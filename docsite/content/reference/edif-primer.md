@@ -3,7 +3,7 @@ title: "EDIF netlist primer"
 description: "The EDIF 2.0.0 netlist format Agni ingests: syntax, structure, gotchas, and the mapping into the IR."
 ---
 
-Reference for studying the format. Pairs with `edif/reader.go` and
+Reference for studying the format. Pairs with `readers/edif/reader.go` and
 `protos/agni/v1/ir/ir.proto`.
 
 ## What EDIF is
@@ -132,7 +132,7 @@ occur there.
 
 ## How we map EDIF -> the IR
 
-See `edif/reader.go` and `protos/agni/v1/ir/ir.proto`.
+See `readers/edif/reader.go` and `protos/agni/v1/ir/ir.proto`.
 
 | EDIF construct | IR |
 |---|---|

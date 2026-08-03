@@ -29,7 +29,7 @@ this, so run it locally before opening a pull request.
 
 - **A new format reader.** Each reader is its own package exposing
   `Read(io.Reader, sourceFile) (*ir.Design, error)`, wired in with one entry in
-  `formats/registry.go`. See the reader notes in [Ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/)
+  `readers/formats/registry.go`. See the reader notes in [Ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/)
   and reconcile new concepts against the cross-format map (CONSTRAINTS C9). Ship a runnable
   example with it (CONSTRAINTS C10).
 - **A new check rule.** One `check/rule_<name>.go`, one line in `check/index.go`, and one

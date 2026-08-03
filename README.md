@@ -17,7 +17,7 @@ so every analysis downstream is written once and works on all of them.
 
 - **Reads many formats into one IR.** EDIF netlists and schematics, KiCad schematics and
   boards, IPC-2581, xschem, and gEDA all parse into the same `ir.Design`. Adding a reader is
-  one entry in `formats/registry.go`.
+  one entry in `readers/formats/registry.go`.
 - **Structural checks (ERC/DRC-like).** Missing I2C pull-ups, unprotected exposed signals,
   power rails without decoupling, boards that fail track-width rules. Findings come out in
   plain language and cite the net or component they fire on.
@@ -72,7 +72,7 @@ locate its net on the schematic. See [demo/README.md](demo/README.md).
 ## How it works
 
 One contract sits in the middle: the protobuf IR (`protos/`, generated into `gen/`). Readers
-(`edif/`, `kicad/`, `ipc2581/`, and the xschem/gEDA readers) are the only code that knows a
+(`readers/edif/`, `readers/kicad/`, `readers/ipc2581/`, and the xschem/gEDA readers) are the only code that knows a
 file format; they produce `ir.Design`. Everything else — `check/`, `diff/`, `render/`, the
 query engine, the web service — consumes the IR and never looks at a source file. Add a
 reader and every analysis works on the new format for free. Add an analysis and it works on
