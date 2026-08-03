@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // TestShowcaseFaithfulWireNets guards that the showcase board's wires carry solved net names on

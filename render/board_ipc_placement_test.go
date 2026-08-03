@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	"github.com/panyam/agni/ipc2581"
+	"github.com/panyam/agni/readers/ipc2581"
 )
 
 // TestBoardIPCPlacementLandsInFrame is the WS1-029 behavioral gate: an IPC-2581 placement pad,
@@ -17,7 +17,7 @@ import (
 // coordinates are hand-derived (top: R(+90)*pad; bottom: R(-90)*mirrorX(pad)) as an independent
 // oracle, so this checks the composition end to end rather than the reader's internal convention.
 func TestBoardIPCPlacementLandsInFrame(t *testing.T) {
-	f, err := os.Open(filepath.Join("..", "ipc2581", "testdata", "board_geom_rotation.xml"))
+	f, err := os.Open(filepath.Join("..", "readers", "ipc2581", "testdata", "board_geom_rotation.xml"))
 	if err != nil {
 		t.Fatal(err)
 	}

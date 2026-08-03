@@ -6,7 +6,7 @@ import (
 
 	"github.com/panyam/agni/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // irModel is the default Model: a fact projection computed once over an ir.Design and shared by

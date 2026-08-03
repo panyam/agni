@@ -5,7 +5,7 @@ import (
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // clockDesign builds a two-terminal Y-prefix clock part (XIN/XOUT, no load caps) carrying an MPN, so

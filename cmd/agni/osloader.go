@@ -9,7 +9,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/graph"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/review"
 )

@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/graph"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/render"
 )
 

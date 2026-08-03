@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/edif"
+	"github.com/panyam/agni/readers/edif"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
@@ -176,7 +176,7 @@ func TestFreeTextFitSkipsSchematicSheet(t *testing.T) {
 // documentation page (no placements) with an overflowing column. The schematic page must skip the
 // fit (its note stays at natural, legible size) while the documentation page still gets fitted.
 func TestFreeTextFitDemoFixture(t *testing.T) {
-	f, err := os.Open(filepath.Join("..", "edif", "testdata", "freetext-fit-demo.eds"))
+	f, err := os.Open(filepath.Join("..", "readers", "edif", "testdata", "freetext-fit-demo.eds"))
 	if err != nil {
 		t.Fatal(err)
 	}

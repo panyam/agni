@@ -3,7 +3,7 @@ package check
 import (
 	"testing"
 
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // Every registered rule must declare the facts it Reads (Available derives from them) and set the

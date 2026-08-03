@@ -23,13 +23,13 @@ import (
 	"github.com/panyam/agni/check/naming"
 	_ "github.com/panyam/agni/datalogrules" // registers the "dl" datalog-authored rule source
 	"github.com/panyam/agni/diff"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/intent"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/ipc2581"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/readers/ipc2581"
+	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/profiles" // registers built-in "profile" rules; LoadDir adds overlay profiles
 	"github.com/panyam/agni/review"
 )

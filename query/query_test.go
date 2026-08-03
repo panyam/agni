@@ -8,7 +8,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // boardGeom is a two-net board: SIG routed thin (0.08mm), PWR wide (0.5mm).

@@ -9,7 +9,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // The design fact base (WS3-004): the reads a rule declares, captured as named, typed,

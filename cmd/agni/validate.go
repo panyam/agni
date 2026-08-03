@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/validate"
 )
 

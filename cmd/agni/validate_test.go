@@ -9,14 +9,14 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 )
 
 func TestBuildValidateReport(t *testing.T) {
 	l := &formats.Loader{}
 	rep, err := buildValidateReport(l, []string{
-		"../../edif/testdata/basic.edn",  // netlist-only, healthy
-		"../../edif/testdata/sample.eds", // EDIF schematic: netlist + geometry, healthy
+		"../../readers/edif/testdata/basic.edn",  // netlist-only, healthy
+		"../../readers/edif/testdata/sample.eds", // EDIF schematic: netlist + geometry, healthy
 		"testdata/conformance/nets_from_wires.fires.kicad_sch", // both tiers
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func TestValidateCmdJSONAndExit(t *testing.T) {
 	cmd := rootCmd()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"validate", "--format", "json", "../../edif/testdata/basic.edn"})
+	cmd.SetArgs([]string{"validate", "--format", "json", "../../readers/edif/testdata/basic.edn"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestValidateCmdJSONAndExit(t *testing.T) {
 	// hier.edn has no nets (hierarchy-only fixture), so validate must fail it and error.
 	cmd = rootCmd()
 	cmd.SetOut(&bytes.Buffer{})
-	cmd.SetArgs([]string{"validate", "../../edif/testdata/hier.edn"})
+	cmd.SetArgs([]string{"validate", "../../readers/edif/testdata/hier.edn"})
 	err := cmd.Execute()
 	if err == nil || !strings.Contains(err.Error(), "1 of 1 file(s) failed") {
 		t.Fatalf("failing file must error the command, got %v", err)

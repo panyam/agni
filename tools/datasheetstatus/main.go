@@ -27,7 +27,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/panyam/agni/doc"
+	"github.com/panyam/agni/datasheet/doc"
 )
 
 // docSiblingSuffix is the doc-IR sibling extension, kept in step with the serve-side loader

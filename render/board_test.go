@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	"github.com/panyam/agni/kicad"
+	"github.com/panyam/agni/readers/kicad"
 )
 
 // boardFixtureGeometry loads the hand-authored board fixture through the real reader, so
@@ -16,7 +16,7 @@ import (
 // hand-built geometry.
 func boardFixtureGeometry(t testing.TB) *geom.BoardGeometry {
 	t.Helper()
-	f, err := os.Open(filepath.Join("..", "kicad", "testdata", "board.kicad_pcb"))
+	f, err := os.Open(filepath.Join("..", "readers", "kicad", "testdata", "board.kicad_pcb"))
 	if err != nil {
 		t.Fatal(err)
 	}

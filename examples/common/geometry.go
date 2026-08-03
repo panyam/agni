@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/edif"
+	"github.com/panyam/agni/readers/edif"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 

@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // ErrInvalidPath marks a containment/argument violation an FS/Workspace adapter returns (e.g. a

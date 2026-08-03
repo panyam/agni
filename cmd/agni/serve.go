@@ -17,7 +17,7 @@ import (
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/render"
 )
 

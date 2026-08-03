@@ -45,7 +45,7 @@ func designFixtureSvc(t *testing.T) *service.DesignService {
 
 func edifFixtureMounts(t *testing.T) []mounts.Mount {
 	t.Helper()
-	root, err := filepath.Abs(filepath.Join("..", "..", "edif", "testdata"))
+	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "edif", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ pending:
 }
 
 func TestDesignServiceKicadFaithful(t *testing.T) {
-	root, err := filepath.Abs(filepath.Join("..", "..", "kicad", "testdata"))
+	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +311,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 // TestDesignServiceGetLayoutReport covers the report RPC (WS7-029b): every component is classified with
 // a kind, and because KiCad symbols are inline, a faithful request resolves them all as provided.
 func TestDesignServiceGetLayoutReport(t *testing.T) {
-	root, err := filepath.Abs(filepath.Join("..", "..", "kicad", "testdata"))
+	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,7 +417,7 @@ func TestDesignServiceMultiSheet(t *testing.T) {
 }
 
 func TestDesignServiceKicadHierarchy(t *testing.T) {
-	root, err := filepath.Abs(filepath.Join("..", "..", "kicad", "testdata"))
+	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -444,7 +444,7 @@ func TestDesignServiceKicadHierarchy(t *testing.T) {
 // layoutForFile helpers moved to internal/service and are unit-tested there.
 func TestLayoutAxis(t *testing.T) {
 	t.Run("GetDesign reports available_layouts and grid re-derives", func(t *testing.T) {
-		root, _ := filepath.Abs(filepath.Join("..", "..", "kicad", "testdata"))
+		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 		svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
 		faithful, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "k", Path: "geom.kicad_sch"})
 		if err != nil {

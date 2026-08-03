@@ -20,7 +20,7 @@ func kicadInstalled() bool {
 
 func kicadSvc(t *testing.T, enabled map[string]bool) *service.DesignService {
 	t.Helper()
-	root, err := filepath.Abs(filepath.Join("..", "..", "kicad", "testdata"))
+	root, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestGetSheetNativeGates(t *testing.T) {
 	})
 
 	t.Run("unsupported format gates as no-tool", func(t *testing.T) {
-		root, _ := filepath.Abs(filepath.Join("..", "..", "edif", "testdata"))
+		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "edif", "testdata"))
 		svc := newDesignSvcNative([]mounts.Mount{{Name: "e", Root: root}}, map[string]bool{"kicad-cli": true})
 		if err := native(t, svc, "e", "sample.eds"); !errors.Is(err, service.ErrNativeNoTool) {
 			t.Fatalf("want ErrNativeNoTool for .eds native, got %v", err)
