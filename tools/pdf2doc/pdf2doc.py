@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """pdf2doc: prototype doc-IR producer (WS10-006).
 
-Converts a PDF into a agni.v1.doc Document in textproto form, using docling
+Converts a PDF into an agni.v1.doc Document in textproto form, using docling
 (layout detection + TableFormer structure recognition). This is the derivation
 pipeline's generic-stage prototype: it proves the doc-IR schema against a real
 parser and real datasheets. It is run manually (the corpus PDFs are private and

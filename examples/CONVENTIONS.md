@@ -1,6 +1,6 @@
 # Examples — Conventions
 
-Single source of truth for how a Agni example is laid out. Read this before adding a new
+Single source of truth for how an Agni example is laid out. Read this before adding a new
 example or upgrading an existing one. The reference example is
 [`read-and-stats/`](read-and-stats/).
 

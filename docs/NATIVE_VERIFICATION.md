@@ -54,7 +54,7 @@ xschem and Lepton are Linux/X11 tools with no macOS package. `Dockerfile.nattool
 Debian tool host with kicad-cli, xschem, Lepton, and `agni`, reached over SSH. The agni
 *server* still runs on the host; this container only supplies the tools. `agni native
 render` runs inside it and writes the SVG back to the bind-mounted workspace, and `ssh -X`
-carries a `agni native open` GUI to the host's XQuartz.
+carries an `agni native open` GUI to the host's XQuartz.
 
 This repo's Makefile runs the container lifecycle (`natup`/`natdown`/`natlogs`). A workspace
 Makefile can add file-driven `natrender`/`natopen` wrappers that bind-mount your design tree at
