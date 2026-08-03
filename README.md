@@ -11,7 +11,7 @@ formats into one neutral, protobuf-defined IR, then checks, diffs, renders, and 
 them. The front-end normalizes formats the way a compiler normalizes languages into one AST,
 so every analysis downstream is written once and works on all of them.
 
-![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docs/assets/demo-viewer.gif)
+![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docsite/static/images/demo-viewer.gif)
 
 ## What it does
 
@@ -99,10 +99,12 @@ renderers draw, and a parameter IR that N datasheet extractors fill and the chec
   done when it works on a real file.
 - **Open core with a clear boundary.** The engine is shareable under Apache-2.0. Proprietary
   formats, house rules, and confidential designs live in a private overlay that depends on
-  the engine without forking it. Market and strategy never enter the shared code.
+  the engine without forking it. Company-specific material stays in the overlay, never in the
+  shared engine.
 - **Legible to software engineers.** EDA carries decades of domain vocabulary. Agni maps it
   to concepts software engineers already know (an IR, a linter, a semantic diff, a lockfile),
-  so you can contribute without an EE degree. See [docs/ANALOGY.md](docs/ANALOGY.md).
+  so you can contribute without an EE degree. See
+  [the software-analogy map](https://panyam.github.io/agni/reference/analogy/).
 
 ## Formats read today
 
@@ -116,19 +118,22 @@ renderers draw, and a parameter IR that N datasheet extractors fill and the chec
 
 ## Documentation
 
-- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) — build, symbol libraries for
-  xschem/gEDA, native EDA tools, golden comparisons.
-- [docs/userguide/](docs/userguide/README.md) — concepts, the CLI, checks, diff, and the
-  query language, written for someone new to the tool.
-- [docs/ANALOGY.md](docs/ANALOGY.md) — the hardware-to-software analogy map. If you read
-  code but not schematics, start here.
+Full documentation lives at [panyam.github.io/agni](https://panyam.github.io/agni/).
+
+- [Getting started](https://panyam.github.io/agni/guide/getting-started/) — build, symbol
+  libraries for xschem/gEDA, native EDA tools, golden comparisons.
+- [User guide](https://panyam.github.io/agni/guide/) — concepts, the CLI, checks, diff, and
+  the query language, written for someone new to the tool.
+- [Software-analogy map](https://panyam.github.io/agni/reference/analogy/) — the
+  hardware-to-software analogy map. If you read code but not schematics, start here.
+- [Overview](https://panyam.github.io/agni/overview/) — the engineering docs: IR and
+  ingestion, geometry and rendering, semantic diff, format primers.
 - [examples/README.md](examples/README.md) — runnable walkthroughs, one per feature.
-- [docs/README.md](docs/README.md) — the engineering docs: IR and ingestion, geometry and
-  rendering, semantic diff, format primers.
-- [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules; read before
+- [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules. Read before
   proposing changes.
-- [docs/25-open-core.md](docs/25-open-core.md) — the open-core split: this public engine,
-  and how a private overlay adds proprietary readers and rules without forking it.
+- [Open core](https://panyam.github.io/agni/decisions/open-core/) — the open-core split: this
+  public engine, and how a private overlay adds proprietary readers and rules without forking
+  it.
 
 ## Status
 

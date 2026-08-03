@@ -22,28 +22,28 @@ this, so run it locally before opening a pull request.
 - [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules (C1–C19). They keep
   the engine format-neutral and the layering clean. Read them before proposing a change; a PR
   that violates one will be asked to change or to justify amending the constraint.
-- [docs/README.md](docs/README.md) — the engineering docs. The architecture is the settled
-  part of the project.
+- [Docs site overview](https://panyam.github.io/agni/overview/) — the engineering docs. The
+  architecture is the settled part of the project.
 
 ## Common contributions
 
 - **A new format reader.** Each reader is its own package exposing
   `Read(io.Reader, sourceFile) (*ir.Design, error)`, wired in with one entry in
-  `formats/registry.go`. See the reader notes in [docs/13-ingestion-ir-architecture.md](docs/13-ingestion-ir-architecture.md)
+  `formats/registry.go`. See the reader notes in [Ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/)
   and reconcile new concepts against the cross-format map (CONSTRAINTS C9). Ship a runnable
   example with it (CONSTRAINTS C10).
 - **A new check rule.** One `check/rule_<name>.go`, one line in `check/index.go`, and one
   `check/docs/<name>.md` (the source of the rule's prose, enforced 1:1 by
   `check/docs_test.go`). The practical walkthrough is
-  [docs/27-rule-authoring.md](docs/27-rule-authoring.md).
-- **A datalog query relation or example.** See [docs/userguide/querying.md](docs/userguide/querying.md).
+  [Authoring a check rule](https://panyam.github.io/agni/build/check-rule/).
+- **A datalog query relation or example.** See [Querying](https://panyam.github.io/agni/guide/querying/).
 
 ## Expectations for a pull request
 
 - Tests. New behavior gets a test; readers get hand-authored fixtures in the package's
   `testdata/`.
 - Docs. A new rule needs its `check/docs/<name>.md`; a user-facing change updates the
-  relevant doc under `docs/`.
+  relevant page under `docsite/content/`.
 - Keep it format-neutral. Analyses read the IR, not source files. Don't add an IR field only
   one format would populate (CONSTRAINTS C9).
 - Prose style in docs, commit messages, and PR text: plain declarative sentences, no
