@@ -1,4 +1,4 @@
-package datalogrules
+package datalog
 
 import (
 	"embed"

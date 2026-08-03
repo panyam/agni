@@ -9,7 +9,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/datasheet/param"
-	"github.com/panyam/agni/profiles"
+	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/review"
 )
 

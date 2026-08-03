@@ -7,7 +7,7 @@ import (
 
 	"github.com/panyam/agni/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	_ "github.com/panyam/agni/profiles" // registers the built-in profile rules into DefaultCatalog
+	_ "github.com/panyam/agni/stdlib/profiles" // registers the built-in profile rules into DefaultCatalog
 )
 
 // A profile item whose interface is absent reads not-applicable, not a silent pass (WS3-051). The
