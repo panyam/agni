@@ -23,6 +23,7 @@ type moduleDoc struct {
 	Name  string `yaml:"name"`
 	Class string `yaml:"class"`
 	MPN   string `yaml:"mpn"`
+	Count int    `yaml:"count"`
 }
 
 type vDomainDoc struct {
@@ -68,7 +69,10 @@ func Parse(b []byte) (Declaration, error) {
 		if strings.TrimSpace(m.Class) == "" && strings.TrimSpace(m.MPN) == "" {
 			return Declaration{}, fmt.Errorf("intent %q: module %q needs a \"class\" or an \"mpn\"", doc.Name, m.Name)
 		}
-		d.Modules = append(d.Modules, Module{Name: m.Name, Class: m.Class, MPN: m.MPN})
+		if m.Count < 0 {
+			return Declaration{}, fmt.Errorf("intent %q: module %q has a negative \"count\" %d", doc.Name, m.Name, m.Count)
+		}
+		d.Modules = append(d.Modules, Module{Name: m.Name, Class: m.Class, MPN: m.MPN, Count: m.Count})
 	}
 	for i, v := range doc.VoltageDomains {
 		if strings.TrimSpace(v.Name) == "" {

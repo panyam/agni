@@ -279,6 +279,7 @@ func TestReviewIntentContract(t *testing.T) {
 	// (WS10-014). Supplying --intent-path flips them to pass/fail (below).
 	base := runReview(t, "--checklist", checklist, design)
 	for _, want := range []string{
+		"| 4 | component counts match architecture | needs-design-intent |",
 		"| 5 | all required modules present | needs-design-intent |",
 		"| 7 | voltage domains identified | needs-design-intent |",
 		"| 8 | power tree consistency | needs-design-intent |",
@@ -289,9 +290,11 @@ func TestReviewIntentContract(t *testing.T) {
 		}
 	}
 
-	// Deviating declaration: the design has no soc and no 1V8 rail, so both items fail.
+	// Deviating declaration: the design has two ics (intent expects one), no soc, and no 1V8 rail, so
+	// the count, module, domain, and subsystem items all fail.
 	dev := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/deviating.yaml", design)
 	for _, want := range []string{
+		"| 4 | component counts match architecture | fail |",
 		"| 5 | all required modules present | fail |",
 		"| 7 | voltage domains identified | fail |",
 		"| 8 | power tree consistency | fail |",
@@ -302,9 +305,10 @@ func TestReviewIntentContract(t *testing.T) {
 		}
 	}
 
-	// Matching declaration: an ic is present and 3V3 sits at 3.3V, so both items pass.
+	// Matching declaration: exactly two ics are present and 3V3 sits at 3.3V, so the items pass.
 	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/matching.yaml", design)
 	for _, want := range []string{
+		"| 4 | component counts match architecture | pass |",
 		"| 5 | all required modules present | pass |",
 		"| 7 | voltage domains identified | pass |",
 		"| 8 | power tree consistency | pass |",

@@ -9,6 +9,7 @@ import "github.com/panyam/agni/check"
 // is loaded.
 const (
 	RuleModuleMissing = "module-missing"
+	RuleModuleCount   = "module-count"
 	RuleVoltageDomain = "voltage-domain-mismatch"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
@@ -26,6 +27,9 @@ func Compile(d Declaration) []*check.Rule {
 	if len(d.Modules) > 0 {
 		rules = append(rules, moduleMissingRule(d))
 	}
+	if anyModuleHasCount(d) {
+		rules = append(rules, moduleCountRule(d))
+	}
 	if len(d.VoltageDomains) > 0 {
 		rules = append(rules, voltageDomainRule(d))
 	}
@@ -42,6 +46,18 @@ func Compile(d Declaration) []*check.Rule {
 		rules = append(rules, protectionRule(p.Kind, d.Protections))
 	}
 	return rules
+}
+
+// anyModuleHasCount reports whether the declaration sets an exact count on any module. The count rule
+// is emitted only then, so a declaration with modules but no counts compiles to just module-missing (no
+// count rule that would silently pass).
+func anyModuleHasCount(d Declaration) bool {
+	for _, mod := range d.Modules {
+		if mod.Count > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // intentTags is the classification every intent rule carries. Category integrity marks a design-intent

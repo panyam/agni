@@ -1,7 +1,8 @@
-# A declaration ecu.edn satisfies: an ic is present and 3V3 sits at its declared 3.3V nominal.
+# A declaration ecu.edn satisfies: two ics are present (count: 2 matches exactly) and 3V3 sits at its
+# declared 3.3V nominal.
 name: ECU intent (matching scaffold)
 modules:
-  - {name: MCU, class: ic}
+  - {name: MCU, class: ic, count: 2}
 voltage_domains:
   - {name: io_3v3, nominal: 3.3, rails: [3V3]}
 subsystems:

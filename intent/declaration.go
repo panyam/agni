@@ -63,6 +63,13 @@ type Module struct {
 	// MPN is an exact manufacturer part number; matched case-sensitively against Model.ComponentMPN.
 	// Empty to match by Class only. Requires a params-built model to resolve (see the Module doc).
 	MPN string
+	// Count is the EXACT number of components the design is expected to contain for this module's
+	// criterion (e.g. 2 CAN transceivers, 4 Wi-Fi radios). 0 means unspecified — no count check
+	// (moduleCountRule skips it), so declaring a module without a count keeps the presence-only
+	// behavior. When > 0, moduleCountRule fails if the actual matching-component count differs (too
+	// few OR too many), a distinct ask from module-missing (which only asks "at least one"). Counting
+	// by MPN requires a params-built model, same as the MPN match path.
+	Count int
 }
 
 // VoltageDomain is one declared power domain: a nominal voltage and the rail net names that must sit on
