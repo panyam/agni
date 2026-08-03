@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="{{ .FrontMatter.customCSS }}">
     {{ end }}
 
+    <link rel="icon" type="image/svg+xml" href="{{.Site.PathPrefix}}/static/images/favicon.svg">
     <link rel="icon" type="image/png" href="{{.Site.PathPrefix}}/static/images/favicon.png">
 </head>
 <body class="{{ if .FrontMatter.bodyClass }}{{ .FrontMatter.bodyClass }}{{ end }}">
