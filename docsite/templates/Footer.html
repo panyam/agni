@@ -31,9 +31,5 @@
             <p>&copy; {{ .Now.UTC.Year }} {{ (json "SiteMetadata.json" "author") }}</p>
         </div>
     </div>
-
-    <div class="footer-bottom">
-        <p>Built with <a href="https://github.com/panyam/s3gen" target="_blank" rel="noopener">s3gen</a></p>
-    </div>
 </footer>
 {{ end }}
