@@ -15,7 +15,7 @@ See [README](README.md). Settled 2026-07-02. Enforceable rules live in
   unknown-field retention gives lossless / forward-compat for free (see [13](13-ingestion-ir-architecture.md)).
 - **EDIF reader: hand-rolled in Go.** EDIF is S-expressions, trivial to parse. No
   need for Galore here.
-- **Galore + tlex (TypeScript): reserved for the browser DSL IDE** (WS3). They are TS
+- **Galore + tlex (TypeScript): reserved for the browser DSL IDE**. They are TS
   and built for web IDEs, so that is their lane: syntax highlighting, live parse,
   error squiggles for the rules DSL. Not used for ingestion.
 - **UI: thin TS view; Model-View-Presenter.** The presenter pattern is mandatory; its

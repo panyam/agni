@@ -1,6 +1,6 @@
 # 18 — Semantic diff
 
-The diff engine (`diff/`) and the design behind it (roadmap WS2-001). It compares two IR
+The diff engine (`diff/`) and the design behind it. It compares two IR
 `Design`s and classifies what changed, on the neutral IR, so the *same* diff runs over any
 format that reads into the IR (EDIF, KiCad, IPC-2581, ...). This is the review beachhead:
 the value is not "files differ" but "*what* changed and how much it matters."
@@ -8,7 +8,7 @@ the value is not "files differ" but "*what* changed and how much it matters."
 ## Identity strategy
 
 Matching is on **semantic keys**, never the format-native id (`Provenance.native_id` is
-regenerated per export, matching on it would report everything as changed; see WS1-004):
+regenerated per export, matching on it would report everything as changed):
 
 - **Components** match by `ref_des`.
 - **Nets** match by `name`.
@@ -30,7 +30,7 @@ Mirrors the classes the engineers' own comparison tool uses (the
 
 Components report Added / Removed / Changed (part-reference set + `Value`). Mapping to the
 "cosmetic vs electrical vs constraint-violating" axis: Soft = cosmetic, Hard = electrical;
-**constraint-violating is out of scope here**: that is the rules DSL (WS3) evaluating the
+**constraint-violating is out of scope here**: that is the rules DSL evaluating the
 diff, not the diff itself.
 
 ## Rename detection
@@ -65,7 +65,7 @@ in the new." The annotation is keyed by the semantic match, not the native id.
 - **Electrically-identical reroute** (same endpoints, different copper): invisible to a
   netlist diff by design: routing is geometry, not connectivity, so it does not appear.
 - **Ref-des-less power/ground nets, bus/member pins**: their stability depends on the
-  reader emitting stable keys (WS1-004); unstable keys would surface as false Hard changes.
+  reader emitting stable keys; unstable keys would surface as false Hard changes.
 - **Ambiguous rename signatures**: declined (reported as New/Deleted), never guessed.
 
 ## Validation
@@ -74,7 +74,7 @@ in the new." The annotation is keyed by the semantic match, not the native id.
   Renamed, New, Deleted, Equal, and provenance.
 - Manual: `agni diff` on the `ecc83` v1/v2 corpus pair (real Hard rewires).
 - The EDIF `netlist_comparison_*.xlsx` is the eventual ground-truth oracle, pending an
-  earlier EDIF revision `.edn` to diff against (WS6-001 open item).
+  earlier EDIF revision `.edn` to diff against.
 
 ## Follow-ups
 

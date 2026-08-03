@@ -1,6 +1,6 @@
 # 19 — Rules & checks: requirements, prior art, evaluation model
 
-The design/requirements survey for the rules layer (roadmap WS3-001). It answers three
+The design/requirements survey for the rules layer. It answers three
 questions: what kinds of rules must we express, what expressive power do they need, and
 how do we evaluate them. The competitive/positioning analysis lives in the private research
 notes, not here.
@@ -10,13 +10,13 @@ notes, not here.
 A **rule** asserts something must hold over a design and reports where it does not:
 "every I2C net has a pull-up," "no output pin drives another output." A rule reads the IR
 and produces findings; it does not simulate or solve. Worst-case tolerance, timing, and SI
-are **analysis** (WS4), a different engine. Drawing this line keeps the rules layer a
+are **analysis**, a different engine. Drawing this line keeps the rules layer a
 query-and-assert system, not a general compute environment.
 
 **Rules and analysis cooperate without blurring the line.** Some rules assert over a
 quantity that analysis computes: an inductor's saturation-current margin needs the peak
 current, a capacitor's derating needs a rail's worst-case maximum. The rule references that
-quantity by name through an interface WS4 fills; the rule still only asserts and reports, it
+quantity by name through an interface the analysis engine fills; the rule still only asserts and reports, it
 never simulates. The boundary stays crisp even where a rule and an analysis compose.
 
 **A third category sits beside rules and analysis: queries that report.** Some asks are not
@@ -39,7 +39,7 @@ program. Our layers map onto that.
   set, the wire geometry): it is an **input diagnostic**. The reader detects it while building the
   IR, applying its own format's semantics, and records a **neutral** result. Example:
   duplicate-ref-des. The IR merges components by ref_des on purpose (a multi-unit part is one
-  component with sections, WS1-001), so by netlist time the collision is gone; only the reader,
+  component with sections), so by netlist time the collision is gone; only the reader,
   mid-merge, knows a genuine duplicate from a legitimate multi-unit part (KiCad: same unit claimed
   twice; a flat netlist: a repeated designator). Likewise dangling-endpoint: the wire geometry is
   gone by netlist time.
@@ -83,7 +83,7 @@ this reader can't observe", input-diagnostic coverage cannot be inferred from a 
 pinned two ways: a **labeled corpus fixture** (a known-bad design, staged `pending` in the expectation
 sidecar until the reader can catch it, so the gap is a visible row in the harness rather than tribal
 memory), and a **source-tool-oracle cross-check** (diff our findings against the originating tool's
-own ERC, the WS1-010 discipline). Absent both, a missed diagnostic is invisible.
+own ERC). Absent both, a missed diagnostic is invisible.
 
 ## What rules look like (expressiveness tiers)
 
@@ -106,7 +106,7 @@ power is the useful axis, because it decides the evaluation model:
 **Expressive ceiling:** Tiers R+A+X are a *Datalog / relational-algebra + aggregation +
 external relations* class: pattern-match, traverse, quantify, aggregate, join. Not
 Turing-complete, not a general programming language. That bounded ceiling is what makes a
-declarative rules layer feasible; anything needing real computation is analysis (WS4), by
+declarative rules layer feasible; anything needing real computation is analysis, by
 the boundary above.
 
 ## What runs now vs later
@@ -114,32 +114,32 @@ the boundary above.
 - **Now (on the netlist IR):** ERC (Tier P electrical), and the connectivity/attribute/
   quantified/aggregate rules of Tiers R and A. This is where the value is and what we have
   the data for.
-- **Now (on the board tier, WS3-008):** the first geometric DRC class (track width, hole
-  size, annular width, copper clearance), over the WS1-006 board sidecar, gated by
+- **Now (on the board tier):** the first geometric DRC class (track width, hole
+  size, annular width, copper clearance), over the board sidecar, gated by
   `Available`'s `board.` read prefix (a netlist-only design reports "unavailable", the same
   honest split the datasheet gate makes). Thresholds are fab-capability floors; per-design
-  values are rule parameterization (WS3-006). Two structural notes the batch established:
+  values are rule parameterization. Two structural notes the batch established:
   per-net threshold rules are ordinary Specs over a `board.nets` entity set, while
   **clearance is a pairwise cross-entity join the AST deliberately does not express**: a
   geometry-query/join vocabulary must be evidenced by more rules before it earns AST nodes
-  (the WS3-003 earn-it guard), so clearance is the catalog's one purpose-built Go rule and
-  the standing evidence. Its O(S²) walk is the WS3-004 tripwire: ~0.7ms at corpus scale
+  (the earn-it guard), so clearance is the catalog's one purpose-built Go rule and
+  the standing evidence. Its O(S²) walk is the tripwire: ~0.7ms at corpus scale
   (400 segments), ~16ms at 2k, ~380ms at 10k (`BenchmarkCopperClearance`).
 - **Later:** the remaining DRC classes (pad/zone clearance, edge/silk, hole-to-hole,
   courtyard) need pad-shape and zone-fill facts; external joins (Tier X) need the parts/spec
   data source. Both are additive; the evaluation model below does not change.
 
-The corpus-derived sequencing (the WS3-003 lock; the concrete corpus is maintained internally) splits the not-yet-built rules by what each waits on:
+The corpus-derived sequencing (the concrete corpus is maintained internally) splits the not-yet-built rules by what each waits on:
 
 - **Buildable now, pure netlist:** signal-net naming convention, TX/RX connection-role
   compatibility, test-point coverage; diode orientation once pin polarity roles land (a
-  small additive IR enrichment, WS1-009); the ordering variants of the ESD/protection rules
-  once the reachability primitive lands (WS3-011).
-- **With the parameter layer (WS10):** cap voltage derating, VIH/VIL vs VOH/VOL
+  small additive IR enrichment); the ordering variants of the ESD/protection rules
+  once the reachability primitive lands.
+- **With the parameter layer:** cap voltage derating, VIH/VIL vs VOH/VOL
   margin, passive-value-vs-recommendation, IC pin-mapping against a reference map. These
   are the differentiated Tier-X category: a rule that proves a margin from datasheet data.
-- **Touch analysis (WS4) for an input only:** inductor Isat vs peak current, cap voltage vs
-  a computed rail max. The assert stays a rule; WS4 supplies the number through a named
+- **Touch analysis for an input only:** inductor Isat vs peak current, cap voltage vs
+  a computed rail max. The assert stays a rule; the analysis engine supplies the number through a named
   fact, so the boundary above holds.
 - **Not rules:** BOM-cost-by-application and similar partition/aggregate/join reports are
   queries (see the scope boundary above): same primitives, tabular output, no pass/fail.
@@ -177,7 +177,7 @@ revision (like the diff, doc 18). This makes rules format-agnostic and review-in
    primitives are proven, the same earn-it discipline as CONSTRAINTS C9.
 
 The `check.Finding` shape is the seed of the rule-result contract; **diff-gates** are rules
-that run over a WS2 diff (doc 18) rather than a single design ("fail the review if a `Hard`
+that run over a diff (doc 18) rather than a single design ("fail the review if a `Hard`
 change touches a net tagged critical").
 
 ### Phase-1 rule model (as shipped)
@@ -195,15 +195,15 @@ The Phase-1 library landed with a deliberate split in the `check.Rule` shape, no
   a rule unavailable when it reads a fact whose provider layer is absent (a `param(...)` datasheet
   fact before the parameter layer lands), so a green "no findings" is distinguishable from "never
   ran." When that layer arrives, the same signature becomes design-aware with no wire change.
-- **The catalog is injected, not a global, and composed from sources (WS3-006).** A
+- **The catalog is injected, not a global, and composed from sources.** A
   `check.RuleSource` yields rules (the built-ins, an embedder's Go suite, later the DSL
   compiler's Spec output, one seam for all); `check.NewCatalog(sources...)` composes them
   under the collision policy: the anonymous built-in source keeps bare names, every other
   source is namespaced (`tesla/ctrs-naming`, copied so the source's own rules are never
   mutated) with a `source` tag stamped so one suite selects as an ordinary facet, and any
   post-composition name collision rejects at wiring time instead of shadowing silently.
-  Consumers (`CheckService`, the CLI) hold a `*check.Catalog`. **Out-of-module registration
-  (WS12-004):** `check.RegisterSource(src)` adds a suite from another module (house-style or
+  Consumers (`CheckService`, the CLI) hold a `*check.Catalog`. **Out-of-module registration:**
+  `check.RegisterSource(src)` adds a suite from another module (house-style or
   proprietary rules in the open-core overlay) to a process-global registry, and
   `check.DefaultCatalog()` / `check.CatalogWith(extra...)` compose the built-ins + every
   registered source, so the engine's own CLI and serve pick the suite up with no re-wiring, 
@@ -223,7 +223,7 @@ touched the evaluation model; it all rides the typed-core + Tags contract above.
 
 ### A rule is a value (the spec layer)
 
-The Phase-1 library gained a second authoring form (WS3-003, stakeholder direction): a rule
+The Phase-1 library gained a second authoring form (stakeholder direction): a rule
 body can be a **`check.Spec`**: a small AST of the nine primitives over named facts,
 evaluated by a tiny interpreter, instead of a Go closure. The typed core of `check.Rule`
 (C14) is unchanged; a Spec binds into it by supplying the `Eval`. What the value form buys:
@@ -238,17 +238,17 @@ evaluated by a tiny interpreter, instead of a Go closure. The typed core of `che
 - **Go is a primitive, not the rule.** A `Call` node invokes a registered `SpecFunc` by
   name (`intentionally_unconnected`, `ground_name`, ...), so multi-clause heuristics stay in
   Go without making the whole rule opaque. This is the escape hatch a datasheet-joined rule
-  (WS10-005) or an integrator uses for the awkward ten percent.
+  or an integrator uses for the awkward ten percent.
 - **One optimization seam.** The interpreter resolves every fact through `Model`, never the
   raw IR. Storage/indexing questions therefore have one answer: `Model` is the interface,
   today's `irModel` (precomputed maps + linear scans) is the naive implementation, and an
-  indexed fact base (WS3-004) is a drop-in replacement no rule or spec would notice. No
+  indexed fact base is a drop-in replacement no rule or spec would notice. No
   external graph/datalog engine, the earn-it rule that rejected Rego/CUE applies to storage
   dependencies too. The same split governs the interpreter's vocabulary tables (entity
   sets, collections, facts): they are the language's closed lexicon and stay private, 
   a faster implementation of a name swaps in behind `Model` (one name, one meaning),
-  while genuinely external vocabulary arrives via registration with the provider story
-  (WS3-004/006), the way `RegisterSpecFunc` already works for functions.
+  while genuinely external vocabulary arrives via registration with the provider story,
+  the way `RegisterSpecFunc` already works for functions.
 
 The original thirteen rules carry both forms: the Go `Eval` stays canonical, and the
 declarative twin lives in `check.Specs`, held to it by a parity gate (identical findings
@@ -273,7 +273,7 @@ Cost, measured (full 13-rule catalog over a synthetic 2000-net design, M4 Pro): 
 closures run in ~1.6ms, the interpreter in ~8.7ms (~5.5x, allocation-dominated: boxing
 entities and per-entity scope maps). Both are far below interactive thresholds, so the twin
 form is affordable today; the benchmark pair (`BenchmarkRulesGo`/`BenchmarkRulesSpec`) is
-the standing evidence for when a WS3-004 fact base earns its complexity.
+the standing evidence for when a fact base earns its complexity.
 
 ### Fact vocabulary (what the Model exposes today)
 
@@ -287,8 +287,8 @@ and the design-level no-connect channel (`HasNoConnectChannel`: whether the sour
 express "intentionally unconnected" at all, the gate that keeps per-pin absence rules quiet
 on bare netlist exports).
 
-Three connection-scope facts arrived with WS1-014 (power symbols as typed virtual
-connections). `pin.electrical_type` in connection scope resolves the connection's
+Three connection-scope facts arrived with power symbols as typed virtual
+connections. `pin.electrical_type` in connection scope resolves the connection's
 `attributes["direction"]` FIRST and falls back to `PinDir` (`connDir` in Go): a virtual
 power-symbol pin has no part type, so its direction travels on the connection itself.
 `conn.virtual` is true when the connection's component is a virtual symbol (`#`-prefixed
@@ -311,28 +311,28 @@ ones the model already computes: `component.class` (resistor / diode / led / tvs
 GATE on class/role, not trust direction by itself: "is this a driven-or-floating logic input"
 is `pin.electrical_type == input AND component.class not in {passives, diode-family}`, never
 `pin.electrical_type == input` alone. This is one recurring false-positive family, not two: the
-passive-INPUT exemption (WS1-025) and the diode-terminal exclusion (WS3-062, a pair of steering-
+passive-INPUT exemption and the diode-terminal exclusion (a pair of steering-
 diode cathodes read as an all-input net) are the same shortcut, patched in the same place. When
 authoring a new direction-based rule, reach for the class/role facts first; the raw-direction
 count is the trap.
 
-The naming batch (WS3-015/016/017) added: `net.name_leaf` (the leaf of a hierarchy-qualified
+The naming batch added: `net.name_leaf` (the leaf of a hierarchy-qualified
 name, what convention patterns match by default), the collapsed-alias channel
 (`netgraph.AttrAliases`: every label the naming pass folded into one net, with its scoping
 rank; read via the `scoped_label_clash` / `rail_name_clash` FFIs), `Model.NetNameCount`
 (exact-name claims, the `nets_sharing_name` FFI behind duplicate-net-name), and the first
 CONFIG-CARRYING rule source: `check/naming` compiles an operator YAML convention
 (allow/exempt regex sets) into ordinary namespaced catalog rules through the exported Spec
-surface alone, config in, rules out, no second registry (the WS3-006 proof).
+surface alone, config in, rules out, no second registry.
 
-Rule PROSE is single-sourced (WS3-025): each built-in rule's Detail is one markdown file
+Rule PROSE is single-sourced: each built-in rule's Detail is one markdown file
 under `check/docs/<name>.md` (plus its diagrams), embedded via go:embed, the examples'
 walkthrough.md sidecar convention applied to rules. Embedding keeps single-binary, WASM,
 and C1 intact; ListRules serves Detail as data either way, and external RuleSources carry
 their own Detail (the naming source generates it from config). The rule↔doc 1:1 and every
 image reference are harness-enforced (check/docs_test.go).
 
-**reach** (WS3-011) is the traversal primitive: `Model.Reach(net, hops)` walks from a net
+**reach** is the traversal primitive: `Model.Reach(net, hops)` walks from a net
 through SERIES PASS ELEMENTS, two-net components classed R/L/ferrite/fuse, returning the
 visited nets (BFS order) with the crossed elements and per-net paths (`PathTo`,
 `ThroughOnPath`); `Between(from, to, class, hops)` is the on-path predicate. Stops are bus
@@ -348,10 +348,10 @@ FFIs (`unprotected_power_reach`, `tvs_reach`, `power_pin_reach`) per the twin di
 For a software-reader orientation (the walk as BFS across middleware that splits a
 channel, and the four methods as an API), see [ANALOGY.md](ANALOGY.md#the-protection-walk-reach).
 
-**pin.role** (WS1-009) is the second class-style derived fact: anode/cathode/power/ground,
+**pin.role** is the second class-style derived fact: anode/cathode/power/ground,
 classified from the pin's declared NAME within the component's device-class context
 (polarity only for the diode family, so an IC's "K" pin never reads as a cathode). The
-WS1-009 format audit found no source that states polarity as data, KiCad diode pins are
+format audit found no source that states polarity as data, KiCad diode pins are
 electrically passive with "A"/"K" names, gEDA's pintype has no polarity, EDIF carries
 directions only, so a typed `ir.Pin.role` field would fail C9 and every reader would be
 guessing; the role is a Model projection instead, exactly the `component.class` reasoning.
@@ -381,7 +381,7 @@ protection and decoupling rule batch quantifies over them separately. The fact i
 enabler for that batch (decoupling and bulk-cap presence, protection present, ESD, test-point
 coverage, and the refined i2c-pull-up).
 
-### The fact base — reads as materialized relations (WS3-004)
+### The fact base — reads as materialized relations
 
 The vocabulary above is what a rule *declares* it reads; `check.Facts(Model) []FactRow` is that
 vocabulary *materialized* as named, typed, provenanced relation tuples — the substrate a rule
@@ -407,24 +407,24 @@ This is the fact-capture discipline only, not a query engine. More relations acc
 adopts the convention. No optimizer is planned: one design's fact base is small enough for naïve
 evaluation, and the bounded expressiveness ceiling above is what keeps it that way.
 
-**Which reader-diagnostics become query relations (WS3-081).** A diagnostic earns a `Facts()` relation
+**Which reader-diagnostics become query relations.** A diagnostic earns a `Facts()` relation
 when it carries an **entity key to join on**; a point-geometry diagnostic (a bare coordinate) stays
 rule-scoped, because a relation over `(x, y)` only duplicates the check panel's list with nothing to
 join. So the entity-keyed diagnostics ARE relations — `ref_des_collision(ref_des)` and
 `pin_net_conflict(ref_des, pin, net)` (one row per net the conflicted pin touches, so a query finds
 every net a bad pin reaches) — while `dangling_endpoint` and `no_junction_endpoint` remain
-Spec-`Over:` scopes only. `bus(label, kind)` (WS1-034) fits the same rule (keyed by label), so it is
+Spec-`Over:` scopes only. `bus(label, kind)` fits the same rule (keyed by label), so it is
 consistent, not an exception. Note the `pin_net_conflict` semantics: a ref-des that already collided
 is excluded from conflict detection, because a duplicated designator legitimately spans nets — that IS
 the collision, reported by `ref_des_collision`, not a pin-on-two-nets fault.
 
-The same "name the shared predicate once" move applies to the reach walk (WS3-080): `net.bus_like(net)`
+The same "name the shared predicate once" move applies to the reach walk: `net.bus_like(net)`
 is a shared-distribution net (ground plane, global rail, or rail-scale fan-out `> maxWalkFan`) — the
 exact predicate the series-reach walk stops crossing into, now named (`isBusLike`) and exposed as a
 relation so it is one definition, not a hidden constant. It is distinct from `bus(label, kind)`, which
 is a reader-detected unmodeled bus LABEL, not a high-fan-out net.
 
-### Querying the fact base (WS3-029)
+### Querying the fact base
 
 The `query` package runs ad-hoc queries over these relations — "search your whole design as
 relations, including datasheets", every answer carrying the provenance of the facts that produced
@@ -478,8 +478,8 @@ U1  LM1117  20    +24V  24    …/regulator.fires.kicad_sch ; datasheet "SNOS412
 ```
 
 The Evaluator is tier-general (it joins relation tuples, agnostic to which IR tier produced a
-fact): a tier becomes queryable by adding WS3-004 projectors, with no Evaluator change. The **board
-tier** (WS1-041) does exactly this — `board.track_width(net, mm)`, `board.via_drill(net, mm)`,
+fact): a tier becomes queryable by adding projectors, with no Evaluator change. The **board
+tier** does exactly this — `board.track_width(net, mm)`, `board.via_drill(net, mm)`,
 `board.layer(net, layer)`, derived per net (the minimum, in mm — not raw geometry) — and then
 cross-tier joins work in one cited query:
 
@@ -526,7 +526,7 @@ cheap to synthesize into and cheap to validate) survives the expansion.
 
 **One IR enrichment falls out of this.** Role-based rules that need anode / cathode or an
 explicit power / ground role reference pin semantics the IR does not yet carry beyond
-`PinDirection`. That is a small, additive IR change (WS1), sized separately. Rules that need
+`PinDirection`. That is a small, additive IR change, sized separately. Rules that need
 only `PinDirection` (unconnected, single-pin, output-drives-output) run without it, so this
 does not gate Phase 1.
 
@@ -572,7 +572,7 @@ Two things make this reliable, and both fall out of decisions already made here:
 - **The bounded expressiveness ceiling** (Datalog/relational, not general code) is a small,
   typed generation target, far more reliable to synthesize into, and cheap to validate,
   than free-form code.
-- **The fixtures** (WS6) close the loop: NL -> draft rule -> run on a labeled fixture ->
+- **The fixtures** close the loop: NL -> draft rule -> run on a labeled fixture ->
   show findings -> engineer confirms or edits -> commit. The committed rule is code, so it
   is reviewed in the PR (human-in-the-loop) and diffable; LLM assistance strengthens the
   design-as-code posture rather than bypassing it. It is bidirectional too: rule -> NL to

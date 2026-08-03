@@ -3,7 +3,7 @@
 Enforceable rules in [/CONSTRAINTS.md](../CONSTRAINTS.md); a `CN` reference (e.g. C9) points to constraint N there.
 
 Companion to [edif-primer.md](edif-primer.md) (which covers the `.edn` netlist) and to
-the geometry sidecar work (ticket WS1-003).
+the geometry sidecar work.
 This doc studies the `.eds` SCHEMATIC export the way the netlist primer studied the
 `.edn`, so we can design the geometry sidecar proto and reader against ground truth.
 

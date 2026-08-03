@@ -2,7 +2,7 @@
 
 Enforceable rules in [/CONSTRAINTS.md](../CONSTRAINTS.md); a `CN` reference (e.g. C9) points to constraint N there.
 
-The browser viewer and visual diff over `agni serve` (workstream WS9). This doc records
+The browser viewer and visual diff over `agni serve`. This doc records
 the settled architecture: how designs reach the browser (the mount model), the wire
 contract (four Connect services), the render and highlight contracts both renderers share,
 the client's composition (islands, presenter, dock, router), and the one recorded deviation
@@ -31,7 +31,7 @@ flowchart LR
   PAGES["server-rendered pages\n(ViewerPage.html holes)"] --> ISL
 ```
 
-Two server layers by design (WS9-026): `internal/service` holds the transport-neutral
+Two server layers by design: `internal/service` holds the transport-neutral
 implementations (loaders in, proto messages out, no HTTP), and `internal/server` wraps them
 into Connect handlers. The services are the reusable surface; the handlers are glue. Pages
 are server-rendered HTML with `data-dock-panel` holes the client islands mount into (C11): 
@@ -70,8 +70,8 @@ independent cadences.
 | Check | GetExpectations | the design's `.expect.yaml` sidecar as its own resource; client reconciles against findings |
 | Check | GetCheckReport | the canonical severity-organized report (shared shape with `agni check --format report`) |
 | Diff | DiffDesigns | semantic diff of two designs' netlist IR + the highlight maps; wire form shared with `agni diff --format json` |
-| Query | RunQuery | evaluate an ad-hoc datalog query (WS3-029) over the design's fact base, return columns + provenance-linked rows; same engine as `agni query` |
-| Query | ListRelations | the relation catalog (built-ins + overlay-registered) with arg labels, summary, and kind; static per build, drives the panel's click-to-insert picker (WS9-037) |
+| Query | RunQuery | evaluate an ad-hoc datalog query over the design's fact base, return columns + provenance-linked rows; same engine as `agni query` |
+| Query | ListRelations | the relation catalog (built-ins + overlay-registered) with arg labels, summary, and kind; static per build, drives the panel's click-to-insert picker |
 
 Contract notes that bite:
 
@@ -82,14 +82,14 @@ Contract notes that bite:
 - **HighlightSheet must mirror its GetSheet.** The overlay is only meaningful over the base
   render it was framed for, so sheet/layout/symbols in the two requests must match. The
   spec message is `geom.HighlightSpec` end to end, one vocabulary for the WebGL local
-  resolution, the server SVG overlay, and the packed projection (WS9-016/017; shapes:
+  resolution, the server SVG overlay, and the packed projection (shapes:
   outline, bounding rect, bounding circle, per entity).
 - **The board is a sheet.** A `.kicad_pcb` renders as the synthetic "board" sheet, which is
   why navigation, deep links, and both highlight paths needed zero client plumbing for
   boards.
 - **Diff is all-or-nothing.** Either side failing to load fails the call; there is no
   partial diff.
-- **Query evaluates server-side, netlist facts only (WS9-036, v1).** RunQuery loads the
+- **Query evaluates server-side, netlist facts only (v1).** RunQuery loads the
   design, builds `check.NewModel`, and runs the same `query.Naive` the CLI runs; a parse
   error or unloadable design is an InvalidArgument the panel shows inline. The datasheet
   `param` relation is empty here — serve wires no params dir and datasheet data is
@@ -118,12 +118,12 @@ fixture); the SVG path fetches the overlay document and stacks it.
 
 - **Presenter (C3, humble object).** `ViewerPresenter` owns the semantic loop (open file →
   sheets → render → checks → highlights) and pushes state snapshots into one typed
-  `ViewSink` of view interfaces (WS9-019). It calls views and clients, never DOM or Solid
+  `ViewSink` of view interfaces. It calls views and clients, never DOM or Solid
   primitives, so it tests with plain mocks.
 - **Islands (C11).** Leaf Solid components render the pushed state and emit intents back
-  up. Panels live in a dockview shell (WS9-021); saved layouts are stamped with the
+  up. Panels live in a dockview shell; saved layouts are stamped with the
   panel-id registry at save time, so newly registered panels appear without migrations.
-- **Router (WS9-009).** Deep-linkable URLs: `/files/<mount>/<path>` plus `?sheet=`,
+- **Router.** Deep-linkable URLs: `/files/<mount>/<path>` plus `?sheet=`,
   `?mode=` (webgl / svg / native), `?layout=`, `?sym=`. Directories are the same path with
   a trailing slash. The presenter reports location changes; the composition root reflects
   them into the browser URL.

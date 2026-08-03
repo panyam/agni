@@ -91,7 +91,7 @@ established without one:
    independent channels; a correct placement puts every pin on its copper. Measuring that
    distance is a ground truth the file carries itself, stronger than a third-party render
    (which re-derives from the same placement data). This is how the placement geometry was
-   pinned (WS1-029/030).
+   pinned.
 2. **kicad-cli cross-check.** Where a KiCad equivalent exists, `kicad-cli pcb drc` gives a
    numeric oracle (the board DRC counts were cross-checked this way).
 3. **Web visualizer.** For a visual sanity pass, a browser IPC-2581/ODB++ viewer

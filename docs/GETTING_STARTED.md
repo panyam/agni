@@ -58,7 +58,7 @@ An xschem or gEDA `.sch` file stores components by *reference* to a symbol (`res
 `agni` needs them to join wires to pins and produce a connected netlist. Without them you
 still get every component and every net *name*, but no pin-level connections.
 
-`--symbol-path` also resolves KiCad `.kicad_sym` libraries (WS1-016) for schematics that
+`--symbol-path` also resolves KiCad `.kicad_sym` libraries for schematics that
 do not embed their symbols, including KiCad's own installed set, e.g.
 `--symbol-path "/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols"`. A project
 `sym-lib-table` beside the schematic is honored automatically, no flag needed.

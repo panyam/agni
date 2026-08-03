@@ -70,7 +70,7 @@ the core IR by stable keys (`ref_des`, net name, `port_ref`, plus provenance
 `source_id`), joined at render time. Diff/rules/sim never carry graphics; the renderer
 loads (core IR + geometry sidecar) and joins. This keeps heavy graphics off the hot
 paths (C7) and lets geometry come from a different source than connectivity (e.g. the
-EDIF `.eds` schematic vs the `.edn` netlist). See roadmap ticket WS1-003.
+EDIF `.eds` schematic vs the `.edn` netlist).
 
 ## Round-trip as a test oracle (pays for itself)
 

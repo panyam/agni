@@ -135,9 +135,9 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
-	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel (WS9-035)")
-	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the ReviewService catalog (WS9-047)")
-	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the ReviewService catalog so intent-bound review items resolve (WS9-047)")
+	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
+	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the ReviewService catalog")
+	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the ReviewService catalog so intent-bound review items resolve")
 	return c
 }
 

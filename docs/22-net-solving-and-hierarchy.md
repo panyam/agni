@@ -5,7 +5,7 @@ Enforceable rules in [/CONSTRAINTS.md](../CONSTRAINTS.md); a `CN` reference (e.g
 How a schematic's implicit connectivity becomes `ir.Net`s: the shared solver
 (`internal/netgraph`), the KiCad connection-point semantics layered on it
 (`kicad/sch_nets.go`), and the multi-sheet hierarchy walk that reads a whole project as
-one design (`kicad/sch_hier_nets.go`, WS1-018). Written because the walk's PR (109) was
+one design (`kicad/sch_hier_nets.go`). Written because the walk was
 hard to review without this picture in one place.
 
 ## The problem
@@ -33,7 +33,7 @@ caller quantizes its native units so points meant to coincide compare equal):
   net continues into something the read did not cover"), and `Rank` (naming priority,
   below).
 - **Pin**: a component pin at a point: `(Comp, Pin)`, plus `NoConnect` (a no-connect
-  marker sat on the pin) and `Dir` (a virtual power-symbol pin's direction, WS1-014).
+  marker sat on the pin) and `Dir` (a virtual power-symbol pin's direction).
 - **terminals**: points where a bare wire end is legitimate (junction dots, no-connect
   flags), used only by dangling-endpoint detection.
 
@@ -45,7 +45,7 @@ Solving is two unions and a naming pass:
 
 2. **Union by label.** Every non-empty label (wire labels and anchor labels alike)
    unions all the points that carry it. This is "connect by name": every `GND` tap on a
-   sheet is one net regardless of geometry. Since WS1-018 it is also *aliasing*: a node
+   sheet is one net regardless of geometry. It is also *aliasing*: a node
    carrying two different labels folds both label groups into one net (two labels on one
    wire are two names for one net), and it is the mechanism the hierarchy walk uses to
    stitch sheets, two points in different coordinate bands that share a label become
@@ -55,14 +55,14 @@ Solving is two unions and a naming pass:
    (rank −1, preserving the old wire-label-beats-anchor behavior), then anchors by
    `Rank`, ties broken by input order. Unnamed roots with pins get synthetic `N$<n>`
    names by first appearance, except a lone pin marked `NoConnect`, which takes the
-   tool-marker name `unconnected-(REF-PadN)` so no-connect-aware consumers key on it
-   (WS1-019). Unnamed, pinless roots are drawing noise and are dropped.
+   tool-marker name `unconnected-(REF-PadN)` so no-connect-aware consumers key on it.
+   Unnamed, pinless roots are drawing noise and are dropped.
 
 Dangling detection is separate and purely positional: a wire endpoint whose grid point
 holds nothing else (no pin, anchor, terminal, or second wire endpoint) is reported with
 its wire id.
 
-`Build`'s third return is a **wire → net-name map** keyed by `Wire.Id` (WS1-022): the same
+`Build`'s third return is a **wire → net-name map** keyed by `Wire.Id`: the same
 solve that names nets also tells the geometry sidecar which net each drawn wire belongs to,
 so the viewer can tint or highlight a KiCad wire by net (KiCad wires carry no inline net
 name, unlike xschem `lab=` / gEDA, which fill `WireGeometry.net` from the wire's own label
@@ -103,7 +103,7 @@ two of these rules are not what the endpoint-only solver would guess:
   `unescapeName` undoes the escape table at every label/port read.
 - **A power symbol (`#PWR`, `#FLG`) is an anchor plus a virtual pin.** Its Value names
   the net (a PWR_FLAG names nothing but asserts Driven); its power-typed pin also lands
-  as a typed virtual connection (WS1-014) so rules see driver evidence. The symbol never
+  as a typed virtual connection so rules see driver evidence. The symbol never
   enters `Components`.
 
 ## Name scoping: the fully-qualified-name model
@@ -166,7 +166,7 @@ on a dangling wire), and dangling endpoints are translated back out of their ban
 (`X − k·2^41`, source file looked up by band index) so diagnostics carry sheet-frame
 coordinates the viewer can draw.
 
-**Completeness is the WS1-017 witness.** `external` on a net means "the read may not
+**Completeness is the witness.** `external` on a net means "the read may not
 cover this net". A complete PROJECT walk (`.kicad_pro` read, every Sheetfile opened)
 makes that marking stale, and `ReadProject` downgrades external→global
 (`netgraph.ResolveExternal`); a sheetless root is trivially complete, so flat projects
@@ -177,7 +177,7 @@ upward into a parent nobody read.
 
 `ReadProject` always walks the schematic side even when a board is present: the board
 still supplies the nets, but sub-sheet components now arrive with their part types and
-typed pins instead of as bare footprint pads (the read gap that forced WS1-014's
+typed pins instead of as bare footprint pads (the read gap that forced the
 `PinDeclared` guard).
 
 ## Worked example

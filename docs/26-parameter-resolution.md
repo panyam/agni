@@ -80,7 +80,7 @@ materializes on access instead of having been preloaded. Two consequences:
   (`abs_max(C, "VIN", V)`) that today it cannot answer unless the set was
   preloaded. The resolver is what lets search reach the datasheet at all.
 - This slots into the existing `check.Available` gating (params tier empty is
-  silent by construction) and the WS3-004/006 provider story that the codebase
+  silent by construction) and the provider story that the codebase
   already earmarks for external vocabulary.
 
 ### Demand-driven converges toward eager, in priority order
@@ -102,7 +102,7 @@ escalation order and stops at the first confident answer:
     cache → recipe → model → HITL
 
 - **cache** — a prior resolution for this part/param (see Recall below).
-- **recipe** — per-vendor deterministic table classification (the WS10 `derive/`
+- **recipe** — per-vendor deterministic table classification (the `derive/`
   recipes). Precise, brittle across vendors, cheap to write one vendor at a time.
 - **model** — an inference backend (see Model types). Generalizes across vendors,
   fuzzy, needs an eval harness.
