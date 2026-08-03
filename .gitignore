@@ -5,3 +5,7 @@ bin/
 # Built example binaries (rebuilt by `make testall`; never commit them)
 examples/render-board/render-board
 examples/validate/validate
+
+# Docs site tooling and build output (make docs-*)
+.venv-docs/
+site/

@@ -100,6 +100,29 @@ demo: ui
 	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
 	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
 
+# Documentation site (mkdocs-material over docs/). docs-install builds a repo-local venv from
+# docs/requirements.txt (pinned, shared with the Pages CI). docs-serve is the live local
+# preview; it renders identically to the deployed GitHub Pages site. docs-deploy pushes the
+# built site to the gh-pages branch (needs Pages set to serve from that branch, and a plan
+# that allows Pages on this repo).
+DOCS_VENV ?= .venv-docs
+DOCS_BIN := $(DOCS_VENV)/bin
+$(DOCS_BIN)/mkdocs:
+	python3 -m venv $(DOCS_VENV)
+	$(DOCS_BIN)/pip install -q --upgrade pip
+	$(DOCS_BIN)/pip install -q -r docs/requirements.txt
+
+docs-install: $(DOCS_BIN)/mkdocs
+
+docs-serve: docs-install
+	$(DOCS_BIN)/mkdocs serve
+
+docs-build: docs-install
+	$(DOCS_BIN)/mkdocs build --site-dir site
+
+docs-deploy: docs-install
+	$(DOCS_BIN)/mkdocs gh-deploy --force
+
 # Install the web viewer's node dependencies. Run once before the first build (or after
 # dependency changes); ui and web-test assume it has run.
 web-install:
