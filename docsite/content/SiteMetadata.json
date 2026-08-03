@@ -6,9 +6,9 @@
   "repository": "https://github.com/panyam/agni",
   "license": "Apache-2.0",
   "theme": {
-    "primaryColor": "#c2410c",
-    "secondaryColor": "#4a5568",
-    "accentColor": "#d69e2e"
+    "primaryColor": "#991b1b",
+    "secondaryColor": "#57534e",
+    "accentColor": "#ea580c"
   },
   "features": {
     "search": true,

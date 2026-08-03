@@ -1,18 +1,18 @@
 /* Notations Documentation Styles */
 
 :root {
-    --primary-color: #2c5282;
-    --secondary-color: #4a5568;
-    --accent-color: #d69e2e;
-    --text-color: #1a202c;
-    --text-light: #718096;
+    --primary-color: #991b1b;
+    --secondary-color: #57534e;
+    --accent-color: #ea580c;
+    --text-color: #1c1917;
+    --text-light: #78716c;
     --bg-color: #ffffff;
-    --bg-light: #f7fafc;
-    --border-color: #e2e8f0;
-    --code-bg: #2d3748;
-    --code-color: #e2e8f0;
-    --link-color: #3182ce;
-    --link-hover: #2c5282;
+    --bg-light: #faf6f4;
+    --border-color: #eae4e0;
+    --code-bg: #292524;
+    --code-color: #f5f5f4;
+    --link-color: #b91c1c;
+    --link-hover: #7f1d1d;
 
     /* Notation component variables (light mode) */
     --notation-stroke-color: black;
@@ -25,18 +25,18 @@
 /* Dark mode */
 :root.dark,
 [data-theme="dark"] {
-    --primary-color: #63b3ed;
-    --secondary-color: #a0aec0;
-    --accent-color: #ecc94b;
-    --text-color: #f7fafc;
-    --text-light: #a0aec0;
-    --bg-color: #1a202c;
-    --bg-light: #2d3748;
-    --border-color: #4a5568;
-    --code-bg: #171923;
-    --code-color: #e2e8f0;
-    --link-color: #63b3ed;
-    --link-hover: #90cdf4;
+    --primary-color: #f87171;
+    --secondary-color: #a8a29e;
+    --accent-color: #fb923c;
+    --text-color: #f5f0ec;
+    --text-light: #a8a29e;
+    --bg-color: #1c1512;
+    --bg-light: #292018;
+    --border-color: #44403c;
+    --code-bg: #14100e;
+    --code-color: #f5f5f4;
+    --link-color: #fca5a5;
+    --link-hover: #fecaca;
 
     /* Notation component variables (dark mode) */
     --notation-stroke-color: #e5e5e5;
@@ -66,7 +66,7 @@ body {
 
 /* Header */
 .site-header {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
     color: white;
     padding: 1rem 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -428,7 +428,7 @@ pre code {
 .home-hero {
     text-align: center;
     padding: 4rem 2rem;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background: linear-gradient(135deg, #7f1d1d 0%, #ea580c 100%);
     color: white;
     border-radius: 8px;
     margin-bottom: 3rem;
@@ -908,6 +908,21 @@ pre code {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+.btn-github {
+    color: white;
+    text-decoration: none;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.btn-github:hover {
+    background-color: rgba(255,255,255,0.15);
+    color: white;
 }
 
 /* Visual Test Suite */
