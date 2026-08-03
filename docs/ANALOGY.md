@@ -1,7 +1,7 @@
 # The software analogy (a map for engineers coming from code)
 
 A design is a program. The symbol library is its imports. The BOM is its lockfile.
-Datasheets are vendor documentation, and the WS10 parameter layer is us turning those
+Datasheets are vendor documentation, and the parameter layer is us turning those
 docs into type definitions a linter can check. This page expands that mapping one
 concept at a time, with what each thing means in an actual circuit and where it lives
 in the schemas. It complements the numbered docs (13-23); read those for the design
@@ -51,8 +51,8 @@ embed their libraries, like vendoring your dependencies).
 ## Instances: `Component`
 
 **Software.** `r1 := Device.R(value: "10k")`. The variable name is the reference
-designator; constructor arguments and fields are the instance attributes (Value, and
-since the WS10-003 join, MPN/Manufacturer). Twenty resistors are twenty instances of
+designator; constructor arguments and fields are the instance attributes (Value,
+MPN/Manufacturer). Twenty resistors are twenty instances of
 one class.
 
 **Circuit.** A placed part: R1 near the connector, R2 in the feedback path. Identity
@@ -134,7 +134,7 @@ somewhere between the connector and the regulator, an ESD clamp hangs off a net 
 power-entry path. The series element that splits the net is exactly what a per-net check
 cannot see past, which is why the walk exists.
 
-**Schema.** `check.Model.Reach`/`Between` over the netlist IR (WS3-011); the crossable
+**Schema.** `check.Model.Reach`/`Between` over the netlist IR; the crossable
 classes are resistor/inductor/ferrite/fuse; the stops are ground/global/high-fan-out.
 The rules that use it carry their own worked diagrams: [what the walk crosses and where
 it stops](../check/docs/reach-semantics.png) and [the fires/passes
@@ -156,7 +156,7 @@ letter for letter.
 repeated four times. Each instance has its own components (the walk resolves
 per-instance reference designators) and its own local nets.
 
-**Schema.** `ir.Sheet` references plus the multi-sheet hierarchy walk (WS1-018);
+**Schema.** `ir.Sheet` references plus the multi-sheet hierarchy walk;
 qualified net names follow KiCad's own convention so they match board-file names.
 
 ![hierarchy template](analogy/hierarchy-template.svg)
@@ -280,8 +280,8 @@ datasheet-backed limit, land on the exact table in the PDF.
   the type-annotation work and their absence means skip.
 - **Runtime is physics.** There is no sandbox: "running the program" is powering a
   board, so the linting tier (checks against stubs) carries weight software linters
-  do not, the cheap static end of a ramp whose expensive end is simulation (WS4).
+  do not, the cheap static end of a ramp whose expensive end is simulation.
 - **Instances are atoms.** Two "identical" resistors are still two physical objects
   with tolerances; the stub describes a population, not your unit. That is what
-  tolerance analysis (WS4) exists to reason about, and why characteristics carry
+  tolerance analysis exists to reason about, and why characteristics carry
   min/typ/max rather than one number.

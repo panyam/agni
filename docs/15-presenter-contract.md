@@ -85,7 +85,7 @@ presenter for the Editor page where mouse movements need high-frequency handling
 
 **Our mapping:**
 - **Design viewer** (browse schematic/PCB, view diff, hover/select; pan/zoom is
-  view-local, hover throttled to rAF): lower-frequency. As built (WS9), it runs a thin
+  view-local, hover throttled to rAF): lower-frequency. As built, it runs a thin
   **TS presenter** (`web/src/viewer.ts`) that calls the Go engine over Connect, which
   keeps heavy ops server-side (C7) with one runtime shipped. A **WASM presenter**
   reusing the Go diff/IR logic in-browser remains the swap-in if an offline or
@@ -95,7 +95,7 @@ presenter for the Editor page where mouse movements need high-frequency handling
   (TS) live: the DSL editor uses them for live parse/highlight, calling the Go core for
   validation.
 
-## The two decisions, as made (WS9)
+## The two decisions, as made
 
 - **Panel rendering school:** the shipped shell is server-rendered pages with framework
   islands (`@panyam/tsappkit-solid`) mounted into declared holes; commands stay semantic

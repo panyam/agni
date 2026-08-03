@@ -26,7 +26,7 @@ func queryCmd() *cobra.Command {
 	var specLib bool
 	c := &cobra.Command{
 		Use:   "query <file> <query>",
-		Short: "Search the design fact base with a datalog query (WS3-029)",
+		Short: "Search the design fact base with a datalog query",
 		Long: `Run an ad-hoc datalog query over the design's fact relations and print each answer with
 its provenance. Relations:
 
@@ -102,10 +102,10 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 		},
 	}
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (datasheet corpus) — enables the param relation")
-	c.Flags().BoolVar(&specLib, "speclib", false, "query the whole seeded datasheet corpus (--params) with no <file>: the param/part.audience relations range over the whole spec library, not one design's parts (WS10-010)")
+	c.Flags().BoolVar(&specLib, "speclib", false, "query the whole seeded datasheet corpus (--params) with no <file>: the param/part.audience relations range over the whole spec library, not one design's parts")
 	c.Flags().BoolVar(&showExamples, "examples", false, "print starter queries (the concept ladder the web panel shows) and exit")
 	c.Flags().BoolVar(&showRelations, "relations", false, "print the queryable relation catalog (grouped by kind) and exit")
-	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations, also print each relation's full reference doc (WS14-005)")
+	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations, also print each relation's full reference doc")
 	return c
 }
 

@@ -1,0 +1,24 @@
+{
+  "siteName": "Agni",
+  "siteDescription": "A project for learning hardware design by building tooling for it: read schematics and boards from several EDA formats into one representation, then check, diff, query, and render them.",
+  "version": "0.1.0",
+  "author": "Sriram Panyam",
+  "repository": "https://github.com/panyam/agni",
+  "license": "Apache-2.0",
+  "theme": {
+    "primaryColor": "#991b1b",
+    "secondaryColor": "#57534e",
+    "accentColor": "#ea580c"
+  },
+  "features": {
+    "search": true,
+    "toc": true,
+    "syntaxHighlighting": true,
+    "darkMode": true
+  },
+  "contact": {
+    "github": "https://github.com/panyam/agni",
+    "issues": "https://github.com/panyam/agni/issues"
+  },
+  "issues": "https://github.com/panyam/agni/issues"
+}

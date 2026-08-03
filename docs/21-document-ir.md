@@ -56,10 +56,10 @@ the revision differ use:
 - `PageText`: the page's text blocks joined; the full-text-search source.
 - `FindTableForProv(d, page, label)`: resolves a `param.ParamProvenance` locator
   (page + table label, matched by title equality or containment either way) to a
-  table. The committed cross-contract test proves the WS10-001 param fixture's
+  table. The committed cross-contract test proves the param fixture's
   provenance resolves against the doc-IR fixture.
 
-Tier 2, deferred to the extraction store (WS10-002/003): a Connect `DocService`
+Tier 2, deferred to the extraction store: a Connect `DocService`
 (C2/C13) over the persisted corpus, document by hash, region by id (verification
 crops), and full-text search over an index built from `PageText` + table cells,
 so "not extracted yet" is searchable and never a dead end. The index engine choice
@@ -68,7 +68,7 @@ addressing, content hashes, text retained).
 
 ## What the real producer taught (prototype findings)
 
-Running `tools/pdf2doc` (docling 2.x) over the two WS10-001 datasheets:
+Running `tools/pdf2doc` (docling 2.x) over the two datasheets:
 
 - **Structure is solid**: every table validated (grid consistency, hash match),
   including a 32x8 electrical-characteristics table, and cell text is faithful.
@@ -78,7 +78,7 @@ Running `tools/pdf2doc` (docling 2.x) over the two WS10-001 datasheets:
   `Table.title` resolution and the recipe tests run against the hand-authored
   fixture (the post-recipe shape), not raw producer output.
 - **Symbol text needs normalization**: subscripts arrive space-split ("V GSS").
-  A recipe-layer tokenizer concern, noted for WS10-002/004; doc-IR stores text as
+  A recipe-layer tokenizer concern; doc-IR stores text as
   extracted, faithful to the parse.
 
 ## What is deliberately absent
@@ -90,4 +90,4 @@ Running `tools/pdf2doc` (docling 2.x) over the two WS10-001 datasheets:
   output, recorded in the parameter-IR; doc-IR stays a faithful decomposition with
   no interpretation, which is what makes it reusable across recipe versions.
 - **No cross-document corpus structure** (part to documents). That is the store's
-  join, arriving with WS10-002/003.
+  join.

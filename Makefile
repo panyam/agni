@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test serve ui natimage natup natdown natlogs
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test serve demo ghinstall ghserve ghbuild ghdeploy ui natimage natup natdown natlogs
 
 all: proto build
 
@@ -92,6 +92,36 @@ SYMBOL_PATH ?=
 SYMBOL_FLAGS := $(foreach p,$(SYMBOL_PATH),--symbol-path $(p))
 serve: ui
 	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) web
+
+# One-command self-contained demo. Builds the web bundle and serves the viewer with only the
+# shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
+# left tree, and explore the render, checks, and query panels. See demo/README.md.
+demo: ui
+	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
+	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
+
+# Documentation site (mkdocs-material over docs/). ghinstall builds a repo-local venv from
+# docs/requirements.txt (pinned, shared with the Pages CI). ghserve is the live local
+# preview; it renders identically to the deployed GitHub Pages site. ghdeploy pushes the
+# built site to the gh-pages branch (needs Pages set to serve from that branch, and a plan
+# that allows Pages on this repo).
+DOCS_VENV ?= .venv-docs
+DOCS_BIN := $(DOCS_VENV)/bin
+$(DOCS_BIN)/mkdocs:
+	python3 -m venv $(DOCS_VENV)
+	$(DOCS_BIN)/pip install -q --upgrade pip
+	$(DOCS_BIN)/pip install -q -r docs/requirements.txt
+
+ghinstall: $(DOCS_BIN)/mkdocs
+
+ghserve: ghinstall
+	$(DOCS_BIN)/mkdocs serve
+
+ghbuild: ghinstall
+	$(DOCS_BIN)/mkdocs build --site-dir site
+
+ghdeploy: ghinstall
+	$(DOCS_BIN)/mkdocs gh-deploy --force
 
 # Install the web viewer's node dependencies. Run once before the first build (or after
 # dependency changes); ui and web-test assume it has run.

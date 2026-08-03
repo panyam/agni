@@ -100,8 +100,7 @@ Your rules appear in the catalog namespaced `myco/<rule>`, so they can never sha
 CLI and serve run your rules alongside its own.
 
 A registered rule is a Go rule; it does not join the built-in Spec-twin regression suite (that is
-the engine catalog's own concern). Authoring a rule in a DSL instead of Go is future work
-(WS3-004/007 + WS12-002).
+the engine catalog's own concern). Authoring a rule in a DSL instead of Go is future work.
 
 ## 4. Compose in main
 

@@ -73,7 +73,7 @@ from identical connectivity under the new name.
   "shared components moved"; the refusal is the feature. The KiCad pair passes because
   faithful geometry preserves author coordinates.
 - Only components tint on the KiCad pair's canvases: KiCad wire geometry carries no net
-  names yet (WS1-022), so net-level changes list in the panel but do not paint.
+  names yet, so net-level changes list in the panel but do not paint.
 
 ## 4. Run the checks
 
@@ -90,9 +90,9 @@ and those rules skip themselves.
 - **Checks panel**: the findings (ten on this board across six rules: bulk-cap,
   decoupling-present, esd-protection, i2c-pull-up, input-protection, test-point-coverage).
   Clicking one focuses it: every finding keeps its outline highlight and the focused
-  subject gains a translucent bounding box on top (highlight shapes, WS9-017), in whichever
+  subject gains a translucent bounding box on top (highlight shapes), in whichever
   renderer is showing. Net-subject highlights paint right on this faithful KiCad render, the
-  showcase wires carry uuids, so WS1-022 resolves their names (SCL, USB_D+, USB_D-, VBUS, ...);
+  showcase wires carry uuids, so their names resolve (SCL, USB_D+, USB_D-, VBUS, ...);
   no auto-layout needed. The two exceptions are the `+3V3` and `GND` rails: they are tapped at
   power-symbol pins with no drawn wire, so there is nothing to key a wire highlight on (on any
   layout).

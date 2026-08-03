@@ -6,6 +6,26 @@ rules, geometry, rendering). Enforceable rules live in [/CONSTRAINTS.md](../CONS
 Research, market, competitor, and strategy analysis is deliberately kept out of this
 repo so it can be shared freely.
 
+## Philosophy
+
+Agni is built on a few convictions, and the architecture below follows from them:
+
+- **One neutral IR, many formats.** Normalize each format once into a protobuf IR, and write
+  every analysis once against it. Add a reader and every check, diff, render, and query works
+  on the new format; add an analysis and it works on every format.
+- **Format-neutrality is enforced.** Analyses read the IR, never source files, and the IR
+  carries no field a second format could not populate (CONSTRAINTS C9). CI keeps it that way.
+- **Silence is never coverage.** A check that cannot evaluate reads "not applicable" or flags
+  what it could not model; it never returns a false pass. Findings cite their provenance and
+  mark unverified data. You can always tell "clean" from "not checked".
+- **Verify against reality.** Readers and rules are checked against the native tools and real
+  design exports, not only fixtures.
+- **Open core with a clear boundary.** The engine is shareable under Apache-2.0; proprietary
+  formats, house rules, and confidential designs live in an overlay that depends on it
+  without forking. See [25 — Open core](25-open-core.md).
+- **Legible to software engineers.** EDA vocabulary is mapped to concepts software engineers
+  already know; [ANALOGY.md](ANALOGY.md) is the map.
+
 **Using the tool rather than building it?** The [user guide](userguide/README.md) is for
 hardware engineers running reports, datasheets, and diffs, and opens with a
 [software-to-hardware concepts map](userguide/concepts.md). The docs below are the
@@ -33,12 +53,12 @@ maps), with circuit examples and diagrams.
 - [19 — Rules & checks](19-rules-dsl.md): the rules layer: rule expressiveness tiers, the rules-assert/analysis-computes boundary, technical prior art, and the phased evaluation model (embedded rules library first, declarative DSL later).
 - [20 — Parameter-IR](20-parameter-ir.md): the third contract (one parameter-IR, N datasheet extractors): parameter + test conditions + range + limit kind + provenance, the under-specification guard, and the join to the design IR by part identity. PROVISIONAL.
 - [21 — Doc-IR](21-document-ir.md): the extraction pipeline's intermediate: a source document decomposed into pages/tables/figures/text with bbox provenance, content-hash identity for revision diffing, and the two-tier query surface (in-process helpers now, corpus service + full-text search with the store). PROVISIONAL.
-- [23 — Authoring a check rule](23-rule-authoring.md): the practical path from checklist item to shipped rule: the sentence-then-guards method, spec-first authoring with the twin discipline, the doc-file requirement, fixture shapes, four-level verification, narrated over a real rule.
-- [22 — Net solving & the hierarchy walk](22-net-solving-and-hierarchy.md): how implicit schematic connectivity becomes nets: the shared netgraph solver (point-union, label-union, rank naming), KiCad's connection-point rules pinned against kicad-cli (mid-span labels, endpoint-only pins, name escapes), and the multi-sheet walk (instance scoping as fully-qualified names, coordinate bands, port stitching, the WS1-017 completeness witness).
+- [22 — Net solving & the hierarchy walk](22-net-solving-and-hierarchy.md): how implicit schematic connectivity becomes nets: the shared netgraph solver (point-union, label-union, rank naming), KiCad's connection-point rules pinned against kicad-cli (mid-span labels, endpoint-only pins, name escapes), and the multi-sheet walk (instance scoping as fully-qualified names, coordinate bands, port stitching, the completeness witness).
 - [23 — The web app](23-web-app.md): the browser viewer and visual diff over `agni serve`: the mount model, the four Connect services and their contract, the render/highlight contracts both renderers share, the client composition (islands, presenter, dock, router), and the recorded C3 deviation. Runnable tour: [WEB_WALKTHROUGH.md](WEB_WALKTHROUGH.md).
 - [24 — Derivation](24-derivation.md): extraction as a deterministic pipeline: PartSpec = f(document, toolchain, recipes, patches); candidate-title classification, tokenizers, patches-last, run manifests with gap lists, the trust ladder (derive/v0 confidence < human), and the golden gate against the hand-encoded corpus. Posture: CONSTRAINTS C16.
 - [25 — Open core: engine + overlay](25-open-core.md): the public Apache-2.0 engine and the private overlay that depends on it: the two personas, what lives where (the doc-placement rule extended to code), the two extension seams (`formats.Register`, `check.RegisterSource`), how an overlay requires the engine, and the `examples/overlay` reference. Posture: CONSTRAINTS C18. Practical how-to: [OVERLAY_AUTHORING.md](OVERLAY_AUTHORING.md).
 - [26 — Parameter resolution](26-parameter-resolution.md): the scheduling model for the datasheet layer (schematic-first, demand-driven): the eager/lazy seam at doc-IR ↔ PartSpec, the lazy provider behind the Model params tier (cache → recipe → model → HITL), model types as pluggable backends, the check/HITL/search user flows, recall-as-suggestion, and demand-relative coverage. DECIDED direction, not yet built.
+- [27 — Authoring a check rule](27-rule-authoring.md): the practical path from checklist item to shipped rule: the sentence-then-guards method, spec-first authoring with the twin discipline, the doc-file requirement, fixture shapes, four-level verification, narrated over a real rule.
 
 ## Format references
 

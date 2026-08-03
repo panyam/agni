@@ -34,11 +34,11 @@ the open repo, defeating the split.
 
 An overlay contributes only through two public registries — it never edits the engine.
 
-- **Readers — `formats.Register`** (WS12-003): register a `formats.Format` (extension, UI label,
+- **Readers — `formats.Register`**: register a `formats.Format` (extension, UI label,
   and the `Design`/`Geometry`/`Board` reader funcs) and the extension resolves through the CLI
   reader dispatch, the file-tree label, and the supported-extension list. One table, one code path;
   the built-ins register the same way.
-- **Rules — `check.RegisterSource`** (WS12-004): register a named `check.RuleSource` and its rules
+- **Rules — `check.RegisterSource`**: register a named `check.RuleSource` and its rules
   appear in `ListRules` and run in `CheckDesign`, namespaced `<source>/<rule>` so a private rule can
   never shadow a built-in. The engine's `DefaultCatalog()` composes the built-ins plus every
   registered source.
@@ -90,4 +90,4 @@ as the starting scaffold.
   reusable command root; today the skeleton drives the engine library directly. Tracked as a
   follow-up.
 - **Authoring a rule in a DSL** rather than Go, and **loading extensions dynamically** (no rebuild),
-  ride the WS3-004/007 DSL and WS12-002 dynamic-loader work.
+  ride the DSL and dynamic-loader work.

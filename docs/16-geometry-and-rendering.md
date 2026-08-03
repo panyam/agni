@@ -6,8 +6,7 @@ Builds on the sidecar decision in
 sidecar, not in the core IR), the stack decision in
 [14-stack-and-architecture](14-stack-and-architecture.md), and the presenter contract
 in [15-presenter-contract](15-presenter-contract.md). The format ground truth is in
-[edif-schematic-primer.md](edif-schematic-primer.md). Drives roadmap workstream WS7 and
-the data half of WS1-003.
+[edif-schematic-primer.md](edif-schematic-primer.md).
 
 This doc records how we represent schematic geometry and how we render it in the
 browser at scale (100k+ primitives per design, 82 sheets).
@@ -184,7 +183,7 @@ The reader emits tier 1 always. Tier 2 is generated for the scale path (per-shee
 upload) and shares the same underlying vertex data. Tier 1's `Point`/`Shape`/`Polyline`
 are for reads and small designs; they are not the bulk carrier.
 
-## Reader plan (WS1-003 data half)
+## Reader plan
 
 - `edif/schematic.go`: `ReadSchematic(io.Reader, sourceFile) (*geom.SchematicGeometry, error)`,
   reusing `sexpr.go`. Does **not** touch `reader.go` (the netlist extractor).
@@ -197,7 +196,7 @@ are for reads and small designs; they are not the bulk carrier.
   serializes the sidecar.
 - Join keys: `ref_des` + `source_id` (instance `&id`), `net` name, `port_ref` (primer §8).
 
-## Renderer plan (WS7)
+## Renderer plan
 
 - **SVG verification backend (built first, `render/` + `svg/`).** A pure-Go
   `SheetSVG(geometry, sheet)` renders a sheet to SVG via a small zero-dep `svg/` element
@@ -224,7 +223,7 @@ are for reads and small designs; they are not the bulk carrier.
 - **Fallback view:** a netlist-graph diagram derived from the IR alone (auto-layout),
   for when geometry is absent. Separate renderer over the same presenter contract.
 
-## WebGL renderer as built (WS7-001, WS7-002)
+## WebGL renderer as built
 
 The WebGL path reaches SVG-backend parity for a schematic sheet. What the plan above got
 right (WebGL2, upload-once, view-local camera, per-sheet) held; the presenter runtime and a
@@ -262,7 +261,7 @@ few mechanics differ:
 `geom.SchematicGeometry` is not owned by one format. It is the contract that decouples
 **producers** from **renderers**:
 - Producers: faithful readers (`edif.ReadSchematic` for `.eds`; `kicad.ReadSchematicGeometry`
-  for `.kicad_sch`, WS1-008) and the auto-layout path (`graph.Layout`, grid/layered, WS7-003).
+  for `.kicad_sch`) and the auto-layout path (`graph.Layout`, grid/layered).
 - Renderers: `render.SheetSVG` and `render.PackSheet` (tier-2 -> WebGL).
 
 A new source plugs into the contract and every renderer inherits it; a new renderer consumes
@@ -271,7 +270,7 @@ no renderer change. The corollary bites too: when two producers feed the same fi
 renderer, their conventions must be reconciled (see justify below): the shared contract
 surfaces the inconsistency instead of hiding it.
 
-## KiCad geometry reader: coordinate conventions (WS1-008)
+## KiCad geometry reader: coordinate conventions
 
 KiCad uses **two coordinate frames**, and conflating them is the trap:
 - **Library symbol graphics are Y-up** (like the geom contract). Map lib-local points straight
@@ -292,7 +291,7 @@ endpoints) is the cheap correctness signal for the transform math, but it is NOT
 rotation *direction* on symmetric 2-pin parts (the pins just swap), so eyeball the asymmetric
 symbol bodies too.
 
-## Render-fidelity fields (WS7-016)
+## Render-fidelity fields
 
 Added to the contract so a reader-produced sheet renders like the source tool:
 - `SheetGeometry.shapes`: free sheet graphics not owned by a symbol (junction dots,
@@ -306,10 +305,10 @@ Added to the contract so a reader-produced sheet renders like the source tool:
   (vertical).
 - `SymbolPlacement.fields` (`Field{name,value,origin,justify,visible,...}`) + `PinPoint.name`:
   instance text (Reference/Value/custom) is structured on the placement, not loose sheet
-  labels, so a consumer knows which text is which field (for the WS9 visual diff). Sheet
+  labels, so a consumer knows which text is which field (for the visual diff). Sheet
   labels are now only genuine free text (net labels, notes).
 
-## Text stays readable and inside its box (WS7)
+## Text stays readable and inside its box
 
 Readers carry a source's text orientation and sizing faithfully; making that text *legible*
 is the render layer's job, shared by the SVG backend and the WebGL overlay (C12: the two agree
@@ -334,7 +333,7 @@ by construction). Two rules live in `render` and are applied by both `drawText` 
 PNG of the SVG backend still shows a caption overflowing. Browsers honor it, and the viewer's
 SVG/WebGL output is browser-consumed, so it is correct in the product. Verify condensing in a real
 browser (e2e screenshot), not via an rsvg PNG or golden. Repro fixture: `edif/testdata/upsidedown.eds`
-(an R180 connector + R180 net stub with R0 controls); see PR 54.
+(an R180 connector + R180 net stub with R0 controls).
 
 ## Fidelity
 
@@ -342,7 +341,7 @@ Reader declares **lossy-bounded (render subset)** per C6. It is not a round-trip
 oracle; the schematic drawing is not reconstructed byte-for-byte, only the render
 subset is extracted.
 
-## Board geometry sidecar (WS1-006)
+## Board geometry sidecar
 
 There are two geometries and two sidecars, one per physical medium:
 
@@ -362,7 +361,7 @@ KiCad reader (`kicad.ReadBoardGeometry`, over the same s-expr parse as the netli
 reader); IPC-2581 and ODB++ producers slot in behind the same proto, keeping the
 one-contract/N-producers property.
 
-**Silkscreen / legend text (WS7).** `BoardText` carries the board's placed strings, each
+**Silkscreen / legend text.** `BoardText` carries the board's placed strings, each
 footprint's ref-des and value, plus free `gr_text` such as the title block, so both board
 renderers (`BoardSVG` and the packed/WebGL path) draw them, matching what KiCad shows.
 Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it lives in the
@@ -374,7 +373,7 @@ KiCad's default *keep_upright* so text on a rotated footprint never renders inve
 `gr_text` is exempt, so a deliberately mirrored back-side title stays mirrored). Hidden
 source text is dropped.
 
-**Silkscreen / fab graphics (WS7).** `BoardGraphic` carries the non-copper artwork the same
+**Silkscreen / fab graphics.** `BoardGraphic` carries the non-copper artwork the same
 way: a footprint's silk/fab body outlines, courtyards, and polarity marks (`fp_line`/`fp_arc`/
 `fp_circle`/`fp_poly`/`fp_rect`), plus free `gr_*` graphics that are not the board edge (the
 edge stays `BoardOutline`). It reuses `geom.Shape` for the geometry itself (POLYLINE/RECT/
@@ -388,7 +387,7 @@ Filled zone regions and per-side silk/fab default-visibility remain a later refi
 
 Tiering: only **tier 1** exists for the board today. The columnar packed transport for
 high-volume copper (the `PackedSheet` analogue) is deliberately deferred until its
-consumer, the WS7 board renderer, exists; the tier split above is the design it will
+consumer, the board renderer, exists; the tier split above is the design it will
 follow. Coordinates are nanometers (`unit_nm=1`), Y-up, matching the KiCad schematic
 reader's convention; rotations are carried verbatim from the source and composition with
 the Y-flip is the renderer's concern (documented on the proto). Fidelity is
@@ -396,8 +395,8 @@ lossy-bounded (render/DRC subset): arc tracks, zone fill polygons, teardrops, an
 references are out; zone outlines are as authored; outline arcs are approximated as
 polylines.
 
-What it enables: the WS3-008 geometric DRC class (clearance, width, annular ring) gets
-its data tier, and a WS7 board viewer gets its contract.
+What it enables: the geometric DRC class (clearance, width, annular ring) gets
+its data tier, and a board viewer gets its contract.
 
 **Copper stroke width (both renderers).** Board copper renders at its TRUE physical width,
 floored to a *physical* minimum (`minStrokeNm`, ~25µm in board space), never to a fixed
@@ -411,24 +410,24 @@ triangle quads rather than lines, so only the SVG backend needed converging. Sco
 copper; schematic wire strokes stay a fixed pixel width (line-art at readable zoom, no
 blobbing), and pad/via size-floors stay (discrete-feature visibility, a separate concern).
 
-**Buses draw distinctly (WS7-042).** `WireGeometry.kind` (unset=wire, `KIND_BUS`, `KIND_BUS_ENTRY`)
+**Buses draw distinctly.** `WireGeometry.kind` (unset=wire, `KIND_BUS`, `KIND_BUS_ENTRY`)
 lets the readers flag a bus trunk/entry so both renderers style it apart from a net wire: the SVG
 backend strokes it thicker (`busStrokePx`) in the bus color (`Style.Bus`), and the WebGL packer
 tessellates it to true-width triangle quads in a distinct `groupBus` (12, past the board strata in
 the shared group space) with `quadPts`, the same "GL lines are ~1px, so widen via quads" path copper
 takes. The kind is format-neutral (KiCad sets it today from `bus`/`bus_entry`; a bus carries no net,
-so its member nets stay unmodeled, WS1-034). The packed palette only grows to cover `groupBus` on a
+so its member nets stay unmodeled). The packed palette only grows to cover `groupBus` on a
 sheet that actually packs a bus, so a bus-less sheet's bytes are unchanged. A `bus-not-modeled`
 finding HIGHLIGHTS its drawn trunk on click, keyed by the bus NAME (`WireGeometry.Net`, gated on the
 bus kind so a same-named net wire is not caught), via OUTLINE (recolor in place — a bus is already
 thick, so the net-focus PATH shape is unneeded and mis-tessellates the WebGL quads). The reader names
 the bus wire from its source label (KiCad range-label-on-wire; gEDA/xschem inline), which is also the
-finding subject, so the join is by name (WS7-042b; not the uuid an early cut assumed — WS1-034 Phase 2
-made bus detection name-keyed). An UNDRAWABLE bus (a `bus_alias`, an EDIF `array`, a hierarchical port
+finding subject, so the join is by name (not the uuid an early cut assumed, since bus detection is
+name-keyed). An UNDRAWABLE bus (a `bus_alias`, an EDIF `array`, a hierarchical port
 with no drawn wire) shows a server-authoritative "bus not drawn" note instead, computed in
-`AnnotateSheets` from the drawn-`KIND_BUS`-name index (WS7-042c).
+`AnnotateSheets` from the drawn-`KIND_BUS`-name index.
 
-### Second producer: IPC-2581, and the contract's first second-format audit (WS1-023)
+### Second producer: IPC-2581, and the contract's first second-format audit
 
 `ipc2581.ReadBoardGeometry` is the second `BoardGeometry` producer. The proto was designed
 from one producer (KiCad), so the second is also the audit that proves the fields are not
@@ -458,7 +457,7 @@ Scope landed across two PRs: placements, pads, layers, and outline first; then r
 as the annular). That lights all four board DRC rules on IPC-2581 (track-width, copper-clearance,
 hole-size, annular-width).
 
-**Full producer parity (WS1-031, PRs 152/153).** The second producer initially lagged the
+**Full producer parity.** The second producer initially lagged the
 contract: fields KiCad filled sat empty on IPC. That gap is now closed, all into existing
 fields with no proto change: component **VALUE** (`Component>NonstandardAttribute`) →
 `ir.Component` attrs; silk/fab **graphics** (`Package` `Marking`/`Outline`/`AssemblyDrawing`,
@@ -471,9 +470,9 @@ pinned: the fill is nested under `Set>Features>Contour`, not a direct child (a f
 passed while the real board rendered zero zones, caught only by the corpus-render rule), and a
 drill layer's `<Span>` lives on the `Layer`, not the `Hole`. Non-via copper lands, fill cutouts,
 and the padstack def/instance indirection remain ledgered (no consumer yet); stackup materials
-are WS1-036.
+are a later refinement.
 
-**Two render-faithfulness bugs on real Allegro exports (PR 154).** Both passed unit fixtures
+**Two render-faithfulness bugs on real Allegro exports.** Both passed unit fixtures
 and showed only on a corpus PNG render. (1) Cadence Allegro writes `clockwise="TRUE"/"FALSE"`
 in UPPERCASE; a case-sensitive `== "true"` read every clockwise arc as counter-clockwise, so it
 swept the long way and ballooned outline/copper arcs, parse with `strings.EqualFold`. (2) A
@@ -483,7 +482,7 @@ copper and blew up the render bounds. General lesson for any second producer: a 
 is copper on one layer is drawing geometry on another: classify by the source `layerFunction`,
 not by the element name.
 
-## Auto-layout node drawing (WS7-025..032)
+## Auto-layout node drawing
 
 The netlist-graph fallback (`graph.Layout`, `agni render --layout=grid|layered`) has no source
 geometry, so it synthesizes a `SchematicGeometry` from the IR. `graph/assemble` decides what to

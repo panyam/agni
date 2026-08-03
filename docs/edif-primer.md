@@ -17,7 +17,7 @@ tool database, so EDIF can already be lossy relative to that (see docs/13).
 Our files are exported by Siemens/Mentor xDX Designer, `edifVersion 2 0 0`,
 `edifLevel 0`. Two views:
 - `.edn` netlist (10MB): connectivity. This is what demo one parses.
-- `.eds` schematic (62MB): adds geometry/graphics. Future geometry sidecar (WS1-003).
+- `.eds` schematic (62MB): adds geometry/graphics. Future geometry sidecar.
 
 ### Versions, and why we target 2.0.0 (with readiness for later)
 
@@ -126,7 +126,7 @@ node in the tree, since they only occur there.
    naive "duplicate ref-des" check is wrong.
 4. **NETLIST vs SCHEMATIC views.** The `.edn` has only connectivity. Geometry (symbol
    shapes, coordinates, routing) lives in the `.eds` SCHEMATIC view, out of scope for
-   the netlist reader (see geometry sidecar, WS1-003).
+   the netlist reader (see geometry sidecar).
 5. **`edifLevel 0`** = static, no parameters/expressions. Simpler to parse.
 
 ## How we map EDIF -> our IR

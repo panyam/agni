@@ -10,13 +10,13 @@ builds on the private research notes on component data.
 Status: PROVISIONAL, the same posture as the IR's tier-2 physical messages. No
 extractor populates the schema yet; it is validated by two hand-encoded fixtures
 (`param/testdata/`) transcribed from real datasheets. Names and shape may change until
-the first extractor (WS10-002) lands.
+the first extractor lands.
 
 ## The core decision: a parameter is not a scalar
 
 "RDS(on) = 3.5 Ω" is not a fact about a part. "RDS(on) max 3.5 Ω at VGS = 10 V,
 ID = 0.22 A, TJ = 25 °C, pulse-tested" is. A validation engine that compares design
-state against datasheet limits (WS10-003) is only safe if the schema makes it
+state against datasheet limits is only safe if the schema makes it
 impossible to hold the first form without noticing. Three schema features enforce
 that:
 
@@ -52,7 +52,7 @@ the exact datasheet page is a liability. Zero confidence is invalid by construct
 value nobody stands behind is not emitted. Hand-encoded values use `method: "hand"`,
 `confidence: 1`.
 
-`SourceDoc.locator` is corpus-local on purpose. The deployment posture (WS10-002) is
+`SourceDoc.locator` is corpus-local on purpose. The deployment posture is
 internal-seed: the customer's datasheets and the extracted database never leave their
 boundary, so locators are only meaningful inside one deployment and the schema carries
 no assumption of a shared global document store.
@@ -61,12 +61,12 @@ no assumption of a shared global document store.
 
 The join key is part identity: `PartSpec.mpn` + `PartSpec.manufacturer`, matching
 `ir.BomLine.mpn` / `ir.BomLine.manufacturer`. The dependency points one way: the
-readers and the IR never import the parameter layer; the WS10-003 validation join
+readers and the IR never import the parameter layer; the validation join
 consumes both contracts. When a design carries no BOM/MPN data (a bare netlist), the
 join has no key and parameter checks skip, the same skip-not-false-pass behavior
-WS10-003 specifies for unseeded parts.
+specified for unseeded parts.
 
-Implemented (the WS10-003 slice): `param.Set`/`param.LoadSet` hold the seeded corpus;
+Implemented: `param.Set`/`param.LoadSet` hold the seeded corpus;
 the check `Model`'s params tier (`check.NewModelWithParams`, `Model.PartSpec`) is the
 join, BomLine MPN first, else the component's MPN attribute (the KiCad reader carries
 the MPN/Manufacturer symbol properties into attributes), case-insensitive, nothing
@@ -77,19 +77,19 @@ supply-symbol alias map in the model layer. Rule text never names a vendor symbo
 Its findings carry the design site in `Prov` and the datasheet citation (document
 revision, page, table, method, confidence) in the message.
 
-The second rule, `cap-voltage` (WS10-005), is the first spec-authored datasheet rule
+The second rule, `cap-voltage`, is the first spec-authored datasheet rule
 (docs/19 "a rule is a value", no Go twin): the body is a `check.Spec`, the join and
 the float compare live behind the `cap_voltage_detail` SpecFunc, and the FFI's
 declared reads flow into the rule's derived metadata, `param.cap_rated_voltage`,
 `net.max_voltage`, `component.mpn` appear as named relations without hand-maintained
-lists (the WS3-004 fact-capture seed). Rail voltage is declared (a `max_voltage` net
+lists. Rail voltage is declared (a `max_voltage` net
 attribute, else the name-derived nominal); the assertion is
 `Vrated >= rail_V x 1.25`, with the derate constant until rule parameterization lands.
 
 ## Comparison semantics before normalization
 
-Values, units, and symbols are as printed, so the comparison layer (WS10-003) meets
-vendor variety before WS10-004 normalization exists. Three rules keep it honest, all
+Values, units, and symbols are as printed, so the comparison layer meets
+vendor variety before normalization exists. Three rules keep it honest, all
 variants of the same posture: when a comparison cannot be made safely, stay silent,
 never improvise.
 
@@ -100,16 +100,16 @@ never improvise.
   `param.MachineComparable` names that boundary: only rows whose every condition is
   structured (`eq` or `min`/`max`) may enter an automatic comparison. The middle state
   (captured but text-only) is surfaced, never auto-compared.
-- **Unlike unit strings are under-specified for comparison.** Until WS10-004 provides
-  canonical units, a comparison between values whose unit strings differ ("mA" vs
+- **Unlike unit strings are under-specified for comparison.** Until canonical units
+  exist, a comparison between values whose unit strings differ ("mA" vs
   "A", "mOhm" vs "Ohm") is skipped or flagged, never ad-hoc converted. Conversion
   logic written at a call site is a second, informal normalization layer, which is
-  exactly the drift WS10-004 exists to prevent.
+  exactly the drift normalization exists to prevent.
 - **Vendor symbols never appear in rule text.** The same physical parameter prints as
   "VDC", "WV", or "Rated Voltage" depending on vendor. `symbol` is the per-vendor
   match key, but the lookup lives behind the join/Model layer (a per-corpus alias
   map), so a rule asks for a concept and no rule hardcodes one vendor's spelling.
-  This precedent matters before the first datasheet-backed rule (WS10-005) lands.
+  This precedent matters before the first datasheet-backed rule lands.
 
 ## What is deliberately absent
 
@@ -118,16 +118,16 @@ it) applies here with "vendor datasheet" in place of "format":
 
 - **No canonical parameter ids, no canonical units.** `Parameter.canonical_id` exists
   but stays empty; `symbol` and `unit` are as printed. Normalization and the ontology
-  are WS10-004, and doing them prematurely would bake one vendor's vocabulary in as
+  are a later phase, and doing them prematurely would bake one vendor's vocabulary in as
   "canonical". The fixtures keep "IOUT = 800 mA" as 800 mA, not 0.8 A.
 - **No graph/curve data.** Derating and SOA curves are real and valuable, but they are
-  the harder extraction (WS10-002 defers them) and their shape (sampled curves? fitted
+  the harder extraction (deferred for now) and their shape (sampled curves? fitted
   models?) should be designed against real extractor output, not guessed.
 - **No verification-workflow state** (reviewed-by, approved). The human-in-the-loop
-  workflow belongs to the extraction pipeline and store (WS10-002/003); until it
+  workflow belongs to the extraction pipeline and store; until it
   exists, `method` + `confidence` carry what the schema needs. Anything extra goes in
   `attributes`.
-- **No package/pin data.** Package compatibility checks (WS10-003) join through the
+- **No package/pin data.** Package compatibility checks join through the
   design IR's footprint tier when they arrive; duplicating package data here would
   create a second source of truth.
 
