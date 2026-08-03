@@ -5,9 +5,9 @@ description: "Extend the engine: readers, rules, overlays."
 
 These guides are for people extending Agni. They assume you read Go.
 
-- **[Adding a format reader](format-reader/)** &mdash; wire a new EDA format into the neutral IR.
-- **[Authoring a check rule](check-rule/)** &mdash; from a checklist item to a shipped rule.
-- **[Authoring an overlay](overlay/)** &mdash; a private module with your own readers and house rules,
+- **[Adding a format reader](format-reader/)**: wire a new EDA format into the neutral IR.
+- **[Authoring a check rule](check-rule/)**: from a checklist item to a shipped rule.
+- **[Authoring an overlay](overlay/)**: a private module with your own readers and house rules,
   depending on the public engine without forking it.
-- **[Native verification](native-verification/)** &mdash; check a reader against the format's own EDA
+- **[Native verification](native-verification/)**: check a reader against the format's own EDA
   tool as an oracle.

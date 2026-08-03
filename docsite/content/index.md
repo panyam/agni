@@ -6,7 +6,7 @@ hideTitle: true
 
 <div class="home-hero">
 <h1>Agni</h1>
-<p class="hero-subtitle">Read schematics and boards from many EDA formats into one neutral intermediate representation, then check, diff, query, and render them.</p>
+<p class="hero-subtitle">A project for learning hardware design by building tooling for it. Agni reads schematics and boards from several EDA formats into one representation, then lets you check, diff, query, and render them.</p>
 <div class="hero-actions">
 <a href="{{.Site.PathPrefix}}/guide/getting-started/" class="btn btn-primary">Get started</a>
 <a href="{{.Site.PathPrefix}}/overview/" class="btn btn-secondary">What is Agni</a>
@@ -42,7 +42,7 @@ hideTitle: true
 <div class="section-cards">
 <a href="{{.Site.PathPrefix}}/guide/" class="section-card">
 <h3>Use it</h3>
-<p>Install Agni and run checks, diffs, and queries on a design. For hardware engineers; no Go required.</p>
+<p>Install Agni and run checks, diffs, and queries on a design. For hardware engineers, no Go required.</p>
 </a>
 <a href="{{.Site.PathPrefix}}/build/" class="section-card">
 <h3>Build on it</h3>

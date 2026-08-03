@@ -1,6 +1,6 @@
 {
   "siteName": "Agni",
-  "siteDescription": "An EDA tooling engine: read schematics and boards from many formats into one neutral IR, then check, diff, query, and render them.",
+  "siteDescription": "A project for learning hardware design by building tooling for it: read schematics and boards from several EDA formats into one representation, then check, diff, query, and render them.",
   "version": "0.1.0",
   "author": "Sriram Panyam",
   "repository": "https://github.com/panyam/agni",

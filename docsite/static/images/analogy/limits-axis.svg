@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="190" font-family="system-ui,sans-serif" font-size="12">
+  <text x="320" y="18" text-anchor="middle" fill="#808080">LimitKind on one axis (LM1117 input voltage)</text>
+  <!-- axis -->
+  <line x1="60" y1="100" x2="600" y2="100" stroke="#808080" marker-end="url(#x)"/>
+  <text x="610" y="104" fill="#808080" font-size="10">VIN</text>
+  <!-- bands -->
+  <rect x="60" y="88" width="330" height="24" fill="#5aa06a" opacity="0.25"/>
+  <rect x="390" y="88" width="110" height="24" fill="#d9c34a" opacity="0.3"/>
+  <rect x="500" y="88" width="100" height="24" fill="#d95a4a" opacity="0.3"/>
+  <!-- ticks -->
+  <line x1="390" y1="82" x2="390" y2="118" stroke="#5aa06a"/>
+  <text x="390" y="75" text-anchor="middle" fill="#5aa06a" font-size="11">15 V recommended-operating</text>
+  <text x="390" y="135" text-anchor="middle" fill="#5aa06a" font-size="10">(the supported SLA envelope)</text>
+  <line x1="500" y1="82" x2="500" y2="118" stroke="#d95a4a"/>
+  <text x="500" y="75" text-anchor="middle" fill="#d95a4a" font-size="11">20 V absolute-max</text>
+  <text x="500" y="135" text-anchor="middle" fill="#d95a4a" font-size="10">(undefined behavior past here)</text>
+  <text x="160" y="160" fill="#808080" font-size="10">characteristics (dropout 1.2V typ @ IOUT=800mA, TJ=25C) = benchmark numbers under stated test configs</text>
+  <defs><marker id="x" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8" fill="none" stroke="#808080"/></marker></defs>
+</svg>

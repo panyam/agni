@@ -4,8 +4,8 @@ description: "From nothing to a first checked design in a few minutes."
 ---
 
 This page gets you from nothing to a first checked design in a few minutes. It assumes the
-vocabulary from [Concepts](../concepts/) (what a *finding*, a *tier*, and *provenance* mean);
-if a word here is unfamiliar, that page is the glossary.
+vocabulary from [Concepts](../concepts/) (what a *finding*, a *tier*, and *provenance* mean).
+If a word here is unfamiliar, that page is the glossary.
 
 ## Install
 
@@ -68,7 +68,7 @@ plain-language reason in parentheses. Each finding also carries its provenance: 
 and table, the finding came from.
 
 Severity is a policy signal, not a measure of certainty. An `error` is something you almost
-certainly must fix (an I2C bus with no pull-up will not communicate); `info` is a note worth
+certainly must fix (an I2C bus with no pull-up will not communicate). `info` is a note worth
 a look.
 
 ## A clean run, and why "no findings" has a number in it
