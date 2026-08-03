@@ -1,0 +1,9 @@
+# Build output
+dist/
+
+# esbuild-generated component bundles and their template includes
+static/js/gen/
+templates/gen.*.html
+
+# node deps (only needed when building playground components)
+node_modules/

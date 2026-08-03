@@ -1,0 +1,49 @@
+{{# include "nav/GuideNav.html" #}}
+{{# include "nav/BuildNav.html" #}}
+{{# include "nav/ArchitectureNav.html" #}}
+{{# include "nav/ReferenceNav.html" #}}
+{{# include "nav/DecisionsNav.html" #}}
+
+{{ define "Sidebar" }}
+<aside class="sidebar">
+    <div class="sidebar-content">
+        {{ $currentPath := .Res.FullPath }}
+
+        {{ if .FrontMatter.toc }}
+        <div class="toc">
+            <h3>On This Page</h3>
+            <div id="toc-container"></div>
+        </div>
+        {{ end }}
+
+        <nav class="section-nav">
+            {{ if (Contains $currentPath "/guide/") }}
+                {{ template "GuideNav" . }}
+            {{ else if (Contains $currentPath "/build/") }}
+                {{ template "BuildNav" . }}
+            {{ else if (Contains $currentPath "/architecture/") }}
+                {{ template "ArchitectureNav" . }}
+            {{ else if (Contains $currentPath "/reference/") }}
+                {{ template "ReferenceNav" . }}
+            {{ else if (Contains $currentPath "/decisions/") }}
+                {{ template "DecisionsNav" . }}
+            {{ else }}
+                <div class="section-nav-content">
+                    <h3>Start here</h3>
+                    <ul>
+                        <li><a href="{{.Site.PathPrefix}}/overview/">Overview</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/guide/getting-started/">Getting started</a></li>
+                    </ul>
+                    <h3>Sections</h3>
+                    <ul>
+                        <li><a href="{{.Site.PathPrefix}}/guide/">Use it</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/build/">Build on it</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/architecture/">Understand it</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/reference/">Reference</a></li>
+                    </ul>
+                </div>
+            {{ end }}
+        </nav>
+    </div>
+</aside>
+{{ end }}
