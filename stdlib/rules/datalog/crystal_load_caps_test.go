@@ -9,6 +9,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // installs the built-in catalog this parity test reads
 )
 
 // plainComp is a component whose class comes from its ref-des prefix alone (no part data): Y -> crystal,
@@ -70,7 +71,7 @@ func findingKeys(fs []check.Finding) []string {
 }
 
 func goRuleByName(name string) *check.Rule {
-	for _, r := range check.Rules {
+	for _, r := range check.BuiltinRules() {
 		if r.Name == name {
 			return r
 		}
@@ -86,7 +87,7 @@ func TestCrystalDatalogParity(t *testing.T) {
 
 	goRule := goRuleByName("crystal-load-caps")
 	if goRule == nil {
-		t.Fatal(`built-in rule "crystal-load-caps" not found in check.Rules`)
+		t.Fatal(`built-in rule "crystal-load-caps" not found in the built-in catalog`)
 	}
 	want := findingKeys(goRule.Eval(m))
 	got := findingKeys(crystalLoadCapsDL.Eval(m))

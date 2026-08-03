@@ -12,14 +12,43 @@ type RuleSource interface {
 }
 
 // Builtins is the built-in rule set as a RuleSource — the default (and only anonymous)
-// source. It reads the Rules registry at call time, so rules registered by package init
-// are always included.
+// source. It reads the installed built-in registry at call time, so the rules registered by
+// stdlib/rules/builtin's init (via RegisterBuiltins) are always included. With that package
+// not imported the built-in set is empty, and the engine runs whatever sources ARE registered
+// — the open-core posture where the core owns no rules.
 var Builtins RuleSource = builtins{}
 
 type builtins struct{}
 
 func (builtins) Name() string   { return "" }
-func (builtins) Rules() []*Rule { return Rules }
+func (builtins) Rules() []*Rule { return builtinRules }
+
+// builtinRules and builtinSpecs are the standard rule catalog and its declarative-twin map,
+// installed by stdlib/rules/builtin at init through RegisterBuiltins. They are empty in a
+// program that does not import that package.
+var (
+	builtinRules []*Rule
+	builtinSpecs map[string]*Spec
+)
+
+// RegisterBuiltins installs the standard EE rule catalog as the anonymous built-in source. It is
+// the built-in analogue of RegisterSource: stdlib/rules/builtin calls it from its init so the
+// rules pass through the Catalog bare (the empty source name is reserved for the built-ins), while
+// overlay suites register named and are namespaced. rules is exposed through Builtins (and
+// BuiltinRules); specs is the Go-eval'd rules' declarative twins (BuiltinSpecs), held to their Go
+// Eval by the parity tests. Calling it more than once replaces the set (the last import wins);
+// there is exactly one built-in source, so this is a set, not an append.
+func RegisterBuiltins(rules []*Rule, specs map[string]*Spec) {
+	builtinRules, builtinSpecs = rules, specs
+}
+
+// BuiltinRules returns the installed built-in rule set (empty when stdlib/rules/builtin is not
+// imported). Callers must not mutate the returned slice.
+func BuiltinRules() []*Rule { return builtinRules }
+
+// BuiltinSpecs returns the built-in rules' declarative-twin map (empty when stdlib/rules/builtin
+// is not imported). Callers must not mutate the returned map.
+func BuiltinSpecs() map[string]*Spec { return builtinSpecs }
 
 // NewSource wraps a fixed rule slice as a named RuleSource: the one-liner for an embedder's
 // suite or a test source. The name becomes the namespace prefix; it must match the Catalog's

@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/agni/core/review"
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rules into DefaultCatalog
 )
 
 // fsReviewLoader is a filesystem-backed reviewLoader over the CLI's own review fixtures, so the

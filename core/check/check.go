@@ -96,13 +96,13 @@ const (
 // own keys, and the catalog UI pivots by whatever keys are present. Nothing in the engine or the
 // IR depends on a Tag, so a new axis needs no core change.
 type Rule struct {
-	Name       string            // stable identifier, e.g. "single-pin-net"
-	Severity   string            // "error" | "warning" | "info"
-	Summary    string            // one-line description for listings
-	Impact     string            // what goes wrong when violated
-	Detail     string            // long-form markdown: meaning, rationale, diagram, query structure
-	Primitives []string          // query primitives Eval composes (docs/19)
-	Reads      []string          // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))
+	Name       string   // stable identifier, e.g. "single-pin-net"
+	Severity   string   // "error" | "warning" | "info"
+	Summary    string   // one-line description for listings
+	Impact     string   // what goes wrong when violated
+	Detail     string   // long-form markdown: meaning, rationale, diagram, query structure
+	Primitives []string // query primitives Eval composes (docs/19)
+	Reads      []string // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))
 	// OptionalReads is the subset of Reads a rule consults opportunistically: their absence
 	// does not make the rule inapplicable. Available's tier-gate skips them, so a netlist rule
 	// that only EXEMPTS findings using a datasheet fact (esd-protection crediting an IC's ESD
@@ -136,10 +136,12 @@ func Run(m Model, rules []*Rule) []Finding {
 	return out
 }
 
-// RunDesign evaluates the built-in Rules over the default Model for d: the common entry point
+// RunDesign evaluates the built-in rule set over the default Model for d: the common entry point
 // when a caller just has a design and wants the standard checks. It builds the shared Model
-// once (NewModel) and hands it, with Rules, to Run.
-func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), Rules) }
+// once (NewModel) and hands it, with the installed built-ins, to Run. The built-ins are installed
+// by importing stdlib/rules/builtin; without that import the set is empty and RunDesign returns
+// no findings.
+func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), builtinRules) }
 
 // Report maps a selection to findings (the report step every rule ends with). Subject and
 // Prov come from the selected entity via mk.

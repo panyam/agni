@@ -12,13 +12,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/datasheet/param"
-	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/stdlib/rules/builtin"
 )
 
 // serveCmd hosts the web viewer over HTTP for local development. It serves three things on
@@ -114,7 +115,7 @@ func serveCmd() *cobra.Command {
 			// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
 			// served read-only so the rules/expectations panels resolve their relative image refs
 			// (WS9-030). Images only, from the embed FS only — no filesystem access.
-			mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/", check.RuleDocImageHandler()))
+			mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/", builtin.RuleDocImageHandler()))
 			// The per-relation fact-doc schematic cards (WS14-005), same read-only image-only posture
 			// as the rule docs, so the query panel resolves a relation Detail's image refs.
 			mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", check.RelationDocImageHandler()))

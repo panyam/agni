@@ -6,6 +6,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/diff"
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog (check.RunDesign runs it)
 )
 
 func TestDesigns(t *testing.T) {
