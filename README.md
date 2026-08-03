@@ -38,3 +38,9 @@ unit tests); CI runs exactly that.
 - [examples/README.md](examples/README.md) — runnable walkthroughs, one per feature.
 - [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules; read before
   proposing changes.
+- [docs/25-open-core.md](docs/25-open-core.md) — the open-core split: the public engine
+  and how a private overlay adds proprietary readers and rules without forking it.
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

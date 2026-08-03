@@ -129,8 +129,7 @@ the boundary above.
   courtyard) need pad-shape and zone-fill facts; external joins (Tier X) need the parts/spec
   data source. Both are additive; the evaluation model below does not change.
 
-The corpus-derived sequencing (the WS3-003 lock; the concrete corpus is in the private
-roadmap notes) splits the not-yet-built rules by what each waits on:
+The corpus-derived sequencing (the WS3-003 lock; the concrete corpus is maintained internally) splits the not-yet-built rules by what each waits on:
 
 - **Buildable now, pure netlist:** signal-net naming convention, TX/RX connection-role
   compatibility, test-point coverage; diode orientation once pin polarity roles land (a
@@ -498,8 +497,7 @@ the same way.
 The survey's open question was whether `select / traverse / exists / count` is enough for
 Phase 1. Working a real design-rule corpus (naming conventions, differential-pair integrity,
 logic-level compatibility, component-value-vs-recommendation, ESD protection, part
-orientation, connection-role compatibility, test-point coverage; the concrete set is in the
-private roadmap notes) back to the machinery each rule needs gives the answer: **no, four is
+orientation, connection-role compatibility, test-point coverage; the concrete set is maintained internally) back to the machinery each rule needs gives the answer: **no, four is
 short by five.** The Phase-1 primitives are nine, and all nine stay inside the bounded ceiling
 above (Datalog / relational + arithmetic, not Turing-complete).
 
@@ -593,8 +591,7 @@ both-net), passive MPN-missing (Tier X), I2C pull-up, test-coverage report. Plus
 existing `check/` connectivity rules as the seed. These are the Phase-1 library's first rules
 and the acceptance set for its primitives.
 
-This starter set has since been broadened into a larger real design-rule corpus (kept in the
-private roadmap notes) that drove the nine-primitive set above. That corpus is the working
+This starter set has since been broadened into a larger real design-rule corpus (kept internally) that drove the nine-primitive set above. That corpus is the working
 acceptance set: each primitive earns its place by being what a real rule in the corpus needs.
 
 ## Open questions
