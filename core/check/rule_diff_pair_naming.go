@@ -2,7 +2,6 @@ package check
 
 import (
 	"fmt"
-	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -45,40 +44,6 @@ var diffPairNaming = &Rule{
 			}
 		})
 	},
-}
-
-// diffConventionPresent reports whether the design uses differential-pair naming at all: at
-// least one net has its expected complement present (a complete X_P/X_N pair). It is the
-// pair-population evidence that gates orphan reporting, so a design with no differential pairs
-// stays silent even when names coincidentally carry a _P/_DP/+ suffix.
-func diffConventionPresent(m Model) bool {
-	for _, n := range m.Nets() {
-		if neg, ok := expectedDiffNegative(n.Name); ok && m.HasNetName(neg) {
-			return true
-		}
-	}
-	return false
-}
-
-// expectedDiffNegative returns the complementary negative net name for a differential-pair
-// positive member, and ok=false when the name is not a positive member. Suffix families:
-// "_P"/"_N", "_DP"/"_DN", and trailing "+"/"-". Matching is case-insensitive; the returned name
-// preserves the source casing so the message reads naturally.
-func expectedDiffNegative(name string) (string, bool) {
-	up := strings.ToUpper(name)
-	switch {
-	case strings.HasSuffix(up, "_DP"), strings.HasSuffix(up, "_P"):
-		// Both end in P; flip only the trailing P/p to N/n, preserving case.
-		last := name[len(name)-1]
-		flip := "N"
-		if last == 'p' {
-			flip = "n"
-		}
-		return name[:len(name)-1] + flip, true
-	case strings.HasSuffix(name, "+"):
-		return name[:len(name)-1] + "-", true
-	}
-	return "", false
 }
 
 // diffPairNamingSpec is the rule's declarative twin (WS3-003): the complement name is a Let

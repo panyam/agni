@@ -2,8 +2,6 @@ package check
 
 import (
 	"fmt"
-
-	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // supplyExceedsAbsMax flags a power-input pin fed by a rail whose nominal voltage
@@ -68,18 +66,4 @@ var supplyExceedsAbsMax = &Rule{
 		}
 		return out
 	},
-}
-
-// citation renders the datasheet side of a finding's dual provenance as a message string: which
-// document revision, page, and table the limit came from, and how it was extracted. The design side
-// travels in Finding.Prov; the same facts also travel structured in Finding.DatasheetProv (built via
-// datasheetCitationOf, which this shares), so a renderer can column them instead of parsing this text.
-func citation(spec *parampb.PartSpec, p *parampb.Parameter) string {
-	c := datasheetCitationOf(spec, p)
-	doc := c.Doc
-	if doc == "" {
-		doc = "unknown source"
-	}
-	return fmt.Sprintf("datasheet %q page %d, %q (%s, confidence %g)",
-		doc, c.Page, c.Section, c.Method, c.Confidence)
 }
