@@ -26,17 +26,17 @@
 :root.dark,
 [data-theme="dark"] {
     --primary-color: #f87171;
-    --secondary-color: #a8a29e;
+    --secondary-color: #b8ada6;
     --accent-color: #fb923c;
-    --text-color: #f5f0ec;
-    --text-light: #a8a29e;
-    --bg-color: #1c1512;
-    --bg-light: #292018;
-    --border-color: #44403c;
-    --code-bg: #14100e;
+    --text-color: #f8f2ed;
+    --text-light: #b8ada6;
+    --bg-color: #0e0a08;
+    --bg-light: #1a130f;
+    --border-color: #33261f;
+    --code-bg: #0a0705;
     --code-color: #f5f5f4;
     --link-color: #fca5a5;
-    --link-hover: #fecaca;
+    --link-hover: #fed7d7;
 
     /* Notation component variables (dark mode) */
     --notation-stroke-color: #e5e5e5;
@@ -381,7 +381,7 @@ pre code {
 
 /* Footer */
 .site-footer {
-    background-color: var(--secondary-color);
+    background-color: #17110e;
     color: white;
     padding: 3rem 2rem 1rem;
     margin-top: 4rem;
@@ -1152,9 +1152,29 @@ pre code {
 }
 
 /* Responsive */
+/* Keep wide content inside its column on every screen size */
+.content-body pre {
+    overflow-x: auto;
+}
+
+.content-body table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.content img,
+.content svg,
+.mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
 @media (max-width: 768px) {
     .page-container {
         grid-template-columns: 1fr;
+        padding: 1rem;
+        gap: 1.25rem;
     }
 
     .sidebar {
@@ -1163,7 +1183,31 @@ pre code {
 
     .header-container {
         flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0 1rem;
+    }
+
+    /* The nav does not wrap; let it scroll horizontally instead of
+       pushing the page wider than the viewport. */
+    .main-nav {
+        width: 100%;
+        overflow-x: auto;
         gap: 1rem;
+        padding-bottom: 0.25rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .home-hero {
+        padding: 2.5rem 1.25rem;
+    }
+
+    .home-hero h1 {
+        font-size: 2.2rem;
+    }
+
+    .content-header h1 {
+        font-size: 1.9rem;
     }
 
     .notation-btn-text {
