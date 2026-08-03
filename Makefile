@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test serve ui natimage natup natdown natlogs
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test serve demo ghinstall ghserve ghbuild ghdeploy ui natimage natup natdown natlogs
 
 all: proto build
 
@@ -100,9 +100,9 @@ demo: ui
 	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
 	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
 
-# Documentation site (mkdocs-material over docs/). docs-install builds a repo-local venv from
-# docs/requirements.txt (pinned, shared with the Pages CI). docs-serve is the live local
-# preview; it renders identically to the deployed GitHub Pages site. docs-deploy pushes the
+# Documentation site (mkdocs-material over docs/). ghinstall builds a repo-local venv from
+# docs/requirements.txt (pinned, shared with the Pages CI). ghserve is the live local
+# preview; it renders identically to the deployed GitHub Pages site. ghdeploy pushes the
 # built site to the gh-pages branch (needs Pages set to serve from that branch, and a plan
 # that allows Pages on this repo).
 DOCS_VENV ?= .venv-docs
@@ -112,15 +112,15 @@ $(DOCS_BIN)/mkdocs:
 	$(DOCS_BIN)/pip install -q --upgrade pip
 	$(DOCS_BIN)/pip install -q -r docs/requirements.txt
 
-docs-install: $(DOCS_BIN)/mkdocs
+ghinstall: $(DOCS_BIN)/mkdocs
 
-docs-serve: docs-install
+ghserve: ghinstall
 	$(DOCS_BIN)/mkdocs serve
 
-docs-build: docs-install
+ghbuild: ghinstall
 	$(DOCS_BIN)/mkdocs build --site-dir site
 
-docs-deploy: docs-install
+ghdeploy: ghinstall
 	$(DOCS_BIN)/mkdocs gh-deploy --force
 
 # Install the web viewer's node dependencies. Run once before the first build (or after
