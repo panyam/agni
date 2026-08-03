@@ -93,6 +93,13 @@ SYMBOL_FLAGS := $(foreach p,$(SYMBOL_PATH),--symbol-path $(p))
 serve: ui
 	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) web
 
+# One-command self-contained demo. Builds the web bundle and serves the viewer with only the
+# shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
+# left tree, and explore the render, checks, and query panels. See demo/README.md.
+demo: ui
+	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
+	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
+
 # Install the web viewer's node dependencies. Run once before the first build (or after
 # dependency changes); ui and web-test assume it has run.
 web-install:
