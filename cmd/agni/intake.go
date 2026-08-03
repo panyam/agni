@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/intake"
 	"github.com/panyam/agni/datasheet/param"
 	"github.com/spf13/cobra"

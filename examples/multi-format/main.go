@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/panyam/demokit"
-	"github.com/panyam/agni/diff"
+	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/examples/common"
 )
 

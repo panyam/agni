@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/readers/formats"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/agni/review"
+	"github.com/panyam/agni/core/review"
 )
 
 // fsReviewLoader is a filesystem-backed reviewLoader over the CLI's own review fixtures, so the

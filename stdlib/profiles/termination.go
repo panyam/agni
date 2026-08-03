@@ -3,8 +3,8 @@ package profiles
 import (
 	"fmt"
 
-	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 )
 
 // terminationRule (WS3-045) fires when an interface is in use but its two designated signal nets are

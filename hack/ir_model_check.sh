@@ -18,7 +18,7 @@ BASELINE="hack/ir_model_baseline.txt"
 # top-level ANALYSIS/TRANSFORM that takes designs as its input (not a helper handed the design to
 # scan). Never scanned. Readers (edif..geda) + formats + netgraph produce IR; graph/diff/validate
 # are top-level netlist consumers that use no Model index; examples are demos. See C19.
-EXCLUDE='^(gen|readers|internal/netgraph|examples|graph|diff|validate)/'
+EXCLUDE='^(gen|readers|internal/netgraph|examples|core/graph|core/diff|core/validate)/'
 
 current() {
   grep -rEn 'func [^{]*\*ir\.Design' --include='*.go' . 2>/dev/null | sed -E 's#^\./##' \

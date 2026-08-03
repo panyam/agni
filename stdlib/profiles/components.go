@@ -1,7 +1,7 @@
 package profiles
 
 import (
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // Components returns the set of component RefDes that belong to interface p on this design — the parts

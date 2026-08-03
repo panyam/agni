@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/classify"
+	"github.com/panyam/agni/core/classify"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/graph"
+	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/readers/kicad"
 )

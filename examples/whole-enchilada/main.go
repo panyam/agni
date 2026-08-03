@@ -21,12 +21,12 @@ import (
 	"os"
 
 	"github.com/panyam/demokit"
-	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/diff"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/examples/common"
-	"github.com/panyam/agni/graph"
+	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/readers/ipc2581"
-	"github.com/panyam/agni/render"
+	"github.com/panyam/agni/core/render"
 )
 
 //go:embed walkthrough.md

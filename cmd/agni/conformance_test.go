@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/internal/expect"
 )
 

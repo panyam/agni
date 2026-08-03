@@ -1,6 +1,6 @@
 package profiles
 
-import "github.com/panyam/agni/check"
+import "github.com/panyam/agni/core/check"
 
 // Profiles is the built-in interface-profile set. Adding an interface is one entry here plus its
 // Profile value; the compiler and registration below need no change.

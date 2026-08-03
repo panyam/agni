@@ -15,7 +15,7 @@ import (
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/readers/formats"
-	"github.com/panyam/agni/validate"
+	"github.com/panyam/agni/core/validate"
 )
 
 // validateCmd is the reader-health smoke over real design files (WS6-007): for every file,

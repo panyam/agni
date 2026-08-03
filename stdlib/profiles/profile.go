@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 )
 
 // Profile is one interface definition. Name appears in rule names/messages and the "profile" tag;

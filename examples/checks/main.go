@@ -12,7 +12,7 @@ import (
 	"fmt"
 
 	"github.com/panyam/demokit"
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/examples/common"
 )
 

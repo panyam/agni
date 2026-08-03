@@ -18,7 +18,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/readers/kicad"
-	"github.com/panyam/agni/render"
+	"github.com/panyam/agni/core/render"
 )
 
 //go:embed walkthrough.md

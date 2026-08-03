@@ -166,7 +166,7 @@ wire (`PackedLabel.color`, `PackedSheet.font_family`) so the client renders with
 palette. Per-element font/style overrides wait until the geom IR carries them.
 **Why:** kill the duplication that let the SVG and label colors drift (`#555` vs `#555555`),
 and keep styling overridable (theming, dark mode, accessibility) without editing the engine.
-**Verify:** no `"#rrggbb"` or `font-family` literals in `render/*.go` outside `style.go`;
+**Verify:** no `"#rrggbb"` or `font-family` literals in `core/render/*.go` outside `style.go`;
 `SheetSVG`/`PackSheet` take render options; label colors come from `Style`.
 
 ## C13: Service impls are importable, transport-neutral, and take I/O via injected ports
@@ -217,14 +217,14 @@ field; `NewDesignService` takes a `[]*check.Rule` parameter.
 
 ## C15: Readers never import the presentation tier
 **Rule:** Format readers (all under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`, and
-any future reader) must not import `render/` or `svg/`. Geometry math a reader and a renderer both need
+any future reader) must not import `core/render/` or `core/svg/`. Geometry math a reader and a renderer both need
 (placement transforms, pin world positions) lives in `internal/geomath`, imported by both
 sides. Dependencies point one way: readers produce IR/geom; the presentation tier consumes it.
 **Why:** "pins land where symbols are drawn" must hold by shared code, not by a reader
 reaching up into the renderer for its helper (which couples ingestion to presentation and
 drags drawing code into every entrypoint that only wants netlists). One implementation of the
 transform contract (the geometry doc) serves producers and consumers alike.
-**Verify:** `grep -rl '"github.com/panyam/agni/render"\|"github.com/panyam/agni/svg"'
+**Verify:** `grep -rl '"github.com/panyam/agni/core/render"\|"github.com/panyam/agni/core/svg"'
 readers/` returns nothing.
 
 ## C16: Internal-seed posture (datasheet data never leaves the customer boundary)
@@ -262,7 +262,7 @@ registry — not on the web/serve tier. Go module-graph pruning already keeps th
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
 the seam clean now so the split stays a rename, not a refactor.
 **Verify:** `go list -deps ./readers/... | grep -E
-'servicekit|connectrpc|panyam/agni/(render|svg|serve|internal/service|internal/server)'`
+'servicekit|connectrpc|panyam/agni/(core/render|core/svg|serve|internal/service|internal/server)'`
 returns nothing; and `go list -deps ./gen/... | grep 'panyam/agni/' | grep -v '/gen/'` returns
 nothing (the contract imports no first-party package).
 

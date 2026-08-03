@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/review"
+	"github.com/panyam/agni/core/review"
 )
 
 // reportsFromProto maps a RunReviewResponse back to the Go view-model the renderers consume — the CLI

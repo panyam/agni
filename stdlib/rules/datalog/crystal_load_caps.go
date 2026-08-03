@@ -1,8 +1,8 @@
 package datalog
 
 import (
-	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 )
 
 // crystalLoadCapsDL is the datalog expression of the built-in crystal-load-caps rule (WS3-074): a

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // LoadFile reads a single intent declaration from a YAML file (the --intent-path flag). The os
