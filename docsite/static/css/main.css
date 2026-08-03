@@ -359,6 +359,37 @@ pre code {
     color: var(--primary-color);
 }
 
+/* The hero sits on a fixed warm gradient in both themes, so its buttons use
+   fixed colors that contrast with it rather than the theme variables (which go
+   light-on-warm in dark mode and blend in). */
+.home-hero .btn {
+    border: 2px solid transparent;
+}
+
+.home-hero .btn-primary {
+    background-color: #ffffff;
+    color: #7f1d1d;
+    border-color: #ffffff;
+}
+
+.home-hero .btn-primary:hover {
+    background-color: #fbe9e3;
+    color: #7f1d1d;
+}
+
+.home-hero .btn-secondary,
+.home-hero .btn-outline {
+    background-color: transparent;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.75);
+}
+
+.home-hero .btn-secondary:hover,
+.home-hero .btn-outline:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
 /* Feature Cards */
 .features {
     display: grid;
