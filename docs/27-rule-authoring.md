@@ -1,8 +1,8 @@
-# 23 — Authoring a check rule
+# 27 — Authoring a check rule
 
 The practical path from "our review checklist says X" to a shipped, trustworthy rule, 
 written for a hardware engineer and a software engineer working together, using a real
-rule (test-point-coverage, PR for WS3-026) as the worked example at every step. The
+rule (test-point-coverage) as the worked example at every step. The
 architecture behind each step: docs/19 (the rules layer), docs/22 (how nets are solved).
 The condensed checklist lives in the workspace router; this is the narrative version.
 
@@ -31,7 +31,7 @@ Then interrogate it the way the corpus will:
   design.nc_channel pattern; that gate once took a rule from 1836 findings to 0).
 - What is "a rail" when the format carries no direction data? Name is the only rail
   evidence a bare EDIF netlist has. -> rail facts OR rail/ground name heuristics.
-- What about nets the read did not fully cover? -> skip external (docs/22; the WS1-017
+- What about nets the read did not fully cover? -> skip external (docs/22; the
   external/global lifecycle).
 - Who decides the policy edge cases (a feedback node named like a rail, deliberately
   unprobed)? The reviewer. -> severity info, and say so in the doc.
@@ -82,7 +82,7 @@ viewer's expectations panel). Author three shapes:
 
 KiCad authoring gotchas that bite everyone once: pins bind at wire ENDPOINTS (labels and
 junction dots bind mid-span, docs/22); pin connect point = origin + (local_x, −local_y);
-power-symbol fixtures need the {} .kicad_pro stub or WS1-017 keeps their nets external.
+power-symbol fixtures need the {} .kicad_pro stub or their nets stay external.
 Expect the showcase boards to react: they are the load-bearing anti-false-positive gates,
 and a new rule firing there is a decision to make deliberately; cover the passes board
 (it must stay silent) and list the fires board's incidentals in its sidecar.
