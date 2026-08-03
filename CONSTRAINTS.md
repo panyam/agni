@@ -1,9 +1,9 @@
 # CONSTRAINTS
 
 Enforceable architectural rules for this project. Background and rationale in
-[docs/14-stack-and-architecture.md](docs/14-stack-and-architecture.md),
-[docs/15-presenter-contract.md](docs/15-presenter-contract.md), and
-[docs/13-ingestion-ir-architecture.md](docs/13-ingestion-ir-architecture.md).
+[stack and architecture](https://panyam.github.io/agni/architecture/stack/),
+[presenter contract](https://panyam.github.io/agni/architecture/web-app/), and
+[ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/).
 
 ## C1: Engine logic in Go, view in TS, core runtime-agnostic
 **Rule:** All domain/business logic (parsing, IR, diff, rules, simulation) lives in Go
@@ -61,7 +61,7 @@ only the dynamic overlay crosses per frame. Input batched to requestAnimationFra
 ## C5: Sanctioned ingestion only
 **Rule:** Ingest via open formats, official APIs, or official extractors.
 Reverse-engineering a proprietary format requires explicit approval.
-**Why:** EULA/DMCA risk plus enterprise-sales blocker (see docs/13 legal ordering).
+**Why:** EULA/DMCA risk plus enterprise-sales blocker (see the ingestion doc's legal-ingress ordering).
 
 ## C6: Readers declare a fidelity contract
 **Rule:** Each reader declares its fidelity (lossless or lossy-bounded). Lossless
@@ -85,7 +85,7 @@ sidecars like geometry). Performance-oriented in-memory representations (e.g. a 
 Go struct for bulk geometry) are **derived projections** of that proto, not a second
 hand-maintained schema, and must map to/from it at the edges. Bulk data may cross as an
 opaque `bytes` blob with an explicit, versioned layout when per-element proto messages
-would be too costly (see docs/16); the structural/logical tier stays modeled in proto.
+would be too costly (see the geometry doc); the structural/logical tier stays modeled in proto.
 **Why:** keep C2's one-schema no-drift guarantee while allowing allocation-light compute
 and near-free wire serialization for high-volume geometry. Storage optimization must not
 leak into the public API.
@@ -121,11 +121,11 @@ untouched. The fill variant normalizes; it does not fabricate — the value it w
 could not express, not a guess.
 
 **Why:** keep the neutral IR from overfitting to whichever format we read most (EDIF
-today). The two-layer split (C1, docs/13) only pays off if the semantic layer stays
-format-neutral; this is the gate that keeps it so. Background: docs/17-ir-v0.md and the
+today). The two-layer split (C1, and the ingestion doc) only pays off if the semantic layer stays
+format-neutral; this is the gate that keeps it so. Background: the IR-v0 discussion in the ingestion doc and the
 cross-format survey it references.
 **Verify:** each first-class semantic field is justified by >=2 formats in the
-cross-format map / docs/17 OR is a DERIVED-NORMALIZATION field meeting (a)-(c) above;
+cross-format map OR is a DERIVED-NORMALIZATION field meeting (a)-(c) above;
 provisional messages carry a "PROVISIONAL" marker in `ir.proto`. Every new-reader ticket
 reconciles its concepts against the map before adding fields (the drift trigger).
 
@@ -223,7 +223,7 @@ sides. Dependencies point one way: readers produce IR/geom; the presentation tie
 **Why:** "pins land where symbols are drawn" must hold by shared code, not by a reader
 reaching up into the renderer for its helper (which couples ingestion to presentation and
 drags drawing code into every entrypoint that only wants netlists). One implementation of the
-transform contract (docs/16, primer §7) serves producers and consumers alike.
+transform contract (the geometry doc) serves producers and consumers alike.
 **Verify:** `grep -rl '"github.com/panyam/agni/render"\|"github.com/panyam/agni/svg"'
 edif/ kicad/ ipc2581/ xschem/ geda/` returns nothing.
 
@@ -273,7 +273,7 @@ only**: no engine package may import an overlay, and the engine `go.mod` require
 module. An overlay contributes exclusively through the public extension seams — `formats.Register`
 (readers, WS12-003) and `check.RegisterSource` (rules, WS12-004) — never by the engine reaching
 into it. The reference overlay lives at `examples/overlay/` (its own module, `replace => ../..`);
-a real overlay is a separate private repo (`docs/25-open-core.md`).
+a real overlay is a separate private repo (the open-core doc).
 **Why:** the split only holds if the arrow points one way. An engine that imported an overlay
 would drag private/customer code into the shareable, open-source repo — the whole reason the
 overlay exists (the C16 datasheet posture generalized to all of readers, rules, and data). It is

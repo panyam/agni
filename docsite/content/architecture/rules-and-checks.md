@@ -144,7 +144,7 @@ Sequencing the not-yet-built rules by what each waits on:
   lands.
 - With the [parameter layer](../datasheet-layer/): cap voltage derating, logic-level input
   versus output margin, passive value versus recommendation, IC pin-mapping against a reference
-  map. These are the differentiated Tier-X category, a rule that proves a margin from datasheet
+  map. These are the Tier-X category, a rule that proves a margin from datasheet
   data.
 - Touching analysis for an input only: inductor saturation current versus peak current, cap
   voltage versus a computed rail maximum. The assertion stays a rule and the analysis engine
