@@ -4,7 +4,7 @@
 // both check and query, and check must never import query. A binary that wants these rules blank-
 // imports this package (cmd/agni does); they then appear in DefaultCatalog for both `agni check`
 // and serve, exactly like any RegisterSource'd suite.
-package datalogrules
+package datalog
 
 import (
 	"github.com/panyam/agni/check"

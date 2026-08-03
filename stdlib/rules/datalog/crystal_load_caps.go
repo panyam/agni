@@ -1,4 +1,4 @@
-package datalogrules
+package datalog
 
 import (
 	"github.com/panyam/agni/check"

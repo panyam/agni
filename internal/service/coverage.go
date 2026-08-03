@@ -4,7 +4,7 @@ import (
 	"context"
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/profiles"
+	"github.com/panyam/agni/stdlib/profiles"
 )
 
 // GetInterfaceCoverage projects the built-in interface profiles onto the loaded design's coverage
