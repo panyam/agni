@@ -78,7 +78,7 @@ var rowOutputOutput = matrixRow{
 func isWiredOrBus(m Model, n *ir.Net) bool {
 	resistor := false
 	for _, c := range n.Connections {
-		if connDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_OUT {
+		if ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_OUT {
 			return false
 		}
 		if m.HasClass(c.ComponentRef, ClassResistor) {
@@ -182,7 +182,7 @@ func registerDrivingComponents() {
 			n := ents["net"].(*ir.Net)
 			comps := map[string]bool{}
 			for _, c := range n.Connections {
-				switch connDir(m, c) { // attribute-aware: virtual power pins drive too (WS1-014)
+				switch ConnDir(m, c) { // attribute-aware: virtual power pins drive too (WS1-014)
 				case ir.PinDirection_PIN_DIRECTION_OUTPUT, ir.PinDirection_PIN_DIRECTION_POWER_OUT:
 					comps[c.ComponentRef] = true
 				}

@@ -27,7 +27,7 @@ var i2cPullUp = &Rule{
 				return m.HasClass(c.ComponentRef, ClassResistor)
 			})
 		})
-		return Report(bad, netFinding("I2C net has no pull-up resistor"))
+		return Report(bad, NetFinding("I2C net has no pull-up resistor"))
 	},
 }
 

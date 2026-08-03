@@ -26,9 +26,9 @@ var esdClampNotTVS = &Rule{
 		bad := Select(m.Nets(), func(n *ir.Net) bool {
 			// The same external-signal scope as esd-protection, but the net HAS a Zener clamp in
 			// reach and no TVS / IC-ESD rating: the two rules are mutually exclusive on a net.
-			return externalSignalNet(m, n) && zenerReachable(m, n) && !tvsReachable(m, n) && !icEsdRated(m, n)
+			return externalSignalNet(m, n) && ZenerReachable(m, n) && !TVSReachable(m, n) && !ICESDRated(m, n)
 		})
-		return Report(bad, netFinding("externally-exposed signal net is clamped by a Zener, not a fast ESD TVS"))
+		return Report(bad, NetFinding("externally-exposed signal net is clamped by a Zener, not a fast ESD TVS"))
 	},
 }
 

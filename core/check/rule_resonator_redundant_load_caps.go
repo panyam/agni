@@ -51,7 +51,7 @@ var resonatorRedundantLoadCaps = &Rule{
 		// of a load capacitor (terminal -> cap -> ground), the shape we are looking for.
 		groundRef := map[string]bool{}
 		for _, n := range m.Nets() {
-			if isGroundName(n.Name) {
+			if IsGroundName(n.Name) {
 				for _, conn := range n.Connections {
 					groundRef[conn.ComponentRef] = true
 				}
@@ -61,7 +61,7 @@ var resonatorRedundantLoadCaps = &Rule{
 		// resonator's center/case pin, not a signal terminal; an unresolved external net may carry
 		// its wiring on an unread sheet, so skip it (the crystal-load-caps external-skip precedent).
 		for _, n := range m.Nets() {
-			if isGroundName(n.Name) || n.Attributes[netgraph.AttrExternal] == "true" {
+			if IsGroundName(n.Name) || n.Attributes[netgraph.AttrExternal] == "true" {
 				continue
 			}
 			for _, conn := range n.Connections {

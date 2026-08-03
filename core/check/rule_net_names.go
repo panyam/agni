@@ -87,7 +87,7 @@ var labelAliasConflict = matrixlessSpecRule(func() *Rule {
 				if a.Rank == 0 {
 					continue
 				}
-				scope, _ := scopeOf(a.Name)
+				scope, _ := ScopeOf(a.Name)
 				if byScope[scope] == nil {
 					byScope[scope] = map[string]bool{}
 				}

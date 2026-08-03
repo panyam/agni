@@ -32,16 +32,16 @@ var powerInputNotDriven = &Rule{
 			if n.Attributes[netgraph.AttrPowerDriven] == "true" || n.Attributes[netgraph.AttrExternal] == "true" {
 				return false // driven by a power flag, or fed from another sheet we did not read
 			}
-			dirs := netDirs(m, n)
-			hasPowerIn := countDir(dirs, func(d ir.PinDirection) bool { return d == ir.PinDirection_PIN_DIRECTION_POWER_IN }) >= 1
-			return hasPowerIn && countDir(dirs, isDriver) == 0
+			dirs := NetDirs(m, n)
+			hasPowerIn := CountDir(dirs, func(d ir.PinDirection) bool { return d == ir.PinDirection_PIN_DIRECTION_POWER_IN }) >= 1
+			return hasPowerIn && CountDir(dirs, IsDriver) == 0
 		})
-		return Report(bad, netFinding("net has a power-input pin but no power source"))
+		return Report(bad, NetFinding("net has a power-input pin but no power source"))
 	},
 }
 
 // powerInputNotDrivenSpec is the rule's declarative twin (WS3-003). The driver set mirrors
-// isDriver: output, power_out, and inout (a bidirectional drives when enabled).
+// IsDriver: output, power_out, and inout (a bidirectional drives when enabled).
 var powerInputNotDrivenSpec = &Spec{
 	Over: "nets",
 	Where: And{Xs: []Expr{

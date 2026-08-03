@@ -23,7 +23,7 @@ var singlePinNet = &Rule{
 	Detail: ruleDoc("single-pin-net"),
 	Eval: func(m Model) []Finding {
 		stubs := Select(m.Nets(), func(n *ir.Net) bool {
-			return len(n.Connections) < 2 && !intentionallyUnconnected(m, n)
+			return len(n.Connections) < 2 && !IntentionallyUnconnected(m, n)
 		})
 		return Report(stubs, func(n *ir.Net) Finding {
 			return Finding{

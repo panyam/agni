@@ -40,7 +40,7 @@ var railNominalOutOfRecommended = &Rule{
 			}
 			// Exactly one recommended supply row: 0 => nothing to check; >1 => the
 			// pin-to-supply mapping is ambiguous, so skip rather than risk a false finding.
-			limits := recommendedOperatingLimits(spec)
+			limits := RecommendedOperatingLimits(spec)
 			if len(limits) != 1 {
 				continue
 			}
@@ -49,14 +49,14 @@ var railNominalOutOfRecommended = &Rule{
 			lo, hi := binding.Value.GetMin(), binding.Value.GetMax()
 			seen := map[string]bool{}
 			for _, pin := range m.Pins() {
-				if pin.Component.RefDes != c.RefDes || !supplyInputPin(m, c.RefDes, pin.Designator) {
+				if pin.Component.RefDes != c.RefDes || !SupplyInputPin(m, c.RefDes, pin.Designator) {
 					continue
 				}
 				net := m.PinNetName(c.RefDes, pin.Designator)
 				if net == "" || seen[net] {
 					continue
 				}
-				nominal, ok := nominalVoltageFromName(net)
+				nominal, ok := NominalVoltageFromName(net)
 				if !ok {
 					continue
 				}
@@ -74,7 +74,7 @@ var railNominalOutOfRecommended = &Rule{
 					Kind:    KindComponent,
 					Subject: c.RefDes,
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV %s for %s — %s",
-						pin.Designator, net, nominal, rel, binding.Symbol, citation(spec, binding)),
+						pin.Designator, net, nominal, rel, binding.Symbol, Citation(spec, binding)),
 					Prov: c.Prov,
 				})
 			}

@@ -25,7 +25,7 @@ var floatingInput = &Rule{
 				return false // the driver may be on another sheet we did not read
 			}
 			for _, c := range n.Connections {
-				if isPassiveClass(m.ComponentClass(c.ComponentRef)) {
+				if IsPassiveClass(m.ComponentClass(c.ComponentRef)) {
 					return false // a pull, a filter, or a path we cannot follow: not provably floating
 				}
 			}
@@ -38,7 +38,7 @@ var floatingInput = &Rule{
 			// floating IC input that merely carries a clamp diode firing.
 			logicInputs, ncOrIn := 0, 0
 			for _, c := range n.Connections {
-				switch connDir(m, c) {
+				switch ConnDir(m, c) {
 				case ir.PinDirection_PIN_DIRECTION_INPUT:
 					ncOrIn++
 					if !m.HasClass(c.ComponentRef, ClassDiode) {
@@ -50,7 +50,7 @@ var floatingInput = &Rule{
 			}
 			return logicInputs >= 1 && ncOrIn == len(n.Connections)
 		})
-		return Report(bad, netFinding("net carries only input pins; nothing drives it"))
+		return Report(bad, NetFinding("net carries only input pins; nothing drives it"))
 	},
 }
 

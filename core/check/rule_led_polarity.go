@@ -60,7 +60,7 @@ func registerLedReversed() {
 				}
 			}
 			return anodeNet != "" && cathodeNet != "" &&
-				isGroundName(anodeNet) && isPowerRailName(cathodeNet)
+				IsGroundName(anodeNet) && IsPowerRailName(cathodeNet)
 		},
 	})
 }

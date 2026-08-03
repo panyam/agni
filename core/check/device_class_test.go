@@ -30,7 +30,7 @@ func TestComponentDeviceClassFact(t *testing.T) {
 		t.Fatalf("component.device_class = %+v, want one (U1, efuse)", rows)
 	}
 	if rows[0].Cite == "" {
-		t.Error("component.device_class row carries no citation")
+		t.Error("component.device_class row carries no Citation")
 	}
 
 	// No params tier attached -> the relation is empty (skip, never a false pass).

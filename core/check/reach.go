@@ -34,7 +34,7 @@ const maxWalkFan = 16
 func isBusLike(n *ir.Net) bool {
 	a := n.GetAttributes()
 	return a[netgraph.AttrGlobal] == "true" ||
-		isGroundName(n.Name) || len(n.Connections) > maxWalkFan
+		IsGroundName(n.Name) || len(n.Connections) > maxWalkFan
 }
 
 // reach runs the bounded BFS over the model's pass-element adjacency.

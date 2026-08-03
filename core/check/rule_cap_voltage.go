@@ -52,14 +52,14 @@ var capVoltage = func() *Rule {
 
 // capVoltageDetail is the cap_voltage_detail SpecFunc body: the join, the worst-rail
 // scan, and the derated compare. It returns the full violation message (with the
-// datasheet citation) or "" for pass and for every skip case, so the Spec's Where
+// datasheet Citation) or "" for pass and for every skip case, so the Spec's Where
 // clause and Message share one memoized Let binding.
 func capVoltageDetail(m Model, c *ir.Component) string {
 	spec := m.PartSpec(c.RefDes)
 	if spec == nil {
 		return ""
 	}
-	limits := capRatedVoltageLimits(spec)
+	limits := CapRatedVoltageLimits(spec)
 	if len(limits) == 0 {
 		return ""
 	}
@@ -81,7 +81,7 @@ func capVoltageDetail(m Model, c *ir.Component) string {
 		if !onNet {
 			continue
 		}
-		if v, ok := railMaxVoltage(n, n.Name); ok && (!found || v > worstV) {
+		if v, ok := RailMaxVoltage(n, n.Name); ok && (!found || v > worstV) {
 			worstNet, worstV, found = n.Name, v, true
 		}
 	}
@@ -94,5 +94,5 @@ func capVoltageDetail(m Model, c *ir.Component) string {
 	}
 	return fmt.Sprintf("capacitor %s (MPN %s): rated voltage %s %gV is below %gV required (rail %q %gV x derate %g) — %s",
 		c.RefDes, m.ComponentMPN(c.RefDes), binding.Symbol, binding.Value.GetMax(),
-		required, worstNet, worstV, capVoltageDerate, citation(spec, binding))
+		required, worstNet, worstV, capVoltageDerate, Citation(spec, binding))
 }

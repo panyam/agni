@@ -304,7 +304,7 @@ var specFacts = map[string]factDef{
 		// (docs/22) is the reader's scoping, not the author's spelling.
 		reads: []string{"net.names"},
 		get: func(ev *evalEnv) any {
-			_, leaf := scopeOf(ev.ents["net"].(*ir.Net).Name)
+			_, leaf := ScopeOf(ev.ents["net"].(*ir.Net).Name)
 			return leaf
 		},
 	},
@@ -319,7 +319,7 @@ var specFacts = map[string]factDef{
 		reads: []string{"pin.electrical_type"}, primitives: []string{"pin-role"},
 		get: func(ev *evalEnv) any {
 			if c, ok := ev.ents["conn"].(*ir.Connection); ok {
-				return dirString(connDir(ev.m, c)) // connection attr first: virtual power pins (WS1-014)
+				return dirString(ConnDir(ev.m, c)) // connection attr first: virtual power pins (WS1-014)
 			}
 			p := ev.ents["pin"].(PinInst)
 			return dirString(ev.m.PinDir(p.Component.RefDes, p.Designator))
@@ -328,7 +328,7 @@ var specFacts = map[string]factDef{
 	"conn.virtual": { // the in-scope connection's component is a virtual symbol (#PWR/#FLG)
 		reads: []string{"on_net"},
 		get: func(ev *evalEnv) any {
-			return isVirtualRef(ev.ents["conn"].(*ir.Connection).ComponentRef)
+			return IsVirtualRef(ev.ents["conn"].(*ir.Connection).ComponentRef)
 		},
 	},
 	"pin.declared": { // the in-scope connection's pin exists in its part type's pin list

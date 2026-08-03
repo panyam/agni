@@ -21,17 +21,17 @@ var decouplingPresent = &Rule{
 	Detail: ruleDoc("decoupling-present"),
 	Eval: func(m Model) []Finding {
 		bad := Select(m.Nets(), func(n *ir.Net) bool {
-			if n.Attributes[netgraph.AttrExternal] == "true" || isGroundName(n.Name) {
+			if n.Attributes[netgraph.AttrExternal] == "true" || IsGroundName(n.Name) {
 				return false
 			}
 			hasPowerIn := Exists(n.Connections, func(c *ir.Connection) bool {
-				return !isVirtualRef(c.ComponentRef) && connDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+				return !IsVirtualRef(c.ComponentRef) && ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 			})
 			return hasPowerIn && !Exists(n.Connections, func(c *ir.Connection) bool {
 				return m.HasClass(c.ComponentRef, ClassCapacitor)
 			})
 		})
-		return Report(bad, netFinding("power rail has no decoupling capacitor"))
+		return Report(bad, NetFinding("power rail has no decoupling capacitor"))
 	},
 }
 

@@ -35,9 +35,9 @@ func TestNominalVoltageFromName(t *testing.T) {
 		{"5V_AND_5V0", 5, true}, // two tokens, same nominal: unambiguous
 	}
 	for _, tc := range cases {
-		got, ok := nominalVoltageFromName(tc.name)
+		got, ok := NominalVoltageFromName(tc.name)
 		if ok != tc.ok || (ok && got != tc.want) {
-			t.Errorf("nominalVoltageFromName(%q) = %v,%v want %v,%v", tc.name, got, ok, tc.want, tc.ok)
+			t.Errorf("NominalVoltageFromName(%q) = %v,%v want %v,%v", tc.name, got, ok, tc.want, tc.ok)
 		}
 	}
 }
@@ -121,7 +121,7 @@ func TestSupplyExceedsAbsMax(t *testing.T) {
 			t.Errorf("finding message missing %q: %s", want, f.Message)
 		}
 	}
-	// The same citation also travels structured, so a renderer need not parse the message (WS10-012).
+	// The same Citation also travels structured, so a renderer need not parse the message (WS10-012).
 	if dp := f.DatasheetProv; dp == nil {
 		t.Fatal("supply-exceeds-abs-max finding must carry structured DatasheetProv")
 	} else if dp.Doc != "ACME-33 Rev B" || dp.DocRef != "ds" || dp.Page != 4 ||

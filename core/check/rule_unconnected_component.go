@@ -20,7 +20,7 @@ var unconnectedComponent = &Rule{
 		orphans := Select(m.Components(), func(c *ir.Component) bool {
 			return c.RefDes != "" && !m.IsConnected(c.RefDes)
 		})
-		return Report(orphans, compFinding("component has no net connections"))
+		return Report(orphans, CompFinding("component has no net connections"))
 	},
 }
 

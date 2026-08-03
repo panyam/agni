@@ -72,14 +72,14 @@ func TestSetActiveRoleVocab(t *testing.T) {
 		t.Fatalf("build: %v", err)
 	}
 	SetActiveRoleVocab(v)
-	if !isPowerRailName("HV_BATT") {
-		t.Error("isPowerRailName should honor the active vocab's extra rail pattern")
+	if !IsPowerRailName("HV_BATT") {
+		t.Error("IsPowerRailName should honor the active vocab's extra rail pattern")
 	}
 	if !isFeedbackName("VCC0.8_ETH_FB") {
 		t.Error("isFeedbackName should honor the active vocab's extra feedback pattern")
 	}
 	SetActiveRoleVocab(nil)
-	if isPowerRailName("HV_BATT") {
+	if IsPowerRailName("HV_BATT") {
 		t.Error("nil should restore defaults (HV_ is not a built-in rail)")
 	}
 }

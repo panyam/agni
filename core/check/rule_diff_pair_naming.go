@@ -28,13 +28,13 @@ var diffPairNaming = &Rule{
 		// nets end in _P) sprays a warning per net — the profile of a rule operators disable.
 		// Folded into the predicate (not an early nil return) to stay structurally identical
 		// to the Spec twin's Where, which the parity test compares element-for-element.
-		uses := diffConventionPresent(m)
+		uses := DiffConventionPresent(m)
 		orphans := Select(m.Nets(), func(n *ir.Net) bool {
-			neg, ok := expectedDiffNegative(n.Name)
+			neg, ok := ExpectedDiffNegative(n.Name)
 			return uses && ok && !m.HasNetName(neg)
 		})
 		return Report(orphans, func(n *ir.Net) Finding {
-			neg, _ := expectedDiffNegative(n.Name)
+			neg, _ := ExpectedDiffNegative(n.Name)
 			return Finding{
 				Kind:    KindNet,
 				Subject: n.Name,

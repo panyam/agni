@@ -23,7 +23,7 @@ const (
 func LocateReason(m Model, kind, subject string) string {
 	switch kind {
 	case KindComponent:
-		if isVirtualRef(subject) {
+		if IsVirtualRef(subject) {
 			return LocateVirtual
 		}
 		if !m.HasComponent(subject) {
@@ -61,5 +61,5 @@ func (m *irModel) IsPowerRail(name string) bool {
 	}
 	a := n.GetAttributes()
 	return a[netgraph.AttrPowerDriven] == "true" || a[netgraph.AttrGlobal] == "true" ||
-		netHasRole(n, NetRoleGround, isGroundName) || netHasRole(n, NetRoleRail, isPowerRailName)
+		netHasRole(n, NetRoleGround, IsGroundName) || netHasRole(n, NetRoleRail, IsPowerRailName)
 }

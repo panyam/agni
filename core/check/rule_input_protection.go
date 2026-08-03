@@ -21,7 +21,7 @@ var inputProtection = &Rule{
 	Detail: ruleDoc("input-protection"),
 	Eval: func(m Model) []Finding {
 		bad := Select(m.Nets(), func(n *ir.Net) bool {
-			if n.Attributes[netgraph.AttrExternal] == "true" || isGroundName(n.Name) {
+			if n.Attributes[netgraph.AttrExternal] == "true" || IsGroundName(n.Name) {
 				return false
 			}
 			hasConn := Exists(n.Connections, func(c *ir.Connection) bool {
@@ -30,9 +30,9 @@ var inputProtection = &Rule{
 			if !hasConn {
 				return false
 			}
-			return unprotectedPowerReach(m, n)
+			return UnprotectedPowerReach(m, n)
 		})
-		return Report(bad, netFinding("connector feeds a power input with no fuse or TVS in the path"))
+		return Report(bad, NetFinding("connector feeds a power input with no fuse or TVS in the path"))
 	},
 }
 

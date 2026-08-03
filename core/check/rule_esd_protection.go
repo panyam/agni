@@ -29,9 +29,9 @@ var esdProtection = &Rule{
 			// (IC-integrated ESD, the common automotive posture); either protects it (WS3-073).
 			// A Zener clamp is NOT counted here — it is characterized separately by
 			// esd-clamp-not-tvs (WS3-078), so this rule flags only a truly unprotected net.
-			return externalSignalNet(m, n) && !tvsReachable(m, n) && !icEsdRated(m, n) && !zenerReachable(m, n)
+			return externalSignalNet(m, n) && !TVSReachable(m, n) && !ICESDRated(m, n) && !ZenerReachable(m, n)
 		})
-		return Report(bad, netFinding("externally-exposed signal net has no ESD protection"))
+		return Report(bad, NetFinding("externally-exposed signal net has no ESD protection"))
 	},
 }
 
@@ -42,10 +42,10 @@ var esdProtection = &Rule{
 func externalSignalNet(m Model, n *ir.Net) bool {
 	a := n.Attributes
 	if a[netgraph.AttrExternal] == "true" || a[netgraph.AttrGlobal] == "true" ||
-		a[netgraph.AttrPowerDriven] == "true" || isGroundName(n.Name) || isPowerRailName(n.Name) {
+		a[netgraph.AttrPowerDriven] == "true" || IsGroundName(n.Name) || IsPowerRailName(n.Name) {
 		return false
 	}
-	if intentionallyUnconnected(m, n) {
+	if IntentionallyUnconnected(m, n) {
 		return false
 	}
 	hasConn := Exists(n.Connections, func(c *ir.Connection) bool {
@@ -54,7 +54,7 @@ func externalSignalNet(m Model, n *ir.Net) bool {
 	if !hasConn {
 		return false
 	}
-	return !powerPinReachable(m, n)
+	return !PowerPinReachable(m, n)
 }
 
 // esdProtectionSpec is the rule's declarative twin (WS3-003): the widest guard stack in the

@@ -29,7 +29,7 @@ var supplyExceedsAbsMax = &Rule{
 			if spec == nil {
 				continue
 			}
-			limits := supplyAbsMaxLimits(spec)
+			limits := SupplyAbsMaxLimits(spec)
 			if len(limits) == 0 {
 				continue
 			}
@@ -42,14 +42,14 @@ var supplyExceedsAbsMax = &Rule{
 			}
 			seen := map[string]bool{}
 			for _, pin := range m.Pins() {
-				if pin.Component.RefDes != c.RefDes || !supplyInputPin(m, c.RefDes, pin.Designator) {
+				if pin.Component.RefDes != c.RefDes || !SupplyInputPin(m, c.RefDes, pin.Designator) {
 					continue
 				}
 				net := m.PinNetName(c.RefDes, pin.Designator)
 				if net == "" || seen[net] {
 					continue
 				}
-				nominal, ok := nominalVoltageFromName(net)
+				nominal, ok := NominalVoltageFromName(net)
 				if !ok || nominal <= binding.Value.GetMax() {
 					continue
 				}
@@ -58,9 +58,9 @@ var supplyExceedsAbsMax = &Rule{
 					Kind:    KindComponent,
 					Subject: c.RefDes,
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV exceeds absolute-maximum %s %gV — %s",
-						pin.Designator, net, nominal, binding.Symbol, binding.Value.GetMax(), citation(spec, binding)),
+						pin.Designator, net, nominal, binding.Symbol, binding.Value.GetMax(), Citation(spec, binding)),
 					Prov:          c.Prov,
-					DatasheetProv: datasheetCitationOf(spec, binding),
+					DatasheetProv: DatasheetCitationOf(spec, binding),
 				})
 			}
 		}

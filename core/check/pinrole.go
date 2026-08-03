@@ -13,11 +13,11 @@ import (
 // so these predicates are false and the rules simply do not fire (absent-tolerant, same posture as
 // the rest of check).
 
-// isDriver reports whether a pin can source a signal onto its net: a plain output, a power source
+// IsDriver reports whether a pin can source a signal onto its net: a plain output, a power source
 // (a regulator output or a PWR_FLAG, mapped to POWER_OUT), or a bidirectional pin (it drives when
 // enabled). INOUT is a driver for "is this net driven?" but not counted as a hard driver for the
 // two-drivers conflict, where a shared bus of INOUT pins is legal.
-func isDriver(d ir.PinDirection) bool {
+func IsDriver(d ir.PinDirection) bool {
 	switch d {
 	case ir.PinDirection_PIN_DIRECTION_OUTPUT,
 		ir.PinDirection_PIN_DIRECTION_POWER_OUT,
@@ -27,19 +27,19 @@ func isDriver(d ir.PinDirection) bool {
 	return false
 }
 
-// netDirs resolves the electrical direction of every connection on a net, in connection order.
-func netDirs(m Model, n *ir.Net) []ir.PinDirection {
+// NetDirs resolves the electrical direction of every connection on a net, in connection order.
+func NetDirs(m Model, n *ir.Net) []ir.PinDirection {
 	out := make([]ir.PinDirection, 0, len(n.Connections))
 	for _, c := range n.Connections {
-		out = append(out, connDir(m, c))
+		out = append(out, ConnDir(m, c))
 	}
 	return out
 }
 
-// connDir resolves one connection's electrical direction: the connection-level
+// ConnDir resolves one connection's electrical direction: the connection-level
 // "direction" attribute wins (a virtual power-symbol pin, whose component is not in
 // Components so no part-type pin exists — WS1-014), then the part-type pin via PinDir.
-func connDir(m Model, c *ir.Connection) ir.PinDirection {
+func ConnDir(m Model, c *ir.Connection) ir.PinDirection {
 	switch c.GetAttributes()["direction"] {
 	case "power_in":
 		return ir.PinDirection_PIN_DIRECTION_POWER_IN
@@ -49,17 +49,17 @@ func connDir(m Model, c *ir.Connection) ir.PinDirection {
 	return m.PinDir(c.ComponentRef, c.PinRef)
 }
 
-// isVirtualRef reports whether a connection's component is a virtual connectivity symbol
+// IsVirtualRef reports whether a connection's component is a virtual connectivity symbol
 // (a KiCad #PWR/#FLG), which contributes power evidence but is not a physical part:
 // consumer-intent guards (a decoupling rule asking "does a real part draw from this
 // rail") must not count it, while driver/ERC semantics (power-input-not-driven, the
 // driver conflict) must.
-func isVirtualRef(ref string) bool {
+func IsVirtualRef(ref string) bool {
 	return strings.HasPrefix(ref, "#")
 }
 
-// countDir returns how many of dirs satisfy pred.
-func countDir(dirs []ir.PinDirection, pred func(ir.PinDirection) bool) int {
+// CountDir returns how many of dirs satisfy pred.
+func CountDir(dirs []ir.PinDirection, pred func(ir.PinDirection) bool) int {
 	n := 0
 	for _, d := range dirs {
 		if pred(d) {
@@ -69,11 +69,11 @@ func countDir(dirs []ir.PinDirection, pred func(ir.PinDirection) bool) int {
 	return n
 }
 
-// isPassiveClass reports whether a component class is a two-terminal passive (plus test
+// IsPassiveClass reports whether a component class is a two-terminal passive (plus test
 // points): parts whose pins conduct rather than listen or drive, so direction-based rules
 // treat them as transparent — some libraries type a passive's pins INPUT (the Mentor EDIF
 // corpus does for capacitors), and counting those as logic inputs is a false positive.
-func isPassiveClass(c ComponentClass) bool {
+func IsPassiveClass(c ComponentClass) bool {
 	switch c {
 	case ClassResistor, ClassCapacitor, ClassInductor, ClassFerrite, ClassFuse, ClassTestPoint:
 		return true
@@ -109,10 +109,10 @@ func classifyPinRole(name string, class ComponentClass) PinRole {
 			return RoleCathode
 		}
 	}
-	if isGroundName(u) {
+	if IsGroundName(u) {
 		return RoleGround
 	}
-	if isPowerRailName(u) {
+	if IsPowerRailName(u) {
 		return RolePower
 	}
 	return RoleUnknown

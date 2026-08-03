@@ -113,7 +113,7 @@ var supplySymbols = map[string]bool{
 	"VBAT": true, "VSUP": true, "V+": true,
 }
 
-// supplyAbsMaxLimits selects the machine-comparable absolute-maximum supply-voltage
+// SupplyAbsMaxLimits selects the machine-comparable absolute-maximum supply-voltage
 // rows of a spec: symbol in the supply alias set, kind ABSOLUTE_MAX, unit exactly "V"
 // (unlike units are under-specified for comparison until WS10-004 — never converted),
 // a max bound present, conditions asserted complete and structured
@@ -198,16 +198,21 @@ func esdVolts(p *parampb.Parameter) (float64, bool) {
 	return 0, false
 }
 
-// supplyInputPin reports whether a pin consumes a supply rail, format-neutrally — the entity both
+// SupplyInputPin reports whether a pin consumes a supply rail, format-neutrally — the entity both
 // datasheet rail rules (supply-exceeds-abs-max, rail-nominal-out-of-recommended) quantify over. Since
 // WS3-072 PR2 the answer is a plain PinDir == POWER_IN: the ingestion pass (classify.StampPowerInPins)
 // fills POWER_IN on a supply-named input pin a reader (EDIF) left under-typed, so every reader now types
 // its supply pins the same way KiCad does. The earlier name-role fallback (the WS3-036 interim) is gone.
-func supplyInputPin(m Model, refDes, designator string) bool {
+func SupplyInputPin(m Model, refDes, designator string) bool {
 	return m.PinDir(refDes, designator) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 }
 
-func supplyAbsMaxLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+// SupplyAbsMaxLimits returns the absolute-maximum voltage rows of a PartSpec that name a supply
+// pin and are safe to compare: symbol in the supply set, LimitKind ABSOLUTE_MAX, unit V, and fully
+// specified (not under-specified, machine-comparable). It is the datasheet lookup behind
+// supply-exceeds-abs-max; text-only or under-specified rows are skipped so a rule never compares
+// against a value a human must read.
+func SupplyAbsMaxLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
@@ -222,16 +227,16 @@ func supplyAbsMaxLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	return out
 }
 
-// recommendedOperatingLimits selects the machine-comparable recommended-operating
+// RecommendedOperatingLimits selects the machine-comparable recommended-operating
 // supply-voltage rows of a spec: symbol in the supply alias set, kind
 // RECOMMENDED_OPERATING, unit exactly "V", at least one of min/max present, and the
 // docs/20 comparison gates (unlike units and text-only conditions are skipped, never
-// coerced). Unlike supplyAbsMaxLimits — a one-sided ceiling that is always conservative
+// coerced). Unlike SupplyAbsMaxLimits — a one-sided ceiling that is always conservative
 // to apply across every power-in pin — the recommended range is two-sided, so its
 // consumer (rail-nominal-out-of-recommended) acts only on a part that declares a SINGLE
 // such row: a netlist does not say which power-in pin is which supply, so a multi-supply
 // part can't be range-checked without risking a false over/under finding.
-func recommendedOperatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+func RecommendedOperatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
@@ -254,12 +259,12 @@ var capRatedVoltageSymbols = map[string]bool{
 	"VDC": true, "WV": true, "VR": true, "VRATED": true,
 }
 
-// capRatedVoltageLimits selects the machine-comparable rated-voltage rows of a cap
+// CapRatedVoltageLimits selects the machine-comparable rated-voltage rows of a cap
 // spec: symbol in the alias set (or the printed name saying "rated voltage"), kind
 // recommended-operating or absolute-max (a rated voltage is the operating envelope;
 // some sheets state it as a maximum), unit exactly "V", a max bound present, and the
 // docs/20 comparison gates. Rows failing any gate are skipped, not coerced.
-func capRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+func CapRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
@@ -276,12 +281,12 @@ func capRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	return out
 }
 
-// railMaxVoltage is the "net.max_voltage" fact: the rail voltage a net declares. A
+// RailMaxVoltage is the "net.max_voltage" fact: the rail voltage a net declares. A
 // max_voltage attribute wins when present (the explicit channel; a computed
 // worst-case value is WS4); otherwise the name-derived nominal
 // (nominalVoltageFromName) is the only evidence a netlist carries. ok is false when
 // neither channel yields a number — consumers skip, never guess.
-func railMaxVoltage(n *ir.Net, name string) (volts float64, ok bool) {
+func RailMaxVoltage(n *ir.Net, name string) (volts float64, ok bool) {
 	if v := n.Attributes["max_voltage"]; v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			return f, true
@@ -308,7 +313,7 @@ func NominalVoltageFromName(name string) (volts float64, ok bool) {
 }
 
 // nominalVoltageFromName derives a rail's nominal voltage from its net name — the
-// only voltage evidence a netlist carries (the isPowerRailName precedent). The name
+// only voltage evidence a netlist carries (the IsPowerRailName precedent). The name
 // is split into tokens and each is matched in full; ok is false when no token parses
 // or when two tokens disagree ("12V_TO_5V"), because refusing to guess is the
 // contract every params rule leans on.

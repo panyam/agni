@@ -22,14 +22,14 @@ var bulkCap = &Rule{
 	Eval: func(m Model) []Finding {
 		bad := Select(m.Nets(), func(n *ir.Net) bool {
 			named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
-			if !named || n.Attributes[netgraph.AttrExternal] == "true" || isGroundName(n.Name) {
+			if !named || n.Attributes[netgraph.AttrExternal] == "true" || IsGroundName(n.Name) {
 				return false
 			}
 			return !Exists(n.Connections, func(c *ir.Connection) bool {
 				return m.HasClass(c.ComponentRef, ClassCapacitor)
 			})
 		})
-		return Report(bad, netFinding("power rail has no bulk capacitor"))
+		return Report(bad, NetFinding("power rail has no bulk capacitor"))
 	},
 }
 
