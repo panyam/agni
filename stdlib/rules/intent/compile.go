@@ -1,6 +1,6 @@
 package intent
 
-import "github.com/panyam/agni/check"
+import "github.com/panyam/agni/core/check"
 
 // Rule names the intent rules emit under. These are the BARE names (Rule.Name may not contain the
 // catalog's "/" namespace separator); Source("intent", ...) exposes them in the catalog as

@@ -3,9 +3,9 @@ package profiles
 import (
 	"strings"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/query"
 )
 
 // Coverage states (WS9-041). They match the conditions the profile rules fire on, so a coverage

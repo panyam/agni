@@ -7,8 +7,8 @@
 package datalog
 
 import (
-	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 )
 
 // powerPinMistyped flags a pin whose NAME says power or ground (pin.role) but whose electrical TYPE

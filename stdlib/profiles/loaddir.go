@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // LoadDir loads every *.yaml / *.yml profile in dir (non-recursive), sorted by filename for

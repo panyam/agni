@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/classify"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/readers/formats"
 )
 

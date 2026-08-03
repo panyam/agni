@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // subsystemRule builds the rule for ONE declared subsystem. It fails when the subsystem's required

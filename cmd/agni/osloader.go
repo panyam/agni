@@ -7,11 +7,11 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/graph"
+	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/review"
+	"github.com/panyam/agni/core/review"
 )
 
 // osLoader is the OS-backed service.Loader adapter: it resolves a (mount, path) to an absolute host

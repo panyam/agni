@@ -3,7 +3,7 @@ package profiles
 import (
 	"strings"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // InUse reports whether interface p's signal convention is genuinely in use on the model — the SAME

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/datasheet/param"

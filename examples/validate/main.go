@@ -16,7 +16,7 @@ import (
 	"github.com/panyam/agni/readers/edif"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/examples/common"
-	"github.com/panyam/agni/validate"
+	"github.com/panyam/agni/core/validate"
 )
 
 //go:embed walkthrough.md

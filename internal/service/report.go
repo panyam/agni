@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )

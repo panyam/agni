@@ -11,7 +11,7 @@ package acmerules
 import (
 	"strings"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // init registers the suite as a named RuleSource. An overlay uses import-side-effect

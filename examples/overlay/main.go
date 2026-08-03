@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/readers/formats"
 
 	_ "github.com/panyam/agni/examples/overlay/acmeformat" // registers the .acme reader

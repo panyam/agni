@@ -19,10 +19,10 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/check/naming"
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
 	_ "github.com/panyam/agni/stdlib/rules/datalog" // registers the "dl" datalog-authored rule source
-	"github.com/panyam/agni/diff"
+	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/readers/formats"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -31,7 +31,7 @@ import (
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/stdlib/profiles" // registers built-in "profile" rules; LoadDir adds overlay profiles
-	"github.com/panyam/agni/review"
+	"github.com/panyam/agni/core/review"
 )
 
 // diffListLimit caps how many items each diff section prints. It lives at the CLI edge,

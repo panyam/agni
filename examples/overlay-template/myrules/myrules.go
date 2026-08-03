@@ -8,7 +8,7 @@
 package myrules
 
 import (
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // init registers the suite by import side effect. To register explicitly from your binary's

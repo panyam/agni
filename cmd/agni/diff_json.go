@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/panyam/agni/diff"
+	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/internal/service"
 )
 

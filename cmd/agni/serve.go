@@ -11,14 +11,14 @@ import (
 	skhttp "github.com/panyam/servicekit/http"
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/datasheet/param"
-	"github.com/panyam/agni/render"
+	"github.com/panyam/agni/core/render"
 )
 
 // serveCmd hosts the web viewer over HTTP for local development. It serves three things on

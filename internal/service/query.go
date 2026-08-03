@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/datasheet/param"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/query"
 )
 
 // QueryService evaluates ad-hoc datalog queries over a design's fact base (WS3-029) for the web

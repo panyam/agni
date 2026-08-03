@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/readers/formats"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/graph"
+	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/review"
+	"github.com/panyam/agni/core/review"
 )
 
 // localLoader is the CLI's service.Loader: it resolves a bare LOCAL path with NO mount containment

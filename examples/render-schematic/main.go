@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/panyam/agni/examples/common"
-	"github.com/panyam/agni/render"
+	"github.com/panyam/agni/core/render"
 )
 
 //go:embed walkthrough.md

@@ -9,8 +9,8 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/graph"
-	"github.com/panyam/agni/render"
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/render"
 )
 
 // twoSheetGeom is a minimal drawable geometry with two identifiable sheets, enough for

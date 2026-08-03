@@ -3,7 +3,7 @@ package intent
 import (
 	"fmt"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 )
 
 // moduleMissingRule fails once per declared module that no design component satisfies. A module matches

@@ -15,9 +15,9 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/graph"
+	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/readers/formats"
-	"github.com/panyam/agni/render"
+	"github.com/panyam/agni/core/render"
 )
 
 // The layout/--symbols vocabulary is shared with the service tier via formats.

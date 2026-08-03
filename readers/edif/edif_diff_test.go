@@ -3,7 +3,7 @@ package edif
 import (
 	"testing"
 
-	"github.com/panyam/agni/diff"
+	"github.com/panyam/agni/core/diff"
 )
 
 // findChange returns the ComponentChange for (ref, field), or a zero value if absent.

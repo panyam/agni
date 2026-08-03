@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/datasheet/param"
-	"github.com/panyam/agni/query"
+	"github.com/panyam/agni/core/query"
 	"github.com/spf13/cobra"
 )
 

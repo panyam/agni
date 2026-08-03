@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/stdlib/profiles"
-	"github.com/panyam/agni/review"
+	"github.com/panyam/agni/core/review"
 )
 
 // ReviewLoader is the narrow file surface ReviewService needs: the netlist design, an optional

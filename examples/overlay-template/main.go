@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/agni/check"
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/readers/formats"
 
 	// TODO: point these at your renamed packages.
