@@ -36,49 +36,6 @@ var inputProtection = &Rule{
 	},
 }
 
-// unprotectedPowerReach walks the connector net's series neighborhood (WS3-011) and
-// reports whether SOME reached net carries a real power-input pin with neither a fuse
-// crossed on the way there nor a TVS on any net along that path. The per-target path
-// check matters: a board can have a protected 5V path and an unprotected 3V3 path off
-// one connector, and protection on one must not excuse the other.
-func unprotectedPowerReach(m Model, n *ir.Net) bool {
-	r := m.Reach(n, 3)
-	protectorOn := func(net *ir.Net) bool {
-		return Exists(net.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, ClassFuse) || m.HasClass(c.ComponentRef, ClassTVS)
-		})
-	}
-	for _, target := range r.Nets {
-		hasPowerIn := Exists(target.Connections, func(c *ir.Connection) bool {
-			return !isVirtualRef(c.ComponentRef) && connDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
-		})
-		if !hasPowerIn {
-			continue
-		}
-		protected := false
-		for _, ref := range r.ThroughOnPath(target) {
-			if m.HasClass(ref, ClassFuse) {
-				protected = true // a fuse sits on this path as a series element
-				break
-			}
-		}
-		if !protected {
-			// A protector as a MEMBER of a path net also counts — the pre-reach rule's
-			// (conservative) reading, kept so no previously-quiet board starts firing.
-			for _, pn := range r.PathTo(target) {
-				if protectorOn(pn) {
-					protected = true
-					break
-				}
-			}
-		}
-		if !protected {
-			return true
-		}
-	}
-	return false
-}
-
 // inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses stay
 // AST; the reach walk is one declared FFI shared with the Go Eval (the WS3-011
 // vocabulary is new, so the Go side stays canonical until it soaks — docs/19).

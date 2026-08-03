@@ -1,7 +1,6 @@
 package check
 
 import (
-	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 )
@@ -58,13 +57,6 @@ func externalSignalNet(m Model, n *ir.Net) bool {
 	return !powerPinReachable(m, n)
 }
 
-// isPowerRailName reports whether a net name follows a supply-rail convention (VCC, VDD, VBUS, VIN,
-// +3V3, 12V, ...). It is the rail-identity fallback for sources that carry no pin directions or power
-// symbols (an EDIF netlist), where the name is the only evidence; rail nets are input-protection's and
-// bulk-cap's concern, not ESD's. The pattern set lives in the active naming lexicon (WS3-069), so a
-// project can extend it via --conventions; hierarchical sheet prefixes ("/psu/12V") are stripped first.
-func isPowerRailName(name string) bool { return classify.ActiveRoleVocab().IsRail(name) }
-
 // esdProtectionSpec is the rule's declarative twin (WS3-003): the widest guard stack in the
 // catalog, every skip an explicit clause.
 var esdProtectionSpec = &Spec{
@@ -83,62 +75,4 @@ var esdProtectionSpec = &Spec{
 		Not{X: IsTrue{T: Call{Fn: "zener_reach"}}},
 	}},
 	Message: "externally-exposed signal net has no ESD protection",
-}
-
-// powerPinReachable reports a power-direction pin on the net or on any net in its 2-hop
-// series reach (WS3-011): the esd/input-protection turf split must not depend on whether
-// a bead sits between the connector and the regulator.
-func powerPinReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
-		if countDir(netDirs(m, rn), func(d ir.PinDirection) bool {
-			return d == ir.PinDirection_PIN_DIRECTION_POWER_IN || d == ir.PinDirection_PIN_DIRECTION_POWER_OUT
-		}) >= 1 {
-			return true
-		}
-	}
-	return false
-}
-
-// tvsReachable reports a TVS on the net or on any net in its 2-hop series reach
-// (WS3-011): ESD structures commonly put a series resistor between the connector and
-// the clamped node, which splits the net and hid the clamp from the pre-reach rule.
-func tvsReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
-		if Exists(rn.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, ClassTVS)
-		}) {
-			return true
-		}
-	}
-	return false
-}
-
-// zenerReachable reports a Zener clamp on the net or on any net in its 2-hop series reach — the
-// same reach the TVS check walks (WS3-011), so a series-split clamp is not hidden. A Zener is
-// distinct from a TVS (a slower clamp), so esd-protection does not count it as ESD protection;
-// esd-clamp-not-tvs (WS3-078) reports its presence separately for the review to weigh.
-func zenerReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
-		if Exists(rn.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, ClassZener)
-		}) {
-			return true
-		}
-	}
-	return false
-}
-
-// icEsdRated reports whether a component on the net (or within its 2-hop series reach) declares a
-// datasheet ESD rating at or above the credit floor — the IC-integrated ESD that protects a
-// connector-facing signal without a discrete TVS (WS3-073). Silent without a seeded param set
-// (m.PartSpec is nil), so esd behaves exactly as before on a design read with no datasheets.
-func icEsdRated(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
-		for _, c := range rn.Connections {
-			if spec := m.PartSpec(c.ComponentRef); spec != nil && len(esdRatingLimits(spec)) > 0 {
-				return true
-			}
-		}
-	}
-	return false
 }

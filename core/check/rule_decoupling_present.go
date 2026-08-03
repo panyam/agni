@@ -1,7 +1,6 @@
 package check
 
 import (
-	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 )
@@ -35,12 +34,6 @@ var decouplingPresent = &Rule{
 		return Report(bad, netFinding("power rail has no decoupling capacitor"))
 	},
 }
-
-// isGroundName matches the ground-rail naming conventions (GND and variants, VSS, EARTH). Ground pins
-// read as power_in, but decoupling is asserted on the supply side; matching by name keeps the rule from
-// double-reporting every cap-less design on its ground net too. The pattern set lives in the active
-// naming lexicon (WS3-069), so a project can extend it via --conventions.
-func isGroundName(name string) bool { return classify.ActiveRoleVocab().IsGround(name) }
 
 // decouplingPresentSpec is the rule's declarative twin (WS3-003).
 var decouplingPresentSpec = &Spec{

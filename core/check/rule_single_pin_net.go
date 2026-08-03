@@ -2,7 +2,6 @@ package check
 
 import (
 	"fmt"
-	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -36,20 +35,6 @@ var singlePinNet = &Rule{
 			}
 		})
 	},
-}
-
-// intentionallyUnconnected reports whether a net's lack of connections is deliberate: its name
-// is a tool no-connect marker, or a connected pin resolves to the NO_CONNECT electrical type.
-func intentionallyUnconnected(m Model, n *ir.Net) bool {
-	switch name := strings.ToLower(n.Name); {
-	case strings.HasPrefix(name, "unconnected"),
-		strings.HasPrefix(name, "no_connect"),
-		strings.HasPrefix(name, "nc_"):
-		return true
-	}
-	return Exists(n.Connections, func(c *ir.Connection) bool {
-		return m.PinDir(c.ComponentRef, c.PinRef) == ir.PinDirection_PIN_DIRECTION_NO_CONNECT
-	})
 }
 
 // singlePinNetSpec is the rule's declarative twin (WS3-003): the count compare in the AST,

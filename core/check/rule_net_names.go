@@ -26,16 +26,6 @@ func netAliases(n *ir.Net) []netgraph.Alias {
 	return netgraph.ParseAliases(n.GetAttributes()[netgraph.AttrAliases])
 }
 
-// scopeOf splits a KiCad-style qualified name into its sheet scope and leaf: "/amp1/SIG"
-// -> ("/amp1", "SIG"), bare root names -> ("", name).
-func scopeOf(name string) (scope, leaf string) {
-	if !strings.HasPrefix(name, "/") {
-		return "", name
-	}
-	i := strings.LastIndex(name, "/")
-	return name[:i], name[i+1:]
-}
-
 // joinNames renders a distinct name set for a finding message, sorted for determinism.
 func joinNames(set map[string]bool) string {
 	names := make([]string, 0, len(set))
