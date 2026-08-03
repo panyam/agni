@@ -1,9 +1,15 @@
-# agni
+# Agni
 
-An engine for electronic design files. It reads schematics and PCBs from several formats
-into one neutral, protobuf-defined IR, then checks, diffs, renders, and queries them. The
-front-end normalizes formats the way a compiler normalizes languages into one AST, so every
-analysis downstream is written once and works on all of them.
+[![CI](https://github.com/panyam/agni/actions/workflows/ci.yml/badge.svg)](https://github.com/panyam/agni/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/panyam/agni.svg)](https://pkg.go.dev/github.com/panyam/agni)
+[![Go Report Card](https://goreportcard.com/badge/github.com/panyam/agni)](https://goreportcard.com/report/github.com/panyam/agni)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Go 1.26](https://img.shields.io/badge/go-1.26-00ADD8?logo=go&logoColor=white)](go.mod)
+
+Agni is an engine for electronic design files. It reads schematics and PCBs from several
+formats into one neutral, protobuf-defined IR, then checks, diffs, renders, and queries
+them. The front-end normalizes formats the way a compiler normalizes languages into one AST,
+so every analysis downstream is written once and works on all of them.
 
 ![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docs/assets/demo-viewer.gif)
 
@@ -74,6 +80,29 @@ every format for free.
 
 The same shape repeats at two more contracts: a geometry IR that N producers fill and N
 renderers draw, and a parameter IR that N datasheet extractors fill and the checks read.
+
+## Philosophy
+
+- **One neutral IR, many formats.** A schematic is a schematic whether it came from KiCad,
+  EDIF, or IPC-2581. Normalize each format once, and write every analysis once against the
+  IR. Add a reader and every check, diff, render, and query works on the new format; add an
+  analysis and it works on every format.
+- **Format-neutrality is enforced, not aspirational.** Analyses read the IR, never source
+  files, and the IR carries no field a second format could not populate. Architectural
+  constraints checked in CI keep the core from accreting format-specific special cases.
+- **Silence is never coverage.** A check that cannot evaluate reports "not applicable" or
+  flags what it could not model; it never returns a false pass. Findings cite the net,
+  component, or datasheet page they come from, and unverified data is marked as such. You can
+  always tell "clean" from "not checked".
+- **Verify against reality.** Readers and rules are checked against the native tools
+  (`kicad-cli` ERC/DRC) and real design exports, not only hand-written fixtures. A feature is
+  done when it works on a real file.
+- **Open core with a clear boundary.** The engine is shareable under Apache-2.0. Proprietary
+  formats, house rules, and confidential designs live in a private overlay that depends on
+  the engine without forking it. Market and strategy never enter the shared code.
+- **Legible to software engineers.** EDA carries decades of domain vocabulary. Agni maps it
+  to concepts software engineers already know (an IR, a linter, a semantic diff, a lockfile),
+  so you can contribute without an EE degree. See [docs/ANALOGY.md](docs/ANALOGY.md).
 
 ## Formats read today
 

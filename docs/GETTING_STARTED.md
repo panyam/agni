@@ -5,7 +5,7 @@ it at the symbol libraries that xschem and gEDA schematics need for a full netli
 built, [WEB_WALKTHROUGH.md](WEB_WALKTHROUGH.md) tours the browser viewer over committed
 fixtures.
 
-## 1. Build agni
+## 1. Build Agni
 
 Requires Go 1.26, `pnpm` (the web viewer bundle; run `pnpm install` in `web/` once), and
 (only if you change protos) `buf`.

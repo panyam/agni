@@ -6,6 +6,26 @@ rules, geometry, rendering). Enforceable rules live in [/CONSTRAINTS.md](../CONS
 Research, market, competitor, and strategy analysis is deliberately kept out of this
 repo so it can be shared freely.
 
+## Philosophy
+
+Agni is built on a few convictions, and the architecture below follows from them:
+
+- **One neutral IR, many formats.** Normalize each format once into a protobuf IR, and write
+  every analysis once against it. Add a reader and every check, diff, render, and query works
+  on the new format; add an analysis and it works on every format.
+- **Format-neutrality is enforced.** Analyses read the IR, never source files, and the IR
+  carries no field a second format could not populate (CONSTRAINTS C9). CI keeps it that way.
+- **Silence is never coverage.** A check that cannot evaluate reads "not applicable" or flags
+  what it could not model; it never returns a false pass. Findings cite their provenance and
+  mark unverified data. You can always tell "clean" from "not checked".
+- **Verify against reality.** Readers and rules are checked against the native tools and real
+  design exports, not only fixtures.
+- **Open core with a clear boundary.** The engine is shareable under Apache-2.0; proprietary
+  formats, house rules, and confidential designs live in an overlay that depends on it
+  without forking. See [25 — Open core](25-open-core.md).
+- **Legible to software engineers.** EDA vocabulary is mapped to concepts software engineers
+  already know; [ANALOGY.md](ANALOGY.md) is the map.
+
 **Using the tool rather than building it?** The [user guide](userguide/README.md) is for
 hardware engineers running reports, datasheets, and diffs, and opens with a
 [software-to-hardware concepts map](userguide/concepts.md). The docs below are the

@@ -1,4 +1,4 @@
-site_name: agni
+site_name: Agni
 site_description: An engine that reads schematics and PCBs from several formats into one neutral IR, then checks, diffs, renders, and queries them.
 site_url: https://panyam.github.io/agni/
 repo_url: https://github.com/panyam/agni
