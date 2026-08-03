@@ -52,8 +52,8 @@ func TestSpecLibFacts(t *testing.T) {
 	if len(rows) > 0 && rows[0].Relation != RelParam {
 		t.Errorf("first row relation = %q, want %q (rows must be sorted)", rows[0].Relation, RelParam)
 	}
-	// A param row keeps its datasheet citation through the spec library projection.
+	// A param row keeps its datasheet Citation through the spec library projection.
 	if byRel[RelParam][0].Cite == "" {
-		t.Error("spec library param row lost its citation")
+		t.Error("spec library param row lost its Citation")
 	}
 }

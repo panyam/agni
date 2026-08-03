@@ -96,7 +96,7 @@ func NewModel(d *ir.Design) Model {
 		case strings.HasPrefix(name, "unconnected"),
 			strings.HasPrefix(name, "no_connect"),
 			strings.HasPrefix(name, "nc_"):
-			m.ncChannel = true // same marker vocabulary as intentionallyUnconnected
+			m.ncChannel = true // same marker vocabulary as IntentionallyUnconnected
 		}
 		for _, c := range n.Connections {
 			m.connected[c.ComponentRef] = true

@@ -40,70 +40,9 @@ const (
 	DistProprietary     = "proprietary"      // vendor/customer-locked; studied for coverage only
 )
 
-// Rules is the built-in rule set, in evaluation order. This is the single registry: adding a
-// rule means adding one rule_*.go file and one line here. Run evaluates these; Tree groups
-// them for display.
-var Rules = []*Rule{
-	singlePinNet,
-	unconnectedComponent,
-	unconnectedPin,
-	danglingEndpoint,
-	wireNoJunction,
-	duplicateRefDes,
-	outputOutputConflict,
-	ncPinConnected,
-	unspecifiedPinWithDriver,
-	duplicateNetName,
-	labelAliasConflict,
-	powerTapConflict,
-	testPointCoverage,
-	floatingInput,
-	powerInputNotDriven,
-	decouplingPresent,
-	bulkCap,
-	crystalLoadCaps,
-	resonatorRedundantLoadCaps,
-	inputProtection,
-	esdProtection,
-	esdClampNotTVS,
-	i2cPullUp,
-	supplyExceedsAbsMax,
-	railNominalOutOfRecommended,
-	capVoltage,
-	diffPairNaming,
-	trackWidth,
-	holeSize,
-	annularWidth,
-	copperClearance,
-	ledPolarity,
-	pinNetConflict,
-	busNotModeled,
-}
-
-// Specs maps each Go-eval'd rule to its declarative twin: the same rule body as a Spec value
-// (WS3-003, docs/19 "A rule is a value"). For these rules the Go Eval stays canonical — Run
-// evaluates it, not the twin — while the twin is held to it by TestSpecParity (identical
-// findings on every fixture) and TestSpecMetadata (the rule's hand-written Reads/Primitives
-// equal the spec's derived ones). Flipping a rule to spec-canonical is replacing its Eval
-// with its twin's, gated by the parity test — output-output-conflict was the first flip
-// (rule_pin_matrix.go) and therefore no longer appears here. Spec-only rules (the matrix
-// rows, and future rules on proven vocabulary per the docs/19 twin discipline) never do:
-// their Eval IS the interpreter. Benchmarks comparing the two evaluation paths live in
-// spec_bench_test.go and feed the WS3-004 fact-store decision.
-var Specs = map[string]*Spec{
-	"single-pin-net":         singlePinNetSpec,
-	"unconnected-component":  unconnectedComponentSpec,
-	"unconnected-pin":        unconnectedPinSpec,
-	"wire-no-junction":       wireNoJunctionSpec,
-	"dangling-endpoint":      danglingEndpointSpec,
-	"duplicate-ref-des":      duplicateRefDesSpec,
-	"floating-input":         floatingInputSpec,
-	"power-input-not-driven": powerInputNotDrivenSpec,
-	"decoupling-present":     decouplingPresentSpec,
-	"bulk-cap":               bulkCapSpec,
-	"input-protection":       inputProtectionSpec,
-	"esd-protection":         esdProtectionSpec,
-	"esd-clamp-not-tvs":      esdClampNotTVSSpec,
-	"i2c-pull-up":            i2cPullUpSpec,
-	"diff-pair-naming":       diffPairNamingSpec,
-}
+// The built-in rule set and its declarative-twin map used to live here as `var Rules` and
+// `var Specs`. They moved to package stdlib/rules/builtin (phase 2b of the package reorg), which
+// installs them as the anonymous built-in source via check.RegisterBuiltins at init. The engine
+// core no longer owns any rules: a program gets the standard catalog by blank-importing
+// stdlib/rules/builtin, exactly as it registers an overlay suite. See source.go (Builtins,
+// RegisterBuiltins) and catalog.go (CatalogWith).

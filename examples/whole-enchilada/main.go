@@ -27,6 +27,7 @@ import (
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/core/render"
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog (check.RunDesign runs it)
 )
 
 //go:embed walkthrough.md

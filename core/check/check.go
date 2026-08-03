@@ -23,7 +23,7 @@ import (
 // Kind names what Subject refers to (a net, a component, or a pin) so a consumer can group and
 // highlight by entity type without re-guessing from the string: Subject is a net name when Kind is
 // KindNet and a ref_des when KindComponent or KindPin, and Pin holds the pin designator only when
-// Kind is KindPin. A rule states its subject kind at construction (see netFinding/compFinding).
+// Kind is KindPin. A rule states its subject kind at construction (see NetFinding/CompFinding).
 type Finding struct {
 	Severity string // "error" | "warning" | "info"
 	Rule     string
@@ -44,7 +44,7 @@ type Finding struct {
 
 // DatasheetCitation is the structured datasheet provenance of a finding: which document, page, and
 // section a datasheet-backed value came from, plus how it was extracted. It is the typed twin of the
-// citation string the built-in datasheet rules embed in a message, so a renderer can column it and,
+// Citation string the built-in datasheet rules embed in a message, so a renderer can column it and,
 // crucially, surface Confidence — a low confidence flags a value a reviewer should verify before
 // trusting it, rather than burying that in prose. The design side of the dual provenance stays in
 // Finding.Prov.
@@ -96,13 +96,13 @@ const (
 // own keys, and the catalog UI pivots by whatever keys are present. Nothing in the engine or the
 // IR depends on a Tag, so a new axis needs no core change.
 type Rule struct {
-	Name       string            // stable identifier, e.g. "single-pin-net"
-	Severity   string            // "error" | "warning" | "info"
-	Summary    string            // one-line description for listings
-	Impact     string            // what goes wrong when violated
-	Detail     string            // long-form markdown: meaning, rationale, diagram, query structure
-	Primitives []string          // query primitives Eval composes (docs/19)
-	Reads      []string          // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))
+	Name       string   // stable identifier, e.g. "single-pin-net"
+	Severity   string   // "error" | "warning" | "info"
+	Summary    string   // one-line description for listings
+	Impact     string   // what goes wrong when violated
+	Detail     string   // long-form markdown: meaning, rationale, diagram, query structure
+	Primitives []string // query primitives Eval composes (docs/19)
+	Reads      []string // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))
 	// OptionalReads is the subset of Reads a rule consults opportunistically: their absence
 	// does not make the rule inapplicable. Available's tier-gate skips them, so a netlist rule
 	// that only EXEMPTS findings using a datasheet fact (esd-protection crediting an IC's ESD
@@ -136,10 +136,12 @@ func Run(m Model, rules []*Rule) []Finding {
 	return out
 }
 
-// RunDesign evaluates the built-in Rules over the default Model for d: the common entry point
+// RunDesign evaluates the built-in rule set over the default Model for d: the common entry point
 // when a caller just has a design and wants the standard checks. It builds the shared Model
-// once (NewModel) and hands it, with Rules, to Run.
-func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), Rules) }
+// once (NewModel) and hands it, with the installed built-ins, to Run. The built-ins are installed
+// by importing stdlib/rules/builtin; without that import the set is empty and RunDesign returns
+// no findings.
+func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), builtinRules) }
 
 // Report maps a selection to findings (the report step every rule ends with). Subject and
 // Prov come from the selected entity via mk.
@@ -151,15 +153,17 @@ func Report[T any](xs []T, mk func(T) Finding) []Finding {
 	return out
 }
 
-// netFinding and compFinding are the two subject constructors rules use with Report. They stamp
+// NetFinding and CompFinding are the two subject constructors rules use with Report. They stamp
 // Kind so the subject's entity type travels with the finding.
-func netFinding(msg string) func(*ir.Net) Finding {
+func NetFinding(msg string) func(*ir.Net) Finding {
 	return func(n *ir.Net) Finding {
 		return Finding{Kind: KindNet, Subject: n.Name, NetID: n.GetId(), Message: msg, Prov: n.Prov}
 	}
 }
 
-func compFinding(msg string) func(*ir.Component) Finding {
+// CompFinding is the component-subject counterpart of NetFinding: a Report constructor that
+// stamps KindComponent so the finding's subject is the component ref-des.
+func CompFinding(msg string) func(*ir.Component) Finding {
 	return func(c *ir.Component) Finding {
 		return Finding{Kind: KindComponent, Subject: c.RefDes, Message: msg, Prov: c.Prov}
 	}

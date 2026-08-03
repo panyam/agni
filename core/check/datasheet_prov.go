@@ -4,10 +4,10 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// datasheetCitationOf builds the structured datasheet citation for one seeded parameter: it resolves
+// DatasheetCitationOf builds the structured datasheet Citation for one seeded parameter: it resolves
 // the SourceDoc title from the parameter's doc_ref and copies the page, section, method, and
-// confidence. It is the shared core of both the string citation() and the typed Finding.DatasheetProv.
-func datasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *DatasheetCitation {
+// confidence. It is the shared core of both the string Citation() and the typed Finding.DatasheetProv.
+func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *DatasheetCitation {
 	return &DatasheetCitation{
 		Doc:        docTitle(spec, p.GetProv().GetDocRef()),
 		DocRef:     p.GetProv().GetDocRef(),
@@ -29,7 +29,7 @@ func docTitle(spec *parampb.PartSpec, docRef string) string {
 	return ""
 }
 
-// DatasheetProvFor resolves the structured datasheet citation for a component's parameter by symbol,
+// DatasheetProvFor resolves the structured datasheet Citation for a component's parameter by symbol,
 // so a datalog-authored rule (query.RuleFromQuery) can carry the same doc/page/section/method/
 // confidence the built-in datasheet rules attach directly. refDes is the finding's component subject.
 // Nil when the component has no seeded spec, or the spec has no parameter with that symbol.
@@ -40,7 +40,7 @@ func DatasheetProvFor(m Model, refDes, symbol string) *DatasheetCitation {
 	}
 	for _, p := range spec.GetParameters() {
 		if p.GetSymbol() == symbol {
-			return datasheetCitationOf(spec, p)
+			return DatasheetCitationOf(spec, p)
 		}
 	}
 	return nil

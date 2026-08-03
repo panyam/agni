@@ -13,6 +13,7 @@ import (
 
 	"github.com/panyam/demokit"
 	"github.com/panyam/agni/core/check"
+	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog (check.RunDesign runs it)
 	"github.com/panyam/agni/examples/common"
 )
 

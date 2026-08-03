@@ -9,7 +9,7 @@ import (
 // TestNetRoleStampedIsAuthoritative (WS3-072): the core reads the STAMPED net.role fact, not the name,
 // when a net carries one. A net named "MYSTERY" (which no naming pattern matches) but stamped with the
 // ground role projects a net.ground fact — proof the read comes from the field, not a re-run of the name
-// lexicon. This is the left-shift made observable: had the projector still called isGroundName, MYSTERY
+// lexicon. This is the left-shift made observable: had the projector still called IsGroundName, MYSTERY
 // would yield nothing.
 func TestNetRoleStampedIsAuthoritative(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{

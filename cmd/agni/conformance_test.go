@@ -44,7 +44,7 @@ func TestConformance(t *testing.T) {
 				t.Fatalf("readModel: %v", err)
 			}
 			got := map[string][]string{}
-			for _, f := range check.Run(m, check.Rules) {
+			for _, f := range check.Run(m, check.BuiltinRules()) {
 				got[f.Rule] = append(got[f.Rule], f.Subject)
 			}
 			for rule, e := range exp.Fires {
@@ -85,8 +85,8 @@ func TestConformanceSpecParity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("readModel: %v", err)
 			}
-			for _, r := range check.Rules {
-				spec, ok := check.Specs[r.Name]
+			for _, r := range check.BuiltinRules() {
+				spec, ok := check.BuiltinSpecs()[r.Name]
 				if !ok {
 					continue // spec-only rule: its Eval is the interpreter, nothing to compare
 				}

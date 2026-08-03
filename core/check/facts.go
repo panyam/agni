@@ -34,7 +34,7 @@ const (
 	RelComponentOnNet = "component-on-net" // component-on-net(ref_des, net): a component sits on a net. doc: facts/docs/component-on-net.md
 
 	// net.nominal_voltage(net, volts) is the DESIGN-side nominal a rail's NAME declares (3V3 -> 3.3),
-	// the same name-derived number railMaxVoltage falls back to, but exposed on its own so a datasheet
+	// the same name-derived number RailMaxVoltage falls back to, but exposed on its own so a datasheet
 	// range check joins the design's rail voltage as a fact rather than recomputing it in Go. Distinct
 	// from net.max_voltage, which prefers an explicit max_voltage attribute over the name. (WS3-082)
 	RelNetNominalVoltage = "net.nominal_voltage" // net.nominal_voltage(net, volts): name-derived rail nominal. doc: facts/docs/net.nominal_voltage.md
@@ -49,11 +49,11 @@ const (
 
 	// param.prov(mpn, symbol, doc, page, section) exposes the PROVENANCE of a datasheet parameter —
 	// the SourceDoc title, the page, and the table/figure the value was read from — so "where did this
-	// number come from" is a query, and a datalog-authored rule can carry the citation onto its
+	// number come from" is a query, and a datalog-authored rule can carry the Citation onto its
 	// findings (WS10-012). doc is the resolved SourceDoc title (not the raw doc_ref id), the readable
-	// form a citation shows. Method/confidence are not columns here (the tuple has no slot); a finding
+	// form a Citation shows. Method/confidence are not columns here (the tuple has no slot); a finding
 	// gets them via check.DatasheetProvFor. Empty without --params, the same posture as param.
-	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's citation. doc: facts/docs/param.prov.md
+	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's Citation. doc: facts/docs/param.prov.md
 
 	// Board-geometry relations (the board tier, WS1-006): derived per-net values, not raw geometry.
 	// They demonstrate the query surface is tier-general — a new tier is queryable by adding
@@ -197,7 +197,7 @@ func sortFacts(out []FactRow) {
 func netMaxVoltageFacts(m Model) []FactRow {
 	var out []FactRow
 	for _, n := range m.Nets() {
-		if v, ok := railMaxVoltage(n, n.Name); ok {
+		if v, ok := RailMaxVoltage(n, n.Name); ok {
 			vv := v
 			out = append(out, FactRow{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
 		}
@@ -207,13 +207,13 @@ func netMaxVoltageFacts(m Model) []FactRow {
 
 // netNominalVoltageFacts emits the name-derived nominal voltage of each net (3V3 -> 3.3), the
 // design-side number a datasheet range check compares against. It reads only the net NAME
-// (nominalVoltageFromName), never the max_voltage attribute — that explicit channel is
+// (NominalVoltageFromName), never the max_voltage attribute — that explicit channel is
 // net.max_voltage's job — so the two relations stay distinct evidence. A net whose name carries
 // no parseable nominal yields no row (skip, never guess).
 func netNominalVoltageFacts(m Model) []FactRow {
 	var out []FactRow
 	for _, n := range m.Nets() {
-		if v, ok := nominalVoltageFromName(n.Name); ok {
+		if v, ok := NominalVoltageFromName(n.Name); ok {
 			vv := v
 			out = append(out, FactRow{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
 		}
@@ -275,7 +275,7 @@ func limitKindToken(k parampb.LimitKind) string {
 func specParamRows(mpn string, spec *parampb.PartSpec) []FactRow {
 	out := make([]FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		f := FactRow{Relation: RelParam, Subject: mpn, Object: p.Symbol, Value: rangeText(p.Value), Conditions: conditionsText(p.Conditions), Cite: citation(spec, p)}
+		f := FactRow{Relation: RelParam, Subject: mpn, Object: p.Symbol, Value: rangeText(p.Value), Conditions: conditionsText(p.Conditions), Cite: Citation(spec, p)}
 		if p.Value != nil && p.Value.Max != nil {
 			v := *p.Value.Max
 			f.Num = &v
@@ -291,7 +291,7 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []FactRow {
 func specParamRangeRows(mpn string, spec *parampb.PartSpec) []FactRow {
 	out := make([]FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		f := FactRow{Relation: RelParamRange, Subject: mpn, Object: p.Symbol, Value: limitKindToken(p.LimitKind), Conditions: conditionsText(p.Conditions), Cite: citation(spec, p)}
+		f := FactRow{Relation: RelParamRange, Subject: mpn, Object: p.Symbol, Value: limitKindToken(p.LimitKind), Conditions: conditionsText(p.Conditions), Cite: Citation(spec, p)}
 		if p.Value != nil {
 			if p.Value.Min != nil {
 				v := *p.Value.Min
@@ -344,13 +344,13 @@ func specParamProvRows(mpn string, spec *parampb.PartSpec) []FactRow {
 			Value:      docTitle(spec, p.GetProv().GetDocRef()),
 			Num:        &page,
 			Conditions: p.GetProv().GetTableOrFigure(),
-			Cite:       citation(spec, p),
+			Cite:       Citation(spec, p),
 		})
 	}
 	return out
 }
 
-// paramProvFacts emits the citation of each joined datasheet parameter — where the value came from —
+// paramProvFacts emits the Citation of each joined datasheet parameter — where the value came from —
 // deduped by MPN and empty without --params, the same silent-by-construction posture as paramFacts.
 func paramProvFacts(m Model) []FactRow {
 	var out []FactRow
@@ -557,7 +557,7 @@ func componentClassFacts(m Model) []FactRow {
 // esdRatedFacts emits component.esd_rated(ref) for each component whose joined datasheet spec carries
 // an ESD rating at or above the credit floor (esdRatingLimits, the same extractor esd-protection's Go
 // rule uses). Keyed by ref_des so a datalog rule joins it against net.pin / component.class; the
-// citation is the datasheet ESD row (the real evidence), not the component's IR site. Empty when the
+// Citation is the datasheet ESD row (the real evidence), not the component's IR site. Empty when the
 // Model has no seeded params (m.PartSpec nil for every ref), the param tier's silent-by-construction posture.
 func esdRatedFacts(m Model) []FactRow {
 	var out []FactRow
@@ -570,7 +570,7 @@ func esdRatedFacts(m Model) []FactRow {
 		if len(limits) == 0 {
 			continue
 		}
-		out = append(out, FactRow{Relation: RelEsdRated, Subject: c.RefDes, Cite: citation(spec, limits[0])})
+		out = append(out, FactRow{Relation: RelEsdRated, Subject: c.RefDes, Cite: Citation(spec, limits[0])})
 	}
 	return out
 }
@@ -578,7 +578,7 @@ func esdRatedFacts(m Model) []FactRow {
 // componentDeviceClassFacts emits component.device_class(ref, class) for each component whose joined
 // datasheet spec declares a non-empty device_class (WS10-013). The class is the datasheet's own single
 // string ("efuse", "ldo"), projected verbatim — a canonical taxonomy is WS10-004, so this is the value
-// as the spec states it, not a normalized key. The citation is the spec's source document (device_class
+// as the spec states it, not a normalized key. The Citation is the spec's source document (device_class
 // is a PartSpec-level field, so there is no per-parameter provenance to cite). Empty when the Model has
 // no seeded params (m.PartSpec nil for every ref), the param tier's silent-by-construction posture.
 func componentDeviceClassFacts(m Model) []FactRow {
@@ -593,9 +593,9 @@ func componentDeviceClassFacts(m Model) []FactRow {
 	return out
 }
 
-// specDocCite renders a spec-level citation (the first source document's title) for a PartSpec fact that
+// specDocCite renders a spec-level Citation (the first source document's title) for a PartSpec fact that
 // has no per-parameter provenance, e.g. the device_class field. "" resolves to "unknown source", the
-// same rendering citation() uses for a missing doc.
+// same rendering Citation() uses for a missing doc.
 func specDocCite(spec *parampb.PartSpec) string {
 	doc := "unknown source"
 	if docs := spec.GetDocs(); len(docs) > 0 && docs[0].GetTitle() != "" {
@@ -611,7 +611,7 @@ func specDocCite(spec *parampb.PartSpec) string {
 func netGroundFacts(m Model) []FactRow {
 	var out []FactRow
 	for _, n := range m.Nets() {
-		if netHasRole(n, NetRoleGround, isGroundName) {
+		if netHasRole(n, NetRoleGround, IsGroundName) {
 			out = append(out, FactRow{Relation: RelNetGround, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
@@ -646,7 +646,7 @@ func busFacts(m Model) []FactRow {
 
 // refDesCollisionFacts emits ref_des_collision(ref) for each designator used by more than one part
 // (WS3-081), keyed by ref_des so a query joins it to components (e.g. collisions on a ref-des prefix).
-// The citation is the first colliding instance. Empty for a design with no collision.
+// The Citation is the first colliding instance. Empty for a design with no collision.
 func refDesCollisionFacts(m Model) []FactRow {
 	var out []FactRow
 	for _, c := range m.RefDesCollisions() {
@@ -750,7 +750,7 @@ func nmToMM(nm int64) float64 { return float64(nm) / 1e6 }
 
 func mmStr(mm float64) string { return fmt.Sprintf("%gmm", mm) }
 
-// irCite renders an IR provenance as a one-line source citation: the source file, narrowed by
+// irCite renders an IR provenance as a one-line source Citation: the source file, narrowed by
 // the reader's native id when present (the addressable unit a viewer can navigate to).
 func irCite(p *ir.Provenance) string {
 	if p == nil {

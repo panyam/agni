@@ -18,7 +18,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"net.names", "pin.no_connect"},
 		Primitives: []string{"traverse", "exists", "pin-role"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
-			return intentionallyUnconnected(m, ents["net"].(*ir.Net))
+			return IntentionallyUnconnected(m, ents["net"].(*ir.Net))
 		},
 	})
 	RegisterSpecFunc("unprotected_power_reach", &SpecFunc{
@@ -29,7 +29,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"component.class", "on_net", "pin.electrical_type"},
 		Primitives: []string{"exists", "pin-role", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
-			return unprotectedPowerReach(m, ents["net"].(*ir.Net))
+			return UnprotectedPowerReach(m, ents["net"].(*ir.Net))
 		},
 	})
 	RegisterSpecFunc("power_pin_reach", &SpecFunc{
@@ -38,7 +38,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"component.class", "on_net", "pin.electrical_type"},
 		Primitives: []string{"exists", "pin-role", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
-			return powerPinReachable(m, ents["net"].(*ir.Net))
+			return PowerPinReachable(m, ents["net"].(*ir.Net))
 		},
 	})
 	RegisterSpecFunc("tvs_reach", &SpecFunc{
@@ -47,7 +47,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"component.class", "on_net"},
 		Primitives: []string{"exists", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
-			return tvsReachable(m, ents["net"].(*ir.Net))
+			return TVSReachable(m, ents["net"].(*ir.Net))
 		},
 	})
 	RegisterSpecFunc("zener_reach", &SpecFunc{
@@ -56,7 +56,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"component.class", "on_net"},
 		Primitives: []string{"exists", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
-			return zenerReachable(m, ents["net"].(*ir.Net))
+			return ZenerReachable(m, ents["net"].(*ir.Net))
 		},
 	})
 	RegisterSpecFunc("ic_esd_rated", &SpecFunc{
@@ -65,21 +65,21 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"param.esd_rating", "on_net"},
 		Primitives: []string{"exists", "reach", "traverse", "param-join"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
-			return icEsdRated(m, ents["net"].(*ir.Net))
+			return ICESDRated(m, ents["net"].(*ir.Net))
 		},
 	})
 	RegisterSpecFunc("ground_name", &SpecFunc{
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},
 		Fn: func(_ Model, _ map[string]any, args []any) any {
-			return isGroundName(args[0].(string))
+			return IsGroundName(args[0].(string))
 		},
 	})
 	RegisterSpecFunc("rail_name", &SpecFunc{
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},
 		Fn: func(_ Model, _ map[string]any, args []any) any {
-			return isPowerRailName(args[0].(string))
+			return IsPowerRailName(args[0].(string))
 		},
 	})
 	RegisterSpecFunc("feedback_name", &SpecFunc{
@@ -95,7 +95,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},
 		Fn: func(_ Model, _ map[string]any, args []any) any {
-			neg, ok := expectedDiffNegative(args[0].(string))
+			neg, ok := ExpectedDiffNegative(args[0].(string))
 			if !ok {
 				return ""
 			}
@@ -116,7 +116,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pair"},
 		Fn: func(m Model, _ map[string]any, _ []any) any {
-			return diffConventionPresent(m)
+			return DiffConventionPresent(m)
 		},
 	})
 }
