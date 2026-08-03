@@ -1190,8 +1190,35 @@ pre code {
 
 .content-body table {
     display: block;
-    overflow-x: auto;
+    width: fit-content;
     max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.92rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.content-body th,
+.content-body td {
+    padding: 0.55rem 0.9rem;
+    text-align: left;
+    vertical-align: top;
+    /* Let wide tables scroll rather than squeeze the columns. */
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.content-body thead th {
+    background-color: var(--bg-light);
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.content-body tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .content img,
