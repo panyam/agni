@@ -1,0 +1,9 @@
+# WS3-016: two explicit (net VCC ...) entries in one EDIF netlist — a thing connect-by-name
+# schematic formats cannot even express (their solver merges same-named nets), but an
+# explicit net list states it happily. Every name-keyed consumer (diff identity, board
+# joins) is silently wrong about which VCC is which. Fires once per claiming net: each is a
+# place to fix.
+fires:
+  duplicate-net-name:
+    subjects: [VCC, VCC]
+    why: "one name, two electrically distinct nets; a rename slip or an export/reader split"

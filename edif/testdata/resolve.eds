@@ -1,0 +1,41 @@
+
+(edif TEST
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library (rename LibOne "Lib One")
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 -100) (pt 200 0)))
+          (figure BOX (rectangle (pt 0 -100) (pt 200 0)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 200 -50)))))))))
+  (library builtin
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell gnd
+      (cellType GENERIC)
+      (view gnd
+        (viewType GRAPHIC)
+        (interface)
+        (contents
+          (boundingBox (rectangle (pt -50 -50) (pt 50 0)))
+          (figure LINE (path (pointList (pt -50 0) (pt 50 0))))
+          (figure LINE (path (pointList (pt -30 -20) (pt 30 -20))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef (name &c1) (libraryRef LibOne)))
+          (transform (origin (pt 300 400)))
+          (designator (stringDisplay "R1")))
+        (instance (rename &i2 "$i2")
+          (viewRef gnd (cellRef gnd (libraryRef builtin)))
+          (transform (origin (pt 100 100)))
+          (designator (stringDisplay "GND1")))))))

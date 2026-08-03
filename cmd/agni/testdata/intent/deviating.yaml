@@ -1,0 +1,13 @@
+# A scaffold declaration whose expectations DEVIATE from ecu.edn, so both items fail: the design has
+# an ic (U1/U2) but no soc, and carries 3V3 but not the declared 1V8 rail.
+name: ECU intent (deviating scaffold)
+modules:
+  - {name: MCU, class: ic}
+  - {name: SoC, class: soc}
+voltage_domains:
+  - {name: io_3v3, nominal: 3.3, rails: [3V3]}
+  - {name: core, nominal: 1.8, rails: [1V8]}
+subsystems:
+  - {name: power tree, nets: [3V3, 1V8]}
+protections:
+  - {rail: 3V3, kind: discharge}

@@ -1,0 +1,117 @@
+# Raw-shaped doc-IR of the BSS138 sheet: what a real producer emits, unlike the
+# post-recipe fixture in doc/testdata. Tables are UNTITLED (titles come from the
+# derive title-attachment stage using the heading text blocks), an ordering-info
+# table exists that no recipe classifies (must land in gaps), and the VDSS ratings
+# cell is deliberately mis-encoded as "500" so the patch fixture (keyed by this
+# table's pre-patch content hash) corrects it to 50.
+content_hash: "sha256:f7359512158956f42f3d90464ae87f7ec45abf2a9fa1630e046ab61076a1e8d0"
+source_format: "pdf"
+title: "BSS138 N-Channel Logic Level Enhancement Mode Field Effect Transistor"
+producer: "hand"
+page_count: 5
+
+pages {
+  number: 1
+  width: 612
+  height: 792
+  text_blocks {
+    id: "p1.x1"
+    text: "Absolute Maximum Ratings"
+    bbox { x: 72 y: 470 width: 200 height: 14 }
+    kind: "section_header"
+  }
+  text_blocks {
+    id: "p1.x2"
+    text: "Package Marking and Ordering Information"
+    bbox { x: 72 y: 640 width: 260 height: 14 }
+    kind: "section_header"
+  }
+  tables {
+    id: "p1.t1"
+    bbox { x: 72 y: 490 width: 470 height: 130 }
+    rows: 5
+    cols: 4
+    cells { row: 0 col: 0 text: "Symbol" is_header: true }
+    cells { row: 0 col: 1 text: "Parameter" is_header: true }
+    cells { row: 0 col: 2 text: "Ratings" is_header: true }
+    cells { row: 0 col: 3 text: "Units" is_header: true }
+    cells { row: 1 col: 0 text: "V DSS" }
+    cells { row: 1 col: 1 text: "Drain-Source Voltage" }
+    cells { row: 1 col: 2 text: "500" }
+    cells { row: 1 col: 3 text: "V" }
+    cells { row: 2 col: 0 text: "V GSS" }
+    cells { row: 2 col: 1 text: "Gate-Source Voltage" }
+    cells { row: 2 col: 2 text: "± 20" }
+    cells { row: 2 col: 3 text: "V" }
+    cells { row: 3 col: 0 text: "I D" }
+    cells { row: 3 col: 1 text: "Drain Current - Continuous" }
+    cells { row: 3 col: 2 text: "0.22" }
+    cells { row: 3 col: 3 text: "A" }
+    cells { row: 4 col: 0 text: "TJ, TSTG" }
+    cells { row: 4 col: 1 text: "Operating and Storage Junction Temperature Range" }
+    cells { row: 4 col: 2 text: "-55 to +150" }
+    cells { row: 4 col: 3 text: "C" }
+    confidence: 1
+    content_hash: "sha256:a5f41e6cf26ec10436a043c4c43368b0f7ba7834f6d9a5528190298841454dfb"
+  }
+  tables {
+    id: "p1.t2"
+    bbox { x: 72 y: 660 width: 470 height: 40 }
+    rows: 2
+    cols: 3
+    cells { row: 0 col: 0 text: "Device Marking" is_header: true }
+    cells { row: 0 col: 1 text: "Device" is_header: true }
+    cells { row: 0 col: 2 text: "Reel Size" is_header: true }
+    cells { row: 1 col: 0 text: "SS" }
+    cells { row: 1 col: 1 text: "BSS138" }
+    cells { row: 1 col: 2 text: "7 inch" }
+    confidence: 1
+    content_hash: "sha256:b713b33869ec7fa666479ba9b344f33c75e19f717223b73030a0023efe75331a"
+  }
+}
+
+pages {
+  number: 2
+  width: 612
+  height: 792
+  text_blocks {
+    id: "p2.x1"
+    text: "Electrical Characteristics"
+    bbox { x: 72 y: 100 width: 200 height: 14 }
+    kind: "section_header"
+  }
+  tables {
+    id: "p2.t1"
+    bbox { x: 72 y: 120 width: 470 height: 160 }
+    rows: 5
+    cols: 7
+    cells { row: 0 col: 0 text: "Symbol" is_header: true }
+    cells { row: 0 col: 1 text: "Parameter" is_header: true }
+    cells { row: 0 col: 2 text: "Test Conditions" is_header: true }
+    cells { row: 0 col: 3 text: "Min" is_header: true }
+    cells { row: 0 col: 4 text: "Typ" is_header: true }
+    cells { row: 0 col: 5 text: "Max" is_header: true }
+    cells { row: 0 col: 6 text: "Units" is_header: true }
+    cells { row: 1 col: 0 text: "VGS(th)" }
+    cells { row: 1 col: 1 text: "Gate Threshold Voltage" }
+    cells { row: 1 col: 2 text: "VDS = VGS, ID = 1 mA" }
+    cells { row: 1 col: 3 text: "0.8" }
+    cells { row: 1 col: 4 text: "1.3" }
+    cells { row: 1 col: 5 text: "1.5" }
+    cells { row: 1 col: 6 text: "V" }
+    cells { row: 2 col: 0 row_span: 3 text: "R DS(on)" }
+    cells { row: 2 col: 1 row_span: 3 text: "Static Drain-Source On-Resistance" }
+    cells { row: 2 col: 2 text: "VGS = 10 V, ID = 0.22 A" }
+    cells { row: 2 col: 4 text: "0.7" }
+    cells { row: 2 col: 5 text: "3.5" }
+    cells { row: 2 col: 6 row_span: 3 text: "Ohm" }
+    cells { row: 3 col: 2 text: "VGS = 4.5 V, ID = 0.22 A" }
+    cells { row: 3 col: 4 text: "1.0" }
+    cells { row: 3 col: 5 text: "6.0" }
+    cells { row: 4 col: 2 text: "VGS = 10 V, ID = 0.22 A, TJ = 125C" }
+    cells { row: 4 col: 4 text: "1.1" }
+    cells { row: 4 col: 5 text: "5.8" }
+    confidence: 1
+    content_hash: "sha256:d7b223877b45645ae8b8323220c8e0480d57e5ceb5209e80655580807819f588"
+  }
+}

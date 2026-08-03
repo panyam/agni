@@ -1,0 +1,23 @@
+(edif DUPPORTS
+  (edifVersion 2 0 0)
+  (design DUPPORTS (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell CONN4 (view V (viewType NETLIST)
+      (interface
+        (port (rename &1 "1") (direction INOUT))
+        (port GND (direction INOUT))
+        (port SIG (direction INPUT)))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance (rename &I1 "J1") (viewRef V (cellRef CONN4))
+            (portInstance &1 (designator "1"))
+            (portInstance GND (designator "5"))
+            (portInstance GND (designator "6"))
+            (portInstance SIG (designator "2"))
+            (designator "J1"))
+          (instance (rename &I2 "J2") (viewRef V (cellRef CONN4))
+            (portInstance GND (designator "6"))
+            (designator "J2"))
+          (net GND_A (joined (portRef GND (instanceRef &I1)) (portRef SIG (instanceRef &I1))))
+          (net GND_B (joined (portRef GND (instanceRef &I2)) (portRef &1 (instanceRef &I1)))))))))

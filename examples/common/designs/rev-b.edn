@@ -1,0 +1,17 @@
+(edif REVB
+  (edifVersion 2 0 0)
+  (design REVB (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (instance R2 (viewRef V (cellRef RES)) (designator "R2"))
+          (instance R3 (viewRef V (cellRef RES)) (designator "R3"))
+          (instance R4 (viewRef V (cellRef RES)) (designator "R4"))
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (net VCC (joined (portRef 1 (instanceRef R1)) (portRef 1 (instanceRef U1))))
+          (net GND (joined (portRef 2 (instanceRef R1)) (portRef 2 (instanceRef U1))))
+          (net DATA (joined (portRef 1 (instanceRef R2)) (portRef 3 (instanceRef U1))))
+          (net CLK (joined (portRef 1 (instanceRef R3)) (portRef 4 (instanceRef U1)) (portRef 6 (instanceRef U1))))
+          (net NEW (joined (portRef 1 (instanceRef R4)) (portRef 7 (instanceRef U1)))))))))

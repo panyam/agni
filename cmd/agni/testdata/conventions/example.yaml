@@ -1,0 +1,9 @@
+# Example operator naming convention (agni check --conventions example.yaml).
+# Rules land in the catalog namespaced by this name: example/signal-net-naming.
+name: example
+rules:
+  - name: signal-net-naming
+    severity: info
+    why: "signal nets are UPPER_SNAKE; rails and stubs are exempt"
+    allow: ["^[A-Z][A-Z0-9_]*$"]
+    exempt: ["^\\+", "^GND"]

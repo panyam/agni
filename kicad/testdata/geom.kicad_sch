@@ -1,0 +1,48 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Geo Test"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "test:DUAL"
+			(property "Reference" "U")
+			(symbol "DUAL_1_1"
+				(polyline (pts (xy -2.54 2.54) (xy 2.54 2.54)))
+				(pin input line (at -5.08 0 0) (length 2.54) (name "A") (number "1")))
+			(symbol "DUAL_2_1"
+				(polyline (pts (xy -2.54 -2.54) (xy 2.54 -2.54)))
+				(pin output line (at 5.08 0 180) (length 2.54) (name "Y") (number "2")))))
+	(symbol (lib_id "test:R") (at 50.8 40.64 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1"
+			(at 48.26 39.37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 53.34 39.37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Footprint" "R_0805"
+			(at 50.8 40.64 0)
+			(effects (font (size 1.27 1.27)) (hide yes))))
+	(symbol (lib_id "test:DUAL") (at 100.33 60.96 90) (mirror x) (unit 2) (uuid "u1b")
+		(property "Reference" "U1")
+		(property "Value" "DUAL"
+			(at 103 59 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 50.8 40.64) (xy 71.12 40.64)))
+	(label "NET1" (at 60.96 40.64 0)
+		(effects (font (size 1.27 1.27))))
+	(text "a note" (at 20 20 0)
+		(effects (font (size 2 2))))
+	(junction (at 50.8 40.64) (diameter 1.016))
+	(no_connect (at 71.12 40.64))
+	(polyline (pts (xy 10 10) (xy 30 10) (xy 30 30))))

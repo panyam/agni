@@ -1,0 +1,8 @@
+# WS1-012's anti-false-positive gate: the SAME T as tjunc.fires WITH its junction dot (one
+# net, the tap joined — note TAP's single-pin-net finding is gone too), plus two wires that
+# merely CROSS with no endpoint at the meet. Neither may trip wire-no-junction: the dot is
+# the connection, and a crossing tells no lie (KiCad never connects crossings, so there is
+# nothing silent about it). Incidentals: the resistors' far pins are bare stubs.
+fires:
+  single-pin-net:
+    subjects: [N$1, N$2, N$3]

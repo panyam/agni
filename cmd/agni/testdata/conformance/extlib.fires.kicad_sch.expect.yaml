@@ -1,0 +1,10 @@
+# WS1-016: external symbol-library resolution. The schematic embeds NOTHING (empty
+# lib_symbols); part types, pins, and therefore net connectivity come from ext.kicad_sym
+# via the project's sym-lib-table beside this file — no flag needed, project truth. R2 is
+# a DERIVED symbol (extends "R") inheriting its parent's pins. On main this board reads
+# as two unconnected placeholder components and an empty SIG net; resolved, the wire
+# joins R1.2-R2.2 and only the far pins' stubs remain.
+fires:
+  single-pin-net:
+    subjects: [N$1, N$2]
+    why: "the resistors' far pins are bare — visible at all ONLY because the external lib supplied the pins"

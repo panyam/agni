@@ -1,0 +1,9 @@
+# A toy .acme netlist read by the overlay's private format reader.
+# One component uses an X-prefixed ref-des, which the overlay's house rule flags.
+component R1 resistor 10k
+component C1 cap 100n
+component U1 mcu
+component X1 widget
+net VCC R1.1 C1.1 U1.1
+net GND R1.2 C1.2 U1.8 X1.3
+net SIG U1.2 X1.1

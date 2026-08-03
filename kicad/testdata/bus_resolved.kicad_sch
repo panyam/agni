@@ -1,0 +1,27 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "22222222-2222-2222-2222-222222222222")
+	(paper "A4")
+	(title_block (title "Flat bus"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1" (rectangle (start -1.016 2.54) (end 1.016 -2.54) (fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2")))))
+	(symbol (lib_id "test:R") (at 50 50 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1" (at 47 49 0) (effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "r2")
+		(property "Reference" "R2" (at 77 49 0) (effects (font (size 1.27 1.27)))))
+	(bus (pts (xy 45 40) (xy 85 40)) (uuid "bus1"))
+	(label "DATA[1:0]" (at 65 40 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 50 46.19) (xy 50 42)) (uuid "w1"))
+	(bus_entry (at 50 42) (size 2 -2) (uuid "be1"))
+	(label "DATA0" (at 50 44 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 80 46.19) (xy 80 42)) (uuid "w2"))
+	(bus_entry (at 80 42) (size 2 -2) (uuid "be2"))
+	(label "DATA1" (at 80 44 0) (effects (font (size 1.27 1.27)))))

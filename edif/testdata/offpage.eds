@@ -1,0 +1,16 @@
+(edif OFFPAGE
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library L
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE)))))
+  (design D
+    (cellRef Top (libraryRef L))
+    (contents
+      (page (rename P1 "S")
+        (pageSize (rectangle (pt 0 0) (pt 1000 1000)))
+        (portImplementation (name NET_A
+            (display (figureGroupOverride LABEL (visible (true))) (justify CENTERLEFT) (orientation R0) (origin (pt 200 800))))
+          (connectLocation (figure GRAPHICS (dot (pt 250 800)))))
+        (portImplementation (name NET_B
+            (display (justify CENTERRIGHT) (origin (pt 700 400))))
+          (connectLocation (figure GRAPHICS (dot (pt 650 400)))))))))

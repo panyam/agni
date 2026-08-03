@@ -1,0 +1,40 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "dddd4444-0000-0000-0000-000000000000")
+	(paper "A4")
+	(title_block (title "Hier bus child"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1" (rectangle (start -1.016 2.54) (end 1.016 -2.54) (fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2")))))
+	(symbol (lib_id "test:R") (at 100 50 0) (unit 1) (uuid "childra")
+		(property "Reference" "R?" (at 97 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "10k" (at 103 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/11111111-1111-1111-1111-111111111111/aaaa1111-0000-0000-0000-000000000000"
+					(reference "R101")
+					(unit 1)))))
+	(symbol (lib_id "test:R") (at 110 50 0) (unit 1) (uuid "childrb")
+		(property "Reference" "R?" (at 107 49 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "22k" (at 113 49 0) (effects (font (size 1.27 1.27))))
+		(instances
+			(project "test"
+				(path "/11111111-1111-1111-1111-111111111111/aaaa1111-0000-0000-0000-000000000000"
+					(reference "R102")
+					(unit 1)))))
+	(bus (pts (xy 95 40) (xy 115 40)) (uuid "cbus1"))
+	(label "DATA[1:0]" (at 102 40 0) (effects (font (size 1.27 1.27))))
+	(hierarchical_label "DATA[1:0]" (at 95 40 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 100 46.19) (xy 100 42)) (uuid "cw1"))
+	(bus_entry (at 100 42) (size 2 -2) (uuid "cbe1"))
+	(label "DATA0" (at 100 44 0) (effects (font (size 1.27 1.27))))
+	(wire (pts (xy 110 46.19) (xy 110 42)) (uuid "cw2"))
+	(bus_entry (at 110 42) (size 2 -2) (uuid "cbe2"))
+	(label "DATA1" (at 110 44 0) (effects (font (size 1.27 1.27)))))

@@ -1,0 +1,32 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Supply Abs-Max Test (passes)"))
+	(lib_symbols
+		(symbol "test:REG"
+			(property "Reference" "REG")
+			(symbol "REG_1_1"
+				(rectangle (start -12.7 -5.08) (end -2.54 5.08))
+				(polyline (pts (xy -2.54 0) (xy 0 0)))
+				(pin power_out line (at 0 0 0) (length 0) (name "OUT") (number "1"))))
+		(symbol "test:MCU"
+			(property "Reference" "U")
+			(symbol "MCU_1_1"
+				(rectangle (start 2.54 -5.08) (end 12.7 5.08))
+				(polyline (pts (xy 0 0) (xy 2.54 0)))
+				(polyline (pts (xy 7.62 -5.08) (xy 7.62 -7.62)))
+				(pin power_in line (at 0 0 0) (length 0) (name "VDD") (number "1"))
+				(pin power_in line (at 7.62 -7.62 0) (length 0) (name "GND") (number "2")))))
+	(symbol (lib_id "test:REG") (at 50.8 50.8 0) (unit 1) (uuid "reg1")
+		(property "Reference" "REG1") (property "Value" "3V3-REG"))
+	(symbol (lib_id "test:MCU") (at 71.12 50.8 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1") (property "Value" "MCU")
+		(property "MPN" "DEMO-MCU33") (property "Manufacturer" "Agni Conformance Works"))
+	(wire (pts (xy 50.8 50.8) (xy 71.12 50.8)))
+	(label "+3V3" (at 50.8 50.8 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 78.74 58.42 0)
+		(effects (font (size 1.27 1.27))))
+)

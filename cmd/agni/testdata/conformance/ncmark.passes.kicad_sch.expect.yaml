@@ -1,0 +1,6 @@
+# WS1-019: no_connect markers ON pin connect points declare those pins intentionally
+# unconnected. U1 pin 2 and R1 pin 2 are bare but NC-marked, so their stubs synthesize
+# with the tool-marker name (unconnected-(U1-Pad2), unconnected-(R1-Pad2)) instead of N$,
+# and single-pin-net's no-connect awareness skips them — NOTHING may fire on this board.
+# Before the marker bound pins, both stubs fired single-pin-net.
+fires: {}

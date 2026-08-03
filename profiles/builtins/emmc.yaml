@@ -1,0 +1,19 @@
+name: eMMC
+host: {attr: interface, value: eMMC}
+signals:
+  - {name: CMD,  suffix: _CMD, pullup: true, anchor: true}
+  - {name: CLK,  suffix: _CLK}
+  - {name: DAT0, suffix: _DAT0}
+  - {name: DAT1, suffix: _DAT1}
+  - {name: DAT2, suffix: _DAT2}
+  - {name: DAT3, suffix: _DAT3}
+  - {name: DAT4, suffix: _DAT4}
+  - {name: DAT5, suffix: _DAT5}
+  - {name: DAT6, suffix: _DAT6}
+  - {name: DAT7, suffix: _DAT7}
+  - {name: RST,  suffix: _RST}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: missing-pullup}
+  - {type: signal-dangling}

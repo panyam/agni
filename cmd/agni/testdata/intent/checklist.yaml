@@ -1,0 +1,8 @@
+name: Intent scaffold review
+areas:
+  - name: System Architecture
+    items:
+      - {id: "5", title: all required modules present, rule: intent/module-missing}
+      - {id: "7", title: voltage domains identified, rule: intent/voltage-domain-mismatch}
+      - {id: "8", title: power tree consistency, rule: intent/subsystem-power-tree}
+      - {id: "30", title: rail discharge, rule: intent/protection-discharge}

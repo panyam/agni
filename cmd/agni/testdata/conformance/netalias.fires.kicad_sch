@@ -1,0 +1,67 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Net alias conflicts"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "power:P3V3"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#PWR")
+			(symbol "P3V3_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27))))
+			(symbol "P3V3_1_1"
+				(pin power_in line (at 0 0 90) (length 0) (name "+3V3") (number "1"))))
+		(symbol "power:P3.3V"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#PWR")
+			(symbol "P3.3V_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27))))
+			(symbol "P3.3V_1_1"
+				(pin power_in line (at 0 0 90) (length 0) (name "+3.3V") (number "1")))))
+	(symbol (lib_id "test:R") (at 50 46.19 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1"
+			(at 47 45 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 80 46.19 0) (unit 1) (uuid "r2")
+		(property "Reference" "R2"
+			(at 77 45 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "power:P3V3") (at 75 70 0) (unit 1) (uuid "pwr1")
+		(property "Reference" "#PWR01"
+			(at 75 67 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "+3V3"
+			(at 75 73 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "power:P3.3V") (at 85 70 0) (unit 1) (uuid "pwr2")
+		(property "Reference" "#PWR02"
+			(at 85 67 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "+3.3V"
+			(at 85 73 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 50 50) (xy 65 50)))
+	(wire (pts (xy 65 50) (xy 80 50)))
+	(label "SIG_A" (at 55 50 0)
+		(effects (font (size 1.27 1.27))))
+	(label "SIG_B" (at 70 50 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 75 70) (xy 80 70)))
+	(wire (pts (xy 80 70) (xy 85 70)))
+	(symbol (lib_id "test:R") (at 80 73.81 0) (unit 1) (uuid "r3")
+		(property "Reference" "R3"
+			(at 77 73 0)
+			(effects (font (size 1.27 1.27))))))

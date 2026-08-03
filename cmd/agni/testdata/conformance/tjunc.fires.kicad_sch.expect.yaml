@@ -1,0 +1,12 @@
+# WS1-012: the undotted T-tap. The vertical TAP wire's endpoint lands mid-span on the BUS
+# wire with no junction dot: on screen it is one node, electrically it is two nets — the
+# capture slip visual review cannot catch by construction. The endpoint is the subject
+# (sheet-frame nm, same as dangling-endpoint), and dangling-endpoint deliberately does NOT
+# also fire there (the endpoint touches something; this rule owns the diagnosis). The
+# netlist symptom shows alongside: TAP is a single-pin net because the tap never joined.
+fires:
+  wire-no-junction:
+    subjects: ["65000000,-50000000"]
+    why: "the TAP wire's end sits on the BUS wire's body; KiCad connects only at a dot"
+  single-pin-net:
+    subjects: [N$1, N$2, N$3, TAP]

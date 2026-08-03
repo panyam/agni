@@ -1,0 +1,10 @@
+(kicad_sch
+	(version 20240620)
+	(generator "test")
+	(junction (at 20 10) (uuid "j1"))
+	(label "SIG" (at 40 0 0) (uuid "l1"))
+	(wire (pts (xy 0 0) (xy 10 0)) (uuid "w1"))
+	(wire (pts (xy 10 0) (xy 10 10)) (uuid "w2"))
+	(wire (pts (xy 20 0) (xy 20 10)) (uuid "w3"))
+	(wire (pts (xy 30 0) (xy 40 0)) (uuid "w4"))
+)

@@ -1,0 +1,63 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Decoupling Test"))
+	(lib_symbols
+		(symbol "test:REG"
+			(property "Reference" "REG")
+			(symbol "REG_1_1"
+				(rectangle (start -12.7 -5.08) (end -2.54 5.08))
+				(polyline (pts (xy -2.54 0) (xy 0 0)))
+				(pin power_out line (at 0 0 0) (length 0) (name "OUT") (number "1"))))
+		(symbol "test:MCU"
+			(property "Reference" "U")
+			(symbol "MCU_1_1"
+				(rectangle (start 2.54 -5.08) (end 12.7 5.08))
+				(polyline (pts (xy 0 0) (xy 2.54 0)))
+				(polyline (pts (xy 7.62 -5.08) (xy 7.62 -7.62)))
+				(pin power_in line (at 0 0 0) (length 0) (name "VDD") (number "1"))
+				(pin power_in line (at 7.62 -7.62 0) (length 0) (name "GND") (number "2"))))
+		(symbol "test:C"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0.254))
+			(property "Reference" "C")
+			(property "Description" "Unpolarized capacitor (artwork from KiCad Device:C)")
+			(symbol "C_0_1"
+				(polyline (pts (xy -2.032 0.762) (xy 2.032 0.762)) (stroke (width 0.508) (type default)) (fill (type none)))
+				(polyline (pts (xy -2.032 -0.762) (xy 2.032 -0.762)) (stroke (width 0.508) (type default)) (fill (type none))))
+			(symbol "C_1_1"
+				(pin passive line (at 0 3.81 270) (length 2.794) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 2.794) (name "~") (number "2"))))
+		(symbol "power:PWR_FLAG"
+			(property "Reference" "#FLG")
+			(symbol "PWR_FLAG_1_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27) (xy -1.016 2.286) (xy 0 3.302) (xy 1.016 2.286) (xy 0 1.27)))
+				(pin power_out line (at 0 0 0) (length 0) (name "pwr") (number "1")))))
+	(symbol (lib_id "test:REG") (at 50.8 50.8 0) (unit 1) (uuid "reg1")
+		(property "Reference" "REG1") (property "Value" "LDO"))
+	(symbol (lib_id "test:MCU") (at 71.12 50.8 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1") (property "Value" "MCU"))
+	(symbol (lib_id "test:REG") (at 50.8 71.12 0) (unit 1) (uuid "reg2")
+		(property "Reference" "REG2") (property "Value" "LDO"))
+	(symbol (lib_id "test:MCU") (at 71.12 71.12 0) (unit 1) (uuid "u2")
+		(property "Reference" "U2") (property "Value" "MCU"))
+	(symbol (lib_id "test:C") (at 60.96 74.93 0) (unit 1) (uuid "c1")
+		(property "Reference" "C1") (property "Value" "100n"))
+	(symbol (lib_id "power:PWR_FLAG") (at 60.96 78.74 0) (unit 1) (uuid "flg1")
+		(property "Reference" "#FLG01") (property "Value" "PWR_FLAG"))
+	(wire (pts (xy 50.8 50.8) (xy 71.12 50.8)))
+	(label "VCC1" (at 50.8 50.8 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 50.8 71.12) (xy 60.96 71.12)))
+	(wire (pts (xy 60.96 71.12) (xy 71.12 71.12)))
+	(label "VCC2" (at 50.8 71.12 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 78.74 58.42 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 78.74 78.74 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 60.96 78.74 0)
+		(effects (font (size 1.27 1.27))))
+)

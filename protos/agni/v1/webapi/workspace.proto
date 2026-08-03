@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// The application tier is a set of services, one proto file per concern (workspace, design,
+// checks, diff, validate); the web layer is just a Connect (later grpc-gateway) translation
+// over them. Like the IR and the geometry sidecar, the contract is defined in proto and
+// consumed via generated code in Go and TS (CONSTRAINTS C2, C13). No hand-written JSON DTOs.
+//
+// This file: WorkspaceService, the mounted folders and their contents (the "Files" resource).
+
+// WorkspaceService exposes the read-only folders ("mounts") the server was started with
+// and their directory contents. Mounts are the security boundary: a client names
+// a mount and a mount-relative path, never an absolute host path.
+service WorkspaceService {
+  // ListMounts returns the mounts the server is serving, in the order they were
+  // configured. It takes no parameters and never fails for a running server.
+  rpc ListMounts(ListMountsRequest) returns (ListMountsResponse);
+
+  // ListDir lists one directory level inside a mount: its subdirectories and the files a
+  // reader can open (filtered by extension). The client addresses a location by mount name
+  // plus a mount-relative path, never an absolute host path; the server joins them inside
+  // the mount. Lazy, one level per call, so large trees stay responsive.
+  rpc ListDir(ListDirRequest) returns (ListDirResponse);
+}
+
+// Mount is one configured root folder. Clients reference it by name in later calls;
+// root is a human-readable display path and is not a capability.
+message Mount {
+  // name is the stable handle the client passes back to address this mount.
+  string name = 1;
+  // root is the absolute host path the mount serves, for display in the UI.
+  string root = 2;
+}
+
+message ListMountsRequest {}
+
+message ListMountsResponse {
+  repeated Mount mounts = 1;
+}
+
+// DirEntry is one item in a directory listing: a subdirectory or a supported design file.
+message DirEntry {
+  // name is the base name (no path).
+  string name = 1;
+  // path is the mount-relative path to this entry, to pass back to ListDir (for a
+  // directory) or to a design/sheet load (for a file).
+  string path = 2;
+  // is_dir is true for a subdirectory.
+  bool is_dir = 3;
+  // format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
+  // "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
+  // has no reader for): the tree lists such files but the UI shows them disabled, so an
+  // unsupported format is distinguishable from an empty folder. It is a hint for the UI;
+  // ambiguous extensions are resolved for real at load time.
+  string format = 4;
+}
+
+message ListDirRequest {
+  // mount is the name of a mount from ListMounts.
+  string mount = 1;
+  // path is the mount-relative directory to list; empty lists the mount root.
+  string path = 2;
+}
+
+message ListDirResponse {
+  // entries are the directory's subdirectories and supported files, directories first,
+  // each group sorted by name.
+  repeated DirEntry entries = 1;
+}

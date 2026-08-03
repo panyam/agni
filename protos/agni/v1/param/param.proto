@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package agni.v1.param;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/param";
+
+// The parameter-IR is the engine's third contract, alongside the design IR
+// (agni.v1.ir: one IR, N readers) and the geometry sidecar (agni.v1.geom: one geom,
+// N producers): one parameter-IR, N datasheet extractors. It models a datasheet
+// parameter as it actually is -- a value plus the test conditions it is valid under,
+// a limit kind, and provenance back to the exact page/table/figure -- never a bare
+// scalar. Design rationale and the worked examples are in docs/20-parameter-ir.md.
+//
+// PROVISIONAL (the ir.proto tier-2 posture): no extractor populates this yet; the
+// shape is validated only by hand-encoded fixtures (param/testdata/). Names and shape
+// may change until WS10-002 lands the first extractor.
+//
+// Field discipline mirrors CONSTRAINTS C9, applied to the parameter domain: no field
+// enters this schema unless a second vendor's datasheet could populate it. Vendor
+// extras live in `attributes`. Normalization (canonical parameter ids, canonical
+// units) is WS10-004 and deliberately absent here: this layer records what the
+// datasheet says, as it says it.
+//
+// It joins to the design IR by part identity -- PartSpec.mpn / PartSpec.manufacturer
+// match ir.BomLine.mpn / ir.BomLine.manufacturer (WS10-003) -- and is never imported
+// by the readers or the IR itself; the dependency points from the validation join
+// down into both contracts.
+
+// PartSpec is the root message: every extracted parameter for one part, with the
+// source documents they came from. One PartSpec per part per corpus; fixture files
+// hold one PartSpec each.
+message PartSpec {
+  // Join keys to the design IR (ir.BomLine.mpn / ir.BomLine.manufacturer). mpn is
+  // required; a PartSpec without it cannot join and fails param.Validate.
+  string mpn = 1;
+  string manufacturer = 2;
+
+  // Free-form device class ("ldo", "nfet"). A canonical taxonomy is WS10-004; until
+  // then this is a hint, not a key.
+  string device_class = 3;
+
+  repeated SourceDoc docs = 4;
+  repeated Parameter parameters = 5;
+
+  map<string, string> attributes = 14;
+}
+
+// SourceDoc is one source document (a datasheet, an app note). Parameters reference
+// it via ParamProvenance.doc_ref so the document identity (vendor doc number +
+// revision) is stated once, not repeated per parameter.
+message SourceDoc {
+  // Local key within this PartSpec, referenced by ParamProvenance.doc_ref.
+  string id = 1;
+  // Vendor document number and revision as printed, e.g.
+  // "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023". This is the citation an
+  // engineer verifies against, so it must identify the exact revision.
+  string title = 2;
+  string vendor = 3;
+  // Where this corpus keeps the document (path or URL). Corpus-local by design: the
+  // internal-seed posture (WS10-002) means documents never leave the customer
+  // boundary, so this locator is meaningful only inside one deployment.
+  string locator = 4;
+}
+
+// LimitKind is the first-class distinction that makes static checks safe: an
+// absolute-max rating, a recommended-operating bound, and a measured characteristic
+// mean different things to a rule, and free text cannot be dispatched on.
+enum LimitKind {
+  // Unknown. A parameter with this kind fails param.Validate; extractors must
+  // classify or drop.
+  LIMIT_KIND_UNSPECIFIED = 0;
+  // Stress rating: exceeding it risks permanent damage. Not an operating point.
+  LIMIT_KIND_ABSOLUTE_MAX = 1;
+  // The range the vendor specifies for functional operation.
+  LIMIT_KIND_RECOMMENDED_OPERATING = 2;
+  // Measured/ensured behavior under the stated test conditions (the electrical
+  // characteristics tables).
+  LIMIT_KIND_CHARACTERISTIC = 3;
+}
+
+// ConditionCoverage states, explicitly, how complete a parameter's condition list
+// is. This is what keeps a conditions-stripped value from silently becoming a
+// scalar: consumers (the WS10-003 join) must treat anything other than COMPLETE or
+// UNCONDITIONAL as under-specified and skip or flag, never trust.
+enum ConditionCoverage {
+  // Unknown whether conditions were captured. Under-specified.
+  CONDITION_COVERAGE_UNSPECIFIED = 0;
+  // The extractor asserts every condition the source states is in `conditions`.
+  CONDITION_COVERAGE_COMPLETE = 1;
+  // Some stated conditions are known to be missing (unparsed footnote, graph-only
+  // qualifier). Under-specified.
+  CONDITION_COVERAGE_PARTIAL = 2;
+  // The source genuinely states no conditions for this row (rare; most tables carry
+  // at least a temperature default in the table header).
+  CONDITION_COVERAGE_UNCONDITIONAL = 3;
+}
+
+// RangeValue is a min/typ/max triple with explicit presence. An absolute-max table
+// row is typically max-only; a characteristic row may be typ-only or min/max; all of
+// those are distinct from zero. There is no bare-scalar form on purpose.
+message RangeValue {
+  optional double min = 1;
+  optional double typ = 2;
+  optional double max = 3;
+}
+
+// Condition is one test condition a value is valid under: an exact point
+// (VGS = 10 V), a range (0 <= IOUT <= 800 mA), or a one-sided bound (VIN <= 15 V).
+// `raw` always carries the condition text as printed, so nothing the structured
+// fields fail to capture is lost.
+message Condition {
+  // The conditioned quantity's symbol as printed ("VGS", "IOUT", "TJ").
+  string symbol = 1;
+  // Exactly one of eq, or min/max (either or both), is set for a structured
+  // condition; all absent means the condition was captured only as text (`raw`),
+  // which is still a captured condition -- coverage stays COMPLETE if nothing is
+  // missing, it is just not machine-comparable yet.
+  optional double eq = 2;
+  optional double min = 3;
+  optional double max = 4;
+  // Unit as printed; normalization is WS10-004.
+  string unit = 5;
+  // The condition text as printed in the source.
+  string raw = 6;
+}
+
+// Parameter is one datasheet parameter row: identity as printed, a limit kind, a
+// range value with units, the conditions it is valid under, and provenance. The
+// canonical (cross-vendor) identity is assigned by WS10-004 normalization;
+// until then consumers match on the printed symbol per vendor.
+message Parameter {
+  // Parameter name as printed ("Dropout voltage", "Static Drain-Source
+  // On-Resistance").
+  string name = 1;
+  // Symbol as printed ("VIN - VOUT", "RDS(on)"). The per-vendor match key.
+  string symbol = 2;
+  // Canonical cross-vendor id, empty until WS10-004 assigns one.
+  string canonical_id = 3;
+
+  LimitKind limit_kind = 4;
+  RangeValue value = 5;
+  // Unit as printed; normalization is WS10-004. Empty only for genuinely
+  // dimensionless rows (a ratio, a percentage already folded into the value).
+  string unit = 6;
+
+  repeated Condition conditions = 7;
+  ConditionCoverage condition_coverage = 8;
+
+  // The variant/grade this row covers when the document specs several ("LM1117-3.3",
+  // an automotive grade). Empty when the row covers every variant the document
+  // covers.
+  string applies_to = 9;
+
+  map<string, string> attributes = 14;
+
+  ParamProvenance prov = 16;
+}
+
+// ParamProvenance locates a parameter in its source document: the parameter-domain
+// analogue of ir.Provenance (which locates by file/span; here the addressable unit
+// is page + table/figure). Every Parameter carries one -- the same
+// provenance-on-every-finding discipline the check/ package enforces -- because an
+// extracted value an engineer cannot one-click verify is a liability, not a feature
+// (docs/20, and the moat framing it references).
+message ParamProvenance {
+  // SourceDoc.id within the enclosing PartSpec.
+  string doc_ref = 1;
+  // 1-based page number in the document.
+  int32 page = 2;
+  // The table or figure as titled in the source ("Absolute Maximum Ratings",
+  // "7.5 LM1117 Electrical Characteristics", "Figure 4").
+  string table_or_figure = 3;
+  // How the value was extracted: "hand" for hand-encoded fixtures, extractor names
+  // ("vlm", "table-parse") once WS10-002 lands.
+  string method = 4;
+  // Extraction confidence in (0, 1]; 1.0 for hand-encoded. Zero is invalid: a value
+  // nobody stands behind must not be emitted.
+  double confidence = 5;
+}

@@ -1,0 +1,14 @@
+# The control for supplycheck.fires: identical sheet but the rail is +3V3, inside the
+# seeded 4.6V abs-max, so supply-exceeds-abs-max must NOT fire (the exhaustive-firing
+# contract fails on any unexpected finding). The incidental firings are the same
+# minimal-sheet artifacts as the fires variant.
+fires:
+  decoupling-present:
+    subjects: ["+3V3"]
+    why: "incidental: the minimal rail feeds a power-in pin with no capacitor"
+  power-input-not-driven:
+    subjects: [GND]
+    why: "incidental: the single-pin GND stub has no driver (no PWR_FLAG in this minimal sheet)"
+  single-pin-net:
+    subjects: [GND]
+    why: "incidental: the GND label binds only U1's GND pin"

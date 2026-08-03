@@ -1,0 +1,9 @@
+name: A2B
+host: {attr: interface, value: A2B}
+signals:
+  - {name: BUSP, suffix: _A2B_P, anchor: true}
+  - {name: BUSN, suffix: _A2B_N}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: signal-dangling}

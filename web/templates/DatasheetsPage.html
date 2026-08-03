@@ -1,0 +1,116 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<style>
+  .ds-app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+  .ds-sidebar { flex: 0 0 300px; border-right: 1px solid #ddd; overflow: auto; padding: 8px; background: #fafafa; display: flex; flex-direction: column; }
+  .ds-sidebar h1 { font-size: 13px; margin: 0 0 8px; color: #333; }
+  .ds-sidebar h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 14px 0 6px; border-top: 1px solid #e5e5e5; padding-top: 10px; }
+  .ds-main { flex: 1 1 auto; min-width: 0; overflow: hidden; background: #f0f0f0; }
+  /* #ds-view is the island hole (id, not class); it must be height-bounded so .ds-workbench's
+     height:100% resolves and .ds-viewport can overflow-scroll instead of growing to the page. */
+  #ds-view, .ds-workbench { height: 100%; }
+  .ds-empty, .ds-error { padding: 20px; color: #777; }
+  .ds-error { color: #b00; }
+  /* workbench: a toolbar strip over a body that splits the page viewport (+status bar) from the transcribe panel */
+  .ds-workbench { display: flex; flex-direction: column; }
+  .ds-toolbar { flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; background: #fff; border-bottom: 1px solid #ddd; padding: 6px 10px; font-size: 12px; }
+  .ds-doc-name { font-weight: 600; color: #222; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ds-pager, .ds-zoomer { display: inline-flex; align-items: center; gap: 3px; }
+  .ds-pager button, .ds-zoomer button { border: 1px solid #ccc; background: #eee; border-radius: 4px; padding: 1px 8px; cursor: pointer; font: inherit; font-size: 12px; line-height: 1.4; }
+  .ds-pager button:disabled { opacity: 0.4; cursor: default; }
+  .ds-pageinput { width: 42px; font: inherit; font-size: 12px; padding: 1px 4px; text-align: right; border: 1px solid #ccc; border-radius: 4px; }
+  .ds-pagetotal { color: #666; }
+  .ds-zoomval { min-width: 44px; text-align: center; }
+  .ds-extracted { color: #1a7e3f; font-weight: 600; }
+  .ds-notextracted { color: #b9770f; display: inline-flex; align-items: center; gap: 8px; }
+  .ds-extract-btn { border: 1px solid #2563eb; background: #2563eb; color: #fff; border-radius: 4px; padding: 2px 10px; cursor: pointer; font: inherit; font-size: 12px; }
+  .ds-extract-btn:disabled { opacity: 0.6; cursor: default; }
+  .ds-cov { color: #555; }
+  .ds-note { color: #b9770f; }
+  .ds-tools { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .ds-tools button, .ds-import { border: 1px solid #ccc; background: #eee; border-radius: 4px; padding: 2px 10px; cursor: pointer; font: inherit; font-size: 12px; }
+  .ds-import input { display: none; }
+  .ds-body { flex: 1 1 auto; min-height: 0; display: flex; }
+  .ds-viewport-wrap { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .ds-viewport { flex: 1 1 auto; min-height: 0; overflow: auto; background: #e9e9ec; }
+  .ds-page-canvas { position: relative; margin: 16px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); background: #fff; }
+  .ds-page-canvas canvas { display: block; }
+  .ds-overlay { position: absolute; inset: 0; touch-action: none; }
+  .ds-region { position: absolute; border: 1.5px solid; box-sizing: border-box; background: transparent; cursor: pointer; }
+  .ds-region.kind-table { border-color: rgba(37, 99, 235, 0.85); background: rgba(37, 99, 235, 0.08); }
+  .ds-region.kind-figure { border-color: rgba(26, 158, 75, 0.85); background: rgba(26, 158, 75, 0.08); }
+  .ds-region.kind-text { border-color: rgba(150, 150, 150, 0.6); background: rgba(150, 150, 150, 0.04); }
+  .ds-region.kind-user { border-color: rgba(180, 100, 0, 0.85); border-style: dashed; background: rgba(180, 100, 0, 0.06); cursor: move; }
+  .ds-region:hover { background: rgba(236, 27, 184, 0.1); }
+  .ds-region.selected { outline: 2px solid #ec1bb8; z-index: 2; }
+  .ds-region.done { border-color: #1a7e3f; background: rgba(26, 158, 75, 0.12); }
+  /* Other authors' drawn boxes, read-only (compose): distinct violet, dotted, never interactive. */
+  .ds-region.ds-other { border-color: rgba(124, 58, 237, 0.8); border-style: dotted; background: rgba(124, 58, 237, 0.05); pointer-events: none; cursor: default; }
+  .ds-region.ds-other .ds-region-tag { color: rgba(124, 58, 237, 0.95); }
+  /* Second toolbar row: the overlay-layer toggles live here so the top row cannot overflow. */
+  .ds-subtoolbar { flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; background: #fff; border-bottom: 1px solid #eee; padding: 4px 10px; }
+  .ds-layers-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: #888; }
+  .ds-layers { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 11px; color: #555; }
+  .ds-layers label { display: inline-flex; gap: 2px; align-items: center; cursor: pointer; white-space: nowrap; }
+  .ds-layers input { margin: 0; }
+  .ds-region-tag { position: absolute; top: -14px; left: -1px; font-size: 9px; color: #444; background: rgba(255, 255, 255, 0.85); padding: 0 3px; white-space: nowrap; pointer-events: none; }
+  /* resize handles on a selected user region */
+  .ds-handle { position: absolute; width: 9px; height: 9px; background: #ec1bb8; border: 1px solid #fff; box-sizing: border-box; z-index: 3; }
+  .ds-handle-nw { left: -5px; top: -5px; cursor: nwse-resize; }
+  .ds-handle-ne { right: -5px; top: -5px; cursor: nesw-resize; }
+  .ds-handle-sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+  .ds-handle-se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+  .ds-del-btn { position: absolute; top: -10px; right: -10px; width: 17px; height: 17px; line-height: 15px; text-align: center; background: #d21f3c; color: #fff; border: 1px solid #fff; border-radius: 50%; font-size: 13px; cursor: pointer; z-index: 4; box-sizing: border-box; }
+  .ds-draft { position: absolute; border: 1.5px dashed #ec1bb8; background: rgba(236, 27, 184, 0.08); pointer-events: none; }
+  .ds-statusbar { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; border-top: 1px solid #ddd; background: #fff; padding: 3px 10px; font-size: 11px; color: #666; }
+  .ds-status-coords { font-variant-numeric: tabular-nums; }
+  /* extracted-params panel (left sidebar) */
+  .ps-empty { color: #999; font-size: 12px; }
+  .ps-list { list-style: none; margin: 0; padding: 0; }
+  .ps-row { display: grid; grid-template-columns: 1fr auto auto; align-items: baseline; gap: 4px 6px; width: 100%; text-align: left; border: 1px solid transparent; background: none; font: inherit; font-size: 12px; color: inherit; padding: 3px 5px; border-radius: 4px; cursor: pointer; }
+  .ps-row:hover { background: #eef; }
+  .ps-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ps-val { color: #555; font-size: 11px; }
+  .ps-page { color: #2b4a8b; background: #e8edf8; border: 1px solid #c4d2ef; border-radius: 8px; font-size: 10px; padding: 0 5px; }
+  /* transcribe panel */
+  .tx-panel { flex: 0 0 320px; overflow: auto; border-left: 1px solid #ddd; background: #fff; padding: 10px; }
+  .tx-panel h3 { font-size: 12px; margin: 0 0 6px; color: #333; text-transform: uppercase; letter-spacing: 0.03em; }
+  .tx-region-head { display: flex; align-items: center; justify-content: space-between; }
+  .tx-del-region { border: 1px solid #e0b4b4; background: #fff; color: #b00; border-radius: 4px; font: inherit; font-size: 11px; padding: 1px 8px; cursor: pointer; text-transform: none; letter-spacing: 0; }
+  .tx-meta { padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 10px; }
+  .tx-field { display: flex; flex-direction: column; font-size: 11px; color: #666; margin-bottom: 6px; gap: 2px; }
+  .tx-field input, .tx-field select { font: inherit; font-size: 12px; padding: 3px 5px; border: 1px solid #ccc; border-radius: 4px; color: #1c1c1c; }
+  .tx-range { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+  .tx-add { margin-top: 4px; border: 1px solid #2563eb; background: #2563eb; color: #fff; border-radius: 4px; padding: 4px 10px; cursor: pointer; font: inherit; font-size: 12px; }
+  .tx-hint { color: #999; font-size: 12px; padding: 6px 0; }
+  .tx-params { list-style: none; margin: 10px 0 0; padding: 0; }
+  .tx-row { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+  .tx-p-name { font-weight: 600; flex: 1 1 auto; }
+  .tx-p-val { color: #555; }
+  .tx-del { border: 0; background: none; color: #b00; cursor: pointer; font-size: 14px; line-height: 1; }
+</style>
+{{ end }}
+
+{{ define "Body" }}
+<div class="ds-app">
+  <div class="ds-sidebar">
+    <h1>Datasheets</h1>
+    <!-- WS13-006: the datasheet-tree island mounts here (reuses WorkspaceService, filtered to PDFs) -->
+    <div id="ds-tree" data-component="ds-tree"></div>
+    <h2>Extracted</h2>
+    <!-- the extracted-parameters list; click a row to locate its page + region -->
+    <div id="ds-params" data-component="ds-params"></div>
+  </div>
+  <div class="ds-main">
+    <!-- WS13-006: the workbench (page viewer + marquee edit + transcribe panel) mounts here -->
+    <div id="ds-view" data-component="ds-view"></div>
+  </div>
+</div>
+{{ end }}
+
+{{ define "AppScript" }}
+<script type="module" src="/static/datasheets.js"></script>
+{{ end }}
+
+{{ define "DatasheetsPage" }}{{ template "BasePage" . }}{{ end }}

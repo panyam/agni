@@ -1,0 +1,7 @@
+tmpfiles
+.DS_Store
+bin/
+
+# Built example binaries (rebuilt by `make testall`; never commit them)
+examples/render-board/render-board
+examples/validate/validate

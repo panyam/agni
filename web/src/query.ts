@@ -1,0 +1,157 @@
+// query.ts is the framework-neutral state for the datalog query panel (WS9-036): the presenter
+// pushes a QueryResult, the panel renders it. Keeping the shape here (not in the .tsx) mirrors
+// rules.ts / findings.ts and lets the presenter and tests build state without touching Solid.
+import { type RunQueryResponse, LocateReason } from "./gen/agni/v1/webapi/query_pb.js";
+import type { SheetBadge } from "./findings.js";
+
+export { LocateReason };
+
+// QueryRowItem is one answer row: cells align positionally with QueryResult.columns, cites is the
+// row's provenance (shown on demand so the table stays narrow), and cellSheets aligns with cells —
+// the sheet badges a navigable cell (component/net) can jump to (WS9-038), [] for a scalar or
+// unlocated cell.
+export interface QueryRowItem {
+  cells: string[];
+  cites: string[];
+  cellSheets: SheetBadge[][];
+  cellReasons: LocateReason[];
+}
+
+// QueryResult is the panel's whole state. `ran` distinguishes "not run yet" (blank panel) from
+// "ran and matched nothing" (no results). `error` is the inline message for a bad query or an
+// unloadable design; when set, columns/rows are empty. `loading` gates the run button. columnKinds
+// aligns with columns ("component" | "net" | "" scalar): it drives which cells are clickable to
+// locate the entity in the canvas (WS9-038).
+export interface QueryResult {
+  columns: string[];
+  columnKinds: string[];
+  rows: QueryRowItem[];
+  error: string;
+  loading: boolean;
+  ran: boolean;
+}
+
+// RelationItem is one entry in the relation picker (WS9-037): its name, the arg labels a template
+// inserts as ?arg, a one-line summary (hover), a kind for grouping, and (WS14-005) the rich
+// reference markdown the panel renders on demand ("" when the relation has no doc yet).
+export interface RelationItem {
+  name: string;
+  args: string[];
+  summary: string;
+  kind: string;
+  detail: string;
+}
+
+// ExampleItem is one starter query (WS14-002): a plain-language label, the datalog query a click
+// fills and runs, and the concept it teaches. Ordered as a concept ladder by the server.
+export interface ExampleItem {
+  label: string;
+  query: string;
+  teaches: string;
+}
+
+// QueryView is the command-down surface: the presenter (or the composition root, for the static
+// relation + example catalog) calls setState with each result, and setRelations/setExamples once at
+// boot. setLocateNote pushes the WS9-039 explanation shown when a cell click highlighted nothing
+// ("" to clear it), so the presenter — which alone knows whether the highlight actually resolved —
+// drives the note.
+export interface QueryView {
+  setState: (s: QueryResult) => void;
+  setRelations: (rels: RelationItem[]) => void;
+  setExamples: (examples: ExampleItem[]) => void;
+  setLocateNote: (message: string) => void;
+}
+
+// RELATION_KINDS is the group order + display label for the picker; a kind absent here (or with no
+// members) renders no group. Mirrors query.KindOrder on the server, but the client owns display.
+export const RELATION_KINDS: readonly { key: string; label: string }[] = [
+  { key: "netlist", label: "Netlist" },
+  { key: "board", label: "Board" },
+  { key: "datasheet", label: "Datasheet" },
+  { key: "predicate", label: "Predicates" },
+  { key: "overlay", label: "Overlay" },
+];
+
+// relationTemplate renders a relation as an insertable snippet: name(?arg1, ?arg2). A zero-arg
+// relation (none today) inserts name().
+export function relationTemplate(r: RelationItem): string {
+  return `${r.name}(${r.args.map((a) => "?" + a).join(", ")})`;
+}
+
+// groupRelations buckets the catalog by kind in RELATION_KINDS order, each bucket sorted by name.
+// Kinds not in RELATION_KINDS are appended in first-seen order so an overlay's novel kind still
+// shows. Empty buckets are dropped.
+export function groupRelations(rels: RelationItem[]): { key: string; label: string; items: RelationItem[] }[] {
+  const byKind = new Map<string, RelationItem[]>();
+  for (const r of rels) {
+    const list = byKind.get(r.kind) ?? [];
+    list.push(r);
+    byKind.set(r.kind, list);
+  }
+  const order = [...RELATION_KINDS];
+  for (const k of byKind.keys()) {
+    if (!order.some((o) => o.key === k)) order.push({ key: k, label: k });
+  }
+  const out: { key: string; label: string; items: RelationItem[] }[] = [];
+  for (const { key, label } of order) {
+    const items = byKind.get(key);
+    if (items && items.length > 0) {
+      out.push({ key, label, items: [...items].sort((a, b) => a.name.localeCompare(b.name)) });
+    }
+  }
+  return out;
+}
+
+// emptyResult is the initial state (nothing run yet) and the reset the panel shows while a query
+// is in flight.
+export function emptyResult(loading = false): QueryResult {
+  return { columns: [], columnKinds: [], rows: [], error: "", loading, ran: false };
+}
+
+// resultFromResponse projects a RunQueryResponse into panel state. Columns, column kinds, and each
+// row's cells come straight across; cites ride alongside for the per-row provenance expander. Each
+// navigable cell's sheet ids are resolved to display badges by the injected resolver (the
+// presenter's sheetBadges, which suppresses badges on a single-sheet design and maps id->name);
+// the default resolver yields no badges so callers that do not care (tests) need not pass one.
+export function resultFromResponse(
+  resp: RunQueryResponse,
+  resolveSheets: (ids: string[]) => SheetBadge[] = () => [],
+): QueryResult {
+  return {
+    columns: resp.columns,
+    columnKinds: resp.columnKinds ?? [],
+    rows: resp.rows.map((r) => ({
+      cells: r.cells,
+      cites: r.cites,
+      cellSheets: r.cells.map((_, i) => resolveSheets(r.cellSheets?.[i]?.sheetIds ?? [])),
+      cellReasons: r.cells.map((_, i) => r.cellReasons?.[i] ?? LocateReason.UNSPECIFIED),
+    })),
+    error: "",
+    loading: false,
+    ran: true,
+  };
+}
+
+// errorResult wraps a failure message (a parse error, or an unloadable design) as panel state.
+export function errorResult(message: string): QueryResult {
+  return { columns: [], columnKinds: [], rows: [], error: message, loading: false, ran: true };
+}
+
+// reasonMessage renders a locate reason (WS9-039) as the explanation shown when clicking a cell
+// highlighted nothing. UNSPECIFIED is the fallback for a normal entity that still did not resolve on
+// the current view (an unplaced part, or one that lives on a layout/sheet not shown). The panel owns
+// this copy, mirroring how it owns the relation-picker labels.
+export function reasonMessage(reason: LocateReason, kind: string, subject: string): string {
+  switch (reason) {
+    case LocateReason.VIRTUAL_SYMBOL:
+      return `${subject} is a power-port/flag symbol (a virtual “#” part), not a placed component — there's nothing to highlight.`;
+    case LocateReason.POWER_RAIL_NO_WIRE:
+      return `${subject} is a power rail distributed through power-symbol taps, so it has no drawn wire to trace on this schematic view.`;
+    case LocateReason.NOT_IN_DESIGN:
+      return `${subject} is not in the loaded design.`;
+    case LocateReason.BUS_NOT_DRAWN:
+      return `${subject} is a bus with no drawn wire on this schematic (a bus alias or a port whose members aren't modeled), so there's nothing to highlight.`;
+    default:
+      return `Couldn't locate ${kind || "entity"} ${subject} on this view.`;
+  }
+}

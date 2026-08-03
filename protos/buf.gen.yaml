@@ -1,0 +1,11 @@
+version: v2
+clean: true
+plugins:
+  - local: protoc-gen-go
+    out: ../gen/go
+    opt: paths=source_relative
+  # Connect service stubs for the WS9 web API (server + client), browser-friendly over
+  # HTTP/1.1. Only files that declare a service emit *connect code, so ir/geom are unaffected.
+  - local: protoc-gen-connect-go
+    out: ../gen/go
+    opt: paths=source_relative

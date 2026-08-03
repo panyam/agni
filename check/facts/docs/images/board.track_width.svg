@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="board.track_width relation: a net whose minimum track is wide is fine; a net that necks down to a thin trace is flagged">
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- LEFT: fine, wide track -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#2f8a4c">Fine: wide track</text>
+  <circle cx="70" cy="132" r="10" fill="#c98a3a" stroke="#394049"/>
+  <circle cx="270" cy="132" r="10" fill="#c98a3a" stroke="#394049"/>
+  <rect x="70" y="122" width="200" height="20" fill="#2f8a4c"/>
+  <text x="170" y="102" font-size="12" fill="#2f8a4c" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">min 0.40mm</text>
+  <text x="170" y="216" font-size="13" fill="#2f8a4c" text-anchor="middle">thinnest segment stays wide</text>
+
+  <!-- RIGHT: flagged, necks down -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: necks down thin</text>
+  <circle cx="410" cy="132" r="10" fill="#c98a3a" stroke="#394049"/>
+  <circle cx="610" cy="132" r="10" fill="#c98a3a" stroke="#394049"/>
+  <rect x="410" y="122" width="80" height="20" fill="#c98a3a"/>
+  <rect x="490" y="128" width="40" height="8" fill="#d64545"/>
+  <rect x="530" y="122" width="80" height="20" fill="#c98a3a"/>
+  <text x="510" y="102" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">min 0.15mm</text>
+  <text x="510" y="216" font-size="13" fill="#d64545" text-anchor="middle">thinnest segment sets the row</text>
+</svg>

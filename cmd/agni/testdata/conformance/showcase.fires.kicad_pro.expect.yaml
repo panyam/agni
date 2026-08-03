@@ -1,0 +1,19 @@
+fires:
+  decoupling-present:
+    subjects: ["+3V3", VBUS]
+    why: "Both rails lost their capacitors: +3V3 feeds the MCU's VDD bare, and VBUS feeds the regulator's VIN bare. The passes variant has C1/C2 on +3V3 and C5 on the protected input."
+  i2c-pull-up:
+    subjects: [SCL]
+    why: "R2 (the SCL pull-up) was removed; SDA keeps R1 and stays quiet."
+  bulk-cap:
+    subjects: ["+3V3", VBUS]
+    why: "Named rails (power symbols) with no capacitor anywhere on them. Overlaps decoupling-present here by design: that rule quantifies over power-input pins, this one over named rails."
+  input-protection:
+    subjects: [VBUS]
+    why: "The fuse F1 and input TVS D5 were removed, so the USB connector feeds the regulator's power input directly with nothing in the path. In the passes variant the series fuse splits the net, so the protected board is not even selected."
+  esd-protection:
+    subjects: [USB_D+, USB_D-]
+    why: "The USB data lines lost their TVS arrays D3/D4. The I2C header lines keep D6/D7 and stay quiet, showing the rule distinguishes protected from unprotected external signals on one board."
+  test-point-coverage:
+    subjects: [GND, VBUS]
+    why: "the board places a TP on 3V3 only, so the DFT channel is open and the bare rails are omissions (incidental to this board's purpose; the passes board is fully covered)"

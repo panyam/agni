@@ -1,0 +1,20 @@
+(edif ESCID
+  (edifVersion 2 0 0)
+  (design ESCID (cellRef TOP (libraryRef LIB)))
+  (library IC
+    (cell (rename &87844225 "87844225")
+      (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface
+          (designator "U?")
+          (port VCC (direction INPUT) (designator "1"))
+          (port GND (direction INPUT) (designator "2"))))))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef S25 (cellRef &87844225 (libraryRef IC))) (designator "U1")
+            (portInstance VCC (designator "1"))
+            (portInstance GND (designator "2")))
+          (net P3V3 (joined (portRef VCC (instanceRef U1))))
+          (net GND (joined (portRef GND (instanceRef U1)))))))))

@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/ir/ir.proto";
+
+// This file: DiffService, the semantic diff between two designs.
+
+// DiffService computes the semantic diff between two designs' netlist IR (diff.Designs,
+// docs/18-semantic-diff.md): components matched by ref_des, nets by name with signature-based
+// rename recovery. The diff core stays presentation-free; this service owns the wire form,
+// shared with `agni diff --format json` so the CLI and the viewer parse one message (WS9-004).
+service DiffService {
+  // DiffDesigns loads both files' netlist IR and returns the classified report plus the
+  // highlight maps the viewer joins to geometry. Either file failing to load (unknown mount,
+  // escaping path, no netlist reader) fails the call; there is no partial diff.
+  rpc DiffDesigns(DiffDesignsRequest) returns (DiffDesignsResponse);
+}
+
+// DiffDesignsRequest names the two designs: a is the old revision, b the new, each as a
+// (mount, mount-relative path) pair like every other file-addressing request.
+message DiffDesignsRequest {
+  string a_mount = 1;
+  string a_path = 2;
+  string b_mount = 3;
+  string b_path = 4;
+}
+
+// DiffReport is the wire form of diff.Report: the classified component and net changes
+// between the old (a) and new (b) design. Equal entities are not reported. Lists arrive in
+// the diff's canonical order (components sorted by ref_des, nets new/deleted/renamed/hard/soft
+// grouped in classification order).
+message DiffReport {
+  repeated string components_added = 1;   // ref_des present only in b, sorted
+  repeated string components_removed = 2; // ref_des present only in a, sorted
+  // One entry per changed field on a component present in both designs (a ref_des with
+  // several changed fields appears once per field).
+  repeated ComponentChange components_changed = 3;
+  repeated NetChange nets = 4;
+
+  message ComponentChange {
+    string ref_des = 1;
+    string field = 2; // "parts" (the library/part set over all sections) | "Value"
+    string old = 3;
+    string new = 4;
+  }
+
+  // NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
+  // "deleted", "renamed" (same connection signature, different name), "hard" (pin membership
+  // changed), "soft" (attribute-only). name is the net's name where it exists (the new name
+  // for a rename); old_name is set only for renames. added/removed are "refdes.pin"
+  // connection deltas, set only for hard changes. old_prov/new_prov locate the net in each
+  // revision's source, unset on the side where the net does not exist.
+  message NetChange {
+    string kind = 1;
+    string name = 2;
+    string old_name = 3;
+    repeated string added = 4;
+    repeated string removed = 5;
+    agni.v1.ir.Provenance old_prov = 6;
+    agni.v1.ir.Provenance new_prov = 7;
+  }
+}
+
+// DiffDesignsResponse carries the full report plus the compact highlight maps a viewer joins
+// to geometry keys without re-deriving the diff (WS9-004): component_status maps ref_des ->
+// "added" | "removed" | "changed"; net_status maps net name -> "new" | "deleted" | "renamed" |
+// "hard" | "soft". A renamed net appears under BOTH its old and new name (both -> "renamed"),
+// so each side of a visual diff joins by the name its own geometry carries; the by-name match
+// in diff.Designs guarantees one name never carries two different statuses. A consumer filters
+// by side: the old design draws removed/deleted/renamed/hard/soft, the new one
+// added/new/renamed/hard/soft.
+message DiffDesignsResponse {
+  DiffReport report = 1;
+  map<string, string> component_status = 2;
+  map<string, string> net_status = 3;
+
+  // Sheet membership for the CHANGED entities only, keyed BY the entity: in
+  // component_sheets_a/b the key is a changed ref_des and the value lists the ids of the
+  // SHEETS that component appears on in that revision (component_sheets_a["R3"] = ["root",
+  // "power"] reads "changed component R3 is placed on sheets root and power in revision
+  // a"); net_sheets_a/b likewise by net name. The ids are exactly the SheetRef.id values
+  // GetDesign returns for that side, in the design's sheet order — never entity ids. One
+  // map per side because each revision has its own geometry and sheet ids (WS9-006): a
+  // changed component may live on different sheets in a and b, and a renamed net keys
+  // under its OLD name in a's map and its NEW name in b's. Derived from each side's
+  // default-layout geometry the same way finding sheets are (WS9-024); a side with no
+  // geometry (or a format whose wires carry no net names, e.g. KiCad until WS1-022) simply
+  // has no entry for the affected keys, which a viewer treats as "no navigation target".
+  message SheetIds {
+    repeated string ids = 1;
+  }
+  map<string, SheetIds> component_sheets_a = 4;
+  map<string, SheetIds> component_sheets_b = 5;
+  map<string, SheetIds> net_sheets_a = 6;
+  map<string, SheetIds> net_sheets_b = 7;
+
+  // A deterministic sample of placements for components present in BOTH designs (sorted
+  // ref_des, capped — see the service), one entry per side, for the overlay-mode alignment
+  // check (WS9-007): the viewer compares shared positions per sheet pair to decide whether
+  // superimposing the two revisions on one canvas would be truthful. Positions are the
+  // placement origin in that side's sheet frame. UNCHANGED components are deliberately
+  // included — they are the alignment evidence; changed ones move for real reasons. Empty
+  // when a side has no geometry (the viewer then falls back to frame-size evidence alone).
+  message Placement {
+    string sheet = 1;
+    double x = 2;
+    double y = 3;
+  }
+  map<string, Placement> shared_placements_a = 8;
+  map<string, Placement> shared_placements_b = 9;
+}

@@ -1,0 +1,7 @@
+fires:
+  cap-voltage:
+    subjects: [C1]
+    why: "C1 (MPN DEMO-CAP-6V3, seeded in params/) is rated 6.3V but sits on the +10V rail; 10V x derate 1.25 = 12.5V required, so the vendor rating is exceeded and the finding cites the datasheet page/table. The passes variant is identical but for a +3V3 rail."
+  single-pin-net:
+    subjects: ["+10V", GND]
+    why: "incidental: the minimal one-cap sheet gives each net a single connection"

@@ -1,0 +1,6 @@
+# WS3-011 anti-false-positive gate: the same connector-to-regulator topology as
+# reach.fires, done RIGHT — a fuse crossed on the path (J1 -> F1 -> FB1 -> U1), a
+# PWR_FLAG driving the input net, a cap on it, and the regulator grounded. Every rule the
+# fires-variant trips must stay silent here; in particular input-protection must
+# recognize the fuse ACROSS two series hops, which is the reach walk's whole point.
+fires: {}

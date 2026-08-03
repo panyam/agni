@@ -1,0 +1,75 @@
+
+(edif FREETEXTFITDEMO
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (keywordMap (keywordLevel 0))
+  (status
+    (written
+      (timestamp 2026 7 28 0 0 0)
+      (author "Agni test fixtures")
+      (program "hand-authored")))
+  (comment "Redistributable repro for the WS7-041 free-text fit scope fix.")
+  (comment "Contains NO organization-specific data: all text is lorem ipsum placeholder.")
+  (comment "SCHEMATIC page: a sheet with component placements carries stand-alone multi-line")
+  (comment "annotation notes. The old fit squeezed them against a neighbor/frame (illegible blob);")
+  (comment "the placement-gated fit leaves them at natural size. CONTENTS page: a documentation")
+  (comment "page (no placements) whose multi-line columns overflow still gets the uniform fit.")
+  (comment "D-size page (86360000 x 55880000 at 1e-8 m/unit) so the 8-zone ruler engages.")
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE)))
+      (figureGroup ATTRIBUTE
+        (color 0 0 0)
+        (textHeight 177800)))
+    (cell (rename &c1 "Res")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1"))
+          (port (rename &2 "2") (direction OUTPUT) (designator "2")))
+        (symbol
+          (boundingBox (rectangle (pt -1000000 -600000) (pt 3000000 600000)))
+          (figure BOX (rectangle (pt 0 -400000) (pt 2000000 400000)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 0 0))))
+            (figure PIN (path (pointList (pt -1000000 0) (pt 0 0)))))
+          (portImplementation
+            (name &2)
+            (connectLocation (figure GRAPHICS (dot (pt 2000000 0))))
+            (figure PIN (path (pointList (pt 2000000 0) (pt 3000000 0)))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "NOTES ON A SCHEMATIC")
+        (pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))
+        (commentGraphics
+          (annotate (stringDisplay "Signal Timing Notes --%10%Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore%10%Consectetur adipiscing dolor devices latch data on the falling clock edge and hold per the note"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 177800)) (justify CENTERLEFT) (origin (pt 20000000 44000000)))))
+          (annotate (stringDisplay "Placement Note --%10%TBD"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 177800)) (justify CENTERLEFT) (origin (pt 25000000 44000000))))))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 20000000 20000000)))
+          (designator (stringDisplay "R1"))
+          (property Value (string (stringDisplay "Lorem"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 20000000 22000000)))))))
+        (instance (rename &i2 "$i2")
+          (viewRef v1 (cellRef Res (libraryRef Lib1)))
+          (transform (orientation R0) (origin (pt 40000000 20000000)))
+          (designator (stringDisplay "R2"))
+          (property Value (string (stringDisplay "Ipsum"
+            (display (figureGroupOverride ATTRIBUTE (visible (true))) (justify CENTERLEFT) (origin (pt 40000000 22000000)))))))
+        (net N1
+          (joined (portRef &2 (instanceRef &i1)) (portRef &1 (instanceRef &i2)))
+          (net (rename &n1 "N1")
+            (figure NET (path (pointList (pt 23000000 20000000) (pt 40000000 20000000)))))))
+      (page (rename P2 "CONTENTS")
+        (pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))
+        (commentGraphics
+          (annotate (stringDisplay "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore%10%Sed do eiusmod tempor incididunt%10%Ut enim ad minim veniam quis nostrud%10%Duis aute irure dolor in reprehenderit"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 177800)) (justify CENTERLEFT) (origin (pt 6000000 48000000)))))
+          (annotate (stringDisplay "Excepteur sint occaecat cupidatat%10%In culpa qui officia deserunt%10%Sed ut perspiciatis unde omnis%10%Nemo enim ipsam voluptatem"
+            (display (figureGroupOverride ATTRIBUTE (visible (true)) (textHeight 177800)) (justify CENTERLEFT) (origin (pt 14000000 48000000))))))))))

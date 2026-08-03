@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/webapi/checks.proto";
+
+// This file: ReviewService, the transport-neutral analogue of `agni review` (WS9-047). Review is
+// the check family's aggregation layer — it runs a project's checklist (a manifest) against a
+// design, classifying each item's outcome — and was the last check surface with no served RPC (the
+// CLI was its only caller). It composes the SAME check catalog + interface profiles + design-intent
+// the CheckService uses, and both surfaces map the run through review.Run, so a served review and
+// the CLI cannot disagree on an outcome. The ReviewReport shape here is the canonical wire form.
+
+// ReviewService runs a review checklist manifest over one or more designs and returns each item's
+// outcome. The overlay knobs (--profile-path / --intent-path / --params) are serve-startup config
+// (like CheckService's --params), composed once into the catalog the service holds, so a request
+// only names the manifest, the design(s), an optional separate board export, and the ratified-data
+// floor. With one design the response is a single per-item report; with several it is a rollup (one
+// report per design, in request order), the same single-vs-rollup split the CLI renders.
+service ReviewService {
+  // RunReview runs the manifest against each requested design and returns a report per design. A bad
+  // manifest, an unreadable design, or a --board-path override at a non-board file is an error (the
+  // run is all-or-nothing, so a partial read never reports items clean without checking them).
+  rpc RunReview(RunReviewRequest) returns (RunReviewResponse);
+}
+
+message RunReviewRequest {
+  string mount = 1;         // workspace mount the paths resolve within (mounts.Resolve containment)
+  string manifest_path = 2; // the review checklist manifest (YAML: review.Manifest)
+  // design_path is one or more designs to run: one design yields a per-item report; several yield a
+  // project rollup (one report each, in this order = the CLI's multi-design surface).
+  repeated string design_path = 3;
+  // board_path attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
+  // items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
+  // a netlist entry then reads its board items not-applicable, as before.
+  string board_path = 4;
+  // ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
+  // (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
+  double ratified_floor = 5;
+}
+
+// ReviewItem is one checklist item's outcome, the wire form of review.ItemResult. outcome is the
+// review.Outcome string (pass | fail | not-applicable | not-automated | provisional |
+// needs-design-intent | computed-n/a); note carries the not-applicable / not-automated reason when
+// one applies; findings are the rule firings that made the item fail, in the canonical Finding form
+// reused from CheckService so a client highlights review findings with the same join key.
+message ReviewItem {
+  string id = 1;
+  string title = 2;
+  string outcome = 3;
+  string note = 4;
+  repeated Finding findings = 5;
+}
+
+// ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).
+message ReviewArea {
+  string name = 1;
+  repeated ReviewItem items = 2;
+}
+
+// ReviewReport is one design's review result (the wire form of review.Report): the manifest and
+// design names plus each area's item outcomes. A client derives the tally (covered / pass / fail /
+// ...) from the item outcomes, the same pure function review.Report.Tally() applies, so the two
+// surfaces cannot drift on it.
+message ReviewReport {
+  string manifest = 1;
+  string design = 2;
+  repeated ReviewArea areas = 3;
+}
+
+message RunReviewResponse {
+  string manifest = 1;
+  // reports is one ReviewReport per requested design, in request order (= column order in a rollup).
+  repeated ReviewReport reports = 2;
+}

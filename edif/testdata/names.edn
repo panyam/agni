@@ -1,0 +1,15 @@
+(edif NAMES
+  (edifVersion 2 0 0)
+  (design NAMES (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (instance R2 (viewRef V (cellRef RES)) (designator "R2"))
+          (net PLAIN (joined (portRef 1 (instanceRef R1)) (portRef 1 (instanceRef R2))))
+          (net (rename SIG_A "SIG/A") (joined (portRef 2 (instanceRef R1)) (portRef 2 (instanceRef R2))))
+          (net (name ACT_LED (display (figureGroupOverride ALIAS (textHeight 15)) (origin (pt 6420 -1480))))
+            (joined (portRef 3 (instanceRef R1)) (portRef 3 (instanceRef R2))))
+          (net (rename (name &_3_3V (display (figureGroupOverride ALIAS (textHeight 15)) (origin (pt 4331 0)))) "+3.3V")
+            (joined (portRef 4 (instanceRef R1)) (portRef 4 (instanceRef R2)))))))))

@@ -1,0 +1,26 @@
+v 20200319 2
+C 1000 1000 1 0 0 resistor.sym
+{
+T 1100 1400 5 10 1 1 0 0 1
+refdes=R2
+T 1100 1200 5 10 1 1 0 0 1
+value=2k
+T 1000 1000 5 10 0 0 0 0 1
+device=RESISTOR
+}
+C 1000 2000 1 0 0 resistor.sym
+{
+T 1100 2400 5 10 1 1 0 0 1
+refdes=R1
+T 1100 2200 5 10 1 1 0 0 1
+value=1k
+T 1000 2000 5 10 0 0 0 0 1
+device=RESISTOR
+}
+C 1000 2800 1 0 0 gnd.sym
+N 1000 800 1000 1000 4
+N 1000 1800 1000 2000 4
+T 1050 900 5 10 1 1 0 0 1
+netname=IN
+T 1050 1900 5 10 1 1 0 0 1
+netname=MID

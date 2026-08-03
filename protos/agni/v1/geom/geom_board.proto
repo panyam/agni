@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+package agni.v1.geom;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/geom";
+
+import "agni/v1/geom/geom.proto";
+
+// Board geometry sidecar (WS1-006): the physical-layout artifact, distinct from the
+// schematic-page sidecar (SchematicGeometry in geom.proto). Same posture: a separate
+// keyed artifact that references the core netlist IR by stable keys (ref_des for
+// placements, net name for copper) and is joined at consumption time; never imported by
+// diff/rules/sim (CONSTRAINTS C7/C8). The netlist readers deliberately drop this data
+// (see kicad/GRAMMAR.md); the board-geometry reader recovers it here.
+//
+// This file is Tier 1 (C8): the logical contract, nested messages, int64 raw source
+// units. The columnar packed transport for high-volume copper (the geom_packed.proto
+// analogue) is deliberately absent until its consumer — the WS7 board renderer — exists.
+//
+// Fidelity: lossy-bounded (render/DRC subset), CONSTRAINTS C6: arc track segments, zone
+// fill polygons, teardrops, and 3D model references are not carried; zones carry their
+// authored outline only.
+
+// BoardGeometry is the root: one message per board, the layout analogue of
+// SchematicGeometry. Coordinates are Points in raw source units (unit_nm nanometers per
+// unit); the KiCad reader emits unit_nm=1 (plain nanometers), Y-up like the schematic
+// contract.
+message BoardGeometry {
+  string design_ref = 1;                        // joins to ir.Design.name (may be empty, like the IR)
+  int64 unit_nm = 2;                            // nanometers per source unit
+  repeated BoardLayer layers = 3;               // the stackup table, in source order
+  BoardOutline outline = 4;                     // the board edge (KiCad Edge.Cuts)
+  repeated ComponentPlacement placements = 5;   // one per placed physical component
+  repeated NetCopper nets = 6;                  // routed copper grouped by net
+  repeated Zone zones = 7;                      // copper pours, outline only
+  repeated BoardText texts = 8;                 // silkscreen/legend + free text (WS7)
+  repeated BoardGraphic graphics = 9;           // silkscreen/fab body outlines + free graphics (WS7)
+  Provenance prov = 16;
+}
+
+// BoardText is one placed text string on the board: a footprint's silkscreen ref-des or
+// value, footprint user text, or free graphic text (KiCad gr_text, including the title
+// block). Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it
+// belongs in the shared contract (C9), not in a single reader. Footprint-owned text is
+// pre-composed to BOARD coordinates by the reader (placement transform applied to the
+// text's footprint-local offset), so every entry here is already board-frame Y-up and a
+// consumer draws it without re-deriving the placement -- the same way gr_text is authored
+// absolute. Hidden source text is dropped, not carried (mirrors the no-ref placement skip).
+message BoardText {
+  string text = 1;          // the string as authored; may contain newlines
+  Point at = 2;             // board-frame anchor, Y-up (footprint text is pre-composed)
+  double rotation_deg = 3;  // CCW degrees in the Y-up frame, placement-composed
+  int64 height = 4;         // glyph height in source units (unit_nm), from the font size
+  string layer = 5;         // source layer verbatim ("F.SilkS", "F.Fab", "B.SilkS", ...)
+  bool mirror = 6;          // back-side / mirrored text (KiCad's justify mirror)
+  string justify = 7;       // horizontal justify verbatim: "left" / "right" / "" (center)
+  string ref_des = 8;       // owning placement's ref for footprint text; "" for free text
+  string kind = 9;          // source role: "reference" | "value" | "user" | "gr"
+}
+
+// BoardGraphic is one piece of non-copper board artwork: a footprint's silkscreen or fab
+// body outline / courtyard / polarity mark, or a free graphic line (KiCad `gr_*` that is not
+// the board edge). Like BoardText it is a universal board concept (IPC-2581 legend, ODB++,
+// Gerber silk are all line/arc/region artwork), so it lives in the shared contract (C9), and
+// footprint-owned graphics are pre-composed to BOARD coordinates by the reader (each point
+// through the placement transform, the same `geomath.ComposePlacement` pads and text use),
+// so a consumer draws it as-is. The board EDGE (KiCad Edge.Cuts) is NOT carried here — it is
+// BoardOutline; graphics are the silk/fab layers. Reuses geom.Shape for the geometry itself
+// (POLYLINE / RECT / CIRCLE / ARC, with Fill for filled bodies) so no primitive is duplicated.
+message BoardGraphic {
+  Shape shape = 1;      // the geometry, board-frame Y-up (footprint graphics pre-composed)
+  string layer = 2;     // source layer verbatim ("F.SilkS", "F.Fab", "B.SilkS", "B.Fab", ...)
+  string ref_des = 3;   // owning placement's ref for footprint graphics; "" for free graphics
+  int64 width = 4;      // stroke width in source units (unit_nm); 0 = the source's default
+}
+
+// BoardLayer is one row of the board's layer table, as the source declares it: the
+// numeric id copper references resolve through, the name ("F.Cu", "In1.Cu"), and the
+// source's kind word ("signal", "power", "user") kept verbatim rather than mapped to an
+// enum a second format might not share.
+message BoardLayer {
+  int32 number = 1;
+  string name = 2;
+  string kind = 3;
+}
+
+// BoardOutline is the board edge: the closed (or to-be-closed) paths of the outline
+// layer. Paths are as authored — consumers wanting a closed polygon must stitch
+// segments, since sources commonly draw the edge as disconnected lines and arcs
+// (arcs are approximated as polylines by the reader, per the C6 bound).
+message BoardOutline {
+  repeated Polyline paths = 1;
+}
+
+// ComponentPlacement is one placed physical component: where it sits, which side, and
+// its copper lands. ref_des is the join key to ir.Component; a placement whose source
+// footprint has no reference is not emitted (mirrors the netlist reader's skip).
+message ComponentPlacement {
+  string ref_des = 1;
+  Point at = 2;             // board-frame origin of the footprint
+  double rotation_deg = 3;  // degrees CCW in the canonical Y-up geom frame (WS1-030). Each
+                            // reader converts its native frame here: a Y-down source (KiCad)
+                            // negates its rotation as it Y-flips coordinates; a Y-up source
+                            // (IPC-2581) carries the source angle verbatim. The renderer is a
+                            // pure composer: world = at + M(R(rotation_deg) * pad_offset),
+                            // where M mirrors X iff `mirror`.
+  string layer = 4;         // the side it is placed on ("F.Cu" / "B.Cu" for KiCad)
+  repeated Pad pads = 5;
+  bool mirror = 6;          // component is on the back: mirror the footprint across X (after
+                            // rotation) so its pads land on the mirrored copper. Set by the
+                            // reader from the placed side; the renderer applies it.
+  Provenance prov = 16;
+}
+
+// Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL
+// (relative to ComponentPlacement.at before its rotation is applied), matching how
+// sources author them and keeping identical footprints comparable across placements;
+// a consumer composes placement transform x pad offset for board coordinates. number
+// matches ir.Connection.pin_ref, so (ref_des, number) joins a pad to the netlist pin.
+// net is the connected net's name, "" for an unconnected pad.
+message Pad {
+  string number = 1;
+  Point at = 2;
+  double rotation_deg = 3;  // as printed; same verbatim rule as ComponentPlacement
+  Point size = 4;             // bounding extents (x = width, y = height)
+  string shape = 5;           // source word, verbatim: "rect", "roundrect", "circle", "oval", ...
+  repeated string layers = 6; // layer names, wildcards as printed ("*.Cu")
+  int64 drill = 7;            // drill diameter, 0 for SMD
+  string net = 8;
+}
+
+// NetCopper is the routed copper of one net: its track segments and vias, grouped so a
+// consumer joins per-net geometry by name (the same key WireGeometry uses on the
+// schematic side).
+message NetCopper {
+  string net = 1;  // joins to ir.Net.name
+  repeated TrackSegment segments = 2;
+  repeated Via vias = 3;
+}
+
+// TrackSegment is one straight copper run on one layer.
+message TrackSegment {
+  Point a = 1;
+  Point b = 2;
+  int64 width = 3;   // trace width in source units
+  string layer = 4;
+}
+
+// Via is one drilled inter-layer connection. layer_from/layer_to bound the span
+// ("F.Cu".."B.Cu" for a through via); blind/buried vias narrow the pair.
+message Via {
+  Point at = 1;
+  int64 size = 2;    // annular pad diameter
+  int64 drill = 3;   // hole diameter
+  string layer_from = 4;
+  string layer_to = 5;
+}
+
+// Zone is one copper pour: its net, layer, and AUTHORED outline (the polygon the
+// designer drew, not the computed fill — fills are derived data a consumer regenerates
+// or a later tier carries; the C6 bound above).
+message Zone {
+  string net = 1;
+  string layer = 2;
+  Polyline outline = 3;
+}

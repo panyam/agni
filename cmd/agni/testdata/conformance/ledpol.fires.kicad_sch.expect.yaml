@@ -1,0 +1,10 @@
+# led-polarity (WS1-009 consumer): LED1's anode pin (named "A" in the symbol) wires to a
+# GND-labelled net and its cathode ("K") to +3V3 — mounted backwards, it can never
+# conduct. The roles are derived from the pin names within the led device class; no
+# format states polarity as data. Incidentals: both rail stubs reach one pin each.
+fires:
+  led-polarity:
+    subjects: [LED1]
+    why: "anode on GND, cathode on +3V3: reverse-biased forever"
+  single-pin-net:
+    subjects: ["+3V3", GND]

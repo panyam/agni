@@ -1,0 +1,27 @@
+# Conformance seed for the LM1117 real-PDF demo beat. This is a REAL part: TI LM1117 (SNOS412Q),
+# with the actual PDF at datasheets/ti/LM1117.pdf, so the finding's page/table citation opens a
+# real document. The VIN abs-max row is encoded UNCONDITIONAL so it is machine-comparable: the
+# datasheet's "over operating free-air temperature range" note is boilerplate, not an
+# operating-point dependence, so the 20V stress limit applies unconditionally. (The faithful
+# unit-test copy at param/testdata/lm1117.textproto keeps the text-only condition and is NOT
+# comparable; a fixture meant to FIRE must carry a comparable row — same discipline as demo-mcu33.)
+mpn: "LM1117"
+manufacturer: "Texas Instruments"
+device_class: "ldo"
+
+docs {
+  id: "snos412q"
+  title: "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023"
+  vendor: "Texas Instruments"
+  locator: "datasheets/ti/LM1117.pdf"
+}
+
+parameters {
+  name: "Maximum input voltage (VIN to GND)"
+  symbol: "VIN"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 20 }
+  unit: "V"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  prov { doc_ref: "snos412q" page: 4 table_or_figure: "7.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}

@@ -1,0 +1,14 @@
+fires:
+  decoupling-present:
+    subjects: ["+12V"]
+    why: "incidental: the 12V rail feeds a power-in pin with no decoupling capacitor"
+  input-protection:
+    subjects: ["+12V"]
+    why: "incidental: J1 (a connector) feeds the LDO power input with no fuse or TVS in the path"
+  power-input-not-driven:
+    subjects: [GND]
+    why: "incidental: the single-pin GND stub has no driver (no PWR_FLAG in this minimal sheet)"
+  single-pin-net:
+    subjects: [GND]
+    why: "incidental: the GND label binds only U1's GND pin"
+# supply-exceeds-abs-max deliberately absent: same LM1117, but +12V is under the 20V abs-max.

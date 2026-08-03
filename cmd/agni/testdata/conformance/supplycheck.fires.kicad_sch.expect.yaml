@@ -1,0 +1,16 @@
+fires:
+  supply-exceeds-abs-max:
+    subjects: [U1]
+    why: "U1 (MPN DEMO-MCU33, seeded in params/) has its power-in VDD on the +5V rail; the seeded abs-max VDD is 4.6V, so the vendor limit is exceeded and the finding cites the datasheet page/table. The passes variant is identical but for a +3V3 rail."
+  rail-nominal-out-of-recommended:
+    subjects: [U1]
+    why: "Same U1/+5V: the seeded recommended-operating VDD is 3.0..3.6V, so the +5V rail is over the functional envelope too (the sibling of abs-max). The passes variant's +3V3 rail sits inside 3.0..3.6V, so this stays silent there."
+  decoupling-present:
+    subjects: ["+5V"]
+    why: "incidental: the minimal rail feeds a power-in pin with no capacitor"
+  power-input-not-driven:
+    subjects: [GND]
+    why: "incidental: the single-pin GND stub has no driver (no PWR_FLAG in this minimal sheet)"
+  single-pin-net:
+    subjects: [GND]
+    why: "incidental: the GND label binds only U1's GND pin"

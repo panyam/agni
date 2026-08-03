@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package agni.v1.derive;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/derive";
+
+// The derivation layer's three data artifacts (docs/24-derivation.md): the pieces of
+// PartSpec = f(document, toolchain, recipes, patches) that are DATA rather than code.
+// Recipes and patches live as textproto files in git (reviewable, diffable,
+// accumulating); manifests are emitted per run and stored beside the derived
+// PartSpec. All three are keyed by content hashes from the doc-IR (agni.v1.doc), so
+// a document revision or a re-detected table changes the key rather than silently
+// reusing stale data.
+//
+// PROVISIONAL, like param and doc: one deterministic extractor exercises this today;
+// the ensemble/VLM fields are declared where the model needs them (RunManifest) and
+// stay zero until that path exists.
+
+// Recipe is one doc-family's extraction rules: how to classify this family's tables
+// into limit kinds. It matches by document title (the vendor doc-number line the
+// producer read), never by content hash: a recipe covers a family of documents and
+// revisions, while a Patch pins exactly one.
+message Recipe {
+  // Recipe identity, recorded in RunManifest.recipes, e.g. "fairchild-mosfet-sheets".
+  string name = 1;
+  // RE2 pattern over Document.title selecting the documents this recipe understands.
+  // An empty pattern matches nothing (a recipe must opt in).
+  string doc_title_pattern = 2;
+  repeated TableRule tables = 3;
+  map<string, string> attributes = 14;
+}
+
+// TableRule classifies tables whose (attached) title matches the pattern into a
+// parameter limit kind. Tables no rule matches are not extracted; they land in the
+// manifest's gap list so coverage is visible.
+message TableRule {
+  // RE2 pattern over the table's title after title attachment.
+  string title_pattern = 1;
+  // The agni.v1.param.LimitKind enum NAME this table's rows carry, e.g.
+  // "LIMIT_KIND_ABSOLUTE_MAX". A string (not an imported enum) so derive.proto does
+  // not import param.proto for one constant; the derive stage validates the name.
+  string limit_kind = 2;
+}
+
+// Patch is one pinned human correction to one cell of one table of one exact
+// document: the layer applied LAST in a derivation, so a verified fix can never be
+// regressed by a re-run. Keys are content hashes, so a new document revision or a
+// structurally different re-detection invalidates the patch by construction (it
+// simply stops matching, and the manifest reports it unapplied).
+message Patch {
+  // Patch identity, recorded in RunManifest.patches_applied.
+  string name = 1;
+  // Document.content_hash this patch pins.
+  string doc_content_hash = 2;
+  // Table.content_hash BEFORE patching (the detected table this correction targets).
+  string table_content_hash = 3;
+  // 0-based grid position of the corrected cell. A position with no detected cell
+  // is inserted (a producer that mis-placed a value leaves the right position
+  // empty), so a cell-placement error is corrected by a clear + an insert pair.
+  int32 row = 4;
+  int32 col = 5;
+  // The corrected cell text (what the human read on the page). Empty text clears
+  // the cell.
+  string text = 6;
+  // Why: what was wrong ("parser read 13, page says 1.3"). Required by LoadPatches;
+  // an unexplained correction cannot be reviewed.
+  string note = 7;
+  string author = 8;
+}
+
+// RunManifest is the lockfile of one derivation run: enough to reproduce the
+// PartSpec (pinned inputs) and to see what the run did NOT extract (the gap list --
+// silence must never read as absence, docs/17 coverage accounting).
+message RunManifest {
+  // Document.content_hash the run derived from.
+  string doc_content_hash = 1;
+  // The doc-IR's producer (e.g. "docling/2.113.0") and this derive stage's version
+  // (e.g. "derive/v0"): together the toolchain pin.
+  string doc_producer = 2;
+  string derive_version = 3;
+  // Part identity the operator supplied for the emitted PartSpec.
+  string mpn = 4;
+  string manufacturer = 5;
+  // Recipe names that matched the document, in application order.
+  repeated string recipes = 6;
+  // Patch names that actually applied. A patch that was loaded but no longer matched
+  // (revision changed, table re-detected) appears in gaps with kind "patch-unapplied".
+  repeated string patches_applied = 7;
+  // Parameters emitted into the PartSpec (post-Validate).
+  int32 parameters_emitted = 8;
+  // Ensemble agreement stats: zero until a second extraction path exists (the
+  // VLM/ensemble gate of docs/17). Declared here so the manifest shape is stable.
+  int32 ensemble_agreed = 9;
+  int32 ensemble_disagreed = 10;
+  repeated Gap gaps = 11;
+}
+
+// Gap is one thing the run saw and did not extract, with enough locator to act on
+// it. Kinds are open strings; the v0 extractor emits: "unclassified-table" (no
+// recipe rule matched), "unparsed-row" (a classified table's row yielded no
+// parameter), "raw-condition" (a condition kept as text only), "validate-reject"
+// (an extracted parameter failed param.Validate), "patch-unapplied".
+message Gap {
+  string kind = 1;
+  // Doc-IR region id when the gap has one (page-scoped table id), else empty.
+  string region = 2;
+  string detail = 3;
+}

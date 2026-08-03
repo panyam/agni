@@ -1,0 +1,18 @@
+(edif UNCONNPIN
+  (edifVersion 2 0 0)
+  (design UNCONNPIN (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell MCU (view V (viewType NETLIST)
+      (interface
+        (port P1 (direction INPUT) (designator "1"))
+        (port P2 (direction INPUT) (designator "2"))
+        (port P3 (direction OUTPUT) (designator "3")))))
+    (cell DRV (view V (viewType NETLIST)
+      (interface (port O (direction OUTPUT) (designator "1")))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef DRV)) (designator "U2"))
+          (net WIRED (joined (portRef 1 (instanceRef U2)) (portRef 1 (instanceRef U1))))
+          (net NC_SPARE (joined (portRef 3 (instanceRef U1)))))))))

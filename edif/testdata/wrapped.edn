@@ -1,0 +1,11 @@
+(edif WRAPPED
+  (edifVersion 2 0 0)
+  (design (rename SCHEMATIC1 "SCH
+EMATIC1") (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (instance R2 (viewRef V (cellRef RES)) (designator "R2"))
+          (net GND (joined (portRef 1 (instanceRef R1)) (portRef 1 (instanceRef R2)))))))))

@@ -1,0 +1,277 @@
+syntax = "proto3";
+
+package agni.v1.geom;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/geom";
+
+// Schematic geometry sidecar. A separate artifact from the core netlist IR
+// (agni.v1.ir): it references the IR by stable keys (ref_des, net name, port_ref,
+// plus provenance source_id) and is joined at render time. Never imported by
+// diff/rules/sim. See docs/16-geometry-and-rendering.md and
+// docs/edif-schematic-primer.md. Fidelity: lossy-bounded (render subset), CONSTRAINTS C6.
+//
+// This file is Tier 1 (CONSTRAINTS C8): the logical contract. Nested messages, int64 raw
+// source units, the public API for reads, picking, and IR-keying. Storage/packing detail
+// never leaks in here. Tier 2 (the columnar GPU-transport projection, PackedSheet) lives
+// in geom_packed.proto so this contract stays pure.
+
+// Provenance links a geometry node back to its source (schematic file + EDIF internal
+// id). source_id (the EDIF rename &id) is the robust join key to the IR, since it is
+// identical across the .edn netlist and the .eds schematic.
+message Provenance {
+  string source_file = 1;
+  string source_id = 2;
+}
+
+// Point is a 2D coordinate in raw source units (SchematicGeometry.unit_nm nm per unit).
+message Point {
+  int64 x = 1;
+  int64 y = 2;
+}
+
+// BBox is an axis-aligned bounding box.
+message BBox {
+  Point min = 1;
+  Point max = 2;
+}
+
+// Transform places a symbol on a sheet. Format-neutral: origin + rotation + mirror +
+// optional scale, so readers for formats with arbitrary angles/scales (KiCad, Altium,
+// OrCAD, ...) map onto it, not just EDIF's fixed orientation codes. Application order is
+// mirror, then rotate, then translate by origin. The EDIF 8 codes map exactly:
+// R0/R90/R180/R270 = rotation only; MX = mirror_x; MY = mirror_y; MXR90 = mirror_x +
+// rotation 90; MYR90 = mirror_y + rotation 90. EDIF scaleX/scaleY map to scale_x/scale_y.
+message Transform {
+  Point origin = 1;
+  int32 rotation_deg = 2;  // degrees counter-clockwise (0/90/180/270 typical)
+  bool mirror_x = 3;       // mirror across X axis (flip Y), applied before rotation
+  bool mirror_y = 4;       // mirror across Y axis (flip X), applied before rotation
+  double scale_x = 5;      // 0 means unset (treat as 1.0)
+  double scale_y = 6;      // 0 means unset (treat as 1.0)
+}
+
+// Shape is one drawable primitive of a symbol or free graphic.
+message Shape {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_POLYLINE = 1;  // open path: points in order
+    KIND_RECT = 2;      // two points: min/max corners
+    KIND_CIRCLE = 3;    // center = points[0], radius
+    KIND_ARC = 4;       // three points: start, mid, end
+    KIND_DOT = 5;       // single point (junction / connect location)
+  }
+  // Fill style of a closed shape. Formats distinguish how a body is filled, so this is not
+  // a bool: OUTLINE fills with the outline/stroke color, BACKGROUND with the symbol body
+  // color, COLOR with an explicit fill_color. UNSPECIFIED is an unfilled outline (the
+  // default). Set where the format expresses it (KiCad fill types; EDIF fill, if any).
+  enum Fill {
+    FILL_UNSPECIFIED = 0;  // not filled (outline only)
+    FILL_OUTLINE = 1;      // filled with the outline/stroke color
+    FILL_BACKGROUND = 2;   // filled with the symbol body/background color
+    FILL_COLOR = 3;        // filled with fill_color
+  }
+  Kind kind = 1;
+  repeated Point points = 2;
+  int64 radius = 3;         // CIRCLE only
+  string figure_group = 4;  // EDIF figureGroup (BOX/PIN/NET/...), a style hint
+  Fill fill = 5;
+  string fill_color = 6;    // "#rrggbb" when fill == FILL_COLOR
+}
+
+// PinPoint is a pin's connect location within a symbol, in symbol-local coordinates.
+message PinPoint {
+  string port_ref = 1;      // joins to ir.Port.designator / net PortRef.port_ref
+  Point loc = 2;            // connectLocation dot
+  string source_id = 3;     // EDIF port internal id (&id)
+  Point label_origin = 4;   // symbol-local origin of the pin-number label (nil if hidden)
+  string justify = 5;       // pin-number label alignment, canonical "<h> <v>" (see Label.justify)
+  string name = 6;          // pin name (e.g. "OUT"), distinct from the number in port_ref
+}
+
+// Asset marks a geom object that was loaded as a self-contained unit from an external source
+// (a symbol file, an embedded/external image, an imported group) rather than drawn inline. It
+// carries the origin so attribution, licensing (symbol/image libraries are often GPL), and
+// round-tripping are traceable, and a kind so consumers can iterate symbols, images, and
+// generic groups uniformly. Inline hand-drawn primitives carry no Asset; its presence is the
+// signal that this content came from somewhere as a unit.
+message Asset {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_SYMBOL = 1;  // a symbol/cell loaded from a .sym or library
+    KIND_IMAGE = 2;   // a raster image, embedded in the source or an external file
+    KIND_GROUP = 3;   // a set of primitives imported as one unit
+  }
+  Kind kind = 1;
+  string id = 2;        // stable identity for dedup / cross-reference (e.g. the symbol/file name)
+  Provenance prov = 3;  // where the asset was loaded from
+  // placeholder is set when the asset could NOT be loaded (e.g. a referenced .sym file was not
+  // found) and the geometry is a stand-in box, not the real artwork. Consumers use it to tell a
+  // resolved symbol from a fallback (e.g. the render report's "pass --symbol-path" hint).
+  bool placeholder = 4;
+}
+
+// Image is a raster bitmap placed on a sheet or baked into a symbol (a logo, a title-block
+// graphic, an embedded photo). The bytes are carried inline (decoded from the source's base64),
+// drawn into bbox with the given rotation/mirror. bbox is in the coordinate space of its owner:
+// sheet coordinates for SheetGeometry.images, symbol-local for SymbolDef.images (then
+// transformed by each placement). Always an Asset (kind KIND_IMAGE).
+message Image {
+  BBox bbox = 1;
+  string mime = 2;         // e.g. "image/png", "image/jpeg"
+  bytes data = 3;          // raw image bytes (base64-decoded from the source)
+  int32 rotation_deg = 4;  // degrees counter-clockwise
+  bool mirror = 5;         // mirror across the y-axis (flip x) before rotation
+  Asset asset = 6;
+}
+
+// SymbolDef is the reusable graphic for a part type (an EDIF cell view symbol),
+// drawn once and placed many times. Keyed by (cell_ref, library_ref, view_ref): a
+// multi-section cell (e.g. a connector with A/B/C/D banks) defines several views, each a
+// distinct symbol, and a placement selects one by view_ref.
+message SymbolDef {
+  string cell_ref = 1;     // joins to ir.ComponentInstance.cell_ref
+  string library_ref = 2;  // joins to ir.ComponentInstance.library_ref
+  BBox bbox = 3;
+  repeated Shape shapes = 4;
+  repeated PinPoint pins = 5;
+  string view_ref = 6;     // EDIF view display name; distinguishes multi-section banks
+  // Static free-text annotations baked into the symbol (e.g. a title-block's field
+  // labels), in symbol-local coordinates; drawn transformed by each placement.
+  repeated Label annotations = 7;
+  // asset marks a symbol loaded from a .sym/library (kind KIND_SYMBOL) and carries its origin;
+  // prov (16) is retained for the EDIF/KiCad readers that already set it.
+  Asset asset = 8;
+  repeated Image images = 9;  // raster graphics baked into the symbol (symbol-local coords)
+  Provenance prov = 16;
+}
+
+// SymbolPlacement is one placed component on a sheet: a symbol plus a transform.
+// Field is a placed text field on a symbol instance (Reference, Value, or a custom field):
+// its displayed value and where the format placed it. Structured (not a loose sheet Label)
+// so consumers know which text is which field, and whether it is shown, e.g. for the visual
+// diff and interaction (a Value change highlights the right label). ref_des stays the join
+// key; the Reference field is its drawn form.
+message Field {
+  string name = 1;         // "Reference", "Value", or a custom field name
+  string value = 2;        // the displayed text
+  Point origin = 3;        // placement (sheet coordinates)
+  string justify = 4;      // canonical justify (see Label.justify)
+  int64 height = 5;        // text height in source units
+  int32 rotation_deg = 6;  // degrees counter-clockwise
+  bool visible = 7;        // false = present but not drawn (a hidden field)
+}
+
+message SymbolPlacement {
+  string ref_des = 1;      // joins to ir.ComponentInstance.ref_des
+  string cell_ref = 2;     // which SymbolDef to draw
+  string library_ref = 3;
+  Transform transform = 4;
+  string view_ref = 5;     // which view/bank of the cell (joins to SymbolDef.view_ref)
+  repeated Field fields = 6;  // the instance's text fields (Reference, Value, custom)
+  Provenance prov = 16;    // source_id = EDIF instance &id (the unique join key)
+}
+
+// Polyline is an ordered list of points (one wire run).
+message Polyline {
+  repeated Point points = 1;
+}
+
+// WireGeometry is the routed geometry for one net on a sheet.
+message WireGeometry {
+  // Kind distinguishes a plain net wire from a bus construct, so the renderers style a bus
+  // trunk/entry differently (thicker, distinct color) from a wire. Unset renders as a wire, so
+  // existing readers and goldens are unaffected until a reader sets it. Format-neutral: KiCad
+  // sets BUS/BUS_ENTRY today; gEDA/xschem when their geometry readers emit bus segments.
+  enum Kind {
+    KIND_UNSPECIFIED = 0;  // treat as a plain wire
+    KIND_WIRE = 1;         // a net wire
+    KIND_BUS = 2;          // a bus trunk (KiCad `bus`)
+    KIND_BUS_ENTRY = 3;    // a bus entry / ripper stub (KiCad `bus_entry`)
+  }
+  string net = 1;                    // joins to ir.Net.name
+  // net_id joins to ir.Net.id — the deterministic per-instance net identity, so a highlight can
+  // target one of two nets that share a name (see ir.Net.id). Empty for a wire on a pinless net
+  // or a format whose solve produced no id; consumers fall back to net.
+  string net_id = 3;
+  repeated Polyline polylines = 2;
+  Kind kind = 4;
+  Provenance prov = 16;
+}
+
+// Label is free text placed on a sheet (annotations, net labels, notes).
+message Label {
+  string text = 1;
+  Point origin = 2;
+  int64 height = 3;         // text height in source units
+  // Alignment of the text relative to origin, canonical "<h> <v>": h in {left,center,right},
+  // v in {top,middle,bottom}; either token may be omitted (defaults to centered). Each reader
+  // maps its native codes onto this (EDIF LOWERLEFT -> "left bottom"; KiCad "left bottom").
+  string justify = 4;
+  int32 rotation_deg = 5;  // degrees counter-clockwise
+}
+
+// SheetGeometry is one schematic page/sheet (tier 1, logical).
+message SheetGeometry {
+  string id = 1;                             // page internal id
+  string name = 2;                           // page display name
+  // parent_id is the id of the sheet this one nests under, or empty for a top-level sheet.
+  // A design may have several top-level sheets (a forest). Populated by readers with a sheet
+  // hierarchy (KiCad hierarchical schematics); flat formats (EDIF pages) leave it empty. This
+  // is the rendering-side hierarchy (the geometry sidecar); the neutral IR does not model it
+  // yet (CONSTRAINTS C9 — only one format has it so far).
+  string parent_id = 8;
+  BBox size = 3;                             // pageSize
+  repeated SymbolPlacement placements = 4;
+  repeated WireGeometry wires = 5;
+  repeated Label labels = 6;
+  // Free graphics on the sheet that are not owned by a placed symbol: junction dots,
+  // no-connect markers, and stand-alone drawing primitives (notes, lines, boxes). Populated
+  // by any reader that has them (KiCad junctions/no-connects/graphics, EDIF commentGraphics
+  // figures). Symbol graphics stay in SymbolDef.shapes; these are sheet-level.
+  repeated Shape shapes = 7;
+  TitleBlock title_block = 9;  // the sheet's worksheet title-block fields, if any (8 = parent_id)
+  repeated Image images = 10;  // sheet-level raster graphics (logos, notes) in sheet coordinates
+  // suppress_worksheet tells the renderer NOT to synthesize its KiCad-style drawing sheet
+  // (frame + ruler + title block) for this sheet, because the source format carries its own
+  // (xschem title.sym, gEDA title-*.sym). Default false, so KiCad and EDIF still get the
+  // synthetic worksheet; xschem/gEDA readers set it true. (WS7-036: the format's own title
+  // block/annotations are rendered faithfully in a follow-up; until then such a sheet draws
+  // without a title block rather than with a wrong synthetic one.)
+  bool suppress_worksheet = 11;
+  Provenance prov = 16;
+}
+
+// TitleBlock holds the drawing-sheet title-block fields (the bottom-right info table). The
+// worksheet frame/border/zone-ruler is standard furniture the renderer synthesizes from the
+// page size; only these text fields carry per-design/sheet content. Cross-format: KiCad
+// (title_block ...), EDIF title-block annotations. Any field may be empty.
+message TitleBlock {
+  string title = 1;
+  string rev = 2;
+  string date = 3;
+  string company = 4;
+  repeated string comments = 5;  // free comment lines
+  // Title-block fields a format carries that have no typed slot here (e.g. EDIF's Drawing,
+  // Designer, Prototype, DV/PV/Checked signatures). Ordered as the source lists them and
+  // deduped by key, so consumers keep the key/value split a "Key: Value" comment would lose.
+  // Kept generic (not typed fields) because so far only some formats populate these.
+  repeated KeyValue extra_fields = 6;
+}
+
+// KeyValue is a preserved-order named string, used where a format carries a field the shared
+// geometry schema does not promote to a typed slot. Order is the producer's; keys are unique
+// within one list. Prefer this over map<string,string> when order matters or output must be
+// byte-stable (proto map iteration is unordered).
+message KeyValue {
+  string key = 1;
+  string value = 2;
+}
+
+// SchematicGeometry is the whole sidecar artifact for one design (tier 1, logical).
+message SchematicGeometry {
+  string design_ref = 1;            // joins to ir.Design.name
+  int64 unit_nm = 2;                // nanometers per source unit (10 for this EDIF)
+  repeated SymbolDef symbols = 3;   // the symbol library, keyed by cell_ref
+  repeated SheetGeometry sheets = 4;
+  Provenance prov = 16;
+}

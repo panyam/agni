@@ -1,0 +1,19 @@
+# WS1-018: the netlist hierarchy walk, pinned end to end. The root instantiates
+# twosheet_sub TWICE (amp1, amp2), so the flattened design is R1 + {R101,R102} + {R201,R202}
+# with per-instance refs from the instances paths. VCC unifies across all three sheets
+# (power symbols + the root PWR_FLAG) and, this being a complete project read, resolves
+# external->global — which is why bulk-cap may fire on it at all. amp1's CTRL port is wired
+# on the root; amp2's is left unwired, so /amp2/CTRL is a genuine one-pin net. The root's
+# own local SIG is a one-pin net too, and distinct from /amp1/SIG and /amp2/SIG (which have
+# two pins each and stay quiet) — the sheet-scoped naming in action. The sub-sheet's stray
+# wire dangles at both ends in both instances: four findings, sheet-frame coordinates.
+fires:
+  bulk-cap:
+    subjects: [VCC]
+    why: "the cross-sheet rail, unified by the walk and downgraded to global by the complete project read, carries no bulk capacitor"
+  single-pin-net:
+    subjects: [SIG, /amp2/CTRL]
+    why: "the root's local SIG (scoped apart from each instance's /ampN/SIG) and the amp2 port no root wire reaches"
+  dangling-endpoint:
+    subjects: ["200000000,-100000000", "200000000,-100000000", "205000000,-100000000", "205000000,-100000000"]
+    why: "the sub-sheet's stray wire, reported once per instance, in sheet-frame coordinates"

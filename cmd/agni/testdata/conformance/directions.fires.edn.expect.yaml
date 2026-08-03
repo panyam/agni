@@ -1,0 +1,5 @@
+fires:
+  output-output-conflict: [FIGHT]
+  floating-input: [FLOAT]
+pending:
+  net-naming-convention: [FIGHT]   # staged (WS3-015): rendered red, must not fail the harness

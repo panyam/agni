@@ -1,0 +1,7 @@
+# The control for capcheck.fires: identical sheet but the rail is +3V3
+# (3.3 x 1.25 = 4.125, inside the seeded 6.3V rating), so cap-voltage must NOT fire
+# (the exhaustive-firing contract fails on any unexpected finding).
+fires:
+  single-pin-net:
+    subjects: ["+3V3", GND]
+    why: "incidental: the minimal one-cap sheet gives each net a single connection"

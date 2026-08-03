@@ -1,0 +1,13 @@
+# WS1-014 harvest: the connection matrix's unspecified column. J1's pin is DECLARED with
+# electrical type "unspecified" and shares VCC with a PWR_FLAG's virtual power_out — the
+# matrix cannot clear an untyped pin against a driver, so it warns (KiCad's
+# ERCE_PIN_TO_PIN on its erc_multiple_pin_to_pin qa board, our corpus pin-to-pin-conflict
+# case). Ships as a .kicad_pro pair: the driver evidence is a power symbol, and only the
+# project read resolves the rail's conservative external marking (WS1-017). Incidental:
+# the flag-driven rail carries no capacitor (bulk-cap).
+fires:
+  unspecified-pin-with-driver:
+    subjects: [VCC]
+    why: "a declared-but-untyped pin on a driven net; the matrix is blind exactly where a wrong guess costs a driver"
+  bulk-cap:
+    subjects: [VCC]

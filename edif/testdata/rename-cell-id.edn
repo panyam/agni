@@ -1,0 +1,24 @@
+(edif RENID
+  (edifVersion 2 0 0)
+  (design RENID (cellRef TOP (libraryRef LIB)))
+  (library Oscillator
+    ; A cell whose rename ID differs from its display AND carries no & escape (a real oscillator cell:
+    ; id MC2016Z500560000C1ZYSH vs display MC2016Z50.0000C1ZYSH). The instance references it by the ID.
+    (cell (rename OSC00500000C1 "OSC.0000C1")
+      (cellType GENERIC)
+      (view MC (viewType NETLIST)
+        (interface
+          (designator "X?")
+          (port Vcc (direction INPUT) (designator "4"))
+          (port OUTPUT (direction INPUT) (designator "3"))
+          (port GND (direction INPUT) (designator "2"))))))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance X1 (viewRef MC (cellRef OSC00500000C1 (libraryRef Oscillator))) (designator "X1")
+            (portInstance Vcc (designator "4"))
+            (portInstance OUTPUT (designator "3"))
+            (portInstance GND (designator "2")))
+          (net VCC3V3 (joined (portRef Vcc (instanceRef X1))))
+          (net CLKOUT (joined (portRef OUTPUT (instanceRef X1)))))))))

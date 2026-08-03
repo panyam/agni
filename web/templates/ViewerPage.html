@@ -1,0 +1,84 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<link rel="stylesheet" href="/static/app.css" />
+{{ end }}
+
+{{ define "Body" }}
+<div class="app">
+  <div class="sheet-nav-bar">
+    <!-- WS9-005: the Compare button (arm "pick file B") renders here -->
+    <div id="compare" class="compare-host"></div>
+    <!-- WS9-021: the panels dropdown (reopen a closed dock panel) renders here -->
+    <div id="panels-menu" class="panels-menu"></div>
+    <!-- WS9-044: the highlight-style dropdown (focus marker color / opacity / width) renders here -->
+    <div id="highlight-menu" class="highlight-menu"></div>
+  </div>
+  <!-- WS9-021: dockview mounts here and adopts the holes below into its panels -->
+  <div id="dock" class="dock"></div>
+  <!-- Server-rendered island holes. The dock shell moves each hole into its dockview panel;
+       a closed panel's hole parks back here (hidden) so its island stays mounted. -->
+  <div id="panel-park" hidden>
+    <!-- WS9-002: the file-tree island mounts into this hole -->
+    <div data-dock-panel="files" class="dock-body" id="file-tree" data-component="file-tree"></div>
+    <!-- WS9-025: the birds-eye sheet overview (per-sheet violation counts) mounts here -->
+    <div data-dock-panel="overview" class="dock-body"><div id="sheet-overview" data-component="sheet-overview"></div></div>
+    <div data-dock-panel="canvas" class="canvas-wrap">
+      <!-- The render controls (mode/layout/symbols/board-layers) float inside the canvas
+           panel: they configure only the rendered sheet, so they live next to it (the top
+           bar keeps the truly global chrome: Compare, Panels). -->
+      <div id="controls" class="canvas-toolbar" data-component="controls"></div>
+      <canvas id="view"></canvas>
+      <div id="text-overlay" class="text-overlay"></div>
+      <!-- WS9-045: the conformance-fixture expectation verdict (hidden on real designs). -->
+      <div id="expect-caption" class="expect-caption" role="status" aria-live="polite"></div>
+      <div id="svg-view" class="svg-view"></div>
+      <div id="readout">no sheet loaded</div>
+    </div>
+    <div data-dock-panel="details" class="dock-body">
+      <div id="design-summary" class="summary"></div>
+      <div id="conversion-report" class="conversion-report" style="display:none"></div>
+    </div>
+    <!-- WS9-013: the rules panel (catalog + multi-select) island mounts into this hole -->
+    <div data-dock-panel="rules" class="dock-body"><div id="rules" data-component="rules"></div></div>
+    <!-- the findings panel (rule checks) island mounts into this hole -->
+    <div data-dock-panel="checks" class="dock-body"><div id="findings" data-component="findings"></div></div>
+    <!-- WS9-018: the expectations panel (expected-vs-actual per rule, from the .expect.yaml sidecar) mounts here -->
+    <!-- WS9-036: the datalog query panel (ad-hoc search over the fact base) mounts here -->
+    <div data-dock-panel="query" class="dock-body"><div id="query-panel" data-component="query"></div></div>
+    <div data-dock-panel="coverage" class="dock-body"><div id="coverage-panel" data-component="coverage"></div></div>
+    <!-- WS9-035: the datasheet-params panel (per-component parameter tree) mounts here -->
+    <div data-dock-panel="parts" class="dock-body"><div id="parts-panel" data-component="parts"></div></div>
+    <!-- WS9-005: the visual diff — the chrome bar island plus two synced SVG canvases (plain DOM) -->
+    <div data-dock-panel="diff" class="diff-wrap">
+      <div id="diff-bar" data-component="diff-bar"></div>
+      <div id="diff-sides" class="diff-sides">
+        <div class="diff-side">
+          <div id="diff-svg-a" class="diff-svg"></div>
+          <div id="diff-ph-a" class="diff-ph"></div>
+          <div id="diff-label-a" class="diff-side-label">A — old</div>
+        </div>
+        <div class="diff-side">
+          <div id="diff-svg-b" class="diff-svg"></div>
+          <div id="diff-ph-b" class="diff-ph"></div>
+          <div class="diff-side-label">B — new</div>
+        </div>
+      </div>
+    </div>
+    <!-- WS9-006: the changed-item list (click-to-locate) island mounts into this hole -->
+    <div data-dock-panel="changes" class="dock-body"><div id="diff-changes" data-component="diff-changes"></div></div>
+  </div>
+  <!-- WS7-044: the render/compare loader. App-level (a direct child of .app, NOT a dock panel)
+       so its position:fixed resolves against the viewport, not a transformed dockview panel — a
+       nested overlay only covered the canvas and sat behind the other panels. -->
+  <div id="render-busy" class="render-busy" role="status" aria-live="polite">
+    <span class="render-busy-label">rendering…</span>
+  </div>
+</div>
+{{ end }}
+
+{{ define "AppScript" }}
+<script type="module" src="/static/app.js"></script>
+{{ end }}
+
+{{ define "ViewerPage" }}{{ template "BasePage" . }}{{ end }}

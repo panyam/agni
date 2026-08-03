@@ -1,0 +1,13 @@
+node_modules/
+static/app.js
+static/app.js.map
+# WS13-006 datasheets workbench bundles (build artifacts, like app.js)
+static/datasheets.js
+static/datasheets.js.map
+static/pdf.worker.js
+static/pdf.worker.js.map
+
+# Non-distributable packed sheets (e.g. proprietary boards)
+*.local.pb
+shot*.png
+static/app.css

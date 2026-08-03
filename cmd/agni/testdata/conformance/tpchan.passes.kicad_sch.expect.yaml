@@ -1,0 +1,6 @@
+# WS3-026 channel gate: the same rails with ZERO test points anywhere — no DFT convention
+# exists, so test-point-coverage must not fire on any of them (the design.nc_channel
+# pattern). Incidental: the rails are lone pins on this minimal board.
+fires:
+  single-pin-net:
+    subjects: [VCC, GND]

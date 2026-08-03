@@ -1,0 +1,9 @@
+# WS3-026: DFT coverage. TP1 covers VCC; 3V3 and GND have no probe access on a board
+# whose designer clearly uses test points — the channel gate is open, so the uncovered
+# rails are omissions, not style. Incidental: GND is also a lone pin here.
+fires:
+  test-point-coverage:
+    subjects: [3V3, GND]
+    why: "rails a scope or flying probe cannot reach on the assembled board"
+  single-pin-net:
+    subjects: [GND]

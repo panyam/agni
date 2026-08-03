@@ -1,0 +1,8 @@
+# WS1-021 anti-false-positive gate: the SAME rail as gedapwr.fires, now tapped by a vcc-1
+# power symbol. gEDA has no separate PWR_FLAG, so the supply symbol marks the net External
+# (KiCad's power-symbol semantics), which suppresses power-input-not-driven AND
+# decoupling-present without the bulk-cap noise a power_driven mark would add. The vcc
+# symbol stub and one bare IN pin remain as single-pin nets.
+fires:
+  single-pin-net:
+    subjects: [N$1, N$2]

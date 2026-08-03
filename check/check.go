@@ -1,0 +1,166 @@
+// Package check runs rule checks over a netlist IR Design. Pure IR operations, no I/O
+// (CONSTRAINTS C1). This is the Phase-1 rules library (docs/19): rules are individually
+// registered Rule values evaluated over the IR, the shape a declarative DSL would later
+// compile down to.
+//
+// Structure: one file per rule (rule_*.go), each a Rule value carrying its documentation and
+// an Eval written in terms of the query primitives in query.go (Select/Exists/Count over a
+// shared Model), never raw loops over the IR. index.go is the registry. Each rule also
+// carries a declarative twin — the same body as a Spec value (spec.go), the rules-as-data
+// form a Phase-2 DSL compiles to — kept identical to the Go Eval by the parity tests; see
+// Specs in index.go for the contract between the two forms.
+package check
+
+import (
+	"sort"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
+
+// Finding is one rule violation. Prov locates it in the source (nil when the source carries
+// no provenance for the subject).
+//
+// Kind names what Subject refers to (a net, a component, or a pin) so a consumer can group and
+// highlight by entity type without re-guessing from the string: Subject is a net name when Kind is
+// KindNet and a ref_des when KindComponent or KindPin, and Pin holds the pin designator only when
+// Kind is KindPin. A rule states its subject kind at construction (see netFinding/compFinding).
+type Finding struct {
+	Severity string // "error" | "warning" | "info"
+	Rule     string
+	Kind     string // KindNet | KindComponent | KindPin
+	Subject  string // net name (KindNet) or ref_des (KindComponent | KindPin)
+	Pin      string // pin designator, set only when Kind == KindPin
+	Message  string
+	Prov     *ir.Provenance
+	// NetID is the per-instance net identity (ir.Net.id) for a net subject, so two findings on
+	// nets that share a Subject name are distinguishable and each locates to ITS wires. Empty for a
+	// component/pin subject or a pinless net; consumers then join by Subject (the name).
+	NetID string
+	// DatasheetProv is the datasheet side of a datasheet-backed finding's provenance, so a consumer
+	// (review report, web checks panel) can show which document, page, and section a limit came from
+	// without parsing it out of Message. Nil for a finding not backed by a seeded datasheet value.
+	DatasheetProv *DatasheetCitation
+}
+
+// DatasheetCitation is the structured datasheet provenance of a finding: which document, page, and
+// section a datasheet-backed value came from, plus how it was extracted. It is the typed twin of the
+// citation string the built-in datasheet rules embed in a message, so a renderer can column it and,
+// crucially, surface Confidence — a low confidence flags a value a reviewer should verify before
+// trusting it, rather than burying that in prose. The design side of the dual provenance stays in
+// Finding.Prov.
+type DatasheetCitation struct {
+	Doc        string  // the SourceDoc title (vendor doc number + revision), resolved from DocRef; "" if unresolved
+	DocRef     string  // the SourceDoc id the value cites (the stable join key into PartSpec.docs)
+	Page       int32   // 1-based page in the document
+	Section    string  // the table or figure the value was read from
+	Method     string  // how the value was extracted ("hand", "derive/v0", "mock", ...)
+	Confidence float64 // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+}
+
+// Finding subject kinds: what a Finding.Subject refers to.
+const (
+	KindNet       = "net"
+	KindComponent = "component"
+	KindPin       = "pin"
+	// KindEndpoint is a geometric location rather than a captured entity: a dangling wire endpoint,
+	// whose Subject is its "x,y" in the sheet geometry frame (there is no net/component/pin to name).
+	KindEndpoint = "endpoint"
+	// KindBus is a source bus construct, not a net: its Subject is the display label and its
+	// geometry join key is the construct's uuid (Finding.Prov.NativeId), carried to the client as
+	// Subject.bus_id so a bus-not-modeled finding highlights its own drawn bus (WS7-042b), never a net.
+	KindBus = "bus"
+)
+
+// Rule is a named, self-describing check over the IR.
+//
+// The documentation fields are first-class so a rule is authored in one file and can be
+// listed, explained, and grouped without a separate catalog: Summary is the one-line form,
+// Impact is what goes wrong when the rule is violated, and Detail is the long-form markdown
+// (what it means, why engineers want it, a diagram, the query structure). Category and Tier
+// classify it for grouping (index.go Tree) and for the expressiveness tier (docs/19). Primitives
+// names the query primitives Eval composes, which documents the rule and seeds later coverage
+// analysis.
+//
+// Eval reads the shared Model and returns findings with Subject/Message/Prov set; Run stamps
+// Rule and Severity from the rule's metadata, so a rule states its identity once.
+//
+// Only the fields the engine acts on are typed: Name (identity/lookup), Severity (sort + gate),
+// Reads (the fact dependencies Available derives from), and Eval. Reads names the facts (docs/15
+// vocabulary) the rule consumes; it doubles as the incremental capture WS3-004 indexes into the
+// fact schema, so keep it in the doc-15 vocabulary verbatim.
+//
+// Everything classificatory lives in Tags, an open key -> value bag the catalog groups and filters
+// on (see TreeBy and Filter). Agni's own rules populate the well-known keys (index.go Key*), but
+// Tags is deliberately not a closed schema: rules provided by an operator, a DSL author, or an
+// integrator embedding Agni as a library (rules that never live in this check/ folder) add their
+// own keys, and the catalog UI pivots by whatever keys are present. Nothing in the engine or the
+// IR depends on a Tag, so a new axis needs no core change.
+type Rule struct {
+	Name       string            // stable identifier, e.g. "single-pin-net"
+	Severity   string            // "error" | "warning" | "info"
+	Summary    string            // one-line description for listings
+	Impact     string            // what goes wrong when violated
+	Detail     string            // long-form markdown: meaning, rationale, diagram, query structure
+	Primitives []string          // query primitives Eval composes (docs/19)
+	Reads      []string          // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))
+	// OptionalReads is the subset of Reads a rule consults opportunistically: their absence
+	// does not make the rule inapplicable. Available's tier-gate skips them, so a netlist rule
+	// that only EXEMPTS findings using a datasheet fact (esd-protection crediting an IC's ESD
+	// rating) still runs and reports over a design read with no --params, instead of reading as
+	// not-applicable the way a rule whose finding REQUIRES the datasheet does (supply-exceeds-abs-max).
+	// Still declared in Reads (twin parity, docs); this only annotates which reads are non-gating.
+	OptionalReads []string
+	Tags          map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
+	Eval          func(Model) []Finding
+}
+
+// Run evaluates rules over a Model (the query interface) and returns findings sorted by rule
+// then subject. Both the Model and the rule set are supplied by the caller: Run depends only on
+// the Model interface, not on how facts are computed, and the caller chooses which rules run
+// (the full set, a subset, or diff-gates). Use RunDesign for the common "standard checks over a
+// design" case.
+func Run(m Model, rules []*Rule) []Finding {
+	var out []Finding
+	for _, r := range rules {
+		for _, f := range r.Eval(m) {
+			f.Rule, f.Severity = r.Name, r.Severity
+			out = append(out, f)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Rule != out[j].Rule {
+			return out[i].Rule < out[j].Rule
+		}
+		return out[i].Subject < out[j].Subject
+	})
+	return out
+}
+
+// RunDesign evaluates the built-in Rules over the default Model for d: the common entry point
+// when a caller just has a design and wants the standard checks. It builds the shared Model
+// once (NewModel) and hands it, with Rules, to Run.
+func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), Rules) }
+
+// Report maps a selection to findings (the report step every rule ends with). Subject and
+// Prov come from the selected entity via mk.
+func Report[T any](xs []T, mk func(T) Finding) []Finding {
+	out := make([]Finding, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, mk(x))
+	}
+	return out
+}
+
+// netFinding and compFinding are the two subject constructors rules use with Report. They stamp
+// Kind so the subject's entity type travels with the finding.
+func netFinding(msg string) func(*ir.Net) Finding {
+	return func(n *ir.Net) Finding {
+		return Finding{Kind: KindNet, Subject: n.Name, NetID: n.GetId(), Message: msg, Prov: n.Prov}
+	}
+}
+
+func compFinding(msg string) func(*ir.Component) Finding {
+	return func(c *ir.Component) Finding {
+		return Finding{Kind: KindComponent, Subject: c.RefDes, Message: msg, Prov: c.Prov}
+	}
+}

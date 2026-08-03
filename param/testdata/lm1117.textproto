@@ -1,0 +1,108 @@
+# Hand-encoded worked example for the parameter-IR (WS10-001): TI LM1117 LDO.
+# Every value transcribed from the datasheet cited in `docs`; provenance points at
+# the exact section table and page. Encoding choices this fixture demonstrates:
+#   - the three limit kinds on one part (abs-max VIN, recommended-operating VIN,
+#     dropout as a conditional characteristic),
+#   - datasheet rows with different condition sets stay distinct parameters
+#     (dropout typ at TJ=25C vs max over the 0..125C range),
+#   - values and units as printed (IOUT = 800 mA, not 0.8 A).
+mpn: "LM1117"
+manufacturer: "Texas Instruments"
+device_class: "ldo"
+
+docs {
+  id: "snos412q"
+  title: "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023"
+  vendor: "Texas Instruments"
+  locator: "datasheets/ti/LM1117.pdf"
+}
+
+parameters {
+  name: "Maximum input voltage (VIN to GND)"
+  symbol: "VIN"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 20 }
+  unit: "V"
+  conditions {
+    symbol: "TA"
+    raw: "over operating free-air temperature range (unless otherwise noted)"
+  }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "snos412q" page: 4 table_or_figure: "7.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Junction temperature (TJ)"
+  symbol: "TJ"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 150 }
+  unit: "C"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  prov { doc_ref: "snos412q" page: 4 table_or_figure: "7.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Input voltage (VIN to GND)"
+  symbol: "VIN"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 15 }
+  unit: "V"
+  conditions {
+    symbol: "TA"
+    raw: "over operating free-air temperature range (unless otherwise noted)"
+  }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "snos412q" page: 4 table_or_figure: "7.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Junction temperature (TJ)"
+  symbol: "TJ"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 0 max: 125 }
+  unit: "C"
+  applies_to: "LM1117"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  prov { doc_ref: "snos412q" page: 4 table_or_figure: "7.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+# Dropout voltage: two source rows with distinct condition sets. Note (4) in the
+# source defines dropout as the input/output differential where regulation ceases,
+# measured when VOUT has dropped 100 mV from nominal at VIN = VOUT + 1.5 V.
+parameters {
+  name: "Dropout voltage"
+  symbol: "VIN - VOUT"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { typ: 1.2 }
+  unit: "V"
+  conditions { symbol: "IOUT" eq: 800 unit: "mA" raw: "IOUT = 800 mA" }
+  conditions { symbol: "TJ" eq: 25 unit: "C" raw: "TJ = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "source note (4): measured when VOUT has dropped 100 mV from nominal" }
+  prov { doc_ref: "snos412q" page: 6 table_or_figure: "7.5 LM1117 Electrical Characteristics" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Dropout voltage"
+  symbol: "VIN - VOUT"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { max: 1.3 }
+  unit: "V"
+  conditions { symbol: "IOUT" eq: 800 unit: "mA" raw: "IOUT = 800 mA" }
+  conditions { symbol: "TJ" min: 0 max: 125 unit: "C" raw: "over the junction temperature range 0C to 125C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "source note (4): measured when VOUT has dropped 100 mV from nominal" }
+  prov { doc_ref: "snos412q" page: 6 table_or_figure: "7.5 LM1117 Electrical Characteristics" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Current limit"
+  symbol: "ILIMIT"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { min: 800 typ: 1200 max: 1500 }
+  unit: "mA"
+  conditions { symbol: "VIN - VOUT" eq: 5 unit: "V" raw: "VIN - VOUT = 5 V" }
+  conditions { symbol: "TJ" eq: 25 unit: "C" raw: "TJ = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "snos412q" page: 6 table_or_figure: "7.5 LM1117 Electrical Characteristics" method: "hand" confidence: 1 }
+}

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IPC-2581 revision="C" xmlns="http://webstds.ipc.org/2581">
+  <Content>
+    <DictionaryStandard units="MILLIMETER">
+      <EntryStandard id="CIRCLE_1">
+        <Circle diameter="0.500000"/>
+      </EntryStandard>
+      <EntryStandard id="RECT_1">
+        <RectCenter width="0.800000" height="0.600000"/>
+      </EntryStandard>
+    </DictionaryStandard>
+    <DictionaryUser units="MILLIMETER">
+      <EntryUser id="UPRIM_1">
+        <UserSpecial>
+          <Contour>
+            <Polygon>
+              <PolyBegin x="-0.400000" y="-0.250000"/>
+              <PolyStepSegment x="0.400000" y="-0.250000"/>
+              <PolyStepSegment x="0.400000" y="0.250000"/>
+              <PolyStepSegment x="-0.400000" y="0.250000"/>
+              <PolyStepSegment x="-0.400000" y="-0.250000"/>
+            </Polygon>
+          </Contour>
+        </UserSpecial>
+      </EntryUser>
+    </DictionaryUser>
+    <DictionaryLineDesc units="MILLIMETER">
+      <EntryLineDesc id="TRACE_W">
+        <LineDesc lineEnd="ROUND" lineWidth="0.200000"/>
+      </EntryLineDesc>
+    </DictionaryLineDesc>
+  </Content>
+  <Bom name="bom">
+    <BomItem quantity="2" internalPartNumber="RES-10K" packageRef="R0603">
+      <RefDes name="R1" populate="TRUE"/>
+      <RefDes name="R2" populate="TRUE"/>
+    </BomItem>
+  </Bom>
+  <Ecad name="ecad">
+    <CadData>
+      <Layer name="TOP" layerFunction="CONDUCTOR" side="TOP" polarity="POSITIVE">
+        <Span fromLayer="TOP" toLayer="BOTTOM"/>
+        </Layer>
+      <Layer name="BOTTOM" layerFunction="CONDUCTOR" side="BOTTOM" polarity="POSITIVE"/>
+      <Stackup overallThickness="1.6">
+        <StackupGroup name="g">
+          <StackupLayer layerOrGroupRef="TOP" materialType="COPPER" thickness="0.035"/>
+          <StackupLayer layerOrGroupRef="BOTTOM" materialType="COPPER" thickness="0.035"/>
+        </StackupGroup>
+      </Stackup>
+      <Step name="step">
+        <Profile>
+          <Polygon>
+            <PolyBegin x="0.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="8.000000"/>
+            <PolyStepSegment x="0.000000" y="8.000000"/>
+            <PolyStepSegment x="0.000000" y="0.000000"/>
+          </Polygon>
+        </Profile>
+        <Package name="R0603" type="OTHER">
+          <Pin number="1" type="SURFACE">
+            <Location x="-0.750000" y="0.000000"/>
+            <StandardPrimitiveRef id="RECT_1"/>
+          </Pin>
+          <Pin number="2" type="SURFACE">
+            <Location x="0.750000" y="0.000000"/>
+            <StandardPrimitiveRef id="RECT_1"/>
+          </Pin>
+          <Marking markingUsage="NONE">
+            <Polyline>
+              <PolyBegin x="-0.500000" y="-0.300000"/>
+              <PolyStepSegment x="0.500000" y="-0.300000"/>
+              <PolyStepSegment x="0.500000" y="0.300000"/>
+              <PolyStepSegment x="-0.500000" y="0.300000"/>
+              <PolyStepSegment x="-0.500000" y="-0.300000"/>
+            </Polyline>
+          </Marking>
+        </Package>
+        <Package name="SOIC8" type="OTHER">
+          <Pin number="1" type="SURFACE">
+            <Location x="-1.905000" y="0.635000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+          <Pin number="4" type="SURFACE">
+            <Location x="-1.905000" y="-1.905000"/>
+            <StandardPrimitiveRef id="CIRCLE_1"/>
+          </Pin>
+          <Pin number="8" type="SURFACE">
+            <Location x="1.905000" y="0.635000"/>
+            <UserPrimitiveRef id="UPRIM_1"/>
+          </Pin>
+        </Package>
+        <Component refDes="R1" packageRef="R0603" layerRef="TOP" part="RES" mountType="SMT">
+          <Xform rotation="0.000"/>
+          <Location x="3.000000" y="4.000000"/>
+        </Component>
+        <Component refDes="R2" packageRef="R0603" layerRef="TOP" part="RES" mountType="SMT">
+          <Xform rotation="90.000"/>
+          <Location x="6.000000" y="4.000000"/>
+        </Component>
+        <Component refDes="U1" packageRef="SOIC8" layerRef="BOTTOM" part="OPAMP" mountType="SMT">
+          <Xform rotation="270.000"/>
+          <Location x="5.000000" y="2.000000"/>
+        </Component>
+        <LayerFeature layerRef="TOP">
+          <Set net="GND">
+            <Features>
+              <Location x="0.0" y="0.0"/>
+              <Polyline>
+                <PolyBegin x="2.000000" y="1.000000"/>
+                <PolyStepSegment x="4.000000" y="1.000000"/>
+                <PolyStepCurve x="5.000000" y="2.000000" centerX="4.000000" centerY="2.000000" clockwise="false"/>
+                <LineDescRef id="TRACE_W"/>
+              </Polyline>
+            </Features>
+            <Pad>
+              <Location x="4.000000" y="1.000000"/>
+              <StandardPrimitiveRef id="CIRCLE_1"/>
+            </Pad>
+          </Set>
+          <Set net="GND" geometry="VIA1">
+            <Hole name="H1" diameter="0.300000" platingStatus="VIA" x="4.000000" y="1.000000"/>
+          </Set>
+          <Set net="GNDPLANE">
+            <Features>
+            <Contour>
+              <Polygon>
+                <PolyBegin x="0.000000" y="0.000000"/>
+                <PolyStepSegment x="10.000000" y="0.000000"/>
+                <PolyStepSegment x="10.000000" y="8.000000"/>
+                <PolyStepSegment x="0.000000" y="8.000000"/>
+                <PolyStepSegment x="0.000000" y="0.000000"/>
+              </Polygon>
+            </Contour>
+            </Features>
+          </Set>
+        </LayerFeature>
+        <LogicalNet name="GND">
+          <PinRef componentRef="R1" pin="2"/>
+          <PinRef componentRef="U1" pin="4"/>
+        </LogicalNet>
+        <LogicalNet name="VCC">
+          <PinRef componentRef="R1" pin="1"/>
+          <PinRef componentRef="U1" pin="8"/>
+        </LogicalNet>
+      </Step>
+    </CadData>
+  </Ecad>
+</IPC-2581>

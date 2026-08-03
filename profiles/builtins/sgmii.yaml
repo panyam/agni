@@ -1,0 +1,11 @@
+name: SGMII
+host: {attr: interface, value: SGMII}
+signals:
+  - {name: TXP, suffix: _TXP, anchor: true}
+  - {name: TXN, suffix: _TXN}
+  - {name: RXP, suffix: _RXP}
+  - {name: RXN, suffix: _RXN}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: signal-dangling}

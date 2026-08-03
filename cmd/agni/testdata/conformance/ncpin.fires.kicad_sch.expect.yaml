@@ -1,0 +1,11 @@
+# nc-pin-connected (WS3-014, matrix row NC-vs-anything): U1 pin 1 is typed no_connect in
+# the symbol yet a wire lands exactly on its connect point, joining it to R1 pin 1 (the
+# synthesized N$1). R1 pin 2 is a bare placed pin, so its per-pin stub net fires
+# single-pin-net (incidental). unconnected-pin stays silent: the NC channel exists but the
+# only bare pin is passive (direction-unknown) and R1's pins are stub-netted anyway.
+fires:
+  nc-pin-connected:
+    subjects: [N$1]
+    why: "a wire joins a no_connect-typed pin to R1; the symbol says leave it alone"
+  single-pin-net:
+    subjects: [N$2]

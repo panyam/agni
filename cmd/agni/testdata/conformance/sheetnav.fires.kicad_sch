@@ -1,0 +1,29 @@
+(kicad_sch
+	(version 20250114)
+	(generator "test")
+	(paper "A4")
+	(title_block
+		(title "Sheet Nav Root"))
+	(lib_symbols
+		(symbol "test:R"
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 -2.54) (end 1.016 2.54))
+				(pin passive line (at 0 0 0) (length 2) (name "~") (number "1")))))
+	(symbol (lib_id "test:R") (at 50.8 40.64 0) (unit 1) (uuid "aaa")
+		(property "Reference" "U1"
+			(at 48 36 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "R"))
+	(symbol (lib_id "test:R") (at 63.5 40.64 0) (unit 1) (uuid "bbb")
+		(property "Reference" "U1"
+			(at 61 36 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "C"))
+	(sheet (at 100 60) (size 40 25) (uuid "sheet-power")
+		(property "Sheetname" "Power"
+			(at 100 59 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Sheetfile" "sheetnav_sub.kicad_sch"
+			(at 100 86 0)
+			(effects (font (size 1.27 1.27))))))

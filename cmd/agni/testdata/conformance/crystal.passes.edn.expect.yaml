@@ -1,0 +1,4 @@
+# Control for crystal.fires: identical crystal circuit but XTAL_OUT also carries a
+# load cap (C2), so crystal-load-caps must NOT fire (the exhaustive-firing contract
+# fails on any unexpected finding).
+fires: {}

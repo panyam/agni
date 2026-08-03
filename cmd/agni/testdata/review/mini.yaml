@@ -1,0 +1,19 @@
+name: Mini ECU review
+areas:
+  - name: CAN Interface
+    items:
+      - id: "202"
+        title: termination strategy
+        description: A 120-ohm resistor must terminate the differential pair (CANH/CANL) at each physical end of the bus.
+        rule: profile/can-termination-missing
+      - {id: "198", title: bus signals present, profile: CAN}
+      - {id: "196", title: transceiver selection, note: manual review — needs the design-intent contract}
+      - {id: "197", title: voltage compatibility, rule: rail-nominal-out-of-recommended}
+  - name: Board
+    items:
+      - {id: "b1", title: track widths, rule: track-width}
+  - name: House rules
+    items:
+      - id: "h1"
+        title: no forbidden MPN
+        query: {match: 'component.mpn(?r, "FORBIDDEN-PART") => ?r', subject: r, message: '{r} uses a forbidden MPN'}

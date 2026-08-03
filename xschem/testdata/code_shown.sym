@@ -1,0 +1,9 @@
+v {xschem version=3.4.4 file_version=1.2}
+G {}
+K {type=netlist_commands}
+V {}
+S {}
+E {}
+B 5 0 -40 200 40 {}
+T {@name} 5 -30 0 0 0.3 0.3 {}
+T {@value} 5 -5 0 0 0.3 0.3 {font=Monospace}

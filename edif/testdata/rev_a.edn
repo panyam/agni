@@ -1,0 +1,16 @@
+(edif REVA
+  (edifVersion 2 0 0)
+  (design REVA (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1") (property Value (string "10k")))
+          (instance R2 (viewRef V (cellRef RES)) (designator "R2") (property Value (string "1k")))
+          (instance U1A (viewRef V (cellRef GATE)) (designator "U1"))
+          (instance U1B (viewRef V (cellRef GATE)) (designator "U1"))
+          (instance C1 (viewRef V (cellRef CAP)) (designator "C1") (property Value (string "100n")))
+          (net GND (joined (portRef 2 (instanceRef R1)) (portRef 2 (instanceRef R2))))
+          (net VCC (joined (portRef 1 (instanceRef R1)) (portRef 14 (instanceRef U1A))))
+          (net SIGOLD (joined (portRef 1 (instanceRef U1A)) (portRef 7 (instanceRef U1B))))
+          (net DEAD (joined (portRef 1 (instanceRef C1)) (portRef 2 (instanceRef C1)))))))))

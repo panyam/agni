@@ -1,0 +1,358 @@
+syntax = "proto3";
+
+package agni.v1.ir;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/ir";
+
+// The IR is the neutral, format-agnostic model of a hardware design (CONSTRAINTS C1):
+// many readers normalize into it, many writers emit from it (the LLVM/Pandoc posture,
+// docs/13-ingestion-ir-architecture.md). It is named for concepts, not for any one
+// format's spelling of them. The neutral vocabulary and the cross-format mapping that
+// justifies each name are documented in docs/17-ir-v0.md (which references the private
+// cross-format survey).
+//
+// Two layers (docs/13):
+//   - a normalized SEMANTIC layer (the messages below), and
+//   - a format-FIDELITY layer (FidelityFragment) that a lossless reader uses to retain
+//     raw source for round-trip. Provenance links the two.
+//
+// Tiers of maturity:
+//   Tier 1 (netlist): Design, PartLibrary, PartType, Pin, Component, ComponentSection,
+//     Net, Connection, Sheet. Exercised by the EDIF netlist reader; names are frozen.
+//   Tier 2 (physical): Footprint, Layer, Stackup, Constraint, BomLine. PROVISIONAL --
+//     no reader populates them yet, so they are designed from the IPC-2581/ODB++ schemas
+//     and are unvalidated by the round-trip oracle until the first PCB reader (WS1-002).
+//     Names and shape may change.
+//
+// CONSTRAINTS C9 (promotion rule): a field enters the semantic layer only once a second
+// format's reader would populate it; until then it stays in `attributes` or the fidelity
+// layer. This is the safeguard against overfitting the schema to any single format.
+
+// --- Cross-cutting: provenance and fidelity ---
+
+// Span locates a node within its source file, for lossless reconstruction and surgical
+// edits (docs/13). Zero when the reader does not track offsets.
+message Span {
+  int64 byte_offset = 1;
+  int64 byte_length = 2;
+  int32 line = 3;
+  int32 column = 4;
+}
+
+// Provenance is the neutral locator linking an IR node back to its source. native_id is
+// a format-native identifier whose kind is named in native_id_kind; it is NOT assumed
+// stable across exports (an EDIF rename &id is regenerated per export; a KiCad uuid is
+// stable). Never use native_id as a cross-revision or cross-format key -- use the
+// semantic keys (ref_des, net name, pin) for that (see WS1-004).
+message Provenance {
+  string source_file = 1;
+  Span span = 2;
+  string native_id = 3;
+  string native_id_kind = 4;  // e.g. "edif-rename-id", "kicad-uuid", "ipc2581-xpath"
+}
+
+// FidelityFragment is one piece of the format-fidelity layer: raw source a lossless
+// reader retains, keyed to a node by provenance, so write-back is byte/semantically
+// identical. Lossy-bounded readers (e.g. the EDIF netlist reader) leave this empty.
+message FidelityFragment {
+  Provenance prov = 1;
+  string format = 2;  // source format tag, e.g. "edif-2.0.0"
+  bytes raw = 3;
+  string note = 4;
+}
+
+// PinDirection is the normalized electrical direction of a pin. Readers map their native
+// spelling onto this and keep the raw string in attributes ("direction_raw") when it does
+// not map cleanly.
+//
+// POWER is the generic power/ground pin for readers that do not distinguish source from sink;
+// POWER_IN (a rail consumed, e.g. a chip's VCC) and POWER_OUT (a rail sourced, e.g. a regulator
+// output or a KiCad PWR_FLAG) are the finer split the connectivity rules need to tell a power
+// driver from a power sink. Treat POWER as "either" when classifying drivers.
+enum PinDirection {
+  PIN_DIRECTION_UNSPECIFIED = 0;
+  PIN_DIRECTION_INPUT = 1;
+  PIN_DIRECTION_OUTPUT = 2;
+  PIN_DIRECTION_INOUT = 3;
+  PIN_DIRECTION_PASSIVE = 4;
+  PIN_DIRECTION_POWER = 5;
+  PIN_DIRECTION_NO_CONNECT = 6;
+  PIN_DIRECTION_POWER_IN = 7;
+  PIN_DIRECTION_POWER_OUT = 8;
+}
+
+// --- Tier 1: netlist (frozen) ---
+
+// Design is the top-level artifact: one board / step.
+message Design {
+  string name = 1;
+  string ir_version = 2;     // IR schema version, "0" for v0
+  string source_format = 3;  // origin format tag, e.g. "edif-2.0.0"
+
+  // Semantic layer, tier 1 (netlist).
+  repeated PartLibrary libraries = 4;
+  repeated Component components = 5;
+  repeated Net nets = 6;
+  repeated Sheet sheets = 7;
+  reserved 13;                              // was: dangling_endpoints; now under input_diagnostics
+  InputDiagnostics input_diagnostics = 17;  // reader-emitted, front-end origin (see docs/19)
+
+  // Semantic layer, tier 2 (physical) -- PROVISIONAL (see file header, CONSTRAINTS C9).
+  repeated Footprint footprints = 8;
+  repeated Layer layers = 9;
+  Stackup stackup = 10;
+  repeated Constraint constraints = 11;
+  repeated BomLine bom = 12;
+
+  map<string, string> attributes = 14;     // un-promoted named properties (escape hatch)
+  repeated FidelityFragment fidelity = 15;  // format-fidelity layer
+  Provenance prov = 16;
+}
+
+// InputDiagnostics groups the problems the reader (front-end) detects while building the IR --
+// things the normalized netlist cannot reconstruct because the reader has already normalized the
+// detail away, so they are found once, at read time, applying each format's own semantics, and
+// recorded in a neutral form here. They are reportable as findings by thin check/ rules, but they
+// originate at ingestion, not analysis (see docs/19 "Where a rule runs"). Distinct from input
+// *facts* (net.attributes power_driven/external, ...), which are annotations a check reads, not
+// problems. Empty for sources with none.
+message InputDiagnostics {
+  repeated DanglingEndpoint dangling_endpoints = 1;
+  repeated RefDesCollision ref_des_collisions = 2;
+  // A wire endpoint dropped onto the BODY (mid-span) of another wire with no junction dot
+  // (WS1-012): the drawing shows a T-tap or crossing the author meant as connected, but the
+  // tool treats it as two separate nets -- the most dangerous silent connectivity slip in
+  // capture. Same shape and frame as dangling_endpoints; the endpoint is the subject.
+  // Populated by readers of formats whose tools require an explicit dot (KiCad); formats
+  // that auto-connect T-touches (gEDA) never emit it.
+  repeated DanglingEndpoint no_junction_endpoints = 3;
+  // A bus construct the reader recognized but does NOT yet expand into member nets (WS1-034):
+  // gEDA `U` bus segments, KiCad `bus`/`bus_entry`/`bus_alias`, xschem `NAME[n:0]` bus labels,
+  // EDIF `array` bus ports. Until Phase 2 expands members, a bussed design's connectivity is
+  // unresolved (members merge onto one net or land off-net), so the reader records each construct
+  // here and the bus-not-modeled integrity rule surfaces it rather than letting silence read as
+  // coverage. Format-neutral: every schematic reader populates it, so the read-health signal is
+  // uniform across formats.
+  repeated BusNotModeled unmodeled_buses = 4;
+}
+
+// BusNotModeled is one bus construct a reader detected but has not expanded into member nets
+// (WS1-034 Phase 1). label is the source's bus name when it carries one (a KiCad bus-alias name, an
+// xschem `DATA[7:0]` label, an EDIF array port name), else empty. kind names the source construct
+// ("bus", "bus_entry", "bus_alias", "geda_bus", "edif_array", "xschem_bus_label") so a finding can
+// say what was seen. prov carries the source file and the construct's native id/location. Emitting
+// it does not change connectivity: it marks the read as incomplete for this construct, the same
+// silence-is-not-coverage posture as the dangling-endpoint diagnostics.
+message BusNotModeled {
+  string label = 1;
+  string kind = 2;
+  Provenance prov = 3;
+  // members is the expanded member-signal set the bus names (a range `DATA[7:0]` -> DATA7..DATA0, or
+  // an explicit `bus_alias` member list), when the reader can determine it — empty otherwise. The
+  // bus-not-modeled rule uses it to tell a RESOLVED bus (every member already a net, via member labels
+  // on the taps — the common flat-sheet case, verified against kicad-cli) from one whose members are
+  // genuinely unmodeled, so the flag reports real read-gaps rather than the mere presence of a bus.
+  repeated string members = 4;
+}
+
+// DanglingEndpoint is a schematic wire endpoint that terminates on nothing -- no pin, junction,
+// label, or other wire shares its point -- so a connection the author drew is incomplete. Derived
+// from wire geometry via the shared net solver; board- and netlist-only sources have none. x,y
+// locate the endpoint in the sheet geometry frame (the same integer grid the geometry sidecar uses,
+// so a viewer highlight joins directly); prov carries the source file and, when the format has one,
+// the wire's native id (e.g. a KiCad uuid; xschem/gEDA wires carry none, so location is the
+// subject). Populated by the KiCad, xschem, and gEDA readers (WS1-011/013): xschem/gEDA
+// gate emission on full external-symbol resolution, since an unresolved symbol drops its
+// pins and would fabricate dangles. The same message shape carries both endpoint-on-nothing
+// (dangling_endpoints) and endpoint-on-body (no_junction_endpoints, KiCad-only: xschem and
+// gEDA auto-connect mid-span touches, so a missing junction is not a defect there).
+message DanglingEndpoint {
+  int64 x = 1;
+  int64 y = 2;
+  Provenance prov = 3;
+}
+
+// RefDesCollision is a reference designator claimed by more than one distinct physical placement --
+// a genuine duplicate, not the legitimate multi-section grouping of a multi-unit part (which the IR
+// keeps as one component with distinct-index sections, WS1-001). The reader decides duplicate from
+// legitimate using its own format's rule (KiCad: the same unit claimed twice; a flat netlist: a
+// repeated designator) because the merged netlist can no longer tell them apart. instances carries
+// the provenance of each colliding placement so a finding can point at all of them.
+message RefDesCollision {
+  string ref_des = 1;
+  repeated Provenance instances = 2;
+}
+
+// PartLibrary groups PartType definitions (EDIF library, KiCad symbol library).
+message PartLibrary {
+  string name = 1;
+  repeated PartType parts = 2;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// PartType is a part/component definition (EDIF cell, KiCad symbol). Named "PartType"
+// rather than "cell" because only EDIF uses "cell".
+message PartType {
+  string name = 1;
+  string kind = 2;               // format-native type tag (EDIF cellType), free-form
+  string designator_prefix = 3;  // ref-des prefix, e.g. "R", "J"
+  repeated Pin pins = 4;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// Pin is a terminal on a PartType (EDIF port, KiCad pin).
+message Pin {
+  string name = 1;
+  string designator = 2;      // pin number/name on the part
+  PinDirection direction = 3;
+  map<string, string> attributes = 14;  // e.g. "direction_raw" for the source spelling
+  Provenance prov = 16;
+}
+
+// Component is a placed physical component, keyed by its reference designator. One
+// ref_des is often several sections (multi-gate ICs, connector banks, relay coil +
+// contacts), so ref_des is NOT unique per source instance; sections keep that detail.
+message Component {
+  string ref_des = 1;
+  repeated ComponentSection sections = 2;
+  string footprint_ref = 3;  // PROVISIONAL: joins to Footprint.name (no reader yet)
+  // device_classes is the normalized device-class SET, derived ONCE at ingestion by the
+  // format-neutral classify pass (WS3-071), not read from any one format. It is the first
+  // DERIVED-NORMALIZATION field (C9): every format populates it via the same shared pass, so
+  // it is format-neutral by construction rather than by the two-reader promotion test. The set
+  // carries the specific class plus its family tags (a TVS is {tvs, diode}); consumers do
+  // membership, not equality. Empty when the design was built without the ingestion pass (a
+  // hand-authored test IR); check.Model then re-derives as a fallback.
+  repeated string device_classes = 4;
+  map<string, string> attributes = 14;  // component-level properties (aggregated across sections)
+  Provenance prov = 16;
+}
+
+// ComponentSection is one section/unit of a Component (one EDIF instance, one KiCad
+// symbol unit). Sections may reference different PartTypes (heterogeneous, e.g. a relay
+// coil and its contacts).
+message ComponentSection {
+  int32 index = 1;         // 0-based section index within the component
+  string part_ref = 2;     // referenced PartType.name
+  string library_ref = 3;  // referenced PartLibrary.name
+  map<string, string> attributes = 14;  // per-instance properties (faithful to source)
+  Provenance prov = 16;    // native_id = source instance id (EDIF &id)
+}
+
+// Net is a set of electrically connected pins.
+message Net {
+  string name = 1;
+  string net_class = 2;  // optional; carried when the source has it
+  repeated Connection connections = 3;
+  // id is a deterministic identity derived from the connection set (a hash of the sorted
+  // pins), independent of name. Two electrically-distinct nets that share a name get distinct
+  // ids, so a consumer can tell them apart where the name collides. Ephemeral (recomputed each
+  // solve, never persisted) and connectivity-dependent, so it is a within-load join key, NOT a
+  // durable cross-revision handle (that would be a separate stable id — the datasheet-layer
+  // content-hash-vs-stable-id lesson). Empty for a pinless net. Distinct from Provenance.native_id,
+  // which is the source-native id (a KiCad uuid), not a semantic connectivity identity.
+  string id = 4;
+  // roles is the normalized net-role SET (rail / ground / feedback), derived ONCE at ingestion by the
+  // format-neutral naming pass (classify.StampNetRoles, WS3-072), not read from any one format. A
+  // DERIVED-NORMALIZATION field (C9), the naming sibling of Component.device_classes: every format
+  // populates it via the same shared pass from the active naming lexicon, so it is format-neutral by
+  // construction. A net may carry more than one role (a rail-named feedback node is {rail, feedback});
+  // consumers decide precedence. Empty for a plain signal net, AND when the design was built without the
+  // ingestion pass (a hand-authored test IR); the core then re-derives from the net name as a fallback,
+  // so an empty set never means "no evidence", only "none stamped".
+  repeated string roles = 5;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// Connection is one pin's membership in a Net: (component ref_des, pin designator). This
+// pair is the stable, cross-format, cross-revision key (never the native id).
+message Connection {
+  string component_ref = 1;  // Component.ref_des
+  string pin_ref = 2;        // Pin.designator on that component
+  // Per-connection input facts ("this is so" annotations a reader derives, docs/19), the
+  // same open map every other IR entity carries. First tenant: "direction" — the
+  // electrical direction of a connection whose component is virtual and therefore not in
+  // Components (a KiCad power symbol's pin, WS1-014: component_ref "#PWR05" with
+  // direction "power_in"/"power_out"); consumers resolve direction from here first, then
+  // from the component's part-type pins. Next expected tenant: EDIF portRef properties.
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// Sheet is a logical schematic page reference. The drawn geometry lives in the geometry
+// sidecar (agni.v1.geom), never in the core IR.
+message Sheet {
+  string id = 1;
+  string name = 2;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// --- Tier 2: physical (PROVISIONAL: no reader yet; names/shape may change) ---
+
+// Footprint is a physical land pattern / package (KiCad footprint, IPC-2581/ODB++
+// package). Modeled as a separate entity a Component references, since KiCad and the PCB
+// formats justify separating it from the logical PartType.
+message Footprint {
+  string name = 1;
+  string library = 2;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// LayerFunction is the normalized role of a fabrication layer.
+enum LayerFunction {
+  LAYER_FUNCTION_UNSPECIFIED = 0;
+  LAYER_FUNCTION_SIGNAL = 1;
+  LAYER_FUNCTION_PLANE = 2;
+  LAYER_FUNCTION_DIELECTRIC = 3;
+  LAYER_FUNCTION_SOLDER_MASK = 4;
+  LAYER_FUNCTION_SILKSCREEN = 5;
+  LAYER_FUNCTION_PASTE = 6;
+}
+
+message Layer {
+  string name = 1;
+  int32 index = 2;  // stack order
+  LayerFunction function = 3;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// StackupLayer is one physical layer in the board stackup (a sub-record; keyed within
+// its parent Stackup).
+message StackupLayer {
+  string layer_ref = 1;    // Layer.name
+  int64 thickness_nm = 2;  // nanometers, matching the geometry sidecar unit convention
+  string material = 3;
+  map<string, string> attributes = 14;
+}
+
+message Stackup {
+  repeated StackupLayer layers = 1;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// Constraint is a design rule/gate. Its class is `kind`; the rules DSL (WS3) owns the
+// semantics, so the IR node stays a thin carrier.
+message Constraint {
+  string name = 1;
+  string kind = 2;
+  map<string, string> params = 3;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}
+
+// BomLine is one bill-of-materials line covering one or more ref_des.
+message BomLine {
+  repeated string ref_des = 1;
+  string mpn = 2;
+  string manufacturer = 3;
+  int32 quantity = 4;
+  map<string, string> attributes = 14;
+  Provenance prov = 16;
+}

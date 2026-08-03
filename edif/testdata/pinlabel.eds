@@ -1,0 +1,30 @@
+
+(edif PL
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library L
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c "Part")
+      (cellType GENERIC)
+      (view (rename &v "sym")
+        (viewType SCHEMATIC)
+        (interface (port A1 (direction INPUT) (designator "A1")) (port A2 (direction INPUT) (designator "A2")))
+        (symbol
+          (boundingBox (rectangle (pt 0 0) (pt 100 100)))
+          (portImplementation
+            (name A1
+              (display (figureGroupOverride LABEL (visible (true))) (justify CENTERRIGHT) (origin (pt 10 20))))
+            (connectLocation (figure GRAPHICS (dot (pt 0 20)))))
+          (portImplementation
+            (name A2
+              (display (figureGroupOverride LABEL (visible (false))) (justify LOWERLEFT) (origin (pt 30 40))))
+            (connectLocation (figure GRAPHICS (dot (pt 0 40)))))))))
+  (design D
+    (cellRef Top (libraryRef L))
+    (contents
+      (page (rename P1 "S1")
+        (pageSize (rectangle (pt 0 0) (pt 500 500)))
+        (instance (rename &i "$i")
+          (viewRef v (cellRef (name &c) (libraryRef L)))
+          (transform (origin (pt 0 0)))
+          (designator (stringDisplay "U1")))))))

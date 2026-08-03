@@ -1,0 +1,22 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Hier Sub"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1")))))
+	(symbol (lib_id "test:R") (at 60 50 0) (unit 1) (uuid "r2")
+		(property "Reference" "R2"
+			(at 58 49 0)
+			(effects (font (size 1.27 1.27)))))
+	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "r3")
+		(property "Reference" "R3"
+			(at 78 49 0)
+			(effects (font (size 1.27 1.27))))))

@@ -1,0 +1,10 @@
+(kicad_sch
+	(lib_symbols
+		(symbol "test:DUAL"
+			(property "Reference" "U")
+			(symbol "DUAL_1_1" (pin input line (name "A") (number "1")))
+			(symbol "DUAL_2_1" (pin output line (name "Y") (number "2")))))
+	(symbol (lib_id "test:DUAL") (unit 1) (uuid "u1a")
+		(property "Reference" "U1") (property "Value" "DUAL"))
+	(symbol (lib_id "test:DUAL") (unit 2) (uuid "u1b")
+		(property "Reference" "U1") (property "Value" "DUAL")))

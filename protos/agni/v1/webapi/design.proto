@@ -1,0 +1,171 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/geom/geom_packed.proto";
+
+// This file: DesignService, loading and rendering one design. Rule checks are the separate
+// CheckService (checks.proto); the structural diff is DiffService (diff.proto).
+
+// DesignService loads a design file into something the viewer can draw. It reuses the
+// engine's readers, auto-layout, and packer; the web tier only chooses which per file and
+// serves the result. A design that carries schematic geometry (EDIF .eds) renders faithfully;
+// any other supported format is drawn as an auto-layout of its netlist graph.
+service DesignService {
+  // GetDesign loads a file and returns its summary plus the list of drawable sheets (the
+  // sheet navigator's source). It resolves the render mode per file (faithful for geometry,
+  // else an auto-layout).
+  rpc GetDesign(GetDesignRequest) returns (GetDesignResponse);
+
+  // GetSheet returns one rendered sheet. The `format` selects the renderer: PACKED (the
+  // tier-2 geometry for the WebGL viewer, C8), SVG (the render.SheetSVG verification
+  // backend), or NATIVE (the format's own tool, a golden reference; not yet implemented).
+  // `sheet` selects by id, name, or 0-based index (as the CLI does).
+  rpc GetSheet(GetSheetRequest) returns (GetSheetResponse);
+
+  // HighlightSheet resolves highlight specs ("these components, nets, and pins, in this
+  // color/alpha") against one rendered sheet and returns a drawable overlay layer, decoupled
+  // from the base render: PACKED yields primitive-index groups that join the GetSheet
+  // PackedSheet by index (the WebGL viewer redraws just those primitives), SVG yields a
+  // transparent overlay document with the same viewBox as the GetSheet SVG (the client
+  // stacks or composites it above the sheet). NATIVE has no overlay and is rejected. The
+  // request's sheet/layout/symbols must match the GetSheet call that produced the base
+  // render, so the two layers describe the same geometry.
+  rpc HighlightSheet(HighlightSheetRequest) returns (HighlightSheetResponse);
+
+  // GetLayoutReport explains how an auto-layout maps each component to a drawn node (device class,
+  // and whether it drew a glyph, the generic box, the design's own symbol, or an unresolved
+  // fallback). It uses the same symbol source as the render, so it describes what the viewer
+  // shows and points at --symbol-path when provided symbols do not resolve.
+  rpc GetLayoutReport(GetLayoutReportRequest) returns (GetLayoutReportResponse);
+}
+
+// SheetFormat selects which renderer draws a sheet. It is an axis distinct from
+// GetSheetRequest.layout (faithful vs auto-layout geometry): layout chooses the geometry,
+// format chooses how it is rendered.
+enum SheetFormat {
+  SHEET_FORMAT_UNSPECIFIED = 0; // treated as PACKED
+  SHEET_FORMAT_PACKED = 1;      // tier-2 PackedSheet for the WebGL viewer
+  SHEET_FORMAT_SVG = 2;         // render.SheetSVG (our reference render)
+  SHEET_FORMAT_NATIVE = 3;      // the format's native tool (golden); not yet implemented
+}
+
+// SymbolSource selects what an auto-layout draws at each component node: predefined synthetic
+// glyphs, or the design's own provided symbols re-laid-out (partial-faithful, WS7-031).
+enum SymbolSource {
+  SYMBOL_SOURCE_UNSPECIFIED = 0; // treated as GLYPH
+  SYMBOL_SOURCE_GLYPH = 1;       // classified synthetic glyphs
+  SYMBOL_SOURCE_FAITHFUL = 2;    // the design's own symbols (needs provided geometry)
+}
+
+// SheetRef identifies a drawable sheet within a design.
+message SheetRef {
+  string id = 1;
+  string name = 2;
+  // parent_id is the id of this sheet's parent sheet, or empty for a top-level sheet. It lets
+  // the UI show a sheet hierarchy (KiCad hierarchical schematics); flat formats (EDIF pages,
+  // single-sheet designs) leave it empty. Populated by hierarchy-aware readers (a later step).
+  string parent_id = 3;
+}
+
+message GetDesignRequest {
+  string mount = 1;
+  string path = 2;
+  // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
+  // empty uses the default. Ignored for geometry-bearing files, which render faithfully.
+  string layout = 3;
+}
+
+message GetDesignResponse {
+  // name is the design name (from the IR, or the geometry's design ref for .eds).
+  string name = 1;
+  // source_format is the origin format tag from the IR; empty for a geometry-only file.
+  string source_format = 2;
+  // component_count / net_count come from the netlist IR; 0 for a geometry-only file.
+  int32 component_count = 3;
+  int32 net_count = 4;
+  // layout is the render mode actually used: "faithful" or the auto-layout name.
+  string layout = 5;
+  // sheets are the drawable pages, in document order.
+  repeated SheetRef sheets = 6;
+  // native_available is true when this file's format has a native renderer that is enabled
+  // and installed, so the UI can offer the NATIVE format. False otherwise.
+  bool native_available = 7;
+  // available_layouts are the layouts this file can render (the geometry axis, distinct from
+  // the render format): "faithful" for geometry-bearing files, plus auto-layout strategy names
+  // (grid, layered, ...) for files with a netlist IR. The UI offers these; `layout` above is
+  // the one used for this response.
+  repeated string available_layouts = 8;
+}
+
+message GetSheetRequest {
+  string mount = 1;
+  string path = 2;
+  // sheet selects by id, name, or 0-based index; empty selects the first sheet.
+  string sheet = 3;
+  string layout = 4;
+  // format selects the renderer; unset means PACKED.
+  SheetFormat format = 5;
+  // symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
+  // faithful layout (always the design's own symbols).
+  SymbolSource symbols = 6;
+}
+
+message GetSheetResponse {
+  // content carries exactly one rendering, matching the requested format: packed geometry
+  // for PACKED, an SVG document for SVG/NATIVE.
+  oneof content {
+    agni.v1.geom.PackedSheet packed = 1; // tier-2 contract (C8), for the WebGL viewer
+    string svg = 2;                        // standalone SVG document
+  }
+}
+
+message HighlightSheetRequest {
+  string mount = 1;
+  string path = 2;
+  // sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
+  string sheet = 3;
+  string layout = 4;
+  SymbolSource symbols = 5;
+  // format selects the overlay projection: PACKED or SVG (NATIVE is InvalidArgument).
+  // Unset means PACKED, matching GetSheet.
+  SheetFormat format = 6;
+  // specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
+  repeated agni.v1.geom.HighlightSpec specs = 7;
+}
+
+message HighlightSheetResponse {
+  // content matches the requested format: index groups for PACKED, a transparent standalone
+  // SVG overlay document for SVG.
+  oneof content {
+    agni.v1.geom.PackedHighlight packed = 1;
+    string svg = 2;
+  }
+}
+
+message GetLayoutReportRequest {
+  string mount = 1;
+  string path = 2;
+  // symbols selects the node artwork the report explains; unset means GLYPH.
+  SymbolSource symbols = 3;
+}
+
+message GetLayoutReportResponse {
+  ConversionReport report = 1;
+}
+
+// ConversionReport is how an auto-layout mapped each component to a drawn node.
+message ConversionReport {
+  repeated ComponentReport components = 1;
+}
+
+// ComponentReport is one component's mapping in the conversion report.
+message ComponentReport {
+  string ref_des = 1;
+  string symbol = 2;       // source part/symbol name, empty if none
+  string device_class = 3; // device class (empty for the box or a provided symbol)
+  string cell = 4;         // drawn symbol cell_ref
+  string kind = 5;         // provided | glyph | box | unresolved
+}

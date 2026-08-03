@@ -1,0 +1,7 @@
+# Recipe for Fairchild-style small-signal datasheets: which table headings carry
+# which limit kinds. Declarative and reviewable; this file is the shape recipes
+# accumulate in per vendor doc-family (docs/24).
+name: "fairchild-smallsignal"
+doc_title_pattern: "(?i)field effect transistor|bss138"
+tables { title_pattern: "(?i)absolute maximum" limit_kind: "LIMIT_KIND_ABSOLUTE_MAX" }
+tables { title_pattern: "(?i)electrical characteristics" limit_kind: "LIMIT_KIND_CHARACTERISTIC" }

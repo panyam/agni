@@ -1,0 +1,10 @@
+# WS1-014: power-symbol pins are typed virtual connections, so two PWR_FLAGs (power_out
+# each) on one rail are two distinct driving components — KiCad ERC's classic
+# pin-to-pin power conflict, previously invisible because #-symbols contributed only
+# name anchors. Incidental: the flag-driven rail carries no capacitor (bulk-cap).
+fires:
+  output-output-conflict:
+    subjects: [VCC_RAW]
+    why: "two PWR_FLAG power_out pins fight; the corpus pin-to-pin-conflict case, now live"
+  bulk-cap:
+    subjects: [VCC_RAW]

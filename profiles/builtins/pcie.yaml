@@ -1,0 +1,14 @@
+name: PCIe
+host: {attr: interface, value: PCIe}
+signals:
+  - {name: PETP, suffix: _PETP, anchor: true}
+  - {name: PETN, suffix: _PETN}
+  - {name: PERP, suffix: _PERP}
+  - {name: PERN, suffix: _PERN}
+  - {name: REFCLKP, suffix: _REFCLKP}
+  - {name: REFCLKN, suffix: _REFCLKN}
+  - {name: PERST, suffix: _PERST}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: signal-dangling}

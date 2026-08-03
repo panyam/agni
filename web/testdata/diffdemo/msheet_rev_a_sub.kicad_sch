@@ -1,0 +1,51 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "5c1d0000-0000-0000-0000-000000000000")
+	(paper "A4")
+	(title_block
+		(title "Multi-sheet diff — sub, revision A"))
+	(lib_symbols
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(property "Reference" "R")
+			(symbol "R_0_1"
+				(rectangle (start -1.016 2.54) (end 1.016 -2.54)
+					(fill (type background))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "power:VCC"
+			(power)
+			(pin_names (offset 0))
+			(property "Reference" "#PWR")
+			(symbol "VCC_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27))))
+			(symbol "VCC_1_1"
+				(pin power_in line (at 0 0 90) (length 0) (name "VCC") (number "1")))))
+	(symbol (lib_id "test:R") (at 100 50 0) (unit 1) (uuid "subr101")
+		(property "Reference" "R?"
+			(at 97 49 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 103 49 0)
+			(effects (font (size 1.27 1.27))))
+		(instances
+			(project "msheet"
+				(path "/aaaaaaaa-0000-0000-0000-000000000000/5b500000-0000-0000-0000-000000000000"
+					(reference "R101")
+					(unit 1)))))
+	(symbol (lib_id "power:VCC") (at 110 40 0) (unit 1) (uuid "subvcc")
+		(property "Reference" "#PWR02"
+			(at 110 37 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "VCC"
+			(at 110 43 0)
+			(effects (font (size 1.27 1.27)))))
+	(wire (pts (xy 100 46.19) (xy 100 40)))
+	(hierarchical_label "CTRL" (at 100 40 0)
+		(effects (font (size 1.27 1.27))))
+	(wire (pts (xy 100 53.81) (xy 100 60)))
+	(label "SIG" (at 100 60 0)
+		(effects (font (size 1.27 1.27)))))

@@ -1,0 +1,12 @@
+name: CAN
+host: {attr: interface, value: CAN}
+signals:
+  - {name: CANH, suffix: _CANH, anchor: true}
+  - {name: CANL, suffix: _CANL}
+  - {name: TXD,  suffix: _TXD}
+  - {name: RXD,  suffix: _RXD}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: termination, params: {high: _CANH, low: _CANL}}
+  - {type: signal-dangling}

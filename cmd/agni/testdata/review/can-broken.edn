@@ -1,0 +1,12 @@
+(edif CANREVIEW
+  (edifVersion 2 0 0)
+  (design CANREVIEW (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef XCVR)) (designator "U2"))
+          (net CAN_CANH (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U2))))
+          (net CAN_CANL (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef U2))))
+          (net CAN_TXD (joined (portRef 3 (instanceRef U1)))))))))

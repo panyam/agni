@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="board.via_drill relation: a net whose minimum via has a large drill is fine; a net with a small drill is flagged">
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- LEFT: fine, large drill -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#2f8a4c">Fine: large drill</text>
+  <circle cx="170" cy="130" r="46" fill="#c98a3a" stroke="#394049"/>
+  <circle cx="170" cy="130" r="26" fill="#2f8a4c"/>
+  <text x="170" y="200" font-size="12" fill="#2f8a4c" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">min drill 0.40mm</text>
+  <text x="170" y="222" font-size="13" fill="#2f8a4c" text-anchor="middle">smallest via clears the floor</text>
+
+  <!-- RIGHT: flagged, small drill -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: small drill</text>
+  <circle cx="510" cy="130" r="46" fill="#c98a3a" stroke="#394049"/>
+  <circle cx="510" cy="130" r="10" fill="#d64545"/>
+  <text x="510" y="200" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">min drill 0.20mm</text>
+  <text x="510" y="222" font-size="13" fill="#d64545" text-anchor="middle">smallest via sets the row</text>
+</svg>

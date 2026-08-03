@@ -1,0 +1,16 @@
+(edif TEST
+  (edifVersion 2 0 0)
+  (design TEST (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef IC)) (designator "U1")
+            (property (rename Manufacturer_PN "Manufacturer PN") (string "PARTX")))
+          (instance U2 (viewRef V (cellRef IC)) (designator "U2")
+            (property Manufacturer_PN (string "PARTY")))
+          (instance U3 (viewRef V (cellRef IC)) (designator "U3")
+            (property MPN (string "PARTZ"))
+            (property (rename Manufacturer_PN "Manufacturer PN") (string "IGNORED")))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net SIG (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef R1)))))))))

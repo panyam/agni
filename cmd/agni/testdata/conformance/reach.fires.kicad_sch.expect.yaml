@@ -1,0 +1,15 @@
+# WS3-011: the reach walk's flagship. J1 feeds U1's power input THROUGH a ferrite bead —
+# the bead splits the net, so the pre-reach rule saw JIN as a plain signal net (it fired
+# esd-protection, info, and missed the unfused power entry entirely). With reach, JIN's
+# 3-hop walk finds the power_in behind the bead with no fuse crossed and no TVS on the
+# path: input-protection, on the connector net where the fix belongs. esd-protection
+# stays quiet by the same walk (power-path nets are input-protection's turf).
+# Incidentals: the bead-fed input has no local cap and no driver.
+fires:
+  input-protection:
+    subjects: [JIN]
+    why: "the power input is one bead away and nothing protects the path; invisible to any per-net rule"
+  decoupling-present:
+    subjects: [JOUT]
+  power-input-not-driven:
+    subjects: [JOUT]

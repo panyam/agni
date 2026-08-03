@@ -1,0 +1,11 @@
+check:NewModel
+check:NewModelWithBoard
+check:NewModelWithParams
+check:RunDesign
+classify:PartIndex
+classify:Stamp
+classify:StampNetRoles
+classify:StampPowerInPins
+cmd/agni:compareLayouts
+cmd/agni:Design
+cmd/agni:readDesign

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- WS1-028 outline-arc fixture: a board whose top edge is a semicircular arc (a PolyStepCurve)
+     bulging up to y=9, interleaved with straight steps. Before the fix the arc step was dropped
+     and the outline cut straight across at y=4; after, the arc expands to chord points and the
+     apex at (5,9) appears. Units MM. -->
+<IPC-2581 revision="C" xmlns="http://webstds.ipc.org/2581">
+  <Content>
+    <DictionaryStandard units="MILLIMETER"/>
+  </Content>
+  <Ecad name="ecad">
+    <CadData>
+      <Layer name="TOP" layerFunction="CONDUCTOR" side="TOP" polarity="POSITIVE"/>
+      <Step name="step">
+        <Profile>
+          <Polygon>
+            <PolyBegin x="0.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="4.000000"/>
+            <PolyStepCurve x="0.000000" y="4.000000" centerX="5.000000" centerY="4.000000" clockwise="false"/>
+            <PolyStepSegment x="0.000000" y="0.000000"/>
+          </Polygon>
+        </Profile>
+      </Step>
+    </CadData>
+  </Ecad>
+</IPC-2581>

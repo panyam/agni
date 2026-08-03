@@ -1,0 +1,26 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "Cap Voltage Test (passes)"))
+	(lib_symbols
+		(symbol "test:C"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0.254))
+			(property "Reference" "C")
+			(symbol "C_0_1"
+				(polyline (pts (xy -2.032 0.762) (xy 2.032 0.762)) (stroke (width 0.508) (type default)) (fill (type none)))
+				(polyline (pts (xy -2.032 -0.762) (xy 2.032 -0.762)) (stroke (width 0.508) (type default)) (fill (type none))))
+			(symbol "C_1_1"
+				(pin passive line (at 0 3.81 270) (length 2.794) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 2.794) (name "~") (number "2")))))
+	(symbol (lib_id "test:C") (at 60.96 74.93 0) (unit 1) (uuid "c1")
+		(property "Reference" "C1") (property "Value" "10u")
+		(property "MPN" "DEMO-CAP-6V3") (property "Manufacturer" "Agni Conformance Works"))
+	(wire (pts (xy 50.8 71.12) (xy 60.96 71.12)))
+	(label "+3V3" (at 50.8 71.12 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GND" (at 60.96 78.74 0)
+		(effects (font (size 1.27 1.27))))
+)

@@ -1,0 +1,38 @@
+package main
+
+import (
+	"net/http"
+	"path"
+	"strings"
+
+	"github.com/panyam/agni/internal/mounts"
+)
+
+// rawDatasheetHandler streams a datasheet's source bytes (the PDF the browser renders under the
+// region overlay on the /datasheets page, WS13-006) from a mount, so the page can load it into
+// pdf.js. It is mounted under /datasheets/raw/<mount>/<path...>; mounts are the security boundary
+// (mounts.Resolve contains the path), and only .pdf files are served — doc-IR is served
+// structured over DatasheetService, never raw. Rendering stays in the browser, so nothing about
+// the document leaves the deployment boundary beyond the local client (C16).
+func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// r.URL.Path is already stripped of the /datasheets/raw/ prefix, leaving "<mount>/<path...>".
+		mountName, rel, ok := strings.Cut(r.URL.Path, "/")
+		if !ok || mountName == "" || rel == "" {
+			http.Error(w, "raw datasheet path must be <mount>/<path>", http.StatusBadRequest)
+			return
+		}
+		if strings.ToLower(path.Ext(rel)) != ".pdf" {
+			http.Error(w, "only .pdf datasheets are served raw", http.StatusBadRequest)
+			return
+		}
+		abs, err := mounts.Resolve(ms, mountName, rel)
+		if err != nil {
+			// Unknown mount or a path escaping it: do not distinguish, do not echo the host path.
+			http.Error(w, "no such datasheet", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/pdf")
+		http.ServeFile(w, r, abs)
+	})
+}

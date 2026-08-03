@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// This file: QueryService, the ad-hoc datalog query surface (WS3-029) over a loaded design's fact
+// base — the web front-end to the same `query` engine `agni query` runs. Search is its own concern
+// distinct from the rule checks (a rule is one named query among arbitrary ones), so it is its own
+// service, mirroring the WS9-026 extraction of CheckService from DesignService. v1 evaluates
+// server-side (the client posts query text; the backend loads the file and runs query.Naive); the
+// engine is WASM-clean, so client-side eval is a later option, not a rewrite.
+
+// QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004
+// fact base, the same relations the rules assert over) and returns the answer rows with provenance.
+// A geometry-only file with no netlist is an invalid argument; a malformed query is an invalid
+// argument the caller shows inline.
+service QueryService {
+  // RunQuery parses and evaluates the query text over the loaded design and returns the projected
+  // columns and answer rows, each row carrying the provenance of the facts that produced it. The
+  // relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
+  // component-on-net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
+  // relation is empty because the server wires no params dir and datasheet data is deployment-bound
+  // (C16), so a query over `param` returns no rows rather than an error.
+  rpc RunQuery(RunQueryRequest) returns (RunQueryResponse);
+
+  // ListRelations returns the queryable relation catalog (WS9-037): the built-in relations and
+  // predicates plus any overlay-registered relations, each with its argument labels, a one-line
+  // summary, and a kind for grouping. The catalog is static per service build (it does not depend
+  // on a loaded design), so the client fetches it once to populate the panel's relation picker.
+  rpc ListRelations(ListRelationsRequest) returns (ListRelationsResponse);
+}
+
+message RunQueryRequest {
+  string mount = 1;
+  string path = 2;
+  // query is the datalog text, the same surface `agni query` accepts:
+  //   component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
+  string query = 3;
+}
+
+// QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
+// provenance of the base facts that produced the row (the same citations the CLI prints), kept a
+// separate list so a client can show them on demand rather than widen the results table.
+message QueryRow {
+  repeated string cells = 1;
+  repeated string cites = 2;
+  // cell_sheets aligns positionally with cells (WS9-038): the sheet ids each navigable cell's entity
+  // lives on, so the panel can render an inline sheet badge per cell and navigate on click. Sheet
+  // ids only (the client resolves names, as it does for Finding.sheets); empty for a scalar cell, an
+  // unresolved entity, or a single-sheet design. A row with no navigable cells omits it entirely.
+  repeated CellSheets cell_sheets = 3;
+  // cell_reasons aligns positionally with cells (WS9-039): why a navigable cell's entity is not
+  // highlightable in the faithful view — set ONLY for an entity the loaded geometry does not draw
+  // (a `#` virtual power/flag symbol, a power rail with no drawn wire, an unknown ref/net, or any
+  // other undrawn entity), with the reason classified from design facts. UNSPECIFIED means the
+  // entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
+  // additionally shows it only on a faithful layout, since an auto-layout draws every entity.
+  repeated LocateReason cell_reasons = 4;
+}
+
+// CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no
+// repeated-of-repeated. sheet_ids is empty for a non-navigable or unlocated cell.
+message CellSheets {
+  repeated string sheet_ids = 1;
+}
+
+// LocateReason is why a query result cell's entity may not be locatable in the canvas (WS9-039).
+// It is a semantic fact from the netlist, independent of layout — the client pairs it with an
+// actual resolution check before showing it, so the reason and the on-screen truth never conflict.
+enum LocateReason {
+  LOCATE_REASON_UNSPECIFIED = 0;      // the entity IS drawn — expected to highlight; no explanation
+  LOCATE_REASON_VIRTUAL_SYMBOL = 1;   // a `#`-ref power port / flag (#PWR/#FLG), not a placed part
+  LOCATE_REASON_POWER_RAIL_NO_WIRE = 2; // a power/ground rail distributed via taps, no drawn wire
+  LOCATE_REASON_NOT_IN_DESIGN = 3;    // the ref/net is not in the loaded netlist
+  LOCATE_REASON_NO_GEOMETRY = 4;      // undrawn in the faithful view for no more specific reason
+  LOCATE_REASON_BUS_NOT_DRAWN = 5;    // a bus with no drawn wire (a bus_alias, an EDIF array, a
+                                      // hierarchical bus port with no wire on the shown sheet) — WS7-042c
+}
+
+message RunQueryResponse {
+  // columns are the projected answer columns (the query's Select, or its goal variables in
+  // first-seen order), naming each cell position in every row.
+  repeated string columns = 1;
+  repeated QueryRow rows = 2;
+  // column_kinds aligns positionally with columns (WS9-038): the entity kind of each column,
+  // derived from the arg-label of the relation position its variable was bound from — "component"
+  // (a ref_des), "net", or "" for a scalar or unresolved column. It drives which cells the panel
+  // renders as clickable-to-locate. Empty (or all "") when no column resolves to an entity.
+  repeated string column_kinds = 3;
+}
+
+message ListRelationsRequest {}
+
+// RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
+// `args` the labels a template inserts as `?arg` (so `component-on-net` inserts
+// `component-on-net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
+// ("netlist" | "board" | "datasheet" | "predicate" | "overlay").
+message RelationInfo {
+  string name = 1;
+  repeated string args = 2;
+  string summary = 3;
+  string kind = 4;
+  // detail is the relation's rich reference markdown from check/facts/docs/<name>.md (WS14-005),
+  // or "" when the relation has no doc yet. summary is the one-liner for the picker chip; detail is
+  // the deep-dive the panel renders on demand, the same markdown pipeline rule Detail uses.
+  string detail = 5;
+}
+
+// ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
+// `query` a click fills and runs, and the one `teaches` concept it introduces. The panel and the CLI
+// `--examples` read the same catalog, so they never drift.
+message ExampleQuery {
+  string label = 1;
+  string query = 2;
+  string teaches = 3;
+}
+
+message ListRelationsResponse {
+  // relations are pre-sorted by kind then name, so the client renders the grouped picker without
+  // re-sorting.
+  repeated RelationInfo relations = 1;
+  // examples are runnable teaching queries in concept-ladder order (WS14-002), rendered as
+  // click-to-run chips beside the relation picker.
+  repeated ExampleQuery examples = 2;
+}

@@ -1,0 +1,14 @@
+name: SPI_NOR
+host: {attr: interface, value: SPI_NOR}
+signals:
+  - {name: CS,   suffix: _CS,   pullup: true, anchor: true}
+  - {name: SCLK, suffix: _SCLK}
+  - {name: IO0,  suffix: _IO0}
+  - {name: IO1,  suffix: _IO1}
+  - {name: IO2,  suffix: _IO2}
+  - {name: IO3,  suffix: _IO3}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: missing-pullup}
+  - {type: signal-dangling}

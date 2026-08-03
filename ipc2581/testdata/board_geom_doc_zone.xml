@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Zone copper-gate fixture: a Zone is a copper pour, so only CONDUCTOR/PLANE layers may produce
+     one. The "fab" layer is a DOCUMENT (fabrication drawing) layer whose Contour is drawing
+     geometry (a dimension bar), NOT copper; emitting it as a Zone leaked off-board drawing bars
+     into the render (the "gray strip" bug). Expect exactly one Zone (net GNDPLANE on TOP), the fab
+     Contour excluded. Units MM. -->
+<IPC-2581 revision="C" xmlns="http://webstds.ipc.org/2581">
+  <Content>
+    <DictionaryStandard units="MILLIMETER"/>
+  </Content>
+  <Ecad name="ecad">
+    <CadData>
+      <Layer name="TOP" layerFunction="CONDUCTOR" side="TOP" polarity="POSITIVE"/>
+      <Layer name="fab" layerFunction="DOCUMENT" side="NONE"/>
+      <Step name="step">
+        <Profile>
+          <Polygon>
+            <PolyBegin x="0.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="0.000000"/>
+            <PolyStepSegment x="10.000000" y="10.000000"/>
+            <PolyStepSegment x="0.000000" y="10.000000"/>
+            <PolyStepSegment x="0.000000" y="0.000000"/>
+          </Polygon>
+        </Profile>
+        <LayerFeature layerRef="TOP">
+          <Set net="GNDPLANE">
+            <Features>
+              <Contour>
+                <Polygon>
+                  <PolyBegin x="1.000000" y="1.000000"/>
+                  <PolyStepSegment x="9.000000" y="1.000000"/>
+                  <PolyStepSegment x="9.000000" y="9.000000"/>
+                  <PolyStepSegment x="1.000000" y="9.000000"/>
+                  <PolyStepSegment x="1.000000" y="1.000000"/>
+                </Polygon>
+              </Contour>
+            </Features>
+          </Set>
+        </LayerFeature>
+        <LayerFeature layerRef="fab">
+          <Set>
+            <Features>
+              <Contour>
+                <Polygon>
+                  <PolyBegin x="20.000000" y="-5.000000"/>
+                  <PolyStepSegment x="21.000000" y="-5.000000"/>
+                  <PolyStepSegment x="21.000000" y="5.000000"/>
+                  <PolyStepSegment x="20.000000" y="5.000000"/>
+                  <PolyStepSegment x="20.000000" y="-5.000000"/>
+                </Polygon>
+              </Contour>
+            </Features>
+          </Set>
+        </LayerFeature>
+      </Step>
+    </CadData>
+  </Ecad>
+</IPC-2581>

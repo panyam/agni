@@ -1,0 +1,10 @@
+# A two-sheet hierarchy for the finding->sheet join (WS9-024): both duplicated U1s live on the
+# root sheet, the Power sub-sheet is clean, so the finding's sheet badge points back at the root
+# and clicking it navigates there even when the Power sheet is the one on screen.
+fires:
+  duplicate-ref-des:
+    subjects: [U1]
+    why: "Two resistors on the root sheet share the ref des U1; the Power sub-sheet is clean, so the finding's sheet badge locates the root."
+  single-pin-net:
+    subjects: [N$1, N$2, N$3, N$4]
+    why: "Each bare pin lands on its own synthesized stub net — the root's duplicated U1 pins (N$1, N$2) AND the Power sub-sheet's R2/R3 pins (N$3, N$4), which the netlist hierarchy walk (WS1-018) reads. WS9-028 attributes each net its sheet membership from the walk, so these net subjects now carry a sheet badge to the sheet their pin lives on (root or Power) even though KiCad wire geometry names no wires here."

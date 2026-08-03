@@ -1,0 +1,50 @@
+
+(edif MULTI
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 -100) (pt 200 0)))
+          (figure BOX (rectangle (pt 0 -100) (pt 200 0)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 200 -50))))
+            (figure PIN (path (pointList (pt 150 -50) (pt 200 -50)))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 300 400)))
+          (designator (stringDisplay "R1")))
+        (net GND
+          (joined (portRef &1 (instanceRef &i1)))
+          (net (rename &n1 "N1")
+            (joined (portRef &1 (instanceRef &i1)))
+            (figure NET (path (pointList (pt 300 400) (pt 300 350)))))))
+      (page (rename P2 "Sheet 2")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (instance (rename &i2 "$i2")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 100 200)))
+          (designator (stringDisplay "R2")))
+        (instance (rename &i3 "$i3")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 500 600)))
+          (designator (stringDisplay "R3")))
+        (net GND2
+          (joined (portRef &1 (instanceRef &i2)) (portRef &1 (instanceRef &i3)))
+          (net (rename &n2 "N2")
+            (joined (portRef &1 (instanceRef &i2)))
+            (figure NET (path (pointList (pt 100 200) (pt 500 600))))))))))

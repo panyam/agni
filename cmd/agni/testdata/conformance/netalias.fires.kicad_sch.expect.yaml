@@ -1,0 +1,15 @@
+# WS3-016/017: the collapsed-alias conflicts, split by scoping class (docs/22). One wire
+# carries local labels SIG_A and SIG_B (label-alias-conflict; KiCad ERC agrees:
+# multiple_net_names on the same pair), and one rail is tapped by both a +3V3 and a +3.3V
+# power symbol (power-tap-conflict; ERC flags that pair too — two design-wide names, so
+# every other tap of either spelling joins this net). Incidental: the resistors' far pins
+# are bare stubs.
+fires:
+  label-alias-conflict:
+    subjects: [SIG_A]
+    why: "two different sheet-scoped labels on one wire; the naming pass keeps SIG_A and SIG_B silently vanishes"
+  power-tap-conflict:
+    subjects: ["+3V3"]
+    why: "rival design-wide rail names on one net; the classic 3V3-spelling merge hazard"
+  single-pin-net:
+    subjects: [N$1, N$2, N$3]

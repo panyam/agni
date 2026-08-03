@@ -1,0 +1,4 @@
+fires:
+  decoupling-present:
+    subjects: [VCC1]
+    why: "VCC1 feeds U1's power-in VDD with no capacitor on the rail; VCC2 is the control, identical but for the decoupling cap C1"

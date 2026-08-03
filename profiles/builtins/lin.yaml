@@ -1,0 +1,11 @@
+name: LIN
+host: {attr: interface, value: LIN}
+signals:
+  - {name: LIN, suffix: _LIN, pullup: true, anchor: true}
+  - {name: TXD, suffix: _TXD}
+  - {name: RXD, suffix: _RXD}
+requirements:
+  - {type: signal-missing}
+  - {type: host-incomplete}
+  - {type: missing-pullup}
+  - {type: signal-dangling}

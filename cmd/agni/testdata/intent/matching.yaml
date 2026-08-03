@@ -1,0 +1,10 @@
+# A declaration ecu.edn satisfies: an ic is present and 3V3 sits at its declared 3.3V nominal.
+name: ECU intent (matching scaffold)
+modules:
+  - {name: MCU, class: ic}
+voltage_domains:
+  - {name: io_3v3, nominal: 3.3, rails: [3V3]}
+subsystems:
+  - {name: power tree, nets: [3V3, 5V0]}
+protections:
+  - {rail: 5V0, kind: discharge}
