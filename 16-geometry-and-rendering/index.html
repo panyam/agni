@@ -1,0 +1,2542 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An engine that reads schematics and PCBs from several formats into one neutral IR, then checks, diffs, renders, and queries them.">
+      
+      
+      
+        <link rel="canonical" href="https://panyam.github.io/agni/16-geometry-and-rendering/">
+      
+      
+        <link rel="prev" href="../15-presenter-contract/">
+      
+      
+        <link rel="next" href="../17-ir-v0/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>16 Geometry and rendering - agni</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#geometry-sidecar-and-scalable-rendering" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agni" class="md-header__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agni
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              16 Geometry and rendering
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agni" class="md-nav__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agni
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../NATIVE_VERIFICATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Native EDA tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../WEB_WALKTHROUGH/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser viewer tour
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OVERLAY_AUTHORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring an overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software-to-hardware concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/checks-and-reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checks and reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/comparing-revisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparing revisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/querying/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Querying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/naming-conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Naming conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/datasheets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datasheets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ANALOGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and software analogy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-ingestion-ir-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 Ingestion and IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-stack-and-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 Stack and architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-presenter-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 Presenter contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 Geometry and rendering
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 Geometry and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-representations-kept-distinct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three representations, kept distinct
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Three representations, kept distinct">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-logical-contract-the-public-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1: logical contract (the public API)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-columnar-transport-the-storagewire-optimized-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2: columnar transport (the storage/wire-optimized form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-in-memory-compute-form-go" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3: in-memory compute form (Go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-not-just-use-proto-everywhere" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not just use proto everywhere
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#making-wire-serialization-nearly-free-the-bytes-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making wire serialization nearly free (the bytes envelope)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proto-contract-sketch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proto contract sketch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reader-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reader plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#renderer-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Renderer plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#webgl-renderer-as-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebGL renderer as built
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-geometry-proto-is-a-render-contract-one-proto-n-producers-n-renderers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The geometry proto is a render contract: one proto, N producers -&gt; N renderers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kicad-geometry-reader-coordinate-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        KiCad geometry reader: coordinate conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#render-fidelity-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render-fidelity fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-stays-readable-and-inside-its-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text stays readable and inside its box
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#board-geometry-sidecar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Board geometry sidecar
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Board geometry sidecar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#second-producer-ipc-2581-and-the-contracts-first-second-format-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Second producer: IPC-2581, and the contract's first second-format audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-layout-node-drawing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-layout node drawing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-ir-v0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 IR v0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-semantic-diff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 Semantic diff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-rules-dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 Rules and checks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20-parameter-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 Parameter IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-document-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 Document IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-net-solving-and-hierarchy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 Net solving and the hierarchy walk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-web-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 The web app
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-derivation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 Derivation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-open-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 Open core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-parameter-resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 Parameter resolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-rule-authoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 Authoring a check rule
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Format references
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Format references
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF netlist primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-schematic-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF schematic primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-representations-kept-distinct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three representations, kept distinct
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Three representations, kept distinct">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-logical-contract-the-public-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1: logical contract (the public API)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-columnar-transport-the-storagewire-optimized-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2: columnar transport (the storage/wire-optimized form)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-in-memory-compute-form-go" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3: in-memory compute form (Go)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-not-just-use-proto-everywhere" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not just use proto everywhere
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#making-wire-serialization-nearly-free-the-bytes-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making wire serialization nearly free (the bytes envelope)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proto-contract-sketch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proto contract sketch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reader-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reader plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#renderer-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Renderer plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#webgl-renderer-as-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebGL renderer as built
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-geometry-proto-is-a-render-contract-one-proto-n-producers-n-renderers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The geometry proto is a render contract: one proto, N producers -&gt; N renderers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kicad-geometry-reader-coordinate-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        KiCad geometry reader: coordinate conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#render-fidelity-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Render-fidelity fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-stays-readable-and-inside-its-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Text stays readable and inside its box
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fidelity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fidelity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#board-geometry-sidecar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Board geometry sidecar
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Board geometry sidecar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#second-producer-ipc-2581-and-the-contracts-first-second-format-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Second producer: IPC-2581, and the contract's first second-format audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#auto-layout-node-drawing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-layout node drawing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="geometry-sidecar-and-scalable-rendering">Geometry sidecar and scalable rendering<a class="headerlink" href="#geometry-sidecar-and-scalable-rendering" title="Permanent link">&para;</a></h1>
+<p>See <a href="../">README</a>. Enforceable rules in <a href="../CONSTRAINTS.md">/CONSTRAINTS.md</a>.
+Builds on the sidecar decision in
+<a href="../13-ingestion-ir-architecture/">13-ingestion-ir-architecture</a> (geometry is a keyed
+sidecar, not in the core IR), the stack decision in
+<a href="../14-stack-and-architecture/">14-stack-and-architecture</a>, and the presenter contract
+in <a href="../15-presenter-contract/">15-presenter-contract</a>. The format ground truth is in
+<a href="../edif-schematic-primer/">edif-schematic-primer.md</a>.</p>
+<p>This doc records how we represent schematic geometry and how we render it in the
+browser at scale (100k+ primitives per design, 82 sheets).</p>
+<h2 id="the-problem">The problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
+<p>A web renderer needs geometry (symbol shapes, placements, wire routing, pin
+coordinates). Diff / rules / sim do not. Geometry volume, not frame rate, is the
+constraint: ~121k figures and ~149k points across 82 sheets. The naive path (one proto
+message per point, one draw object per primitive) allocates hundreds of thousands of
+objects on both sides of the wire and on the GPU, which is what actually breaks.</p>
+<h2 id="three-representations-kept-distinct">Three representations, kept distinct<a class="headerlink" href="#three-representations-kept-distinct" title="Permanent link">&para;</a></h2>
+<p>The mistake is collapsing the API, the wire format, and the compute layout into one
+type. We keep three, matched to three access patterns.</p>
+<h3 id="tier-1-logical-contract-the-public-api">Tier 1: logical contract (the public API)<a class="headerlink" href="#tier-1-logical-contract-the-public-api" title="Permanent link">&para;</a></h3>
+<p>Nested, ergonomic proto messages, sized O(thousands): <code>SymbolDef</code>,
+<code>SymbolPlacement{ref_des, transform}</code>, <code>PinPoint{port_ref, x, y}</code>,
+<code>WireGeometry{net, ...}</code>, <code>SheetGeometry</code>. This is what single reads
+("give me placement R12"), list reads ("placements on sheet 3"), picking results, and
+IR-keying use, and what other tools consume. Stable and readable. <strong>Storage/packing
+details never leak in here.</strong> Proto is the single source of truth for this tier
+(honors C2's no-drift intent).</p>
+<h3 id="tier-2-columnar-transport-the-storagewire-optimized-form">Tier 2: columnar transport (the storage/wire-optimized form)<a class="headerlink" href="#tier-2-columnar-transport-the-storagewire-optimized-form" title="Permanent link">&para;</a></h3>
+<p>A separate message carrying the vertex streams as a <strong><code>bytes</code> blob</strong> with a defined
+little-endian columnar layout, addressed by index back to tier 1. Requested explicitly
+by the bulk path ("give me the packed buffers for sheet N"), never mixed into tier 1.
+This is what crosses to the GPU.</p>
+<p><strong>Coordinates here are int32, and sheet-relative (rebased).</strong> Not to save disk (the
+whole design is ~1.2MB vs ~2.4MB, immaterial), but because the consumer forces it:
+WebGL2 / GLSL ES 3.0 has no 64-bit vertex attribute and no <code>int64</code>/<code>double</code> in shaders,
+so the blob that feeds GPU buffers is physically 32-bit. Storing int64 here would force
+a narrowing pass on load, defeating the zero-copy envelope. int32 over float32 because
+int32 is exact to 2^31 while float32 dies at 2^24 (below our ~8.6e7 range, section on
+units). Rebasing per sheet (subtract the sheet min corner) bounds values by the sheet
+extent regardless of absolute-coordinate magnitude, making int32 provably safe and
+avoiding the float32 precision trap at the GPU. Tier 1 stays int64 (read-only, O(few),
+range-safe, no unit assumption baked into the public API); narrowing happens only here.</p>
+<h3 id="tier-3-in-memory-compute-form-go">Tier 3: in-memory compute form (Go)<a class="headerlink" href="#tier-3-in-memory-compute-form-go" title="Permanent link">&para;</a></h3>
+<p>What the reader builds and what a server-side spatial index / culler operates on.
+Columnar, allocation-light (<code>struct { Xs, Ys []int32; ... }</code>). This is a <strong>derived
+projection of the proto contract, not a second schema.</strong> Proto is the boundary format,
+not the compute format.</p>
+<h2 id="why-not-just-use-proto-everywhere">Why not just use proto everywhere<a class="headerlink" href="#why-not-just-use-proto-everywhere" title="Permanent link">&para;</a></h2>
+<p>Vanilla protobuf-go generates <code>[]*Point</code> for <code>repeated Point</code>, so bulk geometry becomes
+~149k heap objects with pointer chasing, and marshal/unmarshal touches every varint.
+That is fine as a wire/disk contract but wrong as the thing a renderer or spatial index
+iterates. It also buys nothing at the browser edge, because bulk data is copied into a
+typed array at the WASM boundary regardless (<code>CopyBytesToGo</code> / <code>CopyBytesToJS</code>). So
+proto is the <strong>boundary format</strong>, and tier 3 is the <strong>compute format</strong>.</p>
+<h2 id="making-wire-serialization-nearly-free-the-bytes-envelope">Making wire serialization nearly free (the bytes envelope)<a class="headerlink" href="#making-wire-serialization-nearly-free-the-bytes-envelope" title="Permanent link">&para;</a></h2>
+<p>Tier 2 is a <code>bytes</code> field holding a packed columnar buffer. This removes the mapping tax
+on the hot path:</p>
+<ul>
+<li><strong>In-memory (tier 3):</strong> the columnar arrays' backing store <em>is</em> the byte slice (or a
+  trivial view over it). Mapping to proto = assign the slice; no per-element copy, no
+  <code>[]*Point</code>.</li>
+<li><strong>Serialize:</strong> proto encodes a <code>bytes</code> field as <code>tag + length + raw copy</code>. One memcpy,
+  not 149k varint encodes.</li>
+<li><strong>Deserialize:</strong> you get the slice back and reinterpret it as columnar arrays.</li>
+<li><strong>Browser:</strong> the blob arrives as a <code>Uint8Array</code>; make <code>Int32Array</code> / <code>Float32Array</code>
+  views over it and hand them to GPU buffers. Zero-copy on the JS side.</li>
+</ul>
+<p><strong>Cost we accept:</strong> the blob is opaque to proto tooling (no field-level introspection,
+no unknown-field evolution <em>inside</em> the blob). We own its layout versioning via an
+explicit <code>layout_version</code>. This is acceptable for a render-only vertex stream. The C2
+rationale that most motivates strict proto modeling (unknown-field retention for the
+lossless IR, docs/13) is IR-specific and does not apply to a lossy-bounded render
+subset. C2's cross-language no-drift intent still holds and is honored by keeping the
+layout spec authoritative and versioned.</p>
+<p><strong>Why not FlatBuffers / Cap'n Proto:</strong> they are serialization formats, not a
+replacement for <code>protoc-gen-go-wasmjs</code>, which is a Go-WASM-to-JS <strong>bridge generator</strong>
+(it emits the service exposure to <code>js.Global()</code>, the TS client facades, and the duplex
+presenter-service scaffolding C3 mandates). Two reasons we keep proto:</p>
+<ol>
+<li><strong>The zero-copy win is marginal here.</strong> FlatBuffers/Cap'n Proto read fields in place
+   with no parse step. For our vertex tier the <code>bytes</code> envelope already gets that: the
+   blob is our columnar layout, TS makes typed-array views over it zero-copy, Go assigns
+   the slice. The only extra they offer is structured random access inside the blob,
+   which a flat vertex pool with a layout we own does not need. We would adopt a new
+   toolchain to save one memcpy of a few MB per sheet.</li>
+<li><strong>Neither ships a Go-WASM bridge generator.</strong> Adopting one means hand-writing the
+   presenter-service exposure, TS clients, and boundary wiring that the wasmjs pipeline
+   generates, plus running a second IDL alongside the proto IR (C2), creating a seam
+   between netlist IR and geometry sidecar. One schema toolchain across the system beats
+   a per-vertex micro-optimization.</li>
+</ol>
+<p>If profiling later shows the tier-2 or boundary copy is a real bottleneck, we can adopt
+FlatBuffers <strong>just for the vertex blob</strong> while keeping proto for the contract and the
+bridge (tier 2 sits behind the contract, so it is a localized swap). Premature now, and
+a STACK_CATALOG-consult decision if ever taken.</p>
+<h2 id="proto-contract-sketch">Proto contract sketch<a class="headerlink" href="#proto-contract-sketch" title="Permanent link">&para;</a></h2>
+<p>Tier 1 (logical), in a new package <code>agni.v1.geom</code>, a separate artifact never imported
+by diff / rules / sim:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">message</span><span class="w"> </span><span class="nc">SchematicGeometry</span><span class="w"> </span><span class="p">{</span><span class="w">           </span><span class="c1">// the sidecar for one design</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">design_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">              </span><span class="c1">// joins to ir.Design.name</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="kt">int64</span><span class="w">  </span><span class="na">unit_nm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">                 </span><span class="c1">// nanometers per source unit (10 for this EDIF)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">SymbolDef</span><span class="w"> </span><span class="na">symbols</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">     </span><span class="c1">// symbol library, keyed by cell_ref</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">SheetGeometry</span><span class="w"> </span><span class="na">sheets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="n">Provenance</span><span class="w"> </span><span class="na">prov</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="kd">message</span><span class="w"> </span><span class="nc">SymbolDef</span><span class="w"> </span><span class="p">{</span><span class="w">                   </span><span class="c1">// reusable graphic per part type</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">cell_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">library_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="n">BBox</span><span class="w"> </span><span class="na">bbox</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">Shape</span><span class="w"> </span><span class="na">shapes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">PinPoint</span><span class="w"> </span><span class="na">pins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">         </span><span class="c1">// connectLocation dots, symbol-local</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="n">Provenance</span><span class="w"> </span><span class="na">prov</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">}</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="kd">message</span><span class="w"> </span><span class="nc">SymbolPlacement</span><span class="w"> </span><span class="p">{</span><span class="w">             </span><span class="c1">// a symbol dropped on a sheet</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">ref_des</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">                 </span><span class="c1">// joins to ir.ComponentInstance.ref_des</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">cell_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">library_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">  </span><span class="n">Transform</span><span class="w"> </span><span class="na">transform</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">  </span><span class="n">Provenance</span><span class="w"> </span><span class="na">prov</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="p">;</span><span class="w">               </span><span class="c1">// source_id = EDIF instance &amp;id (unique join key)</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">}</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="kd">message</span><span class="w"> </span><span class="nc">WireGeometry</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">net</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="k">repeated</span><span class="w"> </span><span class="n">Polyline</span><span class="w"> </span><span class="na">polylines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1">// small designs</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="kd">message</span><span class="w"> </span><span class="nc">SheetGeometry</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="n">BBox</span><span class="w"> </span><span class="na">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">SymbolPlacement</span><span class="w"> </span><span class="na">placements</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">WireGeometry</span><span class="w"> </span><span class="na">wires</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">    </span><span class="c1">// tier-1 form; tier-2 PackedSheet is the scale path</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">Label</span><span class="w"> </span><span class="na">labels</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">;</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="p">}</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="kd">message</span><span class="w"> </span><span class="nc">Point</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="na">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="na">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="kd">message</span><span class="w"> </span><span class="nc">BBox</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="na">min</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="k">max</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="c1">// Format-neutral placement: origin + rotation + mirror + optional scale (not EDIF&#39;s</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="c1">// fixed orientation codes), so other-format readers map onto it. EDIF&#39;s 8 codes and</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="c1">// scaleX/Y map exactly (MXR90 = mirror_x + rotation 90, etc.).</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="kd">message</span><span class="w"> </span><span class="nc">Transform</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="na">origin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="kt">int32</span><span class="w"> </span><span class="na">rotation_deg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="na">mirror_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="na">mirror_y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="na">scale_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="na">scale_y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="kd">message</span><span class="w"> </span><span class="nc">Shape</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">Kind</span><span class="w"> </span><span class="na">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="k">repeated</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="na">points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="na">radius</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">figure_group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="kd">message</span><span class="w"> </span><span class="nc">PinPoint</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">port_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="na">loc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">source_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="kd">message</span><span class="w"> </span><span class="nc">Polyline</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">repeated</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="na">points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="kd">message</span><span class="w"> </span><span class="nc">Label</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">Point</span><span class="w"> </span><span class="na">origin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="na">height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">justify</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="kt">int32</span><span class="w"> </span><span class="na">rotation_deg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><strong>The sidecar is a format-neutral geometry IR, not an EDIF dump.</strong> The primitives
+(shapes, points, polylines, placements, pins, labels, sheets) are universal 2D
+schematic vector constructs; the transform is a general rotation/mirror/scale rather
+than EDIF's fixed orientation enum. So KiCad, Altium (via export), OrCAD, IPC-2581, and
+other readers can populate the same sidecar, mirroring the many-readers-one-IR thesis
+(docs/13). Symbol graphics come from the source file itself (EDIF embeds them as
+vectors), so the renderer needs no external symbol-asset library for the faithful view;
+only the netlist-graph fallback and text glyphs are drawn by us.</p>
+<p>Tier 2 (columnar transport), separate message, requested per sheet:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">message</span><span class="w"> </span><span class="nc">PackedSheet</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="kt">string</span><span class="w"> </span><span class="na">sheet_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="kt">int32</span><span class="w">  </span><span class="na">layout_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">          </span><span class="c1">// we own this; bump on layout change</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="kt">int64</span><span class="w">  </span><span class="na">origin_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">;</span><span class="w"> </span><span class="kt">int64</span><span class="w"> </span><span class="na">origin_y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">7</span><span class="p">;</span><span class="w">  </span><span class="c1">// sheet min corner; blob coords are relative to this</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="kt">bytes</span><span class="w">  </span><span class="na">vertices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">                </span><span class="c1">// int32 LE pairs, sheet-relative: [x0,y0,x1,y1,...]</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="kt">bytes</span><span class="w">  </span><span class="na">primitives</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w">              </span><span class="c1">// fixed-width records: kind,group,first_vertex,vertex_count</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="n">PrimitiveKey</span><span class="w"> </span><span class="na">keys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">     </span><span class="c1">// O(primitives): primitive index -&gt; ref_des / net (for picking)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>The reader emits tier 1 always. Tier 2 is generated for the scale path (per-sheet GPU
+upload) and shares the same underlying vertex data. Tier 1's <code>Point</code>/<code>Shape</code>/<code>Polyline</code>
+are for reads and small designs; they are not the bulk carrier.</p>
+<h2 id="reader-plan">Reader plan<a class="headerlink" href="#reader-plan" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>edif/schematic.go</code>: <code>ReadSchematic(io.Reader, sourceFile) (*geom.SchematicGeometry, error)</code>,
+  reusing <code>sexpr.go</code>. Does <strong>not</strong> touch <code>reader.go</code> (the netlist extractor).</li>
+<li>Parses into the tier-3 columnar Go form, then maps to tier-1 proto (and tier-2 when
+  the renderer needs it).</li>
+<li>Fidelity = lossy-bounded (render subset) per C6. Drops connectivity graph, properties,
+  style palette, display metadata, back-annotation (see primer §6). Keeps shapes, pin
+  points, placements + transforms, wire polylines, labels, sheets.</li>
+<li>Heavy (62MB) so server-side / CLI only (C7). A <code>cmd/edifgeom</code> CLI dumps stats and
+  serializes the sidecar.</li>
+<li>Join keys: <code>ref_des</code> + <code>source_id</code> (instance <code>&amp;id</code>), <code>net</code> name, <code>port_ref</code> (primer §8).</li>
+</ul>
+<h2 id="renderer-plan">Renderer plan<a class="headerlink" href="#renderer-plan" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>SVG verification backend (built first, <code>render/</code> + <code>svg/</code>).</strong> A pure-Go
+  <code>SheetSVG(geometry, sheet)</code> renders a sheet to SVG via a small zero-dep <code>svg/</code> element
+  builder. It is the eyeball/golden instrument, not the production renderer, and it proved
+  the geometry model against the real 62MB board before any browser code: symbol placement</li>
+<li>orientation math, pins landing on wire endpoints, per-view (multi-section) symbol
+  selection, and the annotation layer (pin numbers, title-block/symbol text, off-page
+  connector net names). WebGL2 is a second backend over the same <code>render</code> layer.</li>
+<li><strong>Backend: WebGL2 from the start.</strong> Not Phaser (its per-sprite scene graph does not
+  scale to 100k+ vector primitives). Batched line/instanced rendering: static geometry
+  uploaded once as GPU buffers from the tier-2 blob; a small dynamic overlay
+  (selection/hover) crosses per frame (C4).</li>
+<li><strong>Per-sheet loading.</strong> Load one sheet at a time (a few thousand primitives), not the
+  whole design. Server-side spatial index / culling optional later.</li>
+<li><strong>Camera and picking are view-local</strong> (C3): pan/zoom is an affine transform in the
+  view; picking uses a view-local spatial index over what was drawn and emits semantic
+  intents (<code>ComponentSelected(refDes)</code>, <code>NetHovered(net)</code>). The presenter never sees
+  pixels.</li>
+<li><strong>Renderer runtime: TS in-process</strong> (superseded the original WASM plan). A continuously
+  dragged canvas is exactly the high-frequency surface C7 keeps in TS to avoid per-event
+  boundary cost, so the WebGL renderer + camera are plain TS (<code>web/src/{webgl,camera,
+  canvas}.ts</code>); there is no Go/WASM presenter and no <code>protoc-gen-go-wasmjs</code> codegen. The
+  server stays authoritative (parsing, geometry, style); the client only draws.</li>
+<li><strong>Fallback view:</strong> a netlist-graph diagram derived from the IR alone (auto-layout),
+  for when geometry is absent. Separate renderer over the same presenter contract.</li>
+</ul>
+<h2 id="webgl-renderer-as-built">WebGL renderer as built<a class="headerlink" href="#webgl-renderer-as-built" title="Permanent link">&para;</a></h2>
+<p>The WebGL path reaches SVG-backend parity for a schematic sheet. What the plan above got
+right (WebGL2, upload-once, view-local camera, per-sheet) held; the presenter runtime and a
+few mechanics differ:</p>
+<ul>
+<li><strong>Join by embedded keys, not a separate IR load.</strong> <code>PackedSheet</code> carries
+  <code>PrimitiveKey{ref_des,net}</code> inline, so picking reads the key off the packed primitive; no
+  second IR fetch to join.</li>
+<li><strong>Y-up end to end.</strong> geom is Y-up and WebGL NDC is Y-up, so the camera matrix does <strong>not</strong>
+  flip Y (an early bug did, rendering upside-down vs the SVG oracle). The SVG backend flips
+  once only because SVG pixel space is Y-down.</li>
+<li><strong>Worksheet furniture is synthesized in the packer</strong>, in world units, only when the sheet
+  has a page (<code>sheet.Size</code>): frame border, zone-ruler ticks, title-block box + dividers, under
+  a <code>groupFrame</code>. Mirrors the SVG <code>drawWorksheet</code>; the frame extends the packed bounds so the
+  camera fits the whole page. Ruler/title-block <strong>text</strong> is not geometry (see overlay).</li>
+<li><strong>Text overlay (a GPU line pipeline draws no glyphs).</strong> Labels ride on the wire as
+  <code>PackedSheet.labels</code> (<code>PackedLabel</code>: world position + height + rotation + justify + color,
+  computed server-side with the same transform math as SVG). The client draws them as a
+  second <strong>SVG layer</strong> over the canvas: each <code>&lt;text&gt;</code> is placed once in a <strong>Y-flipped world
+  space</strong> (<code>y -&gt; -y</code>, so glyphs stay upright), and pan/zoom is a single <strong>CSS transform</strong> on
+  the layer (GPU-composited, one style write per frame). Both layers read the same camera in
+  the same <code>requestAnimationFrame</code>, so text stays locked to geometry with no drift. The layer
+  is <code>pointer-events:none</code> and shows only in WebGL mode. Browser-owned text metrics (docs/14),
+  so no glyph atlas. One font per sheet (<code>PackedSheet.font_family</code>); per-element font waits on
+  the IR carrying it.</li>
+<li><strong>One palette for both renderers (<code>render.Style</code>, C12).</strong> Colors and the default font are
+  injectable data (<code>render.Style</code> + <code>DefaultStyle</code>, override via <code>WithStyle</code>), resolved
+  server-side and consumed by both backends: SVG draws from <code>Style</code> directly; the WebGL side
+  receives <code>group_colors</code> (geometry, indexed by group), <code>background_color</code>, <code>font_family</code>, and
+  per-label <code>color</code> on the wire, so <code>webgl.ts</code> holds no palette of its own. <code>agni serve
+  --theme default|dark</code> recolors both backends from one <code>Style</code>.</li>
+</ul>
+<h2 id="the-geometry-proto-is-a-render-contract-one-proto-n-producers-n-renderers">The geometry proto is a render contract: one proto, N producers -&gt; N renderers<a class="headerlink" href="#the-geometry-proto-is-a-render-contract-one-proto-n-producers-n-renderers" title="Permanent link">&para;</a></h2>
+<p><code>geom.SchematicGeometry</code> is not owned by one format. It is the contract that decouples
+<strong>producers</strong> from <strong>renderers</strong>:
+- Producers: faithful readers (<code>edif.ReadSchematic</code> for <code>.eds</code>; <code>kicad.ReadSchematicGeometry</code>
+  for <code>.kicad_sch</code>) and the auto-layout path (<code>graph.Layout</code>, grid/layered).
+- Renderers: <code>render.SheetSVG</code> and <code>render.PackSheet</code> (tier-2 -&gt; WebGL).</p>
+<p>A new source plugs into the contract and every renderer inherits it; a new renderer consumes
+every source. Adding the KiCad reader lit up faithful KiCad rendering on the SVG backend with
+no renderer change. The corollary bites too: when two producers feed the same field into one
+renderer, their conventions must be reconciled (see justify below): the shared contract
+surfaces the inconsistency instead of hiding it.</p>
+<h2 id="kicad-geometry-reader-coordinate-conventions">KiCad geometry reader: coordinate conventions<a class="headerlink" href="#kicad-geometry-reader-coordinate-conventions" title="Permanent link">&para;</a></h2>
+<p>KiCad uses <strong>two coordinate frames</strong>, and conflating them is the trap:
+- <strong>Library symbol graphics are Y-up</strong> (like the geom contract). Map lib-local points straight
+  through (mm -&gt; nm, no Y flip).
+- <strong>The schematic sheet is Y-down.</strong> Flip Y only for sheet-level coordinates: placement
+  origins, wires, labels, junctions.
+- <strong>Rotation is negated</strong> (<code>geom = 360 - kicad</code>). Converting the sheet frame to Y-up is a
+  reflection, which inverts rotation direction. Verified against <code>ApplyTransform</code> (CCW in
+  Y-up). Mirror axes and origin translation are unchanged by the flip. Flipping lib points
+  too, or not negating rotation, mirrors/overlaps every rotated symbol (an upside-down GND is
+  the tell).
+- Units: KiCad mm -&gt; nm (x1e6, exact at KiCad's 0.0001mm grid); <code>unit_nm = 1</code>.
+- <code>#</code>-prefixed references (<code>#PWR</code>, <code>#FLG</code> power/flag virtuals) are hidden by KiCad; drop them
+  for display. <code>pl.RefDes</code> stays the picking key.</p>
+<p>The pin-on-wire coincidence rate (fraction of placed pin connect-points landing on wire
+endpoints) is the cheap correctness signal for the transform math, but it is NOT sensitive to
+rotation <em>direction</em> on symmetric 2-pin parts (the pins just swap), so eyeball the asymmetric
+symbol bodies too.</p>
+<h2 id="render-fidelity-fields">Render-fidelity fields<a class="headerlink" href="#render-fidelity-fields" title="Permanent link">&para;</a></h2>
+<p>Added to the contract so a reader-produced sheet renders like the source tool:
+- <code>SheetGeometry.shapes</code>: free sheet graphics not owned by a symbol (junction dots,
+  no-connect markers, notes). KiCad junctions/no-connects/graphics; EDIF commentGraphics.
+- <code>Shape.fill</code> (<code>UNSPECIFIED</code>/<code>OUTLINE</code>/<code>BACKGROUND</code>/<code>COLOR</code> + <code>fill_color</code>): solid symbol
+  bodies render filled. Not a bool: KiCad distinguishes fill types. <code>PlaceShape</code> must
+  propagate it through the placement transform.
+- <strong>Canonical <code>justify</code></strong>: <code>"&lt;h&gt; &lt;v&gt;"</code> (h left/center/right, v top/middle/bottom). Each reader
+  maps its native codes (EDIF <code>LOWERLEFT</code> -&gt; <code>"left bottom"</code>; KiCad tokens are already
+  canonical). The SVG backend applies <code>text-anchor</code> (horizontal) AND <code>dominant-baseline</code>
+  (vertical).
+- <code>SymbolPlacement.fields</code> (<code>Field{name,value,origin,justify,visible,...}</code>) + <code>PinPoint.name</code>:
+  instance text (Reference/Value/custom) is structured on the placement, not loose sheet
+  labels, so a consumer knows which text is which field (for the visual diff). Sheet
+  labels are now only genuine free text (net labels, notes).</p>
+<h2 id="text-stays-readable-and-inside-its-box">Text stays readable and inside its box<a class="headerlink" href="#text-stays-readable-and-inside-its-box" title="Permanent link">&para;</a></h2>
+<p>Readers carry a source's text orientation and sizing faithfully; making that text <em>legible</em>
+is the render layer's job, shared by the SVG backend and the WebGL overlay (C12: the two agree
+by construction). Two rules live in <code>render</code> and are applied by both <code>drawText</code> (SVG) and
+<code>collectLabels</code> (the overlay's label source):</p>
+<ul>
+<li><strong>Upright text (<code>readableText</code>).</strong> No run is ever drawn upside down, the way every EDA viewer
+  (Eeschema, Altium, OrCAD, the tool that authored our EDIF) draws it. A run whose angle would
+  read upside down (normalized magnitude &gt; 90, e.g. a symbol placed <code>R180</code> or a net label with
+  its own <code>R180</code> orientation) is turned a further 180 and its <code>justify</code> flipped on both axes, so
+  it stays anchored to the same corner. Vertical text (<code>+/-90</code>) is left alone, so the KiCad-90
+  <code>rotate(-90)</code> parity holds. Without this, R180-placed connectors on a real-corpus
+  headers sheet rendered their ref-des and half their net-stub labels upside down.</li>
+<li><strong>Caption fits its box (condense, don't shrink).</strong> A symbol caption with no source text height
+  (e.g. a "Net Splitter" label) fell back to a fixed size and spilled past its symbol. It is now
+  condensed horizontally to the drawn body-box width (<code>captionWidth</code> = widest <code>figureGroup=="BOX"</code>
+  rect, not the pin-stub-widened bounding box) via SVG <code>textLength</code> + <code>lengthAdjust="spacingAndGlyphs"</code>,
+  keeping the font height instead of dropping it to a few pixels, and only when it would overflow.
+  <code>PackedLabel.max_width</code> carries the budget to the overlay so it condenses identically.</li>
+</ul>
+<p><strong>Gotcha:</strong> <code>rsvg-convert</code> (librsvg) silently ignores <code>textLength</code>/<code>lengthAdjust</code>, so an offline
+PNG of the SVG backend still shows a caption overflowing. Browsers honor it, and the viewer's
+SVG/WebGL output is browser-consumed, so it is correct in the product. Verify condensing in a real
+browser (e2e screenshot), not via an rsvg PNG or golden. Repro fixture: <code>edif/testdata/upsidedown.eds</code>
+(an R180 connector + R180 net stub with R0 controls).</p>
+<h2 id="fidelity">Fidelity<a class="headerlink" href="#fidelity" title="Permanent link">&para;</a></h2>
+<p>Reader declares <strong>lossy-bounded (render subset)</strong> per C6. It is not a round-trip
+oracle; the schematic drawing is not reconstructed byte-for-byte, only the render
+subset is extracted.</p>
+<h2 id="board-geometry-sidecar">Board geometry sidecar<a class="headerlink" href="#board-geometry-sidecar" title="Permanent link">&para;</a></h2>
+<p>There are two geometries and two sidecars, one per physical medium:</p>
+<ul>
+<li><strong>Schematic-page geometry</strong>: symbol shapes, wire runs, labels: <code>SchematicGeometry</code>
+  (this document's subject so far).</li>
+<li><strong>Board geometry</strong>: component placement, pads, routed copper, vias, zones, the layer
+  stackup, and the board outline: <code>BoardGeometry</code> (<code>geom_board.proto</code>, same
+  <code>agni.v1.geom</code> package so the primitive vocabulary, <code>Point</code>, <code>Polyline</code>, <code>BBox</code>,
+  <code>Provenance</code>: is shared rather than duplicated).</li>
+</ul>
+<p>The board sidecar follows every rule established above: a separate keyed artifact, never
+imported by diff/rules/sim, joined to the netlist IR at consumption time by stable keys, 
+<code>ref_des</code> for placements (with pad <code>number</code> matching <code>ir.Connection.pin_ref</code>, so
+<code>(ref_des, number)</code> joins a copper land to its netlist pin) and net <strong>name</strong> for routed
+copper (<code>NetCopper</code>, the board analogue of <code>WireGeometry</code>). The first producer is the
+KiCad reader (<code>kicad.ReadBoardGeometry</code>, over the same s-expr parse as the netlist
+reader); IPC-2581 and ODB++ producers slot in behind the same proto, keeping the
+one-contract/N-producers property.</p>
+<p><strong>Silkscreen / legend text.</strong> <code>BoardText</code> carries the board's placed strings, each
+footprint's ref-des and value, plus free <code>gr_text</code> such as the title block, so both board
+renderers (<code>BoardSVG</code> and the packed/WebGL path) draw them, matching what KiCad shows.
+Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it lives in the
+shared contract, not a reader (C9: IR fields earn their place, so the IR never overfits one format). Every <code>BoardText</code> is <strong>board-frame absolute</strong>: the
+reader composes a footprint's local text offset through the placement transform with
+<code>geomath.ComposePlacement</code>: the <em>same</em> composer <code>padWorld</code> uses for pads, which is what
+pins text to its part, and free text is authored absolute already. Glyph angle folds under
+KiCad's default <em>keep_upright</em> so text on a rotated footprint never renders inverted (free
+<code>gr_text</code> is exempt, so a deliberately mirrored back-side title stays mirrored). Hidden
+source text is dropped.</p>
+<p><strong>Silkscreen / fab graphics.</strong> <code>BoardGraphic</code> carries the non-copper artwork the same
+way: a footprint's silk/fab body outlines, courtyards, and polarity marks (<code>fp_line</code>/<code>fp_arc</code>/
+<code>fp_circle</code>/<code>fp_poly</code>/<code>fp_rect</code>), plus free <code>gr_*</code> graphics that are not the board edge (the
+edge stays <code>BoardOutline</code>). It reuses <code>geom.Shape</code> for the geometry itself (POLYLINE/RECT/
+CIRCLE, arcs approximated to polylines under the same C6 bound), adds only a stroke <code>width</code>,
+carries the source <code>layer</code> verbatim, and (like <code>BoardText</code>) pre-composes footprint graphics to
+board coordinates through <code>geomath.ComposePlacement</code> so they sit on their part. Both renderers
+draw them in a silk group; per-layer visibility is the same client-side concern as the copper
+strata. Universal across board formats (IPC-2581 legend, ODB++, Gerber silk are all line/arc/
+region artwork), so it is a shared-contract field a second producer fills, not a reader's.
+Filled zone regions and per-side silk/fab default-visibility remain a later refinement.</p>
+<p>Tiering: only <strong>tier 1</strong> exists for the board today. The columnar packed transport for
+high-volume copper (the <code>PackedSheet</code> analogue) is deliberately deferred until its
+consumer, the board renderer, exists; the tier split above is the design it will
+follow. Coordinates are nanometers (<code>unit_nm=1</code>), Y-up, matching the KiCad schematic
+reader's convention; rotations are carried verbatim from the source and composition with
+the Y-flip is the renderer's concern (documented on the proto). Fidelity is
+lossy-bounded (render/DRC subset): arc tracks, zone fill polygons, teardrops, and 3D
+references are out; zone outlines are as authored; outline arcs are approximated as
+polylines.</p>
+<p>What it enables: the geometric DRC class (clearance, width, annular ring) gets
+its data tier, and a board viewer gets its contract.</p>
+<p><strong>Copper stroke width (both renderers).</strong> Board copper renders at its TRUE physical width,
+floored to a <em>physical</em> minimum (<code>minStrokeNm</code>, ~25µm in board space), never to a fixed
+output-pixel constant: the SVG backend strokes <code>max(width, minStrokeNm)*scale</code> and the WebGL
+packer's <code>quadPts</code> tessellates the same floored width. An output-pixel floor (the earlier
+<code>strokePx=0.8</code>) clamped every sub-pixel trace to one width on a scaled-to-fit board, merging
+dense copper into a blob and erasing relative trace widths; the board-space floor keeps
+thickness proportional to the copper at every zoom, as EDA viewers draw. WebGL was already
+faithful: browser GL line width is ~1px, which is exactly <em>why</em> the packer draws tracks as
+triangle quads rather than lines, so only the SVG backend needed converging. Scope is board
+copper; schematic wire strokes stay a fixed pixel width (line-art at readable zoom, no
+blobbing), and pad/via size-floors stay (discrete-feature visibility, a separate concern).</p>
+<p><strong>Buses draw distinctly.</strong> <code>WireGeometry.kind</code> (unset=wire, <code>KIND_BUS</code>, <code>KIND_BUS_ENTRY</code>)
+lets the readers flag a bus trunk/entry so both renderers style it apart from a net wire: the SVG
+backend strokes it thicker (<code>busStrokePx</code>) in the bus color (<code>Style.Bus</code>), and the WebGL packer
+tessellates it to true-width triangle quads in a distinct <code>groupBus</code> (12, past the board strata in
+the shared group space) with <code>quadPts</code>, the same "GL lines are ~1px, so widen via quads" path copper
+takes. The kind is format-neutral (KiCad sets it today from <code>bus</code>/<code>bus_entry</code>; a bus carries no net,
+so its member nets stay unmodeled). The packed palette only grows to cover <code>groupBus</code> on a
+sheet that actually packs a bus, so a bus-less sheet's bytes are unchanged. A <code>bus-not-modeled</code>
+finding HIGHLIGHTS its drawn trunk on click, keyed by the bus NAME (<code>WireGeometry.Net</code>, gated on the
+bus kind so a same-named net wire is not caught), via OUTLINE (recolor in place — a bus is already
+thick, so the net-focus PATH shape is unneeded and mis-tessellates the WebGL quads). The reader names
+the bus wire from its source label (KiCad range-label-on-wire; gEDA/xschem inline), which is also the
+finding subject, so the join is by name (not the uuid an early cut assumed, since bus detection is
+name-keyed). An UNDRAWABLE bus (a <code>bus_alias</code>, an EDIF <code>array</code>, a hierarchical port
+with no drawn wire) shows a server-authoritative "bus not drawn" note instead, computed in
+<code>AnnotateSheets</code> from the drawn-<code>KIND_BUS</code>-name index.</p>
+<h3 id="second-producer-ipc-2581-and-the-contracts-first-second-format-audit">Second producer: IPC-2581, and the contract's first second-format audit<a class="headerlink" href="#second-producer-ipc-2581-and-the-contracts-first-second-format-audit" title="Permanent link">&para;</a></h3>
+<p><code>ipc2581.ReadBoardGeometry</code> is the second <code>BoardGeometry</code> producer. The proto was designed
+from one producer (KiCad), so the second is also the audit that proves the fields are not
+overfit, the C9 overfit rule only bites when a second vendor's data lands in them. The
+audit's outcomes, all resolved without a proto change:</p>
+<ul>
+<li><strong>No new fields earned.</strong> IPC-2581's stackup carries per-layer material and thickness, but
+  no board rule or renderer consumes them, so <code>BoardLayer</code> keeps only <code>kind</code> (IPC-2581's
+  <code>layerFunction</code> verbatim, the same discipline as KiCad's <code>kind</code> word). The richer stackup
+  stays in the netlist IR's <code>ir.Stackup</code> and is ledgered for when a consumer earns it.</li>
+<li><strong>Padstack def/instance resolves to the same inline <code>Pad</code>.</strong> IPC-2581 references pad shapes
+  by id from a primitive dictionary (<code>StandardPrimitiveRef</code> → <code>EntryStandard</code>), where KiCad
+  inlines them per footprint. The producer resolves the indirection and emits the identical
+  flattened <code>Pad</code> (shape word, size, footprint-local <code>at</code>), confirming the inline mapping holds
+  for a def/instance source.</li>
+<li><strong>Frame.</strong> IPC-2581 is Y-up like the geom contract, so coordinates map directly with <strong>no</strong>
+  Y negation (KiCad is Y-down and negates). Sides normalize into the contract's KiCad-style
+  vocabulary (<code>TOP</code>→<code>F.Cu</code>, <code>BOTTOM</code>→<code>B.Cu</code>) so the format-neutral renderer's front/back
+  classifier works unchanged, the "N producers → one vocabulary" property in miniature.</li>
+<li><strong>The board-availability gate generalized.</strong> <code>check.Available</code>'s <code>board.</code> gate keyed on
+  <code>SourceFormat == "kicad-pcb"</code>; it now tests a <code>boardFormats</code> set. The authoritative
+  per-design gate remains the Model's board tier (empty → rules silent).</li>
+</ul>
+<p>Scope landed across two PRs: placements, pads, layers, and outline first; then routed copper
+, tracks (interleaved straight/arc steps decoded in document order, arcs approximated as
+16-chord polylines) and vias (drilled <code>Hole[platingStatus=VIA]</code> with the co-located copper pad
+as the annular). That lights all four board DRC rules on IPC-2581 (track-width, copper-clearance,
+hole-size, annular-width).</p>
+<p><strong>Full producer parity.</strong> The second producer initially lagged the
+contract: fields KiCad filled sat empty on IPC. That gap is now closed, all into existing
+fields with no proto change: component <strong>VALUE</strong> (<code>Component&gt;NonstandardAttribute</code>) →
+<code>ir.Component</code> attrs; silk/fab <strong>graphics</strong> (<code>Package</code> <code>Marking</code>/<code>Outline</code>/<code>AssemblyDrawing</code>,
+composed per placement) → <code>BoardGraphic</code> (IPC encodes silk as vector geometry, not string text,
+so <code>BoardText</code> legitimately stays empty for this producer, a C9 format difference); copper
+plane/pour <strong>fills</strong> (<code>Set&gt;Features&gt;Contour</code>) → <code>Zone</code> (authored outline, cutouts drop per C6);
+via layer <strong>spans</strong> (drill-<code>Layer</code> <code>&lt;Span&gt;</code>) → <code>Via.layer_from/to</code>; and user-primitive <strong>pads</strong>
+(<code>UserPrimitiveRef</code>→<code>DictionaryUser</code>, its own units) → real pad extents. Two gotchas the work
+pinned: the fill is nested under <code>Set&gt;Features&gt;Contour</code>, not a direct child (a fixture test
+passed while the real board rendered zero zones, caught only by the corpus-render rule), and a
+drill layer's <code>&lt;Span&gt;</code> lives on the <code>Layer</code>, not the <code>Hole</code>. Non-via copper lands, fill cutouts,
+and the padstack def/instance indirection remain ledgered (no consumer yet); stackup materials
+are a later refinement.</p>
+<p><strong>Two render-faithfulness bugs on real Allegro exports.</strong> Both passed unit fixtures
+and showed only on a corpus PNG render. (1) Cadence Allegro writes <code>clockwise="TRUE"/"FALSE"</code>
+in UPPERCASE; a case-sensitive <code>== "true"</code> read every clockwise arc as counter-clockwise, so it
+swept the long way and ballooned outline/copper arcs, parse with <code>strings.EqualFold</code>. (2) A
+<code>Zone</code> is a copper pour, so <code>zones()</code> must gate on the <code>Set</code>'s layer being a copper function
+(<code>CONDUCTOR</code>/<code>PLANE</code>); without the gate, <code>DOCUMENT</code> (fab/assembly-drawing) contours leaked in as
+copper and blew up the render bounds. General lesson for any second producer: a construct that
+is copper on one layer is drawing geometry on another: classify by the source <code>layerFunction</code>,
+not by the element name.</p>
+<h2 id="auto-layout-node-drawing">Auto-layout node drawing<a class="headerlink" href="#auto-layout-node-drawing" title="Permanent link">&para;</a></h2>
+<p>The netlist-graph fallback (<code>graph.Layout</code>, <code>agni render --layout=grid|layered</code>) has no source
+geometry, so it synthesizes a <code>SchematicGeometry</code> from the IR. <code>graph/assemble</code> decides what to
+draw at each component node through a pluggable <strong><code>SymbolSource</code></strong> (<code>graph/sources.go</code>), so the
+layout stays fixed while node artwork varies:</p>
+<ul>
+<li><strong><code>Registry</code></strong> (<code>graph/symbols.go</code>): classified synthetic glyphs. Classification is data-driven
+  and user-extensible: an ordered <code>ClassRule</code> list matches the resolved part/symbol name first,
+  then the ref-des letter prefix on a <em>startswith</em> (so <code>RE1</code>/<code>Cout</code> still classify), mapping to
+  open string class ids each with a hand-authored glyph (resistor, capacitor, inductor, ferrite,
+  diode, led, tvs, fuse, connector, test_point, crystal, ic, transistor, ground, the same
+  vocabulary as the check Model's component.class fact, docs/19). Only unrecognized parts draw
+  the generic box; multi-pin bodies (ic, connector) carry no per-pin terminals, so their edges
+  attach at the node center like the box does. Callers layer rules on the defaults
+  (<code>--class sym=class</code>, <code>--class-file</code>).</li>
+<li><strong><code>FaithfulSource</code></strong>: the design's own symbols (from a geometry sidecar) re-laid-out, falling
+  back per ref to the Registry then the box. <code>--symbols=faithful</code> selects it. A symbol that failed
+  to load (<code>Asset.placeholder</code>) counts as unresolved, not provided.</li>
+</ul>
+<p>Two layout properties keep the output legible, both applied in <code>assemble</code> (no per-strategy change,
+because <code>grid</code> and <code>layered</code> both place on integer <code>pitch</code> multiples):</p>
+<ul>
+<li><strong>Size-aware packing</strong> (<code>graph/compact.go</code>): group nodes by distinct X (columns) and Y (rows),
+  size each cell <code>max(pitch, symbolSize + gutter)</code>. A uniform glyph grid stays at <code>pitch</code>; only a
+  large (faithful) symbol expands its own column/row, so mixed sizes pack tightly without overlap.</li>
+<li><strong>Pin-accurate edges</strong>: a net's hyperedge star runs from each connection's <em>pin</em>: the placed
+  node origin plus the symbol's <code>PinPoint</code> whose <code>port_ref</code> matches the connection's pin, with a
+  node-centre fallback when the symbol has no such pin. A net where three or more pins meet gets a
+  <code>KIND_DOT</code> junction at the centroid. Auto-layout placements carry no rotation, so <code>origin +
+  pin.Loc</code> is the world point (matching the renderer's <code>PlacePin</code>).</li>
+</ul>
+<p><strong>Conversion report.</strong> <code>graph.BuildReport</code> (behind <code>agni render --report</code> and the <code>GetReport</code> web
+API) explains how each component mapped: its device class and whether it drew a glyph, the generic
+box (unmapped class), a provided symbol, or an unresolved fallback, with call-outs for the box
+list and the unresolved list (which points at <code>--symbol-path</code>, needed for xschem/gEDA whose symbol
+artwork lives in external <code>.sym</code> files).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "content.code.copy", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

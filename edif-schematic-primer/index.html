@@ -1,0 +1,2518 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An engine that reads schematics and PCBs from several formats into one neutral IR, then checks, diffs, renders, and queries them.">
+      
+      
+      
+        <link rel="canonical" href="https://panyam.github.io/agni/edif-schematic-primer/">
+      
+      
+        <link rel="prev" href="../edif-primer/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>EDIF schematic primer - agni</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#edif-schematic-eds-primer-geometry-schematics-and-what-else-is-in-the-file" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agni" class="md-header__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agni
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              EDIF schematic primer
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agni" class="md-nav__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agni
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../NATIVE_VERIFICATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Native EDA tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../WEB_WALKTHROUGH/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser viewer tour
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OVERLAY_AUTHORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring an overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software-to-hardware concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/checks-and-reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checks and reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/comparing-revisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparing revisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/querying/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Querying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/naming-conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Naming conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/datasheets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datasheets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ANALOGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and software analogy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-ingestion-ir-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 Ingestion and IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-stack-and-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 Stack and architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-presenter-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 Presenter contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-geometry-and-rendering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 Geometry and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-ir-v0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 IR v0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-semantic-diff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 Semantic diff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-rules-dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 Rules and checks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20-parameter-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 Parameter IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-document-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 Document IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-net-solving-and-hierarchy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 Net solving and the hierarchy walk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-web-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 The web app
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-derivation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 Derivation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-open-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 Open core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-parameter-resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 Parameter resolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-rule-authoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 Authoring a check rule
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Format references
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Format references
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF netlist primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF schematic primer
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF schematic primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-a-schematic-is-the-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What a schematic is (the concepts)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-eds-is-a-superset-of-edn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. .eds is a superset of .edn
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-coordinate-system-and-units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Coordinate system and units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-document-structure-top-to-bottom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Document structure (top to bottom)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-the-geometry-we-extract-the-render-subset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The geometry we extract (the render subset)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. The geometry we extract (the render subset)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#5a-symbol-definition-drawn-once-per-part-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5a. Symbol definition (drawn once per part type)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5b-shape-kinds-observed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5b. Shape kinds observed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5c-placement-symbol-dropped-on-a-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5c. Placement (symbol dropped on a sheet)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5d-wire-routing-per-net-per-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5d. Wire routing (per net, per sheet)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5e-sheet-and-free-graphics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5e. Sheet and free graphics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-everything-else-in-the-file-beyond-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Everything else in the file (beyond geometry)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-orientation-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Orientation semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-the-join-contract-keys-back-to-the-core-ir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. The join contract (keys back to the core IR)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-grammar-sketch-the-schematic-subset-we-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Grammar sketch (the schematic subset we read)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-gotchas-schematic-specific-on-top-of-the-netlist-primers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Gotchas (schematic-specific, on top of the netlist primer's)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-a-schematic-is-the-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What a schematic is (the concepts)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-eds-is-a-superset-of-edn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. .eds is a superset of .edn
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-coordinate-system-and-units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Coordinate system and units
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-document-structure-top-to-bottom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Document structure (top to bottom)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-the-geometry-we-extract-the-render-subset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The geometry we extract (the render subset)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. The geometry we extract (the render subset)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#5a-symbol-definition-drawn-once-per-part-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5a. Symbol definition (drawn once per part type)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5b-shape-kinds-observed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5b. Shape kinds observed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5c-placement-symbol-dropped-on-a-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5c. Placement (symbol dropped on a sheet)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5d-wire-routing-per-net-per-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5d. Wire routing (per net, per sheet)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5e-sheet-and-free-graphics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5e. Sheet and free graphics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-everything-else-in-the-file-beyond-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Everything else in the file (beyond geometry)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-orientation-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Orientation semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-the-join-contract-keys-back-to-the-core-ir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. The join contract (keys back to the core IR)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-grammar-sketch-the-schematic-subset-we-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Grammar sketch (the schematic subset we read)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-gotchas-schematic-specific-on-top-of-the-netlist-primers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Gotchas (schematic-specific, on top of the netlist primer's)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="edif-schematic-eds-primer-geometry-schematics-and-what-else-is-in-the-file">EDIF schematic (.eds) primer: geometry, schematics, and what else is in the file<a class="headerlink" href="#edif-schematic-eds-primer-geometry-schematics-and-what-else-is-in-the-file" title="Permanent link">&para;</a></h1>
+<p>Enforceable rules in <a href="../CONSTRAINTS.md">/CONSTRAINTS.md</a>; a <code>CN</code> reference (e.g. C9) points to constraint N there.</p>
+<p>Companion to <a href="../edif-primer/">edif-primer.md</a> (which covers the <code>.edn</code> netlist) and to
+the geometry sidecar work.
+This doc studies the <code>.eds</code> SCHEMATIC export the way the netlist primer studied the
+<code>.edn</code>, so we can design the geometry sidecar proto and reader against ground truth.</p>
+<p>Source file: a 62MB real-world <code>.eds</code> SCHEMATIC export (proprietary; kept outside the
+repo), <code>edifVersion 2 0 0</code>, <code>edifLevel 0</code>, exported by Siemens xDX Designer.</p>
+<h2 id="1-what-a-schematic-is-the-concepts">1. What a schematic is (the concepts)<a class="headerlink" href="#1-what-a-schematic-is-the-concepts" title="Permanent link">&para;</a></h2>
+<p>A schematic is the human-facing <strong>drawing</strong> of a design. It encodes the same
+connectivity as the netlist, but as a diagram a person reads. The vocabulary:</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What it is</th>
+<th>In EDIF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Sheet / page</strong></td>
+<td>One drawing page. A design is many sheets (this one has 82).</td>
+<td><code>(page ...)</code></td>
+</tr>
+<tr>
+<td><strong>Symbol</strong></td>
+<td>The reusable picture of a part type (a resistor zig-zag, an IC box with pins). Drawn once, placed many times.</td>
+<td><code>(symbol ...)</code> inside a cell view</td>
+</tr>
+<tr>
+<td><strong>Pin</strong></td>
+<td>A connection point on a symbol, at a fixed local coordinate. Wires attach here.</td>
+<td><code>(portImplementation ... (connectLocation ...))</code></td>
+</tr>
+<tr>
+<td><strong>Placement / instance</strong></td>
+<td>A symbol dropped on a sheet at some position/rotation, standing for one physical part.</td>
+<td><code>(instance ...)</code> inside a page</td>
+</tr>
+<tr>
+<td><strong>Ref-des</strong></td>
+<td>The reference designator of a placement (<code>R12</code>, <code>J1900</code>). Names the physical part; joins to the netlist.</td>
+<td><code>(designator (stringDisplay "J1900" ...))</code></td>
+</tr>
+<tr>
+<td><strong>Wire / net segment</strong></td>
+<td>A drawn line (polyline) connecting pins. Belongs to a net.</td>
+<td><code>(figure NET (path (pointList ...)))</code></td>
+</tr>
+<tr>
+<td><strong>Net</strong></td>
+<td>An electrical node: all the pins and wires at the same potential.</td>
+<td><code>(net ... (joined ...))</code></td>
+</tr>
+<tr>
+<td><strong>Junction / dot</strong></td>
+<td>A filled dot where wires that cross are electrically joined.</td>
+<td><code>(dot (pt ...))</code></td>
+</tr>
+<tr>
+<td><strong>Off-page connector</strong></td>
+<td>A tag that continues a net onto another sheet without a drawn wire.</td>
+<td><code>(offPageConnector ...)</code></td>
+</tr>
+<tr>
+<td><strong>Label / annotation</strong></td>
+<td>Free text on the sheet (net names, notes, table titles, block names).</td>
+<td><code>(annotate (stringDisplay ...))</code></td>
+</tr>
+<tr>
+<td><strong>Title block</strong></td>
+<td>The border/metadata frame (sheet name, revision, date). It is just another placed symbol.</td>
+<td><code>(instance ... (viewRef ... (libraryRef Borders)))</code></td>
+</tr>
+<tr>
+<td><strong>Bus</strong></td>
+<td>A bundle of wires drawn as one thick line. Present in the style palette (<code>WIRE_BUS</code>); not central to our first render.</td>
+<td><code>figureGroup BUS</code></td>
+</tr>
+</tbody>
+</table>
+<p>The key mental model for rendering: <strong>a symbol is defined once (shapes + pin
+positions in symbol-local coordinates), and a placement is a symbol plus a transform
+(where + how rotated).</strong> To draw a placed part you look up its symbol, apply the
+placement transform, and stroke the shapes. Wires are drawn directly from their own
+point lists; they already carry absolute sheet coordinates.</p>
+<h2 id="2-eds-is-a-superset-of-edn">2. <code>.eds</code> is a superset of <code>.edn</code><a class="headerlink" href="#2-eds-is-a-superset-of-edn" title="Permanent link">&para;</a></h2>
+<p>The schematic export contains <strong>everything the netlist has, plus graphics</strong>. The two
+files describe one design; the instance internal ids (<code>&amp;04428I78</code>) are the same in
+both, which is what lets the geometry sidecar key back to the netlist IR.</p>
+<table>
+<thead>
+<tr>
+<th>Content</th>
+<th><code>.edn</code> netlist</th>
+<th><code>.eds</code> schematic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Part-type library (cells, ports, directions)</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Placed instances + ref-des</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Net connectivity (joined pins)</td>
+<td>yes</td>
+<td>yes (duplicated)</td>
+</tr>
+<tr>
+<td>Component properties</td>
+<td>yes</td>
+<td>yes (often richer)</td>
+</tr>
+<tr>
+<td>Symbol graphics (shapes, pin coordinates)</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Placement geometry (position, rotation)</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Wire routing (polylines, junctions)</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Sheets / pages, title blocks, annotations</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Drawing style palette (colors, line widths, text heights)</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Display metadata (what/where labels show)</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Off-page connectors, back-annotation</td>
+<td>no</td>
+<td><strong>yes</strong></td>
+</tr>
+</tbody>
+</table>
+<p>We read connectivity from the lighter <code>.edn</code> (demo one) and geometry from the <code>.eds</code>
+(this workstream). We do <strong>not</strong> re-derive connectivity from the <code>.eds</code>; we join by
+key at render time.</p>
+<h2 id="3-coordinate-system-and-units">3. Coordinate system and units<a class="headerlink" href="#3-coordinate-system-and-units" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Coordinates are integers</strong> in EDIF distance units. The header declares the scale:
+  <code>(scale 1 (e 1 -8) (unit DISTANCE))</code> means 1 unit = 1e-8 m = <strong>10 nanometers</strong>. So
+  <code>59690000</code> units = 0.5969 m = 596.9 mm. Store the raw integers; record <code>unit_nm = 10</code>
+  once so the renderer can convert to mm/pixels.</li>
+<li><strong>Why integers, not floats.</strong> The EDIF spec (and GDSII, Gerber, ODB++, KiCad) store
+  geometry as integer counts of a database unit plus a scale, never as floats. The
+  reason is exactness on a manufacturing grid: two wire endpoints or a pin and a wire
+  must be the <em>same</em> point to be electrically connected, and integers give bit-exact
+  equality where floats give near-misses (<code>0.1 + 0.2 != 0.3</code>) and ambiguous
+  serialization (fights round-trip fidelity, docs/13). We keep integers end to end.</li>
+<li><strong>float32 precision trap (renderer).</strong> <code>float32</code> represents integers exactly only up
+  to 2^24 = 16,777,216, but coordinates here reach ~8.6e7. Uploading raw units as
+  <code>float32</code> GPU attributes loses precision and misaligns wires. Keep int32 through
+  storage (int32 holds the full range: max ~8.6e7 &lt;&lt; 2.1e9) and either use integer
+  vertex attributes converted in-shader or rebase per sheet (subtract the sheet origin)
+  before converting to float.</li>
+<li><strong>Points</strong> are <code>(pt X Y)</code>. Y increases upward (schematic convention); symbol shapes
+  frequently use negative Y (the symbol origin is a top reference and pins hang below).</li>
+<li><strong>Page size</strong> is <code>(pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))</code>, i.e.
+  863.6 mm x 558.8 mm for this design.</li>
+<li><strong>Bounding boxes</strong> <code>(boundingBox (rectangle (pt) (pt)))</code> appear on symbols and sheets
+  and are the natural key for the spatial index / viewport culling.</li>
+</ul>
+<h2 id="4-document-structure-top-to-bottom">4. Document structure (top to bottom)<a class="headerlink" href="#4-document-structure-top-to-bottom" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>(edif DxD
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  (edifVersion 2 0 0) (edifLevel 0) (keywordMap ...)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  (status (written (timestamp ...) (author ...) (program ...)))
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  (library &lt;Name&gt;                         ; one or more
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    (technology                           ; the DRAWING STYLE palette
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>      (numberDefinition (scale ... (unit DISTANCE)) (gridMap ...))
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>      (figureGroup BOX  (color ...))      ; per figure class: color, pathWidth, textHeight
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>      (figureGroup PIN  (color ...))
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>      (figureGroup NET  (color ...)) ...)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    (cell (rename &amp;id &quot;PartType&quot;)          ; a PART TYPE
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>      (cellType GENERIC)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>      (view (rename &amp;id &quot;view&quot;)
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        (viewType SCHEMATIC)
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        (interface (designator &quot;J?&quot;) (port ...) ...)   ; pins (same as netlist)
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        (symbol ...))))                                ; THE GRAPHIC (section 5)
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>  (design &lt;Name&gt;
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    (cellRef &lt;top&gt; (libraryRef &lt;lib&gt;))
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    (property ...)                         ; design-level attributes
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    (viewMap (instanceBackAnnotate ...))   ; back-annotation (section 6)
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    ... (contents ... (page ...) ...)))    ; the SHEETS live in the top cell view
+</code></pre></div>
+<p>The sheets are inside the top design cell's SCHEMATIC view <code>(contents ...)</code>. Each
+<code>(page ...)</code> holds the placed instances, the routed nets, the annotations, and the
+off-page connectors for that sheet.</p>
+<h2 id="5-the-geometry-we-extract-the-render-subset">5. The geometry we extract (the render subset)<a class="headerlink" href="#5-the-geometry-we-extract-the-render-subset" title="Permanent link">&para;</a></h2>
+<p>This is what the sidecar proto models. Everything else (section 6) is dropped or kept
+opaque.</p>
+<h3 id="5a-symbol-definition-drawn-once-per-part-type">5a. Symbol definition (drawn once per part type)<a class="headerlink" href="#5a-symbol-definition-drawn-once-per-part-type" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>(symbol
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  (boundingBox (rectangle (pt 0 -9144000) (pt 1016000 0)))
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  (figure BOX (rectangle (pt 0 -9144000) (pt 762000 0)))        ; a shape
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  (figure ARC (openShape (curve (arc (pt s) (pt mid) (pt e))))) ; an arc shape
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  (portImplementation
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    (name &amp;1 (display ...))
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    (connectLocation (figure GRAPHICS (dot (pt 1016000 -254000))))  ; PIN COORDINATE
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    (figure PIN (path (pointList (pt 762000 -254000) (pt 1016000 -254000)))) ; pin stub
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    (keywordDisplay designator (display ...)))
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  (keywordDisplay cell (display ...)))
+</code></pre></div>
+<ul>
+<li>Shapes come from <code>(figure GROUP &lt;shape&gt;)</code>. The <code>GROUP</code> (BOX, PIN, NET, LINE, ...) is
+  a style hint that maps to the technology palette (color/width).</li>
+<li><strong>Pin coordinates</strong> are the <code>connectLocation</code> <code>(dot (pt X Y))</code>, in symbol-local units.
+  This is where a wire attaches. The <code>figure PIN</code> path is just the little stub line
+  drawn from the body to the pin end.</li>
+<li><code>name &amp;1</code> is the port internal id; <code>keywordDisplay</code>/<code>propertyDisplay</code> say where the
+  pin number and part attributes render (we can defer label placement initially).</li>
+</ul>
+<h3 id="5b-shape-kinds-observed">5b. Shape kinds observed<a class="headerlink" href="#5b-shape-kinds-observed" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>EDIF</th>
+<th>Meaning</th>
+<th>Points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(rectangle (pt) (pt))</code></td>
+<td>axis-aligned box</td>
+<td>2 (min/max corners)</td>
+</tr>
+<tr>
+<td><code>(path (pointList (pt)...))</code></td>
+<td>open polyline</td>
+<td>N in order</td>
+</tr>
+<tr>
+<td><code>(circle (pt) (pt))</code></td>
+<td>circle</td>
+<td>2 (defines radius)</td>
+</tr>
+<tr>
+<td><code>(openShape (curve (arc (pt) (pt) (pt))))</code></td>
+<td>circular arc</td>
+<td>3 (start, mid, end)</td>
+</tr>
+<tr>
+<td><code>(dot (pt))</code></td>
+<td>single point (junction / connect location)</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="5c-placement-symbol-dropped-on-a-sheet">5c. Placement (symbol dropped on a sheet)<a class="headerlink" href="#5c-placement-symbol-dropped-on-a-sheet" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>(instance (rename &amp;04428I78 &quot;$28I78&quot;)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  (viewRef H055MTD2 (cellRef (name PE660095 ...) (libraryRef Connector)))  ; which symbol
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  (transform (orientation MY) (origin (pt 63500000 36830000)))             ; where + how
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  (portInstance &amp;20551 (designator (stringDisplay &quot;3&quot; ...)))               ; pin-number labels
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  (designator (stringDisplay &quot;J1900&quot; ...)))                                ; REF-DES
+</code></pre></div>
+<ul>
+<li><code>viewRef -&gt; cellRef -&gt; libraryRef</code> selects the symbol to draw. Note <code>cellRef</code> may be a
+  bare atom or a <code>(name X (display ...))</code> form; handle both.</li>
+<li><code>transform</code> = <code>(origin (pt X Y))</code> plus an <code>(orientation ...)</code> (section 7). Rare
+  <code>(scaleX ...)</code>/<code>(scaleY ...)</code> also appear (7 each in this file).</li>
+<li><code>(designator (stringDisplay "J1900" ...))</code> is the ref-des. Unlike the netlist, it
+  wraps a <code>stringDisplay</code> (it carries its own on-sheet label position).</li>
+</ul>
+<h3 id="5d-wire-routing-per-net-per-sheet">5d. Wire routing (per net, per sheet)<a class="headerlink" href="#5d-wire-routing-per-net-per-sheet" title="Permanent link">&para;</a></h3>
+<p>Nets nest: an outer logical net, then inner physical net-segment groups that carry the
+drawn wires.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>(net GND
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  (joined (globalPortRef GND) (portRef &amp;2 (instanceRef &amp;04428I71)) ...)   ; logical membership
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  (net (rename &amp;04428N58 &quot;$28N58&quot;)
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    (joined (portRef &amp;2 (instanceRef &amp;04428I71)) ...)
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    (figure NET (path (pointList (pt 59690000 33528000) (pt 59690000 33020000))))  ; a WIRE
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    (figure NET (path (pointList ...)))                                            ; another
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    ...))
+</code></pre></div>
+<p>Each <code>(figure NET (path (pointList ...)))</code> is one wire polyline. The net name is the
+join key back to the IR net.</p>
+<h3 id="5e-sheet-and-free-graphics">5e. Sheet and free graphics<a class="headerlink" href="#5e-sheet-and-free-graphics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>(page (rename HEADERS_055055... &quot;HEADERS -- HMTD and 9_5mm&quot;)
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  (pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  (commentGraphics
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    (figure (figureGroupOverride BOX) (rectangle (pt) (pt)))   ; decorative boxes
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    (annotate (stringDisplay &quot;SWITCH A&quot; (display ... (origin (pt 27178000 38608000))))))  ; text
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  (instance ...) (net ...) (offPageConnector ...))
+</code></pre></div>
+<p><code>annotate</code>/<code>stringDisplay</code> are free text labels; <code>commentGraphics</code> are non-electrical
+decorations (grouping boxes, notes).</p>
+<h2 id="6-everything-else-in-the-file-beyond-geometry">6. Everything else in the file (beyond geometry)<a class="headerlink" href="#6-everything-else-in-the-file-beyond-geometry" title="Permanent link">&para;</a></h2>
+<p>The <code>.eds</code> carries a lot we do <strong>not</strong> put in the geometry sidecar. Cataloged so we
+know what we are deliberately dropping (fidelity = lossy-bounded, render subset, C6):</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Constructs</th>
+<th>Why we drop / defer it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Connectivity</strong></td>
+<td><code>net</code>, <code>joined</code>, <code>portRef</code>, <code>instanceRef</code>, <code>globalPortRef</code>, <code>offPageConnector</code></td>
+<td>Already in the core IR from the <code>.edn</code>. We take only the wire polylines, not the logical graph. (Off-page connectors are a candidate to keep later for cross-sheet navigation.)</td>
+</tr>
+<tr>
+<td><strong>Attributes</strong></td>
+<td><code>property</code> (<code>string</code>/<code>integer</code>/<code>boolean</code>), <code>owner</code></td>
+<td>Belong in the core IR (component attributes), not geometry.</td>
+</tr>
+<tr>
+<td><strong>Display metadata</strong></td>
+<td><code>display</code>, <code>figureGroupOverride</code>, <code>visible</code>, <code>justify</code>, <code>orientation</code>, <code>textHeight</code>, <code>keywordDisplay</code>, <code>propertyDisplay</code></td>
+<td>Controls where each attribute label prints. We can render a subset (net names, ref-des, values) later; not needed for a first faithful render.</td>
+</tr>
+<tr>
+<td><strong>Style palette</strong></td>
+<td><code>technology</code>, <code>figureGroup</code>, <code>color</code>, <code>pathWidth</code>, <code>borderPattern</code>, <code>gridMap</code></td>
+<td>Drawing style. We can carry <code>figure_group</code> as a style hint and resolve colors in the renderer; the full palette is optional.</td>
+</tr>
+<tr>
+<td><strong>Header / status</strong></td>
+<td><code>status</code>, <code>written</code>, <code>timestamp</code>, <code>author</code>, <code>program</code>, <code>keywordMap</code></td>
+<td>Provenance only.</td>
+</tr>
+<tr>
+<td><strong>Back-annotation</strong></td>
+<td><code>viewMap</code>, <code>instanceBackAnnotate</code>, <code>portBackAnnotate</code></td>
+<td>Data pushed back from other tools (print order, sheet totals, pin types). Not render geometry.</td>
+</tr>
+<tr>
+<td><strong>Opaque extras</strong></td>
+<td><code>userData</code></td>
+<td>Vendor-specific flags (e.g. <code>visibleName</code>). Keep opaque if at all.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note on connectivity in the <code>.eds</code>:</strong> it is present and consistent with the <code>.edn</code>,
+so in principle the schematic alone could feed both the IR and the geometry. We keep
+the split (connectivity from <code>.edn</code>, geometry from <code>.eds</code>) because the <code>.edn</code> is 6x
+smaller and demo one already parses it, and because the sidecar architecture wants
+geometry to be independently sourced (docs/13).</p>
+<h2 id="7-orientation-semantics">7. Orientation semantics<a class="headerlink" href="#7-orientation-semantics" title="Permanent link">&para;</a></h2>
+<p><code>transform</code> orientation codes (counts in this file), applied to symbol-local
+coordinates before translating by <code>origin</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>R0</code></td>
+<td>no rotation</td>
+<td>74003</td>
+</tr>
+<tr>
+<td><code>R90</code></td>
+<td>rotate 90 CCW</td>
+<td>15060</td>
+</tr>
+<tr>
+<td><code>R180</code></td>
+<td>rotate 180</td>
+<td>2929</td>
+</tr>
+<tr>
+<td><code>R270</code></td>
+<td>rotate 270 CCW</td>
+<td>4002</td>
+</tr>
+<tr>
+<td><code>MY</code></td>
+<td>mirror across Y axis (flip X)</td>
+<td>1698</td>
+</tr>
+<tr>
+<td><code>MX</code></td>
+<td>mirror across X axis (flip Y)</td>
+<td>110</td>
+</tr>
+<tr>
+<td><code>MXR90</code></td>
+<td>mirror X then rotate 90</td>
+<td>738</td>
+</tr>
+<tr>
+<td><code>MYR90</code></td>
+<td>mirror Y then rotate 90</td>
+<td>163</td>
+</tr>
+</tbody>
+</table>
+<p>As 2x2 matrices on symbol-local <code>(x, y)</code> (Y-up), then add <code>origin</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>R0    [ 1  0; 0  1]      R90   [ 0 -1; 1  0]
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>R180  [-1  0; 0 -1]      R270  [ 0  1;-1  0]
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>MX    [ 1  0; 0 -1]      MY    [-1  0; 0  1]
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>MXR90 = R90 * MX         MYR90 = R90 * MY
+</code></pre></div>
+<p>Pins transform the same way, so a pin's absolute position is
+<code>transform(orientation) * connectLocation + origin</code>. This is how wire endpoints line up
+with pins at render time.</p>
+<h2 id="8-the-join-contract-keys-back-to-the-core-ir">8. The join contract (keys back to the core IR)<a class="headerlink" href="#8-the-join-contract-keys-back-to-the-core-ir" title="Permanent link">&para;</a></h2>
+<p>The sidecar never contains the IR; it references it by stable keys, resolved at render
+time (docs/13).</p>
+<table>
+<thead>
+<tr>
+<th>Geometry element</th>
+<th>Key</th>
+<th>Joins to core IR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SymbolPlacement</code></td>
+<td><code>ref_des</code> (+ <code>source_id</code> = instance <code>&amp;id</code>)</td>
+<td><code>ComponentInstance.ref_des</code> (<code>&amp;id</code> is the robust key, since ref-des repeats for multi-section parts)</td>
+</tr>
+<tr>
+<td><code>SymbolDef</code></td>
+<td><code>cell_ref</code>, <code>library_ref</code>, <code>view_ref</code></td>
+<td><code>ComponentInstance.cell_ref</code> / <code>library_ref</code></td>
+</tr>
+<tr>
+<td><code>WireGeometry</code></td>
+<td><code>net</code> name</td>
+<td><code>Net.name</code></td>
+</tr>
+<tr>
+<td><code>PinPoint</code></td>
+<td><code>port_ref</code></td>
+<td><code>Port.designator</code> / net <code>PortRef.port_ref</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>source_id</code> (the EDIF <code>&amp;id</code>) is the crux: it is identical across <code>.edn</code> and <code>.eds</code>, so
+it is the unambiguous join even where display names collide.</p>
+<p><strong>The symbol join has three dimensions, not two.</strong> A placement references a cell by
+display name <em>or</em> internal <code>&amp;id</code>, a library likewise (<code>(rename Ferrite_Bead "Ferrite Bead")</code>),
+and a <strong>view</strong> by id (<code>(viewRef &amp;..._D... (cellRef (name &amp;cellid) ...))</code>). A multi-section
+cell (a connector with A/B/C/D banks) defines one SCHEMATIC view per bank, each its own
+symbol, so the reader emits one <code>SymbolDef</code> per view keyed by <code>(cell_ref, library_ref,
+view_ref)</code> and normalizes every reference to the display name. Builtin GRAPHIC cells (GND,
+no-connect, off-page) keep their geometry under <code>(view (contents (figure ...)))</code> with no
+<code>(symbol ...)</code> node. Pin-number labels come from each <code>portImplementation</code>'s <code>(name X
+(display (origin ...)))</code>, and off-page connector net names from a page-level
+<code>(portImplementation (name X (display ...)))</code>.</p>
+<h2 id="9-grammar-sketch-the-schematic-subset-we-read">9. Grammar sketch (the schematic subset we read)<a class="headerlink" href="#9-grammar-sketch-the-schematic-subset-we-read" title="Permanent link">&para;</a></h2>
+<p>EBNF-ish, restricted to the render subset. <code>ID</code> = identifier or <code>(rename &amp;id "disp")</code>;
+<code>INT</code> = integer; <code>STR</code> = quoted string. Constructs not listed are skipped by the reader.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>schematic     = &quot;(edif&quot; NAME header library+ design &quot;)&quot;
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>header        = edifVersion edifLevel keywordMap status
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>library       = &quot;(library&quot; NAME edifLevel technology cell+ &quot;)&quot;
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>technology    = &quot;(technology&quot; numberDefinition figureGroup+ &quot;)&quot;
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>numberDefn    = &quot;(numberDefinition&quot; scale+ gridMap &quot;)&quot;
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>scale         = &quot;(scale&quot; INT [ &quot;(e&quot; INT INT &quot;)&quot; | INT ] &quot;(unit&quot; UNIT &quot;)&quot; &quot;)&quot;
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>figureGroup   = &quot;(figureGroup&quot; NAME styleAttr* &quot;)&quot;
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>styleAttr     = color | pathWidth | textHeight
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>cell          = &quot;(cell&quot; ID &quot;(cellType&quot; TYPE &quot;)&quot; view &quot;)&quot;
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>view          = &quot;(view&quot; ID &quot;(viewType&quot; (&quot;SCHEMATIC&quot;|&quot;NETLIST&quot;|&quot;GRAPHIC&quot;) &quot;)&quot;
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>                       interface [ symbol ] [ contents ] &quot;)&quot;
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>interface     = &quot;(interface&quot; [ designator ] port* &quot;)&quot;
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>port          = &quot;(port&quot; ID [ &quot;(direction&quot; DIR &quot;)&quot; ] [ designator ] &quot;)&quot;
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>symbol        = &quot;(symbol&quot; [ boundingBox ] figure* portImpl* keywordDisplay* &quot;)&quot;
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>figure        = &quot;(figure&quot; [ GROUP ] shape* &quot;)&quot;
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>shape         = rectangle | path | circle | dot | openShape
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>rectangle     = &quot;(rectangle&quot; pt pt &quot;)&quot;
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>path          = &quot;(path (pointList&quot; pt+ &quot;))&quot;
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>circle        = &quot;(circle&quot; pt pt &quot;)&quot;
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>dot           = &quot;(dot&quot; pt &quot;)&quot;
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>openShape     = &quot;(openShape (curve&quot; arc+ &quot;))&quot;
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>arc           = &quot;(arc&quot; pt pt pt &quot;)&quot;          // start, mid, end
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>pt            = &quot;(pt&quot; INT INT &quot;)&quot;
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>portImpl      = &quot;(portImplementation (name&quot; ID [display] &quot;)&quot;
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>                       connectLocation figure* keywordDisplay* &quot;)&quot;
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>connectLoc    = &quot;(connectLocation (figure GRAPHICS (dot&quot; pt &quot;)))&quot;
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a>design        = &quot;(design&quot; NAME cellRef property* [ viewMap ] contents &quot;)&quot;
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>contents      = &quot;(contents&quot; [ boundingBox ] [ commentGraphics ] page+ &quot;)&quot;
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>page          = &quot;(page&quot; ID pageSize [ commentGraphics ] instance* net* offPage* &quot;)&quot;
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a>pageSize      = &quot;(pageSize (rectangle&quot; pt pt &quot;))&quot;
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>commentGraph  = &quot;(commentGraphics&quot; (figure | annotate)* &quot;)&quot;
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a>annotate      = &quot;(annotate (stringDisplay&quot; STR display &quot;))&quot;
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a>instance      = &quot;(instance&quot; ID viewRef transform portInstance* [ designator ] property* &quot;)&quot;
+<a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a>viewRef       = &quot;(viewRef&quot; NAME &quot;(cellRef&quot; cellName &quot;(libraryRef&quot; NAME &quot;)&quot; &quot;)&quot; &quot;)&quot;
+<a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a>cellName      = NAME | &quot;(name&quot; NAME display &quot;)&quot;
+<a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a>transform     = &quot;(transform&quot; [ orientation ] [ origin ] [ scaleX ] [ scaleY ] &quot;)&quot;
+<a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a>orientation   = &quot;(orientation&quot; (&quot;R0&quot;|&quot;R90&quot;|&quot;R180&quot;|&quot;R270&quot;|&quot;MX&quot;|&quot;MY&quot;|&quot;MXR90&quot;|&quot;MYR90&quot;) &quot;)&quot;
+<a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a>origin        = &quot;(origin&quot; pt &quot;)&quot;
+<a id="__codelineno-6-42" name="__codelineno-6-42" href="#__codelineno-6-42"></a>designator    = &quot;(designator&quot; (STR | &quot;(stringDisplay&quot; STR display &quot;)&quot;) &quot;)&quot;
+<a id="__codelineno-6-43" name="__codelineno-6-43" href="#__codelineno-6-43"></a>
+<a id="__codelineno-6-44" name="__codelineno-6-44" href="#__codelineno-6-44"></a>net           = &quot;(net&quot; [ NAME ] joined (net | wire)* &quot;)&quot;    // outer logical, inner physical
+<a id="__codelineno-6-45" name="__codelineno-6-45" href="#__codelineno-6-45"></a>joined        = &quot;(joined&quot; (portRef | globalPortRef)* &quot;)&quot;
+<a id="__codelineno-6-46" name="__codelineno-6-46" href="#__codelineno-6-46"></a>portRef       = &quot;(portRef&quot; ID &quot;(instanceRef&quot; ID &quot;)&quot; &quot;)&quot;
+<a id="__codelineno-6-47" name="__codelineno-6-47" href="#__codelineno-6-47"></a>wire          = &quot;(figure NET&quot; path &quot;)&quot;
+<a id="__codelineno-6-48" name="__codelineno-6-48" href="#__codelineno-6-48"></a>offPage       = &quot;(offPageConnector&quot; ID &quot;)&quot;
+</code></pre></div>
+<h2 id="10-gotchas-schematic-specific-on-top-of-the-netlist-primers">10. Gotchas (schematic-specific, on top of the netlist primer's)<a class="headerlink" href="#10-gotchas-schematic-specific-on-top-of-the-netlist-primers" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Symbol vs placement split.</strong> Shapes and pin coordinates live once in the cell's
+   <code>(symbol ...)</code>, in symbol-local coordinates. A placement is only a transform + a
+   <code>cellRef</code>. You must join placement to symbol to draw anything.</li>
+<li><strong>Nets nest.</strong> The outer <code>(net NAME (joined ...))</code> is the logical signal; the wires
+   live in inner <code>(net (rename ...) (joined ...) (figure NET ...))</code> groups. Collect
+   wires from the inner nets, but the join key (net name) is the outer one.</li>
+<li><strong><code>cellRef</code> is polymorphic.</strong> It can be a bare atom or <code>(name X (display ...))</code>.</li>
+<li><strong><code>designator</code> wraps <code>stringDisplay</code> here</strong>, not a bare string like in the netlist.</li>
+<li><strong>Pins need the transform.</strong> A wire endpoint only matches a pin after you apply the
+   placement orientation + origin to the symbol-local <code>connectLocation</code>.</li>
+<li><strong>Volume is per-design, not per-view.</strong> ~121k figures and ~149k points across 82
+   sheets. Per sheet it is a few thousand primitives, which is what the renderer loads
+   at a time. See the geometry/rendering design doc (docs/16, forthcoming) for why the
+   proto models bulk geometry as packed/columnar arrays rather than object-per-point.</li>
+<li><strong>Y is up.</strong> Symbol shapes commonly use negative Y below a top-origin.
+```</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "content.code.copy", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2228 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An engine that reads schematics and PCBs from several formats into one neutral IR, then checks, diffs, renders, and queries them.">
+      
+      
+      
+        <link rel="canonical" href="https://panyam.github.io/agni/ANALOGY/">
+      
+      
+        <link rel="prev" href="../userguide/datasheets/">
+      
+      
+        <link rel="next" href="../13-ingestion-ir-architecture/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Hardware and software analogy - agni</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-software-analogy-a-map-for-engineers-coming-from-code" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agni" class="md-header__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agni
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Hardware and software analogy
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agni" class="md-nav__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agni
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../NATIVE_VERIFICATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Native EDA tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../WEB_WALKTHROUGH/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser viewer tour
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OVERLAY_AUTHORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring an overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software-to-hardware concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/checks-and-reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checks and reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/comparing-revisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparing revisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/querying/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Querying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/naming-conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Naming conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/datasheets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datasheets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and software analogy
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and software analogy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#modules-and-classes-partlibrary-and-parttype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules and classes: PartLibrary and PartType
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instances-component" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instances: Component
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#partial-views-componentsection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial views: ComponentSection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aliasing-net" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aliasing: Net
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#name-resolution-net-solving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name resolution: net solving
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-protection-walk-reach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The protection walk: Reach
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates-the-reused-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates: the reused sheet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-lockfile-mpn-and-bomline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The lockfile: MPN and BomLine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vendor-docs-as-type-stubs-partspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vendor docs as type stubs: PartSpec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limits-as-contract-tiers-limitkind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits as contract tiers: LimitKind
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-type-checker-the-validation-join" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The type checker: the validation join
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codegen-doc-ir-and-derive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen: doc-IR and derive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-maps-and-blame-geometry-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source maps and blame: geometry and provenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-analogy-breaks-on-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the analogy breaks (on purpose)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-ingestion-ir-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 Ingestion and IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-stack-and-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 Stack and architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-presenter-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 Presenter contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-geometry-and-rendering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 Geometry and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-ir-v0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 IR v0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-semantic-diff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 Semantic diff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-rules-dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 Rules and checks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20-parameter-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 Parameter IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-document-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 Document IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../22-net-solving-and-hierarchy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 Net solving and the hierarchy walk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-web-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 The web app
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-derivation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 Derivation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-open-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 Open core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-parameter-resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 Parameter resolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-rule-authoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 Authoring a check rule
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Format references
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Format references
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF netlist primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-schematic-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF schematic primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#modules-and-classes-partlibrary-and-parttype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules and classes: PartLibrary and PartType
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instances-component" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instances: Component
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#partial-views-componentsection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial views: ComponentSection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aliasing-net" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aliasing: Net
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#name-resolution-net-solving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name resolution: net solving
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-protection-walk-reach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The protection walk: Reach
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates-the-reused-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates: the reused sheet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-lockfile-mpn-and-bomline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The lockfile: MPN and BomLine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vendor-docs-as-type-stubs-partspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vendor docs as type stubs: PartSpec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limits-as-contract-tiers-limitkind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits as contract tiers: LimitKind
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-type-checker-the-validation-join" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The type checker: the validation join
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codegen-doc-ir-and-derive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codegen: doc-IR and derive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-maps-and-blame-geometry-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source maps and blame: geometry and provenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-analogy-breaks-on-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the analogy breaks (on purpose)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-software-analogy-a-map-for-engineers-coming-from-code">The software analogy (a map for engineers coming from code)<a class="headerlink" href="#the-software-analogy-a-map-for-engineers-coming-from-code" title="Permanent link">&para;</a></h1>
+<p>A design is a program. The symbol library is its imports. The BOM is its lockfile.
+Datasheets are vendor documentation, and the parameter layer is us turning those
+docs into type definitions a linter can check. This page expands that mapping one
+concept at a time, with what each thing means in an actual circuit and where it lives
+in the schemas. It complements the numbered docs (13-23); read those for the design
+rationale, this for orientation.</p>
+<p>The master table:</p>
+<table>
+<thead>
+<tr>
+<th>Hardware / our schema</th>
+<th>Software analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#modules-and-classes-partlibrary-and-parttype"><code>PartLibrary</code></a></td>
+<td>a package/module you import</td>
+</tr>
+<tr>
+<td><a href="#modules-and-classes-partlibrary-and-parttype"><code>PartType</code></a></td>
+<td>a class declaration: members (pins) and their types (directions)</td>
+</tr>
+<tr>
+<td><a href="#instances-component"><code>Component</code></a></td>
+<td>an instance; the ref des is the variable name</td>
+</tr>
+<tr>
+<td><a href="#partial-views-componentsection"><code>ComponentSection</code></a></td>
+<td>partial views of one instance</td>
+</tr>
+<tr>
+<td><a href="#aliasing-net"><code>Net</code></a></td>
+<td>a shared channel aliasing fields of many instances</td>
+</tr>
+<tr>
+<td><a href="#name-resolution-net-solving">Net solving</a></td>
+<td>name resolution + linking</td>
+</tr>
+<tr>
+<td><a href="#the-protection-walk-reach">Protection walk (<code>Reach</code>)</a></td>
+<td>graph reachability across middleware that splits a channel</td>
+</tr>
+<tr>
+<td><a href="#templates-the-reused-sheet">Reused hierarchical sheet</a></td>
+<td>a module instantiated N times, with name mangling</td>
+</tr>
+<tr>
+<td><a href="#the-lockfile-mpn-and-bomline">MPN</a></td>
+<td>an exact pinned artifact (<code>lodash@4.17.21</code>)</td>
+</tr>
+<tr>
+<td><a href="#the-lockfile-mpn-and-bomline"><code>BomLine</code></a></td>
+<td>the lockfile</td>
+</tr>
+<tr>
+<td><a href="#vendor-docs-as-type-stubs-partspec">Datasheet</a></td>
+<td>vendor prose documentation for a closed-source dependency</td>
+</tr>
+<tr>
+<td><a href="#vendor-docs-as-type-stubs-partspec"><code>PartSpec</code></a></td>
+<td>the hand- or machine-written <code>.d.ts</code> type stub for that dependency</td>
+</tr>
+<tr>
+<td><a href="#limits-as-contract-tiers-limitkind"><code>LimitKind</code></a></td>
+<td>UB boundary / SLA envelope / benchmark numbers</td>
+</tr>
+<tr>
+<td><a href="#the-type-checker-the-validation-join">The validation join</a></td>
+<td>type-checking call sites against dependency stubs via the lockfile</td>
+</tr>
+<tr>
+<td><a href="#codegen-doc-ir-and-derive">doc-IR</a></td>
+<td>the parsed AST of the vendor docs</td>
+</tr>
+<tr>
+<td><a href="#codegen-doc-ir-and-derive">derive, recipes, patches, manifests</a></td>
+<td>the codegen tool, its config, pinned overrides, and its lockfile</td>
+</tr>
+<tr>
+<td><a href="#source-maps-and-blame-geometry-and-provenance">Geometry sidecar</a></td>
+<td>source maps</td>
+</tr>
+<tr>
+<td><a href="#source-maps-and-blame-geometry-and-provenance">Provenance</a></td>
+<td>blame / debug symbols</td>
+</tr>
+</tbody>
+</table>
+<h2 id="modules-and-classes-partlibrary-and-parttype">Modules and classes: <code>PartLibrary</code> and <code>PartType</code><a class="headerlink" href="#modules-and-classes-partlibrary-and-parttype" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> <code>import Device</code> brings in a package; <code>Device.R</code> is a class it declares:
+two members (pins 1 and 2), each typed <code>passive</code>. The class says nothing about any
+particular resistor in your program, and nothing about which physical artifact will
+eventually satisfy it.</p>
+<p><strong>Circuit.</strong> The schematic's symbol library. A KiCad <code>lib_symbols</code> entry or an EDIF
+cell: the drawn body, the pin list, each pin's electrical type (input, output,
+power_in...), and the designator prefix ("R" for resistors). Every resistor you place
+comes from this one definition.</p>
+<p><strong>Schema.</strong> <code>ir.PartLibrary</code> holding <code>ir.PartType</code>s; pins are <code>ir.Pin</code> with an
+<code>ir.PinDirection</code>. Readers fill these from the design file itself (v6+ KiCad files
+embed their libraries, like vendoring your dependencies).</p>
+<p><img alt="class and instance" src="../analogy/class-instance.svg" /></p>
+<h2 id="instances-component">Instances: <code>Component</code><a class="headerlink" href="#instances-component" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> <code>r1 := Device.R(value: "10k")</code>. The variable name is the reference
+designator; constructor arguments and fields are the instance attributes (Value,
+MPN/Manufacturer). Twenty resistors are twenty instances of
+one class.</p>
+<p><strong>Circuit.</strong> A placed part: R1 near the connector, R2 in the feedback path. Identity
+is the ref des, not the position; the same R1 exists in the schematic, the layout, and
+the BOM.</p>
+<p><strong>Schema.</strong> <code>ir.Component</code> with <code>RefDes</code>, <code>Attributes</code>, and <code>Sections</code> referencing the
+<code>PartType</code> by name. The checks quantify over Components, the way an analyzer walks
+call sites, not declarations.</p>
+<h2 id="partial-views-componentsection">Partial views: <code>ComponentSection</code><a class="headerlink" href="#partial-views-componentsection" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> One object whose interface is used at several distinct sites: think of
+destructuring a struct's fields across two files, or a partial class. There is still
+exactly one identity.</p>
+<p><strong>Circuit.</strong> A dual op-amp: one physical TL072 drawn as two triangles, U1A on this
+half of the sheet and U1B on that one. One package on the board, one BOM line, two
+drawn units.</p>
+<p><strong>Schema.</strong> One <code>ir.Component</code> ("U1") with two <code>ComponentSection</code>s (unit indexes 0
+and 1). A repeated unit index is a genuine bug and trips the <code>duplicate-ref-des</code>
+diagnostics; distinct units never do.</p>
+<p><img alt="multi-unit" src="../analogy/multi-unit.svg" /></p>
+<h2 id="aliasing-net">Aliasing: <code>Net</code><a class="headerlink" href="#aliasing-net" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> Not a function call: a net is a shared channel, or many variables
+aliasing one memory cell. Everything attached to "+5V" IS the same electrical node;
+there is no caller and no callee, no direction on the edge itself.</p>
+<p><strong>Circuit.</strong> The +5V rail: the regulator's output pin, the MCU's VDD pin, and a
+decoupling cap all tied together. Directionality lives on the <em>pins</em> (the regulator's
+pin is <code>power_out</code>, the MCU's is <code>power_in</code>): those are the type annotations the
+connectivity rules dispatch on, and why a missing direction means "skip, never guess."</p>
+<p><strong>Schema.</strong> <code>ir.Net</code> with <code>Connections</code> (component ref + pin ref). Pin directions come
+from the <code>PartType</code>.</p>
+<p><img alt="net aliasing" src="../analogy/net-aliasing.svg" /></p>
+<h2 id="name-resolution-net-solving">Name resolution: net solving<a class="headerlink" href="#name-resolution-net-solving" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> Compilation's front half: the source (wires, labels, junctions, 
+geometry) contains only implicit references, and the solver builds the symbol table:
+which tokens denote the same thing. Two labels "+5V" on different wires are two
+mentions of one symbol; the solver unifies them, exactly like a linker unifying
+external symbols by name.</p>
+<p><strong>Circuit.</strong> KiCad stores no netlist: connectivity IS the drawing. A wire endpoint on
+a pin's connect point binds; a label names the node; same-named power symbols merge
+across the sheet. Getting these binding rules right is a language-semantics problem,
+which is why they are pinned against the reference implementation (<code>kicad-cli</code>), the
+way a compiler pins against a conformance suite. Details: <a href="../22-net-solving-and-hierarchy/">docs/22</a>.</p>
+<h2 id="the-protection-walk-reach">The protection walk: <code>Reach</code><a class="headerlink" href="#the-protection-walk-reach" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> Some questions are not about one node but about a <em>path</em>: "is there an
+auth middleware anywhere between the public handler and the database call?" Neither
+endpoint can answer it; you walk the call graph between them. <code>Reach</code> is that walk. A
+two-terminal series part (a resistor, inductor, ferrite bead, or fuse) is inline
+middleware: it splits one logical channel into two named nets, so a per-net rule is
+blind across it. <code>Reach(start, hops)</code> is a bounded BFS over the pass-element adjacency,
+and the helpers read the result like a stack trace. <code>PathTo</code> is the path,
+<code>ThroughOnPath</code> is the middleware crossed in order, and <code>Between(from, to, class, hops)</code>
+is the one-line "does any X sit on the path" query.</p>
+<p>Two edges of the model carry the electrical meaning. A <strong>series capacitor is a DC
+block</strong>, an insulator between two plates, so it is a non-edge and the walk never crosses
+it (a decoupling cap to ground is a different role entirely). And a <strong>rail is a global
+singleton</strong>: ground, the design-wide <code>global</code> fact, or any net with bus-scale fan-out
+(more than 16 pins) is a stop, because following a pull-up onto <code>VCC</code> would make the
+whole design reachable. That is the graph equivalent of chasing an <code>import</code> into a
+global and treating everything it touches as local.</p>
+<p><strong>Circuit.</strong> Protection and presence rules are reachability questions: a fuse sits
+somewhere between the connector and the regulator, an ESD clamp hangs off a net on the
+power-entry path. The series element that splits the net is exactly what a per-net check
+cannot see past, which is why the walk exists.</p>
+<p><strong>Schema.</strong> <code>check.Model.Reach</code>/<code>Between</code> over the netlist IR; the crossable
+classes are resistor/inductor/ferrite/fuse; the stops are ground/global/high-fan-out.
+The rules that use it carry their own worked diagrams: <a href="../check/docs/reach-semantics.png">what the walk crosses and where
+it stops</a> and <a href="../check/docs/reach-cases.png">the fires/passes
+cases</a>.</p>
+<p><img alt="the protection walk" src="../analogy/reach-walk.svg" /></p>
+<h2 id="templates-the-reused-sheet">Templates: the reused sheet<a class="headerlink" href="#templates-the-reused-sheet" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> Real templates (C++/generics) specialize at compile time: each
+instantiation is a new type. The hardware analog is NOT the parameterized part; a
+<code>Device:R</code> with <code>Value: 10k</code> is just a constructor argument, no specialization
+happens. The true template is the <strong>reused hierarchical sheet</strong>: one <code>amp.kicad_sch</code>
+source, instantiated twice, producing two complete copies of everything inside, with
+per-instance qualified names (<code>/amp1/IN</code>, <code>/amp2/IN</code>), which is name mangling,
+letter for letter.</p>
+<p><strong>Circuit.</strong> A stereo preamp drawn once and instantiated per channel; a motor driver
+repeated four times. Each instance has its own components (the walk resolves
+per-instance reference designators) and its own local nets.</p>
+<p><strong>Schema.</strong> <code>ir.Sheet</code> references plus the multi-sheet hierarchy walk;
+qualified net names follow KiCad's own convention so they match board-file names.</p>
+<p><img alt="hierarchy template" src="../analogy/hierarchy-template.svg" /></p>
+<h2 id="the-lockfile-mpn-and-bomline">The lockfile: MPN and <code>BomLine</code><a class="headerlink" href="#the-lockfile-mpn-and-bomline" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> Your code says <code>import leftpad</code>; the lockfile says
+<code>leftpad@1.3.0, sha512-...</code>. The MPN is that exact pinned artifact: "BSS138" is not
+"some N-FET"; it is one orderable product with one datasheet. <code>BomLine</code> (or the MPN
+attribute on a component) is the lockfile entry binding your variable to it.</p>
+<p><strong>Circuit.</strong> The BOM: R1 will be built as Yageo RC0603FR-0710KL. Two designs can place
+identical schematics and ship different physical parts; only the BOM knows. This is
+also the moment of real specialization (see Templates): choosing the MPN is
+link-time binding of the abstract symbol to a concrete implementation.</p>
+<p><strong>Schema.</strong> <code>ir.BomLine{ref_des, mpn, manufacturer}</code>; the KiCad reader carries <code>MPN</code>
+and <code>Manufacturer</code> symbol properties into component attributes as the no-BOM
+fallback. The join is case-insensitive on MPN and nothing fuzzier: a near-miss MPN is
+a different part until a human says otherwise.</p>
+<h2 id="vendor-docs-as-type-stubs-partspec">Vendor docs as type stubs: <code>PartSpec</code><a class="headerlink" href="#vendor-docs-as-type-stubs-partspec" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> The dependency is closed-source (you will never see the die), and the
+vendor publishes prose documentation. A <code>PartSpec</code> is the <code>.d.ts</code> stub someone wrote
+for it: machine-readable claims about the artifact's limits and behavior, written
+against one pinned doc revision (<code>SourceDoc</code>), with every claim linking back to the
+prose it came from (page, table, extraction method, confidence). Like DefinitelyTyped,
+stubs start hand-written (our fixtures) and graduate to generated (derive), and a
+stub nobody stands behind is worse than no stub.</p>
+<p><strong>Circuit.</strong> "Absolute-maximum VDD is 4.6 V (page 3, Absolute Maximum Ratings,
+TA = 25 °C)." A parameter is never a bare scalar: it is a min/typ/max range valid
+under stated test conditions, at a stated limit kind.</p>
+<p><strong>Schema.</strong> <code>param.PartSpec</code> / <code>Parameter</code> / <code>Condition</code> / <code>ParamProvenance</code>
+(<a href="../20-parameter-ir/">docs/20</a>). The honesty predicates are part of the contract:
+<code>UnderSpecified</code> (conditions not trustworthy: skip) and <code>MachineComparable</code> (a
+text-only condition means "show a human, never auto-compare").</p>
+<h2 id="limits-as-contract-tiers-limitkind">Limits as contract tiers: <code>LimitKind</code><a class="headerlink" href="#limits-as-contract-tiers-limitkind" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong>
+- <strong>Absolute-max = the undefined-behavior boundary.</strong> Past it, the vendor promises
+  nothing: like indexing past the end of an array, damage may be immediate or latent.
+- <strong>Recommended-operating = the supported envelope.</strong> The SLA: inside it, the product
+  behaves as documented.
+- <strong>Characteristic = published benchmark numbers.</strong> Measured behavior under a stated
+  config, and like any benchmark, the number is meaningless without the config
+  (the test conditions).</p>
+<p><strong>Circuit.</strong> LM1117: operate VIN up to 15 V (recommended), never exceed 20 V
+(absolute max), expect ~1.2 V dropout at 800 mA and 25 °C (characteristic).</p>
+<p><img alt="limit kinds" src="../analogy/limits-axis.svg" /></p>
+<h2 id="the-type-checker-the-validation-join">The type checker: the validation join<a class="headerlink" href="#the-type-checker-the-validation-join" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> With stubs (PartSpecs), a lockfile (BOM/MPN), and call sites
+(Components), checking is linting: resolve each call site through the lockfile to its
+stub and verify usage against the declared types. No stub for a dependency? Skip,
+never pass silently; an untyped import is not a proven-correct import.</p>
+<p><strong>Circuit.</strong> <code>supply-exceeds-abs-max</code>: a power-input pin on a rail whose name says
+"+5V", joined to a part whose stub says absolute-max supply is 4.6 V, is a finding
+that cites both ends, the schematic location and the datasheet page.</p>
+<p><strong>Schema.</strong> The check Model's params tier (<code>check.NewModelWithParams</code>,
+<code>Model.PartSpec</code>), the supply-symbol alias map (vendor spellings live in the model
+layer, never in rule text), and the rule itself. Silence is structural: an empty
+<code>param.ParamSet</code> yields no findings by construction.</p>
+<p><img alt="the join" src="../analogy/lockfile-join.svg" /></p>
+<h2 id="codegen-doc-ir-and-derive">Codegen: doc-IR and derive<a class="headerlink" href="#codegen-doc-ir-and-derive" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> Generating stubs from vendor docs is a compiler pipeline:
+- <strong>doc-IR</strong> is the parsed AST of the documentation, tables, cells, figures, text,
+  with positions (<a href="../21-document-ir/">docs/21</a>). N parsers produce it; nothing
+  downstream re-reads the PDF.
+- <strong>derive</strong> is the generator: deterministic, versioned, reproducible
+  (<a href="../24-derivation/">docs/24</a>).
+- <strong>recipes</strong> are the generator's per-vendor config ("in TI sheets, this heading
+  means absolute-max"), data in git, reviewed like code.
+- <strong>patches</strong> are pinned human overrides that survive regeneration, the fix you
+  commit so the generator's known mistake on one exact input can never come back.
+- <strong>the RunManifest</strong> is the generator's lockfile plus its warnings: inputs pinned,
+  and every gap (what it saw and did not extract) enumerated, because silence must
+  never read as coverage.</p>
+<p><strong>Circuit.</strong> A real run: docling parsed the BSS138 sheet, derive emitted 30
+parameters with page citations; on the LM1117 sheet the parser mis-placed one value
+into the wrong column and a two-patch pair (clear + insert) corrects it permanently.</p>
+<p><img alt="derivation pipeline" src="../analogy/derive-pipeline.svg" /></p>
+<h2 id="source-maps-and-blame-geometry-and-provenance">Source maps and blame: geometry and provenance<a class="headerlink" href="#source-maps-and-blame-geometry-and-provenance" title="Permanent link">&para;</a></h2>
+<p><strong>Software.</strong> The geometry sidecar is a source map: the same program, mapped to where
+things are drawn, kept out of the semantic schema and joined by keys, the renderer
+consumes it, the analyzers never do. Provenance is blame and debug symbols: every IR
+node, finding, and extracted parameter can answer "which file/line (or page/table)
+did you come from," which is what makes findings verifiable rather than asserted.</p>
+<p><strong>Circuit.</strong> Click a finding, land on the exact wire in the schematic; click a
+datasheet-backed limit, land on the exact table in the PDF.</p>
+<p><strong>Schema.</strong> <code>geom.SchematicGeometry</code> joined by ref_des/net/provenance keys
+(<a href="../16-geometry-and-rendering/">docs/16</a>); <code>ir.Provenance</code> and
+<code>param.ParamProvenance</code>.</p>
+<p><img alt="source map" src="../analogy/source-map.svg" /></p>
+<h2 id="where-the-analogy-breaks-on-purpose">Where the analogy breaks (on purpose)<a class="headerlink" href="#where-the-analogy-breaks-on-purpose" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>No dynamic dispatch, no open world.</strong> Every connection is resolved at design
+  time; the whole program is one closed compilation unit. That is why exhaustive
+  static checking works at all, and why "the design" can be diffed as a value.</li>
+<li><strong>Nets are symmetric.</strong> There is no caller: electrically everyone on the net
+  "calls" everyone. Direction is a property of pins, not edges, so pin directions do
+  the type-annotation work and their absence means skip.</li>
+<li><strong>Runtime is physics.</strong> There is no sandbox: "running the program" is powering a
+  board, so the linting tier (checks against stubs) carries weight software linters
+  do not, the cheap static end of a ramp whose expensive end is simulation.</li>
+<li><strong>Instances are atoms.</strong> Two "identical" resistors are still two physical objects
+  with tolerances; the stub describes a population, not your unit. That is what
+  tolerance analysis exists to reason about, and why characteristics carry
+  min/typ/max rather than one number.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "content.code.copy", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

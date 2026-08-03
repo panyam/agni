@@ -1,0 +1,2041 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An engine that reads schematics and PCBs from several formats into one neutral IR, then checks, diffs, renders, and queries them.">
+      
+      
+      
+        <link rel="canonical" href="https://panyam.github.io/agni/22-net-solving-and-hierarchy/">
+      
+      
+        <link rel="prev" href="../21-document-ir/">
+      
+      
+        <link rel="next" href="../23-web-app/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>22 Net solving and the hierarchy walk - agni</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#22-net-solving-the-hierarchy-walk" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="agni" class="md-header__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            agni
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              22 Net solving and the hierarchy walk
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="agni" class="md-nav__button md-logo" aria-label="agni" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    agni
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panyam/agni" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    panyam/agni
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build and setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../NATIVE_VERIFICATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Native EDA tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../WEB_WALKTHROUGH/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser viewer tour
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OVERLAY_AUTHORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring an overlay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software-to-hardware concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/checks-and-reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checks and reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/comparing-revisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparing revisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/querying/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Querying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/naming-conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Naming conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../userguide/datasheets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datasheets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ANALOGY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware and software analogy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../13-ingestion-ir-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    13 Ingestion and IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../14-stack-and-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    14 Stack and architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../15-presenter-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    15 Presenter contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../16-geometry-and-rendering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    16 Geometry and rendering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../17-ir-v0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    17 IR v0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../18-semantic-diff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    18 Semantic diff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../19-rules-dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    19 Rules and checks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../20-parameter-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    20 Parameter IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../21-document-ir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    21 Document IR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 Net solving and the hierarchy walk
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    22 Net solving and the hierarchy walk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-solver-internalnetgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The solver: internal/netgraph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kicad-connection-point-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        KiCad connection-point semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#name-scoping-the-fully-qualified-name-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name scoping: the fully-qualified-name model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hierarchy-walk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The hierarchy walk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worked-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worked example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification method
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../23-web-app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    23 The web app
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../24-derivation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    24 Derivation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../25-open-core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    25 Open core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../26-parameter-resolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    26 Parameter resolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../27-rule-authoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    27 Authoring a check rule
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Format references
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Format references
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF netlist primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edif-schematic-primer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDIF schematic primer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-solver-internalnetgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The solver: internal/netgraph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kicad-connection-point-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        KiCad connection-point semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#name-scoping-the-fully-qualified-name-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name scoping: the fully-qualified-name model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-hierarchy-walk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The hierarchy walk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worked-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worked example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification method
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="22-net-solving-the-hierarchy-walk">22 — Net solving &amp; the hierarchy walk<a class="headerlink" href="#22-net-solving-the-hierarchy-walk" title="Permanent link">&para;</a></h1>
+<p>Enforceable rules in <a href="../CONSTRAINTS.md">/CONSTRAINTS.md</a>; a <code>CN</code> reference (e.g. C9) points to constraint N there.</p>
+<p>How a schematic's implicit connectivity becomes <code>ir.Net</code>s: the shared solver
+(<code>internal/netgraph</code>), the KiCad connection-point semantics layered on it
+(<code>kicad/sch_nets.go</code>), and the multi-sheet hierarchy walk that reads a whole project as
+one design (<code>kicad/sch_hier_nets.go</code>). Written because the walk was
+hard to review without this picture in one place.</p>
+<h2 id="the-problem">The problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
+<p>Schematic formats do not store nets. A <code>.kicad_sch</code> stores wires (line segments), symbol
+placements (whose pins are at symbol-local coordinates), and labels (text at a point).
+Connectivity is implied by geometry: things that touch are connected, and things that
+share a name are connected. The same is true of xschem and gEDA. So nets are <em>computed</em>
+by a solver, and every schematic reader feeds the same one.</p>
+<p>KiCad adds a second problem: a multi-sheet design is a FILE PER SHEET. The root
+references children by <code>(sheet ... (property "Sheetfile" ...))</code>, and one child file can
+be instantiated several times. Reading one file therefore reads one sheet of the design,
+not the design.</p>
+<h2 id="the-solver-internalnetgraph">The solver: internal/netgraph<a class="headerlink" href="#the-solver-internalnetgraph" title="Permanent link">&para;</a></h2>
+<p><code>Build(wires, anchors, pins, terminals)</code> takes four flat inputs on an integer grid (the
+caller quantizes its native units so points meant to coincide compare equal):</p>
+<ul>
+<li><strong>Wire</strong>: a segment between two grid points, optionally carrying an inline net name
+  (xschem <code>lab=</code>) and the source's wire id (for diagnostics).</li>
+<li><strong>Anchor</strong>: a named point: a label, a power tap, a port. Contributes a name, not a
+  pin. Carries <code>Driver</code> (a PWR_FLAG-style "this net is fed" assertion), <code>External</code> ("this
+  net continues into something the read did not cover"), and <code>Rank</code> (naming priority,
+  below).</li>
+<li><strong>Pin</strong>: a component pin at a point: <code>(Comp, Pin)</code>, plus <code>NoConnect</code> (a no-connect
+  marker sat on the pin) and <code>Dir</code> (a virtual power-symbol pin's direction).</li>
+<li><strong>terminals</strong>: points where a bare wire end is legitimate (junction dots, no-connect
+  flags), used only by dangling-endpoint detection.</li>
+</ul>
+<p>Solving is two unions and a naming pass:</p>
+<ol>
+<li>
+<p><strong>Union by point.</strong> Every wire unions its two endpoints; anchors and pins join
+   whatever node owns their point. After this pass, each union-find root is a
+   geometrically-connected node.</p>
+</li>
+<li>
+<p><strong>Union by label.</strong> Every non-empty label (wire labels and anchor labels alike)
+   unions all the points that carry it. This is "connect by name": every <code>GND</code> tap on a
+   sheet is one net regardless of geometry. It is also <em>aliasing</em>: a node
+   carrying two different labels folds both label groups into one net (two labels on one
+   wire are two names for one net), and it is the mechanism the hierarchy walk uses to
+   stitch sheets, two points in different coordinate bands that share a label become
+   one net.</p>
+</li>
+<li>
+<p><strong>Naming.</strong> Each merged root takes its lowest-ranked label: wire labels first
+   (rank −1, preserving the old wire-label-beats-anchor behavior), then anchors by
+   <code>Rank</code>, ties broken by input order. Unnamed roots with pins get synthetic <code>N$&lt;n&gt;</code>
+   names by first appearance, except a lone pin marked <code>NoConnect</code>, which takes the
+   tool-marker name <code>unconnected-(REF-PadN)</code> so no-connect-aware consumers key on it.
+   Unnamed, pinless roots are drawing noise and are dropped.</p>
+</li>
+</ol>
+<p>Dangling detection is separate and purely positional: a wire endpoint whose grid point
+holds nothing else (no pin, anchor, terminal, or second wire endpoint) is reported with
+its wire id.</p>
+<p><code>Build</code>'s third return is a <strong>wire → net-name map</strong> keyed by <code>Wire.Id</code>: the same
+solve that names nets also tells the geometry sidecar which net each drawn wire belongs to,
+so the viewer can tint or highlight a KiCad wire by net (KiCad wires carry no inline net
+name, unlike xschem <code>lab=</code> / gEDA, which fill <code>WireGeometry.net</code> from the wire's own label
+and pass empty ids here). Only identified wires populate it; a wire on drawing-noise is
+omitted. In a hierarchy the geometry reader runs the <em>combined</em> solve (<code>hierWireNets</code>) once,
+not a per-sheet solve, so the names are byte-identical to the netlist read's (same <code>N$</code>
+numbering, same <code>/sheet/LOCAL</code> qualification). A reused sub-sheet's wires share uuids across
+its instances, so the geometry pass namespaces each wire id by its instance
+(<code>sheetScope.wirePfx</code>, the sheet path) before the solve; otherwise <code>/ampli_ht_horizontal</code>
+and <code>/ampli_ht_vertical</code> would collapse onto one name.</p>
+<p>The solver is format-agnostic. Everything KiCad-specific (what counts as a connection
+point, name scoping, escapes) happens in the reader before <code>Build</code> is called.</p>
+<h2 id="kicad-connection-point-semantics">KiCad connection-point semantics<a class="headerlink" href="#kicad-connection-point-semantics" title="Permanent link">&para;</a></h2>
+<p>Pinned against <code>kicad-cli sch export netlist</code> (the reference implementation), because
+two of these rules are not what the endpoint-only solver would guess:</p>
+<ul>
+<li><strong>A pin connects where a wire ENDS on its connect point.</strong> The connect point is
+  <code>placement origin + (local_x, −local_y)</code> through the shared placement transform
+  (<code>internal/geomath</code>): the same math the renderer draws with, which is what guarantees
+  a pin lands exactly on the wire endpoint it connects to.</li>
+<li><strong>A label or a junction dot connects anywhere ALONG a wire.</strong> eeschema does not
+  rewrite a wire when a label lands mid-span; the real corpus has an <code>S_OUT+</code> label in
+  the middle of a 70mm segment. The reader reconciles this with the point-identity
+  solver by SPLITTING each wire at every label/junction point lying strictly inside it
+  (<code>splitWiresAt</code>; sheet-frame coordinates only, the collinearity cross-product would
+  overflow int64 in the walk's offset bands).</li>
+<li><strong>Pins do NOT connect mid-span.</strong> The first split implementation included pins and
+  merged the showcase board's <code>USB_D-</code> into GND: a GND power symbol's pin sits mid-span
+  on the D- wire, and kicad-cli keeps them separate. Wire-wire crossings and
+  endpoint-on-body touches without a junction dot likewise stay unconnected, so other
+  wires' endpoints are not split candidates either.</li>
+<li><strong>Net-name text is brace-escaped in the file.</strong> KiCad stores <code>/</code> in a label as
+  <code>{slash}</code> (it collides with the hierarchy separator) and unescapes on load, so
+  <code>VPP{slash}MCLR</code> and <code>VPP/MCLR</code> are one net (pic_programmer has exactly this pair).
+  <code>unescapeName</code> undoes the escape table at every label/port read.</li>
+<li><strong>A power symbol (<code>#PWR</code>, <code>#FLG</code>) is an anchor plus a virtual pin.</strong> Its Value names
+  the net (a PWR_FLAG names nothing but asserts Driven); its power-typed pin also lands
+  as a typed virtual connection so rules see driver evidence. The symbol never
+  enters <code>Components</code>.</li>
+</ul>
+<h2 id="name-scoping-the-fully-qualified-name-model">Name scoping: the fully-qualified-name model<a class="headerlink" href="#name-scoping-the-fully-qualified-name-model" title="Permanent link">&para;</a></h2>
+<p>KiCad has four name kinds, and they map onto familiar software scoping:</p>
+<table>
+<thead>
+<tr>
+<th>kind</th>
+<th>scope</th>
+<th>net name</th>
+<th>analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>local label</td>
+<td>one sheet instance</td>
+<td><code>/amp1/SIG</code> (root: bare <code>SIG</code>)</td>
+<td>instance-qualified member: same text on two sheets is two nets</td>
+</tr>
+<tr>
+<td>global label / power symbol</td>
+<td>design-wide</td>
+<td>bare (<code>VCC</code>)</td>
+<td>root-namespace global</td>
+</tr>
+<tr>
+<td>hierarchical label + sheet pin</td>
+<td>one instance edge</td>
+<td>the child-qualified port name</td>
+<td>function parameter: child declares the port, each call site binds it</td>
+</tr>
+<tr>
+<td>ref-des in a reused sheet</td>
+<td>per instance</td>
+<td>flat (<code>RV201</code> vs <code>RV301</code>)</td>
+<td>linker gives each inlined copy its own symbol, looked up, not qualified</td>
+</tr>
+</tbody>
+</table>
+<p>The qualifier is the INSTANCE path (built from Sheetnames), not the file: a sheet file
+is a class, its placements are objects. Root locals stay bare because that is what
+<code>.kicad_pcb</code> files store, matching the board's spelling is what lets schematic-vs-board
+diffs and net joins agree. (kicad-cli's netlist export adds a leading <code>/</code> to root locals
+that the board does not carry; we match the board.)</p>
+<p>Naming priority across kinds is encoded in <code>Anchor.Rank</code> and was pinned empirically: a
+net carrying both a local label and a <code>VCC</code> power symbol exports from kicad-cli as
+<code>VCC</code>, so global/power is rank 0 and local/port is rank 1. Rank ties keep input order,
+and the walk emits pre-order, so a root-sheet name beats an equal-kind deeper name, 
+also KiCad's rule.</p>
+<h2 id="the-hierarchy-walk">The hierarchy walk<a class="headerlink" href="#the-hierarchy-walk" title="Permanent link">&para;</a></h2>
+<p><code>ReadSchematicHierarchyNets(rootName, rootContent, open)</code> reads the whole tree into one
+design. <code>open</code> fetches a child by its relative <code>Sheetfile</code> path (the caller, the
+<code>formats</code> registry, resolves against the root's directory; the reader does no
+file I/O, C1). The traversal, cycle guard, and hierarchical sheet ids (<code>/</code>, <code>/&lt;name&gt;</code>,
+<code>/&lt;name&gt;/&lt;name&gt;</code>) are the geometry walk's exactly, so netlist and geometry agree on
+sheet identity, the join surface for sheet badges and cross-sheet navigation.</p>
+<p>Per sheet INSTANCE (a reused file is walked once per placement), pre-order:</p>
+<ol>
+<li><strong>Coordinate band.</strong> Instance k's geometry is offset by <code>k · 2^41</code> nm on X. Sheets
+   are ~10^9 nm wide, so bands never touch: point-union stays within an instance, and
+   only label-union crosses bands. One <code>Build</code> call solves the whole design.</li>
+<li><strong>Scoped collection.</strong> The same collector the single-sheet read uses
+   (<code>collectSheetNets</code>) runs with a <code>sheetScope</code>: the band offset, the name prefix
+   (empty for the root), and the instance path. Local and hierarchical labels emit
+   prefix-qualified anchors; globals and power symbols emit bare ones.</li>
+<li><strong>Components.</strong> <code>symbolRefAt(ps, instPath)</code> resolves each placement's ref-des from
+   the <code>instances</code> entry whose <code>path</code> matches this instance's uuid chain
+   (<code>/&lt;root file uuid&gt;/&lt;sheet block uuid&gt;/...</code>); fallback is the first non-placeholder
+   entry, then the Reference property (the single-file behavior). Components merge
+   design-wide by resolved ref; part libraries dedup by lib_id across files.</li>
+<li><strong>Ports.</strong> For each <code>(sheet ...)</code> block, the parent emits an anchor at every sheet
+   pin's position labeled <code>&lt;childID&gt;/&lt;pin name&gt;</code>: the SAME string the child's
+   same-named <code>hierarchical_label</code> produces under its prefix. Label-union joins the
+   parent net to the child net; rank 1 makes the port name the net's name when nothing
+   better exists. This works per instance edge: the two <code>amp</code> instances bind their
+   <code>CTRL</code> ports to different parent nets.</li>
+<li><strong>Recursion + completeness.</strong> A child that fails to open (or a <code>Sheetfile</code> cycling
+   back to an ancestor) is skipped and flips <code>complete</code> to false. The rest still reads.</li>
+</ol>
+<p>After the walk: one <code>Build</code>, then pinless named nets are filtered (KiCad omits a label
+on a dangling wire), and dangling endpoints are translated back out of their bands
+(<code>X − k·2^41</code>, source file looked up by band index) so diagnostics carry sheet-frame
+coordinates the viewer can draw.</p>
+<p><strong>Completeness is the witness.</strong> <code>external</code> on a net means "the read may not
+cover this net". A complete PROJECT walk (<code>.kicad_pro</code> read, every Sheetfile opened)
+makes that marking stale, and <code>ReadProject</code> downgrades external→global
+(<code>netgraph.ResolveExternal</code>); a sheetless root is trivially complete, so flat projects
+behave as before. A bare <code>.kicad_sch</code> read also walks (the registry passes the same
+opener) but NEVER downgrades: that file may itself be someone's sub-sheet. The root
+sheet's own hierarchical labels stay External for the same reason; they continue
+upward into a parent nobody read.</p>
+<p><code>ReadProject</code> always walks the schematic side even when a board is present: the board
+still supplies the nets, but sub-sheet components now arrive with their part types and
+typed pins instead of as bare footprint pads (the read gap that forced the
+<code>PinDeclared</code> guard).</p>
+<h2 id="worked-example">Worked example<a class="headerlink" href="#worked-example" title="Permanent link">&para;</a></h2>
+<p>The <code>twosheet</code>/<code>hier_root</code> fixture: a root placing <code>hier_child.kicad_sch</code> twice (<code>amp1</code>,
+<code>amp2</code>). The child has two resistors (instances paths give <code>R101/R102</code> in amp1,
+<code>R201/R202</code> in amp2), a local <code>SIG</code> label, a hierarchical <code>CTRL</code> label, and a <code>VCC</code>
+power symbol. The root has <code>R1</code>, its own local <code>SIG</code>, a <code>VCC</code> symbol + PWR_FLAG, wires
+amp1's <code>CTRL</code> pin to R1, and leaves amp2's <code>CTRL</code> pin unwired.</p>
+<table>
+<thead>
+<tr>
+<th>net</th>
+<th>members</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SIG</code></td>
+<td>R1.2</td>
+<td>root local, bare, scoped apart from the children</td>
+</tr>
+<tr>
+<td><code>/amp1/SIG</code></td>
+<td>R101.2 R102.2</td>
+<td>child local, instance-qualified</td>
+</tr>
+<tr>
+<td><code>/amp2/SIG</code></td>
+<td>R201.2 R202.2</td>
+<td>same file, second instance, second net</td>
+</tr>
+<tr>
+<td><code>/amp1/CTRL</code></td>
+<td>R1.1 R101.1</td>
+<td>port: parent pin anchor + child hier label share the string</td>
+</tr>
+<tr>
+<td><code>/amp2/CTRL</code></td>
+<td>R201.1</td>
+<td>port with no parent wire: child side only</td>
+</tr>
+<tr>
+<td><code>VCC</code></td>
+<td>#FLG01.1 #PWR01.1 #PWR02.1 R102.1 R202.1</td>
+<td>bare rank-0 rail unifies all three instances; virtual pins dedup</td>
+</tr>
+</tbody>
+</table>
+<p>The child's stray wire dangles at both ends in both instances: four diagnostics, each
+with sheet-frame coordinates and <code>hier_child.kicad_sch</code> as its source.</p>
+<h2 id="verification-method">Verification method<a class="headerlink" href="#verification-method" title="Permanent link">&para;</a></h2>
+<p>Unit tests pin each mechanism, but the acceptance is INTEROP: flatten the corpus
+hierarchies with <code>kicad-cli sch export netlist</code> and compare components and every labeled
+net by name and membership. Both <code>complex_hierarchy</code> (68 components, 52 nets, a reused
+sheet) and <code>pic_programmer</code> (111 nets, escaped names) match exactly; the only deltas are
+stub conventions (our <code>N$k</code> and <code>unconnected-(REF-PadN)</code> vs KiCad's synthesized
+<code>Net-(REF-Pad)</code> forms), which we deliberately keep. The walked component set also equals
+the board-derived set, closing the loop with the <code>.kicad_pcb</code> reader. This method, not
+the unit tests, is what caught the mid-span label rule, the pins-are-endpoint-only
+rule, and the <code>{slash}</code> escapes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "content.code.copy", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
