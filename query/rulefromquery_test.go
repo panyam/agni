@@ -6,7 +6,7 @@ import (
 	"github.com/panyam/agni/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // pinDesign: U1 (part MCU) has a power pin "1" (VDD) alone on net STUB (one connection) and a

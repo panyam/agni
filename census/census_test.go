@@ -10,12 +10,12 @@ import (
 // hand-authored testdata files (plus the conformance boards/schematics) — the only design files
 // CI can see (the real corpus is a separate private repo, swept by `agni census` / `make census`).
 var fixtureGlobs = map[string][]string{
-	"kicad-pcb": {"../kicad/testdata/*.kicad_pcb", "../cmd/agni/testdata/conformance/*.kicad_pcb"},
-	"kicad-sch": {"../kicad/testdata/*.kicad_sch", "../cmd/agni/testdata/conformance/*.kicad_sch"},
-	"edif":      {"../edif/testdata/*.edn", "../edif/testdata/*.eds"},
-	"ipc2581":   {"../ipc2581/testdata/*.xml"},
-	"xschem":    {"../xschem/testdata/*.sch", "../xschem/testdata/*.sym"},
-	"geda":      {"../geda/testdata/*.sch", "../geda/testdata/*.sym"},
+	"kicad-pcb": {"../readers/kicad/testdata/*.kicad_pcb", "../cmd/agni/testdata/conformance/*.kicad_pcb"},
+	"kicad-sch": {"../readers/kicad/testdata/*.kicad_sch", "../cmd/agni/testdata/conformance/*.kicad_sch"},
+	"edif":      {"../readers/edif/testdata/*.edn", "../readers/edif/testdata/*.eds"},
+	"ipc2581":   {"../readers/ipc2581/testdata/*.xml"},
+	"xschem":    {"../readers/xschem/testdata/*.sch", "../readers/xschem/testdata/*.sym"},
+	"geda":      {"../readers/geda/testdata/*.sch", "../readers/geda/testdata/*.sym"},
 }
 
 // TestFixtureCensus is the coverage guard: every construct in the committed fixtures must be

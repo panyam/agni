@@ -7,7 +7,7 @@ import (
 	"github.com/panyam/agni/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // ModelLoader is the file surface BuildModel needs: the netlist design and its board sidecar, both

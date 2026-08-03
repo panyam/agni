@@ -216,8 +216,8 @@ classification fields beyond the behavioral core; `check.Available` reads `r.Rea
 field; `NewDesignService` takes a `[]*check.Rule` parameter.
 
 ## C15: Readers never import the presentation tier
-**Rule:** Format readers (`edif/`, `kicad/`, `ipc2581/`, `xschem/`, `geda/`, and any future
-reader) must not import `render/` or `svg/`. Geometry math a reader and a renderer both need
+**Rule:** Format readers (all under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`, and
+any future reader) must not import `render/` or `svg/`. Geometry math a reader and a renderer both need
 (placement transforms, pin world positions) lives in `internal/geomath`, imported by both
 sides. Dependencies point one way: readers produce IR/geom; the presentation tier consumes it.
 **Why:** "pins land where symbols are drawn" must hold by shared code, not by a reader
@@ -225,7 +225,7 @@ reaching up into the renderer for its helper (which couples ingestion to present
 drags drawing code into every entrypoint that only wants netlists). One implementation of the
 transform contract (the geometry doc) serves producers and consumers alike.
 **Verify:** `grep -rl '"github.com/panyam/agni/render"\|"github.com/panyam/agni/svg"'
-edif/ kicad/ ipc2581/ xschem/ geda/` returns nothing.
+readers/` returns nothing.
 
 ## C16: Internal-seed posture (datasheet data never leaves the customer boundary)
 **Rule:** Datasheet documents, doc-IRs derived from them, and extracted parameter data
@@ -249,10 +249,11 @@ or readers, never fetch.
 **Rule:** The dependency graph is layered so the low tiers can be consumed (and one day carved
 into their own modules) without dragging the application tail. The generated contract
 (`gen/`: IR + geom + param/doc protos) imports no first-party `agni` package. Format readers
-(`edif/`, `kicad/`, `ipc2581/`, `xschem/`, `geda/`) and the reader registry (`formats/`) depend
+(under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`) and the reader registry
+(`readers/formats`) depend
 only downward — on the contract and shared parse/geom helpers — never on the application tiers
 (`internal/service/`, `internal/server/`, the web transport, `servicekit`, `connectrpc`).
-`formats/` is public (not `internal/`) precisely so an out-of-module reader registers through it
+`readers/formats` is public (not `internal/`) precisely so an out-of-module reader registers through it
 (WS12-003); that is the ONE reader extension seam. This subsumes C15 (readers ⊅ `render`/`svg`)
 and generalizes it to the whole heavy tail.
 **Why:** the open-core overlay, and any future ecosystem reader, depends on the contract plus the
@@ -260,7 +261,7 @@ registry — not on the web/serve tier. Go module-graph pruning already keeps th
 *because* the layering holds; a stray import from a reader up into `internal/server` would pull
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
 the seam clean now so the split stays a rename, not a refactor.
-**Verify:** `go list -deps ./edif ./kicad ./ipc2581 ./xschem ./geda ./formats | grep -E
+**Verify:** `go list -deps ./readers/... | grep -E
 'servicekit|connectrpc|panyam/agni/(render|svg|serve|internal/service|internal/server)'`
 returns nothing; and `go list -deps ./gen/... | grep 'panyam/agni/' | grep -v '/gen/'` returns
 nothing (the contract imports no first-party package).
@@ -289,8 +290,8 @@ engine `go.mod` has no `require`/`replace` for an overlay module.
 projection with indexes and member-method reads), not by taking a raw `*ir.Design` and scanning its
 slices. The target is a *helper handed the whole design to scan*, not an *analysis that takes designs
 as its input*. A raw `*ir.Design` (or `*ir.Net`/`*ir.Component`) parameter is allowed in three
-categories: (1) **producing** the IR — the readers (`edif/`, `kicad/`, `ipc2581/`, `xschem/`,
-`geda/`), the `formats` loader, `internal/netgraph` (IR emission); (2) **constructing** the Model or
+categories: (1) **producing** the IR — the readers (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`,
+`geda`), the `readers/formats` loader, `internal/netgraph` (IR emission); (2) **constructing** the Model or
 **loading** the design — `check`'s `NewModel`/`NewModelWithBoard`/`NewModelWithParams`/`RunDesign`,
 and the `cmd/agni`/`internal/service` loaders that read a file and build the Model; (3) a
 **top-level analysis/transform that takes designs as its input and uses no Model index** — `diff`

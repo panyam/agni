@@ -7,7 +7,7 @@ import (
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // factsByRelation indexes a projection by relation name for the assertions below.

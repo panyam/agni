@@ -16,7 +16,7 @@ func TestModelDepsExcludeImplementation(t *testing.T) {
 		t.Fatalf("go list -deps: %v\n%s", err, out)
 	}
 	for _, dep := range strings.Fields(string(out)) {
-		if strings.HasPrefix(dep, "github.com/panyam/agni/check") || dep == "github.com/panyam/agni/param" {
+		if strings.HasPrefix(dep, "github.com/panyam/agni/check") || dep == "github.com/panyam/agni/datasheet/param" {
 			t.Errorf("model must depend on the contract only, but pulls the implementation %q", dep)
 		}
 	}

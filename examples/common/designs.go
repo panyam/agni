@@ -21,10 +21,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/edif"
+	"github.com/panyam/agni/readers/edif"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/ipc2581"
-	"github.com/panyam/agni/kicad"
+	"github.com/panyam/agni/readers/ipc2581"
+	"github.com/panyam/agni/readers/kicad"
 )
 
 // readByExt picks a reader by the name's extension and decodes r into the neutral IR. It is

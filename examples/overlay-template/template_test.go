@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // TestTemplateComposes is the template's smoke test: it proves the scaffold builds into a

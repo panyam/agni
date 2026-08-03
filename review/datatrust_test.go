@@ -6,7 +6,7 @@ import (
 	"github.com/panyam/agni/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // --- provisional: a fail on unratified datasheet data ---

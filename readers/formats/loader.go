@@ -12,7 +12,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/graph"
 	"github.com/panyam/agni/internal/netgraph"
-	"github.com/panyam/agni/kicad"
+	"github.com/panyam/agni/readers/kicad"
 )
 
 // Loader reads design files through the registry. It carries the configuration the readers

@@ -15,7 +15,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 

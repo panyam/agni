@@ -25,7 +25,7 @@ import (
 	"github.com/panyam/agni/diff"
 	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/graph"
-	"github.com/panyam/agni/ipc2581"
+	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/render"
 )
 

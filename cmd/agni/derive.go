@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/derive"
-	"github.com/panyam/agni/doc"
+	"github.com/panyam/agni/datasheet/derive"
+	"github.com/panyam/agni/datasheet/doc"
 	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
 )
 

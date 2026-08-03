@@ -26,7 +26,7 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 }
 ```
 
-The EDIF reader's signature is exactly this (`edif/reader.go`):
+The EDIF reader's signature is exactly this (`readers/edif/reader.go`):
 
 ```go
 func Read(r io.Reader, sourceFile string) (*ir.Design, error)
@@ -39,7 +39,7 @@ what lets the same reader run in the CLI, in the server, and in tests over an in
 ## The registry entry
 
 Every format the engine reads is one entry in the registry, a `formats.Format` value keyed by
-extension (`formats/formats.go`):
+extension (`readers/formats/formats.go`):
 
 ```go
 type Format struct {
@@ -56,7 +56,7 @@ plain netlist format sets only `Design`. A schematic format that also carries dr
 sets `Design` and `Geometry`. A board format sets `Board`. `.eds` is dual-capability (`Design`
 plus `Geometry`), and `.kicad_pcb` and the IPC-2581 extensions show the `Board` case.
 
-For a built-in reader, add the registration to `formats/registry.go`'s `init`. The wiring for a
+For a built-in reader, add the registration to `readers/formats/registry.go`'s `init`. The wiring for a
 netlist-only format is one adapter that opens the file and hands the bytes to your pure `Read`:
 
 ```go
@@ -85,7 +85,7 @@ second table to update.
 ## One format, several extensions
 
 The same format often appears under several conventional suffixes. Register a loop over the
-aliases sharing one reader func. EDIF does this (`formats/registry.go`):
+aliases sharing one reader func. EDIF does this (`readers/formats/registry.go`):
 
 ```go
 for _, ext := range []string{".edn", ".edf", ".edif"} {
@@ -106,7 +106,7 @@ extension is registered before suspecting the reader.
 Some extensions are shared across formats. `.sch` is xschem, gEDA gschem, or legacy KiCad, and
 `.xml` might be IPC-2581 or something else. The registry entry names the format optimistically and
 the adapter sniffs the file header before committing to a reader. IPC-2581 peeks the first bytes
-for its root element (`formats/registry.go`):
+for its root element (`readers/formats/registry.go`):
 
 ```go
 func readIPC2581(_ *Loader, path string) (*ir.Design, error) {
@@ -134,7 +134,7 @@ in, so the reader receives already-resolved bytes or a resolver it can call, and
 in one place.
 
 The `Loader` carries the configuration a reader needs beyond the file itself, today the
-`--symbol-path` search directories (`formats/loader.go`):
+`--symbol-path` search directories (`readers/formats/loader.go`):
 
 ```go
 type Loader struct {
@@ -154,7 +154,7 @@ d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(
 `sheetOpener` and `kicadSymOpener` are built by the `Loader` and injected. The reader calls them
 but never touches the filesystem directly. If your format has this shape, write the parser to take
 an opener closure and build that closure in the registry adapter, following `sheetOpener` and
-`symbolOpener` in `formats/loader.go`.
+`symbolOpener` in `readers/formats/loader.go`.
 
 Any diagnostic that depends on the referenced files has to account for a failed resolution. An
 unresolved symbol drops that symbol's pins, so wire ends meant to land on it read as dangling.
@@ -163,7 +163,7 @@ Gate any such check on full resolution rather than reporting the phantom finding
 ## What the Loader does after your reader returns
 
 `Loader.ReadDesign` picks the reader by extension, runs it, and then applies a few format-neutral
-normalization passes so every reader's output is consistent (`formats/loader.go`):
+normalization passes so every reader's output is consistent (`readers/formats/loader.go`):
 
 ```go
 d, err := f.Design(l, path)

@@ -128,7 +128,7 @@ func TestRenderGeometryUnknownFormat(t *testing.T) {
 // TestWriteReport covers the conversion report (WS7-029): a text summary and a JSON document
 // over the same components, and a bad format erroring.
 func TestWriteReport(t *testing.T) {
-	const fixture = "../../edif/testdata/basic.edn"
+	const fixture = "../../readers/edif/testdata/basic.edn"
 
 	var b bytes.Buffer
 	if err := writeReport(&b, fixture, symbolsGlyph, nil, "text"); err != nil {

@@ -15,7 +15,7 @@ import (
 	"os"
 
 	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 
 	_ "github.com/panyam/agni/examples/overlay/acmeformat" // registers the .acme reader
 	_ "github.com/panyam/agni/examples/overlay/acmerules"  // registers the acme/ rule suite

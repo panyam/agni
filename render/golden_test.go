@@ -10,10 +10,10 @@ import (
 
 	"bytes"
 
-	"github.com/panyam/agni/edif"
+	"github.com/panyam/agni/readers/edif"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/graph"
-	"github.com/panyam/agni/kicad"
+	"github.com/panyam/agni/readers/kicad"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden SVGs under testdata/golden from the current renderer output")
@@ -54,7 +54,7 @@ func goldenCompare(t *testing.T, name, got string) {
 // golden covers reader output shapes, not just hand-built geometry.
 func faithfulFixtureGeometry(t testing.TB) *geom.SchematicGeometry {
 	t.Helper()
-	f, err := os.Open(filepath.Join("..", "edif", "testdata", "sample.eds"))
+	f, err := os.Open(filepath.Join("..", "readers", "edif", "testdata", "sample.eds"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestGoldenSVGFaithful(t *testing.T) {
 }
 
 func TestGoldenSVGAutoLayout(t *testing.T) {
-	f, err := os.Open(filepath.Join("..", "edif", "testdata", "basic.edn"))
+	f, err := os.Open(filepath.Join("..", "readers", "edif", "testdata", "basic.edn"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestGoldenSVGAutoLayout(t *testing.T) {
 // wire) and would catch a regression that stops drawing or restyles buses.
 func TestGoldenSVGBus(t *testing.T) {
 	src := "bus-render.kicad_sch"
-	raw, err := os.ReadFile(filepath.Join("..", "kicad", "testdata", src))
+	raw, err := os.ReadFile(filepath.Join("..", "readers", "kicad", "testdata", src))
 	if err != nil {
 		t.Fatal(err)
 	}

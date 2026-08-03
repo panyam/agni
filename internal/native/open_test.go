@@ -86,7 +86,7 @@ func TestRenderFileKicad(t *testing.T) {
 
 func kicadFixtureAbs(t *testing.T) string {
 	t.Helper()
-	abs, err := filepath.Abs(filepath.Join("..", "..", "kicad", "testdata", "board.kicad_pcb"))
+	abs, err := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata", "board.kicad_pcb"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/panyam/agni/check"
 	"github.com/panyam/agni/intake"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 	"github.com/spf13/cobra"
 )
 

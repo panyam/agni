@@ -8,7 +8,7 @@ import (
 
 	"github.com/panyam/agni/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // Base is the queryable fact base: the WS3-004 EDB relations indexed by name for lookup, plus the

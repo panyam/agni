@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // efuseSpec is a seeded spec whose datasheet declares device_class "efuse" (the class no ref-des

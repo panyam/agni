@@ -74,7 +74,7 @@ testall: vet ir-model-check ui test examples-test web-test
 #   make serve EXTRA_MOUNTS="--mount corpus=/path/to/designs --mount boards=$$HOME/boards"
 # Override ADDR to change the port, or MOUNTS to replace the fixture set entirely.
 ADDR ?= :8080
-MOUNTS ?= --mount edif=edif/testdata --mount kicad=kicad/testdata --mount ipc=ipc2581/testdata
+MOUNTS ?= --mount edif=readers/edif/testdata --mount kicad=readers/kicad/testdata --mount ipc=readers/ipc2581/testdata
 EXTRA_MOUNTS ?=
 # NATIVE_TOOLS enables native golden renderers by tool name (space-separated), e.g.
 #   make serve NATIVE_TOOLS=kicad-cli

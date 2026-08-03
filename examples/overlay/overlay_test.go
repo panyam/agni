@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // TestOverlayComposesReaderAndRule is the WS12-001 acceptance: a SEPARATE module (this one)

@@ -7,7 +7,7 @@ import (
 	"github.com/panyam/agni/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/param"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // CheckService runs the rule checks over a design's netlist IR and serves the rule catalog,

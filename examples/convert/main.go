@@ -18,7 +18,7 @@ import (
 
 	"github.com/panyam/demokit"
 	"github.com/panyam/agni/examples/common"
-	"github.com/panyam/agni/ipc2581"
+	"github.com/panyam/agni/readers/ipc2581"
 )
 
 //go:embed walkthrough.md

@@ -19,8 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/panyam/agni/geda"
-	"github.com/panyam/agni/xschem"
+	"github.com/panyam/agni/readers/geda"
+	"github.com/panyam/agni/readers/xschem"
 )
 
 // Sentinel errors, mapped to Connect codes by the caller.

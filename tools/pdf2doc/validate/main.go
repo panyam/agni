@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/agni/doc"
+	"github.com/panyam/agni/datasheet/doc"
 )
 
 func main() {

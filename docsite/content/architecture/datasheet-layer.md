@@ -120,18 +120,18 @@ different producers, different consumers, and a different lifecycle.
 Two fixtures are transcribed by hand from the cited datasheet revision, values and units as
 printed.
 
-- **`param/testdata/lm1117.textproto`** (TI LM1117 LDO, SNOS412Q rev Jan 2023) shows the
+- **`datasheet/param/testdata/lm1117.textproto`** (TI LM1117 LDO, SNOS412Q rev Jan 2023) shows the
   three limit kinds on one part: abs-max VIN 20 V, recommended-operating VIN 15 V, and dropout
   voltage as a conditional characteristic. The dropout rows show why rows with different
   condition sets stay distinct parameters: typ 1.2 V holds at TJ = 25 °C and max 1.3 V holds
   over the 0 to 125 °C junction range, both at IOUT = 800 mA.
-- **`param/testdata/bss138.textproto`** (BSS138 N-FET, Fairchild rev C(W)) is the canonical
+- **`datasheet/param/testdata/bss138.textproto`** (BSS138 N-FET, Fairchild rev C(W)) is the canonical
   conditional parameter, RDS(on) specified three times (VGS = 10 V, VGS = 4.5 V, and VGS = 10 V
   at TJ = 125 °C), plus a table-header default ("TA = 25 °C unless otherwise noted") encoded as
   an explicit condition rather than silently dropped, and the pulse-test footnote retained in
   `attributes`.
 
-`param/param_test.go` asserts that both fixtures validate and that these encodings are
+`datasheet/param/param_test.go` asserts that both fixtures validate and that these encodings are
 present, so the worked examples are executable rather than prose.
 
 ## The document contract
@@ -173,7 +173,7 @@ These are the properties a consumer may rely on.
 
 ### Querying in two tiers
 
-Tier 1 is the `doc/` package, in-process and deterministic, used by recipes, tests, and the
+Tier 1 is the `datasheet/doc/` package, in-process and deterministic, used by recipes, tests, and the
 revision differ.
 
 - `TablesMatching(d, regexp)` selects tables by title pattern rather than by id, since ids
@@ -277,8 +277,8 @@ manifest and stay zero until a second extraction path lands.
 
 ### The golden gate
 
-The hand-encoded fixtures in `param/testdata/` are the first verified golden corpus.
-`derive/derive_test.go` asserts that deriving the raw-shaped BSS138 doc-IR reproduces every
+The hand-encoded fixtures in `datasheet/param/testdata/` are the first verified golden corpus.
+`datasheet/derive/derive_test.go` asserts that deriving the raw-shaped BSS138 doc-IR reproduces every
 hand-encoded row (symbol, kind, min/typ/max, unit). Any change to the derive stage must keep
 that agreement or deliberately update the goldens, the same regression discipline the render
 golden SVGs use, applied to extraction. `Version` is bumped on behavior changes.
@@ -384,7 +384,7 @@ first confident answer:
     cache → recipe → model → HITL
 
 - **cache** is a prior resolution for this part and param (see Recall below).
-- **recipe** is per-vendor deterministic table classification, the same `derive/` recipes as
+- **recipe** is per-vendor deterministic table classification, the same `datasheet/derive/` recipes as
   above. It is precise, brittle across vendors, and cheap to write one vendor at a time.
 - **model** is an inference backend (see below). It generalizes across vendors, is fuzzy, and
   needs an eval harness.

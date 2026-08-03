@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/panyam/agni/check"
-	"github.com/panyam/agni/formats"
+	"github.com/panyam/agni/readers/formats"
 
 	// TODO: point these at your renamed packages.
 	_ "github.com/panyam/agni/examples/overlay-template/myfmt"  // registers the .myfmt reader
