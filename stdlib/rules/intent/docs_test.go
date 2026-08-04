@@ -127,3 +127,29 @@ func TestRuleDocImageHandler(t *testing.T) {
 		}
 	}
 }
+
+// TestDocRules holds intent.DocRules to the doc-key set the docsite catalog generator projects: one
+// entry per docKey, each with a non-empty caption and its Detail from intentDoc. A new docKey without
+// a DocRules entry (or a caption) fails here, so the docsite catalog cannot silently drop an intent
+// rule kind.
+func TestDocRules(t *testing.T) {
+	got := DocRules()
+	if len(got) != len(docKeys) {
+		t.Fatalf("DocRules returned %d rules, want %d (one per docKey)", len(got), len(docKeys))
+	}
+	byName := map[string]bool{}
+	for _, r := range got {
+		byName[r.Name] = true
+		if r.Summary == "" {
+			t.Errorf("DocRules[%q] has an empty caption", r.Name)
+		}
+		if r.Detail != intentDoc(r.Name) {
+			t.Errorf("DocRules[%q] Detail does not come from intentDoc(%q)", r.Name, r.Name)
+		}
+	}
+	for _, k := range docKeys {
+		if !byName[k] {
+			t.Errorf("DocRules has no entry for docKey %q", k)
+		}
+	}
+}

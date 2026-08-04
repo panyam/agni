@@ -47,6 +47,11 @@ var powerPinMistyped = query.RuleFromQuery(query.FindingQuery{
 // docs_test holds it 1:1 to the docs/ folder.
 var dlRules = []*check.Rule{powerPinMistyped}
 
+// DocRules returns the datalog source's documented rules for the docsite catalog generator
+// (tools/catalogdocs), so the reference site lists exactly the rules this package registers and
+// runs. It is the same slice the source registers; callers must not mutate the returned rules.
+func DocRules() []*check.Rule { return dlRules }
+
 func init() {
 	check.RegisterSource(check.NewSource("dl", dlRules))
 }

@@ -22,11 +22,15 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/stdlib/profiles"
+	"github.com/panyam/agni/stdlib/rules/datalog"
+	"github.com/panyam/agni/stdlib/rules/intent"
 
-	// Blank imports register the built-in rule catalog and the query relations (plus their
-	// embedded Detail docs) into the process-global registries DefaultCatalog and query.Catalog
-	// read. Only the built-in sources are pulled: this generator scopes to the two surfaces with
-	// the richest reference docs (issue 14), leaving datalog/intent/profile catalogs for later.
+	// Blank imports register the built-in rule catalog and the query relations (plus their embedded
+	// Detail docs) into the process-global registries DefaultCatalog and query.Catalog read. The
+	// non-builtin rule sources (intent/datalog/profile) are pulled by their own DocRules() accessors
+	// below, not via DefaultCatalog, because intent/profile rules are generated per-declaration and
+	// have no static catalog entry.
 	_ "github.com/panyam/agni/stdlib/relations"
 	_ "github.com/panyam/agni/stdlib/rules/builtin"
 )
@@ -34,8 +38,9 @@ import (
 var (
 	contentDir = flag.String("content", "docsite/content/reference", "docsite reference content dir")
 	staticDir  = flag.String("static", "docsite/static/images/catalog", "docsite static dir for catalog images")
-	ruleImgSrc = flag.String("rule-images", "stdlib/rules/builtin/docs/images", "source dir for rule doc images")
-	relImgSrc  = flag.String("relation-images", "stdlib/relations/facts/docs/images", "source dir for relation doc images")
+	ruleImgSrc   = flag.String("rule-images", "stdlib/rules/builtin/docs/images", "source dir for built-in rule doc images")
+	intentImgSrc = flag.String("intent-images", "stdlib/rules/intent/docs/images", "source dir for intent rule doc images")
+	relImgSrc    = flag.String("relation-images", "stdlib/relations/facts/docs/images", "source dir for relation doc images")
 )
 
 // imageRef matches a markdown image whose target is a doc-relative images/<file> path, the form
@@ -84,11 +89,35 @@ func run() error {
 	return nil
 }
 
-// genRules writes one page per built-in rule plus the grouped index, and copies the images those
-// pages reference into the catalog's rules image dir.
+// ruleSource is one origin of documented rules the catalog projects. label is shown in the index's
+// Source column so a reader can tell a built-in from an intent/datalog/profile rule; prefix namespaces
+// the page slug and link so a non-built-in name never collides with a built-in of the same name (and
+// carries provenance in the URL). imgSrc is the dir holding this source's docs/images, empty when the
+// source ships no cards.
+type ruleSource struct {
+	rules  []*check.Rule
+	label  string
+	prefix string
+	imgSrc string
+}
+
+// catalogRow is one rendered index entry: enough to place a rule in its category table with its
+// source, severity, and a link to its page.
+type catalogRow struct {
+	category, label, slug, source, severity, summary string
+}
+
+// genRules writes one page per documented rule across every source (built-in plus the non-built-in
+// intent/datalog/profile catalogs), the grouped index with a Source column, and copies the images
+// those pages reference. Built-in pages keep flat slugs (URLs unchanged); non-built-in pages are
+// namespaced by source so a name shared with a built-in (or a future collision) cannot overwrite.
 func genRules() error {
-	rules := check.DefaultCatalog().Rules()
-	sort.Slice(rules, func(i, j int) bool { return rules[i].Name < rules[j].Name })
+	sources := []ruleSource{
+		{rules: check.BuiltinRules(), label: "built-in", prefix: "", imgSrc: *ruleImgSrc},
+		{rules: intent.DocRules(), label: "intent", prefix: "intent", imgSrc: *intentImgSrc},
+		{rules: datalog.DocRules(), label: "datalog", prefix: "dl", imgSrc: ""},
+		{rules: profiles.DocRules(), label: "profile", prefix: "profile", imgSrc: ""},
+	}
 
 	outDir := filepath.Join(*contentDir, "rules")
 	imgOut := filepath.Join(*staticDir, "rules")
@@ -99,21 +128,54 @@ func genRules() error {
 		return err
 	}
 
-	images := map[string]bool{}
-	for _, r := range rules {
-		if strings.TrimSpace(r.Detail) == "" {
-			continue
+	var rows []catalogRow
+	for _, s := range sources {
+		images := map[string]bool{}
+		for _, r := range s.rules {
+			if strings.TrimSpace(r.Detail) == "" {
+				continue
+			}
+			slug := pageSlug(s.prefix, r.Name)
+			label := linkLabel(s.prefix, r.Name)
+			body := prepareDetail(r.Detail, "rules", images)
+			page := frontMatter(label, r.Summary) + body
+			if err := os.WriteFile(filepath.Join(outDir, slug+".md"), []byte(page), 0o644); err != nil {
+				return err
+			}
+			rows = append(rows, catalogRow{
+				category: r.Tags[check.KeyCategory],
+				label:    label,
+				slug:     slug,
+				source:   s.label,
+				severity: r.Severity,
+				summary:  r.Summary,
+			})
 		}
-		body := prepareDetail(r.Detail, "rules", images)
-		page := frontMatter(r.Name, r.Summary) + body
-		if err := os.WriteFile(filepath.Join(outDir, r.Name+".md"), []byte(page), 0o644); err != nil {
-			return err
+		if s.imgSrc != "" {
+			if err := copyImages(s.imgSrc, imgOut, images); err != nil {
+				return err
+			}
 		}
 	}
-	if err := copyImages(*ruleImgSrc, imgOut, images); err != nil {
-		return err
+	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(rulesIndex(rows)), 0o644)
+}
+
+// pageSlug is a rule's page filename stem: flat for the built-ins (prefix ""), else "<prefix>-<name>"
+// so a non-built-in page never overwrites a built-in of the same bare name.
+func pageSlug(prefix, name string) string {
+	if prefix == "" {
+		return name
 	}
-	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(rulesIndex(rules)), 0o644)
+	return prefix + "-" + name
+}
+
+// linkLabel is the display/link text for a rule: the bare name for built-ins, else "<prefix>/<name>"
+// (the composed catalog name a review manifest binds to), so provenance shows inline.
+func linkLabel(prefix, name string) string {
+	if prefix == "" {
+		return name
+	}
+	return prefix + "/" + name
 }
 
 // genRelations writes one page per documented relation plus the grouped index, and copies the
@@ -217,26 +279,30 @@ func copyImages(src, dst string, names map[string]bool) error {
 	return nil
 }
 
-// rulesIndex renders the rules catalog landing page: a table per category, rows sorted by name,
-// each linking to its page with its severity.
-func rulesIndex(rules []*check.Rule) string {
+// rulesIndex renders the rules catalog landing page: a table per category, rows sorted by label, each
+// linking to its page with its source and severity. The Source column flags where a rule comes from —
+// a built-in, a design-intent check, a datalog-authored rule, or an interface profile — so a reader
+// can tell a new category from a new "shape" of rule within an existing one.
+func rulesIndex(rows []catalogRow) string {
 	var b strings.Builder
-	b.WriteString(frontMatter("Rules catalog", "Every built-in check rule, grouped by category."))
-	b.WriteString("The built-in EE rule catalog. Each rule links to its full reference: what it means, why it matters, the guards it applies, and a fires-versus-fine diagram. This page is generated from the shipped catalog, so it always matches the engine.\n\n")
+	b.WriteString(frontMatter("Rules catalog", "Every check rule the catalog ships, grouped by category, with its source."))
+	b.WriteString("The EE rule catalog. Each rule links to its full reference: what it means, why it matters, the guards it applies, and a fires-versus-fine diagram. The Source column flags where a rule comes from — a built-in, a design-intent check (`intent/`), a datalog-authored rule (`dl/`), or an interface profile (`profile/`). This page is generated from the shipped catalog, so it always matches the engine.\n\n")
 
-	byCat := map[string][]*check.Rule{}
-	for _, r := range rules {
-		byCat[r.Tags[check.KeyCategory]] = append(byCat[r.Tags[check.KeyCategory]], r)
+	byCat := map[string][]catalogRow{}
+	for _, r := range rows {
+		byCat[r.category] = append(byCat[r.category], r)
 	}
 	for _, cat := range orderedKeys(byCat, ruleCategoryOrder) {
 		title := cat
 		if title == "" {
 			title = "other"
 		}
+		catRows := byCat[cat]
+		sort.Slice(catRows, func(i, j int) bool { return catRows[i].label < catRows[j].label })
 		b.WriteString("## " + title + "\n\n")
-		b.WriteString("| Rule | Severity | What it checks |\n|---|---|---|\n")
-		for _, r := range byCat[cat] {
-			b.WriteString(fmt.Sprintf("| [%s](%s/) | %s | %s |\n", r.Name, r.Name, r.Severity, cell(r.Summary)))
+		b.WriteString("| Rule | Source | Severity | What it checks |\n|---|---|---|---|\n")
+		for _, r := range catRows {
+			b.WriteString(fmt.Sprintf("| [%s](%s/) | %s | %s | %s |\n", r.label, r.slug, r.source, r.severity, cell(r.summary)))
 		}
 		b.WriteString("\n")
 	}
