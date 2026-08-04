@@ -1281,3 +1281,108 @@ pre code {
         font-size: 0.85rem;
     }
 }
+
+/* Enhanced code blocks: line-number gutter + floating copy button (codeblocks.js).
+   A consistent dark surface for every code block, tagged or plain, matching the chroma
+   Monokai token colors; kept dark in both light and dark site themes on purpose. */
+.code-block {
+    position: relative;
+    margin: 0 0 1.25rem;
+    background-color: #21252b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.code-inner {
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.code-block .code-gutter {
+    flex: 0 0 auto;
+    display: block;
+    white-space: pre;
+    text-align: right;
+    padding: 1rem 0.75rem;
+    margin: 0;
+    color: #636d7a;
+    background-color: #1b1f24;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.code-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 1rem;
+}
+
+.code-content pre {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+    color: #e6e6e6;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.code-content pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Force one shared line box so the gutter numbers line up with chroma's per-line flex spans. */
+.code-content pre,
+.code-content pre code,
+.code-content pre span {
+    line-height: 1.6;
+}
+
+.code-copy {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    z-index: 2;
+    padding: 0.25rem 0.6rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1;
+    color: #cbd5e1;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.code-block:hover .code-copy,
+.code-copy:focus-visible {
+    opacity: 1;
+}
+
+.code-copy:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.code-copy.is-copied {
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.5);
+    opacity: 1;
+}
+
+/* Touch devices have no hover; keep the button visible there. */
+@media (hover: none) {
+    .code-copy {
+        opacity: 1;
+    }
+}
