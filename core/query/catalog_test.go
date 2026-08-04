@@ -9,10 +9,12 @@ import (
 // TestCatalogMatchesSchema is the drift guard: every built-in EDB relation and predicate has a
 // catalog entry with the right arity, and no catalog entry names a construct that does not exist.
 // A relation added to edbSchema (or a predicate to builtins) without a catalog row fails here, so a
-// new relation cannot ship undiscoverable.
+// new relation cannot ship undiscoverable. The relation catalog is registered by stdlib/relations
+// (imported for the test binary via relations_register_test.go) and the predicate catalog is
+// query's own builtinPredicates; this test spans both, since edbSchema and builtins do.
 func TestCatalogMatchesSchema(t *testing.T) {
 	byName := map[string]RelationInfo{}
-	for _, r := range builtinCatalog {
+	for _, r := range append(append([]RelationInfo{}, builtinRelationCatalog...), builtinPredicates...) {
 		if _, dup := byName[r.Name]; dup {
 			t.Fatalf("duplicate catalog entry %q", r.Name)
 		}
@@ -66,7 +68,7 @@ func TestCatalogIncludesOverlayRelation(t *testing.T) {
 	// Register a throwaway overlay relation and confirm it surfaces with synthesized arg labels.
 	const name = "test.catalog_overlay"
 	if _, seen := registry[name]; !seen {
-		RegisterRelation(name, []Field{FieldSubject, FieldNum}, func(check.Model) []check.FactRow { return nil })
+		RegisterRelation(name, []Field{FieldSubject, FieldNum}, func(check.Model) []FactRow { return nil })
 	}
 	found := false
 	for _, r := range Catalog() {

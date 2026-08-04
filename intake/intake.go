@@ -14,6 +14,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/stdlib/relations"
 )
 
 // Skeleton is the sanitized, deterministic intake summary. Every field is a COUNT, a device CLASS, a
@@ -123,8 +124,8 @@ func Build(m check.Model) *Skeleton {
 
 	// Rail nominals: the name-derived nominal of each rail net, kept as the VOLTAGE only (Num), distinct.
 	seen := map[float64]bool{}
-	for _, f := range check.Facts(m) {
-		if f.Relation == check.RelNetNominalVoltage && f.Num != nil && !seen[*f.Num] {
+	for _, f := range relations.Facts(m) {
+		if f.Relation == relations.RelNetNominalVoltage && f.Num != nil && !seen[*f.Num] {
 			seen[*f.Num] = true
 			s.RailNominals = append(s.RailNominals, *f.Num)
 		}

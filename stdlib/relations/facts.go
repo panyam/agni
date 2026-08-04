@@ -1,11 +1,12 @@
-package check
+package relations
 
 import (
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
@@ -51,7 +52,7 @@ const (
 	// the SourceDoc title, the page, and the table/figure the value was read from — so "where did this
 	// number come from" is a query, and a datalog-authored rule can carry the Citation onto its
 	// findings (WS10-012). doc is the resolved SourceDoc title (not the raw doc_ref id), the readable
-	// form a Citation shows. Method/confidence are not columns here (the tuple has no slot); a finding
+	// form a check.Citation shows. Method/confidence are not columns here (the tuple has no slot); a finding
 	// gets them via check.DatasheetProvFor. Empty without --params, the same posture as param.
 	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's Citation. doc: facts/docs/param.prov.md
 
@@ -90,7 +91,7 @@ const (
 
 	// Datasheet-derived class relation (WS3-076): the CONCEPT the esd-protection Go rule credits,
 	// exposed for datalog. component.esd_rated selects a part whose seeded datasheet declares an ESD
-	// rating at or above the credit floor (the same esdRatingLimits extractor the rule uses), keyed by
+	// rating at or above the credit floor (the same EsdRatingLimits extractor the rule uses), keyed by
 	// ref_des so it joins with net.pin / component.class. Empty without a seeded set (--params), the
 	// silent-by-construction posture the whole param tier has; the raw rating stays queryable via param.
 	RelEsdRated = "component.esd_rated" // component.esd_rated(ref_des): part carries a floor-clearing ESD rating. doc: facts/docs/component.esd_rated.md
@@ -124,33 +125,13 @@ const (
 	RelNetBusLike = "net.bus_like" // doc: facts/docs/net.bus_like.md
 )
 
-// FactRow is one tuple of the derived fact base. Subject is the primary entity (a net name,
-// ref-des, or mpn); Object is the second entity or attribute key (the net for component-on-net,
-// the symbol for param, "" otherwise). Value is the rendered value ("" for a pure link like
-// component-on-net); Num carries it as a number when the relation is numeric, so a consumer can
-// range or compare without re-parsing. Min carries a SECOND numeric slot — the lower bound of a
-// two-sided range relation (param.range), where Num is the upper bound; it is nil for every
-// one-number relation. Conditions holds a param's test conditions ("" otherwise). Cite is the
-// rendered provenance — an IR source or a datasheet doc/page/table — and is never empty for a
-// well-formed fact: a fact you cannot cite is not verifiable.
-type FactRow struct {
-	Relation   string
-	Subject    string
-	Object     string
-	Value      string
-	Num        *float64
-	Min        *float64
-	Conditions string
-	Cite       string
-}
-
 // Facts projects the Model into the seed fact base, deterministically ordered so the projection
 // is regenerable (two calls on one Model are equal). It composes the per-relation projectors;
 // a relation's facts are empty when the Model lacks that tier (a design read without a seeded
 // datasheet set yields no param/mpn facts, the same silent-by-construction posture the rules
 // have), so Facts never fabricates.
-func Facts(m Model) []FactRow {
-	var out []FactRow
+func Facts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	out = append(out, netMaxVoltageFacts(m)...)
 	out = append(out, netNominalVoltageFacts(m)...)
 	out = append(out, componentMPNFacts(m)...)
@@ -182,7 +163,7 @@ func Facts(m Model) []FactRow {
 
 // sortFacts orders fact rows by (relation, subject, object) for deterministic output, shared by the
 // design-scoped Facts and the library-wide SpecLibFacts so both surfaces print stably.
-func sortFacts(out []FactRow) {
+func sortFacts(out []query.FactRow) {
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Relation != out[j].Relation {
 			return out[i].Relation < out[j].Relation
@@ -194,12 +175,12 @@ func sortFacts(out []FactRow) {
 	})
 }
 
-func netMaxVoltageFacts(m Model) []FactRow {
-	var out []FactRow
+func netMaxVoltageFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if v, ok := RailMaxVoltage(n, n.Name); ok {
+		if v, ok := check.RailMaxVoltage(n, n.Name); ok {
 			vv := v
-			out = append(out, FactRow{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -207,25 +188,25 @@ func netMaxVoltageFacts(m Model) []FactRow {
 
 // netNominalVoltageFacts emits the name-derived nominal voltage of each net (3V3 -> 3.3), the
 // design-side number a datasheet range check compares against. It reads only the net NAME
-// (NominalVoltageFromName), never the max_voltage attribute — that explicit channel is
+// (check.NominalVoltageFromName), never the max_voltage attribute — that explicit channel is
 // net.max_voltage's job — so the two relations stay distinct evidence. A net whose name carries
 // no parseable nominal yields no row (skip, never guess).
-func netNominalVoltageFacts(m Model) []FactRow {
-	var out []FactRow
+func netNominalVoltageFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if v, ok := NominalVoltageFromName(n.Name); ok {
+		if v, ok := check.NominalVoltageFromName(n.Name); ok {
 			vv := v
-			out = append(out, FactRow{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
 }
 
-func componentMPNFacts(m Model) []FactRow {
-	var out []FactRow
+func componentMPNFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, c := range m.Components() {
 		if mpn := m.ComponentMPN(c.RefDes); mpn != "" {
-			out = append(out, FactRow{Relation: RelComponentMPN, Subject: c.RefDes, Value: mpn, Cite: irCite(c.Prov)})
+			out = append(out, query.FactRow{Relation: RelComponentMPN, Subject: c.RefDes, Value: mpn, Cite: irCite(c.Prov)})
 		}
 	}
 	return out
@@ -235,8 +216,8 @@ func componentMPNFacts(m Model) []FactRow {
 // deduped (several components can share one MPN, and the spec is the same). It emits every
 // parameter, not only the rule-consumed ones, because the fact base is the whole datasheet: a
 // rule reads a subset (cap-voltage reads the rated-voltage symbol), search reads any.
-func paramFacts(m Model) []FactRow {
-	var out []FactRow
+func paramFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	seen := map[string]bool{}
 	for _, c := range m.Components() {
 		mpn := m.ComponentMPN(c.RefDes)
@@ -272,10 +253,10 @@ func limitKindToken(k parampb.LimitKind) string {
 // specParamRows projects the `param` facts of one PartSpec — one row per parameter, keyed by mpn.
 // Shared by the design-scoped join (paramFacts) and the library-wide projection (SpecLibFacts) so the two
 // surfaces emit identical rows; the only difference is which specs they iterate.
-func specParamRows(mpn string, spec *parampb.PartSpec) []FactRow {
-	out := make([]FactRow, 0, len(spec.Parameters))
+func specParamRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	out := make([]query.FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		f := FactRow{Relation: RelParam, Subject: mpn, Object: p.Symbol, Value: rangeText(p.Value), Conditions: conditionsText(p.Conditions), Cite: Citation(spec, p)}
+		f := query.FactRow{Relation: RelParam, Subject: mpn, Object: p.Symbol, Value: rangeText(p.Value), Conditions: conditionsText(p.Conditions), Cite: check.Citation(spec, p)}
 		if p.Value != nil && p.Value.Max != nil {
 			v := *p.Value.Max
 			f.Num = &v
@@ -288,10 +269,10 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []FactRow {
 // specParamRangeFacts projects the two-sided, limit-kind-discriminated view of one PartSpec: one row
 // per parameter, carrying the kind token (Value), the lower bound (Min) and the upper bound (Num).
 // Shared by the design-scoped join (paramRangeFacts) and the library-wide projection (SpecLibFacts).
-func specParamRangeRows(mpn string, spec *parampb.PartSpec) []FactRow {
-	out := make([]FactRow, 0, len(spec.Parameters))
+func specParamRangeRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	out := make([]query.FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		f := FactRow{Relation: RelParamRange, Subject: mpn, Object: p.Symbol, Value: limitKindToken(p.LimitKind), Conditions: conditionsText(p.Conditions), Cite: Citation(spec, p)}
+		f := query.FactRow{Relation: RelParamRange, Subject: mpn, Object: p.Symbol, Value: limitKindToken(p.LimitKind), Conditions: conditionsText(p.Conditions), Cite: check.Citation(spec, p)}
 		if p.Value != nil {
 			if p.Value.Min != nil {
 				v := *p.Value.Min
@@ -312,8 +293,8 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []FactRow {
 // an absolute-max row and a recommended-operating row on one symbol into indistinguishable tuples,
 // param.range keeps both bounds and the kind, so a range rule can join them apart. Deduped by MPN and
 // empty without --params, the same silent-by-construction posture as paramFacts.
-func paramRangeFacts(m Model) []FactRow {
-	var out []FactRow
+func paramRangeFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	seen := map[string]bool{}
 	for _, c := range m.Components() {
 		mpn := m.ComponentMPN(c.RefDes)
@@ -333,27 +314,27 @@ func paramRangeFacts(m Model) []FactRow {
 // specParamProvRows projects the `param.prov` facts of one PartSpec — one row per parameter, carrying
 // the resolved SourceDoc title (Value), the page (Num), and the table/figure (Conditions). Shared by
 // the design-scoped join (paramProvFacts) and the library-wide projection (SpecLibFacts).
-func specParamProvRows(mpn string, spec *parampb.PartSpec) []FactRow {
-	out := make([]FactRow, 0, len(spec.Parameters))
+func specParamProvRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	out := make([]query.FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
 		page := float64(p.GetProv().GetPage())
-		out = append(out, FactRow{
+		out = append(out, query.FactRow{
 			Relation:   RelParamProv,
 			Subject:    mpn,
 			Object:     p.Symbol,
-			Value:      docTitle(spec, p.GetProv().GetDocRef()),
+			Value:      check.DocTitle(spec, p.GetProv().GetDocRef()),
 			Num:        &page,
 			Conditions: p.GetProv().GetTableOrFigure(),
-			Cite:       Citation(spec, p),
+			Cite:       check.Citation(spec, p),
 		})
 	}
 	return out
 }
 
-// paramProvFacts emits the Citation of each joined datasheet parameter — where the value came from —
+// paramProvFacts emits the check.Citation of each joined datasheet parameter — where the value came from —
 // deduped by MPN and empty without --params, the same silent-by-construction posture as paramFacts.
-func paramProvFacts(m Model) []FactRow {
-	var out []FactRow
+func paramProvFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	seen := map[string]bool{}
 	for _, c := range m.Components() {
 		mpn := m.ComponentMPN(c.RefDes)
@@ -372,8 +353,8 @@ func paramProvFacts(m Model) []FactRow {
 
 // audienceFacts projects the `part.audience` relation over the design-joined specs — one row per
 // entitled team/license (param.Audience, WS10-010). Record-only; nothing enforces it yet (WS10-011).
-func audienceFacts(m Model) []FactRow {
-	var out []FactRow
+func audienceFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	seen := map[string]bool{}
 	for _, c := range m.Components() {
 		mpn := m.ComponentMPN(c.RefDes)
@@ -392,10 +373,10 @@ func audienceFacts(m Model) []FactRow {
 
 // audienceRows projects one part's `part.audience` facts (one per entitled identifier). Shared by the
 // design-scoped and library-wide surfaces. A part with no audience annotation emits nothing.
-func audienceRows(mpn string, spec *parampb.PartSpec) []FactRow {
-	var out []FactRow
+func audienceRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	var out []query.FactRow
 	for _, who := range param.Audience(spec) {
-		out = append(out, FactRow{Relation: RelPartAudience, Subject: mpn, Object: who})
+		out = append(out, query.FactRow{Relation: RelPartAudience, Subject: mpn, Object: who})
 	}
 	return out
 }
@@ -405,8 +386,8 @@ func audienceRows(mpn string, spec *parampb.PartSpec) []FactRow {
 // analogue of Facts: where Facts derives facts for the parts ON a design, SpecLibFacts derives them for
 // the parts IN the spec library, so `agni query --speclib` searches the corpus (a design is not required). Rows
 // are sorted for stable output, matching Facts' ordering.
-func SpecLibFacts(specs []*parampb.PartSpec) []FactRow {
-	var out []FactRow
+func SpecLibFacts(specs []*parampb.PartSpec) []query.FactRow {
+	var out []query.FactRow
 	for _, spec := range specs {
 		if spec.GetMpn() == "" {
 			continue
@@ -420,11 +401,11 @@ func SpecLibFacts(specs []*parampb.PartSpec) []FactRow {
 	return out
 }
 
-func componentOnNetFacts(m Model) []FactRow {
-	var out []FactRow
+func componentOnNetFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
 		for _, conn := range n.Connections {
-			out = append(out, FactRow{Relation: RelComponentOnNet, Subject: conn.ComponentRef, Object: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelComponentOnNet, Subject: conn.ComponentRef, Object: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -432,21 +413,21 @@ func componentOnNetFacts(m Model) []FactRow {
 
 // pinFacts projects every part-type pin of every placed component at pin granularity: its
 // existence, derived role, electrical type, and the net it lands on. Role is emitted only when
-// derived (RoleUnknown is omitted, never guessed); pin.net is omitted for an unconnected pin, so
+// derived (check.RoleUnknown is omitted, never guessed); pin.net is omitted for an unconnected pin, so
 // its ABSENCE is the queryable signal. Empty when the source carries no part-pin data (a bare
 // netlist), the same silent-by-construction posture the other tiers have.
-func pinFacts(m Model) []FactRow {
-	var out []FactRow
+func pinFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, p := range m.Pins() {
 		ref, des := p.Component.RefDes, p.Designator
 		cite := irCite(p.Component.Prov)
-		out = append(out, FactRow{Relation: RelPin, Subject: ref, Object: des, Cite: cite})
-		if role := m.PinRole(ref, des); role != RoleUnknown {
-			out = append(out, FactRow{Relation: RelPinRole, Subject: ref, Object: des, Value: string(role), Cite: cite})
+		out = append(out, query.FactRow{Relation: RelPin, Subject: ref, Object: des, Cite: cite})
+		if role := m.PinRole(ref, des); role != check.RoleUnknown {
+			out = append(out, query.FactRow{Relation: RelPinRole, Subject: ref, Object: des, Value: string(role), Cite: cite})
 		}
-		out = append(out, FactRow{Relation: RelPinType, Subject: ref, Object: des, Value: dirString(m.PinDir(ref, des)), Cite: cite})
+		out = append(out, query.FactRow{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cite: cite})
 		if net := m.PinNetName(ref, des); net != "" {
-			out = append(out, FactRow{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cite: cite})
+			out = append(out, query.FactRow{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cite: cite})
 		}
 	}
 	return out
@@ -454,11 +435,11 @@ func pinFacts(m Model) []FactRow {
 
 // netPinCountFacts emits each net's connection count, the fan-out a rule needs to tell a
 // single-pin stub net (a pin wired to nothing) from a real multi-pin net.
-func netPinCountFacts(m Model) []FactRow {
-	var out []FactRow
+func netPinCountFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
 		c := float64(len(n.Connections))
-		out = append(out, FactRow{Relation: RelNetPinCount, Subject: n.Name, Num: &c, Cite: irCite(n.Prov)})
+		out = append(out, query.FactRow{Relation: RelNetPinCount, Subject: n.Name, Num: &c, Cite: irCite(n.Prov)})
 	}
 	return out
 }
@@ -466,9 +447,9 @@ func netPinCountFacts(m Model) []FactRow {
 // ncChannelFacts emits a single row when the design can express intentional no-connect (a
 // NO_CONNECT-typed pin or an nc-marker net), so a rule can gate on it as `has_nc_channel(?_)`.
 // Absent (zero rows) otherwise, so the gate fails closed on a format that cannot express intent.
-func ncChannelFacts(m Model) []FactRow {
+func ncChannelFacts(m check.Model) []query.FactRow {
 	if m.HasNoConnectChannel() {
-		return []FactRow{{Relation: RelHasNCChannel, Subject: "true", Cite: "design"}}
+		return []query.FactRow{{Relation: RelHasNCChannel, Subject: "true", Cite: "design"}}
 	}
 	return nil
 }
@@ -477,9 +458,9 @@ func ncChannelFacts(m Model) []FactRow {
 // EDIF/IPC do not — see Model.FormatTypesPowerOut). The queryable twin of the design.types_power_out
 // spec fact power-input-not-driven gates on, so "can I trust a driver-absence check on this design" is
 // answerable from `agni query`, the same shape as has_nc_channel.
-func typesPowerOutFacts(m Model) []FactRow {
+func typesPowerOutFacts(m check.Model) []query.FactRow {
 	if m.FormatTypesPowerOut() {
-		return []FactRow{{Relation: RelTypesPowerOut, Subject: "true", Cite: "design"}}
+		return []query.FactRow{{Relation: RelTypesPowerOut, Subject: "true", Cite: "design"}}
 	}
 	return nil
 }
@@ -487,11 +468,11 @@ func typesPowerOutFacts(m Model) []FactRow {
 // railFacts emits one row per net that is a power or ground rail (Model.IsPowerRail: asserted-driven,
 // global, or rail-named). It lets a datalog rule ask "does this signal reach a rail" —
 // reaches(?sig, ?r), rail(?r) — the shape an interface profile's pull-up check needs.
-func railFacts(m Model) []FactRow {
-	var out []FactRow
+func railFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
 		if m.IsPowerRail(n.Name) {
-			out = append(out, FactRow{Relation: RelRail, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelRail, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -500,25 +481,12 @@ func railFacts(m Model) []FactRow {
 // feedbackFacts emits one row per net the naming lexicon reads as a regulator feedback / sense node
 // (WS3-069/067). It is the datalog equivalent of the test-point rule's feedback exclusion: a datalog
 // rule can now ask "a rail that is not a feedback node" — rail(?n), not feedback(?n).
-// netHasRole reads a net's stamped role fact (ir.Net.roles, filled at ingestion by
-// classify.StampNetRoles, WS3-072): if the net carries ANY stamped role the set is authoritative, so a
-// role is present iff it is in the set; if the set is empty the net came from a path that skipped the
-// ingestion pass (a hand-authored test IR), so the core re-derives from the name via nameMatch — the
-// same lexicon the stamp uses. This is the naming counterpart of check.Model reading device_classes with
-// a re-derive fallback, and the seam where a future structural signal (a rail identified by a power pin,
-// WS3-072 PR2) can make the stamp beat the name.
-func netHasRole(n *ir.Net, role string, nameMatch func(string) bool) bool {
-	if roles := n.GetRoles(); len(roles) > 0 {
-		return slices.Contains(roles, role)
-	}
-	return nameMatch(n.GetName())
-}
 
-func feedbackFacts(m Model) []FactRow {
-	var out []FactRow
+func feedbackFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if netHasRole(n, NetRoleFeedback, isFeedbackName) {
-			out = append(out, FactRow{Relation: RelFeedback, Subject: n.Name, Cite: irCite(n.Prov)})
+		if check.NetHasRole(n, check.NetRoleFeedback, check.IsFeedbackName) {
+			out = append(out, query.FactRow{Relation: RelFeedback, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -528,11 +496,11 @@ func feedbackFacts(m Model) []FactRow {
 // lets a datalog rule identify a part by a declared property — an interface profile binds its host
 // this way (component.attr(?ref, "interface", "SPI_NOR")), the annotation path that removes net-name
 // guessing. Empty when the source carries no component attributes.
-func componentAttrFacts(m Model) []FactRow {
-	var out []FactRow
+func componentAttrFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, c := range m.Components() {
 		for k, v := range c.Attributes {
-			out = append(out, FactRow{Relation: RelComponentAttr, Subject: c.RefDes, Object: k, Value: v, Cite: irCite(c.Prov)})
+			out = append(out, query.FactRow{Relation: RelComponentAttr, Subject: c.RefDes, Object: k, Value: v, Cite: irCite(c.Prov)})
 		}
 	}
 	return out
@@ -544,33 +512,33 @@ func componentAttrFacts(m Model) []FactRow {
 // component.class(D1, "tvs") and component.class(D1, "diode"), and a datalog rule asks family
 // membership by joining on the family tag. The class string is the canonical lowercase name
 // (crystal, capacitor, resistor, ...). Empty for an unclassified component (no tag is guessed).
-func componentClassFacts(m Model) []FactRow {
-	var out []FactRow
+func componentClassFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, c := range m.Components() {
 		for _, cl := range m.Classes(c.RefDes) {
-			out = append(out, FactRow{Relation: RelComponentClass, Subject: c.RefDes, Value: string(cl), Cite: irCite(c.Prov)})
+			out = append(out, query.FactRow{Relation: RelComponentClass, Subject: c.RefDes, Value: string(cl), Cite: irCite(c.Prov)})
 		}
 	}
 	return out
 }
 
 // esdRatedFacts emits component.esd_rated(ref) for each component whose joined datasheet spec carries
-// an ESD rating at or above the credit floor (esdRatingLimits, the same extractor esd-protection's Go
+// an ESD rating at or above the credit floor (check.EsdRatingLimits, the same extractor esd-protection's Go
 // rule uses). Keyed by ref_des so a datalog rule joins it against net.pin / component.class; the
-// Citation is the datasheet ESD row (the real evidence), not the component's IR site. Empty when the
+// check.Citation is the datasheet ESD row (the real evidence), not the component's IR site. Empty when the
 // Model has no seeded params (m.PartSpec nil for every ref), the param tier's silent-by-construction posture.
-func esdRatedFacts(m Model) []FactRow {
-	var out []FactRow
+func esdRatedFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.RefDes)
 		if spec == nil {
 			continue
 		}
-		limits := esdRatingLimits(spec)
+		limits := check.EsdRatingLimits(spec)
 		if len(limits) == 0 {
 			continue
 		}
-		out = append(out, FactRow{Relation: RelEsdRated, Subject: c.RefDes, Cite: Citation(spec, limits[0])})
+		out = append(out, query.FactRow{Relation: RelEsdRated, Subject: c.RefDes, Cite: check.Citation(spec, limits[0])})
 	}
 	return out
 }
@@ -578,24 +546,24 @@ func esdRatedFacts(m Model) []FactRow {
 // componentDeviceClassFacts emits component.device_class(ref, class) for each component whose joined
 // datasheet spec declares a non-empty device_class (WS10-013). The class is the datasheet's own single
 // string ("efuse", "ldo"), projected verbatim — a canonical taxonomy is WS10-004, so this is the value
-// as the spec states it, not a normalized key. The Citation is the spec's source document (device_class
+// as the spec states it, not a normalized key. The check.Citation is the spec's source document (device_class
 // is a PartSpec-level field, so there is no per-parameter provenance to cite). Empty when the Model has
 // no seeded params (m.PartSpec nil for every ref), the param tier's silent-by-construction posture.
-func componentDeviceClassFacts(m Model) []FactRow {
-	var out []FactRow
+func componentDeviceClassFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.RefDes)
 		if spec == nil || spec.GetDeviceClass() == "" {
 			continue
 		}
-		out = append(out, FactRow{Relation: RelComponentDeviceClass, Subject: c.RefDes, Value: spec.GetDeviceClass(), Cite: specDocCite(spec)})
+		out = append(out, query.FactRow{Relation: RelComponentDeviceClass, Subject: c.RefDes, Value: spec.GetDeviceClass(), Cite: specDocCite(spec)})
 	}
 	return out
 }
 
-// specDocCite renders a spec-level Citation (the first source document's title) for a PartSpec fact that
+// specDocCite renders a spec-level check.Citation (the first source document's title) for a PartSpec fact that
 // has no per-parameter provenance, e.g. the device_class field. "" resolves to "unknown source", the
-// same rendering Citation() uses for a missing doc.
+// same rendering check.Citation() uses for a missing doc.
 func specDocCite(spec *parampb.PartSpec) string {
 	doc := "unknown source"
 	if docs := spec.GetDocs(); len(docs) > 0 && docs[0].GetTitle() != "" {
@@ -608,11 +576,11 @@ func specDocCite(spec *parampb.PartSpec) string {
 // power and ground (Model.IsPowerRail ORs the ground test), so this isolates the ground case a rule
 // must treat differently from a supply rail — e.g. a grounded crystal case pin is not the Vdd pin
 // of an active oscillator, so a datalog rule reads `rail(?r), not net.ground(?r)` for "supply rail".
-func netGroundFacts(m Model) []FactRow {
-	var out []FactRow
+func netGroundFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if netHasRole(n, NetRoleGround, IsGroundName) {
-			out = append(out, FactRow{Relation: RelNetGround, Subject: n.Name, Cite: irCite(n.Prov)})
+		if check.NetHasRole(n, check.NetRoleGround, check.IsGroundName) {
+			out = append(out, query.FactRow{Relation: RelNetGround, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -623,11 +591,11 @@ func netGroundFacts(m Model) []FactRow {
 // net rather than fire on incomplete connectivity — the external-skip the decoupling/bulk-cap and
 // crystal rules apply in Go. Empty when the read is complete (no external nets), so the guard is a
 // no-op on a fully-resolved design.
-func netExternalFacts(m Model) []FactRow {
-	var out []FactRow
+func netExternalFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
 		if n.GetAttributes()[netgraph.AttrExternal] == "true" {
-			out = append(out, FactRow{Relation: RelNetExternal, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelNetExternal, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -636,25 +604,25 @@ func netExternalFacts(m Model) []FactRow {
 // busFacts emits bus(label, kind) for each reader-detected unmodeled bus (WS1-034 Phase 1), so a
 // datalog query can list or filter buses (e.g. bus(?l, "geda_bus")). label is the source bus name,
 // empty for an anonymous bus wire; kind is the construct. Empty for a design with no bus.
-func busFacts(m Model) []FactRow {
-	var out []FactRow
+func busFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, b := range m.UnmodeledBuses() {
-		out = append(out, FactRow{Relation: RelBus, Subject: b.GetLabel(), Value: b.GetKind(), Cite: irCite(b.GetProv())})
+		out = append(out, query.FactRow{Relation: RelBus, Subject: b.GetLabel(), Value: b.GetKind(), Cite: irCite(b.GetProv())})
 	}
 	return out
 }
 
 // refDesCollisionFacts emits ref_des_collision(ref) for each designator used by more than one part
 // (WS3-081), keyed by ref_des so a query joins it to components (e.g. collisions on a ref-des prefix).
-// The Citation is the first colliding instance. Empty for a design with no collision.
-func refDesCollisionFacts(m Model) []FactRow {
-	var out []FactRow
+// The check.Citation is the first colliding instance. Empty for a design with no collision.
+func refDesCollisionFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, c := range m.RefDesCollisions() {
 		cite := ""
 		if len(c.Instances) > 0 {
 			cite = irCite(c.Instances[0])
 		}
-		out = append(out, FactRow{Relation: RelRefDesCollision, Subject: c.GetRefDes(), Cite: cite})
+		out = append(out, query.FactRow{Relation: RelRefDesCollision, Subject: c.GetRefDes(), Cite: cite})
 	}
 	return out
 }
@@ -662,24 +630,24 @@ func refDesCollisionFacts(m Model) []FactRow {
 // pinNetConflictFacts emits pin_net_conflict(ref, pin, net) once PER net a pin was placed on when the
 // read put a single pin on more than one net (WS3-081, the integrity tripwire). The multi-row shape
 // lets a query find every net a conflicted pin touches and join to those nets. Empty when the read is clean.
-func pinNetConflictFacts(m Model) []FactRow {
-	var out []FactRow
+func pinNetConflictFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, pc := range m.PinNetConflicts() {
 		for _, net := range pc.Nets {
-			out = append(out, FactRow{Relation: RelPinNetConflict, Subject: pc.RefDes, Object: pc.Pin, Value: net, Cite: irCite(pc.Prov)})
+			out = append(out, query.FactRow{Relation: RelPinNetConflict, Subject: pc.RefDes, Object: pc.Pin, Value: net, Cite: irCite(pc.Prov)})
 		}
 	}
 	return out
 }
 
 // netBusLikeFacts emits net.bus_like(net) for each shared-distribution net (WS3-080), reusing the
-// exact isBusLike predicate the series-reach walk stops at, so the two share one definition. Empty
+// exact check.IsBusLike predicate the series-reach walk stops at, so the two share one definition. Empty
 // for a design of only point-to-point nets.
-func netBusLikeFacts(m Model) []FactRow {
-	var out []FactRow
+func netBusLikeFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if isBusLike(n) {
-			out = append(out, FactRow{Relation: RelNetBusLike, Subject: n.Name, Cite: irCite(n.Prov)})
+		if check.IsBusLike(n) {
+			out = append(out, query.FactRow{Relation: RelNetBusLike, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -690,26 +658,26 @@ func netBusLikeFacts(m Model) []FactRow {
 // copper occupies. Empty when the Model has no board tier (a netlist-only design), the same
 // silent-by-construction posture the params tier has. Cite is a descriptive board reference: a
 // derived BoardNet carries no file/span, and the net's copper is what a reader inspects to verify.
-func boardFacts(m Model) []FactRow {
-	var out []FactRow
+func boardFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
 	for _, bn := range m.BoardNets() {
 		cite := "board net " + bn.Net
 		if w, ok := minSegmentWidthNm(bn.Segments); ok {
 			mm := nmToMM(w)
-			out = append(out, FactRow{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, Cite: cite})
+			out = append(out, query.FactRow{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, Cite: cite})
 		}
 		if d, ok := minViaDrillNm(bn.Vias); ok {
 			mm := nmToMM(d)
-			out = append(out, FactRow{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, Cite: cite})
+			out = append(out, query.FactRow{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, Cite: cite})
 		}
 		for _, layer := range netLayers(bn.Segments) {
-			out = append(out, FactRow{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cite: cite})
+			out = append(out, query.FactRow{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cite: cite})
 		}
 	}
 	return out
 }
 
-func minSegmentWidthNm(segs []BoardSeg) (int64, bool) {
+func minSegmentWidthNm(segs []check.BoardSeg) (int64, bool) {
 	found := false
 	var min int64
 	for _, s := range segs {
@@ -720,7 +688,7 @@ func minSegmentWidthNm(segs []BoardSeg) (int64, bool) {
 	return min, found
 }
 
-func minViaDrillNm(vias []BoardVia) (int64, bool) {
+func minViaDrillNm(vias []check.BoardVia) (int64, bool) {
 	found := false
 	var min int64
 	for _, v := range vias {
@@ -731,7 +699,7 @@ func minViaDrillNm(vias []BoardVia) (int64, bool) {
 	return min, found
 }
 
-func netLayers(segs []BoardSeg) []string {
+func netLayers(segs []check.BoardSeg) []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, s := range segs {
@@ -750,7 +718,7 @@ func nmToMM(nm int64) float64 { return float64(nm) / 1e6 }
 
 func mmStr(mm float64) string { return fmt.Sprintf("%gmm", mm) }
 
-// irCite renders an IR provenance as a one-line source Citation: the source file, narrowed by
+// irCite renders an IR provenance as a one-line source check.Citation: the source file, narrowed by
 // the reader's native id when present (the addressable unit a viewer can navigate to).
 func irCite(p *ir.Provenance) string {
 	if p == nil {

@@ -22,7 +22,7 @@ func passClass(c ComponentClass) bool {
 // with no attributes) from turning a pull-up into a doorway to the whole design.
 const maxWalkFan = 16
 
-// isBusLike reports a shared-DISTRIBUTION net — one the series-reach walk must not cross INTO,
+// IsBusLike reports a shared-DISTRIBUTION net — one the series-reach walk must not cross INTO,
 // because it is not a point-to-point series path but a plane/rail/wide fan-out that would turn a
 // pull-up into a doorway to the whole design. It is BUS evidence, three ways: a ground name (a
 // plane, never a series path), the global fact (a design-wide by-name rail), and rail-scale fan-out
@@ -31,7 +31,7 @@ const maxWalkFan = 16
 // (a PWR_FLAG marks the power ENTRY nets themselves — treating them as stops would blind the walk on
 // its primary use case). WS3-080 named this (was the inline walkStop) so the reach walk and the
 // net.bus_like query relation share ONE definition; the walk's start net is never treated as a stop.
-func isBusLike(n *ir.Net) bool {
+func IsBusLike(n *ir.Net) bool {
 	a := n.GetAttributes()
 	return a[netgraph.AttrGlobal] == "true" ||
 		IsGroundName(n.Name) || len(n.Connections) > maxWalkFan
@@ -61,7 +61,7 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 					if visited[o.Name] || o.Name == n.Name {
 						continue
 					}
-					if isBusLike(o) {
+					if IsBusLike(o) {
 						continue
 					}
 					visited[o.Name] = true

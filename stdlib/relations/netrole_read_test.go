@@ -1,8 +1,9 @@
-package check
+package relations
 
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -13,9 +14,9 @@ import (
 // would yield nothing.
 func TestNetRoleStampedIsAuthoritative(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
-		{Name: "MYSTERY", Roles: []string{NetRoleGround}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "MYSTERY", Roles: []string{check.NetRoleGround}, Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
-	gf := factsByRelation(Facts(NewModel(d)))[RelNetGround]
+	gf := factsByRelation(Facts(check.NewModel(d)))[RelNetGround]
 	if len(gf) != 1 || gf[0].Subject != "MYSTERY" {
 		t.Errorf("stamped ground role must drive net.ground regardless of name, got %+v", gf)
 	}
@@ -29,7 +30,7 @@ func TestNetRoleFallsBackToName(t *testing.T) {
 		{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}},
 		{Name: "SDA", Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
-	gf := factsByRelation(Facts(NewModel(d)))[RelNetGround]
+	gf := factsByRelation(Facts(check.NewModel(d)))[RelNetGround]
 	if len(gf) != 1 || gf[0].Subject != "GND" {
 		t.Errorf("unstamped GND must fall back to name match, got %+v", gf)
 	}

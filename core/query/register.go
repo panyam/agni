@@ -13,11 +13,11 @@ import (
 // citizen: the goal joins it, rules read it, negation ranges over it, all with no evaluator change,
 // because the evaluator already treats every EDB relation uniformly (name -> field layout -> facts).
 //
-// It mirrors the check.Facts discipline: a relation is a name, a positional layout over FactRow, and
+// It mirrors the relations.Facts discipline: a relation is a name, a positional layout over FactRow, and
 // a Projector that DERIVES its rows from a Model (never a second authoritative store, C8). The seam
 // lives here rather than in check so check stays unaware of the query layer; an overlay imports both.
 
-// Field names the check.FactRow field a registered relation's positional argument binds to. The
+// Field names the FactRow field a registered relation's positional argument binds to. The
 // values mirror the internal field enum, so a registration reads as, e.g.,
 // []Field{FieldSubject, FieldNum} for reln(subject, number).
 type Field int
@@ -28,12 +28,13 @@ const (
 	FieldValue      = Field(fValue)      // FactRow.Value — the rendered string value
 	FieldNum        = Field(fNum)        // FactRow.Num — the numeric value (for range/compare)
 	FieldConditions = Field(fConditions) // FactRow.Conditions — a parameter's test conditions
+	FieldMin        = Field(fMin)        // FactRow.Min — the SECOND numeric slot (a two-sided range's lower bound)
 )
 
 // Projector derives a relation's fact rows from a Model, the same shape as check's per-relation
 // projectors. It runs once per NewBase; an empty result is correct when the Model lacks the tier the
 // relation needs (silent-by-construction, never fabricated), matching the built-in relations.
-type Projector func(check.Model) []check.FactRow
+type Projector func(check.Model) []FactRow
 
 type relationDef struct {
 	fields  []edbField

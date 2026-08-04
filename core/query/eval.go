@@ -15,7 +15,7 @@ import (
 // Model for intensional relations (reaches, computed via check.Model.Reach). Built once per design
 // from a check.Model; a query re-uses it.
 type Base struct {
-	edb       map[string][]check.FactRow
+	edb       map[string][]FactRow
 	netByName map[string]*ir.Net
 	model     check.Model
 	// idb holds the derived (IDB) relations materialized from a query's user-defined rules, and
@@ -25,12 +25,15 @@ type Base struct {
 	idbArity map[string]int
 }
 
-// NewBase projects a Model into its fact base (check.Facts plus any overlay-registered relations)
-// and indexes it for querying.
+// NewBase projects a Model into its fact base (the built-in relations installed by stdlib/relations
+// plus any overlay-registered relations) and indexes it for querying. With no stdlib/relations
+// imported the built-in projector is nil and only overlay relations populate the base.
 func NewBase(m check.Model) *Base {
-	b := &Base{edb: map[string][]check.FactRow{}, netByName: map[string]*ir.Net{}, model: m}
-	for _, f := range check.Facts(m) {
-		b.edb[f.Relation] = append(b.edb[f.Relation], f)
+	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}, model: m}
+	if builtinFactsModel != nil {
+		for _, f := range builtinFactsModel(m) {
+			b.edb[f.Relation] = append(b.edb[f.Relation], f)
+		}
 	}
 	for _, name := range registryOrder { // overlay relations, keyed by their registered name
 		for _, f := range registry[name].project(m) {
@@ -49,9 +52,11 @@ func NewBase(m check.Model) *Base {
 // model (a spec library is not a design), so model-dependent relations and predicates (net.*, component.*,
 // reaches) have no facts and yield nothing — a spec library query is over the datasheet relations only.
 func NewSpecLibBase(fs param.FactSource) *Base {
-	b := &Base{edb: map[string][]check.FactRow{}, netByName: map[string]*ir.Net{}}
-	for _, f := range check.SpecLibFacts(fs.AllSpecs()) {
-		b.edb[f.Relation] = append(b.edb[f.Relation], f)
+	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}}
+	if builtinFactsSpecLib != nil {
+		for _, f := range builtinFactsSpecLib(fs.AllSpecs()) {
+			b.edb[f.Relation] = append(b.edb[f.Relation], f)
+		}
 	}
 	return b
 }
@@ -244,7 +249,7 @@ func solve(lits []Literal, i int, bnd *binding, b *Base, emit func(*binding) err
 // is symmetric — an argument matches whether the value comes from the fact or from an existing
 // binding — and it commits variables into the binding as a side result, closer to destructuring a
 // value against a pattern than to calling a function with arguments.
-func unify(args []Term, fields []edbField, f check.FactRow, bnd *binding) (*binding, bool) {
+func unify(args []Term, fields []edbField, f FactRow, bnd *binding) (*binding, bool) {
 	out := bnd.clone()
 	for j, arg := range args {
 		if !bindArg(out, arg, fieldValue(f, fields[j])) {

@@ -86,7 +86,7 @@ func registerBuiltinSpecFuncs() {
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},
 		Fn: func(_ Model, _ map[string]any, args []any) any {
-			return isFeedbackName(args[0].(string))
+			return IsFeedbackName(args[0].(string))
 		},
 	})
 	RegisterSpecFunc("diff_negative", &SpecFunc{

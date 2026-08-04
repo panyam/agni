@@ -133,10 +133,10 @@ var esdSymbols = map[string]bool{
 // component handling model (HBM/CDM); and matching the rating to the connector-facing PIN, not the part.
 const icEsdFloorVolts = 2000
 
-// esdRatingLimits selects the machine-comparable ESD-rating rows of a spec at or above the credit
+// EsdRatingLimits selects the machine-comparable ESD-rating rows of a spec at or above the credit
 // floor: symbol in the alias set, an absolute-max limit (an ESD rating is a max survivable stress),
 // a max bound present in V or kV, and the docs/20 comparison gates. Rows failing any gate are skipped.
-func esdRatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+func EsdRatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		// ESD symbols come in many spellings (V_ESD, V(ESD), VESD, ESD_HBM); reduce to alphanumerics.

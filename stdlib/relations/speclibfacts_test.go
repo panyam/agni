@@ -1,8 +1,9 @@
-package check
+package relations
 
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/query"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
@@ -31,7 +32,7 @@ func TestSpecLibFacts(t *testing.T) {
 	}
 
 	rows := SpecLibFacts(specs)
-	byRel := map[string][]FactRow{}
+	byRel := map[string][]query.FactRow{}
 	for _, r := range rows {
 		byRel[r.Relation] = append(byRel[r.Relation], r)
 	}

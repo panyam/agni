@@ -19,6 +19,7 @@ import (
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
 )
 
@@ -118,7 +119,7 @@ func serveCmd() *cobra.Command {
 			mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/", builtin.RuleDocImageHandler()))
 			// The per-relation fact-doc schematic cards (WS14-005), same read-only image-only posture
 			// as the rule docs, so the query panel resolves a relation Detail's image refs.
-			mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", check.RelationDocImageHandler()))
+			mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
 			// The datasheets workbench renders the source PDF in the browser (pdf.js), so its raw
 			// bytes are served from the mounts. A more-specific prefix than the /datasheets/ page,
 			// so ServeMux routes /datasheets/raw/... here and the page space elsewhere.

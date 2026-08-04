@@ -9,6 +9,7 @@ package datalog
 import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/stdlib/relations"
 )
 
 // powerPinMistyped flags a pin whose NAME says power or ground (pin.role) but whose electrical TYPE
@@ -24,7 +25,7 @@ var powerPinMistyped = query.RuleFromQuery(query.FindingQuery{
 		Severity: "warning",
 		Summary:  "A pin named like power/ground but not typed power_in sits alone on its net.",
 		Impact:   "power-input-not-driven catches an unconnected power pin only when the symbol types it as a power input. A pin the symbol author named VDD or GND but left typed as a plain signal slips through it; if that pin is also wired to nothing, the part loses a supply or a ground silently. This is the gap, expressed in datalog over the pin relations.",
-		Reads:    []string{check.RelPinRole, check.RelPinType, check.RelPinNet, check.RelNetPinCount, check.RelHasNCChannel},
+		Reads:    []string{relations.RelPinRole, relations.RelPinType, relations.RelPinNet, relations.RelNetPinCount, relations.RelHasNCChannel},
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",

@@ -1,18 +1,20 @@
-package check
+package relations
 
 import (
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/datasheet/param"
 )
 
 // factsByRelation indexes a projection by relation name for the assertions below.
-func factsByRelation(fs []FactRow) map[string][]FactRow {
-	out := map[string][]FactRow{}
+func factsByRelation(fs []query.FactRow) map[string][]query.FactRow {
+	out := map[string][]query.FactRow{}
 	for _, f := range fs {
 		out[f.Relation] = append(out[f.Relation], f)
 	}
@@ -24,7 +26,7 @@ func factsByRelation(fs []FactRow) map[string][]FactRow {
 // name-derived nominal. These are the facts the datasheet-range family joins.
 func TestParamRangeAndNominalFacts(t *testing.T) {
 	set := param.ParamSet{"ACME-33": ldoRecommendedSpec("ACME-33", 3.0, 3.6)}
-	m := NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, set)
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, set)
 	byRel := factsByRelation(Facts(m))
 
 	// param.range(ACME-33, VDD, recommended_operating, 3.0, 3.6) — kind in Value, min in Min, max in Num.
@@ -61,7 +63,7 @@ func TestParamRangeAndNominalFacts(t *testing.T) {
 // are exactly the reads that rule declares — now materialized as tuples.
 func TestFactsProjectsSeedRelations(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	m := NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set)
+	m := check.NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set)
 	byRel := factsByRelation(Facts(m))
 
 	// net.max_voltage(+10V, 10) — GND yields none (no voltage token), so exactly one.
@@ -104,11 +106,11 @@ func TestFactsProjectsSeedRelations(t *testing.T) {
 // outputs (KiCad) and zero on one that does not (EDIF) — the queryable twin of the design.types_power_out
 // gate, so "is a driver-absence check sound on this design" is answerable from a query.
 func TestTypesPowerOutFact(t *testing.T) {
-	k := factsByRelation(Facts(NewModel(&ir.Design{SourceFormat: "kicad-sch"})))[RelTypesPowerOut]
+	k := factsByRelation(Facts(check.NewModel(&ir.Design{SourceFormat: "kicad-sch"})))[RelTypesPowerOut]
 	if len(k) != 1 || k[0].Subject != "true" {
 		t.Errorf("kicad-sch: want one types_power_out row (true), got %+v", k)
 	}
-	e := factsByRelation(Facts(NewModel(&ir.Design{SourceFormat: "edif-2.0.0"})))[RelTypesPowerOut]
+	e := factsByRelation(Facts(check.NewModel(&ir.Design{SourceFormat: "edif-2.0.0"})))[RelTypesPowerOut]
 	if len(e) != 0 {
 		t.Errorf("edif: want no types_power_out row, got %+v", e)
 	}
@@ -121,7 +123,7 @@ func TestFeedbackFacts(t *testing.T) {
 		{Name: "VCC1V2_FB", Prov: &ir.Provenance{SourceFile: "t"}},
 		{Name: "VCC", Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
-	fb := factsByRelation(Facts(NewModel(d)))[RelFeedback]
+	fb := factsByRelation(Facts(check.NewModel(d)))[RelFeedback]
 	if len(fb) != 1 || fb[0].Subject != "VCC1V2_FB" {
 		t.Errorf("feedback facts = %+v, want one (VCC1V2_FB)", fb)
 	}
@@ -140,14 +142,14 @@ func TestEsdRatedFacts(t *testing.T) {
 		"DEMO-XCVR": esdSpec("DEMO-XCVR", 8000), // 8 kV, above the 2 kV floor -> rated
 		"DEMO-WEAK": esdSpec("DEMO-WEAK", 500),  // below floor -> not credited
 	}
-	rated := factsByRelation(Facts(NewModelWithParams(d, nil, set)))[RelEsdRated]
+	rated := factsByRelation(Facts(check.NewModelWithParams(d, nil, set)))[RelEsdRated]
 	if len(rated) != 1 || rated[0].Subject != "U9" {
 		t.Fatalf("component.esd_rated = %+v, want one (U9); DEMO-WEAK below floor and R1 unseeded must not appear", rated)
 	}
 	if rated[0].Cite == "" {
 		t.Error("component.esd_rated fact has no cite; it should point to the datasheet ESD row")
 	}
-	if got := factsByRelation(Facts(NewModel(d)))[RelEsdRated]; len(got) != 0 {
+	if got := factsByRelation(Facts(check.NewModel(d)))[RelEsdRated]; len(got) != 0 {
 		t.Errorf("component.esd_rated without --params = %+v, want none (silent by construction)", got)
 	}
 }
@@ -167,7 +169,7 @@ func TestNetBusLikeFacts(t *testing.T) {
 			{ComponentRef: "U1", PinRef: "a"}, {ComponentRef: "U2", PinRef: "b"}}}, // 2-pin -> not
 	}}
 	got := map[string]bool{}
-	for _, f := range factsByRelation(Facts(NewModel(d)))[RelNetBusLike] {
+	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelNetBusLike] {
 		got[f.Subject] = true
 	}
 	if !got["WIDE"] || !got["GND"] {
@@ -183,7 +185,7 @@ func TestNetBusLikeFacts(t *testing.T) {
 // cites the datasheet document/page; the IR facts cite the source file.
 func TestFactsAlwaysCited(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	facts := Facts(NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set))
+	facts := Facts(check.NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set))
 	if len(facts) == 0 {
 		t.Fatal("no facts derived")
 	}
@@ -205,7 +207,7 @@ func TestFactsAlwaysCited(t *testing.T) {
 // store as a second authority.
 func TestFactsRegenerable(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
-	m := NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set)
+	m := check.NewModelWithParams(capDesign("+10V", "DEMO-CAP-6V3"), nil, set)
 	if !reflect.DeepEqual(Facts(m), Facts(m)) {
 		t.Error("Facts(m) is not deterministic across calls")
 	}
@@ -215,7 +217,7 @@ func TestFactsRegenerable(t *testing.T) {
 // width and via drill (mm), and layer membership — reusing the DRC board fixture. This is what
 // makes board geometry queryable through the same fact base, with no query-engine change.
 func TestBoardFacts(t *testing.T) {
-	byRel := factsByRelation(Facts(NewModelWithBoard(&ir.Design{}, drcBoard())))
+	byRel := factsByRelation(Facts(check.NewModelWithBoard(&ir.Design{}, drcBoard())))
 
 	tw := map[string]float64{}
 	for _, f := range byRel[RelBoardTrackWidth] {
@@ -255,7 +257,7 @@ func TestBoardFacts(t *testing.T) {
 		}
 	}
 	// A netlist-only design yields no board facts (silent-by-construction, like the params tier).
-	if n := len(factsByRelation(Facts(NewModel(&ir.Design{})))[RelBoardTrackWidth]); n != 0 {
+	if n := len(factsByRelation(Facts(check.NewModel(&ir.Design{})))[RelBoardTrackWidth]); n != 0 {
 		t.Errorf("board.track_width facts without a board tier = %d, want 0", n)
 	}
 }
@@ -279,7 +281,7 @@ func TestComponentClassAndNetAttrFacts(t *testing.T) {
 			ext,
 		},
 	}
-	byRel := factsByRelation(Facts(NewModel(d)))
+	byRel := factsByRelation(Facts(check.NewModel(d)))
 
 	// component.class: Y1->clock (bare Y is the ambiguous clock family, WS10-015), C1->capacitor; the
 	// unclassifiable W1 yields no row.
@@ -325,7 +327,7 @@ func TestComponentClassAndNetAttrFacts(t *testing.T) {
 // only the IR relations (net/connection) and no mpn/param facts — the same silent-by-construction
 // posture the datasheet rules have; the projection never fabricates a datasheet it does not have.
 func TestFactsSilentWithoutDatasheet(t *testing.T) {
-	byRel := factsByRelation(Facts(NewModel(capDesign("+10V", ""))))
+	byRel := factsByRelation(Facts(check.NewModel(capDesign("+10V", ""))))
 	if len(byRel[RelParam]) != 0 || len(byRel[RelComponentMPN]) != 0 {
 		t.Errorf("param/mpn facts without a seeded set = %d/%d, want 0/0", len(byRel[RelParam]), len(byRel[RelComponentMPN]))
 	}
