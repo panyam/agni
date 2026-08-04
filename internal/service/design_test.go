@@ -599,3 +599,45 @@ func TestBoardSheetAbsent(t *testing.T) {
 		t.Fatalf("board sheet on a boardless file = %v, want ErrNotFound", err)
 	}
 }
+
+// TestHighlightSheetCompanionNameJoin: on a NAME-ONLY canvas (a companion .eds: wires named by net,
+// no per-instance net_id), an id-only net spec (as the web builds for a netlist finding) is resolved
+// to its net NAME via the netlist and matches by name. Without the resolution the id-only spec would
+// paint nothing on such a canvas.
+func TestHighlightSheetCompanionNameJoin(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
+		Id:    "P1",
+		Wires: []*geom.WireGeometry{{Net: "SIGA", Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 0}, {X: 100, Y: 0}}}}}},
+	}}}
+	d := &ir.Design{Nets: []*ir.Net{{Id: "n1", Name: "SIGA"}}}
+	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{})
+
+	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
+		Mount: "m", Path: "x.edn", Sheet: "P1",
+		Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
+		Specs:  []*geom.HighlightSpec{{NetIds: []string{"n1"}}},
+	})
+	if err != nil {
+		t.Fatalf("highlight: %v", err)
+	}
+	if !strings.Contains(resp.GetSvg(), "stroke-opacity") {
+		t.Errorf("an id-only net spec should name-join on the companion canvas and paint; svg:\n%s", resp.GetSvg())
+	}
+}
+
+// TestNameOnlyCanvas: a canvas with named wires but no net_id is name-only (the .eds case); one with
+// any net_id is id-capable (leave it to the id-join); an empty one is neither.
+func TestNameOnlyCanvas(t *testing.T) {
+	nameOnly := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Wires: []*geom.WireGeometry{{Net: "A"}}}}}
+	idCapable := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Wires: []*geom.WireGeometry{{Net: "A", NetId: "h1"}}}}}
+	empty := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{}}}
+	if !nameOnlyCanvas(nameOnly) {
+		t.Error("named wires + no net_id should be name-only")
+	}
+	if nameOnlyCanvas(idCapable) {
+		t.Error("a net_id-bearing canvas is not name-only")
+	}
+	if nameOnlyCanvas(empty) {
+		t.Error("no wires is not name-only")
+	}
+}
