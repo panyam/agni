@@ -50,10 +50,14 @@
     {{ template "Footer" . }}
     {{ end }}
 
-    <!-- Interactive playground bundles are injected here once wired.
-         The seam: a front-matter flag selects a gen.*.html include that
-         esbuild (build.mjs) emits, mirroring the notations pattern.
-         Deferred until the wasm-FS demo backend lands. -->
+    <!-- Interactive playground bundles. A front-matter flag (`playground:
+         viewer`) pulls in the hashed DocsPage bundle esbuild (build.mjs) emits
+         into templates/gen.DocsPage.html. The bundle hydrates the inline
+         <agni-viewer> tags on the page. -->
+    {{ if .FrontMatter.playground }}
+    {{ includeFile "templates/gen.DocsPage.html" }}
+    {{ end }}
+
     {{ if .FrontMatter.customJS }}
     {{ range .FrontMatter.customJS }}
     <script src="{{ . }}"></script>
