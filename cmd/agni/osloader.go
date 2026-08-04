@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
+	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -36,7 +38,33 @@ func (l *osLoader) Geometry(_ context.Context, mountName, path, layout string, f
 	if err != nil {
 		return nil, err
 	}
+	// Companion (WS1-047): a netlist opened alongside a sibling <stem>.eds draws on that schematic
+	// instead of the auto-layout graph, so the viewer shows the design's OWN drawing. The netlist
+	// stays analysis truth (checks/query read it via Design); only the picture comes from the .eds,
+	// joined to findings by net name (C21). All three geometry RPCs funnel through here, so
+	// GetDesign / GetSheet / HighlightSheet stay consistent. The sibling sits in the SAME mount dir
+	// as the already-contained abs, so no extra containment check is needed (mirrors Expectations).
+	if comp := companionEds(abs); comp != "" {
+		return l.loader.FaithfulGeometry(comp)
+	}
 	return l.loader.ResolveGeometry(abs, layout, nil, symbolsFor(faithfulSymbols))
+}
+
+// companionEds returns a sibling <stem>.eds schematic for a NETLIST design, or "" when the design
+// already carries its own geometry (an .eds/.kicad_sch draws itself) or no sibling exists. Filename
+// only — it never reads a file's contents.
+func companionEds(abs string) string {
+	if formats.HasFaithful(abs) {
+		return "" // the design already draws itself; no companion needed
+	}
+	sib := strings.TrimSuffix(abs, filepath.Ext(abs)) + ".eds"
+	if sib == abs {
+		return ""
+	}
+	if st, err := os.Stat(sib); err == nil && !st.IsDir() {
+		return sib
+	}
+	return ""
 }
 
 func (l *osLoader) Report(_ context.Context, mountName, path string, faithfulSymbols bool) (*graph.ConversionReport, error) {
