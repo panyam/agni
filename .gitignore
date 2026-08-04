@@ -6,9 +6,5 @@ bin/
 examples/render-board/render-board
 examples/validate/validate
 
-# Docs site tooling and build output (make docs-*)
-.venv-docs/
-site/
-
 # Built docsite binary (rebuilt by `make`/`go run`; never commit it)
 docsite/docsite
