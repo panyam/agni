@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
@@ -37,6 +38,95 @@ func TestFindingSpecs(t *testing.T) {
 	// Pin: default color (info), the pin ref.
 	if p := specs[2].GetPins(); len(p) != 1 || p[0].GetRefDes() != "U2" || p[0].GetPin() != "3" || specs[2].GetColor() != "" {
 		t.Errorf("pin spec = %+v (color %q)", specs[2].GetPins(), specs[2].GetColor())
+	}
+}
+
+// TestCompanionPath covers companion resolution: an explicit --companion is honored for one design
+// and rejected for several; otherwise a sibling <stem>.eds next to a netlist is auto-detected, a
+// design that already draws itself (.eds/.kicad_sch) auto-detects none, and a missing sibling is "".
+func TestCompanionPath(t *testing.T) {
+	dir := t.TempDir()
+	edn := filepath.Join(dir, "d.edn")
+	eds := filepath.Join(dir, "d.eds")
+	os.WriteFile(edn, []byte("(edif X)"), 0o644)
+
+	// No sibling yet.
+	if got, err := companionPath(edn, "", 1); err != nil || got != "" {
+		t.Errorf("no sibling: got %q, %v; want \"\"", got, err)
+	}
+	// Sibling present -> auto-detected.
+	os.WriteFile(eds, []byte("(edif X)"), 0o644)
+	if got, err := companionPath(edn, "", 1); err != nil || got != eds {
+		t.Errorf("sibling: got %q, %v; want %q", got, err, eds)
+	}
+	// Explicit flag wins for a single design.
+	other := filepath.Join(dir, "other.eds")
+	os.WriteFile(other, []byte("(edif X)"), 0o644)
+	if got, err := companionPath(edn, other, 1); err != nil || got != other {
+		t.Errorf("flag: got %q, %v; want %q", got, err, other)
+	}
+	// Explicit flag with several designs is an error (one companion can't map to N).
+	if _, err := companionPath(edn, other, 2); err == nil {
+		t.Error("--companion with several designs should error")
+	}
+	// A missing explicit companion errors.
+	if _, err := companionPath(edn, filepath.Join(dir, "nope.eds"), 1); err == nil {
+		t.Error("a missing --companion file should error")
+	}
+	// A design that already carries geometry auto-detects no companion.
+	sch := filepath.Join(dir, "d.kicad_sch")
+	os.WriteFile(sch, []byte("x"), 0o644)
+	if got, _ := companionPath(sch, "", 1); got != "" {
+		t.Errorf("a faithful design should auto-detect no companion, got %q", got)
+	}
+}
+
+// TestReviewRenderCompanion: a netlist design's findings are drawn on its auto-detected sibling .eds
+// (companion-demo.eds), joined by net name — the WS1-047 join. The finding on SIGA highlights the
+// SIGA wire on the .eds, the summary names the companion, and a matching pair raises no warning.
+func TestReviewRenderCompanion(t *testing.T) {
+	dir := t.TempDir()
+	r := review.Report{Design: "testdata/review/companion-demo.edn", Areas: []review.AreaResult{{
+		Items: []review.ItemResult{{Findings: []check.Finding{
+			{Kind: check.KindNet, Subject: "SIGA", Severity: "warning"},
+		}}},
+	}}}
+	summary, err := renderReviewImages([]review.Report{r}, dir, "")
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(summary, "companion companion-demo.eds") {
+		t.Errorf("summary should name the auto-detected companion:\n%s", summary)
+	}
+	if strings.Contains(summary, "overlap") {
+		t.Errorf("a matching pair should raise no alignment warning:\n%s", summary)
+	}
+	svg := filepath.Join(dir, "companion-demo", "P1.svg")
+	b, err := os.ReadFile(svg)
+	if err != nil {
+		t.Fatalf("expected companion render at %s: %v", svg, err)
+	}
+	if !strings.Contains(string(b), "stroke-opacity") {
+		t.Error("the SIGA finding did not locate on the companion .eds")
+	}
+}
+
+// TestReviewRenderCompanionMismatch: an explicit companion whose net names do not overlap the
+// design's is flagged (likely a different-revision or wrong file), rather than silently drawing a
+// wrong picture. can-broken's CAN_* nets share nothing with companion-demo.eds's SIGA/SIGB.
+func TestReviewRenderCompanionMismatch(t *testing.T) {
+	dir := t.TempDir()
+	r := review.Report{Design: "testdata/review/can-broken.edn", Areas: []review.AreaResult{{
+		Items: []review.ItemResult{{Findings: []check.Finding{
+			{Kind: check.KindNet, Subject: "CAN_CANH", Severity: "warning"},
+		}}},
+	}}}
+	summary, err := renderReviewImages([]review.Report{r}, dir, "testdata/review/companion-demo.eds")
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(summary, "overlap") {
+		t.Errorf("a mismatched companion should raise an alignment warning:\n%s", summary)
 	}
 }
 

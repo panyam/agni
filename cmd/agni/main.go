@@ -375,7 +375,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion string
 	var coverage bool
 	var ratifiedFloor float64
 	cmd := &cobra.Command{
@@ -424,7 +424,7 @@ func reviewCmd() *cobra.Command {
 			// --render bakes each design's findings into annotated schematic SVGs (WS7-043): the report's
 			// finding->picture side. The summary goes to stderr so stdout stays a clean report to redirect.
 			if renderDir != "" {
-				summary, err := renderReviewImages(reports, renderDir)
+				summary, err := renderReviewImages(reports, renderDir, companion)
 				if err != nil {
 					return err
 				}
@@ -474,6 +474,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped) or json (full findings, for tooling)")
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
+	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
 	return cmd
 }
 
