@@ -49,11 +49,13 @@ The example is one FFI (`has_test_points`, the channel gate) plus existing facts
        and (global(N) or power_driven(N) or rail_name(N) or ground_name(N))
        and not exists T in N.connections where class(T) == test_point
 
-Bind it with `spec.Rule(Rule{...})`. `Reads` and `Primitives` derive from the body, so they
-cannot drift from what the rule actually does. Two init-order traps, both learned from fixtures:
-register FFIs inside the rule variable's own initializer (package variables initialize before
-`init` funcs run, and binding validates the Call targets), and call `registerBuiltinSpecFuncs()`
-first if your spec calls the shared helpers like `rail_name` or `ground_name`.
+Bind it with `spec.Rule(check.Rule{...})`. `Reads` and `Primitives` derive from the body, so they
+cannot drift from what the rule actually does. One init-order trap remains, learned from fixtures:
+register a rule's own FFI inside the rule variable's own initializer, because package variables
+initialize before `init` funcs run and binding validates the Call targets. The shared helpers like
+`rail_name` or `ground_name` need no such care from a built-in rule: the catalog lives in package
+`stdlib/rules/builtin`, which imports `core/check`, so `check`'s own package init registers those
+FFIs before `builtin`'s variable initializers run, and they are available for free.
 
 The twin discipline: proven vocabulary is spec-only, as here. New interpreter vocabulary (a new
 entity set, a new fact, a new traversal) ships with a Go `Eval` as the canonical twin until the
@@ -61,9 +63,11 @@ vocabulary soaks, with parity asserted between the two.
 
 ## One file, one line, one doc
 
-- `check/rule_<name>.go`: the rule.
-- `check/index.go`: one registration line.
-- `check/docs/<name>.md`: the single source of the rule's `Detail`, embedded at build time. The
+- `stdlib/rules/builtin/rule_<name>.go`: the rule.
+- `stdlib/rules/builtin/register.go`: one line adding the rule to the `rules` slice. The built-in
+  catalog is its own package now, not part of the core engine. It installs itself through the same
+  public `check.RegisterBuiltins` seam an overlay uses, so `core/check` owns no rules of its own.
+- `stdlib/rules/builtin/docs/<name>.md`: the single source of the rule's `Detail`, embedded at build time. The
   harness fails CI without it. Write it in full as proper `###` sections under the rule's `##`
   title, not bold run-ins: What it means, Why engineers want it, Impact, an ASCII sketch of
   fires-versus-fine, a Scope note recording every guard decision from the step above, the query
