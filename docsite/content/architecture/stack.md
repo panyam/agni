@@ -17,6 +17,33 @@ The engine packages stay pure. A reader takes an `io.Reader` or bytes, not a fil
 and checks operate on the IR. Keeping the packages free of file paths, a database, and any
 browser-only calls is what lets the same code run in every one of those places.
 
+## Package layout
+
+The top-level tree separates the engine from the content it evaluates, which is the split that
+makes the open-core boundary real: the engine ships as a library and the rule content is one of
+several sources that register into it.
+
+- `core/` is the pure engine: the IR model, the net solver, `check` (the rule runtime and the
+  spec interpreter), `query` (the Datalog evaluator), `diff`, `render`, and `svg`. It owns the
+  evaluation machinery and no rules.
+- `stdlib/` is the standard content that registers into the engine through public seams:
+  `stdlib/rules/builtin` (the built-in EE rule catalog, one file per rule), `stdlib/rules/datalog`
+  and `stdlib/rules/intent` (query-authored and design-intent rules), `stdlib/relations` (the
+  query relations the fact base exposes), and `stdlib/profiles` (the interface profiles). Each
+  rule and relation keeps its reference markdown beside its code, embedded and served as the
+  runtime `Detail`.
+- `readers/` holds the format readers (EDIF, KiCad, IPC-2581, and the symbol-file dialects) plus
+  `readers/formats`, the registry and loader that own all file I/O so the core never opens a file.
+- `datasheet/` is the parameter and document stack: `datasheet/param`, `datasheet/doc`, and
+  `datasheet/derive`.
+- `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
+  holds engine-private helpers, and `docsite/` is this documentation site, a separate module.
+
+The `core` and `stdlib` boundary is load-bearing: no `core` package depends on `stdlib` in its
+production build, so the engine has no built-in rules baked in, and a program composes the catalog
+it wants by importing the sources it wants. An overlay adds its own rules the same way the standard
+library does.
+
 ## The IR is protobuf
 
 One `.proto` schema is the source of truth. Code generation produces Go structs, TypeScript
