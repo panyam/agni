@@ -3,8 +3,9 @@ title: "Reference"
 description: "The software analogy and the format primers."
 ---
 
-- **[Rules catalog](rules/)**: every built-in check rule, grouped by category, each with its full
-  reference. Generated from the shipped catalog.
+- **[Rules catalog](rules/)**: every check rule the catalog ships (built-in, design-intent, datalog,
+  and interface-profile), grouped by category and flagged by source, each with its full reference.
+  Generated from the shipped catalog.
 - **[Relations catalog](relations/)**: every query relation the fact base exposes, grouped by kind.
   Generated from the shipped fact base.
 - **[The software analogy](analogy/)**: a map of EE concepts to software ones, for engineers

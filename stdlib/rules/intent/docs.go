@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+
+	"github.com/panyam/agni/core/check"
 )
 
 // ruleDocs embeds the per-rule documentation for the intent rules: one markdown file (plus its
@@ -61,6 +63,40 @@ func docKey(ruleName string) string {
 		return docKeySubsystem
 	}
 	return ruleName
+}
+
+// docSummaries is the one-line catalog caption for each intent rule KIND, shown in the docsite
+// reference index (tools/catalogdocs). It is a doc caption, distinct from the runtime Rule.Summary a
+// finding carries: the runtime summaries for the per-kind protection and per-instance subsystem rules
+// embed a design-specific kind/name, so a generic page needs a name-free caption. Every docKey has an
+// entry (DocRules would emit an empty caption otherwise; TestDocRules holds them 1:1).
+var docSummaries = map[string]string{
+	RuleModuleMissing:                    "A functional block the design intent declares required is absent from the design.",
+	RuleModuleCount:                      "The number of components for a declared module does not match the design intent.",
+	RuleVoltageDomain:                    "A declared voltage domain's rail is absent or named for a different nominal voltage.",
+	"protection-" + ProtectionOVP:        "A rail the design intent declares needs OV protection has no TVS/zener clamp.",
+	"protection-" + ProtectionDischarge:  "A rail the design intent declares needs a discharge path has no bleeder resistor.",
+	docKeySubsystem:                      "An architectural subsystem the design intent declares is missing a required part or net.",
+}
+
+// DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog
+// generator. Intent rules are generated per-declaration, so there is no static catalog to enumerate;
+// this projects each documented kind into a single page-worthy rule carrying its Detail card, its
+// classification (intentTags), and a generic caption (docSummaries) in place of the design-specific
+// runtime Summary. The subsystem family (intent/subsystem-<slug> at runtime) is one page named
+// "subsystem". Callers must not mutate the returned rules.
+func DocRules() []*check.Rule {
+	out := make([]*check.Rule, 0, len(docKeys))
+	for _, k := range docKeys {
+		out = append(out, &check.Rule{
+			Name:     k,
+			Severity: "warning",
+			Summary:  docSummaries[k],
+			Detail:   intentDoc(k),
+			Tags:     intentTags(),
+		})
+	}
+	return out
 }
 
 // RuleDocImageHandler serves the intent rule docs' embedded schematic-card images (the diagram a
