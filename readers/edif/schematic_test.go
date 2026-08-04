@@ -148,6 +148,24 @@ func TestReadSchematic_Sample(t *testing.T) {
 	}
 }
 
+// TestReadSchematic_WireNetNameForm: a net declared with the compound (net (name SIG) ...) form
+// names its wire "SIG". The reader previously kept only the display name of that form (empty here)
+// and fell back to atom(), which is empty for a compound, so every such wire was left UNNAMED —
+// making net-subject findings unlocatable on the .eds canvas (WS1-047: the companion is joined by
+// net name). The fix falls back to the id, matching how the netlist read names the same net.
+func TestReadSchematic_WireNetNameForm(t *testing.T) {
+	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "net-name-id.eds")), "net-name-id.eds")
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if len(g.Sheets) != 1 || len(g.Sheets[0].Wires) != 1 {
+		t.Fatalf("want one sheet with one wire, got %+v", g.Sheets)
+	}
+	if w := g.Sheets[0].Wires[0]; w.GetNet() != "SIG" {
+		t.Errorf("wire net = %q, want SIG (the (name SIG) id)", w.GetNet())
+	}
+}
+
 // TestReadSchematic_FieldVisibility asserts placedFields honors the source visibility flag and
 // inherits a figureGroup's default text height (WS1-037 follow-up). An OrCAD/Mentor export records
 // a display origin for nearly every property but marks most (visible (false)); only the visible
