@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test catalog-docs catalog-docs-check serve demo ghinstall ghserve ghbuild ghdeploy ui natimage natup natdown natlogs
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs
 
 all: proto build
 
@@ -116,28 +116,17 @@ demo: ui
 	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
 	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
 
-# Documentation site (mkdocs-material over docs/). ghinstall builds a repo-local venv from
-# docs/requirements.txt (pinned, shared with the Pages CI). ghserve is the live local
-# preview; it renders identically to the deployed GitHub Pages site. ghdeploy pushes the
-# built site to the gh-pages branch (needs Pages set to serve from that branch, and a plan
-# that allows Pages on this repo).
-DOCS_VENV ?= .venv-docs
-DOCS_BIN := $(DOCS_VENV)/bin
-$(DOCS_BIN)/mkdocs:
-	python3 -m venv $(DOCS_VENV)
-	$(DOCS_BIN)/pip install -q --upgrade pip
-	$(DOCS_BIN)/pip install -q -r docs/requirements.txt
+# Documentation site. The live site is the s3gen app in docsite/, which owns its own targets
+# (make -C docsite run|build|gh-pages) and deploys via the docs.yml GitHub Actions workflow on
+# any push to main touching docsite/**. ghserve/ghbuild are thin aliases to the docsite targets
+# for muscle memory; there is no local publish target here on purpose (the workflow is the
+# canonical deploy). Regenerate the rule/relation catalog with catalog-docs first if the engine
+# catalog changed.
+ghserve:
+	$(MAKE) -C docsite run
 
-ghinstall: $(DOCS_BIN)/mkdocs
-
-ghserve: ghinstall
-	$(DOCS_BIN)/mkdocs serve
-
-ghbuild: ghinstall
-	$(DOCS_BIN)/mkdocs build --site-dir site
-
-ghdeploy: ghinstall
-	$(DOCS_BIN)/mkdocs gh-deploy --force
+ghbuild:
+	$(MAKE) -C docsite build
 
 # Install the web viewer's node dependencies. Run once before the first build (or after
 # dependency changes); ui and web-test assume it has run.
