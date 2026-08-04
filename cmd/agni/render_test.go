@@ -89,7 +89,7 @@ func oneSheetGeom() (*geom.SchematicGeometry, *geom.SheetGeometry) {
 func TestRenderGeometrySVG(t *testing.T) {
 	g, sheet := oneSheetGeom()
 	var b bytes.Buffer
-	if _, err := renderGeometry(&b, g, sheet, "svg"); err != nil {
+	if _, err := renderGeometry(&b, g, sheet, "svg", nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(b.String(), "<svg") {
@@ -97,10 +97,66 @@ func TestRenderGeometrySVG(t *testing.T) {
 	}
 }
 
+// TestRenderGeometrySVGHighlight: when specs are passed, the svg path bakes the highlight into
+// the one document (a wider re-stroke of the matched net's wire), unlike the plain svg render.
+func TestRenderGeometrySVGHighlight(t *testing.T) {
+	g, sheet := oneSheetGeom()
+	sheet.Wires = []*geom.WireGeometry{
+		{Net: "NET1", Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 0}, {X: 100, Y: 0}}}}},
+	}
+	specs := []*geom.HighlightSpec{{Nets: []string{"NET1"}, Color: "#e11"}}
+	var plain, hi bytes.Buffer
+	if _, err := renderGeometry(&plain, g, sheet, "svg", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := renderGeometry(&hi, g, sheet, "svg", specs); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(plain.String(), "#e11") {
+		t.Error("plain render should not carry the highlight color")
+	}
+	if !strings.Contains(hi.String(), `stroke="#e11"`) {
+		t.Error("highlighted render is missing the baked-in highlight stroke")
+	}
+}
+
+// TestParseHighlightSpecs covers the --highlight grammar: each subject kind, style keys, the
+// net default-to-path shape, and the error cases (no subject, bad pin, bad key, bad alpha).
+func TestParseHighlightSpecs(t *testing.T) {
+	specs, err := parseHighlightSpecs([]string{
+		"net=SCL",
+		"ref=U1,shape=rect,color=#0f0,alpha=0.5",
+		"pin=U2:7,shape=circle",
+	})
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(specs) != 3 {
+		t.Fatalf("specs = %d, want 3", len(specs))
+	}
+	// A net defaults to the PATH marker shape (matching the web focus default).
+	if specs[0].GetNets()[0] != "SCL" || specs[0].GetShape() != geom.HighlightShape_HIGHLIGHT_SHAPE_PATH {
+		t.Errorf("net spec = %+v, want SCL as PATH", specs[0])
+	}
+	if specs[1].GetComponents()[0] != "U1" || specs[1].GetShape() != geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT ||
+		specs[1].GetColor() != "#0f0" || specs[1].GetAlpha() != 0.5 {
+		t.Errorf("component spec = %+v", specs[1])
+	}
+	if p := specs[2].GetPins(); len(p) != 1 || p[0].GetRefDes() != "U2" || p[0].GetPin() != "7" {
+		t.Errorf("pin spec = %+v", specs[2].GetPins())
+	}
+
+	for _, bad := range []string{"", "shape=rect", "pin=U1", "net=X,zzz=1", "net=X,alpha=9", "notakv", "ref=", "net=", "pin=U1:"} {
+		if _, err := parseHighlightSpecs([]string{bad}); err == nil {
+			t.Errorf("parseHighlightSpecs(%q) should error", bad)
+		}
+	}
+}
+
 func TestRenderGeometryPack(t *testing.T) {
 	g, sheet := oneSheetGeom()
 	var b bytes.Buffer
-	if _, err := renderGeometry(&b, g, sheet, "pack"); err != nil {
+	if _, err := renderGeometry(&b, g, sheet, "pack", nil); err != nil {
 		t.Fatal(err)
 	}
 	if b.Len() == 0 {
@@ -113,14 +169,14 @@ func TestRenderGeometryPack(t *testing.T) {
 
 func TestRenderGeometryPNGNotImplemented(t *testing.T) {
 	g, sheet := oneSheetGeom()
-	if _, err := renderGeometry(io.Discard, g, sheet, "png"); err == nil || !strings.Contains(err.Error(), "png") {
+	if _, err := renderGeometry(io.Discard, g, sheet, "png", nil); err == nil || !strings.Contains(err.Error(), "png") {
 		t.Errorf("want a png-not-implemented error, got %v", err)
 	}
 }
 
 func TestRenderGeometryUnknownFormat(t *testing.T) {
 	g, sheet := oneSheetGeom()
-	if _, err := renderGeometry(io.Discard, g, sheet, "bogus"); err == nil || !strings.Contains(err.Error(), "bogus") {
+	if _, err := renderGeometry(io.Discard, g, sheet, "bogus", nil); err == nil || !strings.Contains(err.Error(), "bogus") {
 		t.Errorf("want an unknown-format error naming the input, got %v", err)
 	}
 }

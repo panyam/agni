@@ -25,10 +25,19 @@ func SheetSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opti
 	style := resolveStyle(opts)
 	syms := indexSymbols(g)
 	fr := frameSheet(sheet, syms)
-	tx, ty, scale, pxW, pxH := fr.tx, fr.ty, fr.scale, fr.pxW, fr.pxH
+	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
+	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
+	drawSheetContent(c, g, sheet, syms, fr, style)
+	return c.String()
+}
 
-	c := svg.Open(pxW, pxH, svg.A("font-family", style.Font))
-	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", pxW), svg.F("height", pxH), svg.A("fill", style.Page))
+// drawSheetContent draws one sheet's schematic body (worksheet, wires, symbols, labels) onto an
+// already-opened canvas whose size + page rect the caller set. Extracted from SheetSVG so a
+// highlight-baked render (SheetSVGHighlighted) can composite the base body and the highlight
+// overlay onto ONE canvas, sharing the frame by construction. The caller owns svg.Open and the
+// page rect; this fills the drawing between them.
+func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, syms map[string]*geom.SymbolDef, fr sheetFrame, style Style) {
+	tx, ty, scale := fr.tx, fr.ty, fr.scale
 
 	// Worksheet frame + title block (drawn under the schematic), when the sheet has a page.
 	drawWorksheet(c, g, sheet, tx, ty, style)
@@ -124,8 +133,6 @@ func SheetSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opti
 			drawText(c, f.Value, tx(f.Origin.X), ty(f.Origin.Y), labelFont(float64(f.Height)*scale), f.Justify, rot+f.RotationDeg, style.Field, 0)
 		}
 	}
-
-	return c.String()
 }
 
 // SVG pixel-space constants shared by the sheet document and any overlay drawn above it

@@ -291,7 +291,15 @@ func HighlightSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []
 	syms := indexSymbols(g)
 	fr := frameSheet(sheet, syms)
 	c := svg.Open(fr.pxW, fr.pxH) // no background rect: the overlay is transparent
+	drawHighlights(c, syms, sheet, fr, specs)
+	return c.String()
+}
 
+// drawHighlights paints the highlight specs onto an already-framed canvas: it is the shared
+// projection HighlightSVG returns as a transparent overlay and SheetSVGHighlighted bakes over the
+// base render. Both frame the sheet identically (frameSheet), so the same entity draws at the same
+// pixels whether it stacks as an overlay or composites in place.
+func drawHighlights(c *svg.Canvas, syms map[string]*geom.SymbolDef, sheet *geom.SheetGeometry, fr sheetFrame, specs []*geom.HighlightSpec) {
 	for _, spec := range specs {
 		m := matcherFor(spec)
 		strat := strategyFor(spec.GetShape(), spec.GetStrokeScale())
@@ -301,6 +309,22 @@ func HighlightSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []
 			strat.entity(c, e, fr, color, alpha)
 		}
 	}
+}
+
+// SheetSVGHighlighted renders one sheet and BAKES the highlight specs into a single SVG document,
+// so a static render (a report image, a shared file) carries its annotations with no separate
+// overlay to stack. It is the exact base render (drawSheetContent) plus the exact projection
+// (drawHighlights) HighlightSheet serves as an overlay — one code path for the CLI static picture
+// and the live server highlight, composited on one canvas because both share frameSheet. Highlights
+// draw LAST, above the schematic, so the marked entity reads through the translucent shapes.
+func SheetSVGHighlighted(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []*geom.HighlightSpec, opts ...Option) string {
+	style := resolveStyle(opts)
+	syms := indexSymbols(g)
+	fr := frameSheet(sheet, syms)
+	c := svg.Open(fr.pxW, fr.pxH, svg.A("font-family", style.Font))
+	c.El("rect", svg.F("x", 0), svg.F("y", 0), svg.F("width", fr.pxW), svg.F("height", fr.pxH), svg.A("fill", style.Page))
+	drawSheetContent(c, g, sheet, syms, fr, style)
+	drawHighlights(c, syms, sheet, fr, specs)
 	return c.String()
 }
 
