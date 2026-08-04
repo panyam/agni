@@ -1,6 +1,7 @@
 tmpfiles
 .DS_Store
 bin/
+.playwright-mcp/
 
 # Built example binaries (rebuilt by `make testall`; never commit them)
 examples/render-board/render-board
