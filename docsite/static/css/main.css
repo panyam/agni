@@ -1386,3 +1386,94 @@ pre code {
         opacity: 1;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   agni-viewer — pan/zoom canvas over a build-time-baked design SVG (Tier-1
+   docs playground). See docsite/components/AgniViewer.ts.
+   --------------------------------------------------------------------------- */
+.agni-viewer {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+    background: var(--bg-light);
+}
+
+.agni-viewer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--code-bg);
+}
+
+.agni-viewer-btn {
+    font: inherit;
+    font-size: 0.85rem;
+    line-height: 1;
+    min-width: 1.9rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.agni-viewer-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.agni-viewer-caption {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.agni-viewer-stage {
+    position: relative;
+    height: 460px;
+    overflow: hidden;
+    background:
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(128, 128, 128, 0.08) 23px 24px),
+        repeating-linear-gradient(90deg, transparent 0 23px, rgba(128, 128, 128, 0.08) 23px 24px);
+    cursor: grab;
+    touch-action: none;
+}
+
+.agni-viewer-stage.agni-viewer-dragging {
+    cursor: grabbing;
+}
+
+.agni-viewer-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.agni-viewer-canvas svg {
+    /* Baked renders carry a light paper fill; frame it so it reads as a canvas
+       in dark mode instead of a raw white bleed. */
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.agni-viewer-hint {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.72rem;
+    color: var(--text-light);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    opacity: 0.85;
+    pointer-events: none;
+}

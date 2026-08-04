@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1080.0" viewBox="0 0 1680.0 1080.0" font-family="monospace">
+<rect x="0.0" y="0.0" width="1680.0" height="1080.0" fill="#fdfdfb"/>
+<g class="zones-front">
+<polygon points="90.0,90.0 1490.0,90.0 1490.0,990.0 90.0,990.0" fill="#c83434" fill-opacity="0.2" stroke="none"/>
+</g>
+<g class="copper-back" data-layer="B.Cu">
+<line x1="790.0" y1="640.0" x2="1040.0" y2="790.0" stroke="#3050c8" stroke-width="12.5" stroke-linecap="round"/>
+</g>
+<g class="copper-front" data-layer="F.Cu">
+<line x1="590.0" y1="540.0" x2="640.0" y2="540.0" stroke="#c83434" stroke-width="25.0" stroke-linecap="round"/>
+<line x1="490.0" y1="540.0" x2="790.0" y2="640.0" stroke="#c83434" stroke-width="12.5" stroke-linecap="round"/>
+<rect x="510.0" y="455.0" width="60.0" height="70.0" fill="#c83434" rx="15.0"/>
+<rect x="510.0" y="555.0" width="60.0" height="70.0" fill="#c83434" transform="rotate(-90.0 540.0 590.0)" rx="15.0"/>
+</g>
+<g class="through">
+<circle cx="790.0" cy="640.0" r="20.0" fill="#9aa0a6"/>
+<circle cx="790.0" cy="640.0" r="10.0" fill="#fdfdfb"/>
+<circle cx="1040.0" cy="790.0" r="42.5" fill="#9aa0a6"/>
+<circle cx="1040.0" cy="790.0" r="25.0" fill="#fdfdfb"/>
+<circle cx="1040.0" cy="917.0" r="42.5" fill="#9aa0a6"/>
+<circle cx="1040.0" cy="917.0" r="25.0" fill="#fdfdfb"/>
+</g>
+<g class="edge">
+<polyline fill="none" stroke="#8a6d3b" stroke-width="1.2" points="40.0,40.0 1540.0,40.0 1540.0,1040.0 40.0,1040.0 40.0,40.0"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="1.2" points="1540.0,540.0 1559.5,541.9 1578.3,547.6 1595.6,556.9 1610.7,569.3 1623.1,584.4 1632.4,601.7 1638.1,620.5 1640.0,640.0 1638.1,659.5 1632.4,678.3 1623.1,695.6 1610.7,710.7 1595.6,723.1 1578.3,732.4 1559.5,738.1 1540.0,740.0"/>
+</g>
+<g class="silk">
+<g data-layer="F.SilkS">
+<polyline fill="none" stroke="#7a7f88" stroke-width="6.0" points="575.0,465.0 575.0,615.0"/>
+</g>
+<g data-layer="F.SilkS">
+<circle fill="none" stroke="#7a7f88" stroke-width="5.0" cx="540.0" cy="540.0" r="25.0"/>
+</g>
+<g data-layer="F.SilkS">
+<polyline fill="none" stroke="#7a7f88" stroke-width="7.5" points="140.0,340.0 640.0,340.0"/>
+</g>
+</g>
+<g class="labels">
+<text x="640.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central" transform="rotate(-90.0 640.0 540.0)">R1</text>
+<text x="440.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central" transform="rotate(-90.0 440.0 540.0)">10k</text>
+<text x="1040.0" y="690.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">J1</text>
+<text x="1040.0" y="890.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">CONN</text>
+<text x="790.0" y="190.0" fill="#1560bd" font-size="100.0" text-anchor="middle" dominant-baseline="central">Demo Board</text>
+</g>
+</svg>

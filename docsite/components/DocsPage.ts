@@ -1,16 +1,26 @@
-// DocsPage is the base client bundle loaded on every docs page.
+// DocsPage is the base client bundle loaded on a page that opts into a
+// playground (front-matter `playground: viewer`, injected by BasePage.html via
+// the gen.DocsPage.html include esbuild emits).
 //
-// Today it does nothing beyond a readiness marker. It is the hydration entry
-// point for inline interactive elements: once the wasm-FS demo backend lands,
-// this file will querySelectorAll the custom playground tags (for example
-// <agni-query> or <agni-viewer>) and mount the corresponding component against
-// the in-browser engine, mirroring how the notations docs hydrate <notation>.
+// It hydrates the inline interactive tags on the page. Today that is
+// <agni-viewer> (a pan/zoom canvas over a build-time-baked design SVG). Once
+// the wasm-FS demo backend lands, the same hydration mounts <agni-query> /
+// <agni-diff> against the in-browser engine, mirroring how the notations docs
+// hydrate <notation>.
 //
-// It is built by build.mjs (esbuild) into static/js/gen/. The site renders
-// without it; it is only needed once a page opts into a playground.
+// Built by build.mjs (esbuild) into static/js/gen/.
 
-window.addEventListener("DOMContentLoaded", () => {
+import { hydrateViewers } from "./AgniViewer";
+
+function hydrate(): void {
   document.documentElement.setAttribute("data-agni-docs", "ready");
-});
+  hydrateViewers();
+}
+
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", hydrate);
+} else {
+  hydrate();
+}
 
 export {};
