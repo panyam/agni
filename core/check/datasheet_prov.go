@@ -9,7 +9,7 @@ import (
 // confidence. It is the shared core of both the string Citation() and the typed Finding.DatasheetProv.
 func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *DatasheetCitation {
 	return &DatasheetCitation{
-		Doc:        docTitle(spec, p.GetProv().GetDocRef()),
+		Doc:        DocTitle(spec, p.GetProv().GetDocRef()),
 		DocRef:     p.GetProv().GetDocRef(),
 		Page:       p.GetProv().GetPage(),
 		Section:    p.GetProv().GetTableOrFigure(),
@@ -18,9 +18,9 @@ func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *Datashee
 	}
 }
 
-// docTitle resolves a doc_ref to its SourceDoc title within a spec; "" when the id names no doc, which
+// DocTitle resolves a doc_ref to its SourceDoc title within a spec; "" when the id names no doc, which
 // a caller renders as "unknown source".
-func docTitle(spec *parampb.PartSpec, docRef string) string {
+func DocTitle(spec *parampb.PartSpec, docRef string) string {
 	for _, d := range spec.GetDocs() {
 		if d.GetId() == docRef {
 			return d.GetTitle()

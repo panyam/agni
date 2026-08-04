@@ -319,10 +319,10 @@ var specFacts = map[string]factDef{
 		reads: []string{"pin.electrical_type"}, primitives: []string{"pin-role"},
 		get: func(ev *evalEnv) any {
 			if c, ok := ev.ents["conn"].(*ir.Connection); ok {
-				return dirString(ConnDir(ev.m, c)) // connection attr first: virtual power pins (WS1-014)
+				return DirString(ConnDir(ev.m, c)) // connection attr first: virtual power pins (WS1-014)
 			}
 			p := ev.ents["pin"].(PinInst)
-			return dirString(ev.m.PinDir(p.Component.RefDes, p.Designator))
+			return DirString(ev.m.PinDir(p.Component.RefDes, p.Designator))
 		},
 	},
 	"conn.virtual": { // the in-scope connection's component is a virtual symbol (#PWR/#FLG)
@@ -413,11 +413,11 @@ func netAttrFact(key string) factDef {
 	}
 }
 
-// dirString maps a pin direction to the string vocabulary Specs compare against. Unmapped
+// DirString maps a pin direction to the string vocabulary Specs compare against. Unmapped
 // directions (tristate, ...) read as "unspecified" until a rule needs them. PASSIVE is
 // mapped: unspecified-pin-with-driver keys on "unspecified" meaning "the author declared
 // nothing", and a passive pin declares something (any two-terminal part would fire otherwise).
-func dirString(d ir.PinDirection) string {
+func DirString(d ir.PinDirection) string {
 	switch d {
 	case ir.PinDirection_PIN_DIRECTION_INPUT:
 		return "input"

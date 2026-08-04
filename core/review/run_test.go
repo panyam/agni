@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB relations the profile/datalog rules read
 	_ "github.com/panyam/agni/stdlib/profiles"      // registers the built-in profile rules into DefaultCatalog
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rules into DefaultCatalog
 )

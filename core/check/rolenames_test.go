@@ -75,8 +75,8 @@ func TestSetActiveRoleVocab(t *testing.T) {
 	if !IsPowerRailName("HV_BATT") {
 		t.Error("IsPowerRailName should honor the active vocab's extra rail pattern")
 	}
-	if !isFeedbackName("VCC0.8_ETH_FB") {
-		t.Error("isFeedbackName should honor the active vocab's extra feedback pattern")
+	if !IsFeedbackName("VCC0.8_ETH_FB") {
+		t.Error("IsFeedbackName should honor the active vocab's extra feedback pattern")
 	}
 	SetActiveRoleVocab(nil)
 	if IsPowerRailName("HV_BATT") {

@@ -172,9 +172,12 @@ var boardFormats = map[string]bool{
 // rule reading one of them to not-applicable without --params, so a review item bound to it reads
 // not-applicable rather than a hollow pass. component.device_class joins PartSpec.device_class (WS10-013);
 // component.esd_rated joins the datasheet ESD rating (WS3-076), the same silent-without-seed posture.
+// The names are literals (not the RelComponentDeviceClass / RelEsdRated consts) because those consts
+// are stdlib/relations content now (issue 10) and check cannot import relations — relations imports
+// check. A relation NAME is a stable contract string; check gating on it by literal is sound.
 var paramTierRelations = map[string]bool{
-	RelComponentDeviceClass: true,
-	RelEsdRated:             true,
+	"component.device_class": true, // RelComponentDeviceClass (WS10-013)
+	"component.esd_rated":    true, // RelEsdRated (WS3-076)
 }
 
 func Available(r *Rule, m Model) (ok bool, reason string) {

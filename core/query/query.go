@@ -17,7 +17,7 @@ package query
 
 // A Query is a datalog program answered over a fact base: Rules define derived (IDB) relations and
 // Goal is the conjunction to solve. Goal's free variables — narrowed by Select — are the answer
-// columns. EDB relations come from the fact base (check.Facts) via the edb schema; IDB relations
+// columns. EDB relations come from the fact base (relations.Facts) via the edb schema; IDB relations
 // come from Rules; a handful of built-in relations (reaches) are computed from the Model.
 //
 // The whole IR is what Parse produces. For the query text

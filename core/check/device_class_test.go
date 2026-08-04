@@ -19,26 +19,9 @@ func efuseSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// TestComponentDeviceClassFact: a seeded, non-empty device_class projects a component.device_class row
-// keyed by ref-des, and the relation is empty when the model is built without a params tier (silent by
-// construction, the whole datasheet tier's posture).
-func TestComponentDeviceClassFact(t *testing.T) {
-	set := param.ParamSet{"TPS2HB16": efuseSpec("TPS2HB16")}
-	m := NewModelWithParams(supplyDesign("+5V", false, "TPS2HB16"), nil, set)
-	rows := factsByRelation(Facts(m))[RelComponentDeviceClass]
-	if len(rows) != 1 || rows[0].Subject != "U1" || rows[0].Value != "efuse" {
-		t.Fatalf("component.device_class = %+v, want one (U1, efuse)", rows)
-	}
-	if rows[0].Cite == "" {
-		t.Error("component.device_class row carries no Citation")
-	}
-
-	// No params tier attached -> the relation is empty (skip, never a false pass).
-	bare := NewModel(supplyDesign("+5V", false, "TPS2HB16"))
-	if rows := factsByRelation(Facts(bare))[RelComponentDeviceClass]; len(rows) != 0 {
-		t.Errorf("component.device_class without --params = %+v, want empty", rows)
-	}
-}
+// The component.device_class PROJECTION test (that a seeded class projects a fact) moved to
+// stdlib/relations with the Facts projector (issue 10); the tests below exercise the check.Model
+// side of WS10-013 — class-set enrichment and the Available gate — which stay in check.
 
 // TestDeviceClassEnrichesClassSet (WS10-013 Phase 2): a seeded device_class is merged into the
 // component's device_classes SET, so HasClass answers from the datasheet — but only when a params tier
@@ -69,7 +52,7 @@ func TestDeviceClassEnrichesClassSet(t *testing.T) {
 // a seeded params set (so a review item bound to it reads not-automated, not a hollow pass), and
 // applicable once a params tier is attached — the same gate the param(...) reads get.
 func TestDeviceClassRelationAvailability(t *testing.T) {
-	r := &Rule{Reads: []string{RelComponentDeviceClass}}
+	r := &Rule{Reads: []string{"component.device_class"}}
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
 		t.Errorf("component.device_class rule on a params-less model: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
@@ -83,7 +66,7 @@ func TestDeviceClassRelationAvailability(t *testing.T) {
 // name is not param-prefixed, so it must gate to not-applicable without --params exactly like
 // component.device_class — else a datalog rule reading it silently passes on an unseeded design.
 func TestEsdRatedRelationAvailability(t *testing.T) {
-	r := &Rule{Reads: []string{RelEsdRated}}
+	r := &Rule{Reads: []string{"component.esd_rated"}}
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {
 		t.Errorf("component.esd_rated rule on a params-less model: got (%v, %q), want (false, non-empty)", ok, reason)
 	}

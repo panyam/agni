@@ -70,7 +70,7 @@ func ExpectedDiffNegative(name string) (string, bool) {
 func ICESDRated(m Model, n *ir.Net) bool {
 	for _, rn := range m.Reach(n, 2).Nets {
 		for _, c := range rn.Connections {
-			if spec := m.PartSpec(c.ComponentRef); spec != nil && len(esdRatingLimits(spec)) > 0 {
+			if spec := m.PartSpec(c.ComponentRef); spec != nil && len(EsdRatingLimits(spec)) > 0 {
 				return true
 			}
 		}

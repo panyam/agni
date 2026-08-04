@@ -498,7 +498,7 @@ func TestRegisterPredicateRejects(t *testing.T) {
 		"nil predicate":    func() { RegisterPredicate("p", 1, nil) },
 		"collide built-in": func() { RegisterPredicate("contains", 2, func([]Value) (bool, error) { return true, nil }) },
 		"collide EDB": func() {
-			RegisterPredicate(check.RelComponentOnNet, 2, func([]Value) (bool, error) { return true, nil })
+			RegisterPredicate("component-on-net", 2, func([]Value) (bool, error) { return true, nil })
 		},
 		"collide reaches": func() { RegisterPredicate("reaches", 2, func([]Value) (bool, error) { return true, nil }) },
 	}
@@ -535,11 +535,11 @@ func TestNegatedReaches(t *testing.T) {
 func TestRegisterRelation(t *testing.T) {
 	withCleanRegistry(t)
 	// An overlay "house.approved(ref)" relation: U1 is approved, U2 is not.
-	RegisterRelation("house.approved", []Field{FieldSubject}, func(m check.Model) []check.FactRow {
-		var out []check.FactRow
+	RegisterRelation("house.approved", []Field{FieldSubject}, func(m check.Model) []FactRow {
+		var out []FactRow
 		for _, c := range m.Components() {
 			if c.RefDes == "U1" {
-				out = append(out, check.FactRow{Subject: c.RefDes, Cite: "house db row 7"})
+				out = append(out, FactRow{Subject: c.RefDes, Cite: "house db row 7"})
 			}
 		}
 		return out
@@ -575,14 +575,14 @@ func TestRegisterRelation(t *testing.T) {
 // silently at query time.
 func TestRegisterRelationRejects(t *testing.T) {
 	cases := map[string]func(){
-		"empty name":    func() { RegisterRelation("", []Field{FieldSubject}, func(check.Model) []check.FactRow { return nil }) },
-		"no fields":     func() { RegisterRelation("x.y", nil, func(check.Model) []check.FactRow { return nil }) },
+		"empty name":    func() { RegisterRelation("", []Field{FieldSubject}, func(check.Model) []FactRow { return nil }) },
+		"no fields":     func() { RegisterRelation("x.y", nil, func(check.Model) []FactRow { return nil }) },
 		"nil projector": func() { RegisterRelation("x.y", []Field{FieldSubject}, nil) },
 		"collide built-in": func() {
-			RegisterRelation(check.RelComponentMPN, []Field{FieldSubject}, func(check.Model) []check.FactRow { return nil })
+			RegisterRelation("component.mpn", []Field{FieldSubject}, func(check.Model) []FactRow { return nil })
 		},
 		"collide reaches": func() {
-			RegisterRelation("reaches", []Field{FieldSubject, FieldObject}, func(check.Model) []check.FactRow { return nil })
+			RegisterRelation("reaches", []Field{FieldSubject, FieldObject}, func(check.Model) []FactRow { return nil })
 		},
 	}
 	for name, register := range cases {
