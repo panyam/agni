@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 270" width="700" height="270" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="input-protection rule: a connector-to-power-input path through only a ferrite bead is flagged; a path crossing a fuse is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="698" height="268" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="350" y1="24" x2="350" y2="246" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: bead only, no protector</text>
+
+  <!-- J1 connector -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="40" y="120" width="28" height="28" rx="2" fill="#ffffff"/>
+    <line x1="52" y1="128" x2="60" y2="128"/>
+    <line x1="52" y1="140" x2="60" y2="140"/>
+  </g>
+  <text x="54" y="112" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <!-- FB1 ferrite bead (labeled box) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="118" y="123" width="44" height="22" rx="2" fill="#ffffff"/>
+  </g>
+  <text x="140" y="115" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">FB1</text>
+
+  <!-- U1 power-input IC -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="246" y="112" width="62" height="46" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="277" y="139" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="234" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="end">vin</text>
+
+  <!-- flagged path in red: J1 → bead → U1.vin, no fuse or TVS -->
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="68" y1="134" x2="118" y2="134"/>
+    <line x1="162" y1="134" x2="246" y2="134"/>
+  </g>
+  <text x="92" y="126" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VBUS</text>
+
+  <text x="185" y="218" font-size="13" fill="#d64545" text-anchor="middle">no fuse or TVS on the path &#8594; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="378" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: fuse crossed on path</text>
+
+  <!-- J1 connector -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="388" y="120" width="28" height="28" rx="2" fill="#ffffff"/>
+    <line x1="400" y1="128" x2="408" y2="128"/>
+    <line x1="400" y1="140" x2="408" y2="140"/>
+  </g>
+  <text x="402" y="112" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">J1</text>
+
+  <!-- F1 fuse (labeled box) -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="466" y="123" width="44" height="22" rx="2" fill="#ffffff"/>
+    <line x1="466" y1="134" x2="510" y2="134"/>
+  </g>
+  <text x="488" y="115" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">F1</text>
+
+  <!-- U1 power-input IC -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="594" y="112" width="62" height="46" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="625" y="139" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="582" y="150" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="end">vin</text>
+
+  <!-- protected path: J1 → fuse → U1.vin -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="416" y1="134" x2="466" y2="134"/>
+    <line x1="510" y1="134" x2="594" y2="134"/>
+  </g>
+  <text x="440" y="126" font-size="12" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">VBUS</text>
+
+  <text x="533" y="218" font-size="13" fill="#2f9e57" text-anchor="middle">fuse (or TVS) on the path &#8594; fine</text>
+</svg>

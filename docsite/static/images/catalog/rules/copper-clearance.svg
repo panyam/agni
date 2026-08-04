@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="copper-clearance rule: two different-net traces too close are flagged; adequate spacing is fine">
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ============ LEFT: flagged (traces too close) ============ -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: too close</text>
+  <rect x="60" y="96" width="220" height="20" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <rect x="60" y="132" width="220" height="20" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <text x="66" y="90" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">net A</text>
+  <text x="66" y="168" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">net B</text>
+  <!-- gap dimension between the two edges -->
+  <g stroke="#d64545" stroke-width="2">
+    <line x1="240" y1="116" x2="240" y2="132"/>
+    <line x1="236" y1="116" x2="244" y2="116"/>
+    <line x1="236" y1="132" x2="244" y2="132"/>
+  </g>
+  <text x="252" y="128" font-size="12" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">&lt; 0.127 mm</text>
+  <text x="150" y="212" font-size="13" fill="#d64545" text-anchor="middle">edges closer than the floor &#8594; flagged</text>
+
+  <!-- ============ RIGHT: fine (adequate spacing) ============ -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: adequate gap</text>
+  <rect x="400" y="82" width="220" height="20" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <rect x="400" y="150" width="220" height="20" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <text x="406" y="76" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">net A</text>
+  <text x="406" y="186" font-size="11" fill="#6b7280" font-family="ui-monospace, Menlo, Consolas, monospace">net B</text>
+  <g stroke="#2f9e57" stroke-width="2">
+    <line x1="580" y1="102" x2="580" y2="150"/>
+    <line x1="576" y1="102" x2="584" y2="102"/>
+    <line x1="576" y1="150" x2="584" y2="150"/>
+  </g>
+  <text x="592" y="130" font-size="12" fill="#2f9e57" font-family="ui-monospace, Menlo, Consolas, monospace">&#8805; 0.127 mm</text>
+  <text x="500" y="212" font-size="13" fill="#2f9e57" text-anchor="middle">etching keeps them separate &#8594; fine</text>
+</svg>

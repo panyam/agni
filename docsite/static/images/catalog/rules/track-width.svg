@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="track-width rule: a copper trace narrower than the fab floor is flagged; an adequate width is fine">
+  <rect x="1" y="1" width="678" height="248" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="226" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ============ LEFT: flagged (thin trace) ============ -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: thin trace</text>
+  <!-- copper trace (thin) -->
+  <rect x="60" y="118" width="200" height="7" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <!-- width dimension at the right end -->
+  <g stroke="#d64545" stroke-width="2">
+    <line x1="276" y1="118" x2="276" y2="125"/>
+    <line x1="272" y1="118" x2="280" y2="118"/>
+    <line x1="272" y1="125" x2="280" y2="125"/>
+  </g>
+  <text x="288" y="126" font-size="12" fill="#d64545" font-family="ui-monospace, Menlo, Consolas, monospace">&lt; 0.127 mm</text>
+  <text x="150" y="196" font-size="13" fill="#d64545" text-anchor="middle">below the fab floor &#8594; flagged</text>
+
+  <!-- ============ RIGHT: fine (adequate trace) ============ -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: adequate trace</text>
+  <rect x="400" y="108" width="200" height="24" fill="#cf9b57" stroke="#394049" stroke-width="1.5"/>
+  <g stroke="#2f9e57" stroke-width="2">
+    <line x1="616" y1="108" x2="616" y2="132"/>
+    <line x1="612" y1="108" x2="620" y2="108"/>
+    <line x1="612" y1="132" x2="620" y2="132"/>
+  </g>
+  <text x="500" y="196" font-size="13" fill="#2f9e57" text-anchor="middle">&#8805; 0.127 mm, etches reliably &#8594; fine</text>
+</svg>

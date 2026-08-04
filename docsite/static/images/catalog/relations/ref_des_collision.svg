@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="ref_des_collision relation: two parts sharing the designator R1 is a collision; two parts with unique designators R1 and R2 are clean">
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- LEFT: collision -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Collision: one designator, two parts</text>
+  <rect x="70" y="78" width="64" height="46" rx="4" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <text x="102" y="106" font-size="14" font-weight="600" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R1</text>
+  <rect x="70" y="150" width="64" height="46" rx="4" fill="#ffffff" stroke="#d64545" stroke-width="2"/>
+  <text x="102" y="178" font-size="14" font-weight="600" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R1</text>
+  <text x="155" y="140" font-size="13" fill="#6b7280">two distinct parts,</text>
+  <text x="155" y="158" font-size="13" fill="#6b7280">same designator</text>
+  <text x="150" y="224" font-size="13" fill="#d64545" text-anchor="middle">one name, two parts → collision</text>
+
+  <!-- RIGHT: clean -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f8a4c">Clean: each designator unique</text>
+  <rect x="410" y="78" width="64" height="46" rx="4" fill="#ffffff" stroke="#2f8a4c" stroke-width="2"/>
+  <text x="442" y="106" font-size="14" font-weight="600" fill="#2f8a4c" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R1</text>
+  <rect x="410" y="150" width="64" height="46" rx="4" fill="#ffffff" stroke="#2f8a4c" stroke-width="2"/>
+  <text x="442" y="178" font-size="14" font-weight="600" fill="#2f8a4c" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">R2</text>
+  <text x="495" y="140" font-size="13" fill="#6b7280">each part has</text>
+  <text x="495" y="158" font-size="13" fill="#6b7280">its own designator</text>
+  <text x="490" y="224" font-size="13" fill="#2f8a4c" text-anchor="middle">unique names → clean</text>
+</svg>

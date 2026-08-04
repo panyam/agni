@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test serve demo ghinstall ghserve ghbuild ghdeploy ui natimage natup natdown natlogs
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test catalog-docs catalog-docs-check serve demo ghinstall ghserve ghbuild ghdeploy ui natimage natup natdown natlogs
 
 all: proto build
 
@@ -61,12 +61,28 @@ test:
 web-test:
 	cd web && pnpm run typecheck && pnpm test
 
+# Regenerate the docsite rule + relation catalog (issue 14) from the shipped engine catalog and
+# the embedded per-rule/per-relation Detail markdown. The stdlib docs stay the source of truth;
+# this projects them into docsite/content/reference/{rules,relations}/ and the SVG cards under
+# docsite/static/images/catalog/. Commit the result.
+catalog-docs:
+	$(GO) run ./tools/catalogdocs
+
+# Freshness gate: fail when the committed catalog drifts from a fresh run, so a rule or relation
+# whose doc changed cannot silently desync the site (the make-roadmap / roadmap-check pattern).
+catalog-docs-check: catalog-docs
+	@if [ -n "$$(git status --porcelain -- docsite/content/reference/rules docsite/content/reference/relations docsite/static/images/catalog)" ]; then \
+		echo "catalog docs are stale — run 'make catalog-docs' and commit the result:"; \
+		git status --short -- docsite/content/reference/rules docsite/content/reference/relations docsite/static/images/catalog; \
+		exit 1; \
+	fi
+
 # The full deterministic gate: vet, the browser bundle build (which enforces the
-# single-Solid-core invariant, see web/build.mjs), engine (Go) tests, example modules, and
-# web unit tests. Green = ship-ready. CI runs exactly this (.github/workflows/ci.yml).
-# The bundle build comes before the engine tests: TestCheckWebAssets (cmd/agni) asserts
-# web/static/app.js exists, and the bundle is a gitignored build artifact.
-testall: vet ir-model-check ui test examples-test web-test
+# single-Solid-core invariant, see web/build.mjs), engine (Go) tests, example modules, web unit
+# tests, and the docsite catalog freshness check. Green = ship-ready. CI runs exactly this
+# (.github/workflows/ci.yml). The bundle build comes before the engine tests: TestCheckWebAssets
+# (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
+testall: vet ir-model-check ui test examples-test web-test catalog-docs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

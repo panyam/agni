@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 260" width="680" height="260" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="duplicate-ref-des rule: one ref-des on two distinct parts is flagged; one ref-des shared by units of a multi-unit part is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="678" height="258" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="340" y1="24" x2="340" y2="236" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+
+  <!-- ================= LEFT: flagged ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: one ref-des, two parts</text>
+
+  <!-- U1 as an IC -->
+  <g stroke="#d64545" stroke-width="2.5" fill="#ffffff">
+    <rect x="60" y="90" width="70" height="56" rx="6"/>
+  </g>
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="52" y1="104" x2="60" y2="104"/>
+    <line x1="52" y1="132" x2="60" y2="132"/>
+    <line x1="130" y1="104" x2="138" y2="104"/>
+    <line x1="130" y1="132" x2="138" y2="132"/>
+  </g>
+  <text x="95" y="122" font-size="13" font-weight="600" fill="#d64545" text-anchor="middle">U1</text>
+  <text x="95" y="80" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">an IC</text>
+
+  <!-- U1 as a connector / jack -->
+  <g stroke="#d64545" stroke-width="2.5" fill="#ffffff">
+    <rect x="210" y="94" width="44" height="48" rx="3"/>
+  </g>
+  <g stroke="#d64545" stroke-width="2.5" fill="none">
+    <line x1="254" y1="106" x2="266" y2="106"/>
+    <line x1="254" y1="130" x2="266" y2="130"/>
+  </g>
+  <circle cx="222" cy="106" r="3.5" fill="#d64545"/>
+  <circle cx="222" cy="130" r="3.5" fill="#d64545"/>
+  <text x="232" y="122" font-size="13" font-weight="600" fill="#d64545" text-anchor="middle">U1</text>
+  <text x="232" y="84" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">a jack</text>
+
+  <text x="180" y="216" font-size="13" fill="#d64545" text-anchor="middle">two distinct parts collide -&gt; flagged</text>
+
+  <!-- ================= RIGHT: fine ================= -->
+  <text x="370" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: one multi-unit part</text>
+
+  <!-- U1 unit A -->
+  <g stroke="#394049" stroke-width="2" fill="#ffffff">
+    <rect x="392" y="90" width="66" height="52" rx="6"/>
+  </g>
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="384" y1="104" x2="392" y2="104"/>
+    <line x1="384" y1="128" x2="392" y2="128"/>
+    <line x1="458" y1="116" x2="466" y2="116"/>
+  </g>
+  <text x="425" y="121" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1A</text>
+
+  <!-- U1 unit B -->
+  <g stroke="#394049" stroke-width="2" fill="#ffffff">
+    <rect x="524" y="90" width="66" height="52" rx="6"/>
+  </g>
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <line x1="516" y1="104" x2="524" y2="104"/>
+    <line x1="516" y1="128" x2="524" y2="128"/>
+    <line x1="590" y1="116" x2="598" y2="116"/>
+  </g>
+  <text x="557" y="121" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1B</text>
+
+  <!-- brace: one physical part -->
+  <g stroke="#2f9e57" stroke-width="2" fill="none">
+    <path d="M 392 160 L 392 168 L 590 168 L 590 160"/>
+    <line x1="491" y1="168" x2="491" y2="176"/>
+  </g>
+  <text x="491" y="192" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">one quad part</text>
+
+  <text x="491" y="216" font-size="13" fill="#2f9e57" text-anchor="middle">units share a ref-des -&gt; fine</text>
+</svg>
