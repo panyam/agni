@@ -1,0 +1,1075 @@
+{
+ "design": "showcase.fires.kicad_sch",
+ "listRules": {
+  "rules": [
+   {
+    "name": "single-pin-net",
+    "severity": "info",
+    "summary": "A net connects to fewer than two pins (a floating stub), and is not an intentional no-connect.",
+    "reads": [
+     "net.names",
+     "net.pin_count",
+     "pin.no_connect"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "A stub is a signal wired to one thing or nothing: the other end was meant to go somewhere and does not. It shows up only at bring-up, when a pin is silently dead. Catching it at capture is free; catching it on the bench is a debugging session.",
+    "detail": "## single-pin-net\n\n### What it means\n\nA net that connects to fewer than two pins. A signal wired to exactly one\nthing, or to nothing, is almost always a mistake.\n\n### Why engineers want it\n\nSchematic capture is manual wiring. It is trivial to leave one end\nof a wire floating, misspell a net label so two wires that should join do not, or delete a\npart and orphan the stub that fed it. Every ERC tool ships this check because it is the single\nmost frequent capture slip.\n\n### Impact\n\nHigh frequency, near-zero false positives once no-connect is handled. A dangling\nnet is a signal that silently does nothing.\n\n![single-pin-net: a one-pin stub is flagged, a two-pin net is fine](images/single-pin-net.svg)\n\n### The one subtlety\n\nA pin deliberately marked \"not connected\" is a single-member net on\npurpose, so the rule excludes intentional no-connects: a tool-generated \"unconnected-...\" net\nname, an \"nc_\"/\"no_connect\" tag, or a connected pin whose electrical type is NO_CONNECT. This\nno-connect awareness removes the demo's biggest false positive (WS3-002).\n\n### Query structure\n\nselect the nets, exclude the intentional no-connects, report the rest.\n\n    select N in nets where count(N.connections) < 2 and not intentional_nc(N)\n\nReads: net.names (the no-connect name markers), net.pin_count, pin.no_connect (via pin\nelectrical type). Tier P."
+   },
+   {
+    "name": "unconnected-component",
+    "severity": "warning",
+    "summary": "A component appears on no net (none of its pins land on any signal).",
+    "reads": [
+     "on_net"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A part on no net is either a placement mistake, a forgotten connection, or dead weight in the BOM. If it was meant to do something, the circuit is missing whatever it was meant to do.",
+    "detail": "## unconnected-component\n\n### What it means\n\nA component whose pins land on no net at all. It is placed but wired to\nnothing.\n\n### Why engineers want it\n\nParts get dropped onto a sheet and left unwired during a work in\nprogress, or a block gets deleted and one part survives. The part then ships in the BOM and\ngets placed on the board while doing nothing.\n\n### Impact\n\nEither a real missing connection (the part was supposed to be in the circuit) or\nwasted cost and board area. Both are worth surfacing.\n\n![Flagged: R9 with no pin on any net; fine: U1 with pins wired to nets](images/unconnected-component.svg)\n\n### Section-aware\n\nConnections key on ref_des, and the IR groups all of a physical part's\nsections under one ref_des (WS1-001), so a part counts as connected if any section's pin lands\non a net. A multi-gate IC with one gate wired is connected.\n\n### Query structure\n\nselect the components not present in the connected-ref set.\n\n    select C in components where ref_des(C) != \"\" and not on_net(C)\n\nReads: on_net (the connected-ref projection). Tier R (a traverse of every net's members builds\nthe set the select tests against)."
+   },
+   {
+    "name": "unconnected-pin",
+    "severity": "warning",
+    "summary": "A pin lands on no net and is not marked no-connect.",
+    "reads": [
+     "net.names",
+     "pin.electrical_type",
+     "pin.no_connect",
+     "pin.on_net"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A single forgotten pin on an otherwise-wired part is the most common capture slip: an enable left floating, a feedback pin missed, one gate input skipped. unconnected-component only fires when every pin is unwired, so the one-pin miss is invisible to it, and it surfaces at bring-up as a part that almost works.",
+    "detail": "## unconnected-pin\n\n### What it means\n\nA pin the part type declares, on a placed component, that appears in no\nnet's connections and is not marked NO_CONNECT.\n\n### Why engineers want it\n\nunconnected-component catches the part wired to nothing; this\ncatches the pin wired to nothing on a part that is otherwise connected \u2014 the far more common\nslip. Every ERC ships it.\n\n### Impact\n\nA floating enable, a missed feedback divider, one gate input of four left open:\nparts that mostly work and fail in ways that read as component defects.\n\n![A declared pin left on no net is flagged; the same pin marked NO_CONNECT is fine](images/unconnected-pin.svg)\n\n### Where it can and cannot fire (conservative on purpose)\n\nThree guards, each learned\nfrom a real source:\n- **The source must have a no-connect channel** (any NO_CONNECT-typed pin or nc-marker net\n  name anywhere in the design). Where none exists, an unwired pin carries no NC flag\n  because the format cannot express one, not because the designer missed it: a bare EDIF\n  netlist export lists every library pin of every part, and firing there produced 1836\n  findings on one real board (unused gates, spare TVS channels, unwired connector pads \u2014\n  all normal). No channel, no rule.\n- **A direction-unknown (UNSPECIFIED) pin is skipped**, the same trade floating-input makes.\n- **A source with no part-pin data yields no pins** and is silent by construction.\n\nOn KiCad, placed bare pins land on synthesized per-pin stub nets (the miss surfaces as\nsingle-pin-net instead); what can still fire there is a typed pin of an unplaced unit of a\nmulti-unit part, in designs that use no-connect markers elsewhere \u2014 a real unused-unit\nsignal. The hunting ground is sources with typed pins, an NC vocabulary, and no stub\nsynthesis (EDIF schematic exports, xschem/gEDA with symbol libraries).\n\n### Query structure\n\ngate on the channel, then select the pins on no net, excluding\ndeclared no-connects and direction-unknown pins.\n\n    select P in pins where nc_channel(design)\n      and pin_dir(P) not in {no_connect, unspecified} and not on_net(P)\n\nReads: pin.electrical_type, pin.on_net. Tier R."
+   },
+   {
+    "name": "dangling-endpoint",
+    "severity": "warning",
+    "summary": "A wire endpoint terminates on nothing (no pin, junction, label, or other wire).",
+    "reads": [
+     "wire.endpoint",
+     "wire.junction"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "site": "diagnostic",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "A wire drawn to nothing is a connection the author intended but did not complete. Unlike a stub net it has no net to show up on: the wire is just there, contributing nothing, and whatever it was meant to reach is left unconnected. It is invisible at capture and only bites at bring-up.",
+    "detail": "## dangling-endpoint\n\n### What it means\n\nA schematic wire whose end lands on empty space: no pin, no junction dot, no\nlabel, and no other wire endpoint sits at that point. The author drew a connection and stopped a\nhair short, so the wire connects nothing.\n\n### Why engineers want it\n\nA .kicad_sch (and xschem/gEDA) stores connectivity as geometry: two\nthings connect only when their points coincide. A wire dropped a grid step away from a pin looks\nconnected on screen but is not. This is the geometric sibling of single-pin-net: single-pin-net\ncatches a net wired to one pin, this catches a wire wired to zero \u2014 a link that never became a net\nat all, so no net-level rule can see it.\n\n### Impact\n\nThe connection the author meant to make is missing, and nothing downstream reveals it\nbecause the wire produced no net. Every ERC ships a dangling-end check for exactly this reason.\n\n![Wire ending on empty space is flagged; wire ending on a pin is fine](images/dangling-endpoint.svg)\n\n### Scope\n\nEndpoint-on-nothing only. The disguised sibling \u2014 a wire end landing mid-span on\nanother wire's body with no junction dot \u2014 is wire-no-junction (WS1-012).\n\n### Query structure\n\nthe reader computes the dangling endpoints from wire geometry; the rule\nreports them.\n\n    select E in dangling_endpoints\n\nReads: wire.endpoint, wire.junction. Tier P."
+   },
+   {
+    "name": "wire-no-junction",
+    "severity": "warning",
+    "summary": "A wire endpoint lands mid-span on another wire with no junction dot.",
+    "reads": [
+     "wire.endpoint",
+     "wire.junction"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "site": "diagnostic",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "The drawing shows a T-tap; the tool sees two separate nets. The author believes net A and net B are one, every visual review confirms it, and the board ships with the connection missing. It is the most dangerous silent connectivity slip in schematic capture.",
+    "detail": "## wire-no-junction\n\n### What it means\n\nA wire's endpoint lies strictly inside another wire segment's body, and no\njunction dot (or label) sits at the touch point. KiCad connects wires only where a dot is\nplaced, so the two wires are electrically separate despite touching on screen.\n\n### Why engineers want it\n\nThis is the sibling of dangling-endpoint with the opposite\ndisguise: a dangling end is visibly incomplete if you look closely, but an undotted T-tap\nlooks EXACTLY like a connected one. The mistake survives visual review by construction and\nsurfaces at bring-up as a missing connection between two otherwise-healthy nets.\n\n### Impact\n\nNet A and net B behave normally in isolation \u2014 every net-level rule sees two\nwell-formed nets \u2014 so nothing else can catch it. The drawing is the only witness, and the\ndrawing lies.\n\n![undotted T-tap flagged as two nets vs a dotted T that is one net](images/wire-no-junction.svg)\n\n### Scope\n\nEndpoint-on-body only. Two wires that merely CROSS (no endpoint at the meet)\nnever flag: KiCad does not connect crossings regardless, so the drawing tells no lie. A\nlabel at the touch point joins the wires by name (both attach to it) and the reader has\nalready split the segment there, so labeled taps do not flag either. KiCad-family\nsemantics: formats whose tools auto-connect T-touches (gEDA) never emit the diagnostic.\n\n### Query structure\n\nthe reader computes endpoint-on-body from wire geometry after\nsplitting at junctions and labels; the rule reports them.\n\n    select E in no_junction_endpoints\n\nReads: wire.endpoint, wire.junction. Tier P.\n\n### For software readers\n\nKiCad stores no connection list; connectivity is GEOMETRIC \u2014 things connect where their\ncoordinates coincide, the way whitespace-significant syntax gives meaning to layout. Two\ntouching wires join only at endpoints or where the author placed a junction dot (the\nexplicit \"yes, these join\" marker). A wire ENDING on the MIDDLE of another wire, with no\ndot, is a file that LOOKS imported because it sits in the right directory but was never\nadded to the build: every human reads it as connected, the toolchain disagrees, and both\nhalves are individually healthy so nothing else can reveal the gap.\n\n![t-tap cases](images/tjunc-cases.png)\n"
+   },
+   {
+    "name": "duplicate-ref-des",
+    "severity": "error",
+    "summary": "A reference designator is claimed by more than one distinct physical part.",
+    "reads": [
+     "ref_des_collision"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "site": "diagnostic",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "Two parts sharing a ref-des collapse into one in the BOM and corrupt the net join key: one part is dropped from the build, or connections meant for two parts land on one. It is an annotation slip that silently falsifies both the BOM and the netlist.",
+    "detail": "## duplicate-ref-des\n\n### What it means\n\nOne reference designator (U1, R5) assigned to two genuinely distinct physical\nparts, as opposed to the legitimate case of one multi-unit part whose gates share a ref-des.\n\n### Why engineers want it\n\nA duplicated ref-des is a common annotation slip. The two parts merge\ninto one BOM line (one gets built, the other silently omitted) and their connections collide on the\nsame net-join key, so the netlist is quietly wrong. Every capture tool's ERC flags it.\n\n### Why this is a reader diagnostic, not an IR check\n\nThe IR keys components by ref-des and folds a\nmulti-unit part into one component with sections (WS1-001), so by the time the netlist exists the\ncollision is gone and a duplicate is indistinguishable from a multi-unit part. Only the reader, at\ningestion, can tell them apart using its format's own rule (KiCad: the same unit claimed twice). It\nrecords the verdict in InputDiagnostics.RefDesCollisions; this rule only reports it (docs/19,\n\"Where a rule runs\").\n\n![One ref-des on two distinct parts is flagged; units of one multi-unit part sharing a ref-des is fine](images/duplicate-ref-des.svg)\n\n### Query structure\n\nreport each collision the reader recorded.\n\n    select C in ref_des_collisions\n\nReads: ref_des_collision. Tier P. Site: diagnostic (reader-detected)."
+   },
+   {
+    "name": "output-output-conflict",
+    "severity": "error",
+    "summary": "Two or more driving pins (outputs / power sources) share a net and fight each other.",
+    "reads": [
+     "component.class",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "Two outputs on one net drive it to opposite levels at once. The result is a low-impedance path between rails through the two drivers: contention current, brownouts, and cooked output stages. It is the classic short-through-logic bug.",
+    "detail": "## output-output-conflict\n\n### What it means\n\nA net with two or more pins that actively drive it \u2014 signal outputs or power\nsources. A net may have at most one hard driver; two of them fight.\n\n### Why engineers want it\n\nIt is one of the ERC pin-type-matrix's flagship errors (output \u2194 output).\nIt happens when two blocks are wired to the same node by mistake, a bus is drawn without tri-state\nenables, or two regulators land on one rail. The symptom is contention current: the net sits between\nlevels while both drivers source into each other.\n\n### Impact\n\nContention burns power and can destroy the output stages; the logic level is undefined.\n\n![Two component outputs on one net are flagged; one output driving one input is fine](images/output-output-conflict.svg)\n\n### Scope note\n\nCounts hard drivers only \u2014 outputs and power-outputs. Bidirectional (INOUT) pins are\nnot counted: a shared bus of bidirectional pins is legal, and flagging it is the false positive that\nmakes engineers mute the rule. Pin roles come from the reader's electrical types; a design whose\nreader does not type pins does not fire. This is a row of the connection matrix (rule_pin_matrix.go);\nthe pairing subsumes output \u2194 output, output \u2194 power-out, and power-out \u2194 power-out.\n\n### Drivers are counted per COMPONENT, not per pin\n\nA power device commonly drives one net\nthrough several paralleled output pins (the real corpus: one driver IC, six output pads on\none net) \u2014 one driver electrically. Two-plus driving pins of the SAME component never fire;\ntwo different components' outputs do. This surfaced the moment EDIF pin keys joined\nphysically (WS1-025) and is why the count lives behind the driving_components FFI: distinct-\ncount is not (yet) an AST shape.\n\n### A wired-OR bus is not contention\n\nAn open-drain bus (a shared interrupt, inhibit, or reset line) has several devices whose outputs\nonly pull to one level, with a pull resistor setting the idle level. That is intentional, not two\ndrivers fighting. EDIF types open-drain pins plain \"output\", so the tell is the PULL RESISTOR: a\nmulti-driver net that carries a resistor and NO power-source (POWER_OUT) driver is treated as a\nwired-OR bus and stays quiet. The resistor is matched by PRESENCE, not by where it pulls to, because\na real pull runs through several elements to an auto-named rail or to ground. The power-source\nexclusion is load-bearing: two power sources on a rail fight even with a bleeder resistor present, so\na POWER_OUT driver keeps the rule firing.\n\n### Query structure\n\nselect the nets driven by two or more distinct components, excluding wired-OR buses.\n\n    select N in nets where count(distinct component(P) : P in N, hard_driver(P)) >= 2\n      and not (has_resistor(N) and not any(power_out(P) : P in N))\n\nReads: on_net (the net's members), pin.electrical_type, component.class (the resistor pull). Tier R."
+   },
+   {
+    "name": "nc-pin-connected",
+    "severity": "error",
+    "summary": "A pin marked no-connect is wired into a net with other members.",
+    "reads": [
+     "net.attributes",
+     "net.pin_count",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "The symbol says the pin must not be used and the schematic uses it anyway. Either the wire is a capture slip landing on the wrong pad, or the part is being asked to do something its maker forbids (an internal test pin, a reserved pad). Both read as working designs until the part misbehaves.",
+    "detail": "## nc-pin-connected\n\n### What it means\n\nA pin whose electrical type is NO_CONNECT (the symbol author's \"leave this\nalone\") sits on a net that connects it to at least one other pin.\n\n### Why engineers want it\n\nIt is the no-connect column of every ERC connection matrix (KiCad\nreports it as \"connected NC pin\", an error). NC pins exist because vendors reserve pads: internal\ntest points, factory-trim pins, pads with no bond wire. A wire landing on one is usually a\nmisplaced connection, and occasionally a genuine misuse of the part.\n\n### Impact\n\nBest case, a signal routed to a dead pad silently does nothing (a missing connection\nin disguise). Worst case, the net disturbs an internal node the datasheet says to leave floating.\n\n![NC pin wired into a net is flagged; the same NC pin left unwired is fine](images/nc-pin-connected.svg)\n\n### Scope note\n\nFires only when the net has two or more members: a lone NC pin on its own\nstub net is the intentional case (single-pin-net skips it for the same reason). Cross-sheet\n(external) nets are skipped. The pairing is NC \u2194 anything, so one flagged net reports once,\non the net.\n\n### Query structure\n\nselect multi-member nets carrying a NO_CONNECT-typed pin.\n\n    select N in nets where count(N.connections) >= 2\n      and exists P in N.connections where pin_dir(P) == no_connect\n\nReads: net.attributes, net.pin_count, on_net, pin.electrical_type. Tier R."
+   },
+   {
+    "name": "unspecified-pin-with-driver",
+    "severity": "warning",
+    "summary": "A pin with no declared electrical type sits on a driven net.",
+    "reads": [
+     "net.attributes",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "The symbol author never said what the pin is, so no matrix row can clear it: it may be an input (fine), an output (contention with the driver), or a supply pin (a rail short). The ERC is flying blind on exactly the net where a wrong guess costs a driver stage.",
+    "detail": "## unspecified-pin-with-driver\n\n### What it means\n\nA net has at least one hard driver (output / power-out pin, including a\npower symbol's virtual pin), and one of its other member pins declares no electrical type at\nall.\n\n### Why engineers want it\n\nIt is the \"unspecified\" column of the ERC connection matrix (KiCad\nwarns on unspecified against everything). An untyped pin is a library gap: the matrix cannot\nsay whether the pairing is legal, and the place that matters most is a driven net, where the\nuntyped pin might itself be a fighting driver or a supply pin shorted to a signal.\n\n### Impact\n\nIf the untyped pin turns out to be an output, this is output-output-conflict the\nmatrix could not see; if a supply pin, a rail-to-signal short. Fixing the symbol (typing the\npin) either clears the warning or upgrades it to the real error.\n\n![A driver joined to an untyped J1 pin is flagged; the same driver joined to a declared passive R1 pin is fine](images/unspecified-pin-with-driver.svg)\n\n### Scope note\n\n\"Unspecified\" means the symbol DECLARES the pin and types it as nothing \u2014 a\nKiCad passive pin is typed and never fires this (the resistor-on-every-driven-net false\npositive that kept this row out of the catalog until PASSIVE entered the direction\nvocabulary), and a pin the read never saw a symbol for (a board footprint's pads, a\nsub-sheet component in a root-only hierarchy read) is a read gap, not an authoring gap, and\nis skipped via pin.declared. Gated on a driver being present: a wholly untyped read (a bare\nEDIF netlist with no direction data) has no drivers in evidence and stays silent by\nconstruction. Cross-sheet (external) nets are skipped. Virtual power-symbol pins carry\npower types by construction and are excluded as subjects.\n\n### Query structure\n\nselect the driven nets carrying a declared-but-untyped real pin.\n\n    select N in nets where count(distinct component(P) : P in N, hard_driver(P)) >= 1\n      and exists P in N.connections\n        where pin_dir(P) == unspecified and declared(P) and not virtual(P)\n\nReads: net.attributes, on_net, pin.electrical_type. Tier R."
+   },
+   {
+    "name": "duplicate-net-name",
+    "severity": "warning",
+    "summary": "Two electrically distinct nets carry the same name.",
+    "reads": [
+     "net.names"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A name is an identity: reviews, BOM tools, and cross-artifact joins (schematic vs board, revision diffs) assume one name means one net. Two nets under one name silently alias in every one of those views, and on connect-by-name formats the same slip would have MERGED the copper.",
+    "detail": "## duplicate-net-name\n\n### What it means\n\nMore than one net in the design states the same non-empty name.\n\n### Why engineers want it\n\nOn schematic formats connectivity IS naming \u2014 same-named labels\njoin \u2014 so this cannot happen there by construction (the solver merges them; see\nlabel-alias-conflict for the collapsed-alias hazards). It happens on formats with EXPLICIT\nnet lists (an EDIF netlist can state two (net VCC ...) entries) and wherever a tool export\nor a reader gap splits one logical net into two records. Either way, every consumer that\nkeys on net names \u2014 diff identity, board joins, reviews \u2014 is now quietly wrong.\n\n### Impact\n\nA revision diff keyed by name sees one net where the design has two; a\nschematic-vs-board join attaches findings to the wrong copper.\n\n![Two separate net records both named VCC are flagged; one net named VCC is fine](images/duplicate-net-name.svg)\n\n### Scope note\n\nFires once per claiming net (each is a place to fix). Synthesized stub\nnames (N$, unconnected-(...)) are per-net reader inventions and never collide; empty names\ncarry no claim. A firing on a fresh format's corpus is ALSO a read-health signal \u2014 check\nthe reader before the design (the pin-net-conflict lesson).\n\n### Query structure\n\nselect the nets whose exact name is stated by two or more nets.\n\n    select N in nets where count(M : M in nets, M.name == N.name) >= 2\n\nReads: net.names. Tier R."
+   },
+   {
+    "name": "label-alias-conflict",
+    "severity": "warning",
+    "summary": "One net carries two different sheet-scoped labels in the same scope.",
+    "reads": [
+     "net.attributes"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "Two labels on one wire read as two signals to every human and one net to the tool. Whichever name a reviewer greps for, half the net's story is elsewhere; and if the author MEANT two nets, the wire between the labels is the defect.",
+    "detail": "## label-alias-conflict\n\n### What it means\n\nAfter net solving, one net's collapsed alias list holds two or more\ndistinct sheet-scoped label names within a single sheet scope.\n\n### Why engineers want it\n\nLabels connect by name, so a wire carrying labels A and B pulls\neverything named A and everything named B into ONE net \u2014 usually a leftover label after a\nrename, or two nets drawn into accidental contact. KiCad's own ERC warns on it. The naming\npass picks one winner and the second name silently vanishes from the netlist.\n\n### Impact\n\nIf the merge was unintended, this is a short circuit drawn with text. If it was\nintended, every search, review note, and cross-reference under the losing name misses.\n\n![One wire carrying two distinct label names is flagged; the same name on both halves is fine](images/label-alias-conflict.svg)\n\n### Scope note\n\nSheet-scoped names only (rank != 0), compared WITHIN one scope: a\nhierarchy net legitimately carries one qualified name per sheet it crosses (/amp1/CTRL\njoining the root is not a conflict), and a design-wide rail name plus a local nickname is\nnormal (the rival-rail case is power-tap-conflict). Semantics cross-checked against\nkicad-cli sch erc.\n\n### Query structure\n\nselect nets whose alias list clashes within a scope.\n\n    select N in nets\n      where exists scope : count(distinct name : (scope, name) in aliases(N), scoped(name)) >= 2\n\nReads: net.attributes. Tier R."
+   },
+   {
+    "name": "power-tap-conflict",
+    "severity": "warning",
+    "summary": "One net is tapped by two different design-wide names (power symbols or global labels).",
+    "reads": [
+     "net.attributes"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A rail tapped +3V3 here and +3.3V there is one net pretending to be two rails. Every OTHER +3.3V tap in the design joins this net too \u2014 the classic multi-sheet capture slip where two supplies quietly become one, or one rail's consumers scatter across two names.",
+    "detail": "## power-tap-conflict\n\n### What it means\n\nOne net's collapsed alias list holds two or more distinct DESIGN-WIDE\nnames: power-symbol rails or global labels (rank 0 in the docs/22 scoping model).\n\n### Why engineers want it\n\nDesign-wide names unify by name across every sheet. Two of them\non one net means every tap of EITHER name anywhere in the design lands on this net \u2014 so a\nwire joining a +3V3 symbol to a +3.3V symbol does not just alias two spellings, it merges\ntwo design-wide rails. That is either a real short drawn with symbols or a naming split\nthat scatters one rail's story across two names.\n\n### Impact\n\nMerged rails (a 5V and 3V3 net joined through a mislabeled tap) are a\npower-integrity defect; split naming corrupts rail-level review and any per-rail analysis.\n\n![Two rival design-wide rail names on one net are flagged; one shared name is fine](images/power-tap-conflict.svg)\n\n### Scope note\n\nDesign-wide names only: a rail's local nickname (a sheet label on the VCC\nnet) is normal aliasing and stays quiet. Netclass consistency (one net, two netclasses) is\nNOT covered: netclasses live in the KiCad project file, which the reader deliberately\nstubs (OUT_OF_SCOPE.md). Formats whose readers emit every label at rank 0 (xschem, gEDA\ninline names) get the strict interpretation: any two names on one net are rivals there.\n\n### Query structure\n\nselect nets carrying two or more distinct rank-0 names.\n\n    select N in nets where count(distinct name : name in aliases(N), design_wide(name)) >= 2\n\nReads: net.attributes. Tier R."
+   },
+   {
+    "name": "test-point-coverage",
+    "severity": "info",
+    "summary": "A power rail or ground net has no test point, on a board that uses them.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "The nets you most need to see at bring-up are the ones you cannot reach with a probe on an assembled board. A rail without a test point means debugging a power problem by touching a component pad the size of a sand grain, and factory test cannot verify the rail at all.",
+    "detail": "## test-point-coverage\n\n### What it means\n\nA power rail or ground net carries no test-point component, on a design\nthat places test points elsewhere.\n\n### Why engineers want it\n\nA test point is a dedicated probe pad: its only job is to\nexpose a net so a scope probe (bring-up debugging) or a bed-of-nails / flying-probe\nmachine (factory test) can measure it on the assembled board. DFT review checklists ask\nfor the important nets \u2014 rails and ground first \u2014 to be probe-able; an unreachable rail\nis debugged by touching component pads the size of sand grains, and factory test simply\ncannot verify it.\n\n### Impact\n\nThe nets you most need to observe when a board misbehaves are exactly the ones\nthis rule covers: is the 3V3 rail actually at 3.3V, is ground clean, is the supply\nsagging under load. Missing coverage costs nothing at design time and everything at\nbring-up.\n\n![rail with a test point is fine; a rail with no test point is flagged](images/test-point-coverage.svg)\n\n### Scope note\n\nGated on the DESIGN using test points at all (the design.nc_channel\npattern): a board with zero TPs has no probe convention to violate, so small demo boards\nstay silent; a board with some TPs has declared the convention, making an uncovered rail\nan omission. \"Rail\" is the union of the rail FACTS (global, power_driven) and the rail /\nground NAME heuristics \u2014 name is the only rail evidence a directionless EDIF netlist\ncarries. Cross-sheet (external) nets are skipped. Connector pins can also provide probe\naccess in real DFT flows; counting them is a possible widening if the corpus shows the\nTP-only reading too strict. A regulator FEEDBACK / sense node reads as a rail by name (VCC..._FB)\nbut is a high-impedance sense point that must not be probed (a test point would load the divider and\nshift the regulated output), so it is EXCLUDED (WS3-067); the feedback patterns are naming-lexicon\nconfig a project extends (WS3-069). Severity info: DFT posture is a per-project policy and the reviewer\ndecides, the rule surfaces the genuine rails.\n\n### Query structure\n\ngate on the channel, select uncovered rails, excluding feedback sense nodes.\n\n    select N in nets where has_test_points(design)\n      and (rail_fact(N) or rail_name(N.name) or ground_name(N.name))\n      and not feedback_name(N.name)\n      and not exists T in N.connections where class(T) == test_point\n\nReads: component.class, net.attributes, net.names, on_net. Tier R.\n\n### For software readers\n\nA test point is a metrics endpoint: a tiny component whose only purpose is observability.\nThis rule is \"every critical path must emit telemetry\" \u2014 a power rail without a test\npoint is a service with no health check, fine until the day you desperately need to see\ninside it. The channel gate is the interesting part: the rule only fires on boards that\ninstrument SOMETHING, the way a lint rule for missing metrics only makes sense in a\ncodebase that has a metrics library wired up at all.\n\n![test-point coverage cases](images/tpcov-cases.png)\n"
+   },
+   {
+    "name": "floating-input",
+    "severity": "warning",
+    "summary": "An input pin sits on a net with no driver and no pull, so its level is undefined.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.pin_count",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A floating logic input drifts, picks up noise, and can oscillate or sit in the forbidden region where both transistors of a CMOS stage conduct. Behavior is non-deterministic and often temperature- and board-dependent, the worst kind of intermittent bug.",
+    "detail": "## floating-input\n\n### What it means\n\nA net that carries one or more input pins and nothing else that could set its\nlevel \u2014 no driver, no pull resistor, no rail. The input is left floating.\n\n### Why engineers want it\n\nUnused gate inputs, unconnected enable/mode pins, and forgotten pulls are\na standard bring-up surprise. A floating CMOS input is not a benign \"0\"; it drifts to the switching\nthreshold, draws shoot-through current, and couples noise, so the part misbehaves in ways that move\nwith temperature and a fingertip.\n\n### Impact\n\nNon-deterministic logic and excess current. It is a real defect, but the check must be\nconservative to stay quiet on legitimate nets.\n\n![Input-only net is flagged as floating; the same input pulled to a rail is fine](images/floating-input.svg)\n\n### Scope note (conservative on purpose)\n\nFires only when every pin on the net is an input (or an\nexplicit no-connect): the moment a driver, a passive (a pull), or a power pin is present the net is\nconsidered set and the rule stays quiet. A net with any un-typed (UNSPECIFIED) pin is skipped too,\nsince the reader could not classify it. This trades recall for near-zero false positives.\n\n### A passive member exempts the net\n\nA resistor on the net is the classic pull (the net\nis set); a cap or ferrite means a path this netlist-local rule cannot follow. Claiming\n\"floating\" past a passive is guesswork, so ANY passive-class member (resistor, capacitor,\ninductor, ferrite, fuse, test point) silences the rule for that net \u2014 which also absorbs\nlibraries that type passive pins INPUT (the Mentor EDIF corpus does for capacitors, which\nmade cap-plus-input nets read as all-input the moment pin keys joined correctly, WS1-025).\n\n### A diode terminal is not a logic input\n\nSome libraries type a diode/LED/TVS terminal (an anode or cathode) INPUT, the same way they\ntype passive pins. But a diode-only node's level is set by the diode network (a clamp, a\nsteering pair, a diode-OR), it is not an undriven logic input. So a diode-family pin is\nexcluded from the \"is there a logic input\" count. The exclusion is PER-PIN, not per-net:\na real IC input that merely carries a clamp diode still fires (the input is genuinely\nfloating), only a net whose input pins are all diode terminals goes quiet. (Without this, a\npair of steering-diode cathodes tied together read as an all-input net and false-fired; on\none real automotive netlist that was 36 findings, every one a diode network.)\n\n### Query structure\n\nselect all-input nets that carry no passive member and at least one non-diode logic input.\n\n    select N in nets where not exists P in N.connections where class(P) in passives\n      and any(input(P) and class(P) not in {diode, led, tvs})\n      and all(input(P) or no_connect(P))\n\nReads: component.class (the passive exemption and the diode-terminal exclusion),\nnet.attributes (the external skip), net.pin_count, on_net, pin.electrical_type. Tier R."
+   },
+   {
+    "name": "power-input-not-driven",
+    "severity": "error",
+    "summary": "A power-input pin sits on a net with no power source (no power-output and no power flag).",
+    "reads": [
+     "net.attributes",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A power-input pin (a chip's VCC/VDD) that nothing drives means the part is unpowered, or the rail was drawn but never tied to its regulator. The board either does not come up or a whole section is dead, and it is invisible until first power-on.",
+    "detail": "## power-input-not-driven\n\n### What it means\n\nA net that has a power-input pin (a VCC/VDD/rail-consuming pin) but no power\nsource: no power-output pin and no power flag asserting the rail is fed elsewhere.\n\n### Why engineers want it\n\nThis is KiCad's ERCE_POWERPIN_NOT_DRIVEN, and the reason power flags\nexist. A rail is often drawn as a named net (+3V3) with the regulator on another sheet; capture\ntools cannot see the source without either a power-output pin on the net or an explicit flag. A\npower-input with neither is almost always a real omission \u2014 the rail was named but never connected.\n\n### Impact\n\nThe part (or a whole supply domain) is unpowered. It is one of the highest-consequence\ncapture errors and only shows up at first power-on.\n\n![A power-input pin with no power-output driver and no power flag is flagged; a net driven by a power-output pin or asserted by a power flag is fine](images/power-input-not-driven.svg)\n\n### Scope note\n\nNeeds the power-in / power-out split (a reader that collapses both to a generic\npower pin cannot distinguish source from sink, so the rule does not fire). A power flag on the net,\nrecorded by the reader, counts as driven.\n\nConcretely, the rule is gated OFF on a source format that does not type power OUTPUTS \u2014 EDIF's port\ngrammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types\n(the `design.types_power_out` fact). There a rail's driver reads as a plain input, so \"no power source\"\nwould false-fire on every switched or derived rail. WS3-072 PR2 stamps the power-INPUT side so the\npower-in-only rules (decoupling-present, input-protection) work on EDIF; this rule waits for the\nsymmetric power-OUTPUT stamp (PR3) before it can run there soundly.\n\n### Query structure\n\nselect nets with a power-input, no driver, and no power flag.\n\n    select N in nets where any(power_in(P)) and not any(driver(P)) and not power_driven(N)\n\nReads: net.attributes (power_driven, external), on_net, pin.electrical_type. Tier R."
+   },
+   {
+    "name": "decoupling-present",
+    "severity": "warning",
+    "summary": "A power rail feeds power-input pins but has no decoupling capacitor on it.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "Chips draw current in sharp transients; without a local capacitor the rail sags and bounces at the pin. The board often works on the bench and then fails intermittently in the field (resets, corrupted logic, EMC failures), which is why decoupling review is a fixture of every design checklist.",
+    "detail": "## decoupling-present\n\n### What it means\n\nEvery supply rail that feeds a power-input pin (a chip's VCC/VDD) should carry\nat least one capacitor. The cap is the local charge reservoir that serves the chip's switching\ntransients; the regulator is electrically far away.\n\n### Why engineers want it\n\nMissing decoupling is a classic review catch and a recurring\nfield-reliability defect: the design works at the bench, then resets or corrupts under load or\ntemperature. Vendor app notes (TI, ST, NXP) specify decoupling per power pin precisely because it\nis external and easy to forget.\n\n### Impact\n\nSupply sag and ground bounce at the pin: intermittent resets, logic corruption, EMC\nfailures. Rarely visible at first power-on, expensive to find later.\n\n![Power rail with no capacitor is flagged; rail with a decoupling cap is fine](images/decoupling-present.svg)\n\n### Scope note\n\nThis is the netlist presence check: \"a capacitor somewhere on the rail\". It does\nnot check value, count-per-pin, or placement distance \u2014 proximity is a board-tier notion and the\nvalue/impedance version is a datasheet-joined rule (Tier X). Ground-named nets (GND/VSS/...) are\nskipped: their pins are power_in too, but decoupling is a supply-rail concept and the same\ncapacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a\nsheet we did not read). Capacitor identity is the shared component.class fact.\n\n### Query structure\n\nselect power nets with no capacitor member.\n\n    select N in nets where any(power_in(P)) and not ground(N)\n      and not exists C in N.connections where class(C) == capacitor\n\nReads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,\npin.electrical_type. Tier R."
+   },
+   {
+    "name": "bulk-cap",
+    "severity": "warning",
+    "summary": "A named power rail carries no capacitor at all (no bulk reservoir).",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A rail with zero capacitance has no charge reservoir: every load transient sags the rail, and the regulator's feedback loop may oscillate. Boards usually survive the lab and fail under real load patterns.",
+    "detail": "## bulk-cap\n\n### What it means\n\nEvery named power rail (a net an author gave a power symbol or asserted\nwith a power flag) should carry at least one capacitor.\n\n### Why engineers want it\n\nDecoupling is per-pin; bulk capacitance is per-rail. A rail with\nliterally no capacitance sags on every load step, and LDO datasheets require an output\ncapacitor for loop stability. This is the aggregate per-rail complement to\ndecoupling-present.\n\n### Impact\n\nRail droop under transients, regulator instability, resets that only reproduce\nunder real load patterns.\n\n![A power rail with no capacitor anywhere is flagged; a rail carrying bulk and decoupling caps is fine](images/bulk-cap.svg)\n\n### Scope note\n\nRail identity is the global / power_driven net facts (power symbols and\npower flags), not pin directions, so a rail feeding only passives is still covered;\ndecoupling-present quantifies over power-input pins instead, and the two deliberately\noverlap on a rail that has power pins and no caps. Ground-named nets are excluded\n(capacitors land ON ground from every rail; \"ground has no bulk cap\" is not a defect), and\nunresolved external nets are skipped (the cap may live in an unread sheet). Distinguishing\nbulk from local decoupling by value is a datasheet-joined refinement (WS10).\n\n### Query structure\n\nselect rails by fact, require a capacitor member.\n\n    select N in nets where (global(N) or power_driven(N)) and not ground_name(N)\n      and not exists P in N.connections where class(P) == capacitor\n\nReads: component.class, net.attributes (global, power_driven, external), net.names (the\nground-name skip), on_net. Tier R.\n"
+   },
+   {
+    "name": "crystal-load-caps",
+    "severity": "warning",
+    "summary": "A passive crystal has an oscillator terminal with no load capacitor to ground.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A quartz crystal oscillates at its rated frequency only with the specified load capacitance on each terminal. Omit a load cap and the oscillator either will not start, starts intermittently over temperature, or runs off-frequency, which corrupts every timed peripheral downstream (UART baud, USB, CAN bit timing). The failure is analog and load-dependent, so it routinely passes bring-up and fails in the field.",
+    "detail": "## crystal-load-caps\n\n### What it means\n\nA passive quartz crystal (a two-terminal resonator, ref-des `Y`/`XTAL`) needs a load\ncapacitor from each of its two oscillator terminals to ground. This rule flags a crystal\nterminal that carries no capacitor.\n\n### Why engineers want it\n\nA crystal is specified for a nominal LOAD CAPACITANCE (`C_L`), and the two load caps plus\nthe board stray capacitance are what present that load. With a load cap missing the\noscillator sees the wrong load: it may fail to start, start only sometimes across\ntemperature, or run off its rated frequency. Everything clocked from it drifts with it, so\nthe defect surfaces as flaky UART/USB/CAN timing rather than an obvious \"no clock\".\n\n### Impact\n\nOscillator no-start or off-frequency operation; timing-dependent field failures that pass\nbench bring-up.\n\n![Crystal with a load cap missing on one terminal is flagged; a cap on both terminals is fine](images/crystal-load-caps.svg)\n\n### Scope note\n\nThe rule quantifies over crystal COMPONENTS, not nets, because \"which terminals\" and \"is\nthis an active oscillator\" are both cross-net facts about the one part. A crystal that\nconnects to a non-ground POWER RAIL is treated as an ACTIVE oscillator (a packaged XO with\na Vdd pin, which supplies its own load internally and takes no external caps) and is\nskipped entirely, so the rule never demands load caps of the wrong device. Ground-named\nterminals (the grounded case pins of a 3- or 4-pin crystal) are not signal terminals and\nare excluded. An unresolved external net is skipped (the cap may live on an unread sheet),\nmatching the decoupling-present / bulk-cap external-skip convention. The load-cap VALUE\n(does `2*(C_L - C_stray)` match the crystal's spec) is a datasheet-joined refinement\n(WS10), out of scope here: this rule checks PRESENCE, not value.\n\n### For software readers\n\nThink of the crystal as a component with a hard runtime dependency that the type system\ncan't express: it only works when two specific companion parts (the load caps) are wired\nto it. This is a static \"is the required dependency present on this node\" check, the same\nshape as decoupling-present (\"does this power rail have its bypass cap\"). The active-XO skip\nis a guard clause: an active oscillator is a different type that satisfies the dependency\ninternally, and we detect it structurally (it has a power pin) rather than by trusting a\nname.\n\n### Query structure\n\nselect crystals; for each, gather non-ground terminal nets and whether it has a power pin;\nskip if powered; require a capacitor on each terminal net.\n\n    for Y in components where class(Y) == crystal:\n      terms   = nets(Y) where not ground(net)\n      powered = any net(Y) is a non-ground power rail\n      if powered: continue\n      for N in terms where not external(N):\n        if not exists P in N.connections where class(P) == capacitor: FIRE(Y, N)\n\nReads: component.class, net.attributes (external), net.names (the ground / power-rail\nskip), on_net. Tier R.\n"
+   },
+   {
+    "name": "resonator-redundant-load-caps",
+    "severity": "warning",
+    "summary": "A ceramic resonator with integrated load capacitors also has an external load cap to ground on a terminal.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A ceramic resonator of the built-in-cap family already presents its specified load capacitance internally. Adding external load caps to ground doubles the load: the total capacitance is now well above spec, so the oscillator starts slowly or off-frequency, or (over temperature and part spread) fails to start. The board usually oscillates on the bench and drifts or drops out in the field, and every timed peripheral clocked from it (UART baud, CAN bit timing) goes with it. It is a silent BOM/layout carry-over from a crystal design, invisible until the load is measured.",
+    "detail": "## resonator-redundant-load-caps\n\n### What it means\n\nA ceramic resonator of the built-in-cap family (Murata CERALOCK and kin, ref-des `Y`) already\ncontains its load capacitors, so its oscillator terminals connect straight to the driver and\nits center pin to ground. No external load caps are needed. This rule flags a resonator\nterminal that carries an external load capacitor to ground: the \"double load\" mistake.\n\n### Why engineers want it\n\nThe load a crystal or resonator sees sets whether it starts and at what frequency. A ceramic\nresonator with integrated caps is specified for that load already built in. Add external load\ncaps to ground and the total load roughly doubles, well above spec, so the oscillator starts\nslowly, starts only over part of the temperature range, or runs off-frequency. Everything\nclocked from it drifts with it. It is a common carry-over when a crystal footprint (which does\nneed the caps) is reused for an integrated-cap resonator, and it usually oscillates on the\nbench and fails in the field.\n\n### Impact\n\nSlow-start / no-start over temperature or off-frequency operation from an over-loaded\nresonator; timing-dependent field failures that pass bench bring-up.\n\n![A ceramic resonator with an external load cap to ground is flagged; a resonator wired with no external caps is fine](images/resonator-redundant-load-caps.svg)\n\n### Scope note\n\nThe rule quantifies over ceramic-resonator COMPONENTS. The `ceramic_resonator` class is\ndatasheet-seeded (WS10-015): the classifier cannot tell a resonator from a crystal by tokens,\nso an un-subtyped clock candidate is NOT treated as a resonator and this rule stays silent on\nit (a crystal genuinely needs its caps, which crystal-load-caps checks). A capacitor is counted\nas an external LOAD cap only when it sits on a resonator terminal net AND also reaches ground;\na coupling or series cap between two signals (not touching ground) is not a load cap and is not\nflagged. Ground-named nets are the resonator's center/case pin, not signal terminals. An\nunresolved external net is skipped (its wiring may live on an unread sheet), matching the\ncrystal-load-caps external-skip convention. This rule checks the PRESENCE of a redundant cap,\nnot its value; the exact integrated-cap value is a datasheet-joined refinement (WS10), out of\nscope here.\n\n### For software readers\n\nThis is the mirror of crystal-load-caps. A crystal is a component with a required companion\ndependency (load caps) that must be present; a built-in-cap resonator is a variant that\nsatisfies that dependency internally, so wiring the companion parts again is a redundant, and\nharmful, override of a default. The check is \"this node has a dependency it should NOT have,\"\nthe negative of \"this node is missing a dependency it must have.\" We detect the resonator\nvariant from its declared class (datasheet-seeded), not from a name, exactly as the active-XO\nskip in crystal-load-caps detects the self-satisfying variant structurally.\n\n### Query structure\n\nselect ceramic resonators; for each non-ground, resolved terminal net, fire if a capacitor on\nthat net also reaches ground.\n\n    ground_refs = { component | some pin on a ground net }\n    for Y in components where class(Y) == ceramic_resonator:\n      for N in nets(Y) where not ground(N) and not external(N):\n        if exists C in N.connections where class(C) == capacitor and C in ground_refs:\n          FIRE(Y, N, C)\n\nReads: component.class, net.attributes (external), net.names (the ground skip and cap-to-ground\ntest), on_net. Tier R.\n"
+   },
+   {
+    "name": "input-protection",
+    "severity": "warning",
+    "summary": "A connector feeds a power-input pin directly with no fuse or TVS in the path.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net",
+     "pin.electrical_type"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An unprotected power input passes every upstream fault into the board: a shorted load takes out the cable or supply instead of a fuse, and a hot-plug transient or miswired adapter reaches the regulator unclamped. A classic review finding with real field consequences.",
+    "detail": "## input-protection\n\n### What it means\n\nA net where a board connector directly meets a power-input pin must also\ncarry a protection device: a fuse or a TVS.\n\n### Why engineers want it\n\nThe power entry is the one net every external fault arrives on.\nReview checklists ask for a fuse (overcurrent) and a clamp (transient) between the jack and\nthe first regulator; forgetting them is invisible until the wrong charger shows up.\n\n### Impact\n\nShorted loads burn traces or supplies instead of opening a fuse; hot-plug and\nESD transients reach the regulator input unclamped.\n\n![connector-to-power-input path: a fuse or TVS makes it fine, a bare ferrite bead leaves it flagged](images/input-protection.svg)\n\n### Scope note\n\nSince WS3-011 the rule walks: from each connector net it follows series\npass elements (R/L/ferrite/fuse, the reach primitive, 3 hops) to find a power-input pin,\nand the path is protected if a FUSE was crossed to get there or a TVS hangs on any walked\nnet up to it. Before the walk, a series element split the net and the rule saw nothing \u2014\na fuse-protected board passed by accident, and an unprotected connector-bead-regulator\npath passed too (the false negative this upgrade closes). Fuse OR TVS satisfies the rule;\na per-design \"which protections are required\" policy is rule configuration (WS3-006).\nGround-named and unresolved external nets are skipped as before.\n\n### Query structure\n\nselect connector nets whose reach finds an unprotected power input.\n\n    select N in nets where exists C in N.connections where class(C) == connector\n      and exists M in reach(N, 3) where exists P in M.connections, pin_dir(P) == power_in\n      and not (fuse crossed on path(N..M) or exists T on path nets, class(T) == tvs)\n\nReads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,\npin.electrical_type, reach. Tier R.\n\n### For software readers\n\nA schematic is a graph: components are nodes with named pins, a net is a hyperedge joining\npins that are wired together. The concepts this rule leans on:\n\n- **Series (\"pass\") element**: a two-terminal part wired INLINE, like middleware in a\n  request pipeline. Because a net is \"everything directly touching\", an inline part SPLITS\n  one logical connection into two nets \u2014 which is why a per-net rule is like a function\n  that can only see its own local scope.\n- **Fuse**: a sacrificial circuit breaker, wired inline. \"Is there a fuse between the wall\n  plug and the machine\" is a PATH question, like \"does any middleware in the chain do auth\".\n- **TVS diode**: a surge protector hanging OFF the path to ground like a pressure-relief\n  valve; it is protection on a path net, not a crossing.\n- **Ferrite bead**: an inline noise filter, electrically transparent here \u2014 the classic\n  innocent reason a power path is split into two nets.\n- **Rail** (VCC, GND): a shared supply net like a global singleton; the walk never crosses\n  into one.\n\nThe two conformance fixtures, drawn:\n\n![reach cases](images/reach-cases.png)\n\nThe walk's crossing and stopping rules at a glance:\n\n![walk semantics](images/reach-semantics.png)\n"
+   },
+   {
+    "name": "esd-protection",
+    "severity": "info",
+    "summary": "An externally-exposed signal net (on a connector) has no TVS device.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net",
+     "pin.electrical_type",
+     "pin.no_connect",
+     "param.esd_rating"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that leaves the board through a connector is a direct ESD path into the IC behind it. Human contact discharges kilovolts; an unclamped data pin takes the hit. Failures are intermittent, latent, and appear in the field as flaky ports and dead interfaces.",
+    "detail": "## esd-protection\n\n### What it means\n\nA signal net a connector exposes to the outside world should carry a TVS\n(ESD clamp) device.\n\n### Why engineers want it\n\nESD protection on external interfaces is a standard review and\ncompliance item (IEC 61000-4-2 exists because fingers do). The clamp must be a deliberate\ncomponent on the net; internal chip protection is designed for handling, not for system-level\nstrikes.\n\n### Impact\n\nField failures that never reproduce in the lab: flaky USB ports, dead data lines\nafter winter, latent damage that surfaces weeks later.\n\n![External connector net without a TVS clamp is flagged; the same net with a TVS to ground is fine](images/esd-protection.svg)\n\n### Scope note\n\nA signal is treated as protected two ways: a discrete TVS clamps it (within a 2-hop series reach),\nOR an IC on the net carries a datasheet ESD rating at or above the credit floor (IC-integrated ESD,\nWS3-073, the common automotive posture). The IC path needs a seeded PartSpec (`--params`), so on a\ndesign read with no datasheets it is silent and the rule behaves as before. The IC path credits ONLY a\nSYSTEM-level rating (IEC 61000-4-2), NOT a handling model (HBM/CDM): the rating's test model is a\ndeclared `esd_test_model` attribute (WS3-077), and an unstated or handling rating never credits \u2014\ncrediting an HBM handling rating on a harness input would hide a real ESD gap, since handling ratings\nare for assembly, not field strikes. One refinement remains a follow-up: matching the rating to the\nconnector-facing PIN, not the whole part (deferred with WS3-077 \u2014 the PartSpec carries no structured\npin applicability, and the residue it would address is largely correct findings anyway).\n\n![an IC with no ESD rating is still flagged; an IC carrying a datasheet ESD rating credits the net as fine](images/esd-protection-ic-rated.svg)\n\n\"External\" is approximated as: the net has a connector-class member, no\npower pins, no rail facts (global / power_driven), no ground name, and no power-rail NAME\n(VCC/VDD/VBUS/12V-style); rails have their own rules (input-protection, bulk-cap), and the\nname check is the only rail evidence a directionless netlist (EDIF) carries. A DEBUG / TEST /\nedge-card / programming connector is excluded: it classifies as `test_connector` (WS3-066), a\ndistinct class from `connector`, so a bench interface (a JTAG header, a SAMTEC edge card) is not\ntreated as harness exposure; the debug-connector patterns are lexicon defaults a project can\nextend. Severity is info because the approximation still cannot know\nwhether a plain header is a real external interface or an unlabeled internal one; the corpus results\nare documented in the shipping PR. Since WS3-011 the clamp may sit one series\nhop away (connector -> series R -> clamped node, the classic ESD topology): the TVS\nexistence check runs over the net's 2-hop reach. True ordering (\"the clamp is\nconnector-side of the IC\") remains unmodeled; reach makes the existence check\ntopology-tolerant, not directional.\n\n### Query structure\n\nselect external signal nets, require a TVS member.\n\n    select N in nets where exists C in N.connections where class(C) == connector\n      and not exists P in N.connections where pin_dir(P) in {power_in, power_out}\n      and not ground_name(N) and not rail_name(N) and not global(N) and not intentional_nc(N)\n      and not exists G in N.connections where class(G) == tvs\n\nReads: component.class, net.attributes, net.names (the ground/rail-name skips), on_net,\npin.electrical_type, pin.no_connect (the no-connect skip). Tier R."
+   },
+   {
+    "name": "esd-clamp-not-tvs",
+    "severity": "info",
+    "summary": "An externally-exposed signal net is clamped by a Zener, not a fast ESD TVS.",
+    "reads": [
+     "component.class",
+     "net.attributes",
+     "net.names",
+     "on_net",
+     "pin.electrical_type",
+     "pin.no_connect",
+     "param.esd_rating"
+    ],
+    "tags": {
+     "category": "power",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A Zener clamps slower and at higher energy than a TVS designed for ESD (IEC 61000-4-2 is ns-scale). It gives transient / load-dump protection, but a review targeting ESD specifically may still want a dedicated TVS on the exposed pin. This is informational: the net is not unprotected, it is protected by the wrong device class for ESD.",
+    "detail": "## esd-clamp-not-tvs\n\n### What it means\n\nAn externally-exposed signal net (on a connector) has a **Zener clamp** in reach but no fast\n**ESD TVS**. The net is not unprotected, it is protected by a different device class than the one\nan ESD review usually asks for.\n\n### Why engineers want it\n\nESD compliance (IEC 61000-4-2) is a nanosecond-scale event; a TVS is engineered to turn on that\nfast and shunt the strike. A Zener diode clamps too, but slower and at higher clamping energy, so\nit is commonly a load-dump / flyback clamp on an output rather than a signal-ESD device. Flagging\n\"clamped by a Zener, not a TVS\" lets a reviewer decide, per their checklist, whether that satisfies\nthe ESD requirement for that pin or whether a dedicated TVS is still wanted. It is deliberately\n**info** severity: the finding is a distinction to weigh, not a defect.\n\n### Impact\n\nReported so a review can tell \"this pin has a Zener clamp\" apart from \"this pin has nothing.\" An\nESD-specific checklist item may accept it or require a TVS; a load-dump item may consider it done.\n\n    OPH0070 ---[ J1 ]---[ D3 zener ]---[ U2 ]   clamped, but not a fast TVS -> info\n    OPH0070 ---[ J1 ]---[ D3 tvs   ]---[ U2 ]   fast ESD clamp              -> not flagged\n\n![an external net clamped by a Zener is reported (info); the same net with a fast ESD TVS is not flagged](images/esd-clamp-not-tvs.svg)\n\n### Scope note\n\nThis rule and `esd-protection` partition the same external-signal nets (connector member, no power\npins, no rail facts, no ground / power-rail name, and not on a power path \u2014 see `esd-protection` for\nthe shared definition). A net with **no** protection in reach is `esd-protection`; a net whose only\nprotection in reach is a **Zener clamp** (no TVS, no IC ESD rating) is this rule. The two are mutually\nexclusive on any one net, so moving a net here removes it from the `esd-protection` count without\nhiding it. A TVS or a datasheet IC-ESD rating in reach satisfies both rules (neither fires).\n\nThe Zener is recognized by classification: a part whose `Description` (or other part text) carries a\n`zener` token classifies as the `zener` device class (distinct from `tvs`), the same\nnetlist-derived, config-extensible class lexicon that recognizes a TVS. As with the TVS check, the\nclamp may sit one series hop away (the reach walk is 2-hop), so a series resistor between the\nconnector and the clamp does not hide it.\n\n### For software readers\n\nA Zener clamp is a slower, higher-energy pressure-relief valve than a TVS. Both sit *beside* the\nsignal path and shunt overvoltage to ground; the TVS is the one rated for the fast ESD spike. This\nrule is a **classifier**, not a gate: it re-labels a subset of what `esd-protection` would otherwise\ncall \"unprotected\" as \"protected by the wrong class,\" so a downstream policy (a review manifest) can\nroute it to pass or fail without the engine hard-coding that judgment.\n\n### Query structure\n\nselect external signal nets with a Zener clamp in reach and no TVS / IC-ESD rating.\n\n    select N in nets where exists C in N.connections where class(C) == connector\n      and not exists P in N.connections where pin_dir(P) in {power_in, power_out}\n      and not ground_name(N) and not rail_name(N) and not global(N) and not intentional_nc(N)\n      and not tvs_reach(N) and not ic_esd_rated(N)\n      and zener_reach(N)\n\nReads: component.class, net.attributes, net.names, on_net, pin.electrical_type, pin.no_connect,\nparam.esd_rating (the IC-ESD exemption, optional). Tier R.\n"
+   },
+   {
+    "name": "i2c-pull-up",
+    "severity": "error",
+    "summary": "An I2C net (SDA/SCL) has no pull-up resistor.",
+    "reads": [
+     "net.names",
+     "on_net",
+     "component.class"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "I2C pins are open-drain: they can only pull the line low. With no pull-up the line never returns high, so the bus is stuck and nothing on it communicates. It is a total-function failure and a recurring field bug.",
+    "detail": "## i2c-pull-up\n\n### What it means\n\nEvery I2C net (its two lines are SDA and SCL) must have a pull-up resistor\nto its rail. Open-drain pins can only pull low; the pull-up returns the line high.\n\n### Why engineers want it\n\nOpen-drain is a shared-bus trick: many parts can pull the line low,\nand a single pull-up returns it high. The pull-up is external and easy to forget, especially\nwhen every chip on the bus has a weak internal pull-up that a designer wrongly assumes is\nenough. TI and others publish app notes on it precisely because it is a recurring field failure.\n\n### Impact\n\nA missing pull-up means the bus is stuck low and no device on it communicates.\n\n![An I2C line with no pull-up resistor is flagged; a line with a pull-up to the rail is fine](images/i2c-pull-up.svg)\n\n### Scope note\n\nThis is the presence check (is there a pull-up), which needs no datasheet. The\npull-up value being in range is a datasheet-joined rule (a separate, Tier-X check). Resistor\nidentity is the shared component.class fact: the ref-des prefix convention (R, RN) refined by\npart-type data when the source carries it.\n\nThe SDA/SCL name match is at a **token boundary**, not a substring (WS3-037): `SDA`, `SCL`,\n`I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK` do NOT \u2014 `SCL`\nabutting another letter is a different signal. Generalizing this presence check to an\narbitrary profile-declared signal set (CS, reset, boot straps) is the remaining WS3-037 work.\n\n### Query structure\n\nselect the I2C nets that have no resistor member.\n\n    select N in nets where is_i2c(N) and not exists P in N.connections where is_resistor(P)\n\nReads: net name (pattern), on_net, component.class (resistor). Tier R."
+   },
+   {
+    "name": "supply-exceeds-abs-max",
+    "severity": "error",
+    "summary": "A power-input pin sits on a rail whose nominal voltage exceeds the part's absolute-maximum supply rating.",
+    "reads": [
+     "param.supply_abs_max",
+     "pin.electrical_type",
+     "net.name",
+     "on_net"
+    ],
+    "tags": {
+     "category": "datasheet",
+     "distribution": "open",
+     "evidence": "datasheet",
+     "tier": "R"
+    },
+    "unavailableReason": "needs a seeded datasheet parameter set (check --params)",
+    "impact": "Exceeding an absolute-maximum rating is outside the vendor's stress envelope: the part may be damaged immediately or degrade in the field. Unlike a heuristic, this limit is the vendor's own number, with the page it came from.",
+    "detail": "## supply-exceeds-abs-max\n\n### What it means\n\nA component joined to a seeded datasheet spec (by MPN) has a power-input\npin on a rail whose name states a nominal voltage above the spec's absolute-maximum supply\nrating (VIN/VDD/VCC-family symbol, limit kind ABSOLUTE_MAX).\n\n![a rail above the datasheet abs-max is flagged; a rail under it is fine](images/supply-exceeds-abs-max.svg)\n\n### Why engineers want it\n\nThis is the wedge of the datasheet layer (docs/20): the limit is\nnot a heuristic threshold baked into a rule, it is the vendor's own number, carried with\nprovenance (document revision, page, table, extraction method, confidence) into the finding.\nReviewers verify the citation, not the tool.\n\n### Evidence honesty\n\nEvery input that cannot be trusted is a skip, never a guess:\n- no MPN, unseeded MPN, or no seeded set at all -> silent (skip-not-false-pass);\n- limit rows that are under-specified or carry text-only conditions are not compared\n  (param.MachineComparable, docs/20 comparison semantics);\n- units other than \"V\" are not converted (normalization is WS10-004);\n- a rail name with no parseable nominal, or with conflicting nominals, is not compared\n  (the net name is the only voltage evidence a netlist carries).\n\n### Query structure\n\njoin components to specs by MPN; for each power_in pin, parse the\nattached rail's nominal from its net name and compare against the most restrictive\nmachine-comparable abs-max supply row.\n\n    select C in components where spec(C) != nil\n      for P in pins(C) where electrical_type(P) == power_in\n        nominal(net(P)) > min(supply_abs_max(spec(C))) -> finding\n\nReads: param.supply_abs_max, pin.electrical_type, net.name, on_net. Tier R."
+   },
+   {
+    "name": "rail-nominal-out-of-recommended",
+    "severity": "warning",
+    "summary": "A power-input pin sits on a rail whose nominal voltage is outside the part's recommended operating supply range.",
+    "reads": [
+     "param.recommended_operating",
+     "pin.electrical_type",
+     "net.name",
+     "on_net"
+    ],
+    "tags": {
+     "category": "datasheet",
+     "distribution": "open",
+     "evidence": "datasheet",
+     "tier": "R"
+    },
+    "unavailableReason": "needs a seeded datasheet parameter set (check --params)",
+    "impact": "Outside the recommended operating range the datasheet's guaranteed specifications no longer hold: the part may still function, but its behavior is uncharacterized and margin, accuracy, and lifetime are no longer assured. Unlike a heuristic, the range is the vendor's own number, with the page it came from.",
+    "detail": "## rail-nominal-out-of-recommended\n\n### What it means\n\nA component joined to a seeded datasheet spec (by MPN) has a power-input pin on a rail whose\nname states a nominal voltage outside the spec's recommended operating supply range\n(VIN/VDD/VCC-family symbol, limit kind RECOMMENDED_OPERATING, min..max). The\nrecommended-operating sibling of `supply-exceeds-abs-max`: same datasheet join, but the\nvendor's functional envelope rather than the destroy-it ceiling.\n\n![a rail over the recommended maximum is flagged; a rail inside the range is fine](images/rail-nominal-out-of-recommended.svg)\n\n### Why engineers want it\n\nThe absolute-maximum rating says where the part is damaged; the recommended operating range\nsays where its datasheet specifications are guaranteed. A rail between the two still runs the\npart, but outside the vendor's characterized conditions: margin, accuracy, timing, and lifetime\nare no longer assured. Like its sibling, the range is the vendor's own number, carried with\nprovenance (document revision, page, table, extraction method, confidence) into the finding, so\na reviewer verifies the citation rather than trusting the tool.\n\n### For software readers\n\nA rail is a global constant every consumer reads; the recommended range is the part's declared\nprecondition on that constant. `supply-exceeds-abs-max` is the hard assertion that crashes the\nprocess (exceed it and the part may be destroyed); this rule is the softer contract check that\nthe input is inside the documented, supported range, where behavior is defined. Being outside it\nis like calling an API with an argument outside its documented domain: it may return something,\nbut nothing about the result is promised.\n\n### Evidence honesty\n\nEvery input that cannot be trusted is a skip, never a guess:\n- no MPN, unseeded MPN, or no seeded set at all -> silent (skip-not-false-pass);\n- limit rows that are under-specified or carry text-only conditions are not compared\n  (param.MachineComparable, docs/20 comparison semantics);\n- units other than \"V\" are not converted (normalization is WS10-004);\n- a rail name with no parseable nominal, or with conflicting nominals, is not compared;\n- a part that declares MORE THAN ONE recommended supply range is skipped entirely: a netlist\n  does not label which power-in pin is which supply, and the range is two-sided, so an\n  unlabeled pin cannot be matched to the right range without risking a false finding (per-pin\n  supply mapping is a follow-up). Its one-sided sibling has no such restriction because a\n  ceiling is conservative to apply across every power-in pin.\n\n### Query structure\n\njoin components to specs by MPN; act only on a part with a single machine-comparable\nrecommended supply row; for each power_in pin, parse the attached rail's nominal from its net\nname and flag it when it is above the row's max or below its min.\n\n    select C in components where spec(C) != nil\n      let R = recommended_operating(spec(C)) where |R| == 1\n        for P in pins(C) where electrical_type(P) == power_in\n          nominal(net(P)) > max(R) or nominal(net(P)) < min(R) -> finding\n\nReads: param.recommended_operating, pin.electrical_type, net.name, on_net. Tier R.\n"
+   },
+   {
+    "name": "cap-voltage",
+    "severity": "error",
+    "summary": "A capacitor's datasheet rated voltage does not clear the worst rail it touches times the derate factor.",
+    "reads": [
+     "component.class",
+     "component.mpn",
+     "net.max_voltage",
+     "on_net",
+     "param.cap_rated_voltage"
+    ],
+    "tags": {
+     "category": "datasheet",
+     "distribution": "open",
+     "evidence": "datasheet",
+     "tier": "R"
+    },
+    "unavailableReason": "needs a seeded datasheet parameter set (check --params)",
+    "impact": "A cap run at or above its rated voltage ages fast and fails early (ceramics also lose most of their capacitance near rating). Unlike a heuristic, the limit here is the vendor's own rated voltage, cited to its page.",
+    "detail": "## cap-voltage\n\n### What it means\n\nA component classed as a capacitor, joined by MPN to a seeded datasheet\nspec carrying a rated voltage (VDC/WV/VR-family symbol or a \"Rated Voltage\" row), sits on a\nrail whose declared voltage times the derate factor (`1.25`) exceeds that rating.\n\n![a cap whose derated rail exceeds its rating is flagged; margin is fine](images/cap-voltage.svg)\n\n### Why engineers want it\n\nThis is the stakeholder-named cap-voltage rule: the classic\nreview checklist item (\"is every cap rated for its rail, with margin?\") turned into a check\nwhose limit is the vendor's number with provenance, not a rule-of-thumb constant in code.\nThe finding cites the datasheet page/table so the margin is verifiable, which is the\ndatasheet layer's whole posture (docs/20).\n\n### Evidence honesty\n\nEvery untrusted input is a skip, never a guess: no MPN / unseeded MPN\n/ no seeded corpus; no machine-comparable rated-voltage row (docs/20 comparison semantics);\nunits other than \"V\"; a rail with neither a max_voltage attribute nor a name-derived\nnominal. The worst (highest) known rail among the cap's nets governs.\n\n### Query structure\n\nSpec-authored (docs/19 \"a rule is a value\"); the join and float\ncompare live in the cap_voltage_detail SpecFunc, which returns the violation sentence or \"\"\n\u2014 so the rule body stays AST and the derived Reads carry the param join as named relations.\n\n    select C in components where class(C) == capacitor\n      and cap_voltage_detail(C) != \"\"    // Vrated < worst_rail_V x 1.25, seeded and comparable\n\nReads: param.cap_rated_voltage, net.max_voltage, component.mpn, component.class, on_net. Tier R."
+   },
+   {
+    "name": "diff-pair-naming",
+    "severity": "warning",
+    "summary": "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net.",
+    "reads": [
+     "net.names"
+    ],
+    "tags": {
+     "category": "naming",
+     "distribution": "public-reference",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A broken pair means the layout tool never treats the two nets as coupled, so they route like ordinary signals and the high-speed link fails signal integrity. Caught at capture it is a one-line fix; caught after layout it means re-routing.",
+    "detail": "## diff-pair-naming\n\n### What it means\n\nA net named as the positive half of a differential pair (a \"_P\", \"_DP\", or\ntrailing \"+\" suffix) must have a matching negative half (\"_N\", \"_DN\", or trailing \"-\").\n\n### Why engineers want it\n\nHigh-speed signals travel as complementary pairs, and the naming\nconvention is how the pair is declared to every downstream tool that must route the two nets\ntogether with matched length. The two halves are authored separately, and nothing but the name\nties them, so a typo or a deleted net silently breaks the pair.\n\n### Impact\n\nThe layout tool never couples the two nets, so they get routed like ordinary\nsignals and the link fails signal integrity.\n\n![A positive net with no matching negative half is flagged; a complete P/N pair is fine](images/diff-pair-naming.svg)\n\n### Positive-anchored on purpose\n\nDetection anchors on the positive member. A lone \"_N\" suffix\nis ambiguous with active-low signals (RESET_N, WE_N), so treating every \"_N\" as an orphaned\npair half would fire on the most common real naming convention. A positive suffix does not\ncarry that ambiguity. The cost is that a stray negative with no positive is not reported, which\nis acceptable for a first rule.\n\n### Only when the design uses the convention\n\nThe rule fires only on a design that shows it uses differential-pair naming at all, i.e. at\nleast one *complete* pair (some `X_P` with a matching `X_N`) exists somewhere. A suffix like\n`_P` is weak evidence on its own: combinational netlists (the LGSynth benchmark family, for\nexample) carry hundreds of `_P`-suffixed signal names that are not differential, and without\nthis gate every one of them is a finding. Requiring pair-population evidence takes those\ndesigns to zero while a real board, which does declare complete pairs, still surfaces its\nbroken ones.\n\nThe cost is a design whose only differential pair is itself broken (one `X_P`, no `X_N`, and\nnothing else paired) stays silent. That is the same weak-signal case, so the trade is\ndeliberate. An operator who wants a stricter policy can add a naming convention via\n`--conventions`.\n\nFor software readers: this is the difference between \"the string ends in `_P`\" and \"this\ncodebase uses a `_P`/`_N` pairing convention that this one member violates.\" The second is\nonly a bug if the convention is in use.\n\n### Query structure\n\nGate on pair-population evidence, then select the positive-suffix nets whose expected\ncomplement is absent.\n\n    diff_convention_present(design)\n      and select N in nets where is_pos_diff(N) and not has_net(expected_negative(N))\n\nReads: net.names. Primitives: pattern (the suffix), pair (the P-to-N lookup and the\nconvention-present check). Tier R."
+   },
+   {
+    "name": "track-width",
+    "severity": "error",
+    "summary": "A routed track is narrower than the loosest common fabrication floor (0.127mm).",
+    "reads": [
+     "board.copper"
+    ],
+    "tags": {
+     "category": "board",
+     "distribution": "open",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "A trace below the fab's minimum width either fails DFM at order time or etches unreliably: opens, current-carrying failures, yield loss. A sub-floor trace is not tight routing; it is unmanufacturable by mainstream processes.",
+    "detail": "## track-width\n\n### What it means\n\nA routed copper segment narrower than 0.127mm (5mil), the minimum trace\nwidth of the loosest mainstream fabrication capability (the corpus JLCPCB rule set).\n\n![a trace narrower than the fab floor is flagged; an adequate width is fine](images/track-width.svg)\n\n### Why engineers want it\n\nTrack width is the first constraint every fab publishes and\nevery DRC ships. A sub-minimum trace is not a style choice: the fab rejects the board or\netches it unreliably.\n\n### Impact\n\nOrder-time rejection at best; intermittent opens and current failures at worst.\n\n### Scope note\n\nThe 0.127mm default is deliberately the loosest published floor, so the\nrule fires on defects rather than on deliberate tight routing under a capable fab's own\nrules; per-design thresholds arrive with rule parameterization (WS3-006). Available gates\nthe rule behind the board-geometry tier (a netlist-only design reports \"unavailable\", not\na silent pass).\n\n### Query structure\n\nselect nets with any segment below the floor.\n\n    select N in board.nets where count(S in N.segments where width(S) < 0.127mm) >= 1\n\nReads: board.copper. Tier P."
+   },
+   {
+    "name": "hole-size",
+    "severity": "error",
+    "summary": "A via's drill is smaller than the loosest common mechanical-drill floor (0.2mm).",
+    "reads": [
+     "board.copper"
+    ],
+    "tags": {
+     "category": "board",
+     "distribution": "open",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "A hole below the fab's minimum drill cannot be mechanically drilled: the order is rejected, or the via is silently upsized and clearances shift under you.",
+    "detail": "## hole-size\n\n### What it means\n\nA via whose drill diameter is below 0.2mm, the smallest mechanical\ndrill of the loosest mainstream capability set (the corpus JLCPCB rules).\n\n![a via drilled below the fab floor is flagged; an adequate drill is fine](images/hole-size.svg)\n\n### Why engineers want it\n\nDrill size is a hard tooling limit. Below it a fab either\nrejects the design or substitutes a larger drill, which silently changes annular rings\nand clearances.\n\n### Impact\n\nOrder-time rejection, or a board that differs from what was reviewed.\n\n### Scope note\n\nSame floor-default posture as track-width; per-design values are WS3-006.\nPad through-holes wait on pad-level drill facts; this rule covers vias, where the tiny\ndrills actually happen.\n\n### Query structure\n\nselect nets with any via drilled below the floor.\n\n    select N in board.nets where count(V in N.vias where drill(V) < 0.2mm) >= 1\n\nReads: board.copper. Tier P."
+   },
+   {
+    "name": "annular-width",
+    "severity": "error",
+    "summary": "A via's annular ring is thinner than the loosest common fabrication floor (0.075mm).",
+    "reads": [
+     "board.copper"
+    ],
+    "tags": {
+     "category": "board",
+     "distribution": "open",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "Drill wander eats the ring: a via with too little annulus breaks out of its pad on real tolerances, and the connection opens intermittently or fails outright.",
+    "detail": "## annular-width\n\n### What it means\n\nA via whose copper ring \u2014 (pad diameter minus drill) / 2 \u2014 is below\n0.075mm, the loosest mainstream floor (the corpus JLCPCB rules).\n\n![a via with a thin copper ring is flagged; an adequate ring is fine](images/annular-width.svg)\n\n### Why engineers want it\n\nDrills wander within tolerance; the annular ring is the margin\nthat keeps a wandered drill inside its pad. Too little ring means breakout: the barrel\ntangent to (or outside) the pad edge.\n\n### Impact\n\nIntermittent or open via connections that pass visual inspection.\n\n### Scope note\n\nSame floor-default posture as track-width; per-design values are WS3-006.\n\n### Query structure\n\nselect nets with any via whose ring is below the floor.\n\n    select N in board.nets where count(V in N.vias where annular(V) < 0.075mm) >= 1\n\nReads: board.copper. Tier P."
+   },
+   {
+    "name": "copper-clearance",
+    "severity": "error",
+    "summary": "Copper of two different nets sits closer than the 0.127mm fabrication floor.",
+    "reads": [
+     "board.copper"
+    ],
+    "tags": {
+     "category": "board",
+     "distribution": "open",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "Sub-clearance copper either fails DFM at order time or ships as a latent short: etch variance and solder bridging turn a too-tight gap into a connection the netlist never had. It is the defect DRC exists for.",
+    "detail": "## copper-clearance\n\n### What it means\n\nTwo track segments on the same copper layer, belonging to different\nnets, whose copper edges (centerline distance minus half of each width) come closer than\n0.127mm (5mil) \u2014 the loosest mainstream fab's minimum spacing (the corpus JLCPCB rules).\n\n![two different-net traces too close are flagged; adequate spacing is fine](images/copper-clearance.svg)\n\n### Why engineers want it\n\nClearance is the other half of every fab capability sheet.\nBelow it, etching cannot guarantee separation and solder bridges what etching spared:\nthe board acquires connections the schematic never had.\n\n### Impact\n\nOrder-time rejection at best; intermittent shorts in the field at worst.\n\n### Scope note\n\nSegment-to-segment on the same layer only: pad and zone clearances wait\non pad-shape geometry facts, and same-net spacing is not a defect. The pairwise walk is\nO(S\u00b2) with an early bounding-box reject; fine at corpus scale (hundreds of segments),\nand the benchmark documents where a spatial index (WS3-004) becomes necessary. One\nfinding per net PAIR, subject = the alphabetically first net, message naming both and\nthe worst gap.\n\n### Query structure\n\nthe pairwise spatial join the Phase-1 AST does not express:\n\n    select (S1, S2) in board.segments x board.segments\n      where net(S1) != net(S2) and layer(S1) == layer(S2)\n        and edge_distance(S1, S2) < 0.127mm\n\nReads: board.copper. Tier P. Primitives: select, geometry-distance (candidate primitive,\nnot yet in the AST \u2014 this rule is its evidence)."
+   },
+   {
+    "name": "led-polarity",
+    "severity": "error",
+    "summary": "An LED's anode sits on ground and its cathode on a power rail \u2014 mounted backwards.",
+    "reads": [
+     "component.class",
+     "net.names",
+     "on_net",
+     "pin.role"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A reversed LED simply never lights. It passes every connectivity check (both pins are wired), survives assembly, and shows up as a dead indicator at bring-up \u2014 a part-level rework for a capture-time slip.",
+    "detail": "## led-polarity\n\n### What it means\n\nAn LED whose anode pin lands on a ground-named net while its cathode\nlands on a power-rail-named net. Current would have to flow from ground to the rail; the\nLED never conducts.\n\n### Why engineers want it\n\nLED polarity is the classic capture slip: the symbol is\nsymmetric-looking, the footprint is not, and the netlist connects fine either way. Every\nreview checklist has \"check LED orientation\" precisely because no electrical check\ncatches it \u2014 both pins are properly wired, just to the wrong ends.\n\n### Impact\n\nA dead indicator discovered at bring-up; rework if the footprint is not\nhand-flippable.\n\n![LED reversed (anode on ground, cathode on rail) is flagged; forward wiring is fine](images/led-polarity.svg)\n\n### Pin roles are derived, not stated\n\nNo format carries polarity as data (KiCad LED pins\nare electrically passive; \"A\"/\"K\" are pin names), so the anode/cathode roles come from the\nname convention gated by device class \u2014 pin.role, the same projection posture as\ncomponent.class. An LED whose pins carry no recognizable names yields RoleUnknown and the\nrule stays silent (never guess).\n\n### LED-only, on purpose\n\nA zener or TVS wired cathode-to-rail is correct usage; the\ngeneral diode-orientation rule needs net-polarity facts and is tracked with the WS3-003\ncorpus row, not here.\n\n### Query structure\n\nselect LEDs whose role-resolved pins land on opposing rails.\n\n    select C in components where class(C) == led\n      and ground_name(net_of(anode(C))) and rail_name(net_of(cathode(C)))\n\nReads: component.class, net.names, on_net, pin.role. Tier R."
+   },
+   {
+    "name": "pin-net-conflict",
+    "severity": "info",
+    "summary": "A pin appears in more than one net's connections \u2014 malformed input.",
+    "reads": [
+     "pin.on_net",
+     "ref_des_collision"
+    ],
+    "tags": {
+     "category": "integrity",
+     "distribution": "open",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "Every consumer that asks which net a pin is on (rules, diff keying, highlights) gets an arbitrary answer for this pin. The netlist is not internally consistent, and anything derived from it inherits the ambiguity silently.",
+    "detail": "## pin-net-conflict\n\n### What it means\n\nOne (component, pin) appears in the connection lists of two or more\nnets. A net is the equivalence class of electrically joined pins, so membership is\nmany-pins-to-one-net by definition; multiple membership is not a design error a person\ndrew \u2014 it is malformed input from a reader bug or a corrupt export.\n\n### Why engineers want it\n\nThey should rarely see it. It exists as the integrity tripwire\nbehind every per-pin net question the engine answers (pin.role consumers, diff keys,\nviewer highlights): when the invariant breaks, this fires instead of every downstream\nanswer silently becoming arbitrary. PinNetName documents that it reports the first net in\ndesign order; this rule is why that arbitrary pick is safe. A firing points at the READ,\nnot the design: its first corpus run surfaced two reader gaps (unannotated placeholder\nrefs merged, WS1-024; duplicate port designators collapsed, WS1-025).\n\n### Impact\n\nWithout the tripwire, an inconsistent netlist degrades every derived answer\nquietly. With it, the file is flagged at check time with the claiming nets named.\n\n![Pin U1.3 claimed by two nets is flagged; the same pin on one net is fine](images/pin-net-conflict.svg)\n\n### Severity is info, deliberately\n\nBoth known producers of this state are reader gaps\n(WS1-024, WS1-025), so today a firing points at the tool's read of the file, not at the\ndesign \u2014 flagging it louder would blame the engineer for our keying. Revisit via severity\nconfiguration (WS3-006) once the reader fixes land and a firing is anomalous again.\n\n### One deliberate suppression\n\nA duplicated ref-des produces this state mechanically \u2014\neach colliding placement brings its own copper, so their shared (ref, pin) key lands in\nseveral nets. That root cause is duplicate-ref-des's finding; pins of collided ref-des\nare skipped here so one authoring slip yields one finding, not two. (Found on the\nsheetnav conformance fixture the moment this rule first ran: the tripwire works, it just\ncaught prey that already had an owner.)\n\n### Query structure\n\nreport each conflict the model collected.\n\n    select P in pin_net_conflicts where not ref_des_collided(P)\n\nReads: pin.on_net, ref_des_collision (the suppression). Tier P."
+   },
+   {
+    "name": "bus-not-modeled",
+    "severity": "info",
+    "summary": "A bus's member signals are not resolved into distinct nets.",
+    "reads": [
+     "bus.construct",
+     "net.names"
+    ],
+    "tags": {
+     "category": "integrity",
+     "distribution": "open",
+     "site": "diagnostic",
+     "tier": "P"
+    },
+    "available": true,
+    "impact": "A bus groups many signals under one drawn line. When its members do not each resolve to a net, connectivity for those signals is unmodeled: a diff, a rule, or a highlight over them is unreliable. On a flat sheet the member labels on the taps already form the nets, so this is silent; it fires where the members are genuinely unresolved (e.g. a hierarchical bus port), marking the read as incomplete rather than letting silence read as coverage.",
+    "detail": "## bus-not-modeled\n\n### What it means\n\nA bus on the schematic (a gEDA `U` segment, a KiCad `bus` / `bus_alias`, an\nxschem `NAME[n:0]` label, or an EDIF `array` port) whose member signals are NOT all resolved into\ndistinct nets. The bus names a set of members (a range `DATA[7:0]` expands to `DATA0..DATA7`, or a\n`bus_alias` lists them); the finding fires when one or more of those members is not a net in the read.\n\n### Why engineers want it\n\nA bus is a drawing shorthand: one line stands for many signals. What\nmatters for every downstream answer (a diff, a rule, a highlight) is that each member ends up as its\nown net. On a flat sheet that already happens: KiCad requires a member label on every bus tap, so the\nmembers form nets by name and the bus is effectively modeled. The finding is SILENT there. It fires\nwhere the members are genuinely unresolved, so the read-gap is visible instead of silent.\n\n### Impact\n\nCorrupt or missing connectivity for the unresolved members, with no other symptom until\na rule misfires or a diff lies. Info severity because the cause is the reader, not the design.\n\n![a bus whose members each resolve to a net is fine; one whose members are unresolved is flagged](images/bus-not-modeled.svg)\n\n### The one subtlety\n\nResolution is checked by member NAME. A flat sheet's member labels are bare\n(`DATA0`), so they match the bus's expanded members and the bus reads as resolved. A hierarchy read\nqualifies a sheet-local member net per instance (`/amp1/DATA0`), which does NOT match the bare\n`DATA0` \u2014 correctly flagging a bus whose members do not cross a sheet boundary (a hierarchical bus\nport), the case where connectivity really is lost. Verified against `kicad-cli sch export netlist`:\na flat bussed sheet produces exactly the member nets, so the rule stays silent on it.\n\n### Scope note\n\nDetection + resolution-checking is where this rule stops. Actually EXPANDING a bus\nacross a sheet boundary (a hierarchical bus port) into crossing member nets is the remaining WS1-034\nwork; until then this rule flags those cases rather than silently mis-reading them. Drawing the bus\ntrunk on the canvas is a separate concern (WS7-042).\n\n### Query structure\n\nreport each bus whose members are not all present as nets.\n\n    select B in unmodeled_buses where exists M in members(B) : not net_exists(M)\n\nReads: bus.construct (a reader diagnostic), net.names. Tier P.\n"
+   },
+   {
+    "name": "profile/spi_nor-signal-missing",
+    "severity": "error",
+    "summary": "A required SPI_NOR signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SPI_NOR",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An SPI_NOR bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/spi_nor-host-incomplete",
+    "severity": "error",
+    "summary": "A required SPI_NOR signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SPI_NOR",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An SPI_NOR bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/spi_nor-missing-pullup",
+    "severity": "warning",
+    "summary": "A SPI_NOR signal that needs a pull-up reaches no rail.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SPI_NOR",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An open-drain or chip-select line with no pull-up floats to an undefined level between drives, so the device can select or clock spuriously at power-up.",
+    "detail": "## missing-pullup\n\n### What it means\n\nA signal the profile marks as needing a pull-up (a chip-select, an open-drain line) whose net\nreaches no power/ground rail \u2014 no pull-up resistor in its path.\n\n### Why engineers want it\n\nAn open-drain or chip-select line with no pull-up floats between drives. At power-up, before any\ndriver takes it, it can sit at an undefined level and select or clock the device spuriously. The\npull-up is what holds it inactive.\n\n### How it is checked\n\n`reaches(?net, ?rail), rail(?rail)` \u2014 the net reaches a rail by crossing a series pass element (the\npull-up resistor). If no such rail is reachable, the line is unpulled. Uses the merged reach walk\nand the `rail` relation, so no geometry is needed.\n\n### For software readers\n\nA pull-up is a default value: absent it, the line has no defined idle state, the hardware analogue\nof reading an uninitialised variable. The rule checks the default is wired in.\n"
+   },
+   {
+    "name": "profile/spi_nor-signal-dangling",
+    "severity": "warning",
+    "summary": "A SPI_NOR signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SPI_NOR",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "profile/emmc-signal-missing",
+    "severity": "error",
+    "summary": "A required eMMC signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "eMMC",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An eMMC bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/emmc-host-incomplete",
+    "severity": "error",
+    "summary": "A required eMMC signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "eMMC",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An eMMC bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/emmc-missing-pullup",
+    "severity": "warning",
+    "summary": "A eMMC signal that needs a pull-up reaches no rail.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "eMMC",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An open-drain or chip-select line with no pull-up floats to an undefined level between drives, so the device can select or clock spuriously at power-up.",
+    "detail": "## missing-pullup\n\n### What it means\n\nA signal the profile marks as needing a pull-up (a chip-select, an open-drain line) whose net\nreaches no power/ground rail \u2014 no pull-up resistor in its path.\n\n### Why engineers want it\n\nAn open-drain or chip-select line with no pull-up floats between drives. At power-up, before any\ndriver takes it, it can sit at an undefined level and select or clock the device spuriously. The\npull-up is what holds it inactive.\n\n### How it is checked\n\n`reaches(?net, ?rail), rail(?rail)` \u2014 the net reaches a rail by crossing a series pass element (the\npull-up resistor). If no such rail is reachable, the line is unpulled. Uses the merged reach walk\nand the `rail` relation, so no geometry is needed.\n\n### For software readers\n\nA pull-up is a default value: absent it, the line has no defined idle state, the hardware analogue\nof reading an uninitialised variable. The rule checks the default is wired in.\n"
+   },
+   {
+    "name": "profile/emmc-signal-dangling",
+    "severity": "warning",
+    "summary": "A eMMC signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "eMMC",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "profile/can-signal-missing",
+    "severity": "error",
+    "summary": "A required CAN signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "CAN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An CAN bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/can-host-incomplete",
+    "severity": "error",
+    "summary": "A required CAN signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "CAN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An CAN bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/can-termination-missing",
+    "severity": "warning",
+    "summary": "A CAN bus has no termination across _CANH/_CANL.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "CAN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A differential bus with no termination resistor across its pair reflects signals off the unterminated end, corrupting data at speed; the link may pass at low rate and fail intermittently under load.",
+    "detail": "## termination\n\n### What it means\n\nA profile whose bus needs termination (a differential pair like CAN's CANH/CANL, or RS-485) is in\nuse, but no single component bridges its two designated signal nets \u2014 the terminating resistor is\nmissing.\n\n### Why engineers want it\n\nA differential bus with no termination reflects its own signal off the unterminated end. At low\nspeed the link often works, so the omission survives bring-up; under load or at rate the reflections\ncorrupt data and the fault reads as intermittent, hard-to-localize bus errors rather than an obvious\ndead link. Termination is easy to forget precisely because its absence is not immediately fatal.\n\n### How it is checked\n\n`terminated(?h)` is derived when a high-suffix net (e.g. `_CANH`) `reaches` a low-suffix net\n(`_CANL`) through the series-passive walk. That walk crosses only 2-net R/L/ferrite/fuse elements,\nso it finds the terminating resistor across the pair but does NOT cross the multi-pin transceiver\nthat legitimately drives both lines \u2014 and because it is transitive it also accepts a split\ntermination (two 60\u03a9 resistors with a midpoint). When the interface is in use (the confidence gate\nholds) and nothing terminates the pair, the high net is reported as unterminated. The two suffixes\nare the requirement's `high`/`low` params, so the same compiler serves any differential bus that\nnames its pair by convention.\n\n### For software readers\n\nIt is a topology assertion: \"somewhere in the graph, one node must connect these two specific edges.\"\nThe signals can each be present and fully wired (presence and dangling checks pass) while the\nbridging element between them is absent \u2014 like two services that are both up and reachable but with\nno configured link between them.\n"
+   },
+   {
+    "name": "profile/can-signal-dangling",
+    "severity": "warning",
+    "summary": "A CAN signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "CAN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "profile/lin-signal-missing",
+    "severity": "error",
+    "summary": "A required LIN signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "LIN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An LIN bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/lin-host-incomplete",
+    "severity": "error",
+    "summary": "A required LIN signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "LIN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An LIN bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/lin-missing-pullup",
+    "severity": "warning",
+    "summary": "A LIN signal that needs a pull-up reaches no rail.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "LIN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An open-drain or chip-select line with no pull-up floats to an undefined level between drives, so the device can select or clock spuriously at power-up.",
+    "detail": "## missing-pullup\n\n### What it means\n\nA signal the profile marks as needing a pull-up (a chip-select, an open-drain line) whose net\nreaches no power/ground rail \u2014 no pull-up resistor in its path.\n\n### Why engineers want it\n\nAn open-drain or chip-select line with no pull-up floats between drives. At power-up, before any\ndriver takes it, it can sit at an undefined level and select or clock the device spuriously. The\npull-up is what holds it inactive.\n\n### How it is checked\n\n`reaches(?net, ?rail), rail(?rail)` \u2014 the net reaches a rail by crossing a series pass element (the\npull-up resistor). If no such rail is reachable, the line is unpulled. Uses the merged reach walk\nand the `rail` relation, so no geometry is needed.\n\n### For software readers\n\nA pull-up is a default value: absent it, the line has no defined idle state, the hardware analogue\nof reading an uninitialised variable. The rule checks the default is wired in.\n"
+   },
+   {
+    "name": "profile/lin-signal-dangling",
+    "severity": "warning",
+    "summary": "A LIN signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "LIN",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "profile/a2b-signal-missing",
+    "severity": "error",
+    "summary": "A required A2B signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "A2B",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An A2B bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/a2b-host-incomplete",
+    "severity": "error",
+    "summary": "A required A2B signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "A2B",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An A2B bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/a2b-signal-dangling",
+    "severity": "warning",
+    "summary": "A A2B signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "A2B",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "profile/pcie-signal-missing",
+    "severity": "error",
+    "summary": "A required PCIe signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "PCIe",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An PCIe bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/pcie-host-incomplete",
+    "severity": "error",
+    "summary": "A required PCIe signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "PCIe",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An PCIe bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/pcie-signal-dangling",
+    "severity": "warning",
+    "summary": "A PCIe signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "PCIe",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "profile/sgmii-signal-missing",
+    "severity": "error",
+    "summary": "A required SGMII signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SGMII",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An SGMII bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/sgmii-host-incomplete",
+    "severity": "error",
+    "summary": "A required SGMII signal is absent.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SGMII",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "An SGMII bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.",
+    "detail": "## signal-missing\n\n### What it means\n\nAn interface profile lists the signals a bus must have. This fires when the interface is **in use**\n\u2014 its anchor signal (e.g. SPI-NOR's chip-select) is present \u2014 but a required signal net is absent.\nSignals are matched by net-name suffix.\n\n### Why engineers want it\n\nThe most common bus-wiring slip is a forgotten line: five of six SPI-NOR signals wired, one missed.\nEach \"verify signal X connected\" review item is really this one check applied per signal \u2014 the\nprofile encodes the required set once, and the rule flags whichever member is missing.\n\n### Why it anchors on a present signal (and what it does not catch)\n\nA datalog rule fires on rows; an absent net is not a row. So \"IO2 is missing\" is reported against\nthe interface's **anchor** net (which is present), one finding per missing signal. The deliberate\nlimit: if the anchor itself is absent \u2014 a wholly-missing interface \u2014 there is nothing to anchor on,\nand the rule stays silent. Detecting a required interface that is entirely absent needs a declared\nhost or a design-intent statement (a later refinement), not a name convention.\n\n### For software readers\n\nThe profile is an interface/protocol definition; this is the check that an implementation provides\nevery member the interface declares. \"Anchored on a present signal\" is like validating a\npartially-filled config: you can flag the missing keys only once you can tell the config is meant to\nbe there at all.\n"
+   },
+   {
+    "name": "profile/sgmii-signal-dangling",
+    "severity": "warning",
+    "summary": "A SGMII signal net has fewer than two connections.",
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "profile": "SGMII",
+     "source": "profile",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+    "detail": "## signal-dangling\n\n### What it means\n\nA profile signal net that exists by name but carries fewer than two connections \u2014 present in the\nnetlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not\nactually reached.\n\n### Why engineers want it\n\n\"Present by name\" and \"actually connected\" are different. A net can be labelled `SPI_IO2` and touch\nonly the flash, with the controller end forgotten. Signal-missing would not fire (the net exists);\nthis catches the half-made connection by its fan-out.\n\n### How it is checked\n\n`net.pin_count(?net, ?c), ?c < 2` over the profile's signal nets. A single-connection net is a stub:\nnamed, but not wired through.\n\n### For software readers\n\nThe net exists, so a null check passes \u2014 but it has one endpoint where it needs two, like a\nreference that is non-null but points at an object with a required field unset. Presence is not\nconnectivity.\n"
+   },
+   {
+    "name": "dl/power-pin-mistyped",
+    "severity": "warning",
+    "summary": "A pin named like power/ground but not typed power_in sits alone on its net.",
+    "reads": [
+     "pin.role",
+     "pin.type",
+     "pin.net",
+     "net.pin_count",
+     "has_nc_channel"
+    ],
+    "tags": {
+     "category": "connectivity",
+     "distribution": "open",
+     "source": "dl",
+     "tier": "R"
+    },
+    "available": true,
+    "impact": "power-input-not-driven catches an unconnected power pin only when the symbol types it as a power input. A pin the symbol author named VDD or GND but left typed as a plain signal slips through it; if that pin is also wired to nothing, the part loses a supply or a ground silently. This is the gap, expressed in datalog over the pin relations.",
+    "detail": "## power-pin-mistyped\n\n### What it means\n\nA pin whose *name* says power or ground (`VDD`, `VCC`, `VBAT`, `GND`, `VSS`, ... \u2014 the same\nrail-name family that gives it a power/ground `pin.role`) but whose *electrical type* is not\n`power_in`, sitting alone on its net (a single-connection stub). The symbol author named the pin\nlike a supply but typed it like a signal, and then left it wired to nothing.\n\n### Why engineers want it\n\n`power-input-not-driven` already flags an unconnected power pin \u2014 but only when the symbol types\nthe pin as `power_in`. A pin named `VDD` yet typed `passive` (a common symbol-authoring slip) is\ninvisible to it. This rule covers exactly that gap: name says power, type does not, and the pin is\neffectively unconnected.\n\n    U1 pin \"VDD\", typed power_in, on a stub   -> power-input-not-driven (not this rule)\n    U1 pin \"VDD\", typed passive,  on a stub   -> power-pin-mistyped (this rule)\n    U1 pin \"VDD\", typed passive,  wired to a rail -> fine (not alone on its net)\n\n### Why \"alone on its net\", not \"unconnected\"\n\nA KiCad schematic reader synthesizes a one-pin net for every bare pin, so a pin is never literally\n\"on no net\" \u2014 an unconnected pin reads as a net with one connection. So the rule keys on net\n**fan-out** (`net.pin_count < 2`), not net membership. This is the reason the earlier membership-based\nformulation was a no-op on KiCad.\n\n### How it is written\n\nIt is a datalog rule (`query.RuleFromQuery`, WS3-038), not Go or Spec:\n\n    bad(?ref,?pin,?net) :- pin.role(?ref,?pin,\"power\"),  not pin.type(?ref,?pin,\"power_in\"),\n                           pin.net(?ref,?pin,?net), net.pin_count(?net,?c), ?c < 2, has_nc_channel(?_);\n    bad(?ref,?pin,?net) :- pin.role(?ref,?pin,\"ground\"), ... ;\n    bad(?ref,?pin,?net) => ?ref, ?pin, ?net\n\nTwo rules (power, ground) share one head; each answer row is one finding.\n\n### Where it stays silent (conservative on purpose)\n\n- **`has_nc_channel` gate** \u2014 silent on a format that cannot express intentional no-connect, so a\n  legitimately single-connection supply pin on such a format is not a false positive.\n- **No power/ground role** \u2014 a bare netlist with numeric pin names (some EDIF exports) derives no\n  role, so no pin qualifies. Silent, not guessed.\n- **Correctly-typed pins** \u2014 a `power_in` pin is left to `power-input-not-driven`; this rule does\n  not double-report it.\n\n### For software readers\n\n`power-input-not-driven` is a type-checked assertion: it trusts the pin's declared *type*.\n`power-pin-mistyped` is the lint for when the declared type disagrees with the *name* \u2014 like a\nfield named `passwordHash` typed `PlainString`. The name encodes intent the type contradicts, and\nthe value (here, the wiring) is also wrong. It fires only where the name-vs-type mismatch and the\nmissing connection coincide, so it complements the type-checked rule instead of duplicating it.\n"
+   }
+  ]
+ },
+ "checkDesign": {
+  "findings": [
+   {
+    "rule": "esd-protection",
+    "severity": "info",
+    "subject": {
+     "kind": "net",
+     "ref": "USB_D+",
+     "netId": "012870ae2b6b"
+    },
+    "message": "externally-exposed signal net has no ESD protection",
+    "provenance": {
+     "sourceFile": "/Users/dzshrh/work/hw/Agni/docs/demo/showcase.fires.kicad_sch"
+    },
+    "sheets": [
+     "/"
+    ]
+   },
+   {
+    "rule": "esd-protection",
+    "severity": "info",
+    "subject": {
+     "kind": "net",
+     "ref": "USB_D-",
+     "netId": "96db58278460"
+    },
+    "message": "externally-exposed signal net has no ESD protection",
+    "provenance": {
+     "sourceFile": "/Users/dzshrh/work/hw/Agni/docs/demo/showcase.fires.kicad_sch"
+    },
+    "sheets": [
+     "/"
+    ]
+   },
+   {
+    "rule": "i2c-pull-up",
+    "severity": "error",
+    "subject": {
+     "kind": "net",
+     "ref": "SCL",
+     "netId": "9de85e683cf7"
+    },
+    "message": "I2C net has no pull-up resistor",
+    "provenance": {
+     "sourceFile": "/Users/dzshrh/work/hw/Agni/docs/demo/showcase.fires.kicad_sch"
+    },
+    "sheets": [
+     "/"
+    ]
+   }
+  ]
+ }
+}

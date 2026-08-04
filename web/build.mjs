@@ -33,6 +33,9 @@ const solidAlias = {
 const appBundles = [
   { entry: "src/main.ts", outfile: "static/app.js" },
   { entry: "src/datasheets.ts", outfile: "static/datasheets.js" },
+  // embed.ts is a library bundle: the real panels mounted as standalone islands
+  // for an external host (the docs site), driven by a recorded backend (WS14-006).
+  { entry: "src/embed.ts", outfile: "static/embed.js" },
 ];
 
 const solidBuild = (b) => ({
