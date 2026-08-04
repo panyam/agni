@@ -618,10 +618,16 @@ func isTitleBlockPlaceholder(v string) bool {
 // logical net, inner physical net-segment groups carrying the wires); the wires are
 // gathered from the whole subtree and keyed by the outer net name.
 func wireOf(n *node, src string) *geom.WireGeometry {
-	_, disp := nameParts(n.Arg(1))
+	// Name the wire by its net, preferring the display name and falling back to the id, the same
+	// resolution the netlist read uses (nm.best) so the geometry wire.Net EQUALS the ir.Net name a
+	// finding carries. A bare (name ID) net has no display, so the id is the join key; discarding it
+	// (the old code kept only the display, then atom(), which is empty for the (name ...) compound)
+	// left every .eds wire unnamed and made net-subject findings unlocatable on the .eds canvas
+	// (WS1-047: the .edn is analysis truth, the .eds a companion joined BY NET NAME).
+	id, disp := nameParts(n.Arg(1))
 	name := disp
 	if name == "" {
-		name = atom(n.Arg(1))
+		name = id
 	}
 	w := &geom.WireGeometry{Net: name, Prov: &geom.Provenance{SourceFile: src}}
 	var figs []*node
