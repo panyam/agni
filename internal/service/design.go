@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/protobuf/proto"
+
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -333,14 +335,89 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, err)
 	}
 
+	// On a NAME-ONLY canvas (a faithful .eds / WS1-047 companion schematic: wires named by net but
+	// carrying no per-instance net_id), a net spec that targets a net by id alone cannot match, so
+	// resolve those ids to their net NAMES via the netlist and add them for a name-join.
+	specs := s.nameJoinSpecs(ctx, mount, path, g, req.GetSpecs())
+
 	resp := &webapi.HighlightSheetResponse{}
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_SVG {
-		resp.Content = &webapi.HighlightSheetResponse_Svg{Svg: render.HighlightSVG(g, sheet, req.GetSpecs())}
+		resp.Content = &webapi.HighlightSheetResponse_Svg{Svg: render.HighlightSVG(g, sheet, specs)}
 	} else { // UNSPECIFIED or PACKED
 		// Style does not affect packing indices/keys, so the default-style pack joins the
 		// styled GetSheet pack exactly (same primitive table).
 		packed := render.PackSheet(g, sheet)
-		resp.Content = &webapi.HighlightSheetResponse_Packed{Packed: render.HighlightPacked(packed, req.GetSpecs())}
+		resp.Content = &webapi.HighlightSheetResponse_Packed{Packed: render.HighlightPacked(packed, specs)}
 	}
 	return resp, nil
+}
+
+// nameJoinSpecs adapts highlight specs for a NAME-ONLY geometry canvas (a faithful .eds / WS1-047
+// companion schematic). Such a canvas names its wires by net but carries no per-instance net_id —
+// the net_id hashes ref-des, which the schematic under-annotates, so it can never match the
+// netlist's id. A spec that targets a net by id alone therefore matches nothing there. This resolves
+// each spec's net_id to its net NAME (from the netlist at path) and adds it, so the match lands by
+// name. It is a NO-OP on an id-capable canvas (nameOnlyCanvas is false) and when no spec carries a
+// bare net_id, so the primary-canvas per-instance precision and the goldens are untouched.
+func (s *DesignService) nameJoinSpecs(ctx context.Context, mount, path string, g *geom.SchematicGeometry, specs []*geom.HighlightSpec) []*geom.HighlightSpec {
+	if !nameOnlyCanvas(g) || !anyNetIDSpec(specs) {
+		return specs
+	}
+	d, err := s.loader.Design(ctx, mount, path)
+	if err != nil {
+		return specs // cannot resolve the netlist: leave specs as-is, no worse than before
+	}
+	idToName := map[string]string{}
+	for _, n := range d.GetNets() {
+		if id := n.GetId(); id != "" {
+			idToName[id] = n.GetName()
+		}
+	}
+	out := make([]*geom.HighlightSpec, len(specs))
+	for i, sp := range specs {
+		if len(sp.GetNetIds()) == 0 {
+			out[i] = sp
+			continue
+		}
+		seen := map[string]bool{}
+		for _, nm := range sp.GetNets() {
+			seen[nm] = true
+		}
+		cp := proto.Clone(sp).(*geom.HighlightSpec) // don't mutate the request's specs
+		for _, id := range sp.GetNetIds() {
+			if nm := idToName[id]; nm != "" && !seen[nm] {
+				cp.Nets = append(cp.Nets, nm)
+				seen[nm] = true
+			}
+		}
+		out[i] = cp
+	}
+	return out
+}
+
+// nameOnlyCanvas reports whether a geometry names its wires by net but carries no per-instance
+// net_id — the faithful .eds / companion case where a net highlight must join by name, not id.
+func nameOnlyCanvas(g *geom.SchematicGeometry) bool {
+	named := false
+	for _, sh := range g.GetSheets() {
+		for _, w := range sh.GetWires() {
+			if w.GetNetId() != "" {
+				return false // an id-capable canvas: id-join works, leave it alone
+			}
+			if w.GetNet() != "" {
+				named = true
+			}
+		}
+	}
+	return named
+}
+
+// anyNetIDSpec reports whether any spec targets a net by id (so a name resolution is worth doing).
+func anyNetIDSpec(specs []*geom.HighlightSpec) bool {
+	for _, sp := range specs {
+		if len(sp.GetNetIds()) > 0 {
+			return true
+		}
+	}
+	return false
 }
