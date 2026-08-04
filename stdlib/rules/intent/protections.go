@@ -25,6 +25,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 		Name:     "protection-" + kind,
 		Severity: "warning",
 		Summary:  fmt.Sprintf("a rail the design intent declares needs %s protection has none", kind),
+		Detail:   intentDoc("protection-" + kind),
 		Impact:   "a power rail the design was intended to protect (OV clamp / discharge path) lacks the protection device",
 		Reads:    []string{"component-on-net", "component.class", "net.ground"},
 		Tags:     intentTags(),

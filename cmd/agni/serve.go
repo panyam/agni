@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,6 +23,7 @@ import (
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
+	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // serveCmd hosts the web viewer over HTTP for local development. It serves three things on
@@ -115,8 +118,12 @@ func serveCmd() *cobra.Command {
 			mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 			// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
 			// served read-only so the rules/expectations panels resolve their relative image refs
-			// (WS9-030). Images only, from the embed FS only — no filesystem access.
-			mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/", builtin.RuleDocImageHandler()))
+			// (WS9-030). Images only, from the embed FS only — no filesystem access. The built-in and
+			// intent rule docs live in separate embed FSes (WS3-093), but a rule's Detail references its
+			// card as images/<name> under this one route regardless of source, so the two handlers are
+			// composed (first non-404 wins; card basenames are unique across sources).
+			mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/",
+				firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())))
 			// The per-relation fact-doc schematic cards (WS14-005), same read-only image-only posture
 			// as the rule docs, so the query panel resolves a relation Detail's image refs.
 			mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
@@ -163,6 +170,53 @@ func checkWebAssets(dir string) error {
 		return fmt.Errorf("%q has no static/datasheets.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
 	}
 	return nil
+}
+
+// firstImageHandler composes several rule-source image handlers into one, serving the response of the
+// first that does not 404 (WS3-093). Each source's rule-doc images live in its own embed FS behind its
+// own handler, but the web resolves every rule's card under the single /rule-docs/ route, so a request
+// is tried against each in turn and the first hit is copied through. Card basenames are unique across
+// sources, so order does not affect which card a request resolves to. Each handler is image-only and
+// 404s cleanly on a miss, so the buffered probe never has a side effect to undo.
+func firstImageHandler(handlers ...http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, h := range handlers {
+			rec := &bufferedResponse{header: http.Header{}}
+			h.ServeHTTP(rec, r)
+			if rec.status == http.StatusNotFound {
+				continue
+			}
+			maps.Copy(w.Header(), rec.header)
+			if rec.status == 0 {
+				rec.status = http.StatusOK
+			}
+			w.WriteHeader(rec.status)
+			w.Write(rec.body.Bytes())
+			return
+		}
+		http.NotFound(w, r)
+	})
+}
+
+// bufferedResponse captures a handler's status, headers, and body in memory so firstImageHandler can
+// discard a 404 and try the next source without having written anything to the client.
+type bufferedResponse struct {
+	header http.Header
+	status int
+	body   bytes.Buffer
+}
+
+func (b *bufferedResponse) Header() http.Header { return b.header }
+func (b *bufferedResponse) WriteHeader(status int) {
+	if b.status == 0 {
+		b.status = status
+	}
+}
+func (b *bufferedResponse) Write(p []byte) (int, error) {
+	if b.status == 0 {
+		b.status = http.StatusOK
+	}
+	return b.body.Write(p)
 }
 
 // themeNames returns the available --theme values in sorted order, for flag help and the

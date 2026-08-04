@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 290" width="700" height="290" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="module-missing rule: a design-intent-declared module absent from the schematic is flagged; the module present is fine">
+  <!-- card -->
+  <rect x="1" y="1" width="698" height="288" rx="10" fill="#f8f9fb" stroke="#e3e6eb"/>
+  <line x1="350" y1="24" x2="350" y2="252" stroke="#e3e6eb" stroke-dasharray="4 4"/>
+  <text x="350" y="278" font-size="12" fill="#6b7280" text-anchor="middle">intent.yaml declares the module (modules: class can_transceiver); the design is checked against it</text>
+
+  <!-- ================= LEFT: flagged (module absent) ================= -->
+  <text x="30" y="42" font-size="15" font-weight="600" fill="#d64545">Flagged: declared module absent</text>
+
+  <!-- MCU present -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="40" y="98" width="66" height="48" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="73" y="90" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U1</text>
+  <text x="73" y="126" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">MCU</text>
+
+  <!-- ghost (declared but absent) transceiver -->
+  <g stroke="#d64545" stroke-width="2" stroke-dasharray="5 4" fill="none">
+    <rect x="200" y="98" width="90" height="48" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="245" y="90" font-size="12" fill="#d64545" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">can_transceiver</text>
+  <text x="245" y="128" font-size="18" fill="#d64545" text-anchor="middle">absent</text>
+
+  <text x="188" y="234" font-size="13" fill="#d64545" text-anchor="middle">no matching component &#8594; flagged</text>
+
+  <!-- ================= RIGHT: fine (module present) ================= -->
+  <text x="378" y="42" font-size="15" font-weight="600" fill="#2f9e57">Fine: declared module present</text>
+
+  <!-- MCU present -->
+  <g stroke="#394049" stroke-width="2" fill="none">
+    <rect x="390" y="98" width="66" height="48" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="423" y="90" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U2</text>
+  <text x="423" y="126" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">MCU</text>
+
+  <!-- transceiver present -->
+  <g stroke="#2f9e57" stroke-width="2" fill="none">
+    <rect x="550" y="98" width="90" height="48" rx="4" fill="#ffffff"/>
+  </g>
+  <text x="595" y="90" font-size="13" font-weight="600" fill="#394049" text-anchor="middle">U3</text>
+  <text x="595" y="126" font-size="11" fill="#6b7280" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">can_transceiver</text>
+
+  <text x="540" y="234" font-size="13" fill="#2f9e57" text-anchor="middle">a component of the declared class &#8594; fine</text>
+</svg>
