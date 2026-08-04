@@ -181,6 +181,25 @@ func TestSheetSVGHighlighted(t *testing.T) {
 	}
 }
 
+// TestHasHighlights: a spec that matches an entity on the sheet reports true, one that matches
+// nothing reports false, so a per-sheet report renderer skips sheets its findings do not touch.
+func TestHasHighlights(t *testing.T) {
+	g := highlightFixture()
+	sheet := g.Sheets[0]
+	if !HasHighlights(g, sheet, []*geom.HighlightSpec{{Components: []string{"R1"}}}) {
+		t.Error("R1 is on the sheet; HasHighlights should be true")
+	}
+	if !HasHighlights(g, sheet, []*geom.HighlightSpec{{Nets: []string{"NET1"}}}) {
+		t.Error("NET1 is on the sheet; HasHighlights should be true")
+	}
+	if HasHighlights(g, sheet, []*geom.HighlightSpec{{Components: []string{"NOPE"}, Nets: []string{"GONE"}}}) {
+		t.Error("no matching entity; HasHighlights should be false")
+	}
+	if HasHighlights(g, sheet, nil) {
+		t.Error("no specs; HasHighlights should be false")
+	}
+}
+
 // TestHighlightSVGBus checks that a bus spec re-strokes ONLY its own bus trunk, keyed by the bus
 // NAME and gated on the bus kind so it never matches a net (WS7-042b): a non-matching name paints
 // nothing, and a net wire that shares the bus name is not caught.

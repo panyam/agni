@@ -311,6 +311,20 @@ func drawHighlights(c *svg.Canvas, syms map[string]*geom.SymbolDef, sheet *geom.
 	}
 }
 
+// HasHighlights reports whether any spec matches at least one entity drawn on this sheet, so a
+// caller rendering per-sheet (a review report annotating only the sheets its findings land on) can
+// skip a sheet no finding touches instead of writing an unannotated copy. It reuses the exact
+// matcher collectEntities uses, so "would highlight" agrees with what SheetSVGHighlighted draws.
+func HasHighlights(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []*geom.HighlightSpec) bool {
+	syms := indexSymbols(g)
+	for _, spec := range specs {
+		if len(collectEntities(syms, sheet, matcherFor(spec))) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // SheetSVGHighlighted renders one sheet and BAKES the highlight specs into a single SVG document,
 // so a static render (a report image, a shared file) carries its annotations with no separate
 // overlay to stack. It is the exact base render (drawSheetContent) plus the exact projection

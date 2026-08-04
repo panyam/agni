@@ -375,7 +375,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir string
 	var coverage bool
 	var ratifiedFloor float64
 	cmd := &cobra.Command{
@@ -421,6 +421,15 @@ func reviewCmd() *cobra.Command {
 			// Map the proto response back to the Go view-model and render with the existing renderers — the
 			// CLI analogue of the web tier's reportFromWire, so both surfaces start from one wire shape.
 			reports := reportsFromProto(resp)
+			// --render bakes each design's findings into annotated schematic SVGs (WS7-043): the report's
+			// finding->picture side. The summary goes to stderr so stdout stays a clean report to redirect.
+			if renderDir != "" {
+				summary, err := renderReviewImages(reports, renderDir)
+				if err != nil {
+					return err
+				}
+				fmt.Fprint(cmd.ErrOrStderr(), summary)
+			}
 			// --coverage is the rollup shortcut; --format {markdown,json} picks the surface. JSON carries the
 			// FULL finding list per item (markdown caps the Detail cell), so tooling keeps every finding.
 			var out string
@@ -464,6 +473,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/computed-n-a/n-a/not-automated) instead of the per-item report")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped) or json (full findings, for tooling)")
+	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	return cmd
 }
 
