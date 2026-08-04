@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -36,7 +37,7 @@ const (
 func renderCmd() *cobra.Command {
 	var layout, format, sheetSel, out, classFile, symbols, reportFormat string
 	var compare, stats, pinDots, report bool
-	var classFlags []string
+	var classFlags, highlightFlags []string
 	cmd := &cobra.Command{
 		Use:   "render <file>",
 		Short: "Render a design: faithful schematic geometry, or an auto-laid-out netlist graph",
@@ -65,6 +66,16 @@ func renderCmd() *cobra.Command {
 			if symbols != symbolsGlyph && symbols != symbolsFaithful {
 				return fmt.Errorf("--symbols %q is not one of: %s, %s", symbols, symbolsGlyph, symbolsFaithful)
 			}
+			// --highlight bakes finding-locating overlays (a net's wire, a component's outline, a
+			// pin) into the rendered SVG, so a static picture carries its annotations. Parse early
+			// so a malformed spec fails before any load, and gate it to the SVG schematic path.
+			specs, err := parseHighlightSpecs(highlightFlags)
+			if err != nil {
+				return err
+			}
+			if len(specs) > 0 && format != "svg" {
+				return fmt.Errorf("--highlight is supported for --format svg only (got %q)", format)
+			}
 			reg, err := buildRegistry(classFlags, classFile)
 			if err != nil {
 				return err
@@ -79,6 +90,9 @@ func renderCmd() *cobra.Command {
 			// explicit auto-layout still draws the netlist graph.
 			if layout == faithfulLayout && format == "svg" && !stats {
 				if b, err := newLoader().BoardGeometry(file); err == nil && b != nil {
+					if len(specs) > 0 {
+						return fmt.Errorf("--highlight is not yet supported for a board render; it covers schematic sheets (WS7-043)")
+					}
 					return writeBoard(out, b)
 				}
 			}
@@ -107,7 +121,7 @@ func renderCmd() *cobra.Command {
 			if pinDots {
 				opts = append(opts, render.WithPinDots())
 			}
-			return writeRender(out, g, sheet, format, opts...)
+			return writeRender(out, g, sheet, format, specs, opts...)
 		},
 	}
 	cmd.Flags().StringVar(&layout, "layout", faithfulLayout,
@@ -123,7 +137,98 @@ func renderCmd() *cobra.Command {
 	cmd.Flags().StringVar(&symbols, "symbols", symbolsGlyph, "auto-layout node artwork: glyph (classified synthetic symbols) | faithful (the design's own symbols, re-laid-out)")
 	cmd.Flags().BoolVar(&report, "report", false, "print how each component maps to a drawn node (device class, glyph/box/provided/unresolved) instead of rendering")
 	cmd.Flags().StringVar(&reportFormat, "report-format", "text", "--report output: text | json")
+	cmd.Flags().StringArrayVar(&highlightFlags, "highlight", nil,
+		"bake a finding-locating overlay into the SVG, repeatable. One subject per flag, comma-separated:\n"+
+			"net=<name> | ref=<refdes> | pin=<refdes>:<pin>, plus optional shape=outline|rect|circle|path, "+
+			"color=#rrggbb, alpha=0..1 (e.g. --highlight net=SCL,shape=path,color=#e11)")
 	return cmd
+}
+
+// parseHighlightSpecs turns each --highlight value into one geom.HighlightSpec. A value is a
+// comma-separated list of key=value pairs naming exactly one subject (net / ref / pin) plus
+// optional style keys (shape, color, alpha). The subject shape defaults sensibly per kind — a net
+// draws as a PATH marker along its wire, a component/pin as an OUTLINE — matching the web
+// click-to-locate defaults, so the CLI static picture reads like the interactive one.
+func parseHighlightSpecs(flags []string) ([]*geom.HighlightSpec, error) {
+	var specs []*geom.HighlightSpec
+	for _, raw := range flags {
+		spec := &geom.HighlightSpec{}
+		var subjectKind string
+		shapeSet := false
+		for _, part := range strings.Split(raw, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			k, v, ok := strings.Cut(part, "=")
+			if !ok {
+				return nil, fmt.Errorf("--highlight %q: %q is not key=value", raw, part)
+			}
+			k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+			switch k {
+			case "net":
+				if v == "" {
+					return nil, fmt.Errorf("--highlight %q: net= needs a name", raw)
+				}
+				spec.Nets = append(spec.Nets, v)
+				subjectKind = "net"
+			case "ref", "component":
+				if v == "" {
+					return nil, fmt.Errorf("--highlight %q: %s= needs a ref-des", raw, k)
+				}
+				spec.Components = append(spec.Components, v)
+				subjectKind = "component"
+			case "pin":
+				ref, pin, ok := strings.Cut(v, ":")
+				if !ok || ref == "" || pin == "" {
+					return nil, fmt.Errorf("--highlight %q: pin must be <refdes>:<pin>, got %q", raw, v)
+				}
+				spec.Pins = append(spec.Pins, &geom.PinRef{RefDes: ref, Pin: pin})
+				subjectKind = "pin"
+			case "shape":
+				sh, err := parseHighlightShape(v)
+				if err != nil {
+					return nil, fmt.Errorf("--highlight %q: %w", raw, err)
+				}
+				spec.Shape = sh
+				shapeSet = true
+			case "color":
+				spec.Color = v
+			case "alpha":
+				a, err := strconv.ParseFloat(v, 32)
+				if err != nil || a < 0 || a > 1 {
+					return nil, fmt.Errorf("--highlight %q: alpha must be a number in [0,1], got %q", raw, v)
+				}
+				spec.Alpha = float32(a)
+			default:
+				return nil, fmt.Errorf("--highlight %q: unknown key %q (want net|ref|pin|shape|color|alpha)", raw, k)
+			}
+		}
+		if subjectKind == "" {
+			return nil, fmt.Errorf("--highlight %q names no subject (need one of net=, ref=, pin=)", raw)
+		}
+		if !shapeSet && subjectKind == "net" {
+			spec.Shape = geom.HighlightShape_HIGHLIGHT_SHAPE_PATH
+		}
+		specs = append(specs, spec)
+	}
+	return specs, nil
+}
+
+// parseHighlightShape maps the CLI shape word to the proto enum. Unset draws as OUTLINE.
+func parseHighlightShape(v string) (geom.HighlightShape, error) {
+	switch v {
+	case "outline", "":
+		return geom.HighlightShape_HIGHLIGHT_SHAPE_UNSPECIFIED, nil
+	case "rect":
+		return geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT, nil
+	case "circle":
+		return geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_CIRCLE, nil
+	case "path":
+		return geom.HighlightShape_HIGHLIGHT_SHAPE_PATH, nil
+	default:
+		return 0, fmt.Errorf("unknown shape %q (want outline|rect|circle|path)", v)
+	}
 }
 
 // writeReport builds the conversion report for the file's netlist under the chosen symbol source
@@ -240,7 +345,7 @@ func writeBoard(out string, b *geom.BoardGeometry) error {
 	return nil
 }
 
-func writeRender(out string, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, format string, opts ...render.Option) error {
+func writeRender(out string, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, format string, specs []*geom.HighlightSpec, opts ...render.Option) error {
 	w := os.Stdout
 	if out != "" && out != "-" {
 		f, err := os.Create(out)
@@ -250,7 +355,7 @@ func writeRender(out string, g *geom.SchematicGeometry, sheet *geom.SheetGeometr
 		defer f.Close()
 		w = f
 	}
-	note, err := renderGeometry(w, g, sheet, format, opts...)
+	note, err := renderGeometry(w, g, sheet, format, specs, opts...)
 	if err != nil {
 		return err
 	}
@@ -263,13 +368,19 @@ func writeRender(out string, g *geom.SchematicGeometry, sheet *geom.SheetGeometr
 // renderGeometry writes one sheet to w in the given format and returns a one-line status note.
 // svg is the verification backend; pack is a tier-2 PackedSheet proto for the WebGL viewer
 // (CONSTRAINTS C8). png is reserved but not implemented, and an unknown format errors.
-func renderGeometry(w io.Writer, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, format string, opts ...render.Option) (string, error) {
+func renderGeometry(w io.Writer, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, format string, specs []*geom.HighlightSpec, opts ...render.Option) (string, error) {
 	switch format {
 	case "svg":
-		if _, err := io.WriteString(w, render.SheetSVG(g, sheet, opts...)); err != nil {
+		doc := render.SheetSVG(g, sheet, opts...)
+		note := fmt.Sprintf("sheet %q, %d placements, %d wires", sheet.Name, len(sheet.Placements), len(sheet.Wires))
+		if len(specs) > 0 {
+			doc = render.SheetSVGHighlighted(g, sheet, specs, opts...)
+			note += fmt.Sprintf(", %d highlight(s)", len(specs))
+		}
+		if _, err := io.WriteString(w, doc); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("sheet %q, %d placements, %d wires", sheet.Name, len(sheet.Placements), len(sheet.Wires)), nil
+		return note, nil
 	case "pack":
 		blob, err := proto.Marshal(render.PackSheet(g, sheet, opts...))
 		if err != nil {

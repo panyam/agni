@@ -144,6 +144,43 @@ func TestHighlightSVG(t *testing.T) {
 	}
 }
 
+// TestSheetSVGHighlighted proves the baked single-document render composites exactly: the base
+// sheet content (page rect + wires) AND the highlight overlay (the marked net's re-stroke, the
+// matched pin dots) in one SVG, with nothing lost or doubled. For every element kind the two layers
+// contribute, the baked count equals base + overlay — the one-code-path guarantee the CLI static
+// render leans on (same projection the server serves as a separate overlay).
+func TestSheetSVGHighlighted(t *testing.T) {
+	g := highlightFixture()
+	specs := []*geom.HighlightSpec{
+		{Components: []string{"R1"}, Nets: []string{"NET1"}, Color: "#00ff00", Alpha: 0.4},
+		{Pins: []*geom.PinRef{{RefDes: "U1", Pin: "1"}}},
+	}
+	base := SheetSVG(g, g.Sheets[0])
+	overlay := HighlightSVG(g, g.Sheets[0], specs)
+	baked := SheetSVGHighlighted(g, g.Sheets[0], specs)
+
+	// The baked document carries the base page fill (it is NOT a transparent overlay).
+	if !strings.Contains(baked, `<rect x="0.0" y="0.0"`) {
+		t.Error("baked render is missing the base page rect; a static picture must not be transparent")
+	}
+	// The highlight is baked in, in its spec color/alpha.
+	if !strings.Contains(baked, `stroke="#00ff00"`) || !strings.Contains(baked, `stroke-opacity="0.4"`) {
+		t.Error("baked render is missing the highlight color/alpha")
+	}
+	// Compositing is lossless and duplication-free: baked = base + overlay per element kind.
+	for _, el := range []string{"<polyline", "<circle"} {
+		if got, want := strings.Count(baked, el), strings.Count(base, el)+strings.Count(overlay, el); got != want {
+			t.Errorf("baked %s = %d, want base(%d)+overlay(%d)=%d",
+				el, got, strings.Count(base, el), strings.Count(overlay, el), want)
+		}
+	}
+	// The overlay draws LAST, above the schematic, so the highlight stroke sits after the base
+	// symbol graphics in document order (SVG painter's model: later = on top).
+	if strings.Index(baked, `stroke="#00ff00"`) < strings.LastIndex(base, "<polyline") {
+		t.Error("highlight must be painted after the base content so the marked entity reads through it")
+	}
+}
+
 // TestHighlightSVGBus checks that a bus spec re-strokes ONLY its own bus trunk, keyed by the bus
 // NAME and gated on the bus kind so it never matches a net (WS7-042b): a non-matching name paints
 // nothing, and a net wire that shares the bus name is not caught.
