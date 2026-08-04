@@ -20,6 +20,7 @@ func voltageDomainRule(d Declaration) *check.Rule {
 		Name:     RuleVoltageDomain,
 		Severity: "warning",
 		Summary:  "a declared voltage domain's rail is absent or on the wrong nominal voltage",
+		Detail:   intentDoc(RuleVoltageDomain),
 		Impact:   "a power rail is missing or named for a different voltage than its declared domain, so the power tree does not match the declared architecture",
 		Reads:    []string{"net.nominal_voltage"},
 		Tags:     intentTags(),
