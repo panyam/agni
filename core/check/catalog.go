@@ -214,5 +214,42 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 			return false, "design carries no board geometry (WS1-006 sidecar)"
 		}
 	}
+	// Source-format capability gate (WS3-096). A rule that infers a defect from the ABSENCE of a
+	// construct the format cannot express gates itself internally (returning no findings), which a
+	// review cannot tell from a clean pass. Consulting the declared requirement here lets the review
+	// render not-applicable instead. With no design in hand (m == nil, the catalog listing) the rule
+	// is available — the engine can run it on a design that has the capability — mirroring the board
+	// branch. A capability is a per-design property, so unlike the param tier there is no seeding to
+	// wait for; the gate is purely "does this format support the construct".
+	for _, c := range r.RequiresCapability {
+		if m != nil && !capabilityMet(c, m) {
+			return false, capabilityReason(c)
+		}
+	}
 	return true, ""
+}
+
+// capabilityMet reports whether the model's source format supplies capability c. An unrecognized
+// capability does not gate (fail-open, as an unrecognized Read does): the vocabulary is closed and
+// declared at the rule, so a typo surfaces as a rule that never gates, not one silently suppressed.
+func capabilityMet(c Capability, m Model) bool {
+	switch c {
+	case CapTypesPowerOut:
+		return m.FormatTypesPowerOut()
+	case CapNoConnectChannel:
+		return m.HasNoConnectChannel()
+	}
+	return true
+}
+
+// capabilityReason is the short not-applicable reason a UI and the review report show for an unmet
+// capability c.
+func capabilityReason(c Capability) string {
+	switch c {
+	case CapTypesPowerOut:
+		return "source format does not type power-output pins (driver absence is not conclusive here)"
+	case CapNoConnectChannel:
+		return "source format cannot express intentional no-connect"
+	}
+	return "source format lacks a capability this rule requires"
 }

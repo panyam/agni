@@ -92,6 +92,83 @@ func oneDesign() *ir.Design {
 	}
 }
 
+// TestCapabilityGatedNotApplicable (WS3-096): a rule whose required source-format capability the
+// design lacks reads not-applicable with a reason, not a silent pass; the SAME rule on a format that
+// supplies the capability evaluates live (here, fires). power-input-not-driven needs types_power_out
+// (EDIF/IPC carry no power_out) and unconnected-pin needs the no-connect channel (EDIF has none).
+func TestCapabilityGatedNotApplicable(t *testing.T) {
+	item := func(rule string) Manifest {
+		return Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+			{ID: "x", Title: rule, Binding: Binding{Rule: rule}},
+		}}}}
+	}
+	run := func(man Manifest, d *ir.Design) ItemResult {
+		return Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+	cases := []struct {
+		rule        string
+		edif, kicad *ir.Design
+	}{
+		{"power-input-not-driven", powerInDesign("edif-2.0.0"), powerInDesign("kicad-sch")},
+		{"unconnected-pin", unwiredPinDesign("edif-2.0.0", false), unwiredPinDesign("kicad-sch", true)},
+	}
+	for _, c := range cases {
+		man := item(c.rule)
+		if got := run(man, c.edif); got.Outcome != NotApplicable || got.Note == "" {
+			t.Errorf("%s on EDIF: got (%s, %q), want (not-applicable, non-empty reason)", c.rule, got.Outcome, got.Note)
+		}
+		if got := run(man, c.kicad); got.Outcome != Fail {
+			t.Errorf("%s on KiCad: got %s, want fail (the rule evaluates live)", c.rule, got.Outcome)
+		}
+	}
+}
+
+// powerInDesign is a one-part design with a single POWER_IN pin on an otherwise-empty net, so
+// power-input-not-driven fires wherever the source format types power outputs. The source format is the
+// only variable: on EDIF the rule is capability-gated, on KiCad it evaluates and fires.
+func powerInDesign(format string) *ir.Design {
+	return &ir.Design{
+		SourceFormat: format,
+		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
+			Name: "IC",
+			Pins: []*ir.Pin{{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN}},
+		}}}},
+		Components: []*ir.Component{{
+			RefDes:   "U1",
+			Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}},
+			Prov:     &ir.Provenance{SourceFile: "t"},
+		}},
+		Nets: []*ir.Net{{
+			Name:        "VCC",
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}},
+			Prov:        &ir.Provenance{SourceFile: "t"},
+		}},
+	}
+}
+
+// unwiredPinDesign is a one-part design whose single INPUT pin lands on no net. When channel is set, a
+// no-connect-marker net enables the design's no-connect channel (as a KiCad export would), so
+// unconnected-pin evaluates and fires; without it (an EDIF netlist) the channel is absent and the rule
+// is capability-gated.
+func unwiredPinDesign(format string, channel bool) *ir.Design {
+	d := &ir.Design{
+		SourceFormat: format,
+		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
+			Name: "IC",
+			Pins: []*ir.Pin{{Name: "IN", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_INPUT}},
+		}}}},
+		Components: []*ir.Component{{
+			RefDes:   "U1",
+			Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}},
+			Prov:     &ir.Provenance{SourceFile: "t"},
+		}},
+	}
+	if channel {
+		d.Nets = []*ir.Net{{Name: "unconnected-(U2-Pad1)", Prov: &ir.Provenance{SourceFile: "t"}}}
+	}
+	return d
+}
+
 // debugDesign is oneDesign plus a J-prefixed connector whose description marks it a JTAG/debug
 // connector, so ComponentClass classifies it test_connector (WS3-066).
 func debugDesign() *ir.Design {

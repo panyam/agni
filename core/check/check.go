@@ -110,9 +110,38 @@ type Rule struct {
 	// not-applicable the way a rule whose finding REQUIRES the datasheet does (supply-exceeds-abs-max).
 	// Still declared in Reads (twin parity, docs); this only annotates which reads are non-gating.
 	OptionalReads []string
-	Tags          map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
-	Eval          func(Model) []Finding
+	// RequiresCapability lists the source-format capabilities a rule needs to evaluate SOUNDLY.
+	// It is a third gating axis alongside the param and board tiers (WS3-096): a rule that reads a
+	// construct the format cannot express produces no findings, which is indistinguishable from a
+	// clean pass, so Available gates it to not-applicable where the capability is absent. Distinct
+	// from Reads (a fact TIER that a --params/board injection supplies): a capability is a property
+	// of the design's source format, always answerable from the Model. Every entry here is REQUIRED
+	// by construction (the field name says so), which sidesteps the OptionalReads two-valued
+	// problem — a capability that merely NARROWS a rule is not declared here; the rule handles that
+	// case in its own Eval (as power-input-not-driven and unconnected-pin still do internally).
+	RequiresCapability []Capability
+	Tags               map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
+	Eval               func(Model) []Finding
 }
+
+// Capability names a source-format ability a rule needs to evaluate soundly (WS3-096). A rule that
+// infers a defect from the ABSENCE of a construct the format cannot express (an undriven power net,
+// an unwired pin) would false-fire on that format, so it gates itself internally AND declares the
+// capability here, letting Available report not-applicable instead of a silent pass. The value is a
+// stable contract string, matching the design-level fact / queryable twin the same gate reads.
+type Capability string
+
+const (
+	// CapTypesPowerOut: the source format classifies power-OUTPUT pins. EDIF (INPUT/OUTPUT/INOUT
+	// only) and IPC-2581 (a board format with no pin electrical types) do not, so a rail's driver
+	// reads as a plain input and a driver-absence rule (power-input-not-driven) cannot conclude
+	// "unpowered". The queryable twin is types_power_out / the design.types_power_out fact.
+	CapTypesPowerOut Capability = "types_power_out"
+	// CapNoConnectChannel: the design can express intentional no-connect (a NO_CONNECT-typed pin or
+	// an nc-marker net name). Without it a per-pin absence rule (unconnected-pin) cannot tell a
+	// deliberate open pin from a forgotten one. The queryable twin is has_nc_channel / design.nc_channel.
+	CapNoConnectChannel Capability = "nc_channel"
+)
 
 // Run evaluates rules over a Model (the query interface) and returns findings sorted by rule
 // then subject. Both the Model and the rule set are supplied by the caller: Run depends only on
