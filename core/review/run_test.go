@@ -136,6 +136,34 @@ func TestDatasheetQueryNeedsData(t *testing.T) {
 	}
 }
 
+// TestIntentPrebindNamespaceSafety (WS3-098 part 1): a pre-bound NOT-YET-SHIPPED intent rule name reads
+// not-automated, while a real-but-undeclared intent rule still reads needs-design-intent. Both resolve
+// to zero catalog rules (DefaultCatalog carries no intent source without --intent-path); IntentRuleKnown
+// is what tells them apart. A nil predicate keeps the old prefix-only behavior.
+func TestIntentPrebindNamespaceSafety(t *testing.T) {
+	man := func(rule string) Manifest {
+		return Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+			{ID: "x", Title: rule, Binding: Binding{Rule: rule}},
+		}}}}
+	}
+	// mimics intent.Emits for the two names under test (the real predicate is unit-tested in the intent pkg)
+	known := func(name string) bool { return name == "intent/module-missing" }
+	run := func(rule string, k func(string) bool) Outcome {
+		return Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(),
+			Manifest: man(rule), Design: "d", IntentRuleKnown: k}).Areas[0].Items[0].Outcome
+	}
+	if got := run("intent/power-sequence", known); got != NotAutomated {
+		t.Errorf("pre-bound unshipped intent rule: got %s, want not-automated", got)
+	}
+	if got := run("intent/module-missing", known); got != NeedsDesignIntent {
+		t.Errorf("real undeclared intent rule: got %s, want needs-design-intent", got)
+	}
+	// nil predicate: the unshipped name falls back to the prefix-only behavior (needs-design-intent).
+	if got := run("intent/power-sequence", nil); got != NeedsDesignIntent {
+		t.Errorf("nil IntentRuleKnown: got %s, want needs-design-intent (unchanged behavior)", got)
+	}
+}
+
 // TestCapabilityGatedNotApplicable (WS3-096): a rule whose required source-format capability the
 // design lacks reads not-applicable with a reason, not a silent pass; the SAME rule on a format that
 // supplies the capability evaluates live (here, fires). power-input-not-driven needs types_power_out
