@@ -54,18 +54,19 @@ func writeAggregateSummary(b *strings.Builder, a Aggregate) {
 			t0.Covered(), t0.Total, t0.NotAutomated)
 	}
 	b.WriteString("## Per-design outcomes\n\n")
-	b.WriteString("| Design | Pass | Fail | Provisional | Needs-intent | Computed-n/a | N/A |\n")
-	b.WriteString("|--------|------|------|-------------|--------------|--------------|-----|\n")
+	b.WriteString("| Design | Pass | Fail | Provisional | Needs-intent | Needs-data | Computed-n/a | N/A |\n")
+	b.WriteString("|--------|------|------|-------------|--------------|------------|--------------|-----|\n")
 	var tot Tally
 	for _, r := range a.Reports {
 		t := r.Tally()
-		fmt.Fprintf(b, "| `%s` | %d | %d | %d | %d | %d | %d |\n",
-			r.Design, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.ComputedNA, t.NotApplicable)
+		fmt.Fprintf(b, "| `%s` | %d | %d | %d | %d | %d | %d | %d |\n",
+			r.Design, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.NeedsData, t.ComputedNA, t.NotApplicable)
 		tot.Pass, tot.Fail, tot.NotApplicable = tot.Pass+t.Pass, tot.Fail+t.Fail, tot.NotApplicable+t.NotApplicable
 		tot.Provisional, tot.NeedsDesignIntent, tot.ComputedNA = tot.Provisional+t.Provisional, tot.NeedsDesignIntent+t.NeedsDesignIntent, tot.ComputedNA+t.ComputedNA
+		tot.NeedsData += t.NeedsData
 	}
-	fmt.Fprintf(b, "| **Total** | %d | %d | %d | %d | %d | %d |\n\n",
-		tot.Pass, tot.Fail, tot.Provisional, tot.NeedsDesignIntent, tot.ComputedNA, tot.NotApplicable)
+	fmt.Fprintf(b, "| **Total** | %d | %d | %d | %d | %d | %d | %d |\n\n",
+		tot.Pass, tot.Fail, tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.ComputedNA, tot.NotApplicable)
 }
 
 // RenderAggregateCoverageMarkdown is the multi-design analogue of RenderCoverageMarkdown: the automation
@@ -132,6 +133,7 @@ type jsonDesignSummary struct {
 	Fail              int    `json:"fail"`
 	Provisional       int    `json:"provisional"`
 	NeedsDesignIntent int    `json:"needs_design_intent"`
+	NeedsData         int    `json:"needs_data"`
 	ComputedNA        int    `json:"computed_na"`
 	NotApplicable     int    `json:"not_applicable"`
 }
@@ -159,7 +161,7 @@ func RenderAggregateJSON(a Aggregate) (string, error) {
 		t := r.Tally()
 		out.PerDesign = append(out.PerDesign, jsonDesignSummary{
 			Design: r.Design, Pass: t.Pass, Fail: t.Fail, NotApplicable: t.NotApplicable,
-			Provisional: t.Provisional, NeedsDesignIntent: t.NeedsDesignIntent, ComputedNA: t.ComputedNA,
+			Provisional: t.Provisional, NeedsDesignIntent: t.NeedsDesignIntent, NeedsData: t.NeedsData, ComputedNA: t.ComputedNA,
 		})
 	}
 	ms := a.outcomeByID()

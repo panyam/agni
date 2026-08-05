@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB relations the profile/datalog rules read
 	_ "github.com/panyam/agni/stdlib/profiles"      // registers the built-in profile rules into DefaultCatalog
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rules into DefaultCatalog
@@ -89,6 +91,48 @@ func oneDesign() *ir.Design {
 			Prov:        &ir.Provenance{SourceFile: "t"},
 			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}},
 		}},
+	}
+}
+
+// TestDatasheetQueryNeedsData (WS3-097): an inline datasheet query (param_symbol set) that matches
+// nothing reads needs-data, not pass, when NO component on the design has that symbol seeded — the
+// query could not evaluate. The same query with the symbol seeded reads pass (it ran, clean), and a
+// real firing keeps reading fail. This is the "deleting a seed makes the review greener" proof: the
+// only variable across the pass/needs-data pair is whether the symbol is seeded.
+func TestDatasheetQueryNeedsData(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	// A query that always matches nothing (no net has 10^6 pins), so the outcome turns purely on
+	// whether IOUT is seeded.
+	clean := &QueryBinding{Match: `net.pin_count(?n, ?c), ?c > 1000000 => ?n`, Subject: "n", Kind: check.KindNet, Message: "x", ParamSymbol: "IOUT"}
+	// A query that fires on U1, to prove a real fail is never masked by the needs-data gate.
+	fires := &QueryBinding{Match: `component.mpn(?r, ?m) => ?r`, Subject: "r", Message: "x", ParamSymbol: "IOUT"}
+	man := func(q *QueryBinding) Manifest {
+		return Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{{ID: "23", Title: "UVLO", Binding: Binding{Query: q}}}}}}
+	}
+	spec := func(sym string) *parampb.PartSpec {
+		return &parampb.PartSpec{Mpn: "ACME-1", Parameters: []*parampb.Parameter{{Symbol: sym}}}
+	}
+	run := func(q *QueryBinding, seededSym string) ItemResult {
+		provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+			if mpn == "ACME-1" {
+				return spec(seededSym)
+			}
+			return nil
+		})
+		m := check.NewModelWithParams(d, nil, provider)
+		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man(q), Design: "d"}).Areas[0].Items[0]
+	}
+	if got := run(clean, "IOUT"); got.Outcome != Pass {
+		t.Errorf("symbol seeded, clean query: got %s, want pass", got.Outcome)
+	}
+	if got := run(clean, "VDD"); got.Outcome != NeedsData || got.Note == "" {
+		t.Errorf("symbol unseeded (only VDD present): got (%s, %q), want (needs-data, non-empty reason)", got.Outcome, got.Note)
+	}
+	if got := run(fires, "VDD"); got.Outcome != Fail {
+		t.Errorf("query fires: got %s, want fail (a real finding is never masked as needs-data)", got.Outcome)
 	}
 }
 
@@ -303,8 +347,8 @@ func TestCoverageRollup(t *testing.T) {
 	md := RenderCoverageMarkdown(Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}))
 	for _, want := range []string{
 		"**2 of 4 covered** — 0 pass, 1 fail, 1 n/a; 2 not-automated",
-		"| A | 2/4 | 0 | 1 | 0 | 0 | 0 | 1 | 2 |",
-		"| **Total** | 2/4 | 0 | 1 | 0 | 0 | 0 | 1 | 2 |",
+		"| A | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 2 |",
+		"| **Total** | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 2 |",
 	} {
 		if !strings.Contains(md, want) {
 			t.Errorf("coverage missing %q\n%s", want, md)

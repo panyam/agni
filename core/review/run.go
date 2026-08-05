@@ -36,6 +36,15 @@ const (
 	// takes ("no crystals here → n/a"). Distinct from NotApplicable (a missing fact TIER) — here the
 	// tier is present and the answer is a computed "does not apply".
 	ComputedNA Outcome = "computed-n/a"
+	// NeedsData: the item's mechanism exists and ran, but the specific data it joins against is not
+	// present, so it could not actually evaluate (WS3-097). Today the one derivable case is a datasheet
+	// inline query (param_symbol) whose symbol is seeded on no component: --params is supplied so the
+	// param tier exists (Available does not gate), but the query matched nothing because the value is
+	// unseeded, not because the design is clean — reading pass there would mean "deleting a seed makes
+	// the review greener". It is COVERED (a mechanism exists, blocked on a supplyable value), so it
+	// counts toward Covered() like NeedsDesignIntent, and it is the honest reading that lets an overlay
+	// BIND a datasheet check before its seed lands and watch it flip to a real verdict as seeding arrives.
+	NeedsData Outcome = "needs-data"
 )
 
 // ItemResult is one item's outcome, with the findings that made it fail (or the reason it did not
@@ -255,7 +264,40 @@ func runItem(p RunParams, it Item) ItemResult {
 		}
 		return ItemResult{Item: it, Outcome: Fail, Findings: fs}
 	}
+	// Zero findings is only a genuine pass if the check could evaluate (WS3-097). A datasheet inline
+	// query names the symbol it joins (param_symbol); when that symbol is seeded on no component, the
+	// query matched nothing because the value is absent, not because the design is clean, so the honest
+	// reading is needs-data, not pass. Only this datasheet case is gated: --params supplied means
+	// Available did not gate, so an unseeded symbol is the silent gap. The general "all joined relations
+	// empty" case is deliberately not chased (the datasheet join is the one that bites, the params tier
+	// being sparse by nature).
+	if sym := datasheetSymbol(it); sym != "" && !anyComponentSeedsSymbol(m, sym) {
+		return ItemResult{Item: it, Outcome: NeedsData, Note: "no seeded datasheet value for " + sym + " on this design"}
+	}
 	return ItemResult{Item: it, Outcome: Pass}
+}
+
+// datasheetSymbol returns the datasheet symbol an inline query binding joins against (its param_symbol),
+// or "" for a binding that is not a datasheet query. It is the WS3-097 hook: the symbol is declared on
+// the binding, so the runner knows the query's datasheet dependency without parsing the datalog.
+func datasheetSymbol(it Item) string {
+	if q := it.Binding.Query; q != nil {
+		return q.ParamSymbol
+	}
+	return ""
+}
+
+// anyComponentSeedsSymbol reports whether any component on the design has a seeded datasheet parameter
+// for symbol (a PartSpec row with that symbol). It reuses check.DatasheetProvFor, which resolves the
+// component's spec and matches the symbol, so "seeded" here means exactly what a finding's citation
+// would resolve. False means the datasheet query had nothing to evaluate against.
+func anyComponentSeedsSymbol(m check.Model, symbol string) bool {
+	for _, c := range m.Components() {
+		if check.DatasheetProvFor(m, c.RefDes, symbol) != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // anyComponentHasClass reports whether any component on the design carries one of the given device

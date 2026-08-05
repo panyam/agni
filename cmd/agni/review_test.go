@@ -90,8 +90,8 @@ func TestReviewCmdMultiDesign(t *testing.T) {
 		"# Review rollup: Mini ECU review",
 		"**5 of 6 items covered** (manifest-level), 1 not-automated.", // coverage stated once, not 10 of 12
 		"## Per-design outcomes",
-		"| `testdata/review/can-broken.edn` | 1 | 2 | 0 | 0 | 0 | 2 |",
-		"| `testdata/profiles/overlay-bus.edn` | 2 | 0 | 0 | 0 | 0 | 3 |",
+		"| `testdata/review/can-broken.edn` | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
+		"| `testdata/profiles/overlay-bus.edn` | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
 		"## Traceability matrix",
 		"### CAN Interface",
 		"| 202 | termination strategy | fail | pass |",                    // per-design outcome, same item
@@ -187,8 +187,8 @@ func TestReviewCmdCoverage(t *testing.T) {
 	for _, want := range []string{
 		"# Review coverage: Mini ECU review",
 		"**5 of 6 covered**",
-		"| CAN Interface | 3/4 | 0 | 2 | 0 | 0 | 0 | 1 | 1 |",
-		"| **Total** | 5/6 | 1 | 2 | 0 | 0 | 0 | 2 | 1 |",
+		"| CAN Interface | 3/4 | 0 | 2 | 0 | 0 | 0 | 0 | 1 | 1 |",
+		"| **Total** | 5/6 | 1 | 2 | 0 | 0 | 0 | 0 | 2 | 1 |",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("coverage report missing %q\n%s", want, s)

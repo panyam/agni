@@ -11,6 +11,7 @@ import (
 type Tally struct {
 	Pass, Fail, NotApplicable, NotAutomated, Total int
 	Provisional, NeedsDesignIntent, ComputedNA     int
+	NeedsData                                      int
 }
 
 func (t *Tally) add(o Outcome) {
@@ -30,6 +31,8 @@ func (t *Tally) add(o Outcome) {
 		t.NeedsDesignIntent++
 	case ComputedNA:
 		t.ComputedNA++
+	case NeedsData:
+		t.NeedsData++
 	}
 }
 
@@ -44,6 +47,9 @@ func (t Tally) String() string {
 	}
 	if t.NeedsDesignIntent > 0 {
 		s += fmt.Sprintf(", %d needs-intent", t.NeedsDesignIntent)
+	}
+	if t.NeedsData > 0 {
+		s += fmt.Sprintf(", %d needs-data", t.NeedsData)
 	}
 	if t.ComputedNA > 0 {
 		s += fmt.Sprintf(", %d computed-n/a", t.ComputedNA)
@@ -104,16 +110,16 @@ func RenderCoverageMarkdown(r Report) string {
 	// the HITL worklists, distinct from a clean pass/fail or a genuine not-automated.
 	fmt.Fprintf(&b, "**%d of %d covered** — %d pass, %d fail, %d n/a; %d not-automated",
 		tot.Covered(), tot.Total, tot.Pass, tot.Fail, tot.NotApplicable, tot.NotAutomated)
-	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.ComputedNA > 0 {
-		fmt.Fprintf(&b, "\n\nOf the covered: %d provisional (awaiting datasheet data), %d needs-design-intent (awaiting a declaration), %d computed-n/a",
-			tot.Provisional, tot.NeedsDesignIntent, tot.ComputedNA)
+	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.NeedsData > 0 || tot.ComputedNA > 0 {
+		fmt.Fprintf(&b, "\n\nOf the covered: %d provisional (awaiting datasheet data), %d needs-design-intent (awaiting a declaration), %d needs-data (awaiting a datasheet seed), %d computed-n/a",
+			tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.ComputedNA)
 	}
 	b.WriteString("\n\n")
-	b.WriteString("| Area | Covered | Pass | Fail | Provisional | Needs-intent | Computed-n/a | N/A | Not-automated |\n")
-	b.WriteString("|------|---------|------|------|-------------|--------------|--------------|-----|---------------|\n")
+	b.WriteString("| Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Computed-n/a | N/A | Not-automated |\n")
+	b.WriteString("|------|---------|------|------|-------------|--------------|------------|--------------|-----|---------------|\n")
 	row := func(name string, t Tally) {
-		fmt.Fprintf(&b, "| %s | %d/%d | %d | %d | %d | %d | %d | %d | %d |\n",
-			name, t.Covered(), t.Total, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.ComputedNA, t.NotApplicable, t.NotAutomated)
+		fmt.Fprintf(&b, "| %s | %d/%d | %d | %d | %d | %d | %d | %d | %d | %d |\n",
+			name, t.Covered(), t.Total, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.NeedsData, t.ComputedNA, t.NotApplicable, t.NotAutomated)
 	}
 	for _, a := range r.Areas {
 		var at Tally
@@ -155,9 +161,10 @@ func detail(it ItemResult) string {
 			s += fmt.Sprintf("; (+%d more)", n-shown)
 		}
 		return s
-	case NotApplicable, ComputedNA, NeedsDesignIntent, NotAutomated:
+	case NotApplicable, ComputedNA, NeedsDesignIntent, NeedsData, NotAutomated:
 		// NotAutomated may carry a runtime reason too (WS3-090: a host-bound interface declared on no
-		// component), so join it with any manifest note rather than showing the manifest note alone.
+		// component), and NeedsData carries the unseeded-symbol reason (WS3-097), so join the runtime
+		// note with any manifest note rather than showing the manifest note alone.
 		return JoinNonEmpty(it.Note, it.Item.Note)
 	default: // Pass
 		return it.Item.Note
