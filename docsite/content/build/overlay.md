@@ -4,8 +4,7 @@ description: "Build a private Go module that extends the public engine with your
 ---
 
 An overlay is a private Go module that extends the public Agni engine with your own format reader
-and rules, without forking it. This page walks from an empty directory to a working overlay. The
-reasoning behind the split lives in [Open core](../../decisions/open-core/).
+and rules, without forking it. This page walks from an empty directory to a working overlay.
 
 Two artifacts back this guide, both in the engine repo under `examples/`:
 

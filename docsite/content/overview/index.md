@@ -42,5 +42,4 @@ the read-first version.
 - **[Use it](../guide/)** covers running the tool on a design.
 - **[Build on it](../build/)** covers adding readers, rules, or an overlay.
 - **[Understand it](../architecture/)** covers how the internals fit together, by subsystem.
-- **[Design decisions](../decisions/)** covers why the larger choices were made.
 - **[Reference](../reference/)** holds the software-to-hardware analogy and the format primers.

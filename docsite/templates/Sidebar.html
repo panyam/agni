@@ -2,7 +2,6 @@
 {{# include "nav/BuildNav.html" #}}
 {{# include "nav/ArchitectureNav.html" #}}
 {{# include "nav/ReferenceNav.html" #}}
-{{# include "nav/DecisionsNav.html" #}}
 
 {{ define "Sidebar" }}
 <aside class="sidebar">
@@ -25,8 +24,6 @@
                 {{ template "ArchitectureNav" . }}
             {{ else if (Contains $currentPath "/reference/") }}
                 {{ template "ReferenceNav" . }}
-            {{ else if (Contains $currentPath "/decisions/") }}
-                {{ template "DecisionsNav" . }}
             {{ else }}
                 <div class="section-nav-content">
                     <h3>Start here</h3>

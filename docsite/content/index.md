@@ -30,11 +30,6 @@ hideTitle: true
 <p>Ask datalog questions about nets, parts, copper, and datasheet limits. Each answer is a cited row you can click to locate.</p>
 <a href="{{.Site.PathPrefix}}/guide/querying/">Query your design &rarr;</a>
 </div>
-<div class="feature-card">
-<h3>Open core</h3>
-<p>The engine is open source under Apache-2.0. Private, house-specific work lives in an overlay that depends on it.</p>
-<a href="{{.Site.PathPrefix}}/decisions/open-core/">The open-core split &rarr;</a>
-</div>
 </div>
 
 <div class="sections-grid">

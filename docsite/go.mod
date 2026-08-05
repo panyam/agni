@@ -2,7 +2,7 @@ module github.com/panyam/agni/docsite
 
 go 1.25
 
-require github.com/panyam/s3gen v0.1.5
+require github.com/panyam/s3gen v0.1.6
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect

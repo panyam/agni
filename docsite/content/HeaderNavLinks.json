@@ -56,14 +56,6 @@
     "icon": "play"
   },
   {
-    "name": "Decisions",
-    "url": "decisions/",
-    "icon": "users",
-    "children": [
-      { "name": "Open core", "url": "decisions/open-core/" }
-    ]
-  },
-  {
     "name": "Reference",
     "url": "reference/",
     "icon": "book-open",
