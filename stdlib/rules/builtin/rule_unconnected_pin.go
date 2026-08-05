@@ -17,8 +17,9 @@ var unconnectedPin = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A pin lands on no net and is not marked no-connect.",
 	Impact:     "A single forgotten pin on an otherwise-wired part is the most common capture slip: an enable left floating, a feedback pin missed, one gate input skipped. unconnected-component only fires when every pin is unwired, so the one-pin miss is invisible to it, and it surfaces at bring-up as a part that almost works.",
-	Primitives: []string{"pin-role", "select", "traverse"},
-	Reads:      []string{"net.names", "pin.electrical_type", "pin.no_connect", "pin.on_net"},
+	Primitives:         []string{"pin-role", "select", "traverse"},
+	Reads:              []string{"net.names", "pin.electrical_type", "pin.no_connect", "pin.on_net"},
+	RequiresCapability: []check.Capability{check.CapNoConnectChannel},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "R",

@@ -4,7 +4,39 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/datasheet/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
+
+// TestAvailableCapability gates a capability-requiring rule to not-applicable where the source format
+// cannot supply the capability, and leaves it available where it can (WS3-096). An EDIF netlist types
+// no power outputs and carries no no-connect channel; a KiCad schematic supplies both. m == nil (the
+// catalog listing) leaves the rule available, mirroring the board branch.
+func TestAvailableCapability(t *testing.T) {
+	powerRule := &Rule{Reads: []string{"on_net"}, RequiresCapability: []Capability{CapTypesPowerOut}}
+	ncRule := &Rule{Reads: []string{"net.names"}, RequiresCapability: []Capability{CapNoConnectChannel}}
+
+	edif := NewModel(&ir.Design{SourceFormat: "edif-2.0.0",
+		Nets: []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}}})
+	if ok, reason := Available(powerRule, edif); ok || reason == "" {
+		t.Errorf("power rule on EDIF: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
+	if ok, reason := Available(ncRule, edif); ok || reason == "" {
+		t.Errorf("nc rule on EDIF: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
+
+	// KiCad source types power outputs; a nc-marker net name gives the no-connect channel.
+	kicad := NewModel(&ir.Design{SourceFormat: "kicad-sch",
+		Nets: []*ir.Net{{Name: "unconnected-(U1-PAD1)", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}}})
+	if ok, _ := Available(powerRule, kicad); !ok {
+		t.Error("power rule on KiCad: want available")
+	}
+	if ok, _ := Available(ncRule, kicad); !ok {
+		t.Error("nc rule on KiCad: want available")
+	}
+	if ok, _ := Available(powerRule, nil); !ok {
+		t.Error("capability rule at catalog listing (m==nil): want available")
+	}
+}
 
 func TestAvailableFromReads(t *testing.T) {
 	if ok, reason := Available(&Rule{Reads: []string{"net.pin_count", "on_net"}}, nil); !ok || reason != "" {

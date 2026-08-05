@@ -136,6 +136,15 @@ adopt an external engine for these, for reasons in the evaluation model below.
   spec data source. Both are additive, and the evaluation model does not change to accommodate
   them.
 
+The same gate covers a third axis besides the board and parameter tiers, source-format capability.
+A rule that infers a defect from the absence of a construct the format cannot express declares the
+capability it needs, and a review over a design whose format lacks it reads that item as
+not-applicable with a reason rather than as a silent pass. Two rules use this today. A
+driver-absence check needs a format that types power-output pins, and a per-pin no-connect check
+needs a format that can mark a pin intentionally unconnected, and an EDIF netlist supplies neither.
+Without the gate the rule still produces no findings on that format, which a report cannot tell from
+a clean pass, so the requirement is declared rather than inferred and the report stays honest.
+
 Sequencing the not-yet-built rules by what each waits on:
 
 - Buildable now on the pure netlist: signal-net naming conventions, transmit and receive
