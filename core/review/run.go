@@ -126,6 +126,13 @@ type RunParams struct {
 	// Zero means use DefaultRatifiedFloor — a floor of 0 would rate everything trustworthy, never the
 	// intent. Config, not a literal (the CLI exposes --ratified-floor).
 	RatifiedFloor float64
+	// IntentRuleKnown reports whether an intent/-namespaced rule NAME is one the intent compiler can
+	// produce (WS3-098). It distinguishes a real-but-undeclared intent rule (needs-design-intent) from a
+	// not-yet-shipped intent rule name a manifest pre-bound (not-automated), which a bare intent/ prefix
+	// test cannot. nil treats every intent/ name as known — the pre-WS3-098 behavior — so a caller that
+	// does not wire it is unchanged. It stays a function so `review` is decoupled from the `intent`
+	// package the way it is from `profiles`; the service wires intent.Emits.
+	IntentRuleKnown func(ruleName string) bool
 }
 
 // DefaultRatifiedFloor is the confidence at or above which a datasheet value counts as ratified,
@@ -212,7 +219,7 @@ func runItem(p RunParams, it Item) ItemResult {
 		// An intent-bound item (WS3-084) with no declaration supplied resolves to zero rules because the
 		// intent rule is absent from the catalog — but it is COVERED, blocked on a declared per-design
 		// input, not genuinely un-mechanized. Report that distinctly so --intent-path is the obvious fix.
-		if bindsIntent(it) {
+		if bindsIntent(it, p.IntentRuleKnown) {
 			return ItemResult{Item: it, Outcome: NeedsDesignIntent, Note: "needs a design-intent declaration (--intent-path)"}
 		}
 		// The interface is present (or the item names no interface), but nothing shipped checks it: an
@@ -314,11 +321,18 @@ func anyComponentHasClass(m check.Model, classes []string) bool {
 	return false
 }
 
-// bindsIntent reports whether an item's binding targets a design-intent rule (WS3-084), which are
-// namespaced `intent/`. It reads the bound Rule name's prefix — the direct, wiring-free signal that a
-// zero-rule resolution is a missing DECLARATION, not a missing mechanism.
-func bindsIntent(it Item) bool {
-	return strings.HasPrefix(it.Binding.Rule, "intent/")
+// bindsIntent reports whether an item's binding targets a design-intent rule the mechanism can
+// actually produce (WS3-084/098): the name is `intent/`-namespaced AND known reports it is a rule the
+// intent compiler emits. The name prefix alone is the wiring-free signal that a zero-rule resolution is
+// a missing DECLARATION rather than a missing mechanism, but it over-matches a pre-bound NOT-YET-SHIPPED
+// intent rule name (intent/power-sequence), which is a missing mechanism and must read not-automated,
+// not needs-design-intent. known narrows the prefix to the compiler's actual name space; a nil known
+// keeps the prefix-only behavior (every intent/ name treated as known) so an unwired caller is unchanged.
+func bindsIntent(it Item, known func(ruleName string) bool) bool {
+	if !strings.HasPrefix(it.Binding.Rule, "intent/") {
+		return false
+	}
+	return known == nil || known(it.Binding.Rule)
 }
 
 // isUnratified reports whether a finding ran on untrustworthy datasheet data: it carries a datasheet
