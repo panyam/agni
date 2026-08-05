@@ -35,6 +35,18 @@ the design drives R1's VIN" to "R1's MPN has an absolute-maximum VIN of 20 V". R
 with a part (one per parameter). Absent means the datasheet corpus was not loaded, or the part
 has no spec in it, never that the part is fine.
 
+An empty join is not a clean result. `component.mpn ⋈ param` is an inner join, so a component
+whose part has no seeded row for the symbol is silently dropped, and the query returns zero rows
+for the same reason a genuinely-clean design does. Reading that as pass is the SQL bug of treating
+a `LEFT JOIN` with a NULL right side as a validated row. A datasheet-backed review item therefore
+checks whether the symbol is seeded at all and reports `needs-data` (closer to HTTP 424 Failed
+Dependency than 404: the check exists, its input is missing) rather than pass. `needs-data` still
+counts as covered, because the mechanism is wired and only the value is absent, which is what lets
+an overlay bind a datasheet check before its seed lands and watch it flip to a real verdict once
+the value arrives (WS3-097). Whether the corpus holds one seeded part or a thousand is only how
+many rows the table has: the relation is the union of every seeded spec, keyed by MPN, so more
+seeds mean fewer `needs-data` items, never a different answer.
+
 ### Go projector
 
 `paramFacts` in `check/facts.go` iterates `Model.Components()`, reads each component's MPN via
