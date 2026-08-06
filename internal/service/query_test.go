@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -160,17 +161,17 @@ func TestRunQueryCellReasons(t *testing.T) {
 			t.Fatalf("cell_reasons = %v, want 2 aligned to cells", reasons)
 		}
 		// the net column: the drawn SIG is UNSPECIFIED, the undrawn GND is a power rail.
-		wantNet := webapi.LocateReason_LOCATE_REASON_UNSPECIFIED
+		wantNet := checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
 		if row.GetCells()[1] == "GND" {
-			wantNet = webapi.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE
+			wantNet = checkspb.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE
 		}
 		if reasons[1] != wantNet {
 			t.Errorf("net %q reason = %v, want %v", row.GetCells()[1], reasons[1], wantNet)
 		}
 		// the component column: drawn R1/U1 are UNSPECIFIED, the undrawn #-ref is virtual.
-		wantComp := webapi.LocateReason_LOCATE_REASON_UNSPECIFIED
+		wantComp := checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
 		if row.GetCells()[0] == "#PWR02" {
-			wantComp = webapi.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL
+			wantComp = checkspb.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL
 		}
 		if reasons[0] != wantComp {
 			t.Errorf("component %q reason = %v, want %v", row.GetCells()[0], reasons[0], wantComp)

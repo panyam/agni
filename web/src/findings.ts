@@ -3,7 +3,7 @@
 // emitting an onSelect(subject) intent back up. Group-by is the panel's own view state.
 
 import type { HighlightSpec } from "./highlights.js";
-import { LocateReason } from "./gen/agni/v1/webapi/query_pb.js";
+import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 // SheetBadge locates a finding's subject on one sheet (WS9-024): the sheet id drives navigation
 // (showSheet) and the name is what the badge displays. The presenter denormalizes the wire's
@@ -14,7 +14,7 @@ export interface SheetBadge {
   name: string;
 }
 
-// FindingItem is the view-side shape of a rule finding (the wire webapi.Finding, minus proto
+// FindingItem is the view-side shape of a rule finding (the wire checks.Finding, minus proto
 // machinery). subject is the entity ref (a net name or a ref_des) and the highlight join key;
 // kind says what it is (so grouping and highlighting are exact, not string-guessed), pin is set
 // only for a pin subject, and category is the finding's rule's category tag (denormalized for the
@@ -41,7 +41,7 @@ export interface FindingItem {
   busId: string;
   message: string;
   sheets: SheetBadge[];
-  // locateReason (webapi Finding.locate_reason) explains why clicking this finding may highlight
+  // locateReason (checks.Finding.locate_reason) explains why clicking this finding may highlight
   // nothing, computed server-side from the geometry (WS7-042c): BUS_NOT_DRAWN for a bus with no drawn
   // wire. UNSPECIFIED (the default) means the subject is drawn and highlights.
   locateReason: LocateReason;

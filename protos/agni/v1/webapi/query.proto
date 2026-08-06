@@ -4,6 +4,8 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/checks/checks.proto";
+
 // This file: QueryService, the ad-hoc datalog query surface (WS3-029) over a loaded design's fact
 // base — the web front-end to the same `query` engine `agni query` runs. Search is its own concern
 // distinct from the rule checks (a rule is one named query among arbitrary ones), so it is its own
@@ -56,26 +58,13 @@ message QueryRow {
   // other undrawn entity), with the reason classified from design facts. UNSPECIFIED means the
   // entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
   // additionally shows it only on a faithful layout, since an auto-layout draws every entity.
-  repeated LocateReason cell_reasons = 4;
+  repeated agni.v1.checks.LocateReason cell_reasons = 4;
 }
 
 // CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no
 // repeated-of-repeated. sheet_ids is empty for a non-navigable or unlocated cell.
 message CellSheets {
   repeated string sheet_ids = 1;
-}
-
-// LocateReason is why a query result cell's entity may not be locatable in the canvas (WS9-039).
-// It is a semantic fact from the netlist, independent of layout — the client pairs it with an
-// actual resolution check before showing it, so the reason and the on-screen truth never conflict.
-enum LocateReason {
-  LOCATE_REASON_UNSPECIFIED = 0;      // the entity IS drawn — expected to highlight; no explanation
-  LOCATE_REASON_VIRTUAL_SYMBOL = 1;   // a `#`-ref power port / flag (#PWR/#FLG), not a placed part
-  LOCATE_REASON_POWER_RAIL_NO_WIRE = 2; // a power/ground rail distributed via taps, no drawn wire
-  LOCATE_REASON_NOT_IN_DESIGN = 3;    // the ref/net is not in the loaded netlist
-  LOCATE_REASON_NO_GEOMETRY = 4;      // undrawn in the faithful view for no more specific reason
-  LOCATE_REASON_BUS_NOT_DRAWN = 5;    // a bus with no drawn wire (a bus_alias, an EDIF array, a
-                                      // hierarchical bus port with no wire on the shown sheet) — WS7-042c
 }
 
 message RunQueryResponse {

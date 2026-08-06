@@ -2,15 +2,17 @@
 // @generated from file agni/v1/webapi/query.proto (package agni.v1.webapi, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { LocateReason } from "../checks/checks_pb";
+import { file_agni_v1_checks_checks } from "../checks/checks_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkiPQoPUnVuUXVlcnlSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgwKBHBhdGgYAiABKAkSDQoFcXVlcnkYAyABKAkijQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLndlYmFwaS5Mb2NhdGVSZWFzb24iHwoKQ2VsbFNoZWV0cxIRCglzaGVldF9pZHMYASADKAkiYQoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIngKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkq1gEKDExvY2F0ZVJlYXNvbhIdChlMT0NBVEVfUkVBU09OX1VOU1BFQ0lGSUVEEAASIAocTE9DQVRFX1JFQVNPTl9WSVJUVUFMX1NZTUJPTBABEiQKIExPQ0FURV9SRUFTT05fUE9XRVJfUkFJTF9OT19XSVJFEAISHwobTE9DQVRFX1JFQVNPTl9OT1RfSU5fREVTSUdOEAMSHQoZTE9DQVRFX1JFQVNPTl9OT19HRU9NRVRSWRAEEh8KG0xPQ0FURV9SRUFTT05fQlVTX05PVF9EUkFXThAFMrsBCgxRdWVyeVNlcnZpY2USTQoIUnVuUXVlcnkSHy5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkiPQoPUnVuUXVlcnlSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgwKBHBhdGgYAiABKAkSDQoFcXVlcnkYAyABKAkijQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24iHwoKQ2VsbFNoZWV0cxIRCglzaGVldF9pZHMYASADKAkiYQoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIngKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkyuwEKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -78,7 +80,7 @@ export type QueryRow = Message<"agni.v1.webapi.QueryRow"> & {
    * entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
    * additionally shows it only on a faithful layout, since an auto-layout draws every entity.
    *
-   * @generated from field: repeated agni.v1.webapi.LocateReason cell_reasons = 4;
+   * @generated from field: repeated agni.v1.checks.LocateReason cell_reasons = 4;
    */
   cellReasons: LocateReason[];
 };
@@ -262,63 +264,6 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 7);
-
-/**
- * LocateReason is why a query result cell's entity may not be locatable in the canvas (WS9-039).
- * It is a semantic fact from the netlist, independent of layout — the client pairs it with an
- * actual resolution check before showing it, so the reason and the on-screen truth never conflict.
- *
- * @generated from enum agni.v1.webapi.LocateReason
- */
-export enum LocateReason {
-  /**
-   * the entity IS drawn — expected to highlight; no explanation
-   *
-   * @generated from enum value: LOCATE_REASON_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * a `#`-ref power port / flag (#PWR/#FLG), not a placed part
-   *
-   * @generated from enum value: LOCATE_REASON_VIRTUAL_SYMBOL = 1;
-   */
-  VIRTUAL_SYMBOL = 1,
-
-  /**
-   * a power/ground rail distributed via taps, no drawn wire
-   *
-   * @generated from enum value: LOCATE_REASON_POWER_RAIL_NO_WIRE = 2;
-   */
-  POWER_RAIL_NO_WIRE = 2,
-
-  /**
-   * the ref/net is not in the loaded netlist
-   *
-   * @generated from enum value: LOCATE_REASON_NOT_IN_DESIGN = 3;
-   */
-  NOT_IN_DESIGN = 3,
-
-  /**
-   * undrawn in the faithful view for no more specific reason
-   *
-   * @generated from enum value: LOCATE_REASON_NO_GEOMETRY = 4;
-   */
-  NO_GEOMETRY = 4,
-
-  /**
-   * a bus with no drawn wire (a bus_alias, an EDIF array, a
-   *
-   * @generated from enum value: LOCATE_REASON_BUS_NOT_DRAWN = 5;
-   */
-  BUS_NOT_DRAWN = 5,
-}
-
-/**
- * Describes the enum agni.v1.webapi.LocateReason.
- */
-export const LocateReasonSchema: GenEnum<LocateReason> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_query, 0);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004

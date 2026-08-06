@@ -4,14 +4,19 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
-import "agni/v1/ir/ir.proto";
+import "agni/v1/checks/checks.proto";
 import "agni/v1/param/param.proto";
-import "agni/v1/webapi/query.proto";
 
 // This file: CheckService, the rule checks over a loaded design (WS9-026 extracted it from
 // DesignService: checks are their own concern, run-on-demand and independent of rendering).
-// The Finding/CheckReport shapes here are the canonical wire forms the CLI's
-// `check --format json|report` emits too, so the two surfaces cannot drift.
+//
+// The Finding/Subject/DatasheetCitation/CheckReport shapes it serves are NOT declared here: they
+// live in agni.v1.checks, the transport-neutral checks contract (WS3-103), and this file references
+// them. They were always the canonical forms — the CLI's `check --format json|report` emits the same
+// ones — but declaring them inside the web API made "canonical" a convention rather than a fact, and
+// left a written results document with nowhere to be defined but a package full of mount/path
+// request types. What remains here is genuinely transport: the request/response envelopes, the
+// per-request overlay configuration, and the catalog-listing shape.
 
 // CheckService runs the rule catalog (the check/ library) over a design's netlist IR and
 // serves the catalog itself. A geometry-only file with no netlist is an invalid argument.
@@ -143,65 +148,9 @@ message NamingRule {
   bool match_full = 6;
 }
 
-// Subject identifies the entity a finding is about, so a consumer can group and highlight by
-// entity type without re-guessing from a bare string. It maps directly to a geom.HighlightSpec
-// bucket: kind "net" -> nets, "component" -> components, "pin" -> pins (ref + pin).
-message Subject {
-  string kind = 1; // "net" | "component" | "pin" | "bus"
-  string ref = 2;  // net name (kind=net) or ref_des (kind=component | pin)
-  string pin = 3;  // pin designator, set only when kind=pin
-  // net_id is the deterministic per-instance net identity (ir.Net.id) for a net subject, so a
-  // client can highlight/locate ONE of two nets that share a name (the duplicate-net-name case).
-  // Empty for a component/pin subject or a pinless net; the client then joins by ref (the name).
-  string net_id = 4;
-  // bus_id is the bus's NAME (its range-label identity) for a kind="bus" subject, so a
-  // bus-not-modeled finding highlights its drawn bus rather than a net (WS7-042b). A bus carries
-  // no net, so this is its only geometry join key; empty for every other subject kind.
-  string bus_id = 5;
-}
-
-// Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join
-// key the viewer needs; `provenance` locates the finding in the source (file, native id, span) for
-// a source-link tooltip or an out-of-viewer consumer such as the CLI's `check --format json`. It is
-// unset when the subject carries no provenance.
-message Finding {
-  string rule = 1;
-  string severity = 2; // "error" | "warning" | "info"
-  Subject subject = 3; // the entity that failed (kind + ref); the highlight join key
-  string message = 4;
-  agni.v1.ir.Provenance provenance = 5; // source location of the subject; unset when none
-  // Sheet ids (SheetRef.id) where the subject appears in the design's default-layout geometry,
-  // filled server-side from placements (components/pins) and wires (nets) per sheet (WS9-024). A
-  // net spanning sheets lists each; empty when the design has no resolvable geometry, in which
-  // case a viewer highlights on the current sheet as before.
-  repeated string sheets = 6;
-  // locate_reason explains why clicking this finding may highlight nothing, computed
-  // server-side from the loaded geometry (WS7-042c). Set to BUS_NOT_DRAWN for a bus finding whose
-  // bus has no drawn wire; UNSPECIFIED (the default) means the subject is drawn and will highlight.
-  LocateReason locate_reason = 7;
-  // datasheet is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
-  // form of check.Finding.DatasheetProv: which document, page, and section a limit came from, plus
-  // the extraction method and confidence. Unset for a finding not backed by a seeded datasheet value.
-  // Carried on the canonical Finding so every consumer — the CLI's `review`/`check --format json`, and
-  // the web check panel — shows the source without parsing it out of the message (WS9-048).
-  DatasheetCitation datasheet = 8;
-}
-
-// DatasheetCitation is where a datasheet-backed value came from, so a consumer shows the source (and
-// flags a low confidence) as structured data rather than only inside the finding message. The wire
-// form of check.DatasheetCitation.
-message DatasheetCitation {
-  string doc = 1;         // the SourceDoc title (vendor doc number + revision), "" if unresolved
-  string doc_ref = 2;     // the SourceDoc id the value cites (the stable join key into PartSpec.docs)
-  int32 page = 3;         // 1-based page in the document
-  string section = 4;     // the table or figure the value was read from
-  string method = 5;      // how the value was extracted ("hand", "derive/v0", "mock", ...)
-  double confidence = 6;  // extraction confidence in (0, 1]; a low value flags "verify before trusting"
-}
-
 message CheckDesignResponse {
   // findings are sorted by rule then subject (check.Run's order).
-  repeated Finding findings = 1;
+  repeated agni.v1.checks.Finding findings = 1;
 }
 
 message GetCheckReportRequest {
@@ -215,30 +164,8 @@ message GetCheckReportRequest {
   OverlayConfig overlay = 4;
 }
 
-// CheckReport is the severity-organized pivot over one check run: THE report shape, rendered
-// by the CLI (`check --format markdown|report`) and the web report panel alike, so the two
-// consumers cannot drift (WS3-022). Sections come worst-severity first and empty severities
-// are omitted; within a section findings group by rule, each group carrying the catalog's
-// one-line summary so a report reads without the tool at hand.
-message CheckReport {
-  string source = 1;   // the checked file (mount-relative path or CLI argument)
-  int32 rules_run = 2; // how many rules the run evaluated (distinguishes "clean" from "skipped")
-  repeated SeveritySection sections = 3;
-
-  message SeveritySection {
-    string severity = 1; // "error" | "warning" | "info" (worst first in `sections`)
-    int32 count = 2;     // findings in this section, for the summary table
-    repeated RuleGroup rules = 3;
-  }
-  message RuleGroup {
-    string rule = 1;
-    string summary = 2;           // the rule's catalog Summary; "" when the rule is unknown
-    repeated Finding findings = 3; // the canonical Finding form, reused
-  }
-}
-
 message GetCheckReportResponse {
-  CheckReport report = 1;
+  agni.v1.checks.CheckReport report = 1;
 }
 
 message GetExpectationsRequest {

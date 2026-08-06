@@ -4,6 +4,7 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/checks/checks.proto";
 import "agni/v1/webapi/checks.proto";
 
 // This file: ReviewService, the transport-neutral analogue of `agni review` (WS9-047). Review is
@@ -11,7 +12,8 @@ import "agni/v1/webapi/checks.proto";
 // design, classifying each item's outcome — and was the last check surface with no served RPC (the
 // CLI was its only caller). It composes the SAME check catalog + interface profiles + design-intent
 // the CheckService uses, and both surfaces map the run through review.Run, so a served review and
-// the CLI cannot disagree on an outcome. The ReviewReport shape here is the canonical wire form.
+// the CLI cannot disagree on an outcome. ReviewReport wraps the canonical per-area outcomes from
+// agni.v1.checks with the manifest and design this run was about.
 
 // ReviewService runs a review checklist manifest over one or more designs and returns each item's
 // outcome. The overlay knobs (--profile-path / --intent-path / --params) are serve-startup config
@@ -44,24 +46,11 @@ message RunReviewRequest {
   OverlayConfig overlay = 6;
 }
 
-// ReviewItem is one checklist item's outcome, the wire form of review.ItemResult. outcome is the
-// review.Outcome string (pass | fail | not-applicable | not-automated | provisional |
-// needs-design-intent | computed-n/a); note carries the not-applicable / not-automated reason when
-// one applies; findings are the rule firings that made the item fail, in the canonical Finding form
-// reused from CheckService so a client highlights review findings with the same join key.
-message ReviewItem {
-  string id = 1;
-  string title = 2;
-  string outcome = 3;
-  string note = 4;
-  repeated Finding findings = 5;
-}
-
-// ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).
-message ReviewArea {
-  string name = 1;
-  repeated ReviewItem items = 2;
-}
+// ReviewItem and ReviewArea are NOT declared here: they live in agni.v1.checks alongside Finding
+// (WS3-103), because a per-item outcome is the review layer's core artifact rather than a fact about
+// this transport. The outcome vocabulary in particular — every verdict that is neither pass nor fail
+// — is what a written results document has to carry and what a foreign checker's flat violation list
+// cannot express, so it belongs to the contract, not to one RPC.
 
 // ReviewReport is one design's review result (the wire form of review.Report): the manifest and
 // design names plus each area's item outcomes. A client derives the tally (covered / pass / fail /
@@ -70,7 +59,7 @@ message ReviewArea {
 message ReviewReport {
   string manifest = 1;
   string design = 2;
-  repeated ReviewArea areas = 3;
+  repeated agni.v1.checks.ReviewArea areas = 3;
 }
 
 message RunReviewResponse {

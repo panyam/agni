@@ -6,6 +6,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/datasheet/param"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/expect"
 )
@@ -150,12 +151,12 @@ func expectationProtos(m map[string]expect.Entry, pending bool) []*webapi.RuleEx
 // geometry reader stamped on the bus WireGeometry.Net), so a bus-not-modeled finding highlights its
 // own drawn bus (WS7-042b). A bus with no drawn geometry (a bus_alias, an EDIF array) simply
 // resolves to nothing — its "bus not drawn" note is WS7-042c.
-func FindingProto(f check.Finding) *webapi.Finding {
-	subject := &webapi.Subject{Kind: f.Kind, Ref: f.Subject, Pin: f.Pin, NetId: f.NetID}
+func FindingProto(f check.Finding) *checkspb.Finding {
+	subject := &checkspb.Subject{Kind: f.Kind, Ref: f.Subject, Pin: f.Pin, NetId: f.NetID}
 	if f.Kind == check.KindBus {
 		subject.BusId = f.Subject
 	}
-	return &webapi.Finding{
+	return &checkspb.Finding{
 		Rule:       f.Rule,
 		Severity:   f.Severity,
 		Subject:    subject,
@@ -168,11 +169,11 @@ func FindingProto(f check.Finding) *webapi.Finding {
 // datasheetCitationProto maps a check.DatasheetCitation to its wire form, nil for a finding not
 // backed by a seeded datasheet value (WS9-048). One conversion site, shared by every Finding
 // consumer (the review/check JSON surfaces and the web check panel).
-func datasheetCitationProto(c *check.DatasheetCitation) *webapi.DatasheetCitation {
+func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitation {
 	if c == nil {
 		return nil
 	}
-	return &webapi.DatasheetCitation{
+	return &checkspb.DatasheetCitation{
 		Doc:        c.Doc,
 		DocRef:     c.DocRef,
 		Page:       c.Page,
@@ -184,8 +185,8 @@ func datasheetCitationProto(c *check.DatasheetCitation) *webapi.DatasheetCitatio
 
 // FindingProtos maps a slice of findings through FindingProto, preserving order (check.Run sorts by
 // rule then subject).
-func FindingProtos(fs []check.Finding) []*webapi.Finding {
-	out := make([]*webapi.Finding, 0, len(fs))
+func FindingProtos(fs []check.Finding) []*checkspb.Finding {
+	out := make([]*checkspb.Finding, 0, len(fs))
 	for _, f := range fs {
 		out = append(out, FindingProto(f))
 	}

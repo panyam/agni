@@ -2,9 +2,9 @@ package service
 
 import (
 	"github.com/panyam/agni/core/check"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -100,7 +100,7 @@ func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 // sheetsFor resolves one subject: nets by name, components and pins by ref_des (a pin subject's
 // ref is its component's ref_des, so it locates through the placement). An unknown subject gets
 // nil, which a consumer treats the same as "no geometry".
-func (ix sheetIndex) sheetsFor(s *webapi.Subject) []string {
+func (ix sheetIndex) sheetsFor(s *checkspb.Subject) []string {
 	switch s.GetKind() {
 	case check.KindNet:
 		return ix.nets[netKey(s.GetNetId(), s.GetRef())]
@@ -119,7 +119,7 @@ func (ix sheetIndex) sheetsFor(s *webapi.Subject) []string {
 // geometry misses. Both nil is a no-op (findings keep empty sheets — the pre-WS9-024 behavior the
 // viewer already handles); a net-only channel (design set, geometry nil) still annotates net
 // subjects.
-func AnnotateSheets(findings []*webapi.Finding, g *geom.SchematicGeometry, m NetSource) {
+func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m NetSource) {
 	if g == nil && len(m.Nets()) == 0 {
 		return
 	}
@@ -131,7 +131,7 @@ func AnnotateSheets(findings []*webapi.Finding, g *geom.SchematicGeometry, m Net
 		// say so instead of silently doing nothing (WS7-042c). A drawn bus keeps its sheets and the
 		// default UNSPECIFIED reason, so it highlights as before.
 		if f.GetSubject().GetKind() == check.KindBus && len(f.Sheets) == 0 {
-			f.LocateReason = webapi.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
+			f.LocateReason = checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
 		}
 	}
 }

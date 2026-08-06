@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/panyam/agni/core/check"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/core/review"
 )
@@ -34,7 +35,7 @@ func reportsFromProto(resp *webapi.RunReviewResponse) []review.Report {
 // findingsFromProto reconstructs the check.Finding list a review item's renderers read (rule, subject,
 // message, provenance -> source file, and the datasheet citation the JSON surface prints). The subject
 // name is the proto Subject.Ref for every kind (FindingProto sets it, plus BusId for a bus).
-func findingsFromProto(fs []*webapi.Finding) []check.Finding {
+func findingsFromProto(fs []*checkspb.Finding) []check.Finding {
 	out := make([]check.Finding, 0, len(fs))
 	for _, f := range fs {
 		out = append(out, check.Finding{
@@ -54,7 +55,7 @@ func findingsFromProto(fs []*webapi.Finding) []check.Finding {
 
 // datasheetFromProto reconstructs a finding's datasheet citation from the wire form, nil when the
 // finding carries none.
-func datasheetFromProto(c *webapi.DatasheetCitation) *check.DatasheetCitation {
+func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation {
 	if c == nil {
 		return nil
 	}

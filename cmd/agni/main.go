@@ -24,6 +24,7 @@ import (
 	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/datasheet/param"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
@@ -60,7 +61,7 @@ func rootCmd() *cobra.Command {
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched)")
-	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd())
+	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd())
 	return root
 }
 
@@ -188,7 +189,7 @@ func statsCmd() *cobra.Command {
 
 func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
-	var format, failOn, paramsDir, conventions, profilePath, intentPath string
+	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -289,7 +290,34 @@ func checkCmd() *cobra.Command {
 			}
 			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs)
 			ctx := cmd.Context()
-			var failFindings []*webapi.Finding
+			var failFindings []*checkspb.Finding
+			// --results-out takes one path through the service for every format (WS3-103): the document
+			// holds findings in run order, and the severity pivot is rebuilt from it. Rendering from the
+			// document rather than beside it is what makes the written artifact the SAME artifact the
+			// terminal showed, instead of a second one that happens to agree today.
+			if resultsOut != "" {
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Path: args[0], Rules: names, Overlay: overlay})
+				if err != nil {
+					return err
+				}
+				doc := resultsDoc(args[0], selected, resp.GetFindings(), &checkspb.RunConfig{
+					Params:         paramsDir != "",
+					Profiles:       profilePath != "",
+					Intent:         intentPath != "",
+					Conventions:    overlay.GetConventions().GetName(),
+				})
+				if err := writeResults(resultsOut, doc); err != nil {
+					return err
+				}
+				if err := renderCheckResults(cmd.OutOrStdout(), doc, format); err != nil {
+					return err
+				}
+				if failOn != "" && failsAtProto(resp.GetFindings(), failOn) {
+					cmd.SilenceUsage = true
+					return fmt.Errorf("findings at or above --fail-on %s", failOn)
+				}
+				return nil
+			}
 			switch format {
 			case "markdown", "report":
 				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Path: args[0], Rules: names, Overlay: overlay})
@@ -334,6 +362,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
 	cmd.Flags().StringVar(&conventions, "conventions", "", "compose an operator naming-convention config (YAML) into the catalog; its rules appear namespaced as <config name>/<rule name>")
 	cmd.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration (expected modules, voltage domains); its rules join the catalog")
+	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; render it later with `agni results`")
 	return cmd
 }
 
@@ -375,7 +404,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut string
 	var coverage bool
 	var ratifiedFloor float64
 	cmd := &cobra.Command{
@@ -443,6 +472,28 @@ func reviewCmd() *cobra.Command {
 				}
 				fmt.Fprint(cmd.ErrOrStderr(), summary)
 			}
+			// --results-out writes the per-design review document (WS3-103) and renders FROM it, the same
+			// write-then-render-the-document path `check --results-out` takes. A rollup has no single
+			// design to be about, and a document that averaged several would misrepresent every one of
+			// them, so this is a one-design surface and says so rather than silently picking the first.
+			if resultsOut != "" {
+				if len(reports) != 1 {
+					return fmt.Errorf("--results-out writes one design's document; got %d designs (run it per design)", len(reports))
+				}
+				doc := resultsDoc(args[0], catalog.Rules(), nil, &checkspb.RunConfig{
+					Params:         paramsDir != "",
+					Profiles:       profilePath != "",
+					Intent:         intentPath != "",
+					Conventions:    overlay.GetConventions().GetName(),
+					RatifiedFloor:  ratifiedFloor,
+				})
+				doc.Manifest = resp.GetManifest()
+				doc.Areas = resp.GetReports()[0].GetAreas()
+				if err := writeResults(resultsOut, doc); err != nil {
+					return err
+				}
+				return renderReviewResults(cmd.OutOrStdout(), doc, format, coverage)
+			}
 			// --coverage is the rollup shortcut; --format {markdown,json} picks the surface. JSON carries the
 			// FULL finding list per item (markdown caps the Detail cell), so tooling keeps every finding.
 			var out string
@@ -489,6 +540,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped) or json (full findings, for tooling)")
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
+	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; one design only. Render it later with `agni results`")
 	return cmd
 }
 

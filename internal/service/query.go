@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/datasheet/param"
@@ -96,11 +97,11 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 		row := &webapi.QueryRow{Cells: cells, Cites: r.Cites}
 		if navigable {
 			row.CellSheets = make([]*webapi.CellSheets, len(cols))
-			row.CellReasons = make([]webapi.LocateReason, len(cols))
+			row.CellReasons = make([]checkspb.LocateReason, len(cols))
 			for i := range cols {
 				cs := &webapi.CellSheets{}
 				if kinds[i] != "" {
-					cs.SheetIds = ix.sheetsFor(&webapi.Subject{Kind: kinds[i], Ref: cells[i]})
+					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kinds[i], Ref: cells[i]})
 					row.CellReasons[i] = cellReason(model, kinds[i], cells[i], drawnComps, drawnNets)
 				}
 				row.CellSheets[i] = cs
@@ -135,23 +136,23 @@ func drawnEntities(g *geom.SchematicGeometry) (comps, nets map[string]bool) {
 // (virtual `#` symbol, power rail, unknown ref/net); an undrawn entity with no such fact is
 // NO_GEOMETRY (drawn nowhere for no more specific reason). A drawn entity never gets a reason, so a
 // rail that happens to carry a wire (e.g. VBUS) reports UNSPECIFIED.
-func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[string]bool) webapi.LocateReason {
+func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[string]bool) checkspb.LocateReason {
 	drawn := drawnComps[subject]
 	if kind == check.KindNet {
 		drawn = drawnNets[subject]
 	}
 	if drawn {
-		return webapi.LocateReason_LOCATE_REASON_UNSPECIFIED
+		return checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
 	}
 	switch check.LocateReason(m, kind, subject) {
 	case check.LocateVirtual:
-		return webapi.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL
+		return checkspb.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL
 	case check.LocatePowerRail:
-		return webapi.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE
+		return checkspb.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE
 	case check.LocateNotInDesign:
-		return webapi.LocateReason_LOCATE_REASON_NOT_IN_DESIGN
+		return checkspb.LocateReason_LOCATE_REASON_NOT_IN_DESIGN
 	default:
-		return webapi.LocateReason_LOCATE_REASON_NO_GEOMETRY
+		return checkspb.LocateReason_LOCATE_REASON_NO_GEOMETRY
 	}
 }
 
