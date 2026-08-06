@@ -95,7 +95,7 @@ func formatTypesPowerOut(sourceFormat string) bool {
 // classifyPinRole derives a pin's role from its declared name, gated by device class for
 // the polarity roles. Matching is deliberately exact-token (not substring): pin names are
 // short vocabulary words, and "CLKA" must not read as an anode.
-func classifyPinRole(name string, class ComponentClass) PinRole {
+func classifyPinRole(m *irModel, name string, class ComponentClass) PinRole {
 	u := strings.ToUpper(strings.TrimSpace(name))
 	if u == "" || u == "~" {
 		return RoleUnknown
@@ -109,10 +109,10 @@ func classifyPinRole(name string, class ComponentClass) PinRole {
 			return RoleCathode
 		}
 	}
-	if IsGroundName(u) {
+	if m.IsGroundName(u) {
 		return RoleGround
 	}
-	if IsPowerRailName(u) {
+	if m.IsPowerRailName(u) {
 		return RolePower
 	}
 	return RoleUnknown

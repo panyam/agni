@@ -23,7 +23,7 @@ var bulkCap = &check.Rule{
 	Eval: func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
-			if !named || n.Attributes[netgraph.AttrExternal] == "true" || check.IsGroundName(n.Name) {
+			if !named || n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
 				return false
 			}
 			return !check.Exists(n.Connections, func(c *ir.Connection) bool {

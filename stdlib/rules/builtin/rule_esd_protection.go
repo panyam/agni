@@ -43,7 +43,7 @@ var esdProtection = &check.Rule{
 func externalSignalNet(m check.Model, n *ir.Net) bool {
 	a := n.Attributes
 	if a[netgraph.AttrExternal] == "true" || a[netgraph.AttrGlobal] == "true" ||
-		a[netgraph.AttrPowerDriven] == "true" || check.IsGroundName(n.Name) || check.IsPowerRailName(n.Name) {
+		a[netgraph.AttrPowerDriven] == "true" || m.IsGroundNet(n) || m.IsRailNet(n) {
 		return false
 	}
 	if check.IntentionallyUnconnected(m, n) {

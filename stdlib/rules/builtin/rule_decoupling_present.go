@@ -22,7 +22,7 @@ var decouplingPresent = &check.Rule{
 	Detail: ruleDoc("decoupling-present"),
 	Eval: func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			if n.Attributes[netgraph.AttrExternal] == "true" || check.IsGroundName(n.Name) {
+			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
 				return false
 			}
 			hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {

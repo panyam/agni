@@ -51,8 +51,8 @@ var crystalLoadCaps = &check.Rule{
 		for _, n := range m.Nets() {
 			// A non-ground power rail on a crystal pin marks it an ACTIVE oscillator (it has a Vdd
 			// pin); active oscillators do not use external load caps, so exclude them entirely.
-			rail := m.IsPowerRail(n.Name) && !check.IsGroundName(n.Name)
-			ground := check.IsGroundName(n.Name)
+			rail := m.IsPowerRail(n.Name) && !m.IsGroundNet(n)
+			ground := m.IsGroundNet(n)
 			for _, conn := range n.Connections {
 				x := xtals[conn.ComponentRef]
 				if x == nil {

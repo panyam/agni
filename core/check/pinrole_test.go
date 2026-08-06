@@ -1,6 +1,10 @@
 package check
 
-import "testing"
+import (
+	"testing"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
 
 func TestClassifyPinRole(t *testing.T) {
 	cases := []struct {
@@ -26,7 +30,7 @@ func TestClassifyPinRole(t *testing.T) {
 		{"", ClassLED, RoleUnknown},
 	}
 	for _, tc := range cases {
-		if got := classifyPinRole(tc.name, tc.class); got != tc.want {
+		if got := classifyPinRole(NewModel(&ir.Design{}).(*irModel), tc.name, tc.class); got != tc.want {
 			t.Errorf("classifyPinRole(%q, %s) = %s, want %s", tc.name, tc.class, got, tc.want)
 		}
 	}

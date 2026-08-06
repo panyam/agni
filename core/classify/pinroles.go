@@ -33,15 +33,6 @@ func underspecifiedInputDir(d ir.PinDirection) bool {
 // rules simply do not fire, absent-tolerant), meeting carve-out condition (c). Mutates the shared
 // part-type pins (a pin name is a part-type property, so a promotion is consistent across every
 // instance of the part). Idempotent.
-func StampPowerInPins(d *ir.Design) {
-	v := activeRoleVocab
-	for _, lib := range d.GetLibraries() {
-		for _, pt := range lib.GetParts() {
-			for _, pin := range pt.GetPins() {
-				if underspecifiedInputDir(pin.GetDirection()) && v.IsSupplyPin(pin.GetName()) {
-					pin.Direction = ir.PinDirection_PIN_DIRECTION_POWER_IN
-				}
-			}
-		}
-	}
-}
+// It promotes from the PROCESS-level lexicon; a read carrying its own conventions calls
+// (*Lexicon).StampPowerInPins instead (WS3-106).
+func StampPowerInPins(d *ir.Design) { ActiveLexicon().StampPowerInPins(d) }
