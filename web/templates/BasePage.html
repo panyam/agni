@@ -23,6 +23,16 @@
     .highlight-reset { margin-top: 6px; }
     .summary { color: #333; font-size: 12px; white-space: pre-wrap; }
     .sheet-nav-bar { flex: 0 0 auto; min-height: 0; border-bottom: 1px solid #ddd; background: #f4f4f4; display: flex; align-items: flex-end; gap: 8px; }
+    /* WS9-049: the visited-sheet tab strip. It takes the bar's free width (so the Compare/Panels
+       chrome stays right-aligned) and scrolls horizontally rather than wrapping the bar taller. */
+    .sheet-tabs-host { flex: 1 1 auto; min-width: 0; }
+    .sheet-tabs { display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; scrollbar-width: thin; padding: 4px 0 0 6px; }
+    .sheet-tab { display: inline-flex; align-items: center; flex: 0 0 auto; max-width: 200px; border: 1px solid #ccc; border-bottom: none; border-radius: 4px 4px 0 0; background: #e8e8e8; }
+    .sheet-tab.active { background: #fff; border-color: #bbb; }
+    .sheet-tab-label { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: none; font: inherit; font-size: 12px; padding: 4px 4px 4px 8px; cursor: pointer; }
+    .sheet-tab.active .sheet-tab-label { font-weight: 600; }
+    .sheet-tab-close { border: 0; background: none; color: #777; font: inherit; line-height: 1; padding: 2px 6px 2px 2px; border-radius: 3px; cursor: pointer; }
+    .sheet-tab-close:hover { background: #d8d8d8; color: #111; }
     .controls { display: flex; align-items: flex-end; gap: 4px; }
     .render-mode { display: flex; gap: 2px; padding: 4px 0 4px 6px; }
     .mode-btn { border: 1px solid #ccc; background: #eee; padding: 3px 10px; border-radius: 4px; cursor: pointer; font: inherit; }

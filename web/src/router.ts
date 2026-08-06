@@ -22,7 +22,14 @@ export interface ViewerLocation {
   symbols: boolean;
 }
 
-const FILES_PREFIX = "/files/";
+const DESIGNS_PREFIX = "/designs/";
+
+// VIEW_SEGMENT terminates a design's work-page URL. It is what tells a FILE location apart from a
+// FOLDER one without depending on the path's shape: a folder ends in "/" (the classic convention),
+// a design ends in "/view". The segment carries no state today (the work page's panels are dock
+// panels, not routes); it is here so per-verb routes (/checks, /query, a per-design report) can be
+// added later without migrating the URL space a second time.
+const VIEW_SEGMENT = "view";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
@@ -47,16 +54,16 @@ function isRenderMode(s: string | null): s is RenderMode {
   return s === "webgl" || s === "svg" || s === "native";
 }
 
-// locationToUrl renders a location as a root-relative URL (pathname + search). A file lives at
-// /files/<mount>/<path...> so the address is resourceful (a design has a stable, shareable URL);
-// the sheet and view knobs ride in the query string because sheet ids and layout names are
-// opaque strings that are not guaranteed path-safe. A folder is the same path with a trailing
-// slash (/files/<mount>/<dir>/, or /files/<mount>/ for a mount root) and no query, mirroring the
-// classic "directories end in /" convention. With neither it collapses to "/".
+// locationToUrl renders a location as a root-relative URL (pathname + search). A design's work
+// page lives at /designs/<mount>/<path...>/view so the address is resourceful (a design has a
+// stable, shareable URL); the sheet and view knobs ride in the query string because sheet ids and
+// layout names are opaque strings that are not guaranteed path-safe. A folder is the same path
+// with a trailing slash (/designs/<mount>/<dir>/, or /designs/<mount>/ for a mount root) and no
+// query, mirroring the classic "directories end in /" convention. With neither it collapses to "/".
 export function locationToUrl(loc: ViewerLocation): string {
   if (hasDir(loc)) {
     const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
-    return FILES_PREFIX + segs.join("/") + "/";
+    return DESIGNS_PREFIX + segs.join("/") + "/";
   }
   if (!hasFile(loc)) return "/";
   const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
@@ -66,18 +73,19 @@ export function locationToUrl(loc: ViewerLocation): string {
   if (loc.layout) params.set("layout", loc.layout);
   if (loc.symbols) params.set("sym", "1");
   const q = params.toString();
-  return FILES_PREFIX + segs.join("/") + (q ? `?${q}` : "");
+  return DESIGNS_PREFIX + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
 }
 
 // parseUrl reads a location back out of a pathname+search pair (as read from window.location). A
-// path that is not under /files/ (or that lacks a mount) yields the empty location. The first
+// path that is not under /designs/ (or that lacks a mount) yields the empty location. The first
 // path segment is the mount; the rest, rejoined, is the path within it. A trailing slash marks a
-// folder (mount root is /files/<mount>/, path ""); otherwise it is a file, which needs at least
-// one path segment and carries the sheet/view knobs from the query.
+// folder (mount root is /designs/<mount>/, path ""); a trailing /view marks a design, which needs
+// at least one path segment and carries the sheet/view knobs from the query. Anything else under
+// the prefix is not addressable and collapses to the empty location rather than being guessed at.
 export function parseUrl(pathname: string, search: string): ViewerLocation {
   const loc = emptyLocation();
-  if (!pathname.startsWith(FILES_PREFIX)) return loc;
-  const rest = pathname.slice(FILES_PREFIX.length);
+  if (!pathname.startsWith(DESIGNS_PREFIX)) return loc;
+  const rest = pathname.slice(DESIGNS_PREFIX.length);
   const isDir = rest.endsWith("/"); // the trailing slash is the folder marker
   const segs = rest
     .split("/")
@@ -90,7 +98,9 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
     loc.isDir = true;
     return loc; // folders carry no sheet or view knobs
   }
-  if (segs.length < 2) return loc; // a file needs a mount and at least one path segment
+  if (segs[segs.length - 1] !== VIEW_SEGMENT) return loc; // not a design URL
+  segs.pop();
+  if (segs.length < 2) return loc; // a design needs a mount and at least one path segment
   loc.mount = segs[0];
   loc.path = segs.slice(1).join("/");
   const params = new URLSearchParams(search);

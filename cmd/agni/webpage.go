@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	goal "github.com/panyam/goapplib"
 	"github.com/panyam/agni/internal/mounts"
@@ -46,6 +47,24 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 	return nil, false
 }
 
+// redirectLegacyFiles permanently redirects the pre-WS9-049 deep-link space to its replacement:
+// /files/<mount>/<path> becomes /designs/<mount>/<path>/view, and a folder URL (trailing slash)
+// becomes the same folder under /designs/. The sheet and view knobs ride in the query string in
+// both spaces, so they carry over untouched. It is a plain handler rather than a proto service
+// because it serves no message — C2 governs the API surface, not HTTP-level redirects.
+func redirectLegacyFiles(w http.ResponseWriter, r *http.Request) {
+	rest := strings.TrimPrefix(r.URL.Path, "/files/")
+	target := "/designs/" + rest
+	// A folder keeps its trailing slash (that IS the folder marker); a design gains /view.
+	if rest != "" && !strings.HasSuffix(rest, "/") {
+		target += "/view"
+	}
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusMovedPermanently)
+}
+
 // newPageApp builds the goapplib App that renders the viewer's pages from templates under
 // dir/templates.
 func newPageApp(dir string, sa *serveApp) *goal.App[*serveApp] {
@@ -53,13 +72,17 @@ func newPageApp(dir string, sa *serveApp) *goal.App[*serveApp] {
 }
 
 // registerPages mounts the viewer's server-rendered pages on mux. The same shell serves both
-// "/" and the deep-link space "/files/<mount>/<path>?sheet=…": routing is server-owned (C11), but
-// per-file state lives in the URL, so the frontend reads the URL on load and reopens that file.
-// The shell is identical for every path (the file's data still arrives over the Connect API), so
-// a refresh or a shared link lands on the same design/sheet instead of the empty root.
+// "/" and the deep-link space "/designs/<mount>/<path>/view?sheet=…": routing is server-owned
+// (C11), but per-design state lives in the URL, so the frontend reads the URL on load and reopens
+// that design. The shell is identical for every path (the design's data still arrives over the
+// Connect API), so a refresh or a shared link lands on the same design/sheet instead of the empty
+// root.
 func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	goal.Register[*ViewerPage](app, mux, "/")
-	goal.Register[*ViewerPage](app, mux, "/files/")
+	goal.Register[*ViewerPage](app, mux, "/designs/")
+	// The retired /files/ space (WS9-049) redirects rather than 404s: links to a design were
+	// shareable long before the split, so they have to keep resolving.
+	mux.HandleFunc("/files/", redirectLegacyFiles)
 	// The extraction workbench (WS13-006) is its own page space. Like the viewer, the shell is
 	// identical for every path and per-datasheet state lives in the URL (/datasheets/files/<mount>/
 	// <path>), so a refresh or shared link reopens the datasheet.

@@ -9,6 +9,7 @@ import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from 
 import { CanvasComponent } from "./canvas.js";
 import { fileTreeIsland } from "./filetree.js";
 import { controlBarIsland } from "./controlbar.js";
+import { sheetTabsIsland } from "./sheettabs.js";
 import { findingsPanelIsland } from "./findingspanel.js";
 import { rulesPanelIsland } from "./rulespanel.js";
 import { diffPanelIsland } from "./diffpanel.js";
@@ -79,7 +80,8 @@ class AppRoot extends BaseComponent {
     const queryEl = document.getElementById("query-panel");
     const coverageEl = document.getElementById("coverage-panel");
     const partsEl = document.getElementById("parts-panel");
-    if (!canvasEl || !treeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl)
+    const sheetTabsEl = document.getElementById("sheet-tabs");
+    if (!canvasEl || !treeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
       return children;
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
@@ -212,6 +214,11 @@ class AppRoot extends BaseComponent {
       onSheetSelect: (id) => void presenter.showSheet(id),
     });
     this.revealDir = tree.revealDir;
+    // WS9-049: the visited-sheet tab strip. It is a second SheetsView beside the tree, so it needs
+    // no presenter change; selecting a tab is the same showSheet intent a tree sheet-click emits.
+    const sheetTabs = sheetTabsIsland(sheetTabsEl, this._eventBus, {
+      onSelect: (id) => void presenter.showSheet(id),
+    });
     // The control bar (render-mode buttons + layout selector) is a Solid island: it renders from
     // the ControlsState the presenter pushes and emits mode/layout intents back up.
     const controls = controlBarIsland(controlsEl, this._eventBus, {
@@ -263,16 +270,16 @@ class AppRoot extends BaseComponent {
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
       })
       .catch(() => {});
-    // The file tree is the sheet-nav surface (sheets nest under their file; the old top tab
-    // strip was removed as redundant); the presenter still fans sheet state to every surface
-    // in this list, so a second one can join without presenter changes.
+    // The presenter fans sheet state to every surface in sheetNavs: the file tree (sheets nest
+    // under their file), the Sheets overview panel, and the top tab strip. The strip is the
+    // WS9-049 second surface the fan-out was built for — it joined with no presenter change.
     const presenter = new ViewerPresenter(
       designClient(),
       checksClient(),
       canvas,
       renderView,
       {
-        sheetNavs: [tree.view],
+        sheetNavs: [tree.view, sheetTabs.view],
         summary: setSummary,
         controls: controls.view,
         findings: findings.view,
@@ -309,6 +316,7 @@ class AppRoot extends BaseComponent {
     children.push(
       canvas,
       tree.island,
+      sheetTabs.island,
       controls.island,
       findings.island,
       rules.island,
