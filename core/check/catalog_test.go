@@ -84,3 +84,70 @@ func TestCatalogRejections(t *testing.T) {
 		}
 	}
 }
+
+// TestCatalogWithKeepsWhatTheBaseCarried is the property WS3-107 turned on: extending a catalog must
+// ADD to it. A *Catalog holds composed rules rather than its inputs, so a caller holding one it did
+// not build cannot rebuild it — and the thing it did instead, recomposing from the standard sources,
+// silently discarded whatever else the base carried.
+func TestCatalogWithKeepsWhatTheBaseCarried(t *testing.T) {
+	base, err := NewCatalog(NewSource("alpha", []*Rule{{Name: "a1"}}), NewSource("beta", []*Rule{{Name: "b1"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := base.With(NewSource("gamma", []*Rule{{Name: "g1"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"alpha/a1", "beta/b1", "gamma/g1"} {
+		if got.Lookup(want) == nil {
+			t.Errorf("%s missing after With; the base was dropped", want)
+		}
+	}
+	if base.Lookup("gamma/g1") != nil {
+		t.Error("With mutated the base catalog")
+	}
+	if n := len(base.Rules()); n != 2 {
+		t.Errorf("base rule count changed to %d", n)
+	}
+}
+
+// TestCatalogWithNamespacesOnlyTheExtras pins that base rules cross over verbatim. They are already
+// namespaced, so re-composing them would be rejected for containing the separator; only the extras go
+// through composition.
+func TestCatalogWithNamespacesOnlyTheExtras(t *testing.T) {
+	base, err := NewCatalog(NewSource("alpha", []*Rule{{Name: "a1"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := base.With(NewSource("beta", []*Rule{{Name: "b1"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := got.Lookup("alpha/a1"); r == nil {
+		t.Fatal("base rule lost")
+	} else if r.Tags[KeySource] != "alpha" {
+		t.Errorf("base rule source tag = %q, want alpha", r.Tags[KeySource])
+	}
+	if got.Lookup("alpha/alpha/a1") != nil {
+		t.Error("a base rule was namespaced a second time")
+	}
+	if r := got.Lookup("beta/b1"); r == nil || r.Tags[KeySource] != "beta" {
+		t.Errorf("extra rule not composed: %v", r)
+	}
+}
+
+// TestCatalogWithRejectsACollision pins that an extension cannot shadow what the base carried, and
+// that re-adding a source the base already has is the same duplicate error a single composition would
+// give rather than a confusing per-rule collision.
+func TestCatalogWithRejectsACollision(t *testing.T) {
+	base, err := NewCatalog(NewSource("alpha", []*Rule{{Name: "a1"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := base.With(NewSource("alpha", []*Rule{{Name: "a2"}})); err == nil {
+		t.Error("re-adding an existing source should be a duplicate-source error")
+	}
+	if _, err := base.With(NewSource("beta", []*Rule{{Name: "b/1"}})); err == nil {
+		t.Error("a rule name containing the namespace separator should be rejected")
+	}
+}

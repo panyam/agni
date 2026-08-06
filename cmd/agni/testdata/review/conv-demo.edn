@@ -10,7 +10,9 @@
           ; INPUT/OUTPUT/INOUT, so it arrives under-typed and only the ingestion pass can promote it.
           (port PWRIN_MAIN (direction INPUT) (designator "1"))
           (port SIGNAL_A (direction INPUT) (designator "2"))
-          (port SIGNAL_B (direction INPUT) (designator "3")))))
+          (port SIGNAL_B (direction INPUT) (designator "3"))
+          (port BUS_A (direction INPUT) (designator "4"))
+          (port BUS_B (direction INPUT) (designator "5")))))
     (cell RES
       (cellType GENERIC)
       (view V (viewType NETLIST)
@@ -25,4 +27,8 @@
           (instance I2 (viewRef V (cellRef RES (libraryRef PARTS))) (designator "R1"))
           (net PMIC_VDD_LPM_1V8 (joined (portRef 1 (instanceRef I1)) (portRef 1 (instanceRef I2))))
           (net lowercase_net (joined (portRef 2 (instanceRef I1)) (portRef 2 (instanceRef I2))))
-          (net GND (joined (portRef 3 (instanceRef I1)))))))))
+          (net GND (joined (portRef 3 (instanceRef I1))))
+          ; Two SIGBUS signals, which is what puts the interface in use; the profile's third signal has
+          ; no net here, so its completeness check has a real violation to report.
+          (net BUS_A (joined (portRef 4 (instanceRef I1))))
+          (net BUS_B (joined (portRef 5 (instanceRef I1)))))))))

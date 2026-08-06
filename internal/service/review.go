@@ -89,9 +89,13 @@ func (s *ReviewService) runOne(ctx context.Context, mount, design, boardPath str
 	if err != nil {
 		return review.Report{}, err
 	}
+	cat, err := ov.Catalog(s.catalog)
+	if err != nil {
+		return review.Report{}, err
+	}
 	present, scope, compScope := reviewClosures(m, s.byName)
 	return review.Run(review.RunParams{
-		Model: m, Catalog: ov.Catalog(s.catalog), Manifest: man, Design: design,
+		Model: m, Catalog: cat, Manifest: man, Design: design,
 		Present: present, Scope: scope, CompScope: compScope, RatifiedFloor: floor,
 		// intent.Emits narrows the intent/ prefix to the compiler's actual name space, so a pre-bound
 		// not-yet-shipped intent rule reads not-automated instead of a misleading needs-design-intent

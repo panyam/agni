@@ -77,7 +77,11 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
-	rules := ov.Catalog(s.catalog).Filter(check.Facets{Names: req.GetRules()})
+	cat, err := ov.Catalog(s.catalog)
+	if err != nil {
+		return nil, err
+	}
+	rules := cat.Filter(check.Facets{Names: req.GetRules()})
 	resp := &webapi.CheckDesignResponse{Findings: FindingProtos(check.Run(m, rules))}
 	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, req.GetMount(), req.GetPath()), m)
 	return resp, nil

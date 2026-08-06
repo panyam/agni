@@ -1,0 +1,9 @@
+# A design-intent declaration, as a project supplies it to `agni review --intent-path`. It is here to
+# prove the intent TIER survives a run that also carries a naming convention (WS3-107): a convention
+# with rules used to replace the composed catalog rather than extend it, taking every intent rule with
+# it, and an intent-bound item then read needs-design-intent as though no declaration had been given.
+name: conv-review-intent
+voltage_domains:
+  # The project's rail, named function-first. Its nominal is deliberately WRONG for a 1V8 rail, so the
+  # item resolves to a real FAIL rather than a pass that would also be produced by the tier vanishing.
+  - {name: lpm, nominal: 3.3, rails: [PMIC_VDD_LPM_1V8]}

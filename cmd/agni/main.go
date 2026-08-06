@@ -227,12 +227,16 @@ func checkCmd() *cobra.Command {
 			// silently drop registered sources. The flags accumulate so they may be combined.
 			overlay := &webapi.OverlayConfig{}
 			var extra []check.RuleSource
+			// convSource is the convention's rules, kept OUT of the catalog handed to the service and
+			// composed only into the local catalog facets resolve against (WS3-107). The service composes
+			// the convention itself from the request, so putting it in both would ask it to add a source
+			// the base already carries — a duplicate-source error now that composing EXTENDS the base
+			// rather than rebuilding it. The two jobs are genuinely different: the service needs the
+			// authoritative catalog, and the CLI needs a name space to resolve `--rule <config>/<rule>`
+			// against before it calls.
+			var convSource check.RuleSource
 			// --conventions: the CLI reads the file (files are the CLI's world, not the service's) and
-			// sends the convention as a VALUE on the request, which the service composes (WS3-102). The
-			// same value is ALSO composed here, because the CLI resolves --rule / --tag facets to rule
-			// NAMES before calling, and a convention's rules must be in the catalog it resolves against
-			// for `--rule <config>/<rule>` to select anything. Composing is pure, so doing it twice is
-			// free; the RUN is entirely the service's.
+			// sends the convention as a VALUE on the request, which the service composes (WS3-102).
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
@@ -244,7 +248,7 @@ func checkCmd() *cobra.Command {
 					if err != nil {
 						return err
 					}
-					extra = append(extra, src)
+					convSource = src
 				}
 			}
 			if profilePath != "" {
@@ -264,10 +268,18 @@ func checkCmd() *cobra.Command {
 			if len(extra) > 0 {
 				catalog = check.CatalogWith(extra...)
 			}
-			// Resolve the --rule/--tag facets to rule NAMES against the composed catalog: CheckDesign /
-			// GetCheckReport select by name, and the CLI (not the service) owns facet resolution. The same
-			// composed catalog is injected into the service, so the names resolve identically there.
-			selected := catalog.Filter(facets)
+			// Resolve the --rule/--tag facets to rule NAMES against the catalog the RUN will use, which is
+			// the service's catalog plus the convention the request carries. CheckDesign / GetCheckReport
+			// select by name and the CLI owns facet resolution, so the two must see the same name space —
+			// but only this local copy carries the convention, or the service would compose it twice.
+			resolveAgainst := catalog
+			if convSource != nil {
+				var err error
+				if resolveAgainst, err = catalog.With(convSource); err != nil {
+					return err
+				}
+			}
+			selected := resolveAgainst.Filter(facets)
 			if len(selected) == 0 && format == "text" {
 				fmt.Fprintln(cmd.OutOrStdout(), "no rules selected")
 				return nil

@@ -47,7 +47,11 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	if err != nil {
 		return nil, err
 	}
-	rules := ov.Catalog(s.catalog).Filter(check.Facets{Names: req.GetRules()})
+	cat, err := ov.Catalog(s.catalog)
+	if err != nil {
+		return nil, err
+	}
+	rules := cat.Filter(check.Facets{Names: req.GetRules()})
 	rep := CheckReportProto(req.GetPath(), check.Run(m, rules), rules)
 	AnnotateReport(rep, BuildGeometry(ctx, s.loader, req.GetMount(), req.GetPath()), m)
 	return &webapi.GetCheckReportResponse{Report: rep}, nil
