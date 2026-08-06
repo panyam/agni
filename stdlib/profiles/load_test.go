@@ -123,6 +123,52 @@ requirements:
 	}
 }
 
+// An overlay can author a glob- or regex-matched signal in YAML (WS3-057), which is what lets a
+// project whose bus identity is the PREFIX and whose suffix is shared with a foreign bus declare an
+// interface at all. The compiled rules carry the pattern through, so the profile stays off CAN.
+func TestLoadPatternSignals(t *testing.T) {
+	y := `
+name: ETHX
+signals:
+  - {name: H, glob: "ETH_SW*_H", anchor: true}
+  - {name: L, regex: '^ETH_SW\d+_P\d+_._L$'}
+requirements:
+  - {type: signal-dangling}
+`
+	p, err := Load(strings.NewReader(y))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if p.Signals[0].Glob != "ETH_SW*_H" || p.Signals[1].Regex == "" {
+		t.Fatalf("matchers did not survive the load: %+v", p.Signals)
+	}
+	if got := len(Compile(p)); got != 1 {
+		t.Fatalf("Compile(loaded): want 1 rule, got %d", got)
+	}
+	d := &ir.Design{Components: comps("U1", "U2"), Nets: []*ir.Net{
+		net("ETH_SW1_P1_A_H", "U1.1", "U2.1"),
+		net("ETH_SW1_P1_A_L", "U1.2"), // in use, and this one is dangling
+		net("CAN_00_L", "U3.1"),       // foreign, also single-pin: must NOT be reported
+	}}
+	fs := check.Run(check.NewModel(d), Compile(p))
+	if len(fs) != 1 || fs[0].Subject != "ETH_SW1_P1_A_L" {
+		t.Fatalf("want only the ETH _L net reported dangling, got %+v", fs)
+	}
+}
+
+// A naming map REPLACES a signal's matcher rather than adding a second form to it: remapping the
+// suffix of a glob-matched signal must not leave both declared, which is not a matcher at all.
+func TestNamingMapReplacesPatternMatcher(t *testing.T) {
+	core := Profile{Name: "GlobBus", Signals: []Signal{{Name: "H", Glob: "ETH_SW*_H", Anchor: true}}}
+	got := applyNamingMap(core, map[string]string{"H": "_HOUSE_H"})
+	if err := validateSignalMatcher(got.Signals[0]); err != nil {
+		t.Fatalf("remapped signal should be a sound matcher: %v", err)
+	}
+	if got.Signals[0].Glob != "" || got.Signals[0].Suffix != "_HOUSE_H" {
+		t.Errorf("remap should clear the glob and set the suffix, got %+v", got.Signals[0])
+	}
+}
+
 // Load reports an unknown requirement type with the list of known types (teaching error), the surface
 // a customer authoring an overlay profile hits on a typo.
 func TestLoadUnknownRequirementTeaches(t *testing.T) {
@@ -146,6 +192,11 @@ func TestParseValidationErrors(t *testing.T) {
 		"no signals":    "name: X",
 		"signal fields": "name: X\nsignals: [{name: CLK}]",
 		"two anchors":   "name: X\nsignals: [{name: A, suffix: _A, anchor: true}, {name: B, suffix: _B, anchor: true}]",
+		// WS3-057 matcher validation: a signal declares exactly one sound form.
+		"two matcher forms": "name: X\nsignals: [{name: A, suffix: _A, glob: 'A*'}]",
+		"bad regex":         "name: X\nsignals: [{name: A, regex: '^ETH_(SW'}]",
+		"universal glob":    "name: X\nsignals: [{name: A, glob: '*'}]",
+		"universal regex":   "name: X\nsignals: [{name: A, regex: '.*'}]",
 	}
 	for name, y := range cases {
 		if _, err := Parse([]byte(y)); err == nil {

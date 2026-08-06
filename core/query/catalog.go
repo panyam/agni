@@ -46,6 +46,8 @@ var builtinPredicates = []RelationInfo{
 	{Name: "contains", Args: []string{"string", "substring"}, Summary: "the string contains the substring", Kind: KindPredicate},
 	{Name: "prefix", Args: []string{"string", "prefix"}, Summary: "the string starts with the prefix", Kind: KindPredicate},
 	{Name: "suffix", Args: []string{"string", "suffix"}, Summary: "the string ends with the suffix", Kind: KindPredicate},
+	{Name: "glob", Args: []string{"string", "pattern"}, Summary: "the whole string matches a shell-style glob (* any run, ? one char)", Kind: KindPredicate},
+	{Name: "match", Args: []string{"string", "regex"}, Summary: "the string matches an (unanchored) regular expression", Kind: KindPredicate},
 }
 
 // Catalog returns the discoverable relation set: the built-in relations and predicates, plus any

@@ -55,6 +55,8 @@ The relations a datalog query joins over. Each documented relation links to its 
 | Relation | Summary |
 |---|---|
 | `contains(string, substring)` | the string contains the substring |
+| `glob(string, pattern)` | the whole string matches a shell-style glob (* any run, ? one char) |
+| `match(string, regex)` | the string matches an (unanchored) regular expression |
 | `prefix(string, prefix)` | the string starts with the prefix |
 | [`reaches(from, net)`](reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse) |
 | `suffix(string, suffix)` | the string ends with the suffix |
