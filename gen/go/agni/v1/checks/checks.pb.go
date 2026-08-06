@@ -595,8 +595,11 @@ type CheckResults struct {
 	// It carries identity and one-line prose only: the long-form rule detail belongs to the engine's
 	// catalog surface, and copying it into every document would multiply the same markdown across
 	// every archived run.
-	Catalog  []*RuleRecord `protobuf:"bytes,4,rep,name=catalog,proto3" json:"catalog,omitempty"`
-	Findings []*Finding    `protobuf:"bytes,5,rep,name=findings,proto3" json:"findings,omitempty"`
+	Catalog []*RuleRecord `protobuf:"bytes,4,rep,name=catalog,proto3" json:"catalog,omitempty"`
+	// findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and carries
+	// its findings per item instead, and that is not an oversight: a review runs each item's bound rules
+	// scoped to that item, so a flat union would assert a design-wide sweep that never happened.
+	Findings []*Finding `protobuf:"bytes,5,rep,name=findings,proto3" json:"findings,omitempty"`
 	// manifest is the review checklist's name; empty for a plain check run. Its presence is what
 	// distinguishes a review document from a check document, so a consumer never reports an absent
 	// coverage axis as a complete one.

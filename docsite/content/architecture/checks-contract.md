@@ -80,10 +80,89 @@ it, with nothing to say so — the same silence-reads-as-coverage failure the ou
 exists to prevent. Unknown *fields* within a known schema are tolerated, because additive fields do
 not change what an older reader understands.
 
-## What is not here yet
+## The other half: rule definitions
 
-The rule-DEFINITION half of this contract — the declarative source a rule compiles from, so that
-`check.Spec`, a datalog query, an interface profile, and a foreign rule deck become four front-ends
-onto one form — is the sibling piece and is not in this package yet. It is deliberately absent
-rather than sketched: a declared message nothing populates is the same failure class as a review
-binding that silently resolves to zero rules.
+A results document says what a run found. The rule-definition half says what a rule *is*, in a form
+that is data rather than code.
+
+`check.Rule` is not that form and must not become it: a Rule carries an `Eval` closure, and a Go func
+has no wire form. Reaching for one would mean shipping code as data or amputating the escape hatch
+that makes the catalog practical. The serializable artifact is the rule's **source**, and compiling is
+exactly the step that produces the non-serializable part. The engine already made that split in three
+places, and `ruledef.proto` is the union of their inputs.
+
+| Declarative source | Compiler | Runtime, never serialized |
+|---|---|---|
+| `check.Spec` | `Spec.Rule()` | `*check.Rule` with derived `Reads`/`Primitives` |
+| `query.Query` | `query.RuleFromQuery` | `*check.Rule` registered as `dl/…` |
+| `profiles.Profile` | `profiles.Compile` | one `*check.Rule` per requirement, `profile/…` |
+
+So the layering is three tiers, not two: a rule definition, the `RuleInfo` catalog projection of a
+compiled rule, and the Go runtime object. A rule with a hand-written Go `Eval` and no declarative twin
+is **outside this contract by design**, not a gap in it.
+
+A `RuleDef` compiles to one rule *or more*. A spec and a query each yield one; an interface profile
+yields one per requirement. That asymmetry is the profile mechanism working — one declaration standing
+in for a family of near-identical checks — so the signature admits it rather than making every caller
+pretend otherwise.
+
+### The FFI boundary is what keeps this honest
+
+A spec needing behavior the vocabulary cannot express calls a registered function **by name**. The
+name is data; the Go function behind it is not. So a rule definition serializes to a closed vocabulary
+plus named references into a registry — the same posture the vendor-rule survey takes on arbitrary
+scripted checks. The escape hatch exists, it is bounded, and covering general code verbatim is a
+non-goal, because a scripted check is exactly as reviewable as the code inside it.
+
+### Everything that cannot run is rejected when it is read
+
+An unknown entity set, an unknown fact, an unbound variable, an unregistered function, an unknown
+relation, an unknown requirement type, an over-broad signal matcher, a completeness requirement with
+no anchor. Each of those would otherwise compile to a rule that never fires, and a rule that never
+fires is indistinguishable from a design with nothing wrong with it. A deck stops at the first bad
+definition rather than loading partially, for the same reason: a catalog missing one rule looks
+exactly like a catalog that ran it and found nothing.
+
+Where the check can teach, it does — an unknown relation names the closest one in the catalog.
+
+## Reading a foreign rule deck: `.kicad_dru` on paper
+
+The point of a neutral definition form is that a vendor's rule file becomes a front-end rather than a
+parallel path. `.kicad_dru` is the honest test case: it is the one incumbent rule language that is
+open, documented, and licensed for study. Mapping it is worth doing on paper *before* building the
+front-end, because the interesting result is which layer has to change.
+
+Measured against the licensed 31-rule JLCPCB deck in the private rule corpus:
+
+| `.kicad_dru` construct | Our form | Verdict |
+|---|---|---|
+| `(rule "<name>")`, `(severity …)` | `RuleMeta.name`, `.severity` | direct |
+| `(condition "<expr>")` | `SpecBody.where` | direct in shape |
+| `(constraint <kind> (min X))` | `SpecCmp` over the kind's fact | direct where the fact exists |
+| `A.Type`, `A.Pad_Type`, `A.isPlated()`, `A.NetClass` | — | no fact |
+| `(layer "F.Cu")` | — | no layer scope |
+| Anything naming `B` | — | no second entity in scope |
+
+Of the 31 rules, **17 are single-item** and **14 are pairwise** (they reference a second item `B`:
+6 `clearance`, 4 `hole_to_hole`, 3 `hole_clearance`, 1 `silk_clearance`). The pairwise half does not
+map at all, and that is not an oversight: a `Spec` binds exactly one entity, which is precisely why
+`copper-clearance` is the one board rule with a hand-written Go `Eval`. A pairwise spatial join has
+not yet earned AST nodes.
+
+Of the 17 single-item rules, the constraint kinds with a shipped fact are `track_width` (2, via
+`segment.width`), `annular_width` (4, via `via.annular`), and the via subset of `hole_size` (via
+`via.drill`). The rest name item properties we do not model: pad geometry and plating for the pad
+`hole_size` rules, silkscreen text metrics for `text_thickness` and `text_height`, board-edge distance
+for `edge_clearance`, and blind/buried/micro-via predicates for the one `assertion`.
+
+**The conclusion is the useful part: the definition schema does not need to change.** The shape of a
+`.kicad_dru` rule — a named rule, a condition, a parametric comparison — is already `RuleMeta` plus
+`SpecBody.where` plus a `SpecCmp`. What is missing is the **fact vocabulary** (pad, layer, text, and
+board-edge facts) and **a two-entity scope**. Both are additions to the spec language rather than to
+this contract, and both have to clear the same bar every fact does: model the concept, not one
+vendor's spelling of it, and promote only when more than one source needs it.
+
+The corollary is a warning. A deck whose constraint kinds have no shipped counterpart must not
+evaluate clean. Loading 31 rules and silently running 6 of them would report a fab-capability pass
+that was never checked, which is the same false-pass failure the review outcomes exist to prevent —
+which is why load-time rejection is total rather than best-effort.

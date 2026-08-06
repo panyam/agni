@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/checks/checks.proto.
  */
 export const file_agni_v1_checks_checks: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NoZWNrcy9jaGVja3MucHJvdG8SDmFnbmkudjEuY2hlY2tzIlEKB1N1YmplY3QSDAoEa2luZBgBIAEoCRILCgNyZWYYAiABKAkSCwoDcGluGAMgASgJEg4KBm5ldF9pZBgEIAEoCRIOCgZidXNfaWQYBSABKAkidAoRRGF0YXNoZWV0Q2l0YXRpb24SCwoDZG9jGAEgASgJEg8KB2RvY19yZWYYAiABKAkSDAoEcGFnZRgDIAEoBRIPCgdzZWN0aW9uGAQgASgJEg4KBm1ldGhvZBgFIAEoCRISCgpjb25maWRlbmNlGAYgASgBIosCCgdGaW5kaW5nEgwKBHJ1bGUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSKAoHc3ViamVjdBgDIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDwoHbWVzc2FnZRgEIAEoCRIqCgpwcm92ZW5hbmNlGAUgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlEg4KBnNoZWV0cxgGIAMoCRIzCg1sb2NhdGVfcmVhc29uGAcgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEjQKCWRhdGFzaGVldBgIIAEoCzIhLmFnbmkudjEuY2hlY2tzLkRhdGFzaGVldENpdGF0aW9uIrACCgtDaGVja1JlcG9ydBIOCgZzb3VyY2UYASABKAkSEQoJcnVsZXNfcnVuGAIgASgFEj0KCHNlY3Rpb25zGAMgAygLMisuYWduaS52MS5jaGVja3MuQ2hlY2tSZXBvcnQuU2V2ZXJpdHlTZWN0aW9uGmgKD1NldmVyaXR5U2VjdGlvbhIQCghzZXZlcml0eRgBIAEoCRINCgVjb3VudBgCIAEoBRI0CgVydWxlcxgDIAMoCzIlLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVwb3J0LlJ1bGVHcm91cBpVCglSdWxlR3JvdXASDAoEcnVsZRgBIAEoCRIPCgdzdW1tYXJ5GAIgASgJEikKCGZpbmRpbmdzGAMgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZyJxCgpSZXZpZXdJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg8KB291dGNvbWUYAyABKAkSDAoEbm90ZRgEIAEoCRIpCghmaW5kaW5ncxgFIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmciRQoKUmV2aWV3QXJlYRIMCgRuYW1lGAEgASgJEikKBWl0ZW1zGAIgAygLMhouYWduaS52MS5jaGVja3MuUmV2aWV3SXRlbSKhAgoMQ2hlY2tSZXN1bHRzEikKBG1ldGEYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5SZXN1bHRzTWV0YRIpCgZkZXNpZ24YAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5EZXNpZ25SZWYSJgoDcnVuGAMgASgLMhkuYWduaS52MS5jaGVja3MuUnVuQ29uZmlnEisKB2NhdGFsb2cYBCADKAsyGi5hZ25pLnYxLmNoZWNrcy5SdWxlUmVjb3JkEikKCGZpbmRpbmdzGAUgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZxIQCghtYW5pZmVzdBgGIAEoCRIpCgVhcmVhcxgHIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJldmlld0FyZWEiXQoLUmVzdWx0c01ldGESDgoGc2NoZW1hGAEgASgJEhAKCHByb2R1Y2VyGAIgASgJEhgKEHByb2R1Y2VyX3ZlcnNpb24YAyABKAkSEgoKY3JlYXRlZF9hdBgEIAEoCSJWCglEZXNpZ25SZWYSDgoGc291cmNlGAEgASgJEgwKBG5hbWUYAiABKAkSFQoNc291cmNlX2Zvcm1hdBgDIAEoCRIUCgxjb250ZW50X2hhc2gYBCABKAkicQoJUnVuQ29uZmlnEg4KBnBhcmFtcxgBIAEoCBIXCg9wcm9maWxlX3NvdXJjZXMYAiADKAkSDgoGaW50ZW50GAMgASgIEhMKC2NvbnZlbnRpb25zGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBIp4BCgpSdWxlUmVjb3JkEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIyCgR0YWdzGAQgAygLMiQuYWduaS52MS5jaGVja3MuUnVsZVJlY29yZC5UYWdzRW50cnkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEq1gEKDExvY2F0ZVJlYXNvbhIdChlMT0NBVEVfUkVBU09OX1VOU1BFQ0lGSUVEEAASIAocTE9DQVRFX1JFQVNPTl9WSVJUVUFMX1NZTUJPTBABEiQKIExPQ0FURV9SRUFTT05fUE9XRVJfUkFJTF9OT19XSVJFEAISHwobTE9DQVRFX1JFQVNPTl9OT1RfSU5fREVTSUdOEAMSHQoZTE9DQVRFX1JFQVNPTl9OT19HRU9NRVRSWRAEEh8KG0xPQ0FURV9SRUFTT05fQlVTX05PVF9EUkFXThAFQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY2hlY2tzYgZwcm90bzM", [file_agni_v1_ir_ir]);
+  fileDesc("ChthZ25pL3YxL2NoZWNrcy9jaGVja3MucHJvdG8SDmFnbmkudjEuY2hlY2tzIlEKB1N1YmplY3QSDAoEa2luZBgBIAEoCRILCgNyZWYYAiABKAkSCwoDcGluGAMgASgJEg4KBm5ldF9pZBgEIAEoCRIOCgZidXNfaWQYBSABKAkidAoRRGF0YXNoZWV0Q2l0YXRpb24SCwoDZG9jGAEgASgJEg8KB2RvY19yZWYYAiABKAkSDAoEcGFnZRgDIAEoBRIPCgdzZWN0aW9uGAQgASgJEg4KBm1ldGhvZBgFIAEoCRISCgpjb25maWRlbmNlGAYgASgBIosCCgdGaW5kaW5nEgwKBHJ1bGUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSKAoHc3ViamVjdBgDIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDwoHbWVzc2FnZRgEIAEoCRIqCgpwcm92ZW5hbmNlGAUgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlEg4KBnNoZWV0cxgGIAMoCRIzCg1sb2NhdGVfcmVhc29uGAcgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uEjQKCWRhdGFzaGVldBgIIAEoCzIhLmFnbmkudjEuY2hlY2tzLkRhdGFzaGVldENpdGF0aW9uIrACCgtDaGVja1JlcG9ydBIOCgZzb3VyY2UYASABKAkSEQoJcnVsZXNfcnVuGAIgASgFEj0KCHNlY3Rpb25zGAMgAygLMisuYWduaS52MS5jaGVja3MuQ2hlY2tSZXBvcnQuU2V2ZXJpdHlTZWN0aW9uGmgKD1NldmVyaXR5U2VjdGlvbhIQCghzZXZlcml0eRgBIAEoCRINCgVjb3VudBgCIAEoBRI0CgVydWxlcxgDIAMoCzIlLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVwb3J0LlJ1bGVHcm91cBpVCglSdWxlR3JvdXASDAoEcnVsZRgBIAEoCRIPCgdzdW1tYXJ5GAIgASgJEikKCGZpbmRpbmdzGAMgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZyJxCgpSZXZpZXdJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg8KB291dGNvbWUYAyABKAkSDAoEbm90ZRgEIAEoCRIpCghmaW5kaW5ncxgFIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmciRQoKUmV2aWV3QXJlYRIMCgRuYW1lGAEgASgJEikKBWl0ZW1zGAIgAygLMhouYWduaS52MS5jaGVja3MuUmV2aWV3SXRlbSKhAgoMQ2hlY2tSZXN1bHRzEikKBG1ldGEYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5SZXN1bHRzTWV0YRIpCgZkZXNpZ24YAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5EZXNpZ25SZWYSJgoDcnVuGAMgASgLMhkuYWduaS52MS5jaGVja3MuUnVuQ29uZmlnEisKB2NhdGFsb2cYBCADKAsyGi5hZ25pLnYxLmNoZWNrcy5SdWxlUmVjb3JkEikKCGZpbmRpbmdzGAUgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZxIQCghtYW5pZmVzdBgGIAEoCRIpCgVhcmVhcxgHIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJldmlld0FyZWEiXQoLUmVzdWx0c01ldGESDgoGc2NoZW1hGAEgASgJEhAKCHByb2R1Y2VyGAIgASgJEhgKEHByb2R1Y2VyX3ZlcnNpb24YAyABKAkSEgoKY3JlYXRlZF9hdBgEIAEoCSIxCglEZXNpZ25SZWYSDgoGc291cmNlGAEgASgJEhQKDGNvbnRlbnRfaGFzaBgCIAEoCSJqCglSdW5Db25maWcSDgoGcGFyYW1zGAEgASgIEhAKCHByb2ZpbGVzGAIgASgIEg4KBmludGVudBgDIAEoCBITCgtjb252ZW50aW9ucxgEIAEoCRIWCg5yYXRpZmllZF9mbG9vchgFIAEoASKeAQoKUnVsZVJlY29yZBIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEg8KB3N1bW1hcnkYAyABKAkSMgoEdGFncxgEIAMoCzIkLmFnbmkudjEuY2hlY2tzLlJ1bGVSZWNvcmQuVGFnc0VudHJ5GisKCVRhZ3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBKtYBCgxMb2NhdGVSZWFzb24SHQoZTE9DQVRFX1JFQVNPTl9VTlNQRUNJRklFRBAAEiAKHExPQ0FURV9SRUFTT05fVklSVFVBTF9TWU1CT0wQARIkCiBMT0NBVEVfUkVBU09OX1BPV0VSX1JBSUxfTk9fV0lSRRACEh8KG0xPQ0FURV9SRUFTT05fTk9UX0lOX0RFU0lHThADEh0KGUxPQ0FURV9SRUFTT05fTk9fR0VPTUVUUlkQBBIfChtMT0NBVEVfUkVBU09OX0JVU19OT1RfRFJBV04QBUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2NoZWNrc2IGcHJvdG8z", [file_agni_v1_ir_ir]);
 
 /**
  * Subject identifies the entity a finding is about, so a consumer can group and highlight by entity
@@ -421,6 +421,10 @@ export type CheckResults = Message<"agni.v1.checks.CheckResults"> & {
   catalog: RuleRecord[];
 
   /**
+   * findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and carries
+   * its findings per item instead, and that is not an oversight: a review runs each item's bound rules
+   * scoped to that item, so a flat union would assert a design-wide sweep that never happened.
+   *
    * @generated from field: repeated agni.v1.checks.Finding findings = 5;
    */
   findings: Finding[];
@@ -497,6 +501,11 @@ export const ResultsMetaSchema: GenMessage<ResultsMeta> = /*@__PURE__*/
  * makes a findings diff between revisions meaningful and what stops a stale document from being
  * silently re-read against a design that has since changed.
  *
+ * The design's own name and source format are deliberately absent. A producer would have to parse
+ * the design to know them, and this document is written by a surface that is a thin client of the
+ * check service and never loads one itself. A field only a second read could fill would either cost
+ * every write a redundant parse or sit empty pretending to be optional.
+ *
  * @generated from message agni.v1.checks.DesignRef
  */
 export type DesignRef = Message<"agni.v1.checks.DesignRef"> & {
@@ -508,23 +517,9 @@ export type DesignRef = Message<"agni.v1.checks.DesignRef"> & {
   source: string;
 
   /**
-   * ir.Design.name
-   *
-   * @generated from field: string name = 2;
-   */
-  name: string;
-
-  /**
-   * ir.Design.source_format
-   *
-   * @generated from field: string source_format = 3;
-   */
-  sourceFormat: string;
-
-  /**
    * "sha256:<hex>" over the source bytes; empty when the producer did not hash
    *
-   * @generated from field: string content_hash = 4;
+   * @generated from field: string content_hash = 2;
    */
   contentHash: string;
 };
@@ -557,11 +552,11 @@ export type RunConfig = Message<"agni.v1.checks.RunConfig"> & {
   params: boolean;
 
   /**
-   * overlay interface-profile catalog sources in effect
+   * overlay interface profiles were attached
    *
-   * @generated from field: repeated string profile_sources = 2;
+   * @generated from field: bool profiles = 2;
    */
-  profileSources: string[];
+  profiles: boolean;
 
   /**
    * a design-intent declaration was attached
@@ -571,7 +566,9 @@ export type RunConfig = Message<"agni.v1.checks.RunConfig"> & {
   intent: boolean;
 
   /**
-   * the naming convention's name; "" = engine defaults
+   * conventions is the naming convention's NAME, not a flag, because it is also the namespace its
+   * rules appear under: a finding from `acme/signal-net-naming` is unreadable without it. "" is the
+   * engine defaults.
    *
    * @generated from field: string conventions = 4;
    */

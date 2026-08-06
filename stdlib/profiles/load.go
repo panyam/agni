@@ -73,37 +73,59 @@ func Parse(b []byte) (Profile, error) {
 	if doc.Host != nil {
 		p.HostAttrKey, p.HostAttrVal = doc.Host.Attr, doc.Host.Value
 	}
+	for _, s := range doc.Signals {
+		p.Signals = append(p.Signals, Signal{Name: s.Name, Prefix: s.Prefix, Suffix: s.Suffix, Glob: s.Glob, Regex: s.Regex, PullUp: s.PullUp, Anchor: s.Anchor})
+	}
+	for _, r := range doc.Requirements {
+		p.Requirements = append(p.Requirements, Requirement{Type: r.Type, Params: r.Params})
+	}
+	if err := Validate(p); err != nil {
+		return Profile{}, err
+	}
+	return p, nil
+}
+
+// Validate reports why a profile cannot do what it says: a missing name, no signals, an unnamed
+// signal, a requirement with no type, more than one anchor, an unsound signal matcher, or a
+// completeness requirement with no anchor to hang on.
+//
+// It is exported and separate from Parse because a profile now arrives by more than one route — YAML
+// today, a serialized rule definition too (WS3-103) — and a second authoring route with its own idea
+// of validity is how an unsound profile eventually gets in. The two failure classes it covers are the
+// ones that produce a rule which cannot fire rather than a rule that errors: an over-broad matcher
+// silently claims foreign nets, and a completeness requirement with no anchor compiles to nothing at
+// all, so an item bound to it scores a clean pass while the declared check never existed (WS3-099).
+func Validate(p Profile) error {
+	if strings.TrimSpace(p.Name) == "" {
+		return fmt.Errorf("profile: missing required field \"name\"")
+	}
+	if len(p.Signals) == 0 {
+		return fmt.Errorf("profile %q: needs at least one signal", p.Name)
+	}
 	anchors := 0
-	for i, s := range doc.Signals {
+	for i, s := range p.Signals {
 		if strings.TrimSpace(s.Name) == "" {
-			return Profile{}, fmt.Errorf("profile %q: signal #%d needs a \"name\"", doc.Name, i+1)
+			return fmt.Errorf("profile %q: signal #%d needs a \"name\"", p.Name, i+1)
 		}
-		sig := Signal{Name: s.Name, Prefix: s.Prefix, Suffix: s.Suffix, Glob: s.Glob, Regex: s.Regex, PullUp: s.PullUp, Anchor: s.Anchor}
-		// The matcher is validated HERE, at load, so a malformed regex or an over-broad pattern is a
-		// teaching error naming the signal rather than a rule that silently matches every net.
-		if err := validateSignalMatcher(sig); err != nil {
-			return Profile{}, fmt.Errorf("profile %q: %w", doc.Name, err)
+		if err := validateSignalMatcher(s); err != nil {
+			return fmt.Errorf("profile %q: %w", p.Name, err)
 		}
 		if s.Anchor {
 			anchors++
 		}
-		p.Signals = append(p.Signals, sig)
 	}
 	if anchors > 1 {
-		return Profile{}, fmt.Errorf("profile %q: at most one signal may be the anchor, got %d", doc.Name, anchors)
+		return fmt.Errorf("profile %q: at most one signal may be the anchor, got %d", p.Name, anchors)
 	}
-	for _, r := range doc.Requirements {
+	for _, r := range p.Requirements {
 		if strings.TrimSpace(r.Type) == "" {
-			return Profile{}, fmt.Errorf("profile %q: a requirement is missing its \"type\"", doc.Name)
+			return fmt.Errorf("profile %q: a requirement is missing its \"type\"", p.Name)
 		}
-		p.Requirements = append(p.Requirements, Requirement{Type: r.Type, Params: r.Params})
 	}
-	// A completeness requirement that would compile to nothing is a teaching error here rather than a
-	// silently-absent check (WS3-099).
 	if err := validateAnchorDeclared(p); err != nil {
-		return Profile{}, fmt.Errorf("profile: %w", err)
+		return fmt.Errorf("profile: %w", err)
 	}
-	return p, nil
+	return nil
 }
 
 // Load reads a YAML profile from r, parses+structurally-validates it (Parse), and additionally
@@ -204,6 +226,12 @@ func mustParse(b []byte) Profile {
 	}
 	return p
 }
+
+// RequirementTypes returns the registered requirement type names, sorted. Exported because a profile
+// now arrives from more than one place — YAML through Load, a serialized rule definition through the
+// deck reader (WS3-103) — and each has to reject an unknown type with the same teaching error rather
+// than skipping it into a declared check that never runs.
+func RequirementTypes() []string { return knownRequirementTypes() }
 
 // knownRequirementTypes returns the registered requirement type names, sorted, for teaching errors.
 func knownRequirementTypes() []string {
