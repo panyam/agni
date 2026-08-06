@@ -205,7 +205,7 @@ classificatory axis — category, tier, distribution, and any provider-defined o
 that reads a fact whose provider layer is absent is unavailable), not a stored track/label field.
 Consumers take the rule catalog as an injected `[]*check.Rule`, not the `check.Rules` global.
 **Why:** the set of classification axes is open and provider-specific — rules will come from a
-Phase-2 DSL and from integrators embedding Agni (customer suites outside `check/`), so a closed
+Phase-2 DSL and from integrators embedding Agni (customer suites outside `core/check`), so a closed
 column schema would force a core change per axis and force external authors to populate
 Agni-internal fields. Tags keep the catalog extensible (a browsable UI groups/filters by whatever
 keys are present) and keep the rule model from overfitting to today's axes — the earn-its-place
