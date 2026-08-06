@@ -364,3 +364,48 @@ netlist by one click on the project, we render their drawing beside it.
 geometry reader; a geometry companion contributes only render + locate. (Checkable once the
 companion-file association lands, WS1-047: geometry-only readers feed no component/net into the rule
 model.)
+
+## C22: Configuration travels as a value, never as ambient state or a locator the callee resolves
+**Rule:** Configuration that changes what a run CHECKS or how it INTERPRETS a design — naming
+conventions and their vocabularies, interface profiles, design intent, a review manifest, house policy
+thresholds — is passed to the code that uses it as a VALUE, along the same call it configures. Two
+things it must not be. It must not be **ambient process state**: a package-level vocabulary that a
+caller installs before invoking (`SetActiveRoleVocab` and friends) may exist only as a startup DEFAULT,
+never mutated per run, because ambient state cannot be scoped to one request and one caller's config
+then reaches another caller's work. It must not be a **locator the callee resolves**: a wire request
+carries the config as a message (`OverlayConfig.conventions` is a `NamingConvention`, not a
+`conventions_path`), so `internal/service` composes it with NO file I/O and how it was obtained — a
+YAML file the CLI read, a form a browser filled, a registry a deployment queried — stays the caller's
+business.
+
+ARTIFACTS are the deliberate exception: a design, a board export, and any large parsed input are named
+by an opaque REF (`mount` + key) that the injected Loader port resolves (C13), because they are
+megabytes, need format-reader dispatch, and are re-requested across many RPCs. A ref is not a host path;
+it is a key in a server-defined namespace, and nothing above the Loader may treat it as a filesystem
+path.
+
+**Why:** both failure modes were shipped and both cost real time. `agni review` could not load a
+`--conventions` config at all (WS3-102), so any review item bound to a naming rule read `not-automated`
+forever with no error to explain it, and the lexicon that teaches the engine a project's rail names
+could not reach a review, so unrelated rules reported failures that config would have fixed. Making the
+config per-request was blocked by the vocabulary being a process global (WS3-106): on serve, one
+request's conventions would have reached another request's design read, silently producing wrong
+`net.roles`. Passing a PATH instead was the second wrong answer: it forces the service to own file I/O
+to do its job, contradicts C13's os-free posture, and bakes a deployment's filesystem into the API
+contract — a host with no filesystem (WASM, an embedder, a test) then cannot call it. Carrying the
+value instead DELETED a loader interface and seven methods. Values also compose: one
+`service.ComposeOverlay` is pure, so CLI, serve, and web cannot drift, and a test needs no filesystem.
+
+Corollary, from C20: a convention VOCABULARY is applied at the READ as a value carried on the loader
+(`formats.Loader.Lexicon`), which is what makes "applied at the edge" scopeable rather than global.
+
+**Verify:** no `*_path` field on a CONFIG message in `protos/agni/v1/webapi/` (artifact refs are
+exempt and should be named `*_ref`); no `os.`/`filepath.` in `internal/service/` impl files (the
+existing C13 guard, `transport_guard_test.go`); the vocabulary installers (`naming.ApplyLexicon`,
+`classify.SetActive*`) are called only from entrypoint startup wiring (`cmd/agni`), never from a
+service method or any per-run path.
+
+**Known outstanding violation:** `RunReviewRequest.manifest_path` is config carried as a locator, and
+`design_path` / `board_path` are artifact refs wearing a misleading `_path` name. WS9-050 moves the
+manifest to a value and renames the refs. Recorded here rather than left implicit, so the constraint
+is not read as already satisfied.
