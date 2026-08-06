@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -74,10 +73,6 @@ type fakeLoader struct {
 	expect  *expect.Expectations
 	err     error
 	geomErr error
-}
-
-func (f fakeLoader) Conventions(context.Context, string, string) (naming.Config, error) {
-	return naming.Config{}, nil
 }
 
 func (f fakeLoader) Design(context.Context, string, string, ...ReadOption) (*ir.Design, error) {

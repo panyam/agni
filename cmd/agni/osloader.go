@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -124,14 +123,4 @@ func (l *osLoader) Manifest(_ context.Context, mountName, path string) (review.M
 	}
 	defer f.Close()
 	return review.Load(f)
-}
-
-// Conventions loads an operator naming-convention config from within the mount (WS3-102), so a served
-// review can name its project's conventions the same way it names its manifest.
-func (l *osLoader) Conventions(_ context.Context, mountName, path string) (naming.Config, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
-	if err != nil {
-		return naming.Config{}, err
-	}
-	return naming.Load(abs)
 }

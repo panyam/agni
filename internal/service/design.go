@@ -7,7 +7,6 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -58,10 +57,6 @@ type Loader interface {
 	// (.kicad_pcb today). nil with a nil error means the format has none — absence is
 	// normal, mirroring Expectations — and the design then simply lists no board sheet.
 	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
-	// Conventions loads an operator naming-convention config (WS3-102), mount-scoped like every other
-	// read. A named-but-unreadable config is an error, never an empty config: silently running with the
-	// built-in vocabulary would report a design clean against conventions that were never applied.
-	Conventions(ctx context.Context, mount, path string) (naming.Config, error)
 }
 
 // boardSheetID is the synthetic sheet id the board renders under (WS7-034). It is a sheet

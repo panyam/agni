@@ -224,20 +224,20 @@ func checkCmd() *cobra.Command {
 			// Compose any ad-hoc sources (overlay profiles, design intent) onto the catalog.
 			// CatalogWith keeps the built-ins AND any RegisterSource'd suites; NewCatalog here would
 			// silently drop registered sources. The flags accumulate so they may be combined.
-			// The overlay config rides every rule-running request; the service composes it.
-			overlay := &webapi.OverlayConfig{ConventionsPath: conventions}
+			overlay := &webapi.OverlayConfig{}
 			var extra []check.RuleSource
-			// --conventions is composed by the SERVICE now (WS3-102), from the path on the request, so
-			// the CLI and the web share one composition path and the lexicon travels with the read
-			// rather than being installed in a process global. It is ALSO composed here, because the
-			// CLI (not the service) resolves --rule / --tag facets to rule NAMES, and a convention's
-			// rules have to be in the catalog it resolves against for `--rule <config>/<rule>` to
-			// select anything. Composition is pure, so doing it twice costs a file read.
+			// --conventions: the CLI reads the file (files are the CLI's world, not the service's) and
+			// sends the convention as a VALUE on the request, which the service composes (WS3-102). The
+			// same value is ALSO composed here, because the CLI resolves --rule / --tag facets to rule
+			// NAMES before calling, and a convention's rules must be in the catalog it resolves against
+			// for `--rule <config>/<rule>` to select anything. Composing is pure, so doing it twice is
+			// free; the RUN is entirely the service's.
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
 					return err
 				}
+				overlay.Conventions = service.ConventionProto(cfg)
 				if len(cfg.Rules) > 0 {
 					src, err := naming.Source(cfg)
 					if err != nil {
@@ -403,6 +403,15 @@ func reviewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Reading the convention file is the CLI's job; the service takes the value.
+			overlay := &webapi.OverlayConfig{}
+			if conventions != "" {
+				cfg, err := naming.Load(conventions)
+				if err != nil {
+					return err
+				}
+				overlay.Conventions = service.ConventionProto(cfg)
+			}
 			var specs param.ParamProvider
 			if paramsDir != "" {
 				set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -414,10 +423,10 @@ func reviewCmd() *cobra.Command {
 			svc := service.NewReviewService(&localLoader{loader: newLoader()}, catalog, byName, specs)
 			resp, err := svc.RunReview(cmd.Context(), &webapi.RunReviewRequest{
 				ManifestPath: checklist, DesignPath: args, BoardPath: boardPath, RatifiedFloor: ratifiedFloor,
-				// --conventions rides the REQUEST rather than being composed here (WS3-102): the service
-				// resolves it, so the CLI and the web reach one composition path. Its lexicon half then
-				// travels with the design read instead of being installed in a process global.
-				Overlay: &webapi.OverlayConfig{ConventionsPath: conventions},
+				// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
+				// and the web reach one composition path, and its lexicon half travels with the design
+				// read instead of being installed in a process global.
+				Overlay: overlay,
 			})
 			if err != nil {
 				return err

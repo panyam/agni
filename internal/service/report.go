@@ -76,7 +76,7 @@ func CheckReportProto(source string, fs []check.Finding, rules []*check.Rule) *w
 // renders the one canonical report shape. Findings carry the same sheet annotation as
 // CheckDesign's (WS9-024), so the report panel shares the sheet-navigation join.
 func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckReportRequest) (*webapi.GetCheckReportResponse, error) {
-	ov, err := ComposeOverlay(ctx, s.loader, req.GetMount(), req.GetOverlay())
+	ov, err := ComposeOverlay(req.GetOverlay())
 	if err != nil {
 		return nil, err
 	}

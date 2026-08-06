@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -54,10 +53,4 @@ func (l *localLoader) Manifest(_ context.Context, _, path string) (review.Manife
 	}
 	defer f.Close()
 	return review.Load(f)
-}
-
-// Conventions loads an operator naming-convention config from a bare local path (no containment, the
-// localLoader contract).
-func (l *localLoader) Conventions(_ context.Context, _, path string) (naming.Config, error) {
-	return naming.Load(path)
 }

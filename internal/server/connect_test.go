@@ -10,7 +10,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -78,10 +77,6 @@ type memReviewLoader struct {
 	design *ir.Design
 	man    review.Manifest
 	err    error
-}
-
-func (m memReviewLoader) Conventions(context.Context, string, string) (naming.Config, error) {
-	return naming.Config{}, nil
 }
 
 func (m memReviewLoader) Design(context.Context, string, string, ...service.ReadOption) (*ir.Design, error) {

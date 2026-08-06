@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -23,10 +22,6 @@ type ReviewLoader interface {
 	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
 	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
 	Manifest(ctx context.Context, mount, path string) (review.Manifest, error)
-	// Conventions loads an operator naming-convention config (WS3-102), mount-scoped like every other
-	// read. A named-but-unreadable config is an error, never an empty config: silently running with the
-	// built-in vocabulary would report a design clean against conventions that were never applied.
-	Conventions(ctx context.Context, mount, path string) (naming.Config, error)
 }
 
 // ReviewService runs a review checklist manifest over one or more designs, the transport-neutral
@@ -69,7 +64,7 @@ func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequ
 	// Per-request overlay config (WS3-102), composed BEFORE any design is read: its lexicon half has
 	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
 	// service's own catalog and the default vocabulary in place.
-	ov, err := ComposeOverlay(ctx, s.loader, req.GetMount(), req.GetOverlay())
+	ov, err := ComposeOverlay(req.GetOverlay())
 	if err != nil {
 		return nil, err
 	}

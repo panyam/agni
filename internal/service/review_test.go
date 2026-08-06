@@ -23,10 +23,6 @@ import (
 // construction, not a re-encoded copy. It is the one os-touching test helper (production is os-free).
 type fsReviewLoader struct{ base string }
 
-func (l fsReviewLoader) Conventions(_ context.Context, _, path string) (naming.Config, error) {
-	return naming.Load(filepath.Join(l.base, path))
-}
-
 // Design HONORS the read options rather than discarding them, because that is the whole point of the
 // seam: a loader that dropped the lexicon would make a per-request convention silently no-op, and a
 // test helper that dropped it would assert nothing.
@@ -188,10 +184,6 @@ func TestReviewReportProtoMapsAllFields(t *testing.T) {
 type stubReviewLoader struct {
 	design *ir.Design
 	man    review.Manifest
-}
-
-func (l stubReviewLoader) Conventions(context.Context, string, string) (naming.Config, error) {
-	return naming.Config{}, nil
 }
 
 func (l stubReviewLoader) Design(context.Context, string, string, ...ReadOption) (*ir.Design, error) {
@@ -366,7 +358,13 @@ func TestRunReviewOverlayIsPerRequest(t *testing.T) {
 			DesignPath:   []string{"review/conv-demo.edn"},
 		}
 		if conventions != "" {
-			r.Overlay = &webapi.OverlayConfig{ConventionsPath: conventions}
+			// The convention travels as a VALUE, so the caller decides where it came from; here that is
+			// the same YAML the CLI test uses, read by the test rather than by the service.
+			cfg, err := naming.Load(filepath.Join("../../cmd/agni/testdata", conventions))
+			if err != nil {
+				t.Fatalf("naming.Load: %v", err)
+			}
+			r.Overlay = &webapi.OverlayConfig{Conventions: ConventionProto(cfg)}
 		}
 		return r
 	}
