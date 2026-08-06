@@ -21,6 +21,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PROVISIONAL: nothing consumes this schema yet, so names and shape may change until a front-end or a
+// deck-loading surface arrives to exercise it. See the file header.
+//
 // RuleDeck is a set of rule definitions from one source: a shipped catalog exported for inspection, a
 // customer's house rules, or a foreign rule file translated by a front-end. The deck is the unit a
 // front-end emits and a catalog source consumes, which is what makes profile YAML, datalog text, a

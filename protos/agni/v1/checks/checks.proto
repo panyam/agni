@@ -166,6 +166,33 @@ message CheckResults {
   // coverage axis as a complete one.
   string manifest = 6;
   repeated ReviewArea areas = 7;
+  // import_summary is present only on a document IMPORTED from a foreign checker: how many of that
+  // tool's findings could be attached to an entity in our model, and what the rest were. Unset for a
+  // native run, whose findings are produced from the model and therefore joined by construction.
+  ImportSummary import_summary = 8;
+}
+
+// ImportSummary is the honest accounting of an import. A foreign checker names the entity a violation
+// is about in free text ("Pad 1 [VCC] of R1 on B.Cu"), so attaching it to our model is a parse, and a
+// parse has a residue: a wire whose description carries only its length and orientation names nothing
+// we can join to.
+//
+// The residue is REPORTED rather than dropped, and the unjoined findings are kept rather than
+// discarded, because either silence would read as coverage. A consumer seeing 40 imported findings has
+// to be able to tell "the tool found 40 things" from "the tool found 60 and we understood 40".
+message ImportSummary {
+  int32 findings = 1; // findings read from the source document
+  int32 joined = 2;   // how many attached to a component, pin, or net in the model
+  repeated UnjoinedReason unjoined = 3;
+}
+
+// UnjoinedReason is one class of finding the import could not attach, with a few verbatim examples so
+// a reader can judge whether the residue is benign (board outline geometry) or a gap worth closing (an
+// entity shape the parse table does not know yet).
+message UnjoinedReason {
+  string reason = 1;
+  int32 count = 2;
+  repeated string examples = 3;
 }
 
 // ResultsMeta is who produced the document and when. producer matters because this contract is meant
@@ -176,6 +203,16 @@ message ResultsMeta {
   string producer = 2;         // the tool that ran the checks, e.g. "agni"
   string producer_version = 3; // that tool's build identity
   string created_at = 4;       // RFC 3339, UTC
+  // coverage_axis states whether this producer's outcomes distinguish "checked and clean" from "not
+  // checked". A native run does: every verdict that is neither pass nor fail records a distinct way a
+  // question went unanswered. An incumbent DRC or ERC report does NOT — it is a flat violation list,
+  // and its silence about a rule is unreadable.
+  //
+  // It is declared rather than inferred because the difference is invisible in the data: an imported
+  // document and a clean native run both look like "few findings". A consumer that treated them alike
+  // would report a fab-capability pass that was never checked, so the weaker artifact says it is
+  // weaker instead of being quietly promoted.
+  bool coverage_axis = 5;
 }
 
 // DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the

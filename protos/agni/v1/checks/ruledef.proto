@@ -7,6 +7,22 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/checks";
 // This file is the RULE-DEFINITION half of the checks contract (WS3-103): the declarative SOURCE a
 // rule compiles from. Its sibling checks.proto is the results half, the evidence a run produced.
 //
+// PROVISIONAL (the ir.proto tier-2 posture, same as param.proto). Nothing CONSUMES this yet: no CLI
+// surface exports or loads a rule deck, there is no foreign-rule front-end, and the phase-2 DSL that
+// would emit into it is deferred. The shape is validated only by round-tripping the shipped catalog
+// (cmd/agni/ruledef_test.go), which proves it is faithful but cannot tell us it is convenient — the
+// first real consumer is the feedback signal, and it has not arrived. Names and shape may change
+// until one does.
+//
+// The specific risk worth naming: the Spec messages below mirror check.Spec's closed vocabulary 1:1,
+// and that vocabulary is still moving (OptionalReads arrived in WS3-078, RequiresCapability in
+// WS3-096). Every change to it is now also a change here. The round-trip test catches the breakage in
+// the same PR, so the coupling is loud rather than silent, but it is coupling.
+//
+// The sibling results half carries no such marker on purpose: it has two producers (a native run and
+// an imported vendor report) and a live consumer (`agni results`), so its shape has been exercised
+// from both ends.
+//
 // `check.Rule` is not the serialization target and must not become one. A Rule carries an Eval
 // closure, and a Go func has no wire form; reaching for one would mean shipping code as data or
 // amputating the escape hatch that makes the catalog practical. The serializable artifact is the
@@ -28,6 +44,9 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/checks";
 // registry, which is the same posture the vendor-rule survey takes on arbitrary scripted checks —
 // the escape hatch exists, it is bounded, and covering general code verbatim is a non-goal.
 
+// PROVISIONAL: nothing consumes this schema yet, so names and shape may change until a front-end or a
+// deck-loading surface arrives to exercise it. See the file header.
+//
 // RuleDeck is a set of rule definitions from one source: a shipped catalog exported for inspection, a
 // customer's house rules, or a foreign rule file translated by a front-end. The deck is the unit a
 // front-end emits and a catalog source consumes, which is what makes profile YAML, datalog text, a
