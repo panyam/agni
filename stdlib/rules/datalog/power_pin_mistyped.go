@@ -19,7 +19,7 @@ import (
 // net fan-out (net.pin_count < 2), NOT net membership, because KiCad stub-synthesizes a net for
 // every bare pin — so "not on a net" is never true there, but "alone on its net" is. Gated by
 // has_nc_channel so it stays silent on formats that cannot express intentional no-connect.
-var powerPinMistyped = query.RuleFromQuery(query.FindingQuery{
+var powerPinMistypedQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "power-pin-mistyped",
 		Severity: "warning",
@@ -41,7 +41,9 @@ var powerPinMistyped = query.RuleFromQuery(query.FindingQuery{
 	SubjectVar: "ref",
 	PinVar:     "pin",
 	Message:    "pin {pin} is named like a power/ground pin but is typed as a plain signal, alone on net {net} — a mistyped supply pin power-input-not-driven cannot catch",
-})
+}
+
+var powerPinMistyped = query.RuleFromQuery(powerPinMistypedQ)
 
 // dlRules is the "dl" source's rule set — the datalog-authored rules this package registers.
 // docs_test holds it 1:1 to the docs/ folder.
@@ -51,6 +53,12 @@ var dlRules = []*check.Rule{powerPinMistyped}
 // (tools/catalogdocs), so the reference site lists exactly the rules this package registers and
 // runs. It is the same slice the source registers; callers must not mutate the returned rules.
 func DocRules() []*check.Rule { return dlRules }
+
+// Queries returns the datalog rule DECLARATIONS this package holds, registered and twin alike. It is
+// the rule-definition contract's view of the package (WS3-103): RuleFromQuery consumes a FindingQuery
+// and yields a check.Rule with an Eval closure, which has no wire form, so a round-trip has to start
+// from the declaration rather than the compiled rule. Callers must not mutate the returned values.
+func Queries() []query.FindingQuery { return []query.FindingQuery{powerPinMistypedQ, crystalLoadCapsQ} }
 
 func init() {
 	check.RegisterSource(check.NewSource("dl", dlRules))

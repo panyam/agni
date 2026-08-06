@@ -1,0 +1,307 @@
+syntax = "proto3";
+
+package agni.v1.checks;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/checks";
+
+// This file is the RULE-DEFINITION half of the checks contract (WS3-103): the declarative SOURCE a
+// rule compiles from. Its sibling checks.proto is the results half, the evidence a run produced.
+//
+// `check.Rule` is not the serialization target and must not become one. A Rule carries an Eval
+// closure, and a Go func has no wire form; reaching for one would mean shipping code as data or
+// amputating the escape hatch that makes the catalog practical. The serializable artifact is the
+// rule's source, and compiling is exactly the step that produces the non-serializable part. The
+// engine already makes that split in three places, and this schema is the union of their inputs:
+//
+//   declarative source   compiler                 runtime (never serialized)
+//   check.Spec           Spec.Rule()              *check.Rule with derived Reads/Primitives
+//   query.Query          query.RuleFromQuery      *check.Rule registered as dl/…
+//   profiles.Profile     profiles.Compile         one *check.Rule per requirement, profile/…
+//
+// So the layering is three tiers rather than two: this schema (definition), RuleInfo (the catalog
+// metadata projection of a compiled rule), and check.Rule (the Go runtime object). A rule with a
+// hand-written Go Eval and no declarative twin is OUTSIDE this contract by design, not a gap in it.
+//
+// The FFI boundary is what keeps the definition tier honest. A spec needing behavior the vocabulary
+// cannot express calls a registered function BY NAME: the name is data, the Go function behind it is
+// not. A rule definition therefore serializes to a closed vocabulary plus named references into a
+// registry, which is the same posture the vendor-rule survey takes on arbitrary scripted checks —
+// the escape hatch exists, it is bounded, and covering general code verbatim is a non-goal.
+
+// RuleDeck is a set of rule definitions from one source: a shipped catalog exported for inspection, a
+// customer's house rules, or a foreign rule file translated by a front-end. The deck is the unit a
+// front-end emits and a catalog source consumes, which is what makes profile YAML, datalog text, a
+// future DSL, and a vendor rule deck four front-ends onto one form rather than four parallel paths.
+message RuleDeck {
+  // name is the catalog namespace the deck's rules appear under, matching check.RuleSource.Name().
+  string name = 1;
+  // source names where the deck came from, for provenance in an error or a listing. Free text: a file
+  // name, a vendor tool, an exporting build. It is descriptive, never resolved or opened.
+  string source = 2;
+  repeated RuleDef rules = 3;
+}
+
+// RuleDef is one declaration. It compiles to one OR MORE rules: a spec and a query each yield one, an
+// interface profile yields one per requirement. That asymmetry is the point of a profile rather than a
+// wart — one declaration standing in for a family of near-identical checks is the whole mechanism —
+// so the shape says so instead of pretending every definition is a single rule.
+message RuleDef {
+  oneof body {
+    SpecRule spec = 1;
+    QueryRule query = 2;
+    ProfileDef profile = 3;
+  }
+}
+
+// RuleMeta is the identity and prose a compiled rule carries. Reads and Primitives are absent on
+// purpose: both are DERIVED from a definition's body by its compiler, and serializing a derived value
+// invites a document whose declared reads disagree with what the rule actually does. What IS here is
+// what a body cannot imply — the declared gates.
+message RuleMeta {
+  string name = 1;
+  string severity = 2; // "error" | "warning" | "info"
+  string summary = 3;  // one-line description for listings
+  string impact = 4;   // what goes wrong when the rule is violated
+  string detail = 5;   // long-form markdown: meaning, rationale, diagram, query structure
+  map<string, string> tags = 6; // the open classification (category, tier, distribution, ...)
+  // optional_reads is the subset of reads a rule consults opportunistically. Their absence must not
+  // make the rule inapplicable, which is a claim only the author can make: a netlist rule that merely
+  // EXEMPTS findings using a datasheet fact would otherwise read not-applicable wherever no datasheet
+  // corpus is attached, and report nothing at all.
+  repeated string optional_reads = 7;
+  // requires_capability lists source-format capabilities the rule needs to evaluate SOUNDLY. A rule
+  // inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
+  // which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
+  repeated string requires_capability = 8;
+}
+
+// --- The spec body: a rule as a small AST over declared facts -------------------------------------
+
+// SpecRule is a rule whose body is a Spec: select an entity set, keep the entities matching a
+// predicate, report one finding per survivor.
+message SpecRule {
+  RuleMeta meta = 1;
+  SpecBody body = 2;
+}
+
+// SpecBody mirrors check.Spec. over names the entity set (nets, components, pins, ...); let names
+// intermediate terms usable in both the predicate and the message; message is a template where
+// "{name}" interpolates a let binding or a fact and "{name:q}" quotes it. An absent where selects
+// every entity.
+message SpecBody {
+  string over = 1;
+  map<string, SpecTerm> let = 2;
+  SpecExpr where = 3;
+  string message = 4;
+}
+
+// SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer
+// datalog-class rather than Turing-complete, and what makes a generated rule cheap to validate.
+message SpecTerm {
+  oneof term {
+    SpecLit lit = 1;
+    string fact = 2;  // a named fact of the entity in scope ("net.pin_count", "pin.role", ...)
+    string var = 3;   // a let binding, evaluated at most once per entity
+    SpecCall call = 4;
+    SpecCountOf count_of = 5;
+  }
+}
+
+// SpecLit is a literal string, integer, or boolean.
+message SpecLit {
+  oneof value {
+    string s = 1;
+    int64 i = 2;
+    bool b = 3;
+  }
+}
+
+// SpecCall invokes a registered function by NAME with evaluated arguments — the Go escape hatch for
+// multi-clause logic the AST should not express. The name is the entire serialized form: an
+// unregistered name is rejected when a definition is read, not discovered when a rule runs.
+message SpecCall {
+  string fn = 1;
+  repeated SpecTerm args = 2;
+}
+
+// SpecCountOf counts the members of a nested collection matching a predicate. An absent where counts
+// every member.
+message SpecCountOf {
+  string over = 1;
+  SpecExpr where = 2;
+}
+
+// SpecExpr is a predicate over one entity. Closed for the same reason SpecTerm is.
+message SpecExpr {
+  oneof expr {
+    SpecExprList and = 1;   // true when every member is (an empty list is true)
+    SpecExprList or = 2;    // true when any member is (an empty list is false)
+    SpecExpr not = 3;
+    SpecCmp cmp = 4;
+    SpecIn in = 5;
+    SpecMatch match = 6;
+    SpecExistsIn exists_in = 7;
+    SpecTerm is_true = 8;   // how a boolean fact or FFI call is used as a predicate
+  }
+}
+
+message SpecExprList {
+  repeated SpecExpr xs = 1;
+}
+
+// SpecCmp compares two terms. "==" and "!=" apply to any value; "<", "<=", ">", ">=" to integers.
+message SpecCmp {
+  SpecTerm l = 1;
+  string op = 2;
+  SpecTerm r = 3;
+}
+
+// SpecIn is string membership: true when the term's value is one of set.
+message SpecIn {
+  SpecTerm t = 1;
+  repeated string set = 2;
+}
+
+// SpecMatch is true when the term's string value matches pattern (unanchored RE2).
+message SpecMatch {
+  SpecTerm t = 1;
+  string pattern = 2;
+}
+
+// SpecExistsIn is true when any member of a nested collection matches where.
+message SpecExistsIn {
+  string over = 1;
+  SpecExpr where = 2;
+}
+
+// --- The query body: a rule as a datalog program ---------------------------------------------------
+
+// QueryRule is a rule whose body is a datalog program plus the mapping from an answer row to a
+// finding. Rules and search share one vocabulary here: a rule asserts a property over the fact
+// relations, a search is an arbitrary query over the same ones.
+message QueryRule {
+  RuleMeta meta = 1;
+  DatalogQuery query = 2;
+  string kind = 3;        // the finding subject kind: "net" | "component" | "pin"
+  string subject_var = 4; // projected variable (no leading "?") bound to the finding's subject
+  string pin_var = 5;     // projected variable bound to the finding's pin; kind="pin" only
+  string message = 6;     // template; each {var} is replaced by that variable's bound value
+  // param_symbol, on a component-subject datasheet rule, names the datasheet symbol the rule checks.
+  // The compiler resolves that parameter's citation from the subject's seeded spec, so a
+  // datalog-authored datasheet finding carries the same doc/page/section/confidence a built-in one
+  // does. Empty means the rule is not datasheet-backed.
+  string param_symbol = 7;
+}
+
+// DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
+// solve, with select naming the answer columns.
+message DatalogQuery {
+  repeated DatalogRule rules = 1;
+  DatalogBody goal = 2;
+  repeated DatalogTerm select = 3;
+}
+
+// DatalogRule derives its head for every binding satisfying its body. Disjunction is several rules
+// sharing one head relation rather than an OR node, which is what keeps a program stratifiable.
+message DatalogRule {
+  DatalogAtom head = 1;
+  DatalogBody body = 2;
+  int32 hops = 3; // 0 runs to fixpoint; a positive value bounds recursion depth
+}
+
+// DatalogBody is an implicit conjunction of literals.
+message DatalogBody {
+  repeated DatalogLiteral literals = 1;
+}
+
+// DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), or a
+// comparison built-in.
+message DatalogLiteral {
+  oneof literal {
+    DatalogAtom pos = 1;
+    DatalogAtom neg = 2;
+    DatalogCompare compare = 3;
+  }
+}
+
+// DatalogAtom applies a relation to argument terms. The relation is a fact relation, a built-in, or a
+// relation the program's own rules define.
+message DatalogAtom {
+  string relation = 1;
+  repeated DatalogTerm args = 2;
+}
+
+// DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. Numeric when
+// both bound values carry a number, string otherwise.
+message DatalogCompare {
+  DatalogTerm left = 1;
+  string op = 2; // < | <= | = | != | > | >=
+  DatalogTerm right = 3;
+}
+
+// DatalogTerm is a variable, a constant, or an aggregate over the group formed by the projection's
+// plain-variable columns.
+message DatalogTerm {
+  oneof term {
+    string var = 1; // the logic variable name, without its leading "?"
+    DatalogValue constant = 2;
+    DatalogAggregate agg = 3;
+  }
+}
+
+// DatalogValue is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound
+// term keeps both and neither string equality nor numeric comparison needs a re-parse.
+message DatalogValue {
+  string s = 1;
+  optional double num = 2;
+}
+
+// DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.
+message DatalogAggregate {
+  string func = 1; // count | min | max | sum
+  string var = 2;
+}
+
+// --- The profile body: one declaration, a family of rules ------------------------------------------
+
+// ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...): its required signals, an optional
+// declared-host binding, and the checks it declares. It compiles to one rule per requirement, which is
+// why adding an interface is a data value rather than new code.
+//
+// It carries no RuleMeta: each generated rule names itself from the profile and the requirement, so a
+// single meta block here would have to be either ignored or applied to rules it does not describe.
+message ProfileDef {
+  string name = 1;
+  repeated ProfileSignal signals = 2;
+  // host_attr_key / host_attr_val bind the interface to a component that DECLARES it via an attribute
+  // (interface=SPI_NOR). A declared host gives a precise anchor and can flag a wholly-absent bus, which
+  // the naming-convention path cannot. Empty key means no host binding.
+  string host_attr_key = 3;
+  string host_attr_val = 4;
+  repeated ProfileRequirement requirements = 5;
+}
+
+// ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
+// affix (suffix, optionally narrowed by prefix), glob (whole-name), or regex (unanchored RE2). Zero
+// forms, several forms, or a form matching the empty string are rejected when the definition is read —
+// an over-broad matcher would silently claim foreign nets rather than fail.
+message ProfileSignal {
+  string name = 1;   // the signal's role name, e.g. "IO2"
+  string prefix = 2;
+  string suffix = 3;
+  string glob = 4;
+  string regex = 5;
+  bool pull_up = 6;  // the signal needs a pull-up
+  // anchor marks the always-present signal the naming-convention completeness check hangs on. At most
+  // one, and a profile declaring a completeness requirement must declare it: without an anchor that
+  // requirement compiles to nothing, and a check that silently does not exist scores as a pass.
+  bool anchor = 7;
+}
+
+// ProfileRequirement is one declared check: a registered requirement-type name plus its parameters.
+// Making the composition data rather than a hardcoded compile step is what lets a new interface, or a
+// new requirement type, be a declaration instead of engine code.
+message ProfileRequirement {
+  string type = 1; // signal-missing | host-incomplete | missing-pullup | signal-dangling | termination | an overlay's own
+  map<string, string> params = 2;
+}

@@ -33,7 +33,7 @@ import (
 //     whose Vcc net is not name-recognizable as a rail (the real-corpus false-positive PR 265 fixed).
 //   - bad fires on a terminal of an exactly-two-terminal, non-powered crystal that carries no cap and
 //     is not an external read-gap net (net.external), the faithful successor to the Go external-skip.
-var crystalLoadCapsDL = query.RuleFromQuery(query.FindingQuery{
+var crystalLoadCapsQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "crystal-load-caps",
 		Severity: "warning",
@@ -57,4 +57,6 @@ var crystalLoadCapsDL = query.RuleFromQuery(query.FindingQuery{
 	Kind:       check.KindComponent,
 	SubjectVar: "y",
 	Message:    "crystal terminal net {net} has no load capacitor",
-})
+}
+
+var crystalLoadCapsDL = query.RuleFromQuery(crystalLoadCapsQ)
