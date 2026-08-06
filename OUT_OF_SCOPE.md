@@ -10,6 +10,8 @@ One line per item a PR deliberately deferred without a roadmap ticket. The contr
 
 | Item | From | Pick up when |
 |------|------|--------------|
+| Details-panel summary names the sheet the design OPENED on and never updates as you navigate sheets, so it reads stale ("Hier root · faithful" while amp1 is shown). Pre-existing; the WS9-049 tab strip makes it visible by putting the active sheet name right beside it | WS9-049 PR1 | someone re-does the Details panel, or a user reports the mismatch; the fix is to push the summary per sheet rather than per design load |
+| Work page still registers the `files` panel (menu-openable, not default-open) so there remains a way to reach another design before the browse page exists | WS9-049 PR1 | WS9-049 phase 2 lands `/designs` as a browse page; then drop the panel, its hole, and the tree's file-open path from the work page |
 | Symbol/multi-file resolution for an out-of-module reader — `Loader.symbolOpener`/`kicadSymOpener` stay unexported, so an externally-registered reader can open its own path but not get `--symbol-path` resolution or a hierarchy opener | WS12-003 PR | the first overlay reader needs multi-file resolution; expose an opener the Loader hands to the registered reader (mirror the built-in `ReadWithSymbols` seam) without leaking file paths into core (C1) |
 | DRC findings located on the board sheet (finding sheet annotation joins schematic geometry only) | WS7-034 PR | a board DRC finding should light up on copper; join findings to the board sheet id |
 | Bounding-shape highlight strategies on the board face (`HighlightBoardSVG` ignores `HighlightSpec.shape`, draws outline-only) | WS9-017 PR | a board consumer wants area emphasis; reuse `framedBounds` over the board join's matched copper/pads |

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, adoptPanel, defaultLayout, panelsMenu, openPanel } from "./dock.js";
+import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, prunePanels, adoptPanel, defaultLayout, panelsMenu, openPanel } from "./dock.js";
 
 function memStorage(initial: Record<string, string> = {}): Pick<Storage, "getItem" | "setItem" | "removeItem"> & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));
@@ -70,6 +70,64 @@ describe("panel registry", () => {
       "query",
       "rules",
     ]);
+  });
+
+  it("keeps Files registered but out of the default layout (WS9-049)", () => {
+    // The defaultLayout test below derives its expectation from the defaultOpen flag, so it would
+    // keep passing if Files were silently promoted back. This pins the demotion itself.
+    const files = VIEWER_PANELS.find((p) => p.id === "files");
+    expect(files).toBeDefined();
+    expect(files?.defaultOpen).toBeFalsy();
+    expect(files?.onDemand).toBeFalsy(); // menu-openable, not feature-driven
+  });
+
+  it("leaves Sheets default-open as the work page's navigation surface", () => {
+    expect(VIEWER_PANELS.find((p) => p.id === "overview")?.defaultOpen).toBe(true);
+  });
+});
+
+describe("prunePanels", () => {
+  // A fake DockviewApi exposing the open panels as `panels` and recording removals.
+  function fakeApi(open: string[]) {
+    const panels = open.map((id) => ({ id }));
+    const removed: string[] = [];
+    return {
+      removed,
+      panels,
+      api: {
+        get panels() {
+          return panels;
+        },
+        removePanel: (p: { id: string }) => {
+          removed.push(p.id);
+          panels.splice(panels.findIndex((x) => x.id === p.id), 1);
+        },
+      } as never,
+    };
+  }
+
+  it("closes a panel the registry no longer has", () => {
+    const { api, removed } = fakeApi(["canvas", "checks", "retired-panel"]);
+    prunePanels(api);
+    expect(removed).toEqual(["retired-panel"]);
+  });
+
+  it("leaves every registered panel alone", () => {
+    const { api, removed } = fakeApi(VIEWER_PANELS.map((p) => p.id));
+    prunePanels(api);
+    expect(removed).toEqual([]);
+  });
+
+  it("removes several retired panels in one pass without skipping any", () => {
+    // Guards the snapshot in prunePanels: removePanel mutates the collection being walked, so
+    // iterating it live would skip the entry that slides into the removed one's index.
+    const { api, removed } = fakeApi(["gone-a", "gone-b", "canvas"]);
+    prunePanels(api);
+    expect(removed.sort()).toEqual(["gone-a", "gone-b"]);
+  });
+
+  it("tolerates an api that reports no panels", () => {
+    expect(() => prunePanels({ removePanel: () => {} } as never)).not.toThrow();
   });
 });
 

@@ -27,7 +27,10 @@ export interface DockPanelDef {
 // VIEWER_PANELS is the registry the dock is built from: panel ids double as dockview
 // component names and as the data-dock-panel key of the server-rendered hole.
 export const VIEWER_PANELS: readonly DockPanelDef[] = [
-  { id: "files", title: "Files", defaultOpen: true },
+  // Files is SECONDARY as of WS9-049: the work page opens one design, so a permanent cross-file
+  // tree costs left-rail width for navigation that belongs on the browse page. It stays registered
+  // (and menu-openable) until that page ships, so there is still a way to reach another design.
+  { id: "files", title: "Files" },
   // The birds-eye sheet list (WS9-025) tabs with Files in the default layout; for existing
   // saved layouts it appears via the reconcile pass (it is not in their saved registry).
   { id: "overview", title: "Sheets", defaultOpen: true },
@@ -56,7 +59,11 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   { id: "changes", title: "Changes", onDemand: true },
 ];
 
-export const LAYOUT_KEY = "agni-viewer-dockview-layout";
+// LAYOUT_KEY changed with the WS9-049 work page. The saved-layout mechanism reconciles panels that
+// were ADDED since a save, never ones that were removed or demoted, so an existing save would have
+// restored the old tree-on-the-left arrangement and hidden the whole change. A new key retires
+// every pre-split save at once, which is cheaper and more predictable than migrating them.
+export const LAYOUT_KEY = "agni-work-page-dockview-layout";
 
 type LayoutStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -123,6 +130,18 @@ export function reconcilePanels(api: DockviewApi, savedPanels: string[]): void {
   }
 }
 
+// prunePanels closes panels a restored layout names that the registry no longer has. It is the
+// counterpart to reconcilePanels, which only ever ADDS: without it a removed panel restores as an
+// empty tab, because adoptPanel falls back to a blank element when the hole is gone (below). The
+// user's arrangement of the surviving panels is untouched, so this is a prune, not a reset.
+export function prunePanels(api: DockviewApi): void {
+  const known = new Set(VIEWER_PANELS.map((p) => p.id));
+  // Snapshot first: removePanel mutates the collection being walked.
+  for (const panel of [...(api.panels ?? [])]) {
+    if (!known.has(panel.id)) api.removePanel(panel);
+  }
+}
+
 // adoptPanel is the dockview content renderer for a panel: it adopts the server-rendered
 // hole (found by data-dock-panel wherever it currently is — the park on first open, the park
 // again after a close) and parks it on dispose. Element identity is preserved across
@@ -141,25 +160,22 @@ export function adoptPanel(park: HTMLElement, name: string): IContentRenderer {
   };
 }
 
-// defaultLayout is the lean boot layout (WS9-042): only the default-open (core) panels open
-// — files+sheets on the left (260px), canvas in the center, and a 300px right column
-// stacking details and checks. The secondaries (rules, report, query) stay
-// closed and are opened from the Panels menu, so the page stops being overloaded as features
-// add panels. Their holes still mount (parked, hidden), so opening one is instant.
+// defaultLayout is the lean boot layout (WS9-042, narrowed by WS9-049): only the default-open
+// (core) panels open — Sheets on the left (260px), canvas in the center, and a 300px right column
+// stacking details and checks. Sheets holds the left rail alone now that Files is secondary: the
+// work page opens exactly one design, so the design's own sheet hierarchy is the navigation that
+// belongs there. The secondaries (files, rules, query) stay closed and are opened from the Panels
+// menu. Their holes still mount (parked, hidden), so opening one is instant.
 export function defaultLayout(api: DockviewApi): void {
   api.addPanel({ id: "canvas", component: "canvas", title: "Canvas" });
-  api.addPanel({ id: "files", component: "files", title: "Files", position: { direction: "left", referencePanel: "canvas" } });
-  // Sheets tabs into the Files group (same navigation column); Files re-fronts below.
-  api.addPanel({ id: "overview", component: "overview", title: "Sheets", position: { direction: "within", referencePanel: "files" } });
+  api.addPanel({ id: "overview", component: "overview", title: "Sheets", position: { direction: "left", referencePanel: "canvas" } });
   api.addPanel({ id: "details", component: "details", title: "Details", position: { direction: "right", referencePanel: "canvas" } });
   api.addPanel({ id: "checks", component: "checks", title: "Checks", position: { direction: "below", referencePanel: "details" } });
   // Column widths only stick once dockview has laid the grid out, hence the deferred set
-  // (same pattern as the reference implementation). Files re-fronts its group: adding Sheets
-  // as a tab left it in front.
+  // (same pattern as the reference implementation).
   setTimeout(() => {
-    api.getPanel("files")?.api.setSize({ width: 260 });
+    api.getPanel("overview")?.api.setSize({ width: 260 });
     api.getPanel("details")?.api.setSize({ width: 300 });
-    api.getPanel("files")?.api.setActive();
   }, 0);
 }
 
@@ -272,9 +288,10 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
   if (saved !== null) {
     try {
       api.fromJSON(saved.layout as Parameters<typeof api.fromJSON>[0]);
-      // Panels added to the registry since this layout was saved appear now, without
-      // touching the user's arrangement.
+      // Panels added to the registry since this layout was saved appear now, and ones removed
+      // from it go away, without touching the user's arrangement of the rest.
       reconcilePanels(api, saved.savedPanels);
+      prunePanels(api);
     } catch (err) {
       console.warn("dock: saved layout rejected, using default", err);
       storage.removeItem(LAYOUT_KEY);
