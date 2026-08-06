@@ -61,7 +61,7 @@ func rootCmd() *cobra.Command {
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched)")
-	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd())
+	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd(), importResultsCmd())
 	return root
 }
 

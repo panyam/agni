@@ -29,7 +29,7 @@ import (
 // proof that the document is self-contained: it loads no design, composes no catalog, and runs no
 // rule, so anything it can render came out of the file.
 func resultsCmd() *cobra.Command {
-	var format string
+	var format, compare string
 	var coverage bool
 	cmd := &cobra.Command{
 		Use:   "results <file>",
@@ -38,7 +38,11 @@ func resultsCmd() *cobra.Command {
 			"The document is self-contained: rendering reads only the file, so a report can be archived, " +
 			"shared, or read on a machine that has neither the design nor this engine's rule catalog.\n\n" +
 			"A document from a check run renders as text | json | markdown | report; one from a review " +
-			"run renders as markdown | json, matching what each command emits live.",
+			"run renders as markdown | json, matching what each command emits live.\n\n" +
+			"--compare turns it into a differential harness: given another document (typically a vendor " +
+			"report brought in with `agni import-results`), it reports which entities each run flagged — " +
+			"ours only, theirs only, both — so a foreign checker becomes a gate rather than something a " +
+			"person reads side by side.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			b, err := os.ReadFile(args[0])
@@ -48,6 +52,17 @@ func resultsCmd() *cobra.Command {
 			doc, err := results.Parse(b)
 			if err != nil {
 				return fmt.Errorf("%s: %w", args[0], err)
+			}
+			if compare != "" {
+				ob, err := os.ReadFile(compare)
+				if err != nil {
+					return err
+				}
+				other, err := results.Parse(ob)
+				if err != nil {
+					return fmt.Errorf("%s: %w", compare, err)
+				}
+				return results.WriteComparison(cmd.OutOrStdout(), results.Compare(doc, other))
 			}
 			if doc.GetManifest() != "" {
 				return renderReviewResults(cmd.OutOrStdout(), doc, format, coverage)
@@ -60,6 +75,7 @@ func resultsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&format, "format", "", "output format; defaults to text for a check document and markdown for a review one")
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "for a review document, emit the per-area coverage rollup instead of the per-item report")
+	cmd.Flags().StringVar(&compare, "compare", "", "compare against another results document (e.g. an imported vendor report) and print the three-way entity split instead of a report")
 	return cmd
 }
 
@@ -136,6 +152,10 @@ func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding
 			Producer:        results.Producer,
 			ProducerVersion: version.Version(),
 			CreatedAt:       time.Now().UTC().Format(time.RFC3339),
+			// A native run records what it could NOT check as well as what it found: a rule whose fact
+			// tier is absent reads not-applicable, and a review item that did not evaluate never reads
+			// pass. That is the axis an imported vendor report does not have.
+			CoverageAxis: true,
 		},
 		Design:   &checkspb.DesignRef{Source: source, ContentHash: hashSource(source)},
 		Run:      run,

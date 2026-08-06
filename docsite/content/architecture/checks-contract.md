@@ -80,6 +80,58 @@ it, with nothing to say so — the same silence-reads-as-coverage failure the ou
 exists to prevent. Unknown *fields* within a known schema are tolerated, because additive fields do
 not change what an older reader understands.
 
+## Importing another tool's results
+
+A results document is only a contract if more than one tool can produce one. `agni import-results`
+reads a `kicad-cli pcb drc --format json` or `sch erc --format json` report into the same document
+shape, so `agni results` renders it with no special case.
+
+```
+agni import-results erc.json --design board.kicad_pro -o theirs.json
+agni results ours.json --compare theirs.json
+```
+
+Three things about it are deliberate.
+
+**It is not a `formats` reader.** Every capability on that registry answers a question about a design
+file: give me its netlist, its geometry, its board. A results file describes a design it does not
+contain and cannot answer any of them. Registering it would make the capability set mean two
+different things, so the import is a separate path — the Loader's job is producing a model, and this
+produces evidence *about* one.
+
+**The imported document is visibly weaker, and says so.** A vendor report is a flat violation list.
+It has no not-applicable, no needs-data, no coverage axis, and no per-item traceability, because
+those came out of the review work and no incumbent has them. So `meta.coverage_axis` is false, and
+every report that shows an imported document labels it. The difference is invisible in the data —
+an import and a clean native run both look like "few findings" — which is exactly why it has to be
+declared rather than inferred.
+
+**The residue is reported, not dropped.** A foreign checker names entities in free text ("Pad 1
+[VCC] of R1 on B.Cu"), so attaching a violation to our model is a parse, and a parse has a residue: a
+schematic wire's description carries only its orientation and length. Unattached findings are kept
+and counted by class in `import_summary`, because a consumer seeing 40 imported findings has to be
+able to tell "the tool found 40 things" from "the tool found 60 and we understood 40". A parsed
+ref-des that names no component in the loaded design leaves the finding unattached rather than
+inventing a subject — a wrong join attaches a real violation to an innocent part, which is worse than
+no join.
+
+### The oracle becomes a harness
+
+Verifying rule semantics against kicad-cli was already standing practice, and it has repeatedly paid:
+it is what caught mid-span labels, endpoint-only pin connections, and the brace escapes when unit
+tests did not. Every one of those was a person reading two outputs side by side. `--compare` makes it
+a gate.
+
+The split is keyed on the **entity** each tool flagged, not on rule names. Two tools have two rule
+vocabularies, and a table asserting "our `track-width` means their `track_width`" would be an
+unverified mapping that rots — the same objection that killed identifying an interface host by an MPN
+prefix list. What can be said without asserting anything is: here is the set of entities we flagged,
+here is theirs, here is the overlap. Rule co-occurrence is then reported as an *observation*, so an
+equivalence can be discovered from evidence instead of declared up front.
+
+A pin finding keys to its component, because one tool flagging "R1 pin 2" and another flagging "R1"
+is a difference in reporting granularity, not a disagreement.
+
 ## The other half: rule definitions
 
 A results document says what a run found. The rule-definition half says what a rule *is*, in a form
