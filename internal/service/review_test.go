@@ -253,3 +253,34 @@ func TestReviewAbsentHostProfileNotApplicable(t *testing.T) {
 		t.Errorf("genuinely-absent host-bound profile: want not-applicable, got %q", got)
 	}
 }
+
+// TestReviewInUseWithoutAnchorNotAutomated (WS3-099): a profile whose convention is in use through two
+// NON-anchor signals, with the anchor net absent, must not read pass. The completeness rule hangs on the
+// anchor, so it reports nothing, and zero findings scored a clean pass on an interface nothing checked.
+// This is the fifth route to the same defect after WS3-090/096/097/098.
+func TestReviewInUseWithoutAnchorNotAutomated(t *testing.T) {
+	pcie := profiles.Profile{Name: "PXANCHOR", Signals: []profiles.Signal{
+		{Name: "PETP", Suffix: "_PETP", Anchor: true},
+		{Name: "REFCLKP", Suffix: "_REFCLKP"},
+		{Name: "REFCLKN", Suffix: "_REFCLKN"},
+	}, Requirements: []profiles.Requirement{{Type: "signal-missing"}}}
+	// Both REFCLK nets are properly wired (two connections each), so signal-dangling has nothing to say
+	// either: the item's only verdict comes from the completeness rule, which cannot evaluate.
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1"}, {RefDes: "U2"}},
+		Nets: []*ir.Net{
+			{Name: "PCIE_NAD_REFCLKP", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U2", PinRef: "1"}}},
+			{Name: "PCIE_NAD_REFCLKN", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}, {ComponentRef: "U2", PinRef: "2"}}},
+		},
+	}
+	if got := runOneItem(t, pcie, d); got != "not-automated" {
+		t.Errorf("in-use-but-unanchored profile: want not-automated, got %q", got)
+	}
+	// The same profile with its anchor net present evaluates normally, so the gate does not swallow a
+	// genuinely-checkable interface: PETN is not declared, nothing is missing, clean pass.
+	d.Nets = append(d.Nets, &ir.Net{Name: "PCIE_NAD_PETP",
+		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "3"}, {ComponentRef: "U2", PinRef: "3"}}})
+	if got := runOneItem(t, pcie, d); got != "pass" {
+		t.Errorf("anchored profile with nothing missing: want pass, got %q", got)
+	}
+}

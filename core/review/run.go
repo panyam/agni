@@ -85,9 +85,19 @@ const (
 	// hollow pass. When the convention IS in use the verdict is IfacePresent instead, so a genuinely
 	// checkable un-annotated design still runs.
 	IfaceHostUnsatisfied
-	// IfacePresent: the convention is in use (or a host is declared); the rules genuinely evaluate ->
-	// run for pass/fail.
+	// IfacePresent: the convention is in use AND its completeness anchor is matched (or a host is
+	// declared); the rules genuinely evaluate -> run for pass/fail.
 	IfacePresent
+	// IfaceConventionUnmatched: the convention path's sibling of IfaceHostUnsatisfied (WS3-099). The
+	// interface IS partly named to the profile — enough signals match to clear in_use — but its anchor
+	// signal is absent, so the completeness rule has nothing to hang on and cannot evaluate. The
+	// interface is neither absent (it is visibly there) nor checkable under this profile's naming; the
+	// diagnosis a reviewer needs is "this looks like the interface but the naming does not match".
+	//
+	// Unlike the two verdicts above this does NOT stop the item running: a profile's secondary rules
+	// (signal-dangling, missing-pullup) gate on in_use alone, so they do evaluate on the matched nets.
+	// The item runs, a real finding still reads fail, and only a would-be PASS is replaced.
+	IfaceConventionUnmatched
 )
 
 // PresenceFunc reports the review's evaluability verdict for an interface (by profile Name) and
@@ -184,6 +194,9 @@ func runItem(p RunParams, it Item) ItemResult {
 	if it.Binding.Profile != "" {
 		ifaces = []string{it.Binding.Profile}
 	}
+	// unmatched defers the WS3-099 verdict to the zero-findings tail: the convention is partly in use, so
+	// the secondary rules still evaluate and a real finding must survive.
+	unmatched := false
 	if len(ifaces) > 0 && present != nil {
 		runs, hostUnsatisfied := false, false
 		for _, iface := range ifaces {
@@ -192,11 +205,17 @@ func runItem(p RunParams, it Item) ItemResult {
 				runs = true // an unknown or genuinely-present interface keeps the item running
 				break
 			}
-			if v == IfaceHostUnsatisfied {
+			switch v {
+			case IfaceHostUnsatisfied:
 				hostUnsatisfied = true
+			case IfaceConventionUnmatched:
+				unmatched = true
 			}
 		}
-		if !runs {
+		// A convention-unmatched interface takes precedence over the other two non-running verdicts: it
+		// is the most specific diagnosis (the naming IS partly there), and it runs the rules rather than
+		// returning here, so its verdict is decided at the bottom.
+		if !runs && !unmatched {
 			// A rule that could not evaluate must not score PASS (WS3-090). A host-bound interface
 			// annotated on no component reads not-automated (the intended check is blocked on the
 			// annotation); an interface simply absent reads not-applicable.
@@ -280,6 +299,13 @@ func runItem(p RunParams, it Item) ItemResult {
 	// being sparse by nature).
 	if sym := datasheetSymbol(it); sym != "" && !anyComponentSeedsSymbol(m, sym) {
 		return ItemResult{Item: it, Outcome: NeedsData, Note: "no seeded datasheet value for " + sym + " on this design"}
+	}
+	// Same discipline for the unanchored interface (WS3-099): the secondary rules ran and found nothing,
+	// but the completeness rule never evaluated, so this is not a clean bill of health. It reads
+	// not-automated rather than a needs-* state because no shipped mechanism covers THIS design's naming
+	// — scoring it covered would inflate the coverage axis, which is the defect this whole family fights.
+	if unmatched {
+		return ItemResult{Item: it, Outcome: NotAutomated, Note: "interface named but its completeness anchor signal is absent, so the convention check could not evaluate"}
 	}
 	return ItemResult{Item: it, Outcome: Pass}
 }

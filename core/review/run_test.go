@@ -619,3 +619,38 @@ areas:
 		t.Errorf("Title/Description round-trip: got %+v", got)
 	}
 }
+
+// TestConventionUnmatchedRunsButDoesNotPass (WS3-099): an interface whose signal convention is in use
+// but whose completeness anchor is absent reads not-automated on zero findings, never pass. Unlike the
+// host-unsatisfied verdict this is NOT a run gate: a profile's secondary rules (signal-dangling,
+// missing-pullup) gate on in_use alone, so they DO evaluate without the anchor and a real finding must
+// still read fail. That is the WS3-097 discipline — the honest verdict replaces a would-be pass, never
+// a fail.
+func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
+	unmatched := func(string) (Presence, bool) { return IfaceConventionUnmatched, true }
+	// A clean design: the bound rule finds nothing, so the only verdict available is the honest one.
+	clean := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets: []*ir.Net{{Name: "SIG", Prov: &ir.Provenance{SourceFile: "t"},
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "2"}}}},
+	}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "x", Title: "iface", Binding: Binding{Rule: "single-pin-net", Scope: ScopeBinding{Profiles: []string{"IF"}}}},
+	}}}}
+	run := func(d *ir.Design) ItemResult {
+		return Run(RunParams{Model: check.NewModel(d), Catalog: check.DefaultCatalog(), Manifest: man,
+			Design: "d", Present: unmatched}).Areas[0].Items[0]
+	}
+	got := run(clean)
+	if got.Outcome != NotAutomated {
+		t.Errorf("unanchored interface, no findings: want not-automated, got %s", got.Outcome)
+	}
+	if !strings.Contains(got.Note, "anchor") {
+		t.Errorf("want a note naming the missing anchor, got %q", got.Note)
+	}
+	// oneDesign's SIG net has a single connection, so single-pin-net fires. The verdict must stay fail:
+	// gating this case at the top (the host-unsatisfied shape) would have swallowed it.
+	if got := run(oneDesign()); got.Outcome != Fail {
+		t.Errorf("unanchored interface with a real finding: want fail, got %s", got.Outcome)
+	}
+}

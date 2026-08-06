@@ -6,11 +6,13 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// InUse reports whether interface p's signal convention is genuinely in use on the model — the SAME
-// gate the compiled completeness rules apply (profile.go `in_use`): at least TWO DISTINCT signals of
-// the profile appear as nets, matched by each signal's full declared matcher (netMatchesSignal, the
-// Go twin of the generated netMatch). This is the review's absence gate (WS3-090): it must agree with
-// the rules, or an interface the rules will not fire on gets scored as a clean pass. The discriminating
+// InUse reports whether interface p's signal convention is genuinely in use on the model — the Go twin
+// of the generated `in_use` relation (profile.go): at least TWO DISTINCT signals of the profile appear
+// as nets, matched by each signal's full declared matcher (netMatchesSignal, the Go twin of the
+// generated netMatch). This is the review's absence gate (WS3-090): it must agree with the rules, or an
+// interface the rules will not fire on gets scored as a clean pass. It is only HALF that agreement —
+// the convention completeness rule conjoins in_use with the anchor net, which is Anchored (WS3-099);
+// the run gate is both. The discriminating
 // part of the matcher is load-bearing — a prefix- or glob-discriminated profile (PCIe signals prefixed
 // `PCIE_`) must NOT read in-use just because foreign nets share a bare suffix (`LIN_TX`, `CAN_RX`);
 // applying the whole matcher is exactly what the rules do, so the gate and the rules never disagree. A
@@ -26,6 +28,30 @@ func InUse(m check.Model, p Profile) bool {
 			}
 		}
 		if distinct >= 2 {
+			return true
+		}
+	}
+	return false
+}
+
+// Anchored reports whether profile p's CONVENTION completeness check can hang on this model: its
+// anchor signal matches some net. InUse alone does not answer that (WS3-099) — it is the twin of the
+// datalog `in_use` relation (two distinct signals), while signalMissingRule conjoins in_use with the
+// ANCHOR net existing. So an interface can clear InUse through two NON-anchor signals while the anchor
+// is absent, the completeness rule reports nothing, and zero findings score a clean pass on a bus
+// nothing checked. The review gate needs both halves; they are separate predicates rather than one
+// widened InUse so each keeps a single honest meaning (InUse still answers what the secondary rules —
+// signal-dangling, missing-pullup — gate on, and those DO evaluate without the anchor).
+//
+// A profile that declares NO anchor generates no convention completeness rule at all (signalMissingRule
+// returns nil), so there is nothing for a missing anchor to block: vacuously anchored.
+func Anchored(m check.Model, p Profile) bool {
+	a := p.anchorSignal()
+	if a == nil {
+		return true
+	}
+	for _, n := range m.Nets() {
+		if netMatchesSignal(n.GetName(), *a) {
 			return true
 		}
 	}
