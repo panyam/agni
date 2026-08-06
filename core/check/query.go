@@ -30,10 +30,23 @@ type irModel struct {
 	specs     param.ParamProvider         // params tier seam, populated only by NewModelWithParams
 	mpn       map[string]string           // ref_des -> design-side MPN (BomLine, else attribute)
 	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
+	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
+}
+
+// ModelOption configures a Model at construction. It is variadic on every constructor so an existing
+// call site is unchanged.
+type ModelOption func(*irModel)
+
+// WithLexicon tells the model which naming vocabulary its design was READ with, so the residual
+// name projections (the spec name FFIs, pin-role derivation, and the stamped-role fallback for a
+// hand-built IR) answer with the project's conventions rather than a process global (WS3-106).
+// Pass the same *classify.Lexicon the loader used; omitting it means the process defaults.
+func WithLexicon(lex *classify.Lexicon) ModelOption {
+	return func(m *irModel) { m.lex = lex }
 }
 
 // NewModel builds the default IR-backed Model for a design.
-func NewModel(d *ir.Design) Model {
+func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	m := &irModel{
 		d:         d,
 		pinDir:    map[string]ir.PinDirection{},
@@ -46,6 +59,11 @@ func NewModel(d *ir.Design) Model {
 		nameCount: map[string]int{},
 		classSet:  map[string][]ComponentClass{},
 		passNets:  map[string][]*ir.Net{},
+	}
+	// Apply options FIRST: the device-class fallback below re-derives through the lexicon, so a
+	// model built WithLexicon must already carry it by the time that runs.
+	for _, opt := range opts {
+		opt(m)
 	}
 	// Index part-type pins by (library, part) so a component's sections resolve to pin
 	// directions. The loose "/part" key matches when a section omits the library ref. The
@@ -78,7 +96,7 @@ func NewModel(d *ir.Design) Model {
 				}
 			}
 		}
-		m.classSet[c.RefDes] = componentClassesOf(c, first)
+		m.classSet[c.RefDes] = m.componentClassesOf(c, first)
 	}
 	// A duplicated ref-des mechanically puts one (ref, pin) key in several nets (each
 	// placement gets its own copper), so those pins are the ref-des collision's symptom,
@@ -125,14 +143,42 @@ func NewModel(d *ir.Design) Model {
 	return m
 }
 
+// lexicon resolves the naming vocabulary this model reads names with, defaulting to the process-level
+// one for a model built without WithLexicon (a hand-authored test IR, or a caller that declares no
+// project convention). Never nil, so the call sites need no guard.
+func (m *irModel) lexicon() *classify.Lexicon {
+	if m.lex == nil {
+		return classify.ActiveLexicon()
+	}
+	return m.lex
+}
+
+// IsPowerRailName / IsGroundName / IsFeedbackName project this model's naming lexicon over a bare
+// name. They are the model-scoped form of the package-level helpers of the same names, which read the
+// process globals; prefer these wherever a Model is in hand (WS3-106).
+func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVocab().IsRail(name) }
+func (m *irModel) IsGroundName(name string) bool    { return m.lexicon().RoleVocab().IsGround(name) }
+func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVocab().IsFeedback(name) }
+
+// IsGroundNet / IsRailNet answer the role question about a net: the stamped role set when the net
+// carries one (authoritative, filled at ingestion), else this model's lexicon over the name. Taking
+// the net rather than its name matters because net names are not unique.
+func (m *irModel) IsGroundNet(n *ir.Net) bool {
+	return NetHasRole(n, NetRoleGround, m.IsGroundName)
+}
+
+func (m *irModel) IsRailNet(n *ir.Net) bool {
+	return NetHasRole(n, NetRoleRail, m.IsPowerRailName)
+}
+
 // componentClassesOf resolves a component's device_classes SET: the normalized set stamped at
 // ingestion (WS3-071) when present, else a fallback derivation for a design built without the
 // ingestion pass (a hand-authored test IR). Because Stamp writes the same derivation, a never-stamped
 // component re-derives to the same set. Returns nil for an unclassified component.
-func componentClassesOf(c *ir.Component, pt *ir.PartType) []ComponentClass {
+func (m *irModel) componentClassesOf(c *ir.Component, pt *ir.PartType) []ComponentClass {
 	tags := c.GetDeviceClasses()
 	if len(tags) == 0 {
-		tags = classify.ClassesOf(classify.Classify(c, pt))
+		tags = classify.ClassesOf(m.lexicon().Classify(c, pt))
 	}
 	out := make([]ComponentClass, len(tags))
 	for i, t := range tags {
@@ -195,7 +241,7 @@ func (m *irModel) Pins() []PinInst { return m.pins }
 func (m *irModel) PinConnected(refDes, pin string) bool { return m.pinConn[refDes+"\x00"+pin] }
 
 func (m *irModel) PinRole(refDes, pin string) PinRole {
-	return classifyPinRole(m.pinName[refDes+"\x00"+pin], m.ComponentClass(refDes))
+	return classifyPinRole(m, m.pinName[refDes+"\x00"+pin], m.ComponentClass(refDes))
 }
 
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }

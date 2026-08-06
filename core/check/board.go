@@ -15,8 +15,8 @@ import (
 
 // NewModelWithBoard builds the default Model with the board-geometry tier attached.
 // NewModel remains the netlist-only constructor; every existing caller is unchanged.
-func NewModelWithBoard(d *ir.Design, bg *geom.BoardGeometry) Model {
-	m := NewModel(d).(*irModel)
+func NewModelWithBoard(d *ir.Design, bg *geom.BoardGeometry, opts ...ModelOption) Model {
+	m := NewModel(d, opts...).(*irModel)
 	if bg == nil {
 		return m
 	}

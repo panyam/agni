@@ -61,12 +61,9 @@ func FirstPart(index map[string]*ir.PartType, c *ir.Component) *ir.PartType {
 // once at ingestion (WS3-071). The loader calls it after readers finish, so every format is classified
 // by the same cross-format conventions and check reads a normalized data fact. Idempotent: it recomputes
 // and overwrites the set, so a re-stamp after a re-read is safe.
-func Stamp(d *ir.Design) {
-	index := PartIndex(d)
-	for _, c := range d.GetComponents() {
-		c.DeviceClasses = ClassesOf(Classify(c, FirstPart(index, c)))
-	}
-}
+// It classifies against the PROCESS-level lexicon; a read that carries its own conventions calls
+// (*Lexicon).Stamp instead, so two designs in one process can be stamped differently (WS3-106).
+func Stamp(d *ir.Design) { ActiveLexicon().Stamp(d) }
 
 // MostSpecific picks the most-specific class from a device_classes set using the classifier's
 // specificity order (a refined subtype like tvs beats its diode family tag), so a Model exposing a

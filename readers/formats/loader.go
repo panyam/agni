@@ -23,6 +23,26 @@ type Loader struct {
 	// SymbolPaths are the directories searched for .sym symbol files when netlisting or
 	// drawing xschem/gEDA schematics (the schematic's own directory is always searched).
 	SymbolPaths []string
+	// Lexicon is the naming vocabulary this loader's reads are stamped with: which net names are
+	// rails / grounds / feedback nodes, which pin names are supplies, and the device-class token
+	// hints (WS3-106). Nil means the process defaults, so a loader that declares no project
+	// convention behaves exactly as before.
+	//
+	// It lives here, beside SymbolPaths, because it is read configuration: the stamps below turn it
+	// into design DATA once, and rules then read the data. Carrying it per-loader rather than in a
+	// package global is what lets two designs be read with different project conventions in one
+	// process, which a served request needs and a mutable global cannot give.
+	Lexicon *classify.Lexicon
+}
+
+// lexicon is the naming vocabulary this loader stamps with. A nil *Loader is a supported caller
+// (ResolveGeometry is reached through one), and a nil Lexicon means the process defaults, so both
+// degrade to the built-in vocabularies rather than panicking.
+func (l *Loader) lexicon() *classify.Lexicon {
+	if l == nil {
+		return nil
+	}
+	return l.Lexicon
 }
 
 // ReadDesign reads a design file into the netlist IR, picking the reader by extension.
@@ -41,18 +61,18 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	netgraph.StampNetIDs(d)
 	// Classify every component into its device_classes set once at ingestion (WS3-071), so check reads
 	// a normalized data fact instead of re-deriving the class from vendor strings on every model build.
-	// Runs after readers finish, applying the process-level class lexicon (SetActiveClassVocab), so a
-	// --conventions class override must be installed before this call.
-	classify.Stamp(d)
-	// Stamp each net's role SET (rail / ground / feedback) from the active naming lexicon once at
-	// ingestion (WS3-072), so the core reads a normalized net.role fact instead of re-running name
-	// matching per-net per-rule. Same ordering contract as the class stamp: a --conventions role
-	// override (SetActiveRoleVocab) must be installed before this call.
-	classify.StampNetRoles(d)
+	// Runs after readers finish, against THIS loader's lexicon (WS3-106) — the vocabulary arrives with
+	// the read, so there is no install-before-this-call ordering to get wrong.
+	lex := l.lexicon()
+	lex.Stamp(d)
+	// Stamp each net's role SET (rail / ground / feedback) from the same lexicon once at ingestion
+	// (WS3-072), so the core reads a normalized net.role fact instead of re-running name matching
+	// per-net per-rule.
+	lex.StampNetRoles(d)
 	// Fill POWER_IN on supply pins a reader left under-typed (WS3-072 PR2): EDIF's port grammar carries
 	// only INPUT/OUTPUT/INOUT, so a VDD pin reads as plain INPUT; this promotes it so the power-pin rule
 	// family works format-neutrally on PinDir == POWER_IN. A no-op for KiCad/gEDA (already typed).
-	classify.StampPowerInPins(d)
+	lex.StampPowerInPins(d)
 	return d, nil
 }
 

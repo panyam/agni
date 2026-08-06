@@ -485,7 +485,7 @@ func railFacts(m check.Model) []query.FactRow {
 func feedbackFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if check.NetHasRole(n, check.NetRoleFeedback, check.IsFeedbackName) {
+		if check.NetHasRole(n, check.NetRoleFeedback, m.IsFeedbackName) {
 			out = append(out, query.FactRow{Relation: RelFeedback, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
@@ -579,7 +579,7 @@ func specDocCite(spec *parampb.PartSpec) string {
 func netGroundFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if check.NetHasRole(n, check.NetRoleGround, check.IsGroundName) {
+		if m.IsGroundNet(n) {
 			out = append(out, query.FactRow{Relation: RelNetGround, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
@@ -646,7 +646,7 @@ func pinNetConflictFacts(m check.Model) []query.FactRow {
 func netBusLikeFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if check.IsBusLike(n) {
+		if check.IsBusLike(m, n) {
 			out = append(out, query.FactRow{Relation: RelNetBusLike, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}

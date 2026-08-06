@@ -83,6 +83,12 @@ var tokenClasses = map[string]ComponentClass{
 // ferrite), so a resistor named "PULLUP_LED_EN" stays a resistor; with no base class the
 // token decides outright. It is the pure, single-class derivation Stamp and check.Model share.
 func Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
+	return ActiveLexicon().Classify(c, pt)
+}
+
+// Classify is the per-read form: the same derivation against THIS lexicon's vocabularies rather than
+// the process globals (WS3-106).
+func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	prefix := refDesPrefix(c.GetRefDes())
 	// A part's declared prefix arrives as printed, and capture tools print it in the
 	// annotation-placeholder form ("C?", "REF**" — the Mentor EDIF corpus does): the
@@ -97,7 +103,7 @@ func Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	// Collect the SET of hints from the active classification lexicon (WS3-070), not the first: a "Tvs
 	// Diode" description carries both a "tvs" and a "diode" token, and the generic "diode" must not
 	// shadow the "tvs" refinement whichever order they tokenize in.
-	hints := activeClassVocab.HintsFor(classTokens(pt, c))
+	hints := l.class().HintsFor(classTokens(pt, c))
 
 	// Clock family (WS10-015): scoped to clock candidates so the structural power-pin signal never
 	// promotes an arbitrary powered IC (an MCU has a supply pin too). The ONLY reliable keyword-time
@@ -107,7 +113,7 @@ func Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	// stays at the family; its crystal / ceramic_resonator / oscillator subtype resolves from a seeded
 	// datasheet device_class (enrichClassesFromParams).
 	if base == ClassClock || hints[ClassClock] {
-		if hasSupplyPin(pt) {
+		if l.hasSupplyPin(pt) {
 			return ClassOscillator
 		}
 		return ClassClock
@@ -148,9 +154,9 @@ func Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 // StampPowerInPins, and EDIF under-types a supply pin as plain INPUT, so the direction is neither
 // available nor reliable here — the name is. A part with no declared pins yields false (no structural
 // signal, so the oscillator subtype must then come from a token or the datasheet).
-func hasSupplyPin(pt *ir.PartType) bool {
+func (l *Lexicon) hasSupplyPin(pt *ir.PartType) bool {
 	for _, p := range pt.GetPins() {
-		if activeRoleVocab.IsSupplyPin(p.GetName()) {
+		if l.role().IsSupplyPin(p.GetName()) {
 			return true
 		}
 	}

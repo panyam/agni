@@ -73,6 +73,24 @@ type Model interface {
 	// name. Such rails are distributed by power-symbol taps, not drawn wires (WS9-039). Unknown
 	// net -> false.
 	IsPowerRail(name string) bool
+	// role: whether a net carries the ground / rail naming role, reading the STAMPED role fact
+	// (ir.Net.roles, filled at ingestion) and falling back to this model's naming lexicon only for a
+	// net that skipped the loader. They take the net rather than its name because names are not
+	// unique (see NetNameCount) — a by-name lookup can answer about a different net.
+	//
+	// IsRailNet is the role question alone. It is deliberately NARROWER than IsPowerRail, which also
+	// answers true for a driven-or-global net and for grounds because it serves the "distributed by
+	// power-symbol taps, nothing to stroke" locate question. A rule asking "is this a rail" wants
+	// this one.
+	IsGroundNet(n *ir.Net) bool
+	IsRailNet(n *ir.Net) bool
+	// naming lexicon: does a bare NAME match a role vocabulary. For the callers that hold no net to
+	// read a stamped role from — the spec-language name FFIs over a literal, and pin-name role
+	// derivation. Reads the lexicon this model's design was READ with (WS3-106), so a project's
+	// conventions reach a name match without a package global.
+	IsPowerRailName(name string) bool
+	IsGroundName(name string) bool
+	IsFeedbackName(name string) bool
 	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName's
 	// pairing lookup). More than one means the design states the same name for
 	// electrically distinct nets — impossible on connect-by-name formats (the solver

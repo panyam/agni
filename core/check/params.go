@@ -31,8 +31,8 @@ import (
 // source is pluggable without touching the model or any rule. NewModel and NewModelWithBoard
 // remain the narrower constructors; every existing caller is unchanged (a ParamSet satisfies
 // ParamProvider).
-func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamProvider) Model {
-	m := NewModelWithBoard(d, bg).(*irModel)
+func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamProvider, opts ...ModelOption) Model {
+	m := NewModelWithBoard(d, bg, opts...).(*irModel)
 	m.specs = specs
 	m.mpn = map[string]string{}
 	for _, line := range d.Bom {

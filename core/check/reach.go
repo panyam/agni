@@ -31,10 +31,10 @@ const maxWalkFan = 16
 // (a PWR_FLAG marks the power ENTRY nets themselves — treating them as stops would blind the walk on
 // its primary use case). WS3-080 named this (was the inline walkStop) so the reach walk and the
 // net.bus_like query relation share ONE definition; the walk's start net is never treated as a stop.
-func IsBusLike(n *ir.Net) bool {
+func IsBusLike(m Model, n *ir.Net) bool {
 	a := n.GetAttributes()
 	return a[netgraph.AttrGlobal] == "true" ||
-		IsGroundName(n.Name) || len(n.Connections) > maxWalkFan
+		m.IsGroundNet(n) || len(n.Connections) > maxWalkFan
 }
 
 // reach runs the bounded BFS over the model's pass-element adjacency.
@@ -61,7 +61,7 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 					if visited[o.Name] || o.Name == n.Name {
 						continue
 					}
-					if IsBusLike(o) {
+					if IsBusLike(m, o) {
 						continue
 					}
 					visited[o.Name] = true

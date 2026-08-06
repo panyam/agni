@@ -61,5 +61,5 @@ func (m *irModel) IsPowerRail(name string) bool {
 	}
 	a := n.GetAttributes()
 	return a[netgraph.AttrPowerDriven] == "true" || a[netgraph.AttrGlobal] == "true" ||
-		NetHasRole(n, NetRoleGround, IsGroundName) || NetHasRole(n, NetRoleRail, IsPowerRailName)
+		m.IsGroundNet(n) || m.IsRailNet(n)
 }

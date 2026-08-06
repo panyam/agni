@@ -150,12 +150,9 @@ func BuildRoleVocab(rail, ground, feedback, supplyPin VocabPatterns) (*RoleVocab
 // recomputes and overwrites, so a re-stamp after a re-read is safe. A net matching no vocabulary gets an
 // empty set (a plain signal net), so a consumer reads the absence as "no role", the same way an empty
 // device_classes reads as "unknown".
-func StampNetRoles(d *ir.Design) {
-	v := activeRoleVocab
-	for _, n := range d.GetNets() {
-		n.Roles = rolesFor(v, n.GetName())
-	}
-}
+// It stamps from the PROCESS-level lexicon; a read carrying its own conventions calls
+// (*Lexicon).StampNetRoles instead (WS3-106).
+func StampNetRoles(d *ir.Design) { ActiveLexicon().StampNetRoles(d) }
 
 // rolesFor is the per-net projection StampNetRoles applies: every vocabulary a name matches, in a
 // stable order. A rail-named feedback node ("VCC1V2_FB") matches BOTH rail and feedback and carries
