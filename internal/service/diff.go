@@ -22,7 +22,7 @@ const sharedPlacementCap = 50
 // geometry is best-effort there, see annotateDiffSheets). Declared separately so DiffService
 // states its dependencies; the server's osLoader (and any Loader) satisfies it.
 type DesignLoader interface {
-	Design(ctx context.Context, mount, path string) (*ir.Design, error)
+	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
 	Geometry(ctx context.Context, mount, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
 }
 

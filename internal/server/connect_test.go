@@ -10,11 +10,11 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/core/review"
 )
 
 // TestToConnectErr pins the one sentinel-to-code table every adapter shares — the mapping the
@@ -79,7 +79,7 @@ type memReviewLoader struct {
 	err    error
 }
 
-func (m memReviewLoader) Design(context.Context, string, string) (*ir.Design, error) {
+func (m memReviewLoader) Design(context.Context, string, string, ...service.ReadOption) (*ir.Design, error) {
 	return m.design, m.err
 }
 func (m memReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {

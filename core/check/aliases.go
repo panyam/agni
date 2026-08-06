@@ -31,6 +31,10 @@ type (
 	// The naming (role) lexicon moved to classify in WS3-072 for the same reason (the net.role stamp
 	// runs at ingestion). RoleVocab keeps its check.* name here.
 	RoleVocab = classify.RoleVocab
+
+	// Lexicon pairs the two vocabularies as the value a design is READ with (WS3-106), so a caller
+	// composing project conventions holds one thing rather than two.
+	Lexicon = classify.Lexicon
 )
 
 // The classification-lexicon functions, re-exported from classify. SetActiveClassVocab/ActiveClassVocab

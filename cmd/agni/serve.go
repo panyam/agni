@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
@@ -42,7 +43,7 @@ func serveCmd() *cobra.Command {
 	var nativeTools []string
 	var pdf2docCmd string
 	var theme string
-	var paramsDir, profilePath, intentPath string
+	var paramsDir, profilePath, intentPath, conventions string
 	c := &cobra.Command{
 		Use:   "serve [dir]",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -113,6 +114,27 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// --conventions is the DEPLOYMENT default for this server's project (WS3-102): composed into
+			// the catalog here and installed as the process-level vocabulary, which is the one legitimate
+			// use of a process-wide install (startup, before any request, never mutated after). A request
+			// that names its own conventions_path overrides both per request, with its lexicon travelling
+			// with that read; that is why the override is safe under concurrency (WS3-106).
+			if conventions != "" {
+				cfg, err := naming.Load(conventions)
+				if err != nil {
+					return err
+				}
+				if err := naming.ApplyLexicon(cfg); err != nil {
+					return err
+				}
+				if len(cfg.Rules) > 0 {
+					src, err := naming.Source(cfg)
+					if err != nil {
+						return err
+					}
+					reviewCatalog = check.CatalogWith(src)
+				}
+			}
 			rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(service.NewReviewService(loader, reviewCatalog, reviewProfiles, specs)))
 			mux.Handle(rvPath, rvHandler)
 			mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
@@ -145,6 +167,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
+	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's default: its rules join the catalog and its lexicon becomes the default naming vocabulary. A request may name its own instead")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the ReviewService catalog")
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the ReviewService catalog so intent-bound review items resolve")
 	return c

@@ -7,13 +7,13 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/readers/formats"
-	"github.com/panyam/agni/core/render"
 )
 
 // faithfulLayout is the layout name for an ingested faithful geometry (vs an auto-layout),
@@ -43,7 +43,7 @@ var (
 type Loader interface {
 	// Design returns the netlist IR (for counts and checks). A geometry-only file has none and
 	// returns an error the caller treats as "no netlist".
-	Design(ctx context.Context, mount, path string) (*ir.Design, error)
+	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
 	// Geometry resolves drawable geometry for the layout and symbol source (the design's own
 	// symbols when faithfulSymbols, else synthetic glyphs).
 	Geometry(ctx context.Context, mount, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)

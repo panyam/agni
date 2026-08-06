@@ -88,37 +88,58 @@ func Parse(b []byte) (Config, error) {
 // an author chose.
 const alwaysExempt = `^(N\$|unconnected-\(|Net-\(|\$)`
 
-// ApplyLexicon installs the config's naming-lexicon overrides as the process-level role vocabulary
-// (WS3-069). A nil Lexicon is a no-op (defaults stay). Each regex is validated here; a bad pattern is a
-// returned error, not a panic, because config is operator input. Call it once at startup, before any
-// rule runs. It is idempotent for a given config.
-func ApplyLexicon(cfg Config) error {
+// BuildLexicon compiles the config's naming-lexicon block into a lexicon VALUE (WS3-106). A nil
+// Lexicon block yields nil, meaning "this config states no vocabulary", which the caller reads as the
+// engine defaults. Each regex is validated here; a bad pattern is a returned error, not a panic,
+// because config is operator input.
+//
+// This is the form a per-request caller wants: the value travels with the read it configures, so two
+// designs can be read with different project conventions in one process. ApplyLexicon is the same
+// build followed by a process-wide install, kept for the startup-config callers.
+func BuildLexicon(cfg Config) (*check.Lexicon, error) {
 	if cfg.Lexicon == nil {
-		return nil
+		return nil, nil
 	}
 	vp := func(vc VocabConfig) check.VocabPatterns {
 		return check.VocabPatterns{Patterns: vc.Patterns, Replace: vc.Replace}
 	}
 	v, err := check.BuildRoleVocab(vp(cfg.Lexicon.Rail), vp(cfg.Lexicon.Ground), vp(cfg.Lexicon.Feedback), vp(cfg.Lexicon.SupplyPin))
 	if err != nil {
-		return fmt.Errorf("naming config %q lexicon: %w", cfg.Name, err)
+		return nil, fmt.Errorf("naming config %q lexicon: %w", cfg.Name, err)
 	}
-	check.SetActiveRoleVocab(v)
-
+	lex := &check.Lexicon{Role: v}
 	if len(cfg.Lexicon.Class) > 0 {
 		overrides := map[check.ComponentClass]check.VocabPatterns{}
 		for name, vc := range cfg.Lexicon.Class {
 			cl, ok := check.ParseComponentClass(name)
 			if !ok {
-				return fmt.Errorf("naming config %q lexicon: unknown component class %q", cfg.Name, name)
+				return nil, fmt.Errorf("naming config %q lexicon: unknown component class %q", cfg.Name, name)
 			}
 			overrides[cl] = vp(vc)
 		}
 		cv, err := check.BuildClassVocab(overrides)
 		if err != nil {
-			return fmt.Errorf("naming config %q lexicon class: %w", cfg.Name, err)
+			return nil, fmt.Errorf("naming config %q lexicon class: %w", cfg.Name, err)
 		}
-		check.SetActiveClassVocab(cv)
+		lex.Class = cv
+	}
+	return lex, nil
+}
+
+// ApplyLexicon installs the config's naming-lexicon overrides as the PROCESS-level vocabulary
+// (WS3-069). A nil Lexicon is a no-op (defaults stay). Call it once at startup, before any design is
+// read. It is idempotent for a given config.
+//
+// Prefer BuildLexicon where the vocabulary can travel with the read: a process-wide install cannot be
+// scoped to one request, so it is startup config only.
+func ApplyLexicon(cfg Config) error {
+	lex, err := BuildLexicon(cfg)
+	if err != nil || lex == nil {
+		return err
+	}
+	check.SetActiveRoleVocab(lex.Role)
+	if lex.Class != nil {
+		check.SetActiveClassVocab(lex.Class)
 	}
 	return nil
 }

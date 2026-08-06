@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Finding } from "./checks_pb";
+import type { Finding, OverlayConfig } from "./checks_pb";
 import { file_agni_v1_webapi_checks } from "./checks_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpInkKEFJ1blJldmlld1JlcXVlc3QSDQoFbW91bnQYASABKAkSFQoNbWFuaWZlc3RfcGF0aBgCIAEoCRITCgtkZXNpZ25fcGF0aBgDIAMoCRISCgpib2FyZF9wYXRoGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBInEKClJldmlld0l0ZW0SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDwoHb3V0Y29tZRgDIAEoCRIMCgRub3RlGAQgASgJEikKCGZpbmRpbmdzGAUgAygLMhcuYWduaS52MS53ZWJhcGkuRmluZGluZyJFCgpSZXZpZXdBcmVhEgwKBG5hbWUYASABKAkSKQoFaXRlbXMYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5SZXZpZXdJdGVtIlsKDFJldmlld1JlcG9ydBIQCghtYW5pZmVzdBgBIAEoCRIOCgZkZXNpZ24YAiABKAkSKQoFYXJlYXMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5SZXZpZXdBcmVhIlQKEVJ1blJldmlld1Jlc3BvbnNlEhAKCG1hbmlmZXN0GAEgASgJEi0KB3JlcG9ydHMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5SZXZpZXdSZXBvcnQyYQoNUmV2aWV3U2VydmljZRJQCglSdW5SZXZpZXcSIC5hZ25pLnYxLndlYmFwaS5SdW5SZXZpZXdSZXF1ZXN0GiEuYWduaS52MS53ZWJhcGkuUnVuUmV2aWV3UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_checks]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIqkBChBSdW5SZXZpZXdSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEhUKDW1hbmlmZXN0X3BhdGgYAiABKAkSEwoLZGVzaWduX3BhdGgYAyADKAkSEgoKYm9hcmRfcGF0aBgEIAEoCRIWCg5yYXRpZmllZF9mbG9vchgFIAEoARIuCgdvdmVybGF5GAYgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyJxCgpSZXZpZXdJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg8KB291dGNvbWUYAyABKAkSDAoEbm90ZRgEIAEoCRIpCghmaW5kaW5ncxgFIAMoCzIXLmFnbmkudjEud2ViYXBpLkZpbmRpbmciRQoKUmV2aWV3QXJlYRIMCgRuYW1lGAEgASgJEikKBWl0ZW1zGAIgAygLMhouYWduaS52MS53ZWJhcGkuUmV2aWV3SXRlbSJbCgxSZXZpZXdSZXBvcnQSEAoIbWFuaWZlc3QYASABKAkSDgoGZGVzaWduGAIgASgJEikKBWFyZWFzGAMgAygLMhouYWduaS52MS53ZWJhcGkuUmV2aWV3QXJlYSJUChFSdW5SZXZpZXdSZXNwb25zZRIQCghtYW5pZmVzdBgBIAEoCRItCgdyZXBvcnRzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuUmV2aWV3UmVwb3J0MmEKDVJldmlld1NlcnZpY2USUAoJUnVuUmV2aWV3EiAuYWduaS52MS53ZWJhcGkuUnVuUmV2aWV3UmVxdWVzdBohLmFnbmkudjEud2ViYXBpLlJ1blJldmlld1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunReviewRequest
@@ -56,6 +56,14 @@ export type RunReviewRequest = Message<"agni.v1.webapi.RunReviewRequest"> & {
    * @generated from field: double ratified_floor = 5;
    */
   ratifiedFloor: number;
+
+  /**
+   * overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
+   * service was constructed with, so an existing caller is unchanged.
+   *
+   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 6;
+   */
+  overlay?: OverlayConfig | undefined;
 };
 
 /**

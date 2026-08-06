@@ -5,12 +5,13 @@ import (
 	"errors"
 	"os"
 
-	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/core/review"
+	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // localLoader is the CLI's service.Loader: it resolves a bare LOCAL path with NO mount containment
@@ -21,8 +22,8 @@ import (
 // command constructs its service over this and calls the same method the web serves.
 type localLoader struct{ loader *formats.Loader }
 
-func (l *localLoader) Design(_ context.Context, _, path string) (*ir.Design, error) {
-	return l.loader.ReadDesign(path)
+func (l *localLoader) Design(_ context.Context, _, path string, opts ...service.ReadOption) (*ir.Design, error) {
+	return readerFor(l.loader, opts...).ReadDesign(path)
 }
 
 func (l *localLoader) Board(_ context.Context, _, path string) (*geom.BoardGeometry, error) {

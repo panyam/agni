@@ -5,9 +5,9 @@ import (
 	"sort"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // CheckService runs the rule checks over a design's netlist IR and serves the rule catalog,
@@ -66,11 +66,17 @@ func (s *CheckService) ListRules(_ context.Context, _ *webapi.ListRulesRequest) 
 // design's default-layout geometry (WS9-024); a design with no resolvable geometry degrades to
 // findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
-	m, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs)
+	// Per-request overlay config (WS3-102) resolves the same way it does for a review, through the one
+	// ComposeOverlay, so the two surfaces cannot read a convention file differently.
+	ov, err := ComposeOverlay(req.GetOverlay())
 	if err != nil {
 		return nil, err
 	}
-	rules := s.catalog.Filter(check.Facets{Names: req.GetRules()})
+	m, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs, ov.ReadOptions()...)
+	if err != nil {
+		return nil, err
+	}
+	rules := ov.Catalog(s.catalog).Filter(check.Facets{Names: req.GetRules()})
 	resp := &webapi.CheckDesignResponse{Findings: FindingProtos(check.Run(m, rules))}
 	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, req.GetMount(), req.GetPath()), m)
 	return resp, nil
