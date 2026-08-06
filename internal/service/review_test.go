@@ -253,3 +253,90 @@ func TestReviewAbsentHostProfileNotApplicable(t *testing.T) {
 		t.Errorf("genuinely-absent host-bound profile: want not-applicable, got %q", got)
 	}
 }
+
+// TestReviewInUseWithoutAnchorNotAutomated (WS3-099): a profile whose convention is in use through two
+// NON-anchor signals, with the anchor net absent, must not read pass. The completeness rule hangs on the
+// anchor, so it reports nothing, and zero findings scored a clean pass on an interface nothing checked.
+// This is the fifth route to the same defect after WS3-090/096/097/098.
+func TestReviewInUseWithoutAnchorNotAutomated(t *testing.T) {
+	pcie := profiles.Profile{Name: "PXANCHOR", Signals: []profiles.Signal{
+		{Name: "PETP", Suffix: "_PETP", Anchor: true},
+		{Name: "REFCLKP", Suffix: "_REFCLKP"},
+		{Name: "REFCLKN", Suffix: "_REFCLKN"},
+	}, Requirements: []profiles.Requirement{{Type: "signal-missing"}}}
+	// Both REFCLK nets are properly wired (two connections each), so signal-dangling has nothing to say
+	// either: the item's only verdict comes from the completeness rule, which cannot evaluate.
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1"}, {RefDes: "U2"}},
+		Nets: []*ir.Net{
+			{Name: "PCIE_NAD_REFCLKP", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U2", PinRef: "1"}}},
+			{Name: "PCIE_NAD_REFCLKN", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}, {ComponentRef: "U2", PinRef: "2"}}},
+		},
+	}
+	if got := runOneItem(t, pcie, d); got != "not-automated" {
+		t.Errorf("in-use-but-unanchored profile: want not-automated, got %q", got)
+	}
+	// The same profile with its anchor net present evaluates normally, so the gate does not swallow a
+	// genuinely-checkable interface: PETN is not declared, nothing is missing, clean pass.
+	d.Nets = append(d.Nets, &ir.Net{Name: "PCIE_NAD_PETP",
+		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "3"}, {ComponentRef: "U2", PinRef: "3"}}})
+	if got := runOneItem(t, pcie, d); got != "pass" {
+		t.Errorf("anchored profile with nothing missing: want pass, got %q", got)
+	}
+}
+
+// TestReviewOverlayProfileResolvesUnmatched (WS3-099) pins the REMEDIATION path for the verdict above:
+// a board whose bus is correctly designed but named to a convention the shipped profile cannot express
+// reads not-automated, and authoring an overlay profile with WS3-057 matchers makes it evaluate for
+// real. The two profiles share the interface Name and load as separate catalog sources, as a built-in
+// and a --profile-path overlay do. The core profile stays SILENT rather than clashing: it cannot anchor
+// on this naming, so the overlay's finding is the whole verdict.
+func TestReviewOverlayProfileResolvesUnmatched(t *testing.T) {
+	core := profiles.Profile{Name: "PXOVL", Signals: []profiles.Signal{
+		{Name: "PETP", Suffix: "_PETP", Anchor: true},
+		{Name: "REFCLKP", Suffix: "_REFCLKP"},
+		{Name: "REFCLKN", Suffix: "_REFCLKN"},
+	}, Requirements: []profiles.Requirement{{Type: "signal-missing"}}}
+	// Same interface, this board's naming, via a glob. TXP0 is required and absent -> a genuine finding.
+	overlay := profiles.Profile{Name: "PXOVL", Signals: []profiles.Signal{
+		{Name: "OREFCLKP", Glob: "PCIE_*_REFCLKP", Anchor: true},
+		{Name: "OREFCLKN", Glob: "PCIE_*_REFCLKN"},
+		{Name: "OTXP", Glob: "PCIE_*_TXP0"},
+	}, Requirements: []profiles.Requirement{{Type: "signal-missing"}}}
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1"}, {RefDes: "U2"}},
+		Nets: []*ir.Net{
+			{Name: "PCIE_NAD_REFCLKP", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U2", PinRef: "1"}}},
+			{Name: "PCIE_NAD_REFCLKN", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}, {ComponentRef: "U2", PinRef: "2"}}},
+		},
+	}
+	if got := runProfiles(t, []profiles.Profile{core}, d); got != "not-automated" {
+		t.Errorf("shipped profile alone cannot express this naming: want not-automated, got %q", got)
+	}
+	if got := runProfiles(t, []profiles.Profile{core, overlay}, d); got != "fail" {
+		t.Errorf("overlay profile should make the interface evaluate: want fail, got %q", got)
+	}
+}
+
+// runProfiles runs a one-item manifest bound to the interface every profile in ps names, loading the
+// first as a built-in source and the rest as an overlay source (the production namespacing, which is
+// also what keeps their generated rule names distinct).
+func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
+	t.Helper()
+	name := ps[0].Name
+	man := review.Manifest{Name: "t", Areas: []review.Area{{Name: "A", Items: []review.Item{
+		{ID: "it", Title: "iface", Binding: review.Binding{Profile: name}},
+	}}}}
+	srcs := []check.RuleSource{profiles.Source("profile-core", ps[:1])}
+	if len(ps) > 1 {
+		srcs = append(srcs, profiles.Source("profile-overlay", ps[1:]))
+	}
+	svc := NewReviewService(stubReviewLoader{design: d, man: man}, check.CatalogWith(srcs...),
+		map[string][]profiles.Profile{name: ps}, nil)
+	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{ManifestPath: "m", DesignPath: []string{"d"}})
+	if err != nil {
+		t.Fatalf("RunReview: %v", err)
+	}
+	out, _ := outcomeOf(resp.GetReports()[0], "it")
+	return out
+}

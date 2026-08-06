@@ -103,11 +103,20 @@ func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review
 		if !ok {
 			return review.IfaceAbsent, false // unknown interface: leave the item running
 		}
-		// The interface genuinely evaluates when its signal convention is in use OR a component declares
-		// its host — the same preconditions the profile's rules apply (WS3-090).
+		// The interface genuinely evaluates when a component declares its host, or when its signal
+		// convention is in use AND the convention completeness rule can anchor — the same preconditions
+		// the profile's rules apply (WS3-090, and its anchor half WS3-099). The host path does not need
+		// the anchor: hostIncompleteRule anchors on the declared component instead.
 		for _, p := range ps {
-			if profiles.HostDeclared(m, p) || profiles.InUse(m, p) {
+			if profiles.HostDeclared(m, p) || (profiles.InUse(m, p) && profiles.Anchored(m, p)) {
 				return review.IfacePresent, true
+			}
+		}
+		// In use but unanchored: the interface is visibly named to the convention, yet the completeness
+		// rule has nothing to hang on. Neither absent nor checkable under this profile's naming (WS3-099).
+		for _, p := range ps {
+			if profiles.InUse(m, p) {
+				return review.IfaceConventionUnmatched, true
 			}
 		}
 		// Not strictly evaluable. A host-bound interface that IS named on the board (loose evidence) but

@@ -100,6 +100,39 @@ func (p Profile) anchorSignal() *Signal {
 	return nil
 }
 
+// reqSignalMissing is the convention completeness requirement — the one built-in whose compiler can
+// only hang on a declared anchor, hence the validation below.
+const reqSignalMissing = "signal-missing"
+
+// validateAnchorDeclared rejects a profile that declares the convention completeness requirement but
+// gives signalMissingRule nothing to compile: no anchor signal, or an anchor with no OTHER signal left
+// to report missing. Either way the requirement compiles to NOTHING, silently. Paired with any
+// requirement that does compile (signal-dangling), the item then runs clean and scores a PASS while the
+// check the author asked for never existed — the WS3-099 false-pass shape arriving through author error
+// rather than design state. Rejecting it is the same posture Compile already takes for an unsound
+// matcher or an unknown requirement type: a declaration that cannot do what it says is a bug in the
+// declaration, not a silent no-op.
+//
+// Scoped to this one requirement type on purpose: an overlay-registered compiler owns its own
+// applicability and may legitimately return nil (no host, no pull-up signal), so a blanket
+// "every requirement must compile" rule would be wrong.
+func validateAnchorDeclared(p Profile) error {
+	for _, r := range p.Requirements {
+		if r.Type != reqSignalMissing {
+			continue
+		}
+		if p.anchorSignal() == nil {
+			return fmt.Errorf("profile %q declares the %q requirement but marks no signal as the anchor: the convention completeness check has nothing to hang on, so it would compile to nothing",
+				p.Name, reqSignalMissing)
+		}
+		if len(p.Signals) < 2 {
+			return fmt.Errorf("profile %q declares the %q requirement but has no signal besides the anchor: there is nothing left to report missing, so it would compile to nothing",
+				p.Name, reqSignalMissing)
+		}
+	}
+	return nil
+}
+
 // anchorSuffix returns the net-name suffix of the profile's anchor signal, or "" when none is
 // flagged — and also "" for a glob/regex-matched anchor, which has no suffix.
 func (p Profile) anchorSuffix() string {
@@ -154,6 +187,11 @@ func Compile(p Profile) []*check.Rule {
 			panic(fmt.Sprintf("profiles: profile %q: %v", p.Name, err))
 		}
 	}
+	// Likewise for a completeness requirement that would compile to nothing (WS3-099). Parse rejects it
+	// for YAML profiles; this is the gate for a Go-literal one.
+	if err := validateAnchorDeclared(p); err != nil {
+		panic("profiles: " + err.Error())
+	}
 	var rules []*check.Rule
 	for _, req := range p.Requirements {
 		c, ok := requirementRegistry[req.Type]
@@ -205,7 +243,9 @@ func (p Profile) tags() map[string]string {
 func (p Profile) signalMissingRule() *check.Rule {
 	anchorSig := p.anchorSignal()
 	if anchorSig == nil {
-		return nil // no declared anchor: the convention completeness check has nothing to hang on
+		// Unreachable for a validated profile (validateAnchorDeclared rejects this at Parse/Compile);
+		// kept so a hand-built Profile that bypasses both degrades instead of panicking here.
+		return nil
 	}
 	rules := p.presenceRules()
 	// When the profile can bind a host, suppress the convention path on a design that DECLARES one:

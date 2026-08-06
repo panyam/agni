@@ -98,6 +98,11 @@ func Parse(b []byte) (Profile, error) {
 		}
 		p.Requirements = append(p.Requirements, Requirement{Type: r.Type, Params: r.Params})
 	}
+	// A completeness requirement that would compile to nothing is a teaching error here rather than a
+	// silently-absent check (WS3-099).
+	if err := validateAnchorDeclared(p); err != nil {
+		return Profile{}, fmt.Errorf("profile: %w", err)
+	}
 	return p, nil
 }
 

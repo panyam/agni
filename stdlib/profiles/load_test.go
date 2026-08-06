@@ -230,3 +230,66 @@ func TestLoadDirAndSource(t *testing.T) {
 	// sanity: the compiled source is usable by the checker.
 	_ = check.NewSource
 }
+
+// TestSignalMissingRequiresAnchor (WS3-099): a profile declaring the convention completeness
+// requirement without a usable anchor compiles it to NOTHING, silently. Paired with any requirement
+// that does compile (signal-dangling), the item then runs clean and scores a pass while the check the
+// author asked for never existed — the same false-pass shape, arriving through author error rather
+// than design state. Both entry points reject it: Parse with a teaching error, Compile with a panic.
+func TestSignalMissingRequiresAnchor(t *testing.T) {
+	const noAnchor = `
+name: NOANCHOR
+signals:
+  - {name: A, suffix: _A}
+  - {name: B, suffix: _B}
+requirements:
+  - {type: signal-missing}
+`
+	if _, err := Parse([]byte(noAnchor)); err == nil {
+		t.Error("Parse must reject signal-missing with no anchor signal")
+	} else if !strings.Contains(err.Error(), "anchor") {
+		t.Errorf("want an error naming the anchor, got %v", err)
+	}
+	// An anchor with no OTHER signal is the same silent drop: there is nothing left to report missing.
+	const anchorOnly = `
+name: ANCHORONLY
+signals:
+  - {name: A, suffix: _A, anchor: true}
+requirements:
+  - {type: signal-missing}
+`
+	if _, err := Parse([]byte(anchorOnly)); err == nil {
+		t.Error("Parse must reject signal-missing with no non-anchor signal to check")
+	}
+	// A well-formed profile still parses, so the guard does not reject the normal shape.
+	const ok = `
+name: FINE
+signals:
+  - {name: A, suffix: _A, anchor: true}
+  - {name: B, suffix: _B}
+requirements:
+  - {type: signal-missing}
+`
+	if _, err := Parse([]byte(ok)); err != nil {
+		t.Errorf("a profile with an anchor and a second signal must parse: %v", err)
+	}
+	// A profile declaring NO completeness requirement needs no anchor.
+	const danglingOnly = `
+name: DANGONLY
+signals:
+  - {name: A, suffix: _A}
+requirements:
+  - {type: signal-dangling}
+`
+	if _, err := Parse([]byte(danglingOnly)); err != nil {
+		t.Errorf("a profile without signal-missing needs no anchor: %v", err)
+	}
+	// The Go-literal path panics, the same posture Compile takes for an unsound matcher.
+	defer func() {
+		if recover() == nil {
+			t.Error("Compile must panic on signal-missing with no anchor")
+		}
+	}()
+	Compile(Profile{Name: "GOLIT", Signals: []Signal{{Name: "A", Suffix: "_A"}, {Name: "B", Suffix: "_B"}},
+		Requirements: []Requirement{{Type: "signal-missing"}}})
+}

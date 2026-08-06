@@ -66,3 +66,33 @@ func TestHostDeclared(t *testing.T) {
 		t.Error("a profile with no host binding is never host-declared")
 	}
 }
+
+// TestAnchoredRequiresAnchorNet is the WS3-099 core: InUse clears on two NON-anchor signals while the
+// anchor net is absent, so InUse alone does not mean the convention completeness rule can evaluate —
+// signalMissingRule hangs on the anchor net existing. Anchored is the missing half of that gate.
+func TestAnchoredRequiresAnchorNet(t *testing.T) {
+	pcie := Profile{Name: "PCIe", Signals: []Signal{
+		{Name: "PETP", Suffix: "_PETP", Anchor: true},
+		{Name: "REFCLKP", Suffix: "_REFCLKP"},
+		{Name: "REFCLKN", Suffix: "_REFCLKN"},
+	}}
+	// Two non-anchor signals match and the anchor does not: in use, but the completeness rule has
+	// nothing to hang on. This is the shape that scored a clean pass while checking nothing.
+	partial := check.NewModel(&ir.Design{Nets: nets("PCIE_NAD_REFCLKP", "PCIE_NAD_REFCLKN")})
+	if !InUse(partial, pcie) {
+		t.Error("two matching non-anchor signals should still read as in use (InUse keeps its meaning)")
+	}
+	if Anchored(partial, pcie) {
+		t.Error("an absent anchor net must NOT read as anchored (the false-pass bug)")
+	}
+	full := check.NewModel(&ir.Design{Nets: nets("PCIE_NAD_PETP", "PCIE_NAD_REFCLKP")})
+	if !Anchored(full, pcie) {
+		t.Error("a present anchor net should read as anchored")
+	}
+	// A profile declaring no anchor generates no convention completeness rule at all, so there is
+	// nothing for a missing anchor to block: vacuously anchored, never the unmatched verdict.
+	noAnchor := Profile{Name: "X", Signals: []Signal{{Name: "A", Suffix: "_A"}, {Name: "B", Suffix: "_B"}}}
+	if !Anchored(check.NewModel(&ir.Design{Nets: nets("FOO_A")}), noAnchor) {
+		t.Error("a profile with no declared anchor is vacuously anchored")
+	}
+}
