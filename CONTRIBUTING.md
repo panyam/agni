@@ -19,7 +19,7 @@ this, so run it locally before opening a pull request.
 
 ## Read this first
 
-- [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules (C1–C19). They keep
+- [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules (C1–C21). They keep
   the engine format-neutral and the layering clean. Read them before proposing a change; a PR
   that violates one will be asked to change or to justify amending the constraint.
 - [Docs site overview](https://panyam.github.io/agni/overview/) — the engineering docs. The
@@ -32,11 +32,19 @@ this, so run it locally before opening a pull request.
   `readers/formats/registry.go`. See the reader notes in [Ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/)
   and reconcile new concepts against the cross-format map (CONSTRAINTS C9). Ship a runnable
   example with it (CONSTRAINTS C10).
-- **A new check rule.** One `check/rule_<name>.go`, one line in `check/index.go`, and one
-  `check/docs/<name>.md` (the source of the rule's prose, enforced 1:1 by
-  `check/docs_test.go`). The practical walkthrough is
-  [Authoring a check rule](https://panyam.github.io/agni/build/check-rule/).
+- **A new check rule.** One `stdlib/rules/builtin/rule_<name>.go`, one line in
+  `stdlib/rules/builtin/register.go`, and one `stdlib/rules/builtin/docs/<name>.md` (the source
+  of the rule's prose, enforced 1:1 by `stdlib/rules/builtin/docs_test.go`). The practical
+  walkthrough is [Authoring a check rule](https://panyam.github.io/agni/build/check-rule/).
 - **A datalog query relation or example.** See [Querying](https://panyam.github.io/agni/guide/querying/).
+- **An interface profile.** A profile is a data value, not code: a YAML declaration of an
+  interface's signals and the checks it requires, compiled into datalog rules. Built-ins live in
+  `stdlib/profiles/builtins/*.yaml`; an out-of-tree one loads through `agni check --profile-path
+  <dir>`. A signal declares exactly one net-name matcher — `suffix` (optionally narrowed by a
+  conjunctive `prefix`), `glob`, or `regex` — documented in `stdlib/profiles/matcher.go`. Reach for
+  `suffix` first; it is the readable convention. Reach for `glob` or `regex` only when the bus
+  identity is the prefix and the suffix is shared with an unrelated bus, which is the one case
+  suffix matching cannot express.
 
 ## Expectations for a pull request
 
