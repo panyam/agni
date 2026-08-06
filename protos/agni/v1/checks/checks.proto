@@ -1,0 +1,223 @@
+syntax = "proto3";
+
+package agni.v1.checks;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/checks";
+
+import "agni/v1/ir/ir.proto";
+
+// The checks contract is the engine's fourth schema, alongside the design IR (agni.v1.ir: one IR,
+// N readers), the geometry sidecar (agni.v1.geom: one geom, N producers), and the parameter IR
+// (agni.v1.param: one parameter shape, N datasheet extractors). Here the shape is: one check-result
+// document, N checkers produce it and N consumers read it.
+//
+// This file is the RESULTS half (WS3-103). It carries no RPC types and imports no transport package,
+// because a results document is an artifact, not a request/response pair. The web API's checks.proto
+// and review.proto now reference these messages rather than declaring their own, so the served wire
+// form, the CLI's --format json, and a written .results.json are one shape by construction and
+// service.FindingProto stays the single conversion site.
+//
+// The rule-DEFINITION half (the declarative source a rule compiles from) is the sibling ticket and
+// lands in this package as its own file. It is deliberately absent here rather than sketched: a
+// declared message nothing populates is the same failure class as a review binding that resolves to
+// zero rules.
+
+// Subject identifies the entity a finding is about, so a consumer can group and highlight by entity
+// type without re-guessing from a bare string. It maps directly to a geom.HighlightSpec bucket:
+// kind "net" -> nets, "component" -> components, "pin" -> pins (ref + pin).
+message Subject {
+  string kind = 1; // "net" | "component" | "pin" | "bus"
+  string ref = 2;  // net name (kind=net) or ref_des (kind=component | pin)
+  string pin = 3;  // pin designator, set only when kind=pin
+  // net_id is the deterministic per-instance net identity (ir.Net.id) for a net subject, so a
+  // client can highlight/locate ONE of two nets that share a name (the duplicate-net-name case).
+  // Empty for a component/pin subject or a pinless net; the client then joins by ref (the name).
+  string net_id = 4;
+  // bus_id is the bus's NAME (its range-label identity) for a kind="bus" subject, so a
+  // bus-not-modeled finding highlights its drawn bus rather than a net (WS7-042b). A bus carries
+  // no net, so this is its only geometry join key; empty for every other subject kind.
+  string bus_id = 5;
+}
+
+// LocateReason is why an entity a consumer wants to highlight may not be locatable in the canvas
+// (WS9-039). It is computed server-side from the loaded geometry, because a client-side resolve
+// check silently fails in SVG render mode. It lives on the checks contract rather than the web API
+// because it answers a question about a Subject's drawability, and both findings and query result
+// cells ask it.
+enum LocateReason {
+  LOCATE_REASON_UNSPECIFIED = 0;      // the entity IS drawn — expected to highlight; no explanation
+  LOCATE_REASON_VIRTUAL_SYMBOL = 1;   // a `#`-ref power port / flag (#PWR/#FLG), not a placed part
+  LOCATE_REASON_POWER_RAIL_NO_WIRE = 2; // a power/ground rail distributed via taps, no drawn wire
+  LOCATE_REASON_NOT_IN_DESIGN = 3;    // the ref/net is not in the loaded netlist
+  LOCATE_REASON_NO_GEOMETRY = 4;      // undrawn in the faithful view for no more specific reason
+  LOCATE_REASON_BUS_NOT_DRAWN = 5;    // a bus with no drawn wire (a bus_alias, an EDIF array, a
+                                      // hierarchical bus port with no wire on the shown sheet) — WS7-042c
+}
+
+// DatasheetCitation is where a datasheet-backed value came from, so a consumer shows the source (and
+// flags a low confidence) as structured data rather than only inside the finding message. The wire
+// form of check.DatasheetCitation.
+message DatasheetCitation {
+  string doc = 1;         // the SourceDoc title (vendor doc number + revision), "" if unresolved
+  string doc_ref = 2;     // the SourceDoc id the value cites (the stable join key into PartSpec.docs)
+  int32 page = 3;         // 1-based page in the document
+  string section = 4;     // the table or figure the value was read from
+  string method = 5;      // how the value was extracted ("hand", "derive/v0", "mock", ...)
+  double confidence = 6;  // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+}
+
+// Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join
+// key; `provenance` locates the finding in the source (file, native id, span) for a source-link
+// tooltip or an out-of-viewer consumer such as the CLI's `check --format json`. It is unset when the
+// subject carries no provenance.
+message Finding {
+  string rule = 1;
+  string severity = 2; // "error" | "warning" | "info"
+  Subject subject = 3; // the entity that failed (kind + ref); the highlight join key
+  string message = 4;
+  agni.v1.ir.Provenance provenance = 5; // source location of the subject; unset when none
+  // Sheet ids (SheetRef.id) where the subject appears in the design's default-layout geometry,
+  // filled server-side from placements (components/pins) and wires (nets) per sheet (WS9-024). A
+  // net spanning sheets lists each; empty when the design has no resolvable geometry, in which
+  // case a viewer highlights on the current sheet as before.
+  repeated string sheets = 6;
+  // locate_reason explains why locating this finding may highlight nothing, computed server-side
+  // from the loaded geometry (WS7-042c). Set to BUS_NOT_DRAWN for a bus finding whose bus has no
+  // drawn wire; UNSPECIFIED (the default) means the subject is drawn and will highlight.
+  LocateReason locate_reason = 7;
+  // datasheet is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
+  // form of check.Finding.DatasheetProv: which document, page, and section a limit came from, plus
+  // the extraction method and confidence. Unset for a finding not backed by a seeded datasheet value.
+  DatasheetCitation datasheet = 8;
+}
+
+// CheckReport is the severity-organized pivot over one check run: THE report shape, rendered by the
+// CLI (`check --format markdown|report`), the web report path, and a reloaded results document
+// alike, so no two consumers drift (WS3-022). Sections come worst-severity first and empty
+// severities are omitted; within a section findings group by rule, each group carrying the catalog's
+// one-line summary so a report reads without the tool at hand.
+message CheckReport {
+  string source = 1;   // the checked file (mount-relative path or CLI argument)
+  int32 rules_run = 2; // how many rules the run evaluated (distinguishes "clean" from "skipped")
+  repeated SeveritySection sections = 3;
+
+  message SeveritySection {
+    string severity = 1; // "error" | "warning" | "info" (worst first in `sections`)
+    int32 count = 2;     // findings in this section, for the summary table
+    repeated RuleGroup rules = 3;
+  }
+  message RuleGroup {
+    string rule = 1;
+    string summary = 2;            // the rule's catalog Summary; "" when the rule is unknown
+    repeated Finding findings = 3; // the canonical Finding form, reused
+  }
+}
+
+// ReviewItem is one checklist item's outcome, the wire form of review.ItemResult.
+//
+// The outcome vocabulary is the part of this contract with no incumbent equivalent, and it is the
+// reason the review layer exists: a check that did not evaluate must not score as a pass. pass and
+// fail are the two verdicts a vendor's flat violation list can express; every other value records a
+// distinct way the question went unanswered (not-applicable, not-automated, needs-data,
+// needs-design-intent, computed-n/a) or answered on data not yet trustworthy (provisional). A
+// producer that has no such axis must leave these unspoken rather than manufacture them.
+message ReviewItem {
+  string id = 1;
+  string title = 2;
+  // outcome is the review.Outcome string: pass | fail | not-applicable | not-automated |
+  // needs-data | needs-design-intent | computed-n/a | provisional. It is a string, not an enum, so
+  // a new honest verdict is a review-layer change rather than a schema migration — the same posture
+  // Finding.severity takes.
+  string outcome = 3;
+  string note = 4; // why, for an outcome that is neither pass nor fail
+  repeated Finding findings = 5; // the rule firings that made the item fail
+}
+
+// ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).
+message ReviewArea {
+  string name = 1;
+  repeated ReviewItem items = 2;
+}
+
+// CheckResults is a self-contained check-result document: what was checked, by what, with what
+// outcome. It is the artifact half of this contract — N checkers produce it, N consumers read it —
+// and it is deliberately NOT a view over live state. Everything a consumer needs to render the run
+// is inside it, which is what lets a report be read, diffed, archived, or handed to a reviewer with
+// no design file, no rule catalog, and no engine build present.
+//
+// That self-containment is the acceptance test, not a design aspiration: writing a run and
+// re-rendering it from the document alone must reproduce the original output byte for byte.
+message CheckResults {
+  ResultsMeta meta = 1;
+  DesignRef design = 2;
+  RunConfig run = 3;
+  // catalog is the snapshot of the rules this run evaluated, so a reader knows what was ASKED as
+  // well as what was found — the difference between a clean design and a run that checked nothing.
+  // It carries identity and one-line prose only: the long-form rule detail belongs to the engine's
+  // catalog surface, and copying it into every document would multiply the same markdown across
+  // every archived run.
+  repeated RuleRecord catalog = 4;
+  // findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and carries
+  // its findings per item instead, and that is not an oversight: a review runs each item's bound rules
+  // scoped to that item, so a flat union would assert a design-wide sweep that never happened.
+  repeated Finding findings = 5;
+  // manifest is the review checklist's name; empty for a plain check run. Its presence is what
+  // distinguishes a review document from a check document, so a consumer never reports an absent
+  // coverage axis as a complete one.
+  string manifest = 6;
+  repeated ReviewArea areas = 7;
+}
+
+// ResultsMeta is who produced the document and when. producer matters because this contract is meant
+// to hold a foreign checker's output too: a document is only comparable to another once you know
+// which tool and which build made it.
+message ResultsMeta {
+  string schema = 1;           // the document schema version, e.g. "agni.checks.results/v1"
+  string producer = 2;         // the tool that ran the checks, e.g. "agni"
+  string producer_version = 3; // that tool's build identity
+  string created_at = 4;       // RFC 3339, UTC
+}
+
+// DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the
+// revision identity: two documents describe the same revision when their hashes match, which is what
+// makes a findings diff between revisions meaningful and what stops a stale document from being
+// silently re-read against a design that has since changed.
+//
+// The design's own name and source format are deliberately absent. A producer would have to parse
+// the design to know them, and this document is written by a surface that is a thin client of the
+// check service and never loads one itself. A field only a second read could fill would either cost
+// every write a redundant parse or sit empty pretending to be optional.
+message DesignRef {
+  string source = 1;       // the checked file as the run named it (path or CLI argument)
+  string content_hash = 2; // "sha256:<hex>" over the source bytes; empty when the producer did not hash
+}
+
+// RunConfig records the inputs that changed what was even EVALUABLE, so a reader can tell a design
+// with no datasheet violations from a run that had no datasheet corpus attached. These are the
+// overlay tiers whose absence turns a rule not-applicable or an item not-automated; without them a
+// document's silence is unreadable.
+//
+// It records that a tier was present and under what name, never the path it was read from. Where the
+// configuration came from is the producer's business (CONSTRAINTS C22), and a path is meaningless to
+// every consumer that is not on the producing machine.
+message RunConfig {
+  bool params = 1;           // a datasheet parameter corpus was attached
+  bool profiles = 2;         // overlay interface profiles were attached
+  bool intent = 3;           // a design-intent declaration was attached
+  // conventions is the naming convention's NAME, not a flag, because it is also the namespace its
+  // rules appear under: a finding from `acme/signal-net-naming` is unreadable without it. "" is the
+  // engine defaults.
+  string conventions = 4;
+  double ratified_floor = 5; // review only: the datasheet-confidence floor for a ratified fail
+}
+
+// RuleRecord is one rule as the run saw it: enough to render and group a report without the engine's
+// catalog. Availability is deliberately absent — it is a per-design question answered by the item
+// outcomes and the not-applicable reasons they carry, and a snapshot field claiming it would have to
+// be filled from a design the document does not contain.
+message RuleRecord {
+  string name = 1;
+  string severity = 2; // "error" | "warning" | "info"
+  string summary = 3;  // the rule's one-line catalog Summary
+  map<string, string> tags = 4; // the open classification (category, tier, provider, ...)
+}

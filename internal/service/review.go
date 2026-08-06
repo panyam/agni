@@ -7,6 +7,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/datasheet/param"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -165,9 +166,9 @@ func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review
 func reviewReportProto(r review.Report) *webapi.ReviewReport {
 	out := &webapi.ReviewReport{Manifest: r.Manifest, Design: r.Design}
 	for _, ar := range r.Areas {
-		area := &webapi.ReviewArea{Name: ar.Area.Name}
+		area := &checkspb.ReviewArea{Name: ar.Area.Name}
 		for _, it := range ar.Items {
-			area.Items = append(area.Items, &webapi.ReviewItem{
+			area.Items = append(area.Items, &checkspb.ReviewItem{
 				Id:       it.Item.ID,
 				Title:    it.Item.Title,
 				Outcome:  string(it.Outcome),

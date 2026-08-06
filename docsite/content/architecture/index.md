@@ -15,6 +15,8 @@ were built. Read them in any order. Each stands on its own.
 - **[Semantic diff](semantic-diff/)**: comparing two revisions at the level of meaning, not text.
 - **[Rules and checks](rules-and-checks/)**: the evaluation model and the rules-assert /
   analysis-computes boundary.
+- **[Checks contract](checks-contract/)**: the check-result document, and why a run's evidence is
+  an artifact rather than terminal output.
 - **[Datasheet layer](datasheet-layer/)**: parameters and source documents as contracts, and the
   join into checks.
 - **[Web app and presenter](web-app/)**: the browser viewer and the presenter contract.

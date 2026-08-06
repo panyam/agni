@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -12,7 +13,7 @@ import (
 // failsAtProto reports whether any finding sits at or above the --fail-on threshold, the CI-gate
 // predicate over the wire findings a service call returns. Ranking is service.SeverityRank, so a
 // custom severity (rank above error) always trips an "error" gate rather than sliding under it.
-func failsAtProto(fs []*webapi.Finding, threshold string) bool {
+func failsAtProto(fs []*checkspb.Finding, threshold string) bool {
 	t := service.SeverityRank(threshold)
 	for _, f := range fs {
 		if service.SeverityRank(f.GetSeverity()) >= t {
@@ -24,8 +25,8 @@ func failsAtProto(fs []*webapi.Finding, threshold string) bool {
 
 // reportFindings flattens every finding out of a CheckReport's severity sections, so --fail-on gates
 // on the same run the markdown/report output renders (no second check pass).
-func reportFindings(rep *webapi.CheckReport) []*webapi.Finding {
-	var out []*webapi.Finding
+func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
+	var out []*checkspb.Finding
 	for _, s := range rep.GetSections() {
 		for _, g := range s.GetRules() {
 			out = append(out, g.GetFindings()...)
@@ -39,7 +40,7 @@ func reportFindings(rep *webapi.CheckReport) []*webapi.Finding {
 // first), findings grouped by rule under a heading that carries the catalog Summary so the
 // report reads without the tool. Rendering from the proto — not from raw findings — keeps
 // this and the web report panel showing one canonical pivot.
-func writeCheckMarkdown(w io.Writer, rep *webapi.CheckReport) error {
+func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	fmt.Fprintf(w, "# agni check — %s\n\n", rep.GetSource())
 	total := 0
 	for _, s := range rep.GetSections() {
@@ -79,7 +80,7 @@ func writeCheckMarkdown(w io.Writer, rep *webapi.CheckReport) error {
 // writeCheckReportJSON emits the report as a GetCheckReportResponse in protojson form, the
 // same wire shape the RPC returns (mirroring writeCheckJSON's contract for the findings
 // array), so CI tooling parses one shape whether it shells out or calls the API.
-func writeCheckReportJSON(w io.Writer, rep *webapi.CheckReport) error {
+func writeCheckReportJSON(w io.Writer, rep *checkspb.CheckReport) error {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(&webapi.GetCheckReportResponse{Report: rep})
 	if err != nil {
 		return err

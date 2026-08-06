@@ -7,6 +7,7 @@
 package webapi
 
 import (
+	checks "github.com/panyam/agni/gen/go/agni/v1/checks"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -20,67 +21,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-// LocateReason is why a query result cell's entity may not be locatable in the canvas (WS9-039).
-// It is a semantic fact from the netlist, independent of layout — the client pairs it with an
-// actual resolution check before showing it, so the reason and the on-screen truth never conflict.
-type LocateReason int32
-
-const (
-	LocateReason_LOCATE_REASON_UNSPECIFIED        LocateReason = 0 // the entity IS drawn — expected to highlight; no explanation
-	LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL     LocateReason = 1 // a `#`-ref power port / flag (#PWR/#FLG), not a placed part
-	LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE LocateReason = 2 // a power/ground rail distributed via taps, no drawn wire
-	LocateReason_LOCATE_REASON_NOT_IN_DESIGN      LocateReason = 3 // the ref/net is not in the loaded netlist
-	LocateReason_LOCATE_REASON_NO_GEOMETRY        LocateReason = 4 // undrawn in the faithful view for no more specific reason
-	LocateReason_LOCATE_REASON_BUS_NOT_DRAWN      LocateReason = 5 // a bus with no drawn wire (a bus_alias, an EDIF array, a
-)
-
-// Enum value maps for LocateReason.
-var (
-	LocateReason_name = map[int32]string{
-		0: "LOCATE_REASON_UNSPECIFIED",
-		1: "LOCATE_REASON_VIRTUAL_SYMBOL",
-		2: "LOCATE_REASON_POWER_RAIL_NO_WIRE",
-		3: "LOCATE_REASON_NOT_IN_DESIGN",
-		4: "LOCATE_REASON_NO_GEOMETRY",
-		5: "LOCATE_REASON_BUS_NOT_DRAWN",
-	}
-	LocateReason_value = map[string]int32{
-		"LOCATE_REASON_UNSPECIFIED":        0,
-		"LOCATE_REASON_VIRTUAL_SYMBOL":     1,
-		"LOCATE_REASON_POWER_RAIL_NO_WIRE": 2,
-		"LOCATE_REASON_NOT_IN_DESIGN":      3,
-		"LOCATE_REASON_NO_GEOMETRY":        4,
-		"LOCATE_REASON_BUS_NOT_DRAWN":      5,
-	}
-)
-
-func (x LocateReason) Enum() *LocateReason {
-	p := new(LocateReason)
-	*p = x
-	return p
-}
-
-func (x LocateReason) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (LocateReason) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_webapi_query_proto_enumTypes[0].Descriptor()
-}
-
-func (LocateReason) Type() protoreflect.EnumType {
-	return &file_agni_v1_webapi_query_proto_enumTypes[0]
-}
-
-func (x LocateReason) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use LocateReason.Descriptor instead.
-func (LocateReason) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{0}
-}
 
 type RunQueryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -163,7 +103,7 @@ type QueryRow struct {
 	// other undrawn entity), with the reason classified from design facts. UNSPECIFIED means the
 	// entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
 	// additionally shows it only on a faithful layout, since an auto-layout draws every entity.
-	CellReasons   []LocateReason `protobuf:"varint,4,rep,packed,name=cell_reasons,json=cellReasons,proto3,enum=agni.v1.webapi.LocateReason" json:"cell_reasons,omitempty"`
+	CellReasons   []checks.LocateReason `protobuf:"varint,4,rep,packed,name=cell_reasons,json=cellReasons,proto3,enum=agni.v1.checks.LocateReason" json:"cell_reasons,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -219,7 +159,7 @@ func (x *QueryRow) GetCellSheets() []*CellSheets {
 	return nil
 }
 
-func (x *QueryRow) GetCellReasons() []LocateReason {
+func (x *QueryRow) GetCellReasons() []checks.LocateReason {
 	if x != nil {
 		return x.CellReasons
 	}
@@ -580,7 +520,7 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\"Q\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\"Q\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
@@ -590,7 +530,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x05cites\x18\x02 \x03(\tR\x05cites\x12;\n" +
 	"\vcell_sheets\x18\x03 \x03(\v2\x1a.agni.v1.webapi.CellSheetsR\n" +
 	"cellSheets\x12?\n" +
-	"\fcell_reasons\x18\x04 \x03(\x0e2\x1c.agni.v1.webapi.LocateReasonR\vcellReasons\")\n" +
+	"\fcell_reasons\x18\x04 \x03(\x0e2\x1c.agni.v1.checks.LocateReasonR\vcellReasons\")\n" +
 	"\n" +
 	"CellSheets\x12\x1b\n" +
 	"\tsheet_ids\x18\x01 \x03(\tR\bsheetIds\"}\n" +
@@ -611,14 +551,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\ateaches\x18\x03 \x01(\tR\ateaches\"\x8d\x01\n" +
 	"\x15ListRelationsResponse\x12:\n" +
 	"\trelations\x18\x01 \x03(\v2\x1c.agni.v1.webapi.RelationInfoR\trelations\x128\n" +
-	"\bexamples\x18\x02 \x03(\v2\x1c.agni.v1.webapi.ExampleQueryR\bexamples*\xd6\x01\n" +
-	"\fLocateReason\x12\x1d\n" +
-	"\x19LOCATE_REASON_UNSPECIFIED\x10\x00\x12 \n" +
-	"\x1cLOCATE_REASON_VIRTUAL_SYMBOL\x10\x01\x12$\n" +
-	" LOCATE_REASON_POWER_RAIL_NO_WIRE\x10\x02\x12\x1f\n" +
-	"\x1bLOCATE_REASON_NOT_IN_DESIGN\x10\x03\x12\x1d\n" +
-	"\x19LOCATE_REASON_NO_GEOMETRY\x10\x04\x12\x1f\n" +
-	"\x1bLOCATE_REASON_BUS_NOT_DRAWN\x10\x052\xbb\x01\n" +
+	"\bexamples\x18\x02 \x03(\v2\x1c.agni.v1.webapi.ExampleQueryR\bexamples2\xbb\x01\n" +
 	"\fQueryService\x12M\n" +
 	"\bRunQuery\x12\x1f.agni.v1.webapi.RunQueryRequest\x1a .agni.v1.webapi.RunQueryResponse\x12\\\n" +
 	"\rListRelations\x12$.agni.v1.webapi.ListRelationsRequest\x1a%.agni.v1.webapi.ListRelationsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
@@ -635,29 +568,28 @@ func file_agni_v1_webapi_query_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_query_proto_rawDescData
 }
 
-var file_agni_v1_webapi_query_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_agni_v1_webapi_query_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_agni_v1_webapi_query_proto_goTypes = []any{
-	(LocateReason)(0),             // 0: agni.v1.webapi.LocateReason
-	(*RunQueryRequest)(nil),       // 1: agni.v1.webapi.RunQueryRequest
-	(*QueryRow)(nil),              // 2: agni.v1.webapi.QueryRow
-	(*CellSheets)(nil),            // 3: agni.v1.webapi.CellSheets
-	(*RunQueryResponse)(nil),      // 4: agni.v1.webapi.RunQueryResponse
-	(*ListRelationsRequest)(nil),  // 5: agni.v1.webapi.ListRelationsRequest
-	(*RelationInfo)(nil),          // 6: agni.v1.webapi.RelationInfo
-	(*ExampleQuery)(nil),          // 7: agni.v1.webapi.ExampleQuery
-	(*ListRelationsResponse)(nil), // 8: agni.v1.webapi.ListRelationsResponse
+	(*RunQueryRequest)(nil),       // 0: agni.v1.webapi.RunQueryRequest
+	(*QueryRow)(nil),              // 1: agni.v1.webapi.QueryRow
+	(*CellSheets)(nil),            // 2: agni.v1.webapi.CellSheets
+	(*RunQueryResponse)(nil),      // 3: agni.v1.webapi.RunQueryResponse
+	(*ListRelationsRequest)(nil),  // 4: agni.v1.webapi.ListRelationsRequest
+	(*RelationInfo)(nil),          // 5: agni.v1.webapi.RelationInfo
+	(*ExampleQuery)(nil),          // 6: agni.v1.webapi.ExampleQuery
+	(*ListRelationsResponse)(nil), // 7: agni.v1.webapi.ListRelationsResponse
+	(checks.LocateReason)(0),      // 8: agni.v1.checks.LocateReason
 }
 var file_agni_v1_webapi_query_proto_depIdxs = []int32{
-	3, // 0: agni.v1.webapi.QueryRow.cell_sheets:type_name -> agni.v1.webapi.CellSheets
-	0, // 1: agni.v1.webapi.QueryRow.cell_reasons:type_name -> agni.v1.webapi.LocateReason
-	2, // 2: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
-	6, // 3: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
-	7, // 4: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
-	1, // 5: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
-	5, // 6: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
-	4, // 7: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
-	8, // 8: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
+	2, // 0: agni.v1.webapi.QueryRow.cell_sheets:type_name -> agni.v1.webapi.CellSheets
+	8, // 1: agni.v1.webapi.QueryRow.cell_reasons:type_name -> agni.v1.checks.LocateReason
+	1, // 2: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
+	5, // 3: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
+	6, // 4: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
+	0, // 5: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
+	4, // 6: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
+	3, // 7: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
+	7, // 8: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
 	7, // [7:9] is the sub-list for method output_type
 	5, // [5:7] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -675,14 +607,13 @@ func file_agni_v1_webapi_query_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_query_proto_rawDesc), len(file_agni_v1_webapi_query_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_agni_v1_webapi_query_proto_goTypes,
 		DependencyIndexes: file_agni_v1_webapi_query_proto_depIdxs,
-		EnumInfos:         file_agni_v1_webapi_query_proto_enumTypes,
 		MessageInfos:      file_agni_v1_webapi_query_proto_msgTypes,
 	}.Build()
 	File_agni_v1_webapi_query_proto = out.File

@@ -4,7 +4,9 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Finding, OverlayConfig } from "./checks_pb";
+import type { ReviewArea } from "../checks/checks_pb";
+import { file_agni_v1_checks_checks } from "../checks/checks_pb";
+import type { OverlayConfig } from "./checks_pb";
 import { file_agni_v1_webapi_checks } from "./checks_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIqkBChBSdW5SZXZpZXdSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEhUKDW1hbmlmZXN0X3BhdGgYAiABKAkSEwoLZGVzaWduX3BhdGgYAyADKAkSEgoKYm9hcmRfcGF0aBgEIAEoCRIWCg5yYXRpZmllZF9mbG9vchgFIAEoARIuCgdvdmVybGF5GAYgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyJxCgpSZXZpZXdJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg8KB291dGNvbWUYAyABKAkSDAoEbm90ZRgEIAEoCRIpCghmaW5kaW5ncxgFIAMoCzIXLmFnbmkudjEud2ViYXBpLkZpbmRpbmciRQoKUmV2aWV3QXJlYRIMCgRuYW1lGAEgASgJEikKBWl0ZW1zGAIgAygLMhouYWduaS52MS53ZWJhcGkuUmV2aWV3SXRlbSJbCgxSZXZpZXdSZXBvcnQSEAoIbWFuaWZlc3QYASABKAkSDgoGZGVzaWduGAIgASgJEikKBWFyZWFzGAMgAygLMhouYWduaS52MS53ZWJhcGkuUmV2aWV3QXJlYSJUChFSdW5SZXZpZXdSZXNwb25zZRIQCghtYW5pZmVzdBgBIAEoCRItCgdyZXBvcnRzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuUmV2aWV3UmVwb3J0MmEKDVJldmlld1NlcnZpY2USUAoJUnVuUmV2aWV3EiAuYWduaS52MS53ZWJhcGkuUnVuUmV2aWV3UmVxdWVzdBohLmFnbmkudjEud2ViYXBpLlJ1blJldmlld1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_checks]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIqkBChBSdW5SZXZpZXdSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEhUKDW1hbmlmZXN0X3BhdGgYAiABKAkSEwoLZGVzaWduX3BhdGgYAyADKAkSEgoKYm9hcmRfcGF0aBgEIAEoCRIWCg5yYXRpZmllZF9mbG9vchgFIAEoARIuCgdvdmVybGF5GAYgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyJbCgxSZXZpZXdSZXBvcnQSEAoIbWFuaWZlc3QYASABKAkSDgoGZGVzaWduGAIgASgJEikKBWFyZWFzGAMgAygLMhouYWduaS52MS5jaGVja3MuUmV2aWV3QXJlYSJUChFSdW5SZXZpZXdSZXNwb25zZRIQCghtYW5pZmVzdBgBIAEoCRItCgdyZXBvcnRzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuUmV2aWV3UmVwb3J0MmEKDVJldmlld1NlcnZpY2USUAoJUnVuUmV2aWV3EiAuYWduaS52MS53ZWJhcGkuUnVuUmV2aWV3UmVxdWVzdBohLmFnbmkudjEud2ViYXBpLlJ1blJldmlld1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunReviewRequest
@@ -74,73 +76,6 @@ export const RunReviewRequestSchema: GenMessage<RunReviewRequest> = /*@__PURE__*
   messageDesc(file_agni_v1_webapi_review, 0);
 
 /**
- * ReviewItem is one checklist item's outcome, the wire form of review.ItemResult. outcome is the
- * review.Outcome string (pass | fail | not-applicable | not-automated | provisional |
- * needs-design-intent | computed-n/a); note carries the not-applicable / not-automated reason when
- * one applies; findings are the rule firings that made the item fail, in the canonical Finding form
- * reused from CheckService so a client highlights review findings with the same join key.
- *
- * @generated from message agni.v1.webapi.ReviewItem
- */
-export type ReviewItem = Message<"agni.v1.webapi.ReviewItem"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string title = 2;
-   */
-  title: string;
-
-  /**
-   * @generated from field: string outcome = 3;
-   */
-  outcome: string;
-
-  /**
-   * @generated from field: string note = 4;
-   */
-  note: string;
-
-  /**
-   * @generated from field: repeated agni.v1.webapi.Finding findings = 5;
-   */
-  findings: Finding[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ReviewItem.
- * Use `create(ReviewItemSchema)` to create a new message.
- */
-export const ReviewItemSchema: GenMessage<ReviewItem> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 1);
-
-/**
- * ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).
- *
- * @generated from message agni.v1.webapi.ReviewArea
- */
-export type ReviewArea = Message<"agni.v1.webapi.ReviewArea"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * @generated from field: repeated agni.v1.webapi.ReviewItem items = 2;
-   */
-  items: ReviewItem[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ReviewArea.
- * Use `create(ReviewAreaSchema)` to create a new message.
- */
-export const ReviewAreaSchema: GenMessage<ReviewArea> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 2);
-
-/**
  * ReviewReport is one design's review result (the wire form of review.Report): the manifest and
  * design names plus each area's item outcomes. A client derives the tally (covered / pass / fail /
  * ...) from the item outcomes, the same pure function review.Report.Tally() applies, so the two
@@ -160,7 +95,7 @@ export type ReviewReport = Message<"agni.v1.webapi.ReviewReport"> & {
   design: string;
 
   /**
-   * @generated from field: repeated agni.v1.webapi.ReviewArea areas = 3;
+   * @generated from field: repeated agni.v1.checks.ReviewArea areas = 3;
    */
   areas: ReviewArea[];
 };
@@ -170,7 +105,7 @@ export type ReviewReport = Message<"agni.v1.webapi.ReviewReport"> & {
  * Use `create(ReviewReportSchema)` to create a new message.
  */
 export const ReviewReportSchema: GenMessage<ReviewReport> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 3);
+  messageDesc(file_agni_v1_webapi_review, 1);
 
 /**
  * @generated from message agni.v1.webapi.RunReviewResponse
@@ -194,7 +129,7 @@ export type RunReviewResponse = Message<"agni.v1.webapi.RunReviewResponse"> & {
  * Use `create(RunReviewResponseSchema)` to create a new message.
  */
 export const RunReviewResponseSchema: GenMessage<RunReviewResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 4);
+  messageDesc(file_agni_v1_webapi_review, 2);
 
 /**
  * ReviewService runs a review checklist manifest over one or more designs and returns each item's

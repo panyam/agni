@@ -1,7 +1,8 @@
 // query.ts is the framework-neutral state for the datalog query panel (WS9-036): the presenter
 // pushes a QueryResult, the panel renders it. Keeping the shape here (not in the .tsx) mirrors
 // rules.ts / findings.ts and lets the presenter and tests build state without touching Solid.
-import { type RunQueryResponse, LocateReason } from "./gen/agni/v1/webapi/query_pb.js";
+import { type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 import type { SheetBadge } from "./findings.js";
 
 export { LocateReason };

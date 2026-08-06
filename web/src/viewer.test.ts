@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { HighlightShape } from "./highlights.js";
 import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
-import { LocateReason } from "./gen/agni/v1/webapi/query_pb.js";
+import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 // Fakes for the presenter's collaborators. The presenter only calls typed methods, so plain
 // stubs suffice — no DOM, no transport. getSheet returns the oneof-shaped response the real
