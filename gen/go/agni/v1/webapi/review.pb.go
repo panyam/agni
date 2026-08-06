@@ -35,6 +35,9 @@ type RunReviewRequest struct {
 	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
 	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
 	RatifiedFloor float64 `protobuf:"fixed64,5,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
+	// overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
+	// service was constructed with, so an existing caller is unchanged.
+	Overlay       *OverlayConfig `protobuf:"bytes,6,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -102,6 +105,13 @@ func (x *RunReviewRequest) GetRatifiedFloor() float64 {
 		return x.RatifiedFloor
 	}
 	return 0
+}
+
+func (x *RunReviewRequest) GetOverlay() *OverlayConfig {
+	if x != nil {
+		return x.Overlay
+	}
+	return nil
 }
 
 // ReviewItem is one checklist item's outcome, the wire form of review.ItemResult. outcome is the
@@ -359,7 +369,7 @@ var File_agni_v1_webapi_review_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\"\xb4\x01\n" +
+	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\"\xed\x01\n" +
 	"\x10RunReviewRequest\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12#\n" +
 	"\rmanifest_path\x18\x02 \x01(\tR\fmanifestPath\x12\x1f\n" +
@@ -367,7 +377,8 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"designPath\x12\x1d\n" +
 	"\n" +
 	"board_path\x18\x04 \x01(\tR\tboardPath\x12%\n" +
-	"\x0eratified_floor\x18\x05 \x01(\x01R\rratifiedFloor\"\x95\x01\n" +
+	"\x0eratified_floor\x18\x05 \x01(\x01R\rratifiedFloor\x127\n" +
+	"\aoverlay\x18\x06 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\"\x95\x01\n" +
 	"\n" +
 	"ReviewItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
@@ -408,20 +419,22 @@ var file_agni_v1_webapi_review_proto_goTypes = []any{
 	(*ReviewArea)(nil),        // 2: agni.v1.webapi.ReviewArea
 	(*ReviewReport)(nil),      // 3: agni.v1.webapi.ReviewReport
 	(*RunReviewResponse)(nil), // 4: agni.v1.webapi.RunReviewResponse
-	(*Finding)(nil),           // 5: agni.v1.webapi.Finding
+	(*OverlayConfig)(nil),     // 5: agni.v1.webapi.OverlayConfig
+	(*Finding)(nil),           // 6: agni.v1.webapi.Finding
 }
 var file_agni_v1_webapi_review_proto_depIdxs = []int32{
-	5, // 0: agni.v1.webapi.ReviewItem.findings:type_name -> agni.v1.webapi.Finding
-	1, // 1: agni.v1.webapi.ReviewArea.items:type_name -> agni.v1.webapi.ReviewItem
-	2, // 2: agni.v1.webapi.ReviewReport.areas:type_name -> agni.v1.webapi.ReviewArea
-	3, // 3: agni.v1.webapi.RunReviewResponse.reports:type_name -> agni.v1.webapi.ReviewReport
-	0, // 4: agni.v1.webapi.ReviewService.RunReview:input_type -> agni.v1.webapi.RunReviewRequest
-	4, // 5: agni.v1.webapi.ReviewService.RunReview:output_type -> agni.v1.webapi.RunReviewResponse
-	5, // [5:6] is the sub-list for method output_type
-	4, // [4:5] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	5, // 0: agni.v1.webapi.RunReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	6, // 1: agni.v1.webapi.ReviewItem.findings:type_name -> agni.v1.webapi.Finding
+	1, // 2: agni.v1.webapi.ReviewArea.items:type_name -> agni.v1.webapi.ReviewItem
+	2, // 3: agni.v1.webapi.ReviewReport.areas:type_name -> agni.v1.webapi.ReviewArea
+	3, // 4: agni.v1.webapi.RunReviewResponse.reports:type_name -> agni.v1.webapi.ReviewReport
+	0, // 5: agni.v1.webapi.ReviewService.RunReview:input_type -> agni.v1.webapi.RunReviewRequest
+	4, // 6: agni.v1.webapi.ReviewService.RunReview:output_type -> agni.v1.webapi.RunReviewResponse
+	6, // [6:7] is the sub-list for method output_type
+	5, // [5:6] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_review_proto_init() }

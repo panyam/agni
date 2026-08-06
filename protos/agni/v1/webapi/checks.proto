@@ -67,6 +67,31 @@ message CheckDesignRequest {
   // existing caller is unchanged. A selection lets the client run only what it wants to see (and
   // avoid running expensive rules it did not select).
   repeated string rules = 3;
+  // overlay carries the per-request rule-catalog configuration; empty keeps the catalog the service
+  // was constructed with.
+  OverlayConfig overlay = 4;
+}
+
+// OverlayConfig is the per-request configuration that extends what a run can check: config files
+// naming rules the shipped catalog does not carry, resolved within the request's `mount` like every
+// other path (WS3-102). It exists so a surface does not have to hand-wire each input separately —
+// that hand-wiring is why --conventions reached `agni check` but never `agni review`, leaving any
+// review item bound to a naming rule reading not-automated forever with no error to explain it.
+//
+// Only the inputs that are actually WIRED appear here. The other catalog extensions
+// (--profile-path / --intent-path / --params) are still service-construction config; they move here
+// as they are wired, so a field never silently does nothing.
+message OverlayConfig {
+  // conventions_path names an operator naming-convention config (YAML: core/check/naming.Config).
+  // It carries two halves with different jobs. Its `rules:` become catalog rules namespaced under the
+  // config's name, and its `lexicon:` extends the vocabularies that decide which net names are power
+  // rails, grounds, and feedback nodes.
+  //
+  // The lexicon half is applied to the design READ, not to the catalog, because net roles are
+  // resolved once at ingestion (WS3-072). That is also why it can be per-request at all: the
+  // vocabulary travels with the read as a value (WS3-106) instead of being installed in a process
+  // global that a concurrent request would see.
+  string conventions_path = 1;
 }
 
 // Subject identifies the entity a finding is about, so a consumer can group and highlight by
@@ -135,6 +160,10 @@ message GetCheckReportRequest {
   string path = 2;
   // Same selector semantics as CheckDesignRequest.rules: names the subset to run, empty = all.
   repeated string rules = 3;
+  // Same semantics as CheckDesignRequest.overlay. It is here too because this RPC also RUNS the
+  // rules: an overlay honored by one and not the other would make the same flag change the findings
+  // in one --format and not another.
+  OverlayConfig overlay = 4;
 }
 
 // CheckReport is the severity-organized pivot over one check run: THE report shape, rendered

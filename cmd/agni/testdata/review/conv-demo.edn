@@ -1,0 +1,28 @@
+(edif CONVREVIEW
+  (edifVersion 2 0 0)
+  (design CONVREVIEW (cellRef TOP (libraryRef WORK)))
+  (library PARTS
+    (cell MCU
+      (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface
+          ; A supply pin named to this project's convention. EDIF's port grammar carries only
+          ; INPUT/OUTPUT/INOUT, so it arrives under-typed and only the ingestion pass can promote it.
+          (port PWRIN_MAIN (direction INPUT) (designator "1"))
+          (port SIGNAL_A (direction INPUT) (designator "2"))
+          (port SIGNAL_B (direction INPUT) (designator "3")))))
+    (cell RES
+      (cellType GENERIC)
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INPUT) (designator "1"))
+          (port 2 (direction INPUT) (designator "2"))))))
+  (library WORK
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance I1 (viewRef V (cellRef MCU (libraryRef PARTS))) (designator "U1"))
+          (instance I2 (viewRef V (cellRef RES (libraryRef PARTS))) (designator "R1"))
+          (net PMIC_VDD_LPM_1V8 (joined (portRef 1 (instanceRef I1)) (portRef 1 (instanceRef I2))))
+          (net lowercase_net (joined (portRef 2 (instanceRef I1)) (portRef 2 (instanceRef I2))))
+          (net GND (joined (portRef 3 (instanceRef I1)))))))))

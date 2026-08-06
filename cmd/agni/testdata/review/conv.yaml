@@ -1,0 +1,21 @@
+name: Conventions review
+areas:
+  - name: Naming
+    items:
+      # Bound to a rule that only exists when a convention config is loaded. Without one the binding
+      # resolves to zero catalog rules, which is indistinguishable from a rule that never shipped.
+      - {id: "16", title: nets named consistently, rule: house/signal-net-naming}
+  - name: Rails
+    items:
+      # Reads the STAMPED net role, so it answers only if the lexicon reached the design read.
+      - id: "63"
+        title: rails recognized
+        query: {match: 'rail(?n), not net.ground(?n) => ?n', subject: n, message: '{n} is a recognized supply rail'}
+  - name: Power pins
+    items:
+      # Reads the pin's ELECTRICAL TYPE. EDIF under-types a supply pin as a plain INPUT, and the only
+      # thing that can promote it is the ingestion stamp — the model has no name fallback for a pin
+      # direction. So this item answers only if the lexicon reached the design READ.
+      - id: "64"
+        title: supply pins typed
+        query: {match: 'pin.type(?r, ?p, "power_in") => ?r, ?p', subject: r, message: '{r} has a typed supply pin'}

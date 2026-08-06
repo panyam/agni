@@ -7,13 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/core/review"
+	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // osLoader is the OS-backed service.Loader adapter: it resolves a (mount, path) to an absolute host
@@ -25,12 +27,12 @@ type osLoader struct {
 	loader *formats.Loader
 }
 
-func (l *osLoader) Design(_ context.Context, mountName, path string) (*ir.Design, error) {
+func (l *osLoader) Design(_ context.Context, mountName, path string, opts ...service.ReadOption) (*ir.Design, error) {
 	abs, err := mounts.Resolve(l.mounts, mountName, path)
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ReadDesign(abs)
+	return readerFor(l.loader, opts...).ReadDesign(abs)
 }
 
 func (l *osLoader) Geometry(_ context.Context, mountName, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
@@ -122,4 +124,14 @@ func (l *osLoader) Manifest(_ context.Context, mountName, path string) (review.M
 	}
 	defer f.Close()
 	return review.Load(f)
+}
+
+// Conventions loads an operator naming-convention config from within the mount (WS3-102), so a served
+// review can name its project's conventions the same way it names its manifest.
+func (l *osLoader) Conventions(_ context.Context, mountName, path string) (naming.Config, error) {
+	abs, err := mounts.Resolve(l.mounts, mountName, path)
+	if err != nil {
+		return naming.Config{}, err
+	}
+	return naming.Load(abs)
 }

@@ -22,7 +22,7 @@ type pairLoader struct {
 	geo     map[string]*geom.SchematicGeometry
 }
 
-func (p pairLoader) Design(_ context.Context, _, path string) (*ir.Design, error) {
+func (p pairLoader) Design(_ context.Context, _, path string, _ ...ReadOption) (*ir.Design, error) {
 	d, ok := p.designs[path]
 	if !ok {
 		return nil, fmt.Errorf("no design %q: %w", path, ErrNotFound)

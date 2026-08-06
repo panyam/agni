@@ -14,7 +14,7 @@ import (
 // mount-scoped by the impl. The fat service.Loader and the review ReviewLoader both satisfy it, so
 // every service reaches BuildModel through the loader it already holds.
 type ModelLoader interface {
-	Design(ctx context.Context, mount, path string) (*ir.Design, error)
+	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
 	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
 }
 
@@ -54,8 +54,8 @@ func BuildGeometry(ctx context.Context, loader GeometryLoader, mount, path strin
 // a silent nil — an explicit board request that read nothing would report the board items clean without
 // checking them. A design's OWN path that carries no board (a netlist) is not an override, so it is the
 // normal nil-board case, not an error.
-func BuildModel(ctx context.Context, loader ModelLoader, mount, path, boardPath string, specs param.ParamProvider) (check.Model, error) {
-	d, err := loader.Design(ctx, mount, path)
+func BuildModel(ctx context.Context, loader ModelLoader, mount, path, boardPath string, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
+	d, err := loader.Design(ctx, mount, path, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -70,5 +70,12 @@ func BuildModel(ctx context.Context, loader ModelLoader, mount, path, boardPath 
 	if boardPath != "" && bg == nil {
 		return nil, fmt.Errorf("%w: board_path %q carries no board geometry", ErrInvalidArgument, boardPath)
 	}
-	return check.NewModelWithParams(d, bg, specs), nil
+	// The read's lexicon also reaches the MODEL, so the residual name matches that hold no net (the
+	// spec name FFIs, pin-role derivation) answer with the same vocabulary the design was stamped
+	// with. Without this the two halves of one convention could disagree.
+	var mopts []check.ModelOption
+	if lex := ReadOpts(opts...).Lexicon; lex != nil {
+		mopts = append(mopts, check.WithLexicon(lex))
+	}
+	return check.NewModelWithParams(d, bg, specs, mopts...), nil
 }

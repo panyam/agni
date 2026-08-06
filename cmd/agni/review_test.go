@@ -327,3 +327,80 @@ func TestReviewCmdRequiresChecklist(t *testing.T) {
 		t.Fatal("review without --checklist must error")
 	}
 }
+
+// runConvReview runs the conventions checklist, with or without the config, and returns the report.
+func runConvReview(t *testing.T, conventions string) string {
+	t.Helper()
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	args := []string{"--checklist", "testdata/review/conv.yaml"}
+	if conventions != "" {
+		args = append(args, "--conventions", conventions)
+	}
+	cmd.SetArgs(append(args, "testdata/review/conv-demo.edn"))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review (--conventions %q): %v", conventions, err)
+	}
+	return out.String()
+}
+
+// TestReviewCmdConventionsRules covers the half that is merely invisible: a checklist item bound to a
+// convention rule. With no config the binding resolves to zero catalog rules, which the review reports
+// as not-automated — the same word it uses for a rule nobody has written, with no error to tell the
+// two apart. Loading the config compiles the rule and the item reaches a real verdict.
+func TestReviewCmdConventionsRules(t *testing.T) {
+	if want := "| 16 | nets named consistently | not-automated |"; !strings.Contains(runConvReview(t, ""), want) {
+		t.Errorf("without --conventions the item must read not-automated, missing %q", want)
+	}
+	got := runConvReview(t, "testdata/review/conventions.yaml")
+	for _, want := range []string{
+		"| 16 | nets named consistently | fail |",
+		"house/signal-net-naming: lowercase_net",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("with --conventions the item must fail on the real violation, missing %q\n---\n%s", want, got)
+		}
+	}
+}
+
+// TestReviewCmdConventionsLexicon covers the damaging half: the vocabulary that changes what OTHER
+// rules can see. This project names rails function-first (PMIC_VDD_LPM_1V8), which the start-anchored
+// built-in vocabulary matches nowhere, so without the config the item passes while checking nothing.
+func TestReviewCmdConventionsLexicon(t *testing.T) {
+	if want := "| 63 | rails recognized | pass |"; !strings.Contains(runConvReview(t, ""), want) {
+		t.Errorf("without --conventions the rail is unrecognized and the item passes hollowly, missing %q", want)
+	}
+	got := runConvReview(t, "testdata/review/conventions.yaml")
+	if want := "PMIC_VDD_LPM_1V8 is a recognized supply rail"; !strings.Contains(got, want) {
+		t.Errorf("the project rail vocabulary must reach the run; missing %q\n---\n%s", want, got)
+	}
+}
+
+// TestReviewCmdConventionsReachesTheRead isolates the half that ONLY the design read can do. A net
+// role has a name-match fallback on the model, so a rail item answers even if the lexicon arrives
+// after ingestion; a pin's ELECTRICAL TYPE has no such fallback. EDIF's port grammar carries only
+// INPUT/OUTPUT/INOUT, so a supply pin arrives under-typed and nothing but the ingestion stamp can
+// promote it to power_in. If the lexicon ever stops reaching the read, this is the test that fails.
+func TestReviewCmdConventionsReachesTheRead(t *testing.T) {
+	if want := "| 64 | supply pins typed | pass |"; !strings.Contains(runConvReview(t, ""), want) {
+		t.Errorf("without --conventions the supply pin stays under-typed, missing %q", want)
+	}
+	got := runConvReview(t, "testdata/review/conventions.yaml")
+	if want := "U1 has a typed supply pin"; !strings.Contains(got, want) {
+		t.Errorf("the lexicon must reach INGESTION for the pin to be promoted; missing %q\n---\n%s", want, got)
+	}
+}
+
+// TestReviewCmdConventionsUnreadable: a named config that cannot be read fails the run. Falling back
+// to the built-in vocabulary would report the design clean against conventions never applied.
+func TestReviewCmdConventionsUnreadable(t *testing.T) {
+	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
+		cmd := reviewCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetArgs([]string{"--checklist", "testdata/review/conv.yaml", "--conventions", path, "testdata/review/conv-demo.edn"})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("--conventions %s must error, not silently run with the defaults", path)
+		}
+	}
+}

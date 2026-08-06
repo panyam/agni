@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -21,8 +23,15 @@ import (
 // construction, not a re-encoded copy. It is the one os-touching test helper (production is os-free).
 type fsReviewLoader struct{ base string }
 
-func (l fsReviewLoader) Design(_ context.Context, _, path string) (*ir.Design, error) {
-	return (&formats.Loader{}).ReadDesign(filepath.Join(l.base, path))
+func (l fsReviewLoader) Conventions(_ context.Context, _, path string) (naming.Config, error) {
+	return naming.Load(filepath.Join(l.base, path))
+}
+
+// Design HONORS the read options rather than discarding them, because that is the whole point of the
+// seam: a loader that dropped the lexicon would make a per-request convention silently no-op, and a
+// test helper that dropped it would assert nothing.
+func (l fsReviewLoader) Design(_ context.Context, _, path string, opts ...ReadOption) (*ir.Design, error) {
+	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, path))
 }
 
 func (l fsReviewLoader) Board(_ context.Context, _, path string) (*geom.BoardGeometry, error) {
@@ -181,7 +190,11 @@ type stubReviewLoader struct {
 	man    review.Manifest
 }
 
-func (l stubReviewLoader) Design(context.Context, string, string) (*ir.Design, error) {
+func (l stubReviewLoader) Conventions(context.Context, string, string) (naming.Config, error) {
+	return naming.Config{}, nil
+}
+
+func (l stubReviewLoader) Design(context.Context, string, string, ...ReadOption) (*ir.Design, error) {
 	return l.design, nil
 }
 func (l stubReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
@@ -339,4 +352,52 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	}
 	out, _ := outcomeOf(resp.GetReports()[0], "it")
 	return out
+}
+
+// TestRunReviewOverlayIsPerRequest is the property the process-global vocabulary could not provide,
+// and the reason the lexicon travels with the read (WS3-106): two RunReview calls in ONE process,
+// naming different conventions, must each see their own. Run concurrently and repeatedly so a shared
+// mutable vocabulary would show up as a race or a flipped outcome rather than passing by luck.
+func TestRunReviewOverlayIsPerRequest(t *testing.T) {
+	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, check.DefaultCatalog(), reviewByName(), nil)
+	req := func(conventions string) *webapi.RunReviewRequest {
+		r := &webapi.RunReviewRequest{
+			ManifestPath: "review/conv.yaml",
+			DesignPath:   []string{"review/conv-demo.edn"},
+		}
+		if conventions != "" {
+			r.Overlay = &webapi.OverlayConfig{ConventionsPath: conventions}
+		}
+		return r
+	}
+	// Item 64 is keyed on a pin's electrical type, which ONLY the ingestion stamp can set (no model-side
+	// name fallback exists for a pin direction), so this asserts the READ each request performed — not
+	// merely the model it built afterwards.
+	cases := []struct{ conventions, want string }{
+		{"", "pass"},
+		{"review/conventions.yaml", "fail"},
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		for _, tc := range cases {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				resp, err := svc.RunReview(context.Background(), req(tc.conventions))
+				if err != nil {
+					t.Errorf("RunReview(%q): %v", tc.conventions, err)
+					return
+				}
+				got, ok := outcomeOf(resp.GetReports()[0], "64")
+				if !ok {
+					t.Errorf("RunReview(%q): item 64 missing", tc.conventions)
+					return
+				}
+				if got != tc.want {
+					t.Errorf("RunReview(%q): item 64 = %s, want %s (a request saw another's lexicon)", tc.conventions, got, tc.want)
+				}
+			}()
+		}
+	}
+	wg.Wait()
 }

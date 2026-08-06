@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/review"
+	"github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/rules/intent"
-	"github.com/panyam/agni/core/review"
 )
 
 // ReviewLoader is the narrow file surface ReviewService needs: the netlist design, an optional
@@ -19,9 +20,13 @@ import (
 // subset of the fat service.Loader plus Manifest, defined at the point of use so the service depends
 // only on what it reads (the fat Loader stays the design/render services' contract).
 type ReviewLoader interface {
-	Design(ctx context.Context, mount, path string) (*ir.Design, error)
+	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
 	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
 	Manifest(ctx context.Context, mount, path string) (review.Manifest, error)
+	// Conventions loads an operator naming-convention config (WS3-102), mount-scoped like every other
+	// read. A named-but-unreadable config is an error, never an empty config: silently running with the
+	// built-in vocabulary would report a design clean against conventions that were never applied.
+	Conventions(ctx context.Context, mount, path string) (naming.Config, error)
 }
 
 // ReviewService runs a review checklist manifest over one or more designs, the transport-neutral
@@ -61,9 +66,16 @@ func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequ
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
+	// Per-request overlay config (WS3-102), composed BEFORE any design is read: its lexicon half has
+	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
+	// service's own catalog and the default vocabulary in place.
+	ov, err := ComposeOverlay(ctx, s.loader, req.GetMount(), req.GetOverlay())
+	if err != nil {
+		return nil, err
+	}
 	resp := &webapi.RunReviewResponse{Manifest: man.Name}
 	for _, design := range req.GetDesignPath() {
-		rep, err := s.runOne(ctx, req.GetMount(), design, req.GetBoardPath(), man, req.GetRatifiedFloor())
+		rep, err := s.runOne(ctx, req.GetMount(), design, req.GetBoardPath(), man, req.GetRatifiedFloor(), ov)
 		if err != nil {
 			return nil, err
 		}
@@ -76,14 +88,14 @@ func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequ
 // and runs the manifest over it. The board tier is read from board_path, not the design, so a netlist
 // entry can attach a separate confidential board export (WS3-089); an override that reads no board is
 // an error, never a silent nil.
-func (s *ReviewService) runOne(ctx context.Context, mount, design, boardPath string, man review.Manifest, floor float64) (review.Report, error) {
-	m, err := BuildModel(ctx, s.loader, mount, design, boardPath, s.specs)
+func (s *ReviewService) runOne(ctx context.Context, mount, design, boardPath string, man review.Manifest, floor float64, ov Overlay) (review.Report, error) {
+	m, err := BuildModel(ctx, s.loader, mount, design, boardPath, s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return review.Report{}, err
 	}
 	present, scope, compScope := reviewClosures(m, s.byName)
 	return review.Run(review.RunParams{
-		Model: m, Catalog: s.catalog, Manifest: man, Design: design,
+		Model: m, Catalog: ov.Catalog(s.catalog), Manifest: man, Design: design,
 		Present: present, Scope: scope, CompScope: compScope, RatifiedFloor: floor,
 		// intent.Emits narrows the intent/ prefix to the compiler's actual name space, so a pre-bound
 		// not-yet-shipped intent rule reads not-automated instead of a misleading needs-design-intent

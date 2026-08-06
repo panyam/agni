@@ -221,23 +221,23 @@ func checkCmd() *cobra.Command {
 				facets.Tags[k] = append(facets.Tags[k], v)
 			}
 			catalog := check.DefaultCatalog()
-			// Compose any ad-hoc sources (naming conventions, overlay profiles) onto the catalog.
+			// Compose any ad-hoc sources (overlay profiles, design intent) onto the catalog.
 			// CatalogWith keeps the built-ins AND any RegisterSource'd suites; NewCatalog here would
-			// silently drop registered sources. Both flags accumulate so they may be combined. This runs
-			// BEFORE the design is read (WS3-071): ApplyLexicon installs the class lexicon the ingestion
-			// classify pass reads, so a --conventions class override reaches the stamped device_classes
-			// set instead of arriving after the model was already built.
+			// silently drop registered sources. The flags accumulate so they may be combined.
+			// The overlay config rides every rule-running request; the service composes it.
+			overlay := &webapi.OverlayConfig{ConventionsPath: conventions}
 			var extra []check.RuleSource
+			// --conventions is composed by the SERVICE now (WS3-102), from the path on the request, so
+			// the CLI and the web share one composition path and the lexicon travels with the read
+			// rather than being installed in a process global. It is ALSO composed here, because the
+			// CLI (not the service) resolves --rule / --tag facets to rule NAMES, and a convention's
+			// rules have to be in the catalog it resolves against for `--rule <config>/<rule>` to
+			// select anything. Composition is pure, so doing it twice costs a file read.
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
 					return err
 				}
-				// The lexicon (rail/ground/feedback name overrides) applies process-wide before rules run.
-				if err := naming.ApplyLexicon(cfg); err != nil {
-					return err
-				}
-				// Convention RULES are optional: a config may carry only a lexicon.
 				if len(cfg.Rules) > 0 {
 					src, err := naming.Source(cfg)
 					if err != nil {
@@ -276,9 +276,9 @@ func checkCmd() *cobra.Command {
 				names[i] = r.Name
 			}
 			// Thin client of the in-process CheckService (WS9-048): the same service + BuildModel fact
-			// base the web check panel runs, so CLI and web render one shape. --conventions ApplyLexicon
-			// already ran above (a process-global the ingestion classify pass reads); the composed catalog
-			// and the datasheet corpus are injected into the service.
+			// base the web check panel runs, so CLI and web render one shape. The composed catalog and the
+			// datasheet corpus are injected into the service; --conventions rides the request instead, so
+			// its lexicon reaches the design read without touching process state.
 			var specs param.ParamProvider
 			if paramsDir != "" {
 				set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -292,7 +292,7 @@ func checkCmd() *cobra.Command {
 			var failFindings []*webapi.Finding
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Path: args[0], Rules: names})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Path: args[0], Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -306,7 +306,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json — both need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Path: args[0], Rules: names})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Path: args[0], Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -375,7 +375,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions string
 	var coverage bool
 	var ratifiedFloor float64
 	cmd := &cobra.Command{
@@ -414,6 +414,10 @@ func reviewCmd() *cobra.Command {
 			svc := service.NewReviewService(&localLoader{loader: newLoader()}, catalog, byName, specs)
 			resp, err := svc.RunReview(cmd.Context(), &webapi.RunReviewRequest{
 				ManifestPath: checklist, DesignPath: args, BoardPath: boardPath, RatifiedFloor: ratifiedFloor,
+				// --conventions rides the REQUEST rather than being composed here (WS3-102): the service
+				// resolves it, so the CLI and the web reach one composition path. Its lexicon half then
+				// travels with the design read instead of being installed in a process global.
+				Overlay: &webapi.OverlayConfig{ConventionsPath: conventions},
 			})
 			if err != nil {
 				return err
@@ -469,6 +473,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations added to the catalog")
 	cmd.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration (expected modules, voltage domains); its rules join the catalog so intent-bound items resolve")
+	cmd.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML); its rules join the catalog namespaced as <config name>/<rule name>, and its lexicon teaches the run which net names are this project's power rails, grounds, and feedback nodes")
 	cmd.Flags().StringVar(&boardPath, "board-path", "", "a board-geometry file (.kicad_pcb / IPC-2581 .xml|.cvg) attached to the netlist design so board-tier DRC items resolve pass/fail instead of not-applicable")
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")

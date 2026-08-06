@@ -39,6 +39,9 @@ message RunReviewRequest {
   // ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
   // (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
   double ratified_floor = 5;
+  // overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
+  // service was constructed with, so an existing caller is unchanged.
+  OverlayConfig overlay = 6;
 }
 
 // ReviewItem is one checklist item's outcome, the wire form of review.ItemResult. outcome is the
