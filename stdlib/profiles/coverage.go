@@ -1,8 +1,6 @@
 package profiles
 
 import (
-	"strings"
-
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/core/query"
@@ -37,15 +35,15 @@ type InterfaceCoverage struct {
 // Coverage projects a profile onto a design's per-signal coverage matrix, or nil when the interface
 // is not DETECTED — silent by construction, matching the rules. Detection is the profile's in-use
 // confidence gate: two of its signals present, or a component declares the interface via its host
-// attribute. It reuses the same net-suffix matching and reaches-rail pull-up walk the profile rules
-// compile to, so the panel and the findings cannot drift.
+// attribute. It reuses the same signal matcher (matcher.go) and reaches-rail pull-up walk the profile
+// rules compile to, so the panel and the findings cannot drift.
 func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 	base := query.NewBase(m)
 	nets := make([]*ir.Net, len(p.Signals))
 	present := 0
 	anchor := ""
 	for i, s := range p.Signals {
-		n := matchSignalNet(m, s.Suffix)
+		n := matchSignalNet(m, s)
 		nets[i] = n
 		if n != nil {
 			present++
@@ -75,11 +73,12 @@ func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 	return cov
 }
 
-// matchSignalNet returns the first net whose name has the given suffix and carries at least one
-// component connection — the same net component-on-net(?r,?n), suffix(?n, S) selects.
-func matchSignalNet(m check.Model, suffix string) *ir.Net {
+// matchSignalNet returns the first net satisfying the signal's matcher that carries at least one
+// component connection — the same net component-on-net(?r,?n) plus netMatch(?n, s) selects, so the
+// coverage panel binds the net a finding would name and not a foreign one that merely shares a suffix.
+func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	for _, n := range m.Nets() {
-		if strings.HasSuffix(n.GetName(), suffix) && len(n.GetConnections()) > 0 {
+		if netMatchesSignal(n.GetName(), s) && len(n.GetConnections()) > 0 {
 			return n
 		}
 	}

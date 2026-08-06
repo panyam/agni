@@ -29,6 +29,8 @@ type signalDoc struct {
 	Name   string `yaml:"name"`
 	Prefix string `yaml:"prefix"`
 	Suffix string `yaml:"suffix"`
+	Glob   string `yaml:"glob"`
+	Regex  string `yaml:"regex"`
 	PullUp bool   `yaml:"pullup"`
 	Anchor bool   `yaml:"anchor"`
 }
@@ -51,7 +53,8 @@ type namingMapDoc struct {
 }
 
 // Parse reads a YAML profile declaration into a Profile and validates its STRUCTURE (name present, at
-// least one signal, at most one anchor). It does NOT check that requirement types are registered —
+// least one signal, at most one anchor) and every signal's MATCHER (exactly one form, compiling, not
+// over-broad — see validateSignalMatcher). It does NOT check that requirement types are registered —
 // that is Load's job, so Parse stays free of any registry dependency and WASM-clean (yaml only, no
 // os). Built-in profiles load through Parse (their requirement types are covered by the test suite);
 // external/customer profiles go through Load for the teaching type-check.
@@ -72,13 +75,19 @@ func Parse(b []byte) (Profile, error) {
 	}
 	anchors := 0
 	for i, s := range doc.Signals {
-		if strings.TrimSpace(s.Name) == "" || strings.TrimSpace(s.Suffix) == "" {
-			return Profile{}, fmt.Errorf("profile %q: signal #%d needs both \"name\" and \"suffix\"", doc.Name, i+1)
+		if strings.TrimSpace(s.Name) == "" {
+			return Profile{}, fmt.Errorf("profile %q: signal #%d needs a \"name\"", doc.Name, i+1)
+		}
+		sig := Signal{Name: s.Name, Prefix: s.Prefix, Suffix: s.Suffix, Glob: s.Glob, Regex: s.Regex, PullUp: s.PullUp, Anchor: s.Anchor}
+		// The matcher is validated HERE, at load, so a malformed regex or an over-broad pattern is a
+		// teaching error naming the signal rather than a rule that silently matches every net.
+		if err := validateSignalMatcher(sig); err != nil {
+			return Profile{}, fmt.Errorf("profile %q: %w", doc.Name, err)
 		}
 		if s.Anchor {
 			anchors++
 		}
-		p.Signals = append(p.Signals, Signal{Name: s.Name, Prefix: s.Prefix, Suffix: s.Suffix, PullUp: s.PullUp, Anchor: s.Anchor})
+		p.Signals = append(p.Signals, sig)
 	}
 	if anchors > 1 {
 		return Profile{}, fmt.Errorf("profile %q: at most one signal may be the anchor, got %d", doc.Name, anchors)
@@ -142,13 +151,18 @@ func loadNamingMap(doc namingMapDoc) (Profile, error) {
 }
 
 // applyNamingMap returns a copy of core with each signal whose role (Signal.Name) is in suffixes
-// rebound to the mapped suffix; unmapped signals keep the core suffix. Host binding, anchor/pull-up
+// rebound to the mapped suffix; unmapped signals keep the core matcher. Host binding, anchor/pull-up
 // flags, and requirements are inherited unchanged — only the naming moves.
+//
+// A remap REPLACES the signal's matcher rather than adding to it: the mapped suffix becomes the whole
+// convention, clearing any prefix/glob/regex the core signal declared. A map that only overrode the
+// suffix of a glob-matched signal would leave two forms declared, which is not a matcher at all.
 func applyNamingMap(core Profile, suffixes map[string]string) Profile {
 	p := core
 	p.Signals = make([]Signal, len(core.Signals))
 	for i, s := range core.Signals {
 		if sfx, ok := suffixes[s.Name]; ok {
+			s.Prefix, s.Glob, s.Regex = "", "", ""
 			s.Suffix = sfx
 		}
 		p.Signals[i] = s

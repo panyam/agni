@@ -3,6 +3,7 @@ package query
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -41,12 +42,28 @@ var builtins = map[string]builtin{
 	"contains": strFilter(strings.Contains),
 	"prefix":   strFilter(strings.HasPrefix),
 	"suffix":   strFilter(strings.HasSuffix),
+	"glob":     patFilter(CompileGlob),
+	"match":    patFilter(CompilePattern),
 }
 
 // strFilter wraps a string(value, pattern) bool as a 2-arity filter builtin (the shape of
-// contains/prefix/suffix). Plain strings only (no regex), so the package stays WASM-clean.
+// contains/prefix/suffix).
 func strFilter(fn func(s, pat string) bool) builtin {
 	return filterBuiltin(2, func(args []Value) (bool, error) { return fn(args[0].S, args[1].S), nil })
+}
+
+// patFilter is strFilter for the two PATTERN predicates (glob, match): the pattern must be compiled
+// before it can be tested, so a malformed one is an EVAL ERROR rather than a non-match. That
+// direction matters — a bad pattern that quietly matched nothing would read as "the design is clean"
+// on a completeness check, the same silent-pass shape WS3-090 fixed at the profile presence gate.
+func patFilter(compile func(string) (*regexp.Regexp, error)) builtin {
+	return filterBuiltin(2, func(args []Value) (bool, error) {
+		re, err := compile(args[1].S)
+		if err != nil {
+			return false, err
+		}
+		return re.MatchString(args[0].S), nil
+	})
 }
 
 // filterBuiltin builds a pure filter from a boolean over its (all-bound) argument values: it keeps

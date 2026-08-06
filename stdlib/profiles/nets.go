@@ -1,8 +1,6 @@
 package profiles
 
 import (
-	"strings"
-
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -12,7 +10,8 @@ import (
 // interface's nets, not the whole design. It mirrors the profile's own host-beats-convention
 // precedence: when the interface declares a host and that host is on the design, the scope is exactly
 // the host component's nets (precise, and it disambiguates suffixes shared across buses, e.g. LIN's
-// _TX/_RX); otherwise it falls back to nets matched by the profile's signal suffixes.
+// _TX/_RX); otherwise it falls back to nets matched by the profile's signal matchers — the SAME
+// matchers the rules compile to, so a scoped item cannot pull in a foreign net no finding can name.
 //
 // Presence is a SEPARATE concern (Present): an absent interface is marked not-applicable before any
 // filtering, so an empty result here means "present but none of its nets matched", which reads as a
@@ -52,7 +51,7 @@ func scope(m check.Model, p Profile) (nets, comps map[string]bool) {
 		}
 	}
 	for _, n := range m.Nets() {
-		if matchesSuffix(p, n.GetName()) {
+		if matchesAnySignal(p, n.GetName()) {
 			collect(n, nets, comps)
 		}
 	}
@@ -65,14 +64,4 @@ func collect(n *ir.Net, nets, comps map[string]bool) {
 	for _, conn := range n.GetConnections() {
 		comps[conn.GetComponentRef()] = true
 	}
-}
-
-// matchesSuffix reports whether a net name ends with any of p's non-empty signal suffixes.
-func matchesSuffix(p Profile, name string) bool {
-	for _, s := range p.Signals {
-		if s.Suffix != "" && strings.HasSuffix(name, s.Suffix) {
-			return true
-		}
-	}
-	return false
 }

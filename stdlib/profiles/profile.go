@@ -3,12 +3,14 @@
 // datalog program per requirement and wraps each with query.RuleFromQuery (WS3-038), so adding an
 // interface is a data value, not new code — the lever that collapses ~130 near-identical "verify
 // signal X connected" review items into one mechanism (docs/19 §3). The generated datalog uses only
-// the merged pin/net relations (component-on-net, suffix, reaches, rail, net.pin_count).
+// the merged pin/net relations (component-on-net, the string/pattern predicates, reaches, rail,
+// net.pin_count).
 //
-// v0 matches signals by net-name SUFFIX (a convention) and anchors the completeness check on a
-// designated always-present signal; a declared-host binding (identify the interface's chip and
-// anchor on it) is a deliberate later refinement (WS3-034 follow-up), so a wholly-absent interface
-// is silent by design here (nothing declares it should exist yet).
+// A signal is matched by NET NAME, through one of the matcher forms in matcher.go (affix, glob, or
+// regex), and the completeness check anchors on a designated always-present signal. A declared-host
+// binding (identify the interface's chip and anchor on it) is the complementary path (WS3-042), so a
+// wholly-absent interface is silent under the convention path by design (nothing declares it should
+// exist yet).
 package profiles
 
 import (
@@ -87,8 +89,6 @@ func RegisterRequirement(name string, c func(Profile, Requirement) *check.Rule) 
 // treats distinctly from an absent interface (WS3-090).
 func (p Profile) HasHost() bool { return p.HostAttrKey != "" }
 
-// anchorSuffix returns the net-name suffix of the profile's anchor signal (the always-present line
-// the convention completeness check hangs on), or "" if none is flagged.
 // anchorSignal returns the profile's anchor signal (the always-present line the convention
 // completeness check hangs on), or nil when none is declared.
 func (p Profile) anchorSignal() *Signal {
@@ -100,6 +100,8 @@ func (p Profile) anchorSignal() *Signal {
 	return nil
 }
 
+// anchorSuffix returns the net-name suffix of the profile's anchor signal, or "" when none is
+// flagged — and also "" for a glob/regex-matched anchor, which has no suffix.
 func (p Profile) anchorSuffix() string {
 	for _, s := range p.Signals {
 		if s.Anchor {
@@ -115,29 +117,25 @@ func (p Profile) hostRule() query.Rule {
 		query.Pos(query.Rel("component.attr", query.V("ref"), query.Str(p.HostAttrKey), query.Str(p.HostAttrVal))))
 }
 
-// Signal is one interface member, matched by the suffix of its net name (e.g. "_CS"). PullUp marks a
-// line that must reach a rail through a pull-up resistor. Prefix, when set, ALSO requires the net
-// name to start with it (e.g. prefix "PCIE_" + suffix "_TXP") — the discriminator for a
-// prefix-named, multi-serdes interface where a bare suffix over-matches a foreign net (a UWB serdes
-// _TXP anchoring a PCIe completeness check, WS3-057). Empty prefix keeps the pure-suffix behavior.
+// Signal is one interface member, identified by how its net is NAMED. A signal declares exactly one
+// matcher form (WS3-057), all evaluated in matcher.go:
+//
+//   - Suffix, optionally narrowed by Prefix (conjunctive): the readable default, "the role is the
+//     tail of the net name", with the prefix discriminating a bus whose suffix is shared with a
+//     foreign one (prefix "PCIE_" + suffix "_TXP", so a UWB serdes _TXP cannot anchor a PCIe check).
+//   - Glob: a whole-name shell-style pattern ("ETH_SW*_A_H"), for naming where the identity is the
+//     PREFIX and the suffix is generic, which affix matching cannot tell apart.
+//   - Regex: an unanchored RE2 escape hatch, for multi-instance naming a glob cannot express.
+//
+// PullUp marks a line that must reach a rail through a pull-up resistor.
 type Signal struct {
 	Name   string
 	Prefix string
 	Suffix string
+	Glob   string
+	Regex  string
 	PullUp bool
 	Anchor bool // the always-present signal the convention completeness check hangs on (at most one)
-}
-
-// netMatch is the literal(s) that bind net-var v to a signal's naming convention: its suffix always,
-// and its prefix when the signal declares one (WS3-057). Every place that matches a net to a signal
-// (presence, the completeness anchor, host-present) goes through here, so prefix discrimination is
-// applied consistently and the anchor cannot latch onto a foreign same-suffix net.
-func netMatch(v query.Term, s Signal) []query.Literal {
-	lits := []query.Literal{query.Pos(query.Rel("suffix", v, query.Str(s.Suffix)))}
-	if s.Prefix != "" {
-		lits = append(lits, query.Pos(query.Rel("prefix", v, query.Str(s.Prefix))))
-	}
-	return lits
 }
 
 // Compile turns a Profile into its check rules by iterating its declared Requirements uniformly:
@@ -146,6 +144,16 @@ func netMatch(v query.Term, s Signal) []query.Literal {
 // here (that was the WS3-034 v0 smell WS3-045 removes); applicability lives in each compiler. The
 // rules carry a "profile" tag (Profile.Name) so a consumer can group them by interface.
 func Compile(p Profile) []*check.Rule {
+	// Every signal must declare exactly one sound matcher before any rule is generated from it: a
+	// matcher-less or over-broad signal compiles to a rule that selects every net, which anchors
+	// completeness anywhere and reports noise. Parse/Load already reject these for YAML profiles, so
+	// this is the gate for a Go-literal one — a programmer error, hence the same panic posture as the
+	// unknown-requirement-type check below.
+	for _, s := range p.Signals {
+		if err := validateSignalMatcher(s); err != nil {
+			panic(fmt.Sprintf("profiles: profile %q: %v", p.Name, err))
+		}
+	}
 	var rules []*check.Rule
 	for _, req := range p.Requirements {
 		c, ok := requirementRegistry[req.Type]
@@ -289,9 +297,9 @@ func (p Profile) pullupRule() *check.Rule {
 			continue
 		}
 		needs++
-		rules = append(rules, query.Def(query.Rel("needs_pullup", query.V("n")),
-			query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n"))),
-			query.Pos(query.Rel("suffix", query.V("n"), query.Str(s.Suffix)))))
+		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
+			netMatch(query.V("n"), s)...)
+		rules = append(rules, query.Def(query.Rel("needs_pullup", query.V("n")), body...))
 	}
 	if needs == 0 {
 		return nil
@@ -327,9 +335,9 @@ func (p Profile) pullupRule() *check.Rule {
 func (p Profile) danglingRule() *check.Rule {
 	rules := p.presenceRules()
 	for _, s := range p.Signals {
-		rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")),
-			query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n"))),
-			query.Pos(query.Rel("suffix", query.V("n"), query.Str(s.Suffix)))))
+		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
+			netMatch(query.V("n"), s)...)
+		rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")), body...))
 	}
 	rules = append(rules, query.Def(query.Rel("dangling", query.V("n")),
 		query.Pos(query.Rel("sig_net", query.V("n"))),
