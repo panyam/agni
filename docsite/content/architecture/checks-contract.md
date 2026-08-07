@@ -158,6 +158,20 @@ yields one per requirement. That asymmetry is the profile mechanism working — 
 in for a family of near-identical checks — so the signature admits it rather than making every caller
 pretend otherwise.
 
+Each of those rules records which requirement produced it, in a `requirement` tag alongside the
+`profile` tag naming the interface. The pair is what lets a consumer address one ask of an interface
+rather than all of them: a review item binding `profile: CAN` selects the union of everything CAN
+compiles, while `profile: CAN` plus `requirement: esd` selects the one rule that answers that ask.
+
+The reason to record it as a tag rather than read it off the rule name is that a profile has to be
+able to GROW. Under union semantics alone, adding a requirement re-scores every item already bound to
+that profile: they all start reporting a defect none of them describes, so an interface's checks
+become effectively frozen once more than one item shares it. Selecting narrows the item to its own
+requirement without giving up the profile's presence gate, which is what a bare rule binding would
+cost — an absent interface still reads not-applicable rather than a hollow pass. A requirement the
+profile does not declare resolves to no rule and reads not-automated, on the same discipline as
+everything else here.
+
 ### The FFI boundary is what keeps this honest
 
 A spec needing behavior the vocabulary cannot express calls a registered function **by name**. The
