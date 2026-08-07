@@ -146,13 +146,38 @@ func Load(r io.Reader) (Profile, error) {
 	if err != nil {
 		return Profile{}, err
 	}
-	for _, req := range p.Requirements {
-		if _, ok := requirementRegistry[req.Type]; !ok {
-			return Profile{}, fmt.Errorf("profile %q: unknown requirement type %q (known: %s)",
-				p.Name, req.Type, strings.Join(knownRequirementTypes(), ", "))
-		}
+	if err := ValidateRequirements(p); err != nil {
+		return Profile{}, err
 	}
 	return p, nil
+}
+
+// ValidateRequirements checks each declared requirement against the registry: that its type has a
+// compiler in this build, and that its params satisfy that type's validator (WS3-047). Both failures
+// are author errors in the declaration, and both produce a check that cannot run — an unknown type
+// silently skipped, or a compiler handed params it cannot use.
+//
+// Separate from Validate because this half needs the requirement REGISTRY, which Validate (and so
+// Parse) deliberately does not depend on: Parse stays structure-only and WASM-clean, and a built-in
+// Go literal reaches its params gate through Compile instead. Exported for the same reason
+// RequirementTypes is — a profile arrives by more than one route (YAML through Load, a serialized
+// rule definition through the deck reader, WS3-103), and each route re-deriving its own idea of a
+// valid requirement is how an unsound profile eventually gets in.
+func ValidateRequirements(p Profile) error {
+	for _, req := range p.Requirements {
+		entry, ok := requirementRegistry[req.Type]
+		if !ok {
+			return fmt.Errorf("profile %q: unknown requirement type %q (known: %s)",
+				p.Name, req.Type, strings.Join(knownRequirementTypes(), ", "))
+		}
+		if entry.validate == nil {
+			continue
+		}
+		if err := entry.validate(req.Params); err != nil {
+			return fmt.Errorf("profile %q: requirement %q: %w", p.Name, req.Type, err)
+		}
+	}
+	return nil
 }
 
 // loadNamingMap resolves a naming map against a built-in profile and applies the suffix remap. Errors

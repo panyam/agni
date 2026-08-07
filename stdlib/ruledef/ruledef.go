@@ -145,25 +145,15 @@ func Parse(b []byte) (*checkspb.RuleDeck, error) {
 	return deck, nil
 }
 
-// requirementsRegistered rejects a profile declaring a requirement type this build has no compiler
-// for, naming what IS available. profiles.Compile panics on one (it is a programming error for a Go
-// literal); arriving from a document it is an input error, and an unknown type silently skipped would
-// mean a declared check that never runs.
+// requirementsRegistered rejects a profile whose declared requirements this build cannot run: an
+// unknown requirement type, or params the type's validator refuses. profiles.Compile panics on either
+// (it is a programming error for a Go literal); arriving from a document it is an input error, and
+// either one silently accepted would mean a declared check that never runs.
+//
+// It delegates to profiles.ValidateRequirements rather than re-deriving the check here, so a deck and
+// a YAML profile cannot drift on what counts as a valid requirement (WS3-047).
 func requirementsRegistered(p profiles.Profile) error {
-	known := profiles.RequirementTypes()
-	for _, r := range p.Requirements {
-		found := false
-		for _, k := range known {
-			if k == r.Type {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("profile %q: unknown requirement type %q (known: %v)", p.Name, r.Type, known)
-		}
-	}
-	return nil
+	return profiles.ValidateRequirements(p)
 }
 
 func deckName(deck *checkspb.RuleDeck) string {
