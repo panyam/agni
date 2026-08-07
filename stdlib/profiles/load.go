@@ -20,9 +20,13 @@ type profileDoc struct {
 	Requirements []requirementDoc `yaml:"requirements"`
 }
 
+// hostDoc is the YAML host binding. attr+value is the declared-attribute form; class is the
+// datasheet device_class form (WS3-044). Either or both; a profile declaring both binds a host that
+// matches either one.
 type hostDoc struct {
 	Attr  string `yaml:"attr"`
 	Value string `yaml:"value"`
+	Class string `yaml:"class"`
 }
 
 type signalDoc struct {
@@ -72,6 +76,7 @@ func Parse(b []byte) (Profile, error) {
 	p := Profile{Name: doc.Name}
 	if doc.Host != nil {
 		p.HostAttrKey, p.HostAttrVal = doc.Host.Attr, doc.Host.Value
+		p.HostClass = doc.Host.Class
 	}
 	for _, s := range doc.Signals {
 		p.Signals = append(p.Signals, Signal{Name: s.Name, Prefix: s.Prefix, Suffix: s.Suffix, Glob: s.Glob, Regex: s.Regex, PullUp: s.PullUp, Anchor: s.Anchor})

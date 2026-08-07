@@ -106,7 +106,7 @@ func HostDeclared(m check.Model, p Profile) bool {
 		return false
 	}
 	for _, c := range m.Components() {
-		if c.GetAttributes()[p.HostAttrKey] == p.HostAttrVal {
+		if p.IsHost(m, c) {
 			return true
 		}
 	}
