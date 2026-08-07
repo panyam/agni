@@ -14,6 +14,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`component.attr(ref_des, key, value)`](component.attr/) | a component-level attribute (e.g. interface, MPN) |
 | [`component.class(ref_des, class)`](component.class/) | a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode) |
 | [`component.mpn(ref_des, mpn)`](component.mpn/) | the design-side part identity (manufacturer part number) |
+| [`external_signal_net(net)`](external_signal_net/) | a connector-facing signal net (not a rail, ground, no-connect, or power path) — the scope the ESD rules share |
 | [`feedback(net)`](feedback/) | the net is a regulator feedback / sense node (must not be probed) |
 | [`has_nc_channel(present)`](has_nc_channel/) | one row when the design can express intentional no-connect |
 | [`has_netclass(present)`](has_netclass/) | one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean) |

@@ -3,7 +3,6 @@ package builtin
 import (
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/internal/netgraph"
 )
 
 // esdProtection flags an externally-exposed signal net with no TVS to clamp it. See Detail.
@@ -30,32 +29,10 @@ var esdProtection = &check.Rule{
 			// (IC-integrated ESD, the common automotive posture); either protects it (WS3-073).
 			// A Zener clamp is NOT counted here — it is characterized separately by
 			// esd-clamp-not-tvs (WS3-078), so this rule flags only a truly unprotected net.
-			return externalSignalNet(m, n) && !check.TVSReachable(m, n) && !check.ICESDRated(m, n) && !check.ZenerReachable(m, n)
+			return check.ExternalSignalNet(m, n) && !check.TVSReachable(m, n) && !check.ICESDRated(m, n) && !check.ZenerReachable(m, n)
 		})
 		return check.Report(bad, check.NetFinding("externally-exposed signal net has no ESD protection"))
 	},
-}
-
-// externalSignalNet reports the scope esd-protection and esd-clamp-not-tvs share: a
-// connector-facing signal net that is not a rail/ground (name or fact), not a deliberately
-// unconnected pad, and not on a power path (input-protection's turf, WS3-011). The two rules
-// partition these nets by what protects them (nothing / a Zener clamp).
-func externalSignalNet(m check.Model, n *ir.Net) bool {
-	a := n.Attributes
-	if a[netgraph.AttrExternal] == "true" || a[netgraph.AttrGlobal] == "true" ||
-		a[netgraph.AttrPowerDriven] == "true" || m.IsGroundNet(n) || m.IsRailNet(n) {
-		return false
-	}
-	if check.IntentionallyUnconnected(m, n) {
-		return false
-	}
-	hasConn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-		return m.HasClass(c.ComponentRef, check.ClassConnector)
-	})
-	if !hasConn {
-		return false
-	}
-	return !check.PowerPinReachable(m, n)
 }
 
 // esdProtectionSpec is the rule's declarative twin (WS3-003): the widest guard stack in the

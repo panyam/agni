@@ -7,6 +7,7 @@ import (
 	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/netgraph"
 )
 
 // This file holds the shared guard vocabulary: name heuristics, protection/reach
@@ -141,6 +142,34 @@ func TVSReachable(m Model, n *ir.Net) bool {
 		}
 	}
 	return false
+}
+
+// ExternalSignalNet reports the scope the ESD rules share: a connector-facing SIGNAL net that is not
+// a rail or ground (by name or by fact), not a deliberately unconnected pad, and not on a power path
+// (input-protection's turf, WS3-011). esd-protection and esd-clamp-not-tvs partition these nets by
+// what protects them (nothing / a Zener clamp).
+//
+// It lives here rather than beside either rule because it is now a THIRD consumer's vocabulary too:
+// the external_signal_net query relation projects it, so a datalog-authored ESD check scopes itself
+// exactly as the Go rules do instead of reassembling six guards by hand and getting one wrong
+// (WS3-061). Its guards read net ATTRIBUTES that have no relation of their own, which is why the
+// scope could not simply be composed in datalog the way the protection predicates now are.
+func ExternalSignalNet(m Model, n *ir.Net) bool {
+	a := n.Attributes
+	if a[netgraph.AttrExternal] == "true" || a[netgraph.AttrGlobal] == "true" ||
+		a[netgraph.AttrPowerDriven] == "true" || m.IsGroundNet(n) || m.IsRailNet(n) {
+		return false
+	}
+	if IntentionallyUnconnected(m, n) {
+		return false
+	}
+	hasConn := Exists(n.Connections, func(c *ir.Connection) bool {
+		return m.HasClass(c.ComponentRef, ClassConnector)
+	})
+	if !hasConn {
+		return false
+	}
+	return !PowerPinReachable(m, n)
 }
 
 // UnprotectedPowerReach walks the connector net's series neighborhood (WS3-011) and

@@ -59,10 +59,10 @@ func TestLINFires(t *testing.T) {
 	}
 }
 
-// Compile produces the four LIN rules, registered under "profile".
+// Compile produces the five LIN rules, registered under "profile".
 func TestLINCompileAndRegistered(t *testing.T) {
-	if got := len(Compile(LIN)); got != 4 {
-		t.Fatalf("Compile(LIN): want 4 rules, got %d", got)
+	if got := len(Compile(LIN)); got != 5 {
+		t.Fatalf("Compile(LIN): want 5 rules, got %d", got)
 	}
 	found := 0
 	for _, r := range check.DefaultCatalog().Rules() {
@@ -70,8 +70,8 @@ func TestLINCompileAndRegistered(t *testing.T) {
 			found++
 		}
 	}
-	if found != 4 {
-		t.Fatalf(`want 4 "profile/lin-*" rules in DefaultCatalog, got %d`, found)
+	if found != 5 {
+		t.Fatalf(`want 5 "profile/lin-*" rules in DefaultCatalog, got %d`, found)
 	}
 }
 

@@ -76,11 +76,11 @@ func TestCANTransceiverIsNotTermination(t *testing.T) {
 	}
 }
 
-// Compile produces the four CAN rules (signal-missing, host-incomplete, termination-missing,
-// signal-dangling) from the declared Requirements list, registered under "profile".
+// Compile produces the five CAN rules (signal-missing, host-incomplete, termination-missing,
+// signal-dangling, esd) from the declared Requirements list, registered under "profile".
 func TestCANCompileAndRegistered(t *testing.T) {
-	if got := len(Compile(CAN)); got != 4 {
-		t.Fatalf("Compile(CAN): want 4 rules, got %d", got)
+	if got := len(Compile(CAN)); got != 5 {
+		t.Fatalf("Compile(CAN): want 5 rules, got %d", got)
 	}
 	found := 0
 	for _, r := range check.DefaultCatalog().Rules() {
@@ -88,8 +88,8 @@ func TestCANCompileAndRegistered(t *testing.T) {
 			found++
 		}
 	}
-	if found != 4 {
-		t.Fatalf(`want 4 "profile/can-*" rules in DefaultCatalog, got %d`, found)
+	if found != 5 {
+		t.Fatalf(`want 5 "profile/can-*" rules in DefaultCatalog, got %d`, found)
 	}
 }
 

@@ -15,8 +15,8 @@ func TestDiffBusRegistered(t *testing.T) {
 		prof Profile
 		ns   string
 	}{{A2B, "profile/a2b-"}, {PCIE, "profile/pcie-"}, {SGMII, "profile/sgmii-"}} {
-		if got := len(Compile(c.prof)); got != 3 {
-			t.Errorf("%s Compile: want 3 rules, got %d", c.ns, got)
+		if got := len(Compile(c.prof)); got != 4 {
+			t.Errorf("%s Compile: want 4 rules, got %d", c.ns, got)
 		}
 		n := 0
 		for _, r := range check.DefaultCatalog().Rules() {
@@ -24,8 +24,8 @@ func TestDiffBusRegistered(t *testing.T) {
 				n++
 			}
 		}
-		if n != 3 {
-			t.Errorf("want 3 %s* rules in catalog, got %d", c.ns, n)
+		if n != 4 {
+			t.Errorf("want 4 %s* rules in catalog, got %d", c.ns, n)
 		}
 	}
 }

@@ -116,6 +116,44 @@ func TestTypesPowerOutFact(t *testing.T) {
 	}
 }
 
+// TestExternalSignalNetFacts (WS3-061): the relation projects check.ExternalSignalNet, so a datalog
+// ESD check selects the same nets the Go rules do. The exclusions are the assertions that matter: a
+// rail and a ground net reaching the same connector must NOT appear, because a dropped guard here is
+// a false FAIL on a net that was never an ESD question.
+func TestExternalSignalNetFacts(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "BUS_CANH", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "1"}}},
+			{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "2"}, {ComponentRef: "U1", PinRef: "2"}}},
+			{Name: "+12V", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "3"}, {ComponentRef: "U1", PinRef: "3"}}},
+			{Name: "INTERNAL", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "U1", PinRef: "4"}}},
+		},
+	}
+	got := map[string]bool{}
+	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelExternalSignalNet] {
+		got[f.Subject] = true
+		if f.Cite == "" {
+			t.Errorf("external_signal_net(%s) has no provenance cite", f.Subject)
+		}
+	}
+	if !got["BUS_CANH"] {
+		t.Errorf("want BUS_CANH (a signal net on a connector), got %v", got)
+	}
+	for _, excluded := range []string{"GND", "+12V", "INTERNAL"} {
+		if got[excluded] {
+			t.Errorf("%s must not be in the ESD scope: %v", excluded, got)
+		}
+	}
+}
+
 // TestNetClassFacts (WS3-105): net.netclass projects the TOOL-assigned class verbatim, one row per
 // classed net, and leaves an unclassed net out (so `not net.netclass(?n, ?_)` reads as unclassed).
 // has_netclass is the design-level marker that separates "no net is in class X" from "this design

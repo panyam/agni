@@ -9,3 +9,4 @@ requirements:
   - {type: host-incomplete}
   - {type: missing-pullup}
   - {type: signal-dangling}
+  - {type: esd}

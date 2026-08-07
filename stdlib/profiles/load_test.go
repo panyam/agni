@@ -74,13 +74,15 @@ func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 		p     Profile
 		rules int
 	}{
+		// The five connector-facing buses each carry the esd requirement (WS3-061); the two
+		// on-board interfaces do not, because no eMMC or SPI-NOR line ever leaves the board.
 		{"SPI_NOR", SPINOR, 4},
 		{"eMMC", EMMC, 4},
-		{"CAN", CAN, 4},
-		{"LIN", LIN, 4},
-		{"A2B", A2B, 3},
-		{"PCIe", PCIE, 3},
-		{"SGMII", SGMII, 3},
+		{"CAN", CAN, 5},
+		{"LIN", LIN, 5},
+		{"A2B", A2B, 4},
+		{"PCIe", PCIE, 4},
+		{"SGMII", SGMII, 4},
 	} {
 		if c.p.Name == "" {
 			t.Errorf("%s: built-in did not initialize from its YAML", c.name)

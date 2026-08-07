@@ -132,6 +132,15 @@ const (
 	// has_netclass is the design-level presence marker, the queryable twin of check.CapNetClass:
 	// only a KiCad project supplies net classes, so a netclass-SCOPED rule selects nothing on
 	// every other read and reports clean. See facts/docs/net.netclass.md.
+	// external_signal_net(net) (WS3-061) is the SCOPE the ESD rules share, projected so a
+	// datalog-authored ESD check scopes itself exactly as the Go rules do. It is the one part of the
+	// ESD guard stack that cannot be composed from existing relations: the protection predicates are
+	// reachability questions and became plain datalog once reaches carried distance (WS3-112), but
+	// this one reads net ATTRIBUTES (global, power_driven) and the no-connect channel, none of which
+	// have a relation. Reassembling it by hand in datalog would drop a guard sooner or later, and a
+	// dropped guard here is a false FAIL on a rail or an unconnected pad.
+	RelExternalSignalNet = "external_signal_net" // external_signal_net(net): connector-facing signal net, the ESD scope. doc: facts/docs/external_signal_net.md
+
 	RelNetNetClass = "net.netclass" // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
 	RelHasNetClass = "has_netclass" // has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/has_netclass.md
 )
@@ -167,6 +176,7 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, refDesCollisionFacts(m)...)
 	out = append(out, pinNetConflictFacts(m)...)
 	out = append(out, netBusLikeFacts(m)...)
+	out = append(out, externalSignalNetFacts(m)...)
 	out = append(out, netNetClassFacts(m)...)
 	out = append(out, hasNetClassFacts(m)...)
 	out = append(out, boardFacts(m)...)
@@ -661,6 +671,20 @@ func netBusLikeFacts(m check.Model) []query.FactRow {
 	for _, n := range m.Nets() {
 		if check.IsBusLike(m, n) {
 			out = append(out, query.FactRow{Relation: RelNetBusLike, Subject: n.Name, Cite: irCite(n.Prov)})
+		}
+	}
+	return out
+}
+
+// externalSignalNetFacts emits external_signal_net(net) for each connector-facing signal net, the
+// scope check.ExternalSignalNet defines and the two ESD rules share. One row per in-scope net; empty
+// on a design with no connectors, which is the honest answer rather than a permissive one — an ESD
+// question about a board that exposes nothing has nothing to ask about.
+func externalSignalNetFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, n := range m.Nets() {
+		if check.ExternalSignalNet(m, n) {
+			out = append(out, query.FactRow{Relation: RelExternalSignalNet, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out

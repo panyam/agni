@@ -9,3 +9,4 @@ requirements:
   - {type: signal-missing}
   - {type: host-incomplete}
   - {type: signal-dangling}
+  - {type: esd}

@@ -20,6 +20,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [led-polarity](led-polarity/) | built-in | error | An LED's anode sits on ground and its cathode on a power rail — mounted backwards. |
 | [nc-pin-connected](nc-pin-connected/) | built-in | error | A pin marked no-connect is wired into a net with other members. |
 | [output-output-conflict](output-output-conflict/) | built-in | error | Two or more driving pins (outputs / power sources) share a net and fight each other. |
+| [profile/esd](profile-esd/) | profile | warning | An interface signal leaves the board through a connector with no ESD clamp. |
 | [profile/missing-pullup](profile-missing-pullup/) | profile | warning | An interface signal that needs a pull-up reaches no rail. |
 | [profile/signal-dangling](profile-signal-dangling/) | profile | warning | An interface signal net has fewer than two connections (a dangling stub). |
 | [profile/signal-missing](profile-signal-missing/) | profile | error | A signal a required interface declares is absent from the design. |
