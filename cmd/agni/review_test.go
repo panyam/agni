@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -458,6 +460,87 @@ func TestReviewOverlayTiersCoexist(t *testing.T) {
 	for _, never := range []string{"| needs-design-intent |", "| not-automated |"} {
 		if strings.Contains(got, never) {
 			t.Errorf("an overlay tier went missing (%q in the report)\n---\n%s", never, got)
+		}
+	}
+}
+
+// TestReviewProfileRequirementSelector (WS3-115) drives the requirement selector end to end: an
+// overlay profile authored in YAML, compiled by stdlib/profiles, resolved by core/review through the
+// CLI. It is the test that PINS the two packages together — review selects on the tag as a bare
+// string because core never imports stdlib, so nothing but a real run would catch the two drifting.
+//
+// The fixture is the oracle. TESTBUS declares two requirements over the same two signals, and on this
+// design they disagree: both signal nets exist, so completeness is clean, while BUS_TBB has one
+// connection, so dangling fires. An item selecting completeness must therefore PASS on a design where
+// the profile as a whole fails, which is precisely what union semantics cannot express.
+func TestReviewProfileRequirementSelector(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	profiles := filepath.Join(dir, "profiles")
+	if err := os.Mkdir(profiles, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(profiles, "testbus.yaml"), []byte(`
+name: TESTBUS
+signals:
+  - {name: A, suffix: _TBA, anchor: true}
+  - {name: B, suffix: _TBB}
+requirements:
+  - {type: signal-missing}
+  - {type: signal-dangling}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A second KNOWN interface this design does not carry, so a requirement-selected item bound to it
+	// must still take the presence branch rather than resolving its rule.
+	if err := os.WriteFile(filepath.Join(profiles, "otherbus.yaml"), []byte(`
+name: OTHERBUS
+signals:
+  - {name: A, suffix: _OBA, anchor: true}
+  - {name: B, suffix: _OBB}
+requirements:
+  - {type: signal-missing}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	checklist := write("checklist.yaml", `
+name: Requirement selector
+areas:
+  - name: Bus
+    items:
+      - {id: "u", title: whole bus, profile: TESTBUS}
+      - {id: "m", title: both signals present, profile: TESTBUS, requirement: signal-missing}
+      - {id: "d", title: signals wired through, profile: TESTBUS, requirement: signal-dangling}
+      - {id: "x", title: bus terminated, profile: TESTBUS, requirement: termination}
+      - {id: "g", title: absent bus, profile: OTHERBUS, requirement: signal-missing}
+`)
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--checklist", checklist, "--profile-path", profiles, "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review: %v", err)
+	}
+	got := out.String()
+	for _, want := range []string{
+		// Unselected: the union of both requirements, so the dangling finding still fails it.
+		"| u | whole bus | fail |",
+		// Selected: each answered by its own requirement, and they disagree.
+		"| m | both signals present | pass |",
+		"| d | signals wired through | fail |",
+		// A requirement the profile does not declare is not covered by anything: never a pass.
+		"| x | bus terminated | not-automated |",
+		// The presence gate still runs ahead of resolution for a selected item.
+		"| g | absent bus | not-applicable |",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("report missing %q\n---\n%s", want, got)
 		}
 	}
 }

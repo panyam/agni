@@ -15,6 +15,7 @@ package profiles
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -82,6 +83,22 @@ type Requirement struct {
 	Type   string
 	Params map[string]string
 }
+
+// TagRequirement is the tag key Compile stamps on every generated rule, carrying the Type of the
+// Requirement that produced it. It is the counterpart of the "profile" tag: that one says WHICH
+// INTERFACE a rule belongs to, this one says WHICH ASK OF THAT INTERFACE it answers, so a consumer
+// can select one requirement's rule instead of the profile's whole compiled set (WS3-115).
+//
+// Without it the only handle on a single requirement is the rule NAME, which encodes the type by
+// convention and not faithfully — the termination requirement compiles to "<profile>-termination-missing"
+// and esd to "<profile>-esd-missing" — so name-matching would be a second source of truth that drifts
+// the moment a compiler picks a different suffix.
+//
+// The value is the requirement TYPE, which is unique within a profile by construction rather than by
+// convention: two requirements of one type compile to the same rule NAME, and catalog composition
+// rejects a duplicate composed name. A profile that would make this key ambiguous therefore already
+// fails loudly at composition.
+const TagRequirement = "requirement"
 
 // requirementCompiler turns one declared Requirement on a Profile into a check rule, or nil when the
 // requirement does not apply to this profile (no host, no pull-up signal). It emits datalog via the
@@ -303,10 +320,28 @@ func Compile(p Profile) []*check.Rule {
 	var rules []*check.Rule
 	for _, req := range p.Requirements {
 		if r := requirementRegistry[req.Type].compile(p, req); r != nil {
-			rules = append(rules, r)
+			rules = append(rules, stampRequirement(r, req.Type))
 		}
 	}
 	return rules
+}
+
+// stampRequirement records on a compiled rule which Requirement produced it (TagRequirement). It is
+// applied HERE rather than inside each compiler for the same reason the profile tag would be if it
+// were being added today: the compilers are an open set — an overlay registers its own through
+// RegisterRequirement — and a tag every selector depends on cannot be left to each of them to
+// remember. Compile is the one place that knows both the rule and the requirement it came from.
+//
+// The tag map is REPLACED with a copy rather than written in place. A built-in compiler builds its
+// map fresh per call (p.tags()), but an out-of-module compiler may hand back a package-level literal
+// shared by every rule it emits, and writing through that would make the last requirement's type win
+// for all of them. Copying costs one small map per rule at init and removes the whole class.
+func stampRequirement(r *check.Rule, reqType string) *check.Rule {
+	tags := make(map[string]string, len(r.Tags)+1)
+	maps.Copy(tags, r.Tags)
+	tags[TagRequirement] = reqType
+	r.Tags = tags
+	return r
 }
 
 func (p Profile) lname() string { return strings.ToLower(strings.ReplaceAll(p.Name, "-", "_")) }

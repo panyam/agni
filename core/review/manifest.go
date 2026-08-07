@@ -61,6 +61,25 @@ type Binding struct {
 	Query   *QueryBinding   `yaml:"query"`
 	Present *PresentBinding `yaml:"present"`
 	Scope   ScopeBinding    `yaml:"scope"`
+	// Requirement narrows a Profile binding to ONE of that profile's declared requirements, by
+	// requirement type (WS3-115). Empty keeps the union semantics every manifest was written against:
+	// `profile: X` means "every rule profile X compiles". Like Scope it NARROWS an existing selector
+	// rather than being one, so it does not count toward the mutually-exclusive binding count, and it
+	// requires Profile to be set.
+	//
+	// The point is that a profile's requirement list must be able to GROW. Under union semantics,
+	// adding a requirement re-scores every item already bound to that profile: they all begin
+	// reporting a defect none of them describes, which is the over-binding failure Scope addresses
+	// for design-wide rules (WS3-058) arriving through the profile door instead. A selected item is
+	// answered by its own requirement's rule and by nothing else, so the profile stays extensible.
+	//
+	// It is preferred over binding the generated rule by NAME because the profile's 3-valued presence
+	// gate still applies (WS3-090): an absent interface reads not-applicable and a host-bound one
+	// whose host is annotated nowhere reads not-automated, where a bare rule binding would read a
+	// hollow pass. A requirement the profile does not declare — or one whose compiler does not apply,
+	// like host-incomplete on a profile that binds no host — resolves to no rule and reads
+	// not-automated, never pass.
+	Requirement string `yaml:"requirement"`
 	// AppliesToClass gates the item on device class (WS10-014): the item is computed-n/a when no
 	// component carries any of these classes (the honest "no crystals here → n/a", automatable via the
 	// device-class fact). Like Scope it is a GATE, not a selector, so it does not count toward the
@@ -170,6 +189,9 @@ func Load(r io.Reader) (Manifest, error) {
 			}
 			if len(it.Binding.Scope.names()) > 0 && it.Binding.Rule == "" && it.Binding.Tag == "" {
 				return Manifest{}, fmt.Errorf("review manifest item %q: scope filters a rule/tag binding, so one must be set", it.ID)
+			}
+			if it.Binding.Requirement != "" && it.Binding.Profile == "" {
+				return Manifest{}, fmt.Errorf("review manifest item %q: requirement narrows a profile binding, so \"profile\" must be set", it.ID)
 			}
 			if it.Binding.Query != nil {
 				if _, err := compileQuery(it); err != nil {

@@ -518,6 +518,94 @@ func TestComponentScopedBinding(t *testing.T) {
 	}
 }
 
+// reqRule is a stand-in for one requirement's compiled rule: tagged with the interface and the
+// requirement type the way profiles.Compile stamps them, and firing a fixed finding set. review is
+// decoupled from stdlib/profiles by design, so its unit tests describe the CONTRACT (these two tags)
+// rather than importing the compiler; the CLI test drives the real profile end to end.
+func reqRule(profile, requirement string, subjects ...string) *check.Rule {
+	return &check.Rule{
+		Name:     requirement,
+		Severity: "warning",
+		Summary:  requirement,
+		Tags:     map[string]string{profileTagName: profile, profileTagRequirement: requirement},
+		Eval: func(check.Model) []check.Finding {
+			var fs []check.Finding
+			for _, s := range subjects {
+				fs = append(fs, check.Finding{Rule: requirement, Kind: check.KindNet, Subject: s, Message: requirement})
+			}
+			return fs
+		},
+	}
+}
+
+// TestProfileRequirementSelector (WS3-115): an item may bind ONE requirement of a profile, so adding a
+// requirement to that profile cannot re-score the items already bound to it.
+//
+// The oracle is the pair of clean requirements. Under union semantics they share the profile's whole
+// compiled set, so the moment a THIRD requirement finds a real defect all three items fail and two of
+// them report a defect they do not describe. Selected, each is answered by its own rule and nothing
+// else, while the unselected item keeps the union verdict byte-for-byte.
+func TestProfileRequirementSelector(t *testing.T) {
+	cat, err := check.NewCatalog(check.NewSource("iface", []*check.Rule{
+		reqRule("BUS", "termination"), // clean
+		reqRule("BUS", "signal-dangling"),
+		reqRule("BUS", "esd", "BUS_H", "BUS_L"), // the newly added requirement, and it finds a real defect
+	}))
+	if err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "union", Title: "whole bus", Binding: Binding{Profile: "BUS"}},
+		{ID: "term", Title: "termination strategy", Binding: Binding{Profile: "BUS", Requirement: "termination"}},
+		{ID: "dangle", Title: "TXD routing", Binding: Binding{Profile: "BUS", Requirement: "signal-dangling"}},
+		{ID: "esd", Title: "ESD protection", Binding: Binding{Profile: "BUS", Requirement: "esd"}},
+		{ID: "undeclared", Title: "load dump", Binding: Binding{Profile: "BUS", Requirement: "not-a-requirement"}},
+		{ID: "absent", Title: "ESD on a bus that is not here", Binding: Binding{Profile: "GONE", Requirement: "esd"}},
+		{ID: "unsat", Title: "ESD on an unannotated host", Binding: Binding{Profile: "UNSAT", Requirement: "esd"}},
+	}}}}
+	present := func(name string) (Presence, bool) {
+		switch name {
+		case "BUS":
+			return IfacePresent, true
+		case "GONE":
+			return IfaceAbsent, true
+		case "UNSAT":
+			return IfaceHostUnsatisfied, true
+		}
+		return IfaceAbsent, false
+	}
+	rep := Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: cat, Manifest: man, Design: "d", Present: present})
+	items := map[string]ItemResult{}
+	for _, it := range rep.Areas[0].Items {
+		items[it.Item.ID] = it
+	}
+	// Unselected: the union, unchanged — every rule the profile compiles, including the new one.
+	if got := items["union"]; got.Outcome != Fail || len(got.Findings) != 2 {
+		t.Errorf("unselected binding: want fail with the esd findings (union semantics), got %s findings=%+v", got.Outcome, got.Findings)
+	}
+	// Selected: answered by its own requirement only. These are the two the union poisons.
+	for _, id := range []string{"term", "dangle"} {
+		if got := items[id]; got.Outcome != Pass {
+			t.Errorf("item %q selects a clean requirement: want pass, got %s findings=%+v", id, got.Outcome, got.Findings)
+		}
+	}
+	if got := items["esd"]; got.Outcome != Fail || len(got.Findings) != 2 {
+		t.Errorf("item selecting the firing requirement: want fail with 2 findings, got %s findings=%+v", got.Outcome, got.Findings)
+	}
+	// A requirement the profile does not declare resolves to no rule: not-automated, never a pass.
+	if got := items["undeclared"].Outcome; got != NotAutomated {
+		t.Errorf("undeclared requirement: want not-automated, got %s", got)
+	}
+	// The presence gate is the reason to select a requirement instead of binding its rule by name, so
+	// it must still fire ahead of resolution for a selected item.
+	if got := items["absent"].Outcome; got != NotApplicable {
+		t.Errorf("selected requirement on an absent interface: want not-applicable, got %s", got)
+	}
+	if got := items["unsat"].Outcome; got != NotAutomated {
+		t.Errorf("selected requirement on a host-unsatisfied interface: want not-automated, got %s", got)
+	}
+}
+
 // filterToScope keeps a net finding whose net is in scope and a component finding whose subject is in
 // scope, and drops out-of-scope subjects of either kind plus every pin finding (no pin→component map).
 func TestFilterToScope(t *testing.T) {
@@ -591,6 +679,8 @@ func TestLoadValidation(t *testing.T) {
 		"present no class":   "name: t\nareas: [{name: A, items: [{id: i, present: {class: ''}}]}]",
 		"bad inline query":   "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'garbage(', subject: r, message: m}}]}]",
 		"query missing vars": "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'component.mpn(?r,\"X\") => ?r'}}]}]",
+		"requirement no profile": "name: t\nareas: [{name: A, items: [{id: i, requirement: esd}]}]",
+		"requirement on a rule":  "name: t\nareas: [{name: A, items: [{id: i, rule: r, requirement: esd}]}]",
 	}
 	for name, y := range cases {
 		if _, err := Load(strings.NewReader(y)); err == nil {
@@ -607,16 +697,21 @@ areas:
     items:
       - {id: "1", title: termination, description: "120 ohm across CANH/CANL at both bus ends", rule: profile/can-termination-missing}
       - {id: "2", title: transceiver, }
+      - {id: "3", title: ESD protection, profile: CAN, requirement: esd}
 `
 	m, err := Load(strings.NewReader(y))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if m.Name != "mini" || len(m.Areas) != 1 || len(m.Areas[0].Items) != 2 {
+	if m.Name != "mini" || len(m.Areas) != 1 || len(m.Areas[0].Items) != 3 {
 		t.Fatalf("parsed wrong: %+v", m)
 	}
 	if got := m.Areas[0].Items[0]; got.Title != "termination" || got.Description != "120 ohm across CANH/CANL at both bus ends" {
 		t.Errorf("Title/Description round-trip: got %+v", got)
+	}
+	// A requirement narrows a profile binding rather than being one, so the pair is valid together.
+	if got := m.Areas[0].Items[2].Binding; got.Profile != "CAN" || got.Requirement != "esd" {
+		t.Errorf("profile+requirement round-trip: got %+v", got)
 	}
 }
 

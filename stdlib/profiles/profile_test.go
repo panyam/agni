@@ -100,6 +100,62 @@ func TestCompileAndRegistered(t *testing.T) {
 	}
 }
 
+// TestCompileStampsRequirement (WS3-115): every rule Compile emits carries the type of the
+// requirement that produced it, which is what lets a review item select one requirement of a profile
+// instead of its whole compiled set. The tag has to be right for a rule whose NAME does not carry the
+// type either (termination compiles to "-termination-missing"), which is why the tag exists at all.
+func TestCompileStampsRequirement(t *testing.T) {
+	byName := map[string]string{}
+	for _, r := range Compile(SPINOR) {
+		byName[r.Name] = r.Tags[TagRequirement]
+	}
+	for _, want := range []struct{ rule, requirement string }{
+		{"spi_nor-signal-missing", "signal-missing"},
+		{"spi_nor-host-incomplete", "host-incomplete"},
+		{"spi_nor-missing-pullup", "missing-pullup"},
+		{"spi_nor-signal-dangling", "signal-dangling"},
+	} {
+		if got := byName[want.rule]; got != want.requirement {
+			t.Errorf("rule %q: requirement tag = %q, want %q", want.rule, got, want.requirement)
+		}
+	}
+	// The profile tag is untouched — the two select together, so stamping one must not clobber the other.
+	for _, r := range Compile(SPINOR) {
+		if r.Tags["profile"] != SPINOR.Name {
+			t.Errorf("rule %q: profile tag = %q, want %q", r.Name, r.Tags["profile"], SPINOR.Name)
+		}
+	}
+}
+
+// An out-of-module requirement compiler is under no obligation to build its tag map fresh per rule.
+// Compile must still stamp each rule with its OWN requirement type, so the stamp cannot be written
+// through a map the compiler shares across the rules it emits (the last type would win for all).
+func TestCompileStampsSharedTagMap(t *testing.T) {
+	shared := map[string]string{"profile": "SHARED"}
+	for _, name := range []string{"shared-a", "shared-b"} {
+		RegisterRequirement(name, func(p Profile, req Requirement) *check.Rule {
+			return &check.Rule{Name: p.lname() + "-" + req.Type, Tags: shared}
+		})
+		defer delete(requirementRegistry, name)
+	}
+	rules := Compile(Profile{
+		Name:         "SHARED",
+		Signals:      []Signal{{Name: "A", Suffix: "_A", Anchor: true}, {Name: "B", Suffix: "_B"}},
+		Requirements: []Requirement{{Type: "shared-a"}, {Type: "shared-b"}},
+	})
+	if len(rules) != 2 {
+		t.Fatalf("want 2 rules, got %d", len(rules))
+	}
+	for i, want := range []string{"shared-a", "shared-b"} {
+		if got := rules[i].Tags[TagRequirement]; got != want {
+			t.Errorf("rule %d: requirement tag = %q, want %q", i, got, want)
+		}
+	}
+	if _, stamped := shared[TagRequirement]; stamped {
+		t.Errorf("the compiler's own tag map was mutated: %v", shared)
+	}
+}
+
 func flashHost(ref string) *ir.Component {
 	return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"},
 		Attributes: map[string]string{"interface": "SPI_NOR"}}

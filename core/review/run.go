@@ -446,6 +446,17 @@ func filterToScope(fs []check.Finding, nets, comps map[string]bool) []check.Find
 	return kept
 }
 
+// The tag keys a profile binding selects on. They are declared here as plain strings rather than
+// imported from stdlib/profiles because review is deliberately decoupled from that package — it
+// reaches it only through the injected PresenceFunc/ScopeFunc, and core has no import of stdlib at
+// all. stdlib/profiles is the AUTHORITY for both values (profiles.TagRequirement); what pins them
+// together is not a shared constant but the end-to-end CLI test, which runs a real overlay profile
+// through a real manifest and would fail on any drift.
+const (
+	profileTagName        = "profile"
+	profileTagRequirement = "requirement"
+)
+
 // resolve turns an item's binding into the set of catalog rules it selects (or the compiled rule for
 // an inline query). An empty result means nothing shipped covers the item. An interface profile whose
 // bus is absent still resolves to rules here; runItem marks it not-applicable BEFORE running them via
@@ -462,7 +473,15 @@ func resolve(cat *check.Catalog, it Item) []*check.Rule {
 	case b.Rule != "":
 		return cat.Filter(check.Facets{Names: []string{b.Rule}})
 	case b.Profile != "":
-		return cat.Filter(check.Facets{Tags: map[string][]string{"profile": {b.Profile}}})
+		tags := map[string][]string{profileTagName: {b.Profile}}
+		// A requirement selector narrows the profile's compiled set to the one rule that answers this
+		// ask (WS3-115). Facets intersect distinct tag keys, so this is a conjunction: the rule must
+		// belong to the profile AND come from that requirement. Empty adds no key, which is exactly the
+		// union every manifest was written against.
+		if b.Requirement != "" {
+			tags[profileTagRequirement] = []string{b.Requirement}
+		}
+		return cat.Filter(check.Facets{Tags: tags})
 	case b.Tag != "":
 		k, v, ok := strings.Cut(b.Tag, "=")
 		if !ok {
