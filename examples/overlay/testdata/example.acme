@@ -1,9 +1,24 @@
 # A toy .acme netlist read by the overlay's private format reader.
-# One component uses an X-prefixed ref-des, which the overlay's house rule flags.
+#
+# Two house-rule violations are seeded, one per overlay rule:
+#   X1 uses an X-prefixed ref-des        -> acme/no-experimental-refdes (a Go rule)
+#   X1 sits on VCC, which carries U1's
+#   declared power pin                   -> acme/experimental-on-power-net (a datalog rule)
+#
+# `pin` lines declare PART-TYPE pins, which is what the engine's pin relations project from. A
+# net connection alone says a pin is wired; only a pin declaration says the pin exists, what it
+# is called, and what type it is.
 component R1 resistor 10k
 component C1 cap 100n
 component U1 mcu
 component X1 widget
-net VCC R1.1 C1.1 U1.1
+
+pin U1 1 VDD power_in
+pin U1 2 GPIO0 output
+pin U1 8 VSS power_in
+pin X1 1 IO inout
+pin X1 3 GND power_in
+
+net VCC R1.1 C1.1 U1.1 X1.2
 net GND R1.2 C1.2 U1.8 X1.3
 net SIG U1.2 X1.1
