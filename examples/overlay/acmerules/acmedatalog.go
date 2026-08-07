@@ -26,10 +26,18 @@ import (
 // nothing like it because it encodes a policy, not a law of electronics — which is exactly the kind
 // of rule that belongs in an overlay rather than upstream.
 //
-// The query is four atoms and reads in the order an engineer would say it out loud: find a declared
-// power pin, find the net it sits on, find another part on that same net, and keep it if that part's
-// ref-des marks it experimental. It composes two PIN relations with a NET-level one, which is the
-// join a pin rule needs and the reason pin.role / pin.net had to exist as relations at all.
+// The query composes two PIN relations with a NET-level one, which is the join a pin rule needs and
+// the reason pin.role / pin.net had to exist as relations at all: find an experimental part, find a
+// net it sits on, then ask whether some other part's declared POWER pin is on that same net.
+//
+// CLAUSE ORDER IS NOT COSMETIC, and the order here is deliberate. The evaluator is a naive
+// backtracking join that runs literals left to right, so the first atom decides what gets enumerated
+// before any filter applies. Leading with the experimental part binds the head variable ?net
+// immediately and starts from the most selective set on the board (a handful of X-prefixed parts).
+// The reverse spelling — opening with pin.role and letting ?net fall out later — reads more naturally
+// but scans every power pin in the design first. On a toy fixture nothing notices; on a real board
+// that difference is the whole runtime, and it is how a shipped profile rule made `agni check`
+// non-terminating (WS3-114). An overlay author copying this file should copy the ordering habit too.
 //
 // `prefix` is an engine built-in string predicate, so the whole rule is expressible without the
 // overlay registering any relation or predicate of its own.
@@ -48,10 +56,10 @@ var experimentalOnPowerNet = query.FindingQuery{
 		Tags:     map[string]string{check.KeyCategory: "house-style"},
 	},
 	Query: query.MustParse(`
-		exp_on_power(?net) :- pin.role(?ref, ?pin, "power"),
-		                      pin.net(?ref, ?pin, ?net),
-		                      component-on-net(?x, ?net),
+		exp_on_power(?net) :- component-on-net(?x, ?net),
 		                      prefix(?x, "X"),
+		                      pin.net(?ref, ?pin, ?net),
+		                      pin.role(?ref, ?pin, "power"),
 		                      ?ref != ?x;
 		exp_on_power(?net) => ?net`),
 	Kind:       check.KindNet,

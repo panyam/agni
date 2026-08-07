@@ -55,6 +55,13 @@ The Go rule still fires; the datalog one is gone without a word. A quiet pass on
 be violating the rule is the worst failure shape there is, which is why `main.go` spells the import
 out and `overlay_test.go` asserts the rule actually produces findings.
 
+**Clause order decides the cost.** The evaluator is a naive backtracking join running literals left to
+right, so the first atom decides what gets enumerated before any filter applies. Lead with the atom
+that binds your head variable and is most selective. The rule here opens on the handful of
+`X`-prefixed parts rather than on every power pin in the design; the reverse spelling reads more
+naturally and is the shape that made a shipped profile rule non-terminating on a real board. A toy
+fixture will never show you the difference.
+
 **Pin relations need the reader to declare pins.** `pin`, `pin.role`, `pin.type` and `pin.net`
 project from PART-TYPE pins, not from net connections. A connection says a pin is wired somewhere; a
 pin declaration says the pin exists, what it is called, and what type it is. A format that emits only
