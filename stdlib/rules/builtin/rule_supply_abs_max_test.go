@@ -92,9 +92,9 @@ func TestSupplyExceedsAbsMax(t *testing.T) {
 		}
 	}
 	// The same Citation also travels structured, so a renderer need not parse the message (WS10-012).
-	if dp := f.DatasheetProv; dp == nil {
-		t.Fatal("supply-exceeds-abs-max finding must carry structured DatasheetProv")
-	} else if dp.Doc != "ACME-33 Rev B" || dp.DocRef != "ds" || dp.Page != 4 ||
+	if len(f.DatasheetProv) != 1 {
+		t.Fatalf("supply-exceeds-abs-max is a single-part rule: want exactly 1 citation, got %d", len(f.DatasheetProv))
+	} else if dp := f.DatasheetProv[0]; dp.Doc != "ACME-33 Rev B" || dp.DocRef != "ds" || dp.Page != 4 ||
 		dp.Section != "Absolute Maximum Ratings" || dp.Method != "hand" || dp.Confidence != 1 {
 		t.Errorf("DatasheetProv not populated from the spec: %+v", dp)
 	}

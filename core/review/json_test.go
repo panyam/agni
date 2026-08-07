@@ -22,10 +22,10 @@ func TestRenderJSONDatasheetProv(t *testing.T) {
 					{
 						Rule: "review/18", Severity: "warning", Kind: check.KindComponent, Subject: "U7000",
 						Message: "IOUT below requirement",
-						DatasheetProv: &check.DatasheetCitation{
+						DatasheetProv: []*check.DatasheetCitation{{
 							Doc: "LMR60410-Q1 (SNAS870B Rev. B)", DocRef: "snas870b", Page: 5,
 							Section: "6.3 Recommended Operating Conditions", Method: "hand", Confidence: 1.0,
-						},
+						}},
 					},
 					{Rule: "review/other", Severity: "warning", Kind: check.KindComponent, Subject: "U9", Message: "no datasheet backing"},
 				},
@@ -37,15 +37,15 @@ func TestRenderJSONDatasheetProv(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`"datasheet":`, `"doc": "LMR60410-Q1 (SNAS870B Rev. B)"`, `"page": 5`,
+		`"datasheets":`, `"doc": "LMR60410-Q1 (SNAS870B Rev. B)"`, `"page": 5`,
 		`"section": "6.3 Recommended Operating Conditions"`, `"confidence": 1`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("datasheet-backed finding is missing %q in:\n%s", want, out)
 		}
 	}
-	// The second finding has no citation, so exactly one `datasheet` object appears.
-	if n := strings.Count(out, `"datasheet":`); n != 1 {
-		t.Fatalf("want exactly 1 datasheet object (only the backed finding), got %d", n)
+	// The second finding has no citation, so exactly one `datasheets` array appears.
+	if n := strings.Count(out, `"datasheets":`); n != 1 {
+		t.Fatalf("want exactly 1 datasheets array (only the backed finding), got %d", n)
 	}
 }

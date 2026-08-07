@@ -113,6 +113,37 @@ var supplySymbols = map[string]bool{
 	"VBAT": true, "VSUP": true, "V+": true,
 }
 
+// outputSymbols is the alias set for a regulator's OUTPUT voltage: the symbols datasheets print it
+// under. Same posture as supplySymbols — the vendor spelling lives in the model layer, never in rule
+// text (docs/20). Deliberately narrow: these are outputs a downstream part is fed BY, so a symbol
+// that could mean an input must not be in here or a connection-aware rule would compare the wrong
+// end of the part against its neighbour.
+var outputSymbols = map[string]bool{
+	"VOUT": true, "VO": true, "VOUT1": true, "VOUT2": true, "VOUTA": true, "VOUTB": true,
+}
+
+// OutputVoltageLimits selects the machine-comparable OUTPUT-voltage rows of a spec: symbol in the
+// output alias set, unit exactly "V", a max bound present, and the docs/20 comparison gates. The
+// limit KIND is deliberately not constrained: a regulator states its output as a recommended-operating
+// or characteristic row, not an absolute maximum, so filtering to one kind would find nothing on a
+// real spec. The MAX is what a downstream part is exposed to, which is the number a compatibility
+// check needs.
+//
+// The counterpart to SupplyAbsMaxLimits: that one reads what a part can WITHSTAND, this reads what a
+// part DELIVERS. A connection-aware rule joins one of each across the net between two parts (WS3-028).
+func OutputVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !outputSymbols[sym] || p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
+			param.UnderSpecified(p) || !param.MachineComparable(p) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
 // SupplyAbsMaxLimits selects the machine-comparable absolute-maximum supply-voltage
 // rows of a spec: symbol in the supply alias set, kind ABSOLUTE_MAX, unit exactly "V"
 // (unlike units are under-specified for comparison until WS10-004 — never converted),

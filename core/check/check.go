@@ -38,8 +38,20 @@ type Finding struct {
 	NetID string
 	// DatasheetProv is the datasheet side of a datasheet-backed finding's provenance, so a consumer
 	// (review report, web checks panel) can show which document, page, and section a limit came from
-	// without parsing it out of Message. Nil for a finding not backed by a seeded datasheet value.
-	DatasheetProv *DatasheetCitation
+	// without parsing it out of Message. Empty for a finding not backed by a seeded datasheet value.
+	//
+	// A SLICE because a connection-aware rule rests on more than one part's datasheet (WS3-028): a
+	// regulator's output voltage against a downstream part's absolute maximum takes a value from each.
+	// The review's data-trust gate reads this to decide whether a finding is trustworthy enough to
+	// fail an item, so it has to see every value the conclusion rests on — with one slot, a finding
+	// half of whose evidence was a low-confidence extraction would still rate as a hard Fail.
+	//
+	// A finding is ratified only when EVERY citation clears the floor (see review.isUnratified): the
+	// values inside one finding are conjunctive evidence, so the finding is only as trustworthy as its
+	// weakest input. That is the opposite quantifier from the one ACROSS findings, where a single
+	// trustworthy finding among several makes the item a real Fail — different question, different
+	// answer, and both deliberate.
+	DatasheetProv []*DatasheetCitation
 }
 
 // DatasheetCitation is the structured datasheet provenance of a finding: which document, page, and

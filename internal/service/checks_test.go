@@ -41,16 +41,20 @@ func TestFindingProtoBusSubject(t *testing.T) {
 func TestFindingProtoCarriesDatasheet(t *testing.T) {
 	backed := FindingProto(check.Finding{
 		Rule: "supply-exceeds-abs-max", Kind: check.KindComponent, Subject: "U1",
-		DatasheetProv: &check.DatasheetCitation{Doc: "SNOS412Q", DocRef: "snos412q", Page: 4, Section: "7.1 Absolute Maximum Ratings", Method: "hand", Confidence: 1.0},
+		DatasheetProv: []*check.DatasheetCitation{{Doc: "SNOS412Q", DocRef: "snos412q", Page: 4, Section: "7.1 Absolute Maximum Ratings", Method: "hand", Confidence: 1.0}},
 	})
-	ds := backed.GetDatasheet()
+	dss := backed.GetDatasheets()
+	if len(dss) != 1 {
+		t.Fatalf("datasheet-backed finding: want 1 citation on the wire, got %d", len(dss))
+	}
+	ds := dss[0]
 	if ds == nil {
 		t.Fatal("datasheet-backed finding has no datasheet citation on the wire")
 	}
 	if ds.GetDoc() != "SNOS412Q" || ds.GetPage() != 4 || ds.GetSection() != "7.1 Absolute Maximum Ratings" || ds.GetMethod() != "hand" {
 		t.Errorf("citation = %+v", ds)
 	}
-	if plain := FindingProto(check.Finding{Rule: "single-pin-net", Kind: check.KindNet, Subject: "SIG"}); plain.GetDatasheet() != nil {
-		t.Errorf("non-datasheet finding got a citation = %+v", plain.GetDatasheet())
+	if plain := FindingProto(check.Finding{Rule: "single-pin-net", Kind: check.KindNet, Subject: "SIG"}); plain.GetDatasheets() != nil {
+		t.Errorf("non-datasheet finding got a citation = %+v", plain.GetDatasheets())
 	}
 }

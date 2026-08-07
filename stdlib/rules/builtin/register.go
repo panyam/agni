@@ -45,6 +45,7 @@ var rules = []*check.Rule{
 	esdClampNotTVS,
 	i2cPullUp,
 	supplyExceedsAbsMax,
+	regulatorOutputExceedsAbsMax,
 	railNominalOutOfRecommended,
 	capVoltage,
 	diffPairNaming,
