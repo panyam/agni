@@ -1,0 +1,79 @@
+---
+title: "reverse-blocking-absent"
+description: "A connector feeds a power input with no directional element blocking reverse flow."
+---
+
+### What it checks
+
+A connector feeds a power-input pin, and nothing on the path between them blocks current flowing the
+**wrong way**.
+
+### For hardware engineers
+
+Two failures share one mechanism.
+
+**Reverse polarity**: a connector is wired backwards, or a technician plugs in a supply the wrong way
+round. Current flows into the board through what should be its return path. On a vehicle this is a
+qualification requirement, not a nicety — ISO 16750-2 makes reverse voltage a test the module has to
+survive.
+
+**Reverse current (backfeed)**: two sources share a rail, or a rail is switched off while something
+downstream still holds charge. Current flows back up a path that was only ever designed to carry it
+forward, powering a domain that is supposed to be dead. That is why an automotive board carries an
+ORing FET or an ideal-diode controller.
+
+Both need a **directional** element: something that conducts one way and not the other. A series
+diode, an ORing FET, an ideal-diode controller.
+
+### Why a fuse or a TVS does not count
+
+This is the whole reason the rule exists separately from `input-protection`.
+
+A **fuse** opens on current *magnitude*. It does not care about sign, so it will not stop reverse
+current until the reverse current is large enough to blow it — by which point the damage is upstream
+of the fuse.
+
+A **TVS** shunts transients to ground. It clamps a voltage spike; it does not block a path.
+
+So "a fuse or a TVS is present" carries no information about whether reverse flow is blocked. Two
+CarCo review items were bound to `input-protection` for exactly this reason and were reading pass with
+their real ask never tested.
+
+### What it will not claim, and why that is deliberate
+
+**A path crossing a transistor is reported as unclassifiable, not unprotected.** The rule stays silent
+there.
+
+A P-FET ideal diode is a transistor plus a bias network. Nothing in a netlist labels that arrangement,
+and it is structurally indistinguishable from any other FET sitting in a power path. It is also the
+*correct modern answer* to reverse protection — so a rule that fired whenever it found no series diode
+would false-fail every well-designed ORing-FET board.
+
+A false fail here is worse than the gap it would close. A reviewer who sees this rule fire on a design
+that is properly protected learns to ignore it, and then it is worth nothing on the design that really
+is missing protection.
+
+### Orientation matters
+
+A diode only counts when it is fitted the right way round: **anode toward the source**, cathode toward
+the load. Fitted the other way it blocks the supply rather than the fault, which is a different defect
+and not the one this rule reports.
+
+Only a plain diode counts. A TVS, a Zener and an LED all carry the diode family tag, and none is a
+series blocking element — the first two shunt to ground, and an LED in a power path is an indicator.
+
+### When it stays silent
+
+- No connector on the net — the rule is about what enters the board.
+- No power input reachable from it.
+- A transistor on the path (above).
+- A diode whose part type declares no anode pin, so orientation is unknown. The path reads as
+  unblocked rather than the rule guessing which way the part faces.
+- Ground and read-gap (external) nets, excluded up front.
+
+### Fixing a finding
+
+Add the directional element, or record why the path does not need one. A path fed from a source that
+physically cannot be reversed (a fixed internal rail rather than a user-facing connector) is a
+legitimate exception — but it is worth writing down, because the next reviewer will ask the same
+question.
