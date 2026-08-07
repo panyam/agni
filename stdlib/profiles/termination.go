@@ -69,7 +69,7 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("termination"),
 		},
-		Query:      tq,
+		Query:      mustBindHeadFirst(tq),
 		Kind:       check.KindNet,
 		SubjectVar: "h",
 		Message:    fmt.Sprintf("%s bus (net {h}) has no termination resistor bridging %s and %s", p.Name, high, low),

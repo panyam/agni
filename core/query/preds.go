@@ -52,7 +52,13 @@ const relReaches = "reaches"
 type builtin struct {
 	arity    int
 	maxArity int // 0 = fixed at arity; otherwise the inclusive upper bound
-	extend   func(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error
+	// generator marks a builtin that PRODUCES values by enumerating from the Model rather than
+	// filtering an already-bound tuple. It is the property that makes clause order load-bearing: a
+	// generator whose own input argument is unbound enumerates from every candidate in the design,
+	// so appearing first in a body is a whole-design scan no later literal can undo. Filters cannot
+	// do this — they require every argument bound and so can only ever narrow. See GeneratorFirstRules.
+	generator bool
+	extend    func(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error
 }
 
 // accepts reports whether n is a valid argument count for this builtin.
@@ -72,7 +78,7 @@ func (bi builtin) arityLabel() string {
 }
 
 var builtins = map[string]builtin{
-	relReaches: {arity: 2, maxArity: 3, extend: extendReaches},
+	relReaches: {arity: 2, maxArity: 3, generator: true, extend: extendReaches},
 	"contains": strFilter(strings.Contains),
 	"prefix":   strFilter(strings.HasPrefix),
 	"suffix":   strFilter(strings.HasSuffix),

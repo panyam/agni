@@ -46,14 +46,22 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	// exempt here, because esd-clamp-not-tvs (WS3-078) characterizes that case separately and the two
 	// rules partition these nets between them. Crediting it here is what keeps this requirement from
 	// double-reporting a net the catalog already speaks about.
+	// Every clause opens with needs_esd(?n), which BINDS the head variable before anything scans.
+	// Without it the body starts at reaches(?n, ?rn, ?h) with all three unbound, so the evaluator
+	// walks the series neighborhood from every net on the board and only then filters — quadratic,
+	// and it made `agni check` non-terminating on a real design (WS3-114). The guard is not a new
+	// restriction: unprotected already conjoins needs_esd, so esd_ok facts outside it were computed
+	// and then discarded. Moving it into the producer is where it costs nothing instead of everything.
 	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
 		rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
+			query.Pos(query.Rel("needs_esd", query.V("n"))),
 			query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
 			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
 			query.Pos(query.Rel("component-on-net", query.V(c.v), query.V("rn"))),
 			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class)))))
 	}
 	rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
+		query.Pos(query.Rel("needs_esd", query.V("n"))),
 		query.Pos(query.Rel("reaches", query.V("n"), query.V("rn"), query.V("h"))),
 		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
 		query.Pos(query.Rel("component-on-net", query.V("u"), query.V("rn"))),
@@ -75,7 +83,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("esd"),
 		},
-		Query:      q,
+		Query:      mustBindHeadFirst(q),
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} is exposed on a connector with no ESD protection in reach", p.Name),
