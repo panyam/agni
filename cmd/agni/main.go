@@ -564,18 +564,34 @@ func reviewCmd() *cobra.Command {
 // item reads not-automated rather than silently passing. Empty paths yield the built-in catalog and
 // the built-in profile index alone.
 func composeReviewInputs(profilePath, intentPath string) (*check.Catalog, map[string][]profiles.Profile, error) {
+	overlay, err := loadOverlayProfiles(profilePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	return composeReviewInputsFrom(overlay, intentPath)
+}
+
+// loadOverlayProfiles reads the overlay interface profiles at path, or nil for an empty path. Split
+// out so a surface composing SEVERAL catalogs from one --profile-path (serve, which feeds both the
+// CheckService and the ReviewService) reads the directory once and fails startup once, rather than
+// loading it per service and reporting the same bad profile twice.
+func loadOverlayProfiles(profilePath string) ([]profiles.Profile, error) {
+	if profilePath == "" {
+		return nil, nil
+	}
+	return profiles.LoadDir(profilePath)
+}
+
+// composeReviewInputsFrom is composeReviewInputs over profiles that are already loaded.
+func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string) (*check.Catalog, map[string][]profiles.Profile, error) {
 	var sources []check.RuleSource
 	byName := map[string][]profiles.Profile{}
 	for _, p := range profiles.Profiles {
 		byName[p.Name] = append(byName[p.Name], p)
 	}
-	if profilePath != "" {
-		ps, err := profiles.LoadDir(profilePath)
-		if err != nil {
-			return nil, nil, err
-		}
-		sources = append(sources, profiles.Source("profile-overlay", ps))
-		for _, p := range ps {
+	if len(overlay) > 0 {
+		sources = append(sources, profiles.Source("profile-overlay", overlay))
+		for _, p := range overlay {
 			byName[p.Name] = append(byName[p.Name], p)
 		}
 	}
