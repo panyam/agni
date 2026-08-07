@@ -369,6 +369,10 @@ var specFacts = map[string]factDef{
 		reads: []string{"pin.electrical_type"},
 		get:   func(ev *evalEnv) any { return ev.m.FormatTypesPowerOut() },
 	},
+	"design.has_netclass": { // design-level: some net carries a tool-assigned net class (WS3-105)
+		reads: []string{"net.netclass"},
+		get:   func(ev *evalEnv) any { return ev.m.HasNetClasses() },
+	},
 	// Board-tier facts (WS3-008), in the sidecar's units (nm for the KiCad producer).
 	"segment.width": {
 		reads: []string{"board.copper"},

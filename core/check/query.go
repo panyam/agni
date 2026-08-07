@@ -20,6 +20,7 @@ type irModel struct {
 	pinNet    map[string]string           // "refdes\x00pin" -> first net name it appears on
 	pinNetDup []PinNetConflict            // pins claimed by more than one net (malformed input)
 	ncChannel bool                        // source carries any no-connect evidence (typed pin or marker net)
+	netClass  bool                        // at least one net carries a tool-assigned net class (WS3-105)
 	boardNets []BoardNet                  // board tier, populated only by NewModelWithBoard
 	hasBoard  bool                        // a non-nil board geometry was attached (tier present, may be empty)
 	connected map[string]bool             // ref_des present on >= 1 net
@@ -110,6 +111,9 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		m.netByName[n.Name] = n
 		m.netNames[strings.ToUpper(n.Name)] = true
 		m.nameCount[n.Name]++
+		if n.NetClass != "" {
+			m.netClass = true
+		}
 		switch name := strings.ToLower(n.Name); {
 		case strings.HasPrefix(name, "unconnected"),
 			strings.HasPrefix(name, "no_connect"),
@@ -253,6 +257,10 @@ func (m *irModel) HasNoConnectChannel() bool { return m.ncChannel }
 // FormatTypesPowerOut reports whether the design's source format classifies power-output pins (see the
 // model.Model contract). Derived from SourceFormat, so it needs no precomputed state.
 func (m *irModel) FormatTypesPowerOut() bool { return formatTypesPowerOut(m.d.GetSourceFormat()) }
+
+// HasNetClasses reports whether any net carries a tool-assigned net class (see the model.Model
+// contract). Collected in the same nets walk as ncChannel, so the read is O(1).
+func (m *irModel) HasNetClasses() bool { return m.netClass }
 
 func (m *irModel) BoardNets() []BoardNet { return m.boardNets }
 

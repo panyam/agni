@@ -123,6 +123,17 @@ const (
 	// so "which nets are bus-scale" is a query, not a hidden constant. Distinct from bus(label,kind)
 	// (WS1-034), which is a reader-detected unmodeled bus LABEL, not a high-fan-out net.
 	RelNetBusLike = "net.bus_like" // doc: facts/docs/net.bus_like.md
+
+	// Net-class relations (WS3-105): the TOOL-assigned class string a design's project file
+	// records ("Default", "Power", "HighSpeed"), which is the near-universal scope expression in
+	// vendor rule decks. Deliberately NOT named net.class: that name belongs to the DERIVED
+	// semantic role space (ir.Net.roles from WS3-072, and the net.ground relation), and a rule
+	// author who conflated the two would write a join that silently matches nothing.
+	// has_netclass is the design-level presence marker, the queryable twin of check.CapNetClass:
+	// only a KiCad project supplies net classes, so a netclass-SCOPED rule selects nothing on
+	// every other read and reports clean. See facts/docs/net.netclass.md.
+	RelNetNetClass = "net.netclass" // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
+	RelHasNetClass = "has_netclass" // has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/has_netclass.md
 )
 
 // Facts projects the Model into the seed fact base, deterministically ordered so the projection
@@ -156,6 +167,8 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, refDesCollisionFacts(m)...)
 	out = append(out, pinNetConflictFacts(m)...)
 	out = append(out, netBusLikeFacts(m)...)
+	out = append(out, netNetClassFacts(m)...)
+	out = append(out, hasNetClassFacts(m)...)
 	out = append(out, boardFacts(m)...)
 	sortFacts(out)
 	return out
@@ -651,6 +664,33 @@ func netBusLikeFacts(m check.Model) []query.FactRow {
 		}
 	}
 	return out
+}
+
+// netNetClassFacts emits net.netclass(net, class) for each net carrying a tool-assigned class. The
+// value is the string the design tool recorded verbatim, not a derived role, so a query scopes by
+// the same label the layout engineer sees in KiCad. One row per classed net; nets left in the
+// tool's implicit default carry no class and yield no row, so `not net.netclass(?n, ?_)` reads as
+// "unclassed". Empty for every source but a KiCad project read — see hasNetClassFacts.
+func netNetClassFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, n := range m.Nets() {
+		if n.NetClass != "" {
+			out = append(out, query.FactRow{Relation: RelNetNetClass, Subject: n.Name, Value: n.NetClass, Cite: irCite(n.Prov)})
+		}
+	}
+	return out
+}
+
+// hasNetClassFacts emits the single has_netclass(true) row when the design assigns net classes at
+// all (Model.HasNetClasses). It is the queryable twin of check.CapNetClass, the same shape
+// typesPowerOutFacts has for CapTypesPowerOut: a rule scoped by net class must be able to tell
+// "no net is in class HV" from "this design has no classes", and absent the marker those are the
+// same empty result.
+func hasNetClassFacts(m check.Model) []query.FactRow {
+	if m.HasNetClasses() {
+		return []query.FactRow{{Relation: RelHasNetClass, Subject: "true", Cite: "design"}}
+	}
+	return nil
 }
 
 // boardFacts projects the board tier (WS1-006): per net, the MINIMUM copper track width and via

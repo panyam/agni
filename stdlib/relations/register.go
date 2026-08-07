@@ -59,6 +59,8 @@ var builtinSchema = map[string][]query.Field{
 	RelRefDesCollision:      {query.FieldSubject},                                               // ref_des_collision(ref_des) — WS3-081
 	RelPinNetConflict:       {query.FieldSubject, query.FieldObject, query.FieldValue},          // pin_net_conflict(ref_des, pin, net) — WS3-081
 	RelNetBusLike:           {query.FieldSubject},                                               // net.bus_like(net) — WS3-080
+	RelNetNetClass:          {query.FieldSubject, query.FieldValue},                             // net.netclass(net, class) — WS3-105
+	RelHasNetClass:          {query.FieldSubject},                                               // has_netclass(present) — WS3-105
 	// Board tier — queryable with no evaluator change (tier-generality).
 	RelBoardTrackWidth: {query.FieldSubject, query.FieldNum},    // board.track_width(net, mm)
 	RelBoardViaDrill:   {query.FieldSubject, query.FieldNum},    // board.via_drill(net, mm)
@@ -97,6 +99,8 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "ref_des_collision", Args: []string{"ref_des"}, Summary: "a reference designator used by more than one part (reader integrity diagnostic)", Kind: query.KindNetlist},
 	{Name: "pin_net_conflict", Args: []string{"ref_des", "pin", "net"}, Summary: "a pin the read placed on more than one net; one row per net (reader integrity diagnostic)", Kind: query.KindNetlist},
 	{Name: "net.bus_like", Args: []string{"net"}, Summary: "a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate", Kind: query.KindNetlist},
+	{Name: "net.netclass", Args: []string{"net", "class"}, Summary: "the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role)", Kind: query.KindNetlist},
+	{Name: "has_netclass", Args: []string{"present"}, Summary: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)", Kind: query.KindNetlist},
 	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part (needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind (absolute_max / recommended_operating / characteristic; needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params)", Kind: query.KindDatasheet},

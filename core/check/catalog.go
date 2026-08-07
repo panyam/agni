@@ -284,6 +284,8 @@ func capabilityMet(c Capability, m Model) bool {
 		return m.FormatTypesPowerOut()
 	case CapNoConnectChannel:
 		return m.HasNoConnectChannel()
+	case CapNetClass:
+		return m.HasNetClasses()
 	}
 	return true
 }
@@ -296,6 +298,8 @@ func capabilityReason(c Capability) string {
 		return "source format does not type power-output pins (driver absence is not conclusive here)"
 	case CapNoConnectChannel:
 		return "source format cannot express intentional no-connect"
+	case CapNetClass:
+		return "design carries no net-class assignments (only a KiCad project file supplies them)"
 	}
 	return "source format lacks a capability this rule requires"
 }
