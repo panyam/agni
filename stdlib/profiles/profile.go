@@ -90,6 +90,7 @@ var requirementRegistry = map[string]requirementEntry{
 	"missing-pullup":  {compile: func(p Profile, _ Requirement) *check.Rule { return p.pullupRule() }},
 	"signal-dangling": {compile: func(p Profile, _ Requirement) *check.Rule { return p.danglingRule() }},
 	"termination":     {compile: terminationRule, validate: validateTermination},
+	"esd":             {compile: esdRule},
 }
 
 // RegisterRequirement adds a requirement-type compiler under name (overwriting any existing entry).

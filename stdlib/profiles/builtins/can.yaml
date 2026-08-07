@@ -10,3 +10,4 @@ requirements:
   - {type: host-incomplete}
   - {type: termination, params: {high: _CANH, low: _CANL}}
   - {type: signal-dangling}
+  - {type: esd}

@@ -10,7 +10,7 @@ import (
 // requirementDocs is the set of requirement TYPES the compiler documents (one docs/<type>.md each),
 // and the canonical key list DocRules and the docs harness both iterate. It lives here, not in the
 // test, so DocRules and TestRuleDocsOneToOne share one source of truth.
-var requirementDocs = []string{"signal-missing", "missing-pullup", "signal-dangling", "termination"}
+var requirementDocs = []string{"signal-missing", "missing-pullup", "signal-dangling", "termination", "esd"}
 
 // requirementCaption is the docsite caption and severity for each requirement TYPE, shown in the
 // docsite reference index (tools/catalogdocs). The caption is interface-agnostic on purpose: the
@@ -25,6 +25,7 @@ var requirementCaption = map[string]struct {
 	"missing-pullup":  {"An interface signal that needs a pull-up reaches no rail.", "warning"},
 	"signal-dangling": {"An interface signal net has fewer than two connections (a dangling stub).", "warning"},
 	"termination":     {"A bus that requires termination has no terminating device across its pair.", "warning"},
+	"esd":             {"An interface signal leaves the board through a connector with no ESD clamp.", "warning"},
 }
 
 // DocRules returns one representative rule per requirement TYPE for the docsite catalog generator
