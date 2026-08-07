@@ -54,14 +54,25 @@ func ComposeOverlay(cfg *webapi.OverlayConfig) (Overlay, error) {
 	return o, nil
 }
 
-// Catalog splices this overlay's rule sources onto a base catalog, returning base unchanged when the
-// overlay carries none. CatalogWith keeps the built-ins and any RegisterSource'd suites, so composing
-// never silently drops the shipped rules.
-func (o Overlay) Catalog(base *check.Catalog) *check.Catalog {
+// Catalog splices this overlay's rule sources ONTO base, returning base unchanged when the overlay
+// carries none.
+//
+// It extends base rather than rebuilding a catalog, and that is the whole point (WS3-107). The
+// previous implementation called check.CatalogWith(o.Sources...), which keeps the built-ins and every
+// RegisterSource'd suite — true, and exactly what made the bug invisible — but drops base. For a
+// review, base is the catalog composed from --profile-path and --intent-path, so a convention that
+// carried a single naming RULE silently disabled every interface profile and the whole design-intent
+// tier for that run. Measured on one design, 19 items went pass -> needs-design-intent and 16 went
+// pass -> not-automated, with nothing anywhere to say why.
+//
+// A composition error is an error, not a panic: the sources come from a REQUEST here, and a caller
+// sending a convention whose name collides with an existing source should get a message, not a
+// crashed process.
+func (o Overlay) Catalog(base *check.Catalog) (*check.Catalog, error) {
 	if len(o.Sources) == 0 {
-		return base
+		return base, nil
 	}
-	return check.CatalogWith(o.Sources...)
+	return base.With(o.Sources...)
 }
 
 // ReadOptions is what the overlay contributes to each design READ: the naming lexicon, or nothing.

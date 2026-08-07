@@ -33,22 +33,32 @@ var sourceNameRe = regexp.MustCompile(`^[a-z0-9-]+$`)
 //     names within or across sources are rejected.
 func NewCatalog(sources ...RuleSource) (*Catalog, error) {
 	c := &Catalog{byName: map[string]*Rule{}}
-	seen := map[string]bool{}
+	if err := c.add(map[string]bool{}, sources...); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// add composes sources into c under the collision policy, recording each source name in seen so a
+// duplicate source is rejected across calls as well as within one. It is shared by NewCatalog and
+// With so there is one implementation of the namespacing and collision rules; a second copy is how
+// an extension path ends up with subtly different policy from the primary one.
+func (c *Catalog) add(seen map[string]bool, sources ...RuleSource) error {
 	for _, s := range sources {
 		name := s.Name()
 		if seen[name] {
 			if name == "" {
-				return nil, fmt.Errorf("check: only one anonymous (built-in) source may be registered")
+				return fmt.Errorf("check: only one anonymous (built-in) source may be registered")
 			}
-			return nil, fmt.Errorf("check: duplicate rule source %q", name)
+			return fmt.Errorf("check: duplicate rule source %q", name)
 		}
 		seen[name] = true
 		if name != "" && !sourceNameRe.MatchString(name) {
-			return nil, fmt.Errorf("check: source name %q must match [a-z0-9-]+", name)
+			return fmt.Errorf("check: source name %q must match [a-z0-9-]+", name)
 		}
 		for _, r := range s.Rules() {
 			if strings.Contains(r.Name, "/") {
-				return nil, fmt.Errorf("check: rule name %q may not contain %q (the catalog's namespace separator)", r.Name, "/")
+				return fmt.Errorf("check: rule name %q may not contain %q (the catalog's namespace separator)", r.Name, "/")
 			}
 			exposed := r
 			if name != "" {
@@ -62,13 +72,49 @@ func NewCatalog(sources ...RuleSource) (*Catalog, error) {
 				exposed = &cp
 			}
 			if _, dup := c.byName[exposed.Name]; dup {
-				return nil, fmt.Errorf("check: duplicate rule name %q after composition", exposed.Name)
+				return fmt.Errorf("check: duplicate rule name %q after composition", exposed.Name)
 			}
 			c.byName[exposed.Name] = exposed
 			c.rules = append(c.rules, exposed)
 		}
 	}
-	return c, nil
+	return nil
+}
+
+// With returns a new catalog carrying every rule c already has, plus the rules of extra, composed
+// under the same namespacing and collision policy. c is not modified.
+//
+// It exists so that EXTENDING a catalog is possible without knowing the sources that built it. A
+// *Catalog holds composed rules, not its inputs, so the only way to add to one used to be to rebuild
+// it from scratch — and a caller holding a catalog it did not compose cannot do that. What it did
+// instead was rebuild from the standard sources and silently lose whatever else the catalog carried,
+// which is exactly how a per-request naming convention came to disable a review's interface profiles
+// and design intent (WS3-107).
+//
+// The base rules are carried across VERBATIM rather than re-composed: they are already namespaced, and
+// feeding a name like "profile-overlay/spi-nor-signal-missing" back through composition would be
+// rejected for containing the separator. Only extra is namespaced, and its names are checked against
+// everything already present, so an extension can never shadow a rule the base carried.
+func (c *Catalog) With(extra ...RuleSource) (*Catalog, error) {
+	out := &Catalog{
+		rules:  append(make([]*Rule, 0, len(c.rules)), c.rules...),
+		byName: maps.Clone(c.byName),
+	}
+	if out.byName == nil {
+		out.byName = map[string]*Rule{}
+	}
+	// Source names already represented in the base are seeded so re-adding one is the same duplicate
+	// error it would be in a single composition, rather than a confusing per-rule collision.
+	seen := map[string]bool{}
+	for _, r := range c.rules {
+		if src := r.Tags[KeySource]; src != "" {
+			seen[src] = true
+		}
+	}
+	if err := out.add(seen, extra...); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // DefaultCatalog is what the CLI and serve wire: the built-ins plus every source added via

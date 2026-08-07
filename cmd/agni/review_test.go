@@ -404,3 +404,76 @@ func TestReviewCmdConventionsUnreadable(t *testing.T) {
 		}
 	}
 }
+
+// runFullOverlayReview runs the conventions checklist with every overlay tier attached, optionally
+// omitting the convention, and returns the report.
+func runFullOverlayReview(t *testing.T, conventions string) string {
+	t.Helper()
+	cmd := reviewCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	args := []string{
+		"--checklist", "testdata/review/conv.yaml",
+		"--intent-path", "testdata/review/intent.yaml",
+		"--profile-path", "testdata/review/profiles",
+	}
+	if conventions != "" {
+		args = append(args, "--conventions", conventions)
+	}
+	cmd.SetArgs(append(args, "testdata/review/conv-demo.edn"))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review (--conventions %q): %v", conventions, err)
+	}
+	return out.String()
+}
+
+// TestReviewOverlayTiersCoexist pins that a convention carrying RULES adds to the catalog rather than
+// replacing it (WS3-107).
+//
+// Composing the per-request overlay used to rebuild the catalog from the standard sources, which keeps
+// the built-ins and every RegisterSource'd suite — true, and exactly what made the bug invisible — but
+// drops the catalog it was handed. For a review that catalog is the --profile-path and --intent-path
+// tiers, so adding one naming rule to a working config silently disabled interface profiles and design
+// intent for the whole run: 19 items pass -> needs-design-intent and 16 pass -> not-automated on one
+// real design, with no error anywhere to explain it.
+//
+// The assertion is that the intent-bound and profile-bound items reach a REAL verdict with the
+// convention loaded. Both fixtures are authored to FAIL rather than pass, because a pass is also what
+// a vanished tier could produce on a design with nothing wrong.
+func TestReviewOverlayTiersCoexist(t *testing.T) {
+	got := runFullOverlayReview(t, "testdata/review/conventions.yaml")
+	for _, want := range []string{
+		"| 16 | nets named consistently | fail |",                    // the convention's own rule
+		"| 70 | rail voltage matches the declared domain | fail |",   // --intent-path survived
+		"| 71 | SIGBUS signals present | fail |",                     // --profile-path survived
+		"intent/voltage-domain-mismatch",
+		"profile-overlay/sigbus-signal-missing",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a convention with rules dropped an overlay tier; missing %q\n---\n%s", want, got)
+		}
+	}
+	// Matched as a table CELL, not as a bare substring: the per-area tally lines name every outcome
+	// ("0 pass, 1 fail, 0 n/a, 0 not-automated"), so a substring test here would always fire.
+	for _, never := range []string{"| needs-design-intent |", "| not-automated |"} {
+		if strings.Contains(got, never) {
+			t.Errorf("an overlay tier went missing (%q in the report)\n---\n%s", never, got)
+		}
+	}
+}
+
+// TestReviewOverlayTiersCoexistWithoutAConvention is the control. The bug only triggered when the
+// convention carried RULES — a lexicon-only config composes no sources and took an early return that
+// was always correct — so without a convention at all, the same two items must already resolve. If
+// this ever fails, the fixtures stopped exercising the tiers and the test above proves nothing.
+func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
+	got := runFullOverlayReview(t, "")
+	for _, want := range []string{
+		"| 70 | rail voltage matches the declared domain | fail |",
+		"| 71 | SIGBUS signals present | fail |",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the overlay tiers must resolve with no convention loaded; missing %q\n---\n%s", want, got)
+		}
+	}
+}

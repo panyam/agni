@@ -19,3 +19,12 @@ areas:
       - id: "64"
         title: supply pins typed
         query: {match: 'pin.type(?r, ?p, "power_in") => ?r, ?p', subject: r, message: '{r} has a typed supply pin'}
+  - name: Intent
+    items:
+      # Bound to a rule the intent COMPILER emits. It resolves only if --intent-path was loaded AND its
+      # rules are still in the catalog the review runs from.
+      - {id: "70", title: rail voltage matches the declared domain, rule: intent/voltage-domain-mismatch}
+  - name: Interfaces
+    items:
+      # Bound to an overlay interface profile. Same job as item 70, for the other overlay tier.
+      - {id: "71", title: SIGBUS signals present, profile: SIGBUS}

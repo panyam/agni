@@ -1,0 +1,12 @@
+# An overlay interface profile, as a project supplies it to `agni review --profile-path`. Present for
+# the same reason as intent.yaml: to prove the profile tier is still in the catalog when a convention
+# carrying rules is also loaded.
+name: SIGBUS
+signals:
+  - {name: A, suffix: _A, anchor: true}
+  - {name: B, suffix: _B}
+  # Deliberately absent from the design, so the completeness check has a real violation to report and
+  # the item resolves to FAIL. A pass here would also be produced by the profile tier vanishing.
+  - {name: C, suffix: _C}
+requirements:
+  - {type: signal-missing}
