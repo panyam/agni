@@ -54,6 +54,47 @@ func TestQueryDesignCLI(t *testing.T) {
 	}
 }
 
+// TestQueryNetClassCLI (WS3-105) covers the whole net-class path, which no unit test can: the class
+// lives only in the .kicad_pro net_settings, so it reaches the IR through the PROJECT entry point
+// (the loader's AnnotateNetClasses call) and is invisible when the same board is opened as a bare
+// .kicad_sch. Both halves are asserted, because "the schematic read shows no classes" is the exact
+// silence the has_netclass marker exists to make visible.
+func TestQueryNetClassCLI(t *testing.T) {
+	run := func(path, q string) string {
+		t.Helper()
+		cmd := queryCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{path, q})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("query %s: %v", path, err)
+		}
+		return out.String()
+	}
+
+	s := run("testdata/conformance/showcase.passes.kicad_pro", "net.netclass(?n, ?c) => ?n, ?c")
+	for _, want := range []string{"USB_D+", "HighSpeed", "VBUS_PROT", "Power", "5 result(s)"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("project net.netclass query missing %q:\n%s", want, s)
+		}
+	}
+	// SCL is in no class, so it must not appear — an unclassed net yields no row at all.
+	if strings.Contains(s, "SCL") {
+		t.Errorf("net.netclass listed the unclassed net SCL:\n%s", s)
+	}
+	if mk := run("testdata/conformance/showcase.passes.kicad_pro", "has_netclass(?p) => ?p"); !strings.Contains(mk, "1 result(s)") {
+		t.Errorf("project has_netclass: want one row:\n%s", mk)
+	}
+
+	// The same board read as a bare schematic never sees the project file: no classes, no marker.
+	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "net.netclass(?n, ?c) => ?n, ?c"); !strings.Contains(bare, "no results") {
+		t.Errorf("schematic-only read must yield no net classes:\n%s", bare)
+	}
+	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "has_netclass(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("schematic-only read must yield no has_netclass marker:\n%s", bare)
+	}
+}
+
 func TestQuerySpecLibRequiresParams(t *testing.T) {
 	cmd := queryCmd()
 	cmd.SetArgs([]string{"--speclib", "param(?m,?s,?x)"})

@@ -1,1 +1,9 @@
-{}
+{
+  "net_settings": {
+    "netclass_assignments": { "+3V3": "Power" },
+    "netclass_patterns": [
+      { "netclass": "HighSpeed", "pattern": "USB_*" },
+      { "netclass": "Power", "pattern": "VBUS*" }
+    ]
+  }
+}

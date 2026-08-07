@@ -134,6 +134,15 @@ type Model interface {
 	// the source is under-typed, not undriven. The symmetric power_in side is stamped
 	// (StampPowerInPins) so decoupling / input-protection work; the power_out stamp is PR3.
 	FormatTypesPowerOut() bool
+	// net-class channel (WS3-105): whether the design carries any tool-assigned net-class
+	// membership at all. Only a KiCad project supplies it (net_settings in the .kicad_pro);
+	// an EDIF or IPC-2581 read, a bare .kicad_sch, and a project that declares no classes all
+	// leave every net_class empty. A rule SCOPED by net class evaluates over nothing there and
+	// reports clean, which a review cannot tell from a pass, so such a rule declares
+	// CapNetClass and reads not-applicable instead. Content-derived rather than
+	// format-derived: "this project declares no classes" and "this format has no classes" are
+	// the same answer to a scoped rule.
+	HasNetClasses() bool
 	// reach (WS3-011): the bounded series-walk neighborhood of a net — nets reachable by
 	// crossing two-net pass elements (R/L/ferrite/fuse), rails excluded — and the
 	// on-path class predicate over it. Protection rules are reachability questions: a

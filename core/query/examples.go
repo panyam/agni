@@ -56,6 +56,11 @@ var examples = []ExampleQuery{
 		Teaches: "class set membership: the diode family tag matches a plain diode, an LED, and a TVS",
 	},
 	{
+		Label:   "Nets the design tool put in a class",
+		Query:   "net.netclass(?net, ?class) => ?net, ?class",
+		Teaches: "tool-assigned scope: the class the layout tool recorded (KiCad net_settings), distinct from a derived role like net.ground",
+	},
+	{
 		Label:   "Signal nets clamped by a Zener at a connector",
 		Query:   `component.class(?j, "connector"), component-on-net(?j, ?net), component-on-net(?z, ?net), component.class(?z, "zener") => ?net, ?z`,
 		Teaches: "topology pattern: one net joining two device classes (the shape esd-clamp-not-tvs refines)",

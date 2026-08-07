@@ -116,6 +116,52 @@ func TestTypesPowerOutFact(t *testing.T) {
 	}
 }
 
+// TestNetClassFacts (WS3-105): net.netclass projects the TOOL-assigned class verbatim, one row per
+// classed net, and leaves an unclassed net out (so `not net.netclass(?n, ?_)` reads as unclassed).
+// has_netclass is the design-level marker that separates "no net is in class X" from "this design
+// assigns no classes", the distinction a netclass-scoped rule needs to avoid reading as a pass.
+func TestNetClassFacts(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		{Name: "USB_D+", NetClass: "HighSpeed", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "VBUS", NetClass: "Power", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "SCL", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	got := map[string]string{}
+	for _, f := range byRel[RelNetNetClass] {
+		got[f.Subject] = f.Value
+		if f.Cite == "" {
+			t.Errorf("net.netclass(%s) has no provenance cite", f.Subject)
+		}
+	}
+	want := map[string]string{"USB_D+": "HighSpeed", "VBUS": "Power"}
+	if len(got) != len(want) || got["USB_D+"] != want["USB_D+"] || got["VBUS"] != want["VBUS"] {
+		t.Errorf("net.netclass = %v, want %v (SCL is unclassed and must not appear)", got, want)
+	}
+
+	if mk := byRel[RelHasNetClass]; len(mk) != 1 || mk[0].Subject != "true" {
+		t.Errorf("want one has_netclass row (true), got %+v", mk)
+	}
+}
+
+// TestNetClassFactsAbsent (WS3-105): a design whose source carries no net classes — every format but
+// a KiCad project read, and a KiCad project that declares none — projects neither the relation nor
+// the marker. The empty marker is the signal a class-scoped rule gates on; without it an empty
+// net.netclass join is indistinguishable from a clean pass.
+func TestNetClassFactsAbsent(t *testing.T) {
+	d := &ir.Design{SourceFormat: "edif-2.0.0", Nets: []*ir.Net{
+		{Name: "USB_D+", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+	if n := byRel[RelNetNetClass]; len(n) != 0 {
+		t.Errorf("want no net.netclass rows on a classless design, got %+v", n)
+	}
+	if mk := byRel[RelHasNetClass]; len(mk) != 0 {
+		t.Errorf("want no has_netclass row on a classless design, got %+v", mk)
+	}
+}
+
 // TestFeedbackFacts (WS3-067): a feedback-named net projects a feedback fact (the datalog equivalent
 // of the test-point rule's exclusion); a plain rail does not.
 func TestFeedbackFacts(t *testing.T) {

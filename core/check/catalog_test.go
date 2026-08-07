@@ -38,6 +38,31 @@ func TestAvailableCapability(t *testing.T) {
 	}
 }
 
+// TestAvailableNetClassCapability (WS3-105): a rule SCOPED by net class selects nothing where the
+// design assigns no classes, so it would report clean without ever checking anything. The gate is
+// content-derived, not format-derived — a KiCad project that declares no classes is as unanswerable
+// as an EDIF netlist that cannot declare any, so both must read not-applicable.
+func TestAvailableNetClassCapability(t *testing.T) {
+	rule := &Rule{Reads: []string{"net.netclass"}, RequiresCapability: []Capability{CapNetClass}}
+
+	classless := NewModel(&ir.Design{SourceFormat: "kicad-sch", Nets: []*ir.Net{{Name: "USB_D+"}}})
+	if ok, reason := Available(rule, classless); ok || reason == "" {
+		t.Errorf("netclass rule on a class-free KiCad design: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
+	edif := NewModel(&ir.Design{SourceFormat: "edif-2.0.0", Nets: []*ir.Net{{Name: "USB_D+"}}})
+	if ok, reason := Available(rule, edif); ok || reason == "" {
+		t.Errorf("netclass rule on EDIF: got (%v, %q), want (false, non-empty)", ok, reason)
+	}
+
+	classed := NewModel(&ir.Design{SourceFormat: "kicad-sch", Nets: []*ir.Net{{Name: "USB_D+", NetClass: "HighSpeed"}}})
+	if ok, _ := Available(rule, classed); !ok {
+		t.Error("netclass rule on a design with classes: want available")
+	}
+	if ok, _ := Available(rule, nil); !ok {
+		t.Error("netclass rule at catalog listing (m==nil): want available")
+	}
+}
+
 func TestAvailableFromReads(t *testing.T) {
 	if ok, reason := Available(&Rule{Reads: []string{"net.pin_count", "on_net"}}, nil); !ok || reason != "" {
 		t.Errorf("topology-only rule: got (%v, %q), want (true, \"\")", ok, reason)

@@ -141,6 +141,14 @@ const (
 	// an nc-marker net name). Without it a per-pin absence rule (unconnected-pin) cannot tell a
 	// deliberate open pin from a forgotten one. The queryable twin is has_nc_channel / design.nc_channel.
 	CapNoConnectChannel Capability = "nc_channel"
+	// CapNetClass: the design carries tool-assigned net-class membership (WS3-105). A rule SCOPED
+	// by net class ("every HV net must ...") selects nothing where the field is empty, and a rule
+	// that finds nothing to check reports clean — indistinguishable from a pass. Only a KiCad
+	// project supplies the field, so an EDIF or IPC-2581 read, a bare .kicad_sch, and a project
+	// that declares no classes all need this gate. Unlike the two above it is a property of the
+	// design's CONTENT rather than its format grammar, which is the honest reading: a scoped rule
+	// has nothing to say either way. The queryable twin is has_netclass / the design.has_netclass fact.
+	CapNetClass Capability = "netclass"
 )
 
 // Run evaluates rules over a Model (the query interface) and returns findings sorted by rule

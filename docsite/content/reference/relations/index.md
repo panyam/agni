@@ -16,10 +16,12 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`component.mpn(ref_des, mpn)`](component.mpn/) | the design-side part identity (manufacturer part number) |
 | [`feedback(net)`](feedback/) | the net is a regulator feedback / sense node (must not be probed) |
 | [`has_nc_channel(present)`](has_nc_channel/) | one row when the design can express intentional no-connect |
+| [`has_netclass(present)`](has_netclass/) | one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean) |
 | [`net.bus_like(net)`](net.bus_like/) | a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate |
 | [`net.external(net)`](net.external/) | the net may extend onto an unread sheet (read-gap marker) |
 | [`net.ground(net)`](net.ground/) | the net is a ground rail (name-derived) |
 | [`net.max_voltage(net, volts)`](net.max_voltage/) | a net's declared rail voltage |
+| [`net.netclass(net, class)`](net.netclass/) | the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role) |
 | [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a rail's nominal voltage derived from its net name (3V3 -> 3.3) |
 | [`net.pin_count(net, count)`](net.pin_count/) | the number of connections on a net |
 | [`pin(ref_des, pin)`](pin/) | a part-type pin of a placed component |
