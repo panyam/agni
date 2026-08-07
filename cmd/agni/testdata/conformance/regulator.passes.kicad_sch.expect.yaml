@@ -1,4 +1,7 @@
 fires:
+  reverse-blocking-absent:
+    subjects: ["+12V"]
+    why: "incidental: J1 feeds the LDO with no reverse-blocking element in the path"
   decoupling-present:
     subjects: ["+12V"]
     why: "incidental: the 12V rail feeds a power-in pin with no decoupling capacitor"

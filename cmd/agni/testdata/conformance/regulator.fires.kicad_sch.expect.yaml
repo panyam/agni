@@ -1,4 +1,7 @@
 fires:
+  reverse-blocking-absent:
+    subjects: ["+24V"]
+    why: "incidental: J1 feeds the LDO with no reverse-blocking element in the path"
   supply-exceeds-abs-max:
     subjects: [U1]
     why: "U1 (MPN LM1117, the REAL TI part seeded in params/) has its power-in VIN on the +24V rail; the seeded abs-max VIN is 20V from datasheets/ti/LM1117.pdf page 4, '7.1 Absolute Maximum Ratings', so the vendor stress limit is exceeded and the finding cites that real page/table. Unlike the DEMO-MCU33 beat, this datasheet has an actual PDF to open."

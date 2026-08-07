@@ -1,4 +1,7 @@
 fires:
+  reverse-blocking-absent:
+    subjects: ["VBUS"]
+    why: "incidental: the USB connector feeds VBUS with no blocking element. A keyed USB plug cannot be reversed, which the rule cannot know — see the rule doc on breadth"
   decoupling-present:
     subjects: ["+3V3", VBUS]
     why: "Both rails lost their capacitors: +3V3 feeds the MCU's VDD bare, and VBUS feeds the regulator's VIN bare. The passes variant has C1/C2 on +3V3 and C5 on the protected input."

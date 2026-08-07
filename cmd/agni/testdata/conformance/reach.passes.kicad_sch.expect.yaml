@@ -3,4 +3,12 @@
 # PWR_FLAG driving the input net, a cap on it, and the regulator grounded. Every rule the
 # fires-variant trips must stay silent here; in particular input-protection must
 # recognize the fuse ACROSS two series hops, which is the reach walk's whole point.
-fires: {}
+fires:
+  reverse-blocking-absent:
+    subjects: ["JIN"]
+    why: |
+      NOT a false positive, and the clearest illustration of why this rule exists. This fixture is
+      "input-protection done RIGHT" — a fuse crossed on the path — and a fuse opens on current
+      MAGNITUDE regardless of sign, so it blocks nothing in reverse. The board is correctly protected
+      against the fault input-protection asks about and carries no reverse protection at all, which is
+      exactly the gap WS3-094 was filed for.
