@@ -6,6 +6,9 @@
 # stays quiet by the same walk (power-path nets are input-protection's turf).
 # Incidentals: the bead-fed input has no local cap and no driver.
 fires:
+  reverse-blocking-absent:
+    subjects: ["JIN"]
+    why: "incidental: the same bead-fed power entry input-protection flags; nothing directional is in the path either"
   input-protection:
     subjects: [JIN]
     why: "the power input is one bead away and nothing protects the path; invisible to any per-net rule"

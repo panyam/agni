@@ -43,6 +43,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [input-protection](input-protection/) | built-in | warning | A connector feeds a power-input pin directly with no fuse or TVS in the path. |
 | [power-input-not-driven](power-input-not-driven/) | built-in | error | A power-input pin sits on a net with no power source (no power-output and no power flag). |
 | [power-tap-conflict](power-tap-conflict/) | built-in | warning | One net is tapped by two different design-wide names (power symbols or global labels). |
+| [reverse-blocking-absent](reverse-blocking-absent/) | built-in | warning | A connector feeds a power input with no directional element blocking reverse flow. |
 | [test-point-coverage](test-point-coverage/) | built-in | info | A power rail or ground net has no test point, on a board that uses them. |
 
 ## naming
