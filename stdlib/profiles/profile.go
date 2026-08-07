@@ -64,23 +64,54 @@ type Requirement struct {
 // query builder — the check LOGIC stays Go (a closed vocabulary); only the COMPOSITION is data.
 type requirementCompiler func(Profile, Requirement) *check.Rule
 
-// requirementRegistry maps a requirement Type to its compiler. Built-ins are registered here as a
-// package var (initialized before register.go's init calls Compile, so no ordering hazard); an
-// overlay adds its own via RegisterRequirement. The four original WS3-034 requirements plus
-// WS3-045's termination.
-var requirementRegistry = map[string]requirementCompiler{
-	"signal-missing":  func(p Profile, _ Requirement) *check.Rule { return p.signalMissingRule() },
-	"host-incomplete": func(p Profile, _ Requirement) *check.Rule { return p.hostIncompleteRule() },
-	"missing-pullup":  func(p Profile, _ Requirement) *check.Rule { return p.pullupRule() },
-	"signal-dangling": func(p Profile, _ Requirement) *check.Rule { return p.danglingRule() },
-	"termination":     terminationRule,
+// requirementValidator reports why a requirement's declared params cannot produce the check its type
+// promises. It sees only the params, not the Profile: a param is valid or not on its own terms, and
+// keeping the signature narrow means a validator cannot quietly grow into a second compiler.
+//
+// Most requirement types take no params and register none (nil is the norm, not an omission).
+type requirementValidator func(params map[string]string) error
+
+// requirementEntry pairs a requirement type's compiler with its optional param validator. The two
+// live together because a type that needs params needs both: the compiler consumes them and the
+// validator is what stops an incomplete declaration reaching it.
+type requirementEntry struct {
+	compile  requirementCompiler
+	validate requirementValidator // nil when the type takes no params
+}
+
+// requirementRegistry maps a requirement Type to its compiler and optional param validator. Built-ins
+// are registered here as a package var (initialized before register.go's init calls Compile, so no
+// ordering hazard); an overlay adds its own via RegisterRequirement or
+// RegisterRequirementWithValidator. The four original WS3-034 requirements plus WS3-045's
+// termination, which is the only one taking params and so the only one with a validator.
+var requirementRegistry = map[string]requirementEntry{
+	"signal-missing":  {compile: func(p Profile, _ Requirement) *check.Rule { return p.signalMissingRule() }},
+	"host-incomplete": {compile: func(p Profile, _ Requirement) *check.Rule { return p.hostIncompleteRule() }},
+	"missing-pullup":  {compile: func(p Profile, _ Requirement) *check.Rule { return p.pullupRule() }},
+	"signal-dangling": {compile: func(p Profile, _ Requirement) *check.Rule { return p.danglingRule() }},
+	"termination":     {compile: terminationRule, validate: validateTermination},
 }
 
 // RegisterRequirement adds a requirement-type compiler under name (overwriting any existing entry).
 // The extension seam for an out-of-module overlay to ship a proprietary requirement type, same
 // open-core posture as check.RegisterSource / formats.Register.
+//
+// A type registered this way declares no params: any params a profile gives it are passed through to
+// the compiler unchecked. Use RegisterRequirementWithValidator when the type needs params, so a
+// customer's incomplete declaration is a teaching error at load rather than a surprise inside Compile.
 func RegisterRequirement(name string, c func(Profile, Requirement) *check.Rule) {
-	requirementRegistry[name] = requirementCompiler(c)
+	requirementRegistry[name] = requirementEntry{compile: c}
+}
+
+// RegisterRequirementWithValidator registers a requirement-type compiler together with a validator for
+// its params (WS3-047). The validator runs at LOAD time for a YAML-authored profile and at Compile time
+// for a Go-literal one, so an incomplete declaration is rejected wherever it arrives; its error text is
+// shown to the profile author verbatim, so it should name the params it wanted.
+//
+// It is a separate function rather than a signature change to RegisterRequirement because that seam is
+// public API an out-of-module overlay already builds against.
+func RegisterRequirementWithValidator(name string, c func(Profile, Requirement) *check.Rule, v func(params map[string]string) error) {
+	requirementRegistry[name] = requirementEntry{compile: c, validate: v}
 }
 
 // HasHost reports whether this profile is host-bound (WS3-042): a component must DECLARE the
@@ -192,13 +223,15 @@ func Compile(p Profile) []*check.Rule {
 	if err := validateAnchorDeclared(p); err != nil {
 		panic("profiles: " + err.Error())
 	}
+	// And for a requirement whose params cannot produce the check its type promises (WS3-047). Load
+	// rejects this for YAML profiles; a Go literal reaches Compile without passing Load, so the gate is
+	// repeated here rather than moved — the same twin posture as the two checks above.
+	if err := ValidateRequirements(p); err != nil {
+		panic("profiles: " + err.Error())
+	}
 	var rules []*check.Rule
 	for _, req := range p.Requirements {
-		c, ok := requirementRegistry[req.Type]
-		if !ok {
-			panic(fmt.Sprintf("profiles: profile %q declares unknown requirement type %q", p.Name, req.Type))
-		}
-		if r := c(p, req); r != nil {
+		if r := requirementRegistry[req.Type].compile(p, req); r != nil {
 			rules = append(rules, r)
 		}
 	}

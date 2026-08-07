@@ -74,6 +74,14 @@ func TestCompileRejectsWhatItCannotRun(t *testing.T) {
 			}),
 			want: "unknown requirement type",
 		},
+		"requirement with incomplete params": {
+			def: ProfileDef(profiles.Profile{
+				Name:         "X",
+				Signals:      []profiles.Signal{{Name: "A", Suffix: "_A", Anchor: true}, {Name: "B", Suffix: "_B"}},
+				Requirements: []profiles.Requirement{{Type: "termination", Params: map[string]string{"high": "_A"}}},
+			}),
+			want: "termination",
+		},
 		"completeness requirement with no anchor": {
 			def: ProfileDef(profiles.Profile{
 				Name:         "X",

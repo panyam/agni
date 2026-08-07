@@ -2,6 +2,7 @@ package profiles
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
@@ -16,12 +17,36 @@ import (
 // legitimately sits on both — a new requirement is new datalog, not new facts (the WS3-034 lesson).
 // Because `reaches` is transitive it also accepts a split termination (60Ω + 60Ω with a midpoint).
 //
-// Params: "high" and "low" name the two bridged net-name suffixes (e.g. "_CANH" / "_CANL"). A
-// requirement missing either param is a profile-authoring error, caught at Compile time.
+// Params: "high" and "low" name the two bridged net-name suffixes (e.g. "_CANH" / "_CANL"), required
+// and validated by validateTermination before this compiler is reached.
+// validateTermination rejects a termination requirement that does not name both bridged net suffixes.
+// Without them the generated datalog matches on the empty suffix, which every net satisfies, so the
+// rule would report the whole board as an unterminated bus rather than doing nothing visible.
+func validateTermination(params map[string]string) error {
+	var missing []string
+	for _, k := range []string{"high", "low"} {
+		if strings.TrimSpace(params[k]) == "" {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) > 0 {
+		noun := "param"
+		if len(missing) > 1 {
+			noun = "params"
+		}
+		return fmt.Errorf("needs the %s %s, naming the two bridged net-name suffixes (e.g. high: _CANH, low: _CANL); got %v",
+			strings.Join(missing, " and "), noun, params)
+	}
+	return nil
+}
+
 func terminationRule(p Profile, req Requirement) *check.Rule {
 	high, low := req.Params["high"], req.Params["low"]
 	if high == "" || low == "" {
-		panic(fmt.Sprintf("profiles: termination requirement on %q needs \"high\" and \"low\" params, got %v", p.Name, req.Params))
+		// Unreachable for a validated profile (Load rejects this, Compile panics on it); kept so a
+		// hand-built Requirement that bypasses both degrades to no rule instead of generating one that
+		// matches the empty suffix, i.e. every net on the board.
+		return nil
 	}
 	// The termination-specific rules as legible datalog. terminated(?h): a high-suffix net that
 	// reaches a low-suffix net through the series-passive walk — a resistor (or split pair) bridges

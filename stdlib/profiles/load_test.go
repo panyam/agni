@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -292,4 +293,103 @@ requirements:
 	}()
 	Compile(Profile{Name: "GOLIT", Signals: []Signal{{Name: "A", Suffix: "_A"}, {Name: "B", Suffix: "_B"}},
 		Requirements: []Requirement{{Type: "signal-missing"}}})
+}
+
+// A requirement whose params are missing is a customer-authoring error, so it must fail at LOAD with
+// a teaching error rather than panicking deep inside Compile (WS3-047). termination is the built-in
+// with params: it bridges two named net suffixes, and without them its generated datalog would match
+// on the empty suffix, i.e. every net.
+func TestLoadTerminationMissingParamTeaches(t *testing.T) {
+	base := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}, {name: L, suffix: _L}]\n"
+	for name, req := range map[string]string{
+		"no params":  "requirements: [{type: termination}]\n",
+		"no low":     "requirements: [{type: termination, params: {high: _H}}]\n",
+		"no high":    "requirements: [{type: termination, params: {low: _L}}]\n",
+		"empty low":  "requirements: [{type: termination, params: {high: _H, low: ''}}]\n",
+		"typo'd key": "requirements: [{type: termination, params: {high: _H, lo: _L}}]\n",
+	} {
+		_, err := Load(strings.NewReader(base + req))
+		if err == nil {
+			t.Errorf("%s: want a load error, got nil", name)
+			continue
+		}
+		// The error has to name the requirement type and the params it wanted, or it teaches nothing.
+		for _, want := range []string{"termination", "high", "low"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("%s: error should mention %q, got: %v", name, want, err)
+			}
+		}
+	}
+}
+
+// The same rejection reaches the actual --profile-path surface, not just the io.Reader one.
+func TestLoadDirRejectsBadRequirementParams(t *testing.T) {
+	dir := t.TempDir()
+	body := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}, {name: L, suffix: _L}]\nrequirements: [{type: termination, params: {high: _H}}]\n"
+	if err := os.WriteFile(filepath.Join(dir, "mybus.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadDir(dir)
+	if err == nil {
+		t.Fatal("LoadDir should reject a profile whose requirement params are incomplete")
+	}
+	if !strings.Contains(err.Error(), "mybus.yaml") || !strings.Contains(err.Error(), "termination") {
+		t.Errorf("error should name the file and the requirement, got: %v", err)
+	}
+}
+
+// A Go-literal profile bypasses Load, so Compile keeps its own gate — the same twin posture the file
+// already takes for an unsound matcher and a missing anchor. Removing it in favour of Load alone
+// would leave every built-in unguarded.
+func TestCompilePanicsOnIncompleteRequirementParams(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("Compile must panic on a termination requirement with no params")
+		}
+		if !strings.Contains(fmt.Sprint(r), "termination") {
+			t.Errorf("panic should teach what is wrong, got %v", r)
+		}
+	}()
+	Compile(Profile{
+		Name:         "MYBUS",
+		Signals:      []Signal{{Name: "H", Suffix: "_H", Anchor: true}, {Name: "L", Suffix: "_L"}},
+		Requirements: []Requirement{{Type: "termination"}},
+	})
+}
+
+// An overlay registering its own requirement type can ship a validator with it, so its params get the
+// same load-time teaching error the built-in gets. This is the seam a customer extends through.
+func TestRegisterRequirementWithValidatorRejectsAtLoad(t *testing.T) {
+	RegisterRequirementWithValidator("house-rule",
+		func(p Profile, _ Requirement) *check.Rule { return nil },
+		func(params map[string]string) error {
+			if params["mode"] == "" {
+				return fmt.Errorf("needs a \"mode\" param (one of: strict, lax)")
+			}
+			return nil
+		})
+	defer delete(requirementRegistry, "house-rule")
+
+	base := "name: MYBUS\nsignals: [{name: H, suffix: _H, anchor: true}]\n"
+	_, err := Load(strings.NewReader(base + "requirements: [{type: house-rule}]\n"))
+	if err == nil {
+		t.Fatal("want a load error for the overlay requirement's missing param")
+	}
+	if !strings.Contains(err.Error(), "house-rule") || !strings.Contains(err.Error(), "mode") {
+		t.Errorf("error should name the requirement and its param, got: %v", err)
+	}
+	if _, err := Load(strings.NewReader(base + "requirements: [{type: house-rule, params: {mode: strict}}]\n")); err != nil {
+		t.Errorf("a satisfied validator should load cleanly, got: %v", err)
+	}
+}
+
+// Every built-in still loads and validates: CAN is the one that declares termination, so this is the
+// regression gate that the new check does not reject the profiles that ship.
+func TestBuiltinsPassRequirementValidation(t *testing.T) {
+	for _, p := range Profiles {
+		if err := ValidateRequirements(p); err != nil {
+			t.Errorf("built-in %q must satisfy its own requirement validators: %v", p.Name, err)
+		}
+	}
 }
