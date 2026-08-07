@@ -242,11 +242,25 @@ func profileRoles(p Profile) []string {
 	return roles
 }
 
-// mustParse loads a built-in profile from its embedded YAML, panicking on error (a malformed built-in
-// is a programmer error caught at package init, same posture as ruleDoc).
+// mustParse builds a built-in profile from its embedded YAML — the authoritative declaration since
+// WS3-049 — panicking on error, so a malformed built-in fails at package init rather than shipping a
+// profile that cannot do what it says (same posture as ruleDoc).
+//
+// It runs BOTH validation halves, so a built-in is held to exactly what a customer's overlay profile
+// is: Parse covers structure and matchers, ValidateRequirements covers requirement types and their
+// params (WS3-047).
+//
+// It deliberately does not call Load, which is the other route that pairs those two halves. Load also
+// resolves NAMING MAPS, which look their target up in Profiles — and Profiles is the list these very
+// vars populate, so a built-in initialized through Load is an initialization cycle the compiler
+// rejects (Profiles -> SPINOR -> Load -> loadNamingMap -> builtinProfileNames -> Profiles). Calling
+// the two validators directly gets identical coverage with no cycle, since neither reaches Profiles.
 func mustParse(b []byte) Profile {
 	p, err := Parse(b)
 	if err != nil {
+		panic(fmt.Sprintf("profiles: malformed built-in profile: %v", err))
+	}
+	if err := ValidateRequirements(p); err != nil {
 		panic(fmt.Sprintf("profiles: malformed built-in profile: %v", err))
 	}
 	return p

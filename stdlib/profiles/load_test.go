@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -60,26 +59,39 @@ func TestNamingMapErrors(t *testing.T) {
 	}
 }
 
-// TestBuiltinsMatchYAML holds each built-in's Go literal identical to its embedded YAML declaration,
-// so the two forms kept side by side (per the TODO in spinor.go/emmc.go/can.go, for comparison until
-// the YAML form becomes authoritative) provably cannot drift. A mismatch here means the YAML and the
-// Go value have diverged.
-func TestBuiltinsMatchYAML(t *testing.T) {
+// Every built-in profile is well-formed and compiles to the rule set its declaration implies. This
+// replaces TestBuiltinsMatchYAML (WS3-049), which held each built-in's Go literal identical to its
+// embedded YAML while both forms were kept side by side. With the YAML authoritative there is only
+// one form, so equality with itself proves nothing; what still needs a gate is that the authoritative
+// declaration parses, validates, and yields the expected rules. The per-profile behavioral suites
+// (TestSPINORFires, TestCANFires, ...) remain the check on what those rules DO.
+//
+// The rule counts are the observable the flip had to preserve: they were captured from the Go-literal
+// build and must not move.
+func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 	for _, c := range []struct {
-		name string
-		lit  Profile
-		yaml []byte
+		name  string
+		p     Profile
+		rules int
 	}{
-		{"SPI_NOR", SPINOR, spinorYAML},
-		{"eMMC", EMMC, emmcYAML},
-		{"CAN", CAN, canYAML},
-		{"LIN", LIN, linYAML},
-		{"A2B", A2B, a2bYAML},
-		{"PCIe", PCIE, pcieYAML},
-		{"SGMII", SGMII, sgmiiYAML},
+		{"SPI_NOR", SPINOR, 4},
+		{"eMMC", EMMC, 4},
+		{"CAN", CAN, 4},
+		{"LIN", LIN, 4},
+		{"A2B", A2B, 3},
+		{"PCIe", PCIE, 3},
+		{"SGMII", SGMII, 3},
 	} {
-		if got := mustParse(c.yaml); !reflect.DeepEqual(got, c.lit) {
-			t.Errorf("%s: YAML declaration != Go literal\n yaml: %+v\n  go:  %+v", c.name, got, c.lit)
+		if c.p.Name == "" {
+			t.Errorf("%s: built-in did not initialize from its YAML", c.name)
+			continue
+		}
+		if err := Validate(c.p); err != nil {
+			t.Errorf("%s: %v", c.name, err)
+			continue
+		}
+		if got := len(Compile(c.p)); got != c.rules {
+			t.Errorf("%s: want %d compiled rules, got %d", c.name, c.rules, got)
 		}
 	}
 }
