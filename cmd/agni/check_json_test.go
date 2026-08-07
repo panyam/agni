@@ -182,3 +182,47 @@ func TestCheckJSONSheets(t *testing.T) {
 		}
 	}
 }
+
+// TestRegulatorOutputAbsMaxConformance is WS3-028's end-to-end acceptance: the connection-aware rule
+// running through the CLI on a committed fixture, with BOTH datasheets on the wire. The unit tests
+// cover the comparison; this covers the whole path, including that the plural citation field survives
+// the proto round trip that a unit test never exercises.
+func TestRegulatorOutputAbsMaxConformance(t *testing.T) {
+	cmd := checkCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--format", "json", "--rule", "regulator-output-exceeds-abs-max",
+		"--params", "testdata/conformance/regparams", "testdata/conformance/regout.fires.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	var doc struct {
+		Findings []struct {
+			Subject struct {
+				Ref string `json:"ref"`
+			} `json:"subject"`
+			Message    string `json:"message"`
+			Datasheets []struct {
+				Doc string `json:"doc"`
+			} `json:"datasheets"`
+		} `json:"findings"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+		t.Fatalf("unmarshal: %v\n%s", err, out.String())
+	}
+	if len(doc.Findings) != 1 {
+		t.Fatalf("want 1 finding, got %d: %s", len(doc.Findings), out.String())
+	}
+	f := doc.Findings[0]
+	if f.Subject.Ref != "U2" {
+		t.Errorf("subject = %q, want U2 (the endangered part)", f.Subject.Ref)
+	}
+	// Two citations, one per part the conclusion rests on. A single-citation regression here would
+	// still produce a correct-looking finding, which is why the count is asserted and not just the docs.
+	if len(f.Datasheets) != 2 {
+		t.Fatalf("want 2 citations on the wire, got %d: %+v", len(f.Datasheets), f.Datasheets)
+	}
+	if f.Datasheets[0].Doc != "ACME-33 Rev B" || f.Datasheets[1].Doc != "ACME-REG Rev A" {
+		t.Errorf("citations = %+v, want the load's doc then the source's", f.Datasheets)
+	}
+}

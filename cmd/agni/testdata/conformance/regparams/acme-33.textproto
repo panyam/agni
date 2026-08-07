@@ -1,0 +1,13 @@
+mpn: "ACME-33"
+manufacturer: "Acme"
+docs { id: "ds" title: "ACME-33 Rev B" vendor: "Acme" }
+device_class: "mcu"
+parameters {
+  name: "Supply voltage" symbol: "VDD"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 3.6 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "ds" page: 4 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1.0 }
+}
