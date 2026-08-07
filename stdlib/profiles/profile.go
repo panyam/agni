@@ -355,7 +355,7 @@ func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, sub
 			Tags:     p.tags(),
 			Detail:   ruleDoc("signal-missing"),
 		},
-		Query:      q,
+		Query:      mustBindHeadFirst(q),
 		Kind:       kind,
 		SubjectVar: subjectVar,
 		Message:    msg,
@@ -391,13 +391,20 @@ func (p Profile) pullupRule() *check.Rule {
 		// The reaches form is KEPT rather than replaced. It covers the multi-hop cases that work today
 		// (a pull-up behind a series element to a narrow rail), and adding a clause can only make more
 		// nets pulled — so this change can remove a false positive and cannot introduce a finding.
+		// Both clauses open with needs_pullup(?n) so the head variable is BOUND before anything
+		// scans (WS3-114). Without it the direct form's first atom enumerates every (component,
+		// net) pair on the board and the third re-scans per survivor; the reaches form walks from
+		// every net. unpulled already conjoins needs_pullup, so this removes only head facts that
+		// were computed and then thrown away.
 		query.Def(query.Rel("pulled", query.V("n")),
+			query.Pos(query.Rel("needs_pullup", query.V("n"))),
 			query.Pos(query.Rel("component-on-net", query.V("pu"), query.V("n"))),
 			query.Pos(query.Rel("component.class", query.V("pu"), query.Str("resistor"))),
 			query.Pos(query.Rel("component-on-net", query.V("pu"), query.V("rail"))),
 			query.Cmp(query.V("rail"), "!=", query.V("n")),
 			query.Pos(query.Rel("rail", query.V("rail")))),
 		query.Def(query.Rel("pulled", query.V("n")),
+			query.Pos(query.Rel("needs_pullup", query.V("n"))),
 			query.Pos(query.Rel("reaches", query.V("n"), query.V("rail"))),
 			query.Pos(query.Rel("rail", query.V("rail")))),
 		query.Def(query.Rel("unpulled", query.V("n")),
@@ -415,7 +422,7 @@ func (p Profile) pullupRule() *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("missing-pullup"),
 		},
-		Query:      q,
+		Query:      mustBindHeadFirst(q),
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} needs a pull-up but reaches no rail", p.Name),
@@ -447,9 +454,33 @@ func (p Profile) danglingRule() *check.Rule {
 			Tags:     p.tags(),
 			Detail:   ruleDoc("signal-dangling"),
 		},
-		Query:      q,
+		Query:      mustBindHeadFirst(q),
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} has fewer than 2 connections (named but not wired through)", p.Name),
 	})
+}
+
+// mustBindHeadFirst is the WS3-114 guard on every query a requirement compiler generates: no derived
+// rule may OPEN with an unbound `reaches`, which walks from every net on the board before any filter
+// applies.
+//
+// It panics rather than returning an error because a violation is an authoring mistake in engine
+// code, not a runtime input, and the compilers run at package init — so a bad rule fails loudly the
+// moment anything imports profiles, which is the same posture ruleDoc already takes for a missing
+// requirement doc. The alternative, discovering it later, is what happened: two rules shipped in that
+// shape and made `agni check` non-terminating on a real board while every fixture stayed green,
+// because a profile fixture is far too small to show the cost.
+//
+// It is applied HERE, at the profile compilers, and deliberately not inside query.RuleFromQuery. A
+// hand-authored query may legitimately lead with a small relation that omits the head variable when
+// that is the cheaper plan; a generated one has no such excuse, because its author cannot see the
+// board it will run against.
+func mustBindHeadFirst(q query.Query) query.Query {
+	if bad := query.GeneratorFirstRules(q); len(bad) > 0 {
+		panic(fmt.Sprintf("profiles: generated rule(s) %v open with an unbound reaches, so the walk "+
+			"starts from every net on the board and `agni check` will not finish on a real design "+
+			"(WS3-114); reorder the body to lead with the guard the consuming rule already conjoins", bad))
+	}
+	return q
 }
