@@ -111,3 +111,69 @@ func TestCheckConventionsAndProfilesTogether(t *testing.T) {
 		}
 	}
 }
+
+// An over-broad or self-colliding overlay profile warns on STDERR without touching the findings
+// (WS3-101). The routing is the point: a config mistake belongs to the profile author, so it must not
+// enter the findings stream that --format json serializes, nor change the exit code.
+func TestCheckProfilePathWarnsOnCollidingSignals(t *testing.T) {
+	dir := t.TempDir()
+	// "B" with suffix "A" also matches every _TBA net, so the two roles cannot be told apart.
+	yaml := `
+name: COLLIDE
+signals:
+  - {name: A, suffix: _TBA, anchor: true}
+  - {name: B, suffix: A}
+requirements:
+  - {type: signal-dangling}
+`
+	if err := os.WriteFile(filepath.Join(dir, "collide.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := checkCmd()
+	var out, errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetArgs([]string{"--format", "json", "--profile-path", dir, "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("a config warning must not fail the run: %v", err)
+	}
+	if !strings.Contains(errOut.String(), "COLLIDE") || !strings.Contains(errOut.String(), "cannot tell these two roles apart") {
+		t.Errorf("want a collision warning on stderr, got: %q", errOut.String())
+	}
+	if strings.Contains(out.String(), "COLLIDE") {
+		t.Errorf("the warning must not reach stdout, which tooling parses: %s", out.String())
+	}
+	var got struct {
+		Findings []json.RawMessage `json:"findings"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("stdout must stay valid JSON: %v\n%s", err, out.String())
+	}
+}
+
+// A sound overlay profile produces no warning at all, or the diagnostic is noise from the first run.
+func TestCheckProfilePathQuietOnSoundProfile(t *testing.T) {
+	dir := t.TempDir()
+	yaml := `
+name: TESTBUS
+signals:
+  - {name: A, suffix: _TBA, anchor: true}
+  - {name: B, suffix: _TBB}
+requirements:
+  - {type: signal-dangling}
+`
+	if err := os.WriteFile(filepath.Join(dir, "testbus.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := checkCmd()
+	var out, errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetArgs([]string{"--format", "json", "--profile-path", dir, "testdata/profiles/overlay-bus.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(errOut.String(), "warning:") {
+		t.Errorf("a sound profile must be silent, got: %q", errOut.String())
+	}
+}

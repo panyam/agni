@@ -256,6 +256,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				warnOverBroadProfiles(cmd.ErrOrStderr(), args[0], ps)
 				extra = append(extra, profiles.Source("profile-overlay", ps))
 			}
 			if intentPath != "" {
