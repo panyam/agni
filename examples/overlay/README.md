@@ -13,19 +13,54 @@ house-style rules, private design data — in an overlay like this one.
 
 - `acmeformat/` — a toy `.acme` netlist reader that registers itself with `formats.Register`
   (WS12-003). One blank import and `.acme` resolves through the engine's Loader and CLI.
-- `acmerules/` — a house-style rule (`X`-prefixed ref-des = experimental, not for production)
-  registered with `check.RegisterSource` (WS12-004). It appears in the catalog namespaced
-  `acme/no-experimental-refdes`, so it can never shadow a built-in.
-- `main.go` — composes the two with two blank imports, loads a `.acme` design, and runs the
-  catalog (built-ins **plus** the registered rule).
+- `acmerules/` — two house-style rules registered with `check.RegisterSource` (WS12-004), one of
+  each authoring style, namespaced `acme/...` so neither can shadow a built-in:
+  - `acmerules.go` — a **Go** rule with an `Eval` closure (`X`-prefixed ref-des = experimental).
+  - `acmedatalog.go` — a **datalog** rule declared as a query and turned into a catalog rule by
+    `query.RuleFromQuery` (WS3-038). It joins two pin relations with a net-level one, over the
+    engine's public relations, with no engine change.
+- `main.go` — composes them with blank imports, loads a `.acme` design, and runs the catalog
+  (built-ins **plus** the registered rules).
 
 ```
 $ go run . testdata/example.acme
 loaded testdata/example.acme: 4 components, 3 nets (via the overlay's .acme reader)
 
+2 finding(s):
+  [warning] acme/experimental-on-power-net: VCC (net VCC carries a production power pin and an experimental (X-prefixed) part)
+  [warning] acme/no-experimental-refdes: X1 (experimental (X-prefixed) part in a production design)
+```
+
+## Authoring a rule in datalog: two things that bite
+
+**A datalog rule needs the fact base imported.** `stdlib/relations` installs the engine's relations
+in its `init`, so a composing binary must blank-import it:
+
+```go
+_ "github.com/panyam/agni/stdlib/relations"
+```
+
+Leave it out and nothing fails. The build succeeds, the run succeeds, and the datalog rule simply
+matches nothing and reports clean:
+
+```
+$ go run . testdata/example.acme      # with the import removed
+loaded testdata/example.acme: 4 components, 3 nets (via the overlay's .acme reader)
+
 1 finding(s):
   [warning] acme/no-experimental-refdes: X1 (experimental (X-prefixed) part in a production design)
 ```
+
+The Go rule still fires; the datalog one is gone without a word. A quiet pass on a design that may
+be violating the rule is the worst failure shape there is, which is why `main.go` spells the import
+out and `overlay_test.go` asserts the rule actually produces findings.
+
+**Pin relations need the reader to declare pins.** `pin`, `pin.role`, `pin.type` and `pin.net`
+project from PART-TYPE pins, not from net connections. A connection says a pin is wired somewhere; a
+pin declaration says the pin exists, what it is called, and what type it is. A format that emits only
+connections leaves every pin relation empty, so a pin-level rule finds nothing — the same silent
+shape as above. That is why `.acme` has a `pin` line and why the reader synthesizes a `PartType` per
+component for its sections to reference.
 
 ## How it depends on the engine
 
@@ -39,5 +74,7 @@ engine never imports the overlay (CONSTRAINTS C18).
 
 This skeleton drives the engine *library* so the composition is visible in one file. Reusing the
 engine's whole CLI (`agni-overlay serve`/`check`/…) needs the engine to export a reusable
-command root — a separate change. Authoring a rule in a DSL rather than Go rides the WS3-004/007
-+ WS12-002 dynamic-loader path.
+command root — a separate change.
+
+The datalog rule here is still a Go *value* compiled into the binary. Loading rule text from a file
+at runtime, with no Go build, rides the WS3-004/007 + WS12-002 dynamic-loader path.

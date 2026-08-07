@@ -12,13 +12,21 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
 )
 
 // init registers the suite as a named RuleSource. An overlay uses import-side-effect
 // registration so a consumer wires the suite in with one blank import; the alternative is an
 // explicit RegisterSource call from the composing binary's main (see WS12-004).
+//
+// The suite carries one rule of each authoring style, which is the point of the pair: a Go rule
+// with an Eval closure (below) and a datalog rule declared as a query (acmedatalog.go). They
+// register identically, so the choice is the author's and the engine does not care.
 func init() {
-	check.RegisterSource(check.NewSource("acme", []*check.Rule{noExperimentalRefDes}))
+	check.RegisterSource(check.NewSource("acme", []*check.Rule{
+		noExperimentalRefDes,
+		query.RuleFromQuery(experimentalOnPowerNet),
+	}))
 }
 
 // noExperimentalRefDes is a house rule: an X-prefixed ref-des marks an experimental/breadboard
