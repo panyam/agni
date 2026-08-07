@@ -145,3 +145,56 @@ func TestEMMCHostWhollyAbsent(t *testing.T) {
 		t.Fatalf("wholly-absent bus: want 11 host-incomplete findings, got %d", got)
 	}
 }
+
+// emmcWideRail is emmcGood with a REALISTIC rail: +3V3 fans out to a couple of dozen loads instead of
+// the two in emmcGood. Everything else is identical, and CMD is still pulled up to it through R1.
+//
+// That one difference is the whole bug (WS3-108). The generated pull-up check asked
+// `reaches(n, rail)`, and the WS3-011 series walk deliberately refuses to cross INTO a net whose
+// fan-out exceeds maxWalkFan (16) — a guard that is right for its own purpose, since it stops a walk
+// wandering across a plane as though it were a series path. But a pull-up TERMINATES on a rail, and a
+// rail is wide almost by definition, so the one destination the rule needs was the one kind of net the
+// walk would not enter. Verified on a real board: EMMC_CMD pulled up by R209 to a genuine 1.8V rail
+// with 51 pins on it, reported as reaching no rail.
+//
+// emmcGood keeps a two-pin rail, which is why the suite passed while the rule could not do its job on
+// any real design.
+func emmcWideRail() *ir.Design {
+	d := emmcGood()
+	loads := make([]string, 0, 24)
+	loads = append(loads, "R1.2", "U2.12")
+	for i := 0; i < 22; i++ {
+		ref := "C" + itoa(i)
+		d.Components = append(d.Components, comps(ref)...)
+		loads = append(loads, ref+".1")
+	}
+	for i, n := range d.Nets {
+		if n.Name == "+3V3" {
+			d.Nets[i] = net("+3V3", loads...)
+		}
+	}
+	return d
+}
+
+func itoa(i int) string {
+	if i < 10 {
+		return string(rune('0' + i))
+	}
+	return string(rune('0'+i/10)) + string(rune('0'+i%10))
+}
+
+// TestEMMCPullupSeesAWideRail is the WS3-108 regression. A signal pulled to a rail through a single
+// resistor must read as pulled whatever that rail's fan-out.
+func TestEMMCPullupSeesAWideRail(t *testing.T) {
+	d := emmcWideRail()
+	for _, n := range d.Nets {
+		if n.Name == "+3V3" && len(n.Connections) <= 16 {
+			t.Fatalf("fixture is not exercising the guard: +3V3 has %d connections, need > 16", len(n.Connections))
+		}
+	}
+	for _, f := range check.Run(check.NewModel(d), Compile(EMMC)) {
+		if strings.Contains(f.Rule, "missing-pullup") {
+			t.Errorf("CMD is pulled up to +3V3 through R1, but the rule reports %+v", f)
+		}
+	}
+}

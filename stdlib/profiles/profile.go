@@ -345,6 +345,24 @@ func (p Profile) pullupRule() *check.Rule {
 		return nil
 	}
 	rules = append(rules,
+		// A signal is pulled two ways, and two rules sharing a head is how datalog spells disjunction.
+		//
+		// The DIRECT form — a resistor sitting on this net and also on a rail — is the shape a pull-up
+		// actually has, and it is the one that works on a real board. The reaches form cannot see it
+		// (WS3-108): the series walk refuses to cross INTO a net whose fan-out exceeds maxWalkFan, which
+		// is right for its own purpose, but a pull-up TERMINATES on a rail and a rail is wide almost by
+		// definition. So the one destination this rule needs was the one kind of net the walk would not
+		// enter, and `pulled` could not become true however correct the design was.
+		//
+		// The reaches form is KEPT rather than replaced. It covers the multi-hop cases that work today
+		// (a pull-up behind a series element to a narrow rail), and adding a clause can only make more
+		// nets pulled — so this change can remove a false positive and cannot introduce a finding.
+		query.Def(query.Rel("pulled", query.V("n")),
+			query.Pos(query.Rel("component-on-net", query.V("pu"), query.V("n"))),
+			query.Pos(query.Rel("component.class", query.V("pu"), query.Str("resistor"))),
+			query.Pos(query.Rel("component-on-net", query.V("pu"), query.V("rail"))),
+			query.Cmp(query.V("rail"), "!=", query.V("n")),
+			query.Pos(query.Rel("rail", query.V("rail")))),
 		query.Def(query.Rel("pulled", query.V("n")),
 			query.Pos(query.Rel("reaches", query.V("n"), query.V("rail"))),
 			query.Pos(query.Rel("rail", query.V("rail")))),
