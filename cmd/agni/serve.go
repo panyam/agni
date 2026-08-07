@@ -22,6 +22,7 @@ import (
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
 	"github.com/panyam/agni/stdlib/rules/intent"
@@ -98,7 +99,17 @@ func serveCmd() *cobra.Command {
 			mux.Handle(wsPath, wsHandler)
 			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
 			mux.Handle(dsPath, dsHandler)
-			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(service.NewCheckService(loader, check.DefaultCatalog(), specs)))
+			// Overlay interface profiles are startup config for the WHOLE server, not just the review
+			// surface (WS3-048). Loaded once here and composed into both the CheckService catalog below
+			// and the ReviewService catalog further down, so a customer's overlay-declared interface is
+			// visible wherever rules run — the web check panel and ListRules included. Before this, a
+			// profile authored in an overlay fired on the CLI and was invisible in the viewer, which is
+			// where the interface-aware view (WS9-041) presents it.
+			overlayProfiles, err := loadOverlayProfiles(profilePath)
+			if err != nil {
+				return err
+			}
+			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(service.NewCheckService(loader, serveCheckCatalog(overlayProfiles), specs)))
 			mux.Handle(ckPath, ckHandler)
 			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader)))
 			mux.Handle(diffPath, diffHandler)
@@ -110,7 +121,7 @@ func serveCmd() *cobra.Command {
 			// startup config (like --params above), composed ONCE into the catalog + profile index the
 			// service holds, so a RunReview request only names the manifest, design(s), and board. A bad
 			// --profile-path/--intent-path fails serve startup rather than every review request.
-			reviewCatalog, reviewProfiles, err := composeReviewInputs(profilePath, intentPath)
+			reviewCatalog, reviewProfiles, err := composeReviewInputsFrom(overlayProfiles, intentPath)
 			if err != nil {
 				return err
 			}
@@ -168,7 +179,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's default: its rules join the catalog and its lexicon becomes the default naming vocabulary. A request may name its own instead")
-	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the ReviewService catalog")
+	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses: the check panel and ListRules as well as reviews")
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the ReviewService catalog so intent-bound review items resolve")
 	return c
 }
@@ -251,4 +262,19 @@ func themeNames() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// serveCheckCatalog is the rule catalog the served CheckService runs: the built-ins plus any overlay
+// interface profiles this server was started with (WS3-048). It exists as a named function so the
+// invariant is testable without standing up a listener — the regression it guards is a future edit
+// handing NewCheckService a bare DefaultCatalog again, which compiles, serves, and silently omits a
+// customer's profiles from the check panel and ListRules.
+//
+// The namespace is "profile-overlay", matching `agni check --profile-path`, so a rule has the same
+// name in the viewer as on the CLI.
+func serveCheckCatalog(overlay []profiles.Profile) *check.Catalog {
+	if len(overlay) == 0 {
+		return check.DefaultCatalog()
+	}
+	return check.CatalogWith(profiles.Source("profile-overlay", overlay))
 }
