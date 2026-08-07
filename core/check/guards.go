@@ -68,7 +68,7 @@ func ExpectedDiffNegative(name string) (string, bool) {
 // connector-facing signal without a discrete TVS (WS3-073). Silent without a seeded param set
 // (m.PartSpec is nil), so esd behaves exactly as before on a design read with no datasheets.
 func ICESDRated(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
+	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		for _, c := range rn.Connections {
 			if spec := m.PartSpec(c.ComponentRef); spec != nil && len(EsdRatingLimits(spec)) > 0 {
 				return true
@@ -109,7 +109,7 @@ func IsPowerRailName(name string) bool { return classify.ActiveRoleVocab().IsRai
 // series reach (WS3-011): the esd/input-protection turf split must not depend on whether
 // a bead sits between the connector and the regulator.
 func PowerPinReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
+	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		if CountDir(NetDirs(m, rn), func(d ir.PinDirection) bool {
 			return d == ir.PinDirection_PIN_DIRECTION_POWER_IN || d == ir.PinDirection_PIN_DIRECTION_POWER_OUT
 		}) >= 1 {
@@ -133,7 +133,7 @@ func ScopeOf(name string) (scope, leaf string) {
 // (WS3-011): ESD structures commonly put a series resistor between the connector and
 // the clamped node, which splits the net and hid the clamp from the pre-reach rule.
 func TVSReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
+	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		if Exists(rn.Connections, func(c *ir.Connection) bool {
 			return m.HasClass(c.ComponentRef, ClassTVS)
 		}) {
@@ -149,7 +149,7 @@ func TVSReachable(m Model, n *ir.Net) bool {
 // check matters: a board can have a protected 5V path and an unprotected 3V3 path off
 // one connector, and protection on one must not excuse the other.
 func UnprotectedPowerReach(m Model, n *ir.Net) bool {
-	r := m.Reach(n, 3)
+	r := m.Reach(n, PowerPathReachHops)
 	protectorOn := func(net *ir.Net) bool {
 		return Exists(net.Connections, func(c *ir.Connection) bool {
 			return m.HasClass(c.ComponentRef, ClassFuse) || m.HasClass(c.ComponentRef, ClassTVS)
@@ -191,7 +191,7 @@ func UnprotectedPowerReach(m Model, n *ir.Net) bool {
 // distinct from a TVS (a slower clamp), so esd-protection does not count it as ESD protection;
 // esd-clamp-not-tvs (WS3-078) reports its presence separately for the review to weigh.
 func ZenerReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, 2).Nets {
+	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		if Exists(rn.Connections, func(c *ir.Connection) bool {
 			return m.HasClass(c.ComponentRef, ClassZener)
 		}) {

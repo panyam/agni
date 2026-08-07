@@ -1,6 +1,7 @@
 package query
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -221,6 +222,100 @@ func TestReachesRecursion(t *testing.T) {
 	}
 	if !got["A"] || !got["B"] {
 		t.Errorf("reaches(A) = %v, want A and B (through the series resistor)", got)
+	}
+}
+
+// reachChainDesign is a straight series chain N0 -R1- N1 -R2- N2 -R3- N3, so every net sits at a
+// known, distinct distance from N0. The graded distance is the point: a fixture where everything is
+// one hop away cannot tell a radius filter from a no-op.
+func reachChainDesign() *ir.Design {
+	d := &ir.Design{}
+	for i := 1; i <= 3; i++ {
+		d.Components = append(d.Components, &ir.Component{
+			RefDes: fmt.Sprintf("R%d", i), Sections: []*ir.ComponentSection{{PartRef: "R"}},
+			Prov: &ir.Provenance{SourceFile: "c"},
+		})
+	}
+	for i := 0; i <= 3; i++ {
+		var conns []*ir.Connection
+		if i > 0 {
+			conns = append(conns, &ir.Connection{ComponentRef: fmt.Sprintf("R%d", i), PinRef: "2"})
+		}
+		if i < 3 {
+			conns = append(conns, &ir.Connection{ComponentRef: fmt.Sprintf("R%d", i+1), PinRef: "1"})
+		}
+		d.Nets = append(d.Nets, &ir.Net{
+			Name: fmt.Sprintf("N%d", i), Connections: conns, Prov: &ir.Provenance{SourceFile: "c"},
+		})
+	}
+	return d
+}
+
+// TestReachesBindsDistance (WS3-112): the optional third argument binds the number of series
+// crossings, reflexive at 0, so a rule states its own radius instead of inheriting the engine's.
+func TestReachesBindsDistance(t *testing.T) {
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `reaches("N0", ?n, ?h) => ?n, ?h`)
+	got := map[string]string{}
+	for _, r := range rows {
+		got[r.Bind["n"].S] = r.Bind["h"].S
+	}
+	want := map[string]string{"N0": "0", "N1": "1", "N2": "2", "N3": "3"}
+	for n, w := range want {
+		if got[n] != w {
+			t.Errorf("reaches(N0, %s, ?h) bound %q, want %q (full: %v)", n, got[n], w, got)
+		}
+	}
+}
+
+// TestReachesRadiusFilter (WS3-112) is the test that would have caught composing a 2-hop protection
+// predicate out of the 100-hop reaches built-in: a clamp three series elements away must NOT satisfy
+// a "within two hops" question, and reporting that it does is a false PASS on a real defect.
+func TestReachesRadiusFilter(t *testing.T) {
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `reaches("N0", ?n, ?h), ?h <= 2 => ?n`)
+	got := map[string]bool{}
+	for _, r := range rows {
+		got[r.Bind["n"].S] = true
+	}
+	if !got["N0"] || !got["N1"] || !got["N2"] {
+		t.Errorf("within 2 hops = %v, want N0, N1 and N2", got)
+	}
+	if got["N3"] {
+		t.Errorf("within 2 hops included N3, which is 3 series elements away: %v", got)
+	}
+}
+
+// TestReachesConstantHopsIsExact (WS3-112) pins the semantics the doc and catalog warn about: a bare
+// constant in the third slot binds by equality, so it means EXACTLY that many hops. A reader who
+// writes it expecting "within" gets a silently narrower answer, which is why the radius idiom is a
+// comparison.
+func TestReachesConstantHopsIsExact(t *testing.T) {
+	rows := runQuery(t, check.NewModel(reachChainDesign()), `reaches("N0", ?n, 2) => ?n`)
+	got := map[string]bool{}
+	for _, r := range rows {
+		got[r.Bind["n"].S] = true
+	}
+	if len(got) != 1 || !got["N2"] {
+		t.Errorf("reaches(N0, ?n, 2) = %v, want exactly {N2} (equality, not a bound)", got)
+	}
+}
+
+// TestReachesArityBothPathsAgree (WS3-112): the optional argument is admitted by the POSITIVE path
+// and the NEGATION path through one predicate. A divergence here would accept reaches(?a,?b,?h) while
+// rejecting `not reaches(?a,?b,?h)`, and negation is validated up front so it would fail the whole
+// query rather than degrade.
+func TestReachesArityBothPathsAgree(t *testing.T) {
+	m := check.NewModel(reachChainDesign())
+	rows := runQuery(t, m, `component-on-net(?r, ?n), not reaches("N0", ?n, ?h) => ?n`)
+	for _, r := range rows {
+		if n := r.Bind["n"].S; n == "N1" {
+			t.Errorf("not reaches(N0, N1, ?h) should not hold: %v", rows)
+		}
+	}
+	q, err := Parse(`reaches(?a, ?b, ?c, ?d) => ?a`)
+	if err == nil {
+		if _, err = (Naive{}).Eval(q, NewBase(m)); err == nil {
+			t.Error("reaches at arity 4: want an error naming the accepted arity")
+		}
 	}
 }
 

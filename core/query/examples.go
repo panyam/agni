@@ -41,6 +41,11 @@ var examples = []ExampleQuery{
 		Teaches: "recursion: transitive reach through R/L/ferrite/fuse",
 	},
 	{
+		Label:   "Reachable within one series element",
+		Query:   "reaches(?from, ?net, ?hops), ?hops <= 1 => ?from, ?net, ?hops",
+		Teaches: "distance: ?hops binds the EXACT crossing count, so a radius is a comparison (writing 1 in that slot would mean exactly one hop, skipping the net itself)",
+	},
+	{
 		Label:   "Power pins on a single-connection net",
 		Query:   `pin.role(?ref, ?pin, "power"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`,
 		Teaches: "pin-level join: a pin, its role, and its net's fan-out",

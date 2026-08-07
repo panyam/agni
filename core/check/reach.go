@@ -22,6 +22,29 @@ func passClass(c ComponentClass) bool {
 // with no attributes) from turning a pull-up into a doorway to the whole design.
 const maxWalkFan = 16
 
+// ProtectionReachHops is the radius every protection guard asks at: a clamp, fuse or power pin
+// counts only within two series crossings of the net in question.
+//
+// The number is ELECTRICAL, not a search budget. A discharge arrives at a connector pin as a fast,
+// high-energy transient, and every series element between the pin and the clamp is impedance the
+// surge pushes through before the clamp conducts, so the pin's voltage spikes first. A TVS six
+// resistors away protects what is downstream of itself. It does not protect the pin.
+//
+// It is deliberately much smaller than the query layer's topology-search radius (query.reachHops).
+// Those two answer different questions: "is a clamp electrically adjacent to this pin" and "what is
+// connected to what through passives". Widening this one would credit distant clamps and turn real
+// unprotected pins into clean passes, which is the silent direction. Named here rather than passed
+// per caller because all four guards use it for the identical reason, and per-caller values would
+// suggest they are independently tunable.
+const ProtectionReachHops = 2
+
+// PowerPathReachHops is the radius the power-entry walk asks at (UnprotectedPowerReach), one hop
+// wider than ProtectionReachHops. A power entry path legitimately crosses more series elements than
+// a signal clamp does: connector, then a fuse, then a bead, then the regulator's input node. Asking
+// at the signal radius would stop short of the regulator and read a genuinely unprotected path as
+// having nothing to protect.
+const PowerPathReachHops = 3
+
 // IsBusLike reports a shared-DISTRIBUTION net — one the series-reach walk must not cross INTO,
 // because it is not a point-to-point series path but a plane/rail/wide fan-out that would turn a
 // pull-up into a doorway to the whole design. It is BUS evidence, three ways: a ground name (a
@@ -39,13 +62,14 @@ func IsBusLike(m Model, n *ir.Net) bool {
 
 // reach runs the bounded BFS over the model's pass-element adjacency.
 func (m *irModel) Reach(start *ir.Net, hops int) Reach {
-	r := Reach{Crossed: map[string]bool{}, Parent: map[string]ReachStep{}}
+	r := Reach{Crossed: map[string]bool{}, Parent: map[string]ReachStep{}, Depth: map[string]int{}}
 	if start == nil {
 		return r
 	}
 	visited := map[string]bool{start.Name: true}
 	frontier := []*ir.Net{start}
 	r.Nets = append(r.Nets, start)
+	r.Depth[start.Name] = 0
 	for depth := 0; depth < hops && len(frontier) > 0; depth++ {
 		var next []*ir.Net
 		for _, n := range frontier {
@@ -67,6 +91,7 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 					visited[o.Name] = true
 					r.Crossed[c.ComponentRef] = true
 					r.Parent[o.Name] = ReachStep{From: n.Name, Through: c.ComponentRef}
+					r.Depth[o.Name] = depth + 1 // BFS, so the first visit is the shortest
 					r.Nets = append(r.Nets, o)
 					next = append(next, o)
 				}
