@@ -18,6 +18,8 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`feedback(net)`](feedback/) | the net is a regulator feedback / sense node (must not be probed) |
 | [`has_nc_channel(present)`](has_nc_channel/) | one row when the design can express intentional no-connect |
 | [`has_netclass(present)`](has_netclass/) | one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean) |
+| [`net.ac_coupled(net)`](net.ac_coupled/) | a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count) |
+| [`net.bias(net, level)`](net.bias/) | a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider |
 | [`net.bus_like(net)`](net.bus_like/) | a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate |
 | [`net.external(net)`](net.external/) | the net may extend onto an unread sheet (read-gap marker) |
 | [`net.ground(net)`](net.ground/) | the net is a ground rail (name-derived) |

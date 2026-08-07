@@ -51,6 +51,8 @@ var docKeys = []string{
 	"protection-" + ProtectionOVP,       // protection-ovp
 	"protection-" + ProtectionDischarge, // protection-discharge
 	docKeySubsystem,                     // subsystem (family doc for intent/subsystem-<slug>)
+	"property-" + PropResetPolarity,     // property-reset-polarity
+	"property-" + PropACCoupled,         // property-ac-coupled
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -71,12 +73,14 @@ func docKey(ruleName string) string {
 // embed a design-specific kind/name, so a generic page needs a name-free caption. Every docKey has an
 // entry (DocRules would emit an empty caption otherwise; TestDocRules holds them 1:1).
 var docSummaries = map[string]string{
-	RuleModuleMissing:                    "A functional block the design intent declares required is absent from the design.",
-	RuleModuleCount:                      "The number of components for a declared module does not match the design intent.",
-	RuleVoltageDomain:                    "A declared voltage domain's rail is absent or named for a different nominal voltage.",
-	"protection-" + ProtectionOVP:        "A rail the design intent declares needs OV protection has no TVS/zener clamp.",
-	"protection-" + ProtectionDischarge:  "A rail the design intent declares needs a discharge path has no bleeder resistor.",
-	docKeySubsystem:                      "An architectural subsystem the design intent declares is missing a required part or net.",
+	RuleModuleMissing:                   "A functional block the design intent declares required is absent from the design.",
+	RuleModuleCount:                     "The number of components for a declared module does not match the design intent.",
+	RuleVoltageDomain:                   "A declared voltage domain's rail is absent or named for a different nominal voltage.",
+	"protection-" + ProtectionOVP:       "A rail the design intent declares needs OV protection has no TVS/zener clamp.",
+	"protection-" + ProtectionDischarge: "A rail the design intent declares needs a discharge path has no bleeder resistor.",
+	docKeySubsystem:                     "An architectural subsystem the design intent declares is missing a required part or net.",
+	"property-" + PropResetPolarity:     "A net the design intent declares as a reset is biased to its ASSERTED level, holding the part in reset.",
+	"property-" + PropACCoupled:         "A net the design intent declares AC-coupled is carried by no series capacitor.",
 }
 
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog
