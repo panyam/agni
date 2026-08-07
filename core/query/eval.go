@@ -148,12 +148,12 @@ func splitNegations(lits []Literal) (pos, negs []Literal) {
 func (b *Base) validateNegations(negs []Literal) error {
 	for _, lit := range negs {
 		rel := lit.Neg.Relation
-		arity, ok := b.arityOf(rel)
-		if !ok {
+		ok, known := b.arityAccepts(rel, len(lit.Neg.Args))
+		if !known {
 			return fmt.Errorf("query: negation over unknown relation %q%s", rel, didYouMean(rel))
 		}
-		if len(lit.Neg.Args) != arity {
-			return fmt.Errorf("query: negated relation %q takes %d args, got %d", rel, arity, len(lit.Neg.Args))
+		if !ok {
+			return fmt.Errorf("query: negated relation %q takes %s args, got %d", rel, b.arityLabelOf(rel), len(lit.Neg.Args))
 		}
 	}
 	return nil

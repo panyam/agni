@@ -126,6 +126,13 @@ type Reach struct {
 	Nets    []*ir.Net
 	Crossed map[string]bool
 	Parent  map[string]ReachStep // net name -> how it was entered
+	// Depth is the number of series crossings from the start net, which the BFS knows as it
+	// goes (the start net is 0, so the walk is reflexive at distance zero). Recorded rather
+	// than re-derived by chasing Parent: that is O(path) per net, and where parallel passes
+	// bridge the same two nets the chain is one of several equally-valid paths, so a derived
+	// count can disagree with the count the walk actually used. Exposed because DISTANCE is
+	// part of the question a reachability rule asks (WS3-112), not an implementation detail.
+	Depth map[string]int // net name -> series crossings from the start
 }
 
 // ReachStep records how a net was reached during the series walk: the net crossed FROM and

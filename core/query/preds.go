@@ -17,28 +17,62 @@ import (
 // failure). That unification is why there is one dispatch, not one per kind, and why `not R(...)`
 // works uniformly for EDB, IDB, filters, and reaches.
 
-// reachHops bounds the reaches built-in's series walk. Generous — reaches is bounded by fan-out and
-// finiteness anyway (check.Model.Reach); this only caps pathological depth.
-const reachHops = 100
+// topologyReachHops is the radius the reaches built-in searches at: the whole series neighborhood.
+// Generous — reaches is bounded by fan-out and finiteness anyway (check.Model.Reach walks only
+// two-terminal pass elements and refuses to enter bus-like nets), so this only caps pathological
+// depth and costs little more than a small bound would.
+//
+// It is deliberately much wider than check.ProtectionReachHops, and the difference is SEMANTIC, not
+// a performance tradeoff. A topology search asks "what is connected to what through passives", where
+// a distant answer is a good answer. A protection guard asks "is a clamp electrically adjacent to
+// this pin", where a distant answer is a wrong answer. Narrowing this would silently shrink every
+// topology query; widening the protection radius would silently create false passes. A rule that
+// needs a specific radius states it with the third argument (WS3-112) rather than relying on either
+// constant.
+const topologyReachHops = 100
 
-// relReaches is the built-in transitive relation reaches(from, to): nets reachable from `from`
-// through series pass elements, bridged to check.Model.Reach (WS3-004's recursion, made real). It is
-// a GENERATOR (it binds `to` by enumerating from the Model), the one built-in that is not a pure
-// filter — which is why a public generator seam is deliberately withheld (a value-producing generator
-// could break the finiteness guarantee), while reaches stays an internal builtin.
+// relReaches is the built-in transitive relation reaches(from, to) and reaches(from, to, hops): nets
+// reachable from `from` through series pass elements, bridged to check.Model.Reach (WS3-004's
+// recursion, made real). It is a GENERATOR (it binds `to` by enumerating from the Model), the one
+// built-in that is not a pure filter — which is why a public generator seam is deliberately withheld
+// (a value-producing generator could break the finiteness guarantee), while reaches stays an
+// internal builtin.
 const relReaches = "reaches"
 
-// builtin is a computed relation: a fixed arity plus extend, the positive primitive for that name.
-// Filters (contains/prefix/suffix and overlay predicates) are built from a boolean via filterBuiltin;
-// reaches is a generator that consults the Base's Model. Overlay predicates register into this same
-// map through RegisterPredicate, so a registered filter is dispatched exactly like a built-in one.
+// builtin is a computed relation: an accepted arity range plus extend, the positive primitive for
+// that name. Filters (contains/prefix/suffix and overlay predicates) are built from a boolean via
+// filterBuiltin; reaches is a generator that consults the Base's Model. Overlay predicates register
+// into this same map through RegisterPredicate, so a registered filter is dispatched exactly like a
+// built-in one.
+//
+// maxArity is 0 for the fixed-arity majority, meaning "exactly arity". Only reaches varies, and the
+// range exists so its optional distance argument is admitted by the POSITIVE path and the NEGATION
+// path through one predicate (accepts), not two independent length checks that could drift — a
+// divergence would accept reaches(?a,?b,?h) but reject not reaches(?a,?b,?h).
 type builtin struct {
-	arity  int
-	extend func(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error
+	arity    int
+	maxArity int // 0 = fixed at arity; otherwise the inclusive upper bound
+	extend   func(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error
+}
+
+// accepts reports whether n is a valid argument count for this builtin.
+func (bi builtin) accepts(n int) bool {
+	if bi.maxArity == 0 {
+		return n == bi.arity
+	}
+	return n >= bi.arity && n <= bi.maxArity
+}
+
+// arityLabel renders the accepted arity for an error message ("2" or "2 or 3").
+func (bi builtin) arityLabel() string {
+	if bi.maxArity == 0 {
+		return fmt.Sprintf("%d", bi.arity)
+	}
+	return fmt.Sprintf("%d or %d", bi.arity, bi.maxArity)
 }
 
 var builtins = map[string]builtin{
-	relReaches: {arity: 2, extend: extendReaches},
+	relReaches: {arity: 2, maxArity: 3, extend: extendReaches},
 	"contains": strFilter(strings.Contains),
 	"prefix":   strFilter(strings.HasPrefix),
 	"suffix":   strFilter(strings.HasSuffix),
@@ -93,8 +127,18 @@ func filterBuiltin(arity int, holds func(args []Value) (bool, error)) builtin {
 	}}
 }
 
-// extendReaches binds reaches(from, to). `from` is a bound/const net when possible, else every net is
-// a candidate start; `to` binds to each net reachable from it (reflexive, so from==to holds).
+// extendReaches binds reaches(from, to) and reaches(from, to, hops). `from` is a bound/const net when
+// possible, else every net is a candidate start; `to` binds to each net reachable from it (reflexive,
+// so from==to holds at distance 0).
+//
+// The optional third argument binds the ACTUAL number of series crossings, so it is an exact value,
+// not a budget. A radius question is therefore written with a comparison — reaches(?n,?rn,?h), ?h<=2
+// — and NOT as reaches(?n,?rn,2), which binds by equality and so means "exactly two hops away",
+// missing anything closer. The catalog entry and the reference doc say this outright, because the
+// constant form is the spelling a reader reaches for first and it silently means something else.
+//
+// One walk serves both arities: the third argument is an extra bindArg over a distance the BFS
+// already recorded, never a second traversal with different semantics.
 func extendReaches(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error {
 	if b.model == nil {
 		return nil // spec library mode (NewSpecLibBase): no design topology, so reaches yields nothing
@@ -109,10 +153,17 @@ func extendReaches(atom *Atom, bnd *binding, b *Base, yield func(*binding) error
 			continue
 		}
 		cite := "reaches from " + name
-		for _, dst := range b.model.Reach(start, reachHops).Nets {
+		r := b.model.Reach(start, topologyReachHops)
+		for _, dst := range r.Nets {
 			next := bnd.clone()
 			if !bindArg(next, from, Value{S: name}) || !bindArg(next, to, Value{S: dst.Name}) {
 				continue
+			}
+			if len(atom.Args) > 2 {
+				hops := float64(r.Depth[dst.Name])
+				if !bindArg(next, atom.Args[2], Value{S: ftoa(hops), Num: &hops}) {
+					continue
+				}
 			}
 			next.cites = append(next.cites, cite)
 			if err := yield(next); err != nil {
@@ -130,8 +181,8 @@ func extendReaches(atom *Atom, bnd *binding, b *Base, yield func(*binding) error
 func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) error {
 	rel := atom.Relation
 	if bi, ok := builtins[rel]; ok {
-		if len(atom.Args) != bi.arity {
-			return fmt.Errorf("query: %s takes %d args, got %d", rel, bi.arity, len(atom.Args))
+		if !bi.accepts(len(atom.Args)) {
+			return fmt.Errorf("query: %s takes %s args, got %d", rel, bi.arityLabel(), len(atom.Args))
 		}
 		return bi.extend(atom, bnd, b, yield)
 	}
@@ -201,17 +252,30 @@ func (b *Base) atomHolds(atom *Atom, bnd *binding) (bool, error) {
 	return found, nil
 }
 
-// arityOf reports the declared arity of any callable relation — built-in, EDB, or IDB — and whether
-// it is one. Used to validate negated atoms up front.
-func (b *Base) arityOf(rel string) (int, bool) {
+// arityAccepts reports whether n is a valid argument count for any callable relation — built-in, EDB,
+// or IDB — and whether the relation exists at all. It is the SAME admission test extendAtom applies
+// on the positive path, so a variadic built-in (reaches, with its optional distance argument) cannot
+// be accepted in a positive atom while its negation is rejected.
+func (b *Base) arityAccepts(rel string, n int) (ok bool, known bool) {
+	if bi, found := builtins[rel]; found {
+		return bi.accepts(n), true
+	}
+	if fields, found := edbSchemaOf(rel); found {
+		return n == len(fields), true
+	}
+	if ar, found := b.idbArity[rel]; found {
+		return n == ar, true
+	}
+	return false, false
+}
+
+// arityLabelOf renders a relation's accepted argument count for an error message.
+func (b *Base) arityLabelOf(rel string) string {
 	if bi, ok := builtins[rel]; ok {
-		return bi.arity, true
+		return bi.arityLabel()
 	}
 	if fields, ok := edbSchemaOf(rel); ok {
-		return len(fields), true
+		return fmt.Sprintf("%d", len(fields))
 	}
-	if ar, ok := b.idbArity[rel]; ok {
-		return ar, true
-	}
-	return 0, false
+	return fmt.Sprintf("%d", b.idbArity[rel])
 }
