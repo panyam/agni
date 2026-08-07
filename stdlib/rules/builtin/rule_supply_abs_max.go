@@ -62,7 +62,7 @@ var supplyExceedsAbsMax = &check.Rule{
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV exceeds absolute-maximum %s %gV — %s",
 						pin.Designator, net, nominal, binding.Symbol, binding.Value.GetMax(), check.Citation(spec, binding)),
 					Prov:          c.Prov,
-					DatasheetProv: check.DatasheetCitationOf(spec, binding),
+					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, binding)},
 				})
 			}
 		}

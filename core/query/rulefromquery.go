@@ -65,7 +65,9 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 				f.Pin = row.Bind[Var(fq.PinVar)].S
 			}
 			if fq.ParamSymbol != "" && fq.Kind == check.KindComponent {
-				f.DatasheetProv = check.DatasheetProvFor(m, subj, fq.ParamSymbol)
+				if dp := check.DatasheetProvFor(m, subj, fq.ParamSymbol); dp != nil {
+					f.DatasheetProv = []*check.DatasheetCitation{dp}
+				}
 			}
 			out = append(out, f)
 		}

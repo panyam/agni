@@ -193,10 +193,10 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
-	dp := fs[0].DatasheetProv
-	if dp == nil {
-		t.Fatal("DatasheetProv not attached to a ParamSymbol datalog finding")
+	if len(fs[0].DatasheetProv) != 1 {
+		t.Fatalf("want 1 citation on a ParamSymbol datalog finding, got %d", len(fs[0].DatasheetProv))
 	}
+	dp := fs[0].DatasheetProv[0]
 	if dp.Doc != "LMR60410-Q1 Buck (SNAS870B Rev. B)" || dp.DocRef != "snas870b" || dp.Page != 5 ||
 		dp.Section != "6.3 Recommended Operating Conditions" || dp.Method != "hand" || dp.Confidence != 1.0 {
 		t.Fatalf("citation not fully attached: %+v", dp)

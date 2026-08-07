@@ -34,14 +34,14 @@ type jsonItem struct {
 // jsonFinding is one finding flattened for tooling. Subject (+ Kind) is the entity a viewer deep-link
 // highlights; SourceFile is which design file it was found in.
 type jsonFinding struct {
-	Rule       string         `json:"rule"`
-	Severity   string         `json:"severity,omitempty"`
-	Kind       string         `json:"kind"`
-	Subject    string         `json:"subject"`
-	Pin        string         `json:"pin,omitempty"`
-	Message    string         `json:"message"`
-	SourceFile string         `json:"source_file,omitempty"`
-	Datasheet  *jsonDatasheet `json:"datasheet,omitempty"`
+	Rule       string          `json:"rule"`
+	Severity   string          `json:"severity,omitempty"`
+	Kind       string          `json:"kind"`
+	Subject    string          `json:"subject"`
+	Pin        string          `json:"pin,omitempty"`
+	Message    string          `json:"message"`
+	SourceFile string          `json:"source_file,omitempty"`
+	Datasheets []jsonDatasheet `json:"datasheets,omitempty"`
 }
 
 // jsonDatasheet is the datasheet-side provenance of a finding: where a datasheet-backed value came
@@ -78,7 +78,7 @@ func RenderJSON(r Report) (string, error) {
 					Pin:        f.Pin,
 					Message:    f.Message,
 					SourceFile: sourceFile(f),
-					Datasheet:  datasheetProv(f),
+					Datasheets: datasheetProv(f),
 				})
 			}
 			ja.Items = append(ja.Items, ji)
@@ -100,19 +100,26 @@ func sourceFile(f check.Finding) string {
 	return f.Prov.GetSourceFile()
 }
 
-// datasheetProv projects a finding's structured datasheet citation into the JSON DTO, or nil when the
-// finding is not datasheet-backed (so the key is omitted).
-func datasheetProv(f check.Finding) *jsonDatasheet {
-	c := f.DatasheetProv
-	if c == nil {
+// datasheetProv projects a finding's structured datasheet citations into the JSON DTO, or nil when
+// the finding is not datasheet-backed (so the key is omitted). A connection-aware rule contributes
+// one entry per part whose datasheet the conclusion rests on (WS3-028).
+func datasheetProv(f check.Finding) []jsonDatasheet {
+	if len(f.DatasheetProv) == 0 {
 		return nil
 	}
-	return &jsonDatasheet{
-		Doc:        c.Doc,
-		DocRef:     c.DocRef,
-		Page:       c.Page,
-		Section:    c.Section,
-		Method:     c.Method,
-		Confidence: c.Confidence,
+	out := make([]jsonDatasheet, 0, len(f.DatasheetProv))
+	for _, c := range f.DatasheetProv {
+		if c == nil {
+			continue
+		}
+		out = append(out, jsonDatasheet{
+			Doc:        c.Doc,
+			DocRef:     c.DocRef,
+			Page:       c.Page,
+			Section:    c.Section,
+			Method:     c.Method,
+			Confidence: c.Confidence,
+		})
 	}
+	return out
 }

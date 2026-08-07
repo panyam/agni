@@ -277,10 +277,17 @@ type Finding struct {
 	// from the loaded geometry (WS7-042c). Set to BUS_NOT_DRAWN for a bus finding whose bus has no
 	// drawn wire; UNSPECIFIED (the default) means the subject is drawn and will highlight.
 	LocateReason LocateReason `protobuf:"varint,7,opt,name=locate_reason,json=locateReason,proto3,enum=agni.v1.checks.LocateReason" json:"locate_reason,omitempty"`
-	// datasheet is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
-	// form of check.Finding.DatasheetProv: which document, page, and section a limit came from, plus
-	// the extraction method and confidence. Unset for a finding not backed by a seeded datasheet value.
-	Datasheet     *DatasheetCitation `protobuf:"bytes,8,opt,name=datasheet,proto3" json:"datasheet,omitempty"`
+	// datasheets is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
+	// form of check.Finding.DatasheetProv: which document, page, and section each limit came from, plus
+	// the extraction method and confidence. Empty for a finding not backed by a seeded datasheet value.
+	//
+	// REPEATED because a connection-aware rule joins TWO parts' datasheets (WS3-028): a regulator's
+	// output against a downstream part's absolute maximum rests on a value from each, and the review's
+	// data-trust gate has to see both — judging such a finding on one citation would rate it
+	// trustworthy while half its evidence was unverified. Singular before WS3-028; the tag is unchanged
+	// because for a message field singular and repeated are wire-compatible, so old data parses as a
+	// one-element list.
+	Datasheets    []*DatasheetCitation `protobuf:"bytes,8,rep,name=datasheets,proto3" json:"datasheets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -364,9 +371,9 @@ func (x *Finding) GetLocateReason() LocateReason {
 	return LocateReason_LOCATE_REASON_UNSPECIFIED
 }
 
-func (x *Finding) GetDatasheet() *DatasheetCitation {
+func (x *Finding) GetDatasheets() []*DatasheetCitation {
 	if x != nil {
-		return x.Datasheet
+		return x.Datasheets
 	}
 	return nil
 }
@@ -1277,7 +1284,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x06method\x18\x05 \x01(\tR\x06method\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x06 \x01(\x01R\n" +
-	"confidence\"\xda\x02\n" +
+	"confidence\"\xdc\x02\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x121\n" +
@@ -1287,8 +1294,10 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"provenance\x18\x05 \x01(\v2\x16.agni.v1.ir.ProvenanceR\n" +
 	"provenance\x12\x16\n" +
 	"\x06sheets\x18\x06 \x03(\tR\x06sheets\x12A\n" +
-	"\rlocate_reason\x18\a \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\flocateReason\x12?\n" +
-	"\tdatasheet\x18\b \x01(\v2!.agni.v1.checks.DatasheetCitationR\tdatasheet\"\xfe\x02\n" +
+	"\rlocate_reason\x18\a \x01(\x0e2\x1c.agni.v1.checks.LocateReasonR\flocateReason\x12A\n" +
+	"\n" +
+	"datasheets\x18\b \x03(\v2!.agni.v1.checks.DatasheetCitationR\n" +
+	"datasheets\"\xfe\x02\n" +
 	"\vCheckReport\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1b\n" +
 	"\trules_run\x18\x02 \x01(\x05R\brulesRun\x12G\n" +
@@ -1400,7 +1409,7 @@ var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.checks.Finding.subject:type_name -> agni.v1.checks.Subject
 	17, // 1: agni.v1.checks.Finding.provenance:type_name -> agni.v1.ir.Provenance
 	0,  // 2: agni.v1.checks.Finding.locate_reason:type_name -> agni.v1.checks.LocateReason
-	2,  // 3: agni.v1.checks.Finding.datasheet:type_name -> agni.v1.checks.DatasheetCitation
+	2,  // 3: agni.v1.checks.Finding.datasheets:type_name -> agni.v1.checks.DatasheetCitation
 	14, // 4: agni.v1.checks.CheckReport.sections:type_name -> agni.v1.checks.CheckReport.SeveritySection
 	3,  // 5: agni.v1.checks.ReviewItem.findings:type_name -> agni.v1.checks.Finding
 	5,  // 6: agni.v1.checks.ReviewArea.items:type_name -> agni.v1.checks.ReviewItem

@@ -128,3 +128,41 @@ func TestTallyCountsDataTrustStates(t *testing.T) {
 		t.Errorf("Covered() = %d, want 6 (all but not-automated)", tl.Covered())
 	}
 }
+
+// TestMultiCitationRatifiedOnlyIfEveryCitationIs pins the semantics WS3-028 forced when
+// Finding.DatasheetProv became a slice: a finding is unratified if ANY of its citations fails the
+// floor, because the conclusion rests on every value it joined and is only as trustworthy as the
+// weakest one.
+//
+// The mixed case is the one that matters. A connection-aware finding whose abs-max was hand-read but
+// whose output voltage came from a low-confidence extraction is exactly half-evidenced; rating it a
+// hard Fail on the strength of the good citation alone is the false-fail this axis exists to prevent.
+//
+// Note this quantifier is the OPPOSITE of allUnratified's, deliberately: across findings one
+// trustworthy finding is enough to make an item a real Fail, because they are independent claims.
+func TestMultiCitationRatifiedOnlyIfEveryCitationIs(t *testing.T) {
+	hand := &check.DatasheetCitation{Doc: "A", Method: "hand", Confidence: 1.0}
+	weak := &check.DatasheetCitation{Doc: "B", Method: "derive/v0", Confidence: 0.3}
+	mock := &check.DatasheetCitation{Doc: "C", Method: "mock", Confidence: 1.0}
+
+	for _, c := range []struct {
+		name  string
+		cites []*check.DatasheetCitation
+		want  bool
+	}{
+		{"no citations is a netlist finding, trustworthy by construction", nil, false},
+		{"one ratified", []*check.DatasheetCitation{hand}, false},
+		{"one below the floor", []*check.DatasheetCitation{weak}, true},
+		{"both ratified", []*check.DatasheetCitation{hand, hand}, false},
+		{"mixed: one weak citation taints the finding", []*check.DatasheetCitation{hand, weak}, true},
+		{"mixed: order does not matter", []*check.DatasheetCitation{weak, hand}, true},
+		{"mock alongside a hand-read value still taints", []*check.DatasheetCitation{hand, mock}, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			f := check.Finding{Rule: "r", Subject: "U1", DatasheetProv: c.cites}
+			if got := isUnratified(f, 0.8); got != c.want {
+				t.Errorf("isUnratified = %v, want %v", got, c.want)
+			}
+		})
+	}
+}

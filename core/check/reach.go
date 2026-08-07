@@ -38,6 +38,17 @@ const maxWalkFan = 16
 // suggest they are independently tunable.
 const ProtectionReachHops = 2
 
+// SupplyPathReachHops is the radius a supply-compatibility question asks at (WS3-028): a regulator
+// and the part it feeds are usually on one net, but a filter bead or a series resistor between them
+// is ordinary and must not hide the connection. One crossing covers that and stops well short of
+// treating the whole rail tree as one node.
+//
+// Smaller than ProtectionReachHops deliberately, and for the opposite reason. A protection question
+// tolerates distance badly because the surge degrades along the path; a supply question tolerates it
+// badly because voltage does NOT degrade — cross too many elements and every part on the board looks
+// connected to every regulator, so the check would start reporting pairs that share no supply path.
+const SupplyPathReachHops = 1
+
 // PowerPathReachHops is the radius the power-entry walk asks at (UnprotectedPowerReach), one hop
 // wider than ProtectionReachHops. A power entry path legitimately crosses more series elements than
 // a signal clamp does: connector, then a fuse, then a bead, then the regulator's input node. Asking

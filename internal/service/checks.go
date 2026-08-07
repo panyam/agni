@@ -166,13 +166,28 @@ func FindingProto(f check.Finding) *checkspb.Finding {
 		Subject:    subject,
 		Message:    f.Message,
 		Provenance: f.Prov,
-		Datasheet:  datasheetCitationProto(f.DatasheetProv),
+		Datasheets: datasheetCitationProtos(f.DatasheetProv),
 	}
 }
 
 // datasheetCitationProto maps a check.DatasheetCitation to its wire form, nil for a finding not
 // backed by a seeded datasheet value (WS9-048). One conversion site, shared by every Finding
 // consumer (the review/check JSON surfaces and the web check panel).
+// datasheetCitationProtos maps a finding's citations to the wire form, preserving order. A
+// connection-aware rule contributes one per part its conclusion rests on (WS3-028).
+func datasheetCitationProtos(cs []*check.DatasheetCitation) []*checkspb.DatasheetCitation {
+	if len(cs) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.DatasheetCitation, 0, len(cs))
+	for _, c := range cs {
+		if pc := datasheetCitationProto(c); pc != nil {
+			out = append(out, pc)
+		}
+	}
+	return out
+}
+
 func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitation {
 	if c == nil {
 		return nil

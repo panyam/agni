@@ -364,9 +364,26 @@ func bindsIntent(it Item, known func(ruleName string) bool) bool {
 // isUnratified reports whether a finding ran on untrustworthy datasheet data: it carries a datasheet
 // citation whose method is "mock" or whose confidence is below the floor. A finding with NO datasheet
 // citation is a netlist/structural finding — trustworthy by construction, so NOT unratified.
+// A finding backed by SEVERAL datasheets (a connection-aware rule, WS3-028) is unratified when ANY of
+// its citations fails the floor, because the conclusion rests on every value it joined and is only as
+// trustworthy as the weakest one. A regulator-output-vs-abs-max finding whose abs-max was hand-read
+// but whose output voltage came from a low-confidence extraction is exactly half-evidenced, and
+// calling it a hard Fail would be the false-fail this axis exists to prevent.
+//
+// Note the quantifier here is the OPPOSITE of allUnratified's, deliberately. Across findings, one
+// trustworthy finding among several makes the item a real Fail — they are independent claims and one
+// standing up is enough. Within a finding, the citations are conjunctive evidence, so all of them
+// have to stand up.
 func isUnratified(f check.Finding, floor float64) bool {
-	dp := f.DatasheetProv
-	return dp != nil && (dp.Method == "mock" || dp.Confidence < floor)
+	for _, dp := range f.DatasheetProv {
+		if dp == nil {
+			continue
+		}
+		if dp.Method == "mock" || dp.Confidence < floor {
+			return true
+		}
+	}
+	return false
 }
 
 // allUnratified reports whether a non-empty finding set is ENTIRELY unratified, so the item is

@@ -85,10 +85,17 @@ message Finding {
   // from the loaded geometry (WS7-042c). Set to BUS_NOT_DRAWN for a bus finding whose bus has no
   // drawn wire; UNSPECIFIED (the default) means the subject is drawn and will highlight.
   LocateReason locate_reason = 7;
-  // datasheet is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
-  // form of check.Finding.DatasheetProv: which document, page, and section a limit came from, plus
-  // the extraction method and confidence. Unset for a finding not backed by a seeded datasheet value.
-  DatasheetCitation datasheet = 8;
+  // datasheets is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
+  // form of check.Finding.DatasheetProv: which document, page, and section each limit came from, plus
+  // the extraction method and confidence. Empty for a finding not backed by a seeded datasheet value.
+  //
+  // REPEATED because a connection-aware rule joins TWO parts' datasheets (WS3-028): a regulator's
+  // output against a downstream part's absolute maximum rests on a value from each, and the review's
+  // data-trust gate has to see both — judging such a finding on one citation would rate it
+  // trustworthy while half its evidence was unverified. Singular before WS3-028; the tag is unchanged
+  // because for a message field singular and repeated are wire-compatible, so old data parses as a
+  // one-element list.
+  repeated DatasheetCitation datasheets = 8;
 }
 
 // CheckReport is the severity-organized pivot over one check run: THE report shape, rendered by the

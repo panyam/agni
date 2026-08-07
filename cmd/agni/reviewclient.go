@@ -47,8 +47,22 @@ func findingsFromProto(fs []*checkspb.Finding) []check.Finding {
 			NetID:         f.GetSubject().GetNetId(),
 			Message:       f.GetMessage(),
 			Prov:          f.GetProvenance(),
-			DatasheetProv: datasheetFromProto(f.GetDatasheet()),
+			DatasheetProv: datasheetsFromProto(f.GetDatasheets()),
 		})
+	}
+	return out
+}
+
+// datasheetsFromProto reconstructs a finding's citations from the wire form, preserving order.
+func datasheetsFromProto(cs []*checkspb.DatasheetCitation) []*check.DatasheetCitation {
+	if len(cs) == 0 {
+		return nil
+	}
+	out := make([]*check.DatasheetCitation, 0, len(cs))
+	for _, c := range cs {
+		if dc := datasheetFromProto(c); dc != nil {
+			out = append(out, dc)
+		}
 	}
 	return out
 }
