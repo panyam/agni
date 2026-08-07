@@ -46,6 +46,7 @@ var rules = []*check.Rule{
 	i2cPullUp,
 	supplyExceedsAbsMax,
 	regulatorOutputExceedsAbsMax,
+	fetVdssBelowRail,
 	railNominalOutOfRecommended,
 	capVoltage,
 	diffPairNaming,

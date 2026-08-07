@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 	"path/filepath"
 	"testing"
 )
@@ -224,5 +225,48 @@ func TestRegulatorOutputAbsMaxConformance(t *testing.T) {
 	}
 	if f.Datasheets[0].Doc != "ACME-33 Rev B" || f.Datasheets[1].Doc != "ACME-REG Rev A" {
 		t.Errorf("citations = %+v, want the load's doc then the source's", f.Datasheets)
+	}
+}
+
+// TestFetVdssConformance is WS3-116's end-to-end, and it runs against the REAL seeded BSS138 rather
+// than a synthetic fixture spec: a 50V part on a 60V rail. Unlike the WS3-028 conformance test, the
+// rail's voltage here comes from the net NAME, so exactly one citation should ride the wire — the
+// FET's. A regression that cited a nonexistent second source would still look plausible in the
+// message, so the count is the assertion that catches it.
+func TestFetVdssConformance(t *testing.T) {
+	cmd := checkCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--format", "json", "--rule", "fet-vdss-below-switched-rail",
+		"--params", "testdata/conformance/fetparams", "testdata/conformance/fetvdss.fires.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	var doc struct {
+		Findings []struct {
+			Subject struct {
+				Ref string `json:"ref"`
+			} `json:"subject"`
+			Message    string `json:"message"`
+			Datasheets []struct {
+				Doc string `json:"doc"`
+			} `json:"datasheets"`
+		} `json:"findings"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+		t.Fatalf("unmarshal: %v\n%s", err, out.String())
+	}
+	if len(doc.Findings) != 1 {
+		t.Fatalf("want 1 finding, got %d: %s", len(doc.Findings), out.String())
+	}
+	f := doc.Findings[0]
+	if f.Subject.Ref != "Q1" {
+		t.Errorf("subject = %q, want Q1", f.Subject.Ref)
+	}
+	if !strings.Contains(f.Message, "from the net name") {
+		t.Errorf("message must record that the rail voltage was name-derived: %s", f.Message)
+	}
+	if len(f.Datasheets) != 1 {
+		t.Fatalf("a name-derived rail earns no citation: want 1, got %d: %+v", len(f.Datasheets), f.Datasheets)
 	}
 }

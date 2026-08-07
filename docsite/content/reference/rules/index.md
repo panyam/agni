@@ -65,6 +65,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | Rule | Source | Severity | What it checks |
 |---|---|---|---|
 | [cap-voltage](cap-voltage/) | built-in | error | A capacitor's datasheet rated voltage does not clear the worst rail it touches times the derate factor. |
+| [fet-vdss-below-switched-rail](fet-vdss-below-switched-rail/) | built-in | error | A MOSFET sits on a rail at or above its datasheet drain-source breakdown voltage. |
 | [rail-nominal-out-of-recommended](rail-nominal-out-of-recommended/) | built-in | warning | A power-input pin sits on a rail whose nominal voltage is outside the part's recommended operating supply range. |
 | [regulator-output-exceeds-abs-max](regulator-output-exceeds-abs-max/) | built-in | error | A regulator's datasheet output voltage exceeds the absolute-maximum supply rating of a part it feeds. |
 | [supply-exceeds-abs-max](supply-exceeds-abs-max/) | built-in | error | A power-input pin sits on a rail whose nominal voltage exceeds the part's absolute-maximum supply rating. |
