@@ -36,7 +36,7 @@ func TestDefaultRoleVocab(t *testing.T) {
 // TestBuildRoleVocabExtendReplace: a project's patterns extend the built-ins by default and replace
 // them when Replace is set; a bad regex is a returned error.
 func TestBuildRoleVocabExtendReplace(t *testing.T) {
-	ext, err := BuildRoleVocab(VocabPatterns{Patterns: []string{`^HV_`}}, VocabPatterns{}, VocabPatterns{}, VocabPatterns{})
+	ext, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`^HV_`}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 		t.Error("extend keeps the built-in rail patterns")
 	}
 
-	repl, err := BuildRoleVocab(VocabPatterns{Patterns: []string{`^HV_`}, Replace: true}, VocabPatterns{}, VocabPatterns{}, VocabPatterns{})
+	repl, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`^HV_`}, Replace: true}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 		t.Error("replace drops the built-in rail patterns")
 	}
 
-	if _, err := BuildRoleVocab(VocabPatterns{Patterns: []string{`(bad`}}, VocabPatterns{}, VocabPatterns{}, VocabPatterns{}); err == nil {
+	if _, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`(bad`}}}); err == nil {
 		t.Error("a malformed regex must be a returned error")
 	}
 }
@@ -67,7 +67,10 @@ func TestBuildRoleVocabExtendReplace(t *testing.T) {
 // restores the defaults.
 func TestSetActiveRoleVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
-	v, err := BuildRoleVocab(VocabPatterns{Patterns: []string{`^HV_`}}, VocabPatterns{}, VocabPatterns{Patterns: []string{`_ETH_FB$`}}, VocabPatterns{})
+	v, err := BuildRoleVocab(RoleVocabConfig{
+		Rail:     VocabPatterns{Patterns: []string{`^HV_`}},
+		Feedback: VocabPatterns{Patterns: []string{`_ETH_FB$`}},
+	})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

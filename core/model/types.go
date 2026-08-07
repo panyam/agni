@@ -63,6 +63,12 @@ const (
 	RoleCathode PinRole = "cathode"
 	RolePower   PinRole = "power"
 	RoleGround  PinRole = "ground"
+	// Transistor terminals (WS3-117), assigned only within the transistor class for the same reason
+	// the polarity roles are diode-only: a bare "G", "S" or "D" pin name means something on almost
+	// every part, so an ungated match would mis-role most of a design.
+	RoleGate    PinRole = "gate"
+	RoleSource  PinRole = "source"
+	RoleDrain   PinRole = "drain"
 	RoleUnknown PinRole = "unknown"
 )
 

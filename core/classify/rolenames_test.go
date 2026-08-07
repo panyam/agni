@@ -44,7 +44,7 @@ func TestStampNetRolesIdempotent(t *testing.T) {
 // takes effect at stamp time, so a project's house rail name is stamped as a rail.
 func TestStampNetRolesHonorsActiveVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
-	v, err := BuildRoleVocab(VocabPatterns{Patterns: []string{`^HV_`}}, VocabPatterns{}, VocabPatterns{}, VocabPatterns{})
+	v, err := BuildRoleVocab(RoleVocabConfig{Rail: VocabPatterns{Patterns: []string{`^HV_`}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

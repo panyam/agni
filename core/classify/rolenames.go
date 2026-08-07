@@ -36,6 +36,14 @@ const (
 // one config-overridable lexicon (WS3-069), not a frozen literal.
 type RoleVocab struct {
 	rail, ground, feedback, supplyPin []*regexp.Regexp
+	// Transistor TERMINAL pin names (WS3-117), each its own vocabulary because the three are
+	// independent conventions a house can spell differently (a gate is "G", "GATE", sometimes "DRV"
+	// on a driver). They are consumed ONLY where the component's class is a transistor — see
+	// classifyPinRole — because these are the shortest, most collision-prone pin names on a board:
+	// bare "S" and "D" mean something on almost every part, and an ungated match would mis-role most
+	// of a design. A wrong role is worse than a missing one, since a topology rule then walks a path
+	// that does not exist.
+	gate, source, drain []*regexp.Regexp
 }
 
 func mustCompileRole(pats ...string) []*regexp.Regexp {
@@ -60,6 +68,12 @@ func DefaultRoleVocab() *RoleVocab {
 		// VCCIO). Stricter than rail on purpose: no bare "+", no digit-then-V net form, and VOUT (a
 		// supply output) is excluded.
 		supplyPin: mustCompileRole(`^(VCC|VDD|VIN|VBAT|VBUS|VSUP|VPP|AVDD|DVDD|VAUX|VCORE|VEE)`),
+		// Transistor terminals, whole-name anchored. Anchoring is what keeps them safe even inside
+		// the class gate: an unanchored "S" would match SDA, SCLK, SENSE and every other S-name on
+		// the part.
+		gate:   mustCompileRole(`^G$`, `^GATE$`),
+		source: mustCompileRole(`^S$`, `^SOURCE$`, `^SRC$`),
+		drain:  mustCompileRole(`^D$`, `^DRAIN$`, `^DRN$`),
 	}
 }
 
@@ -87,6 +101,13 @@ func (v *RoleVocab) IsGround(name string) bool    { return anyRoleMatch(name, v.
 func (v *RoleVocab) IsFeedback(name string) bool  { return anyRoleMatch(name, v.feedback) }
 func (v *RoleVocab) IsSupplyPin(name string) bool { return anyRoleMatch(name, v.supplyPin) }
 
+// IsGate / IsSource / IsDrain classify a TRANSISTOR's pin name. The caller is responsible for the
+// class gate: these vocabularies are deliberately short and would collide badly if applied to any
+// part (see the type doc).
+func (v *RoleVocab) IsGate(name string) bool   { return anyRoleMatch(name, v.gate) }
+func (v *RoleVocab) IsSource(name string) bool { return anyRoleMatch(name, v.source) }
+func (v *RoleVocab) IsDrain(name string) bool  { return anyRoleMatch(name, v.drain) }
+
 // activeRoleVocab is the process-level lexicon every classifier consults. It is deployment/project
 // config (set once at startup from --conventions, immutable after), not per-design, so a package
 // default is the right shape. The is*Name helpers (in check) delegate here so their call sites are
@@ -107,11 +128,26 @@ func SetActiveRoleVocab(v *RoleVocab) {
 // config replaced it). Exposed so a caller can inspect what a --conventions lexicon installed.
 func ActiveRoleVocab() *RoleVocab { return activeRoleVocab }
 
+// RoleVocabConfig is the per-vocabulary override set BuildRoleVocab applies. Named fields rather
+// than positional arguments (WS3-117): every vocabulary has the same type, so a positional signature
+// makes a transposition compile cleanly and silently cross two vocabularies — the kind of bug that
+// surfaces as a rule quietly matching the wrong pin names. An omitted field leaves that vocabulary
+// at its default.
+type RoleVocabConfig struct {
+	Rail      VocabPatterns
+	Ground    VocabPatterns
+	Feedback  VocabPatterns
+	SupplyPin VocabPatterns
+	Gate      VocabPatterns
+	Source    VocabPatterns
+	Drain     VocabPatterns
+}
+
 // BuildRoleVocab applies per-vocabulary overrides onto DefaultRoleVocab, compiling and VALIDATING every
 // pattern — config is operator input, so a bad regex is a returned error, not a bind-time panic. An
 // empty override leaves that vocabulary at its default. Patterns are RE2, matched case-insensitively on
 // the hierarchy leaf (write ^/$ for whole-leaf anchoring).
-func BuildRoleVocab(rail, ground, feedback, supplyPin VocabPatterns) (*RoleVocab, error) {
+func BuildRoleVocab(cfg RoleVocabConfig) (*RoleVocab, error) {
 	def := DefaultRoleVocab()
 	build := func(base []*regexp.Regexp, o VocabPatterns) ([]*regexp.Regexp, error) {
 		var out []*regexp.Regexp
@@ -128,18 +164,25 @@ func BuildRoleVocab(rail, ground, feedback, supplyPin VocabPatterns) (*RoleVocab
 		return out, nil
 	}
 	var v RoleVocab
-	var err error
-	if v.rail, err = build(def.rail, rail); err != nil {
-		return nil, fmt.Errorf("rail: %w", err)
-	}
-	if v.ground, err = build(def.ground, ground); err != nil {
-		return nil, fmt.Errorf("ground: %w", err)
-	}
-	if v.feedback, err = build(def.feedback, feedback); err != nil {
-		return nil, fmt.Errorf("feedback: %w", err)
-	}
-	if v.supplyPin, err = build(def.supplyPin, supplyPin); err != nil {
-		return nil, fmt.Errorf("supply_pin: %w", err)
+	for _, d := range []struct {
+		name string
+		base []*regexp.Regexp
+		over VocabPatterns
+		dst  *[]*regexp.Regexp
+	}{
+		{"rail", def.rail, cfg.Rail, &v.rail},
+		{"ground", def.ground, cfg.Ground, &v.ground},
+		{"feedback", def.feedback, cfg.Feedback, &v.feedback},
+		{"supply_pin", def.supplyPin, cfg.SupplyPin, &v.supplyPin},
+		{"gate", def.gate, cfg.Gate, &v.gate},
+		{"source", def.source, cfg.Source, &v.source},
+		{"drain", def.drain, cfg.Drain, &v.drain},
+	} {
+		out, err := build(d.base, d.over)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", d.name, err)
+		}
+		*d.dst = out
 	}
 	return &v, nil
 }

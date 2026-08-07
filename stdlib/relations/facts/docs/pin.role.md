@@ -3,7 +3,7 @@
 ### What it is
 
 `pin.role(ref_des, pin, role)` yields the derived semantic role of a pin, where `role` is one of
-`power`, `ground`, `anode`, or `cathode`. The role is inferred from the pin's declared name, gated
+`power`, `ground`, `anode`, `cathode`, `gate`, `source`, or `drain`. The role is inferred from the pin's declared name, gated
 by the component's device class. A row is emitted only when a role is derived; a pin whose role
 cannot be determined produces no row (the role is never guessed).
 
@@ -12,7 +12,18 @@ cannot be determined produces no row (the role is never guessed).
 This is the tool reading a pin's name the way you would: `VCC`/`VDD` on any part is a power pin,
 `GND`/`VSS` is ground, and `A`/`K` on a diode-family part are anode and cathode. The polarity
 roles are class-gated on purpose. A pin named `A` on an IC is a signal, not an anode, so anode and
-cathode are derived only for diodes, LEDs, TVS, and Zeners. Matching is exact-token, not substring:
+cathode are derived only for diodes, LEDs, TVS, and Zeners.
+
+`gate`, `source` and `drain` (WS3-117) are gated the same way and for a sharper version of the same
+reason: they are the shortest pin names on a board. A bare `G`, `S` or `D` means something on almost
+every part, so they are derived only where the class lexicon reads the component as a **transistor**,
+and the patterns are whole-name anchored so `SDA` is not a source and `DIR` is not a drain. A wrong
+role is worse than a missing one here, because a topology rule would then walk a path that does not
+exist and report on it.
+
+Unlike the polarity tokens, the terminal roles read from the naming lexicon rather than engine
+literals, so a house that calls its gate `DRV` declares that under `lexicon.gate` in `--conventions`
+instead of patching the engine. Matching is exact-token, not substring:
 `CLKA` is not an anode. You query it to find, say, every cathode and check where it lands, or to
 confirm the polarity roles resolved on the parts you expect.
 
