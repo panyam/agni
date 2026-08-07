@@ -31,6 +31,13 @@ A filtered projection over `Nets()`, 1:1 with classed nets and absent for the re
 everything else keyed by net name (`component-on-net`, `pin.net`, `net.max_voltage`), so it composes as
 a scope filter on any existing question.
 
+`?net` is unique in the current projection: `ir.Net.net_class` is a singular field, so a net yields at
+most one row and a join on it cannot fan out. Do not lean on that. Unlike `component.class`, which is
+1:many by design, the arity here reflects what the IR happens to hold rather than a settled reading of
+the format, and the KiCad reader resolves multiple matching patterns by taking the first. WS1-050
+settles whether a second class is a legitimate tag or a conflict to flag; if it lands as a tag set
+this relation becomes 1:many with no change to its name or shape.
+
 The value is a foreign label, not a closed enum: it comes from the project file, so string comparisons
 are exact and case-sensitive, and two projects can use different vocabularies for the same intent. Do
 not treat an unrecognized class as an error, and do not derive meaning from the string beyond what the
