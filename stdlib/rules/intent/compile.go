@@ -45,6 +45,15 @@ func Compile(d Declaration) []*check.Rule {
 		seen[p.Kind] = true
 		rules = append(rules, protectionRule(p.Kind, d.Protections))
 	}
+	// One rule per property KIND present, same shape and same reason as protections above.
+	seenProp := map[string]bool{}
+	for _, np := range d.NetProperties {
+		if seenProp[np.Property] {
+			continue
+		}
+		seenProp[np.Property] = true
+		rules = append(rules, propertyRule(np.Property, d.NetProperties))
+	}
 	return rules
 }
 

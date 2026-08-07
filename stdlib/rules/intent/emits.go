@@ -22,5 +22,6 @@ func Emits(ruleName string) bool {
 	case RuleModuleMissing, RuleModuleCount, RuleVoltageDomain:
 		return true
 	}
-	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-")
+	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-") ||
+		strings.HasPrefix(name, "property-")
 }

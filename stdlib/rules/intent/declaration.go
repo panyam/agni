@@ -46,6 +46,48 @@ type Declaration struct {
 	// declared NET NAME (not the rail-role heuristic, which misses names like VBATT01 that carry no
 	// voltage token), so an input rail the customer names explicitly is checkable.
 	Protections []Protection
+	// NetProperties is the set of declared PROPERTIES of named nets — not their existence, which the
+	// forms above cover, but an assertion about what a net IS (a reset is active-low, a link is
+	// AC-coupled). Each KIND compiles to its own rule (intent/property-<kind>) so distinct review
+	// items bind and report independently, the same reason Protections split by kind. A property
+	// fails when the design's structure CONTRADICTS the declaration.
+	NetProperties []NetProperty
+}
+
+// Property kinds.
+const (
+	// PropResetPolarity asserts a reset net's asserted level. Value is "low" or "high".
+	PropResetPolarity = "reset-polarity"
+	// PropACCoupled asserts a net is AC-coupled: a series capacitor carries it, rather than DC.
+	PropACCoupled = "ac-coupled"
+)
+
+// NetProperty is one declared property of one net (WS3-088). Kinds (validated at load):
+// "reset-polarity" with Value "low" or "high"; "ac-coupled", which takes no Value.
+//
+// WHAT THESE RULES CAN AND CANNOT CONCLUDE, because the two kinds differ and the difference decides
+// what a passing item means:
+//
+//   - ac-coupled is DECIDABLE from the netlist. A series capacitor is either on the net or it is not,
+//     so absent means the declaration is unmet and the rule fails.
+//   - reset-polarity is only PARTLY decidable. A netlist states polarity nowhere; the evidence is a
+//     bias resistor, and a reset driven by a supervisor with an internal pull carries none. So the
+//     rule fires on a CONTRADICTION (declared low, biased low) and is SILENT where the design shows
+//     nothing either way. Silence there means "no contradiction found", NOT "polarity confirmed" —
+//     stated here, in the rule's doc, and in the finding vocabulary because a review item bound to it
+//     inherits that limit.
+//
+// The engine has no per-subject not-applicable: an outcome is per review ITEM and follows whether the
+// rule fired. So the honest options for the undecidable case were to stay silent (this) or to fail a
+// declaration the design merely does not evidence, which would report a non-defect. Reporting
+// unverifiable declarations is a separate, useful check and deliberately not this one.
+type NetProperty struct {
+	// Net is the exact net name the property is declared on.
+	Net string
+	// Property is the kind (PropResetPolarity, PropACCoupled).
+	Property string
+	// Value qualifies the kind: "low"/"high" for reset-polarity, empty for ac-coupled.
+	Value string
 }
 
 // Module is one required functional block, matched to a design component by device CLASS (the primary

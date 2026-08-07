@@ -12,11 +12,12 @@ import (
 // Declaration carries no yaml tags and the file can nest (voltage_domains: [{name, nominal, rails}])
 // where the domain struct stays plain. A customer authors one of these in their overlay.
 type declarationDoc struct {
-	Name           string          `yaml:"name"`
-	Modules        []moduleDoc     `yaml:"modules"`
-	VoltageDomains []vDomainDoc    `yaml:"voltage_domains"`
-	Subsystems     []subsystemDoc  `yaml:"subsystems"`
-	Protections    []protectionDoc `yaml:"protections"`
+	Name           string           `yaml:"name"`
+	Modules        []moduleDoc      `yaml:"modules"`
+	VoltageDomains []vDomainDoc     `yaml:"voltage_domains"`
+	Subsystems     []subsystemDoc   `yaml:"subsystems"`
+	Protections    []protectionDoc  `yaml:"protections"`
+	NetProperties  []netPropertyDoc `yaml:"net_properties"`
 }
 
 type moduleDoc struct {
@@ -43,6 +44,12 @@ type protectionDoc struct {
 	Kind string `yaml:"kind"`
 }
 
+type netPropertyDoc struct {
+	Net      string `yaml:"net"`
+	Property string `yaml:"property"`
+	Value    string `yaml:"value"`
+}
+
 // Parse reads a YAML intent declaration into a Declaration and validates its structure: a name is
 // present, and the declaration is not empty (at least one module, voltage domain, subsystem, or
 // protection). Each module needs a class or an mpn (matching nothing otherwise), each voltage domain
@@ -58,8 +65,9 @@ func Parse(b []byte) (Declaration, error) {
 	if strings.TrimSpace(doc.Name) == "" {
 		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
 	}
-	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, or protections", doc.Name)
+	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 &&
+		len(doc.NetProperties) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, or net_properties", doc.Name)
 	}
 	d := Declaration{Name: doc.Name}
 	for i, m := range doc.Modules {
@@ -119,6 +127,26 @@ func Parse(b []byte) (Declaration, error) {
 			return Declaration{}, fmt.Errorf("intent %q: protection for rail %q has kind %q (want %q or %q)", doc.Name, p.Rail, p.Kind, ProtectionOVP, ProtectionDischarge)
 		}
 		d.Protections = append(d.Protections, Protection{Rail: p.Rail, Kind: p.Kind})
+	}
+	for i, np := range doc.NetProperties {
+		if strings.TrimSpace(np.Net) == "" {
+			return Declaration{}, fmt.Errorf("intent %q: net_property #%d is missing its \"net\"", doc.Name, i+1)
+		}
+		switch np.Property {
+		case PropACCoupled:
+			if strings.TrimSpace(np.Value) != "" {
+				return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q takes no \"value\" (got %q)", doc.Name, np.Net, np.Property, np.Value)
+			}
+		case PropResetPolarity:
+			// The value is the assertion. Without it the rule has nothing to contradict, so an
+			// omitted or misspelled level is a load error rather than a rule that silently never fires.
+			if np.Value != "low" && np.Value != "high" {
+				return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q needs \"value\" of \"low\" or \"high\" (got %q)", doc.Name, np.Net, np.Property, np.Value)
+			}
+		default:
+			return Declaration{}, fmt.Errorf("intent %q: net_property %q has property %q (want %q or %q)", doc.Name, np.Net, np.Property, PropResetPolarity, PropACCoupled)
+		}
+		d.NetProperties = append(d.NetProperties, NetProperty{Net: np.Net, Property: np.Property, Value: np.Value})
 	}
 	return d, nil
 }
