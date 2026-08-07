@@ -12,22 +12,4 @@ var linYAML []byte
 //
 // v0 checks presence + the bus pull-up + dangling + host-completeness. It does NOT model the
 // master/slave role, the INH/wake pins, or dominant-timeout (datasheet/strap concerns).
-//
-// TODO(WS3-045): held identical to builtins/lin.yaml by TestBuiltinsMatchYAML; flip to
-// YAML-authoritative with the other built-ins.
-var LIN = Profile{
-	Name:        "LIN",
-	HostAttrKey: "interface",
-	HostAttrVal: "LIN",
-	Signals: []Signal{
-		{Name: "LIN", Suffix: "_LIN", PullUp: true, Anchor: true},
-		{Name: "TXD", Suffix: "_TXD"},
-		{Name: "RXD", Suffix: "_RXD"},
-	},
-	Requirements: []Requirement{
-		{Type: "signal-missing"},
-		{Type: "host-incomplete"},
-		{Type: "missing-pullup"},
-		{Type: "signal-dangling"},
-	},
-}
+var LIN = mustParse(linYAML)
