@@ -18,7 +18,9 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/query"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // Profile is one interface definition. Name appears in rule names/messages and the "profile" tag;
@@ -33,15 +35,37 @@ import (
 // replaces, the convention path (a design that declares no host, like the ACME EVT, still gets the
 // convention + confidence-gate check).
 //
-// v0 is attribute-only: the declaration is authoritative (the design states its intent). Identifying
-// a host by MPN prefix was rejected — a hardcoded part-family list is unverified and rots; the
-// authoritative signal is the datasheet device_class (WS10), a deferred follow-up.
+// TWO host forms, either or both (WS3-044). The ATTRIBUTE form is a declaration: the design states
+// its own intent, so it is authoritative and needs nothing seeded. The CLASS form is an inference
+// from the datasheet — a part IS an SPI-NOR flash because its spec says device_class is
+// spi_nor_flash — which lets host binding work on a design that carries MPNs but no interface
+// annotation. They union: a component matching either is a host.
+//
+// Identifying a host by MPN prefix was rejected and stays rejected: a hardcoded part-family list is
+// unverified and rots. The class form is not that. It reads a fact the datasheet states, and it is
+// deliberately keyed on component.device_class rather than component.class, because the latter also
+// carries keyword evidence derived from the ref-des and description — which would put the guess back
+// in through the side door.
 type Profile struct {
 	Name    string
 	Signals []Signal
 
 	HostAttrKey string // a declared component attribute key (e.g. "interface"); "" = no host binding
 	HostAttrVal string // ... and its value (e.g. "SPI_NOR")
+
+	// HostClass binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
+	// against component.device_class. "" = no class binding. It needs a seeded param set: without
+	// --params no component has a spec, so no host is found and the host path stays silent rather
+	// than guessing (the param tier's standing posture).
+	//
+	// Both sides go through classify.NormalizeDeviceClass, which folds only what the WS10-015
+	// vocabulary KNOWS. For those, case and vendor aliases both fold: a datasheet saying "XTAL" or
+	// "Crystal" matches a profile declaring "crystal". A class the vocabulary does NOT recognize
+	// passes through unchanged INCLUDING ITS CASE, so "LDO" and "ldo" are different strings and do
+	// not match. Two classes already in the seeded corpus ("ldo", "mcu") sit in exactly that
+	// position, so a profile binding one of them must spell it as the datasheet does. Widening the
+	// vocabulary is WS10-004's canonical-taxonomy work, not this field's.
+	HostClass string
 
 	// Requirements is the ordered list of checks this profile declares (WS3-045). Each ref names a
 	// registered requirement-type compiler and carries its params; Compile iterates them uniformly.
@@ -119,7 +143,36 @@ func RegisterRequirementWithValidator(name string, c func(Profile, Requirement) 
 // interface via HostAttrKey=HostAttrVal for the host completeness path to anchor. A host-bound
 // profile whose host is declared nowhere cannot evaluate its host path, which the review gate
 // treats distinctly from an absent interface (WS3-090).
-func (p Profile) HasHost() bool { return p.HostAttrKey != "" }
+func (p Profile) HasHost() bool { return p.HostAttrKey != "" || p.HostClass != "" }
+
+// IsHost reports whether component c is a host of this profile: it carries the declared attribute, or
+// its seeded datasheet declares the bound device class. This is the ONE definition of "host", read by
+// all three consumers — the datalog hostRule, the review scope (Nets/Components), and HostDeclared.
+//
+// Keeping them on one predicate is not tidiness. They answer different questions about the same fact,
+// and when they disagree the disagreement is invisible: a host the datalog anchors on but the scope
+// does not recognise produces findings that HostDeclared simultaneously reports as unevaluable, so a
+// review shows an interface both failing and not-automated. Before WS3-044 each consumer tested the
+// attribute itself, and adding the class form to only one of them would have created exactly that.
+//
+// The class path yields nothing without a seeded param set (PartSpec is nil for every component), so a
+// class-bound profile is silent rather than wrong on a design read without --params.
+func (p Profile) IsHost(m check.Model, c *ir.Component) bool {
+	if c == nil {
+		return false
+	}
+	if p.HostAttrKey != "" && c.GetAttributes()[p.HostAttrKey] == p.HostAttrVal {
+		return true
+	}
+	if p.HostClass == "" || m == nil {
+		return false
+	}
+	spec := m.PartSpec(c.GetRefDes())
+	if spec == nil || spec.GetDeviceClass() == "" {
+		return false
+	}
+	return classify.NormalizeDeviceClass(spec.GetDeviceClass()) == classify.NormalizeDeviceClass(p.HostClass)
+}
 
 // anchorSignal returns the profile's anchor signal (the always-present line the convention
 // completeness check hangs on), or nil when none is declared.
@@ -177,9 +230,26 @@ func (p Profile) anchorSuffix() string {
 }
 
 // hostRule derives host(?ref): a component that declares this interface via its attribute.
-func (p Profile) hostRule() query.Rule {
-	return query.Def(query.Rel("host", query.V("ref")),
-		query.Pos(query.Rel("component.attr", query.V("ref"), query.Str(p.HostAttrKey), query.Str(p.HostAttrVal))))
+// hostRules are the datalog twin of IsHost: one Def per declared host form, sharing the head, which
+// is how datalog spells a union. A profile declaring both is a host under either.
+//
+// The class clause reads component.device_class, the DATASHEET-declared class, not component.class —
+// see the Profile doc for why the difference matters. It is empty without a seeded param set, so the
+// clause contributes nothing rather than guessing.
+func (p Profile) hostRules() []query.Rule {
+	var out []query.Rule
+	if p.HostAttrKey != "" {
+		out = append(out, query.Def(query.Rel("host", query.V("ref")),
+			query.Pos(query.Rel("component.attr", query.V("ref"), query.Str(p.HostAttrKey), query.Str(p.HostAttrVal)))))
+	}
+	if p.HostClass != "" {
+		// Normalized at BUILD time: the relation now projects the canonical key (WS3-044), so the
+		// literal compiled in here has to be canonical too or it could never match.
+		cl := string(classify.NormalizeDeviceClass(p.HostClass))
+		out = append(out, query.Def(query.Rel("host", query.V("ref")),
+			query.Pos(query.Rel("component.device_class", query.V("ref"), query.Str(cl)))))
+	}
+	return out
 }
 
 // Signal is one interface member, identified by how its net is NAMED. A signal declares exactly one
@@ -286,7 +356,8 @@ func (p Profile) signalMissingRule() *check.Rule {
 	// the precise host path covers it, so a signal is not reported twice (net + component).
 	var guard []query.Literal
 	if p.HasHost() {
-		rules = append(rules, p.hostRule(),
+		rules = append(rules, p.hostRules()...)
+		rules = append(rules,
 			query.Def(query.Rel("any_host", query.Str("y")), query.Pos(query.Rel("host", query.V("ref")))))
 		guard = []query.Literal{query.Neg(query.Rel("any_host", query.Str("y")))}
 	}
@@ -325,7 +396,7 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 	if !p.HasHost() {
 		return nil // requirement declared but the profile binds no host: nothing to anchor on
 	}
-	rules := []query.Rule{p.hostRule()}
+	rules := p.hostRules()
 	for _, s := range p.Signals {
 		present := "present_" + s.Name
 		presentBody := append([]query.Literal{

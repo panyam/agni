@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/query"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -567,11 +568,22 @@ func esdRatedFacts(m check.Model) []query.FactRow {
 }
 
 // componentDeviceClassFacts emits component.device_class(ref, class) for each component whose joined
-// datasheet spec declares a non-empty device_class (WS10-013). The class is the datasheet's own single
-// string ("efuse", "ldo"), projected verbatim — a canonical taxonomy is WS10-004, so this is the value
-// as the spec states it, not a normalized key. The check.Citation is the spec's source document (device_class
-// is a PartSpec-level field, so there is no per-parameter provenance to cite). Empty when the Model has
-// no seeded params (m.PartSpec nil for every ref), the param tier's silent-by-construction posture.
+// datasheet spec declares a non-empty device_class (WS10-013). The check.Citation is the spec's source
+// document (device_class is a PartSpec-level field, so there is no per-parameter provenance to cite).
+// Empty when the Model has no seeded params (m.PartSpec nil for every ref), the param tier's
+// silent-by-construction posture.
+//
+// The value is NORMALIZED through classify.NormalizeDeviceClass (WS3-044), which folds vendor spelling
+// variants onto one canonical key ("Ceramic Resonator" and "ceramic resonator" both reach `resonator`)
+// and passes an unrecognized-but-meaningful value through unchanged, so nothing is lost.
+//
+// It used to project verbatim, which made this relation disagree with the OTHER consumer of the same
+// field: check.enrichClassesFromParams already normalizes before merging device_class into a
+// component's class set, so `component.class` answered on the canonical key while
+// `component.device_class` answered on the raw one. Anything matching an exact string across the two —
+// a profile binding its host by class, WS3-044 — would have had to know which of the two it was
+// talking to. Normalizing here is what lets a declared class match without the author guessing the
+// vendor's capitalization.
 func componentDeviceClassFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, c := range m.Components() {
@@ -579,7 +591,8 @@ func componentDeviceClassFacts(m check.Model) []query.FactRow {
 		if spec == nil || spec.GetDeviceClass() == "" {
 			continue
 		}
-		out = append(out, query.FactRow{Relation: RelComponentDeviceClass, Subject: c.RefDes, Value: spec.GetDeviceClass(), Cite: specDocCite(spec)})
+		cl := string(classify.NormalizeDeviceClass(spec.GetDeviceClass()))
+		out = append(out, query.FactRow{Relation: RelComponentDeviceClass, Subject: c.RefDes, Value: cl, Cite: specDocCite(spec)})
 	}
 	return out
 }

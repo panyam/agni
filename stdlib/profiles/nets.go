@@ -30,7 +30,7 @@ func scope(m check.Model, p Profile) (nets, comps map[string]bool) {
 	if p.HasHost() {
 		hosts := map[string]bool{}
 		for _, c := range m.Components() {
-			if c.GetAttributes()[p.HostAttrKey] == p.HostAttrVal {
+			if p.IsHost(m, c) {
 				hosts[c.GetRefDes()] = true
 			}
 		}

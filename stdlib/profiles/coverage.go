@@ -104,7 +104,7 @@ func hostDeclares(base *query.Base, p Profile) bool {
 	if !p.HasHost() {
 		return false
 	}
-	q := query.Build([]query.Rule{p.hostRule()},
+	q := query.Build(p.hostRules(),
 		[]query.Literal{query.Pos(query.Rel("host", query.V("ref")))}, query.V("ref"))
 	rows, err := query.Naive{}.Eval(q, base)
 	return err == nil && len(rows) > 0
