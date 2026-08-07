@@ -186,6 +186,9 @@ func ExternalSignalNet(m Model, n *ir.Net) bool {
 // either rail — so that reports NEITHER, and a caller asking "is this held asserted" gets the honest
 // answer instead of a coin flip.
 func NetBias(m Model, n *ir.Net) (up, down bool) {
+	if isSupplyNet(m, n) {
+		return false, false
+	}
 	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()
 		if !m.HasClass(ref, ClassResistor) {
@@ -228,6 +231,9 @@ func railOrGround(m Model, n *ir.Net) (rail, ground bool) {
 // net". The difference is the far side: a decoupling cap returns to ground or a rail and the signal
 // does not pass through it, while a coupling cap's far side is another signal and the signal does.
 func ACCoupled(m Model, n *ir.Net) bool {
+	if isSupplyNet(m, n) {
+		return false
+	}
 	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()
 		if !m.HasClass(ref, ClassCapacitor) {
@@ -243,6 +249,18 @@ func ACCoupled(m Model, n *ir.Net) bool {
 		}
 	}
 	return false
+}
+
+// isSupplyNet reports whether n is itself a rail or a ground, in which case neither derived property
+// is meaningful and both predicates decline to answer.
+//
+// Found by running the relations on a real board rather than by a fixture. A rail read as "biased
+// high" because a pull-up resistor connects it to the signal it pulls, and GROUND read as AC-coupled
+// because a crystal load capacitor puts a signal on its far side. Both are the predicate answered from
+// the wrong end: a rail is not held at a level, it IS the level, and ground is not a coupled signal.
+// Excluding the far side was never enough — the SUBJECT has to be a signal too.
+func isSupplyNet(m Model, n *ir.Net) bool {
+	return m.IsGroundNet(n) || m.IsPowerRail(n.GetName())
 }
 
 // connects reports whether refDes has a connection on n.

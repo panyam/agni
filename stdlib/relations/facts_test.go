@@ -472,4 +472,18 @@ func TestNetBiasAndACCoupledFacts(t *testing.T) {
 	if coupled["BYPASSED"] {
 		t.Errorf("a cap to GND decouples, it does not couple: %v", coupled)
 	}
+
+	// Neither property is meaningful about a supply net, and BOTH answered from the wrong end before
+	// this guard existed: the rail read as biased high (a pull-up connects it to the line it pulls)
+	// and GND read as AC-coupled (a crystal load cap puts a signal on its far side). Found by running
+	// the relations on a real board, not by a fixture — excluding the far side was never enough, the
+	// SUBJECT has to be a signal too.
+	for _, supply := range []string{"+3V3", "GND"} {
+		if lv, ok := bias[supply]; ok {
+			t.Errorf("net.bias(%s) = %q: a supply net is not held at a level, it IS the level", supply, lv)
+		}
+		if coupled[supply] {
+			t.Errorf("net.ac_coupled(%s): a supply net is not a coupled signal", supply)
+		}
+	}
 }
