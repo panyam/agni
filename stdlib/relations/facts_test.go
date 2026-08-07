@@ -419,3 +419,57 @@ func TestFactsSilentWithoutDatasheet(t *testing.T) {
 		t.Error("IR relations (net/connection) should still project from a bare design")
 	}
 }
+
+// TestNetBiasAndACCoupledFacts (WS3-088): the two derived net properties project as relations, so the
+// intent rules that compare them against a declaration and an engineer's ad-hoc query read one
+// definition rather than two.
+//
+// The assertions that matter are the negative ones. A DECOUPLING cap must not read as AC-coupled, or
+// nearly every net on a board would; and a divider must not read as biased, since it holds neither
+// rail.
+func TestNetBiasAndACCoupledFacts(t *testing.T) {
+	net := func(name string, conns ...string) *ir.Net {
+		n := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "t"}}
+		for _, c := range conns {
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: c, PinRef: "1"})
+		}
+		return n
+	}
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "R1", Prov: &ir.Provenance{SourceFile: "t"}}, // PULLED_UP -> +3V3
+			{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}}, // DIVIDED  -> +3V3
+			{RefDes: "R3", Prov: &ir.Provenance{SourceFile: "t"}}, // DIVIDED  -> GND
+			{RefDes: "C1", Prov: &ir.Provenance{SourceFile: "t"}}, // COUPLED  -> FAR (a signal)
+			{RefDes: "C2", Prov: &ir.Provenance{SourceFile: "t"}}, // BYPASSED -> GND
+		},
+		Nets: []*ir.Net{
+			net("PULLED_UP", "R1"), net("DIVIDED", "R2", "R3"),
+			net("COUPLED", "C1"), net("BYPASSED", "C2"), net("FAR", "C1"),
+			net("+3V3", "R1", "R2"), net("GND", "R3", "C2"),
+		},
+	}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	bias := map[string]string{}
+	for _, f := range byRel[RelNetBias] {
+		bias[f.Subject] = f.Value
+	}
+	if bias["PULLED_UP"] != "high" {
+		t.Errorf("net.bias(PULLED_UP) = %q, want high", bias["PULLED_UP"])
+	}
+	if lv, ok := bias["DIVIDED"]; ok {
+		t.Errorf("a divider holds neither rail, want no row: got %q", lv)
+	}
+
+	coupled := map[string]bool{}
+	for _, f := range byRel[RelNetACCoupled] {
+		coupled[f.Subject] = true
+	}
+	if !coupled["COUPLED"] {
+		t.Errorf("a cap to another signal is coupling: %v", coupled)
+	}
+	if coupled["BYPASSED"] {
+		t.Errorf("a cap to GND decouples, it does not couple: %v", coupled)
+	}
+}

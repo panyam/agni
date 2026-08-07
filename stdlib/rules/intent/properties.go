@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -49,13 +48,17 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 	switch p.Property {
 	case PropACCoupled:
-		if seriesCapOn(m, p.Net) {
+		if netNamed(m, p.Net) == nil || check.ACCoupled(m, netNamed(m, p.Net)) {
 			return "", false
 		}
 		return fmt.Sprintf("net %q is declared AC-coupled, but no series capacitor carries it", p.Net), true
 
 	case PropResetPolarity:
-		up, down := biasOn(m, p.Net)
+		n := netNamed(m, p.Net)
+		if n == nil {
+			return "", false // a declared net absent from the design is not a contradiction
+		}
+		up, down := check.NetBias(m, n)
 		switch p.Value {
 		case "low":
 			if down {
@@ -71,61 +74,16 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 	return "", false
 }
 
-// seriesCapOn reports whether a capacitor carries the net IN SERIES rather than to ground. A
-// decoupling cap has its far side on ground; a coupling cap has it on another signal, and that is the
-// difference between the two uses of the same part. A cap whose far side is a rail is likewise not a
-// coupling cap.
-func seriesCapOn(m check.Model, net string) bool {
-	for ref := range componentsOnNet(m, net) {
-		if !m.HasClass(ref, check.ComponentClass("capacitor")) {
-			continue
-		}
-		for _, n := range m.Nets() {
-			if n.GetName() == net || !touches(n, ref) {
-				continue
-			}
-			if !classify.ActiveRoleVocab().IsGround(n.GetName()) && !m.IsPowerRail(n.GetName()) {
-				return true
-			}
+// netNamed returns the design net with this exact name, or nil when the declaration names a net the
+// design does not have. The property rules iterate the DECLARATION, so an absent net is silence: the
+// presence forms (modules, subsystems) are what report a missing thing.
+func netNamed(m check.Model, name string) *ir.Net {
+	for _, n := range m.Nets() {
+		if n.GetName() == name {
+			return n
 		}
 	}
-	return false
-}
-
-// biasOn reports which way a resistor biases the net: to a rail (up), to ground (down), or neither.
-// Both can hold at once on a divider, in which case the net carries no unambiguous bias and neither
-// polarity is contradicted.
-func biasOn(m check.Model, net string) (up, down bool) {
-	for ref := range componentsOnNet(m, net) {
-		if !m.HasClass(ref, check.ComponentClass("resistor")) {
-			continue
-		}
-		for _, n := range m.Nets() {
-			if n.GetName() == net || !touches(n, ref) {
-				continue
-			}
-			switch {
-			case classify.ActiveRoleVocab().IsGround(n.GetName()):
-				down = true
-			case m.IsPowerRail(n.GetName()):
-				up = true
-			}
-		}
-	}
-	if up && down {
-		return false, false // a divider biases neither way on its own
-	}
-	return up, down
-}
-
-// touches reports whether refDes has a connection on n.
-func touches(n *ir.Net, refDes string) bool {
-	for _, c := range n.GetConnections() {
-		if c.GetComponentRef() == refDes {
-			return true
-		}
-	}
-	return false
+	return nil
 }
 
 // propertyImpact is the per-kind impact line shown with a finding.

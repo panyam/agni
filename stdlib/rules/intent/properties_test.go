@@ -144,3 +144,33 @@ func TestPropertyRuleIgnoresUndeclaredNets(t *testing.T) {
 		t.Errorf("a declared net absent from the design is not a contradiction: %+v", fs)
 	}
 }
+
+// TestResetPolarityFindsMultiHopBias is the gap that motivated moving these predicates into
+// core/check. A bias resistor does not always sit directly between the net and its rail — it can
+// reach the rail through further passives, and a direct-only check silently misses that.
+//
+// profiles.pullupRule already carried both clauses (WS3-108 forced the second). The first draft of
+// this rule reimplemented only the direct half, so a design biased through a series element read as
+// "no evidence" and the contradiction went unreported.
+func TestResetPolarityFindsMultiHopBias(t *testing.T) {
+	// PHY_EN -- R1 -- MID -- R2 -- +3V3 : biased HIGH, two hops out.
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "R1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "PHY_EN", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "R1", PinRef: "1"}}},
+			{Name: "MID", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "R1", PinRef: "2"}, {ComponentRef: "R2", PinRef: "1"}}},
+			{Name: "+3V3", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "R2", PinRef: "2"}}},
+		},
+	}
+	fs := propFindings(t, d, NetProperty{Net: "PHY_EN", Property: PropResetPolarity, Value: "high"})
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding: active-high declared, biased high through a series element; got %+v", fs)
+	}
+}

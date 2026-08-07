@@ -29,39 +29,41 @@ func init() {
 // registering it here keeps the relation shapes with the projectors that fill them. Relations the
 // evaluator computes rather than looks up (reaches) are NOT here.
 var builtinSchema = map[string][]query.Field{
-	RelNetMaxVoltage:     {query.FieldSubject, query.FieldNum},                                                              // net.max_voltage(net, volts)
-	RelNetNominalVoltage: {query.FieldSubject, query.FieldNum},                                                              // net.nominal_voltage(net, volts)
-	RelComponentMPN:      {query.FieldSubject, query.FieldValue},                                                            // component.mpn(ref, mpn)
-	RelParam:             {query.FieldSubject, query.FieldObject, query.FieldNum},                                           // param(mpn, symbol, max)
-	RelParamRange:        {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldMin, query.FieldNum},         // param.range(mpn, symbol, kind, min, max)
-	RelParamProv:         {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldNum, query.FieldConditions},  // param.prov(mpn, symbol, doc, page, section)
-	RelPartAudience:      {query.FieldSubject, query.FieldObject},                                                           // part.audience(mpn, who)
-	RelComponentOnNet:    {query.FieldSubject, query.FieldObject},                                                           // component-on-net(ref, net)
+	RelNetMaxVoltage:     {query.FieldSubject, query.FieldNum},                                                             // net.max_voltage(net, volts)
+	RelNetNominalVoltage: {query.FieldSubject, query.FieldNum},                                                             // net.nominal_voltage(net, volts)
+	RelComponentMPN:      {query.FieldSubject, query.FieldValue},                                                           // component.mpn(ref, mpn)
+	RelParam:             {query.FieldSubject, query.FieldObject, query.FieldNum},                                          // param(mpn, symbol, max)
+	RelParamRange:        {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldMin, query.FieldNum},        // param.range(mpn, symbol, kind, min, max)
+	RelParamProv:         {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldNum, query.FieldConditions}, // param.prov(mpn, symbol, doc, page, section)
+	RelPartAudience:      {query.FieldSubject, query.FieldObject},                                                          // part.audience(mpn, who)
+	RelComponentOnNet:    {query.FieldSubject, query.FieldObject},                                                          // component-on-net(ref, net)
 	// Pin tier (WS3-038) — pin-granular relations, queryable with no evaluator change.
-	RelPin:           {query.FieldSubject, query.FieldObject},                       // pin(ref, pin)
-	RelPinRole:       {query.FieldSubject, query.FieldObject, query.FieldValue},     // pin.role(ref, pin, role)
-	RelPinType:       {query.FieldSubject, query.FieldObject, query.FieldValue},     // pin.type(ref, pin, etype)
-	RelPinNet:        {query.FieldSubject, query.FieldObject, query.FieldValue},     // pin.net(ref, pin, net)
-	RelNetPinCount:   {query.FieldSubject, query.FieldNum},                          // net.pin_count(net, count)
-	RelHasNCChannel:  {query.FieldSubject},                                          // has_nc_channel(present)
-	RelTypesPowerOut: {query.FieldSubject},                                          // types_power_out(present)
-	RelRail:          {query.FieldSubject},                                          // rail(net)
-	RelFeedback:      {query.FieldSubject},                                          // feedback(net)
-	RelComponentAttr: {query.FieldSubject, query.FieldObject, query.FieldValue},     // component.attr(ref, key, value)
+	RelPin:           {query.FieldSubject, query.FieldObject},                   // pin(ref, pin)
+	RelPinRole:       {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin.role(ref, pin, role)
+	RelPinType:       {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin.type(ref, pin, etype)
+	RelPinNet:        {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin.net(ref, pin, net)
+	RelNetPinCount:   {query.FieldSubject, query.FieldNum},                      // net.pin_count(net, count)
+	RelHasNCChannel:  {query.FieldSubject},                                      // has_nc_channel(present)
+	RelTypesPowerOut: {query.FieldSubject},                                      // types_power_out(present)
+	RelRail:          {query.FieldSubject},                                      // rail(net)
+	RelFeedback:      {query.FieldSubject},                                      // feedback(net)
+	RelComponentAttr: {query.FieldSubject, query.FieldObject, query.FieldValue}, // component.attr(ref, key, value)
 	// Device-class and net-attribute relations (WS3-074). component.class emits one row per class
 	// tag in the device_classes SET (WS3-071), so a family tag answers too.
-	RelComponentClass:       {query.FieldSubject, query.FieldValue},                             // component.class(ref, class)
-	RelNetGround:            {query.FieldSubject},                                               // net.ground(net)
-	RelNetExternal:          {query.FieldSubject},                                               // net.external(net)
-	RelEsdRated:             {query.FieldSubject},                                               // component.esd_rated(ref) — WS3-076, datasheet tier
-	RelComponentDeviceClass: {query.FieldSubject, query.FieldValue},                             // component.device_class(ref, class) — WS10-013, datasheet tier
-	RelBus:                  {query.FieldSubject, query.FieldValue},                             // bus(label, kind) — reader-detected unmodeled bus (WS1-034)
-	RelRefDesCollision:      {query.FieldSubject},                                               // ref_des_collision(ref_des) — WS3-081
-	RelPinNetConflict:       {query.FieldSubject, query.FieldObject, query.FieldValue},          // pin_net_conflict(ref_des, pin, net) — WS3-081
-	RelNetBusLike:           {query.FieldSubject},                                               // net.bus_like(net) — WS3-080
-	RelExternalSignalNet:    {query.FieldSubject},                                               // external_signal_net(net) — WS3-061
-	RelNetNetClass:          {query.FieldSubject, query.FieldValue},                             // net.netclass(net, class) — WS3-105
-	RelHasNetClass:          {query.FieldSubject},                                               // has_netclass(present) — WS3-105
+	RelComponentClass:       {query.FieldSubject, query.FieldValue},                    // component.class(ref, class)
+	RelNetGround:            {query.FieldSubject},                                      // net.ground(net)
+	RelNetExternal:          {query.FieldSubject},                                      // net.external(net)
+	RelEsdRated:             {query.FieldSubject},                                      // component.esd_rated(ref) — WS3-076, datasheet tier
+	RelComponentDeviceClass: {query.FieldSubject, query.FieldValue},                    // component.device_class(ref, class) — WS10-013, datasheet tier
+	RelBus:                  {query.FieldSubject, query.FieldValue},                    // bus(label, kind) — reader-detected unmodeled bus (WS1-034)
+	RelRefDesCollision:      {query.FieldSubject},                                      // ref_des_collision(ref_des) — WS3-081
+	RelPinNetConflict:       {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin_net_conflict(ref_des, pin, net) — WS3-081
+	RelNetBusLike:           {query.FieldSubject},                                      // net.bus_like(net) — WS3-080
+	RelExternalSignalNet:    {query.FieldSubject},                                      // external_signal_net(net) — WS3-061
+	RelNetBias:              {query.FieldSubject, query.FieldValue},                    // net.bias(net, level) — WS3-088
+	RelNetACCoupled:         {query.FieldSubject},                                      // net.ac_coupled(net) — WS3-088
+	RelNetNetClass:          {query.FieldSubject, query.FieldValue},                    // net.netclass(net, class) — WS3-105
+	RelHasNetClass:          {query.FieldSubject},                                      // has_netclass(present) — WS3-105
 	// Board tier — queryable with no evaluator change (tier-generality).
 	RelBoardTrackWidth: {query.FieldSubject, query.FieldNum},    // board.track_width(net, mm)
 	RelBoardViaDrill:   {query.FieldSubject, query.FieldNum},    // board.via_drill(net, mm)
@@ -101,6 +103,8 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "pin_net_conflict", Args: []string{"ref_des", "pin", "net"}, Summary: "a pin the read placed on more than one net; one row per net (reader integrity diagnostic)", Kind: query.KindNetlist},
 	{Name: "net.bus_like", Args: []string{"net"}, Summary: "a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate", Kind: query.KindNetlist},
 	{Name: "external_signal_net", Args: []string{"net"}, Summary: "a connector-facing signal net (not a rail, ground, no-connect, or power path) — the scope the ESD rules share", Kind: query.KindNetlist},
+	{Name: "net.bias", Args: []string{"net", "level"}, Summary: "a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider", Kind: query.KindNetlist},
+	{Name: "net.ac_coupled", Args: []string{"net"}, Summary: "a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count)", Kind: query.KindNetlist},
 	{Name: "net.netclass", Args: []string{"net", "class"}, Summary: "the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role)", Kind: query.KindNetlist},
 	{Name: "has_netclass", Args: []string{"present"}, Summary: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)", Kind: query.KindNetlist},
 	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part (needs --params)", Kind: query.KindDatasheet},

@@ -172,6 +172,86 @@ func ExternalSignalNet(m Model, n *ir.Net) bool {
 	return !PowerPinReachable(m, n)
 }
 
+// NetBias reports which way a net is held by a bias resistor: toward a rail (up), toward ground
+// (down), or neither. It is the "is this net pulled" predicate, in one place (WS3-088).
+//
+// TWO CLAUSES, and the second one is the one that gets forgotten. A bias resistor commonly sits
+// directly between the net and its rail, but it may also reach the rail through further passives, and
+// a rule that only checked the direct form silently misses those. profiles.pullupRule learned this the
+// hard way (WS3-108): its reaches-only form could not see a wide rail at all, so a direct clause had
+// to be added beside it. Both live here now so a third consumer inherits both rather than
+// reimplementing one.
+//
+// Both directions can hold at once on a divider, which sets an intermediate level rather than holding
+// either rail — so that reports NEITHER, and a caller asking "is this held asserted" gets the honest
+// answer instead of a coin flip.
+func NetBias(m Model, n *ir.Net) (up, down bool) {
+	for _, c := range n.GetConnections() {
+		ref := c.GetComponentRef()
+		if !m.HasClass(ref, ClassResistor) {
+			continue
+		}
+		for _, far := range m.Nets() {
+			if far.GetName() == n.GetName() || !connects(far, ref) {
+				continue
+			}
+			u, d := railOrGround(m, far)
+			// The far side may reach its rail through more passives, so walk from it too.
+			if !u && !d {
+				for _, hop := range m.Reach(far, ProtectionReachHops).Nets {
+					if hu, hd := railOrGround(m, hop); hu || hd {
+						u, d = u || hu, d || hd
+					}
+				}
+			}
+			up, down = up || u, down || d
+		}
+	}
+	if up && down {
+		return false, false // a divider holds neither rail
+	}
+	return up, down
+}
+
+// railOrGround classifies a net as a supply rail or a ground, the two things a bias can pull toward.
+func railOrGround(m Model, n *ir.Net) (rail, ground bool) {
+	if m.IsGroundNet(n) {
+		return false, true
+	}
+	return m.IsPowerRail(n.GetName()), false
+}
+
+// ACCoupled reports whether a SERIES capacitor carries the net — the structural signature of AC
+// coupling (WS3-088).
+//
+// The whole check is telling a coupling cap from a decoupling one, since both are "a capacitor on the
+// net". The difference is the far side: a decoupling cap returns to ground or a rail and the signal
+// does not pass through it, while a coupling cap's far side is another signal and the signal does.
+func ACCoupled(m Model, n *ir.Net) bool {
+	for _, c := range n.GetConnections() {
+		ref := c.GetComponentRef()
+		if !m.HasClass(ref, ClassCapacitor) {
+			continue
+		}
+		for _, far := range m.Nets() {
+			if far.GetName() == n.GetName() || !connects(far, ref) {
+				continue
+			}
+			if rail, gnd := railOrGround(m, far); !rail && !gnd {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// connects reports whether refDes has a connection on n.
+func connects(n *ir.Net, refDes string) bool {
+	return Exists(n.GetConnections(), func(c *ir.Connection) bool {
+		return c.GetComponentRef() == refDes
+	})
+}
+
 // UnprotectedPowerReach walks the connector net's series neighborhood (WS3-011) and
 // reports whether SOME reached net carries a real power-input pin with neither a fuse
 // crossed on the way there nor a TVS on any net along that path. The per-target path

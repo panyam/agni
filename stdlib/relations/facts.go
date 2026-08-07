@@ -8,10 +8,10 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // The design fact base (WS3-004): the reads a rule declares, captured as named, typed,
@@ -142,6 +142,13 @@ const (
 	// dropped guard here is a false FAIL on a rail or an unconnected pad.
 	RelExternalSignalNet = "external_signal_net" // external_signal_net(net): connector-facing signal net, the ESD scope. doc: facts/docs/external_signal_net.md
 
+	// Derived net properties (WS3-088): what the DESIGN does, projected so it can be compared against
+	// what an intent declaration says it should do — and so an engineer can ask either question ad hoc.
+	// Both were private helpers inside the intent rule first; they are here because a derived predicate
+	// with more than one plausible consumer belongs in the vocabulary, not inside one rule.
+	RelNetBias      = "net.bias"       // net.bias(net, level): a bias resistor holds the net high or low. doc: facts/docs/net.bias.md
+	RelNetACCoupled = "net.ac_coupled" // net.ac_coupled(net): a SERIES capacitor carries the net. doc: facts/docs/net.ac_coupled.md
+
 	RelNetNetClass = "net.netclass" // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
 	RelHasNetClass = "has_netclass" // has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/has_netclass.md
 )
@@ -178,6 +185,8 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, pinNetConflictFacts(m)...)
 	out = append(out, netBusLikeFacts(m)...)
 	out = append(out, externalSignalNetFacts(m)...)
+	out = append(out, netBiasFacts(m)...)
+	out = append(out, netACCoupledFacts(m)...)
 	out = append(out, netNetClassFacts(m)...)
 	out = append(out, hasNetClassFacts(m)...)
 	out = append(out, boardFacts(m)...)
@@ -698,6 +707,40 @@ func externalSignalNetFacts(m check.Model) []query.FactRow {
 	for _, n := range m.Nets() {
 		if check.ExternalSignalNet(m, n) {
 			out = append(out, query.FactRow{Relation: RelExternalSignalNet, Subject: n.Name, Cite: irCite(n.Prov)})
+		}
+	}
+	return out
+}
+
+// netBiasFacts emits net.bias(net, "high"|"low") for each net a bias resistor holds at a rail. A net
+// with no bias, or with a divider holding it at neither rail, yields no row — so `not net.bias(?n,?_)`
+// reads as "unbiased", which is a genuinely different state from "biased the other way".
+func netBiasFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, n := range m.Nets() {
+		up, down := check.NetBias(m, n)
+		level := ""
+		switch {
+		case up:
+			level = "high"
+		case down:
+			level = "low"
+		default:
+			continue
+		}
+		out = append(out, query.FactRow{Relation: RelNetBias, Subject: n.Name, Value: level, Cite: irCite(n.Prov)})
+	}
+	return out
+}
+
+// netACCoupledFacts emits net.ac_coupled(net) for each net a SERIES capacitor carries. A decoupling
+// cap (far side on ground or a rail) does not count — that distinction is the whole predicate, since
+// both uses are "a capacitor on the net".
+func netACCoupledFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, n := range m.Nets() {
+		if check.ACCoupled(m, n) {
+			out = append(out, query.FactRow{Relation: RelNetACCoupled, Subject: n.Name, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
