@@ -113,6 +113,37 @@ var supplySymbols = map[string]bool{
 	"VBAT": true, "VSUP": true, "V+": true,
 }
 
+// fetBreakdownSymbols is the alias set for a MOSFET's drain-source breakdown voltage: the symbols
+// datasheets print it under. Same posture as supplySymbols — vendor spelling lives in the model layer,
+// never in rule text (docs/20). Deliberately excludes VGSS (the GATE-source rating), which is a
+// different limit on a different pair of terminals and is typically much lower; comparing a rail
+// against the wrong one of the two would misreport which rating a design violates.
+var fetBreakdownSymbols = map[string]bool{
+	"VDSS": true, "VDS": true, "BVDSS": true, "V(BR)DSS": true,
+}
+
+// FetBreakdownLimits selects the machine-comparable drain-source breakdown rows of a spec: symbol in
+// the breakdown alias set, kind ABSOLUTE_MAX, unit exactly "V", a max bound present, and the docs/20
+// comparison gates. Breakdown IS an absolute maximum on a real datasheet (it is the voltage past which
+// the part stops being a switch), so unlike OutputVoltageLimits the kind is constrained.
+//
+// The third member of the connection-aware extractor family: SupplyAbsMaxLimits reads what a part can
+// WITHSTAND on its supply, OutputVoltageLimits what a part DELIVERS, and this what a switch can BLOCK.
+func FetBreakdownLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !fetBreakdownSymbols[sym] ||
+			p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
+			param.UnderSpecified(p) || !param.MachineComparable(p) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
 // outputSymbols is the alias set for a regulator's OUTPUT voltage: the symbols datasheets print it
 // under. Same posture as supplySymbols — the vendor spelling lives in the model layer, never in rule
 // text (docs/20). Deliberately narrow: these are outputs a downstream part is fed BY, so a symbol
