@@ -33,11 +33,16 @@ type Config struct {
 // whether a net name is a power rail, a ground, or a regulator feedback node. A project declares its
 // house naming here instead of being stuck with the built-in literals.
 type Lexicon struct {
-	Rail      VocabConfig            `yaml:"rail"`
-	Ground    VocabConfig            `yaml:"ground"`
-	Feedback  VocabConfig            `yaml:"feedback"`
-	SupplyPin VocabConfig            `yaml:"supply_pin"` // a component's power-supply INPUT pin names (WS3-072)
-	Class     map[string]VocabConfig `yaml:"class"`      // component-class name (e.g. "tvs") -> patterns
+	Rail      VocabConfig `yaml:"rail"`
+	Ground    VocabConfig `yaml:"ground"`
+	Feedback  VocabConfig `yaml:"feedback"`
+	SupplyPin VocabConfig `yaml:"supply_pin"` // a component's power-supply INPUT pin names (WS3-072)
+	// Transistor TERMINAL pin names (WS3-117). Applied only to parts the class lexicon reads as a
+	// transistor, so a house spelling here cannot leak onto an MCU's pins.
+	Gate   VocabConfig            `yaml:"gate"`
+	Source VocabConfig            `yaml:"source"`
+	Drain  VocabConfig            `yaml:"drain"`
+	Class  map[string]VocabConfig `yaml:"class"` // component-class name (e.g. "tvs") -> patterns
 }
 
 // VocabConfig is one vocabulary override: Patterns are RE2 (case-insensitive, matched on the hierarchy
@@ -103,7 +108,15 @@ func BuildLexicon(cfg Config) (*check.Lexicon, error) {
 	vp := func(vc VocabConfig) check.VocabPatterns {
 		return check.VocabPatterns{Patterns: vc.Patterns, Replace: vc.Replace}
 	}
-	v, err := check.BuildRoleVocab(vp(cfg.Lexicon.Rail), vp(cfg.Lexicon.Ground), vp(cfg.Lexicon.Feedback), vp(cfg.Lexicon.SupplyPin))
+	v, err := check.BuildRoleVocab(check.RoleVocabConfig{
+		Rail:      vp(cfg.Lexicon.Rail),
+		Ground:    vp(cfg.Lexicon.Ground),
+		Feedback:  vp(cfg.Lexicon.Feedback),
+		SupplyPin: vp(cfg.Lexicon.SupplyPin),
+		Gate:      vp(cfg.Lexicon.Gate),
+		Source:    vp(cfg.Lexicon.Source),
+		Drain:     vp(cfg.Lexicon.Drain),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("naming config %q lexicon: %w", cfg.Name, err)
 	}

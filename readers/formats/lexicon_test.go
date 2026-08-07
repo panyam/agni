@@ -13,8 +13,9 @@ import (
 // start-anchored built-ins.
 func railVocab(t *testing.T, pattern string) *classify.Lexicon {
 	t.Helper()
-	rv, err := classify.BuildRoleVocab(classify.VocabPatterns{Patterns: []string{pattern}},
-		classify.VocabPatterns{}, classify.VocabPatterns{}, classify.VocabPatterns{})
+	rv, err := classify.BuildRoleVocab(classify.RoleVocabConfig{
+		Rail: classify.VocabPatterns{Patterns: []string{pattern}},
+	})
 	if err != nil {
 		t.Fatalf("BuildRoleVocab: %v", err)
 	}

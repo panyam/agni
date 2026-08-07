@@ -27,6 +27,8 @@ type (
 	// the --conventions loader (check/naming) and external overlays.
 	ClassVocab    = classify.ClassVocab
 	VocabPatterns = classify.VocabPatterns
+	// RoleVocabConfig is the named-field override set for BuildRoleVocab (WS3-117).
+	RoleVocabConfig = classify.RoleVocabConfig
 
 	// The naming (role) lexicon moved to classify in WS3-072 for the same reason (the net.role stamp
 	// runs at ingestion). RoleVocab keeps its check.* name here.
@@ -90,6 +92,9 @@ const (
 	RoleCathode = model.RoleCathode
 	RolePower   = model.RolePower
 	RoleGround  = model.RoleGround
+	RoleGate    = model.RoleGate
+	RoleSource  = model.RoleSource
+	RoleDrain   = model.RoleDrain
 	RoleUnknown = model.RoleUnknown
 )
 

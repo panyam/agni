@@ -51,7 +51,7 @@ func TestStampPowerInPins(t *testing.T) {
 // prefix ("PWR_") extends it and the stamp promotes those pins — no engine change, no frozen literal.
 func TestStampPowerInPinsHonorsSupplyPinVocab(t *testing.T) {
 	defer SetActiveRoleVocab(nil)
-	v, err := BuildRoleVocab(VocabPatterns{}, VocabPatterns{}, VocabPatterns{}, VocabPatterns{Patterns: []string{`^PWR_`}})
+	v, err := BuildRoleVocab(RoleVocabConfig{SupplyPin: VocabPatterns{Patterns: []string{`^PWR_`}}})
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

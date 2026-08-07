@@ -108,6 +108,23 @@ func classifyPinRole(m *irModel, name string, class ComponentClass) PinRole {
 		case "K", "KATHODE", "CATHODE", "CAT", "-":
 			return RoleCathode
 		}
+	case ClassTransistor:
+		// Terminal roles, gated to transistors for the same reason polarity is gated to the diode
+		// family: these are the shortest pin names on a board. Ungated, a bare "S" or "D" would
+		// mis-role a pin on nearly every part, and a WRONG role is worse than a missing one — a
+		// topology rule would then walk a path that does not exist and report on it (WS3-117).
+		//
+		// Unlike the polarity tokens above, these read from the naming lexicon rather than literals,
+		// so a house that calls its gate "DRV" declares that in --conventions instead of patching the
+		// engine. The polarity literals predate the lexicon and are left alone here.
+		switch {
+		case m.lexicon().RoleVocab().IsGate(u):
+			return RoleGate
+		case m.lexicon().RoleVocab().IsSource(u):
+			return RoleSource
+		case m.lexicon().RoleVocab().IsDrain(u):
+			return RoleDrain
+		}
 	}
 	if m.IsGroundName(u) {
 		return RoleGround

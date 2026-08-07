@@ -9,8 +9,9 @@ import (
 
 func projectLexicon(t *testing.T, railPattern string) *classify.Lexicon {
 	t.Helper()
-	rv, err := classify.BuildRoleVocab(classify.VocabPatterns{Patterns: []string{railPattern}},
-		classify.VocabPatterns{}, classify.VocabPatterns{}, classify.VocabPatterns{})
+	rv, err := classify.BuildRoleVocab(classify.RoleVocabConfig{
+		Rail: classify.VocabPatterns{Patterns: []string{railPattern}},
+	})
 	if err != nil {
 		t.Fatalf("BuildRoleVocab: %v", err)
 	}
