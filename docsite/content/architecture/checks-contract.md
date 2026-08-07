@@ -169,9 +169,10 @@ non-goal, because a scripted check is exactly as reviewable as the code inside i
 ### Everything that cannot run is rejected when it is read
 
 An unknown entity set, an unknown fact, an unbound variable, an unregistered function, an unknown
-relation, an unknown requirement type, an over-broad signal matcher, a completeness requirement with
-no anchor. Each of those would otherwise compile to a rule that never fires, and a rule that never
-fires is indistinguishable from a design with nothing wrong with it. A deck stops at the first bad
+relation, an unknown requirement type, a requirement whose params cannot produce the check its type
+promises, an over-broad signal matcher, a completeness requirement with no anchor. Each of those
+would otherwise compile to a rule that never fires, and a rule that never fires is indistinguishable
+from a design with nothing wrong with it. A deck stops at the first bad
 definition rather than loading partially, for the same reason: a catalog missing one rule looks
 exactly like a catalog that ran it and found nothing.
 
