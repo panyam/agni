@@ -62,7 +62,7 @@ func TestDiffDesigns(t *testing.T) {
 			{Name: "OLD", Connections: conns("R2.1"), Prov: &ir.Provenance{SourceFile: "a.edn"}},
 			{Name: "SIG", Connections: conns("R1.2", "C1.2")},
 			{Name: "CLK", Connections: conns("R1.3")},
-			{Name: "STYLE", Connections: conns("R1.4"), NetClass: "default"},
+			{Name: "STYLE", Connections: conns("R1.4"), NetClasses: []string{"default"}},
 		},
 	}
 	newer := &ir.Design{
@@ -75,7 +75,7 @@ func TestDiffDesigns(t *testing.T) {
 			{Name: "KEEP", Connections: conns("R1.1", "C1.1")},
 			{Name: "DATA", Connections: conns("R1.2", "C1.2")},
 			{Name: "CLK", Connections: conns("R1.3", "C1.3")},
-			{Name: "STYLE", Connections: conns("R1.4"), NetClass: "power"},
+			{Name: "STYLE", Connections: conns("R1.4"), NetClasses: []string{"power"}},
 			{Name: "FRESH", Connections: conns("R4.1", "R4.2")},
 		},
 	}

@@ -73,9 +73,17 @@ func TestQueryNetClassCLI(t *testing.T) {
 	}
 
 	s := run("testdata/conformance/showcase.passes.kicad_pro", "net.netclass(?n, ?c) => ?n, ?c")
-	for _, want := range []string{"USB_D+", "HighSpeed", "VBUS_PROT", "Power", "5 result(s)"} {
+	for _, want := range []string{"USB_D+", "HighSpeed", "VBUS_PROT", "Power"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("project net.netclass query missing %q:\n%s", want, s)
+		}
+	}
+	// WS1-050: the projection is 1:many, so a net in several classes fans out to one row each.
+	// +3V3 carries an array-form assignment (Power, Critical) and the USB pair matches two
+	// overlapping patterns; every membership must be its own row.
+	for _, want := range []string{"Critical", "Differential", "8 result(s)"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("project net.netclass query missing multi-class row %q:\n%s", want, s)
 		}
 	}
 	// SCL is in no class, so it must not appear — an unclassed net yields no row at all.

@@ -111,7 +111,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		m.netByName[n.Name] = n
 		m.netNames[strings.ToUpper(n.Name)] = true
 		m.nameCount[n.Name]++
-		if n.NetClass != "" {
+		if len(n.NetClasses) > 0 {
 			m.netClass = true
 		}
 		switch name := strings.ToLower(n.Name); {

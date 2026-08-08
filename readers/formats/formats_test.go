@@ -3,6 +3,7 @@ package formats
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,8 +80,10 @@ func TestRegistryConsistency(t *testing.T) {
 }
 
 // TestKicadProjectNetClass covers WS1-037: net-class membership lives only in the .kicad_pro
-// net_settings (not the sch/pcb), so a project read stamps ir.Net.net_class from the first
-// matching pattern. wirenet.kicad_sch yields a net named "SIG"; the project assigns it a class.
+// net_settings (not the sch/pcb), so a project read stamps ir.Net.net_classes. It also covers the
+// WS1-050 cardinality end to end: SIG is named by an explicit assignment AND matched by two
+// patterns, and all three memberships must survive the loader, not just whichever resolved first.
+// wirenet.kicad_sch yields a net named "SIG".
 func TestKicadProjectNetClass(t *testing.T) {
 	sch, err := os.ReadFile("../kicad/testdata/wirenet.kicad_sch")
 	if err != nil {
@@ -90,7 +93,12 @@ func TestKicadProjectNetClass(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "board.kicad_sch"), sch, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	pro := `{"net_settings":{"netclass_patterns":[{"netclass":"HighSpeed","pattern":"SIG"}]}}`
+	pro := `{"net_settings":{
+	  "netclass_assignments": {"SIG": ["Critical"]},
+	  "netclass_patterns": [
+	    {"netclass":"HighSpeed","pattern":"SIG"},
+	    {"netclass":"Diagnostic","pattern":"S*"}
+	  ]}}`
 	if err := os.WriteFile(filepath.Join(dir, "board.kicad_pro"), []byte(pro), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -107,8 +115,9 @@ func TestKicadProjectNetClass(t *testing.T) {
 	if sig == nil {
 		t.Fatalf("SIG net not found in %v", d.Nets)
 	}
-	if sig.NetClass != "HighSpeed" {
-		t.Errorf("SIG net_class = %q, want HighSpeed (populated from .kicad_pro)", sig.NetClass)
+	want := []string{"Critical", "Diagnostic", "HighSpeed"}
+	if !slices.Equal(sig.NetClasses, want) {
+		t.Errorf("SIG net_classes = %v, want %v (populated from .kicad_pro)", sig.NetClasses, want)
 	}
 }
 

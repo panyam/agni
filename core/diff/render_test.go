@@ -31,7 +31,7 @@ func renderPair() *Report {
 			net("CLK", "old", "U1.5", "U2.5"),     // net_class change -> soft
 		},
 	}
-	a.Nets[3].NetClass = "signal"
+	a.Nets[3].NetClasses = []string{"signal"}
 	b := &ir.Design{
 		Components: []*ir.Component{
 			comp("R1", "lib", "res", "22k"),
@@ -44,7 +44,7 @@ func renderPair() *Report {
 			net("CLK", "new", "U1.5", "U2.5"),
 		},
 	}
-	b.Nets[3].NetClass = "power"
+	b.Nets[3].NetClasses = []string{"power"}
 	return Designs(a, b)
 }
 

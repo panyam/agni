@@ -746,16 +746,18 @@ func netACCoupledFacts(m check.Model) []query.FactRow {
 	return out
 }
 
-// netNetClassFacts emits net.netclass(net, class) for each net carrying a tool-assigned class. The
-// value is the string the design tool recorded verbatim, not a derived role, so a query scopes by
-// the same label the layout engineer sees in KiCad. One row per classed net; nets left in the
-// tool's implicit default carry no class and yield no row, so `not net.netclass(?n, ?_)` reads as
-// "unclassed". Empty for every source but a KiCad project read — see hasNetClassFacts.
+// netNetClassFacts emits net.netclass(net, class) for each class a net belongs to. The value is the
+// string the design tool recorded verbatim, not a derived role, so a query scopes by the same label
+// the layout engineer sees in KiCad. ONE ROW PER (net, class) PAIR, so a net in two classes fans out
+// to two rows and `?net` is not unique in this projection (WS1-050) — the same 1:many shape
+// component.class has. Nets left in the tool's implicit default carry no class and yield no row, so
+// `not net.netclass(?n, ?_)` reads as "unclassed". Empty for every source but a KiCad project read
+// — see hasNetClassFacts.
 func netNetClassFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, n := range m.Nets() {
-		if n.NetClass != "" {
-			out = append(out, query.FactRow{Relation: RelNetNetClass, Subject: n.Name, Value: n.NetClass, Cite: irCite(n.Prov)})
+		for _, c := range n.NetClasses {
+			out = append(out, query.FactRow{Relation: RelNetNetClass, Subject: n.Name, Value: c, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
