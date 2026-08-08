@@ -2,7 +2,10 @@ package relations
 
 import (
 	"fmt"
+	"math"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -151,6 +154,22 @@ const (
 
 	RelNetNetClass = "net.netclass" // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
 	RelHasNetClass = "has_netclass" // has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/has_netclass.md
+
+	// Net-class DEFINITIONS (WS3-111): what the project declares a class's nets should route at,
+	// keyed by CLASS. Millimetres, matching the board tier so declared and actual join with no
+	// conversion. These are the raw per-class rows; the cascaded per-NET values are below.
+	RelNetClassClearance   = "netclass.clearance"    // netclass.clearance(class, mm). doc: facts/docs/netclass.clearance.md
+	RelNetClassTrackWidth  = "netclass.track_width"  // netclass.track_width(class, mm). doc: facts/docs/netclass.track_width.md
+	RelNetClassViaDiameter = "netclass.via_diameter" // netclass.via_diameter(class, mm). doc: facts/docs/netclass.via_diameter.md
+	RelNetClassViaDrill    = "netclass.via_drill"    // netclass.via_drill(class, mm). doc: facts/docs/netclass.via_drill.md
+	RelHasNetClassDefs     = "has_netclass_defs"     // has_netclass_defs(present). doc: facts/docs/has_netclass_defs.md
+
+	// The CASCADED per-net values: what a net should route at once its classes are resolved. A rule
+	// comparing declared against actual joins THESE, never the per-class rows — a net in two classes
+	// matches two of those, and comparing against each would fail a net that correctly obeys the
+	// winning one. Only the two quantities with a board-tier counterpart are derived (WS3-111 scope).
+	RelNetDeclaredTrackWidth = "net.declared_track_width" // net.declared_track_width(net, mm). doc: facts/docs/net.declared_track_width.md
+	RelNetDeclaredViaDrill   = "net.declared_via_drill"   // net.declared_via_drill(net, mm). doc: facts/docs/net.declared_via_drill.md
 )
 
 // Facts projects the Model into the seed fact base, deterministically ordered so the projection
@@ -189,6 +208,9 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, netACCoupledFacts(m)...)
 	out = append(out, netNetClassFacts(m)...)
 	out = append(out, hasNetClassFacts(m)...)
+	out = append(out, netClassDefFacts(m)...)
+	out = append(out, hasNetClassDefsFacts(m)...)
+	out = append(out, netDeclaredFacts(m)...)
 	out = append(out, boardFacts(m)...)
 	sortFacts(out)
 	return out
@@ -836,6 +858,140 @@ func netLayers(segs []check.BoardSeg) []string {
 
 // nmToMM converts a board dimension from nanometres to millimetres — the human-natural unit the
 // board relations expose, so a query reads `?w < 0.2` (mm) not `?w < 200000` (nm).
+// netClassDefParams is the ir.Constraint param key for each declared scalar, paired with the
+// relation that projects it.
+var netClassDefParams = []struct {
+	param string
+	rel   string
+}{
+	{"clearance", RelNetClassClearance},
+	{"track_width", RelNetClassTrackWidth},
+	{"via_diameter", RelNetClassViaDiameter},
+	{"via_drill", RelNetClassViaDrill},
+}
+
+// netClassDefFacts emits the RAW per-class declarations: one row per (class, quantity) the project
+// actually stated. A class that declares no track width yields no track-width row, which is the
+// fact a consumer needs — that field cascades to a lower-priority class rather than being zero.
+func netClassDefFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, c := range m.NetClassDefs() {
+		for _, p := range netClassDefParams {
+			mm, ok := parseMM(c.GetParams()[p.param])
+			if !ok {
+				continue
+			}
+			v := mm
+			out = append(out, query.FactRow{Relation: p.rel, Subject: c.GetName(), Value: mmStr(v), Num: &v, Cite: "net_settings"})
+		}
+	}
+	return out
+}
+
+// hasNetClassDefsFacts is the design-level marker for DEFINITIONS, the twin of has_netclass for
+// membership. The two are genuinely independent: net_settings carries assignments and class
+// definitions in separate blocks, so a project can assign nets to classes it never defines. A
+// declared-vs-actual rule that found no definitions would report clean, so it gates on this.
+func hasNetClassDefsFacts(m check.Model) []query.FactRow {
+	if len(m.NetClassDefs()) == 0 {
+		return nil
+	}
+	return []query.FactRow{{Relation: RelHasNetClassDefs, Subject: "true", Cite: "design"}}
+}
+
+// netDeclaredFacts resolves each net's EFFECTIVE declared values and emits one row per net per
+// quantity. This is the cascade, and it is the reason the raw per-class rows are not what a rule
+// should join.
+//
+// KiCad composes an effective netclass PER FIELD, not per class: it sorts a net's constituent
+// classes by priority ascending (the Default class pinned last) and fills each field from the first
+// class that states it. So a net in a high-priority class declaring only a clearance still takes its
+// track width from the next class down. There is no single winning class, and picking one would be
+// wrong in a way that produces confident, incorrect findings.
+//
+// A net whose classes state a quantity nowhere yields no row for it, so a rule joining this relation
+// selects only nets the project actually constrained.
+func netDeclaredFacts(m check.Model) []query.FactRow {
+	defs := m.NetClassDefs()
+	if len(defs) == 0 {
+		return nil
+	}
+	byName := make(map[string]*ir.Constraint, len(defs))
+	for _, c := range defs {
+		byName[c.GetName()] = c
+	}
+	// The default class is not merely the lowest-priority one: it applies to EVERY net, filling
+	// whatever that net's own classes left unstated, and a net in no class takes its values
+	// outright. A cascade over memberships alone would under-report on both counts.
+	var defaultClass string
+	for _, c := range defs {
+		if c.GetParams()["is_default"] == "true" {
+			defaultClass = c.GetName()
+			break
+		}
+	}
+
+	var out []query.FactRow
+	for _, n := range m.Nets() {
+		classes := append([]string(nil), n.GetNetClasses()...)
+		// Cascade order is the project's priority, NOT the net's (alphabetical) membership order.
+		sort.SliceStable(classes, func(i, j int) bool {
+			return defPriority(byName[classes[i]]) < defPriority(byName[classes[j]])
+		})
+		if defaultClass != "" && !slices.Contains(classes, defaultClass) {
+			classes = append(classes, defaultClass) // always last, always present
+		}
+		for _, q := range []struct {
+			param string
+			rel   string
+		}{
+			{"track_width", RelNetDeclaredTrackWidth},
+			{"via_drill", RelNetDeclaredViaDrill},
+		} {
+			for _, cls := range classes {
+				mm, ok := parseMM(byName[cls].GetParams()[q.param])
+				if !ok {
+					continue // this class does not state it; fall through to the next
+				}
+				v := mm
+				out = append(out, query.FactRow{
+					Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v,
+					Cite: "net_settings:" + cls,
+				})
+				break // first stating class wins for THIS field only
+			}
+		}
+	}
+	return out
+}
+
+// defPriority reads a class's cascade rank. An unknown class (a net assigned to a class the project
+// never defined, which net_settings permits) sorts last rather than first: it states nothing, so it
+// must never outrank a class that does.
+func defPriority(c *ir.Constraint) int {
+	if c == nil {
+		return math.MaxInt32
+	}
+	p, err := strconv.Atoi(c.GetParams()["priority"])
+	if err != nil {
+		return math.MaxInt32
+	}
+	return p
+}
+
+// parseMM reads a declared millimetre scalar. Absent and unparseable both read as "not stated",
+// which is the safe direction: a value we cannot read must not become a limit we compare against.
+func parseMM(s string) (float64, bool) {
+	if s == "" {
+		return 0, false
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, false
+	}
+	return v, true
+}
+
 func nmToMM(nm int64) float64 { return float64(nm) / 1e6 }
 
 func mmStr(mm float64) string { return fmt.Sprintf("%gmm", mm) }

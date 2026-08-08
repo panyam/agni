@@ -53,6 +53,8 @@ var rules = []*check.Rule{
 	capVoltage,
 	diffPairNaming,
 	trackWidth,
+	netclassTrackWidth,
+	netclassViaDrill,
 	holeSize,
 	annularWidth,
 	copperClearance,

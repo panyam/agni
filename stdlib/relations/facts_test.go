@@ -4,14 +4,15 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // factsByRelation indexes a projection by relation name for the assertions below.
@@ -513,5 +514,132 @@ func TestNetBiasAndACCoupledFacts(t *testing.T) {
 		if coupled[supply] {
 			t.Errorf("net.ac_coupled(%s): a supply net is not a coupled signal", supply)
 		}
+	}
+}
+
+// netClassDef builds an ir.Constraint the way kicad.AnnotateNetClassDefs does. Only stated params
+// are set, because absent-vs-zero is the distinction the cascade turns on.
+func netClassDef(name string, priority int, params map[string]string) *ir.Constraint {
+	p := map[string]string{"priority": strconv.Itoa(priority)}
+	for k, v := range params {
+		p[k] = v
+	}
+	return &ir.Constraint{Name: name, Kind: "netclass", Params: p}
+}
+
+// TestNetClassDefCascade (WS3-111) is the load-bearing test of the declared-vs-actual story. A net in
+// several classes does NOT take one class's values wholesale: KiCad fills each constraint from the
+// highest-priority class that states THAT constraint, with the default class last. Getting this
+// wrong produces confident, wrong findings, which is why the per-net relation exists at all.
+func TestNetClassDefCascade(t *testing.T) {
+	d := &ir.Design{
+		Constraints: []*ir.Constraint{
+			// HighSpeed outranks Power but states no track width, so track width must fall through.
+			netClassDef("HighSpeed", 1, map[string]string{"clearance": "0.15"}),
+			netClassDef("Power", 5, map[string]string{"track_width": "0.8"}),
+			defaultNetClassDef("Default", map[string]string{"track_width": "0.25", "via_drill": "0.3"}),
+		},
+		Nets: []*ir.Net{
+			{Name: "VBUS", NetClasses: []string{"HighSpeed", "Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "PLAIN", NetClasses: []string{"Default"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{Name: "UNCLASSED", Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+	}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	got := map[string]float64{}
+	cite := map[string]string{}
+	for _, f := range byRel[RelNetDeclaredTrackWidth] {
+		if f.Num == nil {
+			t.Fatalf("declared track width for %q has no Num", f.Subject)
+		}
+		got[f.Subject] = *f.Num
+		cite[f.Subject] = f.Cite
+	}
+	// VBUS is in HighSpeed (priority 1) and Power (5). HighSpeed states no track width, so the
+	// value cascades to Power — NOT to Default, and NOT to "HighSpeed states nothing so give up".
+	if got["VBUS"] != 0.8 {
+		t.Errorf("VBUS declared track width = %v, want 0.8 (cascades past HighSpeed, which states none)", got["VBUS"])
+	}
+	if cite["VBUS"] != "net_settings:Power" {
+		t.Errorf("VBUS cite = %q, want net_settings:Power (a finding must name the class that set the limit)", cite["VBUS"])
+	}
+	if got["PLAIN"] != 0.25 {
+		t.Errorf("PLAIN declared track width = %v, want 0.25", got["PLAIN"])
+	}
+	// The Default class is not just the lowest-priority one: KiCad hands it to a net that is in NO
+	// class, so an unclassed net still has a limit the tool would enforce.
+	if got["UNCLASSED"] != 0.25 {
+		t.Errorf("UNCLASSED declared track width = %v, want 0.25 (Default applies to every net)", got["UNCLASSED"])
+	}
+	// One row per net per quantity: the cascade resolved, never one row per class.
+	if n := len(byRel[RelNetDeclaredTrackWidth]); n != 3 {
+		t.Errorf("declared track width rows = %d, want 3 (resolved per NET, not per class)", n)
+	}
+	// via_drill is stated only by Default, which fills it for EVERY net including VBUS, whose own
+	// two classes state none. This is the half a memberships-only cascade would silently miss.
+	if n := len(byRel[RelNetDeclaredViaDrill]); n != 3 {
+		t.Errorf("declared via drill rows = %d, want 3 (Default fills gaps for every net)", n)
+	}
+	// The raw per-class rows are still projected, and they are 1:many by class.
+	if n := len(byRel[RelNetClassTrackWidth]); n != 2 {
+		t.Errorf("netclass.track_width rows = %d, want 2 (Power and Default state one; HighSpeed does not)", n)
+	}
+	if mk := byRel[RelHasNetClassDefs]; len(mk) != 1 {
+		t.Errorf("want one has_netclass_defs row, got %+v", mk)
+	}
+}
+
+// TestNetClassDefAbsent (WS3-111): a design with no class definitions projects neither the per-class
+// rows, the cascaded rows, nor the marker. Without the marker a declared-vs-actual rule cannot tell
+// "nothing to compare" from "everything conformed".
+func TestNetClassDefAbsent(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		// Membership WITHOUT definitions: net_settings allows it, and it is the case that would
+		// otherwise read as a clean pass over zero comparisons.
+		{Name: "VBUS", NetClasses: []string{"Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+	for _, rel := range []string{RelNetClassTrackWidth, RelNetDeclaredTrackWidth, RelHasNetClassDefs} {
+		if rows := byRel[rel]; len(rows) != 0 {
+			t.Errorf("%s on a design with membership but no definitions = %+v, want empty", rel, rows)
+		}
+	}
+	// has_netclass still fires: membership exists. The two markers are independent on purpose.
+	if mk := byRel[RelHasNetClass]; len(mk) != 1 {
+		t.Errorf("has_netclass = %+v, want one row (membership is present even with no definitions)", mk)
+	}
+}
+
+// defaultNetClassDef builds the DEFAULT class, which carries KiCad's max-int priority and the flag
+// marking it as the class every net inherits from.
+func defaultNetClassDef(name string, params map[string]string) *ir.Constraint {
+	c := netClassDef(name, 2147483647, params)
+	c.Params["is_default"] = "true"
+	return c
+}
+
+// TestNetClassDefCascadeHonoursPriority exercises the cascade ORDER specifically. The cascade test
+// above cannot: there, only one of the net's classes stated a track width, so any ordering produced
+// the same answer. Here two classes state one and disagree, and the class names are chosen so
+// ALPHABETICAL order is the reverse of priority order — membership arrives alphabetically sorted
+// (WS1-050), so a projector that forgot to sort would take the wrong class and look correct.
+func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
+	d := &ir.Design{
+		Constraints: []*ir.Constraint{
+			netClassDef("Zeta", 1, map[string]string{"track_width": "0.15"}),  // wins on priority
+			netClassDef("Alpha", 9, map[string]string{"track_width": "0.90"}), // sorts first, loses
+		},
+		Nets: []*ir.Net{{Name: "SIG", NetClasses: []string{"Alpha", "Zeta"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	rows := factsByRelation(Facts(check.NewModel(d)))[RelNetDeclaredTrackWidth]
+	if len(rows) != 1 {
+		t.Fatalf("rows = %+v, want exactly 1 (the cascade resolves to one value)", rows)
+	}
+	if rows[0].Num == nil || *rows[0].Num != 0.15 {
+		t.Errorf("declared track width = %v, want 0.15 from Zeta (priority 1), not 0.9 from Alpha", rows[0].Num)
+	}
+	if rows[0].Cite != "net_settings:Zeta" {
+		t.Errorf("cite = %q, want net_settings:Zeta", rows[0].Cite)
 	}
 }

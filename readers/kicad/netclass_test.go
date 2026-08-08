@@ -133,3 +133,73 @@ func TestWildcardMatch(t *testing.T) {
 		}
 	}
 }
+
+// TestParseNetClassDefs covers WS3-111: the classes[] block carries each class's declared routing
+// constraints. Absent and zero must stay distinguishable (a class that states no track width lets a
+// lower-priority class fill it), and an unstated priority must cascade LAST rather than first.
+func TestParseNetClassDefs(t *testing.T) {
+	const pro = `{
+	  "net_settings": {
+	    "classes": [
+	      {"name": "Default", "priority": 2147483647, "clearance": 0.2, "track_width": 0.25,
+	       "via_diameter": 0.6, "via_drill": 0.3},
+	      {"name": "HighSpeed", "priority": 1, "clearance": 0.15},
+	      {"name": "Power", "priority": 5, "track_width": 0.8},
+	      {"name": "NoPriority", "track_width": 0.4},
+	      {"name": ""}
+	    ]
+	  }
+	}`
+	defs := ParseNetClassDefs(strings.NewReader(pro))
+
+	var names []string
+	for _, d := range defs {
+		names = append(names, d.Name)
+	}
+	// Sorted by cascade rank: stated priorities first, then the unstated ones and Default.
+	if want := []string{"HighSpeed", "Power", "Default", "NoPriority"}; !slices.Equal(names, want) {
+		t.Errorf("cascade order = %v, want %v (unstated priority sorts last, not first)", names, want)
+	}
+
+	byName := map[string]NetClassDef{}
+	for _, d := range defs {
+		byName[d.Name] = d
+	}
+	// HighSpeed declares ONLY a clearance: its other fields must be absent, not 0.
+	hs := byName["HighSpeed"]
+	if hs.Clearance == nil || *hs.Clearance != 0.15 {
+		t.Errorf("HighSpeed clearance = %v, want 0.15", hs.Clearance)
+	}
+	if hs.TrackWidth != nil {
+		t.Errorf("HighSpeed track width = %v, want ABSENT (it declares none, so it cascades)", *hs.TrackWidth)
+	}
+	if d := byName["Default"]; d.ViaDrill == nil || *d.ViaDrill != 0.3 {
+		t.Errorf("Default via drill = %v, want 0.3", d.ViaDrill)
+	}
+	if _, ok := byName[""]; ok {
+		t.Error("an unnamed class must be skipped")
+	}
+}
+
+// TestAnnotateNetClassDefs: the definitions land on ir.Design as Constraint nodes of kind
+// "netclass" — the first reader to populate that provisional node. Only STATED scalars become
+// params, so a consumer can still tell "declares none" from "declares zero".
+func TestAnnotateNetClassDefs(t *testing.T) {
+	d := &ir.Design{}
+	AnnotateNetClassDefs(d, []NetClassDef{{Name: "HighSpeed", Priority: 1, Clearance: ptr(0.15)}})
+	if len(d.Constraints) != 1 {
+		t.Fatalf("constraints = %v, want 1", d.Constraints)
+	}
+	c := d.Constraints[0]
+	if c.Kind != ConstraintKindNetClass || c.Name != "HighSpeed" {
+		t.Errorf("constraint = {%q %q}, want {HighSpeed netclass}", c.Name, c.Kind)
+	}
+	if c.Params["clearance"] != "0.15" || c.Params["priority"] != "1" {
+		t.Errorf("params = %v, want clearance 0.15 / priority 1", c.Params)
+	}
+	if _, ok := c.Params["track_width"]; ok {
+		t.Errorf("params carry a track_width %q, want the key ABSENT (none was declared)", c.Params["track_width"])
+	}
+}
+
+func ptr(f float64) *float64 { return &f }

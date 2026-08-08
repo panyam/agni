@@ -193,6 +193,14 @@ const (
 	// design's CONTENT rather than its format grammar, which is the honest reading: a scoped rule
 	// has nothing to say either way. The queryable twin is has_netclass / the design.has_netclass fact.
 	CapNetClass Capability = "netclass"
+
+	// CapNetClassDefs: the design declares net-class DEFINITIONS — what a class's nets should route
+	// at (clearance, track width, via sizes), WS3-111. Deliberately SEPARATE from CapNetClass, because
+	// net_settings carries membership and definitions in independent blocks: a project can assign nets
+	// to a class it never defines. A declared-vs-actual rule needs the LIMIT, so gating it on the
+	// membership capability would let a project with assignments and no definitions run the rule over
+	// zero comparisons and report a clean pass. The queryable twin is has_netclass_defs.
+	CapNetClassDefs Capability = "netclass_defs"
 )
 
 // Run evaluates rules over a Model (the query interface) and returns findings sorted by rule

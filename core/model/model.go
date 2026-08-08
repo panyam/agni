@@ -143,6 +143,13 @@ type Model interface {
 	// format-derived: "this project declares no classes" and "this format has no classes" are
 	// the same answer to a scoped rule.
 	HasNetClasses() bool
+	// net-class DEFINITIONS (WS3-111): the per-class routing constraints the project declares
+	// (clearance, track width, via sizes), as ir.Constraint nodes of kind "netclass". Separate
+	// from HasNetClasses on purpose: membership and definitions are two independent blocks of
+	// net_settings, so a project can assign nets to a class it never defines, or define classes it
+	// assigns nothing to. A declared-vs-actual rule needs the DEFINITIONS to exist, and would read
+	// clean over a project that has membership but no definitions — a distinct capability.
+	NetClassDefs() []*ir.Constraint
 	// reach (WS3-011): the bounded series-walk neighborhood of a net — nets reachable by
 	// crossing two-net pass elements (R/L/ferrite/fuse), rails excluded — and the
 	// on-path class predicate over it. Protection rules are reachability questions: a

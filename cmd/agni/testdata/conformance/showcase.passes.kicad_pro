@@ -1,5 +1,13 @@
 {
   "net_settings": {
+    "classes": [
+      { "name": "Default", "priority": 2147483647, "clearance": 0.2, "track_width": 0.25,
+        "via_diameter": 0.6, "via_drill": 0.3 },
+      { "name": "HighSpeed", "priority": 1, "clearance": 0.15 },
+      { "name": "Differential", "priority": 2, "track_width": 0.2 },
+      { "name": "Power", "priority": 5, "track_width": 0.5 },
+      { "name": "Critical", "priority": 3 }
+    ],
     "netclass_assignments": { "+3V3": ["Power", "Critical"] },
     "netclass_patterns": [
       { "netclass": "HighSpeed", "pattern": "USB_*" },
