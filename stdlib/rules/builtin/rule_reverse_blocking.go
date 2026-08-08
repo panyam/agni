@@ -72,18 +72,37 @@ func unblockedPowerPath(m check.Model, n *ir.Net) bool {
 	}
 	// Nothing reachable, so something stopped the walk. Classify each part bridging out of the
 	// neighborhood toward a power input.
+	//
+	// A TRANSISTOR anywhere on the neighborhood settles it first, before any other part is weighed. It
+	// is checked here rather than inside the bridging loop below because that loop reaches a part only
+	// through farNet, which returns nil for anything touching more than one net outside the reach set.
+	// A real 3-terminal MOSFET touches two, so the guard never fired for any actual FET and a diode on
+	// the same node drove the finding instead (issue 63: 14 false FAILs on a real board). Terminal count
+	// is irrelevant to the question being asked, which is only whether something here might be an ORing
+	// FET or an ideal diode.
+	for _, rn := range r.Nets {
+		for _, c := range rn.GetConnections() {
+			if m.ComponentClass(c.GetComponentRef()) == check.ClassTransistor {
+				return false // unclassifiable, never a finding
+			}
+		}
+	}
 	unblocked := false
 	for _, rn := range r.Nets {
 		for _, c := range rn.GetConnections() {
 			ref := c.GetComponentRef()
 			far := farNet(m, ref, inReach)
-			if far == nil || !feedsPowerInput(m, far) {
+			// A part whose far terminal lands on GROUND is a shunt beside the path, not a series
+			// element in it, so it carries no information about reverse blocking. Without this, a
+			// freewheel diode across an inductive load (anode on ground, cathode on the switched
+			// output) failed the orientation test below and reported the output unblocked (issue 63:
+			// 20 false FAILs). Ground only, deliberately: a series blocking diode's far side is very
+			// often a NAMED RAIL (connector -> D1 -> +12V_SW -> regulator), so excluding rails too
+			// would silence the detection this rule exists for.
+			if far == nil || m.IsGroundNet(far) || !feedsPowerInput(m, far) {
 				continue
 			}
-			switch {
-			case m.ComponentClass(ref) == check.ClassTransistor:
-				return false // an ORing FET or ideal diode; unclassifiable, never a finding
-			case m.ComponentClass(ref) == check.ClassDiode:
+			if m.ComponentClass(ref) == check.ClassDiode {
 				if pinNetWithRole(m, ref, check.RoleAnode) != rn.GetName() {
 					unblocked = true // fitted backwards: it blocks the supply, not the fault
 				}
