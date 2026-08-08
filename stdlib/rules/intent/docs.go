@@ -61,6 +61,7 @@ var docKeys = []string{
 	"property-" + PropStrap,             // property-strap
 	RuleRailCurrentCapacity,             // rail-current-capacity
 	RuleRailCurrentMargin,               // rail-current-margin
+	RuleLoadSwitchTripBelowBudget,       // load-switch-trip-below-budget
 	docKeySequence,                      // sequence (family doc for intent/sequence-<slug>)
 }
 
@@ -96,6 +97,7 @@ var docSummaries = map[string]string{
 	"property-" + PropStrap:             "A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch.",
 	RuleRailCurrentCapacity:             "The part supplying a rail is rated below the peak current the design intent declares for that rail.",
 	RuleRailCurrentMargin:               "A rail's supply meets its declared peak current budget but not the declared margin factor over it.",
+	RuleLoadSwitchTripBelowBudget:       "A load switch's current limit is set below the peak current the design intent declares for the rail it feeds.",
 	docKeySequence:                      "A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round.",
 }
 

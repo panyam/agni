@@ -16,6 +16,11 @@ const (
 	// and a "current capability margins" item report independently (WS3-058).
 	RuleRailCurrentCapacity = "rail-current-capacity"
 	RuleRailCurrentMargin   = "rail-current-margin"
+	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085): the switch's
+	// current limit against the rail's declared draw. It reads the same rail_budgets the two rules above
+	// read, and it is a third rule rather than a threshold on them because it judges a different part
+	// (the switch, not the supply) and answers a different review item.
+	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
@@ -40,6 +45,12 @@ func Compile(d Declaration) []*check.Rule {
 	}
 	if len(d.RailBudgets) > 0 {
 		rules = append(rules, railBudgetCapacityRule(d))
+		// The load-switch lower bound needs the budget and nothing else from the declaration, so it is
+		// emitted with the capacity rule rather than behind a second condition. A design with no
+		// controller-based switch resolves none and the rule reports nothing, which is a silence the
+		// mechanism cannot avoid: there is no declaration field that says "this rail is switched", and
+		// inventing one would let an author's omission read as a defect.
+		rules = append(rules, loadSwitchTripBelowBudgetRule(d))
 		// The margin rule is emitted only when a factor is declared, the same shape anyModuleHasCount
 		// gives the count rule and for a sharper reason: the factor IS the rule's threshold. With no
 		// factor there is no question to ask, and compiling the rule anyway would let a bound item read
