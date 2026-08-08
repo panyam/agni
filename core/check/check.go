@@ -26,12 +26,33 @@ import (
 // Kind is KindPin. A rule states its subject kind at construction (see NetFinding/CompFinding).
 type Finding struct {
 	Severity string // "error" | "warning" | "info"
-	Rule     string
-	Kind     string // KindNet | KindComponent | KindPin
-	Subject  string // net name (KindNet) or ref_des (KindComponent | KindPin)
-	Pin      string // pin designator, set only when Kind == KindPin
-	Message  string
-	Prov     *ir.Provenance
+	// Inconclusive marks a finding as a RESULT the rule could not decide, rather than a defect it
+	// found. The rule ran, it had everything it needed, it examined this subject, and it could not
+	// conclude (agni issue 74).
+	//
+	// WHY THIS IS NOT ONE OF THE REVIEW'S needs-* OUTCOMES. Those are PRECONDITIONS, decided before or
+	// around the rule and always design-wide: NotApplicable (the design lacks a fact tier),
+	// NeedsDesignIntent (no declaration supplied), NeedsData (nothing on the design seeds this symbol),
+	// ComputedNA (no component of the applicable class). This is a per-SUBJECT result on the other side
+	// of the rule, so folding it into a precondition would mean telling a reviewer to go supply
+	// something in the cases where nothing is missing. A netlist states reset polarity nowhere and no
+	// amount of seeding will change that, while an unclassified controller resolves the moment its
+	// spec is seeded; both are inconclusive, and only the second is a data gap.
+	//
+	// The REMEDY belongs in Message, exactly as it does for a defect. That is why one flag suffices
+	// where the precondition axis needed four outcomes: "seed a spec for U7" and "a netlist cannot
+	// state this, verify by hand" are both inconclusive results with different next steps, and next
+	// steps already live in the message.
+	//
+	// A rule must only set it where it can NAME the specific thing it could not resolve. Emitting it
+	// for everything hard converts a coverage problem into a reporting problem.
+	Inconclusive bool
+	Rule         string
+	Kind         string // KindNet | KindComponent | KindPin
+	Subject      string // net name (KindNet) or ref_des (KindComponent | KindPin)
+	Pin          string // pin designator, set only when Kind == KindPin
+	Message      string
+	Prov         *ir.Provenance
 	// NetID is the per-instance net identity (ir.Net.id) for a net subject, so two findings on
 	// nets that share a Subject name are distinguishable and each locates to ITS wires. Empty for a
 	// component/pin subject or a pinless net; consumers then join by Subject (the name).

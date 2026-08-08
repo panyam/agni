@@ -168,10 +168,11 @@ const (
 //     so absent means the declaration is unmet and the rule fails.
 //   - reset-polarity is only PARTLY decidable. A netlist states polarity nowhere; the evidence is a
 //     bias resistor, and a reset driven by a supervisor with an internal pull carries none. So the
-//     rule fires on a CONTRADICTION (declared low, biased low) and is SILENT where the design shows
-//     nothing either way. Silence there means "no contradiction found", NOT "polarity confirmed",
-//     stated here, in the rule's doc, and in the finding vocabulary because a review item bound to it
-//     inherits that limit.
+//     rule fires on a CONTRADICTION (declared low, biased low) and reports an INCONCLUSIVE finding
+//     where the design shows nothing either way, so a bound review item reads inconclusive rather
+//     than pass (agni issue 74). It used to stay silent there, and the caveat that a pass meant only
+//     "no contradiction found" had to be carried in three places of prose that a reader of a green
+//     report never saw.
 //   - strap (WS3-086) reads the SAME evidence as reset-polarity and asks the INVERTED question, so
 //     it is worth being explicit that they are not the same rule wearing two names. reset-polarity's
 //     Value is the level that ASSERTS reset, so bias TOWARD it is the defect and bias away from it is
@@ -183,10 +184,11 @@ const (
 //     design declaring the default level with no resistor on the net is correct and common, so firing
 //     there would report a non-defect on the majority of real straps.
 //
-// The engine has no per-subject not-applicable: an outcome is per review ITEM and follows whether the
-// rule fired. So the honest options for the undecidable case were to stay silent (this) or to fail a
-// declaration the design merely does not evidence, which would report a non-defect. Reporting
-// unverifiable declarations is a separate, useful check and deliberately not this one.
+// This is what agni issue 74 was filed for. Before it, an outcome was per review ITEM and followed
+// only whether the rule fired, so the honest options were to stay silent (chosen, with the caveat in
+// prose) or to fail a declaration the design merely does not evidence, reporting a non-defect on
+// every correct board. Neither was right, and the same gap had already forced a workaround in the
+// power-sequence and rail-budget rules.
 type NetProperty struct {
 	// Net is the exact net name the property is declared on.
 	Net string

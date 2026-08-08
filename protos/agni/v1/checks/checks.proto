@@ -75,6 +75,11 @@ message Finding {
   string severity = 2; // "error" | "warning" | "info"
   Subject subject = 3; // the entity that failed (kind + ref); the highlight join key
   string message = 4;
+  // inconclusive marks a finding as a RESULT the rule could not decide rather than a defect it found
+  // (agni issue 74). A consumer must not count it as a failure: the review reads such an item
+  // "inconclusive", never pass and never fail, and a viewer should present it distinctly from a
+  // defect. The message carries what could not be resolved and what would resolve it.
+  bool inconclusive = 10;
   agni.v1.ir.Provenance provenance = 5; // source location of the subject; unset when none
   // Sheet ids (SheetRef.id) where the subject appears in the design's default-layout geometry,
   // filled server-side from placements (components/pins) and wires (nets) per sheet (WS9-024). A

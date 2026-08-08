@@ -70,25 +70,38 @@ func TestResetPolarityAgreesSilently(t *testing.T) {
 	}
 }
 
-// TestResetPolaritySilentWithoutBias pins the limit this rule is honest about: a reset driven by a
-// supervisor with an internal pull carries no bias resistor, so there is nothing to contradict and the
-// rule says nothing.
+// TestResetPolarityReportsWhatItCannotDecide (agni issue 74): a reset driven by a supervisor with an
+// internal pull carries no bias resistor, so the netlist cannot state its resting level.
 //
-// Silence here means "no contradiction found", NOT "polarity confirmed" — the distinction is in the
-// rule's doc card and its declaration comment, because a review item bound to this rule inherits it.
-func TestResetPolaritySilentWithoutBias(t *testing.T) {
-	if fs := propFindings(t, propDesign("SYS_RESET_N", "", ""),
-		NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"}); len(fs) != 0 {
-		t.Errorf("no bias evidence means nothing to contradict, want silence: %+v", fs)
+// This test previously asserted SILENCE, and the rule's doc card, its declaration comment and the
+// test's own name all had to explain that a resulting pass meant "no contradiction found" rather than
+// "polarity confirmed". The rule now says that itself, as an inconclusive finding, so a bound review
+// item reads inconclusive instead of pass and the caveat does not have to survive in prose.
+//
+// The finding must be Inconclusive, not a defect: the design is not wrong, it is unverifiable from
+// this evidence, and failing it would report a non-defect on every correct board whose reset is
+// driven by a part with an internal pull.
+func TestResetPolarityReportsWhatItCannotDecide(t *testing.T) {
+	fs := propFindings(t, propDesign("SYS_RESET_N", "", ""),
+		NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"})
+	if len(fs) != 1 {
+		t.Fatalf("want 1 inconclusive finding (no bias evidence), got %d: %+v", len(fs), fs)
+	}
+	if !fs[0].Inconclusive {
+		t.Error("no bias evidence is not a defect; the design is unverifiable, not wrong")
+	}
+	if !strings.Contains(fs[0].Message, "no bias") {
+		t.Errorf("the message must name what could not be resolved: %s", fs[0].Message)
 	}
 }
 
-// TestResetPolarityDividerIsNeither: a net with both a pull-up and a pull-down is a divider. It holds
-// the line at an intermediate level rather than at either rail, so calling it a contradiction of
-// either polarity would be wrong.
-func TestResetPolarityDividerIsNeither(t *testing.T) {
+// TestResetPolarityDividerSaysSoSpecifically: check.NetBias answers "neither" for two different
+// designs, and the message must tell them apart. A net with no bias resistor sends a reviewer looking
+// for a driver; a DIVIDER sends them to check a ratio against the part's input thresholds. Reporting
+// "carries no bias" on a board that visibly has two resistors would waste that trip and read as a bug
+// in the tool.
+func TestResetPolarityDividerSaysSoSpecifically(t *testing.T) {
 	d := propDesign("SYS_RESET_N", "GND", "")
-	// A second resistor to a rail turns the pull-down into a divider.
 	d.Components = append(d.Components, &ir.Component{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}})
 	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "R2", PinRef: "1"})
 	d.Nets = append(d.Nets, &ir.Net{
@@ -96,14 +109,16 @@ func TestResetPolarityDividerIsNeither(t *testing.T) {
 		Connections: []*ir.Connection{{ComponentRef: "R2", PinRef: "2"}},
 	})
 	for _, v := range []string{"low", "high"} {
-		if fs := propFindings(t, d, NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: v}); len(fs) != 0 {
-			t.Errorf("a divider contradicts neither polarity (value=%s): %+v", v, fs)
+		fs := propFindings(t, d, NetProperty{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: v})
+		if len(fs) != 1 || !fs[0].Inconclusive {
+			t.Fatalf("a divider is undecidable, not a contradiction (value=%s): %+v", v, fs)
+		}
+		if !strings.Contains(fs[0].Message, "divider") {
+			t.Errorf("value=%s: the message must name the divider, not claim there is no bias: %s", v, fs[0].Message)
 		}
 	}
 }
 
-// TestACCoupledFiresWhenDCConnected: unlike reset polarity, this property IS decidable — a series
-// capacitor is present or it is not — so absence is a violation rather than silence.
 func TestACCoupledFiresWhenDCConnected(t *testing.T) {
 	fs := propFindings(t, propDesign("PCIE_TX0_P", "", ""),
 		NetProperty{Net: "PCIE_TX0_P", Property: PropACCoupled})

@@ -161,12 +161,13 @@ func FindingProto(f check.Finding) *checkspb.Finding {
 		subject.BusId = f.Subject
 	}
 	return &checkspb.Finding{
-		Rule:       f.Rule,
-		Severity:   f.Severity,
-		Subject:    subject,
-		Message:    f.Message,
-		Provenance: f.Prov,
-		Datasheets: datasheetCitationProtos(f.DatasheetProv),
+		Rule:         f.Rule,
+		Severity:     f.Severity,
+		Inconclusive: f.Inconclusive,
+		Subject:      subject,
+		Message:      f.Message,
+		Provenance:   f.Prov,
+		Datasheets:   datasheetCitationProtos(f.DatasheetProv),
 	}
 }
 
