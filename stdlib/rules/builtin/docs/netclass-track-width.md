@@ -2,6 +2,8 @@
 
 A net is routed narrower than the track width its own net class declares.
 
+![a net in two classes takes its declared width from the first class that states one; copper below that is flagged, copper meeting it is fine](images/netclass-track-width.svg)
+
 ## What this checks
 
 The project's `net_settings` states, per net class, the track width that class's nets are meant to
