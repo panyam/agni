@@ -55,3 +55,33 @@ func TestStampNetRolesHonorsActiveVocab(t *testing.T) {
 		t.Errorf("HV_BUS roles = %v, want [rail] under the extended vocab", got)
 	}
 }
+
+// TestStampNetRolesDeclared covers WS1-051: a role the SOURCE declared (translated to this
+// vocabulary by the reader that understood the format) is unioned with what the naming lexicon
+// infers, never replaced by it and never duplicating it. The declared role leads, because it is
+// evidence rather than inference.
+func TestStampNetRolesDeclared(t *testing.T) {
+	declared := func(name, role string) *ir.Net {
+		return &ir.Net{Name: name, Attributes: map[string]string{AttrDeclaredRole: role}}
+	}
+	d := &ir.Design{Nets: []*ir.Net{
+		declared("N$17", NetRoleGround),       // opaque name: only the source knows
+		declared("GND", NetRoleGround),        // agrees with the name; must not double up
+		declared("VCC1V2_FB", NetRoleRail),    // agrees on rail, name adds feedback
+		declared("MYSTERY_FB", NetRoleGround), // disagreeing sources UNION, neither wins
+		{Name: "SDA"},                         // no declaration, no name match
+	}}
+	StampNetRoles(d)
+	want := map[string][]string{
+		"N$17":       {NetRoleGround},
+		"GND":        {NetRoleGround},
+		"VCC1V2_FB":  {NetRoleRail, NetRoleFeedback},
+		"MYSTERY_FB": {NetRoleGround, NetRoleFeedback},
+		"SDA":        nil,
+	}
+	for _, n := range d.Nets {
+		if got := n.Roles; !reflect.DeepEqual(got, want[n.Name]) {
+			t.Errorf("roles(%q) = %v, want %v", n.Name, got, want[n.Name])
+		}
+	}
+}

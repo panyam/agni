@@ -238,3 +238,34 @@ func sheetCount(g *geom.SchematicGeometry) int {
 	}
 	return len(g.Sheets)
 }
+
+// TestIPCDeclaredNetRoleEndToEnd covers WS1-051 through the whole ingestion path: the ipc2581
+// reader translates LogicalNet/@netClass into the role vocabulary, the loader's shared
+// StampNetRoles pass unions it with the naming lexicon, and the result reaches ir.Net.roles —
+// which is what every ground/rail-scoped rule reads. N$17 is the case that only works because the
+// source declared it: no naming convention can recover a role from that name.
+func TestIPCDeclaredNetRoleEndToEnd(t *testing.T) {
+	d, err := (&Loader{}).ReadDesign("../ipc2581/testdata/board.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]string{
+		"N$17":        {"ground"}, // declared only; the name says nothing
+		"GND":         {"ground"}, // declared and name-derived agree, recorded once
+		"VCC":         {"rail"},
+		"SIGNAL_ONLY": nil, // netClass SIGNAL names no role, and neither does the name
+	}
+	for _, n := range d.Nets {
+		w, tracked := want[n.Name]
+		if !tracked {
+			continue
+		}
+		if !slices.Equal(n.Roles, w) {
+			t.Errorf("roles(%q) = %v, want %v", n.Name, n.Roles, w)
+		}
+		delete(want, n.Name)
+	}
+	if len(want) > 0 {
+		t.Errorf("nets never seen in the read: %v", want)
+	}
+}

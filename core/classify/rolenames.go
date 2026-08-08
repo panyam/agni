@@ -17,6 +17,26 @@ const (
 	NetRoleFeedback = "feedback"
 )
 
+// AttrDeclaredRole is the ir.Net.attributes key carrying a role the SOURCE FILE stated outright,
+// already translated into the NetRole vocabulary above by the reader that understood the format.
+// StampNetRoles unions it with what the naming lexicon infers.
+//
+// It exists because a role can be KNOWN rather than guessed. Most formats make the engine read a
+// net's purpose out of its name, which is why RoleVocab exists at all; IPC-2581 instead declares it
+// on LogicalNet/@netClass as a closed enum, so a net called "N$17" can be authoritatively GROUND
+// with nothing in the name to go on. Discarding that in favour of a name guess would be a strictly
+// worse read.
+//
+// The translation happens in the READER, not here: C9's left-shift rule puts convention
+// interpretation at the edge and keeps normalized facts in the core, so this package never learns a
+// format's enum. A second format that declares roles writes this same key. An UNMAPPABLE source
+// term is simply not written (the reader keeps it verbatim in its own attribute), so this key always
+// holds a valid NetRole token or is absent.
+//
+// Kept in the open attributes map rather than a typed field on purpose: C9 admits a typed semantic
+// field only once a second format populates it, and one format declares roles today.
+const AttrDeclaredRole = "declared_role"
+
 // RoleVocab is the naming lexicon: the regex sets that decide a net's electrical ROLE by name (rail,
 // ground, feedback), for the cases where a directionless netlist carries the name as the only
 // evidence. It exists so these heuristics stop being frozen Go literals: a project whose house naming
@@ -197,19 +217,34 @@ func BuildRoleVocab(cfg RoleVocabConfig) (*RoleVocab, error) {
 // (*Lexicon).StampNetRoles instead (WS3-106).
 func StampNetRoles(d *ir.Design) { ActiveLexicon().StampNetRoles(d) }
 
-// rolesFor is the per-net projection StampNetRoles applies: every vocabulary a name matches, in a
-// stable order. A rail-named feedback node ("VCC1V2_FB") matches BOTH rail and feedback and carries
-// both roles; precedence between them is the consumer's call, not the stamp's.
-func rolesFor(v *RoleVocab, name string) []string {
+// rolesFor is the per-net projection StampNetRoles applies: the role the SOURCE declared (if any),
+// then every vocabulary the NAME matches, in a stable order and without repeats. A rail-named
+// feedback node ("VCC1V2_FB") matches BOTH rail and feedback and carries both roles; precedence
+// between them is the consumer's call, not the stamp's.
+//
+// The declared role goes first because it is evidence rather than inference, and it is UNIONED with
+// the name reading rather than replacing it: the two answer the same question from different
+// sources, and a source that says GROUND does not thereby say "and nothing else". A design can
+// legitimately declare a net GROUND while naming it something the feedback vocabulary also matches.
+func rolesFor(v *RoleVocab, n *ir.Net) []string {
 	var out []string
+	seen := map[string]bool{}
+	add := func(role string) {
+		if role != "" && !seen[role] {
+			seen[role] = true
+			out = append(out, role)
+		}
+	}
+	add(n.GetAttributes()[AttrDeclaredRole])
+	name := n.GetName()
 	if v.IsRail(name) {
-		out = append(out, NetRoleRail)
+		add(NetRoleRail)
 	}
 	if v.IsGround(name) {
-		out = append(out, NetRoleGround)
+		add(NetRoleGround)
 	}
 	if v.IsFeedback(name) {
-		out = append(out, NetRoleFeedback)
+		add(NetRoleFeedback)
 	}
 	return out
 }

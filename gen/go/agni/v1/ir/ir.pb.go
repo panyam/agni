@@ -1381,14 +1381,21 @@ type Net struct {
 	// content-hash-vs-stable-id lesson). Empty for a pinless net. Distinct from Provenance.native_id,
 	// which is the source-native id (a KiCad uuid), not a semantic connectivity identity.
 	Id string `protobuf:"bytes,4,opt,name=id,proto3" json:"id,omitempty"`
-	// roles is the normalized net-role SET (rail / ground / feedback), derived ONCE at ingestion by the
-	// format-neutral naming pass (classify.StampNetRoles, WS3-072), not read from any one format. A
-	// DERIVED-NORMALIZATION field (C9), the naming sibling of Component.device_classes: every format
-	// populates it via the same shared pass from the active naming lexicon, so it is format-neutral by
-	// construction. A net may carry more than one role (a rail-named feedback node is {rail, feedback});
-	// consumers decide precedence. Empty for a plain signal net, AND when the design was built without the
-	// ingestion pass (a hand-authored test IR); the core then re-derives from the net name as a fallback,
-	// so an empty set never means "no evidence", only "none stamped".
+	// roles is the normalized net-role SET (rail / ground / feedback), filled ONCE at ingestion by the
+	// format-neutral pass classify.StampNetRoles (WS3-072). A DERIVED-NORMALIZATION field (C9), the
+	// naming sibling of Component.device_classes: every format populates it via the same shared pass, so
+	// it is format-neutral by construction. A net may carry more than one role (a rail-named feedback
+	// node is {rail, feedback}); consumers decide precedence. Empty for a plain signal net, AND when the
+	// design was built without the ingestion pass (a hand-authored test IR); the core then re-derives
+	// from the net name as a fallback, so an empty set never means "no evidence", only "none stamped".
+	//
+	// TWO EVIDENCE SOURCES, UNIONED (WS1-051). Usually the pass INFERS the role from the net's name,
+	// because that is all most formats carry. But a format may DECLARE it: IPC-2581's
+	// LogicalNet/@netClass is a closed enum saying what the net is, so a net named "N$17" can be
+	// authoritatively ground with nothing in the name to read. A reader that understands such a
+	// declaration translates it into this vocabulary at the edge and leaves it on
+	// classify.AttrDeclaredRole, and the pass unions it with the name reading. Still one shared pass,
+	// so C9 holds; a declaration only ever ADDS, so it can never cost a role the name would have found.
 	Roles         []string          `protobuf:"bytes,5,rep,name=roles,proto3" json:"roles,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Prov          *Provenance       `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`

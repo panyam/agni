@@ -23,18 +23,24 @@ engine recognises your ground naming, and you subtract it from `rail` to reason 
 
 ### For software engineers
 
-`net.ground` is a filtered projection over `Nets()`, the same shape as `rail` but with a narrower
-name predicate. Rows are 1:1 with ground-named nets. An empty result means no net in the read matched
-a ground name, which on a real design usually points at a naming convention the lexicon does not yet
-cover rather than a board with no ground.
+`net.ground` is a filtered projection over `Nets()`, the same shape as `rail`. Rows are 1:1 with
+ground nets. An empty result means the read found no ground at all, which on a real design usually
+points at a naming convention the lexicon does not yet cover rather than a board with no ground.
+
+**A net is ground by NAME or by DECLARATION, whichever the source supports.** Most formats carry only
+the name, which is why the naming lexicon exists. IPC-2581 states it outright on
+`LogicalNet/@netClass`, so a net called `N$17` can be authoritatively ground with nothing in the name
+to go on (WS1-051). The two sources are unioned at ingestion, not ranked, so a declaration never
+costs you a role the name would have found.
 
 ### Go projector
 
-`netGroundFacts` in `check/facts.go` walks `Model.Nets()` and emits a row for each net where
-`isGroundName(name)` holds. `isGroundName` (in `check/rule_decoupling_present.go`) delegates to the
-active naming lexicon's `IsGround` (`check/rolenames.go`), matching `GND`, `EARTH`, or a `VSS`
-prefix on the hierarchy leaf, case-insensitive. One row per ground-named net; empty when no net name
-matches.
+`netGroundFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row for each net
+where `Model.IsGroundNet` holds. That goes through `check.NetHasRole`, which prefers the role SET
+stamped at ingestion (`ir.Net.roles`, filled by `classify.StampNetRoles`) and falls back to matching
+the name when a net carries no roles at all. The naming lexicon's `IsGround` matches `GND`, `EARTH`,
+or a `VSS` prefix on the hierarchy leaf, case-insensitive; the stamped set additionally carries any
+role the source declared. One row per ground net; empty when neither source finds one.
 
 ### Datalog
 

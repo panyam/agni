@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -104,8 +105,13 @@ type nonstdAttrEl struct {
 }
 
 type netEl struct {
-	Name string     `xml:"name,attr"`
-	Pins []pinRefEl `xml:"PinRef"`
+	Name string `xml:"name,attr"`
+	// NetClass is IPC-2581's LogicalNet/@netClass: a CLOSED enum (CLK/FIXED/GROUND/SIGNAL/POWER/
+	// UNUSED) saying what the net IS. Despite the name it is NOT KiCad's net class, which is
+	// user-named constraint-group membership and lives in ir.Net.net_classes (WS1-050). This one
+	// belongs to the role space, so it feeds ir.Net.roles via the shared ingestion pass.
+	NetClass string     `xml:"netClass,attr,omitempty"`
+	Pins     []pinRefEl `xml:"PinRef"`
 }
 
 type pinRefEl struct {
@@ -177,7 +183,13 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 	}
 
 	for _, n := range f.Nets {
-		net := &ir.Net{Name: n.Name, Prov: prov()}
+		net := &ir.Net{Name: n.Name, Attributes: map[string]string{}, Prov: prov()}
+		// The enum is a lossy normalization, so keep the source term beside the mapped one — the
+		// same discipline layer_function_raw follows below. declared_role is the NEUTRAL seam the
+		// ingestion pass reads (classify.StampNetRoles); the format-specific translation happens
+		// here, in the reader that knows the format (C1).
+		putAttr(net.Attributes, "netclass_raw", n.NetClass)
+		putAttr(net.Attributes, classify.AttrDeclaredRole, declaredRole(n.NetClass))
 		for _, pr := range n.Pins {
 			net.Connections = append(net.Connections, &ir.Connection{
 				ComponentRef: pr.ComponentRef, PinRef: pr.Pin, Prov: prov(),
@@ -233,6 +245,22 @@ func (f *ipcFile) units() string {
 }
 
 // putAttr sets m[k]=v only when v is non-empty, keeping attribute maps free of empty noise.
+// declaredRole translates IPC-2581's LogicalNet/@netClass enum into the engine's net-role
+// vocabulary, or "" when the term states no role. Only GROUND and POWER carry one: SIGNAL is the
+// unremarkable default, FIXED is a routing directive (do not re-route) rather than a purpose, and
+// UNUSED is a lifecycle status. CLK genuinely IS a role, but the engine has no clock role yet, and
+// inventing one here would put a vocabulary decision in a reader; the source term stays in
+// netclass_raw either way, so nothing is lost and the mapping can grow later.
+func declaredRole(netClass string) string {
+	switch netClass {
+	case "GROUND":
+		return classify.NetRoleGround
+	case "POWER":
+		return classify.NetRoleRail
+	}
+	return ""
+}
+
 func putAttr(m map[string]string, k, v string) {
 	if v != "" {
 		m[k] = v
