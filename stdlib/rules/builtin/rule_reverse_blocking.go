@@ -1,6 +1,8 @@
 package builtin
 
 import (
+	"fmt"
+
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
 	"github.com/panyam/agni/core/check"
@@ -37,16 +39,35 @@ var reverseBlockingAbsent = &check.Rule{
 	},
 	Detail: ruleDoc("reverse-blocking-absent"),
 	Eval: func(m check.Model) []check.Finding {
-		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
+		var out []check.Finding
+		for _, n := range m.Nets() {
 			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
-				return false
+				continue
 			}
 			hasConn := check.Exists(n.Connections, func(c *ir.Connection) bool {
 				return m.HasClass(c.ComponentRef, check.ClassConnector)
 			})
-			return hasConn && unblockedPowerPath(m, n)
-		})
-		return check.Report(bad, check.NetFinding("connector feeds a power input with no reverse-blocking element in the path"))
+			if !hasConn {
+				continue
+			}
+			switch v, ref := classifyPowerPath(m, n); v {
+			case pathUnblocked:
+				out = append(out, check.Finding{
+					Kind: check.KindNet, Subject: n.GetName(), Prov: n.GetProv(),
+					Message: "connector feeds a power input with no reverse-blocking element in the path",
+				})
+			case pathUnclassifiable:
+				out = append(out, check.Finding{
+					Kind: check.KindNet, Subject: n.GetName(), Prov: n.GetProv(), Inconclusive: true,
+					Message: fmt.Sprintf(
+						"connector feeds a power input through transistor %s, which may be an ideal diode or "+
+							"ORing FET providing reverse protection, or may be an ordinary switch providing none. "+
+							"A netlist cannot tell them apart. Seed %s's datasheet with a device_class of "+
+							"ideal_diode_controller (or confirm by hand that reverse flow is blocked).", ref, ref),
+				})
+			}
+		}
+		return out
 	},
 }
 
@@ -61,13 +82,13 @@ var reverseBlockingAbsent = &check.Rule{
 //   - A directional part stops the walk, which is why this rule then has to look at what stopped it
 //     rather than concluding from silence. A backwards diode stops the walk exactly as a correct one
 //     does, and reading that as protection would be a false pass on the defect this rule exists for.
-func unblockedPowerPath(m check.Model, n *ir.Net) bool {
+func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	r := m.Reach(n, check.PowerPathReachHops)
 	inReach := map[string]bool{}
 	for _, rn := range r.Nets {
 		inReach[rn.GetName()] = true
 		if hasPowerInput(m, rn) {
-			return true // reached a load through passives alone: nothing directional in the way
+			return pathUnblocked, "" // reached a load through passives alone: nothing directional in the way
 		}
 	}
 	// Nothing reachable, so something stopped the walk. Classify each part bridging out of the
@@ -80,12 +101,28 @@ func unblockedPowerPath(m check.Model, n *ir.Net) bool {
 	// the same node drove the finding instead (issue 63: 14 false FAILs on a real board). Terminal count
 	// is irrelevant to the question being asked, which is only whether something here might be an ORing
 	// FET or an ideal diode.
+	//
+	// A controller the datasheet IDENTIFIES as an ideal diode / ORing / power-mux part settles it the
+	// other way: that is a directional element, so the path is protected and the rule is genuinely
+	// silent. Checked first, because a design carrying both the controller and its FET must read as
+	// protected rather than as unclassifiable.
+	var transistor string
 	for _, rn := range r.Nets {
 		for _, c := range rn.GetConnections() {
-			if m.ComponentClass(c.GetComponentRef()) == check.ClassTransistor {
-				return false // unclassifiable, never a finding
+			ref := c.GetComponentRef()
+			if m.HasClass(ref, check.ClassIdealDiodeController) {
+				return pathProtected, ref
+			}
+			if transistor == "" && m.ComponentClass(ref) == check.ClassTransistor {
+				transistor = ref
 			}
 		}
+	}
+	if transistor != "" {
+		// Cannot tell an ideal diode from an ordinary switch by structure, so SAY so rather than
+		// staying quiet (agni issue 74). The old behaviour returned silence here, which a bound review
+		// item read as pass: a verdict of "protected" on a path nothing had verified.
+		return pathUnclassifiable, transistor
 	}
 	unblocked := false
 	for _, rn := range r.Nets {
@@ -109,8 +146,29 @@ func unblockedPowerPath(m check.Model, n *ir.Net) bool {
 			}
 		}
 	}
-	return unblocked
+	if unblocked {
+		return pathUnblocked, ""
+	}
+	return pathProtected, ""
 }
+
+// pathVerdict is what the walk concluded about one connector-fed net. THREE outcomes, not two: the
+// whole point of agni issue 74 is that "verified protected" and "could not tell" had been the same
+// silence, and a review item bound to this rule read that silence as a pass.
+type pathVerdict int
+
+const (
+	// pathProtected: a directional element stands between the connector and the load, either a
+	// correctly-fitted diode or a datasheet-identified ideal-diode controller. A genuine pass.
+	pathProtected pathVerdict = iota
+	// pathUnblocked: nothing directional is in the way, or a diode is fitted backwards. The defect.
+	pathUnblocked
+	// pathUnclassifiable: a transistor is on the path and nothing identifies it. An ideal diode is a
+	// transistor plus a bias network that no netlist labels, so it is structurally identical to an
+	// ordinary switch. Reported as an INCONCLUSIVE finding, never as a defect: firing would false-fail
+	// every correct ORing-FET design, and staying silent would claim protection nobody verified.
+	pathUnclassifiable
+)
 
 // hasPowerInput reports whether a net carries a real power-input pin (virtual power symbols excluded).
 func hasPowerInput(m check.Model, n *ir.Net) bool {

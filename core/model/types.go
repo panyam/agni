@@ -47,7 +47,17 @@ const (
 	ClassCeramicResonator ComponentClass = "ceramic_resonator"
 	ClassIC               ComponentClass = "ic"
 	ClassTransistor       ComponentClass = "transistor"
-	ClassUnknown          ComponentClass = "unknown"
+	// ClassIdealDiodeController is a controller that drives an external FET to behave as a diode:
+	// ORing controllers, ideal-diode controllers, power muxes. It exists because a rule cannot tell
+	// one from any other FET by structure. An ideal diode IS a transistor plus a bias network, and no
+	// netlist labels that arrangement, so reverse-blocking analysis has to take the part's identity
+	// from a seeded datasheet or stay honest about not knowing (agni issue 74).
+	//
+	// It is DATASHEET-DRIVEN, like the crystal / ceramic_resonator split above and for the same
+	// reason: the structural path cannot resolve it, so it is reached through deviceClassAliases from
+	// a seeded device_class rather than from a refdes prefix or a name keyword.
+	ClassIdealDiodeController ComponentClass = "ideal_diode_controller"
+	ClassUnknown              ComponentClass = "unknown"
 )
 
 // PinRole is the semantic role of a pin, derived from its declared name within the

@@ -12,23 +12,24 @@ import "github.com/panyam/agni/core/model"
 type ComponentClass = model.ComponentClass
 
 const (
-	ClassResistor         = model.ClassResistor
-	ClassCapacitor        = model.ClassCapacitor
-	ClassInductor         = model.ClassInductor
-	ClassFerrite          = model.ClassFerrite
-	ClassDiode            = model.ClassDiode
-	ClassLED              = model.ClassLED
-	ClassTVS              = model.ClassTVS
-	ClassZener            = model.ClassZener
-	ClassFuse             = model.ClassFuse
-	ClassConnector        = model.ClassConnector
-	ClassTestConnector    = model.ClassTestConnector
-	ClassTestPoint        = model.ClassTestPoint
-	ClassClock            = model.ClassClock
-	ClassOscillator       = model.ClassOscillator
-	ClassCrystal          = model.ClassCrystal
-	ClassCeramicResonator = model.ClassCeramicResonator
-	ClassIC               = model.ClassIC
-	ClassTransistor       = model.ClassTransistor
-	ClassUnknown          = model.ClassUnknown
+	ClassResistor             = model.ClassResistor
+	ClassCapacitor            = model.ClassCapacitor
+	ClassInductor             = model.ClassInductor
+	ClassFerrite              = model.ClassFerrite
+	ClassDiode                = model.ClassDiode
+	ClassLED                  = model.ClassLED
+	ClassTVS                  = model.ClassTVS
+	ClassZener                = model.ClassZener
+	ClassFuse                 = model.ClassFuse
+	ClassConnector            = model.ClassConnector
+	ClassTestConnector        = model.ClassTestConnector
+	ClassTestPoint            = model.ClassTestPoint
+	ClassClock                = model.ClassClock
+	ClassOscillator           = model.ClassOscillator
+	ClassCrystal              = model.ClassCrystal
+	ClassCeramicResonator     = model.ClassCeramicResonator
+	ClassIC                   = model.ClassIC
+	ClassTransistor           = model.ClassTransistor
+	ClassIdealDiodeController = model.ClassIdealDiodeController
+	ClassUnknown              = model.ClassUnknown
 )
