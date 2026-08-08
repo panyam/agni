@@ -69,6 +69,11 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	// (WS3-072), so the core reads a normalized net.role fact instead of re-running name matching
 	// per-net per-rule.
 	lex.StampNetRoles(d)
+	// Read each component's VALUE into a machine-comparable Quantity once at ingestion (WS3-118), from
+	// whatever attribute its format spelled it in. It runs AFTER Stamp because the bare-number unit
+	// convention is keyed on the device class this pass has just filled: a bare "100" means ohms only
+	// once the component is known to be a resistor.
+	lex.StampValues(d)
 	// Fill POWER_IN on supply pins a reader left under-typed (WS3-072 PR2): EDIF's port grammar carries
 	// only INPUT/OUTPUT/INOUT, so a VDD pin reads as plain INPUT; this promotes it so the power-pin rule
 	// family works format-neutrally on PinDir == POWER_IN. A no-op for KiCad/gEDA (already typed).

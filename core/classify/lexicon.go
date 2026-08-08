@@ -18,19 +18,23 @@ import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 type Lexicon struct {
 	Role  *RoleVocab
 	Class *ClassVocab
+	// Value carries the bare-number unit conventions (WS3-118). A distinct name space from Role and
+	// Class, so a distinct vocabulary: what unit "100" means on a capacitor has nothing to do with
+	// what makes a net a rail.
+	Value *ValueVocab
 }
 
 // DefaultLexicon returns the engine's built-in vocabularies, the value a read with no project
 // convention uses.
 func DefaultLexicon() *Lexicon {
-	return &Lexicon{Role: DefaultRoleVocab(), Class: DefaultClassVocab()}
+	return &Lexicon{Role: DefaultRoleVocab(), Class: DefaultClassVocab(), Value: DefaultValueVocab()}
 }
 
 // ActiveLexicon captures the process-level vocabularies as a value. It is the bridge for callers that
 // still install a convention globally (the CLI's --conventions today): the globals are read ONCE here,
 // at read time, instead of being consulted again by every downstream name match.
 func ActiveLexicon() *Lexicon {
-	return &Lexicon{Role: activeRoleVocab, Class: activeClassVocab}
+	return &Lexicon{Role: activeRoleVocab, Class: activeClassVocab, Value: DefaultValueVocab()}
 }
 
 // role resolves the role vocabulary, falling back to the process default so a partially-filled or nil
@@ -50,6 +54,17 @@ func (l *Lexicon) class() *ClassVocab {
 	}
 	return l.Class
 }
+
+// value resolves the bare-number unit vocabulary, with the same nil-means-default contract as role.
+func (l *Lexicon) value() *ValueVocab {
+	if l == nil || l.Value == nil {
+		return DefaultValueVocab()
+	}
+	return l.Value
+}
+
+// ValueVocab returns the bare-number unit vocabulary in effect (the built-in default when unset).
+func (l *Lexicon) ValueVocab() *ValueVocab { return l.value() }
 
 // RoleVocab returns the role vocabulary in effect (the process default when unset), for the consumers
 // that must match a bare NAME after the read: the spec-language name FFIs and pin-role derivation,

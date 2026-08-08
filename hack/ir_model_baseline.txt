@@ -6,6 +6,7 @@ core/classify:PartIndex
 core/classify:Stamp
 core/classify:StampNetRoles
 core/classify:StampPowerInPins
+core/classify:StampValues
 cmd/agni:compareLayouts
 cmd/agni:Design
 cmd/agni:readDesign
