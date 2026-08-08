@@ -174,3 +174,72 @@ func TestResetPolarityFindsMultiHopBias(t *testing.T) {
 		t.Fatalf("want 1 finding: active-high declared, biased high through a series element; got %+v", fs)
 	}
 }
+
+// TestStrapFiresOnOppositeBias (WS3-086): a strap declared to latch HIGH that is pulled DOWN comes up
+// in the opposite configuration. That contradiction is the check.
+func TestStrapFiresOnOppositeBias(t *testing.T) {
+	fs := propFindings(t, propDesign("BOOT_MODE0", "GND", ""),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"})
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding (strap declared high, pulled down), got %d: %+v", len(fs), fs)
+	}
+	if !strings.Contains(fs[0].Message, "strap HIGH") || !strings.Contains(fs[0].Message, "biased LOW") {
+		t.Errorf("message should name BOTH the declared and the observed level: %s", fs[0].Message)
+	}
+}
+
+// TestStrapFiresWhenDeclaredLowButPulledHigh is the direction property-reset-polarity structurally
+// cannot catch, and the reason strap is not that rule under another name.
+//
+// reset-polarity's value is the level that ASSERTS reset, so only a bias toward it is a defect and a
+// bias away from it is correct. strap's value is the level the pin should LATCH, so a bias away from it
+// is the defect. Both ways round are wrong, and this pins the second one.
+func TestStrapFiresWhenDeclaredLowButPulledHigh(t *testing.T) {
+	fs := propFindings(t, propDesign("PHYAD1", "+3V3", ""),
+		NetProperty{Net: "PHYAD1", Property: PropStrap, Value: "low"})
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding (strap declared low, pulled up), got %d: %+v", len(fs), fs)
+	}
+	if !strings.Contains(fs[0].Message, "strap LOW") || !strings.Contains(fs[0].Message, "biased HIGH") {
+		t.Errorf("message should name BOTH levels: %s", fs[0].Message)
+	}
+
+	// And the same design declared the other way round is correct, so an inverted comparison cannot
+	// pass this test by firing on everything.
+	if fs := propFindings(t, propDesign("PHYAD1", "+3V3", ""),
+		NetProperty{Net: "PHYAD1", Property: PropStrap, Value: "high"}); len(fs) != 0 {
+		t.Errorf("a strap pulled to the level it declares is correct, want silence: %+v", fs)
+	}
+}
+
+// TestStrapSilentWithoutBias pins the limit this rule is honest about. Strap pins carry internal pulls,
+// and the standard datasheet instruction is to fit an external resistor ONLY for the non-default state,
+// so a design declaring the default level with no resistor on the net is correct and common.
+//
+// Silence here means "no contradiction found", NOT "strap confirmed".
+func TestStrapSilentWithoutBias(t *testing.T) {
+	for _, v := range []string{"low", "high"} {
+		if fs := propFindings(t, propDesign("BOOT_MODE0", "", ""),
+			NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: v}); len(fs) != 0 {
+			t.Errorf("no bias resistor is no evidence, not a wrong strap (value=%s): %+v", v, fs)
+		}
+	}
+}
+
+// TestStrapDividerIsNeither: some parts read a tri-level strap from a divider, and which level it
+// selects depends on a ratio of two resistances the engine cannot read. Reporting a direction here
+// would be guessing.
+func TestStrapDividerIsNeither(t *testing.T) {
+	d := propDesign("BOOT_MODE0", "GND", "")
+	d.Components = append(d.Components, &ir.Component{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}})
+	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "R2", PinRef: "1"})
+	d.Nets = append(d.Nets, &ir.Net{
+		Name: "+3V3", Prov: &ir.Provenance{SourceFile: "t"},
+		Connections: []*ir.Connection{{ComponentRef: "R2", PinRef: "2"}},
+	})
+	for _, v := range []string{"low", "high"} {
+		if fs := propFindings(t, d, NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: v}); len(fs) != 0 {
+			t.Errorf("a divider selects neither level (value=%s): %+v", v, fs)
+		}
+	}
+}

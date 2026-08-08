@@ -10,7 +10,7 @@ import (
 
 // kitchenSink is a declaration that exercises EVERY intent rule kind, so compiling it emits at least
 // one rule per doc key: module-missing + module-count (a module with a count), voltage-domain-mismatch,
-// subsystem-<slug>, both protection kinds, and both net-property kinds. TestRuleDocsOneToOne compiles it to tie the RUNTIME
+// subsystem-<slug>, both protection kinds, and every net-property kind. TestRuleDocsOneToOne compiles it to tie the RUNTIME
 // rules to their docs (the stronger binding a fully-dynamic source needs over the profiles list-only
 // harness: it catches a builder that forgets to set Detail at all, not only a missing file).
 func kitchenSink() Declaration {
@@ -23,6 +23,7 @@ func kitchenSink() Declaration {
 		NetProperties: []NetProperty{
 			{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"},
 			{Net: "PCIE_TX0_P", Property: PropACCoupled},
+			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
 		},
 	}
 }

@@ -137,7 +137,7 @@ func Parse(b []byte) (Declaration, error) {
 			if strings.TrimSpace(np.Value) != "" {
 				return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q takes no \"value\" (got %q)", doc.Name, np.Net, np.Property, np.Value)
 			}
-		case PropResetPolarity:
+		case PropResetPolarity, PropStrap:
 			// The value is the assertion. Without it the rule has nothing to contradict, so an
 			// omitted or misspelled level is a load error rather than a rule that silently never fires.
 			if np.Value != "low" && np.Value != "high" {

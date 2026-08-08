@@ -36,6 +36,12 @@ func TestParseRejects(t *testing.T) {
 		"domain no nominal":   "name: N\nvoltage_domains:\n  - {name: d, rails: [3V3]}",
 		"domain no rails":     "name: N\nvoltage_domains:\n  - {name: d, nominal: 3.3}",
 		"domain no name":      "name: N\nvoltage_domains:\n  - {nominal: 3.3, rails: [3V3]}",
+		// A strap's value IS the assertion, so an omitted or misspelled level has to be a load error.
+		// Accepting it would compile a rule with nothing to contradict, which then reads pass forever.
+		"strap no value":   "name: N\nnet_properties:\n  - {net: BOOT0, property: strap}",
+		"strap bad value":  "name: N\nnet_properties:\n  - {net: BOOT0, property: strap, value: pullup}",
+		"strap no net":     "name: N\nnet_properties:\n  - {property: strap, value: high}",
+		"unknown property": "name: N\nnet_properties:\n  - {net: BOOT0, property: strapp, value: high}",
 	}
 	for label, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
