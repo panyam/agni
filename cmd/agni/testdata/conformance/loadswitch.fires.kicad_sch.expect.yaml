@@ -1,0 +1,7 @@
+fires:
+  load-switch-trip-above-fet-rating:
+    subjects: [Q1]
+    why: "U1 (DEMO-HSS-CTRL, seeded in params/) is a switch controller with no internal pass element: it states a 50mV overcurrent threshold and nothing more. R1 turns that into a current, and the design states R1 as 0R01, which the KiCad reader normalizes to 0.01 ohms at ingestion (WS3-118), so the switch trips at 5A. Q1 (DEMO-NFET-40) is rated 3A continuous, so the current limit sits above what the pass element can carry and the FET fails before the controller acts. The passes variant is identical but for a 0R05 shunt, which trips at 1A."
+  single-pin-net:
+    subjects: [VOUT]
+    why: "incidental: the sheet ends at the switch output, with no load drawn"

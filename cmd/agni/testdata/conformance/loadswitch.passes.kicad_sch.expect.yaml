@@ -1,0 +1,8 @@
+# The control for loadswitch.fires: same controller, same FET, a 0R05 shunt instead of 0R01. The
+# switch trips at 1A, under the FET's 3A rating, so load-switch-trip-above-fet-rating must not fire.
+# That is asserted by the harness's over-firing guard, which fails any rule that fires while listed in
+# neither fires nor pending.
+fires:
+  single-pin-net:
+    subjects: [VOUT]
+    why: "incidental: the sheet ends at the switch output, with no load drawn"
