@@ -47,6 +47,7 @@ var rules = []*check.Rule{
 	supplyExceedsAbsMax,
 	regulatorOutputExceedsAbsMax,
 	fetVdssBelowRail,
+	loadSwitchTripAboveFetRating,
 	reverseBlockingAbsent,
 	railNominalOutOfRecommended,
 	capVoltage,

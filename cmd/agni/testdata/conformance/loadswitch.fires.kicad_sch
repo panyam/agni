@@ -1,0 +1,53 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(paper "A4")
+	(title_block
+		(title "External-FET Load Switch (fires)"))
+	(lib_symbols
+		(symbol "test:HSS"
+			(pin_names (offset 0.254))
+			(property "Reference" "U")
+			(symbol "HSS_1_1"
+				(pin passive line (at -10.16 5.08 0) (length 2.54) (name "GATE") (number "1"))
+				(pin passive line (at -10.16 0 0) (length 2.54) (name "SNSP") (number "2"))
+				(pin passive line (at -10.16 -5.08 0) (length 2.54) (name "SNSN") (number "3"))))
+		(symbol "test:NFET"
+			(pin_names (offset 0.254))
+			(property "Reference" "Q")
+			(symbol "NFET_1_1"
+				(pin passive line (at -5.08 0 0) (length 2.54) (name "G") (number "1"))
+				(pin passive line (at 0 5.08 270) (length 2.54) (name "D") (number "2"))
+				(pin passive line (at 0 -5.08 90) (length 2.54) (name "S") (number "3"))))
+		(symbol "test:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0.254))
+			(property "Reference" "R")
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270) (length 2.54) (name "~") (number "1"))
+				(pin passive line (at 0 -3.81 90) (length 2.54) (name "~") (number "2")))))
+	(symbol (lib_id "test:HSS") (at 100 100 0) (unit 1) (uuid "u1")
+		(property "Reference" "U1") (property "Value" "HSS")
+		(property "MPN" "DEMO-HSS-CTRL") (property "Manufacturer" "Agni Conformance Works"))
+	(symbol (lib_id "test:NFET") (at 120 94.92 0) (unit 1) (uuid "q1")
+		(property "Reference" "Q1") (property "Value" "NFET")
+		(property "MPN" "DEMO-NFET-40") (property "Manufacturer" "Agni Conformance Works"))
+	(symbol (lib_id "test:R") (at 100 120 0) (unit 1) (uuid "r1")
+		(property "Reference" "R1") (property "Value" "0R01"))
+	(label "GATE_DRV" (at 89.84 94.92 0)
+		(effects (font (size 1.27 1.27))))
+	(label "GATE_DRV" (at 114.92 94.92 0)
+		(effects (font (size 1.27 1.27))))
+	(label "VIN" (at 89.84 100 0)
+		(effects (font (size 1.27 1.27))))
+	(label "VIN" (at 100 116.19 0)
+		(effects (font (size 1.27 1.27))))
+	(label "VSW" (at 89.84 105.08 0)
+		(effects (font (size 1.27 1.27))))
+	(label "VSW" (at 100 123.81 0)
+		(effects (font (size 1.27 1.27))))
+	(label "VSW" (at 120 89.84 0)
+		(effects (font (size 1.27 1.27))))
+	(label "VOUT" (at 120 100 0)
+		(effects (font (size 1.27 1.27))))
+)

@@ -74,6 +74,35 @@ func componentQuantity(m Model, refDes string) *ir.Quantity {
 	return nil
 }
 
+// OhmsLawCurrent returns the current in AMPS that volts across ohms produces, and whether the inputs
+// admit an answer. It is the first arithmetic anywhere in the engine that crosses two units (WS3-085),
+// and it is deliberately a NAMED PHYSICAL OPERATION rather than a Quantity.Div.
+//
+// WHY NOT A GENERAL UNIT ALGEBRA. Every other consumer of a quantity compares within one unit, which
+// the accessors already gate: OutputVoltageLimits filters p.Unit != "V", ComponentValueIn refuses a
+// mismatched or empty unit. A dimension system that could type-check volts/ohms -> amps in general is
+// a large amount of machinery for six units and three operations, and it would have no second caller
+// today. A named operation carries the same guarantee in its signature: the parameter names state
+// which unit each side must already be in, so a caller passing farads is making a visible mistake
+// rather than a silently typed one. It also reads to an EE, who knows what Ohm's law is and does not
+// know what a dimension vector is. If a fourth or fifth physical relation shows up, that is the point
+// to reconsider, not before.
+//
+// ok is false for a non-positive or non-finite resistance and for a non-finite voltage. Zero ohms is
+// the case that matters: a sense resistor read as 0 is either a short or a value the parser could not
+// place, and dividing by it yields +Inf, which every comparison downstream would read as "enormous
+// current" and report as a defect. Refusing is the only honest answer. A NEGATIVE voltage is allowed
+// (a low-side sense threshold is legitimately negative) and simply yields a negative current.
+func OhmsLawCurrent(volts, ohms float64) (amps float64, ok bool) {
+	if math.IsNaN(volts) || math.IsInf(volts, 0) {
+		return 0, false
+	}
+	if !(ohms > 0) || math.IsInf(ohms, 0) {
+		return 0, false
+	}
+	return volts / ohms, true
+}
+
 // valueEpsilon is the RELATIVE tolerance for comparing a component value against a number of different
 // provenance (a datasheet parameter, a declared budget). Values this parser produces compare exactly to
 // each other, so this is not for them; it is for the boundary where an exactly-parsed 4700 meets a

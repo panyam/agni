@@ -1,0 +1,26 @@
+(edif CONFORMANCE
+  (edifVersion 2 0 0)
+  (design CONFORMANCE (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell CTRL
+      (view V (viewType NETLIST)
+        (interface (port GATE (direction OUTPUT)) (port SNSP (direction INPUT)) (port SNSN (direction INPUT)))))
+    (cell FET
+      (view V (viewType NETLIST)
+        (interface (port G (direction INPUT)) (port D (direction INOUT)) (port S (direction INOUT)))))
+    (cell RES
+      (view V (viewType NETLIST)
+        (interface (port A (direction INOUT)) (port B (direction INOUT)))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef CTRL)) (designator "U1")
+            (property MPN (string "DEMO-HSS-CTRL")))
+          (instance Q1 (viewRef V (cellRef FET)) (designator "Q1")
+            (property MPN (string "DEMO-NFET-40")))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1")
+            (property VALUE (string "0R01")))
+          (net GATE_DRV (joined (portRef GATE (instanceRef U1)) (portRef G (instanceRef Q1))))
+          (net VIN (joined (portRef SNSP (instanceRef U1)) (portRef A (instanceRef R1))))
+          (net VSW (joined (portRef SNSN (instanceRef U1)) (portRef B (instanceRef R1)) (portRef D (instanceRef Q1))))
+          (net VOUT (joined (portRef S (instanceRef Q1)))))))))

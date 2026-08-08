@@ -1,0 +1,16 @@
+# The same over-current design as loadswitch.fires.kicad_sch, written in EDIF, where the rule reports
+# NOTHING. That is a format limit, not a clean design, and the fixture exists to hold the limit in
+# place so nobody later reads this silence as a pass.
+#
+# The mechanism, measured rather than assumed: the value side is FINE. The EDIF read normalizes R1's
+# "0R01" to 0.01 ohms exactly as KiCad does, because the value-attribute lookup is case-insensitive
+# and the property is spelled VALUE. What fails is the PIN ROLE. The EDIF reader builds part-type pins
+# with a name and an EMPTY designator, while connections reference the port by name, so PinRole finds
+# no declared pin and every pin reads unknown. With no gate terminal, no external-FET load switch can
+# be resolved.
+#
+# Fixing that belongs to the reader, not to this rule (Agni/OUT_OF_SCOPE.md).
+fires:
+  single-pin-net:
+    subjects: [VOUT]
+    why: "incidental: the netlist ends at the switch output, with no load drawn"

@@ -144,6 +144,107 @@ func FetBreakdownLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	return out
 }
 
+// ocpThresholdSymbols is the alias set for a switch controller's OVERCURRENT-PROTECTION sense
+// threshold: the voltage across the external sense resistor at which the controller trips. Same
+// posture as supplySymbols, vendor spelling in the model layer and never in rule text.
+//
+// Narrow on purpose. Every symbol here has to mean "the sense voltage that trips the current limit"
+// and nothing else, because the number is divided by a resistance and reported as an ampere rating. A
+// symbol that could also mean a clamp level or a comparator reference would produce a confident wrong
+// current, which is the failure this rule family costs the most on.
+var ocpThresholdSymbols = map[string]bool{
+	"VOCP": true, "V(OCP)": true, "VOCTH": true, "V(OC)": true,
+	"VILIM": true, "V(ILIM)": true, "VCL": true, "V(CL)": true,
+}
+
+// OcpThresholdLimits selects the machine-comparable overcurrent-threshold rows of a controller's
+// spec: symbol in the alias set, unit exactly "V", a max bound present, and the docs/20 comparison
+// gates. Rows failing any gate are skipped, never coerced.
+//
+// Two deliberate choices. The limit KIND is not constrained: a trip threshold is a characteristic or
+// recommended-operating row, not an absolute maximum, so filtering to one kind would find nothing on a
+// real spec (the same reasoning as OutputVoltageLimits). And the unit gate is exactly "V" while real
+// datasheets print this row in MILLIVOLTS, so a spec seeded as printed reads as no row at all and the
+// rule stays silent. That is the standing unlike-units posture (never converted, WS10-004 owns the
+// conversion), and it fails toward silence rather than toward a current a thousand times too large.
+func OcpThresholdLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.GetParameters() {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !ocpThresholdSymbols[sym] || p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
+			param.UnderSpecified(p) || !param.MachineComparable(p) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// drainCurrentSymbols is the alias set for a MOSFET's CONTINUOUS drain-current rating. Pulsed drain
+// current (IDM, ID(pulse)) is deliberately absent: it is a much larger number under a duty-cycle
+// condition, and crediting it against a steady trip current would turn a real over-current into a
+// pass.
+var drainCurrentSymbols = map[string]bool{
+	"ID": true, "IDMAX": true, "ID(MAX)": true, "IDCONT": true, "ID(CONT)": true, "IDC": true,
+}
+
+// DrainCurrentLimits selects the machine-comparable continuous drain-current rows of a spec: symbol in
+// the alias set, kind ABSOLUTE_MAX, unit exactly "A", a max bound present, and the docs/20 comparison
+// gates. Continuous drain current IS an absolute maximum on a real FET datasheet, so unlike
+// OcpThresholdLimits the kind is constrained.
+//
+// The rating is stated at a case or ambient temperature that the conditions carry, and a real design
+// derates well below it. This selects the vendor's number as printed; a rule comparing against it is
+// therefore reporting the UNAMBIGUOUS half, a current limit set above the part's own rating, and says
+// nothing about whether a limit below the rating is adequately derated.
+func DrainCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.GetParameters() {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !drainCurrentSymbols[sym] ||
+			p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			p.Unit != "A" || p.Value == nil || p.Value.Max == nil ||
+			param.UnderSpecified(p) || !param.MachineComparable(p) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// onResistanceSymbols is the alias set for a MOSFET's static drain-source ON-resistance.
+var onResistanceSymbols = map[string]bool{
+	"RDS(ON)": true, "RDSON": true, "RON": true,
+}
+
+// ohmUnitSpellings are the spellings of the OHM a seeded parameter may carry. Two spellings of one
+// unit, not two units: the hand-encoded corpus writes "Ohm" and a spec transcribed from a sheet that
+// prints the symbol writes "Ω". Accepting both is normalization, not conversion, so it does not
+// weaken the unlike-units posture the rest of this file holds (a milliohm row still reads as no row).
+var ohmUnitSpellings = map[string]bool{"Ohm": true, "ohm": true, "Ω": true}
+
+// OnResistanceLimits selects the machine-comparable RDS(on) rows of a spec: symbol in the alias set,
+// unit an ohm spelling, a max bound present, and the docs/20 comparison gates. The limit kind is not
+// constrained, since RDS(on) is a characteristic row.
+//
+// A real sheet states RDS(on) SEVERAL TIMES under different gate drives and junction temperatures (the
+// seeded BSS138 carries three), so a caller gets several rows and has to say which one it means. There
+// is no single "the" on-resistance, and an accessor that picked one silently would be answering a
+// question the datasheet does not answer.
+func OnResistanceLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.GetParameters() {
+		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
+		if !onResistanceSymbols[sym] || !ohmUnitSpellings[p.Unit] ||
+			p.Value == nil || p.Value.Max == nil ||
+			param.UnderSpecified(p) || !param.MachineComparable(p) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
 // outputSymbols is the alias set for a regulator's OUTPUT voltage: the symbols datasheets print it
 // under. Same posture as supplySymbols — the vendor spelling lives in the model layer, never in rule
 // text (docs/20). Deliberately narrow: these are outputs a downstream part is fed BY, so a symbol

@@ -1,0 +1,25 @@
+# Synthetic high-side switch CONTROLLER for the conformance corpus (WS3-085). A controller has no
+# internal pass element and no current limit of its own: it states a sense THRESHOLD, and the trip
+# current only exists once an external shunt is chosen. This is the half of an external-FET load
+# switch that lives in a datasheet.
+mpn: "DEMO-HSS-CTRL"
+manufacturer: "Agni Conformance Works"
+device_class: "high-side switch controller"
+
+docs {
+  id: "demo-hss-ctrl-rev-a"
+  title: "DEMO-HSS-CTRL Rev A"
+  vendor: "Agni Conformance Works"
+}
+
+parameters {
+  name: "Overcurrent Protection Threshold"
+  symbol: "V(OCP)"
+  limit_kind: LIMIT_KIND_CHARACTERISTIC
+  value { min: 0.045 typ: 0.05 max: 0.05 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  attributes { key: "note" value: "the sheet prints this row in millivolts; seeded in volts because unlike units are never converted" }
+  prov { doc_ref: "demo-hss-ctrl-rev-a" page: 6 table_or_figure: "Electrical Characteristics" method: "hand" confidence: 1 }
+}
