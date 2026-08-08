@@ -104,6 +104,17 @@ var deviceClassAliases = map[string]ComponentClass{
 	"vcxo":             ClassOscillator, // voltage-controlled
 	"activeoscillator": ClassOscillator,
 	"clocksource":      ClassClock,
+	// Ideal-diode / ORing / power-mux controllers (agni items behind reverse-polarity and
+	// reverse-current review asks). Vendors spell this family many ways and none of them is
+	// structurally recognisable, which is the whole reason the class is datasheet-driven.
+	"idealdiodecontroller":      ClassIdealDiodeController,
+	"idealdiode":                ClassIdealDiodeController,
+	"oringcontroller":           ClassIdealDiodeController,
+	"oringfetcontroller":        ClassIdealDiodeController,
+	"orcontroller":              ClassIdealDiodeController,
+	"powermux":                  ClassIdealDiodeController,
+	"powerpathcontroller":       ClassIdealDiodeController,
+	"reversepolaritycontroller": ClassIdealDiodeController,
 }
 
 // NormalizeDeviceClass maps a datasheet device_class string to a canonical ComponentClass (WS10-015).

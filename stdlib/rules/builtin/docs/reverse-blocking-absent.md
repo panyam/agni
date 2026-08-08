@@ -38,17 +38,26 @@ their real ask never tested.
 
 ### What it will not claim, and why that is deliberate
 
-**A path crossing a transistor is reported as unclassifiable, not unprotected.** The rule stays silent
-there.
+**A path crossing an unidentified transistor is reported INCONCLUSIVE, not as a defect.**
 
 A P-FET ideal diode is a transistor plus a bias network. Nothing in a netlist labels that arrangement,
 and it is structurally indistinguishable from any other FET sitting in a power path. It is also the
-*correct modern answer* to reverse protection — so a rule that fired whenever it found no series diode
+*correct modern answer* to reverse protection, so a rule that fired whenever it found no series diode
 would false-fail every well-designed ORing-FET board.
 
-A false fail here is worse than the gap it would close. A reviewer who sees this rule fire on a design
-that is properly protected learns to ignore it, and then it is worth nothing on the design that really
+A false fail here is worse than the gap it would close. A reviewer who sees this rule fire on a
+properly protected design learns to ignore it, and then it is worth nothing on the design that really
 is missing protection.
+
+**It used to stay silent instead, and that was the wrong answer for a reason invisible at the rule
+layer.** A review item bound to this rule read silence as a PASS, so the report asserted protection on
+a path nothing had verified. The rule now says out loud that it could not decide, and a bound item
+reads `inconclusive`: neither a defect nor a clean bill of health.
+
+**A controller the datasheet identifies resolves it.** Seed the part with a `device_class` of
+`ideal_diode_controller` (the alias set also accepts the ORing, power-mux and power-path spellings) and
+the rule credits it as a genuine directional element and goes properly silent. That is what turns an
+inconclusive into a real pass, and it is why the message names the exact class to seed.
 
 ### Orientation matters
 
@@ -59,11 +68,12 @@ and not the one this rule reports.
 Only a plain diode counts. A TVS, a Zener and an LED all carry the diode family tag, and none is a
 series blocking element — the first two shunt to ground, and an LED in a power path is an indicator.
 
-### When it stays silent
+### When it stays silent (a genuine pass)
 
 - No connector on the net — the rule is about what enters the board.
 - No power input reachable from it.
-- A transistor on the path (above).
+- A transistor on the path that a seeded datasheet identifies as an ideal-diode / ORing controller
+  (above). An UNIDENTIFIED transistor is not silence: it is an inconclusive finding.
 - A diode whose part type declares no anode pin, so orientation is unknown. The path reads as
   unblocked rather than the rule guessing which way the part faces.
 - Ground and read-gap (external) nets, excluded up front.

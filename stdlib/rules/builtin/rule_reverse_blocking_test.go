@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -90,13 +91,50 @@ func TestReverseBlockingFiresOnBackwardsDiode(t *testing.T) {
 	}
 }
 
-// TestReverseBlockingSilentOnTransistorPath is the option-A guard and the reason this rule is safe to
-// ship. A P-FET ideal diode is a transistor plus a bias network that no netlist labels, and it is the
-// correct modern answer to reverse protection — so a path crossing a transistor is unclassifiable, not
-// unprotected. Firing here would false-fail every ORing-FET design.
-func TestReverseBlockingSilentOnTransistorPath(t *testing.T) {
-	if fs := revFindings(revDesign("transistor", false)); len(fs) != 0 {
-		t.Errorf("a transistor on the path is unclassifiable, want silence: %+v", fs)
+// TestReverseBlockingReportsUnclassifiableTransistor: a P-FET ideal diode is a transistor plus a bias
+// network that no netlist labels, and it is the correct modern answer to reverse protection, so a path
+// crossing a transistor is unclassifiable rather than unprotected. Firing a DEFECT here would
+// false-fail every ORing-FET design.
+//
+// This asserted SILENCE until agni issue 74 gave a rule somewhere to put "I could not decide". Silence
+// was the wrong answer for a reason invisible at this layer: a review item bound to the rule read it
+// as PASS, so the report claimed protection on a path nothing had verified. The finding must be
+// Inconclusive, so it is neither a defect nor a pass.
+func TestReverseBlockingReportsUnclassifiableTransistor(t *testing.T) {
+	fs := revFindings(revDesign("transistor", false))
+	if len(fs) != 1 {
+		t.Fatalf("want 1 inconclusive finding for an unidentifiable transistor, got %d: %+v", len(fs), fs)
+	}
+	if !fs[0].Inconclusive {
+		t.Error("an unidentifiable transistor is not a defect; the design may well be correct")
+	}
+	if !strings.Contains(fs[0].Message, "ideal_diode_controller") {
+		t.Errorf("the message must say what would resolve it: %s", fs[0].Message)
+	}
+}
+
+// TestReverseBlockingSilentOnIdentifiedController is the capability the class was added for: when a
+// datasheet IDENTIFIES the part as an ideal-diode / ORing / power-mux controller, the path carries a
+// directional element and the rule is genuinely silent.
+//
+// It is the other half of the test above, and the pair is the point. Before this, "verified protected"
+// and "could not tell" were the same silence, so classification could not have changed any observable
+// behaviour. Now they are distinguishable, which is what lets a bound review item read a real pass.
+func TestReverseBlockingSilentOnIdentifiedController(t *testing.T) {
+	// The controller is a SEPARATE part from the FET it drives, which is both the real topology and
+	// what makes this test able to fail. Stamping the class onto the FET itself would stop it being
+	// classified a transistor at all, so the path would go silent by falling through rather than by
+	// the controller being credited, and deleting the credit branch would not fail this test.
+	d := revDesign("transistor", false)
+	d.Components = append(d.Components, &ir.Component{
+		RefDes:        "U9",
+		DeviceClasses: []string{string(check.ClassIdealDiodeController)},
+		Prov:          &ir.Provenance{SourceFile: "t"},
+	})
+	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "U9", PinRef: "1"})
+
+	if fs := revFindings(d); len(fs) != 0 {
+		t.Errorf("an identified ideal-diode controller IS a directional element, want silence: %+v", fs)
 	}
 }
 
@@ -147,8 +185,9 @@ func TestReverseBlockingTransistorBeatsBackwardsDiode(t *testing.T) {
 		Connections: []*ir.Connection{{ComponentRef: "Q1", PinRef: "2"}, {ComponentRef: "U2", PinRef: "1"}},
 	})
 
-	if fs := revFindings(d); len(fs) != 0 {
-		t.Errorf("a transistor on any leg makes the path unclassifiable, want silence: %+v", fs)
+	fs := revFindings(d)
+	if len(fs) != 1 || !fs[0].Inconclusive {
+		t.Fatalf("a transistor on any leg makes the path unclassifiable, want one inconclusive finding: %+v", fs)
 	}
 }
 
@@ -240,7 +279,8 @@ func revMultiTerminalFETDesign() *ir.Design {
 // stays silent on a possible ORing FET or ideal diode rather than false-failing a correct design, and
 // a guard that only recognises 2-terminal parts does not deliver it for any real MOSFET.
 func TestReverseBlockingGuardCountsMultiTerminalTransistor(t *testing.T) {
-	if fs := revFindings(revMultiTerminalFETDesign()); len(fs) != 0 {
-		t.Errorf("a 3-terminal FET on the path is unclassifiable, want silence: %+v", fs)
+	fs := revFindings(revMultiTerminalFETDesign())
+	if len(fs) != 1 || !fs[0].Inconclusive {
+		t.Fatalf("a 3-terminal FET on the path is unclassifiable, want one inconclusive finding: %+v", fs)
 	}
 }
