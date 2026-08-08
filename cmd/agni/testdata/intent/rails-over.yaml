@@ -1,0 +1,8 @@
+# Budgets rails.edn does NOT meet. 3V3 is fed by a 0.5A part and budgeted at 0.8A, so capacity fires.
+# 1V8 is fed by a 0.9A part and budgeted at 0.8A, so it clears the peak but not the 0.96A the margin
+# factor asks for: margin fires and capacity stays silent, which is the whole reason for two rules.
+name: Rail budgets (over-subscribed)
+rail_budgets:
+  - {rail: 3V3, peak: 0.8}
+  - {rail: 1V8, peak: 0.8}
+margin_factor: 1.2

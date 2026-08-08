@@ -1,0 +1,7 @@
+# Budgets rails.edn meets with headroom: 0.4A peak on both rails needs 0.48A at the 1.2 factor, which
+# the 0.5A and 0.9A supplies both clear.
+name: Rail budgets (within budget)
+rail_budgets:
+  - {rail: 3V3, peak: 0.4}
+  - {rail: 1V8, peak: 0.4}
+margin_factor: 1.2

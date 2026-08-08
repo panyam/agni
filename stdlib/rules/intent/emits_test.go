@@ -10,6 +10,7 @@ func TestEmits(t *testing.T) {
 		"intent/module-missing",       // composed catalog name accepted too
 		"subsystem-power-tree", "intent/subsystem-clock",
 		"protection-ovp", "protection-discharge", "intent/protection-discharge",
+		"rail-current-capacity", "rail-current-margin", "intent/rail-current-margin",
 	}
 	for _, n := range known {
 		if !Emits(n) {
@@ -43,6 +44,8 @@ func TestEmitsCoversCompiler(t *testing.T) {
 			{Net: "PCIE_TX0_P", Property: PropACCoupled},
 			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
 		},
+		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
+		MarginFactor: 1.2,
 	}
 	rules := Compile(decl)
 	if len(rules) == 0 {

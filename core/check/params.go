@@ -175,6 +175,85 @@ func OutputVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	return out
 }
 
+// outputCurrentSymbols is the alias set for a regulator's OUTPUT CURRENT rating: the symbols
+// datasheets print it under, matched after alnumUpper normalization so I_OUT, I OUT and IOUT(MAX) all
+// reduce to a key here. Same posture as supplySymbols, the vendor spelling lives in the model layer
+// and never in rule text (docs/20).
+//
+// It is the current-axis counterpart of outputSymbols and is deliberately narrow in the same way:
+// these are ratings for what the part DELIVERS, so a symbol that could mean an input current (IIN,
+// IQ, ISD) must not be in here or a sizing rule would compare a rail's demand against the wrong
+// number. ILIM is likewise excluded: a current LIMIT is where the part folds back, not the current it
+// is rated to deliver continuously, and crediting it as capacity would over-rate every part that
+// states both.
+// It is a SLICE rather than a map, unlike its neighbours here, because these symbols are also read
+// back out (OutputCurrentSymbols) into a review's needs-data message, and an author reading "no seeded
+// datasheet value for IOUT/IO/..." is helped by the ordinary spelling coming first. Map iteration
+// order would not give that, and sorting would lead with ICONT.
+var outputCurrentSymbols = []string{"IOUT", "IO", "IOUTMAX", "IOMAX", "ICONT", "ICONTMAX", "ILOAD", "IOUTDC"}
+
+// OutputCurrentSymbols returns the output-current alias set, for a rule to declare in
+// Rule.ParamSymbols so the review runner can tell "the design is within budget" from "nothing on this
+// design states an output current" (WS3-095). It is the same list OutputCurrentLimits matches on, so
+// the seeding gate and the extractor cannot drift apart.
+func OutputCurrentSymbols() []string {
+	return slices.Clone(outputCurrentSymbols)
+}
+
+// OutputCurrentLimits selects the machine-comparable OUTPUT-CURRENT rows of a spec: symbol in the
+// output-current alias set, unit exactly "A", a max bound present, and the docs/20 comparison gates.
+//
+// The limit KIND is deliberately not constrained, for OutputVoltageLimits' reason: a regulator states
+// its output current as a recommended-operating or characteristic row rather than an absolute maximum,
+// so filtering to one kind would find nothing on a real spec.
+//
+// The unit is exactly "A". Milliamps are not converted, matching the rest of this file: unlike units
+// are under-specified for comparison until WS10-004, and silently scaling one here would make the one
+// place in the engine that converts also the place a unit bug hides.
+func OutputCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
+	var out []*parampb.Parameter
+	for _, p := range spec.Parameters {
+		if !slices.Contains(outputCurrentSymbols, alnumUpper(p.Symbol)) || p.Unit != "A" ||
+			p.Value == nil || p.Value.Max == nil ||
+			param.UnderSpecified(p) || !param.MachineComparable(p) {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// SeedsAnySymbol reports whether ANY component on the design carries a seeded datasheet parameter for
+// one of syms, comparing after the same alnumUpper normalization the alias sets use so a spec written
+// I_OUT answers for a declared IOUT. It is the review runner's WS3-097 gate generalized to a rule that
+// declares its symbols (Rule.ParamSymbols) rather than an inline query that names exactly one: false
+// means the rule had nothing to join against, so zero findings is a data gap and not a clean design.
+//
+// Normalization lives here rather than at the call site for the reason the alias sets do: symbol
+// spelling is a model-layer concern, so a caller passes the symbols it wants and never the rules for
+// matching them.
+func SeedsAnySymbol(m Model, syms []string) bool {
+	if len(syms) == 0 {
+		return false
+	}
+	want := make(map[string]bool, len(syms))
+	for _, s := range syms {
+		want[alnumUpper(s)] = true
+	}
+	for _, c := range m.Components() {
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil {
+			continue
+		}
+		for _, p := range spec.GetParameters() {
+			if want[alnumUpper(p.GetSymbol())] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // SupplyAbsMaxLimits selects the machine-comparable absolute-maximum supply-voltage
 // rows of a spec: symbol in the supply alias set, kind ABSOLUTE_MAX, unit exactly "V"
 // (unlike units are under-specified for comparison until WS10-004 — never converted),

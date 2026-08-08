@@ -54,6 +54,8 @@ var docKeys = []string{
 	"property-" + PropResetPolarity,     // property-reset-polarity
 	"property-" + PropACCoupled,         // property-ac-coupled
 	"property-" + PropStrap,             // property-strap
+	RuleRailCurrentCapacity,             // rail-current-capacity
+	RuleRailCurrentMargin,               // rail-current-margin
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -83,6 +85,8 @@ var docSummaries = map[string]string{
 	"property-" + PropResetPolarity:     "A net the design intent declares as a reset is biased to its ASSERTED level, holding the part in reset.",
 	"property-" + PropACCoupled:         "A net the design intent declares AC-coupled is carried by no series capacitor.",
 	"property-" + PropStrap:             "A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch.",
+	RuleRailCurrentCapacity:             "The part supplying a rail is rated below the peak current the design intent declares for that rail.",
+	RuleRailCurrentMargin:               "A rail's supply meets its declared peak current budget but not the declared margin factor over it.",
 }
 
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog

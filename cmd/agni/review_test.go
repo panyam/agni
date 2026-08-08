@@ -322,6 +322,75 @@ func TestReviewIntentContract(t *testing.T) {
 	}
 }
 
+// TestReviewRailBudgets is the end-to-end proof for the rail-sizing pair (WS3-095), and it holds four
+// behaviours one CLI invocation apart:
+//
+//   - The two items report INDEPENDENTLY. On the over-subscribed declaration item 18 fails on 3V3 (a
+//     0.5A supply under a 0.8A budget) while item 19 fails on 1V8 (a 0.9A supply that clears the 0.8A
+//     peak but not the 0.96A the 1.2 factor asks for). Neither rail appears under both items, which is
+//     the reason this ships as two rules rather than one at two thresholds (WS3-058).
+//   - Budgets the design meets pass both.
+//   - With budgets but NO margin_factor, item 18 still resolves and item 19 reads needs-design-intent.
+//     The margin rule has no default policy, so it is not compiled and cannot pass against a number
+//     nobody declared.
+//   - With --params attached but no output current seeded, both read needs-data. An unseeded regulator
+//     must never read as big enough, which is the honest guard the ticket asks for.
+func TestReviewRailBudgets(t *testing.T) {
+	checklist := "testdata/intent/rails-checklist.yaml"
+	design := "testdata/intent/rails.edn"
+	params := "testdata/intent/params"
+
+	over := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-over.yaml", "--params", params, design)
+	for _, want := range []string{
+		"| 18 | regulator output ratings | fail |",
+		"| 19 | current capability margins | fail |",
+	} {
+		if !strings.Contains(over, want) {
+			t.Errorf("over-subscribed budgets, report missing %q\n%s", want, over)
+		}
+	}
+	// Each item names its OWN rail. A merged verdict would put both rails under both items.
+	for _, bad := range []string{"rail-current-capacity: 1V8", "rail-current-margin: 3V3"} {
+		if strings.Contains(over, bad) {
+			t.Errorf("the two items must not report each other's rail, found %q\n%s", bad, over)
+		}
+	}
+	if !strings.Contains(over, "ACME-REG-500 Datasheet Rev A") {
+		t.Errorf("a sizing finding must cite the supplying part's datasheet\n%s", over)
+	}
+
+	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml", "--params", params, design)
+	for _, want := range []string{
+		"| 18 | regulator output ratings | pass |",
+		"| 19 | current capability margins | pass |",
+	} {
+		if !strings.Contains(ok, want) {
+			t.Errorf("budgets the design meets should pass, report missing %q\n%s", want, ok)
+		}
+	}
+
+	// No margin_factor: the capacity item still resolves, the margin item names the missing input.
+	noFactor := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-no-factor.yaml", "--params", params, design)
+	if !strings.Contains(noFactor, "| 18 | regulator output ratings | pass |") {
+		t.Errorf("budgets without a factor should still resolve item 18\n%s", noFactor)
+	}
+	if !strings.Contains(noFactor, "| 19 | current capability margins | needs-design-intent |") {
+		t.Errorf("no margin_factor must leave item 19 needs-design-intent, never pass\n%s", noFactor)
+	}
+
+	// The honest guard: a params tier is attached, but no part states an output current.
+	unseeded := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml",
+		"--params", "testdata/intent/params-no-current", design)
+	for _, want := range []string{
+		"| 18 | regulator output ratings | needs-data |",
+		"| 19 | current capability margins | needs-data |",
+	} {
+		if !strings.Contains(unseeded, want) {
+			t.Errorf("an unseeded regulator must not read as big enough, report missing %q\n%s", want, unseeded)
+		}
+	}
+}
+
 func TestReviewCmdRequiresChecklist(t *testing.T) {
 	cmd := reviewCmd()
 	cmd.SetArgs([]string{"testdata/review/can-broken.edn"})
