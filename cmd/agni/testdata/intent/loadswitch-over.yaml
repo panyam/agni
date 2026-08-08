@@ -1,0 +1,11 @@
+# A budget the switch on loadswitch.passes.kicad_sch cannot pass. Its controller states a 50mV
+# overcurrent threshold and the design's shunt is 0R05, so it limits at 1A: a rail declared to draw 2A
+# opens the switch under its own load.
+#
+# The design is the conformance corpus's PASSING load-switch fixture, which is the point. It is clean
+# by load-switch-trip-above-fet-rating (the 1A limit sits well under the FET's 3A continuous rating),
+# so the only thing that fires here is the lower bound, and nothing in the design changed to make it
+# fire. The budget did.
+name: Load switch budget (over the limit)
+rail_budgets:
+  - {rail: VOUT, peak: 2}
