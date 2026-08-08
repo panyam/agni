@@ -65,9 +65,11 @@ type railBudgetDoc struct {
 }
 
 type netPropertyDoc struct {
-	Net      string `yaml:"net"`
-	Property string `yaml:"property"`
-	Value    string `yaml:"value"`
+	MinOhms  float64 `yaml:"min_ohms"`
+	MaxOhms  float64 `yaml:"max_ohms"`
+	Net      string  `yaml:"net"`
+	Property string  `yaml:"property"`
+	Value    string  `yaml:"value"`
 }
 
 // Parse reads a YAML intent declaration into a Declaration and validates its structure: a name is
@@ -170,7 +172,19 @@ func Parse(b []byte) (Declaration, error) {
 		default:
 			return Declaration{}, fmt.Errorf("intent %q: net_property %q has property %q (want %q or %q)", doc.Name, np.Net, np.Property, PropResetPolarity, PropACCoupled)
 		}
-		d.NetProperties = append(d.NetProperties, NetProperty{Net: np.Net, Property: np.Property, Value: np.Value})
+		// A band on a kind that has no resistance to bound is an authoring slip that would compile to
+		// a check that can never run, which is the route-six false pass (a declaration meaning nothing
+		// at load time). Reject it here rather than let it read as a silent pass at review.
+		if np.Property != PropStrap && (np.MinOhms != 0 || np.MaxOhms != 0) {
+			return Declaration{}, fmt.Errorf("intent %q: net_property %q kind %q takes no min_ohms/max_ohms (only %q does)", doc.Name, np.Net, np.Property, PropStrap)
+		}
+		if np.MinOhms < 0 || np.MaxOhms < 0 {
+			return Declaration{}, fmt.Errorf("intent %q: net_property %q has a negative resistance bound (min_ohms %g, max_ohms %g)", doc.Name, np.Net, np.MinOhms, np.MaxOhms)
+		}
+		if np.MinOhms > 0 && np.MaxOhms > 0 && np.MinOhms > np.MaxOhms {
+			return Declaration{}, fmt.Errorf("intent %q: net_property %q has min_ohms %g above max_ohms %g, a band nothing can satisfy", doc.Name, np.Net, np.MinOhms, np.MaxOhms)
+		}
+		d.NetProperties = append(d.NetProperties, NetProperty{Net: np.Net, Property: np.Property, Value: np.Value, MinOhms: np.MinOhms, MaxOhms: np.MaxOhms})
 	}
 	rails := map[string]bool{} // one budget per rail, so two declarations cannot both fire on one net
 	for i, rb := range doc.RailBudgets {

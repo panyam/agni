@@ -196,6 +196,23 @@ type NetProperty struct {
 	Property string
 	// Value qualifies the kind: "low"/"high" for reset-polarity and strap, empty for ac-coupled.
 	Value string
+	// MinOhms / MaxOhms bound the acceptable resistance of a STRAP's pull resistor, in ohms. Both
+	// optional and independent: declare one to bound that side only, neither to check direction alone.
+	// Ignored by every other property kind.
+	//
+	// DECLARED, NOT BUILT IN, and that is the whole design of this field. A strap resistor is
+	// "strong enough to hold against leakage but not so strong it fights an active driver", and both
+	// ends of that depend on the part: a CMOS input with nanoamp leakage is happy past 100k, while a
+	// strap a driver has to override wants a few hundred ohms. Any universal band the engine invented
+	// would fire on correct boards, which the review-integrity rule forbids — every FAIL must be a
+	// genuine defect. The person declaring the strap is the one holding the datasheet, so the band is
+	// theirs to state.
+	//
+	// It is also the posture this whole package documents: no built-in intent, external declaration,
+	// deviations fail. A band nobody declared is not a band of zero; the check simply does not run,
+	// and the direction half still does.
+	MinOhms float64
+	MaxOhms float64
 }
 
 // Module is one required functional block, matched to a design component by device CLASS (the primary
