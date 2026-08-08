@@ -41,7 +41,7 @@ comparison across the whole parameter layer, and scaling here would put the engi
 conversion inside a rule that decides pass or fail. Seed output currents in amps.
 
 `intent/rail-current-margin` reports the separate question of whether the rail clears the budget with
-headroom. **A pass here means "rated for the declared load", not "adequately sized"** — a supply that
+headroom. **A pass here means "rated for the declared load", not "adequately sized".** A supply that
 exactly meets the peak passes this rule and fires the margin rule.
 
 ### What counts as the supply

@@ -63,8 +63,8 @@ type netPropertyDoc struct {
 // needs a name, a positive nominal, and at least one rail, each subsystem needs a name (slugifying
 // uniquely) plus a source or at least one net, and each protection needs a rail and a known kind (ovp
 // or discharge), each rail_budget needs a rail and a positive peak with no rail budgeted twice, and a
-// declared margin_factor must exceed 1 and have budgets to apply to
-// — a malformed declaration is a teaching error at load, not a surprise at run. Parse is
+// declared margin_factor must exceed 1 and have budgets to apply to.
+// A malformed declaration is a teaching error at load, not a surprise at run. Parse is
 // WASM-clean (yaml only, no os); LoadFile adds the file read.
 func Parse(b []byte) (Declaration, error) {
 	var doc declarationDoc

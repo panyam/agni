@@ -137,8 +137,8 @@ type Rule struct {
 	// closes (WS3-097), for a rule-bound review item: a datasheet rule whose symbol is seeded on no
 	// component produces zero findings, which is indistinguishable from a design that is within its
 	// limits. A review runner reads this to render needs-data instead. Reads/Available do NOT cover
-	// it — those gate on the params TIER being attached at all, so a run WITH --params but without
-	// this particular symbol seeded sails through to a pass.
+	// it. Those gate on the params TIER being attached at all, so a run WITH --params but without this
+	// particular symbol seeded sails through to a pass.
 	//
 	// Declare it only where a finding REQUIRES the symbol. A rule that merely consults a value to
 	// exempt findings leaves it out, the same distinction OptionalReads draws inside Reads.

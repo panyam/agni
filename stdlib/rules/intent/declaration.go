@@ -70,7 +70,7 @@ type Declaration struct {
 // RailBudget is one rail's declared peak current demand (WS3-095), in amps.
 //
 // Note what is NOT here: a typical draw. Neither shipped rule reads one, and a declared field nothing
-// reads is a false-assurance surface — an author who fills it in has stated a number the engine will
+// reads is a false-assurance surface: an author who fills it in has stated a number the engine will
 // never check, and the review says nothing about that. Adding it later is additive and costs a rule
 // that actually consumes it.
 type RailBudget struct {
