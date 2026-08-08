@@ -198,8 +198,11 @@ func soleSenseResistor(m Model, nets []*ir.Net, ctrl string) (string, float64, b
 		if touched < 2 || !allOnCtrl {
 			continue
 		}
+		// A zero or negative reading is not filtered here on purpose: OhmsLawCurrent is the single
+		// place that decides what resistance admits a current, and duplicating the test would leave a
+		// branch no test could distinguish from it.
 		v, ok := ComponentValueIn(m, r, UnitOhm)
-		if !ok || v <= 0 || v > senseResistorCeilingOhms {
+		if !ok || v > senseResistorCeilingOhms {
 			continue
 		}
 		if ref != "" {
@@ -216,10 +219,9 @@ func soleSenseResistor(m Model, nets []*ir.Net, ctrl string) (string, float64, b
 // worstOnResistance returns the highest-RDS(on) row a FET's spec states, or nil when it is unseeded or
 // states none comparably. A real sheet gives several rows under different gate drives and junction
 // temperatures; the highest is the one a thermal argument has to survive, so it is the one reported.
+// An unseeded FET needs no separate branch: the proto getters are nil-tolerant, so a nil spec states
+// no rows and lands on the same answer.
 func worstOnResistance(spec *parampb.PartSpec) *parampb.Parameter {
-	if spec == nil {
-		return nil
-	}
 	rows := OnResistanceLimits(spec)
 	if len(rows) == 0 {
 		return nil

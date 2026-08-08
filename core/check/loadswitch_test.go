@@ -204,9 +204,14 @@ func TestExternalFetLoadSwitchResolves(t *testing.T) {
 // TestLoadSwitchNeedsTheGateRole: the topology hangs off the FET's GATE terminal, resolved through the
 // naming lexicon (WS3-117). A transistor whose pins carry no recognized terminal name yields no
 // switch, rather than the resolver falling back to some other pin.
+// The FET is left on the drive net ALONE, so that a resolver ignoring the role would find exactly one
+// net and resolve a switch. Leaving its other terminals connected would make the test pass for the
+// wrong reason: any resolver would then see several nets and refuse on count rather than on role.
 func TestLoadSwitchNeedsTheGateRole(t *testing.T) {
 	d := loadSwitchDesign()
 	d.Libraries[0].Parts[1] = lsPart("FET", "P1", "P2", "P3")
+	d.Nets[2].Connections = []*ir.Connection{conn("U1", "3"), conn("R1", "2")}
+	d.Nets[3].Connections = nil
 	if _, ok := resolveOne(t, d); ok {
 		t.Error("a transistor with no gate terminal must resolve no load switch")
 	}
@@ -283,6 +288,24 @@ func TestLoadSwitchExcludesResistorReachingOffTheController(t *testing.T) {
 	d.Nets[3].Connections = append(d.Nets[3].Connections, conn("R1", "2"))
 	if _, ok := resolveOne(t, d); ok {
 		t.Error("a resistor whose far net the controller does not touch must not be read as the shunt")
+	}
+}
+
+// TestLoadSwitchOneTerminalResistorIsNotAShunt: a shunt is MEASURED, so both of its terminals are on
+// the controller. A resistor with one terminal connected has nothing across it, and counting it would
+// make it a second candidate and suppress a switch that is perfectly resolvable.
+func TestLoadSwitchOneTerminalResistorIsNotAShunt(t *testing.T) {
+	d := loadSwitchDesign()
+	r9 := lsComponent("R9", "RES", "")
+	r9.Value = &ir.Quantity{Input: "0R02", Value: lsPtr(0.02), Unit: classify.UnitOhm}
+	d.Components = append(d.Components, r9)
+	d.Nets[1].Connections = append(d.Nets[1].Connections, conn("R9", "1"))
+	sw, ok := resolveOne(t, d)
+	if !ok {
+		t.Fatal("a half-connected resistor must not compete for the shunt role")
+	}
+	if sw.Sense != "R1" {
+		t.Errorf("sense = %q, want R1", sw.Sense)
 	}
 }
 
@@ -363,6 +386,44 @@ func TestLoadSwitchHighestThresholdBinds(t *testing.T) {
 	}
 	if !QuantityEqual(sw[0].TripAmps, 5) {
 		t.Errorf("trip = %gA, want 5 (the HIGHEST threshold, 50mV, binds)", sw[0].TripAmps)
+	}
+}
+
+// TestLoadSwitchWorstOnResistanceBinds: a real sheet states RDS(on) several times under different
+// gate drives and junction temperatures. The HIGHEST is the one a thermal argument has to survive, so
+// reporting the typical row would understate what the FET dissipates.
+func TestLoadSwitchWorstOnResistanceBinds(t *testing.T) {
+	spec := nfetSpec("DEMO-NFET", 3, 0.02)
+	// The worst row is listed LAST, so the selection has to walk past a lower one to reach it.
+	hot := nfetSpec("DEMO-NFET", 3, 0.031).Parameters[1]
+	spec.Parameters = append(spec.Parameters, hot)
+	m := NewModelWithParams(loadSwitchDesign(), nil, param.ParamSet{
+		"DEMO-HSS":  ctrlSpec("DEMO-HSS", 0.05),
+		"DEMO-NFET": spec,
+	})
+	sw := ExternalFetLoadSwitches(m)
+	if len(sw) != 1 {
+		t.Fatalf("want 1 switch, got %d", len(sw))
+	}
+	if !QuantityEqual(sw[0].OnResistance.Value.GetMax(), 0.031) {
+		t.Errorf("on-resistance = %gOhm, want the worst row at 0.031",
+			sw[0].OnResistance.Value.GetMax())
+	}
+}
+
+// TestLoadSwitchTransistorIsNotAController: a second transistor on the gate net is never a candidate
+// controller, whatever its spec says. Without that exclusion it would count as a second candidate and
+// the ambiguity guard would suppress a switch that is perfectly resolvable.
+func TestLoadSwitchTransistorIsNotAController(t *testing.T) {
+	d := loadSwitchDesign()
+	d.Components = append(d.Components, lsComponent("Q9", "RES", "DEMO-HSS"))
+	d.Nets[0].Connections = append(d.Nets[0].Connections, conn("Q9", "1"))
+	sw, ok := resolveOne(t, d)
+	if !ok {
+		t.Fatal("a transistor on the gate net must not compete for the controller role")
+	}
+	if sw.Controller != "U1" {
+		t.Errorf("controller = %q, want U1", sw.Controller)
 	}
 }
 

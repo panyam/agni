@@ -45,10 +45,10 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 	Eval: func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, sw := range check.ExternalFetLoadSwitches(m) {
+			// An unseeded pass element and a seeded one stating no continuous rating are the same gap,
+			// and DrainCurrentLimits answers both with an empty slice (the proto getters are
+			// nil-tolerant), so one guard covers them. Either way: no rating, no verdict.
 			fetSpec := m.PartSpec(sw.Fet)
-			if fetSpec == nil {
-				continue // the pass element is unseeded: no rating to judge against, so no verdict
-			}
 			rated := check.DrainCurrentLimits(fetSpec)
 			if len(rated) == 0 {
 				continue
