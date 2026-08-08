@@ -87,7 +87,7 @@ func (l *Lexicon) Stamp(d *ir.Design) {
 func (l *Lexicon) StampNetRoles(d *ir.Design) {
 	v := l.role()
 	for _, n := range d.GetNets() {
-		n.Roles = rolesFor(v, n.GetName())
+		n.Roles = rolesFor(v, n)
 	}
 }
 

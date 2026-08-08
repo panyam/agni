@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -131,4 +132,34 @@ func eqSet(got, want []string) bool {
 		}
 	}
 	return true
+}
+
+// TestDeclaredNetRole covers WS1-051: IPC-2581 states a net's role outright on
+// LogicalNet/@netClass, so the reader translates that closed enum into the engine's role
+// vocabulary at the edge and leaves the source term beside it. The mapping is deliberately
+// partial — only GROUND and POWER name a role the engine has — and an unmapped term must
+// yield no role rather than a guess.
+func TestDeclaredNetRole(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ net, raw, role string }{
+		{"GND", "GROUND", classify.NetRoleGround},
+		{"VCC", "POWER", classify.NetRoleRail},
+		{"N$17", "GROUND", classify.NetRoleGround}, // the point: the name says nothing
+		{"SIGNAL_ONLY", "SIGNAL", ""},              // maps to no role; must not invent one
+	} {
+		n := findNet(d, tc.net)
+		if n == nil {
+			t.Errorf("net %q not found", tc.net)
+			continue
+		}
+		if got := n.Attributes["netclass_raw"]; got != tc.raw {
+			t.Errorf("net %q netclass_raw = %q, want %q", tc.net, got, tc.raw)
+		}
+		if got := n.Attributes[classify.AttrDeclaredRole]; got != tc.role {
+			t.Errorf("net %q %s = %q, want %q", tc.net, classify.AttrDeclaredRole, got, tc.role)
+		}
+	}
 }

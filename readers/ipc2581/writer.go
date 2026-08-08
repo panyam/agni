@@ -65,7 +65,9 @@ func Write(w io.Writer, d *ir.Design) error {
 		})
 	}
 	for _, n := range d.Nets {
-		ne := netEl{Name: n.Name}
+		// netclass_raw is the source term kept verbatim by the reader; emitting it back keeps the
+		// round trip lossless on @netClass, the same way layer_function_raw does for @layerFunction.
+		ne := netEl{Name: n.Name, NetClass: n.Attributes["netclass_raw"]}
 		for _, cn := range n.Connections {
 			ne.Pins = append(ne.Pins, pinRefEl{ComponentRef: cn.ComponentRef, Pin: cn.PinRef})
 		}
