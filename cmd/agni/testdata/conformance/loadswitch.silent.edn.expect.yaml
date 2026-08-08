@@ -1,16 +1,24 @@
-# The same over-current design as loadswitch.fires.kicad_sch, written in EDIF, where the rule reports
-# NOTHING. That is a format limit, not a clean design, and the fixture exists to hold the limit in
-# place so nobody later reads this silence as a pass.
+# The same over-current design as loadswitch.fires.kicad_sch, written in EDIF.
 #
-# The mechanism, measured rather than assumed: the value side is FINE. The EDIF read normalizes R1's
-# "0R01" to 0.01 ohms exactly as KiCad does, because the value-attribute lookup is case-insensitive
-# and the property is spelled VALUE. What fails is the PIN ROLE. The EDIF reader builds part-type pins
-# with a name and an EMPTY designator, while connections reference the port by name, so PinRole finds
-# no declared pin and every pin reads unknown. With no gate terminal, no external-FET load switch can
-# be resolved.
+# WS3-085 committed this fixture as a TRIPWIRE: at the time the rule reported nothing here, because
+# every EDIF pin read RoleUnknown, and the sidecar asserted that silence so nobody could later read it
+# as a clean design. Issue 71 fixed the reader and the tripwire did its job, so the finding below is
+# the same over-current defect the KiCad twin reports, now visible on EDIF too.
 #
-# Fixing that belongs to the reader, not to this rule (Agni/OUT_OF_SCOPE.md).
+# Worth keeping the mechanism recorded, since it was misdiagnosed twice before being measured. The
+# VALUE side was always fine: the EDIF read normalizes R1's "0R01" to 0.01 ohms exactly as KiCad does.
+# What failed was the pin ROLE. The reader left Designator empty when a port declared none, while the
+# Model indexes pins BY designator and a connection carries the port name, so every pin on such a part
+# collapsed onto one empty key and none of them resolved.
 fires:
+  load-switch-trip-above-fet-rating:
+    subjects: [Q1]
+    why: |
+      The EDIF twin of loadswitch.fires.kicad_sch, and the reason this fixture exists. It asserted
+      silence while issue 71 was open; now that the reader fills a pin's designator from its port name,
+      the gate/source/drain roles resolve, the external-FET load switch is resolvable on EDIF, and the
+      rule reports the same over-current defect its KiCad twin does. If this ever goes silent again,
+      pin-role resolution has regressed on EDIF.
   single-pin-net:
     subjects: [VOUT]
     why: "incidental: the netlist ends at the switch output, with no load drawn"

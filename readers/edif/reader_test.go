@@ -2,6 +2,7 @@ package edif
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -381,4 +382,72 @@ func TestRenameCellIdResolvesPins(t *testing.T) {
 	if vcc.Designator != "4" {
 		t.Errorf("Vcc pin designator = %q, want 4", vcc.Designator)
 	}
+}
+
+// TestEveryPinHasAJoinableDesignator (issue 71): no part-type pin may be left with an EMPTY
+// designator, because that is the key a connection actually joins on.
+//
+// The Model indexes pins by `refDes + "\x00" + Designator` while an EDIF connection carries whatever
+// the portRef named, which is the PORT. Leaving Designator empty collapsed every pin on such a part
+// onto one key and none of them resolved, so PinRole answered unknown for the whole design and every
+// pin-role rule (diode orientation, gate/source/drain, LED polarity) was silently inert on EDIF.
+//
+// Swept over every committed fixture rather than one, since the gap only shows on parts whose ports
+// omit a designator and picking a single fixture is how it stayed invisible.
+func TestEveryPinHasAJoinableDesignator(t *testing.T) {
+	files, err := filepath.Glob("testdata/*.edn")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no fixtures to sweep: %v", err)
+	}
+	pins := 0
+	for _, f := range files {
+		d := readEDN(t, filepath.Base(f))
+		for _, lib := range d.GetLibraries() {
+			for _, p := range lib.GetParts() {
+				for _, pin := range p.GetPins() {
+					// A port with no NAME either has nothing to fall back to. That is a pre-existing
+					// and different situation (it appears on a top-level cell's own ports, not on a
+					// component's pins), and both sides of the join are then the empty string, so it
+					// resolves degenerately rather than failing. Out of scope here; asserting on it
+					// would be asserting on a case this change does not claim to fix.
+					if pin.GetName() == "" {
+						continue
+					}
+					pins++
+					if pin.GetDesignator() == "" {
+						t.Errorf("%s: part %s pin %q has an empty designator, so no connection can join to it",
+							filepath.Base(f), p.GetName(), pin.GetName())
+					}
+				}
+			}
+		}
+	}
+	if pins == 0 {
+		t.Fatal("swept every fixture and found no part-type pins, so this proves nothing")
+	}
+	t.Logf("swept %d fixtures, %d pins", len(files), pins)
+}
+
+// TestExplicitPinDesignatorIsNotOverwritten pins the half that must NOT change. An explicit designator
+// is the physical pin NUMBER, and a connection on such a part already carries that number, so a fix
+// that set Designator = Name unconditionally would break the join that already worked.
+//
+// It adds no COVERAGE: setting the designator unconditionally already fails
+// TestEscapedCellIdLinksToPartType and TestRenameCellIdResolvesPins, verified by mutation. It is kept
+// for what those two do not say, which is WHY the value matters. Their failure reads
+// `VCC pin designator = "VCC", want 1` and looks like a cell-id resolution problem. Do not delete
+// those two believing this one covers them, and do not delete this one believing it is duplication:
+// it is the named statement of the constraint.
+func TestExplicitPinDesignatorIsNotOverwritten(t *testing.T) {
+	d := readEDN(t, "rename-cell-id.edn")
+	for _, lib := range d.GetLibraries() {
+		for _, p := range lib.GetParts() {
+			for _, pin := range p.GetPins() {
+				if pin.GetName() != "" && pin.GetDesignator() != "" && pin.GetName() != pin.GetDesignator() {
+					return // an explicit designator survived distinct from its port name
+				}
+			}
+		}
+	}
+	t.Error("rename-cell-id.edn declares pin numbers distinct from port names (Vcc/4, OUTPUT/3, GND/2); the fallback has overwritten them")
 }
