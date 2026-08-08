@@ -1,0 +1,14 @@
+(edif RAILS
+  (edifVersion 2 0 0)
+  (design RAILS (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef REG)) (designator "U1") (property MPN (string "ACME-REG-500")))
+          (instance U2 (viewRef V (cellRef REG)) (designator "U2") (property MPN (string "ACME-REG-900")))
+          (instance U3 (viewRef V (cellRef MCU)) (designator "U3") (property MPN (string "ACME-MCU")))
+          (net VIN (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U2))))
+          (net 3V3 (joined (portRef 2 (instanceRef U1)) (portRef 1 (instanceRef U3))))
+          (net 1V8 (joined (portRef 2 (instanceRef U2)) (portRef 2 (instanceRef U3))))
+          (net GND (joined (portRef 3 (instanceRef U1)) (portRef 3 (instanceRef U2)) (portRef 3 (instanceRef U3)))))))))

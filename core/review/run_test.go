@@ -749,3 +749,63 @@ func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
 		t.Errorf("unanchored interface with a real finding: want fail, got %s", got.Outcome)
 	}
 }
+
+// TestRuleBoundDatasheetItemNeedsData (WS3-095) closes the rule-side half of the WS3-097 hole. Before
+// it, only an INLINE QUERY declared the datasheet symbol it joined on, so a RULE-bound datasheet item
+// run WITH --params but with the relevant part unseeded ran a rule that could join nothing, found
+// nothing, and scored a PASS. check.Available does not catch it: that gates on the params TIER, which
+// is present.
+//
+// The rule declares its symbols (Rule.ParamSymbols) and the runner reads them, so the item reads
+// needs-data instead. The design, the catalog and the binding are identical across the three cases and
+// the ONLY variable is which symbol the part seeds, which is what makes this a proof rather than a
+// coincidence.
+func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	// A datasheet rule that never fires, so the outcome turns purely on whether its symbol is seeded.
+	silent := &check.Rule{
+		Name: "sizing", Severity: "error", Summary: "s",
+		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
+		Eval: func(check.Model) []check.Finding { return nil },
+	}
+	// The same rule, firing, to prove a real defect is never masked as needs-data.
+	loud := &check.Rule{
+		Name: "sizing", Severity: "error", Summary: "s",
+		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
+		Eval: func(check.Model) []check.Finding {
+			return []check.Finding{{Kind: check.KindNet, Subject: "N", Message: "over budget"}}
+		},
+	}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "18", Title: "regulator output ratings", Binding: Binding{Rule: "sz/sizing"}},
+	}}}}
+	run := func(r *check.Rule, seededSym string) ItemResult {
+		provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+			if mpn == "ACME-1" {
+				return &parampb.PartSpec{Mpn: "ACME-1", Parameters: []*parampb.Parameter{{Symbol: seededSym}}}
+			}
+			return nil
+		})
+		m := check.NewModelWithParams(d, nil, provider)
+		cat := check.CatalogWith(check.NewSource("sz", []*check.Rule{r}))
+		return Run(RunParams{Model: m, Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+	if got := run(silent, "IOUT"); got.Outcome != Pass {
+		t.Errorf("symbol seeded, rule silent: got (%s, %q), want pass", got.Outcome, got.Note)
+	}
+	if got := run(silent, "VDD"); got.Outcome != NeedsData || got.Note == "" {
+		t.Errorf("symbol unseeded (only VDD present): got (%s, %q), want (needs-data, non-empty reason)", got.Outcome, got.Note)
+	}
+	if got := run(loud, "VDD"); got.Outcome != Fail {
+		t.Errorf("rule fires: got %s, want fail (a real finding is never masked as needs-data)", got.Outcome)
+	}
+	// A rule that declares NO symbols is unaffected: the gate applies only where a datasheet dependency
+	// is declared, so every existing netlist-rule item keeps its behavior.
+	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: func(check.Model) []check.Finding { return nil }}
+	if got := run(plain, "VDD"); got.Outcome != Pass {
+		t.Errorf("rule with no declared symbols: got %s, want pass (gate must not over-reach)", got.Outcome)
+	}
+}

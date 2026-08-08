@@ -11,6 +11,11 @@ const (
 	RuleModuleMissing = "module-missing"
 	RuleModuleCount   = "module-count"
 	RuleVoltageDomain = "voltage-domain-mismatch"
+	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095). They
+	// run one mechanism at two thresholds and are two rules so that a "regulator output ratings" item
+	// and a "current capability margins" item report independently (WS3-058).
+	RuleRailCurrentCapacity = "rail-current-capacity"
+	RuleRailCurrentMargin   = "rail-current-margin"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
@@ -32,6 +37,17 @@ func Compile(d Declaration) []*check.Rule {
 	}
 	if len(d.VoltageDomains) > 0 {
 		rules = append(rules, voltageDomainRule(d))
+	}
+	if len(d.RailBudgets) > 0 {
+		rules = append(rules, railBudgetCapacityRule(d))
+		// The margin rule is emitted only when a factor is declared, the same shape anyModuleHasCount
+		// gives the count rule and for a sharper reason: the factor IS the rule's threshold. With no
+		// factor there is no question to ask, and compiling the rule anyway would let a bound item read
+		// PASS against a policy number nobody stated. Not compiling it leaves the item
+		// needs-design-intent, which names the missing input.
+		if d.MarginFactor > 1 {
+			rules = append(rules, railBudgetMarginRule(d))
+		}
 	}
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))

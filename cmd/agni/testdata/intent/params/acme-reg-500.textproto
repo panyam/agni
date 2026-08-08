@@ -1,0 +1,24 @@
+# Seeded spec for the rail-sizing fixture: a fictional 0.5A regulator (synthetic part and datasheet,
+# C16). The output-current row is a recommended-operating row, which is how a real regulator states
+# it, and it is machine-comparable on purpose so the sizing rules may compare it.
+mpn: "ACME-REG-500"
+manufacturer: "Agni Conformance Works"
+device_class: "regulator"
+
+docs {
+  id: "reg500"
+  title: "ACME-REG-500 Datasheet Rev A"
+  vendor: "Agni Conformance Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Output current"
+  symbol: "IOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 0.5 }
+  unit: "A"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "reg500" page: 4 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}

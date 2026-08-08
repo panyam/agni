@@ -42,11 +42,48 @@ func TestParseRejects(t *testing.T) {
 		"strap bad value":  "name: N\nnet_properties:\n  - {net: BOOT0, property: strap, value: pullup}",
 		"strap no net":     "name: N\nnet_properties:\n  - {property: strap, value: high}",
 		"unknown property": "name: N\nnet_properties:\n  - {net: BOOT0, property: strapp, value: high}",
+		// A zero or negative peak is met by every supply, so it would be a declaration that can only
+		// pass. Same reasoning as the strap value: reject it at load rather than compile a rule that
+		// never fires.
+		"budget no peak":       "name: N\nrail_budgets:\n  - {rail: 3V3}",
+		"budget negative peak": "name: N\nrail_budgets:\n  - {rail: 3V3, peak: -1}",
+		"budget no rail":       "name: N\nrail_budgets:\n  - {peak: 0.8}",
+		"budget duplicate rail": "name: N\nrail_budgets:\n  - {rail: 3V3, peak: 0.8}\n" +
+			"  - {rail: 3V3, peak: 1.2}",
+		// A factor of 1 restates the capacity rule and below 1 asks for a supply SMALLER than the
+		// budget. Both are author errors, not policies.
+		"margin factor of one": "name: N\nrail_budgets:\n  - {rail: 3V3, peak: 0.8}\nmargin_factor: 1",
+		"margin factor below one": "name: N\nrail_budgets:\n  - {rail: 3V3, peak: 0.8}\n" +
+			"margin_factor: 0.9",
+		// A factor with nothing to apply it to is a declaration that reads as covered and checks nothing.
+		"margin factor alone": "name: N\nmodules:\n  - {name: X, class: soc}\nmargin_factor: 1.2",
 	}
 	for label, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
 			t.Errorf("%s: expected a validation error, got nil", label)
 		}
+	}
+}
+
+// TestParseRailBudgets: the WS3-095 form round-trips, and margin_factor is optional. Omitted it stays
+// zero, which is what leaves the margin rule uncompiled (no house policy baked into a rule literal).
+func TestParseRailBudgets(t *testing.T) {
+	d, err := Parse([]byte("name: N\nrail_budgets:\n  - {rail: +3V3, peak: 0.8}\n  - {rail: +1V8, peak: 0.35}\nmargin_factor: 1.2\n"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(d.RailBudgets) != 2 || d.RailBudgets[0].Rail != "+3V3" || d.RailBudgets[0].Peak != 0.8 {
+		t.Fatalf("rail budgets parsed wrong: %+v", d.RailBudgets)
+	}
+	if d.MarginFactor != 1.2 {
+		t.Errorf("margin_factor = %g, want 1.2", d.MarginFactor)
+	}
+	bare, err := Parse([]byte("name: N\nrail_budgets:\n  - {rail: +3V3, peak: 0.8}\n"))
+	if err != nil {
+		t.Fatalf("Parse without a factor: %v", err)
+	}
+	if bare.MarginFactor != 0 {
+		t.Errorf("an omitted margin_factor must stay 0 (no default), got %g", bare.MarginFactor)
 	}
 }
 

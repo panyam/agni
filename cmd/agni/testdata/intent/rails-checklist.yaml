@@ -1,0 +1,8 @@
+# The two review items the rail-sizing rules exist for. They are separate asks with separate verdicts,
+# which is why the mechanism ships as two rules rather than one at two thresholds (WS3-058).
+name: Rail sizing review
+areas:
+  - name: Power
+    items:
+      - {id: "18", title: regulator output ratings, rule: intent/rail-current-capacity}
+      - {id: "19", title: current capability margins, rule: intent/rail-current-margin}

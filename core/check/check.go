@@ -132,8 +132,19 @@ type Rule struct {
 	// problem — a capability that merely NARROWS a rule is not declared here; the rule handles that
 	// case in its own Eval (as power-input-not-driven and unconnected-pin still do internally).
 	RequiresCapability []Capability
-	Tags               map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
-	Eval               func(Model) []Finding
+	// ParamSymbols lists the datasheet SYMBOLS a rule joins on (the vendor spellings, e.g. the
+	// output-current alias set). It closes the same silent-pass hole an inline query's param_symbol
+	// closes (WS3-097), for a rule-bound review item: a datasheet rule whose symbol is seeded on no
+	// component produces zero findings, which is indistinguishable from a design that is within its
+	// limits. A review runner reads this to render needs-data instead. Reads/Available do NOT cover
+	// it. Those gate on the params TIER being attached at all, so a run WITH --params but without this
+	// particular symbol seeded sails through to a pass.
+	//
+	// Declare it only where a finding REQUIRES the symbol. A rule that merely consults a value to
+	// exempt findings leaves it out, the same distinction OptionalReads draws inside Reads.
+	ParamSymbols []string
+	Tags         map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
+	Eval         func(Model) []Finding
 }
 
 // Capability names a source-format ability a rule needs to evaluate soundly (WS3-096). A rule that
