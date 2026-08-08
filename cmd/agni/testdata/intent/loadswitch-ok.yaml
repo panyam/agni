@@ -1,0 +1,4 @@
+# A budget the same switch covers: 0.5A declared against a 1A limit.
+name: Load switch budget (within the limit)
+rail_budgets:
+  - {rail: VOUT, peak: 0.5}

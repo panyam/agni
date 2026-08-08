@@ -691,3 +691,55 @@ func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
 		}
 	}
 }
+
+// TestReviewLoadSwitchSizing is the end-to-end proof for the load-switch sizing lower bound (WS3-085),
+// and it holds four outcomes over ONE design so that nothing about the netlist explains the difference
+// between them. The design is the conformance corpus's PASSING load-switch fixture: clean by
+// load-switch-trip-above-fet-rating, because its 1A limit sits well under the pass FET's 3A rating.
+//
+//   - No --intent-path: needs-design-intent. Nothing declares what the rail draws, so there is no
+//     question to ask. The runner names the MISSING INPUT rather than falling back to not-automated,
+//     which tells an author what to supply. Either way it must never be a pass.
+//   - A 2A budget: fail. The switch limits at 1A (a 50mV threshold across the design's 0R05 shunt), so
+//     it opens under the load the architecture was drawn for.
+//   - A 0.5A budget: pass. Same design, same parts, different declaration.
+//   - A params tier attached but no part stating an overcurrent threshold: needs-data. This is the
+//     guard the ticket asks for, and it is the one that fails silently if Rule.ParamSymbols is not
+//     declared. Without it the rule joins nothing, reports nothing, and the item scores a pass on a
+//     check that never ran, which is indistinguishable in the report from a genuinely sized switch.
+func TestReviewLoadSwitchSizing(t *testing.T) {
+	checklist := "testdata/intent/loadswitch-checklist.yaml"
+	design := "testdata/conformance/loadswitch.passes.kicad_sch"
+	params := "testdata/conformance/params"
+
+	base := runReview(t, "--checklist", checklist, "--params", params, design)
+	if !strings.Contains(base, "| 26 | load switch current limit sizing | needs-design-intent |") {
+		t.Errorf("with no declaration the item must name the missing input, never pass\n%s", base)
+	}
+
+	over := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-over.yaml",
+		"--params", params, design)
+	if !strings.Contains(over, "| 26 | load switch current limit sizing | fail |") {
+		t.Errorf("a 2A budget against a 1A limit must fail\n%s", over)
+	}
+	// The finding has to carry the evidence a reviewer acts on: which switch, which shunt, and the
+	// document the threshold came from. A bare verdict cannot be triaged.
+	for _, want := range []string{"U1", "R1", "DEMO-HSS-CTRL Rev A"} {
+		if !strings.Contains(over, want) {
+			t.Errorf("the report must name %q so the finding can be triaged\n%s", want, over)
+		}
+	}
+
+	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-ok.yaml",
+		"--params", params, design)
+	if !strings.Contains(ok, "| 26 | load switch current limit sizing | pass |") {
+		t.Errorf("a 0.5A budget against a 1A limit must pass\n%s", ok)
+	}
+
+	// The honest guard: the FET is seeded, the controller's threshold is not, so no switch resolves.
+	unseeded := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/loadswitch-ok.yaml",
+		"--params", "testdata/intent/params-no-ocp", design)
+	if !strings.Contains(unseeded, "| 26 | load switch current limit sizing | needs-data |") {
+		t.Errorf("no seeded overcurrent threshold must read needs-data, never pass\n%s", unseeded)
+	}
+}

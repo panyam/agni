@@ -11,6 +11,7 @@ func TestEmits(t *testing.T) {
 		"subsystem-power-tree", "intent/subsystem-clock",
 		"protection-ovp", "protection-discharge", "intent/protection-discharge",
 		"rail-current-capacity", "rail-current-margin", "intent/rail-current-margin",
+		"load-switch-trip-below-budget", "intent/load-switch-trip-below-budget",
 		// WS3-092. A manifest that pre-bound these names read not-automated until the rule kind
 		// shipped; missing this line is the one wiring step that fails nothing at build time and
 		// leaves every bound item quiet forever.

@@ -47,6 +47,88 @@ func TestOhmsLawCurrent(t *testing.T) {
 	}
 }
 
+// TestResistivePowerWatts covers OhmsLawCurrent's sibling, the sizing half of a load switch (WS3-085).
+//
+// Two behaviours differ from OhmsLawCurrent and both are deliberate. ZERO ohms is allowed here: a
+// zero-ohm link dissipates nothing, which is a true answer rather than an unanswerable one, whereas a
+// zero divisor has no current to report. And a NEGATIVE current is allowed and squares to the same
+// positive power, because a resistor heats the same whichever way the current runs. A refusal on
+// either would push the sizing clause off a legal design.
+func TestResistivePowerWatts(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		amps   float64
+		ohms   float64
+		want   float64
+		wantOK bool
+	}{
+		{"5A through 20mOhm dissipates 0.5W", 5, 0.02, 0.5, true},
+		{"12A through 20mOhm dissipates 2.88W", 12, 0.02, 2.88, true},
+		{"a zero-ohm link dissipates nothing, and that is an answer", 5, 0, 0, true},
+		{"no current dissipates nothing", 0, 0.02, 0, true},
+		{"a negative current dissipates the same as a positive one", -5, 0.02, 0.5, true},
+		{"a negative resistance is refused", 5, -0.02, 0, false},
+		{"a NaN current is refused", math.NaN(), 0.02, 0, false},
+		{"an infinite current is refused", math.Inf(1), 0.02, 0, false},
+		{"a NaN resistance is refused", 5, math.NaN(), 0, false},
+		{"an infinite resistance is refused", 5, math.Inf(1), 0, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, ok := ResistivePowerWatts(c.amps, c.ohms)
+			if ok != c.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, c.wantOK)
+			}
+			if ok && !QuantityEqual(got, c.want) {
+				t.Errorf("watts = %g, want %g", got, c.want)
+			}
+			if !ok && got != 0 {
+				t.Errorf("a refused answer must return 0, got %g", got)
+			}
+		})
+	}
+}
+
+// TestOcpThresholdSymbolsCoverTheAliasSet holds the two spellings of the overcurrent alias set to each
+// other. OcpThresholdLimits matches a seeded row against ocpThresholdSymbols; a rule declares
+// OcpThresholdSymbols() so the review runner can tell needs-data from a clean design. If those drift,
+// the failure is silent and one-directional: a symbol the extractor reads but the gate does not
+// declare makes a seeded design read needs-data forever, and a symbol the gate declares but the
+// extractor never matches makes an unseeded design look seeded, which scores a pass on a check that
+// never ran.
+func TestOcpThresholdSymbolsCoverTheAliasSet(t *testing.T) {
+	declared := map[string]bool{}
+	for _, s := range OcpThresholdSymbols() {
+		n := alnumUpper(s)
+		if declared[n] {
+			t.Errorf("%q is declared twice after normalization (%q); an author would see it twice", s, n)
+		}
+		declared[n] = true
+	}
+	// Every symbol the extractor matches must be declarable, or a seeded design reads needs-data.
+	for sym := range ocpThresholdSymbols {
+		if !declared[alnumUpper(sym)] {
+			t.Errorf("OcpThresholdLimits matches %q but no declared symbol normalizes to it", sym)
+		}
+	}
+	// And nothing may be declared that the extractor would never match.
+	matched := map[string]bool{}
+	for sym := range ocpThresholdSymbols {
+		matched[alnumUpper(sym)] = true
+	}
+	for _, s := range OcpThresholdSymbols() {
+		if !matched[alnumUpper(s)] {
+			t.Errorf("%q is declared but OcpThresholdLimits matches no such symbol", s)
+		}
+	}
+	// The accessor hands out a copy: a rule storing it in Rule.ParamSymbols must not be able to
+	// corrupt the alias set for every other design in the process.
+	got := OcpThresholdSymbols()
+	got[0] = "CLOBBERED"
+	if OcpThresholdSymbols()[0] == "CLOBBERED" {
+		t.Error("OcpThresholdSymbols returns the package slice itself, so a caller can corrupt it")
+	}
+}
+
 // lsPart builds a part type with the named pins, designators "1".."n".
 func lsPart(name string, pins ...string) *ir.PartType {
 	p := &ir.PartType{Name: name}

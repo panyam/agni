@@ -157,6 +157,29 @@ var ocpThresholdSymbols = map[string]bool{
 	"VILIM": true, "V(ILIM)": true, "VCL": true, "V(CL)": true,
 }
 
+// ocpThresholdSymbolNames is the alias set above written as the DISTINCT symbols it recognizes, one
+// canonical spelling each, for a rule to declare in Rule.ParamSymbols (WS3-085 sizing).
+//
+// One spelling per symbol rather than all eight keys, because the two consumers normalize differently.
+// OcpThresholdLimits matches on the upper-cased, space-stripped spelling, so V(OCP) and VOCP are two
+// keys there; SeedsAnySymbol matches after alnumUpper, which strips the parentheses too, so they are
+// ONE key there. Listing both would print the same symbol twice in a review's needs-data note and tell
+// an author nothing. TestOcpThresholdSymbolsCoverTheAliasSet holds the two forms to each other so the
+// seeding gate and the extractor cannot drift apart.
+//
+// A SLICE rather than a map, for outputCurrentSymbols' reason: it is read back out into a message, and
+// an author reading "no seeded datasheet value for V(OCP)/..." is helped by the ordinary spelling
+// coming first.
+var ocpThresholdSymbolNames = []string{"V(OCP)", "V(OC)", "VOCTH", "V(ILIM)", "V(CL)"}
+
+// OcpThresholdSymbols returns the overcurrent-threshold alias set for Rule.ParamSymbols, so a review
+// runner can tell "this switch trips high enough" from "nothing on this design states a trip
+// threshold". Without it a design that seeds no controller resolves no load switch at all, the rule
+// reports nothing, and the bound item scores a pass on a check that never ran.
+func OcpThresholdSymbols() []string {
+	return slices.Clone(ocpThresholdSymbolNames)
+}
+
 // OcpThresholdLimits selects the machine-comparable overcurrent-threshold rows of a controller's
 // spec: symbol in the alias set, unit exactly "V", a max bound present, and the docs/20 comparison
 // gates. Rows failing any gate are skipped, never coerced.

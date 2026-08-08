@@ -77,6 +77,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | Rule | Source | Severity | What it checks |
 |---|---|---|---|
 | [bus-not-modeled](bus-not-modeled/) | built-in | info | A bus's member signals are not resolved into distinct nets. |
+| [intent/load-switch-trip-below-budget](intent-load-switch-trip-below-budget/) | intent | warning | A load switch's current limit is set below the peak current the design intent declares for the rail it feeds. |
 | [intent/module-count](intent-module-count/) | intent | warning | The number of components for a declared module does not match the design intent. |
 | [intent/module-missing](intent-module-missing/) | intent | warning | A functional block the design intent declares required is absent from the design. |
 | [intent/property-ac-coupled](intent-property-ac-coupled/) | intent | warning | A net the design intent declares AC-coupled is carried by no series capacitor. |

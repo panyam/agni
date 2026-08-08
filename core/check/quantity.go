@@ -103,6 +103,33 @@ func OhmsLawCurrent(volts, ohms float64) (amps float64, ok bool) {
 	return volts / ohms, true
 }
 
+// ResistivePowerWatts returns the power in WATTS a current of amps dissipates in ohms, and whether the
+// inputs admit an answer. It is OhmsLawCurrent's sibling and exists for the same reason: the second
+// physical relation this rule family needs, kept as a NAMED operation in the model layer rather than as
+// an `i*i*r` written inside a rule. A rule that spells its own unit arithmetic is a rule where a unit
+// bug can hide, and there is no unit in the expression to read it back from.
+//
+// It is the sizing half of a controller-based load switch. A switch's pass element is the thing that
+// heats up, and what it dissipates at the current the design actually draws is the number that decides
+// whether the FET was chosen large enough. That figure is REPORTED, never judged: turning it into a
+// verdict needs a thermal limit (a package resistance, an ambient, a rise the house accepts) that no
+// datasheet row and no declaration states today.
+//
+// ok is false for a non-finite current or resistance and for a negative resistance. A NEGATIVE current
+// is allowed and yields the same positive power a positive one does, since a current dissipates the
+// same whichever way it flows. Zero is allowed on both sides: a zero-ohm link dissipates nothing, which
+// is a true answer rather than an unanswerable one, and that is where it differs from OhmsLawCurrent
+// (which must refuse a zero divisor).
+func ResistivePowerWatts(amps, ohms float64) (watts float64, ok bool) {
+	if math.IsNaN(amps) || math.IsInf(amps, 0) {
+		return 0, false
+	}
+	if math.IsNaN(ohms) || math.IsInf(ohms, 0) || ohms < 0 {
+		return 0, false
+	}
+	return amps * amps * ohms, true
+}
+
 // valueEpsilon is the RELATIVE tolerance for comparing a component value against a number of different
 // provenance (a datasheet parameter, a declared budget). Values this parser produces compare exactly to
 // each other, so this is not for them; it is for the boundary where an exactly-parsed 4700 meets a
