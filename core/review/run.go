@@ -45,6 +45,23 @@ const (
 	// counts toward Covered() like NeedsDesignIntent, and it is the honest reading that lets an overlay
 	// BIND a datasheet check before its seed lands and watch it flip to a real verdict as seeding arrives.
 	NeedsData Outcome = "needs-data"
+	// Inconclusive: the item's rule(s) ran with everything they needed, examined a specific subject,
+	// and could not decide (agni issue 74). It is the only outcome on the RESULT side of a rule; every
+	// other non-pass state above is a PRECONDITION, decided before or around the rule and design-wide.
+	//
+	// That distinction is why it is not folded into NeedsData. Half the cases it covers are not data
+	// gaps at all: a netlist states reset polarity nowhere and no seeding will ever change that, while
+	// an unclassified ORing controller resolves the moment its spec is seeded. Reporting the first as
+	// needs-data would tell a reviewer to go supply something that does not exist, which is the same
+	// class of error as a false pass, a verdict asserting something the engine does not know.
+	//
+	// It is COVERED (a mechanism exists and ran), so it counts toward Covered() like NeedsData and
+	// NeedsDesignIntent, and it is NEVER a pass. Expect the pass count to DROP when rules start
+	// emitting it: each item that moves was previously a silent pass on a question nothing answered,
+	// which is the defect this whole family exists to remove (the same intended direction as WS3-099).
+	//
+	// The per-finding Message carries the remedy, so one outcome serves both kinds.
+	Inconclusive Outcome = "inconclusive"
 )
 
 // ItemResult is one item's outcome, with the findings that made it fail (or the reason it did not
@@ -280,6 +297,11 @@ func runItem(p RunParams, it Item) ItemResult {
 		}
 		fs = filterToScope(fs, nets, comps)
 	}
+	// An inconclusive finding is a result the rule could not decide, not a defect, so it must not be
+	// weighed as one: a subject the rule gave up on cannot make the item fail, and cannot make it pass
+	// either. Split them before the fail branch so a rule may legitimately emit both at once (one
+	// subject decided and wrong, another undecidable) and the real defect still wins.
+	fs, undecided := splitInconclusive(fs)
 	if len(fs) > 0 {
 		// Data-trust axis (WS10-014): a fail every one of whose findings ran on UNRATIFIED datasheet data
 		// (mock, or confidence below the floor) is Provisional — a HITL ratification worklist item, not a
@@ -307,7 +329,41 @@ func runItem(p RunParams, it Item) ItemResult {
 	if unmatched {
 		return ItemResult{Item: it, Outcome: NotAutomated, Note: "interface named but its completeness anchor signal is absent, so the convention check could not evaluate"}
 	}
+	// The rule ran, found no defect, and could not decide about at least one subject. That is not a
+	// clean bill of health, so it does not read pass (agni issue 74).
+	if len(undecided) > 0 {
+		return ItemResult{Item: it, Outcome: Inconclusive, Findings: undecided,
+			Note: "the check ran but could not decide for " + subjectList(undecided)}
+	}
 	return ItemResult{Item: it, Outcome: Pass}
+}
+
+// splitInconclusive partitions findings into real defects and the ones the rule could not decide.
+// Both are returned so a caller can report the undecided subjects rather than only counting them: a
+// reviewer needs to know WHICH net the check gave up on, and the finding's message says why.
+func splitInconclusive(fs []check.Finding) (defects, undecided []check.Finding) {
+	for _, f := range fs {
+		if f.Inconclusive {
+			undecided = append(undecided, f)
+		} else {
+			defects = append(defects, f)
+		}
+	}
+	return defects, undecided
+}
+
+// subjectList names the undecided subjects for the item note, deduplicated and order-preserving so a
+// rule that reports several findings on one net does not repeat it.
+func subjectList(fs []check.Finding) string {
+	var out []string
+	seen := map[string]bool{}
+	for _, f := range fs {
+		if s := f.Subject; s != "" && !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return strings.Join(out, ", ")
 }
 
 // datasheetSymbols returns the datasheet symbols an item's check joins against, from BOTH places a

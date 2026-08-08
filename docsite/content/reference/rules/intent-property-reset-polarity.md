@@ -9,23 +9,27 @@ A net the design intent declares as an active-low (or active-high) reset must no
 asserted level**. Declared active-low with a pull-down, or active-high with a pull-up, is a
 contradiction between what the design says it wants and what it actually does.
 
-### Read this before binding a review item to it
+### What it does when it cannot tell
 
-**A pass from this rule means "no contradiction found", NOT "polarity confirmed".** That distinction
-is the whole character of the check and it is not a defect in the implementation — it is what a
-netlist can support.
-
-A netlist states polarity nowhere. The only structural evidence is the bias resistor, and plenty of
+**A netlist states polarity nowhere.** The only structural evidence is a bias resistor, and plenty of
 correct designs carry none: a supervisor or PMIC with an internal pull-up drives the reset line by
-itself, and the schematic shows a bare net. So the rule can catch a design that contradicts its own
-declaration, and it cannot confirm one that merely does not evidence it.
+itself and the schematic shows a bare net.
 
-The engine has no per-subject not-applicable — a review outcome is per item and follows whether the
-rule fired — so the choice was between staying silent on the undecidable case (what this does) and
-failing a declaration the design simply does not evidence, which would report a non-defect. Reporting
-unverifiable declarations is a useful separate check; it is deliberately not this one.
+The rule now **says so** rather than staying quiet. A declared reset with no bias reports an
+INCONCLUSIVE finding, and a review item bound to it reads `inconclusive`, never `pass`. The message
+names what could not be resolved and what to check by hand.
 
-Its sibling `property-ac-coupled` is genuinely decidable and does not carry this caveat.
+This used to be silence, and a passing item then meant only "no contradiction found" rather than
+"polarity confirmed" — a distinction that had to be carried in prose here, in the declaration comment
+and in a test name, and that anyone reading a green report would never see. It is now in the report
+itself.
+
+A **divider** reports inconclusive too, with a different message: two resistors hold the line at an
+intermediate level rather than at either rail, so which level the receiver reads depends on the
+ratio against its input thresholds. Telling you "no bias" on a board that visibly has two resistors
+would send you looking for the wrong thing.
+
+Its sibling `property-ac-coupled` is decidable by looking and carries no inconclusive case.
 
 ### For hardware engineers
 

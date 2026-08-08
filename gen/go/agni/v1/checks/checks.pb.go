@@ -262,12 +262,17 @@ func (x *DatasheetCitation) GetConfidence() float64 {
 // tooltip or an out-of-viewer consumer such as the CLI's `check --format json`. It is unset when the
 // subject carries no provenance.
 type Finding struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Rule       string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
-	Severity   string                 `protobuf:"bytes,2,opt,name=severity,proto3" json:"severity,omitempty"` // "error" | "warning" | "info"
-	Subject    *Subject               `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`   // the entity that failed (kind + ref); the highlight join key
-	Message    string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	Provenance *ir.Provenance         `protobuf:"bytes,5,opt,name=provenance,proto3" json:"provenance,omitempty"` // source location of the subject; unset when none
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Rule     string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
+	Severity string                 `protobuf:"bytes,2,opt,name=severity,proto3" json:"severity,omitempty"` // "error" | "warning" | "info"
+	Subject  *Subject               `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`   // the entity that failed (kind + ref); the highlight join key
+	Message  string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	// inconclusive marks a finding as a RESULT the rule could not decide rather than a defect it found
+	// (agni issue 74). A consumer must not count it as a failure: the review reads such an item
+	// "inconclusive", never pass and never fail, and a viewer should present it distinctly from a
+	// defect. The message carries what could not be resolved and what would resolve it.
+	Inconclusive bool           `protobuf:"varint,10,opt,name=inconclusive,proto3" json:"inconclusive,omitempty"`
+	Provenance   *ir.Provenance `protobuf:"bytes,5,opt,name=provenance,proto3" json:"provenance,omitempty"` // source location of the subject; unset when none
 	// Sheet ids (SheetRef.id) where the subject appears in the design's default-layout geometry,
 	// filled server-side from placements (components/pins) and wires (nets) per sheet (WS9-024). A
 	// net spanning sheets lists each; empty when the design has no resolvable geometry, in which
@@ -348,6 +353,13 @@ func (x *Finding) GetMessage() string {
 		return x.Message
 	}
 	return ""
+}
+
+func (x *Finding) GetInconclusive() bool {
+	if x != nil {
+		return x.Inconclusive
+	}
+	return false
 }
 
 func (x *Finding) GetProvenance() *ir.Provenance {
@@ -1284,12 +1296,14 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x06method\x18\x05 \x01(\tR\x06method\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x06 \x01(\x01R\n" +
-	"confidence\"\xdc\x02\n" +
+	"confidence\"\x80\x03\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x121\n" +
 	"\asubject\x18\x03 \x01(\v2\x17.agni.v1.checks.SubjectR\asubject\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\x126\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12\"\n" +
+	"\finconclusive\x18\n" +
+	" \x01(\bR\finconclusive\x126\n" +
 	"\n" +
 	"provenance\x18\x05 \x01(\v2\x16.agni.v1.ir.ProvenanceR\n" +
 	"provenance\x12\x16\n" +

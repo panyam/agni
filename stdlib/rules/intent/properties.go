@@ -28,6 +28,10 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 				if p.Property != kind {
 					continue
 				}
+				if msg, undecidable := propertyUndecidable(m, p); undecidable {
+					out = append(out, check.Finding{Kind: check.KindNet, Subject: p.Net, Message: msg, Inconclusive: true})
+					continue
+				}
 				msg, bad := propertyViolation(m, p)
 				if !bad {
 					continue
@@ -91,6 +95,78 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 		return "", false
 	}
 	return "", false
+}
+
+// propertyUndecidable reports the subjects this rule family can look at and genuinely cannot decide,
+// and the message saying so (agni issue 74). It runs BEFORE propertyViolation, so an undecidable
+// subject never reaches the contradiction test and never lands in the silence that used to read pass.
+//
+// Only reset-polarity has such a case, and it is PERMANENT rather than a data gap: a netlist states
+// polarity nowhere, the only structural evidence is a bias resistor, and a reset driven by a
+// supervisor with an internal pull carries none. No seeding, declaration or fact tier will ever
+// supply it, which is exactly why this could not be reported as needs-data.
+//
+// ac-coupled and strap are deliberately absent. A series capacitor is decidable by looking, so absent
+// means the declaration is unmet. A strap with no bias is the DEFAULT-state case a datasheet tells
+// you to leave unfitted, so silence there is a correct pass rather than an unanswered question, and
+// emitting inconclusive for it would flag most correct boards.
+func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
+	if p.Property != PropResetPolarity {
+		return "", false
+	}
+	n := netNamed(m, p.Net)
+	if n == nil {
+		return "", false // absent from the design; the presence forms report missing things
+	}
+	if up, down := check.NetBias(m, n); up || down {
+		return "", false // biased one way or the other, so the contradiction test can decide
+	}
+	// NetBias reports neither for TWO different designs, and telling a reviewer the wrong one wastes
+	// their time at the schematic: a net with no bias resistor at all, and a DIVIDER, which reports
+	// neither because it holds the line at an intermediate level rather than at either rail. Both are
+	// undecidable here, and the next step differs.
+	if dividerOn(m, n) {
+		return fmt.Sprintf(
+			"net %q is declared an active-%s reset, but a divider holds it at an intermediate level rather "+
+				"than at either rail, so which level the receiver reads cannot be determined from the "+
+				"netlist. Verify the divider ratio against the part's input thresholds.", p.Net, p.Value), true
+	}
+	return fmt.Sprintf(
+		"net %q is declared an active-%s reset, but the design carries no bias on it, so its resting level "+
+			"cannot be determined from the netlist. Verify by hand that the driver holds it de-asserted "+
+			"(a supervisor or PMIC with an internal pull is normal and correct).", p.Net, p.Value), true
+}
+
+// dividerOn reports whether the net carries BOTH a pull-up and a pull-down, which is what makes
+// check.NetBias answer neither. It re-asks the two questions separately rather than exposing a third
+// return from NetBias, because every other caller wants the two-value answer and only the message
+// needs to tell the two no-answer cases apart.
+func dividerOn(m check.Model, n *ir.Net) bool {
+	up, down := false, false
+	for _, c := range n.GetConnections() {
+		ref := c.GetComponentRef()
+		if !m.HasClass(ref, check.ClassResistor) {
+			continue
+		}
+		for _, far := range m.Nets() {
+			if far.GetName() == n.GetName() || !connectsRef(far, ref) {
+				continue
+			}
+			if m.IsGroundNet(far) {
+				down = true
+			} else if m.IsPowerRail(far.GetName()) {
+				up = true
+			}
+		}
+	}
+	return up && down
+}
+
+// connectsRef reports whether refDes has a connection on n.
+func connectsRef(n *ir.Net, refDes string) bool {
+	return check.Exists(n.GetConnections(), func(c *ir.Connection) bool {
+		return c.GetComponentRef() == refDes
+	})
 }
 
 // netNamed returns the design net with this exact name, or nil when the declaration names a net the

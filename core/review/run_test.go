@@ -375,8 +375,8 @@ func TestCoverageRollup(t *testing.T) {
 	md := RenderCoverageMarkdown(Run(RunParams{Model: check.NewModel(oneDesign()), Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}))
 	for _, want := range []string{
 		"**2 of 4 covered** — 0 pass, 1 fail, 1 n/a; 2 not-automated",
-		"| A | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 2 |",
-		"| **Total** | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 2 |",
+		"| A | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 2 |",
+		"| **Total** | 2/4 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 2 |",
 	} {
 		if !strings.Contains(md, want) {
 			t.Errorf("coverage missing %q\n%s", want, md)
@@ -807,5 +807,74 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: func(check.Model) []check.Finding { return nil }}
 	if got := run(plain, "VDD"); got.Outcome != Pass {
 		t.Errorf("rule with no declared symbols: got %s, want pass (gate must not over-reach)", got.Outcome)
+	}
+}
+
+// TestInconclusiveNeverReadsPass (agni issue 74) is the end-to-end proof the whole primitive exists
+// for: a rule that RAN, had everything it needed, and could not decide about a subject must not give
+// its bound item a pass.
+//
+// It is checked here rather than only in the rule package because the damage is invisible one layer
+// down. A rule emitting an inconclusive finding looks fine in isolation; the defect is the REPORT
+// saying "pass" for a question nothing answered, and only the runner can get that wrong.
+//
+// The pairing is what makes it a proof rather than a demonstration: the same design and manifest,
+// with only the finding's Inconclusive flag differing, must produce two different outcomes and never
+// pass in either. A real defect must still read fail, so the new branch cannot be masking failures.
+func TestInconclusiveNeverReadsPass(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
+		Nets:       []*ir.Net{{Name: "RST", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	ruleEmitting := func(f check.Finding) *check.Rule {
+		return &check.Rule{
+			Name:     "probe",
+			Severity: "warning",
+			Summary:  "s",
+			Eval:     func(check.Model) []check.Finding { return []check.Finding{f} },
+		}
+	}
+	run := func(r *check.Rule) ItemResult {
+		man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+			{ID: "1", Title: "reset polarity", Binding: Binding{Rule: "probe"}},
+		}}}}
+		cat, err := check.NewCatalog(check.NewSource("", []*check.Rule{r}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return Run(RunParams{Model: check.NewModel(d), Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+
+	undecided := run(ruleEmitting(check.Finding{Kind: check.KindNet, Subject: "RST", Message: "cannot tell", Inconclusive: true}))
+	if undecided.Outcome != Inconclusive {
+		t.Errorf("an undecided subject: got %s, want inconclusive", undecided.Outcome)
+	}
+	if undecided.Outcome == Pass {
+		t.Error("an unanswered question must never read pass; that is the defect this outcome exists to remove")
+	}
+	if !strings.Contains(undecided.Note, "RST") {
+		t.Errorf("the note must name the subject the check gave up on, got %q", undecided.Note)
+	}
+
+	defect := run(ruleEmitting(check.Finding{Kind: check.KindNet, Subject: "RST", Message: "wrong"}))
+	if defect.Outcome != Fail {
+		t.Errorf("a real defect: got %s, want fail (the new branch must not mask failures)", defect.Outcome)
+	}
+}
+
+// TestInconclusiveCountsAsCoveredNotPassing: an inconclusive item HAS a mechanism, so it counts toward
+// Covered() exactly like needs-data and needs-design-intent. Scoring it not-automated would understate
+// coverage and hide that a check exists; scoring it pass is the defect. It is covered and unresolved.
+func TestInconclusiveCountsAsCoveredNotPassing(t *testing.T) {
+	var tal Tally
+	tal.add(Inconclusive) // add increments Total itself
+	if tal.Covered() != 1 {
+		t.Errorf("Covered() = %d, want 1 (a mechanism exists and ran)", tal.Covered())
+	}
+	if tal.Pass != 0 {
+		t.Errorf("Pass = %d, want 0", tal.Pass)
+	}
+	if tal.Inconclusive != 1 {
+		t.Errorf("Inconclusive = %d, want 1", tal.Inconclusive)
 	}
 }
