@@ -18,6 +18,8 @@ type declarationDoc struct {
 	Subsystems     []subsystemDoc   `yaml:"subsystems"`
 	Protections    []protectionDoc  `yaml:"protections"`
 	NetProperties  []netPropertyDoc `yaml:"net_properties"`
+	RailBudgets    []railBudgetDoc  `yaml:"rail_budgets"`
+	MarginFactor   float64          `yaml:"margin_factor"`
 }
 
 type moduleDoc struct {
@@ -44,6 +46,11 @@ type protectionDoc struct {
 	Kind string `yaml:"kind"`
 }
 
+type railBudgetDoc struct {
+	Rail string  `yaml:"rail"`
+	Peak float64 `yaml:"peak"`
+}
+
 type netPropertyDoc struct {
 	Net      string `yaml:"net"`
 	Property string `yaml:"property"`
@@ -55,7 +62,9 @@ type netPropertyDoc struct {
 // protection). Each module needs a class or an mpn (matching nothing otherwise), each voltage domain
 // needs a name, a positive nominal, and at least one rail, each subsystem needs a name (slugifying
 // uniquely) plus a source or at least one net, and each protection needs a rail and a known kind (ovp
-// or discharge) — a malformed declaration is a teaching error at load, not a surprise at run. Parse is
+// or discharge), each rail_budget needs a rail and a positive peak with no rail budgeted twice, and a
+// declared margin_factor must exceed 1 and have budgets to apply to
+// — a malformed declaration is a teaching error at load, not a surprise at run. Parse is
 // WASM-clean (yaml only, no os); LoadFile adds the file read.
 func Parse(b []byte) (Declaration, error) {
 	var doc declarationDoc
@@ -66,8 +75,8 @@ func Parse(b []byte) (Declaration, error) {
 		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
 	}
 	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 &&
-		len(doc.NetProperties) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, or net_properties", doc.Name)
+		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, or rail_budgets", doc.Name)
 	}
 	d := Declaration{Name: doc.Name}
 	for i, m := range doc.Modules {
@@ -148,6 +157,33 @@ func Parse(b []byte) (Declaration, error) {
 		}
 		d.NetProperties = append(d.NetProperties, NetProperty{Net: np.Net, Property: np.Property, Value: np.Value})
 	}
+	rails := map[string]bool{} // one budget per rail, so two declarations cannot both fire on one net
+	for i, rb := range doc.RailBudgets {
+		if strings.TrimSpace(rb.Rail) == "" {
+			return Declaration{}, fmt.Errorf("intent %q: rail_budget #%d is missing its \"rail\"", doc.Name, i+1)
+		}
+		// A zero or negative peak is satisfied by every supply, so it would be a declaration that can
+		// only ever pass. Rejecting it at load is the same discipline the "value" checks above use.
+		if rb.Peak <= 0 {
+			return Declaration{}, fmt.Errorf("intent %q: rail_budget %q needs a positive \"peak\" current in amps (got %g)", doc.Name, rb.Rail, rb.Peak)
+		}
+		if rails[rb.Rail] {
+			return Declaration{}, fmt.Errorf("intent %q: rail %q has more than one rail_budget", doc.Name, rb.Rail)
+		}
+		rails[rb.Rail] = true
+		d.RailBudgets = append(d.RailBudgets, RailBudget{Rail: rb.Rail, Peak: rb.Peak})
+	}
+	// margin_factor is optional and has no default (see Declaration.MarginFactor). Omitted, the margin
+	// rule is never compiled. Declared, it must ask for headroom: a factor of 1 restates the capacity
+	// rule and anything below 1 asks for a supply SMALLER than the budget, so both are author errors
+	// caught here rather than a second rule that duplicates or inverts the first.
+	if doc.MarginFactor != 0 && doc.MarginFactor <= 1 {
+		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" must be greater than 1 (got %g); omit it to leave the margin rule uncompiled", doc.Name, doc.MarginFactor)
+	}
+	if doc.MarginFactor != 0 && len(doc.RailBudgets) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" is declared with no rail_budgets, so nothing applies it", doc.Name)
+	}
+	d.MarginFactor = doc.MarginFactor
 	return d, nil
 }
 

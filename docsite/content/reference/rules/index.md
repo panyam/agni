@@ -83,6 +83,8 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/property-strap](intent-property-strap/) | intent | warning | A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch. |
 | [intent/protection-discharge](intent-protection-discharge/) | intent | warning | A rail the design intent declares needs a discharge path has no bleeder resistor. |
 | [intent/protection-ovp](intent-protection-ovp/) | intent | warning | A rail the design intent declares needs OV protection has no TVS/zener clamp. |
+| [intent/rail-current-capacity](intent-rail-current-capacity/) | intent | warning | The part supplying a rail is rated below the peak current the design intent declares for that rail. |
+| [intent/rail-current-margin](intent-rail-current-margin/) | intent | warning | A rail's supply meets its declared peak current budget but not the declared margin factor over it. |
 | [intent/subsystem](intent-subsystem/) | intent | warning | An architectural subsystem the design intent declares is missing a required part or net. |
 | [intent/voltage-domain-mismatch](intent-voltage-domain-mismatch/) | intent | warning | A declared voltage domain's rail is absent or named for a different nominal voltage. |
 | [pin-net-conflict](pin-net-conflict/) | built-in | info | A pin appears in more than one net's connections — malformed input. |

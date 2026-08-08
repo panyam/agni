@@ -25,6 +25,11 @@ func kitchenSink() Declaration {
 			{Net: "PCIE_TX0_P", Property: PropACCoupled},
 			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
 		},
+		// Both rail-sizing rules: the budgets emit rail-current-capacity, and the factor is what emits
+		// rail-current-margin (it has no default, so omitting it here would leave that doc key unemitted
+		// and fail the one-to-one check below).
+		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
+		MarginFactor: 1.2,
 	}
 }
 

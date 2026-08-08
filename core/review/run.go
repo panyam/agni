@@ -297,8 +297,8 @@ func runItem(p RunParams, it Item) ItemResult {
 	// Available did not gate, so an unseeded symbol is the silent gap. The general "all joined relations
 	// empty" case is deliberately not chased (the datasheet join is the one that bites, the params tier
 	// being sparse by nature).
-	if sym := datasheetSymbol(it); sym != "" && !anyComponentSeedsSymbol(m, sym) {
-		return ItemResult{Item: it, Outcome: NeedsData, Note: "no seeded datasheet value for " + sym + " on this design"}
+	if syms := datasheetSymbols(it, avail); len(syms) > 0 && !check.SeedsAnySymbol(m, syms) {
+		return ItemResult{Item: it, Outcome: NeedsData, Note: "no seeded datasheet value for " + strings.Join(syms, "/") + " on this design"}
 	}
 	// Same discipline for the unanchored interface (WS3-099): the secondary rules ran and found nothing,
 	// but the completeness rule never evaluated, so this is not a clean bill of health. It reads
@@ -310,27 +310,38 @@ func runItem(p RunParams, it Item) ItemResult {
 	return ItemResult{Item: it, Outcome: Pass}
 }
 
-// datasheetSymbol returns the datasheet symbol an inline query binding joins against (its param_symbol),
-// or "" for a binding that is not a datasheet query. It is the WS3-097 hook: the symbol is declared on
-// the binding, so the runner knows the query's datasheet dependency without parsing the datalog.
-func datasheetSymbol(it Item) string {
-	if q := it.Binding.Query; q != nil {
-		return q.ParamSymbol
+// datasheetSymbols returns the datasheet symbols an item's check joins against, from BOTH places a
+// binding can declare them: an inline query's param_symbol, and the ParamSymbols of each rule the item
+// resolved to. Empty means the item's check has no declared datasheet dependency, so the WS3-097
+// needs-data gate does not apply to it.
+//
+// Covering the rule side is what closes the hole for a RULE-bound datasheet item (WS3-095). Before
+// this, only an inline query declared its symbol, so a design read WITH --params but with the
+// particular part unseeded ran a datasheet rule that could join nothing, found nothing, and scored a
+// pass. check.Available does not save it: that gates on the params TIER, which is present. Reading the
+// symbols off the resolved rules gives every rule-bound datasheet item the same gate a query binding
+// has always had, without the runner knowing anything about a specific rule.
+//
+// Duplicates are collapsed so the note reads once per symbol when several rules join on the same one.
+func datasheetSymbols(it Item, rules []*check.Rule) []string {
+	var out []string
+	seen := map[string]bool{}
+	add := func(s string) {
+		if s == "" || seen[s] {
+			return
+		}
+		seen[s] = true
+		out = append(out, s)
 	}
-	return ""
-}
-
-// anyComponentSeedsSymbol reports whether any component on the design has a seeded datasheet parameter
-// for symbol (a PartSpec row with that symbol). It reuses check.DatasheetProvFor, which resolves the
-// component's spec and matches the symbol, so "seeded" here means exactly what a finding's citation
-// would resolve. False means the datasheet query had nothing to evaluate against.
-func anyComponentSeedsSymbol(m check.Model, symbol string) bool {
-	for _, c := range m.Components() {
-		if check.DatasheetProvFor(m, c.RefDes, symbol) != nil {
-			return true
+	if q := it.Binding.Query; q != nil {
+		add(q.ParamSymbol)
+	}
+	for _, r := range rules {
+		for _, s := range r.ParamSymbols {
+			add(s)
 		}
 	}
-	return false
+	return out
 }
 
 // anyComponentHasClass reports whether any component on the design carries one of the given device

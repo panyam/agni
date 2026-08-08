@@ -52,6 +52,34 @@ type Declaration struct {
 	// items bind and report independently, the same reason Protections split by kind. A property
 	// fails when the design's structure CONTRADICTS the declaration.
 	NetProperties []NetProperty
+	// RailBudgets is the declared CURRENT demand of named rails (WS3-095). It is the demand side of
+	// regulator sizing, and it has to be declared because nothing in the design carries it: a netlist
+	// has connectivity and not current, the regulator's own datasheet cannot state what the designer
+	// hung off it, and summing every load's rated draw would need near-complete part seeding plus an
+	// assumption about which loads draw at once. Compiles to intent/rail-current-capacity.
+	RailBudgets []RailBudget
+	// MarginFactor is the house headroom policy: the multiple of a rail's peak budget its supply must
+	// be rated for (1.2 means 20% headroom). It compiles intent/rail-current-margin, and it has NO
+	// DEFAULT on purpose. A default would put one company's policy in a rule literal, which is exactly
+	// what WS3-069 moved naming vocabularies out of, and it would let a review item bound to the margin
+	// rule read PASS against a number nobody declared. Absent, the margin rule is not compiled at all,
+	// so a bound item reads needs-design-intent.
+	MarginFactor float64
+}
+
+// RailBudget is one rail's declared peak current demand (WS3-095), in amps.
+//
+// Note what is NOT here: a typical draw. Neither shipped rule reads one, and a declared field nothing
+// reads is a false-assurance surface — an author who fills it in has stated a number the engine will
+// never check, and the review says nothing about that. Adding it later is additive and costs a rule
+// that actually consumes it.
+type RailBudget struct {
+	// Rail is the exact net name the budget is declared on, matched literally (like Protection.Rail)
+	// so a rail the rail-role heuristic does not recognize is still checkable.
+	Rail string
+	// Peak is the maximum current in amps the rail is expected to draw. Load requires it to be > 0:
+	// a zero budget is satisfied by everything, so it would be a silently-passing declaration.
+	Peak float64
 }
 
 // Property kinds.
