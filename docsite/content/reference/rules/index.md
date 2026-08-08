@@ -80,6 +80,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/module-missing](intent-module-missing/) | intent | warning | A functional block the design intent declares required is absent from the design. |
 | [intent/property-ac-coupled](intent-property-ac-coupled/) | intent | warning | A net the design intent declares AC-coupled is carried by no series capacitor. |
 | [intent/property-reset-polarity](intent-property-reset-polarity/) | intent | warning | A net the design intent declares as a reset is biased to its ASSERTED level, holding the part in reset. |
+| [intent/property-strap](intent-property-strap/) | intent | warning | A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch. |
 | [intent/protection-discharge](intent-protection-discharge/) | intent | warning | A rail the design intent declares needs a discharge path has no bleeder resistor. |
 | [intent/protection-ovp](intent-protection-ovp/) | intent | warning | A rail the design intent declares needs OV protection has no TVS/zener clamp. |
 | [intent/subsystem](intent-subsystem/) | intent | warning | An architectural subsystem the design intent declares is missing a required part or net. |

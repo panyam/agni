@@ -60,12 +60,16 @@ const (
 	PropResetPolarity = "reset-polarity"
 	// PropACCoupled asserts a net is AC-coupled: a series capacitor carries it, rather than DC.
 	PropACCoupled = "ac-coupled"
+	// PropStrap asserts the level a boot/config strap net is intended to latch at reset. Value is
+	// "low" or "high".
+	PropStrap = "strap"
 )
 
 // NetProperty is one declared property of one net (WS3-088). Kinds (validated at load):
-// "reset-polarity" with Value "low" or "high"; "ac-coupled", which takes no Value.
+// "reset-polarity" with Value "low" or "high"; "ac-coupled", which takes no Value; "strap" with
+// Value "low" or "high".
 //
-// WHAT THESE RULES CAN AND CANNOT CONCLUDE, because the two kinds differ and the difference decides
+// WHAT THESE RULES CAN AND CANNOT CONCLUDE, because the kinds differ and the difference decides
 // what a passing item means:
 //
 //   - ac-coupled is DECIDABLE from the netlist. A series capacitor is either on the net or it is not,
@@ -73,9 +77,19 @@ const (
 //   - reset-polarity is only PARTLY decidable. A netlist states polarity nowhere; the evidence is a
 //     bias resistor, and a reset driven by a supervisor with an internal pull carries none. So the
 //     rule fires on a CONTRADICTION (declared low, biased low) and is SILENT where the design shows
-//     nothing either way. Silence there means "no contradiction found", NOT "polarity confirmed" —
+//     nothing either way. Silence there means "no contradiction found", NOT "polarity confirmed",
 //     stated here, in the rule's doc, and in the finding vocabulary because a review item bound to it
 //     inherits that limit.
+//   - strap (WS3-086) reads the SAME evidence as reset-polarity and asks the INVERTED question, so
+//     it is worth being explicit that they are not the same rule wearing two names. reset-polarity's
+//     Value is the level that ASSERTS reset, so bias TOWARD it is the defect and bias away from it is
+//     correct: the rule can only ever catch one of the two ways a reset line goes wrong. strap's Value
+//     is the level the pin should LATCH, so bias toward it is correct and bias away from it is the
+//     defect, in EITHER direction.
+//     Absent bias is still silent, and for the same cause: strap pins carry internal pulls, and the
+//     standard datasheet instruction is to fit an external resistor only for the non-default state. A
+//     design declaring the default level with no resistor on the net is correct and common, so firing
+//     there would report a non-defect on the majority of real straps.
 //
 // The engine has no per-subject not-applicable: an outcome is per review ITEM and follows whether the
 // rule fired. So the honest options for the undecidable case were to stay silent (this) or to fail a
@@ -84,9 +98,9 @@ const (
 type NetProperty struct {
 	// Net is the exact net name the property is declared on.
 	Net string
-	// Property is the kind (PropResetPolarity, PropACCoupled).
+	// Property is the kind (PropResetPolarity, PropACCoupled, PropStrap).
 	Property string
-	// Value qualifies the kind: "low"/"high" for reset-polarity, empty for ac-coupled.
+	// Value qualifies the kind: "low"/"high" for reset-polarity and strap, empty for ac-coupled.
 	Value string
 }
 

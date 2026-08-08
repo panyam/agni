@@ -53,6 +53,7 @@ var docKeys = []string{
 	docKeySubsystem,                     // subsystem (family doc for intent/subsystem-<slug>)
 	"property-" + PropResetPolarity,     // property-reset-polarity
 	"property-" + PropACCoupled,         // property-ac-coupled
+	"property-" + PropStrap,             // property-strap
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -81,6 +82,7 @@ var docSummaries = map[string]string{
 	docKeySubsystem:                     "An architectural subsystem the design intent declares is missing a required part or net.",
 	"property-" + PropResetPolarity:     "A net the design intent declares as a reset is biased to its ASSERTED level, holding the part in reset.",
 	"property-" + PropACCoupled:         "A net the design intent declares AC-coupled is carried by no series capacitor.",
+	"property-" + PropStrap:             "A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch.",
 }
 
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog

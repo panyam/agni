@@ -38,6 +38,11 @@ func TestEmitsCoversCompiler(t *testing.T) {
 		VoltageDomains: []VoltageDomain{{Name: "io", Nominal: 3.3, Rails: []string{"3V3"}}},
 		Subsystems:     []Subsystem{{Name: "power tree", Nets: []string{"VBAT"}}},
 		Protections:    []Protection{{Rail: "VBAT", Kind: ProtectionOVP}, {Rail: "3V3", Kind: ProtectionDischarge}},
+		NetProperties: []NetProperty{
+			{Net: "SYS_RESET_N", Property: PropResetPolarity, Value: "low"},
+			{Net: "PCIE_TX0_P", Property: PropACCoupled},
+			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
+		},
 	}
 	rules := Compile(decl)
 	if len(rules) == 0 {
