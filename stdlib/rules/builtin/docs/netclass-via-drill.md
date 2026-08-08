@@ -2,6 +2,8 @@
 
 A net's via is drilled smaller than the drill its own net class declares.
 
+![a via drilled below the drill its net class declares is flagged; one meeting it is fine](images/netclass-via-drill.svg)
+
 ## What this checks
 
 The project's `net_settings` states, per net class, the via drill that class's nets should use. This
