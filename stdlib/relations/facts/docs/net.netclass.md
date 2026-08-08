@@ -25,18 +25,33 @@ you would scope a design rule: "which parts sit on an HV net", "is any high-spee
 termination". The class is assignment, not measurement — a net in `HighSpeed` is one someone declared
 high-speed, not one the engine verified is routed that way.
 
+A net can be in several classes at once, and the engine reports all of them. If you assigned `VBUS`
+to both `Power` and `HighCurrent`, it shows up under both, and a query scoped to either one finds it.
+That matters when you are checking coverage: a net missing from a scope you expected it in is a real
+finding, and it used to be possible for the engine to lose the membership rather than report it.
+
 ### For software engineers
 
 A filtered projection over `Nets()`, 1:1 with classed nets and absent for the rest. It joins to
 everything else keyed by net name (`component-on-net`, `pin.net`, `net.max_voltage`), so it composes as
 a scope filter on any existing question.
 
-`?net` is unique in the current projection: `ir.Net.net_class` is a singular field, so a net yields at
-most one row and a join on it cannot fan out. Do not lean on that. Unlike `component.class`, which is
-1:many by design, the arity here reflects what the IR happens to hold rather than a settled reading of
-the format, and the KiCad reader resolves multiple matching patterns by taking the first. WS1-050
-settles whether a second class is a legitimate tag or a conflict to flag; if it lands as a tag set
-this relation becomes 1:many with no change to its name or shape.
+**`?net` is NOT unique in this projection.** Membership is a set, so a net in two classes emits two
+rows and a join on `?net` fans out — the same 1:many shape `component.class` has. Count rows and you
+are counting memberships, not nets; `net.netclass(?n, ?c) => ?n` on a design where half the nets carry
+two classes returns more results than the design has classed nets.
+
+WS1-050 settled this against the formats rather than against our first reader. KiCad stores
+`map<netname, set<netclass>>` and resolves a net's membership by unioning its explicit assignment with
+EVERY matching pattern, then cascades the per-class VALUES by priority to build one effective class.
+Altium likewise lets a net join several classes, though its clearance matrix treats that as an
+ambiguity to flag rather than a feature. Same data model, opposite house reading, which is why the set
+is carried as fact here and whether a second class is a *problem* is left to a rule.
+
+Order is sorted, and that is a determinism guarantee only. It is NOT the tool's precedence order: in
+KiCad precedence is a per-class `priority` that lives with the class DEFINITIONS (clearance, track
+width, via), which nothing reads yet (WS3-111). Precedence decides whose track width wins, never who
+is a member, so it cannot change the answer to a membership question.
 
 The value is a foreign label, not a closed enum: it comes from the project file, so string comparisons
 are exact and case-sensitive, and two projects can use different vocabularies for the same intent. Do
@@ -45,11 +60,18 @@ project declares.
 
 ### Go projector
 
-`netNetClassFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row for each net
-whose `NetClass` is non-empty. The field is populated in the I/O layer, not by any analysis:
+`netNetClassFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row per entry of
+each net's `NetClasses`. The field is populated in the I/O layer, not by any analysis:
 `readers/formats/registry.go` reads `net_settings.netclass_{assignments,patterns}` out of the sibling
-`.kicad_pro` and calls `kicad.AnnotateNetClasses` (WS1-037). One row per classed net; zero rows when
-the design has no classes, which is the common case and the reason for the companion marker below.
+`.kicad_pro` and calls `kicad.AnnotateNetClasses` (WS1-037). One row per (net, class) pair; zero rows
+when the design has no classes, which is the common case and the reason for the companion marker
+below.
+
+Do not populate `ir.Net.net_classes` from IPC-2581. Its `LogicalNet/@netClass` is spelled the same but
+means something else: a singular CLOSED enum (`CLK`/`FIXED`/`GROUND`/`SIGNAL`/`POWER`/`UNUSED`)
+describing what a net IS. That is the derived-role space `net.ground` and `ir.Net.roles` occupy, not
+user-named constraint groups, and mixing the two would put `GROUND` and `HighSpeed` in one relation
+where a class-scoped query would silently select the wrong nets.
 
 ### Absence is not a pass
 

@@ -29,7 +29,7 @@ func TestNetTaxonomy(t *testing.T) {
 		net("CLK", "old", "U1.5"),             // net_class change only -> Soft
 	}}
 	// CLK carries a net_class in old; changing only that (conns identical) is a Soft change.
-	a.Nets[4].NetClass = "signal"
+	a.Nets[4].NetClasses = []string{"signal"}
 
 	b := &ir.Design{Nets: []*ir.Net{
 		net("GND", "new", "R1.2", "R2.2"),
@@ -38,7 +38,7 @@ func TestNetTaxonomy(t *testing.T) {
 		net("NEWNET", "new", "C1.2"),              // New
 		net("CLK", "new", "U1.5"),                 // Soft: net_class differs
 	}}
-	b.Nets[4].NetClass = "power"
+	b.Nets[4].NetClasses = []string{"power"}
 
 	r := Designs(a, b)
 
@@ -78,6 +78,28 @@ func TestNetTaxonomy(t *testing.T) {
 	}
 	if nc := byName["NEWNET"]; nc.OldProv != nil || nc.NewProv.GetSourceFile() != "new" {
 		t.Errorf("NEWNET prov = %+v, want old nil / new set", nc)
+	}
+}
+
+// TestNetClassSetDiff (WS1-050): net-class membership is a set, so ADDING a class to a net whose
+// existing class is unchanged is a Soft change. Under the old singular field this was invisible —
+// the second membership had nowhere to live, so the meta key never moved. Reordering the same set
+// is not a change, because the key is canonical.
+func TestNetClassSetDiff(t *testing.T) {
+	mk := func(classes ...string) *ir.Design {
+		d := &ir.Design{Nets: []*ir.Net{net("CLK", "rev", "U1.5")}}
+		d.Nets[0].NetClasses = classes
+		return d
+	}
+
+	gained := Designs(mk("HighSpeed"), mk("HighSpeed", "Critical"))
+	if len(gained.Nets) != 1 || gained.Nets[0].Kind != NetSoft {
+		t.Errorf("CLK gaining a second class = %+v, want one Soft change", gained.Nets)
+	}
+
+	reordered := Designs(mk("Critical", "HighSpeed"), mk("HighSpeed", "Critical"))
+	if len(reordered.Nets) != 0 {
+		t.Errorf("reordering the same class set = %+v, want no change", reordered.Nets)
 	}
 }
 

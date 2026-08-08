@@ -1354,10 +1354,25 @@ func (x *ComponentSection) GetProv() *Provenance {
 
 // Net is a set of electrically connected pins.
 type Net struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	NetClass    string                 `protobuf:"bytes,2,opt,name=net_class,json=netClass,proto3" json:"net_class,omitempty"` // optional; carried when the source has it
-	Connections []*Connection          `protobuf:"bytes,3,rep,name=connections,proto3" json:"connections,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// net_classes is the TOOL-ASSIGNED constraint-group membership: the named groups a design tool
+	// puts a net in so a set of nets can share routing rules (clearance, track width, impedance).
+	// Read from the source, never derived — the derived counterpart is `roles` below.
+	//
+	// A SET, because every tool that has this concept stores one. KiCad holds
+	// `map<netname, set<netclass>>` and unions an explicit assignment with EVERY matching pattern;
+	// Altium likewise lets a net join several classes. The field was singular until WS1-050 purely
+	// because the first reader took the first match, and that discarded real memberships (C6).
+	// Empty for a net the tool left in its implicit default. Order is sorted, for determinism only:
+	// it is NOT the tool's precedence order, which needs the per-class definitions (WS3-111).
+	//
+	// NOT IPC-2581's `LogicalNet/@netClass`, despite the name. That is a singular CLOSED enum
+	// (CLK/FIXED/GROUND/SIGNAL/POWER/UNUSED) describing what a net IS, which belongs to the `roles`
+	// space, not to user-named constraint groups. Two formats, one word, different concepts; do not
+	// populate this field from an IPC-2581 read.
+	NetClasses  []string      `protobuf:"bytes,2,rep,name=net_classes,json=netClasses,proto3" json:"net_classes,omitempty"`
+	Connections []*Connection `protobuf:"bytes,3,rep,name=connections,proto3" json:"connections,omitempty"`
 	// id is a deterministic identity derived from the connection set (a hash of the sorted
 	// pins), independent of name. Two electrically-distinct nets that share a name get distinct
 	// ids, so a consumer can tell them apart where the name collides. Ephemeral (recomputed each
@@ -1418,11 +1433,11 @@ func (x *Net) GetName() string {
 	return ""
 }
 
-func (x *Net) GetNetClass() string {
+func (x *Net) GetNetClasses() []string {
 	if x != nil {
-		return x.NetClass
+		return x.NetClasses
 	}
-	return ""
+	return nil
 }
 
 func (x *Net) GetConnections() []*Connection {
@@ -2180,10 +2195,11 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc2\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x02\n" +
 	"\x03Net\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
-	"\tnet_class\x18\x02 \x01(\tR\bnetClass\x128\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
+	"\vnet_classes\x18\x02 \x03(\tR\n" +
+	"netClasses\x128\n" +
 	"\vconnections\x18\x03 \x03(\v2\x16.agni.v1.ir.ConnectionR\vconnections\x12\x0e\n" +
 	"\x02id\x18\x04 \x01(\tR\x02id\x12\x14\n" +
 	"\x05roles\x18\x05 \x03(\tR\x05roles\x12?\n" +

@@ -2,6 +2,8 @@ package relations
 
 import (
 	"reflect"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -160,8 +162,8 @@ func TestExternalSignalNetFacts(t *testing.T) {
 // assigns no classes", the distinction a netclass-scoped rule needs to avoid reading as a pass.
 func TestNetClassFacts(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
-		{Name: "USB_D+", NetClass: "HighSpeed", Prov: &ir.Provenance{SourceFile: "t"}},
-		{Name: "VBUS", NetClass: "Power", Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "USB_D+", NetClasses: []string{"HighSpeed"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "VBUS", NetClasses: []string{"Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
 		{Name: "SCL", Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
 	byRel := factsByRelation(Facts(check.NewModel(d)))
@@ -180,6 +182,32 @@ func TestNetClassFacts(t *testing.T) {
 
 	if mk := byRel[RelHasNetClass]; len(mk) != 1 || mk[0].Subject != "true" {
 		t.Errorf("want one has_netclass row (true), got %+v", mk)
+	}
+}
+
+// TestNetClassFactsFanOut (WS1-050): membership is a set, so the projection is 1:many — a net in
+// two classes emits one row per class and `?net` is NOT unique. This is what a rule joining on ?net
+// must expect; the relation shape is unchanged (it was already {FieldSubject, FieldValue}), only
+// the arity is.
+func TestNetClassFactsFanOut(t *testing.T) {
+	d := &ir.Design{Nets: []*ir.Net{
+		{Name: "VBUS", NetClasses: []string{"HighCurrent", "Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "SCL", Prov: &ir.Provenance{SourceFile: "t"}},
+	}}
+	rows := factsByRelation(Facts(check.NewModel(d)))[RelNetNetClass]
+	if len(rows) != 2 {
+		t.Fatalf("want 2 net.netclass rows for a two-class net, got %d: %+v", len(rows), rows)
+	}
+	got := []string{}
+	for _, r := range rows {
+		if r.Subject != "VBUS" {
+			t.Errorf("unexpected subject %q (SCL is unclassed and must not appear)", r.Subject)
+		}
+		got = append(got, r.Value)
+	}
+	sort.Strings(got)
+	if want := []string{"HighCurrent", "Power"}; !slices.Equal(got, want) {
+		t.Errorf("net.netclass values = %v, want %v", got, want)
 	}
 }
 

@@ -254,11 +254,23 @@ func indexNets(d *ir.Design) map[string]*netInfo {
 		m[n.Name] = &netInfo{
 			conns: conns,
 			sig:   strings.Join(keys, ","),
-			meta:  n.NetClass + "\x00" + attrsKey(n.Attributes),
+			meta:  netClassesKey(n.NetClasses) + "\x00" + attrsKey(n.Attributes),
 			prov:  n.Prov,
 		}
 	}
 	return m
+}
+
+// netClassesKey renders a net's class SET as a canonical, order-independent string, so gaining or
+// losing a membership is a Soft change while a reordering of the same set is not (WS1-050). The
+// reader emits sorted, but a hand-authored IR need not, and diff equality must not depend on it.
+func netClassesKey(cs []string) string {
+	if len(cs) == 0 {
+		return ""
+	}
+	sorted := append([]string(nil), cs...)
+	sort.Strings(sorted)
+	return strings.Join(sorted, ",")
 }
 
 // attrsKey renders an attribute map as a canonical, order-independent string for equality.

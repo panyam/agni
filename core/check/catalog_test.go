@@ -54,7 +54,7 @@ func TestAvailableNetClassCapability(t *testing.T) {
 		t.Errorf("netclass rule on EDIF: got (%v, %q), want (false, non-empty)", ok, reason)
 	}
 
-	classed := NewModel(&ir.Design{SourceFormat: "kicad-sch", Nets: []*ir.Net{{Name: "USB_D+", NetClass: "HighSpeed"}}})
+	classed := NewModel(&ir.Design{SourceFormat: "kicad-sch", Nets: []*ir.Net{{Name: "USB_D+", NetClasses: []string{"HighSpeed"}}}})
 	if ok, _ := Available(rule, classed); !ok {
 		t.Error("netclass rule on a design with classes: want available")
 	}
