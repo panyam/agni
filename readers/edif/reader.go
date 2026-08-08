@@ -247,6 +247,20 @@ func partTypeOf(n *node, src string) *ir.PartType {
 		if dg := p.Child("designator"); dg != nil {
 			pin.Designator = stringDisplayText(dg)
 		}
+		if pin.Designator == "" {
+			// Fall back to the port NAME (issue 71). The Model indexes pins by Designator
+			// (`refDes + "\x00" + pin.Designator`) while a connection carries whatever the joined
+			// portRef named, and EDIF's portRef names the PORT. A part whose ports declare no
+			// designator therefore indexed every pin under one empty key and nothing ever resolved,
+			// so PinRole returned unknown for every pin on the design and EVERY pin-role rule
+			// (diode orientation, gate/source/drain, LED polarity) was silently inert on EDIF.
+			//
+			// Only the fallback: an explicit designator is the physical pin number and a connection
+			// on such a part already carries that number, so overwriting it would break the join
+			// that currently works. Same posture as normalizeMPN below, which fills the canonical
+			// field from the best available source and never overrides an explicit one.
+			pin.Designator = pin.Name
+		}
 		pt.Pins = append(pt.Pins, pin)
 	}
 	return pt
