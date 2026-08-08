@@ -40,6 +40,11 @@ func intentDoc(key string) string {
 // the family doc explains the shared source-and-nets check they all run.
 const docKeySubsystem = "subsystem"
 
+// docKeySequence is the single doc key shared by every intent/sequence-<slug> rule, for
+// docKeySubsystem's reason: sequence rule names are derived from the declared sequence name, so the
+// family shares one card explaining the power-good/enable check they all run.
+const docKeySequence = "sequence"
+
 // docKeys is the canonical set of intent rule-doc keys: every kind Compile can emit maps to exactly one
 // entry here, and each has a docs/<key>.md. It is the harness's expectation set (docs_test.go holds
 // docKeys, the emitted rules, and the docs/ directory to each other), so a new intent rule kind added
@@ -56,6 +61,7 @@ var docKeys = []string{
 	"property-" + PropStrap,             // property-strap
 	RuleRailCurrentCapacity,             // rail-current-capacity
 	RuleRailCurrentMargin,               // rail-current-margin
+	docKeySequence,                      // sequence (family doc for intent/sequence-<slug>)
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -66,6 +72,9 @@ var docKeys = []string{
 func docKey(ruleName string) string {
 	if strings.HasPrefix(ruleName, "subsystem-") {
 		return docKeySubsystem
+	}
+	if strings.HasPrefix(ruleName, "sequence-") {
+		return docKeySequence
 	}
 	return ruleName
 }
@@ -87,6 +96,7 @@ var docSummaries = map[string]string{
 	"property-" + PropStrap:             "A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch.",
 	RuleRailCurrentCapacity:             "The part supplying a rail is rated below the peak current the design intent declares for that rail.",
 	RuleRailCurrentMargin:               "A rail's supply meets its declared peak current budget but not the declared margin factor over it.",
+	docKeySequence:                      "A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round.",
 }
 
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog

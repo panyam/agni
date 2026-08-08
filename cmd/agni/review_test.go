@@ -391,6 +391,68 @@ func TestReviewRailBudgets(t *testing.T) {
 	}
 }
 
+// TestReviewPowerSequences is the end-to-end proof for power-up sequencing as design intent
+// (WS3-092), and it holds four behaviours across four CLI invocations over one design:
+//
+//   - The two items report INDEPENDENTLY. The SoC tree's chain is wired (a power-good reaching the
+//     next regulator's enable through a resistor) so item 20 passes, while the modem rails' handles
+//     both land on the MCU, which is firmware rather than netlist evidence, so item 163 fails. One
+//     shared rule name would have given both items one verdict (WS3-058).
+//   - The failing item names both ends of the missing link, so a reviewer knows where to look.
+//   - With NO sequences declared, both items read needs-design-intent. They are covered and blocked
+//     on a declaration; a design with no gating chain must never read as sequencing correct.
+//   - An order declared the wrong way round is reported as a REVERSED chain, not a missing one.
+func TestReviewPowerSequences(t *testing.T) {
+	checklist := "testdata/intent/sequences-checklist.yaml"
+	design := "testdata/intent/sequence.edn"
+
+	declared := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/sequences.yaml", design)
+	for _, want := range []string{
+		"| 20 | SoC power sequence requirements | pass |",
+		"| 163 | modem power sequencing | fail |",
+	} {
+		if !strings.Contains(declared, want) {
+			t.Errorf("declared sequences, report missing %q\n%s", want, declared)
+		}
+	}
+	// The failing item has to name the two nets that should have been connected.
+	for _, want := range []string{"MODEM_PG", "MODEM_EN", "free to come up first"} {
+		if !strings.Contains(declared, want) {
+			t.Errorf("the finding should name the missing link (%q)\n%s", want, declared)
+		}
+	}
+	// The passing item must not carry the other sequence's rail: a merged verdict would put both
+	// domains under both items.
+	if strings.Contains(declared, "sequence-soc-power-tree: MODEM_EN") {
+		t.Errorf("each item must report only its own sequence\n%s", declared)
+	}
+
+	// No sequences declared: covered, blocked on the declaration, never a pass. This is the honest
+	// reading for a board whose rail order lives in a PMIC or in firmware, which cannot declare a
+	// sequence at all.
+	none := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml", design)
+	for _, want := range []string{
+		"| 20 | SoC power sequence requirements | needs-design-intent |",
+		"| 163 | modem power sequencing | needs-design-intent |",
+	} {
+		if !strings.Contains(none, want) {
+			t.Errorf("an undeclared sequence must read needs-design-intent, report missing %q\n%s", want, none)
+		}
+	}
+	if strings.Contains(none, "| 20 | SoC power sequence requirements | pass |") {
+		t.Errorf("an undeclared sequence must never pass\n%s", none)
+	}
+
+	// The order declared backwards against the same design.
+	reversed := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/sequences-reversed.yaml", design)
+	if !strings.Contains(reversed, "| 20 | SoC power sequence requirements | fail |") {
+		t.Errorf("a backwards order must fail\n%s", reversed)
+	}
+	if !strings.Contains(reversed, "the other way round") {
+		t.Errorf("a backwards order needs the reversed-chain diagnosis\n%s", reversed)
+	}
+}
+
 func TestReviewCmdRequiresChecklist(t *testing.T) {
 	cmd := reviewCmd()
 	cmd.SetArgs([]string{"testdata/review/can-broken.edn"})

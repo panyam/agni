@@ -4,9 +4,9 @@ import "strings"
 
 // Emits reports whether ruleName is a rule the intent compiler can produce from some declaration: the
 // fixed-name rules (module-missing, module-count, voltage-domain-mismatch, rail-current-capacity,
-// rail-current-margin) and the dynamically named subsystem-<slug>, protection-<kind> and
-// property-<kind> families. It accepts either a bare Rule.Name or the composed catalog name
-// ("intent/module-missing").
+// rail-current-margin) and the dynamically named subsystem-<slug>, protection-<kind>,
+// property-<kind> and sequence-<slug> families. It accepts either a bare Rule.Name or the composed
+// catalog name ("intent/module-missing").
 //
 // It exists so a review runner can tell a REAL-but-undeclared intent rule from a NOT-YET-SHIPPED intent
 // rule name a manifest pre-bound (WS3-098). Both resolve to zero catalog rules when no --intent-path is
@@ -29,5 +29,5 @@ func Emits(ruleName string) bool {
 		return true
 	}
 	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-") ||
-		strings.HasPrefix(name, "property-")
+		strings.HasPrefix(name, "property-") || strings.HasPrefix(name, "sequence-")
 }

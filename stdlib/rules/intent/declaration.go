@@ -58,6 +58,12 @@ type Declaration struct {
 	// hung off it, and summing every load's rated draw would need near-complete part seeding plus an
 	// assumption about which loads draw at once. Compiles to intent/rail-current-capacity.
 	RailBudgets []RailBudget
+	// Sequences is the declared power-up ORDER of groups of rails (WS3-092), the third intent
+	// mechanism after presence and property. Each compiles to its OWN rule (intent/sequence-<slug>),
+	// like Subsystems and for the same reason: several review items across different subsystems bind
+	// this one mechanism and must report independently. A sequence fails when the gating chain it
+	// declares is not in the design, or runs the other way round.
+	Sequences []Sequence
 	// MarginFactor is the house headroom policy: the multiple of a rail's peak budget its supply must
 	// be rated for (1.2 means 20% headroom). It compiles intent/rail-current-margin, and it has NO
 	// DEFAULT on purpose. A default would put one company's policy in a rule literal, which is exactly
@@ -80,6 +86,64 @@ type RailBudget struct {
 	// Peak is the maximum current in amps the rail is expected to draw. Load requires it to be > 0:
 	// a zero budget is satisfied by everything, so it would be a silently-passing declaration.
 	Peak float64
+}
+
+// SequenceEnableGated is the one sequence relation the netlist can evidence: each stage after the
+// first is held off by the previous stage's power-good signal driving its enable. Parse rejects any
+// other value rather than accepting a declaration nothing checks.
+//
+// It is a named constant with a single member on purpose. The relation says WHICH structure realizes
+// the order, and a second structure (a sequencer part that owns both rails and steps them from its own
+// configuration, an explicit delay element) is a different query, not a different threshold on this
+// one. Naming the field now makes that second kind additive; leaving it out would make the enable-gated
+// reading implicit and unstatable.
+const SequenceEnableGated = "enable-gated"
+
+// Sequence is one declared power-up ordering: the stages in the order they must come up, plus the
+// relation that says how the design is claimed to enforce it.
+//
+// WHAT A PASS MEANS HERE, because it is narrower than the plain reading of "sequencing correct".
+// A netlist holds no order. The only trace an order leaves in connectivity is the gating chain the
+// stages declare, so a silent rule means every declared link was found in the design, not that the
+// board is proven to power up in the declared sequence. The rule doc says the same thing where a
+// reviewer will read it.
+//
+// The converse is what makes the declaration honest. A board that sequences inside a PMIC or in
+// firmware has no chain to name, so it declares no sequence, no rule is compiled, and its review items
+// read needs-design-intent. There is no way to write a sequence that compiles to a rule which can only
+// ever pass: Parse rejects a sequence with no gating handle (see load.go).
+type Sequence struct {
+	// Name is the sequence label ("SoC power tree", "modem rails"); it slugifies into the rule name
+	// (intent/sequence-<slug>) a review item binds to, and appears in findings. Names must slugify
+	// uniquely within a declaration (Load validates this).
+	Name string
+	// Relation is how the order is claimed to be enforced. SequenceEnableGated is the only value
+	// today; Load rejects the rest.
+	Relation string
+	// Order is the stages, earliest first. At least two, and at least one adjacent pair must carry
+	// the handles the relation reads (Load validates both).
+	Order []SequenceStage
+}
+
+// SequenceStage is one step of a declared power-up order: a rail, plus the nets that signal it is up
+// and hold it off. The two handles are what the check actually reads; the rail names the stage.
+type SequenceStage struct {
+	// Rail is the stage's rail net name. It identifies the stage in findings and in the declaration.
+	// A rail the design does not carry is NOT a finding here. That is a presence question the
+	// voltage-domain and subsystem forms own, and reporting it twice would put one defect under two
+	// review items.
+	Rail string
+	// Good is the net that signals this stage is up (a regulator's power-good output, a supervisor's
+	// output). Empty when the stage gates nothing after it.
+	//
+	// Unlike Rail, a declared Good the design does not carry IS a finding: it is the evidence the
+	// declaration rests on, so its absence means the chain is not there to enforce anything.
+	Good string
+	// Enable is the net that holds this stage off until it is driven (a regulator's EN pin net, a
+	// load switch's control, a peripheral's reset-release line). Empty for the first stage, or for
+	// any stage nothing gates. A declared Enable the design does not carry is a finding, for Good's
+	// reason.
+	Enable string
 }
 
 // Property kinds.

@@ -1,0 +1,9 @@
+# The SoC tree declared the other way round: VDD_IO first, gated by VDD_CORE. The design wires the
+# opposite, so the rule reports a chain running backwards rather than a missing one.
+name: Power sequencing intent (order reversed)
+sequences:
+  - name: SoC power tree
+    relation: enable-gated
+    order:
+      - {rail: VDD_IO, good: IO_PG, enable: IO_EN}
+      - {rail: VDD_CORE, good: CORE_PG, enable: CORE_EN}

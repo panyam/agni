@@ -52,6 +52,16 @@ func Compile(d Declaration) []*check.Rule {
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))
 	}
+	// One rule per declared sequence (WS3-092), the subsystem shape and the same WS3-058 reason.
+	// A sequence with no adjacent good/enable pair compiles to NOTHING: its rule would have no link
+	// to judge and could only ever pass. Parse rejects that at load with a message that teaches, so
+	// this guard only catches a Declaration built in Go; the two share hasGatingPair so they cannot
+	// disagree about what is checkable.
+	for _, s := range d.Sequences {
+		if hasGatingPair(s) {
+			rules = append(rules, sequenceRule(s))
+		}
+	}
 	// One rule per protection KIND present (kinds appear in declaration order so rule order is stable).
 	seen := map[string]bool{}
 	for _, p := range d.Protections {
