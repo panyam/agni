@@ -151,3 +151,96 @@ func TestReverseBlockingTransistorBeatsBackwardsDiode(t *testing.T) {
 		t.Errorf("a transistor on any leg makes the path unclassifiable, want silence: %+v", fs)
 	}
 }
+
+// revShuntClampDesign models the false fire in issue 63's first mechanism: a high-side switch output
+// drives a load connector and carries a FREEWHEEL diode, anode on ground, cathode on the switched
+// output. That diode is a shunt clamp beside the path, not a series element in it, so it says nothing
+// about reverse blocking. U1's ground pin is declared power_in, which is ordinary, and is what made the
+// far side of the clamp look like a load.
+func revShuntClampDesign() *ir.Design {
+	load := &ir.PartType{Name: "LOAD", Pins: []*ir.Pin{
+		{Name: "GND", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
+	}}
+	diode := &ir.PartType{Name: "SER", Pins: []*ir.Pin{{Name: "A", Designator: "1"}, {Name: "K", Designator: "2"}}}
+	return &ir.Design{
+		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{load, diode}}},
+		Components: []*ir.Component{
+			{RefDes: "J2", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "LOAD", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "D1", Sections: []*ir.ComponentSection{{PartRef: "SER", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "SW_OUT", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J2", PinRef: "1"}, {ComponentRef: "D1", PinRef: "2"}, // cathode
+			}},
+			{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "D1", PinRef: "1"}, {ComponentRef: "U1", PinRef: "1"}, // anode, and a power_in ground pin
+			}},
+		},
+	}
+}
+
+// TestReverseBlockingIgnoresShuntClamp (issue 63): a diode whose far terminal lands on GROUND is a
+// shunt clamp, and the rule must not evaluate it as a reverse-blocking candidate at all.
+//
+// Before the fix the orientation test asked only "is the anode on the near net", so a ground-anode
+// freewheel diode read as "fitted backwards" and the output was reported unblocked. That produced 20 of
+// the 34 false FAILs observed on a real board, every one of them on a correctly-protected switch output.
+func TestReverseBlockingIgnoresShuntClamp(t *testing.T) {
+	if fs := revFindings(revShuntClampDesign()); len(fs) != 0 {
+		t.Errorf("a freewheel diode to ground is a shunt, not a backwards series blocker, want silence: %+v", fs)
+	}
+}
+
+// revMultiTerminalFETDesign models issue 63's second mechanism: a real 3-terminal MOSFET (gate, source,
+// drain) on the path, alongside a backwards diode on the same node.
+//
+// The transistor guard reached the part only through farNet, which returns nil for anything touching
+// more than one net outside the reach set. A 3-terminal FET touches two, so the guard was skipped and
+// the diode drove the finding. A 2-terminal stand-in cannot catch this, which is why the existing
+// TestReverseBlockingTransistorBeatsBackwardsDiode passed throughout.
+func revMultiTerminalFETDesign() *ir.Design {
+	load := &ir.PartType{Name: "LOAD", Pins: []*ir.Pin{
+		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
+	}}
+	fet := &ir.PartType{Name: "FET", Pins: []*ir.Pin{
+		{Name: "G", Designator: "1"}, {Name: "S", Designator: "2"}, {Name: "D", Designator: "3"},
+	}}
+	diode := &ir.PartType{Name: "SER", Pins: []*ir.Pin{{Name: "A", Designator: "1"}, {Name: "K", Designator: "2"}}}
+	return &ir.Design{
+		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{load, fet, diode}}},
+		Components: []*ir.Component{
+			{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "LOAD", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "Q1", Sections: []*ir.ComponentSection{{PartRef: "FET", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "D1", Sections: []*ir.ComponentSection{{PartRef: "SER", LibraryRef: "lib"}}, Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{
+			{Name: "VIN", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "J1", PinRef: "1"},
+				{ComponentRef: "Q1", PinRef: "2"}, // source
+				{ComponentRef: "D1", PinRef: "2"}, // cathode on the near side: fitted backwards
+			}},
+			{Name: "VOUT", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "Q1", PinRef: "3"}, // drain
+				{ComponentRef: "D1", PinRef: "1"}, // anode
+				{ComponentRef: "U1", PinRef: "1"},
+			}},
+			{Name: "GATE_CTRL", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{
+				{ComponentRef: "Q1", PinRef: "1"},
+			}},
+		},
+	}
+}
+
+// TestReverseBlockingGuardCountsMultiTerminalTransistor (issue 63): a transistor ANYWHERE on the
+// neighbourhood makes the arrangement unclassifiable, however many terminals it has.
+//
+// This is the 14-net half of the real-board false fires. The rule's whole safety posture is that it
+// stays silent on a possible ORing FET or ideal diode rather than false-failing a correct design, and
+// a guard that only recognises 2-terminal parts does not deliver it for any real MOSFET.
+func TestReverseBlockingGuardCountsMultiTerminalTransistor(t *testing.T) {
+	if fs := revFindings(revMultiTerminalFETDesign()); len(fs) != 0 {
+		t.Errorf("a 3-terminal FET on the path is unclassifiable, want silence: %+v", fs)
+	}
+}
