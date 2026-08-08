@@ -226,8 +226,58 @@ message Component {
   // membership, not equality. Empty when the design was built without the ingestion pass (a
   // hand-authored test IR); check.Model then re-derives as a fallback.
   repeated string device_classes = 4;
+  // value is the component's VALUE as a machine-comparable quantity, derived ONCE at ingestion by the
+  // format-neutral value pass (WS3-118) from whatever attribute the source spelled it in. It is the
+  // third DERIVED-NORMALIZATION field (C9), after device_classes and Net.roles, and exists for the
+  // same reason: a rule that has to compute with a resistance must read a NUMBER, and every format
+  // writes that number as text in its own dialect ("10k", "4R7", "0R05", "100nF/50V").
+  //
+  // Absent when the source carried no value attribute at all. Present-but-unparsed (Quantity.value
+  // absent) when it carried one this engine could not read, which is deliberately distinguishable:
+  // "no value stated" and "a value stated that we failed on" are different facts, and only the second
+  // is a gap worth reporting.
+  Quantity value = 5;
   map<string, string> attributes = 14;  // component-level properties (aggregated across sections)
   Provenance prov = 16;
+}
+
+// Quantity is a physical quantity read off a design: a number, its unit, and the source text it came
+// from. It is the component-value counterpart to the parameter layer's RangeValue, and like that type
+// it uses an OPTIONAL double so absent is distinguishable from zero (0R05 and DNP must not look alike;
+// zero is a legal resistance).
+//
+// THREE FIELDS BECAUSE THE PARSE IS FALLIBLE AND THE SOURCE IS AUTHORITATIVE. Keeping `input` makes the
+// normalization non-lossy and auditable: when a value reads wrong, the evidence to fix it sits beside
+// the wrong answer rather than having been discarded at ingestion. The same discipline the datasheet
+// layer applies by citing doc/page/confidence rather than shipping a bare number.
+//
+// PARTIAL KNOWLEDGE IS REPRESENTABLE, and has to be. A bare "100" on a capacitor is a known number with
+// an unknown unit: farads by one convention, microfarads by an older one, picofarads by a third, and
+// nothing in the notation decides. That is `{input: "100", value: 100, unit: ""}` rather than a failed
+// parse, so a consumer that knows the convention can still use it and one that does not is not misled.
+//
+// VALUE IS ALWAYS THE SI BASE UNIT, never a prefixed one: 4k7 is 4700 Ω, 100n is 1e-7 F. Prefixes are a
+// display concern, re-derived when something wants to show "4.7k". Storing canonically means the only
+// correction anyone ever needs to apply later is FILLING IN an unknown unit, never CONVERTING a known
+// one, which keeps the dangerous operation out of the API entirely (docs/20: unlike units are
+// under-specified, never converted).
+message Quantity {
+  // input is the source text verbatim, never rewritten or trimmed of what the parser ignored. Always
+  // set when the message is present.
+  string input = 1;
+  // value is the quantity in its unit's SI BASE unit (ohms, farads, henries, amps, volts). Absent means
+  // the parser could not read a number from input, which is NOT the same as zero.
+  //
+  // The parser works in exact decimal internally and only then emits a double, so two spellings of one
+  // value produce the IDENTICAL double: "4k7" and "4700" both give exactly 4700, not two neighbouring
+  // floats. That is what lets a diff compare values across revisions by equality. Comparisons against
+  // numbers of OTHER provenance (a datasheet parameter) should still go through a relative-epsilon
+  // helper rather than ==, since those doubles were never produced by this parser.
+  optional double value = 2;
+  // unit is the canonical SI base unit symbol ("Ω", "F", "H", "A", "V"), or EMPTY when the number is
+  // known but the unit is not. Empty is a real state, not a default: see the partial-knowledge note
+  // above. Never a prefixed unit ("kΩ", "nF") and never converted between unlike units.
+  string unit = 3;
 }
 
 // ComponentSection is one section/unit of a Component (one EDIF instance, one KiCad
