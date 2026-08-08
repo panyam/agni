@@ -1,0 +1,9 @@
+# Two sequencing review items on two subsystems. They bind DIFFERENT sequence rules, which is why
+# each declared sequence compiles to its own rule rather than all of them sharing one name: a merged
+# rule would give both items one verdict (WS3-058).
+name: Power sequencing review
+areas:
+  - name: Power
+    items:
+      - {id: "20", title: SoC power sequence requirements, rule: intent/sequence-soc-power-tree}
+      - {id: "163", title: modem power sequencing, rule: intent/sequence-modem-rails}

@@ -10,7 +10,8 @@ import (
 
 // kitchenSink is a declaration that exercises EVERY intent rule kind, so compiling it emits at least
 // one rule per doc key: module-missing + module-count (a module with a count), voltage-domain-mismatch,
-// subsystem-<slug>, both protection kinds, and every net-property kind. TestRuleDocsOneToOne compiles it to tie the RUNTIME
+// subsystem-<slug>, both protection kinds, every net-property kind, both rail-sizing rules, and
+// sequence-<slug>. TestRuleDocsOneToOne compiles it to tie the RUNTIME
 // rules to their docs (the stronger binding a fully-dynamic source needs over the profiles list-only
 // harness: it catches a builder that forgets to set Detail at all, not only a missing file).
 func kitchenSink() Declaration {
@@ -30,6 +31,17 @@ func kitchenSink() Declaration {
 		// and fail the one-to-one check below).
 		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
 		MarginFactor: 1.2,
+		// One sequence with an adjacent good -> enable pair. Without the pair it would compile to no
+		// rule at all (a sequence with nothing to judge is rejected at load), leaving the sequence doc
+		// key unemitted and failing the one-to-one check below.
+		Sequences: []Sequence{{
+			Name:     "SoC power tree",
+			Relation: SequenceEnableGated,
+			Order: []SequenceStage{
+				{Rail: "VDD_CORE", Good: "VDD_CORE_PG"},
+				{Rail: "VDD_IO", Enable: "VDD_IO_EN"},
+			},
+		}},
 	}
 }
 

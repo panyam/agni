@@ -7,10 +7,14 @@ import "testing"
 func TestEmits(t *testing.T) {
 	known := []string{
 		"module-missing", "module-count", "voltage-domain-mismatch",
-		"intent/module-missing",       // composed catalog name accepted too
+		"intent/module-missing", // composed catalog name accepted too
 		"subsystem-power-tree", "intent/subsystem-clock",
 		"protection-ovp", "protection-discharge", "intent/protection-discharge",
 		"rail-current-capacity", "rail-current-margin", "intent/rail-current-margin",
+		// WS3-092. A manifest that pre-bound these names read not-automated until the rule kind
+		// shipped; missing this line is the one wiring step that fails nothing at build time and
+		// leaves every bound item quiet forever.
+		"sequence-soc-power-tree", "intent/sequence-modem-rails",
 	}
 	for _, n := range known {
 		if !Emits(n) {
@@ -18,7 +22,7 @@ func TestEmits(t *testing.T) {
 		}
 	}
 	unknown := []string{
-		"power-sequence", "intent/power-sequence", // a future intent rule kind, not yet shipped
+		"thermal-budget", "intent/thermal-budget", // a future intent rule kind, not yet shipped
 		"reset-polarity", "intent/reset-polarity",
 		"single-pin-net", "", "intent/",
 	}
@@ -46,6 +50,11 @@ func TestEmitsCoversCompiler(t *testing.T) {
 		},
 		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
 		MarginFactor: 1.2,
+		Sequences: []Sequence{{
+			Name:     "SoC power tree",
+			Relation: SequenceEnableGated,
+			Order:    []SequenceStage{{Rail: "VDD_CORE", Good: "PG_CORE"}, {Rail: "VDD_IO", Enable: "EN_IO"}},
+		}},
 	}
 	rules := Compile(decl)
 	if len(rules) == 0 {

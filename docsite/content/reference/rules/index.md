@@ -86,6 +86,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/protection-ovp](intent-protection-ovp/) | intent | warning | A rail the design intent declares needs OV protection has no TVS/zener clamp. |
 | [intent/rail-current-capacity](intent-rail-current-capacity/) | intent | warning | The part supplying a rail is rated below the peak current the design intent declares for that rail. |
 | [intent/rail-current-margin](intent-rail-current-margin/) | intent | warning | A rail's supply meets its declared peak current budget but not the declared margin factor over it. |
+| [intent/sequence](intent-sequence/) | intent | warning | A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round. |
 | [intent/subsystem](intent-subsystem/) | intent | warning | An architectural subsystem the design intent declares is missing a required part or net. |
 | [intent/voltage-domain-mismatch](intent-voltage-domain-mismatch/) | intent | warning | A declared voltage domain's rail is absent or named for a different nominal voltage. |
 | [pin-net-conflict](pin-net-conflict/) | built-in | info | A pin appears in more than one net's connections — malformed input. |

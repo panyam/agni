@@ -1,0 +1,15 @@
+# Both power domains declared, against sequence.edn. The SoC tree's chain is wired (CORE_PG reaches
+# IO_EN through R1) and the modem's is not (both handles land on the MCU, which is firmware, not
+# netlist evidence), so the two items resolve independently.
+name: Power sequencing intent
+sequences:
+  - name: SoC power tree
+    relation: enable-gated
+    order:
+      - {rail: VDD_CORE, good: CORE_PG}
+      - {rail: VDD_IO, enable: IO_EN}
+  - name: modem rails
+    relation: enable-gated
+    order:
+      - {rail: VBAT_MODEM, good: MODEM_PG}
+      - {rail: MODEM_IO, enable: MODEM_EN}

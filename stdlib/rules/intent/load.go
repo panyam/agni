@@ -19,7 +19,20 @@ type declarationDoc struct {
 	Protections    []protectionDoc  `yaml:"protections"`
 	NetProperties  []netPropertyDoc `yaml:"net_properties"`
 	RailBudgets    []railBudgetDoc  `yaml:"rail_budgets"`
+	Sequences      []sequenceDoc    `yaml:"sequences"`
 	MarginFactor   float64          `yaml:"margin_factor"`
+}
+
+type sequenceDoc struct {
+	Name     string             `yaml:"name"`
+	Relation string             `yaml:"relation"`
+	Order    []sequenceStageDoc `yaml:"order"`
+}
+
+type sequenceStageDoc struct {
+	Rail   string `yaml:"rail"`
+	Good   string `yaml:"good"`
+	Enable string `yaml:"enable"`
 }
 
 type moduleDoc struct {
@@ -62,8 +75,10 @@ type netPropertyDoc struct {
 // protection). Each module needs a class or an mpn (matching nothing otherwise), each voltage domain
 // needs a name, a positive nominal, and at least one rail, each subsystem needs a name (slugifying
 // uniquely) plus a source or at least one net, and each protection needs a rail and a known kind (ovp
-// or discharge), each rail_budget needs a rail and a positive peak with no rail budgeted twice, and a
-// declared margin_factor must exceed 1 and have budgets to apply to.
+// or discharge), each rail_budget needs a rail and a positive peak with no rail budgeted twice, a
+// declared margin_factor must exceed 1 and have budgets to apply to, and each sequence needs a
+// uniquely-slugifying name, a known relation, and an order the netlist can be checked against
+// (parseSequence).
 // A malformed declaration is a teaching error at load, not a surprise at run. Parse is
 // WASM-clean (yaml only, no os); LoadFile adds the file read.
 func Parse(b []byte) (Declaration, error) {
@@ -75,8 +90,8 @@ func Parse(b []byte) (Declaration, error) {
 		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
 	}
 	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 &&
-		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, or rail_budgets", doc.Name)
+		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 && len(doc.Sequences) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, rail_budgets, or sequences", doc.Name)
 	}
 	d := Declaration{Name: doc.Name}
 	for i, m := range doc.Modules {
@@ -173,6 +188,14 @@ func Parse(b []byte) (Declaration, error) {
 		rails[rb.Rail] = true
 		d.RailBudgets = append(d.RailBudgets, RailBudget{Rail: rb.Rail, Peak: rb.Peak})
 	}
+	seqSlugs := map[string]string{} // slug -> first name, to reject a rule-name collision
+	for i, s := range doc.Sequences {
+		seq, err := parseSequence(doc.Name, i, s, seqSlugs)
+		if err != nil {
+			return Declaration{}, err
+		}
+		d.Sequences = append(d.Sequences, seq)
+	}
 	// margin_factor is optional and has no default (see Declaration.MarginFactor). Omitted, the margin
 	// rule is never compiled. Declared, it must ask for headroom: a factor of 1 restates the capacity
 	// rule and anything below 1 asks for a supply SMALLER than the budget, so both are author errors
@@ -185,6 +208,64 @@ func Parse(b []byte) (Declaration, error) {
 	}
 	d.MarginFactor = doc.MarginFactor
 	return d, nil
+}
+
+// parseSequence validates one declared sequence and converts it. It is split out of Parse because it
+// carries the one validation in this file that is about EVALUABILITY rather than shape: a sequence
+// with no adjacent good/enable pair compiles to a rule with nothing to judge, and a rule that can only
+// ever pass is author error. WS3-099 settled where that gets caught: at load, where the message can
+// teach, rather than at run as a verdict nobody can trace back to the declaration.
+//
+// The teaching matters here more than elsewhere, because the case it rejects is a real and correct
+// board: one whose rail order lives in a PMIC's configuration or in firmware. Saying so in the error
+// is what stops an author from inventing net names to satisfy the schema.
+func parseSequence(declName string, i int, s sequenceDoc, slugs map[string]string) (Sequence, error) {
+	if strings.TrimSpace(s.Name) == "" {
+		return Sequence{}, fmt.Errorf("intent %q: sequence #%d is missing its \"name\"", declName, i+1)
+	}
+	if s.Relation != SequenceEnableGated {
+		return Sequence{}, fmt.Errorf("intent %q: sequence %q has relation %q (want %q, the only ordering a netlist evidences)", declName, s.Name, s.Relation, SequenceEnableGated)
+	}
+	sl := slug(s.Name)
+	if sl == "" {
+		return Sequence{}, fmt.Errorf("intent %q: sequence name %q has no alphanumeric characters to form a rule name", declName, s.Name)
+	}
+	if first, dup := slugs[sl]; dup {
+		return Sequence{}, fmt.Errorf("intent %q: sequences %q and %q slugify to the same rule name %q", declName, first, s.Name, "intent/sequence-"+sl)
+	}
+	slugs[sl] = s.Name
+	if len(s.Order) < 2 {
+		return Sequence{}, fmt.Errorf("intent %q: sequence %q needs at least two stages in \"order\" (an order of one has nothing to come before)", declName, s.Name)
+	}
+	seq := Sequence{Name: s.Name, Relation: s.Relation}
+	rails := map[string]bool{}
+	for j, st := range s.Order {
+		if strings.TrimSpace(st.Rail) == "" {
+			return Sequence{}, fmt.Errorf("intent %q: sequence %q stage #%d is missing its \"rail\"", declName, s.Name, j+1)
+		}
+		if rails[st.Rail] {
+			return Sequence{}, fmt.Errorf("intent %q: sequence %q lists rail %q twice, so its position in the order is ambiguous", declName, s.Name, st.Rail)
+		}
+		rails[st.Rail] = true
+		seq.Order = append(seq.Order, SequenceStage{Rail: st.Rail, Good: st.Good, Enable: st.Enable})
+	}
+	if !hasGatingPair(seq) {
+		return Sequence{}, fmt.Errorf("intent %q: sequence %q declares no adjacent \"good\" -> \"enable\" pair, so nothing in the netlist can be checked against it. "+
+			"A rail order enforced inside a PMIC or by firmware leaves no trace in a netlist; record it as a review note rather than as a sequence", declName, s.Name)
+	}
+	return seq, nil
+}
+
+// hasGatingPair reports whether any adjacent pair of stages supplies both handles the enable-gated
+// relation reads. It is the compiles-to-something test, and the same predicate Compile uses, so a
+// sequence that loads always yields a rule with at least one link to judge.
+func hasGatingPair(s Sequence) bool {
+	for i := 0; i+1 < len(s.Order); i++ {
+		if s.Order[i].Good != "" && s.Order[i+1].Enable != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // Load reads a YAML intent declaration from r and parses+validates it (Parse). It is the io.Reader
