@@ -18,15 +18,22 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`feedback(net)`](feedback/) | the net is a regulator feedback / sense node (must not be probed) |
 | [`has_nc_channel(present)`](has_nc_channel/) | one row when the design can express intentional no-connect |
 | [`has_netclass(present)`](has_netclass/) | one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean) |
+| [`has_netclass_defs(present)`](has_netclass_defs/) | one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean) |
 | [`net.ac_coupled(net)`](net.ac_coupled/) | a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count) |
 | [`net.bias(net, level)`](net.bias/) | a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider |
 | [`net.bus_like(net)`](net.bus_like/) | a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate |
+| [`net.declared_track_width(net, mm)`](net.declared_track_width/) | the track width a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows) |
+| [`net.declared_via_drill(net, mm)`](net.declared_via_drill/) | the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows) |
 | [`net.external(net)`](net.external/) | the net may extend onto an unread sheet (read-gap marker) |
 | [`net.ground(net)`](net.ground/) | the net is a ground rail (name-derived) |
 | [`net.max_voltage(net, volts)`](net.max_voltage/) | a net's declared rail voltage |
 | [`net.netclass(net, class)`](net.netclass/) | the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role) |
 | [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a rail's nominal voltage derived from its net name (3V3 -> 3.3) |
 | [`net.pin_count(net, count)`](net.pin_count/) | the number of connections on a net |
+| [`netclass.clearance(class, mm)`](netclass.clearance/) | the clearance a net class declares its nets should route at (millimetres) |
+| [`netclass.track_width(class, mm)`](netclass.track_width/) | the track width a net class declares its nets should route at (millimetres) |
+| [`netclass.via_diameter(class, mm)`](netclass.via_diameter/) | the via diameter a net class declares (millimetres) |
+| [`netclass.via_drill(class, mm)`](netclass.via_drill/) | the via drill a net class declares (millimetres) |
 | [`pin(ref_des, pin)`](pin/) | a part-type pin of a placed component |
 | [`pin.net(ref_des, pin, net)`](pin.net/) | the net a pin is on (absent if unconnected) |
 | [`pin.role(ref_des, pin, role)`](pin.role/) | a pin's derived role (power/ground/anode/cathode) |

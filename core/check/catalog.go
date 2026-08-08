@@ -286,6 +286,8 @@ func capabilityMet(c Capability, m Model) bool {
 		return m.HasNoConnectChannel()
 	case CapNetClass:
 		return m.HasNetClasses()
+	case CapNetClassDefs:
+		return len(m.NetClassDefs()) > 0
 	}
 	return true
 }
@@ -300,6 +302,8 @@ func capabilityReason(c Capability) string {
 		return "source format cannot express intentional no-connect"
 	case CapNetClass:
 		return "design carries no net-class assignments (only a KiCad project file supplies them)"
+	case CapNetClassDefs:
+		return "design declares no net-class definitions, so there is no declared limit to compare against"
 	}
 	return "source format lacks a capability this rule requires"
 }

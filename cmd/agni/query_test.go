@@ -110,3 +110,49 @@ func TestQuerySpecLibRequiresParams(t *testing.T) {
 		t.Fatal("--speclib without --params must error")
 	}
 }
+
+// TestQueryNetClassDefsCLI (WS3-111) covers the declared-constraint path end to end, which no unit
+// test can: the definitions live only in the .kicad_pro, so they reach the IR through the PROJECT
+// entry point and are invisible when the same board is opened as a bare .kicad_sch.
+func TestQueryNetClassDefsCLI(t *testing.T) {
+	run := func(path, q string) string {
+		t.Helper()
+		cmd := queryCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{path, q})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("query %s: %v", path, err)
+		}
+		return out.String()
+	}
+	const pro = "testdata/conformance/showcase.passes.kicad_pro"
+
+	// The per-class rows are the raw declarations: HighSpeed states a clearance and no width.
+	raw := run(pro, `netclass.track_width(?c, ?mm) => ?c, ?mm`)
+	if strings.Contains(raw, "HighSpeed") {
+		t.Errorf("HighSpeed declares no track width and must yield no row:\n%s", raw)
+	}
+
+	// The cascade: USB_D+ is in HighSpeed (priority 1, states no width) and Differential
+	// (priority 2, states 0.2). It must resolve to Differential's value, NOT to no value and NOT
+	// to Default's 0.25 — the per-FIELD fall-through is the whole point.
+	d := run(pro, `net.declared_track_width(?n, ?mm) => ?n, ?mm`)
+	for _, want := range []string{"USB_D+", "0.2", "net_settings:Differential"} {
+		if !strings.Contains(d, want) {
+			t.Errorf("declared track width missing %q:\n%s", want, d)
+		}
+	}
+	// A net in no class still gets Default's value, because Default applies to every net.
+	if !strings.Contains(d, "net_settings:Default") {
+		t.Errorf("an unclassed net must still carry Default's declared width:\n%s", d)
+	}
+	if !strings.Contains(run(pro, "has_netclass_defs(?p) => ?p"), "1 result(s)") {
+		t.Error("project has_netclass_defs: want one row")
+	}
+
+	// The same board read as a bare schematic never sees the project file.
+	if bare := run("testdata/conformance/showcase.passes.kicad_sch", "has_netclass_defs(?p) => ?p"); !strings.Contains(bare, "no results") {
+		t.Errorf("schematic-only read must yield no netclass definitions:\n%s", bare)
+	}
+}

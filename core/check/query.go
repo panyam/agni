@@ -262,6 +262,23 @@ func (m *irModel) FormatTypesPowerOut() bool { return formatTypesPowerOut(m.d.Ge
 // contract). Collected in the same nets walk as ncChannel, so the read is O(1).
 func (m *irModel) HasNetClasses() bool { return m.netClass }
 
+// NetClassDefs returns the design's net-class definition constraints (see model.Model). Filtered by
+// kind rather than assuming ir.Design.constraints holds only these: the node is a general carrier
+// and a second kind is expected to land on it.
+func (m *irModel) NetClassDefs() []*ir.Constraint {
+	var out []*ir.Constraint
+	for _, c := range m.d.GetConstraints() {
+		if c.GetKind() == kicadNetClassKind {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// kicadNetClassKind mirrors kicad.ConstraintKindNetClass. Duplicated rather than imported because
+// core must not depend on a reader (C1); the two are pinned together by TestNetClassKindAgrees.
+const kicadNetClassKind = "netclass"
+
 func (m *irModel) BoardNets() []BoardNet { return m.boardNets }
 
 func (m *irModel) HasNetName(name string) bool { return m.netNames[strings.ToUpper(name)] }

@@ -59,6 +59,8 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [annular-width](annular-width/) | built-in | error | A via's annular ring is thinner than the loosest common fabrication floor (0.075mm). |
 | [copper-clearance](copper-clearance/) | built-in | error | Copper of two different nets sits closer than the 0.127mm fabrication floor. |
 | [hole-size](hole-size/) | built-in | error | A via's drill is smaller than the loosest common mechanical-drill floor (0.2mm). |
+| [netclass-track-width](netclass-track-width/) | built-in | warning | A net is routed narrower than the track width its own net class declares. |
+| [netclass-via-drill](netclass-via-drill/) | built-in | warning | A net's via is drilled smaller than the drill its own net class declares. |
 | [track-width](track-width/) | built-in | error | A routed track is narrower than the loosest common fabrication floor (0.127mm). |
 
 ## datasheet

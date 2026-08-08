@@ -124,6 +124,14 @@ func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 	// readers consume, so populate ir.Net.net_class here in the I/O layer (WS1-037, C1).
 	if pro, err := os.Open(proPath); err == nil {
 		kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(pro))
+		// The same net_settings block also declares, per class, the clearance / track width / via
+		// sizes its nets are SUPPOSED to route at (WS3-111). Membership without the definitions
+		// leaves the useful half on the table: the board tier already projects what a net's copper
+		// IS, and this is what the project said it should be. Re-seek rather than re-open — the
+		// decoder above consumed the reader.
+		if _, err := pro.Seek(0, io.SeekStart); err == nil {
+			kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(pro))
+		}
 		pro.Close()
 	}
 	return d, nil

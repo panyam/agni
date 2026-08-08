@@ -50,20 +50,27 @@ var builtinSchema = map[string][]query.Field{
 	RelComponentAttr: {query.FieldSubject, query.FieldObject, query.FieldValue}, // component.attr(ref, key, value)
 	// Device-class and net-attribute relations (WS3-074). component.class emits one row per class
 	// tag in the device_classes SET (WS3-071), so a family tag answers too.
-	RelComponentClass:       {query.FieldSubject, query.FieldValue},                    // component.class(ref, class)
-	RelNetGround:            {query.FieldSubject},                                      // net.ground(net)
-	RelNetExternal:          {query.FieldSubject},                                      // net.external(net)
-	RelEsdRated:             {query.FieldSubject},                                      // component.esd_rated(ref) — WS3-076, datasheet tier
-	RelComponentDeviceClass: {query.FieldSubject, query.FieldValue},                    // component.device_class(ref, class) — WS10-013, datasheet tier
-	RelBus:                  {query.FieldSubject, query.FieldValue},                    // bus(label, kind) — reader-detected unmodeled bus (WS1-034)
-	RelRefDesCollision:      {query.FieldSubject},                                      // ref_des_collision(ref_des) — WS3-081
-	RelPinNetConflict:       {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin_net_conflict(ref_des, pin, net) — WS3-081
-	RelNetBusLike:           {query.FieldSubject},                                      // net.bus_like(net) — WS3-080
-	RelExternalSignalNet:    {query.FieldSubject},                                      // external_signal_net(net) — WS3-061
-	RelNetBias:              {query.FieldSubject, query.FieldValue},                    // net.bias(net, level) — WS3-088
-	RelNetACCoupled:         {query.FieldSubject},                                      // net.ac_coupled(net) — WS3-088
-	RelNetNetClass:          {query.FieldSubject, query.FieldValue},                    // net.netclass(net, class) — WS3-105
-	RelHasNetClass:          {query.FieldSubject},                                      // has_netclass(present) — WS3-105
+	RelComponentClass:        {query.FieldSubject, query.FieldValue},                    // component.class(ref, class)
+	RelNetGround:             {query.FieldSubject},                                      // net.ground(net)
+	RelNetExternal:           {query.FieldSubject},                                      // net.external(net)
+	RelEsdRated:              {query.FieldSubject},                                      // component.esd_rated(ref) — WS3-076, datasheet tier
+	RelComponentDeviceClass:  {query.FieldSubject, query.FieldValue},                    // component.device_class(ref, class) — WS10-013, datasheet tier
+	RelBus:                   {query.FieldSubject, query.FieldValue},                    // bus(label, kind) — reader-detected unmodeled bus (WS1-034)
+	RelRefDesCollision:       {query.FieldSubject},                                      // ref_des_collision(ref_des) — WS3-081
+	RelPinNetConflict:        {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin_net_conflict(ref_des, pin, net) — WS3-081
+	RelNetBusLike:            {query.FieldSubject},                                      // net.bus_like(net) — WS3-080
+	RelExternalSignalNet:     {query.FieldSubject},                                      // external_signal_net(net) — WS3-061
+	RelNetBias:               {query.FieldSubject, query.FieldValue},                    // net.bias(net, level) — WS3-088
+	RelNetACCoupled:          {query.FieldSubject},                                      // net.ac_coupled(net) — WS3-088
+	RelNetNetClass:           {query.FieldSubject, query.FieldValue},                    // net.netclass(net, class) — WS3-105
+	RelHasNetClass:           {query.FieldSubject},                                      // has_netclass(present) — WS3-105
+	RelNetClassClearance:     {query.FieldSubject, query.FieldNum},                      // netclass.clearance(class, mm) — WS3-111
+	RelNetClassTrackWidth:    {query.FieldSubject, query.FieldNum},                      // netclass.track_width(class, mm) — WS3-111
+	RelNetClassViaDiameter:   {query.FieldSubject, query.FieldNum},                      // netclass.via_diameter(class, mm) — WS3-111
+	RelNetClassViaDrill:      {query.FieldSubject, query.FieldNum},                      // netclass.via_drill(class, mm) — WS3-111
+	RelHasNetClassDefs:       {query.FieldSubject},                                      // has_netclass_defs(present) — WS3-111
+	RelNetDeclaredTrackWidth: {query.FieldSubject, query.FieldNum},                      // net.declared_track_width(net, mm) — WS3-111
+	RelNetDeclaredViaDrill:   {query.FieldSubject, query.FieldNum},                      // net.declared_via_drill(net, mm) — WS3-111
 	// Board tier — queryable with no evaluator change (tier-generality).
 	RelBoardTrackWidth: {query.FieldSubject, query.FieldNum},    // board.track_width(net, mm)
 	RelBoardViaDrill:   {query.FieldSubject, query.FieldNum},    // board.via_drill(net, mm)
@@ -107,6 +114,13 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "net.ac_coupled", Args: []string{"net"}, Summary: "a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count)", Kind: query.KindNetlist},
 	{Name: "net.netclass", Args: []string{"net", "class"}, Summary: "the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role)", Kind: query.KindNetlist},
 	{Name: "has_netclass", Args: []string{"present"}, Summary: "one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean)", Kind: query.KindNetlist},
+	{Name: "netclass.clearance", Args: []string{"class", "mm"}, Summary: "the clearance a net class declares its nets should route at (millimetres)", Kind: query.KindNetlist},
+	{Name: "netclass.track_width", Args: []string{"class", "mm"}, Summary: "the track width a net class declares its nets should route at (millimetres)", Kind: query.KindNetlist},
+	{Name: "netclass.via_diameter", Args: []string{"class", "mm"}, Summary: "the via diameter a net class declares (millimetres)", Kind: query.KindNetlist},
+	{Name: "netclass.via_drill", Args: []string{"class", "mm"}, Summary: "the via drill a net class declares (millimetres)", Kind: query.KindNetlist},
+	{Name: "has_netclass_defs", Args: []string{"present"}, Summary: "one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean)", Kind: query.KindNetlist},
+	{Name: "net.declared_track_width", Args: []string{"net", "mm"}, Summary: "the track width a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: query.KindNetlist},
+	{Name: "net.declared_via_drill", Args: []string{"net", "mm"}, Summary: "the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: query.KindNetlist},
 	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part (needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind (absolute_max / recommended_operating / characteristic; needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params)", Kind: query.KindDatasheet},
