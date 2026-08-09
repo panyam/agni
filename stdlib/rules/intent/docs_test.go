@@ -42,6 +42,13 @@ func kitchenSink() Declaration {
 				{Rail: "VDD_IO", Enable: "VDD_IO_EN"},
 			},
 		}},
+		// TWO groups on ONE bus, because the collision rule is compiled only when a collision is
+		// expressible: a single group could never clash, so a one-group kitchen sink would leave the
+		// strap-address-collision doc key unemitted and fail the one-to-one check below.
+		StrapGroups: []StrapGroup{
+			{Name: "PHYAD U12", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1, Bus: "MDIO"},
+			{Name: "PHYAD U13", Device: "U13", Nets: []string{"PHY2AD2", "PHY2AD1", "PHY2AD0"}, Value: 2, Bus: "MDIO"},
+		},
 	}
 }
 

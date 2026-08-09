@@ -63,6 +63,16 @@ func Compile(d Declaration) []*check.Rule {
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))
 	}
+	// One rule per declared strap group (WS3-120), the subsystem shape. The collision check is
+	// necessarily cross-group, so it gets ONE rule for the whole declaration and is compiled only when
+	// at least two groups share a bus — a collision rule over fewer could only ever pass, which is the
+	// compiles-to-nothing shape Parse rejects elsewhere.
+	for _, g := range d.StrapGroups {
+		rules = append(rules, strapGroupRule(g))
+	}
+	if collidableGroups(d.StrapGroups) {
+		rules = append(rules, strapCollisionRule(d.StrapGroups))
+	}
 	// One rule per declared sequence (WS3-092), the subsystem shape and the same WS3-058 reason.
 	// A sequence with no adjacent good/enable pair compiles to NOTHING: its rule would have no link
 	// to judge and could only ever pass. Parse rejects that at load with a message that teaches, so

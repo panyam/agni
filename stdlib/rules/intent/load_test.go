@@ -153,3 +153,66 @@ func TestLoadStrapBandAccepted(t *testing.T) {
 		}
 	}
 }
+
+// TestLoadStrapGroupValidation (WS3-120): a group that could never be satisfied on ANY design is an
+// authoring error, so it fails the load rather than compiling to a rule that reports a design finding.
+func TestLoadStrapGroupValidation(t *testing.T) {
+	for _, tc := range []struct{ name, yaml, want string }{
+		{
+			"value wider than the declared bits",
+			"name: t\nstrap_groups:\n  - {name: PHYAD, nets: [A1, A0], value: 9}\n",
+			"which 2 net(s) cannot encode",
+		},
+		{
+			"no nets",
+			"name: t\nstrap_groups:\n  - {name: PHYAD, nets: [], value: 0}\n",
+			"lists no \"nets\"",
+		},
+		{
+			"a net used as two bits",
+			"name: t\nstrap_groups:\n  - {name: PHYAD, nets: [A0, A0], value: 1}\n",
+			"twice",
+		},
+		{
+			"unknown default level",
+			"name: t\nstrap_groups:\n  - {name: PHYAD, nets: [A0], value: 1, default: floating}\n",
+			"want \"low\", \"high\", or omitted",
+		},
+		{
+			"two groups slugifying to one rule name",
+			"name: t\nstrap_groups:\n  - {name: PHY AD, nets: [A0], value: 1}\n  - {name: 'phy-ad', nets: [B0], value: 0}\n",
+			"slugify to the same rule name",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse([]byte(tc.yaml))
+			if err == nil {
+				t.Fatalf("want a load error for %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error should say why: got %q, want it to contain %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// TestLoadStrapGroupAccepted: a declaration carrying ONLY strap_groups is valid (the empty-declaration
+// guard has to know about the new form), and the fields survive the loader intact.
+func TestLoadStrapGroupAccepted(t *testing.T) {
+	d, err := Parse([]byte("name: t\nstrap_groups:\n" +
+		"  - {name: PHYAD, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 5, bus: MDIO, default: low}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 5, Bus: "MDIO", Default: "low"}
+	if len(d.StrapGroups) != 1 {
+		t.Fatalf("got %d groups, want 1", len(d.StrapGroups))
+	}
+	g := d.StrapGroups[0]
+	if g.Name != want.Name || g.Device != want.Device || g.Value != want.Value || g.Bus != want.Bus || g.Default != want.Default {
+		t.Errorf("group = %+v, want %+v", g, want)
+	}
+	if strings.Join(g.Nets, ",") != strings.Join(want.Nets, ",") {
+		t.Errorf("nets = %v, want %v (MSB-first order must survive)", g.Nets, want.Nets)
+	}
+}
