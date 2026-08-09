@@ -584,8 +584,17 @@ func loadOverlayProfiles(profilePath string) ([]profiles.Profile, error) {
 	return profiles.LoadDir(profilePath)
 }
 
-// composeReviewInputsFrom is composeReviewInputs over profiles that are already loaded.
-func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string) (*check.Catalog, map[string][]profiles.Profile, error) {
+// composeReviewInputsFrom is composeReviewInputs over profiles that are already loaded, plus any
+// extra sources the caller composed itself.
+//
+// extra exists for serve, whose --conventions is a startup DEPLOYMENT default rather than a
+// per-request value, so its rules have to join this composition instead of riding a request (WS3-109).
+// It is a source rather than a path because reading the config is the caller's business (C22), and it
+// goes through this one composer rather than a second CatalogWith so a caller cannot compose a catalog
+// that silently omits the profile and intent sources. That is not hypothetical: serve used to REBUILD
+// its review catalog for the conventions case, which dropped both tiers whenever an operator passed
+// --conventions together with --profile-path or --intent-path.
+func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string, extra ...check.RuleSource) (*check.Catalog, map[string][]profiles.Profile, error) {
 	var sources []check.RuleSource
 	byName := map[string][]profiles.Profile{}
 	for _, p := range profiles.Profiles {
@@ -620,6 +629,7 @@ func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string) (*ch
 		}
 		sources = append(sources, intent.Source("intent", decl))
 	}
+	sources = append(sources, extra...)
 	catalog := check.DefaultCatalog()
 	if len(sources) > 0 {
 		catalog = check.CatalogWith(sources...)
