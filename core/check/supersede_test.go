@@ -87,6 +87,48 @@ func TestSupersedingSourceReplacesEarlierRules(t *testing.T) {
 	}
 }
 
+// A superseded rule leaves the name index too, so Rules and Lookup cannot disagree about what the
+// catalog contains. Nothing in the engine resolves a rule through Lookup today (--rule goes through
+// Filter, over the rule slice), which is exactly why this needs pinning: the first consumer that does
+// would otherwise reach a rule the catalog had dropped, and get it back.
+func TestSupersededRuleLeavesTheNameIndex(t *testing.T) {
+	core := NewSource("profile", []*Rule{tagged("spi-missing", map[string]string{"profile": "SPI"})})
+	overlay := NewSupersedingSource("profile-overlay", []*Rule{
+		tagged("spi-missing", map[string]string{"profile": "SPI"}),
+	}, Facets{Tags: map[string][]string{"profile": {"SPI"}, KeySource: {"profile"}}})
+
+	c, err := NewCatalog(core, overlay)
+	if err != nil {
+		t.Fatalf("NewCatalog: %v", err)
+	}
+	if got := c.Lookup("profile/spi-missing"); got != nil {
+		t.Errorf("Lookup returned a superseded rule (%q); Rules and Lookup must agree", got.Name)
+	}
+	if c.Lookup("profile-overlay/spi-missing") == nil {
+		t.Error("Lookup lost the superseding rule")
+	}
+}
+
+// A declaration that matches nothing records nothing. Without this the catalog accumulates an empty
+// supersession, and the surfaces that report one print "supersedes 0 rule(s):" on a run where no rule
+// was replaced.
+func TestDeclarationMatchingNothingRecordsNothing(t *testing.T) {
+	c, err := NewCatalog(
+		NewSource("profile", []*Rule{tagged("can-missing", map[string]string{"profile": "CAN"})}),
+		NewSupersedingSource("profile-overlay", []*Rule{tagged("other", nil)},
+			Facets{Tags: map[string][]string{"profile": {"NOSUCHINTERFACE"}}}),
+	)
+	if err != nil {
+		t.Fatalf("NewCatalog: %v", err)
+	}
+	if got := c.Superseded(); len(got) != 0 {
+		t.Errorf("Superseded() = %+v, want empty when the declaration matched no rule", got)
+	}
+	if len(c.Rules()) != 2 {
+		t.Errorf("a declaration matching nothing changed the catalog: %v", ruleNames(c.Rules()))
+	}
+}
+
 // The exemption that makes supersession safe. An overlay profile and the built-in it replaces tag
 // their rules identically, so a declaration matching on tags alone would delete the REPLACEMENT too
 // and leave the interface with no rules. That failure is invisible in a report: the findings simply
