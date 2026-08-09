@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
@@ -98,23 +99,12 @@ func serveCmd() *cobra.Command {
 			mux.Handle(wsPath, wsHandler)
 			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
 			mux.Handle(dsPath, dsHandler)
-			// Every overlay knob is startup config for the WHOLE server, not for one surface (WS3-109).
-			// The three that contribute RULES are loaded here and composed ONCE, and both rule-running
-			// services take the result, so "which surfaces does this flag reach" is not a per-flag fact
-			// anyone has to know. They were wired one at a time before, and drifted exactly as you would
-			// expect: --profile-path reached both only after WS3-048, while --intent-path and a
-			// --conventions config's rules reached reviews alone. A rule absent from the check panel's
-			// catalog is indistinguishable there from a rule that ran clean.
-			overlayProfiles, err := loadOverlayProfiles(profilePath)
-			if err != nil {
-				return err
-			}
 			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 			// installed process-wide, which is the one legitimate use of a process-global (startup, before
-			// any request, never mutated after, C22), while its RULES join the composition below like any
-			// other source. A request that names its own conventions overrides both per request, with that
-			// lexicon travelling with the read (WS3-106).
-			var conventionSources []check.RuleSource
+			// any request, never mutated after, C22). Its RULES join the catalog composition instead,
+			// inside serveRuleServices. A request that names its own conventions overrides both per
+			// request, with that lexicon travelling with the read (WS3-106).
+			var conventionCfg naming.Config
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
@@ -123,20 +113,13 @@ func serveCmd() *cobra.Command {
 				if err := naming.ApplyLexicon(cfg); err != nil {
 					return err
 				}
-				if len(cfg.Rules) > 0 {
-					src, err := naming.Source(cfg)
-					if err != nil {
-						return err
-					}
-					conventionSources = append(conventionSources, src)
-				}
+				conventionCfg = cfg
 			}
-			overlayCatalog, reviewProfiles, err := composeReviewInputsFrom(overlayProfiles, intentPath, conventionSources...)
+			checkSvc, reviewSvc, err := serveRuleServices(loader, specs, profilePath, intentPath, conventionCfg, cmd.ErrOrStderr())
 			if err != nil {
 				return err
 			}
-			noteSupersededRules(cmd.ErrOrStderr(), overlayCatalog)
-			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(service.NewCheckService(loader, overlayCatalog, specs)))
+			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc))
 			mux.Handle(ckPath, ckHandler)
 			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader)))
 			mux.Handle(diffPath, diffHandler)
@@ -144,10 +127,9 @@ func serveCmd() *cobra.Command {
 			mux.Handle(dtPath, dtHandler)
 			qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs)))
 			mux.Handle(qPath, qHandler)
-			// ReviewService (WS9-047): the served analogue of `agni review`. It takes the SAME catalog the
-			// CheckService got, plus the by-Name profile index its presence gate reads. A bad
-			// --profile-path/--intent-path/--conventions fails serve startup rather than every request.
-			rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(service.NewReviewService(loader, overlayCatalog, reviewProfiles, specs)))
+			// ReviewService (WS9-047): the served analogue of `agni review`, built alongside the
+			// CheckService above from the one composed catalog.
+			rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
 			mux.Handle(rvPath, rvHandler)
 			mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 			// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
@@ -183,6 +165,56 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
 	return c
+}
+
+// serveLoader is what the two rule-running services need between them. The CheckService and the
+// ReviewService take different loader interfaces, and serve's osLoader satisfies both, so naming the
+// intersection here lets one function build both without widening either service's own contract.
+type serveLoader interface {
+	service.Loader
+	service.ReviewLoader
+}
+
+// serveRuleServices builds the two services that RUN rules from one composed catalog: the
+// CheckService behind the check panel and ListRules, and the ReviewService behind RunReview.
+//
+// They are built together, from one catalog, on purpose (WS3-109). Every overlay knob is startup
+// config for the whole server rather than for one surface, but they used to be wired one at a time at
+// the call site and drifted exactly as that invites: --profile-path reached both surfaces only after
+// WS3-048, while --intent-path and a --conventions config's RULES reached reviews alone. A rule
+// missing from the check panel's catalog is indistinguishable there from a rule that ran and found
+// nothing, so the drift is silent from the outside.
+//
+// Returning both services rather than the catalog is what makes that structural. A caller cannot hand
+// one surface the composed catalog and the other something else, because it never holds the catalog.
+// That specific mistake is not hypothetical: this function replaces a serveCheckCatalog helper whose
+// own doc warned about a future edit passing NewCheckService a bare DefaultCatalog, and mutation
+// testing confirmed the warning was unenforceable while the wiring lived at the call site.
+//
+// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
+// is a process-global install the caller does once at startup, and doing it inside a function tests
+// call would leak one test's vocabulary into the next.
+func serveRuleServices(loader serveLoader, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+	overlay, err := loadOverlayProfiles(profilePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	var extra []check.RuleSource
+	if len(conventions.Rules) > 0 {
+		src, err := naming.Source(conventions)
+		if err != nil {
+			return nil, nil, err
+		}
+		extra = append(extra, src)
+	}
+	catalog, byName, err := composeReviewInputsFrom(overlay, intentPath, extra...)
+	if err != nil {
+		return nil, nil, err
+	}
+	if notes != nil {
+		noteSupersededRules(notes, catalog)
+	}
+	return service.NewCheckService(loader, catalog, specs), service.NewReviewService(loader, catalog, byName, specs), nil
 }
 
 // checkWebAssets verifies dir is the web-assets directory (the viewer template plus the built
@@ -272,4 +304,3 @@ func themeNames() []string {
 	sort.Strings(names)
 	return names
 }
-

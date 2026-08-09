@@ -7,10 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/service"
 )
 
 const overlayProfileYAML = `
@@ -55,37 +53,31 @@ func writeFile(t *testing.T, name, body string) string {
 	return path
 }
 
-// servedRuleNames lists the rule names the served CheckService advertises, composed the way serve's
-// startup composes them. That is what the web check panel and ListRules populate from.
+// servedRuleNames lists the rule names the served CheckService advertises, built through the same
+// serveRuleServices call serve's startup makes. That is what the web check panel and ListRules
+// populate from.
 //
-// It deliberately skips naming.ApplyLexicon, which serve also does: the lexicon is a process global
-// and already reached both surfaces before this change, so installing it here would leak across tests
-// while testing nothing this file is about.
+// Going through serveRuleServices rather than composing a catalog here is deliberate: an earlier
+// version of this helper built its own catalog and handed it to NewCheckService, which meant a
+// mutation replacing serve's catalog with a bare DefaultCatalog survived every test in this file.
+//
+// It skips naming.ApplyLexicon, which serve also does at startup: the lexicon is a process global,
+// and installing it here would leak one test's vocabulary into the next while testing nothing this
+// file is about.
 func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath string) []string {
 	t.Helper()
-	overlay, err := loadOverlayProfiles(profileDir)
-	if err != nil {
-		t.Fatalf("loadOverlayProfiles: %v", err)
-	}
-	var extra []check.RuleSource
+	var cfg naming.Config
 	if conventionsPath != "" {
-		cfg, err := naming.Load(conventionsPath)
+		loaded, err := naming.Load(conventionsPath)
 		if err != nil {
 			t.Fatalf("naming.Load: %v", err)
 		}
-		if len(cfg.Rules) > 0 {
-			src, err := naming.Source(cfg)
-			if err != nil {
-				t.Fatalf("naming.Source: %v", err)
-			}
-			extra = append(extra, src)
-		}
+		cfg = loaded
 	}
-	catalog, _, err := composeReviewInputsFrom(overlay, intentPath, extra...)
+	svc, _, err := serveRuleServices(nil, nil, profileDir, intentPath, cfg, nil)
 	if err != nil {
-		t.Fatalf("composeReviewInputsFrom: %v", err)
+		t.Fatalf("serveRuleServices: %v", err)
 	}
-	svc := service.NewCheckService(nil, catalog, nil)
 	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{})
 	if err != nil {
 		t.Fatalf("ListRules: %v", err)
@@ -152,6 +144,50 @@ func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 	} {
 		if !slicesContains(names, want) {
 			t.Errorf("composing all three overlay flags dropped %q; got %d rules: %v", want, len(names), names)
+		}
+	}
+}
+
+// The REVIEW half of the same guarantee, end to end through the served ReviewService.
+//
+// The check-surface tests above all read ListRules, so they cannot see a catalog that reached one
+// service and not the other: mutation testing confirmed that starving only the ReviewService survived
+// every one of them. This runs an actual review through the service serve hands to RunReview, over the
+// same fixtures as the CLI-side TestReviewOverlayTiersCoexist, and asserts all three overlay tiers
+// arrive. Both fixtures are authored to FAIL rather than pass, because a pass is also what a vanished
+// tier would produce on a design with nothing wrong.
+func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
+	cfg, err := naming.Load("testdata/review/conventions.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, reviewSvc, err := serveRuleServices(&localLoader{loader: newLoader()}, nil,
+		"testdata/review/profiles", "testdata/review/intent.yaml", cfg, nil)
+	if err != nil {
+		t.Fatalf("serveRuleServices: %v", err)
+	}
+	resp, err := reviewSvc.RunReview(context.Background(), &webapi.RunReviewRequest{
+		ManifestPath: "testdata/review/conv.yaml",
+		DesignPath:   []string{"testdata/review/conv-demo.edn"},
+	})
+	if err != nil {
+		t.Fatalf("RunReview: %v", err)
+	}
+	outcomes := map[string]string{}
+	for _, report := range resp.GetReports() {
+		for _, area := range report.GetAreas() {
+			for _, item := range area.GetItems() {
+				outcomes[item.GetId()] = item.GetOutcome()
+			}
+		}
+	}
+	for id, tier := range map[string]string{
+		"16": "the convention's own rule",
+		"70": "--intent-path",
+		"71": "--profile-path",
+	} {
+		if outcomes[id] != "fail" {
+			t.Errorf("served review lost %s: item %s read %q, want fail (outcomes: %v)", tier, id, outcomes[id], outcomes)
 		}
 	}
 }
