@@ -1,0 +1,17 @@
+(edif STRAP (edifVersion 2 0 0) (edifLevel 0) (keywordMap (keywordLevel 0))
+  (library LIB (edifLevel 0) (technology (numberDefinition))
+    (cell MCU (cellType generic) (view V (viewType NETLIST) (interface (port 1 (direction INPUT)) (port 2 (direction INPUT)) (port 3 (direction INPUT)))))
+    (cell RES (cellType generic) (view V (viewType NETLIST) (interface (port 1 (direction INOUT)) (port 2 (direction INOUT))))))
+  (design D (cellRef TOP (libraryRef WORK)))
+  (library WORK (edifLevel 0) (technology (numberDefinition))
+    (cell TOP (cellType generic)
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU (libraryRef LIB))) (designator "U1"))
+          ; BOOT_MODE0 is strapped high through a 100R resistor: the right DIRECTION, too strong a pull.
+          (instance R1 (viewRef V (cellRef RES (libraryRef LIB))) (designator "R1") (property Value (string "100R")))
+          ; BOOT_MODE1 is strapped high through 10k: inside any sensible band.
+          (instance R2 (viewRef V (cellRef RES (libraryRef LIB))) (designator "R2") (property Value (string "10k")))
+          (net 3V3 (joined (portRef 1 (instanceRef R1)) (portRef 1 (instanceRef R2))))
+          (net BOOT_MODE0 (joined (portRef 1 (instanceRef U1)) (portRef 2 (instanceRef R1))))
+          (net BOOT_MODE1 (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef R2)))))))))

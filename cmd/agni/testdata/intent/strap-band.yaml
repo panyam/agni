@@ -1,0 +1,6 @@
+# A strap band declared per-net, in ohms. There is no built-in band: the person declaring the strap
+# is the one holding the part's datasheet.
+name: strap band demo
+net_properties:
+  - {net: BOOT_MODE0, property: strap, value: high, min_ohms: 1000, max_ohms: 100000}
+  - {net: BOOT_MODE1, property: strap, value: high, min_ohms: 1000, max_ohms: 100000}
