@@ -42,6 +42,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`rail(net)`](rail/) | the net is a power or ground rail |
 | [`ref_des_collision(ref_des)`](ref_des_collision/) | a reference designator used by more than one part (reader integrity diagnostic) |
 | [`types_power_out(present)`](types_power_out/) | one row when the source format classifies power-output pins (EDIF/IPC do not, so a driver-absence check is unsound there) |
+| [`unresolved_symbol(ref_des, symref)`](unresolved_symbol/) | a placement whose symbol did not resolve, so it carries no pins (WS1-052) |
 
 ## board
 

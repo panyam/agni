@@ -225,6 +225,10 @@ func (m *irModel) RefDesCollisions() []*ir.RefDesCollision {
 	return m.d.GetInputDiagnostics().GetRefDesCollisions()
 }
 
+func (m *irModel) UnresolvedSymbols() []*ir.UnresolvedSymbol {
+	return m.d.GetInputDiagnostics().GetUnresolvedSymbols()
+}
+
 func (m *irModel) UnmodeledBuses() []*ir.BusNotModeled {
 	return m.d.GetInputDiagnostics().GetUnmodeledBuses()
 }

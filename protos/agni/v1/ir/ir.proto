@@ -134,6 +134,33 @@ message InputDiagnostics {
   // coverage. Format-neutral: every schematic reader populates it, so the read-health signal is
   // uniform across formats.
   repeated BusNotModeled unmodeled_buses = 4;
+  // A symbol reference the reader could NOT resolve (WS1-052): an xschem/gEDA `.sym` file or a
+  // KiCad external `.kicad_sym` library that failed to open or parse. The parse of the SCHEMATIC
+  // succeeds, so there is no error to raise, but every placement of that symbol loses its pins --
+  // and a component with no pins has no connections, so the design reads as valid and emptier than
+  // it is. Silence would be indistinguishable from a design that genuinely has none.
+  //
+  // The reader ALREADY knew this: the unresolved count gates dangling-endpoint emission (WS1-013),
+  // because missing pins turn real wire ends into phantom dangles. Until now that knowledge made
+  // the read quieter and was then discarded. Recording it is what lets the pin-dependent rules
+  // report inconclusive instead of passing over a netlist that is missing connections.
+  repeated UnresolvedSymbol unresolved_symbols = 5;
+}
+
+// UnresolvedSymbol is one symbol reference that failed to resolve, with every placement it cost
+// pins. Keyed per REFERENCE rather than per placement: one missing library file affects every part
+// drawn with it, and a finding per part would bury that single cause under N identical messages.
+//
+// symref is the reference exactly as the source spelled it (`res.sym`, `devices/res.sym`, a KiCad
+// `Library:Symbol` lib_id), so the message can be pasted into a --symbol-path search. kind names
+// the construct ("xschem_sym", "geda_sym", "kicad_sym_lib") so a reader-neutral consumer can still
+// say what kind of thing is missing. ref_des lists the placements that lost pins, which is the
+// blast radius and the join key for the unresolved_symbol query relation.
+message UnresolvedSymbol {
+  string symref = 1;
+  string kind = 2;
+  repeated string ref_des = 3;
+  Provenance prov = 4;
 }
 
 // BusNotModeled is one bus construct a reader detected but has not expanded into member nets

@@ -61,6 +61,7 @@ var rules = []*check.Rule{
 	ledPolarity,
 	pinNetConflict,
 	busNotModeled,
+	symbolUnresolved,
 }
 
 // specs maps each Go-eval'd rule to its declarative twin: the same rule body as a check.Spec value

@@ -51,6 +51,13 @@ type Model interface {
 	// (WS1-034). Empty for sources with no bus, or once Phase 2 models them; the bus-not-modeled
 	// integrity rule reports each so a bussed design is flagged, not silently mis-read.
 	UnmodeledBuses() []*ir.BusNotModeled
+	// UnresolvedSymbols are symbol references the reader could not open or parse (WS1-052), each
+	// with the placements that lost their pins. Non-empty means the netlist is INCOMPLETE by an
+	// unknown amount: those parts have no pins, so they have no connections, and a rule reading
+	// connectivity cannot tell that from a design where the connections were never drawn. Rules
+	// that read pin or connectivity facts are gated to inconclusive while this is non-empty
+	// (check.Run), so the gap reports rather than passing.
+	UnresolvedSymbols() []*ir.UnresolvedSymbol
 	// traverse / pin-role: a pin's electrical direction, or the unspecified zero value when the
 	// source carries no part-type pin data (so direction-based rules do not fire).
 	PinDir(refDes, pin string) ir.PinDirection

@@ -113,6 +113,10 @@ const (
 	// so ad-hoc bus search is expressible in datalog; label is the bus name (empty for an anonymous
 	// wire), kind the source construct (bus, bus_entry, geda_bus, edif_array, xschem_bus_label, ...).
 	RelBus = "bus" // doc: facts/docs/bus.md
+	// RelUnresolvedSymbol is keyed by ref_des, NOT by the symbol reference, so it joins straight to
+	// the components that lost pins (WS1-052). One row per affected placement, so a query can ask
+	// what KIND of parts a missing library cost — the blast radius, not just the file name.
+	RelUnresolvedSymbol = "unresolved_symbol" // doc: facts/docs/unresolved_symbol.md
 
 	// Reader-diagnostic relations (WS3-081): the ENTITY-KEYED input diagnostics promoted to query
 	// relations so they join to components/pins/nets (collisions on a ref-des prefix, the nets a
@@ -200,6 +204,7 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, netGroundFacts(m)...)
 	out = append(out, netExternalFacts(m)...)
 	out = append(out, busFacts(m)...)
+	out = append(out, unresolvedSymbolFacts(m)...)
 	out = append(out, refDesCollisionFacts(m)...)
 	out = append(out, pinNetConflictFacts(m)...)
 	out = append(out, netBusLikeFacts(m)...)
@@ -675,6 +680,21 @@ func busFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, b := range m.UnmodeledBuses() {
 		out = append(out, query.FactRow{Relation: RelBus, Subject: b.GetLabel(), Value: b.GetKind(), Cite: irCite(b.GetProv())})
+	}
+	return out
+}
+
+// unresolvedSymbolFacts emits unresolved_symbol(ref_des, symref) once per PLACEMENT that lost its
+// pins (WS1-052). Keyed by ref_des rather than by the reference, because a ref_des is what every
+// other netlist relation joins on: `unresolved_symbol(?r, ?sym), component.class(?r, "fpga")` asks
+// whether anything IMPORTANT lost its pins, which the file name alone cannot answer. A design whose
+// symbols all resolved emits nothing.
+func unresolvedSymbolFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, u := range m.UnresolvedSymbols() {
+		for _, ref := range u.GetRefDes() {
+			out = append(out, query.FactRow{Relation: RelUnresolvedSymbol, Subject: ref, Value: u.GetSymref(), Cite: irCite(u.GetProv())})
+		}
 	}
 	return out
 }

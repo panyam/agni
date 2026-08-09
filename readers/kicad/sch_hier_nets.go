@@ -69,7 +69,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 
 	var collisions []*ir.RefDesCollision
 	d.Components, collisions = w.comps.components()
-	w.libs.resolveExternal(d.Components, w.syms, rootName)
+	unresolvedSyms := w.libs.resolveExternal(d.Components, w.syms, rootName)
 	d.Libraries = w.libs.libraries()
 
 	built, dangles, _, pointNets := netgraph.BuildWithPoints(w.in.wires, w.in.anchors, w.in.pins, w.in.terminals)
@@ -86,6 +86,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		RefDesCollisions:    collisions,
 		NoJunctionEndpoints: w.in.noJunction,
 		UnmodeledBuses:      w.buses,
+		UnresolvedSymbols:   unresolvedSyms,
 	}
 	return d, w.complete, nil
 }
@@ -101,8 +102,8 @@ type hierNetWalker struct {
 	comps    *compAccum
 	syms     *symLibCache
 	in       netInputs
-	srcs     []string              // per-instance source file, indexed by the instance's offset band
-	buses    []*ir.BusNotModeled   // bus constructs detected across sheets (WS1-034)
+	srcs     []string            // per-instance source file, indexed by the instance's offset band
+	buses    []*ir.BusNotModeled // bus constructs detected across sheets (WS1-034)
 	complete bool
 	open     func(relPath string) ([]byte, error)
 }

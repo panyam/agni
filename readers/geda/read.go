@@ -278,8 +278,11 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 		// dangles. One unresolved placement suppresses the whole design's dangles. gEDA's
 		// netgraph grid is native (round only), so it IS the geometry frame — no unquant,
 		// unlike xschem. No per-wire id, so location is the subject.
-		if unresolved == 0 {
-			d.InputDiagnostics = &ir.InputDiagnostics{DanglingEndpoints: netgraph.IRDangles(dangles, src, "")}
+		// Recorded regardless (WS1-052): the dangle suppression below is exactly what makes an
+		// unresolved symbol invisible, so the cause has to be emitted alongside the silence.
+		d.InputDiagnostics = &ir.InputDiagnostics{UnresolvedSymbols: irUnresolved(unresolved, src)}
+		if len(unresolved) == 0 {
+			d.InputDiagnostics.DanglingEndpoints = netgraph.IRDangles(dangles, src, "")
 		}
 	} else {
 		// Without a symbol library the power taps and net= taps cannot be placed, but their net
@@ -392,4 +395,20 @@ func netFromNetAttr(v string) string {
 		return v[:i]
 	}
 	return v
+}
+
+// irUnresolved turns the resolver's unresolved references into IR diagnostics, stamping the
+// construct kind and source file the resolver does not know. Returns nil for an empty set so a
+// clean read carries no empty slice.
+func irUnresolved(us []symread.Unresolved, src string) []*ir.UnresolvedSymbol {
+	var out []*ir.UnresolvedSymbol
+	for _, u := range us {
+		out = append(out, &ir.UnresolvedSymbol{
+			Symref: u.Symref,
+			Kind:   "geda_sym",
+			RefDes: u.RefDes,
+			Prov:   &ir.Provenance{SourceFile: src},
+		})
+	}
+	return out
 }

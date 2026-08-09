@@ -56,10 +56,11 @@ type Placement struct {
 // load reports whether the symbol RESOLVED (its file opened and parsed) alongside its
 // pins: a symbol that resolves with zero pins is fine (a graphic-only part), but one that
 // fails to resolve drops every pin it should have contributed, which turns each wire end
-// meant to land on those pins into a phantom dangling endpoint (WS1-013). unresolved
-// counts the placements whose symbol did not resolve, so the caller can gate dangling
-// emission: a design with any unresolved placement cannot trust its dangle set.
-func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant func(x, y float64) netgraph.Point) (out []netgraph.Pin, unresolved int) {
+// meant to land on those pins into a phantom dangling endpoint (WS1-013). unresolved lists
+// each reference that did not resolve with the placements it cost pins, so the caller can
+// gate dangling emission (a design with any unresolved placement cannot trust its dangle
+// set) AND report the gap (WS1-052) rather than only going quieter because of it.
+func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant func(x, y float64) netgraph.Point) (out []netgraph.Pin, unresolved []Unresolved) {
 	type entry struct {
 		pins []Pin
 		ok   bool
@@ -74,11 +75,18 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 		cache[symref] = e
 		return e
 	}
+	// Order of first appearance, so the report is stable across runs without a sort that would
+	// scramble the source's own ordering.
+	var missing []string
+	byRef := map[string][]string{}
 
 	for _, pl := range pls {
 		e := resolve(pl.Symref)
 		if !e.ok {
-			unresolved++
+			if _, seen := byRef[pl.Symref]; !seen {
+				missing = append(missing, pl.Symref)
+			}
+			byRef[pl.Symref] = append(byRef[pl.Symref], pl.Ref)
 		}
 		if len(pl.Part.Pins) == 0 {
 			for _, sp := range e.pins {
@@ -90,7 +98,19 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 			out = append(out, netgraph.Pin{At: quant(ax, ay), Comp: pl.Ref, Pin: pl.pinNumber(sp)})
 		}
 	}
+	for _, symref := range missing {
+		unresolved = append(unresolved, Unresolved{Symref: symref, RefDes: byRef[symref]})
+	}
 	return out, unresolved
+}
+
+// Unresolved is one symbol reference that failed to load, with every placement that lost its pins.
+// Grouped per reference rather than per placement because one missing file is one cause, however
+// many parts are drawn with it. The reader turns this into ir.UnresolvedSymbol, stamping the kind
+// and provenance it alone knows.
+type Unresolved struct {
+	Symref string
+	RefDes []string
 }
 
 // pinNumber returns the physical pin number for a drawn symbol pin under this placement:

@@ -57,14 +57,14 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 	comps.collect(root, src, "")
 	var collisions []*ir.RefDesCollision
 	d.Components, collisions = comps.components()
-	libs.resolveExternal(d.Components, syms, src)
+	unresolvedSyms := libs.resolveExternal(d.Components, syms, src)
 	d.Libraries = libs.libraries()
 
 	// Nets are computed from the schematic geometry (wires + pins + labels); see sch_nets.go.
 	// The same geometry pass surfaces dangling wire endpoints (connections drawn but not completed).
 	nets, dangles, noJunction := schNets(root, src, syms)
 	d.Nets = nets
-	d.InputDiagnostics = &ir.InputDiagnostics{DanglingEndpoints: dangles, RefDesCollisions: collisions, NoJunctionEndpoints: noJunction, UnmodeledBuses: collectBuses(root, src, nil)}
+	d.InputDiagnostics = &ir.InputDiagnostics{DanglingEndpoints: dangles, RefDesCollisions: collisions, NoJunctionEndpoints: noJunction, UnmodeledBuses: collectBuses(root, src, nil), UnresolvedSymbols: unresolvedSyms}
 
 	// Hierarchical sub-sheet references. Recorded so the hierarchy is visible; the sub-sheet
 	// files themselves are not recursively loaded here (needs multi-file I/O).
@@ -119,12 +119,19 @@ func (a *libAccum) collect(root *node, src string) {
 
 // resolveExternal adds part types for component sections whose PartRef is missing from
 // the embedded libraries, resolved through the external symbol cache (WS1-016). Embedded
-// parts always win; unresolved refs stay absent, which is today's behavior (direction-
-// based rules see no pins and stay quiet).
-func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src string) {
+// parts always win.
+//
+// A ref that resolves nowhere is REPORTED (WS1-052) rather than left absent: the part keeps its
+// section but gains no pins, and a component with no pins has no connections, so the design reads
+// clean and emptier than it is. Returned per lib_id with the placements that lost pins, in
+// first-appearance order. A nil cache (no opener supplied) reports nothing — that is the caller
+// deliberately reading without symbols, not a resolution failure.
+func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src string) []*ir.UnresolvedSymbol {
 	if syms == nil {
-		return
+		return nil
 	}
+	var missing []string
+	byRef := map[string][]string{}
 	for _, c := range comps {
 		for _, sec := range c.Sections {
 			if a.partSeen[sec.PartRef] {
@@ -132,6 +139,10 @@ func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src
 			}
 			sym := syms.symbol(sec.PartRef)
 			if sym == nil {
+				if _, seen := byRef[sec.PartRef]; !seen {
+					missing = append(missing, sec.PartRef)
+				}
+				byRef[sec.PartRef] = append(byRef[sec.PartRef], c.RefDes)
 				continue
 			}
 			a.partSeen[sec.PartRef] = true
@@ -151,6 +162,16 @@ func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src
 			lib.Parts = append(lib.Parts, pt)
 		}
 	}
+	var out []*ir.UnresolvedSymbol
+	for _, libID := range missing {
+		out = append(out, &ir.UnresolvedSymbol{
+			Symref: libID,
+			Kind:   "kicad_sym_lib",
+			RefDes: byRef[libID],
+			Prov:   &ir.Provenance{SourceFile: src},
+		})
+	}
+	return out
 }
 
 func (a *libAccum) libraries() []*ir.PartLibrary {
