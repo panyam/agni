@@ -8,8 +8,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// railNamed makes the far-side net actually read as a rail/ground by giving it the canonical name.
-func strapDesign(bits map[string]string) *ir.Design {
+// strapBitsDesign wires each named strap net to a rail (bias high), to ground (bias low), or to
+// nothing (unbiased: the pin sitting at the part's internal default, which the netlist cannot see).
+func strapBitsDesign(bits map[string]string) *ir.Design {
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}}}
 	rails := map[string]*ir.Net{}
 	i := 0
@@ -45,7 +46,7 @@ func groupFindings(t *testing.T, d *ir.Design, g StrapGroup) []check.Finding {
 // order, which is the declaration's job because nothing in a netlist says which pin is the high bit.
 func TestStrapGroupDecodesMSBFirst(t *testing.T) {
 	// PHYAD2=1, PHYAD1=0, PHYAD0=1 -> 0b101 = 5.
-	d := strapDesign(map[string]string{"PHYAD2": "+3V3", "PHYAD1": "GND", "PHYAD0": "+3V3"})
+	d := strapBitsDesign(map[string]string{"PHYAD2": "+3V3", "PHYAD1": "GND", "PHYAD0": "+3V3"})
 	g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 5}
 	if fs := groupFindings(t, d, g); len(fs) != 0 {
 		t.Errorf("a group encoding its declared value must be silent: %+v", fs)
@@ -74,7 +75,7 @@ func TestStrapGroupDecodesMSBFirst(t *testing.T) {
 // to the engine. The group must report inconclusive, naming the unread pins, rather than decoding the
 // missing bit as 0 and asserting an address.
 func TestStrapGroupPartialIsInconclusive(t *testing.T) {
-	d := strapDesign(map[string]string{"PHYAD2": "", "PHYAD1": "GND", "PHYAD0": "+3V3"})
+	d := strapBitsDesign(map[string]string{"PHYAD2": "", "PHYAD1": "GND", "PHYAD0": "+3V3"})
 	g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1}
 	fs := groupFindings(t, d, g)
 	if len(fs) != 1 {
@@ -97,7 +98,7 @@ func TestStrapGroupPartialIsInconclusive(t *testing.T) {
 // netlist lacks, so a normally-built board (resistors only on the non-default bits) decodes and is
 // checked properly instead of reading inconclusive forever.
 func TestStrapGroupDefaultResolvesPartial(t *testing.T) {
-	d := strapDesign(map[string]string{"PHYAD2": "", "PHYAD1": "", "PHYAD0": "+3V3"})
+	d := strapBitsDesign(map[string]string{"PHYAD2": "", "PHYAD1": "", "PHYAD0": "+3V3"})
 	g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1, Default: "low"}
 	if fs := groupFindings(t, d, g); len(fs) != 0 {
 		t.Errorf("default low + only PHYAD0 pulled high is 0b001 = 1, the declared value: %+v", fs)
@@ -116,7 +117,7 @@ func TestStrapGroupDefaultResolvesPartial(t *testing.T) {
 // TestStrapGroupSilentWhenNetAbsent: a declared net the design does not have is the presence forms'
 // business. Reporting it here would double-report and would guess at a group that is not there.
 func TestStrapGroupSilentWhenNetAbsent(t *testing.T) {
-	d := strapDesign(map[string]string{"PHYAD1": "GND", "PHYAD0": "+3V3"})
+	d := strapBitsDesign(map[string]string{"PHYAD1": "GND", "PHYAD0": "+3V3"})
 	g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1}
 	if fs := groupFindings(t, d, g); len(fs) != 0 {
 		t.Errorf("a group whose net is absent from the design must be silent here: %+v", fs)
@@ -126,7 +127,7 @@ func TestStrapGroupSilentWhenNetAbsent(t *testing.T) {
 // TestStrapCollisionFires: the check with the real value. Both devices are individually correct and
 // the clash is only visible across them.
 func TestStrapCollisionFires(t *testing.T) {
-	d := strapDesign(map[string]string{
+	d := strapBitsDesign(map[string]string{
 		"A2": "GND", "A1": "GND", "A0": "+3V3", // U12 -> 1
 		"B2": "GND", "B1": "GND", "B0": "+3V3", // U13 -> 1, the same address
 	})
@@ -148,7 +149,7 @@ func TestStrapCollisionFires(t *testing.T) {
 // TestStrapCollisionScopedByBus: two devices at the same address on DIFFERENT buses do not clash, and
 // a group with no declared bus opts out entirely.
 func TestStrapCollisionScopedByBus(t *testing.T) {
-	d := strapDesign(map[string]string{
+	d := strapBitsDesign(map[string]string{
 		"A2": "GND", "A1": "GND", "A0": "+3V3",
 		"B2": "GND", "B1": "GND", "B0": "+3V3",
 	})
@@ -174,7 +175,7 @@ func TestStrapCollisionScopedByBus(t *testing.T) {
 func TestStrapCollisionExcludesUndecidable(t *testing.T) {
 	// U13's high bit carries no resistor and its group declares no default, so its value is unknown.
 	// Assuming that bit is 0 would decode it to 1 and collide with U12.
-	d := strapDesign(map[string]string{
+	d := strapBitsDesign(map[string]string{
 		"A2": "GND", "A1": "GND", "A0": "+3V3", // U12 -> 1
 		"B2": "", "B1": "GND", "B0": "+3V3", // U13 -> unknown (would be 1 if B2 were assumed 0)
 	})
