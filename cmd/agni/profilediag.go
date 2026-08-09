@@ -3,9 +3,26 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/stdlib/profiles"
 )
+
+// noteSupersededRules reports which catalog rules an overlay source replaced (WS3-056). Supersession
+// is what stops an overlay from double-reporting an interface it re-binds, but it works by REMOVING
+// rules, and a removed rule produces no output at all. Left silent, a report whose core profile rules
+// were dropped is indistinguishable from one where they ran and found nothing, which is the reading
+// this project treats as the expensive kind of wrong. Saying so costs one line.
+//
+// It writes to stderr and never fails the command, for the same reason warnOverBroadProfiles does not:
+// this describes how the run was CONFIGURED, not something found on the board, so it must stay out of
+// the findings stream that --format json and --results-out serialize.
+func noteSupersededRules(w io.Writer, c *check.Catalog) {
+	for _, s := range c.Superseded() {
+		fmt.Fprintf(w, "note: %s supersedes %d rule(s): %s\n", s.By, len(s.Rules), strings.Join(s.Rules, ", "))
+	}
+}
 
 // warnOverBroadProfiles reports overlay profiles whose signal matchers claim an implausible share of
 // this design's nets, or whose own roles collide on a net (WS3-101). It is the surface where a

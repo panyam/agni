@@ -22,5 +22,5 @@ func init() {
 	for _, p := range Profiles {
 		rules = append(rules, Compile(p)...)
 	}
-	check.RegisterSource(check.NewSource("profile", rules))
+	check.RegisterSource(check.NewSource(BuiltinSourceName, rules))
 }

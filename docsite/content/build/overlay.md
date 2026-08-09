@@ -104,6 +104,38 @@ CLI and serve run your rules alongside its own.
 A registered rule is a Go rule. It does not join the built-in Spec-twin regression suite, which is
 the engine catalog's own concern. Authoring a rule in a DSL instead of Go is future work.
 
+## Replace built-in rules instead of adding to them
+
+A source normally ADDS to the catalog. A source that implements `check.SupersedingSource` instead
+REPLACES the rules it names:
+
+```go
+check.NewSupersedingSource("myco", rules,
+    check.Facets{Names: []string{"decoupling-missing"}})
+```
+
+Each `Facets` selects what to drop, using the same grammar `Filter` uses for selection. `Names`
+replaces individual rules, and `Tags` replaces a family. A source's declaration never applies to its
+own rules, so a replacement cannot delete itself.
+
+Interface profiles do this for you. An overlay profile that carries a built-in's name supersedes that
+built-in's rules, which is what a naming map is for: re-binding `SPI_NOR` to your own net-name
+suffixes replaces the engine's reading of that interface rather than running beside it.
+
+That matters more than it sounds. Running both is not merely noisy, it invents failures. A naming map
+that re-binds some roles and leaves others at the engine's naming lets the built-in profile still
+anchor and still clear its in-use gate, so it reports each re-bound role as a missing signal while
+your profile reads the same board clean. The effect is invisible when you re-bind the anchor role,
+because the built-in profile then has nothing to anchor on, so a convention CLOSER to the engine's
+produced more spurious failures than one further from it.
+
+Because supersession works by removing rules, the CLI prints a `note:` to stderr naming what was
+dropped and which source dropped it. A rule that was taken away produces no output, and without the
+note a report whose rules were removed looks exactly like one where they ran and found nothing.
+
+If you need to drop rules without owning a source, `Catalog.Without(Facets)` is the same exclusion as
+a standalone operation.
+
 ## Compose in main
 
 Blank-import the reader and rule packages so their `init` runs, then use the engine library:

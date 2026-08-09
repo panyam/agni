@@ -268,6 +268,7 @@ func checkCmd() *cobra.Command {
 			}
 			if len(extra) > 0 {
 				catalog = check.CatalogWith(extra...)
+				noteSupersededRules(cmd.ErrOrStderr(), catalog)
 			}
 			// Resolve the --rule/--tag facets to rule NAMES against the catalog the RUN will use, which is
 			// the service's catalog plus the convention the request carries. CheckDesign / GetCheckReport
@@ -445,6 +446,7 @@ func reviewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			noteSupersededRules(cmd.ErrOrStderr(), catalog)
 			// Reading the convention file is the CLI's job; the service takes the value.
 			overlay := &webapi.OverlayConfig{}
 			if conventions != "" {
@@ -591,6 +593,22 @@ func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string) (*ch
 	}
 	if len(overlay) > 0 {
 		sources = append(sources, profiles.Source("profile-overlay", overlay))
+		// An overlay profile REPLACES the same-named built-in here, tracking the catalog, whose overlay
+		// source supersedes that built-in's rules (WS3-056). This map is the review's absence gate:
+		// reviewClosures reports an interface as evaluating if ANY profile under its name is in use, and
+		// unions every one of their nets for scoping. Keeping the built-in here while the catalog drops it
+		// would let the gate clear on a profile whose rules are no longer in the run, and an item scoped by
+		// it would score a clean pass on an interface nothing checked. That is the WS3-090 twin
+		// disagreement, which is silent by construction.
+		//
+		// Cleared in a separate pass before any overlay profile is added. Clearing and appending in one
+		// pass would make a later profile wipe an earlier one of the same name. That specific input is
+		// rejected upstream (identical rule names fail catalog composition), so the two-pass form is not
+		// load-bearing today, but it costs nothing and the one-pass form is wrong for a reason unrelated
+		// to why it currently cannot happen.
+		for _, p := range overlay {
+			delete(byName, p.Name)
+		}
 		for _, p := range overlay {
 			byName[p.Name] = append(byName[p.Name], p)
 		}

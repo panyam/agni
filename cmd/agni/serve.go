@@ -109,7 +109,9 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(service.NewCheckService(loader, serveCheckCatalog(overlayProfiles), specs)))
+			checkCatalog := serveCheckCatalog(overlayProfiles)
+			noteSupersededRules(cmd.ErrOrStderr(), checkCatalog)
+			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(service.NewCheckService(loader, checkCatalog, specs)))
 			mux.Handle(ckPath, ckHandler)
 			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader)))
 			mux.Handle(diffPath, diffHandler)

@@ -1,0 +1,16 @@
+(edif HOUSESPI
+  (edifVersion 2 0 0)
+  (design HOUSESPI (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef FLASH)) (designator "U2"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net FLASH_CS (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef U2)) (portRef 1 (instanceRef R1))))
+          (net FLASH_SCLK (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef U2))))
+          (net FLASH_DQ0 (joined (portRef 3 (instanceRef U1)) (portRef 3 (instanceRef U2))))
+          (net FLASH_DQ1 (joined (portRef 4 (instanceRef U1)) (portRef 4 (instanceRef U2))))
+          (net FLASH_DQ2 (joined (portRef 5 (instanceRef U1)) (portRef 5 (instanceRef U2))))
+          (net FLASH_DQ3 (joined (portRef 6 (instanceRef U1)) (portRef 6 (instanceRef U2)))))))))
