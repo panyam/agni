@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -33,6 +34,94 @@ type Loader struct {
 	// package global is what lets two designs be read with different project conventions in one
 	// process, which a served request needs and a mutable global cannot give.
 	Lexicon *classify.Lexicon
+	// FS, when non-nil, is what every read in this package resolves against, so a host with no
+	// filesystem — a WASM build, an embedder holding designs in memory, a test — reads through the
+	// same registry, the same extension dispatch, and the same post-read stamps as an on-disk read
+	// (WS1-049). Nil means the host filesystem, so an os-backed caller is unaffected and its paths
+	// keep their host form.
+	//
+	// A non-nil FS makes every path an fs.ValidPath name: slash-separated, unrooted, no "..". That
+	// applies to the SymbolPaths entries and to the sibling references the multi-file formats
+	// resolve (a KiCad sub-sheet's Sheetfile, a .kicad_sym library, an xschem/gEDA .sym), because
+	// those are joined against the design's own directory in this same name space.
+	//
+	// It carries an fs.FS rather than a bytes entry point because bytes cannot express the
+	// multi-file formats at all: a KiCad hierarchy is a root plus its sub-sheets plus its symbol
+	// libraries, and the readers reach them through opener closures this loader supplies. One FS
+	// covers os, in-memory, embedded, and archive hosts with no second dispatch table.
+	FS fs.FS
+}
+
+// Open reads one file in this loader's name space: from FS when it carries one, else from the host
+// filesystem. A registered reader MUST reach its bytes through this (or ReadFile) rather than
+// calling os directly, or it works on a server and fails in every host that has no filesystem —
+// that is the whole contract the FS field buys. It is exported for exactly that reason: the
+// registry is a public extension point (see Register), so an out-of-module reader in the overlay
+// needs the same door the built-in readers use.
+//
+// *os.File already satisfies fs.File, so the host branch needs no wrapper and a caller that sniffs
+// a header keeps the io.Reader it peeks at. The returned file is the caller's to Close.
+func (l *Loader) Open(name string) (fs.File, error) {
+	if l == nil || l.FS == nil {
+		return os.Open(name)
+	}
+	return l.FS.Open(name)
+}
+
+// ReadFile is Open plus a full read, for the readers that want bytes rather than a stream: anything
+// parsed twice, and the multi-file walks that hand whole sub-files to a parser.
+func (l *Loader) ReadFile(name string) ([]byte, error) {
+	if l == nil || l.FS == nil {
+		return os.ReadFile(name)
+	}
+	return fs.ReadFile(l.FS, name)
+}
+
+// Sibling resolves a reference made RELATIVE to a design file (a sub-sheet's Sheetfile, a symbol
+// library, a companion sidecar) into a name Open and ReadFile accept. Readers must build sibling
+// names with this rather than path/filepath directly, because the separator rules differ by host:
+// an fs.FS name space is always slash-separated, and the host filesystem uses the platform's. The
+// difference is invisible on unix, where the two agree, and breaks every sibling lookup on Windows.
+func (l *Loader) Sibling(name, rel string) string {
+	return l.join(l.dir(name), rel)
+}
+
+// dir and join split a path in this loader's name space. Under an FS that is always slash
+// separated (path), and on the host filesystem it is the platform's (filepath) — the same
+// distinction fs.FS itself draws, hoisted to one place so no call site has to remember it. Getting
+// this wrong is invisible on unix, where the two agree, and breaks every sibling lookup on Windows.
+func (l *Loader) dir(name string) string {
+	if l == nil || l.FS == nil {
+		return filepath.Dir(name)
+	}
+	return path.Dir(name)
+}
+
+func (l *Loader) join(elem ...string) string {
+	if l == nil || l.FS == nil {
+		return filepath.Join(elem...)
+	}
+	return path.Join(elem...)
+}
+
+// base takes the final element of a path in this loader's name space. A symbol reference is read
+// out of a schematic FILE, so it may be spelled with either separator regardless of the host;
+// ToSlash normalizes that before the FS name space sees it.
+func (l *Loader) base(name string) string {
+	if l == nil || l.FS == nil {
+		return filepath.Base(name)
+	}
+	return path.Base(filepath.ToSlash(name))
+}
+
+// walkDir walks a directory subtree in this loader's name space. Under an FS a root of "." is the
+// whole tree; on the host filesystem it is the given directory. A missing or unreadable root is
+// skipped by the caller's walk function, matching filepath.WalkDir's error-in, nil-out convention.
+func (l *Loader) walkDir(root string, fn fs.WalkDirFunc) error {
+	if l == nil || l.FS == nil {
+		return filepath.WalkDir(root, fn)
+	}
+	return fs.WalkDir(l.FS, root, fn)
 }
 
 // lexicon is the naming vocabulary this loader stamps with. A nil *Loader is a supported caller
@@ -167,22 +256,22 @@ func (l *Loader) ConversionReport(path, symbols string, reg *graph.Registry) (*g
 // per opener (lazily) and reused; earlier dirs and shallower matches win. Passed to the
 // xschem/gEDA readers, which own no file I/O themselves (CONSTRAINTS C1).
 func (l *Loader) symbolOpener(schPath string) func(string) ([]byte, error) {
-	dirs := append([]string{filepath.Dir(schPath)}, l.SymbolPaths...)
+	dirs := append([]string{l.dir(schPath)}, l.SymbolPaths...)
 	var index map[string]string // basename -> full path; nil until the first recursive miss
 	return func(symref string) ([]byte, error) {
-		base := filepath.Base(symref)
+		base := l.base(symref)
 		for _, d := range dirs {
-			for _, cand := range []string{filepath.Join(d, symref), filepath.Join(d, base)} {
-				if data, err := os.ReadFile(cand); err == nil {
+			for _, cand := range []string{l.join(d, symref), l.join(d, base)} {
+				if data, err := l.ReadFile(cand); err == nil {
 					return data, nil
 				}
 			}
 		}
 		if index == nil {
-			index = indexSymFiles(dirs)
+			index = l.indexSymFiles(dirs)
 		}
 		if p, ok := index[base]; ok {
-			return os.ReadFile(p)
+			return l.ReadFile(p)
 		}
 		return nil, fmt.Errorf("symbol %q not found (searched %d dir(s) and their subtrees; pass --symbol-path)", symref, len(dirs))
 	}
@@ -193,15 +282,15 @@ func (l *Loader) symbolOpener(schPath string) func(string) ([]byte, error) {
 // then each --symbol-path). It only decides among SUBTREE matches: the direct search in
 // symbolOpener runs first, so a top-level file in an earlier dir always wins over any subdir
 // match. A missing or unreadable dir is skipped.
-func indexSymFiles(dirs []string) map[string]string {
+func (l *Loader) indexSymFiles(dirs []string) map[string]string {
 	m := map[string]string{}
 	for _, d := range dirs {
-		filepath.WalkDir(d, func(path string, e fs.DirEntry, err error) error {
-			if err != nil || e.IsDir() || !strings.HasSuffix(path, ".sym") {
+		l.walkDir(d, func(name string, e fs.DirEntry, err error) error {
+			if err != nil || e.IsDir() || !strings.HasSuffix(name, ".sym") {
 				return nil
 			}
-			if b := filepath.Base(path); m[b] == "" {
-				m[b] = path
+			if b := l.base(name); m[b] == "" {
+				m[b] = name
 			}
 			return nil
 		})
@@ -216,19 +305,19 @@ func indexSymFiles(dirs []string) map[string]string {
 // table entries naming installed-lib env vars (${KICAD9_SYMBOL_DIR}/...) and tableless
 // projects resolve. The readers own no file I/O (C1).
 func (l *Loader) kicadSymOpener(schPath string) func(lib string) ([]byte, error) {
-	dir := filepath.Dir(schPath)
+	dir := l.dir(schPath)
 	var table map[string]string
-	if data, err := os.ReadFile(filepath.Join(dir, "sym-lib-table")); err == nil {
+	if data, err := l.ReadFile(l.join(dir, "sym-lib-table")); err == nil {
 		table = kicad.ParseSymLibTable(data, dir)
 	}
 	return func(lib string) ([]byte, error) {
 		if uri, ok := table[lib]; ok && !strings.Contains(uri, "${") {
-			if data, err := os.ReadFile(uri); err == nil {
+			if data, err := l.ReadFile(uri); err == nil {
 				return data, nil
 			}
 		}
 		for _, d := range append([]string{dir}, l.SymbolPaths...) {
-			if data, err := os.ReadFile(filepath.Join(d, lib+".kicad_sym")); err == nil {
+			if data, err := l.ReadFile(l.join(d, lib+".kicad_sym")); err == nil {
 				return data, nil
 			}
 		}

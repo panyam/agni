@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -34,8 +33,8 @@ func init() {
 		// a dual-capability format (netlist + faithful geometry), like a .kicad_sch. Wiring the
 		// netlist reader makes .eds queryable/checkable/diffable (it renders either way).
 		Design: readEDIF,
-		Geometry: func(_ *Loader, path string) (*geom.SchematicGeometry, error) {
-			f, err := os.Open(path)
+		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
+			f, err := l.Open(path)
 			if err != nil {
 				return nil, err
 			}
@@ -47,7 +46,7 @@ func init() {
 		Ext:  ".kicad_sch",
 		Name: "kicad",
 		Design: func(l *Loader, path string) (*ir.Design, error) {
-			content, err := os.ReadFile(path)
+			content, err := l.ReadFile(path)
 			if err != nil {
 				return nil, err
 			}
@@ -56,7 +55,7 @@ func init() {
 			// completeness flag is deliberately dropped — a bare .kicad_sch may itself be
 			// one sheet of a larger design, so its external markings never resolve; only
 			// the .kicad_pro read is a completeness witness (WS1-017).
-			d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, sheetOpener(path), l.kicadSymOpener(path))
+			d, _, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, l.sheetOpener(path), l.kicadSymOpener(path))
 			return d, err
 		},
 		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
@@ -66,16 +65,16 @@ func init() {
 	Register(&Format{
 		Ext:  ".kicad_pcb",
 		Name: "kicad",
-		Design: func(_ *Loader, path string) (*ir.Design, error) {
-			f, err := os.Open(path)
+		Design: func(l *Loader, path string) (*ir.Design, error) {
+			f, err := l.Open(path)
 			if err != nil {
 				return nil, err
 			}
 			defer f.Close()
 			return kicad.Read(f, path)
 		},
-		Board: func(_ *Loader, path string) (*geom.BoardGeometry, error) {
-			f, err := os.Open(path)
+		Board: func(l *Loader, path string) (*geom.BoardGeometry, error) {
+			f, err := l.Open(path)
 			if err != nil {
 				return nil, err
 			}
@@ -105,34 +104,33 @@ func init() {
 func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 	stem := strings.TrimSuffix(proPath, filepath.Ext(proPath))
 	var schR, pcbR io.Reader
-	if f, err := os.Open(stem + ".kicad_sch"); err == nil {
+	if f, err := l.Open(stem + ".kicad_sch"); err == nil {
 		defer f.Close()
 		schR = f
 	}
-	if f, err := os.Open(stem + ".kicad_pcb"); err == nil {
+	if f, err := l.Open(stem + ".kicad_pcb"); err == nil {
 		defer f.Close()
 		pcbR = f
 	}
 	if schR == nil && pcbR == nil {
 		return nil, fmt.Errorf("kicad project %q: no sibling .kicad_sch or .kicad_pcb found", proPath)
 	}
-	d, err := kicad.ReadProjectWithSymbols(schR, pcbR, stem+".kicad_sch", stem+".kicad_pcb", sheetOpener(stem+".kicad_sch"), l.kicadSymOpener(stem+".kicad_sch"))
+	d, err := kicad.ReadProjectWithSymbols(schR, pcbR, stem+".kicad_sch", stem+".kicad_pcb", l.sheetOpener(stem+".kicad_sch"), l.kicadSymOpener(stem+".kicad_sch"))
 	if err != nil {
 		return nil, err
 	}
 	// Net-class membership lives only in the .kicad_pro (net_settings), not the sch/pcb the
 	// readers consume, so populate ir.Net.net_class here in the I/O layer (WS1-037, C1).
-	if pro, err := os.Open(proPath); err == nil {
-		kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(pro))
-		// The same net_settings block also declares, per class, the clearance / track width / via
-		// sizes its nets are SUPPOSED to route at (WS3-111). Membership without the definitions
-		// leaves the useful half on the table: the board tier already projects what a net's copper
-		// IS, and this is what the project said it should be. Re-seek rather than re-open — the
-		// decoder above consumed the reader.
-		if _, err := pro.Seek(0, io.SeekStart); err == nil {
-			kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(pro))
-		}
-		pro.Close()
+	//
+	// The same net_settings block also declares, per class, the clearance / track width / via
+	// sizes its nets are SUPPOSED to route at (WS3-111). Membership without the definitions
+	// leaves the useful half on the table: the board tier already projects what a net's copper
+	// IS, and this is what the project said it should be. Both passes decode the whole file, so
+	// each gets its own reader over one buffer — an fs.File is not required to be an io.Seeker
+	// (WS1-049), and two independent readers make the passes order-independent besides.
+	if data, err := l.ReadFile(proPath); err == nil {
+		kicad.AnnotateNetClasses(d, kicad.ParseNetClasses(bytes.NewReader(data)))
+		kicad.AnnotateNetClassDefs(d, kicad.ParseNetClassDefs(bytes.NewReader(data)))
 	}
 	return d, nil
 }
@@ -140,9 +138,8 @@ func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 // sheetOpener resolves a schematic's sub-sheet Sheetfile references against its own
 // directory — the same contract the geometry walk's opener (readKicadHierarchy) uses, so
 // netlist and geometry read the same tree.
-func sheetOpener(schPath string) func(relPath string) ([]byte, error) {
-	dir := filepath.Dir(schPath)
-	return func(relPath string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, relPath)) }
+func (l *Loader) sheetOpener(schPath string) func(relPath string) ([]byte, error) {
+	return func(relPath string) ([]byte, error) { return l.ReadFile(l.Sibling(schPath, relPath)) }
 }
 
 // readKicadProjectGeometry reads a project's faithful schematic: its sibling .kicad_sch
@@ -160,20 +157,18 @@ func readKicadProjectGeometry(l *Loader, proPath string) (*geom.SchematicGeometr
 // reads the root here and hands the kicad package an opener that resolves each child's
 // Sheetfile against the root's directory, so the reader owns no file I/O (C1).
 func readKicadHierarchy(l *Loader, schPath string) (*geom.SchematicGeometry, error) {
-	content, err := os.ReadFile(schPath)
+	content, err := l.ReadFile(schPath)
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Dir(schPath)
-	open := func(relPath string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, relPath)) }
-	return kicad.ReadSchematicHierarchyWithSymbols(schPath, content, open, l.kicadSymOpener(schPath))
+	return kicad.ReadSchematicHierarchyWithSymbols(schPath, content, l.sheetOpener(schPath), l.kicadSymOpener(schPath))
 }
 
 // readSchDesign nets a .sch, which is shared by xschem, gEDA gschem, and legacy KiCad.
 // Sniff the header: an xschem file opens with "v {xschem", a gEDA file with "v <version>
 // <flags>". Symbol artwork resolves through the Loader's --symbol-path opener.
 func readSchDesign(l *Loader, path string) (*ir.Design, error) {
-	f, err := os.Open(path)
+	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +188,7 @@ func readSchDesign(l *Loader, path string) (*ir.Design, error) {
 // readSchGeometry reads an xschem/gEDA schematic drawing, sniffing the dialect the same way
 // readSchDesign does and resolving symbol artwork through the same --symbol-path opener.
 func readSchGeometry(l *Loader, path string) (*geom.SchematicGeometry, error) {
-	f, err := os.Open(path)
+	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -214,8 +209,8 @@ func readSchGeometry(l *Loader, path string) (*geom.SchematicGeometry, error) {
 // before committing to that reader.
 // readEDIF reads an EDIF netlist into the IR. Shared by the .edn/.edf/.edif extensions, which
 // are all the same format under different conventional suffixes.
-func readEDIF(_ *Loader, path string) (*ir.Design, error) {
-	f, err := os.Open(path)
+func readEDIF(l *Loader, path string) (*ir.Design, error) {
+	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -223,8 +218,8 @@ func readEDIF(_ *Loader, path string) (*ir.Design, error) {
 	return edif.Read(f, path)
 }
 
-func readIPC2581(_ *Loader, path string) (*ir.Design, error) {
-	f, err := os.Open(path)
+func readIPC2581(l *Loader, path string) (*ir.Design, error) {
+	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -239,8 +234,8 @@ func readIPC2581(_ *Loader, path string) (*ir.Design, error) {
 
 // readIPC2581Board reads the board-geometry sidecar from an IPC-2581 file, sniffing the same
 // ambiguous .xml root as readIPC2581 before committing to the reader.
-func readIPC2581Board(_ *Loader, path string) (*geom.BoardGeometry, error) {
-	f, err := os.Open(path)
+func readIPC2581Board(l *Loader, path string) (*geom.BoardGeometry, error) {
+	f, err := l.Open(path)
 	if err != nil {
 		return nil, err
 	}
