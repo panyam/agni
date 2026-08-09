@@ -107,6 +107,23 @@ rule name is the handle you look it up by. The catalog is open, so your team can
 rules on top of the built-ins. [Naming conventions](../naming-conventions/) is the simplest
 form of that, configured without any code.
 
+Here is one, in full, so you know what to expect before you go looking. Every rule in the
+[rule catalog](../../reference/rules/) carries the same shape: what it checks, why it matters in the
+circuit, and — the part worth reading before you trust a green result — what its silence does and does
+not mean.
+
+<details>
+<summary><strong><code>cap-voltage</code></strong> — a capacitor's rating against the rail it sits on</summary>
+
+{{ includeCard "content/reference/rules/cap-voltage.md" }}
+
+</details>
+
+A rule that could not evaluate never reports a pass. It reports not-applicable, needs-data, or
+inconclusive, each naming what was missing. That distinction is the whole reason a clean report from
+this tool is worth something, and it is why the cards spend as much space on absence as on the check
+itself.
+
 ## Gate a build
 
 `--fail-on <severity>` exits non-zero when any finding sits at or above the threshold, so

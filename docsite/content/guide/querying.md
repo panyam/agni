@@ -31,6 +31,11 @@ The datasheet facts need a parameter set (`--params`), the board facts need a `.
 IPC-2581 board. Ask for a fact your design doesn't carry and you simply get no rows. The tool never
 makes one up.
 
+That table is the short form. Every relation also has a full card covering what it means for
+hardware, how the projection is built, and the cases where an empty result is *not* a clean answer.
+The ones this page leans on are inlined at the [bottom of this page](#reference-the-relations-used-here);
+the complete set is the [relation catalog](../../reference/relations/).
+
 ## Writing a query
 
 A query is a list of facts separated by commas, an optional filter, and an optional `=>` that picks
@@ -217,3 +222,56 @@ provenance rides behind each row's expand toggle instead of a trailing column.
 A query **reports**, it does not judge. It has no notion of pass/fail, that is what
 [checks](../checks-and-reports/) are for. If you find yourself running the same query to catch a
 recurring problem, that is a sign it should become a rule.
+
+## Reference: the relations used here
+
+These are the full cards for the relations the examples above use, inlined so you do not have to
+leave the page. They are the same text the [relation catalog](../../reference/relations/) serves, and
+they are generated from the relation definitions themselves, so they cannot drift from what the engine
+actually projects.
+
+**Read the "absence is not a pass" section on any relation you scope a question by.** An empty result
+means the fact is absent from your design, which is a different statement from "nothing matched", and
+the cards say which is which.
+
+<details>
+<summary><strong><code>net.max_voltage</code></strong> — a net's rail voltage</summary>
+
+{{ includeCard "content/reference/relations/net.max_voltage.md" }}
+
+</details>
+
+<details>
+<summary><strong><code>component.mpn</code></strong> — a part's manufacturer part number</summary>
+
+{{ includeCard "content/reference/relations/component.mpn.md" }}
+
+</details>
+
+<details>
+<summary><strong><code>component.class</code></strong> — a device class the part is in</summary>
+
+{{ includeCard "content/reference/relations/component.class.md" }}
+
+</details>
+
+<details>
+<summary><strong><code>component-on-net</code></strong> — a part sits on a net</summary>
+
+{{ includeCard "content/reference/relations/component-on-net.md" }}
+
+</details>
+
+<details>
+<summary><strong><code>reaches</code></strong> — nets reachable through passives</summary>
+
+{{ includeCard "content/reference/relations/reaches.md" }}
+
+</details>
+
+<details>
+<summary><strong><code>board.track_width</code></strong> — a net's thinnest copper track</summary>
+
+{{ includeCard "content/reference/relations/board.track_width.md" }}
+
+</details>
