@@ -62,8 +62,8 @@ netlist-only format is one adapter that opens the file and hands the bytes to yo
 ```go
 Register(&Format{Ext: ".myfmt", Name: "myfmt", Design: readMyFmt})
 
-func readMyFmt(_ *Loader, path string) (*ir.Design, error) {
-    f, err := os.Open(path)
+func readMyFmt(l *Loader, path string) (*ir.Design, error) {
+    f, err := l.Open(path)
     if err != nil {
         return nil, err
     }
@@ -71,6 +71,12 @@ func readMyFmt(_ *Loader, path string) (*ir.Design, error) {
     return myfmt.Read(f, path)
 }
 ```
+
+Reach for the bytes through `l.Open` (or `l.ReadFile`), never `os` directly. The `Loader` decides
+what a path resolves against: the host filesystem by default, or an in-memory `fs.FS` when the host
+has no filesystem at all, such as a WASM build or an embedder holding designs in memory. A reader
+that opens its own files works on a server and fails everywhere else, and the failure looks like a
+missing design rather than a missing capability.
 
 `Register` validates the entry and panics on a malformed one or a duplicate extension, the same
 way the standard library's `image.RegisterFormat` and `sql.Register` do. Those are programming
@@ -109,8 +115,8 @@ the adapter sniffs the file header before committing to a reader. IPC-2581 peeks
 for its root element (`readers/formats/registry.go`):
 
 ```go
-func readIPC2581(_ *Loader, path string) (*ir.Design, error) {
-    f, err := os.Open(path)
+func readIPC2581(l *Loader, path string) (*ir.Design, error) {
+    f, err := l.Open(path)
     if err != nil {
         return nil, err
     }
@@ -133,14 +139,22 @@ does not open a second file inside the reader. The `Loader` builds an opener clo
 in, so the reader receives already-resolved bytes or a resolver it can call, and the file I/O stays
 in one place.
 
-The `Loader` carries the configuration a reader needs beyond the file itself, today the
-`--symbol-path` search directories (`readers/formats/loader.go`):
+The `Loader` carries the configuration a reader needs beyond the file itself: the `--symbol-path`
+search directories, the naming vocabulary reads are stamped with, and the file namespace those
+paths resolve in (`readers/formats/loader.go`):
 
 ```go
 type Loader struct {
     SymbolPaths []string
+    Lexicon     *classify.Lexicon
+    FS          fs.FS // nil = the host filesystem
 }
 ```
+
+Build sibling names with `l.Sibling(designPath, ref)` rather than `filepath.Join`. An `fs.FS`
+namespace is always slash-separated and the host filesystem uses the platform's separator, so a
+reader that joins paths itself resolves siblings correctly on unix and silently fails to find them
+on Windows under an FS. `Sibling` keeps that distinction in one place.
 
 For KiCad, the adapter reads the root schematic and hands the reader an opener that resolves each
 child sheet's `Sheetfile` against the root's directory, plus a separate opener for external symbol

@@ -7,6 +7,11 @@
 // the CLI and the serve adapters share (CONSTRAINTS C13); the readers themselves stay
 // io.Reader-pure (C1).
 //
+// A registered reader reaches its bytes through Loader.Open / Loader.ReadFile / Loader.Sibling,
+// never through os directly (WS1-049). That is what lets one Loader serve a host filesystem and an
+// in-memory fs.FS with the same registry, the same dispatch, and the same post-read stamps; a
+// reader that opens its own files works on a server and fails everywhere else.
+//
 // This package is public (not internal/) because it is the engine's reader extension point
 // for the open-core split (WS12-003): a reader living in another module — a proprietary
 // format in the private overlay — registers itself with Register and gains every derived
