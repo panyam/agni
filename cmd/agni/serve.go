@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
@@ -22,7 +23,6 @@ import (
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
 	"github.com/panyam/agni/stdlib/rules/intent"
@@ -99,39 +99,12 @@ func serveCmd() *cobra.Command {
 			mux.Handle(wsPath, wsHandler)
 			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
 			mux.Handle(dsPath, dsHandler)
-			// Overlay interface profiles are startup config for the WHOLE server, not just the review
-			// surface (WS3-048). Loaded once here and composed into both the CheckService catalog below
-			// and the ReviewService catalog further down, so a customer's overlay-declared interface is
-			// visible wherever rules run — the web check panel and ListRules included. Before this, a
-			// profile authored in an overlay fired on the CLI and was invisible in the viewer, which is
-			// where the interface-aware view (WS9-041) presents it.
-			overlayProfiles, err := loadOverlayProfiles(profilePath)
-			if err != nil {
-				return err
-			}
-			checkCatalog := serveCheckCatalog(overlayProfiles)
-			noteSupersededRules(cmd.ErrOrStderr(), checkCatalog)
-			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(service.NewCheckService(loader, checkCatalog, specs)))
-			mux.Handle(ckPath, ckHandler)
-			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader)))
-			mux.Handle(diffPath, diffHandler)
-			dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
-			mux.Handle(dtPath, dtHandler)
-			qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs)))
-			mux.Handle(qPath, qHandler)
-			// ReviewService (WS9-047): the served analogue of `agni review`. The overlay knobs are
-			// startup config (like --params above), composed ONCE into the catalog + profile index the
-			// service holds, so a RunReview request only names the manifest, design(s), and board. A bad
-			// --profile-path/--intent-path fails serve startup rather than every review request.
-			reviewCatalog, reviewProfiles, err := composeReviewInputsFrom(overlayProfiles, intentPath)
-			if err != nil {
-				return err
-			}
-			// --conventions is the DEPLOYMENT default for this server's project (WS3-102): composed into
-			// the catalog here and installed as the process-level vocabulary, which is the one legitimate
-			// use of a process-wide install (startup, before any request, never mutated after). A request
-			// that names its own conventions_path overrides both per request, with its lexicon travelling
-			// with that read; that is why the override is safe under concurrency (WS3-106).
+			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
+			// installed process-wide, which is the one legitimate use of a process-global (startup, before
+			// any request, never mutated after, C22). Its RULES join the catalog composition instead,
+			// inside serveRuleServices. A request that names its own conventions overrides both per
+			// request, with that lexicon travelling with the read (WS3-106).
+			var conventionCfg naming.Config
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
@@ -140,15 +113,23 @@ func serveCmd() *cobra.Command {
 				if err := naming.ApplyLexicon(cfg); err != nil {
 					return err
 				}
-				if len(cfg.Rules) > 0 {
-					src, err := naming.Source(cfg)
-					if err != nil {
-						return err
-					}
-					reviewCatalog = check.CatalogWith(src)
-				}
+				conventionCfg = cfg
 			}
-			rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(service.NewReviewService(loader, reviewCatalog, reviewProfiles, specs)))
+			checkSvc, reviewSvc, err := serveRuleServices(loader, specs, profilePath, intentPath, conventionCfg, cmd.ErrOrStderr())
+			if err != nil {
+				return err
+			}
+			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc))
+			mux.Handle(ckPath, ckHandler)
+			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader)))
+			mux.Handle(diffPath, diffHandler)
+			dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
+			mux.Handle(dtPath, dtHandler)
+			qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs)))
+			mux.Handle(qPath, qHandler)
+			// ReviewService (WS9-047): the served analogue of `agni review`, built alongside the
+			// CheckService above from the one composed catalog.
+			rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
 			mux.Handle(rvPath, rvHandler)
 			mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 			// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
@@ -180,10 +161,60 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
-	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's default: its rules join the catalog and its lexicon becomes the default naming vocabulary. A request may name its own instead")
-	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses: the check panel and ListRules as well as reviews")
-	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the ReviewService catalog so intent-bound review items resolve")
+	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's default: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may name its own instead")
+	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
+	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
 	return c
+}
+
+// serveLoader is what the two rule-running services need between them. The CheckService and the
+// ReviewService take different loader interfaces, and serve's osLoader satisfies both, so naming the
+// intersection here lets one function build both without widening either service's own contract.
+type serveLoader interface {
+	service.Loader
+	service.ReviewLoader
+}
+
+// serveRuleServices builds the two services that RUN rules from one composed catalog: the
+// CheckService behind the check panel and ListRules, and the ReviewService behind RunReview.
+//
+// They are built together, from one catalog, on purpose (WS3-109). Every overlay knob is startup
+// config for the whole server rather than for one surface, but they used to be wired one at a time at
+// the call site and drifted exactly as that invites: --profile-path reached both surfaces only after
+// WS3-048, while --intent-path and a --conventions config's RULES reached reviews alone. A rule
+// missing from the check panel's catalog is indistinguishable there from a rule that ran and found
+// nothing, so the drift is silent from the outside.
+//
+// Returning both services rather than the catalog is what makes that structural. A caller cannot hand
+// one surface the composed catalog and the other something else, because it never holds the catalog.
+// That specific mistake is not hypothetical: this function replaces a serveCheckCatalog helper whose
+// own doc warned about a future edit passing NewCheckService a bare DefaultCatalog, and mutation
+// testing confirmed the warning was unenforceable while the wiring lived at the call site.
+//
+// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
+// is a process-global install the caller does once at startup, and doing it inside a function tests
+// call would leak one test's vocabulary into the next.
+func serveRuleServices(loader serveLoader, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+	overlay, err := loadOverlayProfiles(profilePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	var extra []check.RuleSource
+	if len(conventions.Rules) > 0 {
+		src, err := naming.Source(conventions)
+		if err != nil {
+			return nil, nil, err
+		}
+		extra = append(extra, src)
+	}
+	catalog, byName, err := composeReviewInputsFrom(overlay, intentPath, extra...)
+	if err != nil {
+		return nil, nil, err
+	}
+	if notes != nil {
+		noteSupersededRules(notes, catalog)
+	}
+	return service.NewCheckService(loader, catalog, specs), service.NewReviewService(loader, catalog, byName, specs), nil
 }
 
 // checkWebAssets verifies dir is the web-assets directory (the viewer template plus the built
@@ -272,19 +303,4 @@ func themeNames() []string {
 	}
 	sort.Strings(names)
 	return names
-}
-
-// serveCheckCatalog is the rule catalog the served CheckService runs: the built-ins plus any overlay
-// interface profiles this server was started with (WS3-048). It exists as a named function so the
-// invariant is testable without standing up a listener — the regression it guards is a future edit
-// handing NewCheckService a bare DefaultCatalog again, which compiles, serves, and silently omits a
-// customer's profiles from the check panel and ListRules.
-//
-// The namespace is "profile-overlay", matching `agni check --profile-path`, so a rule has the same
-// name in the viewer as on the CLI.
-func serveCheckCatalog(overlay []profiles.Profile) *check.Catalog {
-	if len(overlay) == 0 {
-		return check.DefaultCatalog()
-	}
-	return check.CatalogWith(profiles.Source("profile-overlay", overlay))
 }
