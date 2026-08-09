@@ -1,21 +1,24 @@
 package symread
 
 import (
+	"slices"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// TestResolvePinsReportsUnresolved (WS1-013): ResolvePins counts placements whose symbol
-// failed to resolve — the signal the readers gate dangling emission on. A resolved symbol
-// contributes its pins; an unresolved one contributes none and increments the count.
+// TestResolvePinsReportsUnresolved (WS1-013, extended by WS1-052): ResolvePins reports the
+// placements whose symbol failed to resolve — the signal the readers gate dangling emission on,
+// and now also report as a diagnostic. A resolved symbol contributes its pins; an unresolved one
+// contributes none and is recorded once, with every placement it cost pins.
 func TestResolvePinsReportsUnresolved(t *testing.T) {
 	place := func(px, py float64) (float64, float64) { return px, py }
 	pls := []Placement{
 		{Symref: "good.sym", Ref: "R1", Part: &ir.PartType{}, Place: place},
 		{Symref: "missing.sym", Ref: "R2", Part: &ir.PartType{}, Place: place},
-		{Symref: "good.sym", Ref: "R3", Part: &ir.PartType{}, Place: place}, // cached hit, still resolved
+		{Symref: "good.sym", Ref: "R3", Part: &ir.PartType{}, Place: place},    // cached hit, still resolved
+		{Symref: "missing.sym", Ref: "R4", Part: &ir.PartType{}, Place: place}, // second victim of ONE cause
 	}
 	load := func(symref string) ([]Pin, bool) {
 		if symref == "good.sym" {
@@ -26,10 +29,18 @@ func TestResolvePinsReportsUnresolved(t *testing.T) {
 	quant := func(x, y float64) netgraph.Point { return netgraph.Point{X: int64(x), Y: int64(y)} }
 
 	pins, unresolved := ResolvePins(pls, load, quant)
-	if unresolved != 1 {
-		t.Errorf("unresolved = %d, want 1 (only missing.sym)", unresolved)
+	if len(unresolved) != 1 {
+		t.Fatalf("unresolved = %v, want exactly one entry (only missing.sym)", unresolved)
 	}
-	if len(pins) != 4 { // R1 and R3 contribute 2 each; R2 none
+	if got := unresolved[0].Symref; got != "missing.sym" {
+		t.Errorf("unresolved symref = %q, want missing.sym", got)
+	}
+	// One missing file, two affected placements: grouped per REFERENCE, so the single cause is
+	// reported once rather than duplicated per part.
+	if got := unresolved[0].RefDes; !slices.Equal(got, []string{"R2", "R4"}) {
+		t.Errorf("unresolved refdes = %v, want [R2 R4] in placement order", got)
+	}
+	if len(pins) != 4 { // R1 and R3 contribute 2 each; R2 and R4 none
 		t.Errorf("pins = %d, want 4", len(pins))
 	}
 }
@@ -49,7 +60,7 @@ func TestResolvePinsSlotRemap(t *testing.T) {
 		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"1", "2"}},
 		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"3", "4"}},
 		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"9", "8"}}, // swapped order
-		{Symref: "g.sym", Ref: "U2", Part: &ir.PartType{}, Place: place},                              // no slotting -> drawn numbers
+		{Symref: "g.sym", Ref: "U2", Part: &ir.PartType{}, Place: place},                               // no slotting -> drawn numbers
 	}
 	pins, _ := ResolvePins(pls, load, quant)
 	var got []string

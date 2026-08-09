@@ -56,6 +56,7 @@ var builtinSchema = map[string][]query.Field{
 	RelEsdRated:              {query.FieldSubject},                                      // component.esd_rated(ref) — WS3-076, datasheet tier
 	RelComponentDeviceClass:  {query.FieldSubject, query.FieldValue},                    // component.device_class(ref, class) — WS10-013, datasheet tier
 	RelBus:                   {query.FieldSubject, query.FieldValue},                    // bus(label, kind) — reader-detected unmodeled bus (WS1-034)
+	RelUnresolvedSymbol:      {query.FieldSubject, query.FieldValue},                    // unresolved_symbol(ref_des, symref) — a placement that lost its pins (WS1-052)
 	RelRefDesCollision:       {query.FieldSubject},                                      // ref_des_collision(ref_des) — WS3-081
 	RelPinNetConflict:        {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin_net_conflict(ref_des, pin, net) — WS3-081
 	RelNetBusLike:            {query.FieldSubject},                                      // net.bus_like(net) — WS3-080
@@ -106,6 +107,7 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "net.ground", Args: []string{"net"}, Summary: "the net is a ground rail (name-derived)", Kind: query.KindNetlist},
 	{Name: "net.external", Args: []string{"net"}, Summary: "the net may extend onto an unread sheet (read-gap marker)", Kind: query.KindNetlist},
 	{Name: "bus", Args: []string{"label", "kind"}, Summary: "a reader-detected bus not yet expanded into member nets (WS1-034)", Kind: query.KindNetlist},
+	{Name: "unresolved_symbol", Args: []string{"ref_des", "symref"}, Summary: "a placement whose symbol did not resolve, so it carries no pins (WS1-052)", Kind: query.KindNetlist},
 	{Name: "ref_des_collision", Args: []string{"ref_des"}, Summary: "a reference designator used by more than one part (reader integrity diagnostic)", Kind: query.KindNetlist},
 	{Name: "pin_net_conflict", Args: []string{"ref_des", "pin", "net"}, Summary: "a pin the read placed on more than one net; one row per net (reader integrity diagnostic)", Kind: query.KindNetlist},
 	{Name: "net.bus_like", Args: []string{"net"}, Summary: "a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate", Kind: query.KindNetlist},

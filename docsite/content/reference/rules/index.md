@@ -95,4 +95,5 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/subsystem](intent-subsystem/) | intent | warning | An architectural subsystem the design intent declares is missing a required part or net. |
 | [intent/voltage-domain-mismatch](intent-voltage-domain-mismatch/) | intent | warning | A declared voltage domain's rail is absent or named for a different nominal voltage. |
 | [pin-net-conflict](pin-net-conflict/) | built-in | info | A pin appears in more than one net's connections — malformed input. |
+| [symbol-unresolved](symbol-unresolved/) | built-in | warning | A symbol reference did not resolve, so its placements carry no pins. |
 

@@ -13,6 +13,7 @@ package check
 
 import (
 	"sort"
+	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -102,6 +103,13 @@ const (
 	// geometry join key is the construct's uuid (Finding.Prov.NativeId), carried to the client as
 	// Subject.bus_id so a bus-not-modeled finding highlights its own drawn bus (WS7-042b), never a net.
 	KindBus = "bus"
+	// KindSymbol is a symbol REFERENCE that failed to resolve (WS1-052), not a placed entity: its
+	// Subject is the reference as the source spelled it (`res.sym`, `Library:Symbol`), which names
+	// a file that is absent rather than anything in the design. Distinct from KindComponent
+	// because the affected ref-des set is a PROPERTY of the finding (Message and the
+	// unresolved_symbol relation), not its subject — one missing file is one finding however many
+	// parts it cost pins, and a consumer that joined Subject to a component would find nothing.
+	KindSymbol = "symbol"
 )
 
 // Rule is a named, self-describing check over the IR.
@@ -210,7 +218,13 @@ const (
 // design" case.
 func Run(m Model, rules []*Rule) []Finding {
 	var out []Finding
+	gate := unresolvedSymbolGate(m)
 	for _, r := range rules {
+		if f, gated := gate(r); gated {
+			f.Rule, f.Severity = r.Name, r.Severity
+			out = append(out, f)
+			continue
+		}
 		for _, f := range r.Eval(m) {
 			f.Rule, f.Severity = r.Name, r.Severity
 			out = append(out, f)
@@ -223,6 +237,69 @@ func Run(m Model, rules []*Rule) []Finding {
 		return out[i].Subject < out[j].Subject
 	})
 	return out
+}
+
+// connectivityFactPrefixes name the fact families that come from a component's PINS. A symbol that
+// fails to resolve contributes no pins, so every fact in these families is missing for its
+// placements — and missing connectivity is indistinguishable from connectivity that was never
+// drawn. The gate below reads the rule's own declared Reads (docs/15 vocabulary) rather than a new
+// per-rule annotation, so a rule authored later is covered by declaring what it reads, which it
+// must do anyway.
+var connectivityFactPrefixes = []string{"pin.", "on_net"}
+
+// unresolvedSymbolGate returns a per-rule gate that reports whether a rule cannot be DECIDED
+// because the read lost pins (WS1-052), along with the inconclusive finding to emit instead.
+//
+// The gate is DESIGN-WIDE, not per-subject: any unresolved symbol gates every connectivity rule
+// for the whole design. That is deliberately the conservative reading, and it matches the gate
+// WS1-013 already applies to dangling endpoints in the readers ("one unresolved placement
+// suppresses the whole design's dangles"). A per-subject gate needs a finding-to-refdes mapping
+// that does not exist yet; until then, narrowing the gate would mean asserting that the parts we
+// did NOT flag are unaffected, which the reader cannot support.
+//
+// Inconclusive rather than not-applicable, which is the distinction Available draws: a missing
+// capability is a permanent property of the source FORMAT, while an unresolved symbol is a
+// property of THIS read that a --symbol-path away is fixable.
+func unresolvedSymbolGate(m Model) func(*Rule) (Finding, bool) {
+	var unresolved []*ir.UnresolvedSymbol
+	if m != nil {
+		unresolved = m.UnresolvedSymbols()
+	}
+	if len(unresolved) == 0 {
+		return func(*Rule) (Finding, bool) { return Finding{}, false }
+	}
+	refs := make([]string, 0, len(unresolved))
+	for _, u := range unresolved {
+		refs = append(refs, u.GetSymref())
+	}
+	// Terse on purpose. Every gated rule emits this, so a full remediation paragraph here would be
+	// repeated once per rule and bury the one finding that explains the cause. symbol-unresolved
+	// carries the affected placements and the fix; this only says why THIS rule has no verdict.
+	subject := strings.Join(refs, ", ")
+	msg := "cannot decide: pins are unknown while " + subject + " is unresolved (see symbol-unresolved)"
+	if len(refs) > 1 {
+		msg = "cannot decide: pins are unknown while " + subject + " are unresolved (see symbol-unresolved)"
+	}
+	return func(r *Rule) (Finding, bool) {
+		if !readsConnectivity(r) {
+			return Finding{}, false
+		}
+		return Finding{Kind: KindSymbol, Subject: subject, Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
+	}
+}
+
+// readsConnectivity reports whether a rule's conclusions depend on pins existing. A rule that reads
+// only net names, component classes or datasheet params is unaffected by a lost symbol and keeps
+// evaluating, so the gate costs nothing where it buys nothing.
+func readsConnectivity(r *Rule) bool {
+	for _, fact := range r.Reads {
+		for _, p := range connectivityFactPrefixes {
+			if strings.HasPrefix(fact, p) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // RunDesign evaluates the built-in rule set over the default Model for d: the common entry point

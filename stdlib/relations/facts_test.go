@@ -643,3 +643,41 @@ func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
 		t.Errorf("cite = %q, want net_settings:Zeta", rows[0].Cite)
 	}
 }
+
+// TestUnresolvedSymbolFacts (WS1-052): the relation is keyed by ref_des, one row per PLACEMENT, so
+// it joins to the components that lost pins. That asymmetry with the rule (one finding per
+// reference) is deliberate: the rule reports a cause, the relation exposes a blast radius.
+func TestUnresolvedSymbolFacts(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}, {RefDes: "U1"}},
+		InputDiagnostics: &ir.InputDiagnostics{UnresolvedSymbols: []*ir.UnresolvedSymbol{
+			{Symref: "res.sym", Kind: "xschem_sym", RefDes: []string{"R1", "R2"}, Prov: &ir.Provenance{SourceFile: "b.sch"}},
+			{Symref: "ic.sym", Kind: "xschem_sym", RefDes: []string{"U1"}, Prov: &ir.Provenance{SourceFile: "b.sch"}},
+		}},
+	}
+	got := map[string]string{}
+	for _, r := range unresolvedSymbolFacts(check.NewModel(d)) {
+		if r.Relation != RelUnresolvedSymbol {
+			t.Errorf("relation = %q, want %q", r.Relation, RelUnresolvedSymbol)
+		}
+		got[r.Subject] = r.Value
+	}
+	want := map[string]string{"R1": "res.sym", "R2": "res.sym", "U1": "ic.sym"}
+	if len(got) != len(want) {
+		t.Fatalf("rows = %v, want one per affected placement %v", got, want)
+	}
+	for ref, sym := range want {
+		if got[ref] != sym {
+			t.Errorf("unresolved_symbol(%s) = %q, want %q", ref, got[ref], sym)
+		}
+	}
+}
+
+// TestUnresolvedSymbolFactsEmptyWhenClean: no rows for a design whose symbols all resolved, so a
+// query can treat any row as evidence of a real gap.
+func TestUnresolvedSymbolFactsEmptyWhenClean(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}}}
+	if rows := unresolvedSymbolFacts(check.NewModel(d)); len(rows) != 0 {
+		t.Errorf("rows = %v, want none", rows)
+	}
+}

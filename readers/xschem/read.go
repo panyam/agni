@@ -207,8 +207,12 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 		// gate that keeps false positives at zero. Grid points map back to the geometry
 		// frame the viewer draws via danglePoint (xschem's netgraph grid is scaled;
 		// geometry is native). No per-wire id in these formats, so location is the subject.
-		if unresolved == 0 {
-			d.InputDiagnostics = &ir.InputDiagnostics{DanglingEndpoints: geomDangles(dangles, src)}
+		// An unresolved symbol is recorded either way (WS1-052): the suppression above is what
+		// makes it invisible, so the two must be emitted together or the read gets quieter with
+		// nothing to say why.
+		d.InputDiagnostics = &ir.InputDiagnostics{UnresolvedSymbols: irUnresolved(unresolved, src)}
+		if len(unresolved) == 0 {
+			d.InputDiagnostics.DanglingEndpoints = geomDangles(dangles, src)
 		}
 	} else {
 		for _, n := range symread.NameOnlyNets(wires, anchors) {
@@ -262,4 +266,20 @@ func lastBraceC(o object) string {
 		return ""
 	}
 	return lastBrace(o)
+}
+
+// irUnresolved turns the resolver's unresolved references into IR diagnostics, stamping the
+// construct kind and source file the resolver does not know. Returns nil for an empty set so a
+// clean read carries no empty slice.
+func irUnresolved(us []symread.Unresolved, src string) []*ir.UnresolvedSymbol {
+	var out []*ir.UnresolvedSymbol
+	for _, u := range us {
+		out = append(out, &ir.UnresolvedSymbol{
+			Symref: u.Symref,
+			Kind:   "xschem_sym",
+			RefDes: u.RefDes,
+			Prov:   &ir.Provenance{SourceFile: src},
+		})
+	}
+	return out
 }

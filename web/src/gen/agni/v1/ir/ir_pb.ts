@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/ir/ir.proto.
  */
 export const file_agni_v1_ir_ir: GenFile = /*@__PURE__*/
-  fileDesc("ChNhZ25pL3YxL2lyL2lyLnByb3RvEgphZ25pLnYxLmlyIk4KBFNwYW4SEwoLYnl0ZV9vZmZzZXQYASABKAMSEwoLYnl0ZV9sZW5ndGgYAiABKAMSDAoEbGluZRgDIAEoBRIOCgZjb2x1bW4YBCABKAUibAoKUHJvdmVuYW5jZRITCgtzb3VyY2VfZmlsZRgBIAEoCRIeCgRzcGFuGAIgASgLMhAuYWduaS52MS5pci5TcGFuEhEKCW5hdGl2ZV9pZBgDIAEoCRIWCg5uYXRpdmVfaWRfa2luZBgEIAEoCSJjChBGaWRlbGl0eUZyYWdtZW50EiQKBHByb3YYASABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2USDgoGZm9ybWF0GAIgASgJEgsKA3JhdxgDIAEoDBIMCgRub3RlGAQgASgJIp0FCgZEZXNpZ24SDAoEbmFtZRgBIAEoCRISCgppcl92ZXJzaW9uGAIgASgJEhUKDXNvdXJjZV9mb3JtYXQYAyABKAkSKgoJbGlicmFyaWVzGAQgAygLMhcuYWduaS52MS5pci5QYXJ0TGlicmFyeRIpCgpjb21wb25lbnRzGAUgAygLMhUuYWduaS52MS5pci5Db21wb25lbnQSHQoEbmV0cxgGIAMoCzIPLmFnbmkudjEuaXIuTmV0EiEKBnNoZWV0cxgHIAMoCzIRLmFnbmkudjEuaXIuU2hlZXQSNwoRaW5wdXRfZGlhZ25vc3RpY3MYESABKAsyHC5hZ25pLnYxLmlyLklucHV0RGlhZ25vc3RpY3MSKQoKZm9vdHByaW50cxgIIAMoCzIVLmFnbmkudjEuaXIuRm9vdHByaW50EiEKBmxheWVycxgJIAMoCzIRLmFnbmkudjEuaXIuTGF5ZXISJAoHc3RhY2t1cBgKIAEoCzITLmFnbmkudjEuaXIuU3RhY2t1cBIrCgtjb25zdHJhaW50cxgLIAMoCzIWLmFnbmkudjEuaXIuQ29uc3RyYWludBIgCgNib20YDCADKAsyEy5hZ25pLnYxLmlyLkJvbUxpbmUSNgoKYXR0cmlidXRlcxgOIAMoCzIiLmFnbmkudjEuaXIuRGVzaWduLkF0dHJpYnV0ZXNFbnRyeRIuCghmaWRlbGl0eRgPIAMoCzIcLmFnbmkudjEuaXIuRmlkZWxpdHlGcmFnbWVudBIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBSgQIDRAOIvYBChBJbnB1dERpYWdub3N0aWNzEjgKEmRhbmdsaW5nX2VuZHBvaW50cxgBIAMoCzIcLmFnbmkudjEuaXIuRGFuZ2xpbmdFbmRwb2ludBI3ChJyZWZfZGVzX2NvbGxpc2lvbnMYAiADKAsyGy5hZ25pLnYxLmlyLlJlZkRlc0NvbGxpc2lvbhI7ChVub19qdW5jdGlvbl9lbmRwb2ludHMYAyADKAsyHC5hZ25pLnYxLmlyLkRhbmdsaW5nRW5kcG9pbnQSMgoPdW5tb2RlbGVkX2J1c2VzGAQgAygLMhkuYWduaS52MS5pci5CdXNOb3RNb2RlbGVkImMKDUJ1c05vdE1vZGVsZWQSDQoFbGFiZWwYASABKAkSDAoEa2luZBgCIAEoCRIkCgRwcm92GAMgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlEg8KB21lbWJlcnMYBCADKAkiTgoQRGFuZ2xpbmdFbmRwb2ludBIJCgF4GAEgASgDEgkKAXkYAiABKAMSJAoEcHJvdhgDIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZSJNCg9SZWZEZXNDb2xsaXNpb24SDwoHcmVmX2RlcxgBIAEoCRIpCglpbnN0YW5jZXMYAiADKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2Ui1gEKC1BhcnRMaWJyYXJ5EgwKBG5hbWUYASABKAkSIwoFcGFydHMYAiADKAsyFC5hZ25pLnYxLmlyLlBhcnRUeXBlEjsKCmF0dHJpYnV0ZXMYDiADKAsyJy5hZ25pLnYxLmlyLlBhcnRMaWJyYXJ5LkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIvMBCghQYXJ0VHlwZRIMCgRuYW1lGAEgASgJEgwKBGtpbmQYAiABKAkSGQoRZGVzaWduYXRvcl9wcmVmaXgYAyABKAkSHQoEcGlucxgEIAMoCzIPLmFnbmkudjEuaXIuUGluEjgKCmF0dHJpYnV0ZXMYDiADKAsyJC5hZ25pLnYxLmlyLlBhcnRUeXBlLkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIuIBCgNQaW4SDAoEbmFtZRgBIAEoCRISCgpkZXNpZ25hdG9yGAIgASgJEisKCWRpcmVjdGlvbhgDIAEoDjIYLmFnbmkudjEuaXIuUGluRGlyZWN0aW9uEjMKCmF0dHJpYnV0ZXMYDiADKAsyHy5hZ25pLnYxLmlyLlBpbi5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASK0AgoJQ29tcG9uZW50Eg8KB3JlZl9kZXMYASABKAkSLgoIc2VjdGlvbnMYAiADKAsyHC5hZ25pLnYxLmlyLkNvbXBvbmVudFNlY3Rpb24SFQoNZm9vdHByaW50X3JlZhgDIAEoCRIWCg5kZXZpY2VfY2xhc3NlcxgEIAMoCRIjCgV2YWx1ZRgFIAEoCzIULmFnbmkudjEuaXIuUXVhbnRpdHkSOQoKYXR0cmlidXRlcxgOIAMoCzIlLmFnbmkudjEuaXIuQ29tcG9uZW50LkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIkUKCFF1YW50aXR5Eg0KBWlucHV0GAEgASgJEhIKBXZhbHVlGAIgASgBSACIAQESDAoEdW5pdBgDIAEoCUIICgZfdmFsdWUi4wEKEENvbXBvbmVudFNlY3Rpb24SDQoFaW5kZXgYASABKAUSEAoIcGFydF9yZWYYAiABKAkSEwoLbGlicmFyeV9yZWYYAyABKAkSQAoKYXR0cmlidXRlcxgOIAMoCzIsLmFnbmkudjEuaXIuQ29tcG9uZW50U2VjdGlvbi5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASL+AQoDTmV0EgwKBG5hbWUYASABKAkSEwoLbmV0X2NsYXNzZXMYAiADKAkSKwoLY29ubmVjdGlvbnMYAyADKAsyFi5hZ25pLnYxLmlyLkNvbm5lY3Rpb24SCgoCaWQYBCABKAkSDQoFcm9sZXMYBSADKAkSMwoKYXR0cmlidXRlcxgOIAMoCzIfLmFnbmkudjEuaXIuTmV0LkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIskBCgpDb25uZWN0aW9uEhUKDWNvbXBvbmVudF9yZWYYASABKAkSDwoHcGluX3JlZhgCIAEoCRI6CgphdHRyaWJ1dGVzGA4gAygLMiYuYWduaS52MS5pci5Db25uZWN0aW9uLkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrEBCgVTaGVldBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEjUKCmF0dHJpYnV0ZXMYDiADKAsyIS5hZ25pLnYxLmlyLlNoZWV0LkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIr4BCglGb290cHJpbnQSDAoEbmFtZRgBIAEoCRIPCgdsaWJyYXJ5GAIgASgJEjkKCmF0dHJpYnV0ZXMYDiADKAsyJS5hZ25pLnYxLmlyLkZvb3RwcmludC5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLhAQoFTGF5ZXISDAoEbmFtZRgBIAEoCRINCgVpbmRleBgCIAEoBRIrCghmdW5jdGlvbhgDIAEoDjIZLmFnbmkudjEuaXIuTGF5ZXJGdW5jdGlvbhI1CgphdHRyaWJ1dGVzGA4gAygLMiEuYWduaS52MS5pci5MYXllci5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASK6AQoMU3RhY2t1cExheWVyEhEKCWxheWVyX3JlZhgBIAEoCRIUCgx0aGlja25lc3Nfbm0YAiABKAMSEAoIbWF0ZXJpYWwYAyABKAkSPAoKYXR0cmlidXRlcxgOIAMoCzIoLmFnbmkudjEuaXIuU3RhY2t1cExheWVyLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLFAQoHU3RhY2t1cBIoCgZsYXllcnMYASADKAsyGC5hZ25pLnYxLmlyLlN0YWNrdXBMYXllchI3CgphdHRyaWJ1dGVzGA4gAygLMiMuYWduaS52MS5pci5TdGFja3VwLkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIqACCgpDb25zdHJhaW50EgwKBG5hbWUYASABKAkSDAoEa2luZBgCIAEoCRIyCgZwYXJhbXMYAyADKAsyIi5hZ25pLnYxLmlyLkNvbnN0cmFpbnQuUGFyYW1zRW50cnkSOgoKYXR0cmlidXRlcxgOIAMoCzImLmFnbmkudjEuaXIuQ29uc3RyYWludC5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIuEBCgdCb21MaW5lEg8KB3JlZl9kZXMYASADKAkSCwoDbXBuGAIgASgJEhQKDG1hbnVmYWN0dXJlchgDIAEoCRIQCghxdWFudGl0eRgEIAEoBRI3CgphdHRyaWJ1dGVzGA4gAygLMiMuYWduaS52MS5pci5Cb21MaW5lLkF0dHJpYnV0ZXNFbnRyeRIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBKoQCCgxQaW5EaXJlY3Rpb24SHQoZUElOX0RJUkVDVElPTl9VTlNQRUNJRklFRBAAEhcKE1BJTl9ESVJFQ1RJT05fSU5QVVQQARIYChRQSU5fRElSRUNUSU9OX09VVFBVVBACEhcKE1BJTl9ESVJFQ1RJT05fSU5PVVQQAxIZChVQSU5fRElSRUNUSU9OX1BBU1NJVkUQBBIXChNQSU5fRElSRUNUSU9OX1BPV0VSEAUSHAoYUElOX0RJUkVDVElPTl9OT19DT05ORUNUEAYSGgoWUElOX0RJUkVDVElPTl9QT1dFUl9JThAHEhsKF1BJTl9ESVJFQ1RJT05fUE9XRVJfT1VUEAgq3AEKDUxheWVyRnVuY3Rpb24SHgoaTEFZRVJfRlVOQ1RJT05fVU5TUEVDSUZJRUQQABIZChVMQVlFUl9GVU5DVElPTl9TSUdOQUwQARIYChRMQVlFUl9GVU5DVElPTl9QTEFORRACEh0KGUxBWUVSX0ZVTkNUSU9OX0RJRUxFQ1RSSUMQAxIeChpMQVlFUl9GVU5DVElPTl9TT0xERVJfTUFTSxAEEh0KGUxBWUVSX0ZVTkNUSU9OX1NJTEtTQ1JFRU4QBRIYChRMQVlFUl9GVU5DVElPTl9QQVNURRAGQipaKGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvaXJiBnByb3RvMw");
+  fileDesc("ChNhZ25pL3YxL2lyL2lyLnByb3RvEgphZ25pLnYxLmlyIk4KBFNwYW4SEwoLYnl0ZV9vZmZzZXQYASABKAMSEwoLYnl0ZV9sZW5ndGgYAiABKAMSDAoEbGluZRgDIAEoBRIOCgZjb2x1bW4YBCABKAUibAoKUHJvdmVuYW5jZRITCgtzb3VyY2VfZmlsZRgBIAEoCRIeCgRzcGFuGAIgASgLMhAuYWduaS52MS5pci5TcGFuEhEKCW5hdGl2ZV9pZBgDIAEoCRIWCg5uYXRpdmVfaWRfa2luZBgEIAEoCSJjChBGaWRlbGl0eUZyYWdtZW50EiQKBHByb3YYASABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2USDgoGZm9ybWF0GAIgASgJEgsKA3JhdxgDIAEoDBIMCgRub3RlGAQgASgJIp0FCgZEZXNpZ24SDAoEbmFtZRgBIAEoCRISCgppcl92ZXJzaW9uGAIgASgJEhUKDXNvdXJjZV9mb3JtYXQYAyABKAkSKgoJbGlicmFyaWVzGAQgAygLMhcuYWduaS52MS5pci5QYXJ0TGlicmFyeRIpCgpjb21wb25lbnRzGAUgAygLMhUuYWduaS52MS5pci5Db21wb25lbnQSHQoEbmV0cxgGIAMoCzIPLmFnbmkudjEuaXIuTmV0EiEKBnNoZWV0cxgHIAMoCzIRLmFnbmkudjEuaXIuU2hlZXQSNwoRaW5wdXRfZGlhZ25vc3RpY3MYESABKAsyHC5hZ25pLnYxLmlyLklucHV0RGlhZ25vc3RpY3MSKQoKZm9vdHByaW50cxgIIAMoCzIVLmFnbmkudjEuaXIuRm9vdHByaW50EiEKBmxheWVycxgJIAMoCzIRLmFnbmkudjEuaXIuTGF5ZXISJAoHc3RhY2t1cBgKIAEoCzITLmFnbmkudjEuaXIuU3RhY2t1cBIrCgtjb25zdHJhaW50cxgLIAMoCzIWLmFnbmkudjEuaXIuQ29uc3RyYWludBIgCgNib20YDCADKAsyEy5hZ25pLnYxLmlyLkJvbUxpbmUSNgoKYXR0cmlidXRlcxgOIAMoCzIiLmFnbmkudjEuaXIuRGVzaWduLkF0dHJpYnV0ZXNFbnRyeRIuCghmaWRlbGl0eRgPIAMoCzIcLmFnbmkudjEuaXIuRmlkZWxpdHlGcmFnbWVudBIkCgRwcm92GBAgASgLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBSgQIDRAOIrACChBJbnB1dERpYWdub3N0aWNzEjgKEmRhbmdsaW5nX2VuZHBvaW50cxgBIAMoCzIcLmFnbmkudjEuaXIuRGFuZ2xpbmdFbmRwb2ludBI3ChJyZWZfZGVzX2NvbGxpc2lvbnMYAiADKAsyGy5hZ25pLnYxLmlyLlJlZkRlc0NvbGxpc2lvbhI7ChVub19qdW5jdGlvbl9lbmRwb2ludHMYAyADKAsyHC5hZ25pLnYxLmlyLkRhbmdsaW5nRW5kcG9pbnQSMgoPdW5tb2RlbGVkX2J1c2VzGAQgAygLMhkuYWduaS52MS5pci5CdXNOb3RNb2RlbGVkEjgKEnVucmVzb2x2ZWRfc3ltYm9scxgFIAMoCzIcLmFnbmkudjEuaXIuVW5yZXNvbHZlZFN5bWJvbCJnChBVbnJlc29sdmVkU3ltYm9sEg4KBnN5bXJlZhgBIAEoCRIMCgRraW5kGAIgASgJEg8KB3JlZl9kZXMYAyADKAkSJAoEcHJvdhgEIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZSJjCg1CdXNOb3RNb2RlbGVkEg0KBWxhYmVsGAEgASgJEgwKBGtpbmQYAiABKAkSJAoEcHJvdhgDIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIPCgdtZW1iZXJzGAQgAygJIk4KEERhbmdsaW5nRW5kcG9pbnQSCQoBeBgBIAEoAxIJCgF5GAIgASgDEiQKBHByb3YYAyABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2UiTQoPUmVmRGVzQ29sbGlzaW9uEg8KB3JlZl9kZXMYASABKAkSKQoJaW5zdGFuY2VzGAIgAygLMhYuYWduaS52MS5pci5Qcm92ZW5hbmNlItYBCgtQYXJ0TGlicmFyeRIMCgRuYW1lGAEgASgJEiMKBXBhcnRzGAIgAygLMhQuYWduaS52MS5pci5QYXJ0VHlwZRI7CgphdHRyaWJ1dGVzGA4gAygLMicuYWduaS52MS5pci5QYXJ0TGlicmFyeS5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLzAQoIUGFydFR5cGUSDAoEbmFtZRgBIAEoCRIMCgRraW5kGAIgASgJEhkKEWRlc2lnbmF0b3JfcHJlZml4GAMgASgJEh0KBHBpbnMYBCADKAsyDy5hZ25pLnYxLmlyLlBpbhI4CgphdHRyaWJ1dGVzGA4gAygLMiQuYWduaS52MS5pci5QYXJ0VHlwZS5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLiAQoDUGluEgwKBG5hbWUYASABKAkSEgoKZGVzaWduYXRvchgCIAEoCRIrCglkaXJlY3Rpb24YAyABKA4yGC5hZ25pLnYxLmlyLlBpbkRpcmVjdGlvbhIzCgphdHRyaWJ1dGVzGA4gAygLMh8uYWduaS52MS5pci5QaW4uQXR0cmlidXRlc0VudHJ5EiQKBHByb3YYECABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2UaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEitAIKCUNvbXBvbmVudBIPCgdyZWZfZGVzGAEgASgJEi4KCHNlY3Rpb25zGAIgAygLMhwuYWduaS52MS5pci5Db21wb25lbnRTZWN0aW9uEhUKDWZvb3RwcmludF9yZWYYAyABKAkSFgoOZGV2aWNlX2NsYXNzZXMYBCADKAkSIwoFdmFsdWUYBSABKAsyFC5hZ25pLnYxLmlyLlF1YW50aXR5EjkKCmF0dHJpYnV0ZXMYDiADKAsyJS5hZ25pLnYxLmlyLkNvbXBvbmVudC5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJFCghRdWFudGl0eRINCgVpbnB1dBgBIAEoCRISCgV2YWx1ZRgCIAEoAUgAiAEBEgwKBHVuaXQYAyABKAlCCAoGX3ZhbHVlIuMBChBDb21wb25lbnRTZWN0aW9uEg0KBWluZGV4GAEgASgFEhAKCHBhcnRfcmVmGAIgASgJEhMKC2xpYnJhcnlfcmVmGAMgASgJEkAKCmF0dHJpYnV0ZXMYDiADKAsyLC5hZ25pLnYxLmlyLkNvbXBvbmVudFNlY3Rpb24uQXR0cmlidXRlc0VudHJ5EiQKBHByb3YYECABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2UaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi/gEKA05ldBIMCgRuYW1lGAEgASgJEhMKC25ldF9jbGFzc2VzGAIgAygJEisKC2Nvbm5lY3Rpb25zGAMgAygLMhYuYWduaS52MS5pci5Db25uZWN0aW9uEgoKAmlkGAQgASgJEg0KBXJvbGVzGAUgAygJEjMKCmF0dHJpYnV0ZXMYDiADKAsyHy5hZ25pLnYxLmlyLk5ldC5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLJAQoKQ29ubmVjdGlvbhIVCg1jb21wb25lbnRfcmVmGAEgASgJEg8KB3Bpbl9yZWYYAiABKAkSOgoKYXR0cmlidXRlcxgOIAMoCzImLmFnbmkudjEuaXIuQ29ubmVjdGlvbi5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKxAQoFU2hlZXQSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRI1CgphdHRyaWJ1dGVzGA4gAygLMiEuYWduaS52MS5pci5TaGVldC5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASK+AQoJRm9vdHByaW50EgwKBG5hbWUYASABKAkSDwoHbGlicmFyeRgCIAEoCRI5CgphdHRyaWJ1dGVzGA4gAygLMiUuYWduaS52MS5pci5Gb290cHJpbnQuQXR0cmlidXRlc0VudHJ5EiQKBHByb3YYECABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2UaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi4QEKBUxheWVyEgwKBG5hbWUYASABKAkSDQoFaW5kZXgYAiABKAUSKwoIZnVuY3Rpb24YAyABKA4yGS5hZ25pLnYxLmlyLkxheWVyRnVuY3Rpb24SNQoKYXR0cmlidXRlcxgOIAMoCzIhLmFnbmkudjEuaXIuTGF5ZXIuQXR0cmlidXRlc0VudHJ5EiQKBHByb3YYECABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2UaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiugEKDFN0YWNrdXBMYXllchIRCglsYXllcl9yZWYYASABKAkSFAoMdGhpY2tuZXNzX25tGAIgASgDEhAKCG1hdGVyaWFsGAMgASgJEjwKCmF0dHJpYnV0ZXMYDiADKAsyKC5hZ25pLnYxLmlyLlN0YWNrdXBMYXllci5BdHRyaWJ1dGVzRW50cnkaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEixQEKB1N0YWNrdXASKAoGbGF5ZXJzGAEgAygLMhguYWduaS52MS5pci5TdGFja3VwTGF5ZXISNwoKYXR0cmlidXRlcxgOIAMoCzIjLmFnbmkudjEuaXIuU3RhY2t1cC5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKgAgoKQ29uc3RyYWludBIMCgRuYW1lGAEgASgJEgwKBGtpbmQYAiABKAkSMgoGcGFyYW1zGAMgAygLMiIuYWduaS52MS5pci5Db25zdHJhaW50LlBhcmFtc0VudHJ5EjoKCmF0dHJpYnV0ZXMYDiADKAsyJi5hZ25pLnYxLmlyLkNvbnN0cmFpbnQuQXR0cmlidXRlc0VudHJ5EiQKBHByb3YYECABKAsyFi5hZ25pLnYxLmlyLlByb3ZlbmFuY2UaLQoLUGFyYW1zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLhAQoHQm9tTGluZRIPCgdyZWZfZGVzGAEgAygJEgsKA21wbhgCIAEoCRIUCgxtYW51ZmFjdHVyZXIYAyABKAkSEAoIcXVhbnRpdHkYBCABKAUSNwoKYXR0cmlidXRlcxgOIAMoCzIjLmFnbmkudjEuaXIuQm9tTGluZS5BdHRyaWJ1dGVzRW50cnkSJAoEcHJvdhgQIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASqEAgoMUGluRGlyZWN0aW9uEh0KGVBJTl9ESVJFQ1RJT05fVU5TUEVDSUZJRUQQABIXChNQSU5fRElSRUNUSU9OX0lOUFVUEAESGAoUUElOX0RJUkVDVElPTl9PVVRQVVQQAhIXChNQSU5fRElSRUNUSU9OX0lOT1VUEAMSGQoVUElOX0RJUkVDVElPTl9QQVNTSVZFEAQSFwoTUElOX0RJUkVDVElPTl9QT1dFUhAFEhwKGFBJTl9ESVJFQ1RJT05fTk9fQ09OTkVDVBAGEhoKFlBJTl9ESVJFQ1RJT05fUE9XRVJfSU4QBxIbChdQSU5fRElSRUNUSU9OX1BPV0VSX09VVBAIKtwBCg1MYXllckZ1bmN0aW9uEh4KGkxBWUVSX0ZVTkNUSU9OX1VOU1BFQ0lGSUVEEAASGQoVTEFZRVJfRlVOQ1RJT05fU0lHTkFMEAESGAoUTEFZRVJfRlVOQ1RJT05fUExBTkUQAhIdChlMQVlFUl9GVU5DVElPTl9ESUVMRUNUUklDEAMSHgoaTEFZRVJfRlVOQ1RJT05fU09MREVSX01BU0sQBBIdChlMQVlFUl9GVU5DVElPTl9TSUxLU0NSRUVOEAUSGAoUTEFZRVJfRlVOQ1RJT05fUEFTVEUQBkIqWihnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2lyYgZwcm90bzM");
 
 /**
  * Span locates a node within its source file, for lossless reconstruction and surgical
@@ -279,6 +279,22 @@ export type InputDiagnostics = Message<"agni.v1.ir.InputDiagnostics"> & {
    * @generated from field: repeated agni.v1.ir.BusNotModeled unmodeled_buses = 4;
    */
   unmodeledBuses: BusNotModeled[];
+
+  /**
+   * A symbol reference the reader could NOT resolve (WS1-052): an xschem/gEDA `.sym` file or a
+   * KiCad external `.kicad_sym` library that failed to open or parse. The parse of the SCHEMATIC
+   * succeeds, so there is no error to raise, but every placement of that symbol loses its pins --
+   * and a component with no pins has no connections, so the design reads as valid and emptier than
+   * it is. Silence would be indistinguishable from a design that genuinely has none.
+   *
+   * The reader ALREADY knew this: the unresolved count gates dangling-endpoint emission (WS1-013),
+   * because missing pins turn real wire ends into phantom dangles. Until now that knowledge made
+   * the read quieter and was then discarded. Recording it is what lets the pin-dependent rules
+   * report inconclusive instead of passing over a netlist that is missing connections.
+   *
+   * @generated from field: repeated agni.v1.ir.UnresolvedSymbol unresolved_symbols = 5;
+   */
+  unresolvedSymbols: UnresolvedSymbol[];
 };
 
 /**
@@ -287,6 +303,48 @@ export type InputDiagnostics = Message<"agni.v1.ir.InputDiagnostics"> & {
  */
 export const InputDiagnosticsSchema: GenMessage<InputDiagnostics> = /*@__PURE__*/
   messageDesc(file_agni_v1_ir_ir, 4);
+
+/**
+ * UnresolvedSymbol is one symbol reference that failed to resolve, with every placement it cost
+ * pins. Keyed per REFERENCE rather than per placement: one missing library file affects every part
+ * drawn with it, and a finding per part would bury that single cause under N identical messages.
+ *
+ * symref is the reference exactly as the source spelled it (`res.sym`, `devices/res.sym`, a KiCad
+ * `Library:Symbol` lib_id), so the message can be pasted into a --symbol-path search. kind names
+ * the construct ("xschem_sym", "geda_sym", "kicad_sym_lib") so a reader-neutral consumer can still
+ * say what kind of thing is missing. ref_des lists the placements that lost pins, which is the
+ * blast radius and the join key for the unresolved_symbol query relation.
+ *
+ * @generated from message agni.v1.ir.UnresolvedSymbol
+ */
+export type UnresolvedSymbol = Message<"agni.v1.ir.UnresolvedSymbol"> & {
+  /**
+   * @generated from field: string symref = 1;
+   */
+  symref: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: repeated string ref_des = 3;
+   */
+  refDes: string[];
+
+  /**
+   * @generated from field: agni.v1.ir.Provenance prov = 4;
+   */
+  prov?: Provenance | undefined;
+};
+
+/**
+ * Describes the message agni.v1.ir.UnresolvedSymbol.
+ * Use `create(UnresolvedSymbolSchema)` to create a new message.
+ */
+export const UnresolvedSymbolSchema: GenMessage<UnresolvedSymbol> = /*@__PURE__*/
+  messageDesc(file_agni_v1_ir_ir, 5);
 
 /**
  * BusNotModeled is one bus construct a reader detected but has not expanded into member nets
@@ -332,7 +390,7 @@ export type BusNotModeled = Message<"agni.v1.ir.BusNotModeled"> & {
  * Use `create(BusNotModeledSchema)` to create a new message.
  */
 export const BusNotModeledSchema: GenMessage<BusNotModeled> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 5);
+  messageDesc(file_agni_v1_ir_ir, 6);
 
 /**
  * DanglingEndpoint is a schematic wire endpoint that terminates on nothing -- no pin, junction,
@@ -371,7 +429,7 @@ export type DanglingEndpoint = Message<"agni.v1.ir.DanglingEndpoint"> & {
  * Use `create(DanglingEndpointSchema)` to create a new message.
  */
 export const DanglingEndpointSchema: GenMessage<DanglingEndpoint> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 6);
+  messageDesc(file_agni_v1_ir_ir, 7);
 
 /**
  * RefDesCollision is a reference designator claimed by more than one distinct physical placement --
@@ -400,7 +458,7 @@ export type RefDesCollision = Message<"agni.v1.ir.RefDesCollision"> & {
  * Use `create(RefDesCollisionSchema)` to create a new message.
  */
 export const RefDesCollisionSchema: GenMessage<RefDesCollision> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 7);
+  messageDesc(file_agni_v1_ir_ir, 8);
 
 /**
  * PartLibrary groups PartType definitions (EDIF library, KiCad symbol library).
@@ -434,7 +492,7 @@ export type PartLibrary = Message<"agni.v1.ir.PartLibrary"> & {
  * Use `create(PartLibrarySchema)` to create a new message.
  */
 export const PartLibrarySchema: GenMessage<PartLibrary> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 8);
+  messageDesc(file_agni_v1_ir_ir, 9);
 
 /**
  * PartType is a part/component definition (EDIF cell, KiCad symbol). Named "PartType"
@@ -483,7 +541,7 @@ export type PartType = Message<"agni.v1.ir.PartType"> & {
  * Use `create(PartTypeSchema)` to create a new message.
  */
 export const PartTypeSchema: GenMessage<PartType> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 9);
+  messageDesc(file_agni_v1_ir_ir, 10);
 
 /**
  * Pin is a terminal on a PartType (EDIF port, KiCad pin).
@@ -526,7 +584,7 @@ export type Pin = Message<"agni.v1.ir.Pin"> & {
  * Use `create(PinSchema)` to create a new message.
  */
 export const PinSchema: GenMessage<Pin> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 10);
+  messageDesc(file_agni_v1_ir_ir, 11);
 
 /**
  * Component is a placed physical component, keyed by its reference designator. One
@@ -600,7 +658,7 @@ export type Component = Message<"agni.v1.ir.Component"> & {
  * Use `create(ComponentSchema)` to create a new message.
  */
 export const ComponentSchema: GenMessage<Component> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 11);
+  messageDesc(file_agni_v1_ir_ir, 12);
 
 /**
  * Quantity is a physical quantity read off a design: a number, its unit, and the source text it came
@@ -664,7 +722,7 @@ export type Quantity = Message<"agni.v1.ir.Quantity"> & {
  * Use `create(QuantitySchema)` to create a new message.
  */
 export const QuantitySchema: GenMessage<Quantity> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 12);
+  messageDesc(file_agni_v1_ir_ir, 13);
 
 /**
  * ComponentSection is one section/unit of a Component (one EDIF instance, one KiCad
@@ -715,7 +773,7 @@ export type ComponentSection = Message<"agni.v1.ir.ComponentSection"> & {
  * Use `create(ComponentSectionSchema)` to create a new message.
  */
 export const ComponentSectionSchema: GenMessage<ComponentSection> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 13);
+  messageDesc(file_agni_v1_ir_ir, 14);
 
 /**
  * Net is a set of electrically connected pins.
@@ -804,7 +862,7 @@ export type Net = Message<"agni.v1.ir.Net"> & {
  * Use `create(NetSchema)` to create a new message.
  */
 export const NetSchema: GenMessage<Net> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 14);
+  messageDesc(file_agni_v1_ir_ir, 15);
 
 /**
  * Connection is one pin's membership in a Net: (component ref_des, pin designator). This
@@ -850,7 +908,7 @@ export type Connection = Message<"agni.v1.ir.Connection"> & {
  * Use `create(ConnectionSchema)` to create a new message.
  */
 export const ConnectionSchema: GenMessage<Connection> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 15);
+  messageDesc(file_agni_v1_ir_ir, 16);
 
 /**
  * Sheet is a logical schematic page reference. The drawn geometry lives in the geometry
@@ -885,7 +943,7 @@ export type Sheet = Message<"agni.v1.ir.Sheet"> & {
  * Use `create(SheetSchema)` to create a new message.
  */
 export const SheetSchema: GenMessage<Sheet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 16);
+  messageDesc(file_agni_v1_ir_ir, 17);
 
 /**
  * Footprint is a physical land pattern / package (KiCad footprint, IPC-2581/ODB++
@@ -921,7 +979,7 @@ export type Footprint = Message<"agni.v1.ir.Footprint"> & {
  * Use `create(FootprintSchema)` to create a new message.
  */
 export const FootprintSchema: GenMessage<Footprint> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 17);
+  messageDesc(file_agni_v1_ir_ir, 18);
 
 /**
  * @generated from message agni.v1.ir.Layer
@@ -960,7 +1018,7 @@ export type Layer = Message<"agni.v1.ir.Layer"> & {
  * Use `create(LayerSchema)` to create a new message.
  */
 export const LayerSchema: GenMessage<Layer> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 18);
+  messageDesc(file_agni_v1_ir_ir, 19);
 
 /**
  * StackupLayer is one physical layer in the board stackup (a sub-record; keyed within
@@ -999,7 +1057,7 @@ export type StackupLayer = Message<"agni.v1.ir.StackupLayer"> & {
  * Use `create(StackupLayerSchema)` to create a new message.
  */
 export const StackupLayerSchema: GenMessage<StackupLayer> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 19);
+  messageDesc(file_agni_v1_ir_ir, 20);
 
 /**
  * @generated from message agni.v1.ir.Stackup
@@ -1026,7 +1084,7 @@ export type Stackup = Message<"agni.v1.ir.Stackup"> & {
  * Use `create(StackupSchema)` to create a new message.
  */
 export const StackupSchema: GenMessage<Stackup> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 20);
+  messageDesc(file_agni_v1_ir_ir, 21);
 
 /**
  * Constraint is a design rule/gate. Its class is `kind`; the rules DSL (WS3) owns the
@@ -1066,7 +1124,7 @@ export type Constraint = Message<"agni.v1.ir.Constraint"> & {
  * Use `create(ConstraintSchema)` to create a new message.
  */
 export const ConstraintSchema: GenMessage<Constraint> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 21);
+  messageDesc(file_agni_v1_ir_ir, 22);
 
 /**
  * BomLine is one bill-of-materials line covering one or more ref_des.
@@ -1110,7 +1168,7 @@ export type BomLine = Message<"agni.v1.ir.BomLine"> & {
  * Use `create(BomLineSchema)` to create a new message.
  */
 export const BomLineSchema: GenMessage<BomLine> = /*@__PURE__*/
-  messageDesc(file_agni_v1_ir_ir, 22);
+  messageDesc(file_agni_v1_ir_ir, 23);
 
 /**
  * PinDirection is the normalized electrical direction of a pin. Readers map their native
