@@ -106,8 +106,15 @@ PDF2DOC_FLAG := $(if $(strip $(PDF2DOC)),--pdf2doc '$(PDF2DOC)')
 # empty means components + net names + placeholder boxes (see docs/GETTING_STARTED.md).
 SYMBOL_PATH ?=
 SYMBOL_FLAGS := $(foreach p,$(SYMBOL_PATH),--symbol-path $(p))
+# OVERLAY_FLAGS carries the catalog overlay a deployment serves with: --profile-path,
+# --intent-path, --conventions. Separate from EXTRA_MOUNTS because these are not mounts but CATALOG
+# inputs, and since WS3-109 they compose into every rule-running surface the server exposes. E.g.
+#   make serve OVERLAY_FLAGS="--profile-path /path/to/profiles --conventions /path/to/conventions.yaml"
+# An overlay is per-DEPLOYMENT config: a profile named after a built-in supersedes it for every
+# design this server reads, so point it at an overlay that suits the whole mounted set.
+OVERLAY_FLAGS ?=
 serve: ui
-	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) web
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) web
 
 # One-command self-contained demo. Builds the web bundle and serves the viewer with only the
 # shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
