@@ -45,6 +45,11 @@ const docKeySubsystem = "subsystem"
 // family shares one card explaining the power-good/enable check they all run.
 const docKeySequence = "sequence"
 
+// docKeyStrapGroup is the family doc for intent/strap-group-<slug>, the same shape as the subsystem
+// and sequence families: one card per MECHANISM, not per declared group, because every group runs the
+// identical decode and the per-group rule names exist only so review items bind independently.
+const docKeyStrapGroup = "strap-group"
+
 // docKeys is the canonical set of intent rule-doc keys: every kind Compile can emit maps to exactly one
 // entry here, and each has a docs/<key>.md. It is the harness's expectation set (docs_test.go holds
 // docKeys, the emitted rules, and the docs/ directory to each other), so a new intent rule kind added
@@ -63,6 +68,8 @@ var docKeys = []string{
 	RuleRailCurrentMargin,               // rail-current-margin
 	RuleLoadSwitchTripBelowBudget,       // load-switch-trip-below-budget
 	docKeySequence,                      // sequence (family doc for intent/sequence-<slug>)
+	docKeyStrapGroup,                    // strap-group (family doc for intent/strap-group-<slug>)
+	RuleStrapAddressCollision,           // strap-address-collision (cross-group, one for all)
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -76,6 +83,9 @@ func docKey(ruleName string) string {
 	}
 	if strings.HasPrefix(ruleName, "sequence-") {
 		return docKeySequence
+	}
+	if strings.HasPrefix(ruleName, "strap-group-") {
+		return docKeyStrapGroup
 	}
 	return ruleName
 }
@@ -99,6 +109,8 @@ var docSummaries = map[string]string{
 	RuleRailCurrentMargin:               "A rail's supply meets its declared peak current budget but not the declared margin factor over it.",
 	RuleLoadSwitchTripBelowBudget:       "A load switch's current limit is set below the peak current the design intent declares for the rail it feeds.",
 	docKeySequence:                      "A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round.",
+	docKeyStrapGroup:                    "a group of strap nets does not encode the value the design intent declares",
+	RuleStrapAddressCollision:           "two devices on one bus strap to the same address",
 }
 
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog

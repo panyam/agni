@@ -64,6 +64,13 @@ type Declaration struct {
 	// this one mechanism and must report independently. A sequence fails when the gating chain it
 	// declares is not in the design, or runs the other way round.
 	Sequences []Sequence
+	// StrapGroups is the set of declared strap GROUPS (WS3-120): several strap nets read together as
+	// one binary number, plus the value that number is meant to encode. It is the ask NetProperties
+	// structurally cannot express — a per-net declaration has no vocabulary for "these three nets are
+	// one address" — and it is what makes the cross-device collision check possible at all. Each group
+	// compiles to its OWN rule (intent/strap-group-<slug>), the Subsystems shape; the collision check
+	// is necessarily cross-group and gets one rule for all of them.
+	StrapGroups []StrapGroup
 	// MarginFactor is the house headroom policy: the multiple of a rail's peak budget its supply must
 	// be rated for (1.2 means 20% headroom). It compiles intent/rail-current-margin, and it has NO
 	// DEFAULT on purpose. A default would put one company's policy in a rule literal, which is exactly
@@ -71,6 +78,46 @@ type Declaration struct {
 	// rule read PASS against a number nobody declared. Absent, the margin rule is not compiled at all,
 	// so a bound item reads needs-design-intent.
 	MarginFactor float64
+}
+
+// StrapGroup is several strap nets read together as one binary number: a device's address or mode
+// select, spread across pins (WS3-120). It exists because a per-net declaration cannot say "these
+// three nets are one number", and without that neither the encoded VALUE nor a collision between two
+// devices is expressible.
+//
+// PARTIAL EVIDENCE IS THE HARD CASE, and Default is the answer to it. A strap pin usually carries an
+// internal pull, and the standard datasheet instruction is to fit an external resistor only for the
+// NON-DEFAULT state, so a 3-bit address commonly has resistors on one or two bits. Those pins are not
+// unknown to the designer, they are at the part's internal default — but the netlist does not carry
+// that, so the engine cannot know it. Declaring Default supplies exactly the missing fact and lets a
+// normally-built group decode.
+//
+// With no Default, an unbiased bit makes the group's value genuinely UNDECIDABLE. It is then reported
+// inconclusive rather than decoded with the missing bit assumed zero, because assuming would fabricate
+// an address — and a fabricated address can fabricate a COLLISION, turning a silent gap into a
+// confident accusation about two parts that are fine.
+type StrapGroup struct {
+	// Name labels the group ("PHYAD", "boot mode") and slugifies into the rule name
+	// (intent/strap-group-<slug>) a review item binds to. Must slugify uniquely (Load validates).
+	Name string
+	// Device is the ref-des the group configures (U12). It is not matched against the design — the
+	// nets carry the evidence — but it names the part in findings, which is what a reviewer needs to
+	// go look at the right page.
+	Device string
+	// Nets are the group's strap nets in MSB-FIRST bit order. Order is the declaration's job because
+	// nothing in a netlist states which pin is the high bit; a name like PHYAD2 hints at it and a
+	// rule that inferred bit order from names would be a naming heuristic, which is exactly what the
+	// lexicon work moved out of rule literals.
+	Nets []string
+	// Value is the number the group is meant to encode, decoded MSB-first from Nets.
+	Value int
+	// Bus scopes collision detection: two groups sharing a Bus must not encode the same Value. Empty
+	// opts the group out of collision checking entirely, which is right for a mode select that is not
+	// an address on any shared bus.
+	Bus string
+	// Default is the level an UNBIASED pin in this group takes, from the part's internal pull:
+	// "low", "high", or empty for "the netlist cannot tell, so do not guess". See the type doc.
+	Default string
 }
 
 // RailBudget is one rail's declared peak current demand (WS3-095), in amps.

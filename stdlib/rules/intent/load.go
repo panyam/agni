@@ -18,6 +18,7 @@ type declarationDoc struct {
 	Subsystems     []subsystemDoc   `yaml:"subsystems"`
 	Protections    []protectionDoc  `yaml:"protections"`
 	NetProperties  []netPropertyDoc `yaml:"net_properties"`
+	StrapGroups    []strapGroupDoc  `yaml:"strap_groups"`
 	RailBudgets    []railBudgetDoc  `yaml:"rail_budgets"`
 	Sequences      []sequenceDoc    `yaml:"sequences"`
 	MarginFactor   float64          `yaml:"margin_factor"`
@@ -64,6 +65,15 @@ type railBudgetDoc struct {
 	Peak float64 `yaml:"peak"`
 }
 
+type strapGroupDoc struct {
+	Name    string   `yaml:"name"`
+	Device  string   `yaml:"device"`
+	Nets    []string `yaml:"nets"`
+	Value   int      `yaml:"value"`
+	Bus     string   `yaml:"bus"`
+	Default string   `yaml:"default"`
+}
+
 type netPropertyDoc struct {
 	MinOhms  float64 `yaml:"min_ohms"`
 	MaxOhms  float64 `yaml:"max_ohms"`
@@ -92,8 +102,8 @@ func Parse(b []byte) (Declaration, error) {
 		return Declaration{}, fmt.Errorf("intent: missing required field \"name\"")
 	}
 	if len(doc.Modules) == 0 && len(doc.VoltageDomains) == 0 && len(doc.Subsystems) == 0 && len(doc.Protections) == 0 &&
-		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 && len(doc.Sequences) == 0 {
-		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, rail_budgets, or sequences", doc.Name)
+		len(doc.NetProperties) == 0 && len(doc.RailBudgets) == 0 && len(doc.Sequences) == 0 && len(doc.StrapGroups) == 0 {
+		return Declaration{}, fmt.Errorf("intent %q: declares no modules, voltage_domains, subsystems, protections, net_properties, rail_budgets, sequences, or strap_groups", doc.Name)
 	}
 	d := Declaration{Name: doc.Name}
 	for i, m := range doc.Modules {
@@ -144,6 +154,42 @@ func Parse(b []byte) (Declaration, error) {
 			sub.Source = &Module{Name: s.Name + " source", Class: s.Source.Class, MPN: s.Source.MPN}
 		}
 		d.Subsystems = append(d.Subsystems, sub)
+	}
+	groupSlugs := map[string]string{}
+	for i, g := range doc.StrapGroups {
+		if strings.TrimSpace(g.Name) == "" {
+			return Declaration{}, fmt.Errorf("intent %q: strap_group #%d is missing its \"name\"", doc.Name, i+1)
+		}
+		if len(g.Nets) == 0 {
+			return Declaration{}, fmt.Errorf("intent %q: strap_group %q lists no \"nets\"; a group with no bits encodes nothing to check", doc.Name, g.Name)
+		}
+		// The declared value has to be representable in the bits declared, or the group can never
+		// encode it and the rule would fail on every design including a correct one. That is an
+		// authoring error, so it is rejected here rather than reported as a design finding.
+		if max := 1<<len(g.Nets) - 1; g.Value < 0 || g.Value > max {
+			return Declaration{}, fmt.Errorf("intent %q: strap_group %q declares value %d, which %d net(s) cannot encode (range 0..%d)", doc.Name, g.Name, g.Value, len(g.Nets), max)
+		}
+		if g.Default != "" && g.Default != "low" && g.Default != "high" {
+			return Declaration{}, fmt.Errorf("intent %q: strap_group %q has default %q (want \"low\", \"high\", or omitted)", doc.Name, g.Name, g.Default)
+		}
+		seenNet := map[string]bool{}
+		for _, n := range g.Nets {
+			if seenNet[n] {
+				return Declaration{}, fmt.Errorf("intent %q: strap_group %q lists net %q twice; one net cannot be two bits of the same number", doc.Name, g.Name, n)
+			}
+			seenNet[n] = true
+		}
+		sl := slug(g.Name)
+		if sl == "" {
+			return Declaration{}, fmt.Errorf("intent %q: strap_group name %q has no alphanumeric characters to form a rule name", doc.Name, g.Name)
+		}
+		if first, dup := groupSlugs[sl]; dup {
+			return Declaration{}, fmt.Errorf("intent %q: strap_groups %q and %q slugify to the same rule name %q", doc.Name, first, g.Name, "intent/strap-group-"+sl)
+		}
+		groupSlugs[sl] = g.Name
+		d.StrapGroups = append(d.StrapGroups, StrapGroup{
+			Name: g.Name, Device: g.Device, Nets: g.Nets, Value: g.Value, Bus: g.Bus, Default: g.Default,
+		})
 	}
 	for i, p := range doc.Protections {
 		if strings.TrimSpace(p.Rail) == "" {
