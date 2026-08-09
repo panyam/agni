@@ -1,0 +1,6 @@
+# Two PHYs on one MDIO bus. Each strap group is individually correct; the collision is only visible
+# across the two, which is why it needs a rule rather than a reviewer.
+name: strap group collision demo
+strap_groups:
+  - {name: PHYAD U12, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 1, bus: MDIO}
+  - {name: PHYAD U13, device: U13, nets: [PHY2AD2, PHY2AD1, PHY2AD0], value: 1, bus: MDIO}
