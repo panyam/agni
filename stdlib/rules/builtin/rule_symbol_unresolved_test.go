@@ -38,6 +38,11 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 			t.Errorf("message %q does not name affected placement %s", fs[0].Message, ref)
 		}
 	}
+	// This rule is the ONE place the remedy is stated: the connectivity rules gated by the same
+	// cause point here rather than each repeating it, so if it is missing here it is nowhere.
+	if !strings.Contains(fs[0].Message, "--symbol-path") {
+		t.Errorf("message %q does not say how to fix it", fs[0].Message)
+	}
 }
 
 // TestSymbolUnresolvedSilentWhenClean: a design whose symbols all resolved reports nothing, so the

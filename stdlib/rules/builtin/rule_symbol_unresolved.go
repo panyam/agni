@@ -46,14 +46,18 @@ var symbolUnresolved = &check.Rule{
 // much of the netlist is missing: one unresolved decorative symbol and one unresolved 100-pin FPGA
 // read identically until the parts are listed.
 func unresolvedMessage(u *ir.UnresolvedSymbol) string {
+	// The remedy lives HERE and only here. Every connectivity rule emits a companion inconclusive
+	// finding that points back to this one, so repeating the fix on each of them would print the
+	// same paragraph twenty times and bury the single finding that names the cause.
+	const remedy = " Re-run with --symbol-path pointing at the library that holds it."
 	refs := u.GetRefDes()
 	if len(refs) == 0 {
-		return fmt.Sprintf("symbol %q did not resolve; pins unknown", u.GetSymref())
+		return fmt.Sprintf("symbol %q did not resolve; pins unknown.", u.GetSymref()) + remedy
 	}
 	verb := "carry"
 	if len(refs) == 1 {
 		verb = "carries"
 	}
-	return fmt.Sprintf("symbol %q did not resolve, so %s %s no pins (connections absent from the netlist)",
-		u.GetSymref(), strings.Join(refs, ", "), verb)
+	return fmt.Sprintf("symbol %q did not resolve, so %s %s no pins (connections absent from the netlist).",
+		u.GetSymref(), strings.Join(refs, ", "), verb) + remedy
 }

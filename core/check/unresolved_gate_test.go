@@ -50,8 +50,13 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 		if !strings.Contains(fs[0].Message, "res.sym") {
 			t.Errorf("reads %v: message %q does not name the unresolved symbol", reads, fs[0].Message)
 		}
-		if !strings.Contains(fs[0].Message, "--symbol-path") {
-			t.Errorf("reads %v: message %q does not say how to fix it", reads, fs[0].Message)
+		// The remedy is NOT repeated here: every gated rule emits this message, so the fix lives
+		// once on symbol-unresolved and each gate finding points at it.
+		if !strings.Contains(fs[0].Message, "symbol-unresolved") {
+			t.Errorf("reads %v: message %q does not point at the rule that explains the cause", reads, fs[0].Message)
+		}
+		if fs[0].Subject != "res.sym" {
+			t.Errorf("reads %v: subject = %q, want the unresolved reference", reads, fs[0].Subject)
 		}
 	}
 }

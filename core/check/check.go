@@ -12,7 +12,6 @@
 package check
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -273,16 +272,19 @@ func unresolvedSymbolGate(m Model) func(*Rule) (Finding, bool) {
 	for _, u := range unresolved {
 		refs = append(refs, u.GetSymref())
 	}
-	msg := fmt.Sprintf(
-		"cannot decide: %d symbol reference(s) did not resolve (%s), so the parts drawn with them "+
-			"carry no pins and their connections are absent from the netlist. Re-run with "+
-			"--symbol-path pointing at the library that holds them.",
-		len(refs), strings.Join(refs, ", "))
+	// Terse on purpose. Every gated rule emits this, so a full remediation paragraph here would be
+	// repeated once per rule and bury the one finding that explains the cause. symbol-unresolved
+	// carries the affected placements and the fix; this only says why THIS rule has no verdict.
+	subject := strings.Join(refs, ", ")
+	msg := "cannot decide: pins are unknown while " + subject + " is unresolved (see symbol-unresolved)"
+	if len(refs) > 1 {
+		msg = "cannot decide: pins are unknown while " + subject + " are unresolved (see symbol-unresolved)"
+	}
 	return func(r *Rule) (Finding, bool) {
 		if !readsConnectivity(r) {
 			return Finding{}, false
 		}
-		return Finding{Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
+		return Finding{Kind: KindSymbol, Subject: subject, Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
 	}
 }
 
