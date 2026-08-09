@@ -27,11 +27,11 @@ export interface DockPanelDef {
 // VIEWER_PANELS is the registry the dock is built from: panel ids double as dockview
 // component names and as the data-dock-panel key of the server-rendered hole.
 export const VIEWER_PANELS: readonly DockPanelDef[] = [
-  // Files is SECONDARY as of WS9-049: the work page opens one design, so a permanent cross-file
-  // tree costs left-rail width for navigation that belongs on the browse page. It stays registered
-  // (and menu-openable) until that page ships, so there is still a way to reach another design.
-  { id: "files", title: "Files" },
-  // The birds-eye sheet list (WS9-025) tabs with Files in the default layout; for existing
+  // Files is GONE as of WS9-049 phase 3. It was demoted to secondary in phase 1 and kept only
+  // because the old Compare flow needed a tree to click side B in; the compare picker replaced
+  // that, and /designs replaced cross-file navigation, so the panel had no remaining job. A saved
+  // layout still naming it is handled by prunePanels, not by keeping a registry entry alive.
+  // The birds-eye sheet list (WS9-025); for existing
   // saved layouts it appears via the reconcile pass (it is not in their saved registry).
   { id: "overview", title: "Sheets", defaultOpen: true },
   { id: "canvas", title: "Canvas", defaultOpen: true },
@@ -162,10 +162,10 @@ export function adoptPanel(park: HTMLElement, name: string): IContentRenderer {
 
 // defaultLayout is the lean boot layout (WS9-042, narrowed by WS9-049): only the default-open
 // (core) panels open — Sheets on the left (260px), canvas in the center, and a 300px right column
-// stacking details and checks. Sheets holds the left rail alone now that Files is secondary: the
-// work page opens exactly one design, so the design's own sheet hierarchy is the navigation that
-// belongs there. The secondaries (files, rules, query) stay closed and are opened from the Panels
-// menu. Their holes still mount (parked, hidden), so opening one is instant.
+// stacking details and checks. Sheets holds the left rail alone: the work page opens exactly one
+// design, so the design's own sheet hierarchy is the navigation that belongs there. The secondaries
+// (rules, query, coverage, parts) stay closed and are opened from the Panels menu. Their holes
+// still mount (parked, hidden), so opening one is instant.
 export function defaultLayout(api: DockviewApi): void {
   api.addPanel({ id: "canvas", component: "canvas", title: "Canvas" });
   api.addPanel({ id: "overview", component: "overview", title: "Sheets", position: { direction: "left", referencePanel: "canvas" } });
@@ -215,14 +215,14 @@ export function closeDiffPanel(api: DockviewApi): void {
   }
 }
 
-// openPanel re-adds a closed panel from the menu. Files reopens on the left edge and
-// everything else on the right; the user drags it where they want and persistence keeps it.
+// openPanel re-adds a closed panel from the menu, on the right edge; the user drags it where they
+// want and persistence keeps it. (Files used to be special-cased to the left; it is gone.)
 export function openPanel(api: DockviewApi, def: DockPanelDef): void {
   api.addPanel({
     id: def.id,
     component: def.id,
     title: def.title,
-    position: { direction: def.id === "files" ? "left" : "right" },
+    position: { direction: "right" },
   });
 }
 

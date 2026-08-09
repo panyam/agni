@@ -7,7 +7,7 @@
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { CanvasComponent } from "./canvas.js";
-import { fileTreeIsland } from "./filetree.js";
+import { comparePickerIsland } from "./comparepicker.js";
 import { controlBarIsland } from "./controlbar.js";
 import { sheetTabsIsland } from "./sheettabs.js";
 import { findingsPanelIsland } from "./findingspanel.js";
@@ -25,7 +25,7 @@ import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient } from "./api.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
-import { currentLocation, emptyLocation, hasDir, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
+import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
@@ -41,30 +41,23 @@ let restoring = false;
 // changed and we are not mid-restore, so normal navigation builds a back-stack while a
 // refresh/back-forward replay does not.
 function syncUrl(loc: ViewerLocation): void {
-  document.title = hasFile(loc) || hasDir(loc) ? `${loc.path || loc.mount} — Agni` : "Agni viewer";
+  document.title = hasFile(loc) ? `${loc.path || loc.mount} — Agni` : "Agni viewer";
   if (restoring) return;
   const url = locationToUrl(loc);
   if (url !== window.location.pathname + window.location.search) window.history.pushState(null, "", url);
-}
-
-// dirLocation builds a folder location for the URL from a tree folder selection.
-function dirLocation(mount: string, path: string): ViewerLocation {
-  return { ...emptyLocation(), mount, path, isDir: true };
 }
 
 class AppRoot extends BaseComponent {
   // presenter is exposed so the boot code can drive a deep-link restore once the islands are
   // initialized (it is created in performLocalInit, below).
   presenter: ViewerPresenter | null = null;
-  // revealDir expands the tree to a folder URL on restore (deep link / back-forward), set once the
-  // file-tree island is built.
-  revealDir: (mount: string, path: string) => void = () => {};
 
   override performLocalInit(): LCMComponent[] {
     const children: LCMComponent[] = [];
 
     const canvasEl = document.getElementById("view");
-    const treeEl = document.getElementById("file-tree");
+    const pickerEl = document.getElementById("compare-picker");
+    const compareTreeEl = document.getElementById("compare-tree");
     const svgEl = document.getElementById("svg-view");
     const controlsEl = document.getElementById("controls");
     const findingsEl = document.getElementById("findings");
@@ -81,7 +74,7 @@ class AppRoot extends BaseComponent {
     const coverageEl = document.getElementById("coverage-panel");
     const partsEl = document.getElementById("parts-panel");
     const sheetTabsEl = document.getElementById("sheet-tabs");
-    if (!canvasEl || !treeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
+    if (!canvasEl || !pickerEl || !compareTreeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
       return children;
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
@@ -193,27 +186,18 @@ class AppRoot extends BaseComponent {
       diffChanges.view.setState(s);
     });
 
-    // Compare chrome: arming takes the currently open file as side A; the next tree file
-    // click becomes side B and opens the diff panel instead of the viewer.
-    let lastFile: { mount: string; path: string } | null = null;
-    const compare = compareButton(compareEl, () => {});
-
-    const tree = fileTreeIsland(treeEl, this._eventBus, {
-      onFileSelect: (mount, path) => {
-        if (compare.isArmed() && lastFile) {
-          compare.disarm();
-          if (dockApi) openDiffPanel(dockApi);
-          void diffPresenter.open(lastFile, { mount, path });
-          return;
-        }
-        void presenter.openFile(mount, path);
-      },
-      // Selecting a folder only re-addresses the URL; it opens no design and leaves the rendered
-      // view/checks as they were (see syncUrl / dirLocation).
-      onDirSelect: (mount, path) => syncUrl(dirLocation(mount, path)),
-      onSheetSelect: (id) => void presenter.showSheet(id),
+    // Compare chrome (WS9-049 phase 3): the button opens a picker, and the picker reports a design
+    // to compare against. openFile is the currently open design, kept here because it is side A of
+    // whatever comparison the user starts.
+    let openFile: { mount: string; path: string } | null = null;
+    // comparePicker.onPick means "compare against this", not "set side B" — so when the presenter
+    // layer grows to hold several comparisons at once, this callback is what changes, not the picker.
+    const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, (target) => {
+      if (!openFile) return;
+      if (dockApi) openDiffPanel(dockApi);
+      void diffPresenter.open(openFile, target);
     });
-    this.revealDir = tree.revealDir;
+    const compare = compareButton(compareEl, () => comparePick.picker.open(openFile));
     // WS9-049: the visited-sheet tab strip. It is a second SheetsView beside the tree, so it needs
     // no presenter change; selecting a tab is the same showSheet intent a tree sheet-click emits.
     const sheetTabs = sheetTabsIsland(sheetTabsEl, this._eventBus, {
@@ -270,26 +254,28 @@ class AppRoot extends BaseComponent {
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
       })
       .catch(() => {});
-    // The presenter fans sheet state to every surface in sheetNavs: the file tree (sheets nest
-    // under their file), the Sheets overview panel, and the top tab strip. The strip is the
-    // WS9-049 second surface the fan-out was built for — it joined with no presenter change.
+    // The presenter fans sheet state to every surface in sheetNavs. The file tree used to be one of
+    // them (sheets nested under their file); with the tree gone from this page the fan-out feeds the
+    // top tab strip, and the Sheets overview panel takes its own `overview` channel. The array stays
+    // a fan-out because that is what let the strip join in phase 1 with no presenter change.
     const presenter = new ViewerPresenter(
       designClient(),
       checksClient(),
       canvas,
       renderView,
       {
-        sheetNavs: [tree.view, sheetTabs.view],
+        sheetNavs: [sheetTabs.view],
         summary: setSummary,
         controls: controls.view,
         findings: findings.view,
         expectationCaption: setExpectCaption,
         rules: rules.view,
         report: setReport,
-        // Every location report also feeds the Compare chrome: the open file is side A.
+        // Every location report also feeds the Compare chrome: the open design is side A of any
+        // comparison the user starts, and until one is open there is nothing to compare against.
         location: (loc) => {
           if (hasFile(loc)) {
-            lastFile = { mount: loc.mount, path: loc.path };
+            openFile = { mount: loc.mount, path: loc.path };
             compare.setEnabled(true);
           }
           syncUrl(loc);
@@ -315,7 +301,7 @@ class AppRoot extends BaseComponent {
 
     children.push(
       canvas,
-      tree.island,
+      comparePick.island,
       sheetTabs.island,
       controls.island,
       findings.island,
@@ -402,13 +388,10 @@ void controller
     // again on every popstate (browser back/forward).
     const applyUrl = async (): Promise<void> => {
       const loc = currentLocation();
-      if (hasDir(loc)) {
-        // A folder URL only expands the tree to that folder; it opens no design, so the shell's
-        // rendered view is left as-is. No restoring guard is needed — revealing pushes no URL.
-        root.revealDir(loc.mount, loc.path);
-        return;
-      }
-      if (!hasFile(loc)) return; // "/" — leave the empty shell as-is
+      // A folder location cannot reach this page: the server routes a folder URL to the browse page
+      // and only a /view URL here (WS9-049 phase 2), and syncUrl only ever pushes file locations. So
+      // there is no dir branch to handle — the tree that used to expand to one is gone.
+      if (!hasFile(loc)) return; // not a design URL — leave the empty shell as-is
       restoring = true;
       try {
         await presenter.restore(loc);

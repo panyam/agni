@@ -25,7 +25,8 @@ func TestViewerPageRendersShell(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, want := range []string{
-		`id="file-tree"`,            // hole for the WS9-002 file tree
+		`id="compare-picker"`,       // WS9-049 phase 3: the compare picker modal
+		`id="compare-tree"`,         // its file-tree island hole
 		`id="view"`,                 // canvas region
 		`id="dock"`,                 // WS9-021: dockview mounts here
 		`id="panel-park"`,           // WS9-021: server-rendered holes park here
@@ -38,6 +39,17 @@ func TestViewerPageRendersShell(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("rendered page missing %q", want)
+		}
+	}
+	// The Files dock panel is retired (WS9-049 phase 3). Its HOLE is what matters here: the dock
+	// adopts panels by finding a data-dock-panel element, so a stale hole would let a saved layout
+	// resurrect the panel even with the registry entry deleted.
+	for _, deny := range []string{
+		`data-dock-panel="files"`,
+		`id="file-tree"`,
+	} {
+		if strings.Contains(body, deny) {
+			t.Errorf("rendered page still contains retired Files panel markup %q", deny)
 		}
 	}
 }

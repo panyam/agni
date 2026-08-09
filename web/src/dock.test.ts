@@ -54,7 +54,7 @@ describe("layout persistence", () => {
 });
 
 describe("panel registry", () => {
-  it("covers exactly the eleven viewer panels with unique ids", () => {
+  it("covers exactly the ten viewer panels with unique ids", () => {
     const ids = VIEWER_PANELS.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.sort()).toEqual([
@@ -64,7 +64,6 @@ describe("panel registry", () => {
       "coverage",
       "details",
       "diff",
-      "files",
       "overview",
       "parts",
       "query",
@@ -72,13 +71,11 @@ describe("panel registry", () => {
     ]);
   });
 
-  it("keeps Files registered but out of the default layout (WS9-049)", () => {
-    // The defaultLayout test below derives its expectation from the defaultOpen flag, so it would
-    // keep passing if Files were silently promoted back. This pins the demotion itself.
-    const files = VIEWER_PANELS.find((p) => p.id === "files");
-    expect(files).toBeDefined();
-    expect(files?.defaultOpen).toBeFalsy();
-    expect(files?.onDemand).toBeFalsy(); // menu-openable, not feature-driven
+  // Phase 1 demoted Files to secondary and kept it registered only because the old Compare flow
+  // needed a tree to click side B in. The picker replaced that flow, so the panel is gone. Pinned
+  // separately from the id list because re-adding it there would read as an ordinary new panel.
+  it("no longer registers Files (WS9-049 phase 3)", () => {
+    expect(VIEWER_PANELS.find((p) => p.id === "files")).toBeUndefined();
   });
 
   it("leaves Sheets default-open as the work page's navigation surface", () => {
@@ -116,6 +113,15 @@ describe("prunePanels", () => {
     const { api, removed } = fakeApi(VIEWER_PANELS.map((p) => p.id));
     prunePanels(api);
     expect(removed).toEqual([]);
+  });
+
+  // This is the WS9-049 phase 3 migration, and the reason prunePanels was added in phase 1. An
+  // existing user's saved layout still names "files"; its hole is gone from the template, so
+  // without the prune adoptPanel falls back to a blank div and they get an empty "Files" tab.
+  it("closes a restored Files panel now that the registry has dropped it", () => {
+    const { api, removed } = fakeApi(["overview", "canvas", "details", "checks", "files"]);
+    prunePanels(api);
+    expect(removed).toEqual(["files"]);
   });
 
   it("removes several retired panels in one pass without skipping any", () => {

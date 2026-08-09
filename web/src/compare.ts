@@ -1,57 +1,40 @@
-// The Compare affordance (WS9-005): a top-bar button that arms "pick file B". The currently
-// open file is side A; while armed, the next file clicked in the tree becomes side B (the
-// composition root routes that click to the DiffPresenter instead of the viewer). Escape or
-// a second click cancels. Like the panels menu, this is shell chrome, not presenter state,
-// so it stays a plain DOM widget.
+// The Compare affordance (WS9-005, reshaped by WS9-049 phase 3): a top-bar button that opens the
+// compare picker. It used to ARM a mode — the next file clicked in the Files tree became side B —
+// which made the interaction depend on invisible state and on a dock panel being open. Now the
+// button just asks for the picker; choosing there is the whole interaction, so there is no armed
+// state to enter, echo, cancel with Escape, or leak when the open design changes.
+//
+// Like the panels menu, this is shell chrome rather than presenter state, so it stays a plain DOM
+// widget.
 
 export interface CompareControl {
-  // setEnabled reflects whether a file is open to serve as side A.
+  // setEnabled reflects whether a design is open to compare AGAINST. With none open there is
+  // nothing to be the other side of a comparison, so the button is disabled rather than opening a
+  // picker whose choice could not be acted on.
   setEnabled(on: boolean): void;
-  isArmed(): boolean;
-  // disarm ends the armed state silently (no onArmChange echo) — for the host to call once
-  // it has consumed the arm (B was picked) or wants to cancel programmatically.
-  disarm(): void;
 }
 
-const IDLE_LABEL = "Compare…";
-const ARMED_LABEL = "pick file B in the tree (Esc cancels)";
+const LABEL = "Compare…";
+const ENABLED_TITLE = "compare the open design against another";
+const DISABLED_TITLE = "open a design first";
 
-// compareButton renders the button into host and reports arm/cancel transitions the USER
-// makes via onArmChange; host-driven disarm() is silent.
-export function compareButton(host: HTMLElement, onArmChange: (armed: boolean) => void): CompareControl {
+// compareButton renders the button into host and calls onOpen when the user asks to compare.
+export function compareButton(host: HTMLElement, onOpen: () => void): CompareControl {
   const doc = host.ownerDocument;
   const btn = doc.createElement("button");
   btn.type = "button";
   btn.className = "mode-btn compare-btn";
-  btn.textContent = IDLE_LABEL;
+  btn.textContent = LABEL;
   btn.disabled = true;
-  btn.title = "open a file first — it becomes side A";
-  let armed = false;
+  btn.title = DISABLED_TITLE;
 
-  const render = (): void => {
-    btn.classList.toggle("active", armed);
-    btn.textContent = armed ? ARMED_LABEL : IDLE_LABEL;
-  };
-  const setArmed = (on: boolean, notify: boolean): void => {
-    if (armed === on) return;
-    armed = on;
-    render();
-    if (notify) onArmChange(armed);
-  };
-
-  btn.addEventListener("click", () => setArmed(!armed, true));
-  doc.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && armed) setArmed(false, true);
-  });
+  btn.addEventListener("click", () => onOpen());
   host.appendChild(btn);
 
   return {
     setEnabled: (on) => {
       btn.disabled = !on;
-      btn.title = on ? "compare the open file (A) with another file (B)" : "open a file first — it becomes side A";
-      if (!on) setArmed(false, true);
+      btn.title = on ? ENABLED_TITLE : DISABLED_TITLE;
     },
-    isArmed: () => armed,
-    disarm: () => setArmed(false, false),
   };
 }
