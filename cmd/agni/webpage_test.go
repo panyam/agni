@@ -14,11 +14,14 @@ func TestViewerPageRendersShell(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
+	// A work-page URL, not "/": since WS9-049 phase 2 the root serves the browse page, so the
+	// viewer shell is reached by addressing a design.
+	const workURL = "/designs/corpus/boards/b.kicad_sch/view"
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, workURL, nil))
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET / = %d, want 200; body:\n%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET %s = %d, want 200; body:\n%s", workURL, rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
 	for _, want := range []string{
@@ -42,15 +45,16 @@ func TestViewerPageRendersShell(t *testing.T) {
 // TestWorkPageServesDesignsSpace asserts the WS9-049 work-page URL space renders the shell, AND
 // that it does so because /designs/ is registered rather than because the root pattern catches
 // everything. The pattern check is the load-bearing half: "/" is a catch-all, so a 200 alone would
-// pass even with no /designs/ registration at all, and phase 2 needs the space to be a real route
-// it can hang the browse page off.
+// pass even with no /designs/ registration at all, and phase 2 hangs the browse page off this
+// same pattern (the /view suffix is what splits them, since a ServeMux pattern cannot put a
+// wildcard segment before a literal one).
 func TestWorkPageServesDesignsSpace(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
 	for _, path := range []string{
-		"/designs/",                              // the space root
-		"/designs/corpus/",                       // a mount root (folder form)
+		"/designs/",                               // the space root
+		"/designs/corpus/",                        // a mount root (folder form)
 		"/designs/corpus/boards/b.kicad_sch/view", // a design (work page)
 	} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -61,10 +65,78 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 		mux.ServeHTTP(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Errorf("GET %s = %d, want 200", path, rec.Code)
+		}
+	}
+}
+
+// TestDesignsSpaceSplitsBrowseFromWork is the phase-2 contract: one registered pattern, two
+// different shells, chosen by the /view suffix. Each case asserts BOTH that the expected shell
+// rendered and that the other one did not, because both pages descend from BasePage and share
+// enough markup that a one-sided check would pass if the dispatcher sent every request to the
+// same page.
+func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	// browse markers / work markers. The bundle reference is the sharpest discriminator: a page
+	// loading app.js IS the viewer, whatever else it renders.
+	browseMarkers := []string{`id="browse-tree"`, `id="browse-preview"`, "/static/browse.js"}
+	workMarkers := []string{`id="dock"`, `id="panel-park"`, "/static/app.js"}
+
+	for _, tc := range []struct {
+		path       string
+		want, deny []string
+	}{
+		{"/", browseMarkers, workMarkers},                          // the landing page is browse
+		{"/designs/", browseMarkers, workMarkers},                  // the space root
+		{"/designs/corpus/", browseMarkers, workMarkers},           // a mount root
+		{"/designs/corpus/boards/", browseMarkers, workMarkers},    // a subfolder
+		{"/designs/corpus/b.kicad_sch/view", workMarkers, browseMarkers},
+		{"/designs/corpus/boards/b.kicad_sch/view?sheet=root", workMarkers, browseMarkers},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", tc.path, rec.Code)
 			continue
 		}
-		if !strings.Contains(rec.Body.String(), `id="dock"`) {
-			t.Errorf("GET %s did not render the viewer shell", path)
+		body := rec.Body.String()
+		for _, want := range tc.want {
+			if !strings.Contains(body, want) {
+				t.Errorf("GET %s missing %q", tc.path, want)
+			}
+		}
+		for _, deny := range tc.deny {
+			if strings.Contains(body, deny) {
+				t.Errorf("GET %s unexpectedly contains %q (wrong page served)", tc.path, deny)
+			}
+		}
+	}
+}
+
+// TestBrowsePageOmitsAnalysisChrome pins the ticket's structural promise: the browse preview is
+// read-only, so the page must not ship the viewer's analysis surfaces. These are template-level
+// holes, so their absence is what keeps the presenter, WebGL canvas, and checks machinery from
+// ever mounting (the islands resolve their holes by id at boot and bail when they are missing).
+func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/designs/", nil))
+
+	body := rec.Body.String()
+	for _, deny := range []string{
+		`id="view"`,       // the WebGL canvas
+		`id="controls"`,   // the render-mode / layout control bar
+		`id="findings"`,   // the checks panel
+		`id="rules"`,      // the rule catalog
+		`id="query-panel"`,
+		`id="diff-bar"`,   // the comparison chrome (phase 3 initiates a diff, it does not host one)
+		`id="sheet-tabs"`, // sheet navigation belongs to the work page
+	} {
+		if strings.Contains(body, deny) {
+			t.Errorf("browse page unexpectedly contains %q", deny)
 		}
 	}
 }

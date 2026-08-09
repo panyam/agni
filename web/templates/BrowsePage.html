@@ -1,0 +1,52 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<style>
+  .br-app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+  .br-sidebar { flex: 0 0 300px; border-right: 1px solid #ddd; overflow: auto; padding: 8px; background: #fafafa; display: flex; flex-direction: column; }
+  .br-sidebar h1 { font-size: 13px; margin: 0 0 8px; color: #333; }
+  .br-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; background: #f0f0f0; }
+  /* The preview header carries the design's identity and the one action that leaves this page. */
+  .br-head { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; background: #fff; border-bottom: 1px solid #ddd; padding: 6px 10px; min-height: 34px; }
+  .br-name { font-weight: 600; color: #222; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .br-summary { color: #666; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .br-open { margin-left: auto; flex: 0 0 auto; border: 1px solid #2563eb; background: #2563eb; color: #fff; border-radius: 4px; padding: 3px 12px; cursor: pointer; font: inherit; font-size: 12px; }
+  .br-open:disabled { opacity: 0.45; cursor: default; }
+  /* #browse-preview hosts the SvgView, which positions an absolute layer inside it, so the host
+     must be a sized, relatively-positioned box rather than one that grows to its content. */
+  .br-stage { flex: 1 1 auto; min-height: 0; position: relative; }
+  #browse-preview { position: absolute; inset: 0; overflow: hidden; background: #fff; display: none; }
+  .br-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #777; }
+  .br-note.error { color: #b00; }
+</style>
+{{ end }}
+
+{{ define "Body" }}
+<div class="br-app">
+  <div class="br-sidebar">
+    <h1>Designs</h1>
+    <!-- WS9-049: the same file-tree island the viewer uses, driven with an empty sheet state so
+         no sheets nest under a file. Choosing a file previews it; the Open button leaves for the
+         work page. -->
+    <div id="browse-tree" data-component="file-tree"></div>
+  </div>
+  <div class="br-main">
+    <div class="br-head">
+      <span id="browse-name" class="br-name"></span>
+      <span id="browse-summary" class="br-summary"></span>
+      <button id="browse-open" class="br-open" type="button" disabled>Open design &rarr;</button>
+    </div>
+    <div class="br-stage">
+      <!-- The read-only preview: a static first-sheet SVG, no presenter and no WebGL context. -->
+      <div id="browse-preview"></div>
+      <div id="browse-note" class="br-note">Select a design to preview it.</div>
+    </div>
+  </div>
+</div>
+{{ end }}
+
+{{ define "AppScript" }}
+<script type="module" src="/static/browse.js"></script>
+{{ end }}
+
+{{ define "BrowsePage" }}{{ template "BasePage" . }}{{ end }}

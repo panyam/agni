@@ -36,10 +36,22 @@ func TestCheckWebAssets(t *testing.T) {
 		t.Errorf("missing datasheets bundle should name datasheets.js, got %v", err)
 	}
 
-	// All four present: valid.
+	// Datasheets complete, but the browse page is missing (WS9-049 phase 2).
 	touch(t, filepath.Join(dir, "static", "datasheets.js"))
+	if err := checkWebAssets(dir); err == nil || !strings.Contains(err.Error(), "BrowsePage.html") {
+		t.Errorf("missing browse page should name BrowsePage.html, got %v", err)
+	}
+
+	// Browse template present but its bundle missing: hint to build.
+	touch(t, filepath.Join(dir, "templates", "BrowsePage.html"))
+	if err := checkWebAssets(dir); err == nil || !strings.Contains(err.Error(), "browse.js") {
+		t.Errorf("missing browse bundle should name browse.js, got %v", err)
+	}
+
+	// All three templates and all three bundles present: valid.
+	touch(t, filepath.Join(dir, "static", "browse.js"))
 	if err := checkWebAssets(dir); err != nil {
-		t.Errorf("a dir with both templates and both bundles should pass, got %v", err)
+		t.Errorf("a dir with every template and bundle should pass, got %v", err)
 	}
 
 	// The repo's web/ dir passes (asserts the marker paths match the real layout).

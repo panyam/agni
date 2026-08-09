@@ -6,6 +6,9 @@ static/datasheets.js
 static/datasheets.js.map
 static/pdf.worker.js
 static/pdf.worker.js.map
+# WS9-049 design browse page bundle (build artifact, like app.js)
+static/browse.js
+static/browse.js.map
 
 # Non-distributable packed sheets (e.g. proprietary boards)
 *.local.pb
