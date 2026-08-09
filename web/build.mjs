@@ -2,11 +2,13 @@
 // esbuild does not do, so we run esbuild through esbuild-plugin-solid (babel-preset-solid) to
 // compile JSX into Solid's reactive runtime calls.
 //
-// Two app bundles: the viewer (src/main.ts -> static/app.js) and the extraction workbench
-// (src/datasheets.ts -> static/datasheets.js, WS13-006). They are separate pages with separate
-// entries so the workbench's heavier deps (pdf.js) never bloat the viewer bundle. The datasheets
-// page also needs the pdf.js worker as a standalone script (static/pdf.worker.js), which pdf.js
-// loads by URL at runtime.
+// Three app bundles: the viewer (src/main.ts -> static/app.js), the extraction workbench
+// (src/datasheets.ts -> static/datasheets.js, WS13-006), and the design browser
+// (src/browse.ts -> static/browse.js, WS9-049). They are separate pages with separate entries so
+// each page downloads only what it uses: the workbench's heavier deps (pdf.js) never bloat the
+// viewer bundle, and the browse page carries neither pdf.js nor dockview and the WebGL renderer.
+// The datasheets page also needs the pdf.js worker as a standalone script (static/pdf.worker.js),
+// which pdf.js loads by URL at runtime.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import * as esbuild from "esbuild";
@@ -33,6 +35,7 @@ const solidAlias = {
 const appBundles = [
   { entry: "src/main.ts", outfile: "static/app.js" },
   { entry: "src/datasheets.ts", outfile: "static/datasheets.js" },
+  { entry: "src/browse.ts", outfile: "static/browse.js" },
 ];
 
 const solidBuild = (b) => ({

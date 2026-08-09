@@ -205,6 +205,14 @@ func checkWebAssets(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "static", "datasheets.js")); err != nil {
 		return fmt.Errorf("%q has no static/datasheets.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
 	}
+	// The design browser (WS9-049) is the third server-rendered page with its own bundle. It is
+	// also what "/" serves, so a missing browse asset breaks the landing page, not a side route.
+	if _, err := os.Stat(filepath.Join(dir, "templates", "BrowsePage.html")); err != nil {
+		return fmt.Errorf("%q has no templates/BrowsePage.html (the design browse page)", dir)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "static", "browse.js")); err != nil {
+		return fmt.Errorf("%q has no static/browse.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
+	}
 	return nil
 }
 

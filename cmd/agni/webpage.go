@@ -30,6 +30,24 @@ func (p *ViewerPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[
 	return nil, false
 }
 
+// BrowsePage is the server-rendered shell of the design browser (WS9-049 phase 2): the file list
+// plus a read-only preview of the selected design's first sheet. It is a page distinct from the
+// viewer because it serves a distinct moment — choosing what to work on, rather than working. That
+// split is what lets it omit the presenter, the WebGL canvas, and the whole checks/query/diff
+// machinery: the analysis surfaces are simply not holes in this template, so no island mounts them.
+// Its own bundle (static/browse.js) keeps dockview and the renderer out of the browse download.
+// goapplib maps this type to BrowsePage.html by name.
+type BrowsePage struct {
+	Title string
+}
+
+// Load populates the browse page before render. The shell is static: the mount listing and each
+// preview arrive over the Connect API, and which folder is open lives in the URL.
+func (p *BrowsePage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
+	p.Title = "Agni designs"
+	return nil, false
+}
+
 // DatasheetsPage is the server-rendered shell of the extraction workbench (WS13-006), a page
 // distinct from the viewer: the workbench serves the once-per-component author (load a datasheet,
 // select and correct regions), a different persona and runtime than the schematic viewer. Its
@@ -57,7 +75,7 @@ func redirectLegacyFiles(w http.ResponseWriter, r *http.Request) {
 	target := "/designs/" + rest
 	// A folder keeps its trailing slash (that IS the folder marker); a design gains /view.
 	if rest != "" && !strings.HasSuffix(rest, "/") {
-		target += "/view"
+		target += viewSegment
 	}
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
@@ -71,15 +89,45 @@ func newPageApp(dir string, sa *serveApp) *goal.App[*serveApp] {
 	return goal.NewApp(sa, goal.SetupTemplates(filepath.Join(dir, "templates")))
 }
 
-// registerPages mounts the viewer's server-rendered pages on mux. The same shell serves both
-// "/" and the deep-link space "/designs/<mount>/<path>/view?sheet=…": routing is server-owned
-// (C11), but per-design state lives in the URL, so the frontend reads the URL on load and reopens
-// that design. The shell is identical for every path (the design's data still arrives over the
-// Connect API), so a refresh or a shared link lands on the same design/sheet instead of the empty
-// root.
+// viewSegment terminates a design's work-page URL, the mirror of VIEW_SEGMENT in web/src/router.ts.
+// It is what tells a design apart from a folder without depending on the path's shape, and here it
+// is also the routing discriminator (see designsRouter).
+const viewSegment = "/view"
+
+// pageHandler renders one goapplib page as a standalone http.Handler. goal.Register only ever
+// registers onto a mux, so a page is turned into a handler by giving it a private mux of its own
+// whose single "/" pattern matches everything reaching it. That indirection exists because the
+// browse/work split cannot be expressed as two ServeMux patterns: a pattern's {path...} wildcard
+// must be its LAST segment, so "/designs/{mount}/{rest...}/view" is not writable, and the choice
+// has to be made inside one handler.
+func pageHandler[V goal.View[*serveApp]](app *goal.App[*serveApp]) http.Handler {
+	return goal.Register[V](app, nil, "/")
+}
+
+// designsRouter splits the one /designs/ URL space between its two pages by the trailing verb: a
+// design's work page ends in /view, and everything else in the space is a folder, which the browse
+// page renders. Folders are the default rather than the special case so that the space root
+// ("/designs/", which names no mount at all) and a bare mount root land on the browser instead of
+// 404ing, matching what router.ts's parseUrl already treats as addressable.
+func designsRouter(browse, work http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, viewSegment) {
+			work.ServeHTTP(w, r)
+			return
+		}
+		browse.ServeHTTP(w, r)
+	})
+}
+
+// registerPages mounts the viewer's server-rendered pages on mux. Routing is server-owned (C11)
+// but per-page state lives in the URL, so each shell is identical for every path it serves and the
+// frontend reads the URL on load to reopen the design or folder. The /designs/ space carries two
+// pages behind one pattern (see designsRouter); "/" is the catch-all landing page and serves the
+// browser, since arriving with no design named is precisely the "choose one" moment.
 func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
-	goal.Register[*ViewerPage](app, mux, "/")
-	goal.Register[*ViewerPage](app, mux, "/designs/")
+	browse := pageHandler[*BrowsePage](app)
+	mux.Handle("/", browse)
+	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app)))
 	// The retired /files/ space (WS9-049) redirects rather than 404s: links to a design were
 	// shareable long before the split, so they have to keep resolving.
 	mux.HandleFunc("/files/", redirectLegacyFiles)
