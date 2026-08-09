@@ -93,3 +93,63 @@ func TestParseErrorTeaches(t *testing.T) {
 		t.Errorf("error should name the offending module and the missing field, got %v", err)
 	}
 }
+
+// TestLoadStrapBandValidation (WS3-119): a band that could never be satisfied, or one declared on a
+// kind with no resistance to bound, is an AUTHORING error. It is rejected at load rather than
+// compiling to a check that can never fire, which is the route-six false pass (a well-formed-looking
+// declaration that means nothing) — a runtime verdict is the wrong tool for a declaration that is
+// wrong on every design.
+func TestLoadStrapBandValidation(t *testing.T) {
+	for _, tc := range []struct{ name, yaml, want string }{
+		{
+			"band on a kind with no resistance",
+			"name: t\nnet_properties:\n  - {net: CLK, property: ac-coupled, min_ohms: 1000}\n",
+			"takes no min_ohms/max_ohms",
+		},
+		{
+			"inverted band",
+			"name: t\nnet_properties:\n  - {net: B0, property: strap, value: high, min_ohms: 100000, max_ohms: 1000}\n",
+			"a band nothing can satisfy",
+		},
+		{
+			"negative bound",
+			"name: t\nnet_properties:\n  - {net: B0, property: strap, value: high, min_ohms: -5}\n",
+			"negative resistance bound",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse([]byte(tc.yaml))
+			if err == nil {
+				t.Fatalf("want a load error for %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error should say why: got %q, want it to contain %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// TestLoadStrapBandAccepted: the forms that ARE valid, including one-sided bands, survive the loader
+// with their numbers intact.
+func TestLoadStrapBandAccepted(t *testing.T) {
+	d, err := Parse([]byte("name: t\nnet_properties:\n" +
+		"  - {net: B0, property: strap, value: high, min_ohms: 1000, max_ohms: 100000}\n" +
+		"  - {net: B1, property: strap, value: low, max_ohms: 47000}\n" +
+		"  - {net: B2, property: strap, value: low}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []NetProperty{
+		{Net: "B0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000},
+		{Net: "B1", Property: PropStrap, Value: "low", MaxOhms: 47000},
+		{Net: "B2", Property: PropStrap, Value: "low"},
+	}
+	if len(d.NetProperties) != len(want) {
+		t.Fatalf("got %d properties, want %d", len(d.NetProperties), len(want))
+	}
+	for i, w := range want {
+		if d.NetProperties[i] != w {
+			t.Errorf("property %d = %+v, want %+v", i, d.NetProperties[i], w)
+		}
+	}
+}

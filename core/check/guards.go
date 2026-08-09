@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
@@ -185,7 +186,28 @@ func ExternalSignalNet(m Model, n *ir.Net) bool {
 // Both directions can hold at once on a divider, which sets an intermediate level rather than holding
 // either rail — so that reports NEITHER, and a caller asking "is this held asserted" gets the honest
 // answer instead of a coin flip.
-func NetBias(m Model, n *ir.Net) (up, down bool) {
+// NetBiasResistors returns the ref-designators of the resistors that bias n toward a rail or ground,
+// sorted, alongside the same direction NetBias reports. It is NetBias with the evidence kept rather
+// than collapsed, for a caller that has to say something ABOUT the resistor (its value) instead of
+// only about the net.
+//
+// The refs are returned even when the direction is neither, which happens on a divider: both pull
+// resistors are real and identifiable, and only the net's resulting LEVEL is ambiguous. A caller
+// checking resistance still has something to check; a caller asking which way the net is held gets
+// the same honest "neither" NetBias gives.
+func NetBiasResistors(m Model, n *ir.Net) (refs []string, up, down bool) {
+	up, down = netBias(m, n, &refs)
+	sort.Strings(refs)
+	return refs, up, down
+}
+
+// NetBias reports which way a net is held by a bias resistor: toward a rail (up), toward ground
+// (down), or neither. See netBias for the walk; NetBiasResistors is the form that also names the
+// resistors.
+func NetBias(m Model, n *ir.Net) (up, down bool) { return netBias(m, n, nil) }
+
+// netBias is the shared walk. found, when non-nil, collects the biasing resistors' refs.
+func netBias(m Model, n *ir.Net, found *[]string) (up, down bool) {
 	if isSupplyNet(m, n) {
 		return false, false
 	}
@@ -207,11 +229,14 @@ func NetBias(m Model, n *ir.Net) (up, down bool) {
 					}
 				}
 			}
+			if (u || d) && found != nil {
+				*found = append(*found, ref)
+			}
 			up, down = up || u, down || d
 		}
 	}
 	if up && down {
-		return false, false // a divider holds neither rail
+		return false, false // a divider holds neither rail; its resistors are still named in found
 	}
 	return up, down
 }

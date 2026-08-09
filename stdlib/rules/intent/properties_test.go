@@ -258,3 +258,154 @@ func TestStrapDividerIsNeither(t *testing.T) {
 		}
 	}
 }
+
+// strapDesign is propDesign plus a stamped VALUE on the pull resistor. The value has to be set
+// directly rather than as an attribute: check.NewModel re-stamps nothing, so a hand-built design gets
+// its Quantity the way the ingestion pass would have left it.
+func strapDesign(net, biasTo, input string, ohms float64, unit string) *ir.Design {
+	d := propDesign(net, biasTo, "")
+	for _, c := range d.Components {
+		if c.RefDes == "R1" {
+			c.Value = &ir.Quantity{Input: input, Value: &ohms, Unit: unit}
+		}
+	}
+	return d
+}
+
+// TestStrapValueBelowMinimum (WS3-119): a strap pulled the RIGHT way by too strong a resistor. The
+// direction half is satisfied, which is exactly what makes this easy to miss at review.
+func TestStrapValueBelowMinimum(t *testing.T) {
+	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding (100R below the declared 1k minimum), got %d: %+v", len(fs), fs)
+	}
+	for _, want := range []string{"R1", "100R", "1k"} {
+		if !strings.Contains(fs[0].Message, want) {
+			t.Errorf("message must name the resistor, its SOURCE TEXT, and the bound; missing %q: %s", want, fs[0].Message)
+		}
+	}
+}
+
+// TestStrapValueAboveMaximum: the other end of the band.
+func TestStrapValueAboveMaximum(t *testing.T) {
+	fs := propFindings(t, strapDesign("PHYAD1", "GND", "1M", 1e6, check.UnitOhm),
+		NetProperty{Net: "PHYAD1", Property: PropStrap, Value: "low", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding (1M above the declared 100k maximum), got %d: %+v", len(fs), fs)
+	}
+	if !strings.Contains(fs[0].Message, "100k") {
+		t.Errorf("message must render the bound the way an engineer writes it: %s", fs[0].Message)
+	}
+}
+
+// TestStrapValueInsideBandIsSilent: a correct strap produces nothing, both halves passing.
+func TestStrapValueInsideBandIsSilent(t *testing.T) {
+	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "10k", 10000, check.UnitOhm),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 0 {
+		t.Errorf("a strap inside its declared band must be silent: %+v", fs)
+	}
+}
+
+// TestStrapValueUnreadableIsSilent is the case the ticket calls out by name: UNREADABLE IS NOT
+// ACCEPTABLE, but it is also not a defect. A resistor whose value the parser could not read, or which
+// carries none at all, is skipped rather than guessed — the params-tier posture. Firing here would
+// report a defect on no evidence.
+func TestStrapValueUnreadableIsSilent(t *testing.T) {
+	// No value stamped at all (a design read before the value pass, or a part with no value field).
+	none := propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(none) != 0 {
+		t.Errorf("a strap resistor with no value must be silent, not flagged: %+v", none)
+	}
+	// Present-but-unparsed: the source text survived, the number did not.
+	d := propDesign("BOOT_MODE0", "+3V3", "")
+	for _, c := range d.Components {
+		if c.RefDes == "R1" {
+			c.Value = &ir.Quantity{Input: "DNP"} // no Value, no Unit
+		}
+	}
+	unparsed := propFindings(t, d, NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(unparsed) != 0 {
+		t.Errorf("a strap resistor whose value did not parse must be silent: %+v", unparsed)
+	}
+}
+
+// TestStrapValueWrongUnitIsSilent: a stamped value in the wrong unit is not a resistance. Comparing a
+// farad count against an ohm band would be the unlike-units coercion ComponentValueIn exists to refuse.
+func TestStrapValueWrongUnitIsSilent(t *testing.T) {
+	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100n", 1e-7, "F"),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 0 {
+		t.Errorf("a value in farads must not be compared against an ohm band: %+v", fs)
+	}
+}
+
+// TestStrapValueSilentWithoutDeclaredBand: no band declared, no value check. The direction half still
+// runs, which is the degradation the field's doc promises.
+func TestStrapValueSilentWithoutDeclaredBand(t *testing.T) {
+	// 100R would be outside any sensible band, but none was declared.
+	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"})
+	if len(fs) != 0 {
+		t.Errorf("no declared band means no value check: %+v", fs)
+	}
+	// ... and the direction half is unaffected by the value machinery.
+	wrong := propFindings(t, strapDesign("BOOT_MODE0", "GND", "100R", 100, check.UnitOhm),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"})
+	if len(wrong) != 1 || !strings.Contains(wrong[0].Message, "biased LOW") {
+		t.Errorf("the direction half must still fire with no band declared: %+v", wrong)
+	}
+}
+
+// TestStrapValueOnlyOneBoundDeclared: min and max are independent, so a one-sided band checks one side
+// and stays silent on the other.
+func TestStrapValueOnlyOneBoundDeclared(t *testing.T) {
+	lowOnly := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000})
+	if len(lowOnly) != 1 {
+		t.Errorf("a min-only band must still catch too-strong: %+v", lowOnly)
+	}
+	// The same 100R is fine when only a maximum was declared.
+	maxOnly := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MaxOhms: 100000})
+	if len(maxOnly) != 0 {
+		t.Errorf("a max-only band must not judge the low side: %+v", maxOnly)
+	}
+}
+
+// TestStrapValueNoResistorIsSilent: a band is declared but nothing biases the net, so there is no
+// resistor to judge. The direction half already covers "no bias" (silently, for the internal-pull
+// reason), and the value half must not reach for a resistor that is not there.
+func TestStrapValueNoResistorIsSilent(t *testing.T) {
+	fs := propFindings(t, propDesign("BOOT_MODE0", "", ""),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 0 {
+		t.Errorf("a declared band on an unbiased net must be silent: %+v", fs)
+	}
+}
+
+// TestStrapValueDividerIsSilent: a divider's two resistors set the level together, so neither is "the"
+// strap pull. Judging one of them would name an arbitrary part and could flag a correct divider, so
+// the value half declines — the same honesty the direction half applies by reporting neither rail.
+func TestStrapValueDividerIsSilent(t *testing.T) {
+	d := propDesign("BOOT_MODE0", "+3V3", "")
+	// A second resistor to ground makes it a divider.
+	d.Components = append(d.Components, &ir.Component{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}})
+	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "R2", PinRef: "1"})
+	d.Nets = append(d.Nets, &ir.Net{
+		Name: "GND", Prov: &ir.Provenance{SourceFile: "t"},
+		Connections: []*ir.Connection{{ComponentRef: "R2", PinRef: "2"}},
+	})
+	for _, c := range d.Components {
+		if c.RefDes == "R1" || c.RefDes == "R2" {
+			ohms := 100.0
+			c.Value = &ir.Quantity{Input: "100R", Value: &ohms, Unit: check.UnitOhm}
+		}
+	}
+	fs := propFindings(t, d, NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 0 {
+		t.Errorf("a divider has no single strap resistor to judge; want silence, got %+v", fs)
+	}
+}

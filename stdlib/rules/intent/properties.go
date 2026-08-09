@@ -2,6 +2,7 @@ package intent
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -83,7 +84,13 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 		if n == nil {
 			return "", false
 		}
-		up, down := check.NetBias(m, n)
+		refs, up, down := check.NetBiasResistors(m, n)
+		// The VALUE half (WS3-119). Checked before the direction half because a strap can be pulled
+		// the right way by a resistor of the wrong value, and that is the finding worth reporting:
+		// direction-correct is what makes the value mistake easy to miss at review.
+		if msg, bad := strapValueViolation(m, p, refs); bad {
+			return msg, true
+		}
 		// Only an OPPOSITE bias is a contradiction. Neither direction (no bias, or a divider holding
 		// neither rail) leaves the latched level unevidenced, which is not the same as wrong.
 		switch {
@@ -96,6 +103,62 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 	}
 	return "", false
 }
+
+// strapValueViolation checks a strap's pull resistor against the band the DECLARATION states, and is
+// silent unless it can do so honestly (WS3-119).
+//
+// Four ways it declines to answer, and each is a real state rather than a pass:
+//   - no band declared, so there is nothing to check against;
+//   - no biasing resistor identified, which the direction half already reports on;
+//   - more than one, because a divider's two resistors set a level together and neither is "the"
+//     strap pull — reporting one of them would name an arbitrary part;
+//   - a value that does not parse as a resistance, which is the params-tier posture: skip, never
+//     guess. A rule that fired on a number it could not read would report a defect with no evidence.
+//
+// The finding quotes the SOURCE TEXT ("10k"), not the parsed 10000, so a reviewer reads the value
+// they will see on the schematic.
+func strapValueViolation(m check.Model, p NetProperty, refs []string) (string, bool) {
+	// No explicit "no band declared" early-out: an undeclared bound is zero, and the comparisons
+	// below are both gated on `> 0`, so an undeclared band already reports nothing. Mutation testing
+	// showed a guard here was unreachable.
+	if len(refs) != 1 {
+		return "", false
+	}
+	ref := refs[0]
+	ohms, ok := check.ComponentValueIn(m, ref, check.UnitOhm)
+	if !ok {
+		return "", false
+	}
+	text, _ := check.ComponentValueText(m, ref)
+	if text == "" {
+		text = fmt.Sprintf("%g", ohms)
+	}
+	switch {
+	case p.MinOhms > 0 && ohms < p.MinOhms:
+		return fmt.Sprintf("net %q straps through %s at %s, below the declared minimum of %s: "+
+			"too strong a pull fights whatever drives the line",
+			p.Net, ref, text, ohmsText(p.MinOhms)), true
+	case p.MaxOhms > 0 && ohms > p.MaxOhms:
+		return fmt.Sprintf("net %q straps through %s at %s, above the declared maximum of %s: "+
+			"too weak a pull may not hold the level against pin leakage",
+			p.Net, ref, text, ohmsText(p.MaxOhms)), true
+	}
+	return "", false
+}
+
+// ohmsText renders a declared bound the way an engineer writes it (4700 -> "4.7k"), so the finding
+// does not make the reader convert the limit back from the number the YAML happened to carry.
+func ohmsText(ohms float64) string {
+	switch {
+	case ohms >= 1e6:
+		return trimNum(ohms/1e6) + "M"
+	case ohms >= 1e3:
+		return trimNum(ohms/1e3) + "k"
+	}
+	return trimNum(ohms)
+}
+
+func trimNum(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 
 // propertyUndecidable reports the subjects this rule family can look at and genuinely cannot decide,
 // and the message saying so (agni issue 74). It runs BEFORE propertyViolation, so an undecidable
