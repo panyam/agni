@@ -11,6 +11,46 @@ type RuleSource interface {
 	Rules() []*Rule
 }
 
+// SupersedingSource is an OPTIONAL capability a RuleSource may also implement: it REPLACES rules an
+// earlier source contributed instead of running alongside them. Composition type-asserts for it, so
+// this is additive. Widening RuleSource itself would break every out-of-module suite, which is the
+// open-core seam RegisterSource exists to keep stable.
+//
+// Each returned Facets selects the rules this source supersedes, using the same selection vocabulary
+// as Filter. That is what gives both granularities the catalog needs with no second matcher: Names
+// supersedes individual rules (a house rule replacing one built-in), Tags supersedes a whole family
+// (every rule of one interface profile, via the "profile" tag).
+//
+// Composition never applies a source's own declaration to its own rules. A profile overlay and the
+// built-in profile it replaces tag their rules identically, so an unexempted declaration would
+// delete the replacement along with what it replaced and leave the interface unchecked.
+type SupersedingSource interface {
+	RuleSource
+	Supersedes() []Facets
+}
+
+// Supersession records that one source's rules were dropped from a composed catalog because another
+// source superseded them. The Catalog keeps these so a surface can SAY what it suppressed: silently
+// dropping a rule turns a false failure into an invisible gap, which is the worse of the two.
+type Supersession struct {
+	By    string   // Name() of the superseding source
+	Rules []string // composed names of the rules that were dropped, in catalog order
+}
+
+// NewSupersedingSource wraps a fixed rule slice as a named source that supersedes every rule matching
+// any of the given Facets. It is NewSource plus the replace semantic, for the common case where the
+// superseded set is known when the source is built.
+func NewSupersedingSource(name string, rules []*Rule, supersedes ...Facets) SupersedingSource {
+	return supersedingSource{fixedSource{name: name, rules: rules}, supersedes}
+}
+
+type supersedingSource struct {
+	fixedSource
+	supersedes []Facets
+}
+
+func (s supersedingSource) Supersedes() []Facets { return s.supersedes }
+
 // Builtins is the built-in rule set as a RuleSource — the default (and only anonymous)
 // source. It reads the installed built-in registry at call time, so the rules registered by
 // stdlib/rules/builtin's init (via RegisterBuiltins) are always included. With that package

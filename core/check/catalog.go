@@ -15,8 +15,9 @@ import (
 // source tag; the source's own *Rule values are never mutated, so a suite can be
 // registered into several catalogs safely.
 type Catalog struct {
-	rules  []*Rule
-	byName map[string]*Rule
+	rules      []*Rule
+	byName     map[string]*Rule
+	superseded []Supersession
 }
 
 // sourceNameRe is the source-name grammar: the prefix must read cleanly inside a rule
@@ -44,7 +45,11 @@ func NewCatalog(sources ...RuleSource) (*Catalog, error) {
 // With so there is one implementation of the namespacing and collision rules; a second copy is how
 // an extension path ends up with subtly different policy from the primary one.
 func (c *Catalog) add(seen map[string]bool, sources ...RuleSource) error {
+	var declared []SupersedingSource
 	for _, s := range sources {
+		if sup, ok := s.(SupersedingSource); ok && len(sup.Supersedes()) > 0 {
+			declared = append(declared, sup)
+		}
 		name := s.Name()
 		if seen[name] {
 			if name == "" {
@@ -78,7 +83,49 @@ func (c *Catalog) add(seen map[string]bool, sources ...RuleSource) error {
 			c.rules = append(c.rules, exposed)
 		}
 	}
+	c.applySupersessions(declared)
 	return nil
+}
+
+// applySupersessions drops the rules the given sources supersede. It runs once, after every source in
+// the composition has been added, so a source can supersede one added alongside it in the same call
+// and not only one already present.
+//
+// A source's declaration never applies to its OWN rules. A profile overlay and the built-in profile it
+// replaces carry identical tags (both stamp "profile": "SPI_NOR"), so matching on tags alone would drop
+// the replacement together with what it replaced, leaving the interface with no rules at all. That
+// failure is invisible in a report: the findings simply stop, which reads as a pass.
+//
+// Composition rejects duplicate source names, so exempting by name cannot exempt an unrelated source.
+func (c *Catalog) applySupersessions(sources []SupersedingSource) {
+	for _, s := range sources {
+		var dropped []string
+		keep := c.rules[:0:0]
+		for _, r := range c.rules {
+			if r.Tags[KeySource] != s.Name() && matchesAny(r, s.Supersedes()) {
+				dropped = append(dropped, r.Name)
+				delete(c.byName, r.Name)
+				continue
+			}
+			keep = append(keep, r)
+		}
+		if len(dropped) == 0 {
+			continue
+		}
+		c.rules = keep
+		c.superseded = append(c.superseded, Supersession{By: s.Name(), Rules: dropped})
+	}
+}
+
+// matchesAny reports whether r satisfies any of the given selections. An empty list matches nothing,
+// so a source that declares no supersession supersedes nothing.
+func matchesAny(r *Rule, fs []Facets) bool {
+	for _, f := range fs {
+		if matches(r.Name, f.Names) && matchesTags(r, f.Tags) {
+			return true
+		}
+	}
+	return false
 }
 
 // With returns a new catalog carrying every rule c already has, plus the rules of extra, composed
@@ -97,8 +144,9 @@ func (c *Catalog) add(seen map[string]bool, sources ...RuleSource) error {
 // everything already present, so an extension can never shadow a rule the base carried.
 func (c *Catalog) With(extra ...RuleSource) (*Catalog, error) {
 	out := &Catalog{
-		rules:  append(make([]*Rule, 0, len(c.rules)), c.rules...),
-		byName: maps.Clone(c.byName),
+		rules:      append(make([]*Rule, 0, len(c.rules)), c.rules...),
+		byName:     maps.Clone(c.byName),
+		superseded: append(make([]Supersession, 0, len(c.superseded)), c.superseded...),
 	}
 	if out.byName == nil {
 		out.byName = map[string]*Rule{}
@@ -156,6 +204,41 @@ func (c *Catalog) Lookup(name string) *Rule { return c.byName[name] }
 // package-level Filter — including the source tag, so "--tag source=tesla" selects one
 // suite with no extra machinery.
 func (c *Catalog) Filter(f Facets) []*Rule { return Filter(c.rules, f) }
+
+// Without returns a new catalog carrying every rule of c EXCEPT those matching f. It is the exclusion
+// complement of Filter, which selects only inwards: before this, a caller holding a composed catalog
+// could narrow it to a chosen set but could not remove one, so "run everything except these" had no
+// expression and a superseded rule kept running.
+//
+// It reuses Facets, so exclusion and selection share one matcher and one grammar. c is not modified,
+// and the recorded supersessions carry across: an explicit exclusion here is a different act from a
+// source-declared supersession and does not overwrite that record.
+//
+// An empty Facets matches every rule (Filter's documented semantics), so Without(Facets{}) returns an
+// EMPTY catalog rather than an unchanged one.
+func (c *Catalog) Without(f Facets) *Catalog {
+	out := &Catalog{
+		rules:      make([]*Rule, 0, len(c.rules)),
+		byName:     make(map[string]*Rule, len(c.byName)),
+		superseded: append(make([]Supersession, 0, len(c.superseded)), c.superseded...),
+	}
+	for _, r := range c.rules {
+		if matches(r.Name, f.Names) && matchesTags(r, f.Tags) {
+			continue
+		}
+		out.rules = append(out.rules, r)
+		out.byName[r.Name] = r
+	}
+	return out
+}
+
+// Superseded returns the supersessions applied when this catalog was composed: which rules were
+// dropped, and which source replaced them. It is empty for a catalog composed from ordinary sources.
+//
+// It exists so a surface can REPORT the suppression. Dropping a rule silently converts a visible
+// wrong answer into an invisible missing one, and a reader cannot tell a clean report from one whose
+// rules were removed. Callers must not mutate the returned slice.
+func (c *Catalog) Superseded() []Supersession { return c.superseded }
 
 // Facets is a rule selection over the catalog. Names selects by exact rule Name; Tags selects by
 // tag key -> acceptable values. An empty Facets selects every rule; within one tag key the listed

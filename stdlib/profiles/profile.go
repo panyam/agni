@@ -100,6 +100,16 @@ type Requirement struct {
 // fails loudly at composition.
 const TagRequirement = "requirement"
 
+// TagProfile is the tag key every generated rule carries, valued with the profile's Name. WS9-041
+// groups coverage by it, and catalog supersession selects a whole interface family with it (WS3-056).
+const TagProfile = "profile"
+
+// BuiltinSourceName is the catalog source name the built-in profiles register under, so their rules
+// compose as "profile/<rule>". It is named here rather than repeated as a literal because supersession
+// SELECTS on it: an overlay replaces the built-in reading of an interface and must not reach rules
+// that merely share the interface tag from some other source.
+const BuiltinSourceName = "profile"
+
 // requirementCompiler turns one declared Requirement on a Profile into a check rule, or nil when the
 // requirement does not apply to this profile (no host, no pull-up signal). It emits datalog via the
 // query builder — the check LOGIC stays Go (a closed vocabulary); only the COMPOSITION is data.
@@ -372,7 +382,7 @@ func (p Profile) tags() map[string]string {
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistOpen,
-		"profile":            p.Name, // WS9-041 groups findings by this
+		TagProfile:            p.Name, // WS9-041 groups findings by this
 	}
 }
 

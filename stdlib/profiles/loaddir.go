@@ -49,10 +49,35 @@ func LoadDir(dir string) ([]Profile, error) {
 // namespace prefix and must differ from the built-in "profile" source (CatalogWith rejects a
 // duplicate source name); the CLI uses "profile-overlay" so an overlay rule is distinguishable from
 // a built-in one by its namespace.
+// It SUPERSEDES rather than augments: an overlay profile carrying the name of a built-in one replaces
+// that built-in's rules in the composed catalog (WS3-056). Augmenting was WS3-054's v0 and it produces
+// false failures, not just duplicates. A naming map that re-binds some roles and leaves others at core
+// naming lets the CORE profile still anchor and clear its in-use gate, so it reports every re-bound
+// role as a missing signal at severity error while the overlay reads the same design clean. The
+// asymmetry is worth knowing when reading a bug report: re-binding the ANCHOR role hides the effect
+// (the core profile stops anchoring and goes quiet), so the closer a house convention sits to the core
+// one, the more false failures augmenting generates.
+//
+// Supersession is keyed on the profile NAME and scoped to the built-in "profile" source. Same
+// interface name means same interface, so the overlay's reading of it wins. Scoping to the built-ins
+// keeps it predictable: two overlay sources that both define an interface do not delete each other,
+// which under a source-agnostic rule would depend on composition order.
 func Source(name string, ps []Profile) check.RuleSource {
 	var rules []*check.Rule
+	var supersedes []check.Facets
 	for _, p := range ps {
 		rules = append(rules, Compile(p)...)
+		if _, isBuiltin := ByName(p.Name); isBuiltin {
+			supersedes = append(supersedes, check.Facets{
+				Tags: map[string][]string{
+					TagProfile:      {p.Name},
+					check.KeySource: {BuiltinSourceName},
+				},
+			})
+		}
 	}
-	return check.NewSource(name, rules)
+	if len(supersedes) == 0 {
+		return check.NewSource(name, rules)
+	}
+	return check.NewSupersedingSource(name, rules, supersedes...)
 }
