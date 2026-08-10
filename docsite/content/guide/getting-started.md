@@ -12,8 +12,13 @@ If a word here is unfamiliar, that page is the glossary.
 If you have a Go toolchain, install the CLI straight onto your `PATH`:
 
 ```
-go install github.com/panyam/agni/cmd/agni@latest
+go install github.com/panyam/agni/cmd/agni@v0.1.0
 ```
+
+Pin a released version rather than `@latest` for anything whose output you keep. A check report
+is only reproducible if you can say which build produced it, and `@latest` moves under you
+between runs. Releases are plain git tags, so
+[the tag list](https://github.com/panyam/agni/tags) is the version list.
 
 Or build from a clone, which also gives you the sample designs used below:
 
