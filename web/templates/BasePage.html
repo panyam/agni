@@ -21,6 +21,17 @@
     .highlight-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
     .highlight-row input[type="range"] { width: 110px; }
     .highlight-reset { margin-top: 6px; }
+    /* WS9-049 phase 3: the compare picker modal. Hidden until .on so the tree island inside stays
+       mounted and measurable rather than being created lazily (see dock.ts on why this app never
+       lazily mounts island holes). */
+    .compare-picker { position: fixed; inset: 0; z-index: 4000; display: none; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); }
+    .compare-picker.on { display: flex; }
+    .compare-dialog { display: flex; flex-direction: column; width: 420px; max-width: 90vw; max-height: 70vh; background: #fff; border: 1px solid #bbb; border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3); overflow: hidden; }
+    .compare-dialog-head { flex: 0 0 auto; padding: 8px 12px; border-bottom: 1px solid #eee; font-weight: 600; color: #333; }
+    .compare-tree { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
+    /* The open design (side A) is pushed as the tree's active file; in the picker that means
+       "already open", not "selected", so it reads as unavailable rather than highlighted. */
+    .compare-tree .node.active { background: none; color: #999; font-weight: 400; cursor: default; }
     .summary { color: #333; font-size: 12px; white-space: pre-wrap; }
     .sheet-nav-bar { flex: 0 0 auto; min-height: 0; border-bottom: 1px solid #ddd; background: #f4f4f4; display: flex; align-items: flex-end; gap: 8px; }
     /* WS9-049: the visited-sheet tab strip. It takes the bar's free width (so the Compare/Panels

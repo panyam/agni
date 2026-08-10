@@ -22,8 +22,8 @@
   <!-- Server-rendered island holes. The dock shell moves each hole into its dockview panel;
        a closed panel's hole parks back here (hidden) so its island stays mounted. -->
   <div id="panel-park" hidden>
-    <!-- WS9-002: the file-tree island mounts into this hole -->
-    <div data-dock-panel="files" class="dock-body" id="file-tree" data-component="file-tree"></div>
+    <!-- WS9-049 phase 3: the "files" dock panel is gone. Cross-file navigation is the /designs
+         browse page, and picking a design to compare against is the compare picker below. -->
     <!-- WS9-025: the birds-eye sheet overview (per-sheet violation counts) mounts here -->
     <div data-dock-panel="overview" class="dock-body"><div id="sheet-overview" data-component="sheet-overview"></div></div>
     <div data-dock-panel="canvas" class="canvas-wrap">
@@ -70,6 +70,15 @@
     </div>
     <!-- WS9-006: the changed-item list (click-to-locate) island mounts into this hole -->
     <div data-dock-panel="changes" class="dock-body"><div id="diff-changes" data-component="diff-changes"></div></div>
+  </div>
+  <!-- WS9-049 phase 3: the compare picker. App-level (a direct child of .app, NOT a dock panel and
+       NOT parked) so its backdrop covers the viewport rather than one panel. The tree island inside
+       mounts at boot like every other island; opening is a CSS toggle, so the listing is warm. -->
+  <div id="compare-picker" class="compare-picker" role="dialog" aria-modal="true" aria-label="Compare against" aria-hidden="true">
+    <div class="compare-dialog">
+      <div class="compare-dialog-head">Compare the open design against…</div>
+      <div id="compare-tree" class="compare-tree" data-component="file-tree"></div>
+    </div>
   </div>
   <!-- WS7-044: the render/compare loader. App-level (a direct child of .app, NOT a dock panel)
        so its position:fixed resolves against the viewport, not a transformed dockview panel — a
