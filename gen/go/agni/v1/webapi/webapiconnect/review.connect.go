@@ -35,14 +35,21 @@ const (
 const (
 	// ReviewServiceRunReviewProcedure is the fully-qualified name of the ReviewService's RunReview RPC.
 	ReviewServiceRunReviewProcedure = "/agni.v1.webapi.ReviewService/RunReview"
+	// ReviewServiceGetReviewManifestProcedure is the fully-qualified name of the ReviewService's
+	// GetReviewManifest RPC.
+	ReviewServiceGetReviewManifestProcedure = "/agni.v1.webapi.ReviewService/GetReviewManifest"
 )
 
 // ReviewServiceClient is a client for the agni.v1.webapi.ReviewService service.
 type ReviewServiceClient interface {
-	// RunReview runs the manifest against each requested design and returns a report per design. A bad
-	// manifest, an unreadable design, or a --board-path override at a non-board file is an error (the
-	// run is all-or-nothing, so a partial read never reports items clean without checking them).
+	// RunReview runs the manifest against each requested design and returns a report per design. An
+	// invalid or absent manifest, an unreadable design, or a board_ref at a file carrying no board
+	// geometry is an error (the run is all-or-nothing, so a partial read never reports items clean
+	// without checking them).
 	RunReview(context.Context, *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error)
+	// GetReviewManifest resolves a stored checklist into the value RunReview takes. It parses AND
+	// validates, so a client learns its manifest is malformed once, here, rather than on every run.
+	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
 }
 
 // NewReviewServiceClient constructs a client for the agni.v1.webapi.ReviewService service. By
@@ -62,12 +69,19 @@ func NewReviewServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(reviewServiceMethods.ByName("RunReview")),
 			connect.WithClientOptions(opts...),
 		),
+		getReviewManifest: connect.NewClient[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse](
+			httpClient,
+			baseURL+ReviewServiceGetReviewManifestProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("GetReviewManifest")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // reviewServiceClient implements ReviewServiceClient.
 type reviewServiceClient struct {
-	runReview *connect.Client[webapi.RunReviewRequest, webapi.RunReviewResponse]
+	runReview         *connect.Client[webapi.RunReviewRequest, webapi.RunReviewResponse]
+	getReviewManifest *connect.Client[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse]
 }
 
 // RunReview calls agni.v1.webapi.ReviewService.RunReview.
@@ -75,12 +89,21 @@ func (c *reviewServiceClient) RunReview(ctx context.Context, req *connect.Reques
 	return c.runReview.CallUnary(ctx, req)
 }
 
+// GetReviewManifest calls agni.v1.webapi.ReviewService.GetReviewManifest.
+func (c *reviewServiceClient) GetReviewManifest(ctx context.Context, req *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error) {
+	return c.getReviewManifest.CallUnary(ctx, req)
+}
+
 // ReviewServiceHandler is an implementation of the agni.v1.webapi.ReviewService service.
 type ReviewServiceHandler interface {
-	// RunReview runs the manifest against each requested design and returns a report per design. A bad
-	// manifest, an unreadable design, or a --board-path override at a non-board file is an error (the
-	// run is all-or-nothing, so a partial read never reports items clean without checking them).
+	// RunReview runs the manifest against each requested design and returns a report per design. An
+	// invalid or absent manifest, an unreadable design, or a board_ref at a file carrying no board
+	// geometry is an error (the run is all-or-nothing, so a partial read never reports items clean
+	// without checking them).
 	RunReview(context.Context, *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error)
+	// GetReviewManifest resolves a stored checklist into the value RunReview takes. It parses AND
+	// validates, so a client learns its manifest is malformed once, here, rather than on every run.
+	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
 }
 
 // NewReviewServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -96,10 +119,18 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(reviewServiceMethods.ByName("RunReview")),
 		connect.WithHandlerOptions(opts...),
 	)
+	reviewServiceGetReviewManifestHandler := connect.NewUnaryHandler(
+		ReviewServiceGetReviewManifestProcedure,
+		svc.GetReviewManifest,
+		connect.WithSchema(reviewServiceMethods.ByName("GetReviewManifest")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.ReviewService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ReviewServiceRunReviewProcedure:
 			reviewServiceRunReviewHandler.ServeHTTP(w, r)
+		case ReviewServiceGetReviewManifestProcedure:
+			reviewServiceGetReviewManifestHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -111,4 +142,8 @@ type UnimplementedReviewServiceHandler struct{}
 
 func (UnimplementedReviewServiceHandler) RunReview(context.Context, *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.RunReview is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.GetReviewManifest is not implemented"))
 }

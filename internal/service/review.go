@@ -16,13 +16,18 @@ import (
 )
 
 // ReviewLoader is the narrow file surface ReviewService needs: the netlist design, an optional
-// separate board export (WS3-089), and the checklist manifest — all mount-scoped by the impl. It is a
-// subset of the fat service.Loader plus Manifest, defined at the point of use so the service depends
-// only on what it reads (the fat Loader stays the design/render services' contract).
+// separate board export (WS3-089), and a stored checklist manifest — all mount-scoped by the impl. It
+// is a subset of the fat service.Loader plus Manifest, defined at the point of use so the service
+// depends only on what it reads (the fat Loader stays the design/render services' contract).
+//
+// Manifest is deliberately NOT on the RunReview path (WS9-050). RunReview takes the checklist as a
+// value, so it needs no loader at all to score a design; this method backs GetReviewManifest alone,
+// which exists so a client that only holds a ref can obtain that value. The refs are keys the impl
+// resolves inside a mount, never host paths the service may interpret (C22).
 type ReviewLoader interface {
-	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
-	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
-	Manifest(ctx context.Context, mount, path string) (review.Manifest, error)
+	Design(ctx context.Context, mount, ref string, opts ...ReadOption) (*ir.Design, error)
+	Board(ctx context.Context, mount, ref string) (*geom.BoardGeometry, error)
+	Manifest(ctx context.Context, mount, ref string) (review.Manifest, error)
 }
 
 // ReviewService runs a review checklist manifest over one or more designs, the transport-neutral
@@ -51,16 +56,26 @@ func NewReviewService(loader ReviewLoader, catalog *check.Catalog, byName map[st
 
 // RunReview runs the manifest against each requested design and returns a report per design: one
 // design yields a per-item report, several yield a project rollup in request order. The run is
-// all-or-nothing — a bad manifest, an unreadable design, or a board_path override at a file that
-// carries no board geometry is an error — so a partial read never reports items clean without
-// checking them (the same posture as a bad --params corpus failing the CLI run).
+// all-or-nothing — an invalid manifest, an unreadable design, or a board_ref at a file that carries
+// no board geometry is an error — so a partial read never reports items clean without checking them
+// (the same posture as a bad --params corpus failing the CLI run).
+//
+// The checklist arrives as a VALUE (WS9-050), so this method does no file I/O to do its job: every
+// input it needs is either in the request or was injected at construction. That is what lets a host
+// with no filesystem run a review, and it is why the manifest is validated here rather than trusted.
+// A manifest that never passed through review.Load has had no parser enforce its rules, and an item
+// carrying two mutually-exclusive bindings would otherwise score a design against a check its author
+// did not ask for.
 func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequest) (*webapi.RunReviewResponse, error) {
-	if len(req.GetDesignPath()) == 0 {
-		return nil, fmt.Errorf("%w: RunReview needs at least one design_path", ErrInvalidArgument)
+	if len(req.GetDesignRef()) == 0 {
+		return nil, fmt.Errorf("%w: RunReview needs at least one design_ref", ErrInvalidArgument)
 	}
-	man, err := s.loader.Manifest(ctx, req.GetMount(), req.GetManifestPath())
-	if err != nil {
-		return nil, classifyLoadErr(err)
+	if req.GetManifest() == nil {
+		return nil, fmt.Errorf("%w: RunReview needs a manifest (resolve a stored one with GetReviewManifest)", ErrInvalidArgument)
+	}
+	man := ManifestFromProto(req.GetManifest())
+	if err := review.Validate(man); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	// Per-request overlay config (WS3-102), composed BEFORE any design is read: its lexicon half has
 	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
@@ -70,8 +85,8 @@ func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequ
 		return nil, err
 	}
 	resp := &webapi.RunReviewResponse{Manifest: man.Name}
-	for _, design := range req.GetDesignPath() {
-		rep, err := s.runOne(ctx, req.GetMount(), design, req.GetBoardPath(), man, req.GetRatifiedFloor(), ov)
+	for _, design := range req.GetDesignRef() {
+		rep, err := s.runOne(ctx, req.GetMount(), design, req.GetBoardRef(), man, req.GetRatifiedFloor(), ov)
 		if err != nil {
 			return nil, err
 		}
@@ -80,12 +95,33 @@ func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequ
 	return resp, nil
 }
 
+// GetReviewManifest resolves a stored checklist into the value RunReview takes. It is the one place
+// in this service that reads a file, and it is a separate RPC precisely so that read is visible in
+// the contract rather than hidden inside a run: a caller that already holds a manifest never triggers
+// it, and a host with no filesystem simply does not serve it.
+//
+// It validates before returning, so a malformed checklist is reported once, here, with the item that
+// is wrong — rather than on every subsequent run, or worse, silently at scoring time.
+func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetReviewManifestRequest) (*webapi.GetReviewManifestResponse, error) {
+	if req.GetRef() == "" {
+		return nil, fmt.Errorf("%w: GetReviewManifest needs a ref", ErrInvalidArgument)
+	}
+	man, err := s.loader.Manifest(ctx, req.GetMount(), req.GetRef())
+	if err != nil {
+		return nil, classifyLoadErr(err)
+	}
+	if err := review.Validate(man); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	return &webapi.GetReviewManifestResponse{Manifest: ManifestProto(man)}, nil
+}
+
 // runOne builds one design's Model (netlist + optional separate board tier + the shared params tier)
-// and runs the manifest over it. The board tier is read from board_path, not the design, so a netlist
+// and runs the manifest over it. The board tier is read from board_ref, not the design, so a netlist
 // entry can attach a separate confidential board export (WS3-089); an override that reads no board is
 // an error, never a silent nil.
-func (s *ReviewService) runOne(ctx context.Context, mount, design, boardPath string, man review.Manifest, floor float64, ov Overlay) (review.Report, error) {
-	m, err := BuildModel(ctx, s.loader, mount, design, boardPath, s.specs, ov.ReadOptions()...)
+func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef string, man review.Manifest, floor float64, ov Overlay) (review.Report, error) {
+	m, err := BuildModel(ctx, s.loader, mount, design, boardRef, s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return review.Report{}, err
 	}

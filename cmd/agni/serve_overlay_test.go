@@ -9,6 +9,7 @@ import (
 
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/service"
 )
 
 const overlayProfileYAML = `
@@ -166,9 +167,13 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
+	man, err := loadManifest("testdata/review/conv.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
 	resp, err := reviewSvc.RunReview(context.Background(), &webapi.RunReviewRequest{
-		ManifestPath: "testdata/review/conv.yaml",
-		DesignPath:   []string{"testdata/review/conv-demo.edn"},
+		Manifest:  service.ManifestProto(man),
+		DesignRef: []string{"testdata/review/conv-demo.edn"},
 	})
 	if err != nil {
 		t.Fatalf("RunReview: %v", err)

@@ -399,13 +399,21 @@ value instead DELETED a loader interface and seven methods. Values also compose:
 Corollary, from C20: a convention VOCABULARY is applied at the READ as a value carried on the loader
 (`formats.Loader.Lexicon`), which is what makes "applied at the edge" scopeable rather than global.
 
-**Verify:** no `*_path` field on a CONFIG message in `protos/agni/v1/webapi/` (artifact refs are
-exempt and should be named `*_ref`); no `os.`/`filepath.` in `internal/service/` impl files (the
-existing C13 guard, `transport_guard_test.go`); the vocabulary installers (`naming.ApplyLexicon`,
-`classify.SetActive*`) are called only from entrypoint startup wiring (`cmd/agni`), never from a
-service method or any per-run path.
+A config value a client does not already hold is obtained through its OWN rpc, never resolved inside
+the rpc that consumes it (WS9-050). `ReviewService.GetReviewManifest` turns a stored checklist into a
+`ReviewManifest`, and `RunReview` takes only the value. That split is what keeps the consuming call
+free of I/O while still serving a browser, which holds a ref and no filesystem: the read happens, but
+it is named in the contract instead of hiding inside a run, and a caller that already has the value
+never triggers it.
 
-**Known outstanding violation:** `RunReviewRequest.manifest_path` is config carried as a locator, and
-`design_path` / `board_path` are artifact refs wearing a misleading `_path` name. WS9-050 moves the
-manifest to a value and renames the refs. Recorded here rather than left implicit, so the constraint
-is not read as already satisfied.
+**Verify:** no `*_path` field on a CONFIG message in `protos/agni/v1/webapi/` (artifact refs are
+exempt and should be named `*_ref`); no `os`/`path/filepath`/`io/fs` import in `internal/service/`
+impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabulary installers
+(`naming.ApplyLexicon`, `classify.SetActive*`) are called only from entrypoint startup wiring
+(`cmd/agni`), never from a service method or any per-run path.
+
+**Known outstanding violation:** `DiffDesignsRequest.a_path` / `b_path` are artifact refs wearing a
+misleading `_path` name, the same misnaming WS9-050 fixed on the review request. Unlike that one they
+have live web consumers, so the rename is a real wire break rather than a free one and is tracked in
+`OUT_OF_SCOPE.md`. Recorded here rather than left implicit, so the constraint is not read as already
+satisfied.

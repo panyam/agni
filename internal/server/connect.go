@@ -282,3 +282,11 @@ func (a *Review) RunReview(ctx context.Context, req *connect.Request[webapi.RunR
 	}
 	return connect.NewResponse(resp), nil
 }
+
+func (a *Review) GetReviewManifest(ctx context.Context, req *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error) {
+	resp, err := a.svc.GetReviewManifest(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}

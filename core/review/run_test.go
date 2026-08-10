@@ -689,6 +689,45 @@ func TestLoadValidation(t *testing.T) {
 	}
 }
 
+// TestValidateRejectsMalformedValues holds a manifest that never saw YAML to the same rules Load
+// applies (WS9-050). Every case here is built as a struct, which is the path a manifest takes when it
+// arrives as a request value: no parser ran, so Load's checks would never have fired. Without this,
+// the wire path would accept an item with two selectors and resolve one of them arbitrarily.
+func TestValidateRejectsMalformedValues(t *testing.T) {
+	area := func(items ...Item) []Area { return []Area{{Name: "A", Items: items}} }
+	cases := map[string]Manifest{
+		"missing name":           {Areas: area(Item{ID: "i"})},
+		"no areas":               {Name: "t"},
+		"area no name":           {Name: "t", Areas: []Area{{Items: []Item{{ID: "i"}}}}},
+		"item no id":             {Name: "t", Areas: area(Item{Title: "x"})},
+		"two selectors":          {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Rule: "r", Profile: "P"}})},
+		"present plus rule":      {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Rule: "r", Present: &PresentBinding{Class: "test_connector"}}})},
+		"present no class":       {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Present: &PresentBinding{}}})},
+		"unparseable query":      {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Query: &QueryBinding{Match: "garbage(", Subject: "r", Message: "m"}}})},
+		"query missing message":  {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Query: &QueryBinding{Match: "component.mpn(?r,\"X\") => ?r", Subject: "r"}}})},
+		"requirement no profile": {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Requirement: "esd"}})},
+		"scope with no selector": {Name: "t", Areas: area(Item{ID: "i", Binding: Binding{Scope: ScopeBinding{Profiles: []string{"CAN"}}}})},
+	}
+	for name, m := range cases {
+		if err := Validate(m); err == nil {
+			t.Errorf("%s: want error, got nil", name)
+		}
+	}
+}
+
+// TestValidateAcceptsValidValue is the other half: a well-formed struct passes, including the
+// narrower fields (scope, requirement) that compose with a selector rather than counting as one.
+func TestValidateAcceptsValidValue(t *testing.T) {
+	m := Manifest{Name: "t", Areas: []Area{{Name: "CAN", Items: []Item{
+		{ID: "1", Title: "termination", Binding: Binding{Rule: "r", Scope: ScopeBinding{Profiles: []string{"CAN"}}}},
+		{ID: "2", Title: "esd", Binding: Binding{Profile: "CAN", Requirement: "esd"}},
+		{ID: "3", Title: "manual"},
+	}}}}
+	if err := Validate(m); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+}
+
 func TestLoadValid(t *testing.T) {
 	y := `
 name: mini
