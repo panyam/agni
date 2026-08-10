@@ -208,8 +208,27 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 }
 
 // extendEDB fans an EDB atom over the facts of its relation, unifying each into the binding.
+//
+// When the binding already fixes some of the atom's arguments, the candidates come from an index on
+// exactly those positions instead of from the whole relation (WS3-125). unify still decides every
+// candidate, so the index only ever has to avoid MISSING a match; see index.go.
 func (b *Base) extendEDB(atom *Atom, fields []edbField, bnd *binding, yield func(*binding) error) error {
-	for _, f := range b.edb[atom.Relation] {
+	facts := b.edb[atom.Relation]
+	pos, all := b.edbCandidates(atom, fields, bnd)
+	for i := 0; ; i++ {
+		var f FactRow
+		if all {
+			if i >= len(facts) {
+				break
+			}
+			f = facts[i]
+		} else {
+			if i >= len(pos) {
+				break
+			}
+			f = facts[pos[i]]
+		}
+		b.countWork()
 		if next, ok := unify(atom.Args, fields, f, bnd); ok {
 			if err := yield(next); err != nil {
 				return err
@@ -222,7 +241,8 @@ func (b *Base) extendEDB(atom *Atom, fields []edbField, bnd *binding, yield func
 // extendIDB fans a rule-defined atom over the derived tuples of its relation, carrying each tuple's
 // provenance forward — the same shape as extendEDB, over the materialized IDB store.
 func (b *Base) extendIDB(atom *Atom, bnd *binding, yield func(*binding) error) error {
-	for _, t := range b.idb[atom.Relation] {
+	for _, t := range b.idbCandidates(atom, bnd) {
+		b.countWork()
 		out := bnd.clone()
 		ok := true
 		for j, arg := range atom.Args {
