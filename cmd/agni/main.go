@@ -28,6 +28,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/stdlib/profiles"        // registers built-in "profile" rules; LoadDir adds overlay profiles
@@ -57,12 +58,16 @@ func rootCmd() *cobra.Command {
 			"Diff and checks operate on the IR, not on source files, so they are format-neutral.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		// Gives `agni --version`. The same string internal/version stamps into a results
+		// document's provenance, so the build a user reports and the build a report claims
+		// cannot disagree. `agni version` adds the toolchain and platform detail.
+		Version: version.Version(),
 	}
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched). Defaults to "+
 			envSymbolPath+" when unset.")
-	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), healthcheckCmd())
+	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), healthcheckCmd(), versionCmd())
 	return root
 }
 

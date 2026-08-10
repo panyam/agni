@@ -48,12 +48,22 @@ RUN pnpm build
 # libc coupling to the builder.
 # ---------------------------------------------------------------------------------------------
 FROM golang:1.26-bookworm AS build
+# VERSION stamps the build's identity. It must be passed explicitly here, unlike every other way
+# agni is built, because .dockerignore excludes .git to keep the context small: the toolchain has
+# no repository to read, so it records neither a vcs.revision nor a module version and
+# internal/version would resolve to "unknown". That string is not cosmetic — it is what a results
+# document names as its producer — so the image would otherwise write reports that cannot say
+# which build made them, in the one artifact whose whole point is pinning engine and symbol data
+# together. `make image IMAGE_TAG=v0.1.0` passes it; a bare `docker build` gets "dev".
+ARG VERSION=dev
 WORKDIR /src
 # Module files first, so `go mod download` caches independently of source edits.
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -o /out/agni ./cmd/agni
+RUN CGO_ENABLED=0 go build -trimpath \
+      -ldflags "-X github.com/panyam/agni/internal/version.stamped=${VERSION}" \
+      -o /out/agni ./cmd/agni
 
 # ---------------------------------------------------------------------------------------------
 # Stage 3: the symbol libraries. These are DATA, not tools: --symbol-path wants directories of
