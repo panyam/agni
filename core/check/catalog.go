@@ -296,19 +296,6 @@ var boardFormats = map[string]bool{
 	"ipc-2581":  true,
 }
 
-// paramTierRelations are datasheet-tier fact relations whose names do NOT start with "param" (so the
-// prefix test above misses them), but which are just as absent without a seeded set. Available gates a
-// rule reading one of them to not-applicable without --params, so a review item bound to it reads
-// not-applicable rather than a hollow pass. component.device_class joins PartSpec.device_class (WS10-013);
-// component.esd_rated joins the datasheet ESD rating (WS3-076), the same silent-without-seed posture.
-// The names are literals (not the RelComponentDeviceClass / RelEsdRated consts) because those consts
-// are stdlib/relations content now (issue 10) and check cannot import relations — relations imports
-// check. A relation NAME is a stable contract string; check gating on it by literal is sound.
-var paramTierRelations = map[string]bool{
-	"component.device_class": true, // RelComponentDeviceClass (WS10-013)
-	"component.esd_rated":    true, // RelEsdRated (WS3-076)
-}
-
 func Available(r *Rule, m Model) (ok bool, reason string) {
 	for _, fact := range r.Reads {
 		if slices.Contains(r.OptionalReads, fact) {
@@ -317,7 +304,7 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 			// it never gates. See Rule.OptionalReads.
 			continue
 		}
-		if (strings.HasPrefix(fact, "param") || paramTierRelations[fact]) && (m == nil || !m.HasParams()) {
+		if TierOf(fact) == TierParam && (m == nil || !m.HasParams()) {
 			// The params tier is a per-run injection (a seeded corpus via `check
 			// --params` / NewModelWithParams), not a property of the design. It is absent
 			// for a bare design (no --params) and for the catalog listing (m == nil), so a
@@ -330,7 +317,7 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 			// board branch below, which is likewise model-aware.
 			return false, "needs a seeded datasheet parameter set (check --params)"
 		}
-		if strings.HasPrefix(fact, "board.") && m != nil && !m.HasBoard() && !boardFormats[m.SourceFormat()] {
+		if TierOf(fact) == TierBoard && m != nil && !m.HasBoard() && !boardFormats[m.SourceFormat()] {
 			// The board tier is per-artifact: a geometric rule can only run when the design
 			// carries board geometry. HasBoard is the authoritative gate — a board tier was
 			// actually attached (a board-format file's sidecar, or a separate export passed
