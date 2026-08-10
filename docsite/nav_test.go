@@ -182,3 +182,23 @@ func TestSectionIndexesAreListedInHeader(t *testing.T) {
 		}
 	}
 }
+
+// TestBuiltSiteIsSelfContained guards the layering between `build` and `gh-pages`. The generator
+// emits pages only, so `build` must copy static/ in. It did not for a long time, and nothing
+// noticed because the sole consumer was `gh-pages`, which copied static/ itself on the way out. A
+// dist without it has no CSS, no JS bundle, no images and no rendered designs, and an interactive
+// component whose bundle never loads renders as nothing at all rather than as a broken box.
+//
+// This asserts the Makefile wiring rather than running a build, so it stays fast and does not need
+// node. The build is exercised for real by `make build` in CI.
+func TestBuiltSiteIsSelfContained(t *testing.T) {
+	mk := read(t, "Makefile")
+	_, after, ok := strings.Cut(mk, "\nbuild:")
+	if !ok {
+		t.Fatal("no build target in docsite/Makefile")
+	}
+	recipe, _, _ := strings.Cut(after, "\n\n") // a make target ends at the first blank line
+	if !strings.Contains(recipe, "cp -r static dist/static") {
+		t.Error("the build target does not copy static/ into dist, so a built site has no CSS, no JS bundle and no designs")
+	}
+}
