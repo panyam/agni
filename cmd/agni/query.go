@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/query"
 	"github.com/spf13/cobra"
 )
@@ -20,6 +21,8 @@ import (
 // provenance of the facts that produced it.
 func queryCmd() *cobra.Command {
 	var paramsDir string
+	var conventions string
+	var boardPath string
 	var showExamples bool
 	var showRelations bool
 	var verbose bool
@@ -92,8 +95,20 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				}
 				specs = set
 			}
+			// Reading the convention file is the CLI's job; the service takes the value (C22), the same
+			// shape `check` and `review` already use.
+			overlay := &webapi.OverlayConfig{}
+			if conventions != "" {
+				cfg, err := naming.Load(conventions)
+				if err != nil {
+					return err
+				}
+				overlay.Conventions = service.ConventionProto(cfg)
+			}
 			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs)
-			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{Path: args[0], Query: args[1]})
+			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
+				Path: args[0], Query: args[1], Overlay: overlay, BoardRef: boardPath,
+			})
 			if err != nil {
 				return err
 			}
@@ -102,6 +117,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 		},
 	}
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (datasheet corpus) — enables the param relation")
+	c.Flags().StringVar(&conventions, "conventions", "", "a naming-convention config (YAML) whose LEXICON is applied to the design read, so rail/feedback/pin.type answer under the project's own vocabulary rather than the built-in one. The config's rules half is not used here (a query runs no rules)")
+	c.Flags().StringVar(&boardPath, "board-path", "", "a separate board-geometry export (.kicad_pcb / IPC-2581) to attach, so the board.* relations have facts to range over; without it they are empty")
 	c.Flags().BoolVar(&specLib, "speclib", false, "query the whole seeded datasheet corpus (--params) with no <file>: the param/part.audience relations range over the whole spec library, not one design's parts")
 	c.Flags().BoolVar(&showExamples, "examples", false, "print starter queries (the concept ladder the web panel shows) and exit")
 	c.Flags().BoolVar(&showRelations, "relations", false, "print the queryable relation catalog (grouped by kind) and exit")

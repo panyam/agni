@@ -85,6 +85,8 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | flag | what it does |
 |---|---|
 | `--params <dir>` | a parameter set, to query datasheet facts (`param(...)`) |
+| `--conventions <file>` | apply a naming convention's LEXICON to the read, so `rail`/`feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here: a query runs no rules |
+| `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
 
 ### `diff <old> <new>`
 

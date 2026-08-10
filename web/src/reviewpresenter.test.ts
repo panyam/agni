@@ -98,6 +98,11 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 
+  const runQuery = vi.fn(async (_req: { mount: string; path: string; query: string; overlay?: unknown }) => ({
+    columns: ["n"], columnKinds: [], rows: [],
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const query = { runQuery } as any;
   const onReview = vi.fn();
   const onConvention = vi.fn();
   const onSummary = vi.fn();
@@ -112,15 +117,16 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
       expectationCaption: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
+      query: { setState: vi.fn() },
       review: wireReview ? { setState: onReview } : undefined,
       conventionBar: wireConventionBar ? { setState: onConvention } : undefined,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
-    undefined,
+    wireClients ? query : undefined,
     wireClients ? reviews : undefined,
     wireClients ? workspace : undefined,
   );
-  return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules };
+  return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules, runQuery };
 }
 
 function lastState(onReview: ReturnType<typeof vi.fn>): ReviewState {
@@ -380,6 +386,27 @@ describe("naming convention", () => {
     await h.presenter.setConvention("");
     expect(h.listRules.mock.calls.length).toBeGreaterThan(before);
     expect((h.listRules.mock.calls.at(-1)![0] as Record<string, unknown>).overlay).toBeUndefined();
+  });
+
+  // The Query panel must answer under the SAME vocabulary the bar names. Before this, the bar could
+  // say "acme" while query answered under the server's default — the exact over-claim the bar exists
+  // to prevent, and the one surface whose entire purpose is asking what the engine believes.
+  it("carries the vocabulary on an ad-hoc query", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.setConvention("proj/house.yaml");
+    await h.presenter.runQuery("rail(?n) => ?n");
+    const calls = h.runQuery.mock.calls;
+    const sent = calls[calls.length - 1][0] as Record<string, unknown>;
+    expect(sent.overlay, "the query panel would otherwise answer under a different vocabulary than the bar names").toBeDefined();
+  });
+
+  it("sends no overlay on a query while the server's vocabulary applies", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runQuery("rail(?n) => ?n");
+    const qcalls = h.runQuery.mock.calls;
+    expect((qcalls[qcalls.length - 1][0] as Record<string, unknown>).overlay).toBeUndefined();
   });
 
   it("offers the yaml files beside the design as choices", async () => {

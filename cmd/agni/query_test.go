@@ -156,3 +156,78 @@ func TestQueryNetClassDefsCLI(t *testing.T) {
 		t.Errorf("schematic-only read must yield no netclass definitions:\n%s", bare)
 	}
 }
+
+// runQuery executes one `agni query` invocation and returns its stdout.
+func runQuery(t *testing.T, args ...string) string {
+	t.Helper()
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query %v: %v", args, err)
+	}
+	return out.String()
+}
+
+// TestQueryConventionsCLI is WS3-113's reproduction, end to end through the command.
+//
+// `rail(?n)` is not a relation the convention adds; it is one whose ANSWER the convention changes,
+// because the lexicon is applied at the design read and net roles are resolved there. On this fixture
+// the built-in vocabulary — start-anchored on VCC/VDD/+3V3 — matches none of the project's
+// function-first rail names, so the engine reports one rail on a board with more. That is a correct
+// answer to a question the project did not ask, and until now there was no way to ask theirs.
+func TestQueryConventionsCLI(t *testing.T) {
+	design := "testdata/review/conv-demo.edn"
+	q := "rail(?n) => ?n"
+
+	builtin := runQuery(t, design, q)
+	if strings.Contains(builtin, "PMIC_VDD_LPM_1V8") {
+		t.Fatal("the built-in vocabulary already matches this fixture's rail names; it no longer demonstrates the gap")
+	}
+	if !strings.Contains(builtin, "1 result(s)") {
+		t.Errorf("without --conventions, want the one built-in-vocabulary rail:\n%s", builtin)
+	}
+
+	house := runQuery(t, design, q, "--conventions", "testdata/review/conventions.yaml")
+	if !strings.Contains(house, "PMIC_VDD_LPM_1V8") {
+		t.Errorf("--conventions did not reach the design read:\n%s", house)
+	}
+	if !strings.Contains(house, "2 result(s)") {
+		t.Errorf("want both rails under the project's own vocabulary:\n%s", house)
+	}
+}
+
+// TestQueryConventionsUnreadableCLI: a missing or malformed config is an error at the edge, never a
+// silent fall back to the built-in vocabulary. Falling back would answer a different question than
+// the one asked and say nothing about it, which on this surface is the whole failure mode: the user
+// is asking what the engine believes, and would be told what it believes under somebody else's words.
+func TestQueryConventionsUnreadableCLI(t *testing.T) {
+	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
+		cmd := queryCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetArgs([]string{"testdata/review/conv-demo.edn", "rail(?n) => ?n", "--conventions", path})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("--conventions %s must error, not answer under the built-in vocabulary", path)
+		}
+	}
+}
+
+// TestQueryBoardPathCLI: the board.* relations range over a board tier the netlist does not carry, so
+// without an attached export they are empty — indistinguishable, in a result table, from a board with
+// nothing to report.
+func TestQueryBoardPathCLI(t *testing.T) {
+	design := "testdata/review/can-broken.edn"
+	q := "board.track_width(?n,?w) => ?n, ?w"
+
+	if got := runQuery(t, design, q); !strings.Contains(got, "no results") {
+		t.Errorf("a netlist with no attached board should yield no board facts:\n%s", got)
+	}
+	withBoard := runQuery(t, design, q, "--board-path", "testdata/conformance/drc.fires.kicad_pcb")
+	if strings.Contains(withBoard, "no results") {
+		t.Errorf("--board-path did not attach the board tier:\n%s", withBoard)
+	}
+	if !strings.Contains(withBoard, "result(s)") {
+		t.Errorf("want board facts with the export attached:\n%s", withBoard)
+	}
+}

@@ -108,11 +108,39 @@ That second change is the lexicon half doing its job. It is worth sitting with, 
 shape of the whole tier system: supplying a tier does not just add its own findings, it can change
 what the rules you already had are able to see.
 
+## Reading the lexicon directly
+
+Inferring the lexicon from a finding count that moved is indirect. You can ask the fact base itself,
+which is the same question this rung opened with:
+
+```
+agni query designs/gateway/gateway.edn 'rail(?n) => ?n' --conventions conventions.yaml
+```
+
+```
+n               provenance
+GND             designs/gateway/gateway.edn:GND
+PMIC_CORE_3V3   designs/gateway/gateway.edn:PMIC_CORE_3V3
+PMIC_IO_1V8     designs/gateway/gateway.edn:PMIC_IO_1V8
+PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
+
+4 result(s)
+```
+
+Four rails, where the same query without the flag found one. Nothing was added to the design and no
+rule ran. The lexicon changed what the engine believes a rail *is*, and every relation derived from
+that role now answers differently.
+
+This is the loop to write a lexicon in: ask, compare against the rails you know the board has, adjust
+the pattern, ask again. `--conventions` on `query` reads only the lexicon half, since a query runs no
+rules.
+
 ## Writing your own
 
-Start with the lexicon, not the rules. Run `agni query <design> 'rail(?n) => ?n'` on a real board
-and compare the list against the rails you know it has. Whatever is missing tells you the pattern
-you need. Repeat until the list is right, and only then write naming rules.
+Start with the lexicon, not the rules. Run `agni query <design> 'rail(?n) => ?n' --conventions
+<your file>` on a real board and compare the list against the rails you know it has. Whatever is
+missing tells you the pattern you need. Repeat until the list is right, and only then write naming
+rules.
 
 A rule's `allow` is a list of patterns, and a net name passes if it matches any of them. Getting
 this backwards is easy: `allow` describes what is legal, so a name matching none of them is the

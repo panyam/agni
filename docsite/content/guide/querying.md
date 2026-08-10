@@ -195,10 +195,46 @@ GND  reaches from GND
 SIG  reaches from GND
 ```
 
+## Asking under your own vocabulary
+
+Some relations do not report what is in the file; they report what the engine *believes*. `rail`,
+`feedback`, and `pin.type` are resolved from a vocabulary at the moment the design is read.
+
+That vocabulary is the built-in one unless you say otherwise, and it is anchored on the names most
+boards use. On a board that names rails function-first, the honest answer under the built-in
+vocabulary can be badly wrong for your project:
+
+```
+$ agni query gateway.edn 'rail(?n) => ?n'
+GND
+
+1 result(s)
+```
+
+Pass your own and ask again:
+
+```
+$ agni query gateway.edn 'rail(?n) => ?n' --conventions conventions.yaml
+GND
+PMIC_CORE_3V3
+PMIC_IO_1V8
+PMIC_MAIN_12V0
+
+4 result(s)
+```
+
+Nothing about the design changed. This is the loop to author a lexicon in: ask, compare against the
+rails you know the board has, fix the pattern, ask again. See
+[Naming conventions](../naming-conventions/).
+
+Only the config's lexicon half is used here, since a query runs no rules.
+
 ## In the viewer
 
 The viewer has a **Query** panel that runs the same queries against the design you have open. Type a
-query, press Run (or ⌘/Ctrl+Enter), and the results appear as a table. Each row has a small toggle
+query, press Run (or ⌘/Ctrl+Enter), and the results appear as a table. The **vocabulary** control in
+the top bar applies here too, so a query and a check in the same session answer under the same
+vocabulary. Each row has a small toggle
 that expands its provenance, so the citations stay out of your way until you want them. The panel
 runs the query on the server over the open file. You get the same answers as `agni query`, without
 leaving the design. Datasheet (`param`) facts are not yet wired into the viewer, so a query over
