@@ -1,6 +1,7 @@
 ---
 title: "1. Read a design"
 description: "Confirm the tool read your board the way you expect, before trusting anything downstream."
+playground: viewer
 ---
 
 Every finding in every later rung rests on one thing: that the tool read your board correctly. A
@@ -8,6 +9,24 @@ schematic that half-loaded still produces a report, and that report looks exactl
 So the first thing to do with a new design is not to check it. It is to confirm what was read.
 
 Run these from `examples/tutorial-project`.
+
+## The board
+
+This is the design every rung runs against. Drag to pan, scroll to zoom.
+
+<agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-schematic.svg"
+             caption="Gateway ECU (tutorial board): 12V in, 3V3 and 1V8 rails, an MCU, a CAN transceiver, an I2C EEPROM, and a crystal"></agni-viewer>
+
+A small automotive gateway. Power comes in from a connector at 12 V, a buck regulator drops it to
+3.3 V and an LDO drops that to 1.8 V. An MCU sits on both rails and talks to a CAN transceiver, an
+I2C EEPROM, and a crystal.
+
+It is deliberately imperfect. Each flaw is a real defect a reviewer would flag, and each one is
+there so some part of the tool has something true to report rather than a contrived one. You will
+meet them as you go.
+
+This drawing is rendered by Agni from the same file the commands below read. It is not a screenshot
+of another tool.
 
 ## What was read
 

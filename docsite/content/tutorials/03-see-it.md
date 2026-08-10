@@ -1,6 +1,7 @@
 ---
 title: "3. See it"
 description: "Draw the board, and get a picture of a netlist that has no drawing."
+playground: viewer
 ---
 
 A finding names a net. Nobody thinks about a board as a list of net names, so at some point you need
@@ -29,6 +30,12 @@ that cross each other, which is the main thing that makes a generated schematic 
 
 This is a drawing of your netlist, not a reproduction of your schematic. Parts sit where the layout
 algorithm put them. It is for following connectivity, not for review of the drawing itself.
+
+<agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-netlist.svg"
+             caption="gateway.edn with a computed force layout: no geometry came from the file, every position here was calculated"></agni-viewer>
+
+Compare it against the faithful drawing further down. Same board, same nets, and a completely
+different picture, because one was drawn by a person and the other was solved for.
 
 ## Pick a layout
 
@@ -71,6 +78,9 @@ wrote gateway.svg (sheet "Gateway ECU (tutorial board)", 19 placements, 56 wires
 That is placements and wires read out of the file rather than computed, so the result is the drawing
 somebody drew. Faithful is the default. `--layout` is what you reach for when there is nothing to be
 faithful to.
+
+<agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-schematic.svg"
+             caption="gateway.kicad_sch rendered faithfully: every position, wire, and label came out of the file"></agni-viewer>
 
 ## The same board, twice
 

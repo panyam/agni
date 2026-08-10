@@ -37,3 +37,14 @@ gh-pages: build
 		git push -f origin gh-pages
 	@rm -rf dist/.git
 	@echo "Deployed. Set GitHub Pages to serve from the gh-pages branch."
+
+# The board images the tutorial pages embed in <agni-viewer> are rendered by the engine from the
+# committed tutorial fixture, so a rendering change or a fixture edit can be picked up by re-running
+# this rather than by noticing the picture went stale. Run from the repo root, where the engine
+# module lives (docsite is its own module and does not depend on it).
+TUT = examples/tutorial-project/designs/gateway
+designs: ## Re-render the tutorial board images the docs embed
+	@cd .. && go run ./cmd/agni render $(TUT)/gateway.kicad_sch --symbol-path $(TUT)/symbols \
+	  -o docsite/static/designs/gateway-schematic.svg
+	@cd .. && go run ./cmd/agni render $(TUT)/gateway.edn --layout force \
+	  -o docsite/static/designs/gateway-netlist.svg
