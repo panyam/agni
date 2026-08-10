@@ -16,7 +16,11 @@
     "children": [
       { "name": "1. Read a design", "url": "tutorials/01-read-a-design/" },
       { "name": "2. Run the catalog", "url": "tutorials/02-run-the-catalog/" },
-      { "name": "3. See it", "url": "tutorials/03-see-it/" }
+      { "name": "3. See it", "url": "tutorials/03-see-it/" },
+      { "name": "4. Your names", "url": "tutorials/04-your-names/" },
+      { "name": "5. Your interfaces", "url": "tutorials/05-your-interfaces/" },
+      { "name": "6. Part limits", "url": "tutorials/06-part-limits/" },
+      { "name": "7. Your architecture", "url": "tutorials/07-your-architecture/" }
     ]
   },
   {
