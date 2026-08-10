@@ -51,6 +51,9 @@ design still reads, it just reads short: fewer components, fewer nets, and there
 findings, with no error to tell you so. If your component or net counts look low, that is the first
 thing to check, whether you are running in Docker or not.
 
+The libraries are most of the image's ~310MB. That is the trade being made deliberately: a smaller
+image that renders your board wrong is the worse default.
+
 ## Running one-shot commands
 
 The image's entrypoint is the `agni` binary and the server is only its default command, so any
@@ -101,8 +104,15 @@ project. See [interface profiles](../interface-profiles/) and
 ## Writes and file ownership
 
 The datasheets workbench writes back into a mount: saving a PartSpec or an annotation lands a file
-in your bind-mounted folder. The container runs as a non-root user so those files are not written
-as root, but its uid will not match yours. To have writes land as you:
+in your bind-mounted folder. The container runs as a non-root user (uid 10001) so those files are
+never written as root.
+
+On **Docker Desktop** (macOS, Windows) that is the whole story. Its file-sharing layer maps
+ownership to you, so a file the container wrote as uid 10001 appears on your host owned by your own
+account, and there is nothing to configure.
+
+On **Linux**, bind mounts pass ownership through unchanged, so those files land owned by uid 10001
+and you may not be able to edit them afterwards. Run as yourself instead:
 
 ```
 docker run --user $(id -u):$(id -g) -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0
