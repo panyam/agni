@@ -5,6 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
+import "agni/v1/webapi/checks.proto";
 
 // This file: QueryService, the ad-hoc datalog query surface (WS3-029) over a loaded design's fact
 // base — the web front-end to the same `query` engine `agni query` runs. Search is its own concern
@@ -39,6 +40,28 @@ message RunQueryRequest {
   // query is the datalog text, the same surface `agni query` accepts:
   //   component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
   string query = 3;
+  // overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
+  // only its LEXICON half does anything here — and it does a great deal.
+  //
+  // The lexicon decides which net names are rails, grounds, and feedback nodes, and it is applied at
+  // the design READ because those roles are resolved once at ingestion. So it does not merely add a
+  // relation: it changes the answer of `rail`, `feedback`, `pin.type`, and everything derived from
+  // them. A project whose rails are named function-first sees one rail on a four-rail board without
+  // it, which is a correct answer to a question they did not ask.
+  //
+  // That is also why this field is on the ad-hoc query surface at all. Authoring a lexicon is a loop
+  // (write a pattern, ask which nets are rails now, adjust), and query is the natural tool for that
+  // loop; without this it could not participate in it.
+  //
+  // The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
+  // project keeps one conventions file carrying both halves, and a query legitimately consumes only
+  // one of them.
+  OverlayConfig overlay = 4;
+  // board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
+  // relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
+  // no board is attached, and those relations are then simply empty — which is indistinguishable, in
+  // a result table, from a board with nothing to report. Same ref semantics as `path`.
+  string board_ref = 5;
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the

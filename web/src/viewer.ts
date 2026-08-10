@@ -227,7 +227,10 @@ export class ViewerPresenter {
     }
     this.views.query.setState(emptyResult(true));
     try {
-      const resp = await this.query.runQuery({ mount: this.mount, path: this.path, query: text });
+      // The overlay goes here too, or the vocabulary bar lies. The bar names the vocabulary the
+      // answers on screen were computed under, and a Query panel answering under the server's while
+      // the bar said otherwise would be the exact over-claim the bar exists to prevent (WS3-113).
+      const resp = await this.query.runQuery({ mount: this.mount, path: this.path, query: text, overlay: this.overlay() });
       this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
       this.views.query.setState(errorResult(e instanceof Error ? e.message : String(e)));
@@ -608,6 +611,9 @@ export class ViewerPresenter {
   // asking the wrong question.
   private async reloadForConvention(): Promise<void> {
     this.findingCache.clear();
+    // Query results were computed under the previous vocabulary too, and `rail` answering differently
+    // is the whole point of the feature, so leaving them on screen would show two vocabularies at once.
+    this.views.query?.setState(emptyResult(false));
     if (this.mount && this.path) await this.loadRules(this.mount, this.path);
     this.assembleFindings();
   }

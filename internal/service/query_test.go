@@ -3,8 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/readers/formats"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -304,5 +310,100 @@ func TestRunQueryParseErrorMessagePreserved(t *testing.T) {
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Mount: "m", Path: "x.edn", Query: `!!!`})
 	if err == nil || strings.TrimSpace(err.Error()) == "" {
 		t.Fatalf("want a non-empty parse error message, got %v", err)
+	}
+}
+
+// fsQueryLoader reads a real design file and HONORS the read options, which is the whole point: a
+// lexicon is applied at ingestion, so a loader that discarded the option would make the test below
+// assert nothing. It embeds fakeLoader for the methods a query never calls.
+type fsQueryLoader struct {
+	fakeLoader
+	base string
+}
+
+func (l fsQueryLoader) Design(_ context.Context, _, path string, opts ...ReadOption) (*ir.Design, error) {
+	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, path))
+}
+
+// houseConvention is the fixture project's vocabulary: its rails are named function-first
+// ("PMIC_VDD_LPM_1V8"), which the built-in rail vocabulary — start-anchored on VCC/VDD/+3V3 — matches
+// none of.
+func houseConvention(t *testing.T) *webapi.NamingConvention {
+	t.Helper()
+	cfg, err := naming.Load(filepath.Join("..", "..", "cmd", "agni", "testdata", "review", "conventions.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ConventionProto(cfg)
+}
+
+func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
+	t.Helper()
+	var out []string
+	for _, row := range resp.GetRows() {
+		if len(row.GetCells()) > 0 {
+			out = append(out, row.GetCells()[0])
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// TestRunQueryHonorsTheRequestLexicon is the gap this feature closes, using the issue's own example.
+//
+// `rail(?n)` is not a relation a convention ADDS. It is a relation whose ANSWER a convention changes,
+// because net roles are resolved once at the design read and the lexicon decides which names carry
+// which role. Without the project's vocabulary the engine reports one rail on a board with more,
+// which is a correct answer to a question the project did not ask, and there was previously no way to
+// ask theirs.
+//
+// This is also why `query` needed it more than a missing flag usually warrants: authoring a lexicon
+// is a loop of writing a pattern and asking which nets are rails now, and query is the tool for that
+// loop.
+func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil)
+	ask := func(ov *webapi.OverlayConfig) []string {
+		t.Helper()
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+			Path: "review/conv-demo.edn", Query: "rail(?n) => ?n", Overlay: ov,
+		})
+		if err != nil {
+			t.Fatalf("RunQuery: %v", err)
+		}
+		return queryColumn(t, resp)
+	}
+
+	builtin := ask(nil)
+	if slices.Contains(builtin, "PMIC_VDD_LPM_1V8") {
+		t.Fatal("the built-in vocabulary already matches the project's rail names; the fixture no longer demonstrates the gap")
+	}
+
+	house := ask(&webapi.OverlayConfig{Conventions: houseConvention(t)})
+	if !slices.Contains(house, "PMIC_VDD_LPM_1V8") {
+		t.Errorf("rail(?n) under the project's own vocabulary = %v, want it to include PMIC_VDD_LPM_1V8", house)
+	}
+	if len(house) <= len(builtin) {
+		t.Errorf("the project's vocabulary found no more rails than the built-ins: %v vs %v", house, builtin)
+	}
+}
+
+// TestRunQueryIgnoresTheConventionsRulesHalf: a project keeps ONE conventions file carrying both
+// halves, and a query legitimately consumes only the lexicon. Sending one whose rules would not even
+// compile into a catalog must still answer, because a query composes no catalog at all — the
+// alternative is refusing a config that is fine for the question being asked.
+func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil)
+	conv := houseConvention(t)
+	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
+	conv.Rules = append(conv.Rules, &webapi.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Path: "review/conv-demo.edn", Query: "rail(?n) => ?n",
+		Overlay: &webapi.OverlayConfig{Conventions: conv},
+	})
+	if err != nil {
+		t.Fatalf("a query must not fail on the rules half of a convention it does not use: %v", err)
+	}
+	if !slices.Contains(queryColumn(t, resp), "PMIC_VDD_LPM_1V8") {
+		t.Error("the lexicon half did not reach the read")
 	}
 }

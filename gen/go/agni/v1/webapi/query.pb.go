@@ -29,7 +29,29 @@ type RunQueryRequest struct {
 	// query is the datalog text, the same surface `agni query` accepts:
 	//
 	//	component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
-	Query         string `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	Query string `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	// overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
+	// only its LEXICON half does anything here — and it does a great deal.
+	//
+	// The lexicon decides which net names are rails, grounds, and feedback nodes, and it is applied at
+	// the design READ because those roles are resolved once at ingestion. So it does not merely add a
+	// relation: it changes the answer of `rail`, `feedback`, `pin.type`, and everything derived from
+	// them. A project whose rails are named function-first sees one rail on a four-rail board without
+	// it, which is a correct answer to a question they did not ask.
+	//
+	// That is also why this field is on the ad-hoc query surface at all. Authoring a lexicon is a loop
+	// (write a pattern, ask which nets are rails now, adjust), and query is the natural tool for that
+	// loop; without this it could not participate in it.
+	//
+	// The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
+	// project keeps one conventions file carrying both halves, and a query legitimately consumes only
+	// one of them.
+	Overlay *OverlayConfig `protobuf:"bytes,4,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	// board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
+	// relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
+	// no board is attached, and those relations are then simply empty — which is indistinguishable, in
+	// a result table, from a board with nothing to report. Same ref semantics as `path`.
+	BoardRef      string `protobuf:"bytes,5,opt,name=board_ref,json=boardRef,proto3" json:"board_ref,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -81,6 +103,20 @@ func (x *RunQueryRequest) GetPath() string {
 func (x *RunQueryRequest) GetQuery() string {
 	if x != nil {
 		return x.Query
+	}
+	return ""
+}
+
+func (x *RunQueryRequest) GetOverlay() *OverlayConfig {
+	if x != nil {
+		return x.Overlay
+	}
+	return nil
+}
+
+func (x *RunQueryRequest) GetBoardRef() string {
+	if x != nil {
+		return x.BoardRef
 	}
 	return ""
 }
@@ -520,11 +556,13 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\"Q\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xa7\x01\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
-	"\x05query\x18\x03 \x01(\tR\x05query\"\xb4\x01\n" +
+	"\x05query\x18\x03 \x01(\tR\x05query\x127\n" +
+	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
+	"\tboard_ref\x18\x05 \x01(\tR\bboardRef\"\xb4\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x14\n" +
 	"\x05cites\x18\x02 \x03(\tR\x05cites\x12;\n" +
@@ -578,23 +616,25 @@ var file_agni_v1_webapi_query_proto_goTypes = []any{
 	(*RelationInfo)(nil),          // 5: agni.v1.webapi.RelationInfo
 	(*ExampleQuery)(nil),          // 6: agni.v1.webapi.ExampleQuery
 	(*ListRelationsResponse)(nil), // 7: agni.v1.webapi.ListRelationsResponse
-	(checks.LocateReason)(0),      // 8: agni.v1.checks.LocateReason
+	(*OverlayConfig)(nil),         // 8: agni.v1.webapi.OverlayConfig
+	(checks.LocateReason)(0),      // 9: agni.v1.checks.LocateReason
 }
 var file_agni_v1_webapi_query_proto_depIdxs = []int32{
-	2, // 0: agni.v1.webapi.QueryRow.cell_sheets:type_name -> agni.v1.webapi.CellSheets
-	8, // 1: agni.v1.webapi.QueryRow.cell_reasons:type_name -> agni.v1.checks.LocateReason
-	1, // 2: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
-	5, // 3: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
-	6, // 4: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
-	0, // 5: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
-	4, // 6: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
-	3, // 7: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
-	7, // 8: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	8, // 0: agni.v1.webapi.RunQueryRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	2, // 1: agni.v1.webapi.QueryRow.cell_sheets:type_name -> agni.v1.webapi.CellSheets
+	9, // 2: agni.v1.webapi.QueryRow.cell_reasons:type_name -> agni.v1.checks.LocateReason
+	1, // 3: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
+	5, // 4: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
+	6, // 5: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
+	0, // 6: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
+	4, // 7: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
+	3, // 8: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
+	7, // 9: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_query_proto_init() }
@@ -602,6 +642,7 @@ func file_agni_v1_webapi_query_proto_init() {
 	if File_agni_v1_webapi_query_proto != nil {
 		return
 	}
+	file_agni_v1_webapi_checks_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

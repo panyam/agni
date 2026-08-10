@@ -47,10 +47,22 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
+	// The request's overlay is composed BEFORE the read, because only its lexicon half matters here and
+	// that half has to reach the READ: net roles are resolved once at ingestion, so the vocabulary
+	// decides what `rail`, `feedback`, and everything derived from them answer (WS3-113).
+	//
+	// The convention's RULES half is ignored, deliberately. A query composes no catalog, and a project
+	// keeps one conventions file carrying both halves, so refusing it over rules this call will never
+	// run would reject a config that is perfectly valid for the question being asked. There is no base
+	// convention to replace for the same reason: nothing here holds a catalog.
+	ov, err := ComposeOverlay(req.GetOverlay(), "")
+	if err != nil {
+		return nil, err
+	}
 	// One FULL Model over the design (netlist + board + params, WS9-048): the query evaluator reads
 	// it, and the per-cell locate classifier (WS9-039) shares its indexes rather than re-scanning the
 	// raw IR. The board/params tiers back the board.* / param.* query relations, matching `agni query`.
-	model, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs)
+	model, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), req.GetBoardRef(), s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
