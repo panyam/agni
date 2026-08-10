@@ -290,6 +290,88 @@ width, via drill, and layer, so a single cited query can span board, netlist, an
 once, for example finding a net routed thinner than 0.25 mm that carries a part rated for high
 current.
 
+## What the kernel cannot do, and what is actually slow
+
+A rule body is already subgraph matching: a conjunctive query over a labelled graph is graph pattern
+matching, and the pull-up check is a three-node, two-edge pattern. So the interesting question is not
+whether shapes can be expressed but which specific things are missing, and whether the evaluator can
+carry the load if more rules move out of Go and into queries. Both halves were measured rather than
+argued.
+
+### Bounded repetition: already solved, and the remaining work is migration
+
+Plain datalog gives unbounded transitive closure through recursion, but says nothing about distance.
+That is the one hole a circuit question keeps falling into, because protection questions are all
+bounded: a clamp near the pin, a series element within two hops. The fix is shipped. `reaches` takes
+an optional third argument binding the exact number of crossings, so a radius is written
+
+```
+reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs")
+```
+
+and not `reaches(?n, ?rn, 2)`, which means exactly two crossings and silently skips a part sitting one
+away.
+
+**The consequence is that several Go escape hatches are now redundant rather than necessary.** The
+catalog reaches into Go through a small function seam for things the query language could not say.
+Five of those functions are one shape repeated with a different payload: is there a TVS, a Zener, a
+power pin, or a datasheet-rated part within the two-hop series reach of this net. All of them are
+expressible in the form above, and the equivalent is already written down in the fact documentation.
+The rules that use them have simply not moved. That is a migration backlog, not an expressiveness
+gap, and it is worth being precise about the difference: no new syntax makes those rules simpler,
+because the syntax already exists.
+
+The remaining Go functions are mostly not shape problems at all. They consult the naming lexicon,
+transform strings, or fold over entities. A path operator does not remove them, and a survey that
+counts every escape hatch as evidence for new kernel features will overstate the case.
+
+### The evaluator is the real constraint
+
+The interpreter's own documentation says a naive join is sufficient because one design's fact base is
+small. That assumption does not survive a real board. Measured against synthetic designs bracketing
+the size of a production automotive ECU netlist (roughly 4,000 components and 1,600 nets):
+
+| query shape | 100 components | 4,000 components | scaling |
+|---|---|---|---|
+| flat conjunctive (two atoms sharing a variable) | 12 ms | **15.7 s** | quadratic |
+| bounded reach (`?h <= 2`) | 18 ms | **1.4 s** | roughly linear |
+| recursive transitive closure | 22 ms | **28.3 s** | quadratic |
+
+Two results are worth reading carefully because they invert the obvious expectation.
+
+**The simplest shape is the slowest.** A two-atom conjunction with no recursion and no traversal costs
+15.7 seconds at board scale. Once the shared variable is bound by the first atom, the second atom is
+satisfied by scanning every fact of that relation, so the join is an unindexed nested loop. Nothing
+exotic is required to hit this: it is the shape of nearly every rule.
+
+**The traversal everyone worries about is fine.** The bounded reach walk is the only shape that stays
+near-linear, because the walk is fan-bounded by construction. The feature that looks expensive is not
+the problem.
+
+This reorders the work. Indexing facts by bound argument position addresses the common case and is
+the cheapest thing on the list. Replacing the derived-tuple set's linear-scan deduplication addresses
+recursion, which is a separate cost with a separate fix. Worst-case-optimal join algorithms are
+genuinely the right answer for cyclic patterns, and they are also not the first problem, because the
+query measured above is acyclic and already quadratic. Ordering them by sophistication rather than by
+measurement would fix the rarest case first.
+
+The migration described in the previous section runs through this evaluator. Moving rules out of Go
+without addressing the join makes the catalog slower in exchange for making it more declarative,
+which is a trade nobody asked for. Sequence accordingly.
+
+### Matching is by homomorphism, and circuits usually mean the opposite
+
+Datalog matches patterns by homomorphism, so two variables in a body may bind the same node. Circuit
+intent is nearly always injective: a divider's two resistors must be two distinct parts, and a
+pull-up's rail must not be the signal net it pulls up. The language has no way to say that, so every
+author writes a disequality by hand, and the shipped rules already carry two of them.
+
+Forgetting one is not a syntax error and not a crash. It is a silently wrong answer. Drop the
+disequality from the interface-presence rule and a single matching signal satisfies "two distinct
+signals are present", so an interface reports itself in use on half the evidence, and every
+completeness check downstream inherits that. This is the cheapest of the three problems to address
+and the only one whose failure mode is a wrong verdict rather than a slow one.
+
 ## LLM-assisted authoring
 
 Authoring even a well-designed rule language has a learning curve, and the rules that matter are
