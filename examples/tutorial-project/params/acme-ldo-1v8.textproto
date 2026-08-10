@@ -1,0 +1,41 @@
+# The 3V3-to-1V8 LDO (U2), seeded as a MOCK placeholder rather than transcribed from a datasheet.
+#
+# This is the UNTRUSTED half of the tutorial's datasheet pair, and it exists to make one verdict
+# reachable. prov.method is "mock" at confidence 0.3, which is below the trust floor, so a fail that
+# rests only on these rows reports as PROVISIONAL rather than fail. That is the engine declining to
+# call a defect on data nobody has checked, and it is the state a real parameter corpus starts in.
+#
+# The input abs-max below is deliberately 3.0 V while U2's VIN sits on the 3.3 V rail, so there IS a
+# violation to find. Whether you should act on it is exactly what "provisional" is telling you.
+mpn: "ACME-LDO-1V8"
+manufacturer: "Agni Tutorial Works"
+device_class: "regulator"
+
+docs {
+  id: "acme-ldo-1v8-placeholder"
+  title: "ACME-LDO-1V8 (placeholder, not transcribed)"
+  vendor: "Agni Tutorial Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Input voltage"
+  symbol: "VIN"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 3.0 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
+}
+
+parameters {
+  name: "Output voltage"
+  symbol: "VOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { typ: 1.8 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
+}
