@@ -28,6 +28,16 @@ of them at once.
 New here? Start with `whole-enchilada` for the full tour, then use rungs 1-6 to go deep on
 each step. Examples are tracked as roadmap tickets (workstream WS8).
 
+## Not on the ladder: `tutorial-project/`
+
+[`tutorial-project/`](tutorial-project/) is a different kind of artifact and does not belong in the
+table above. The examples are Go programs that narrate one engine capability. That folder is a
+worked *review project*: a synthetic board plus the checklist, conventions, interface profiles,
+datasheet parameters, and design intent a team wraps around one. It is what the docs site tutorials
+run against, and it is a copyable starting point for your own project.
+
+It is not a Go module and has no `main.go`. Drive it with `make review` from inside the folder.
+
 ## Run one
 
 ```bash
