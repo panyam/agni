@@ -1,0 +1,118 @@
+# Publishes the container image to GHCR when a release tag is pushed.
+#
+# The tag is the single source of the version. `make tag-push V=v0.1.0` publishes the tag, which is
+# the Go module release, and this workflow then builds the image from that same tag and stamps the
+# same string into the binary. Before this existed the two were kept in step by hand (`make tag-push
+# V=...` then `make image IMAGE_TAG=...`), which could ship an image tagged one version whose binary
+# reported another — exactly the confusion the version stamp exists to remove.
+#
+# Cost note: this repo is public, so GitHub-hosted standard runners and GHCR storage/bandwidth for
+# public packages are both free. Keep to standard runners; larger runners are billed even here.
+#
+# ONE-TIME MANUAL STEP AFTER THE FIRST RUN. A newly created GHCR package is PRIVATE by default even
+# when the repository publishing it is public, and the workflow cannot change that for itself: the
+# default GITHUB_TOKEN can push to a package but not alter its visibility. So the first release
+# publishes an image that an anonymous `docker pull` cannot see, which looks like a broken build and
+# is not one. Fix it once, in the package's settings on github.com: set visibility to Public, and
+# link the package to this repository so it inherits future permissions. Subsequent releases need
+# nothing. The verify step below still passes on that first run, because it authenticates as the
+# workflow rather than anonymously, so it CANNOT catch this for you.
+name: release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  # Manual re-run, e.g. to republish after a registry problem. Takes the tag to build so a dispatch
+  # can never accidentally publish an image built from an untagged main.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      # The tag reaches the shell through the ENVIRONMENT, never through ${{ }} interpolation into
+      # the script body. A workflow_dispatch input is free text and a tag name can carry shell
+      # metacharacters, so interpolating either one directly would splice attacker-chosen text into
+      # the command before any validation could run. Validation has to happen after the value is
+      # safely in a variable, which is only possible via env.
+      - name: Resolve the tag being released
+        id: rel
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          tag="${INPUT_TAG:-$REF_NAME}"
+          case "$tag" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::refusing to publish from '$tag': not v-prefixed semver"; exit 1 ;;
+          esac
+          # Belt and braces: reject anything outside the character set a semver tag can contain, so
+          # a value that satisfies the glob but smuggles other characters still cannot get through.
+          case "$tag" in
+            *[!v0-9.-]*) echo "::error::tag '$tag' has characters a release tag may not contain"; exit 1 ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag"
+
+      - uses: actions/checkout@v4
+        with:
+          # Build the tag, never whatever main happens to be. A workflow_dispatch defaults to a
+          # branch, so without this an image labelled v0.1.0 could contain unreleased commits.
+          ref: ${{ steps.rel.outputs.tag }}
+
+      # No QEMU. Every stage that compiles or installs runs on $BUILDPLATFORM (see the Dockerfile):
+      # the bundle is JavaScript, the symbol libraries are architecture-independent text, and the
+      # binary is CGO-free so Go cross-compiles it. Only the final COPY-only stage is per-platform.
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # VERSION is what the binary reports. It comes from the tag, which is the whole point of
+          # this workflow: the image tag and `agni version` cannot disagree.
+          build-args: |
+            VERSION=${{ steps.rel.outputs.tag }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.rel.outputs.tag }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Proves the published image runs and agrees with its own tag, on the runner's architecture.
+      # A published image that reports the wrong version is the specific failure this workflow was
+      # built to prevent, so it is worth one pull to confirm rather than assume.
+      - name: Verify the published image reports the tag
+        env:
+          # Via env for the same reason as above. This value is validated, but keeping one rule
+          # ("untrusted-ish values reach the shell through env") is easier to hold than a per-site
+          # judgement about which interpolations happen to be safe.
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          img="ghcr.io/${REPO}:${TAG}"
+          docker pull "$img"
+          got="$(docker run --rm "$img" version | head -1)"
+          want="agni ${TAG}"
+          echo "reported: $got"
+          [ "$got" = "$want" ] || { echo "::error::image reports '$got', expected '$want'"; exit 1; }
+          # It must also actually work, not merely start: run the catalog over a board baked into
+          # the image, so a broken symbol path or missing asset fails here rather than for a user.
+          docker run --rm "$img" check /workspace/demo/showcase.fires.kicad_pro | head -5

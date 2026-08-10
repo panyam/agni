@@ -29,7 +29,10 @@
 # Stage 1: the browser bundle. Node is needed only to produce web/static/*.js, which is a
 # gitignored build artifact (web/.gitignore), so it cannot simply be copied from the context.
 # ---------------------------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS web
+# $BUILDPLATFORM, not the target: the bundle is JavaScript and identical on every architecture, so
+# building it natively lets a multi-arch build produce it once instead of once per platform under
+# emulation.
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS web
 WORKDIR /src/web
 # Manifest first so a dependency-unchanged rebuild reuses the install layer; the source copy
 # below is what actually churns.
@@ -47,7 +50,9 @@ RUN pnpm build
 # Stage 2: the engine binary. CGO off so it runs on the distroless-ish runtime below with no
 # libc coupling to the builder.
 # ---------------------------------------------------------------------------------------------
-FROM golang:1.26-bookworm AS build
+# $BUILDPLATFORM with an explicit GOARCH below: the binary is CGO-free, so Go cross-compiles it far
+# faster than emulating the whole toolchain on the target architecture.
+FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
 # VERSION stamps the build's identity. It must be passed explicitly here, unlike every other way
 # agni is built, because .dockerignore excludes .git to keep the context small: the toolchain has
 # no repository to read, so it records neither a vcs.revision nor a module version and
@@ -61,7 +66,12 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath \
+# TARGETARCH/TARGETOS are supplied by buildx per target platform. They are the ONLY thing that
+# differs between a linux/amd64 and a linux/arm64 build of this image, since everything else it
+# carries is architecture-independent data.
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -trimpath \
       -ldflags "-X github.com/panyam/agni/internal/version.stamped=${VERSION}" \
       -o /out/agni ./cmd/agni
 
@@ -76,7 +86,11 @@ RUN CGO_ENABLED=0 go build -trimpath \
 # binaries, apt's package lists, and the caches are all discarded and the runtime image below
 # carries the symbol data without the tools.
 # ---------------------------------------------------------------------------------------------
-FROM debian:bookworm-slim AS symbols
+# $BUILDPLATFORM again. Symbol libraries are text files describing parts, identical on every
+# architecture: kicad-symbols is even `Architecture: all` in Debian, and only /usr/share data is
+# taken from the xschem and Lepton packages. Emulating this stage per target would cost minutes of
+# apt under QEMU to produce byte-identical output.
+FROM --platform=$BUILDPLATFORM debian:bookworm-slim AS symbols
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       kicad-symbols \
