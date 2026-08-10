@@ -71,7 +71,7 @@ func TestBuildGeometryBestEffort(t *testing.T) {
 // board geometry — the observable bug WS9-048 fixes (CheckDesign built check.NewModel(d), so
 // check.Available gated every board.* rule to not-applicable and the panel showed nothing).
 func TestCheckDesignRunsBoardRules(t *testing.T) {
-	svc := NewCheckService(fakeLoader{design: &ir.Design{}, board: thinBoard()}, check.DefaultCatalog(), nil, "")
+	svc := NewCheckService(fakeLoader{design: &ir.Design{}, board: thinBoard()}, check.DefaultCatalog(), nil, "", nil)
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Rules: []string{"track-width"}})
 	if err != nil {
 		t.Fatalf("CheckDesign: %v", err)

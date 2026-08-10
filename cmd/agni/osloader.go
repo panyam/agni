@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -123,6 +124,18 @@ func (l *osLoader) Manifest(_ context.Context, mountName, path string) (review.M
 	}
 	defer f.Close()
 	return review.Load(f)
+}
+
+// Convention resolves and parses a naming-convention config (YAML) under the mount (WS9-128). Like a
+// review manifest it is a required input once named, so an absent or malformed file is an error: a
+// caller that asked for its own vocabulary and silently got the server's would read the resulting
+// findings as being about their naming when they are about somebody else's.
+func (l *osLoader) Convention(_ context.Context, mountName, ref string) (naming.Config, error) {
+	abs, err := mounts.Resolve(l.mounts, mountName, ref)
+	if err != nil {
+		return naming.Config{}, err
+	}
+	return naming.Load(abs)
 }
 
 // DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A ref that

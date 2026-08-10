@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -31,6 +33,20 @@ type CheckService struct {
 	// there is none. A request carrying its own convention REPLACES it (WS3-124), and this is how the
 	// service says which of its catalog's sources is the one to replace.
 	baseConvention string
+	// conventions resolves a stored convention config into a value, backing GetNamingConvention. It is
+	// a narrow port defined at the point of use rather than a method on the fat Loader, the same shape
+	// ReviewLoader takes: only this one rpc reads a convention, and a host that cannot (or should not)
+	// resolve one passes nil rather than stubbing a method it has no answer for.
+	conventions ConventionLoader
+}
+
+// ConventionLoader reads a stored naming-convention config, mount-scoped by the impl.
+//
+// It is deliberately NOT on the path that RUNS checks. A convention reaches a check run as a value on
+// the request (C22), so CheckDesign needs no filesystem; this backs the separate resolver rpc that a
+// client with a ref and no filesystem calls first.
+type ConventionLoader interface {
+	Convention(ctx context.Context, mount, ref string) (naming.Config, error)
 }
 
 // NewCheckService returns a CheckService backed by the given loader, rule catalog, and (optional)
@@ -39,8 +55,36 @@ type CheckService struct {
 //
 // baseConvention names the startup convention already composed into catalog, so a request that sends
 // its own replaces it rather than stacking on it; pass "" when the catalog carries none.
-func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider, baseConvention string) *CheckService {
-	return &CheckService{loader: loader, catalog: catalog, specs: specs, baseConvention: baseConvention}
+func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider, baseConvention string, conventions ConventionLoader) *CheckService {
+	return &CheckService{loader: loader, catalog: catalog, specs: specs, baseConvention: baseConvention, conventions: conventions}
+}
+
+// GetNamingConvention resolves a stored convention config into the value an OverlayConfig carries.
+// It validates before returning, so a malformed config is reported once, here, naming what is wrong,
+// rather than on every run that sends it.
+func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetNamingConventionRequest) (*webapi.GetNamingConventionResponse, error) {
+	if s.conventions == nil {
+		return nil, fmt.Errorf("%w: this server cannot resolve stored naming conventions", ErrInvalidArgument)
+	}
+	if req.GetRef() == "" {
+		return nil, fmt.Errorf("%w: GetNamingConvention needs a ref", ErrInvalidArgument)
+	}
+	cfg, err := s.conventions.Convention(ctx, req.GetMount(), req.GetRef())
+	if err != nil {
+		return nil, classifyLoadErr(err)
+	}
+	// Compile both halves now. naming.Load already parses, but a config whose patterns will not compile
+	// or whose lexicon names an unknown component class only fails when it is USED, which would be on
+	// every future request rather than on the one that chose it.
+	if _, err := naming.BuildLexicon(cfg); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	if len(cfg.Rules) > 0 {
+		if _, err := naming.Source(cfg); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+		}
+	}
+	return &webapi.GetNamingConventionResponse{Convention: ConventionProto(cfg)}, nil
 }
 
 // ListRules returns the catalog the service runs, mapping each rule to its wire form: identity,
@@ -48,9 +92,20 @@ func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamPro
 // and whether it can run now (from check.Available). The request's mount/path are advisory today
 // since availability derives from each rule's Reads (design-independent); the design is not
 // loaded, so ListRules works before a file is chosen and never fails on a bad path.
-func (s *CheckService) ListRules(_ context.Context, _ *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
+func (s *CheckService) ListRules(_ context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
+	// The listed catalog is the one a run under the SAME overlay would use. A request convention
+	// replaces the server's (WS3-124), so listing the service's own catalog would advertise rules that
+	// will not run and hide the ones that will.
+	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
+	if err != nil {
+		return nil, err
+	}
+	cat, err := ov.Catalog(s.catalog)
+	if err != nil {
+		return nil, err
+	}
 	resp := &webapi.ListRulesResponse{}
-	for _, r := range s.catalog.Rules() {
+	for _, r := range cat.Rules() {
 		ok, reason := check.Available(r, nil)
 		resp.Rules = append(resp.Rules, &webapi.RuleInfo{
 			Name:              r.Name,

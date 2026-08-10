@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -48,6 +49,14 @@ func (l *localLoader) Expectations(_ context.Context, _, path string) (*expect.E
 
 func (l *localLoader) Manifest(_ context.Context, _, ref string) (review.Manifest, error) {
 	return loadManifest(ref)
+}
+
+// Convention resolves a naming-convention config from a local path. The CLI reads its own
+// --conventions at the edge and sends the value, so nothing in the CLI calls this; it exists because
+// localLoader is the no-containment sibling of osLoader behind the same interfaces, and a loader that
+// satisfied all of them but one would make the two impossible to swap.
+func (l *localLoader) Convention(_ context.Context, _, ref string) (naming.Config, error) {
+	return naming.Load(ref)
 }
 
 // DesignHash hashes the design's entry file for a stored run's provenance (WS9-053). It reuses the

@@ -94,6 +94,20 @@ conventions may have disappeared because the rule stopped running, not because t
 Only the convention is replaced. The built-in rules, and anything from `--profile-path` or
 `--intent-path`, are unaffected.
 
+### In the browser
+
+The viewer has a **vocabulary** control in the top bar. It lists the convention configs sitting beside
+the open design, and picking one applies it to everything that runs rules from then on: the checks
+panel, the report, and a review run.
+
+The bar always says which vocabulary the answers on screen were computed under, and looks different
+while a request convention is in effect. That is deliberate, and it is the same caution as above: a
+finding that vanished when you switched conventions may have vanished because the rule stopped
+running. The bar is what lets you tell the two apart.
+
+Switching discards the findings already on screen rather than keeping them, since they were computed
+by asking a different question.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/): conventions findings read like any other,

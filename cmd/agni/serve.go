@@ -206,6 +206,7 @@ func serveCmd() *cobra.Command {
 type serveLoader interface {
 	service.Loader
 	service.ReviewLoader
+	service.ConventionLoader
 }
 
 // serveRuleServices builds the two services that RUN rules from one composed catalog: the
@@ -248,7 +249,7 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		noteSupersededRules(notes, catalog)
 	}
 	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-	return service.NewCheckService(loader, catalog, specs, conventions.Name),
+	return service.NewCheckService(loader, catalog, specs, conventions.Name, loader),
 		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name), nil
 }
 

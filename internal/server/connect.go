@@ -269,6 +269,14 @@ func (a *Query) ListRelations(ctx context.Context, req *connect.Request[webapi.L
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Check) GetNamingConvention(ctx context.Context, req *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error) {
+	resp, err := a.svc.GetNamingConvention(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Review adapts service.ReviewService to the generated Connect handler interface.
 type Review struct {
 	webapiconnect.UnimplementedReviewServiceHandler

@@ -18,6 +18,7 @@ import { sheetOverviewPanelIsland } from "./sheetoverviewpanel.js";
 import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
+import { conventionBarIsland } from "./conventionbar.js";
 import { partsPanelIsland } from "./partspanel.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
@@ -74,13 +75,14 @@ class AppRoot extends BaseComponent {
     const queryEl = document.getElementById("query-panel");
     const coverageEl = document.getElementById("coverage-panel");
     const reviewEl = document.getElementById("review-panel");
+    const conventionEl = document.getElementById("convention-bar");
     const partsEl = document.getElementById("parts-panel");
     const sheetTabsEl = document.getElementById("sheet-tabs");
     if (!canvasEl || !pickerEl || !compareTreeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
       return children;
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
-    if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl) return children;
+    if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl || !conventionEl) return children;
 
     // RenderView reveals whichever renderer drew the sheet: the SVG host overlays the canvas,
     // so showWebgl just hides it and showSvg fills + shows it.
@@ -246,6 +248,11 @@ class AppRoot extends BaseComponent {
     const parts = partsPanelIsland(partsEl, this._eventBus, {
       onLocate: (refDes) => void presenter.locateEntity("component", refDes),
     });
+    // The naming-vocabulary bar (WS9-128): choosing a convention re-runs everything under it, since
+    // a request convention replaces the server's rather than adding to it.
+    const conventionBar = conventionBarIsland(conventionEl, this._eventBus, {
+      onSelect: (ref) => void presenter.setConvention(ref),
+    });
     // The review panel (WS9-052): the project's checklist verdict over the stored runs. Locating a
     // finding under an item reuses the same locateEntity path every other panel uses, so a review
     // finding highlights exactly the way a check finding does.
@@ -295,6 +302,7 @@ class AppRoot extends BaseComponent {
         query: query.view,
         coverage: coverage.view,
         review: review.view,
+        conventionBar: conventionBar.view,
         parts: parts.view,
       },
       queryClient(),
@@ -326,6 +334,7 @@ class AppRoot extends BaseComponent {
       query.island,
       coverage.island,
       review.island,
+      conventionBar.island,
       parts.island,
     );
     return children;

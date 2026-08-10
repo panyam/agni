@@ -337,7 +337,7 @@ func checkCmd() *cobra.Command {
 				}
 				specs = set
 			}
-			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "")
+			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "", nil)
 			ctx := cmd.Context()
 			var failFindings []*checkspb.Finding
 			// --results-out takes one path through the service for every format (WS3-103): the document

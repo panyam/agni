@@ -27,7 +27,7 @@ func TestGetComponentParams(t *testing.T) {
 		return nil
 	})
 
-	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), provider, "")
+	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), provider, "", nil)
 	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +43,7 @@ func TestGetComponentParams(t *testing.T) {
 		t.Errorf("spec parameters not carried through: %v", got)
 	}
 
-	noParams := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "")
+	noParams := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
 	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{})
 	if err != nil {
 		t.Fatal(err)
