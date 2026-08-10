@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs
 
 all: proto build
 
@@ -82,7 +82,7 @@ catalog-docs-check: catalog-docs
 # tests, and the docsite catalog freshness check. Green = ship-ready. CI runs exactly this
 # (.github/workflows/ci.yml). The bundle build comes before the engine tests: TestCheckWebAssets
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
-testall: vet ir-model-check ui test examples-test web-test catalog-docs-check
+testall: vet ir-model-check ui test examples-test web-test catalog-docs-check docsite-test
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
@@ -176,6 +176,12 @@ natlogs:
 # and its terminal-UI deps out of the engine go.mod), so `test` above does not reach them.
 # Build and test each example module explicitly. Run this after changing anything the examples
 # consume (the public reader/diff/check/render APIs or examples/common).
+# The docsite is its own Go module, so the engine's `test` target never reaches it. Its tests are
+# the nav-wiring invariants: adding a section takes five coordinated edits across four files and
+# nothing else checks them.
+docsite-test:
+	@cd docsite && go test ./...
+
 EXAMPLE_MODS := $(dir $(wildcard examples/*/go.mod))
 examples-test:
 	@for d in $(EXAMPLE_MODS); do \
