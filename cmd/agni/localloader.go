@@ -46,7 +46,17 @@ func (l *localLoader) Expectations(_ context.Context, _, path string) (*expect.E
 	return expect.Load(sidecar)
 }
 
-func (l *localLoader) Manifest(_ context.Context, _, path string) (review.Manifest, error) {
+func (l *localLoader) Manifest(_ context.Context, _, ref string) (review.Manifest, error) {
+	return loadManifest(ref)
+}
+
+// loadManifest reads and validates a checklist from a local path. It is a package function rather
+// than only a loader method because `agni review` no longer goes through a loader to get its
+// manifest: the checklist travels to the service as a VALUE (WS9-050), so the CLI reads it at its own
+// edge and sends it. The loader method remains for GetReviewManifest, which serves a client that
+// holds a ref instead, and both paths share this one read so they cannot disagree about what a
+// well-formed manifest is.
+func loadManifest(path string) (review.Manifest, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return review.Manifest{}, err

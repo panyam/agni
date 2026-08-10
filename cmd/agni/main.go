@@ -491,6 +491,14 @@ func reviewCmd() *cobra.Command {
 				}
 				overlay.Conventions = service.ConventionProto(cfg)
 			}
+			// The checklist is read here for the same reason (WS9-050): it is configuration, so it
+			// travels as a value and where it came from stays the caller's business. The CLI's answer
+			// is "a YAML file the user named"; a browser resolves one through GetReviewManifest
+			// instead, and neither answer is in the service's contract.
+			man, err := loadManifest(checklist)
+			if err != nil {
+				return err
+			}
 			var specs param.ParamProvider
 			if paramsDir != "" {
 				set, err := param.LoadSet(os.DirFS(paramsDir))
@@ -501,7 +509,7 @@ func reviewCmd() *cobra.Command {
 			}
 			svc := service.NewReviewService(&localLoader{loader: newLoader()}, catalog, byName, specs)
 			resp, err := svc.RunReview(cmd.Context(), &webapi.RunReviewRequest{
-				ManifestPath: checklist, DesignPath: args, BoardPath: boardPath, RatifiedFloor: ratifiedFloor,
+				Manifest: service.ManifestProto(man), DesignRef: args, BoardRef: boardPath, RatifiedFloor: ratifiedFloor,
 				// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
 				// and the web reach one composition path, and its lexicon half travels with the design
 				// read instead of being installed in a process global.

@@ -461,6 +461,22 @@ func TestReviewCmdRequiresChecklist(t *testing.T) {
 	}
 }
 
+// TestReviewCmdChecklistUnreadable is the --checklist twin of TestReviewCmdConventionsUnreadable, and
+// it guards the edge the manifest read moved to (WS9-050). The CLI now reads the YAML itself and sends
+// the value, so a missing or malformed checklist has to fail HERE. The failure mode it prevents is
+// specific: an unreported read error would send a zero manifest, and a review with no items reports
+// nothing wrong, which reads exactly like a design that passed.
+func TestReviewCmdChecklistUnreadable(t *testing.T) {
+	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
+		cmd := reviewCmd()
+		cmd.SetOut(&bytes.Buffer{})
+		cmd.SetArgs([]string{"--checklist", path, "testdata/review/conv-demo.edn"})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("--checklist %s must error, not run an empty checklist that reports nothing wrong", path)
+		}
+	}
+}
+
 // runConvReview runs the conventions checklist, with or without the config, and returns the report.
 func runConvReview(t *testing.T, conventions string) string {
 	t.Helper()

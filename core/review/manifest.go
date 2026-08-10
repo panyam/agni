@@ -156,11 +156,9 @@ func (b Binding) count() int {
 	return n
 }
 
-// Load reads a review manifest from r and validates it: a name, at least one area, each area named,
-// each item identified with at most one binding, and each inline query well-formed (a malformed
-// query is a teaching error at load, not a surprise at run). It does NOT check that a bound rule name
-// exists in the catalog — a rule that has not shipped yet is a legitimate "not automated" item, not
-// an error (mirrors how a checklist item sits pending until its rule lands).
+// Load reads a review manifest from r, parses the YAML, and validates it. It does NOT check that a
+// bound rule name exists in the catalog — a rule that has not shipped yet is a legitimate "not
+// automated" item, not an error (mirrors how a checklist item sits pending until its rule lands).
 func Load(r io.Reader) (Manifest, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
@@ -170,40 +168,58 @@ func Load(r io.Reader) (Manifest, error) {
 	if err := yaml.Unmarshal(b, &m); err != nil {
 		return Manifest{}, fmt.Errorf("review manifest: invalid YAML: %w", err)
 	}
+	if err := Validate(m); err != nil {
+		return Manifest{}, err
+	}
+	return m, nil
+}
+
+// Validate checks a manifest's structure: a name, at least one area, each area named, each item
+// identified with at most one binding, each narrower (scope, requirement) paired with the selector it
+// narrows, and each inline query well-formed (a malformed query is a teaching error up front, not a
+// surprise at run).
+//
+// It is exported and separate from Load because a manifest does not always arrive as YAML (WS9-050):
+// it travels as a request VALUE under CONSTRAINTS C22, so a browser form or a test may build one
+// directly. Those manifests get held to the same rules, because the checks here are what make the
+// mutually-exclusive bindings actually exclusive. Without it, an item carrying both a rule and a
+// profile would resolve to whichever the runner happened to test for first, and score a real design
+// against a check its author did not ask for.
+func Validate(m Manifest) error {
 	if strings.TrimSpace(m.Name) == "" {
-		return Manifest{}, fmt.Errorf("review manifest: missing required field \"name\"")
+		return fmt.Errorf("review manifest: missing required field \"name\"")
 	}
 	if len(m.Areas) == 0 {
-		return Manifest{}, fmt.Errorf("review manifest %q: needs at least one area", m.Name)
+		return fmt.Errorf("review manifest %q: needs at least one area", m.Name)
 	}
 	for _, a := range m.Areas {
 		if strings.TrimSpace(a.Name) == "" {
-			return Manifest{}, fmt.Errorf("review manifest %q: an area is missing its \"name\"", m.Name)
+			return fmt.Errorf("review manifest %q: an area is missing its \"name\"", m.Name)
 		}
 		for _, it := range a.Items {
 			if strings.TrimSpace(it.ID) == "" {
-				return Manifest{}, fmt.Errorf("review manifest %q, area %q: an item is missing its \"id\"", m.Name, a.Name)
+				return fmt.Errorf("review manifest %q, area %q: an item is missing its \"id\"", m.Name, a.Name)
 			}
 			if it.Binding.count() > 1 {
-				return Manifest{}, fmt.Errorf("review manifest item %q: declares more than one binding (rule/tag/profile/query are mutually exclusive)", it.ID)
+				return fmt.Errorf("review manifest item %q: declares more than one binding (rule/tag/profile/query are mutually exclusive)", it.ID)
 			}
 			if len(it.Binding.Scope.names()) > 0 && it.Binding.Rule == "" && it.Binding.Tag == "" {
-				return Manifest{}, fmt.Errorf("review manifest item %q: scope filters a rule/tag binding, so one must be set", it.ID)
+				return fmt.Errorf("review manifest item %q: scope filters a rule/tag binding, so one must be set", it.ID)
 			}
 			if it.Binding.Requirement != "" && it.Binding.Profile == "" {
-				return Manifest{}, fmt.Errorf("review manifest item %q: requirement narrows a profile binding, so \"profile\" must be set", it.ID)
+				return fmt.Errorf("review manifest item %q: requirement narrows a profile binding, so \"profile\" must be set", it.ID)
 			}
 			if it.Binding.Query != nil {
 				if _, err := compileQuery(it); err != nil {
-					return Manifest{}, fmt.Errorf("review manifest item %q: %w", it.ID, err)
+					return fmt.Errorf("review manifest item %q: %w", it.ID, err)
 				}
 			}
 			if it.Binding.Present != nil && strings.TrimSpace(it.Binding.Present.Class) == "" {
-				return Manifest{}, fmt.Errorf("review manifest item %q: a present binding needs \"class\"", it.ID)
+				return fmt.Errorf("review manifest item %q: a present binding needs \"class\"", it.ID)
 			}
 		}
 	}
-	return m, nil
+	return nil
 }
 
 // compileQuery turns an item's inline QueryBinding into a check.Rule (shared by Load's validation and

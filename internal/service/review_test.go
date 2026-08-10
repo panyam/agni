@@ -67,6 +67,19 @@ func newReviewSvc() *ReviewService {
 	return NewReviewService(fsReviewLoader{base: base}, check.DefaultCatalog(), reviewByName(), nil)
 }
 
+// fixtureManifest reads a checklist fixture and returns its WIRE form, which is how a manifest now
+// reaches RunReview (WS9-050). The tests below go through this rather than naming a path in the
+// request, so they exercise the conversion the CLI and the browser both depend on instead of a
+// hand-built proto that could drift from what the YAML actually parses to.
+func fixtureManifest(t *testing.T, name string) *webapi.ReviewManifest {
+	t.Helper()
+	man, err := fsReviewLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}.Manifest(context.Background(), "", name)
+	if err != nil {
+		t.Fatalf("load manifest fixture %s: %v", name, err)
+	}
+	return ManifestProto(man)
+}
+
 // TestRunReviewOverFixtures runs the same manifest+design the CLI's TestReviewCmd runs, WITH a
 // separate board attached (WS3-089), and checks each item's outcome end to end: the CAN profile
 // fails termination + signals, the datasheet rule with no --params is not-applicable, the noted item
@@ -74,9 +87,9 @@ func newReviewSvc() *ReviewService {
 func TestRunReviewOverFixtures(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{
-		ManifestPath: "review/mini.yaml",
-		DesignPath:   []string{"review/can-broken.edn"},
-		BoardPath:    "conformance/drc.fires.kicad_pcb",
+		Manifest:  fixtureManifest(t, "review/mini.yaml"),
+		DesignRef: []string{"review/can-broken.edn"},
+		BoardRef:  "conformance/drc.fires.kicad_pcb",
 	})
 	if err != nil {
 		t.Fatalf("RunReview: %v", err)
@@ -104,34 +117,88 @@ func TestRunReviewOverFixtures(t *testing.T) {
 	}
 }
 
-// TestRunReviewBoardPathGate: with no board_path the board item is not-applicable (mirroring the CLI);
+// TestRunReviewBoardRefGate: with no board_ref the board item is not-applicable (mirroring the CLI);
 // attaching the fires board flips it to fail. Pins the served side of WS3-089.
-func TestRunReviewBoardPathGate(t *testing.T) {
+func TestRunReviewBoardRefGate(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{
-		ManifestPath: "review/mini.yaml",
-		DesignPath:   []string{"review/can-broken.edn"},
+		Manifest:  fixtureManifest(t, "review/mini.yaml"),
+		DesignRef: []string{"review/can-broken.edn"},
 	})
 	if err != nil {
 		t.Fatalf("RunReview: %v", err)
 	}
 	if got, _ := outcomeOf(resp.GetReports()[0], "b1"); got != "not-applicable" {
-		t.Errorf("no board_path: b1 = %q, want not-applicable", got)
+		t.Errorf("no board_ref: b1 = %q, want not-applicable", got)
 	}
 }
 
-// TestRunReviewErrors: an empty design list, an unreadable manifest, and a board_path at a non-board
-// file each error — the run is all-or-nothing, so a partial read never reports items clean.
+// TestRunReviewErrors: an empty design list, an absent manifest, an INVALID manifest, and a board_ref
+// at a non-board file each error — the run is all-or-nothing, so a partial read never reports items
+// clean.
+//
+// The invalid case is the one the value-carrying request made possible (WS9-050). A manifest that
+// arrives as a value never passed a parser, so nothing but this service would have rejected an item
+// declaring two mutually-exclusive bindings, and the run would have scored a design against whichever
+// binding the resolver reached first.
 func TestRunReviewErrors(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
+	twoBindings := &webapi.ReviewManifest{Name: "t", Areas: []*webapi.ManifestArea{{
+		Name:  "A",
+		Items: []*webapi.ManifestItem{{Id: "i", Binding: &webapi.ItemBinding{Rule: "bulk-cap", Profile: "CAN"}}},
+	}}}
+	design := []string{"review/can-broken.edn"}
 	cases := map[string]*webapi.RunReviewRequest{
-		"empty design_path": {ManifestPath: "review/mini.yaml"},
-		"bad manifest":      {ManifestPath: "review/does-not-exist.yaml", DesignPath: []string{"review/can-broken.edn"}},
-		"board at netlist":  {ManifestPath: "review/mini.yaml", DesignPath: []string{"review/can-broken.edn"}, BoardPath: "review/can-broken.edn"},
+		"empty design_ref": {Manifest: fixtureManifest(t, "review/mini.yaml")},
+		"absent manifest":  {DesignRef: design},
+		"invalid manifest": {Manifest: twoBindings, DesignRef: design},
+		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignRef: design, BoardRef: "review/can-broken.edn"},
 	}
 	for name, req := range cases {
 		if _, err := svc.RunReview(ctx, req); err == nil {
+			t.Errorf("%s: expected an error, got nil", name)
+		}
+	}
+}
+
+// TestGetReviewManifest resolves a stored checklist into the value RunReview takes, and the value it
+// returns actually runs. Reading a manifest by ref did not disappear with WS9-050; it moved out of
+// the run and into its own RPC, and this is the round trip a browser makes.
+func TestGetReviewManifest(t *testing.T) {
+	svc := newReviewSvc()
+	ctx := context.Background()
+	got, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Ref: "review/mini.yaml"})
+	if err != nil {
+		t.Fatalf("GetReviewManifest: %v", err)
+	}
+	if got.GetManifest().GetName() == "" || len(got.GetManifest().GetAreas()) == 0 {
+		t.Fatalf("resolved manifest is empty: %+v", got.GetManifest())
+	}
+	resp, err := svc.RunReview(ctx, &webapi.RunReviewRequest{
+		Manifest:  got.GetManifest(),
+		DesignRef: []string{"review/can-broken.edn"},
+	})
+	if err != nil {
+		t.Fatalf("RunReview with the resolved manifest: %v", err)
+	}
+	if outcome, ok := outcomeOf(resp.GetReports()[0], "202"); !ok || outcome != "fail" {
+		t.Errorf("item 202 = %q (found=%v), want fail: the resolved manifest did not score the same as the file", outcome, ok)
+	}
+}
+
+// TestGetReviewManifestErrors: an empty ref and an unreadable one each error. The unreadable-file case
+// lives here now rather than on RunReview, because that is where the read moved.
+func TestGetReviewManifestErrors(t *testing.T) {
+	svc := newReviewSvc()
+	ctx := context.Background()
+	cases := map[string]*webapi.GetReviewManifestRequest{
+		"empty ref":      {},
+		"absent file":    {Ref: "review/does-not-exist.yaml"},
+		"not a manifest": {Ref: "review/can-broken.edn"},
+	}
+	for name, req := range cases {
+		if _, err := svc.GetReviewManifest(ctx, req); err == nil {
 			t.Errorf("%s: expected an error, got nil", name)
 		}
 	}
@@ -204,7 +271,7 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	cat := check.CatalogWith(profiles.Source("t", []profiles.Profile{p}))
 	byName := map[string][]profiles.Profile{p.Name: {p}}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, cat, byName, nil)
-	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{ManifestPath: "m", DesignPath: []string{"d"}})
+	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{Manifest: ManifestProto(man), DesignRef: []string{"d"}})
 	if err != nil {
 		t.Fatalf("RunReview: %v", err)
 	}
@@ -338,7 +405,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, check.CatalogWith(srcs...),
 		map[string][]profiles.Profile{name: ps}, nil)
-	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{ManifestPath: "m", DesignPath: []string{"d"}})
+	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{Manifest: ManifestProto(man), DesignRef: []string{"d"}})
 	if err != nil {
 		t.Fatalf("RunReview: %v", err)
 	}
@@ -354,8 +421,8 @@ func TestRunReviewOverlayIsPerRequest(t *testing.T) {
 	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, check.DefaultCatalog(), reviewByName(), nil)
 	req := func(conventions string) *webapi.RunReviewRequest {
 		r := &webapi.RunReviewRequest{
-			ManifestPath: "review/conv.yaml",
-			DesignPath:   []string{"review/conv-demo.edn"},
+			Manifest:  fixtureManifest(t, "review/conv.yaml"),
+			DesignRef: []string{"review/conv-demo.edn"},
 		}
 		if conventions != "" {
 			// The convention travels as a VALUE, so the caller decides where it came from; here that is

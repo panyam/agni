@@ -99,7 +99,7 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 	}}}
 	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, check.DefaultCatalog(), nil, nil))
 	resp, err := a.RunReview(context.Background(), connect.NewRequest(&webapi.RunReviewRequest{
-		ManifestPath: "m.yaml", DesignPath: []string{"d.edn"},
+		Manifest: service.ManifestProto(man), DesignRef: []string{"d.edn"},
 	}))
 	if err != nil {
 		t.Fatalf("RunReview: %v", err)
@@ -109,8 +109,33 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 	}
 
 	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, check.DefaultCatalog(), nil, nil))
-	_, err = failing.RunReview(context.Background(), connect.NewRequest(&webapi.RunReviewRequest{ManifestPath: "m.yaml", DesignPath: []string{"d.edn"}}))
+	_, err = failing.RunReview(context.Background(), connect.NewRequest(&webapi.RunReviewRequest{Manifest: service.ManifestProto(man), DesignRef: []string{"d.edn"}}))
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("want InvalidArgument, got %v", err)
+	}
+}
+
+// TestGetReviewManifestAdapter drives the second Review RPC the same way: the mux-visible handler must
+// delegate to the service rather than inheriting the generated CodeUnimplemented stub, and a
+// classified service error must come back coded. This is the gotcha that makes a hand-written adapter
+// worth testing at all — an unimplemented method compiles fine and fails only at request time.
+func TestGetReviewManifestAdapter(t *testing.T) {
+	man := review.Manifest{Name: "M", Areas: []review.Area{{
+		Name:  "A",
+		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
+	}}}
+	a := NewReview(service.NewReviewService(memReviewLoader{man: man}, check.DefaultCatalog(), nil, nil))
+	resp, err := a.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
+	if err != nil {
+		t.Fatalf("GetReviewManifest: %v", err)
+	}
+	if got := resp.Msg.GetManifest(); got.GetName() != "M" || len(got.GetAreas()) != 1 {
+		t.Fatalf("manifest = %+v", got)
+	}
+
+	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no such file: %w", service.ErrNotFound)}, check.DefaultCatalog(), nil, nil))
+	_, err = failing.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("want NotFound, got %v", err)
 	}
 }
