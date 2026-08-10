@@ -226,17 +226,19 @@ image-run: image
 # `go install github.com/panyam/agni/cmd/agni@v0.1.0` works the moment the tag is pushed, with no
 # build artifacts to upload and no separate release pipeline to keep green.
 #
-# The container image does not come along for free, because a tag is not something a registry
-# serves. Cut a release from a clean main with:
+# The container image follows automatically. Pushing the tag triggers .github/workflows/release.yml,
+# which builds the image FROM that tag, stamps the same version into the binary, pushes it to GHCR,
+# and then pulls it back to confirm it reports the tag it is labelled with. So the whole release is:
 #
 #   make testall                    # the gate; CI runs exactly this
-#   make tag-push V=v0.1.0          # publishes the tag, which is the Go release
-#   make image IMAGE_TAG=v0.1.0     # builds the image, stamping the same version INTO the binary
-#   docker push ghcr.io/panyam/agni:v0.1.0
+#   make tag-push V=v0.1.0          # the Go release AND, via the workflow, the image
 #
-# Keep the two versions identical. `make image` stamps IMAGE_TAG into the binary via ldflags (the
-# image has no .git to derive it from), so a mismatch here produces an image tagged one version
-# that reports another, and the report it writes would name the wrong producer.
+# The two versions are no longer kept in step by hand. They were, briefly, and the hazard was that
+# `make image IMAGE_TAG=` taking a different value than `make tag-push V=` would ship an image
+# labelled one version whose binary reported another, which is the confusion the version stamp
+# exists to remove. The tag is now the only input.
+#
+# `make image` below still exists for building locally without publishing.
 
 # Sub-modules that get tagged alongside the root module. Every IMPORTABLE sub-module (one with
 # its own go.mod that a downstream user would `go get`) needs its own tag here, because a
