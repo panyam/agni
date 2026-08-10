@@ -245,3 +245,72 @@ func slicesContains(s []string, v string) bool {
 	}
 	return false
 }
+
+// WS3-124: a request that carries its own naming convention REPLACES the server's startup one rather
+// than stacking on it, end to end through the wiring serve actually builds.
+//
+// This goes through serveRuleServices for the same reason servedRuleNames does: the base convention's
+// NAME has to reach the services, and a test that composed an Overlay by hand would pass while the
+// production wiring forgot to thread it. That is the exact failure mode WS3-109 was written about.
+//
+// The stacking behaviour was defensible in isolation and wrong in context: the flag help says a
+// request "may name its own instead", the serve.go comment says it overrides, and the LEXICON half of
+// the same config already overrode because it travels with the read. One config whose halves compose
+// differently is what let the WS3-102 bug hide.
+func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
+	house, err := naming.Load("testdata/review/conventions.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkSvc, _, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil, "", "", house, nil)
+	if err != nil {
+		t.Fatalf("serveRuleServices: %v", err)
+	}
+	// The server's own convention is in the catalog it was built with.
+	listed, err := checkSvc.ListRules(context.Background(), &webapi.ListRulesRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slicesContains(ruleNamesOf(listed.GetRules()), "house/signal-net-naming") {
+		t.Fatal("the server's startup convention is not in the catalog; the fixture or the wiring changed")
+	}
+
+	// A request naming its own convention gets ITS rule and not the server's.
+	resp, err := checkSvc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{
+		Path: "testdata/review/conv-demo.edn",
+		Overlay: &webapi.OverlayConfig{Conventions: &webapi.NamingConvention{
+			Name: "acme",
+			Rules: []*webapi.NamingRule{{
+				Name: "signal-net-naming", Severity: "warning", Allow: []string{"^ACME_"},
+			}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("GetCheckReport: %v", err)
+	}
+	var sawAcme, sawHouse bool
+	for _, sev := range resp.GetReport().GetSections() {
+		for _, rule := range sev.GetRules() {
+			switch rule.GetRule() {
+			case "acme/signal-net-naming":
+				sawAcme = true
+			case "house/signal-net-naming":
+				sawHouse = true
+			}
+		}
+	}
+	if !sawAcme {
+		t.Error("the request's own convention rule did not run")
+	}
+	if sawHouse {
+		t.Error("the server's convention rule still ran; a request convention must replace it, not stack on it")
+	}
+}
+
+func ruleNamesOf(rules []*webapi.RuleInfo) []string {
+	out := make([]string, 0, len(rules))
+	for _, r := range rules {
+		out = append(out, r.GetName())
+	}
+	return out
+}

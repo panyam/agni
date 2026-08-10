@@ -49,7 +49,7 @@ func writeManifest(t *testing.T, dir, name, body string) {
 func dirReviewSvc(t *testing.T, store ReviewStore) (*ReviewService, string) {
 	t.Helper()
 	dir := t.TempDir()
-	return NewReviewService(dirReviewLoader{dir: dir}, store, check.DefaultCatalog(), nil, nil, testReviewEnv), dir
+	return NewReviewService(dirReviewLoader{dir: dir}, store, check.DefaultCatalog(), nil, nil, testReviewEnv, ""), dir
 }
 
 // TestStoredRunKeepsTheChecklistItScored is the test this whole feature exists to make possible.
@@ -254,7 +254,7 @@ func TestListReviewsPaging(t *testing.T) {
 // message names the flag. A create that ran the whole sweep and silently dropped the result would cost
 // the most and leave the least.
 func TestReviewResourcesNeedAStore(t *testing.T) {
-	svc := NewReviewService(dirReviewLoader{dir: t.TempDir()}, nil, check.DefaultCatalog(), nil, nil, testReviewEnv)
+	svc := NewReviewService(dirReviewLoader{dir: t.TempDir()}, nil, check.DefaultCatalog(), nil, nil, testReviewEnv, "")
 	ctx := context.Background()
 	man := &checkspb.ReviewManifest{Name: "t", Areas: []*checkspb.ManifestArea{{
 		Name: "A", Items: []*checkspb.ManifestItem{{Id: "i"}},

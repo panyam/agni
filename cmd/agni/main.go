@@ -337,7 +337,7 @@ func checkCmd() *cobra.Command {
 				}
 				specs = set
 			}
-			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs)
+			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "")
 			ctx := cmd.Context()
 			var failFindings []*checkspb.Finding
 			// --results-out takes one path through the service for every format (WS3-103): the document
@@ -513,7 +513,7 @@ func reviewCmd() *cobra.Command {
 			// explicit, user-asked-for way to write one. Same engine path as a served create, so the two
 			// surfaces still cannot disagree about an outcome.
 			env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-			svc := service.NewReviewService(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), catalog, byName, specs, env)
+			svc := service.NewReviewService(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), catalog, byName, specs, env, "")
 			// One create per design: a stored run is about ONE design, so the CLI's multi-design rollup is
 			// several runs rather than one call. The loop is the rollup.
 			var docs []*checkspb.CheckResults
