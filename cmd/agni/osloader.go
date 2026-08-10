@@ -124,3 +124,14 @@ func (l *osLoader) Manifest(_ context.Context, mountName, path string) (review.M
 	defer f.Close()
 	return review.Load(f)
 }
+
+// DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A ref that
+// escapes its mount is still an error, because containment is a security boundary and not a
+// provenance nicety; an unreadable file inside the mount yields "" the way hashSource documents.
+func (l *osLoader) DesignHash(_ context.Context, mountName, ref string) (string, error) {
+	abs, err := mounts.Resolve(l.mounts, mountName, ref)
+	if err != nil {
+		return "", err
+	}
+	return hashSource(abs), nil
+}

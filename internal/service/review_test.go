@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/review"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -34,6 +35,10 @@ func (l fsReviewLoader) Board(_ context.Context, _, path string) (*geom.BoardGeo
 	return (&formats.Loader{}).BoardGeometry(filepath.Join(l.base, path))
 }
 
+func (l fsReviewLoader) DesignHash(_ context.Context, _, path string) (string, error) {
+	return "sha256:" + path, nil
+}
+
 func (l fsReviewLoader) Manifest(_ context.Context, _, path string) (review.Manifest, error) {
 	f, err := os.Open(filepath.Join(l.base, path))
 	if err != nil {
@@ -43,6 +48,10 @@ func (l fsReviewLoader) Manifest(_ context.Context, _, path string) (review.Mani
 	return review.Load(f)
 }
 
+// testReviewEnv is the deployment provenance stamped into documents these tests create. The
+// version is fixed so a document comparison never depends on the build.
+var testReviewEnv = ReviewEnv{ProducerVersion: "test"}
+
 func reviewByName() map[string][]profiles.Profile {
 	m := map[string][]profiles.Profile{}
 	for _, p := range profiles.Profiles {
@@ -51,8 +60,8 @@ func reviewByName() map[string][]profiles.Profile {
 	return m
 }
 
-func outcomeOf(rep *webapi.ReviewReport, id string) (string, bool) {
-	for _, a := range rep.GetAreas() {
+func outcomeOf(rv *webapi.Review, id string) (string, bool) {
+	for _, a := range rv.GetResults().GetAreas() {
 		for _, it := range a.GetItems() {
 			if it.GetId() == id {
 				return it.GetOutcome(), true
@@ -64,14 +73,14 @@ func outcomeOf(rep *webapi.ReviewReport, id string) (string, bool) {
 
 func newReviewSvc() *ReviewService {
 	base := filepath.Join("..", "..", "cmd", "agni", "testdata")
-	return NewReviewService(fsReviewLoader{base: base}, check.DefaultCatalog(), reviewByName(), nil)
+	return NewReviewService(fsReviewLoader{base: base}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv)
 }
 
 // fixtureManifest reads a checklist fixture and returns its WIRE form, which is how a manifest now
-// reaches RunReview (WS9-050). The tests below go through this rather than naming a path in the
+// reaches CreateReview (WS9-050). The tests below go through this rather than naming a path in the
 // request, so they exercise the conversion the CLI and the browser both depend on instead of a
 // hand-built proto that could drift from what the YAML actually parses to.
-func fixtureManifest(t *testing.T, name string) *webapi.ReviewManifest {
+func fixtureManifest(t *testing.T, name string) *checkspb.ReviewManifest {
 	t.Helper()
 	man, err := fsReviewLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}.Manifest(context.Background(), "", name)
 	if err != nil {
@@ -80,22 +89,22 @@ func fixtureManifest(t *testing.T, name string) *webapi.ReviewManifest {
 	return ManifestProto(man)
 }
 
-// TestRunReviewOverFixtures runs the same manifest+design the CLI's TestReviewCmd runs, WITH a
+// TestCreateReviewOverFixtures runs the same manifest+design the CLI's TestReviewCmd runs, WITH a
 // separate board attached (WS3-089), and checks each item's outcome end to end: the CAN profile
 // fails termination + signals, the datasheet rule with no --params is not-applicable, the noted item
 // is not-automated, the board item fails on the fires board, and the inline house-rule passes.
-func TestRunReviewOverFixtures(t *testing.T) {
+func TestCreateReviewOverFixtures(t *testing.T) {
 	svc := newReviewSvc()
-	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignRef: []string{"review/can-broken.edn"},
+		DesignRef: "review/can-broken.edn",
 		BoardRef:  "conformance/drc.fires.kicad_pcb",
 	})
 	if err != nil {
-		t.Fatalf("RunReview: %v", err)
+		t.Fatalf("CreateReview: %v", err)
 	}
-	if len(resp.GetReports()) != 1 {
-		t.Fatalf("reports = %d, want 1", len(resp.GetReports()))
+	if resp.GetName() == "" {
+		t.Fatalf("a created review has no resource name: %+v", resp)
 	}
 	want := map[string]string{
 		"202": "fail",           // CAN termination missing
@@ -106,7 +115,7 @@ func TestRunReviewOverFixtures(t *testing.T) {
 		"h1":  "pass",           // inline house-rule query
 	}
 	for id, w := range want {
-		got, ok := outcomeOf(resp.GetReports()[0], id)
+		got, ok := outcomeOf(resp, id)
 		if !ok {
 			t.Errorf("item %s missing from report", id)
 			continue
@@ -117,23 +126,23 @@ func TestRunReviewOverFixtures(t *testing.T) {
 	}
 }
 
-// TestRunReviewBoardRefGate: with no board_ref the board item is not-applicable (mirroring the CLI);
+// TestCreateReviewBoardRefGate: with no board_ref the board item is not-applicable (mirroring the CLI);
 // attaching the fires board flips it to fail. Pins the served side of WS3-089.
-func TestRunReviewBoardRefGate(t *testing.T) {
+func TestCreateReviewBoardRefGate(t *testing.T) {
 	svc := newReviewSvc()
-	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignRef: []string{"review/can-broken.edn"},
+		DesignRef: "review/can-broken.edn",
 	})
 	if err != nil {
-		t.Fatalf("RunReview: %v", err)
+		t.Fatalf("CreateReview: %v", err)
 	}
-	if got, _ := outcomeOf(resp.GetReports()[0], "b1"); got != "not-applicable" {
+	if got, _ := outcomeOf(resp, "b1"); got != "not-applicable" {
 		t.Errorf("no board_ref: b1 = %q, want not-applicable", got)
 	}
 }
 
-// TestRunReviewErrors: an empty design list, an absent manifest, an INVALID manifest, and a board_ref
+// TestCreateReviewErrors: an empty design list, an absent manifest, an INVALID manifest, and a board_ref
 // at a non-board file each error — the run is all-or-nothing, so a partial read never reports items
 // clean.
 //
@@ -141,28 +150,28 @@ func TestRunReviewBoardRefGate(t *testing.T) {
 // arrives as a value never passed a parser, so nothing but this service would have rejected an item
 // declaring two mutually-exclusive bindings, and the run would have scored a design against whichever
 // binding the resolver reached first.
-func TestRunReviewErrors(t *testing.T) {
+func TestCreateReviewErrors(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
-	twoBindings := &webapi.ReviewManifest{Name: "t", Areas: []*webapi.ManifestArea{{
+	twoBindings := &checkspb.ReviewManifest{Name: "t", Areas: []*checkspb.ManifestArea{{
 		Name:  "A",
-		Items: []*webapi.ManifestItem{{Id: "i", Binding: &webapi.ItemBinding{Rule: "bulk-cap", Profile: "CAN"}}},
+		Items: []*checkspb.ManifestItem{{Id: "i", Binding: &checkspb.ItemBinding{Rule: "bulk-cap", Profile: "CAN"}}},
 	}}}
-	design := []string{"review/can-broken.edn"}
-	cases := map[string]*webapi.RunReviewRequest{
+	design := "review/can-broken.edn"
+	cases := map[string]*webapi.CreateReviewRequest{
 		"empty design_ref": {Manifest: fixtureManifest(t, "review/mini.yaml")},
 		"absent manifest":  {DesignRef: design},
 		"invalid manifest": {Manifest: twoBindings, DesignRef: design},
 		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignRef: design, BoardRef: "review/can-broken.edn"},
 	}
 	for name, req := range cases {
-		if _, err := svc.RunReview(ctx, req); err == nil {
+		if _, err := svc.CreateReview(ctx, req); err == nil {
 			t.Errorf("%s: expected an error, got nil", name)
 		}
 	}
 }
 
-// TestGetReviewManifest resolves a stored checklist into the value RunReview takes, and the value it
+// TestGetReviewManifest resolves a stored checklist into the value CreateReview takes, and the value it
 // returns actually runs. Reading a manifest by ref did not disappear with WS9-050; it moved out of
 // the run and into its own RPC, and this is the round trip a browser makes.
 func TestGetReviewManifest(t *testing.T) {
@@ -175,20 +184,20 @@ func TestGetReviewManifest(t *testing.T) {
 	if got.GetManifest().GetName() == "" || len(got.GetManifest().GetAreas()) == 0 {
 		t.Fatalf("resolved manifest is empty: %+v", got.GetManifest())
 	}
-	resp, err := svc.RunReview(ctx, &webapi.RunReviewRequest{
+	resp, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{
 		Manifest:  got.GetManifest(),
-		DesignRef: []string{"review/can-broken.edn"},
+		DesignRef: "review/can-broken.edn",
 	})
 	if err != nil {
-		t.Fatalf("RunReview with the resolved manifest: %v", err)
+		t.Fatalf("CreateReview with the resolved manifest: %v", err)
 	}
-	if outcome, ok := outcomeOf(resp.GetReports()[0], "202"); !ok || outcome != "fail" {
+	if outcome, ok := outcomeOf(resp, "202"); !ok || outcome != "fail" {
 		t.Errorf("item 202 = %q (found=%v), want fail: the resolved manifest did not score the same as the file", outcome, ok)
 	}
 }
 
 // TestGetReviewManifestErrors: an empty ref and an unreadable one each error. The unreadable-file case
-// lives here now rather than on RunReview, because that is where the read moved.
+// lives here now rather than on the run, because that is where the read moved.
 func TestGetReviewManifestErrors(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
@@ -224,14 +233,11 @@ func TestReviewReportProtoMapsAllFields(t *testing.T) {
 			},
 		}},
 	}
-	p := reviewReportProto(rep)
-	if p.GetManifest() != "M" || p.GetDesign() != "d.edn" {
-		t.Fatalf("report header = %q/%q", p.GetManifest(), p.GetDesign())
+	areas := reviewAreaProtos(rep)
+	if len(areas) != 1 || areas[0].GetName() != "A" {
+		t.Fatalf("areas = %+v", areas)
 	}
-	if len(p.GetAreas()) != 1 || p.GetAreas()[0].GetName() != "A" {
-		t.Fatalf("areas = %+v", p.GetAreas())
-	}
-	items := p.GetAreas()[0].GetItems()
+	items := areas[0].GetItems()
 	if len(items) != 2 {
 		t.Fatalf("items = %d, want 2", len(items))
 	}
@@ -259,6 +265,9 @@ func (l stubReviewLoader) Design(context.Context, string, string, ...ReadOption)
 func (l stubReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
+func (l stubReviewLoader) DesignHash(context.Context, string, string) (string, error) {
+	return "", nil
+}
 func (l stubReviewLoader) Manifest(context.Context, string, string) (review.Manifest, error) {
 	return l.man, nil
 }
@@ -270,12 +279,12 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	}}}}
 	cat := check.CatalogWith(profiles.Source("t", []profiles.Profile{p}))
 	byName := map[string][]profiles.Profile{p.Name: {p}}
-	svc := NewReviewService(stubReviewLoader{design: d, man: man}, cat, byName, nil)
-	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{Manifest: ManifestProto(man), DesignRef: []string{"d"}})
+	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), cat, byName, nil, testReviewEnv)
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignRef: "d"})
 	if err != nil {
-		t.Fatalf("RunReview: %v", err)
+		t.Fatalf("CreateReview: %v", err)
 	}
-	out, _ := outcomeOf(resp.GetReports()[0], "it")
+	out, _ := outcomeOf(resp, "it")
 	return out
 }
 
@@ -403,26 +412,26 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	if len(ps) > 1 {
 		srcs = append(srcs, profiles.Source("profile-overlay", ps[1:]))
 	}
-	svc := NewReviewService(stubReviewLoader{design: d, man: man}, check.CatalogWith(srcs...),
-		map[string][]profiles.Profile{name: ps}, nil)
-	resp, err := svc.RunReview(context.Background(), &webapi.RunReviewRequest{Manifest: ManifestProto(man), DesignRef: []string{"d"}})
+	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), check.CatalogWith(srcs...),
+		map[string][]profiles.Profile{name: ps}, nil, testReviewEnv)
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignRef: "d"})
 	if err != nil {
-		t.Fatalf("RunReview: %v", err)
+		t.Fatalf("CreateReview: %v", err)
 	}
-	out, _ := outcomeOf(resp.GetReports()[0], "it")
+	out, _ := outcomeOf(resp, "it")
 	return out
 }
 
-// TestRunReviewOverlayIsPerRequest is the property the process-global vocabulary could not provide,
-// and the reason the lexicon travels with the read (WS3-106): two RunReview calls in ONE process,
+// TestCreateReviewOverlayIsPerRequest is the property the process-global vocabulary could not provide,
+// and the reason the lexicon travels with the read (WS3-106): two CreateReview calls in ONE process,
 // naming different conventions, must each see their own. Run concurrently and repeatedly so a shared
 // mutable vocabulary would show up as a race or a flipped outcome rather than passing by luck.
-func TestRunReviewOverlayIsPerRequest(t *testing.T) {
-	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, check.DefaultCatalog(), reviewByName(), nil)
-	req := func(conventions string) *webapi.RunReviewRequest {
-		r := &webapi.RunReviewRequest{
+func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
+	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv)
+	req := func(conventions string) *webapi.CreateReviewRequest {
+		r := &webapi.CreateReviewRequest{
 			Manifest:  fixtureManifest(t, "review/conv.yaml"),
-			DesignRef: []string{"review/conv-demo.edn"},
+			DesignRef: "review/conv-demo.edn",
 		}
 		if conventions != "" {
 			// The convention travels as a VALUE, so the caller decides where it came from; here that is
@@ -448,18 +457,18 @@ func TestRunReviewOverlayIsPerRequest(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				resp, err := svc.RunReview(context.Background(), req(tc.conventions))
+				resp, err := svc.CreateReview(context.Background(), req(tc.conventions))
 				if err != nil {
-					t.Errorf("RunReview(%q): %v", tc.conventions, err)
+					t.Errorf("CreateReview(%q): %v", tc.conventions, err)
 					return
 				}
-				got, ok := outcomeOf(resp.GetReports()[0], "64")
+				got, ok := outcomeOf(resp, "64")
 				if !ok {
-					t.Errorf("RunReview(%q): item 64 missing", tc.conventions)
+					t.Errorf("CreateReview(%q): item 64 missing", tc.conventions)
 					return
 				}
 				if got != tc.want {
-					t.Errorf("RunReview(%q): item 64 = %s, want %s (a request saw another's lexicon)", tc.conventions, got, tc.want)
+					t.Errorf("CreateReview(%q): item 64 = %s, want %s (a request saw another's lexicon)", tc.conventions, got, tc.want)
 				}
 			}()
 		}

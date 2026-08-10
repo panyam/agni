@@ -115,6 +115,7 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--theme <name>` | render palette: `default` or `dark` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
+| `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
 
 ### `emit <in> [out]`
 

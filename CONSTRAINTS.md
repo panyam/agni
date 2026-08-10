@@ -401,7 +401,7 @@ Corollary, from C20: a convention VOCABULARY is applied at the READ as a value c
 
 A config value a client does not already hold is obtained through its OWN rpc, never resolved inside
 the rpc that consumes it (WS9-050). `ReviewService.GetReviewManifest` turns a stored checklist into a
-`ReviewManifest`, and `RunReview` takes only the value. That split is what keeps the consuming call
+`ReviewManifest`, and `CreateReview` takes only the value. That split is what keeps the consuming call
 free of I/O while still serving a browser, which holds a ref and no filesystem: the read happens, but
 it is named in the contract instead of hiding inside a run, and a caller that already has the value
 never triggers it.
@@ -417,3 +417,39 @@ misleading `_path` name, the same misnaming WS9-050 fixed on the review request.
 have live web consumers, so the rename is a real wire break rather than a free one and is tracked in
 `OUT_OF_SCOPE.md`. Recorded here rather than left implicit, so the constraint is not read as already
 satisfied.
+
+## C23: Stateful resources are AIP-shaped; stateless compute stays verb-shaped
+**Rule:** An API surface that owns state with a lifetime of its own is modelled as a RESOURCE:
+a server-assigned `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
+`filter` and AIP-158 `page_size` / `page_token` on the list. Everything else in
+`protos/agni/v1/webapi/` stays verb-shaped (`GetDesign`, `ListDir`, `RunQuery`, `DiffDesigns`,
+`CheckDesign`), addressed by a `(mount, ref)` pair. Today the only resource is
+`ReviewService`'s `Review` (WS9-053). A new rpc picks its side by ONE question: does what it
+returns still exist after the call? A derived view of files on disk does not, and is verb-shaped.
+Persisted state does, and is a resource.
+
+**Why:** two conventions in one API is a cost, so it is worth being explicit that this is
+deliberate rather than drift. Every verb-shaped rpc here is a pure function of files: `GetDesign`
+takes a mount and a path, and those two arguments ARE its whole input, so a resource name would be
+ceremony over a cache key. A review run is different in kind. It is produced rather than read, it
+outlives the request that made it, two runs over the same design at different times are different
+things a team wants to compare, and none of that is expressible by naming its inputs. Retrofitting
+the whole API to AIP would be a wire break across every service and every web client in exchange
+for consistency rather than capability. Reaching for a bespoke shape on the one surface that
+genuinely has resources would mean inventing pagination and filtering semantics that already have
+a well-specified answer.
+
+The boundary also has to be defended in the other direction: a stateless rpc dressed as a resource
+is worse than either convention. It invites clients to hold a `name` that is really a query, cache
+what was never stable, and eventually ask why deleting it does not work.
+
+**Verify:** every message in `protos/agni/v1/webapi/` carrying a server-assigned `name` field is
+served by the four standard methods and no bespoke mutator; every rpc that reads a design and
+returns a derived view takes `(mount, ref)` and returns no `name`; a resource's `List` carries
+`page_size`, `page_token`, and `filter`, and its service rejects a filter it does not implement
+rather than ignoring it (`service.parseReviewFilter`).
+
+**Known limitation:** stored reviews are visible to every client of a server, because `agni serve`
+has no authentication at all. That is a deployment assumption (one team, one trusted network), not
+an access-control boundary, and it is recorded rather than implied so nobody reads the resource
+model as having brought isolation with it. Auth is deliberately deferred; see `OUT_OF_SCOPE.md`.

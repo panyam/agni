@@ -85,11 +85,14 @@ func (m memReviewLoader) Design(context.Context, string, string, ...service.Read
 func (m memReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
+func (m memReviewLoader) DesignHash(context.Context, string, string) (string, error) {
+	return "sha256:stub", nil
+}
 func (m memReviewLoader) Manifest(context.Context, string, string) (review.Manifest, error) {
 	return m.man, m.err
 }
 
-// TestReviewAdapterRoundTrip drives the Review adapter both ways: a served RunReview returns a
+// TestReviewAdapterRoundTrip drives the Review adapter both ways: a served CreateReview returns a
 // wrapped response (proving the mux-visible handler delegates to the service, the CodeUnimplemented
 // gotcha), and a classified service error comes back as a coded connect error.
 func TestReviewAdapterRoundTrip(t *testing.T) {
@@ -97,19 +100,19 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 		Name:  "A",
 		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
 	}}}
-	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, check.DefaultCatalog(), nil, nil))
-	resp, err := a.RunReview(context.Background(), connect.NewRequest(&webapi.RunReviewRequest{
-		Manifest: service.ManifestProto(man), DesignRef: []string{"d.edn"},
+	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
+	resp, err := a.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{
+		Manifest: service.ManifestProto(man), DesignRef: "d.edn",
 	}))
 	if err != nil {
-		t.Fatalf("RunReview: %v", err)
+		t.Fatalf("CreateReview: %v", err)
 	}
-	if got := resp.Msg.GetReports(); len(got) != 1 || got[0].GetManifest() != "M" {
-		t.Fatalf("reports = %+v", got)
+	if resp.Msg.GetName() == "" || resp.Msg.GetResults().GetManifest() != "M" {
+		t.Fatalf("created review = %+v", resp.Msg)
 	}
 
-	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, check.DefaultCatalog(), nil, nil))
-	_, err = failing.RunReview(context.Background(), connect.NewRequest(&webapi.RunReviewRequest{Manifest: service.ManifestProto(man), DesignRef: []string{"d.edn"}}))
+	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
+	_, err = failing.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{Manifest: service.ManifestProto(man), DesignRef: "d.edn"}))
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("want InvalidArgument, got %v", err)
 	}
@@ -124,7 +127,7 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 		Name:  "A",
 		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
 	}}}
-	a := NewReview(service.NewReviewService(memReviewLoader{man: man}, check.DefaultCatalog(), nil, nil))
+	a := NewReview(service.NewReviewService(memReviewLoader{man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
 	resp, err := a.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
 	if err != nil {
 		t.Fatalf("GetReviewManifest: %v", err)
@@ -133,7 +136,7 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 		t.Fatalf("manifest = %+v", got)
 	}
 
-	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no such file: %w", service.ErrNotFound)}, check.DefaultCatalog(), nil, nil))
+	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no such file: %w", service.ErrNotFound)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
 	_, err = failing.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("want NotFound, got %v", err)

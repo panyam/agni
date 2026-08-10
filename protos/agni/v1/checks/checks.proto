@@ -125,6 +125,97 @@ message CheckReport {
   }
 }
 
+// The review layer has two halves and both live here. What follows first is the ASKING side, a
+// project's checklist, and after it the ANSWERING side, each item's outcome.
+//
+// The manifest moved down into this package from the web API (WS9-053). It arrived there as request
+// config, which was the right home while a run was a transient call: a checklist was something a
+// caller sent, not something a document contained. Persisting runs changed that. An archived review
+// has to carry the checklist it actually scored, because a document whose manifest is only a NAME
+// stops being reproducible the moment that file is edited, and reproducing a run from the document
+// alone is the acceptance test this contract sets for itself. A snapshot cannot be embedded from a
+// package that sits above this one, so the manifest is a results-tier artifact now.
+
+// ReviewManifest is a project's review checklist: named review areas, each holding items, each item
+// bound to the check that verifies it. The authoring form is YAML; this mirrors the parsed struct
+// rather than the file, so an item's binding is a nested message here where the YAML inlines it flat.
+message ReviewManifest {
+  string name = 1;
+  repeated ManifestArea areas = 2;
+}
+
+// ManifestArea is one review area (e.g. "CAN Interface") grouping related checklist items. It is the
+// asking side of what ReviewArea below answers.
+message ManifestArea {
+  string name = 1;
+  repeated ManifestItem items = 2;
+}
+
+// ManifestItem is one checklist entry. title is the short human review label shown in a report;
+// description is an optional longer explanation; note is an optional hint shown for an item that did
+// not fail, most usefully WHY an item is not automated. id names the item in the report.
+//
+// An item with no binding, or one bound to a rule that has not shipped, is tracked but not automated.
+// That is a feature: bind it to its intended future rule name and it flips to pass/fail on its own
+// once that rule lands.
+message ManifestItem {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string note = 4;
+  ItemBinding binding = 5;
+}
+
+// ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
+// profile, query, present); they are mutually exclusive and a second one is a validation error, not a
+// precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than selectors, so
+// they do not count toward that limit and compose with whichever selector is set.
+message ItemBinding {
+  string rule = 1;    // a catalog rule by exact name, e.g. "profile/can-termination-missing"
+  string tag = 2;     // key=value, selecting a set of rules
+  string profile = 3; // an interface profile name (sugar for the profile tag)
+  ManifestQuery query = 4;
+  ManifestPresent present = 5;
+  // scope narrows a rule/tag binding to the nets of one or more interfaces, so a per-interface ask
+  // reflects only its bus instead of a design-wide rule's whole output (WS3-058). It requires a rule
+  // or tag to filter.
+  ManifestScope scope = 6;
+  // requirement narrows a profile binding to ONE of that profile's declared requirements (WS3-115),
+  // so a profile's requirement list can GROW without re-scoring every item already bound to it.
+  // Requires profile to be set.
+  string requirement = 7;
+  // applies_to_class gates the item on device class (WS10-014): computed-n/a when no component
+  // carries any of these classes. Values are component.class names, family tags included.
+  repeated string applies_to_class = 8;
+}
+
+// ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
+// program, whose goal must project subject; message is the finding template, where {var} is replaced
+// by the bound value. kind defaults to "component" and severity to "warning".
+message ManifestQuery {
+  string match = 1;
+  string subject = 2;
+  string kind = 3;
+  string message = 4;
+  string severity = 5;
+  // param_symbol names the datasheet symbol this query checks (e.g. "IOUT"). It does not change the
+  // query logic; the finding gains a structured datasheet citation resolved from the subject's spec.
+  string param_symbol = 6;
+}
+
+// ManifestPresent asserts that a class of component must EXIST on the design: the item passes when at
+// least one is present and fails when none is. It is never not-applicable, because the
+// component-class tier exists on any netlist, so the presence question always has a pass/fail answer.
+message ManifestPresent {
+  string class = 1;
+}
+
+// ManifestScope names the interfaces a rule/tag binding is filtered to. The effective scope is the
+// UNION of their nets, so one item can span several buses.
+message ManifestScope {
+  repeated string profiles = 1;
+}
+
 // ReviewItem is one checklist item's outcome, the wire form of review.ItemResult.
 //
 // The outcome vocabulary is the part of this contract with no incumbent equivalent, and it is the
@@ -175,13 +266,23 @@ message CheckResults {
   repeated Finding findings = 5;
   // manifest is the review checklist's name; empty for a plain check run. Its presence is what
   // distinguishes a review document from a check document, so a consumer never reports an absent
-  // coverage axis as a complete one.
+  // coverage axis as a complete one. It is kept alongside manifest_snapshot because a listing wants
+  // the name without paying to read the whole checklist.
   string manifest = 6;
   repeated ReviewArea areas = 7;
   // import_summary is present only on a document IMPORTED from a foreign checker: how many of that
   // tool's findings could be attached to an entity in our model, and what the rest were. Unset for a
   // native run, whose findings are produced from the model and therefore joined by construction.
   ImportSummary import_summary = 8;
+  // manifest_snapshot is the checklist this run actually scored, embedded rather than referenced
+  // (WS9-053). Empty for a plain check run, and empty on documents written before it existed.
+  //
+  // It is what makes an archived review honest about what it asked. The areas above record the
+  // ANSWERS, but a reader cannot tell an item that was never on the checklist from one that was
+  // removed afterwards, and cannot see the binding an outcome came from at all. Naming the checklist
+  // is not enough either: a manifest is an editable file, so a name resolves to whatever that file
+  // says TODAY, and a run archived last quarter would re-render against a checklist it never saw.
+  ReviewManifest manifest_snapshot = 9;
 }
 
 // ImportSummary is the honest accounting of an import. A foreign checker names the entity a violation

@@ -43,7 +43,7 @@ func TestNoTransportImports(t *testing.T) {
 // TestNoFilesystemImports is the other half of C13's verify, and C22's: the services take their I/O
 // through injected ports, so an impl file reaching for the filesystem directly is the violation both
 // constraints exist to prevent. C22 named this guard as its verify before the guard existed; WS9-050
-// wrote it, which is also when it became load-bearing — RunReview now takes its checklist as a value
+// wrote it, which is also when it became load-bearing — a review run takes its checklist as a value
 // specifically so it needs no filesystem, and nothing but this test stops a later edit from quietly
 // reading a file to "just resolve the path".
 //

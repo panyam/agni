@@ -15,6 +15,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/service"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // toConnectErr maps the service tier's error sentinels to Connect codes — the single
@@ -34,6 +35,8 @@ func toConnectErr(err error) error {
 		return connect.NewError(connect.CodeAborted, err)
 	case errors.Is(err, service.ErrExtractNotEnabled):
 		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --pdf2doc", err))
+	case errors.Is(err, service.ErrReviewStoreNotConfigured):
+		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%w; start agni serve with --review-store <dir>", err))
 	case errors.Is(err, service.ErrInternal):
 		return connect.NewError(connect.CodeInternal, err)
 	default: // ErrInvalidPath, ErrInvalidArgument, and anything unclassified
@@ -275,8 +278,32 @@ type Review struct {
 // NewReview wraps svc for Connect.
 func NewReview(svc *service.ReviewService) *Review { return &Review{svc: svc} }
 
-func (a *Review) RunReview(ctx context.Context, req *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error) {
-	resp, err := a.svc.RunReview(ctx, req.Msg)
+func (a *Review) CreateReview(ctx context.Context, req *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error) {
+	resp, err := a.svc.CreateReview(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Review) GetReview(ctx context.Context, req *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error) {
+	resp, err := a.svc.GetReview(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Review) ListReviews(ctx context.Context, req *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error) {
+	resp, err := a.svc.ListReviews(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Review) DeleteReview(ctx context.Context, req *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error) {
+	resp, err := a.svc.DeleteReview(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}

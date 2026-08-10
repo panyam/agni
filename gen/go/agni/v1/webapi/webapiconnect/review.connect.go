@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"
 )
@@ -33,8 +34,17 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ReviewServiceRunReviewProcedure is the fully-qualified name of the ReviewService's RunReview RPC.
-	ReviewServiceRunReviewProcedure = "/agni.v1.webapi.ReviewService/RunReview"
+	// ReviewServiceCreateReviewProcedure is the fully-qualified name of the ReviewService's
+	// CreateReview RPC.
+	ReviewServiceCreateReviewProcedure = "/agni.v1.webapi.ReviewService/CreateReview"
+	// ReviewServiceGetReviewProcedure is the fully-qualified name of the ReviewService's GetReview RPC.
+	ReviewServiceGetReviewProcedure = "/agni.v1.webapi.ReviewService/GetReview"
+	// ReviewServiceListReviewsProcedure is the fully-qualified name of the ReviewService's ListReviews
+	// RPC.
+	ReviewServiceListReviewsProcedure = "/agni.v1.webapi.ReviewService/ListReviews"
+	// ReviewServiceDeleteReviewProcedure is the fully-qualified name of the ReviewService's
+	// DeleteReview RPC.
+	ReviewServiceDeleteReviewProcedure = "/agni.v1.webapi.ReviewService/DeleteReview"
 	// ReviewServiceGetReviewManifestProcedure is the fully-qualified name of the ReviewService's
 	// GetReviewManifest RPC.
 	ReviewServiceGetReviewManifestProcedure = "/agni.v1.webapi.ReviewService/GetReviewManifest"
@@ -42,13 +52,32 @@ const (
 
 // ReviewServiceClient is a client for the agni.v1.webapi.ReviewService service.
 type ReviewServiceClient interface {
-	// RunReview runs the manifest against each requested design and returns a report per design. An
-	// invalid or absent manifest, an unreadable design, or a board_ref at a file carrying no board
-	// geometry is an error (the run is all-or-nothing, so a partial read never reports items clean
-	// without checking them).
-	RunReview(context.Context, *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error)
-	// GetReviewManifest resolves a stored checklist into the value RunReview takes. It parses AND
-	// validates, so a client learns its manifest is malformed once, here, rather than on every run.
+	// CreateReview runs the checklist against the design and persists the result, returning the stored
+	// Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
+	// board_ref at a file carrying no board geometry is an error, so a partial read never reports items
+	// clean without checking them. Nothing is stored when the run fails.
+	//
+	// It is synchronous. A review is a check sweep per item and finishes in the time a request can
+	// wait, so this returns the Review itself rather than an Operation. If that stops being true the
+	// answer is AIP-151, not a client-side poll invented here.
+	//
+	// One review is about ONE design. A project rollup is several Reviews, because a document carries
+	// a single DesignRef on purpose: averaging several designs into one document would misrepresent
+	// every one of them.
+	CreateReview(context.Context, *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error)
+	// GetReview returns a stored run by name. The document is self-contained, so this needs neither the
+	// design nor the checklist to still exist.
+	GetReview(context.Context, *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error)
+	// ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
+	// design so a client can ask the question it actually has ("how has THIS board been trending").
+	ListReviews(context.Context, *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error)
+	// DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
+	// a silent success, because a client asking to delete something that is not there has a stale view
+	// and is better told so.
+	DeleteReview(context.Context, *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
+	// validates, so a client learns its manifest is malformed once, here, rather than on every run. A
+	// caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
 	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
 }
 
@@ -63,10 +92,28 @@ func NewReviewServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 	baseURL = strings.TrimRight(baseURL, "/")
 	reviewServiceMethods := webapi.File_agni_v1_webapi_review_proto.Services().ByName("ReviewService").Methods()
 	return &reviewServiceClient{
-		runReview: connect.NewClient[webapi.RunReviewRequest, webapi.RunReviewResponse](
+		createReview: connect.NewClient[webapi.CreateReviewRequest, webapi.Review](
 			httpClient,
-			baseURL+ReviewServiceRunReviewProcedure,
-			connect.WithSchema(reviewServiceMethods.ByName("RunReview")),
+			baseURL+ReviewServiceCreateReviewProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("CreateReview")),
+			connect.WithClientOptions(opts...),
+		),
+		getReview: connect.NewClient[webapi.GetReviewRequest, webapi.Review](
+			httpClient,
+			baseURL+ReviewServiceGetReviewProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("GetReview")),
+			connect.WithClientOptions(opts...),
+		),
+		listReviews: connect.NewClient[webapi.ListReviewsRequest, webapi.ListReviewsResponse](
+			httpClient,
+			baseURL+ReviewServiceListReviewsProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("ListReviews")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteReview: connect.NewClient[webapi.DeleteReviewRequest, emptypb.Empty](
+			httpClient,
+			baseURL+ReviewServiceDeleteReviewProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("DeleteReview")),
 			connect.WithClientOptions(opts...),
 		),
 		getReviewManifest: connect.NewClient[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse](
@@ -80,13 +127,31 @@ func NewReviewServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // reviewServiceClient implements ReviewServiceClient.
 type reviewServiceClient struct {
-	runReview         *connect.Client[webapi.RunReviewRequest, webapi.RunReviewResponse]
+	createReview      *connect.Client[webapi.CreateReviewRequest, webapi.Review]
+	getReview         *connect.Client[webapi.GetReviewRequest, webapi.Review]
+	listReviews       *connect.Client[webapi.ListReviewsRequest, webapi.ListReviewsResponse]
+	deleteReview      *connect.Client[webapi.DeleteReviewRequest, emptypb.Empty]
 	getReviewManifest *connect.Client[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse]
 }
 
-// RunReview calls agni.v1.webapi.ReviewService.RunReview.
-func (c *reviewServiceClient) RunReview(ctx context.Context, req *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error) {
-	return c.runReview.CallUnary(ctx, req)
+// CreateReview calls agni.v1.webapi.ReviewService.CreateReview.
+func (c *reviewServiceClient) CreateReview(ctx context.Context, req *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error) {
+	return c.createReview.CallUnary(ctx, req)
+}
+
+// GetReview calls agni.v1.webapi.ReviewService.GetReview.
+func (c *reviewServiceClient) GetReview(ctx context.Context, req *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error) {
+	return c.getReview.CallUnary(ctx, req)
+}
+
+// ListReviews calls agni.v1.webapi.ReviewService.ListReviews.
+func (c *reviewServiceClient) ListReviews(ctx context.Context, req *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error) {
+	return c.listReviews.CallUnary(ctx, req)
+}
+
+// DeleteReview calls agni.v1.webapi.ReviewService.DeleteReview.
+func (c *reviewServiceClient) DeleteReview(ctx context.Context, req *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.deleteReview.CallUnary(ctx, req)
 }
 
 // GetReviewManifest calls agni.v1.webapi.ReviewService.GetReviewManifest.
@@ -96,13 +161,32 @@ func (c *reviewServiceClient) GetReviewManifest(ctx context.Context, req *connec
 
 // ReviewServiceHandler is an implementation of the agni.v1.webapi.ReviewService service.
 type ReviewServiceHandler interface {
-	// RunReview runs the manifest against each requested design and returns a report per design. An
-	// invalid or absent manifest, an unreadable design, or a board_ref at a file carrying no board
-	// geometry is an error (the run is all-or-nothing, so a partial read never reports items clean
-	// without checking them).
-	RunReview(context.Context, *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error)
-	// GetReviewManifest resolves a stored checklist into the value RunReview takes. It parses AND
-	// validates, so a client learns its manifest is malformed once, here, rather than on every run.
+	// CreateReview runs the checklist against the design and persists the result, returning the stored
+	// Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
+	// board_ref at a file carrying no board geometry is an error, so a partial read never reports items
+	// clean without checking them. Nothing is stored when the run fails.
+	//
+	// It is synchronous. A review is a check sweep per item and finishes in the time a request can
+	// wait, so this returns the Review itself rather than an Operation. If that stops being true the
+	// answer is AIP-151, not a client-side poll invented here.
+	//
+	// One review is about ONE design. A project rollup is several Reviews, because a document carries
+	// a single DesignRef on purpose: averaging several designs into one document would misrepresent
+	// every one of them.
+	CreateReview(context.Context, *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error)
+	// GetReview returns a stored run by name. The document is self-contained, so this needs neither the
+	// design nor the checklist to still exist.
+	GetReview(context.Context, *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error)
+	// ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
+	// design so a client can ask the question it actually has ("how has THIS board been trending").
+	ListReviews(context.Context, *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error)
+	// DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
+	// a silent success, because a client asking to delete something that is not there has a stale view
+	// and is better told so.
+	DeleteReview(context.Context, *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error)
+	// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
+	// validates, so a client learns its manifest is malformed once, here, rather than on every run. A
+	// caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
 	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
 }
 
@@ -113,10 +197,28 @@ type ReviewServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	reviewServiceMethods := webapi.File_agni_v1_webapi_review_proto.Services().ByName("ReviewService").Methods()
-	reviewServiceRunReviewHandler := connect.NewUnaryHandler(
-		ReviewServiceRunReviewProcedure,
-		svc.RunReview,
-		connect.WithSchema(reviewServiceMethods.ByName("RunReview")),
+	reviewServiceCreateReviewHandler := connect.NewUnaryHandler(
+		ReviewServiceCreateReviewProcedure,
+		svc.CreateReview,
+		connect.WithSchema(reviewServiceMethods.ByName("CreateReview")),
+		connect.WithHandlerOptions(opts...),
+	)
+	reviewServiceGetReviewHandler := connect.NewUnaryHandler(
+		ReviewServiceGetReviewProcedure,
+		svc.GetReview,
+		connect.WithSchema(reviewServiceMethods.ByName("GetReview")),
+		connect.WithHandlerOptions(opts...),
+	)
+	reviewServiceListReviewsHandler := connect.NewUnaryHandler(
+		ReviewServiceListReviewsProcedure,
+		svc.ListReviews,
+		connect.WithSchema(reviewServiceMethods.ByName("ListReviews")),
+		connect.WithHandlerOptions(opts...),
+	)
+	reviewServiceDeleteReviewHandler := connect.NewUnaryHandler(
+		ReviewServiceDeleteReviewProcedure,
+		svc.DeleteReview,
+		connect.WithSchema(reviewServiceMethods.ByName("DeleteReview")),
 		connect.WithHandlerOptions(opts...),
 	)
 	reviewServiceGetReviewManifestHandler := connect.NewUnaryHandler(
@@ -127,8 +229,14 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 	)
 	return "/agni.v1.webapi.ReviewService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case ReviewServiceRunReviewProcedure:
-			reviewServiceRunReviewHandler.ServeHTTP(w, r)
+		case ReviewServiceCreateReviewProcedure:
+			reviewServiceCreateReviewHandler.ServeHTTP(w, r)
+		case ReviewServiceGetReviewProcedure:
+			reviewServiceGetReviewHandler.ServeHTTP(w, r)
+		case ReviewServiceListReviewsProcedure:
+			reviewServiceListReviewsHandler.ServeHTTP(w, r)
+		case ReviewServiceDeleteReviewProcedure:
+			reviewServiceDeleteReviewHandler.ServeHTTP(w, r)
 		case ReviewServiceGetReviewManifestProcedure:
 			reviewServiceGetReviewManifestHandler.ServeHTTP(w, r)
 		default:
@@ -140,8 +248,20 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 // UnimplementedReviewServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedReviewServiceHandler struct{}
 
-func (UnimplementedReviewServiceHandler) RunReview(context.Context, *connect.Request[webapi.RunReviewRequest]) (*connect.Response[webapi.RunReviewResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.RunReview is not implemented"))
+func (UnimplementedReviewServiceHandler) CreateReview(context.Context, *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.CreateReview is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) GetReview(context.Context, *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.GetReview is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) ListReviews(context.Context, *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.ListReviews is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) DeleteReview(context.Context, *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.DeleteReview is not implemented"))
 }
 
 func (UnimplementedReviewServiceHandler) GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error) {

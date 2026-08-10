@@ -108,7 +108,10 @@ cadences.
 | Query | RunQuery | evaluate an ad-hoc datalog query over the design's fact base, returning columns and provenance-linked rows, the same engine as `agni query` |
 | Query | ListRelations | the relation catalog with arg labels, summary, and kind, driving the panel's click-to-insert picker |
 | Review | GetReviewManifest | resolve a stored checklist into a manifest value, parsed and validated |
-| Review | RunReview | run a checklist manifest over one or more designs, returning each item's outcome, the same run `agni review` performs |
+| Review | CreateReview | run a checklist against one design and store the result, returning the stored run |
+| Review | GetReview | one stored run, by resource name |
+| Review | ListReviews | stored runs newest first, paginated, filterable by design |
+| Review | DeleteReview | remove a stored run |
 
 A few contract details bite if missed.
 
@@ -129,13 +132,28 @@ A few contract details bite if missed.
   datasheet data is deployment-bound, so a query over the datasheet parameter relation returns no
   rows here. The evaluator is dependency-free Go, so a later revision could evaluate it in the
   browser instead.
-- **A design is named, a checklist is sent.** RunReview carries the review manifest as a value while
-  the design stays a mount-relative ref, and the split is deliberate. A design is megabytes, needs a
-  reader chosen by extension, and is re-requested across many calls, so re-sending it every time
-  would be absurd. A checklist is a small declaration the caller already holds, and a service that
-  took a path for it would need a filesystem to do its job. GetReviewManifest is the bridge for a
-  client that holds a ref and no filesystem: it reads and validates once, and the client sends the
+- **A design is named, a checklist is sent.** CreateReview carries the review manifest as a value
+  while the design stays a mount-relative ref, and the split is deliberate. A design is megabytes,
+  needs a reader chosen by extension, and is re-requested across many calls, so re-sending it every
+  time would be absurd. A checklist is a small declaration the caller already holds, and a service
+  that took a path for it would need a filesystem to do its job. GetReviewManifest is the bridge for
+  a client that holds a ref and no filesystem: it reads and validates once, and the client sends the
   value it got back. The CLI skips it, because reading the file the user named is its own job.
+- **Reviews are the one resource; everything else is a verb.** A review RUN outlives the call that
+  made it, so it has a name and the four standard methods, with paging and filtering following AIP.
+  Every other rpc here is a pure function of files on disk, so its arguments are its whole identity
+  and a resource name would be ceremony. That split is CONSTRAINTS C23 and is deliberate rather
+  than drift.
+- **Stored runs need a volume.** `agni serve --review-store <dir>` names a WRITABLE directory,
+  separate from the read-only design mounts, so persisting runs never turns a mount into a write
+  surface. In a container it is a mounted volume. Without the flag the four review resource methods
+  answer with a failed-precondition naming it, rather than running the checks and dropping the
+  result. Runs stored there are visible to every client of the server; `agni serve` has no
+  authentication yet.
+- **A stored run embeds the checklist it scored.** The document carries a manifest SNAPSHOT, not
+  just the manifest's name. A checklist is an editable file, so a name would resolve to whatever it
+  says today, and last quarter's review would re-render against this quarter's questions with its
+  outcomes intact underneath. That is the failure the snapshot exists to prevent.
 
 ## The render contract
 

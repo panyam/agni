@@ -3,20 +3,19 @@ package main
 import (
 	"github.com/panyam/agni/core/check"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/core/review"
 )
 
-// reportsFromProto maps a RunReviewResponse back to the Go view-model the renderers consume — the CLI
-// analogue of the web tier's reportFromWire (proto -> CheckReportData), so both surfaces start from the
-// one wire shape RunReview returns. The proto's item note is the already-joined runtime+manifest note
-// (reviewReportProto), placed in Item.Note so detail()/JSON reproduce it in every outcome case (they
+// reportsFromDocs maps stored review documents back to the Go view-model the renderers consume — the
+// CLI analogue of the web tier's reportFromWire, so both surfaces start from the one shape a review
+// run produces. The document's item note is the already-joined runtime+manifest note
+// (reviewAreaProtos), placed in Item.Note so detail()/JSON reproduce it in every outcome case (they
 // read Item.Note for pass/not-automated and join it for not-applicable — one field satisfies both).
-func reportsFromProto(resp *webapi.RunReviewResponse) []review.Report {
-	reports := make([]review.Report, 0, len(resp.GetReports()))
-	for _, pr := range resp.GetReports() {
-		r := review.Report{Manifest: pr.GetManifest(), Design: pr.GetDesign()}
-		for _, pa := range pr.GetAreas() {
+func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
+	reports := make([]review.Report, 0, len(docs))
+	for _, doc := range docs {
+		r := review.Report{Manifest: doc.GetManifest(), Design: doc.GetDesign().GetSource()}
+		for _, pa := range doc.GetAreas() {
 			ar := review.AreaResult{Area: review.Area{Name: pa.GetName()}}
 			for _, pi := range pa.GetItems() {
 				ar.Items = append(ar.Items, review.ItemResult{
