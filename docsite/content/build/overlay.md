@@ -121,6 +121,7 @@ own rules, so a replacement cannot delete itself.
 Interface profiles do this for you. An overlay profile that carries a built-in's name supersedes that
 built-in's rules, which is what a naming map is for: re-binding `SPI_NOR` to your own net-name
 suffixes replaces the engine's reading of that interface rather than running beside it.
+[Interface profiles](../../guide/interface-profiles/) covers the YAML these are written in.
 
 That matters more than it sounds. Running both is not merely noisy, it invents failures. A naming map
 that re-binds some roles and leaves others at the engine's naming lets the built-in profile still

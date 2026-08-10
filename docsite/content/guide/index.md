@@ -11,5 +11,6 @@ These guides are for people who use Agni on a design. You do not need to read an
 - **[Comparing revisions](comparing-revisions/)**: diff two revisions as a schematic redline.
 - **[Querying](querying/)**: search a design as data, each answer cited.
 - **[Naming conventions](naming-conventions/)**: encode house style and check it on every export.
+- **[Interface profiles](interface-profiles/)**: declare a bus's signals and have every design checked against it.
 - **[Datasheets](datasheets/)**: compare a design against a part's real limits.
 - **[CLI reference](cli-reference/)**: the full command surface.
