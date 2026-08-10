@@ -186,6 +186,11 @@ func TestWorkScalesSubQuadratically(t *testing.T) {
 		{"one-atom", `component-on-net(?a,?n) => ?a`},
 		{"two-atom-shared", `component-on-net(?a,?n), component-on-net(?c,?n), ?a != ?c => ?a`},
 		{"three-atom-chain", `component-on-net(?a,?n), component-on-net(?c,?n), component-on-net(?e,?n) => ?a`},
+		// A cycle in the join graph: a-n, c-n, c-m, a-m closes back on itself. Binary-join plans are
+		// provably suboptimal on cyclic conjunctive queries, which is the case worst-case-optimal
+		// joins exist for. Indexing does not make that go away, so this shape is here to SHOW where
+		// the ceiling is rather than to claim it is gone.
+		{"triangle-cyclic", `component-on-net(?a,?n), component-on-net(?c,?n), component-on-net(?c,?m), component-on-net(?a,?m), ?n != ?m => ?a`},
 		{"negation", `component-on-net(?a,?n), not component.class(?a,"resistor") => ?a`},
 		{"aggregation", `component-on-net(?a,?n) => ?n, count(?a)`},
 		{"recursion", `conn(?a,?b) :- component-on-net(?a,?b); linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; linked("R1",?x) => ?x`},
