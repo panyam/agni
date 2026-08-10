@@ -42,10 +42,11 @@ exists so some part of the tool has something true to report.
 **Teach it your house.** Four independent tiers, one per rung. Stop after any of them and the ones
 you added still work.
 
-4. Your names: which nets are rails, and what a legal name looks like here.
-5. Your interfaces: declare a bus once, check every board against it.
-6. Part limits: compare the design against what the datasheet actually allows.
-7. Your architecture: declare what the board is supposed to be, and detect drift from it.
+4. [Your names](04-your-names/): which nets are rails, and what a legal name looks like here.
+5. [Your interfaces](05-your-interfaces/): declare a bus once, check every board against it.
+6. [Part limits](06-part-limits/): compare the design against what the datasheet actually allows.
+7. [Your architecture](07-your-architecture/): declare what the board is supposed to be, and detect
+   drift from it.
 
 **Run your review.**
 
@@ -54,8 +55,8 @@ you added still work.
 10. Compare revisions: what changed between rev A and rev B, structurally.
 11. Archive and gate: keep the result, re-render it later, fail CI on it.
 
-Rungs 4 through 11 are being written. Until they land, the [guide](../guide/) covers the same
-features one page at a time.
+Rungs 8 through 11 are being written. Until they land, `examples/tutorial-project/review.yaml` is a
+worked checklist and the [guide](../guide/) covers the underlying features one page at a time.
 
 ## Running this on your own board
 
