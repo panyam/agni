@@ -17,12 +17,13 @@ import { diffChangesPanelIsland } from "./diffchangespanel.js";
 import { sheetOverviewPanelIsland } from "./sheetoverviewpanel.js";
 import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
+import { reviewPanelIsland } from "./reviewpanel.js";
 import { partsPanelIsland } from "./partspanel.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
 import { SvgView } from "./svgview.js";
 import { compareButton } from "./compare.js";
-import { designClient, checksClient, diffClient, queryClient } from "./api.js";
+import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient } from "./api.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
 import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
@@ -72,13 +73,14 @@ class AppRoot extends BaseComponent {
     const sheetOverviewEl = document.getElementById("sheet-overview");
     const queryEl = document.getElementById("query-panel");
     const coverageEl = document.getElementById("coverage-panel");
+    const reviewEl = document.getElementById("review-panel");
     const partsEl = document.getElementById("parts-panel");
     const sheetTabsEl = document.getElementById("sheet-tabs");
     if (!canvasEl || !pickerEl || !compareTreeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
       return children;
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
-    if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl) return children;
+    if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl) return children;
 
     // RenderView reveals whichever renderer drew the sheet: the SVG host overlays the canvas,
     // so showWebgl just hides it and showSvg fills + shows it.
@@ -244,6 +246,15 @@ class AppRoot extends BaseComponent {
     const parts = partsPanelIsland(partsEl, this._eventBus, {
       onLocate: (refDes) => void presenter.locateEntity("component", refDes),
     });
+    // The review panel (WS9-052): the project's checklist verdict over the stored runs. Locating a
+    // finding under an item reuses the same locateEntity path every other panel uses, so a review
+    // finding highlights exactly the way a check finding does.
+    const review = reviewPanelIsland(reviewEl, this._eventBus, {
+      onSelectRun: (name) => presenter.showReview(name),
+      onSelectChecklist: (ref) => presenter.setChecklist(ref),
+      onCreate: () => void presenter.createReview(),
+      onLocate: (kind, subject) => void presenter.locateEntity(kind, subject),
+    });
     // The relation catalog (WS9-037) is static per build and design-independent, so fetch it once
     // at startup and push it to the panel's picker; a failure just leaves the picker empty (the
     // panel falls back to the syntax hint).
@@ -283,9 +294,12 @@ class AppRoot extends BaseComponent {
         overview: sheetOverview.view,
         query: query.view,
         coverage: coverage.view,
+        review: review.view,
         parts: parts.view,
       },
       queryClient(),
+      reviewClient(),
+      workspaceClient(),
     );
     this.presenter = presenter;
 
@@ -311,6 +325,7 @@ class AppRoot extends BaseComponent {
       sheetOverview.island,
       query.island,
       coverage.island,
+      review.island,
       parts.island,
     );
     return children;

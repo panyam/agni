@@ -9,6 +9,7 @@ import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
 import { DatasheetService } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
+import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 
 // newTransport builds a Connect transport rooted at baseUrl. It defaults to "/" so the
 // app talks to the same origin that served it (the `agni serve` dev server).
@@ -48,4 +49,10 @@ export function datasheetClient(baseUrl?: string): Client<typeof DatasheetServic
 // fact base — the web front-end to the same engine `agni query` runs, WS9-036 / WS3-029).
 export function queryClient(baseUrl?: string): Client<typeof QueryService> {
   return createClient(QueryService, newTransport(baseUrl));
+}
+
+// reviewClient returns a typed client for ReviewService (WS9-052): review runs as resources, plus
+// GetReviewManifest to resolve a stored checklist into the value a create takes.
+export function reviewClient(baseUrl?: string): Client<typeof ReviewService> {
+  return createClient(ReviewService, newTransport(baseUrl));
 }

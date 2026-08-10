@@ -52,6 +52,10 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // The datasheet-params panel (WS9-035): per-component parameter tree for datasheet-backed parts.
   // Secondary — opened from the menu; only populated when serve was started with --params.
   { id: "parts", title: "Parts" },
+  // The review panel (WS9-052): the project's checklist verdict for the open design, over the stored
+  // runs (WS9-053). Secondary — opened from the menu, or via the reconcile for existing saved
+  // layouts; only useful when serve was started with --review-store.
+  { id: "review", title: "Review" },
   // Diff (WS9-005) and its changed-item list (WS9-006) are registered so their holes are
   // adoptable and the menu can reopen them, but they are not part of the default layout —
   // starting a comparison opens both (openDiffPanel).

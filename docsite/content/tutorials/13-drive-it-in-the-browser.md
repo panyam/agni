@@ -92,6 +92,28 @@ inferring it from findings that did or did not appear.
 
 **Compare** is [rung 10's](../10-compare-revisions/) diff with a revision picker.
 
+**Review** is your checklist from [rung 8](../08-write-your-checklist/), scored in the browser. It
+needs a server started with a place to keep runs:
+
+```
+agni serve web --mount proj=. --review-store ./reviews
+```
+
+Pick your `review.yaml` and press Run review. What comes back is the same verdict
+[rung 9](../09-read-the-verdicts/) read in the terminal, item by item, with the same vocabulary: an
+item that could not be evaluated is styled differently from one that passed, because the two mean
+opposite things. The headline leads with coverage rather than pass/fail, for the reason rung 9 gave
+about what a bare pass count hides.
+
+A failing item lists the findings that failed it, and clicking one highlights it on the canvas, which
+is the same move Findings offers one level down.
+
+Runs are kept, so the panel opens on the latest one and the picker holds the history. That is the
+browser half of [rung 11](../11-archive-and-gate/): comparing this week's verdict against last
+month's, without either of them being a file somebody had to remember to save. Each stored run also
+carries the checklist it actually scored, so a run from before you edited `review.yaml` still shows
+the questions it really asked.
+
 ## Where this fits
 
 The CLI is for the gate. It runs in CI, returns an exit code, and writes the archive.
