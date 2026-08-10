@@ -23,13 +23,46 @@ type Base struct {
 	// populated on a per-query shallow copy, so rules never leak between queries that reuse a Base.
 	idb      map[string][]idbTuple
 	idbArity map[string]int
+	// edbIdx caches fact lookups by binding pattern (WS3-125), built lazily on first probe. It
+	// belongs to the SHARED Base because the EDB is immutable for the Base's life, so a second
+	// query over the same design reuses it — which is the case that matters for the profile
+	// coverage pass, where many queries run against one Base.
+	//
+	// It is the only mutable state a query writes through a shared *Base, so it carries a lock.
+	// Before this, concurrent Eval on one Base was safe by construction (everything shared was
+	// read-only) and nothing should have to discover that it stopped being so. The lock is taken
+	// once per atom extension, not per fact, which is precisely the cost this index removes.
+	//
+	// A POINTER, so Eval's shallow copy shares the one cache rather than copying a mutex (which vet
+	// rejects, correctly: two copies of a lock guard nothing).
+	edbIdx *edbIndexCache
+	// idbIdx is the derived-relation analogue and is per-QUERY, living on the shallow copy beside
+	// idb: a derived relation only exists for one query, so a cached index of it must not outlive
+	// that query.
+	idbIdx map[idxKey]*idbIndex
+	// work counts candidate COMPARISONS: every fact or tuple the solver actually examines. It is
+	// what went quadratic, and counting it rather than timing it gives the scaling guard a
+	// deterministic signal — a duration assertion would be a flake generator across machines and CI
+	// runners, and would say nothing about complexity. Behind a pointer so Eval's shallow copy
+	// accumulates into the same counter.
+	work *int64
+}
+
+// Work reports how many candidate comparisons the solver has performed against this Base. It exists
+// for the scaling guard (WS3-125): assert the RATIO of work at n and 2n rather than any absolute
+// number, so the test measures complexity instead of the machine it runs on.
+func (b *Base) Work() int64 {
+	if b.work == nil {
+		return 0
+	}
+	return *b.work
 }
 
 // NewBase projects a Model into its fact base (the built-in relations installed by stdlib/relations
 // plus any overlay-registered relations) and indexes it for querying. With no stdlib/relations
 // imported the built-in projector is nil and only overlay relations populate the base.
 func NewBase(m check.Model) *Base {
-	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}, model: m}
+	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}, model: m, edbIdx: newEDBIndexCache(), work: new(int64)}
 	if builtinFactsModel != nil {
 		for _, f := range builtinFactsModel(m) {
 			b.edb[f.Relation] = append(b.edb[f.Relation], f)
@@ -52,7 +85,7 @@ func NewBase(m check.Model) *Base {
 // model (a spec library is not a design), so model-dependent relations and predicates (net.*, component.*,
 // reaches) have no facts and yield nothing — a spec library query is over the datasheet relations only.
 func NewSpecLibBase(fs param.FactSource) *Base {
-	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}}
+	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}, edbIdx: newEDBIndexCache(), work: new(int64)}
 	if builtinFactsSpecLib != nil {
 		for _, f := range builtinFactsSpecLib(fs.AllSpecs()) {
 			b.edb[f.Relation] = append(b.edb[f.Relation], f)
@@ -87,6 +120,11 @@ func (Naive) Eval(q Query, b *Base) ([]Row, error) {
 		nb := *b // shallow copy: edb/netByName/model are read-only and shared; idb is fresh per query
 		nb.idb = map[string][]idbTuple{}
 		nb.idbArity = map[string]int{}
+		// Fresh alongside idb, and for the same reason: an index of derived tuples describes THIS
+		// query's derivations and must not be reachable from the next one. Copying the struct
+		// carried the map header across, so leaving this out would have one query probing an index
+		// whose positions point into another query's idb slice.
+		nb.idbIdx = map[idxKey]*idbIndex{}
 		if err := nb.materialize(q.Rules); err != nil {
 			return nil, err
 		}

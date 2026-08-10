@@ -169,14 +169,40 @@ func (b *Base) applyRule(r Rule) (bool, error) {
 // addTuple appends a derived tuple to its relation unless an equal-valued one is already present
 // (set semantics — datalog facts have value identity). The first derivation's cites are kept, so
 // provenance is deterministic under the fixpoint's fixed rule and tuple order.
+//
+// The membership test is a bucket lookup rather than a scan of the relation (WS3-126). It used to
+// be linear, so deriving n tuples cost O(n^2) before any join work: a transitive closure over a
+// 4,000-component design spent 28 seconds here. valsEqual still decides within the bucket, so set
+// semantics and the first-wins provenance rule are unchanged — only the number of comparisons is.
 func (b *Base) addTuple(rel string, t idbTuple) bool {
-	for _, ex := range b.idb[rel] {
-		if valsEqual(ex.vals, t.vals) {
-			return false
+	tuples := b.idb[rel]
+	x := b.idbIndexFor(rel, fullMask(len(t.vals)))
+	x.sync(tuples, fullMask(len(t.vals)))
+	for _, k := range tupleKeys(t.vals) {
+		for _, i := range x.buckets[k] {
+			b.countWork()
+			if valsEqual(tuples[i].vals, t.vals) {
+				return false
+			}
 		}
 	}
-	b.idb[rel] = append(b.idb[rel], t)
+	b.idb[rel] = append(tuples, t)
 	return true
+}
+
+// idbIndexFor returns this query's index of a derived relation at one binding pattern, creating it
+// on first use. Per-query because a derived relation only exists for one query; see Base.idbIdx.
+func (b *Base) idbIndexFor(rel string, mask patternMask) *idbIndex {
+	if b.idbIdx == nil {
+		b.idbIdx = map[idxKey]*idbIndex{}
+	}
+	k := idxKey{rel: rel, mask: mask}
+	x, ok := b.idbIdx[k]
+	if !ok {
+		x = &idbIndex{}
+		b.idbIdx[k] = x
+	}
+	return x
 }
 
 func valsEqual(a, b []Value) bool {
