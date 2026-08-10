@@ -1,0 +1,381 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1211.3" viewBox="0 0 1680.0 1211.3" font-family="monospace">
+<rect x="0.0" y="0.0" width="1680.0" height="1211.3" fill="#fdfdfb"/>
+<rect fill="none" stroke="#8a6d3b" stroke-width="0.8" x="62.6" y="62.6" width="1554.7" height="1086.1"/>
+<text x="192.2" y="73.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
+<text x="192.2" y="1137.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="321.8,62.6 321.8,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="321.8,1148.7 321.8,1135.1"/>
+<text x="451.3" y="73.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<text x="451.3" y="1137.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="580.9,62.6 580.9,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="580.9,1148.7 580.9,1135.1"/>
+<text x="710.4" y="73.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="710.4" y="1137.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="840.0,62.6 840.0,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="840.0,1148.7 840.0,1135.1"/>
+<text x="969.6" y="73.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="969.6" y="1137.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1099.1,62.6 1099.1,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1099.1,1148.7 1099.1,1135.1"/>
+<text x="1228.7" y="73.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="1228.7" y="1137.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1358.2,62.6 1358.2,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1358.2,1148.7 1358.2,1135.1"/>
+<text x="1487.8" y="73.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="1487.8" y="1137.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="73.9" y="198.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">A</text>
+<text x="1606.1" y="198.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">A</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="62.6,334.1 76.2,334.1"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1617.4,334.1 1603.8,334.1"/>
+<text x="73.9" y="469.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">B</text>
+<text x="1606.1" y="469.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">B</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="62.6,605.7 76.2,605.7"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1617.4,605.7 1603.8,605.7"/>
+<text x="73.9" y="741.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">C</text>
+<text x="1606.1" y="741.4" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">C</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="62.6,877.2 76.2,877.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1617.4,877.2 1603.8,877.2"/>
+<text x="73.9" y="1012.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">D</text>
+<text x="1606.1" y="1012.9" font-size="12.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">D</text>
+<rect fill="#fffef8" stroke="#8a6d3b" stroke-width="0.8" x="1257.4" y="1023.3" width="360.0" height="125.4"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1045.3 1617.4,1045.3"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1067.3 1617.4,1067.3"/>
+<text x="1261.4" y="1056.3" font-size="11.0" dominant-baseline="central" fill="#333333">Sheet: Gateway ECU (tutorial board)</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1104.7 1617.4,1104.7"/>
+<text x="1261.4" y="1086.0" font-size="13.0" dominant-baseline="central" fill="#333333" font-weight="bold">Title: Gateway ECU (tutorial board)</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1126.7 1617.4,1126.7"/>
+<text x="1261.4" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333">Size: A4</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1365.4,1104.7 1365.4,1126.7"/>
+<text x="1369.4" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333">Date: </text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1516.6,1104.7 1516.6,1126.7"/>
+<text x="1520.6" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333" font-weight="bold">Rev: A</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1516.6,1126.7 1516.6,1148.7"/>
+<text x="1520.6" y="1137.7" font-size="11.0" dominant-baseline="central" fill="#333333">Id: 1/1</text>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,154.2 173.8,154.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,167.8 173.8,167.8"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,181.5 173.8,181.5"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,195.2 173.8,195.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,167.8 470.1,167.8"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,181.5 470.1,181.5"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,147.3 766.4,147.3"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,161.0 766.4,161.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,174.7 766.4,174.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,188.4 766.4,188.4"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,202.0 766.4,202.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,161.0 1062.7,161.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,174.7 1062.7,174.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,188.4 1062.7,188.4"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,317.8 173.8,317.8"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,331.5 173.8,331.5"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,345.2 173.8,345.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,358.9 173.8,358.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,372.6 173.8,372.6"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,386.2 173.8,386.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,399.9 173.8,399.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,413.6 173.8,413.6"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,427.3 173.8,427.3"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,441.0 173.8,441.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,345.2 470.1,345.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,358.9 470.1,358.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,372.6 470.1,372.6"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,386.2 470.1,386.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,399.9 470.1,399.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,413.6 470.1,413.6"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,358.9 766.4,358.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,372.6 766.4,372.6"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,386.2 766.4,386.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,399.9 766.4,399.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,372.6 1062.7,372.6"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,386.2 1062.7,386.2"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,577.3 173.8,577.3"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,590.9 173.8,590.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,577.3 470.1,577.3"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,590.9 470.1,590.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,577.3 766.4,577.3"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,590.9 766.4,590.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,577.3 1062.7,577.3"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,590.9 1062.7,590.9"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,782.0 173.8,782.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,795.7 173.8,795.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,782.0 470.1,782.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,795.7 470.1,795.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,782.0 766.4,782.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,795.7 766.4,795.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,782.0 1062.7,782.0"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1103.8,795.7 1062.7,795.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,986.7 173.8,986.7"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="214.9,1000.4 173.8,1000.4"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="511.2,993.5 470.1,993.5"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="807.5,993.5 766.4,993.5"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="228.6" y="140.5" width="41.1" height="68.4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,154.2 228.6,154.2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,167.8 228.6,167.8"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,181.5 228.6,181.5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,195.2 228.6,195.2"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="524.8" y="154.2" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,167.8 524.8,167.8"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,181.5 524.8,181.5"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="821.1" y="133.6" width="41.1" height="82.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,147.3 821.1,147.3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,161.0 821.1,161.0"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,174.7 821.1,174.7"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,188.4 821.1,188.4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,202.0 821.1,202.0"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="1117.4" y="147.3" width="41.1" height="54.7"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,161.0 1117.4,161.0"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,174.7 1117.4,174.7"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,188.4 1117.4,188.4"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="228.6" y="304.1" width="41.1" height="150.5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,317.8 228.6,317.8"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,331.5 228.6,331.5"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,345.2 228.6,345.2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,358.9 228.6,358.9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,372.6 228.6,372.6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,386.2 228.6,386.2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,399.9 228.6,399.9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,413.6 228.6,413.6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,427.3 228.6,427.3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,441.0 228.6,441.0"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="524.8" y="331.5" width="41.1" height="95.8"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,345.2 524.8,345.2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,358.9 524.8,358.9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,372.6 524.8,372.6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,386.2 524.8,386.2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,399.9 524.8,399.9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,413.6 524.8,413.6"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="821.1" y="345.2" width="41.1" height="68.4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,358.9 821.1,358.9"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,372.6 821.1,372.6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,386.2 821.1,386.2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,399.9 821.1,399.9"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="1117.4" y="358.9" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,372.6 1117.4,372.6"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,386.2 1117.4,386.2"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="228.6" y="563.6" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,577.3 228.6,577.3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,590.9 228.6,590.9"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="524.8" y="563.6" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,577.3 524.8,577.3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,590.9 524.8,590.9"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="821.1" y="563.6" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,577.3 821.1,577.3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,590.9 821.1,590.9"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="1117.4" y="563.6" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,577.3 1117.4,577.3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,590.9 1117.4,590.9"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="228.6" y="768.3" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,782.0 228.6,782.0"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,795.7 228.6,795.7"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="524.8" y="768.3" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,782.0 524.8,782.0"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,795.7 524.8,795.7"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="821.1" y="768.3" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,782.0 821.1,782.0"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,795.7 821.1,795.7"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="1117.4" y="768.3" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,782.0 1117.4,782.0"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="1103.8,795.7 1117.4,795.7"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="228.6" y="973.0" width="41.1" height="41.1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,986.7 228.6,986.7"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="214.9,1000.4 228.6,1000.4"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="524.8" y="979.9" width="41.1" height="27.4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="511.2,993.5 524.8,993.5"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="821.1" y="979.9" width="41.1" height="27.4"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="807.5,993.5 821.1,993.5"/>
+<text x="214.9" y="154.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="214.9" y="162.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VBAT</text>
+<text x="214.9" y="167.8" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="214.9" y="176.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="214.9" y="181.5" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="214.9" y="189.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CANH</text>
+<text x="214.9" y="195.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="214.9" y="203.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CANL</text>
+<text x="511.2" y="167.8" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="511.2" y="176.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">A</text>
+<text x="511.2" y="181.5" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="511.2" y="189.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">K</text>
+<text x="807.5" y="147.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="807.5" y="155.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VIN</text>
+<text x="807.5" y="161.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="807.5" y="169.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VOUT</text>
+<text x="807.5" y="174.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="807.5" y="183.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="807.5" y="188.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="807.5" y="196.8" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">EN</text>
+<text x="807.5" y="202.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<text x="807.5" y="210.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">PG</text>
+<text x="1103.8" y="161.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="1103.8" y="169.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VIN</text>
+<text x="1103.8" y="174.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="1103.8" y="183.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VOUT</text>
+<text x="1103.8" y="188.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="1103.8" y="196.8" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="214.9" y="317.8" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="214.9" y="326.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VDDCORE</text>
+<text x="214.9" y="331.5" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="214.9" y="339.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VDDIO</text>
+<text x="214.9" y="345.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="214.9" y="353.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="214.9" y="358.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="214.9" y="367.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">XIN</text>
+<text x="214.9" y="372.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<text x="214.9" y="381.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">XOUT</text>
+<text x="214.9" y="386.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
+<text x="214.9" y="394.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CANTX</text>
+<text x="214.9" y="399.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">7</text>
+<text x="214.9" y="408.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CANRX</text>
+<text x="214.9" y="413.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">8</text>
+<text x="214.9" y="422.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SCL</text>
+<text x="214.9" y="427.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">9</text>
+<text x="214.9" y="435.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SDA</text>
+<text x="214.9" y="441.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">10</text>
+<text x="214.9" y="449.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">NRST</text>
+<text x="511.2" y="345.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="511.2" y="353.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
+<text x="511.2" y="358.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="511.2" y="367.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="511.2" y="372.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="511.2" y="381.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">TXD</text>
+<text x="511.2" y="386.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="511.2" y="394.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">RXD</text>
+<text x="511.2" y="399.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<text x="511.2" y="408.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CANH</text>
+<text x="511.2" y="413.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
+<text x="511.2" y="422.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">CANL</text>
+<text x="807.5" y="358.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="807.5" y="367.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">VCC</text>
+<text x="807.5" y="372.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="807.5" y="381.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">GND</text>
+<text x="807.5" y="386.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="807.5" y="394.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SCL</text>
+<text x="807.5" y="399.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="807.5" y="408.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">SDA</text>
+<text x="1103.8" y="372.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="1103.8" y="381.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="1103.8" y="386.2" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="1103.8" y="394.6" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="214.9" y="577.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="214.9" y="585.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="214.9" y="590.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="214.9" y="599.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="511.2" y="577.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="511.2" y="585.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="511.2" y="590.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="511.2" y="599.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="807.5" y="577.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="807.5" y="585.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="807.5" y="590.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="807.5" y="599.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="1103.8" y="577.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="1103.8" y="585.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="1103.8" y="590.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="1103.8" y="599.3" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="214.9" y="782.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="214.9" y="790.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="214.9" y="795.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="214.9" y="804.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="511.2" y="782.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="511.2" y="790.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="511.2" y="795.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="511.2" y="804.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="807.5" y="782.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="807.5" y="790.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="807.5" y="795.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="807.5" y="804.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="1103.8" y="782.0" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="1103.8" y="790.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="1103.8" y="795.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="1103.8" y="804.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="214.9" y="986.7" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="214.9" y="995.1" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="214.9" y="1000.4" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="214.9" y="1008.8" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">2</text>
+<text x="511.2" y="993.5" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="511.2" y="1001.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="807.5" y="993.5" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="807.5" y="1001.9" font-size="6.0" text-anchor="middle" dominant-baseline="central" fill="#2a7d5a">1</text>
+<text x="173.8" y="154.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_MAIN_12V0</text>
+<text x="173.8" y="167.8" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="173.8" y="181.5" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_CANH</text>
+<text x="173.8" y="195.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_CANL</text>
+<text x="470.1" y="167.8" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_MAIN_12V0</text>
+<text x="470.1" y="181.5" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="766.4" y="147.3" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_MAIN_12V0</text>
+<text x="766.4" y="161.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="766.4" y="174.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="766.4" y="188.4" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_EN</text>
+<text x="766.4" y="202.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_PG</text>
+<text x="1062.7" y="161.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="1062.7" y="174.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_IO_1V8</text>
+<text x="1062.7" y="188.4" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="173.8" y="317.8" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_IO_1V8</text>
+<text x="173.8" y="331.5" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="173.8" y="345.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="173.8" y="358.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">XTAL_IN</text>
+<text x="173.8" y="372.6" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">XTAL_OUT</text>
+<text x="173.8" y="386.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_TXD</text>
+<text x="173.8" y="399.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_RXD</text>
+<text x="173.8" y="413.6" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">I2C_SCL</text>
+<text x="173.8" y="427.3" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">I2C_SDA</text>
+<text x="173.8" y="441.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">MCU_NRST</text>
+<text x="470.1" y="345.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="470.1" y="358.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="470.1" y="372.6" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_TXD</text>
+<text x="470.1" y="386.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_RXD</text>
+<text x="470.1" y="399.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_CANH</text>
+<text x="470.1" y="413.6" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_CANL</text>
+<text x="766.4" y="358.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="766.4" y="372.6" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="766.4" y="386.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">I2C_SCL</text>
+<text x="766.4" y="399.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">I2C_SDA</text>
+<text x="1062.7" y="372.6" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="1062.7" y="386.2" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="173.8" y="577.3" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="173.8" y="590.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="470.1" y="577.3" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_IO_1V8</text>
+<text x="470.1" y="590.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="766.4" y="577.3" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_IO_1V8</text>
+<text x="766.4" y="590.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="1062.7" y="577.3" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">XTAL_IN</text>
+<text x="1062.7" y="590.9" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="173.8" y="782.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">XTAL_OUT</text>
+<text x="173.8" y="795.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">GND</text>
+<text x="470.1" y="782.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_CANH</text>
+<text x="470.1" y="795.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">CAN1_CANL</text>
+<text x="766.4" y="782.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_EN</text>
+<text x="766.4" y="795.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_MAIN_12V0</text>
+<text x="1062.7" y="782.0" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">MCU_NRST</text>
+<text x="1062.7" y="795.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_PG</text>
+<text x="173.8" y="986.7" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">XTAL_IN</text>
+<text x="173.8" y="1000.4" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">XTAL_OUT</text>
+<text x="470.1" y="993.5" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_CORE_3V3</text>
+<text x="766.4" y="993.5" font-size="6.8" text-anchor="start" dominant-baseline="central" fill="#555555">PMIC_IO_1V8</text>
+<text x="228.6" y="110.0" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">J1</text>
+<text x="524.8" y="110.0" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">D1</text>
+<text x="821.1" y="110.0" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">U1</text>
+<text x="1117.4" y="110.0" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">U2</text>
+<text x="228.6" y="314.7" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">U3</text>
+<text x="524.8" y="314.7" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">U4</text>
+<text x="821.1" y="314.7" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">U5</text>
+<text x="1117.4" y="314.7" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">C1</text>
+<text x="1117.4" y="328.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">22uF</text>
+<text x="228.6" y="519.5" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">C2</text>
+<text x="228.6" y="532.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">100nF</text>
+<text x="524.8" y="519.5" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">C3</text>
+<text x="524.8" y="532.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">10uF</text>
+<text x="821.1" y="519.5" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">C4</text>
+<text x="821.1" y="532.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">100nF</text>
+<text x="1117.4" y="519.5" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">C5</text>
+<text x="1117.4" y="532.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">18pF</text>
+<text x="228.6" y="724.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">C6</text>
+<text x="228.6" y="737.6" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">18pF</text>
+<text x="524.8" y="724.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R1</text>
+<text x="524.8" y="737.6" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">120</text>
+<text x="821.1" y="724.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R2</text>
+<text x="821.1" y="737.6" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">10k</text>
+<text x="1117.4" y="724.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R3</text>
+<text x="1117.4" y="737.6" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">10k</text>
+<text x="228.6" y="928.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">Y1</text>
+<text x="524.8" y="928.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">TP1</text>
+<text x="821.1" y="928.9" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">TP2</text>
+</svg>

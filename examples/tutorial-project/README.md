@@ -32,6 +32,8 @@ This is the shape a real review project takes. Two kinds of file live here, and 
 |---|---|
 | `design.yaml` | the design's name and which file is its entry point |
 | `gateway.edn` | the netlist, and `gateway-rev-b.edn` a later revision of it |
+| `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
+| `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |
 | `intent.yaml` | what this board is supposed to be: declared domains, modules, subsystems |
 | `reports/<design>/` | the outcome of a run, written by `make report` |
 

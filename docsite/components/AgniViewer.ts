@@ -82,8 +82,17 @@ async function mount(host: HTMLElement): Promise<void> {
   svg.style.display = "block";
   svg.style.width = `${natW}px`;
   svg.style.height = `${natH}px`;
+  // The docs stylesheet constrains embedded media to the prose column (`max-width: 100%`), which
+  // silently squeezes this SVG's box while its viewBox keeps the aspect ratio, so the drawing
+  // letterboxes to a fraction of the stage no matter what the fit computes. The transform owns
+  // sizing here, so opt out of that constraint explicitly.
+  svg.style.maxWidth = "none";
+  svg.style.maxHeight = "none";
 
   const view: ViewState = { scale: 1, tx: 0, ty: 0 };
+  // Auto-fit stays on until the reader pans or zooms, so a late layout still lands fitted but the
+  // viewer never yanks the view back from under someone who has moved it.
+  let autoFit = true;
 
   function apply(): void {
     canvas.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
@@ -116,6 +125,7 @@ async function mount(host: HTMLElement): Promise<void> {
     "wheel",
     (e: WheelEvent) => {
       e.preventDefault();
+      autoFit = false;
       zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
     },
     { passive: false },
@@ -125,6 +135,7 @@ async function mount(host: HTMLElement): Promise<void> {
   let lastX = 0;
   let lastY = 0;
   stage.addEventListener("pointerdown", (e: PointerEvent) => {
+    autoFit = false;
     dragging = true;
     lastX = e.clientX;
     lastY = e.clientY;
@@ -161,10 +172,21 @@ async function mount(host: HTMLElement): Promise<void> {
     const r = stage.getBoundingClientRect();
     zoomAt(r.left + c.x, r.top + c.y, 1 / ZOOM_STEP);
   });
-  fitBtn.addEventListener("click", fit);
+  fitBtn.addEventListener("click", () => {
+    autoFit = false;
+    fit();
+  });
 
-  // Fit once the stage has a real size.
-  requestAnimationFrame(fit);
+  // A single rAF is not enough: on first paint the stage can still measure zero (fonts, the
+  // surrounding grid, a lazily sized parent), and fit() then clamps to MIN_SCALE and leaves the
+  // drawing as a stamp in the middle of a large empty stage. Observe instead, and keep re-fitting
+  // on resize until the reader takes control by panning or zooming.
+  const ro = new ResizeObserver(() => {
+    if (!autoFit) return;
+    const r = stage.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) fit();
+  });
+  ro.observe(stage);
 }
 
 function button(text: string, title: string): HTMLButtonElement {

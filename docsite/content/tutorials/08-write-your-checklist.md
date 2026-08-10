@@ -128,9 +128,29 @@ Some questions are about copper, and a netlist has none:
 | B1 | no track is below the fab's minimum width | not-applicable | design carries no board geometry (WS1-006 sidecar) |
 ```
 
-`not-applicable` means the question does not apply to what was loaded. Attach a board file with
-`--board-path <file.kicad_pcb>` and the same item resolves to a real pass or fail against real
-copper. Nothing about the item changes. What changed is what it had to work with.
+`not-applicable` means the question does not apply to what was loaded. Attach the board and the same
+item resolves against real copper:
+
+```
+agni review designs/gateway/gateway.edn --checklist review.yaml \
+  --conventions conventions.yaml --params params --profile-path profiles \
+  --intent-path designs/gateway/intent.yaml \
+  --board-path designs/gateway/gateway.kicad_pcb
+```
+
+```
+**3 pass, 9 fail, 0 n/a, 2 not-automated, 1 provisional (of 15)**
+
+| B1 | no track is below the fab's minimum width | fail | track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor) |
+```
+
+Nothing about the item changed. One flag changed what it had to work with, and a question that could
+not be asked became a defect with a named net.
+
+Worth being precise about what that proves. The `n/a` was not hiding a failure and it was not
+standing in for a pass. It was the honest report of a question with nothing to evaluate, and the
+only way to find out which it would have been was to supply the copper. An item that had scored
+`pass` on the netlist alone would have been wrong, and nobody would ever have checked it again.
 
 ## Growing it
 
