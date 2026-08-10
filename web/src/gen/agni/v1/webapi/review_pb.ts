@@ -4,22 +4,65 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { ReviewArea } from "../checks/checks_pb";
+import type { CheckResults, ReviewManifest } from "../checks/checks_pb";
 import { file_agni_v1_checks_checks } from "../checks/checks_pb";
 import type { OverlayConfig } from "./checks_pb";
 import { file_agni_v1_webapi_checks } from "./checks_pb";
+import type { EmptySchema } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpItcBChBSdW5SZXZpZXdSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEhIKCmRlc2lnbl9yZWYYAyADKAkSEQoJYm9hcmRfcmVmGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBEi4KB292ZXJsYXkYBiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAcgASgLMh4uYWduaS52MS53ZWJhcGkuUmV2aWV3TWFuaWZlc3RKBAgCEANSDW1hbmlmZXN0X3BhdGgiNgoYR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgsKA3JlZhgCIAEoCSJNChlHZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlEjAKCG1hbmlmZXN0GAEgASgLMh4uYWduaS52MS53ZWJhcGkuUmV2aWV3TWFuaWZlc3QiSwoOUmV2aWV3TWFuaWZlc3QSDAoEbmFtZRgBIAEoCRIrCgVhcmVhcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLk1hbmlmZXN0QXJlYSJJCgxNYW5pZmVzdEFyZWESDAoEbmFtZRgBIAEoCRIrCgVpdGVtcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLk1hbmlmZXN0SXRlbSJ6CgxNYW5pZmVzdEl0ZW0SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDAoEbm90ZRgEIAEoCRIsCgdiaW5kaW5nGAUgASgLMhsuYWduaS52MS53ZWJhcGkuSXRlbUJpbmRpbmci9gEKC0l0ZW1CaW5kaW5nEgwKBHJ1bGUYASABKAkSCwoDdGFnGAIgASgJEg8KB3Byb2ZpbGUYAyABKAkSLAoFcXVlcnkYBCABKAsyHS5hZ25pLnYxLndlYmFwaS5NYW5pZmVzdFF1ZXJ5EjAKB3ByZXNlbnQYBSABKAsyHy5hZ25pLnYxLndlYmFwaS5NYW5pZmVzdFByZXNlbnQSLAoFc2NvcGUYBiABKAsyHS5hZ25pLnYxLndlYmFwaS5NYW5pZmVzdFNjb3BlEhMKC3JlcXVpcmVtZW50GAcgASgJEhgKEGFwcGxpZXNfdG9fY2xhc3MYCCADKAkidgoNTWFuaWZlc3RRdWVyeRINCgVtYXRjaBgBIAEoCRIPCgdzdWJqZWN0GAIgASgJEgwKBGtpbmQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIQCghzZXZlcml0eRgFIAEoCRIUCgxwYXJhbV9zeW1ib2wYBiABKAkiIAoPTWFuaWZlc3RQcmVzZW50Eg0KBWNsYXNzGAEgASgJIiEKDU1hbmlmZXN0U2NvcGUSEAoIcHJvZmlsZXMYASADKAkiWwoMUmV2aWV3UmVwb3J0EhAKCG1hbmlmZXN0GAEgASgJEg4KBmRlc2lnbhgCIAEoCRIpCgVhcmVhcxgDIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJldmlld0FyZWEiVAoRUnVuUmV2aWV3UmVzcG9uc2USEAoIbWFuaWZlc3QYASABKAkSLQoHcmVwb3J0cxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLlJldmlld1JlcG9ydDLLAQoNUmV2aWV3U2VydmljZRJQCglSdW5SZXZpZXcSIC5hZ25pLnYxLndlYmFwaS5SdW5SZXZpZXdSZXF1ZXN0GiEuYWduaS52MS53ZWJhcGkuUnVuUmV2aWV3UmVzcG9uc2USaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMi4AEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDQoFbW91bnQYASABKAkSEQoJYm9hcmRfcmVmGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBEi4KB292ZXJsYXkYBiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAcgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QSEgoKZGVzaWduX3JlZhgIIAEoCUoECAIQA0oECAMQBFINbWFuaWZlc3RfcGF0aCIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiSwoSTGlzdFJldmlld3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJXChNMaXN0UmV2aWV3c1Jlc3BvbnNlEicKB3Jldmlld3MYASADKAsyFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKE0RlbGV0ZVJldmlld1JlcXVlc3QSDAoEbmFtZRgBIAEoCSI2ChhHZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QSDQoFbW91bnQYASABKAkSCwoDcmVmGAIgASgJIk0KGUdldFJldmlld01hbmlmZXN0UmVzcG9uc2USMAoIbWFuaWZlc3QYASABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdDKyAwoNUmV2aWV3U2VydmljZRJLCgxDcmVhdGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EkUKCUdldFJldmlldxIgLmFnbmkudjEud2ViYXBpLkdldFJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSVgoLTGlzdFJldmlld3MSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1Jlc3BvbnNlEksKDERlbGV0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJldmlld1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
 
 /**
- * @generated from message agni.v1.webapi.RunReviewRequest
+ * Review is one stored review run.
+ *
+ * The resource is little more than a name plus the document, and that is the point: the document was
+ * already designed to be self-contained, so making runs addressable needed an identity and a store,
+ * not a new payload. Anything a consumer needs to render, diff, or archive this run is inside
+ * `results`.
+ *
+ * @generated from message agni.v1.webapi.Review
  */
-export type RunReviewRequest = Message<"agni.v1.webapi.RunReviewRequest"> & {
+export type Review = Message<"agni.v1.webapi.Review"> & {
+  /**
+   * name is the resource name, "reviews/{review}". The id is server-assigned, opaque, and
+   * time-sortable, so a listing is chronological without opening every document.
+   *
+   * Reviews are a FLAT collection rather than nested under a mount. A run is stored in the server's
+   * review volume, not inside the design's mount, so nesting would assert an ownership that does not
+   * exist and would break the moment a design moved between mounts. Which design a run was about is
+   * recorded where it belongs, in results.design.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * results is the self-contained document: meta (producer, created_at), the design ref and its
+   * content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
+   * item outcomes.
+   *
+   * @generated from field: agni.v1.checks.CheckResults results = 2;
+   */
+  results?: CheckResults | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.Review.
+ * Use `create(ReviewSchema)` to create a new message.
+ */
+export const ReviewSchema: GenMessage<Review> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 0);
+
+/**
+ * @generated from message agni.v1.webapi.CreateReviewRequest
+ */
+export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> & {
   /**
    * workspace mount the refs resolve within (mounts.Resolve containment)
    *
@@ -28,23 +71,12 @@ export type RunReviewRequest = Message<"agni.v1.webapi.RunReviewRequest"> & {
   mount: string;
 
   /**
-   * design_ref is one or more designs to run: one design yields a per-item report; several yield a
-   * project rollup (one report each, in this order = the CLI's multi-design surface).
-   *
-   * A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
-   * Nothing above the Loader may treat it as one. Designs stay refs rather than values (C22's
-   * artifact exception) because a netlist is megabytes, needs format-reader dispatch by extension,
-   * and is re-requested across many RPCs.
-   *
-   * @generated from field: repeated string design_ref = 3;
-   */
-  designRef: string[];
-
-  /**
    * board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
    * items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
-   * a netlist entry then reads its board items not-applicable, as before. Same ref semantics as
-   * design_ref.
+   * a netlist entry then reads its board items not-applicable, as before.
+   *
+   * A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
+   * Nothing above the Loader may treat it as one.
    *
    * @generated from field: string board_ref = 4;
    */
@@ -60,7 +92,7 @@ export type RunReviewRequest = Message<"agni.v1.webapi.RunReviewRequest"> & {
 
   /**
    * overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
-   * service was constructed with, so an existing caller is unchanged.
+   * service was constructed with.
    *
    * @generated from field: agni.v1.webapi.OverlayConfig overlay = 6;
    */
@@ -68,20 +100,129 @@ export type RunReviewRequest = Message<"agni.v1.webapi.RunReviewRequest"> & {
 
   /**
    * manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
-   * that never passed through the YAML loader (one a browser form built, one a test wrote inline)
-   * is held to exactly the same rules as one read from a file.
+   * that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
+   * held to exactly the same rules as one read from a file. It is also stored with the run, so the
+   * archived document scores against the checklist it actually saw.
    *
-   * @generated from field: agni.v1.webapi.ReviewManifest manifest = 7;
+   * @generated from field: agni.v1.checks.ReviewManifest manifest = 7;
    */
   manifest?: ReviewManifest | undefined;
+
+  /**
+   * design_ref is the one design this run is about, with the same ref semantics as board_ref.
+   *
+   * @generated from field: string design_ref = 8;
+   */
+  designRef: string;
 };
 
 /**
- * Describes the message agni.v1.webapi.RunReviewRequest.
- * Use `create(RunReviewRequestSchema)` to create a new message.
+ * Describes the message agni.v1.webapi.CreateReviewRequest.
+ * Use `create(CreateReviewRequestSchema)` to create a new message.
  */
-export const RunReviewRequestSchema: GenMessage<RunReviewRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 0);
+export const CreateReviewRequestSchema: GenMessage<CreateReviewRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 1);
+
+/**
+ * @generated from message agni.v1.webapi.GetReviewRequest
+ */
+export type GetReviewRequest = Message<"agni.v1.webapi.GetReviewRequest"> & {
+  /**
+   * "reviews/{review}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.GetReviewRequest.
+ * Use `create(GetReviewRequestSchema)` to create a new message.
+ */
+export const GetReviewRequestSchema: GenMessage<GetReviewRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 2);
+
+/**
+ * @generated from message agni.v1.webapi.ListReviewsRequest
+ */
+export type ListReviewsRequest = Message<"agni.v1.webapi.ListReviewsRequest"> & {
+  /**
+   * page_size is the maximum number of reviews to return. 0 uses the server default; the server may
+   * return fewer.
+   *
+   * @generated from field: int32 page_size = 1;
+   */
+  pageSize: number;
+
+  /**
+   * page_token continues a previous call. An empty token starts at the newest run.
+   *
+   * @generated from field: string page_token = 2;
+   */
+  pageToken: string;
+
+  /**
+   * filter narrows the listing (AIP-160). Only `design` is supported: `design="proj/board.kicad_sch"`
+   * matches results.design.source exactly. An unsupported filter is an error rather than a silently
+   * ignored argument, because a client that believed it had filtered and did not would read another
+   * board's verdicts as its own.
+   *
+   * @generated from field: string filter = 3;
+   */
+  filter: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListReviewsRequest.
+ * Use `create(ListReviewsRequestSchema)` to create a new message.
+ */
+export const ListReviewsRequestSchema: GenMessage<ListReviewsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 3);
+
+/**
+ * @generated from message agni.v1.webapi.ListReviewsResponse
+ */
+export type ListReviewsResponse = Message<"agni.v1.webapi.ListReviewsResponse"> & {
+  /**
+   * reviews are ordered newest first.
+   *
+   * @generated from field: repeated agni.v1.webapi.Review reviews = 1;
+   */
+  reviews: Review[];
+
+  /**
+   * next_page_token is empty when the last page has been reached.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ListReviewsResponse.
+ * Use `create(ListReviewsResponseSchema)` to create a new message.
+ */
+export const ListReviewsResponseSchema: GenMessage<ListReviewsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 4);
+
+/**
+ * @generated from message agni.v1.webapi.DeleteReviewRequest
+ */
+export type DeleteReviewRequest = Message<"agni.v1.webapi.DeleteReviewRequest"> & {
+  /**
+   * "reviews/{review}"
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DeleteReviewRequest.
+ * Use `create(DeleteReviewRequestSchema)` to create a new message.
+ */
+export const DeleteReviewRequestSchema: GenMessage<DeleteReviewRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_review, 5);
 
 /**
  * @generated from message agni.v1.webapi.GetReviewManifestRequest
@@ -95,7 +236,7 @@ export type GetReviewManifestRequest = Message<"agni.v1.webapi.GetReviewManifest
   mount: string;
 
   /**
-   * ref names the stored checklist, with the same ref semantics as RunReviewRequest.design_ref: a
+   * ref names the stored checklist, with the same ref semantics as CreateReviewRequest.board_ref: a
    * key the Loader resolves, never a host path.
    *
    * @generated from field: string ref = 2;
@@ -108,14 +249,14 @@ export type GetReviewManifestRequest = Message<"agni.v1.webapi.GetReviewManifest
  * Use `create(GetReviewManifestRequestSchema)` to create a new message.
  */
 export const GetReviewManifestRequestSchema: GenMessage<GetReviewManifestRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 1);
+  messageDesc(file_agni_v1_webapi_review, 6);
 
 /**
  * @generated from message agni.v1.webapi.GetReviewManifestResponse
  */
 export type GetReviewManifestResponse = Message<"agni.v1.webapi.GetReviewManifestResponse"> & {
   /**
-   * @generated from field: agni.v1.webapi.ReviewManifest manifest = 1;
+   * @generated from field: agni.v1.checks.ReviewManifest manifest = 1;
    */
   manifest?: ReviewManifest | undefined;
 };
@@ -125,366 +266,91 @@ export type GetReviewManifestResponse = Message<"agni.v1.webapi.GetReviewManifes
  * Use `create(GetReviewManifestResponseSchema)` to create a new message.
  */
 export const GetReviewManifestResponseSchema: GenMessage<GetReviewManifestResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 2);
-
-/**
- * ReviewManifest is a project's review checklist, the wire form of review.Manifest: named review
- * areas, each holding items, each item bound to the check that verifies it.
- *
- * It is CONFIG, not an artifact, which is why it travels as a value while a design travels as a ref
- * (C22). The distinction is size and dispatch, not importance: a manifest is a small declaration the
- * caller already holds and the service composes into behaviour, so a service that took a path would
- * have to own file I/O to do its job and would bake one deployment's filesystem into the API.
- *
- * The authoring form is YAML and stays that way. This message mirrors the parsed struct rather than
- * the file, so an item's binding is a nested message here where the YAML inlines it flat.
- *
- * @generated from message agni.v1.webapi.ReviewManifest
- */
-export type ReviewManifest = Message<"agni.v1.webapi.ReviewManifest"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * @generated from field: repeated agni.v1.webapi.ManifestArea areas = 2;
-   */
-  areas: ManifestArea[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ReviewManifest.
- * Use `create(ReviewManifestSchema)` to create a new message.
- */
-export const ReviewManifestSchema: GenMessage<ReviewManifest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 3);
-
-/**
- * ManifestArea is one review area (e.g. "CAN Interface") grouping related checklist items. It is the
- * ASKING side and is deliberately distinct from agni.v1.checks.ReviewArea, which is the ANSWERING
- * side (the same areas carrying each item's outcome after a run).
- *
- * @generated from message agni.v1.webapi.ManifestArea
- */
-export type ManifestArea = Message<"agni.v1.webapi.ManifestArea"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * @generated from field: repeated agni.v1.webapi.ManifestItem items = 2;
-   */
-  items: ManifestItem[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ManifestArea.
- * Use `create(ManifestAreaSchema)` to create a new message.
- */
-export const ManifestAreaSchema: GenMessage<ManifestArea> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 4);
-
-/**
- * ManifestItem is one checklist entry. title is the short human review label shown in a report;
- * description is an optional longer explanation; note is an optional hint shown for an item that did
- * not fail, most usefully WHY an item is not automated. id names the item in the report.
- *
- * An item with no binding, or one bound to a rule that has not shipped, is tracked but not automated.
- * That is a feature: bind it to its intended future rule name and it flips to pass/fail on its own
- * once that rule lands.
- *
- * @generated from message agni.v1.webapi.ManifestItem
- */
-export type ManifestItem = Message<"agni.v1.webapi.ManifestItem"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string title = 2;
-   */
-  title: string;
-
-  /**
-   * @generated from field: string description = 3;
-   */
-  description: string;
-
-  /**
-   * @generated from field: string note = 4;
-   */
-  note: string;
-
-  /**
-   * @generated from field: agni.v1.webapi.ItemBinding binding = 5;
-   */
-  binding?: ItemBinding | undefined;
-};
-
-/**
- * Describes the message agni.v1.webapi.ManifestItem.
- * Use `create(ManifestItemSchema)` to create a new message.
- */
-export const ManifestItemSchema: GenMessage<ManifestItem> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 5);
-
-/**
- * ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
- * profile, query, present); they are mutually exclusive and a second one is a validation error, not a
- * precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than selectors, so
- * they do not count toward that limit and compose with whichever selector is set.
- *
- * @generated from message agni.v1.webapi.ItemBinding
- */
-export type ItemBinding = Message<"agni.v1.webapi.ItemBinding"> & {
-  /**
-   * a catalog rule by exact name, e.g. "profile/can-termination-missing"
-   *
-   * @generated from field: string rule = 1;
-   */
-  rule: string;
-
-  /**
-   * key=value, selecting a set of rules
-   *
-   * @generated from field: string tag = 2;
-   */
-  tag: string;
-
-  /**
-   * an interface profile name (sugar for the profile tag)
-   *
-   * @generated from field: string profile = 3;
-   */
-  profile: string;
-
-  /**
-   * @generated from field: agni.v1.webapi.ManifestQuery query = 4;
-   */
-  query?: ManifestQuery | undefined;
-
-  /**
-   * @generated from field: agni.v1.webapi.ManifestPresent present = 5;
-   */
-  present?: ManifestPresent | undefined;
-
-  /**
-   * scope narrows a rule/tag binding to the nets of one or more interfaces, so a per-interface ask
-   * reflects only its bus instead of a design-wide rule's whole output (WS3-058). It requires a rule
-   * or tag to filter.
-   *
-   * @generated from field: agni.v1.webapi.ManifestScope scope = 6;
-   */
-  scope?: ManifestScope | undefined;
-
-  /**
-   * requirement narrows a profile binding to ONE of that profile's declared requirements (WS3-115),
-   * so a profile's requirement list can GROW without re-scoring every item already bound to it.
-   * Requires profile to be set.
-   *
-   * @generated from field: string requirement = 7;
-   */
-  requirement: string;
-
-  /**
-   * applies_to_class gates the item on device class (WS10-014): computed-n/a when no component
-   * carries any of these classes. Values are component.class names, family tags included.
-   *
-   * @generated from field: repeated string applies_to_class = 8;
-   */
-  appliesToClass: string[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ItemBinding.
- * Use `create(ItemBindingSchema)` to create a new message.
- */
-export const ItemBindingSchema: GenMessage<ItemBinding> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 6);
-
-/**
- * ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
- * program, whose goal must project subject; message is the finding template, where {var} is replaced
- * by the bound value. kind defaults to "component" and severity to "warning".
- *
- * @generated from message agni.v1.webapi.ManifestQuery
- */
-export type ManifestQuery = Message<"agni.v1.webapi.ManifestQuery"> & {
-  /**
-   * @generated from field: string match = 1;
-   */
-  match: string;
-
-  /**
-   * @generated from field: string subject = 2;
-   */
-  subject: string;
-
-  /**
-   * @generated from field: string kind = 3;
-   */
-  kind: string;
-
-  /**
-   * @generated from field: string message = 4;
-   */
-  message: string;
-
-  /**
-   * @generated from field: string severity = 5;
-   */
-  severity: string;
-
-  /**
-   * param_symbol names the datasheet symbol this query checks (e.g. "IOUT"). It does not change the
-   * query logic; the finding gains a structured datasheet citation resolved from the subject's spec.
-   *
-   * @generated from field: string param_symbol = 6;
-   */
-  paramSymbol: string;
-};
-
-/**
- * Describes the message agni.v1.webapi.ManifestQuery.
- * Use `create(ManifestQuerySchema)` to create a new message.
- */
-export const ManifestQuerySchema: GenMessage<ManifestQuery> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_review, 7);
 
 /**
- * ManifestPresent asserts that a class of component must EXIST on the design: the item passes when at
- * least one is present and fails when none is. It is never not-applicable, because the
- * component-class tier exists on any netlist, so the presence question always has a pass/fail answer.
+ * ReviewService manages review RUNS as resources (WS9-053). A run used to be a call: you sent a
+ * checklist and a design, got outcomes back, and nothing remained. That is the wrong shape for what
+ * a review actually is. A checklist verdict is the artifact a team acts on over weeks, compares
+ * between revisions, and gates a release on, and every one of those uses needs the run to still
+ * exist tomorrow.
  *
- * @generated from message agni.v1.webapi.ManifestPresent
- */
-export type ManifestPresent = Message<"agni.v1.webapi.ManifestPresent"> & {
-  /**
-   * @generated from field: string class = 1;
-   */
-  class: string;
-};
-
-/**
- * Describes the message agni.v1.webapi.ManifestPresent.
- * Use `create(ManifestPresentSchema)` to create a new message.
- */
-export const ManifestPresentSchema: GenMessage<ManifestPresent> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 8);
-
-/**
- * ManifestScope names the interfaces a rule/tag binding is filtered to. The effective scope is the
- * UNION of their nets, so one item can span several buses.
+ * So a run is created, fetched, listed, and deleted, and what it produces is the same self-contained
+ * agni.v1.checks.CheckResults document `agni review --results-out` writes. Everything needed to
+ * re-render a run lives inside it, including the checklist snapshot, so a review from last quarter
+ * renders against the checklist it actually scored rather than whatever that file says today.
  *
- * @generated from message agni.v1.webapi.ManifestScope
- */
-export type ManifestScope = Message<"agni.v1.webapi.ManifestScope"> & {
-  /**
-   * @generated from field: repeated string profiles = 1;
-   */
-  profiles: string[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ManifestScope.
- * Use `create(ManifestScopeSchema)` to create a new message.
- */
-export const ManifestScopeSchema: GenMessage<ManifestScope> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 9);
-
-/**
- * ReviewReport is one design's review result (the wire form of review.Report): the manifest and
- * design names plus each area's item outcomes. A client derives the tally (covered / pass / fail /
- * ...) from the item outcomes, the same pure function review.Report.Tally() applies, so the two
- * surfaces cannot drift on it.
+ * This service is deliberately AIP-shaped where the rest of this API is verb-shaped (see
+ * CONSTRAINTS C23). The difference is not stylistic: every other rpc here is a pure function of
+ * files on disk, so `GetDesign(mount, path)` names its whole input. A review run has a lifetime
+ * independent of its inputs and therefore needs an identity of its own.
  *
- * @generated from message agni.v1.webapi.ReviewReport
- */
-export type ReviewReport = Message<"agni.v1.webapi.ReviewReport"> & {
-  /**
-   * @generated from field: string manifest = 1;
-   */
-  manifest: string;
-
-  /**
-   * @generated from field: string design = 2;
-   */
-  design: string;
-
-  /**
-   * @generated from field: repeated agni.v1.checks.ReviewArea areas = 3;
-   */
-  areas: ReviewArea[];
-};
-
-/**
- * Describes the message agni.v1.webapi.ReviewReport.
- * Use `create(ReviewReportSchema)` to create a new message.
- */
-export const ReviewReportSchema: GenMessage<ReviewReport> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 10);
-
-/**
- * @generated from message agni.v1.webapi.RunReviewResponse
- */
-export type RunReviewResponse = Message<"agni.v1.webapi.RunReviewResponse"> & {
-  /**
-   * @generated from field: string manifest = 1;
-   */
-  manifest: string;
-
-  /**
-   * reports is one ReviewReport per requested design, in request order (= column order in a rollup).
-   *
-   * @generated from field: repeated agni.v1.webapi.ReviewReport reports = 2;
-   */
-  reports: ReviewReport[];
-};
-
-/**
- * Describes the message agni.v1.webapi.RunReviewResponse.
- * Use `create(RunReviewResponseSchema)` to create a new message.
- */
-export const RunReviewResponseSchema: GenMessage<RunReviewResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_review, 11);
-
-/**
- * ReviewService runs a review checklist manifest over one or more designs and returns each item's
- * outcome. The overlay knobs (--profile-path / --intent-path / --params) are serve-startup config
- * (like CheckService's --params), composed once into the catalog the service holds, so a request
- * carries the manifest, names the design(s) and an optional separate board export, and sets the
- * ratified-data floor. With one design the response is a single per-item report; with several it is
- * a rollup (one report per design, in request order), the same single-vs-rollup split the CLI
- * renders.
- *
- * The two RPCs split along the seam CONSTRAINTS C22 draws (WS9-050). RunReview takes the checklist
- * as a VALUE and therefore does no file I/O to do its job: it is callable by a host with no
- * filesystem at all. GetReviewManifest is the one place a stored checklist becomes such a value, so
- * the read is named rather than hidden inside the run. A caller that already holds a manifest (the
- * CLI reads the YAML the user named) skips it entirely.
+ * The overlay knobs (--profile-path / --intent-path / --params) remain serve-startup config composed
+ * once into the catalog the service holds, so a create carries the checklist, names the design and
+ * an optional separate board export, and sets the ratified-data floor.
  *
  * @generated from service agni.v1.webapi.ReviewService
  */
 export const ReviewService: GenService<{
   /**
-   * RunReview runs the manifest against each requested design and returns a report per design. An
-   * invalid or absent manifest, an unreadable design, or a board_ref at a file carrying no board
-   * geometry is an error (the run is all-or-nothing, so a partial read never reports items clean
-   * without checking them).
+   * CreateReview runs the checklist against the design and persists the result, returning the stored
+   * Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
+   * board_ref at a file carrying no board geometry is an error, so a partial read never reports items
+   * clean without checking them. Nothing is stored when the run fails.
    *
-   * @generated from rpc agni.v1.webapi.ReviewService.RunReview
+   * It is synchronous. A review is a check sweep per item and finishes in the time a request can
+   * wait, so this returns the Review itself rather than an Operation. If that stops being true the
+   * answer is AIP-151, not a client-side poll invented here.
+   *
+   * One review is about ONE design. A project rollup is several Reviews, because a document carries
+   * a single DesignRef on purpose: averaging several designs into one document would misrepresent
+   * every one of them.
+   *
+   * @generated from rpc agni.v1.webapi.ReviewService.CreateReview
    */
-  runReview: {
+  createReview: {
     methodKind: "unary";
-    input: typeof RunReviewRequestSchema;
-    output: typeof RunReviewResponseSchema;
+    input: typeof CreateReviewRequestSchema;
+    output: typeof ReviewSchema;
   },
   /**
-   * GetReviewManifest resolves a stored checklist into the value RunReview takes. It parses AND
-   * validates, so a client learns its manifest is malformed once, here, rather than on every run.
+   * GetReview returns a stored run by name. The document is self-contained, so this needs neither the
+   * design nor the checklist to still exist.
+   *
+   * @generated from rpc agni.v1.webapi.ReviewService.GetReview
+   */
+  getReview: {
+    methodKind: "unary";
+    input: typeof GetReviewRequestSchema;
+    output: typeof ReviewSchema;
+  },
+  /**
+   * ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
+   * design so a client can ask the question it actually has ("how has THIS board been trending").
+   *
+   * @generated from rpc agni.v1.webapi.ReviewService.ListReviews
+   */
+  listReviews: {
+    methodKind: "unary";
+    input: typeof ListReviewsRequestSchema;
+    output: typeof ListReviewsResponseSchema;
+  },
+  /**
+   * DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
+   * a silent success, because a client asking to delete something that is not there has a stale view
+   * and is better told so.
+   *
+   * @generated from rpc agni.v1.webapi.ReviewService.DeleteReview
+   */
+  deleteReview: {
+    methodKind: "unary";
+    input: typeof DeleteReviewRequestSchema;
+    output: typeof EmptySchema;
+  },
+  /**
+   * GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
+   * validates, so a client learns its manifest is malformed once, here, rather than on every run. A
+   * caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
    *
    * @generated from rpc agni.v1.webapi.ReviewService.GetReviewManifest
    */

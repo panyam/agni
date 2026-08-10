@@ -507,20 +507,32 @@ func reviewCmd() *cobra.Command {
 				}
 				specs = set
 			}
-			svc := service.NewReviewService(&localLoader{loader: newLoader()}, catalog, byName, specs)
-			resp, err := svc.RunReview(cmd.Context(), &webapi.RunReviewRequest{
-				Manifest: service.ManifestProto(man), DesignRef: args, BoardRef: boardPath, RatifiedFloor: ratifiedFloor,
-				// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
-				// and the web reach one composition path, and its lexicon half travels with the design
-				// read instead of being installed in a process global.
-				Overlay: overlay,
-			})
-			if err != nil {
-				return err
+			// The CLI stays a thin client of the service (WS9-048), which now creates review RESOURCES
+			// (WS9-053). It runs over an IN-MEMORY store on purpose: `agni review` prints a report and
+			// must not leave files behind as a side effect of being run, and --results-out is the
+			// explicit, user-asked-for way to write one. Same engine path as a served create, so the two
+			// surfaces still cannot disagree about an outcome.
+			env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
+			svc := service.NewReviewService(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), catalog, byName, specs, env)
+			// One create per design: a stored run is about ONE design, so the CLI's multi-design rollup is
+			// several runs rather than one call. The loop is the rollup.
+			var docs []*checkspb.CheckResults
+			for _, design := range args {
+				rv, err := svc.CreateReview(cmd.Context(), &webapi.CreateReviewRequest{
+					Manifest: service.ManifestProto(man), DesignRef: design, BoardRef: boardPath, RatifiedFloor: ratifiedFloor,
+					// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
+					// and the web reach one composition path, and its lexicon half travels with the design
+					// read instead of being installed in a process global.
+					Overlay: overlay,
+				})
+				if err != nil {
+					return err
+				}
+				docs = append(docs, rv.GetResults())
 			}
-			// Map the proto response back to the Go view-model and render with the existing renderers — the
-			// CLI analogue of the web tier's reportFromWire, so both surfaces start from one wire shape.
-			reports := reportsFromProto(resp)
+			// Map the stored documents back to the Go view-model and render with the existing renderers —
+			// the CLI analogue of the web tier's reportFromWire, so both surfaces start from one shape.
+			reports := reportsFromDocs(docs)
 			// --render bakes each design's findings into annotated schematic SVGs (WS7-043): the report's
 			// finding->picture side. The summary goes to stderr so stdout stays a clean report to redirect.
 			if renderDir != "" {
@@ -538,15 +550,11 @@ func reviewCmd() *cobra.Command {
 				if len(reports) != 1 {
 					return fmt.Errorf("--results-out writes one design's document; got %d designs (run it per design)", len(reports))
 				}
-				doc := resultsDoc(args[0], catalog.Rules(), nil, &checkspb.RunConfig{
-					Params:         paramsDir != "",
-					Profiles:       profilePath != "",
-					Intent:         intentPath != "",
-					Conventions:    overlay.GetConventions().GetName(),
-					RatifiedFloor:  ratifiedFloor,
-				})
-				doc.Manifest = resp.GetManifest()
-				doc.Areas = resp.GetReports()[0].GetAreas()
+				// The service already built the whole document, snapshot and catalog included, so this
+				// writes what the run produced rather than reassembling a second one beside it. The
+				// previous code built a parallel document here and copied two fields across, which is
+				// exactly how a --results-out file drifts from what the run actually recorded.
+				doc := docs[0]
 				if err := writeResults(resultsOut, doc); err != nil {
 					return err
 				}
@@ -568,7 +576,7 @@ func reviewCmd() *cobra.Command {
 					return fmt.Errorf("review: unknown --format %q (want markdown or json)", format)
 				}
 			} else {
-				agg := review.Aggregate{Manifest: resp.GetManifest(), Reports: reports}
+				agg := review.Aggregate{Manifest: man.Name, Reports: reports}
 				switch {
 				case coverage:
 					out = review.RenderAggregateCoverageMarkdown(agg)

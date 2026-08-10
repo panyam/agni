@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/panyam/agni/core/review"
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
 // This file is the review manifest's wire <-> value conversion, the manifest half of what overlay.go
@@ -22,7 +22,7 @@ import (
 // It does NOT validate. Conversion and validation are separate so a caller decides when to pay for
 // the query compilation that validation performs, and so a validation failure names the manifest
 // rather than the conversion. Every service path that converts an inbound manifest validates it.
-func ManifestFromProto(p *webapi.ReviewManifest) review.Manifest {
+func ManifestFromProto(p *checkspb.ReviewManifest) review.Manifest {
 	if p == nil {
 		return review.Manifest{}
 	}
@@ -45,12 +45,12 @@ func ManifestFromProto(p *webapi.ReviewManifest) review.Manifest {
 
 // ManifestProto converts an engine manifest to its wire form, for a caller that obtained one from its
 // own source (the CLI reads the YAML file the user named with --checklist) and now has to send it.
-func ManifestProto(m review.Manifest) *webapi.ReviewManifest {
-	p := &webapi.ReviewManifest{Name: m.Name}
+func ManifestProto(m review.Manifest) *checkspb.ReviewManifest {
+	p := &checkspb.ReviewManifest{Name: m.Name}
 	for _, a := range m.Areas {
-		area := &webapi.ManifestArea{Name: a.Name}
+		area := &checkspb.ManifestArea{Name: a.Name}
 		for _, it := range a.Items {
-			area.Items = append(area.Items, &webapi.ManifestItem{
+			area.Items = append(area.Items, &checkspb.ManifestItem{
 				Id:          it.ID,
 				Title:       it.Title,
 				Description: it.Description,
@@ -63,7 +63,7 @@ func ManifestProto(m review.Manifest) *webapi.ReviewManifest {
 	return p
 }
 
-func bindingFromProto(p *webapi.ItemBinding) review.Binding {
+func bindingFromProto(p *checkspb.ItemBinding) review.Binding {
 	b := review.Binding{
 		Rule:           p.GetRule(),
 		Tag:            p.GetTag(),
@@ -91,8 +91,8 @@ func bindingFromProto(p *webapi.ItemBinding) review.Binding {
 // present binding (an empty one fails validation for its missing class), and a non-nil Query counts
 // toward the mutually-exclusive binding limit. Materializing an empty message would turn every plain
 // rule item into an item with three extra bindings.
-func bindingProto(b review.Binding) *webapi.ItemBinding {
-	p := &webapi.ItemBinding{
+func bindingProto(b review.Binding) *checkspb.ItemBinding {
+	p := &checkspb.ItemBinding{
 		Rule:           b.Rule,
 		Tag:            b.Tag,
 		Profile:        b.Profile,
@@ -100,16 +100,16 @@ func bindingProto(b review.Binding) *webapi.ItemBinding {
 		AppliesToClass: b.AppliesToClass,
 	}
 	if b.Query != nil {
-		p.Query = &webapi.ManifestQuery{
+		p.Query = &checkspb.ManifestQuery{
 			Match: b.Query.Match, Subject: b.Query.Subject, Kind: b.Query.Kind,
 			Message: b.Query.Message, Severity: b.Query.Severity, ParamSymbol: b.Query.ParamSymbol,
 		}
 	}
 	if b.Present != nil {
-		p.Present = &webapi.ManifestPresent{Class: b.Present.Class}
+		p.Present = &checkspb.ManifestPresent{Class: b.Present.Class}
 	}
 	if len(b.Scope.Profiles) > 0 {
-		p.Scope = &webapi.ManifestScope{Profiles: b.Scope.Profiles}
+		p.Scope = &checkspb.ManifestScope{Profiles: b.Scope.Profiles}
 	}
 	return p
 }

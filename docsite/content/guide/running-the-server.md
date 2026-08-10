@@ -108,6 +108,38 @@ design this server reads, so point it at rules that suit the whole mounted set r
 project. See [interface profiles](../interface-profiles/) and
 [naming conventions](../naming-conventions/).
 
+## Keeping review runs
+
+`serve --review-store <dir>` turns review runs into things the server keeps. Without it the server
+still serves everything else, and the review endpoints answer that they store no reviews rather than
+running a checklist and dropping the result.
+
+The store is a directory the server writes to, so in a container give it its own volume:
+
+```
+docker run -p 8080:8080 \
+  -v ~/boards:/workspace/boards \
+  -v agni-reviews:/var/lib/agni/reviews \
+  ghcr.io/panyam/agni:v0.1.1 \
+  serve --addr :8080 --mount-root /workspace \
+        --review-store /var/lib/agni/reviews \
+        web
+```
+
+It is deliberately a different volume from your board folders. Design mounts are read-only, and
+keeping runs somewhere else is what preserves that: nothing the server saves ever lands beside your
+schematics. A named volume also survives `docker rm`, which is the point of storing runs at all.
+
+Each run is one file, written in the same format `agni review --results-out` produces, so the volume
+stays readable with ordinary tools and a run can be copied out and rendered anywhere. A run records
+the checklist it scored, not a pointer to it, so editing your `review.yaml` afterwards never
+rewrites what an older run says it asked.
+
+Two things to know before you rely on it. Runs are visible to every client of the server, because
+`agni serve` has no authentication yet, so treat the store the way you treat the mounts: fine for one
+team on a trusted network, not a boundary between teams. And nothing prunes it, so a CI job creating
+a run per commit will grow the volume until you delete runs yourself.
+
 ## Writes and file ownership
 
 The datasheets workbench writes back into a mount: saving a PartSpec or an annotation lands a file

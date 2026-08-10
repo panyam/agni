@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -13,14 +17,21 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/profiles"
 	"github.com/panyam/agni/stdlib/rules/intent"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// ErrReviewStoreNotConfigured is returned by every review resource method when the server was started
+// without a review store. It is its own sentinel, like ErrNativeNotEnabled and ErrExtractNotEnabled,
+// so the transport can map it to a failed-precondition rather than a generic invalid argument: the
+// request was fine, the deployment is not configured to answer it.
+var ErrReviewStoreNotConfigured = errors.New("no review store configured")
 
 // ReviewLoader is the narrow file surface ReviewService needs: the netlist design, an optional
 // separate board export (WS3-089), and a stored checklist manifest — all mount-scoped by the impl. It
 // is a subset of the fat service.Loader plus Manifest, defined at the point of use so the service
 // depends only on what it reads (the fat Loader stays the design/render services' contract).
 //
-// Manifest is deliberately NOT on the RunReview path (WS9-050). RunReview takes the checklist as a
+// Manifest is deliberately NOT on the run path (WS9-050). CreateReview takes the checklist as a
 // value, so it needs no loader at all to score a design; this method backs GetReviewManifest alone,
 // which exists so a client that only holds a ref can obtain that value. The refs are keys the impl
 // resolves inside a mount, never host paths the service may interpret (C22).
@@ -28,6 +39,31 @@ type ReviewLoader interface {
 	Design(ctx context.Context, mount, ref string, opts ...ReadOption) (*ir.Design, error)
 	Board(ctx context.Context, mount, ref string) (*geom.BoardGeometry, error)
 	Manifest(ctx context.Context, mount, ref string) (review.Manifest, error)
+	// DesignHash returns "sha256:<hex>" over the design's bytes, the revision identity a stored run
+	// records so a document is never silently re-read against a design that has since changed. It is on
+	// the loader because hashing means reading bytes, and this package does no I/O (C13/C22).
+	//
+	// An unreadable design is NOT an error here: the run itself already succeeded, so failing a whole
+	// create over a provenance field would be worse than a document that honestly records no hash.
+	// Return ("", nil) in that case, which DesignRef.content_hash explicitly allows.
+	DesignHash(ctx context.Context, mount, ref string) (string, error)
+}
+
+// ReviewEnv is the deployment-level provenance a stored run records: which overlay tiers were
+// composed into the catalog this service holds, and what build produced the document.
+//
+// It is injected rather than derived because the service genuinely cannot see it. By the time a
+// catalog reaches here, an overlay profile is just another rule in it, so "were profiles attached"
+// is unanswerable from the catalog alone. RunConfig exists precisely so a reader can tell a design
+// with no datasheet violations from a run that had no datasheet corpus attached, and a service that
+// guessed those flags would produce documents that lie about what was evaluable.
+type ReviewEnv struct {
+	// ProducerVersion is the engine build identity (version.Version() at the entrypoint).
+	ProducerVersion string
+	// Profiles reports that --profile-path overlay profiles were composed into the catalog.
+	Profiles bool
+	// Intent reports that a --intent-path design-intent declaration was composed into the catalog.
+	Intent bool
 }
 
 // ReviewService runs a review checklist manifest over one or more designs, the transport-neutral
@@ -45,57 +81,189 @@ type ReviewService struct {
 	// specs is the datasheet knowledge base the params join reads (WS10-003), nil when serve ran
 	// without --params; NewModelWithParams guards a nil provider (no joined specs, no false pass).
 	specs param.ParamProvider
+	// store persists runs (WS9-053). Nil means no store was configured, and the four resource methods
+	// then report that rather than half-working: a create that ran the checks and dropped the result
+	// would be the worst of both, since it costs the full sweep and leaves nothing behind.
+	store ReviewStore
+	env   ReviewEnv
 }
 
-// NewReviewService returns a ReviewService over the given loader, composed rule catalog, profile
-// presence index, and optional datasheet provider (nil when no corpus is wired). The catalog and
-// index are built once by the caller (serve/CLI) because they are design-independent.
-func NewReviewService(loader ReviewLoader, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider) *ReviewService {
-	return &ReviewService{loader: loader, catalog: catalog, byName: byName, specs: specs}
+// NewReviewService returns a ReviewService over the given loader, review store, composed rule
+// catalog, profile presence index, and optional datasheet provider (nil when no corpus is wired). The
+// catalog and index are built once by the caller (serve/CLI) because they are design-independent.
+//
+// store may be nil, which disables the review resource methods; pass a MemReviewStore for a caller
+// that wants runs to work without persisting them, which is what `agni review` does.
+func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv) *ReviewService {
+	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env}
 }
 
-// RunReview runs the manifest against each requested design and returns a report per design: one
-// design yields a per-item report, several yield a project rollup in request order. The run is
+// reviewStore returns the configured store or an error naming the flag that configures it. Every
+// resource method goes through it, so the "not configured" message is written once and a deployment
+// that forgot the volume gets told which flag it forgot rather than a nil dereference.
+func (s *ReviewService) reviewStore() (ReviewStore, error) {
+	if s.store == nil {
+		return nil, ErrReviewStoreNotConfigured
+	}
+	return s.store, nil
+}
+
+// CreateReview runs the checklist against the design and persists the result (WS9-053). The run is
 // all-or-nothing — an invalid manifest, an unreadable design, or a board_ref at a file that carries
 // no board geometry is an error — so a partial read never reports items clean without checking them
-// (the same posture as a bad --params corpus failing the CLI run).
+// (the same posture as a bad --params corpus failing the CLI run). Nothing is stored when the run
+// fails, so the store never accumulates half-answers.
 //
-// The checklist arrives as a VALUE (WS9-050), so this method does no file I/O to do its job: every
-// input it needs is either in the request or was injected at construction. That is what lets a host
-// with no filesystem run a review, and it is why the manifest is validated here rather than trusted.
-// A manifest that never passed through review.Load has had no parser enforce its rules, and an item
-// carrying two mutually-exclusive bindings would otherwise score a design against a check its author
-// did not ask for.
-func (s *ReviewService) RunReview(ctx context.Context, req *webapi.RunReviewRequest) (*webapi.RunReviewResponse, error) {
-	if len(req.GetDesignRef()) == 0 {
-		return nil, fmt.Errorf("%w: RunReview needs at least one design_ref", ErrInvalidArgument)
+// The checklist arrives as a VALUE (WS9-050), so the RUN itself needs no filesystem: every input is
+// either in the request or was injected at construction. That is also why the manifest is validated
+// here rather than trusted. A manifest that never passed through review.Load has had no parser
+// enforce its rules, and an item carrying two mutually-exclusive bindings would otherwise score a
+// design against a check its author did not ask for.
+//
+// The document it stores is the same self-contained CheckResults `agni review --results-out` writes,
+// carrying the checklist SNAPSHOT rather than its name, so re-rendering the run later reproduces what
+// was actually asked instead of whatever the checklist file says by then.
+func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateReviewRequest) (*webapi.Review, error) {
+	store, err := s.reviewStore()
+	if err != nil {
+		return nil, err
+	}
+	if req.GetDesignRef() == "" {
+		return nil, fmt.Errorf("%w: CreateReview needs a design_ref", ErrInvalidArgument)
 	}
 	if req.GetManifest() == nil {
-		return nil, fmt.Errorf("%w: RunReview needs a manifest (resolve a stored one with GetReviewManifest)", ErrInvalidArgument)
+		return nil, fmt.Errorf("%w: CreateReview needs a manifest (resolve a stored one with GetReviewManifest)", ErrInvalidArgument)
 	}
 	man := ManifestFromProto(req.GetManifest())
 	if err := review.Validate(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	// Per-request overlay config (WS3-102), composed BEFORE any design is read: its lexicon half has
+	// Per-request overlay config (WS3-102), composed BEFORE the design is read: its lexicon half has
 	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
 	// service's own catalog and the default vocabulary in place.
 	ov, err := ComposeOverlay(req.GetOverlay())
 	if err != nil {
 		return nil, err
 	}
-	resp := &webapi.RunReviewResponse{Manifest: man.Name}
-	for _, design := range req.GetDesignRef() {
-		rep, err := s.runOne(ctx, req.GetMount(), design, req.GetBoardRef(), man, req.GetRatifiedFloor(), ov)
-		if err != nil {
-			return nil, err
-		}
-		resp.Reports = append(resp.Reports, reviewReportProto(rep))
+	rep, cat, err := s.runOne(ctx, req.GetMount(), req.GetDesignRef(), req.GetBoardRef(), man, req.GetRatifiedFloor(), ov)
+	if err != nil {
+		return nil, err
+	}
+	// The hash is provenance, not a precondition: a design that ran but cannot be re-read still
+	// produced real outcomes, so an unreadable source records no hash rather than failing the create.
+	hash, err := s.loader.DesignHash(ctx, req.GetMount(), req.GetDesignRef())
+	if err != nil {
+		hash = ""
+	}
+	doc := &checkspb.CheckResults{
+		Meta: &checkspb.ResultsMeta{
+			Schema:          results.Schema,
+			Producer:        results.Producer,
+			ProducerVersion: s.env.ProducerVersion,
+			// A native run records what it could NOT check as well as what it found: a rule whose fact
+			// tier is absent reads not-applicable, and a review item that did not evaluate never reads
+			// pass. That is the axis an imported vendor report does not have.
+			CoverageAxis: true,
+		},
+		Design: &checkspb.DesignRef{Source: req.GetDesignRef(), ContentHash: hash},
+		Run: &checkspb.RunConfig{
+			Params:        s.specs != nil,
+			Profiles:      s.env.Profiles,
+			Intent:        s.env.Intent,
+			Conventions:   req.GetOverlay().GetConventions().GetName(),
+			RatifiedFloor: req.GetRatifiedFloor(),
+		},
+		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's
+		// base: a reader has to see the rules that actually ran, or a per-request convention's rules
+		// would be missing from the record of a run they shaped.
+		Catalog:          results.RuleRecords(cat.Rules()),
+		Manifest:         man.Name,
+		ManifestSnapshot: req.GetManifest(),
+		Areas:            reviewAreaProtos(rep),
+	}
+	name, createdAt, err := store.Create(ctx, doc)
+	if err != nil {
+		return nil, err
+	}
+	doc.Meta.CreatedAt = createdAt
+	return &webapi.Review{Name: name, Results: doc}, nil
+}
+
+// GetReview returns a stored run. It reads only the store: the document is self-contained, so neither
+// the design nor the checklist it was about needs to still exist.
+func (s *ReviewService) GetReview(ctx context.Context, req *webapi.GetReviewRequest) (*webapi.Review, error) {
+	store, err := s.reviewStore()
+	if err != nil {
+		return nil, err
+	}
+	doc, err := store.Get(ctx, req.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return &webapi.Review{Name: req.GetName(), Results: doc}, nil
+}
+
+// ListReviews returns stored runs newest first, paginated, optionally narrowed to one design.
+func (s *ReviewService) ListReviews(ctx context.Context, req *webapi.ListReviewsRequest) (*webapi.ListReviewsResponse, error) {
+	store, err := s.reviewStore()
+	if err != nil {
+		return nil, err
+	}
+	design, err := parseReviewFilter(req.GetFilter())
+	if err != nil {
+		return nil, err
+	}
+	docs, names, next, err := store.List(ctx, int(req.GetPageSize()), req.GetPageToken(), design)
+	if err != nil {
+		return nil, err
+	}
+	resp := &webapi.ListReviewsResponse{NextPageToken: next}
+	for i, doc := range docs {
+		resp.Reviews = append(resp.Reviews, &webapi.Review{Name: names[i], Results: doc})
 	}
 	return resp, nil
 }
 
-// GetReviewManifest resolves a stored checklist into the value RunReview takes. It is the one place
+// DeleteReview removes a stored run. Deleting an absent run is ErrNotFound rather than a silent
+// success, so a client acting on a stale listing is told rather than left believing it cleaned up.
+func (s *ReviewService) DeleteReview(ctx context.Context, req *webapi.DeleteReviewRequest) (*emptypb.Empty, error) {
+	store, err := s.reviewStore()
+	if err != nil {
+		return nil, err
+	}
+	if err := store.Delete(ctx, req.GetName()); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// parseReviewFilter reads the one supported AIP-160 filter, `design="..."`, returning the design or
+// "" for an empty filter.
+//
+// An unsupported filter is an ERROR rather than an ignored argument, and that is the whole reason
+// this is a function instead of a string compare. A client that believed it had narrowed to its own
+// board, and silently got every board's runs, would read another team's failures as its own. Refusing
+// what we do not implement keeps a wrong answer from looking like a right one.
+func parseReviewFilter(filter string) (string, error) {
+	f := strings.TrimSpace(filter)
+	if f == "" {
+		return "", nil
+	}
+	value, ok := strings.CutPrefix(f, "design=")
+	if !ok {
+		return "", fmt.Errorf("%w: filter %q is not supported; the only supported filter is design=\"<ref>\"", ErrInvalidArgument, filter)
+	}
+	value = strings.TrimSpace(value)
+	if unquoted, err := strconv.Unquote(value); err == nil {
+		value = unquoted
+	}
+	if value == "" {
+		return "", fmt.Errorf("%w: filter %q names an empty design", ErrInvalidArgument, filter)
+	}
+	return value, nil
+}
+
+// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It is the one place
 // in this service that reads a file, and it is a separate RPC precisely so that read is visible in
 // the contract rather than hidden inside a run: a caller that already holds a manifest never triggers
 // it, and a host with no filesystem simply does not serve it.
@@ -120,14 +288,18 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 // and runs the manifest over it. The board tier is read from board_ref, not the design, so a netlist
 // entry can attach a separate confidential board export (WS3-089); an override that reads no board is
 // an error, never a silent nil.
-func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef string, man review.Manifest, floor float64, ov Overlay) (review.Report, error) {
+// It returns the composed catalog alongside the report because the stored document has to record the
+// rules that ACTUALLY ran. That is the per-request catalog, overlay spliced on, not the service's
+// base one: a run shaped by a request's own naming convention would otherwise archive a rule list its
+// findings could not have come from.
+func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef string, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
 	m, err := BuildModel(ctx, s.loader, mount, design, boardRef, s.specs, ov.ReadOptions()...)
 	if err != nil {
-		return review.Report{}, err
+		return review.Report{}, nil, err
 	}
 	cat, err := ov.Catalog(s.catalog)
 	if err != nil {
-		return review.Report{}, err
+		return review.Report{}, nil, err
 	}
 	present, scope, compScope := reviewClosures(m, s.byName)
 	return review.Run(review.RunParams{
@@ -137,13 +309,13 @@ func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef stri
 		// not-yet-shipped intent rule reads not-automated instead of a misleading needs-design-intent
 		// (WS3-098). Injected to keep `review` decoupled from the `intent` package.
 		IntentRuleKnown: intent.Emits,
-	}), nil
+	}), cat, nil
 }
 
 // reviewClosures builds the presence and scope closures a review run needs over a design's Model and
 // the profile index: present marks an item bound to a known-but-absent interface not-applicable, and
 // scope/compScope filter a scoped binding's findings to the interface's nets/parts (WS3-058/083). The
-// service owns this now that the CLI is a thin client of RunReview (WS9-048); it keeps `review`
+// service owns this now that the CLI is a thin client of the review service (WS9-048); it keeps `review`
 // decoupled from `profiles`.
 func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review.PresenceFunc, review.ScopeFunc, review.CompScopeFunc) {
 	present := func(name string) (review.Presence, bool) {
@@ -203,8 +375,8 @@ func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review
 // (both the CLI and a panel key on it); the tally is derived by the consumer from the item outcomes,
 // the same pure function review.Report.Tally() applies, so it is not carried on the wire. Findings
 // reuse the one canonical FindingProto conversion CheckService uses.
-func reviewReportProto(r review.Report) *webapi.ReviewReport {
-	out := &webapi.ReviewReport{Manifest: r.Manifest, Design: r.Design}
+func reviewAreaProtos(r review.Report) []*checkspb.ReviewArea {
+	var out []*checkspb.ReviewArea
 	for _, ar := range r.Areas {
 		area := &checkspb.ReviewArea{Name: ar.Area.Name}
 		for _, it := range ar.Items {
@@ -216,7 +388,7 @@ func reviewReportProto(r review.Report) *webapi.ReviewReport {
 				Findings: FindingProtos(it.Findings),
 			})
 		}
-		out.Areas = append(out.Areas, area)
+		out = append(out, area)
 	}
 	return out
 }

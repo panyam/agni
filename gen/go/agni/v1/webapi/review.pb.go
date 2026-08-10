@@ -10,6 +10,7 @@ import (
 	checks "github.com/panyam/agni/gen/go/agni/v1/checks"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -22,50 +23,44 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type RunReviewRequest struct {
+// Review is one stored review run.
+//
+// The resource is little more than a name plus the document, and that is the point: the document was
+// already designed to be self-contained, so making runs addressable needed an identity and a store,
+// not a new payload. Anything a consumer needs to render, diff, or archive this run is inside
+// `results`.
+type Review struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"` // workspace mount the refs resolve within (mounts.Resolve containment)
-	// design_ref is one or more designs to run: one design yields a per-item report; several yield a
-	// project rollup (one report each, in this order = the CLI's multi-design surface).
+	// name is the resource name, "reviews/{review}". The id is server-assigned, opaque, and
+	// time-sortable, so a listing is chronological without opening every document.
 	//
-	// A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
-	// Nothing above the Loader may treat it as one. Designs stay refs rather than values (C22's
-	// artifact exception) because a netlist is megabytes, needs format-reader dispatch by extension,
-	// and is re-requested across many RPCs.
-	DesignRef []string `protobuf:"bytes,3,rep,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"`
-	// board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
-	// items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
-	// a netlist entry then reads its board items not-applicable, as before. Same ref semantics as
-	// design_ref.
-	BoardRef string `protobuf:"bytes,4,opt,name=board_ref,json=boardRef,proto3" json:"board_ref,omitempty"`
-	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
-	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
-	RatifiedFloor float64 `protobuf:"fixed64,5,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
-	// overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
-	// service was constructed with, so an existing caller is unchanged.
-	Overlay *OverlayConfig `protobuf:"bytes,6,opt,name=overlay,proto3" json:"overlay,omitempty"`
-	// manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
-	// that never passed through the YAML loader (one a browser form built, one a test wrote inline)
-	// is held to exactly the same rules as one read from a file.
-	Manifest      *ReviewManifest `protobuf:"bytes,7,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	// Reviews are a FLAT collection rather than nested under a mount. A run is stored in the server's
+	// review volume, not inside the design's mount, so nesting would assert an ownership that does not
+	// exist and would break the moment a design moved between mounts. Which design a run was about is
+	// recorded where it belongs, in results.design.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// results is the self-contained document: meta (producer, created_at), the design ref and its
+	// content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
+	// item outcomes.
+	Results       *checks.CheckResults `protobuf:"bytes,2,opt,name=results,proto3" json:"results,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RunReviewRequest) Reset() {
-	*x = RunReviewRequest{}
+func (x *Review) Reset() {
+	*x = Review{}
 	mi := &file_agni_v1_webapi_review_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RunReviewRequest) String() string {
+func (x *Review) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RunReviewRequest) ProtoMessage() {}
+func (*Review) ProtoMessage() {}
 
-func (x *RunReviewRequest) ProtoReflect() protoreflect.Message {
+func (x *Review) ProtoReflect() protoreflect.Message {
 	mi := &file_agni_v1_webapi_review_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -77,57 +72,337 @@ func (x *RunReviewRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RunReviewRequest.ProtoReflect.Descriptor instead.
-func (*RunReviewRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use Review.ProtoReflect.Descriptor instead.
+func (*Review) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *RunReviewRequest) GetMount() string {
+func (x *Review) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Review) GetResults() *checks.CheckResults {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
+type CreateReviewRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"` // workspace mount the refs resolve within (mounts.Resolve containment)
+	// board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
+	// items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
+	// a netlist entry then reads its board items not-applicable, as before.
+	//
+	// A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
+	// Nothing above the Loader may treat it as one.
+	BoardRef string `protobuf:"bytes,4,opt,name=board_ref,json=boardRef,proto3" json:"board_ref,omitempty"`
+	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
+	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
+	RatifiedFloor float64 `protobuf:"fixed64,5,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
+	// overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
+	// service was constructed with.
+	Overlay *OverlayConfig `protobuf:"bytes,6,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	// manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
+	// that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
+	// held to exactly the same rules as one read from a file. It is also stored with the run, so the
+	// archived document scores against the checklist it actually saw.
+	Manifest *checks.ReviewManifest `protobuf:"bytes,7,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	// design_ref is the one design this run is about, with the same ref semantics as board_ref.
+	DesignRef     string `protobuf:"bytes,8,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateReviewRequest) Reset() {
+	*x = CreateReviewRequest{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateReviewRequest) ProtoMessage() {}
+
+func (x *CreateReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateReviewRequest.ProtoReflect.Descriptor instead.
+func (*CreateReviewRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CreateReviewRequest) GetMount() string {
 	if x != nil {
 		return x.Mount
 	}
 	return ""
 }
 
-func (x *RunReviewRequest) GetDesignRef() []string {
-	if x != nil {
-		return x.DesignRef
-	}
-	return nil
-}
-
-func (x *RunReviewRequest) GetBoardRef() string {
+func (x *CreateReviewRequest) GetBoardRef() string {
 	if x != nil {
 		return x.BoardRef
 	}
 	return ""
 }
 
-func (x *RunReviewRequest) GetRatifiedFloor() float64 {
+func (x *CreateReviewRequest) GetRatifiedFloor() float64 {
 	if x != nil {
 		return x.RatifiedFloor
 	}
 	return 0
 }
 
-func (x *RunReviewRequest) GetOverlay() *OverlayConfig {
+func (x *CreateReviewRequest) GetOverlay() *OverlayConfig {
 	if x != nil {
 		return x.Overlay
 	}
 	return nil
 }
 
-func (x *RunReviewRequest) GetManifest() *ReviewManifest {
+func (x *CreateReviewRequest) GetManifest() *checks.ReviewManifest {
 	if x != nil {
 		return x.Manifest
 	}
 	return nil
 }
 
+func (x *CreateReviewRequest) GetDesignRef() string {
+	if x != nil {
+		return x.DesignRef
+	}
+	return ""
+}
+
+type GetReviewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "reviews/{review}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReviewRequest) Reset() {
+	*x = GetReviewRequest{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReviewRequest) ProtoMessage() {}
+
+func (x *GetReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReviewRequest.ProtoReflect.Descriptor instead.
+func (*GetReviewRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetReviewRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListReviewsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// page_size is the maximum number of reviews to return. 0 uses the server default; the server may
+	// return fewer.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// page_token continues a previous call. An empty token starts at the newest run.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// filter narrows the listing (AIP-160). Only `design` is supported: `design="proj/board.kicad_sch"`
+	// matches results.design.source exactly. An unsupported filter is an error rather than a silently
+	// ignored argument, because a client that believed it had filtered and did not would read another
+	// board's verdicts as its own.
+	Filter        string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReviewsRequest) Reset() {
+	*x = ListReviewsRequest{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewsRequest) ProtoMessage() {}
+
+func (x *ListReviewsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReviewsRequest.ProtoReflect.Descriptor instead.
+func (*ListReviewsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListReviewsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListReviewsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListReviewsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+type ListReviewsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// reviews are ordered newest first.
+	Reviews []*Review `protobuf:"bytes,1,rep,name=reviews,proto3" json:"reviews,omitempty"`
+	// next_page_token is empty when the last page has been reached.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReviewsResponse) Reset() {
+	*x = ListReviewsResponse{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewsResponse) ProtoMessage() {}
+
+func (x *ListReviewsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReviewsResponse.ProtoReflect.Descriptor instead.
+func (*ListReviewsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListReviewsResponse) GetReviews() []*Review {
+	if x != nil {
+		return x.Reviews
+	}
+	return nil
+}
+
+func (x *ListReviewsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type DeleteReviewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "reviews/{review}"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteReviewRequest) Reset() {
+	*x = DeleteReviewRequest{}
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteReviewRequest) ProtoMessage() {}
+
+func (x *DeleteReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteReviewRequest.ProtoReflect.Descriptor instead.
+func (*DeleteReviewRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DeleteReviewRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type GetReviewManifestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"` // workspace mount the ref resolves within
-	// ref names the stored checklist, with the same ref semantics as RunReviewRequest.design_ref: a
+	// ref names the stored checklist, with the same ref semantics as CreateReviewRequest.board_ref: a
 	// key the Loader resolves, never a host path.
 	Ref           string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -136,7 +411,7 @@ type GetReviewManifestRequest struct {
 
 func (x *GetReviewManifestRequest) Reset() {
 	*x = GetReviewManifestRequest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -148,7 +423,7 @@ func (x *GetReviewManifestRequest) String() string {
 func (*GetReviewManifestRequest) ProtoMessage() {}
 
 func (x *GetReviewManifestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -161,7 +436,7 @@ func (x *GetReviewManifestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewManifestRequest.ProtoReflect.Descriptor instead.
 func (*GetReviewManifestRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetReviewManifestRequest) GetMount() string {
@@ -180,14 +455,14 @@ func (x *GetReviewManifestRequest) GetRef() string {
 
 type GetReviewManifestResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Manifest      *ReviewManifest        `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	Manifest      *checks.ReviewManifest `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetReviewManifestResponse) Reset() {
 	*x = GetReviewManifestResponse{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -199,7 +474,7 @@ func (x *GetReviewManifestResponse) String() string {
 func (*GetReviewManifestResponse) ProtoMessage() {}
 
 func (x *GetReviewManifestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,623 +487,12 @@ func (x *GetReviewManifestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReviewManifestResponse.ProtoReflect.Descriptor instead.
 func (*GetReviewManifestResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GetReviewManifestResponse) GetManifest() *ReviewManifest {
-	if x != nil {
-		return x.Manifest
-	}
-	return nil
-}
-
-// ReviewManifest is a project's review checklist, the wire form of review.Manifest: named review
-// areas, each holding items, each item bound to the check that verifies it.
-//
-// It is CONFIG, not an artifact, which is why it travels as a value while a design travels as a ref
-// (C22). The distinction is size and dispatch, not importance: a manifest is a small declaration the
-// caller already holds and the service composes into behaviour, so a service that took a path would
-// have to own file I/O to do its job and would bake one deployment's filesystem into the API.
-//
-// The authoring form is YAML and stays that way. This message mirrors the parsed struct rather than
-// the file, so an item's binding is a nested message here where the YAML inlines it flat.
-type ReviewManifest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Areas         []*ManifestArea        `protobuf:"bytes,2,rep,name=areas,proto3" json:"areas,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ReviewManifest) Reset() {
-	*x = ReviewManifest{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ReviewManifest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ReviewManifest) ProtoMessage() {}
-
-func (x *ReviewManifest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ReviewManifest.ProtoReflect.Descriptor instead.
-func (*ReviewManifest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ReviewManifest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ReviewManifest) GetAreas() []*ManifestArea {
-	if x != nil {
-		return x.Areas
-	}
-	return nil
-}
-
-// ManifestArea is one review area (e.g. "CAN Interface") grouping related checklist items. It is the
-// ASKING side and is deliberately distinct from agni.v1.checks.ReviewArea, which is the ANSWERING
-// side (the same areas carrying each item's outcome after a run).
-type ManifestArea struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Items         []*ManifestItem        `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ManifestArea) Reset() {
-	*x = ManifestArea{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ManifestArea) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ManifestArea) ProtoMessage() {}
-
-func (x *ManifestArea) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ManifestArea.ProtoReflect.Descriptor instead.
-func (*ManifestArea) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *ManifestArea) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ManifestArea) GetItems() []*ManifestItem {
-	if x != nil {
-		return x.Items
-	}
-	return nil
-}
-
-// ManifestItem is one checklist entry. title is the short human review label shown in a report;
-// description is an optional longer explanation; note is an optional hint shown for an item that did
-// not fail, most usefully WHY an item is not automated. id names the item in the report.
-//
-// An item with no binding, or one bound to a rule that has not shipped, is tracked but not automated.
-// That is a feature: bind it to its intended future rule name and it flips to pass/fail on its own
-// once that rule lands.
-type ManifestItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Note          string                 `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
-	Binding       *ItemBinding           `protobuf:"bytes,5,opt,name=binding,proto3" json:"binding,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ManifestItem) Reset() {
-	*x = ManifestItem{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ManifestItem) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ManifestItem) ProtoMessage() {}
-
-func (x *ManifestItem) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ManifestItem.ProtoReflect.Descriptor instead.
-func (*ManifestItem) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *ManifestItem) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *ManifestItem) GetTitle() string {
-	if x != nil {
-		return x.Title
-	}
-	return ""
-}
-
-func (x *ManifestItem) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *ManifestItem) GetNote() string {
-	if x != nil {
-		return x.Note
-	}
-	return ""
-}
-
-func (x *ManifestItem) GetBinding() *ItemBinding {
-	if x != nil {
-		return x.Binding
-	}
-	return nil
-}
-
-// ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
-// profile, query, present); they are mutually exclusive and a second one is a validation error, not a
-// precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than selectors, so
-// they do not count toward that limit and compose with whichever selector is set.
-type ItemBinding struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Rule    string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`       // a catalog rule by exact name, e.g. "profile/can-termination-missing"
-	Tag     string                 `protobuf:"bytes,2,opt,name=tag,proto3" json:"tag,omitempty"`         // key=value, selecting a set of rules
-	Profile string                 `protobuf:"bytes,3,opt,name=profile,proto3" json:"profile,omitempty"` // an interface profile name (sugar for the profile tag)
-	Query   *ManifestQuery         `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
-	Present *ManifestPresent       `protobuf:"bytes,5,opt,name=present,proto3" json:"present,omitempty"`
-	// scope narrows a rule/tag binding to the nets of one or more interfaces, so a per-interface ask
-	// reflects only its bus instead of a design-wide rule's whole output (WS3-058). It requires a rule
-	// or tag to filter.
-	Scope *ManifestScope `protobuf:"bytes,6,opt,name=scope,proto3" json:"scope,omitempty"`
-	// requirement narrows a profile binding to ONE of that profile's declared requirements (WS3-115),
-	// so a profile's requirement list can GROW without re-scoring every item already bound to it.
-	// Requires profile to be set.
-	Requirement string `protobuf:"bytes,7,opt,name=requirement,proto3" json:"requirement,omitempty"`
-	// applies_to_class gates the item on device class (WS10-014): computed-n/a when no component
-	// carries any of these classes. Values are component.class names, family tags included.
-	AppliesToClass []string `protobuf:"bytes,8,rep,name=applies_to_class,json=appliesToClass,proto3" json:"applies_to_class,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ItemBinding) Reset() {
-	*x = ItemBinding{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ItemBinding) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ItemBinding) ProtoMessage() {}
-
-func (x *ItemBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ItemBinding.ProtoReflect.Descriptor instead.
-func (*ItemBinding) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *ItemBinding) GetRule() string {
-	if x != nil {
-		return x.Rule
-	}
-	return ""
-}
-
-func (x *ItemBinding) GetTag() string {
-	if x != nil {
-		return x.Tag
-	}
-	return ""
-}
-
-func (x *ItemBinding) GetProfile() string {
-	if x != nil {
-		return x.Profile
-	}
-	return ""
-}
-
-func (x *ItemBinding) GetQuery() *ManifestQuery {
-	if x != nil {
-		return x.Query
-	}
-	return nil
-}
-
-func (x *ItemBinding) GetPresent() *ManifestPresent {
-	if x != nil {
-		return x.Present
-	}
-	return nil
-}
-
-func (x *ItemBinding) GetScope() *ManifestScope {
-	if x != nil {
-		return x.Scope
-	}
-	return nil
-}
-
-func (x *ItemBinding) GetRequirement() string {
-	if x != nil {
-		return x.Requirement
-	}
-	return ""
-}
-
-func (x *ItemBinding) GetAppliesToClass() []string {
-	if x != nil {
-		return x.AppliesToClass
-	}
-	return nil
-}
-
-// ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
-// program, whose goal must project subject; message is the finding template, where {var} is replaced
-// by the bound value. kind defaults to "component" and severity to "warning".
-type ManifestQuery struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	Match    string                 `protobuf:"bytes,1,opt,name=match,proto3" json:"match,omitempty"`
-	Subject  string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
-	Kind     string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	Message  string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	Severity string                 `protobuf:"bytes,5,opt,name=severity,proto3" json:"severity,omitempty"`
-	// param_symbol names the datasheet symbol this query checks (e.g. "IOUT"). It does not change the
-	// query logic; the finding gains a structured datasheet citation resolved from the subject's spec.
-	ParamSymbol   string `protobuf:"bytes,6,opt,name=param_symbol,json=paramSymbol,proto3" json:"param_symbol,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ManifestQuery) Reset() {
-	*x = ManifestQuery{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ManifestQuery) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ManifestQuery) ProtoMessage() {}
-
-func (x *ManifestQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ManifestQuery.ProtoReflect.Descriptor instead.
-func (*ManifestQuery) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *ManifestQuery) GetMatch() string {
-	if x != nil {
-		return x.Match
-	}
-	return ""
-}
-
-func (x *ManifestQuery) GetSubject() string {
-	if x != nil {
-		return x.Subject
-	}
-	return ""
-}
-
-func (x *ManifestQuery) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *ManifestQuery) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-func (x *ManifestQuery) GetSeverity() string {
-	if x != nil {
-		return x.Severity
-	}
-	return ""
-}
-
-func (x *ManifestQuery) GetParamSymbol() string {
-	if x != nil {
-		return x.ParamSymbol
-	}
-	return ""
-}
-
-// ManifestPresent asserts that a class of component must EXIST on the design: the item passes when at
-// least one is present and fails when none is. It is never not-applicable, because the
-// component-class tier exists on any netlist, so the presence question always has a pass/fail answer.
-type ManifestPresent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Class         string                 `protobuf:"bytes,1,opt,name=class,proto3" json:"class,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ManifestPresent) Reset() {
-	*x = ManifestPresent{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ManifestPresent) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ManifestPresent) ProtoMessage() {}
-
-func (x *ManifestPresent) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ManifestPresent.ProtoReflect.Descriptor instead.
-func (*ManifestPresent) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ManifestPresent) GetClass() string {
-	if x != nil {
-		return x.Class
-	}
-	return ""
-}
-
-// ManifestScope names the interfaces a rule/tag binding is filtered to. The effective scope is the
-// UNION of their nets, so one item can span several buses.
-type ManifestScope struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Profiles      []string               `protobuf:"bytes,1,rep,name=profiles,proto3" json:"profiles,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ManifestScope) Reset() {
-	*x = ManifestScope{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ManifestScope) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ManifestScope) ProtoMessage() {}
-
-func (x *ManifestScope) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ManifestScope.ProtoReflect.Descriptor instead.
-func (*ManifestScope) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *ManifestScope) GetProfiles() []string {
-	if x != nil {
-		return x.Profiles
-	}
-	return nil
-}
-
-// ReviewReport is one design's review result (the wire form of review.Report): the manifest and
-// design names plus each area's item outcomes. A client derives the tally (covered / pass / fail /
-// ...) from the item outcomes, the same pure function review.Report.Tally() applies, so the two
-// surfaces cannot drift on it.
-type ReviewReport struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Manifest      string                 `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
-	Design        string                 `protobuf:"bytes,2,opt,name=design,proto3" json:"design,omitempty"`
-	Areas         []*checks.ReviewArea   `protobuf:"bytes,3,rep,name=areas,proto3" json:"areas,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ReviewReport) Reset() {
-	*x = ReviewReport{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ReviewReport) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ReviewReport) ProtoMessage() {}
-
-func (x *ReviewReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ReviewReport.ProtoReflect.Descriptor instead.
-func (*ReviewReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *ReviewReport) GetManifest() string {
+func (x *GetReviewManifestResponse) GetManifest() *checks.ReviewManifest {
 	if x != nil {
 		return x.Manifest
-	}
-	return ""
-}
-
-func (x *ReviewReport) GetDesign() string {
-	if x != nil {
-		return x.Design
-	}
-	return ""
-}
-
-func (x *ReviewReport) GetAreas() []*checks.ReviewArea {
-	if x != nil {
-		return x.Areas
-	}
-	return nil
-}
-
-type RunReviewResponse struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	Manifest string                 `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
-	// reports is one ReviewReport per requested design, in request order (= column order in a rollup).
-	Reports       []*ReviewReport `protobuf:"bytes,2,rep,name=reports,proto3" json:"reports,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RunReviewResponse) Reset() {
-	*x = RunReviewResponse{}
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RunReviewResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RunReviewResponse) ProtoMessage() {}
-
-func (x *RunReviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_review_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RunReviewResponse.ProtoReflect.Descriptor instead.
-func (*RunReviewResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *RunReviewResponse) GetManifest() string {
-	if x != nil {
-		return x.Manifest
-	}
-	return ""
-}
-
-func (x *RunReviewResponse) GetReports() []*ReviewReport {
-	if x != nil {
-		return x.Reports
 	}
 	return nil
 }
@@ -837,61 +501,40 @@ var File_agni_v1_webapi_review_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x95\x02\n" +
-	"\x10RunReviewRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x1d\n" +
-	"\n" +
-	"design_ref\x18\x03 \x03(\tR\tdesignRef\x12\x1b\n" +
+	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n" +
+	"\x06Review\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
+	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\x9e\x02\n" +
+	"\x13CreateReviewRequest\x12\x14\n" +
+	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x1b\n" +
 	"\tboard_ref\x18\x04 \x01(\tR\bboardRef\x12%\n" +
 	"\x0eratified_floor\x18\x05 \x01(\x01R\rratifiedFloor\x127\n" +
 	"\aoverlay\x18\x06 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
-	"\bmanifest\x18\a \x01(\v2\x1e.agni.v1.webapi.ReviewManifestR\bmanifestJ\x04\b\x02\x10\x03R\rmanifest_path\"B\n" +
+	"\bmanifest\x18\a \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x1d\n" +
+	"\n" +
+	"design_ref\x18\b \x01(\tR\tdesignRefJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\rmanifest_path\"&\n" +
+	"\x10GetReviewRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"h\n" +
+	"\x12ListReviewsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n" +
+	"\x06filter\x18\x03 \x01(\tR\x06filter\"o\n" +
+	"\x13ListReviewsResponse\x120\n" +
+	"\areviews\x18\x01 \x03(\v2\x16.agni.v1.webapi.ReviewR\areviews\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\")\n" +
+	"\x13DeleteReviewRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"B\n" +
 	"\x18GetReviewManifestRequest\x12\x14\n" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\"W\n" +
 	"\x19GetReviewManifestResponse\x12:\n" +
-	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.webapi.ReviewManifestR\bmanifest\"X\n" +
-	"\x0eReviewManifest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
-	"\x05areas\x18\x02 \x03(\v2\x1c.agni.v1.webapi.ManifestAreaR\x05areas\"V\n" +
-	"\fManifestArea\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
-	"\x05items\x18\x02 \x03(\v2\x1c.agni.v1.webapi.ManifestItemR\x05items\"\xa1\x01\n" +
-	"\fManifestItem\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x12\n" +
-	"\x04note\x18\x04 \x01(\tR\x04note\x125\n" +
-	"\abinding\x18\x05 \x01(\v2\x1b.agni.v1.webapi.ItemBindingR\abinding\"\xbe\x02\n" +
-	"\vItemBinding\x12\x12\n" +
-	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x10\n" +
-	"\x03tag\x18\x02 \x01(\tR\x03tag\x12\x18\n" +
-	"\aprofile\x18\x03 \x01(\tR\aprofile\x123\n" +
-	"\x05query\x18\x04 \x01(\v2\x1d.agni.v1.webapi.ManifestQueryR\x05query\x129\n" +
-	"\apresent\x18\x05 \x01(\v2\x1f.agni.v1.webapi.ManifestPresentR\apresent\x123\n" +
-	"\x05scope\x18\x06 \x01(\v2\x1d.agni.v1.webapi.ManifestScopeR\x05scope\x12 \n" +
-	"\vrequirement\x18\a \x01(\tR\vrequirement\x12(\n" +
-	"\x10applies_to_class\x18\b \x03(\tR\x0eappliesToClass\"\xac\x01\n" +
-	"\rManifestQuery\x12\x14\n" +
-	"\x05match\x18\x01 \x01(\tR\x05match\x12\x18\n" +
-	"\asubject\x18\x02 \x01(\tR\asubject\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1a\n" +
-	"\bseverity\x18\x05 \x01(\tR\bseverity\x12!\n" +
-	"\fparam_symbol\x18\x06 \x01(\tR\vparamSymbol\"'\n" +
-	"\x0fManifestPresent\x12\x14\n" +
-	"\x05class\x18\x01 \x01(\tR\x05class\"+\n" +
-	"\rManifestScope\x12\x1a\n" +
-	"\bprofiles\x18\x01 \x03(\tR\bprofiles\"t\n" +
-	"\fReviewReport\x12\x1a\n" +
-	"\bmanifest\x18\x01 \x01(\tR\bmanifest\x12\x16\n" +
-	"\x06design\x18\x02 \x01(\tR\x06design\x120\n" +
-	"\x05areas\x18\x03 \x03(\v2\x1a.agni.v1.checks.ReviewAreaR\x05areas\"g\n" +
-	"\x11RunReviewResponse\x12\x1a\n" +
-	"\bmanifest\x18\x01 \x01(\tR\bmanifest\x126\n" +
-	"\areports\x18\x02 \x03(\v2\x1c.agni.v1.webapi.ReviewReportR\areports2\xcb\x01\n" +
-	"\rReviewService\x12P\n" +
-	"\tRunReview\x12 .agni.v1.webapi.RunReviewRequest\x1a!.agni.v1.webapi.RunReviewResponse\x12h\n" +
+	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest2\xb2\x03\n" +
+	"\rReviewService\x12K\n" +
+	"\fCreateReview\x12#.agni.v1.webapi.CreateReviewRequest\x1a\x16.agni.v1.webapi.Review\x12E\n" +
+	"\tGetReview\x12 .agni.v1.webapi.GetReviewRequest\x1a\x16.agni.v1.webapi.Review\x12V\n" +
+	"\vListReviews\x12\".agni.v1.webapi.ListReviewsRequest\x1a#.agni.v1.webapi.ListReviewsResponse\x12K\n" +
+	"\fDeleteReview\x12#.agni.v1.webapi.DeleteReviewRequest\x1a\x16.google.protobuf.Empty\x12h\n" +
 	"\x11GetReviewManifest\x12(.agni.v1.webapi.GetReviewManifestRequest\x1a).agni.v1.webapi.GetReviewManifestResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
@@ -906,44 +549,42 @@ func file_agni_v1_webapi_review_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_review_proto_rawDescData
 }
 
-var file_agni_v1_webapi_review_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_agni_v1_webapi_review_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_agni_v1_webapi_review_proto_goTypes = []any{
-	(*RunReviewRequest)(nil),          // 0: agni.v1.webapi.RunReviewRequest
-	(*GetReviewManifestRequest)(nil),  // 1: agni.v1.webapi.GetReviewManifestRequest
-	(*GetReviewManifestResponse)(nil), // 2: agni.v1.webapi.GetReviewManifestResponse
-	(*ReviewManifest)(nil),            // 3: agni.v1.webapi.ReviewManifest
-	(*ManifestArea)(nil),              // 4: agni.v1.webapi.ManifestArea
-	(*ManifestItem)(nil),              // 5: agni.v1.webapi.ManifestItem
-	(*ItemBinding)(nil),               // 6: agni.v1.webapi.ItemBinding
-	(*ManifestQuery)(nil),             // 7: agni.v1.webapi.ManifestQuery
-	(*ManifestPresent)(nil),           // 8: agni.v1.webapi.ManifestPresent
-	(*ManifestScope)(nil),             // 9: agni.v1.webapi.ManifestScope
-	(*ReviewReport)(nil),              // 10: agni.v1.webapi.ReviewReport
-	(*RunReviewResponse)(nil),         // 11: agni.v1.webapi.RunReviewResponse
-	(*OverlayConfig)(nil),             // 12: agni.v1.webapi.OverlayConfig
-	(*checks.ReviewArea)(nil),         // 13: agni.v1.checks.ReviewArea
+	(*Review)(nil),                    // 0: agni.v1.webapi.Review
+	(*CreateReviewRequest)(nil),       // 1: agni.v1.webapi.CreateReviewRequest
+	(*GetReviewRequest)(nil),          // 2: agni.v1.webapi.GetReviewRequest
+	(*ListReviewsRequest)(nil),        // 3: agni.v1.webapi.ListReviewsRequest
+	(*ListReviewsResponse)(nil),       // 4: agni.v1.webapi.ListReviewsResponse
+	(*DeleteReviewRequest)(nil),       // 5: agni.v1.webapi.DeleteReviewRequest
+	(*GetReviewManifestRequest)(nil),  // 6: agni.v1.webapi.GetReviewManifestRequest
+	(*GetReviewManifestResponse)(nil), // 7: agni.v1.webapi.GetReviewManifestResponse
+	(*checks.CheckResults)(nil),       // 8: agni.v1.checks.CheckResults
+	(*OverlayConfig)(nil),             // 9: agni.v1.webapi.OverlayConfig
+	(*checks.ReviewManifest)(nil),     // 10: agni.v1.checks.ReviewManifest
+	(*emptypb.Empty)(nil),             // 11: google.protobuf.Empty
 }
 var file_agni_v1_webapi_review_proto_depIdxs = []int32{
-	12, // 0: agni.v1.webapi.RunReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	3,  // 1: agni.v1.webapi.RunReviewRequest.manifest:type_name -> agni.v1.webapi.ReviewManifest
-	3,  // 2: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.webapi.ReviewManifest
-	4,  // 3: agni.v1.webapi.ReviewManifest.areas:type_name -> agni.v1.webapi.ManifestArea
-	5,  // 4: agni.v1.webapi.ManifestArea.items:type_name -> agni.v1.webapi.ManifestItem
-	6,  // 5: agni.v1.webapi.ManifestItem.binding:type_name -> agni.v1.webapi.ItemBinding
-	7,  // 6: agni.v1.webapi.ItemBinding.query:type_name -> agni.v1.webapi.ManifestQuery
-	8,  // 7: agni.v1.webapi.ItemBinding.present:type_name -> agni.v1.webapi.ManifestPresent
-	9,  // 8: agni.v1.webapi.ItemBinding.scope:type_name -> agni.v1.webapi.ManifestScope
-	13, // 9: agni.v1.webapi.ReviewReport.areas:type_name -> agni.v1.checks.ReviewArea
-	10, // 10: agni.v1.webapi.RunReviewResponse.reports:type_name -> agni.v1.webapi.ReviewReport
-	0,  // 11: agni.v1.webapi.ReviewService.RunReview:input_type -> agni.v1.webapi.RunReviewRequest
-	1,  // 12: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
-	11, // 13: agni.v1.webapi.ReviewService.RunReview:output_type -> agni.v1.webapi.RunReviewResponse
-	2,  // 14: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
-	13, // [13:15] is the sub-list for method output_type
-	11, // [11:13] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	8,  // 0: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
+	9,  // 1: agni.v1.webapi.CreateReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	10, // 2: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
+	0,  // 3: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
+	10, // 4: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
+	1,  // 5: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
+	2,  // 6: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
+	3,  // 7: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
+	5,  // 8: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
+	6,  // 9: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
+	0,  // 10: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
+	0,  // 11: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
+	4,  // 12: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
+	11, // 13: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
+	7,  // 14: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_review_proto_init() }
@@ -958,7 +599,7 @@ func file_agni_v1_webapi_review_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_review_proto_rawDesc), len(file_agni_v1_webapi_review_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

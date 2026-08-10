@@ -50,6 +50,15 @@ func (l *localLoader) Manifest(_ context.Context, _, ref string) (review.Manifes
 	return loadManifest(ref)
 }
 
+// DesignHash hashes the design's entry file for a stored run's provenance (WS9-053). It reuses the
+// same hashSource the CLI's --results-out path uses, so a document written by `agni review` and one
+// created through the service record identical revision identity for identical bytes. An unreadable
+// file yields "" rather than an error, which is what DesignRef.content_hash documents for a producer
+// that did not hash.
+func (l *localLoader) DesignHash(_ context.Context, _, ref string) (string, error) {
+	return hashSource(ref), nil
+}
+
 // loadManifest reads and validates a checklist from a local path. It is a package function rather
 // than only a loader method because `agni review` no longer goes through a loader to get its
 // manifest: the checklist travels to the service as a VALUE (WS9-050), so the CLI reads it at its own

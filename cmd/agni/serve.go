@@ -23,6 +23,7 @@ import (
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
 	"github.com/panyam/agni/stdlib/rules/intent"
@@ -46,6 +47,7 @@ func serveCmd() *cobra.Command {
 	var pdf2docCmd string
 	var theme string
 	var paramsDir, profilePath, intentPath, conventions string
+	var reviewStorePath string
 	c := &cobra.Command{
 		Use:   "serve [dir]",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -127,7 +129,18 @@ func serveCmd() *cobra.Command {
 				}
 				conventionCfg = cfg
 			}
-			checkSvc, reviewSvc, err := serveRuleServices(loader, specs, profilePath, intentPath, conventionCfg, cmd.ErrOrStderr())
+			// --review-store is the writable volume stored runs live in, deliberately separate from the
+			// read-only design mounts. Absent, the review resource methods report that they are not
+			// configured rather than silently discarding runs.
+			var reviewStore service.ReviewStore
+			if reviewStorePath != "" {
+				st, err := newOSReviewStore(reviewStorePath)
+				if err != nil {
+					return err
+				}
+				reviewStore = st
+			}
+			checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, intentPath, conventionCfg, cmd.ErrOrStderr())
 			if err != nil {
 				return err
 			}
@@ -178,6 +191,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's default: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may name its own instead")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
+	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
 }
 
@@ -190,7 +204,7 @@ type serveLoader interface {
 }
 
 // serveRuleServices builds the two services that RUN rules from one composed catalog: the
-// CheckService behind the check panel and ListRules, and the ReviewService behind RunReview.
+// CheckService behind the check panel and ListRules, and the ReviewService behind the review resources.
 //
 // They are built together, from one catalog, on purpose (WS3-109). Every overlay knob is startup
 // config for the whole server rather than for one surface, but they used to be wired one at a time at
@@ -208,7 +222,7 @@ type serveLoader interface {
 // conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
 // is a process-global install the caller does once at startup, and doing it inside a function tests
 // call would leak one test's vocabulary into the next.
-func serveRuleServices(loader serveLoader, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
 		return nil, nil, err
@@ -228,7 +242,8 @@ func serveRuleServices(loader serveLoader, specs param.ParamProvider, profilePat
 	if notes != nil {
 		noteSupersededRules(notes, catalog)
 	}
-	return service.NewCheckService(loader, catalog, specs), service.NewReviewService(loader, catalog, byName, specs), nil
+	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
+	return service.NewCheckService(loader, catalog, specs), service.NewReviewService(loader, store, catalog, byName, specs, env), nil
 }
 
 // healthHandler answers the container orchestrator's liveness/readiness probe. It is registered

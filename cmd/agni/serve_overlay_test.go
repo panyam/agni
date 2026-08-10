@@ -75,7 +75,7 @@ func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath strin
 		}
 		cfg = loaded
 	}
-	svc, _, err := serveRuleServices(nil, nil, profileDir, intentPath, cfg, nil)
+	svc, _, err := serveRuleServices(nil, service.NewMemReviewStore(), nil, profileDir, intentPath, cfg, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 //
 // The check-surface tests above all read ListRules, so they cannot see a catalog that reached one
 // service and not the other: mutation testing confirmed that starving only the ReviewService survived
-// every one of them. This runs an actual review through the service serve hands to RunReview, over the
+// every one of them. This runs an actual review through the service serve hands to CreateReview, over the
 // same fixtures as the CLI-side TestReviewOverlayTiersCoexist, and asserts all three overlay tiers
 // arrive. Both fixtures are authored to FAIL rather than pass, because a pass is also what a vanished
 // tier would produce on a design with nothing wrong.
@@ -162,7 +162,7 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, reviewSvc, err := serveRuleServices(&localLoader{loader: newLoader()}, nil,
+	_, reviewSvc, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil,
 		"testdata/review/profiles", "testdata/review/intent.yaml", cfg, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
@@ -171,19 +171,17 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := reviewSvc.RunReview(context.Background(), &webapi.RunReviewRequest{
+	resp, err := reviewSvc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  service.ManifestProto(man),
-		DesignRef: []string{"testdata/review/conv-demo.edn"},
+		DesignRef: "testdata/review/conv-demo.edn",
 	})
 	if err != nil {
-		t.Fatalf("RunReview: %v", err)
+		t.Fatalf("CreateReview: %v", err)
 	}
 	outcomes := map[string]string{}
-	for _, report := range resp.GetReports() {
-		for _, area := range report.GetAreas() {
-			for _, item := range area.GetItems() {
-				outcomes[item.GetId()] = item.GetOutcome()
-			}
+	for _, area := range resp.GetResults().GetAreas() {
+		for _, item := range area.GetItems() {
+			outcomes[item.GetId()] = item.GetOutcome()
 		}
 	}
 	for id, tier := range map[string]string{

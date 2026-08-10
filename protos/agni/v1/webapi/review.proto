@@ -6,189 +6,161 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
 import "agni/v1/webapi/checks.proto";
+import "google/protobuf/empty.proto";
 
 // This file: ReviewService, the transport-neutral analogue of `agni review` (WS9-047). Review is
 // the check family's aggregation layer — it runs a project's checklist (a manifest) against a
-// design, classifying each item's outcome — and was the last check surface with no served RPC (the
-// CLI was its only caller). It composes the SAME check catalog + interface profiles + design-intent
-// the CheckService uses, and both surfaces map the run through review.Run, so a served review and
-// the CLI cannot disagree on an outcome. ReviewReport wraps the canonical per-area outcomes from
-// agni.v1.checks with the manifest and design this run was about.
+// design, classifying each item's outcome — and both surfaces map the run through review.Run, so a
+// served review and the CLI cannot disagree on an outcome.
 
-// ReviewService runs a review checklist manifest over one or more designs and returns each item's
-// outcome. The overlay knobs (--profile-path / --intent-path / --params) are serve-startup config
-// (like CheckService's --params), composed once into the catalog the service holds, so a request
-// carries the manifest, names the design(s) and an optional separate board export, and sets the
-// ratified-data floor. With one design the response is a single per-item report; with several it is
-// a rollup (one report per design, in request order), the same single-vs-rollup split the CLI
-// renders.
+// ReviewService manages review RUNS as resources (WS9-053). A run used to be a call: you sent a
+// checklist and a design, got outcomes back, and nothing remained. That is the wrong shape for what
+// a review actually is. A checklist verdict is the artifact a team acts on over weeks, compares
+// between revisions, and gates a release on, and every one of those uses needs the run to still
+// exist tomorrow.
 //
-// The two RPCs split along the seam CONSTRAINTS C22 draws (WS9-050). RunReview takes the checklist
-// as a VALUE and therefore does no file I/O to do its job: it is callable by a host with no
-// filesystem at all. GetReviewManifest is the one place a stored checklist becomes such a value, so
-// the read is named rather than hidden inside the run. A caller that already holds a manifest (the
-// CLI reads the YAML the user named) skips it entirely.
+// So a run is created, fetched, listed, and deleted, and what it produces is the same self-contained
+// agni.v1.checks.CheckResults document `agni review --results-out` writes. Everything needed to
+// re-render a run lives inside it, including the checklist snapshot, so a review from last quarter
+// renders against the checklist it actually scored rather than whatever that file says today.
+//
+// This service is deliberately AIP-shaped where the rest of this API is verb-shaped (see
+// CONSTRAINTS C23). The difference is not stylistic: every other rpc here is a pure function of
+// files on disk, so `GetDesign(mount, path)` names its whole input. A review run has a lifetime
+// independent of its inputs and therefore needs an identity of its own.
+//
+// The overlay knobs (--profile-path / --intent-path / --params) remain serve-startup config composed
+// once into the catalog the service holds, so a create carries the checklist, names the design and
+// an optional separate board export, and sets the ratified-data floor.
 service ReviewService {
-  // RunReview runs the manifest against each requested design and returns a report per design. An
-  // invalid or absent manifest, an unreadable design, or a board_ref at a file carrying no board
-  // geometry is an error (the run is all-or-nothing, so a partial read never reports items clean
-  // without checking them).
-  rpc RunReview(RunReviewRequest) returns (RunReviewResponse);
+  // CreateReview runs the checklist against the design and persists the result, returning the stored
+  // Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
+  // board_ref at a file carrying no board geometry is an error, so a partial read never reports items
+  // clean without checking them. Nothing is stored when the run fails.
+  //
+  // It is synchronous. A review is a check sweep per item and finishes in the time a request can
+  // wait, so this returns the Review itself rather than an Operation. If that stops being true the
+  // answer is AIP-151, not a client-side poll invented here.
+  //
+  // One review is about ONE design. A project rollup is several Reviews, because a document carries
+  // a single DesignRef on purpose: averaging several designs into one document would misrepresent
+  // every one of them.
+  rpc CreateReview(CreateReviewRequest) returns (Review);
 
-  // GetReviewManifest resolves a stored checklist into the value RunReview takes. It parses AND
-  // validates, so a client learns its manifest is malformed once, here, rather than on every run.
+  // GetReview returns a stored run by name. The document is self-contained, so this needs neither the
+  // design nor the checklist to still exist.
+  rpc GetReview(GetReviewRequest) returns (Review);
+
+  // ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
+  // design so a client can ask the question it actually has ("how has THIS board been trending").
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+
+  // DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
+  // a silent success, because a client asking to delete something that is not there has a stale view
+  // and is better told so.
+  rpc DeleteReview(DeleteReviewRequest) returns (google.protobuf.Empty);
+
+  // GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
+  // validates, so a client learns its manifest is malformed once, here, rather than on every run. A
+  // caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
   rpc GetReviewManifest(GetReviewManifestRequest) returns (GetReviewManifestResponse);
 }
 
-message RunReviewRequest {
+// Review is one stored review run.
+//
+// The resource is little more than a name plus the document, and that is the point: the document was
+// already designed to be self-contained, so making runs addressable needed an identity and a store,
+// not a new payload. Anything a consumer needs to render, diff, or archive this run is inside
+// `results`.
+message Review {
+  // name is the resource name, "reviews/{review}". The id is server-assigned, opaque, and
+  // time-sortable, so a listing is chronological without opening every document.
+  //
+  // Reviews are a FLAT collection rather than nested under a mount. A run is stored in the server's
+  // review volume, not inside the design's mount, so nesting would assert an ownership that does not
+  // exist and would break the moment a design moved between mounts. Which design a run was about is
+  // recorded where it belongs, in results.design.
+  string name = 1;
+  // results is the self-contained document: meta (producer, created_at), the design ref and its
+  // content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
+  // item outcomes.
+  agni.v1.checks.CheckResults results = 2;
+}
+
+message CreateReviewRequest {
   string mount = 1; // workspace mount the refs resolve within (mounts.Resolve containment)
   // 2 was manifest_path, a locator the service resolved through its Loader. The checklist is
-  // configuration, so it travels as a VALUE (field 7) under CONSTRAINTS C22, and where the caller
-  // got it stays the caller's business.
+  // configuration, so it travels as a VALUE (field 7) under CONSTRAINTS C22.
   reserved 2;
   reserved "manifest_path";
-  // design_ref is one or more designs to run: one design yields a per-item report; several yield a
-  // project rollup (one report each, in this order = the CLI's multi-design surface).
-  //
-  // A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
-  // Nothing above the Loader may treat it as one. Designs stay refs rather than values (C22's
-  // artifact exception) because a netlist is megabytes, needs format-reader dispatch by extension,
-  // and is re-requested across many RPCs.
-  repeated string design_ref = 3;
+  // 3 was design_ref, REPEATED: one call ran a checklist over several designs and returned a report
+  // each. A stored run is about one design, so the rollup became several creates. The name is reused
+  // below at a new number rather than in place, because `repeated string` and `string` share a wire
+  // type: a stale client's array would decode into the singular field as its last element instead of
+  // failing, and a review silently run against the wrong board is worse than a rejected request.
+  reserved 3;
   // board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
   // items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
-  // a netlist entry then reads its board items not-applicable, as before. Same ref semantics as
-  // design_ref.
+  // a netlist entry then reads its board items not-applicable, as before.
+  //
+  // A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
+  // Nothing above the Loader may treat it as one.
   string board_ref = 4;
   // ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
   // (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
   double ratified_floor = 5;
   // overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
-  // service was constructed with, so an existing caller is unchanged.
+  // service was constructed with.
   OverlayConfig overlay = 6;
   // manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
-  // that never passed through the YAML loader (one a browser form built, one a test wrote inline)
-  // is held to exactly the same rules as one read from a file.
-  ReviewManifest manifest = 7;
+  // that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
+  // held to exactly the same rules as one read from a file. It is also stored with the run, so the
+  // archived document scores against the checklist it actually saw.
+  agni.v1.checks.ReviewManifest manifest = 7;
+  // design_ref is the one design this run is about, with the same ref semantics as board_ref.
+  string design_ref = 8;
+}
+
+message GetReviewRequest {
+  string name = 1; // "reviews/{review}"
+}
+
+message ListReviewsRequest {
+  // page_size is the maximum number of reviews to return. 0 uses the server default; the server may
+  // return fewer.
+  int32 page_size = 1;
+  // page_token continues a previous call. An empty token starts at the newest run.
+  string page_token = 2;
+  // filter narrows the listing (AIP-160). Only `design` is supported: `design="proj/board.kicad_sch"`
+  // matches results.design.source exactly. An unsupported filter is an error rather than a silently
+  // ignored argument, because a client that believed it had filtered and did not would read another
+  // board's verdicts as its own.
+  string filter = 3;
+}
+
+message ListReviewsResponse {
+  // reviews are ordered newest first.
+  repeated Review reviews = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+}
+
+message DeleteReviewRequest {
+  string name = 1; // "reviews/{review}"
 }
 
 message GetReviewManifestRequest {
   string mount = 1; // workspace mount the ref resolves within
-  // ref names the stored checklist, with the same ref semantics as RunReviewRequest.design_ref: a
+  // ref names the stored checklist, with the same ref semantics as CreateReviewRequest.board_ref: a
   // key the Loader resolves, never a host path.
   string ref = 2;
 }
 
 message GetReviewManifestResponse {
-  ReviewManifest manifest = 1;
+  agni.v1.checks.ReviewManifest manifest = 1;
 }
 
-// ReviewManifest is a project's review checklist, the wire form of review.Manifest: named review
-// areas, each holding items, each item bound to the check that verifies it.
-//
-// It is CONFIG, not an artifact, which is why it travels as a value while a design travels as a ref
-// (C22). The distinction is size and dispatch, not importance: a manifest is a small declaration the
-// caller already holds and the service composes into behaviour, so a service that took a path would
-// have to own file I/O to do its job and would bake one deployment's filesystem into the API.
-//
-// The authoring form is YAML and stays that way. This message mirrors the parsed struct rather than
-// the file, so an item's binding is a nested message here where the YAML inlines it flat.
-message ReviewManifest {
-  string name = 1;
-  repeated ManifestArea areas = 2;
-}
-
-// ManifestArea is one review area (e.g. "CAN Interface") grouping related checklist items. It is the
-// ASKING side and is deliberately distinct from agni.v1.checks.ReviewArea, which is the ANSWERING
-// side (the same areas carrying each item's outcome after a run).
-message ManifestArea {
-  string name = 1;
-  repeated ManifestItem items = 2;
-}
-
-// ManifestItem is one checklist entry. title is the short human review label shown in a report;
-// description is an optional longer explanation; note is an optional hint shown for an item that did
-// not fail, most usefully WHY an item is not automated. id names the item in the report.
-//
-// An item with no binding, or one bound to a rule that has not shipped, is tracked but not automated.
-// That is a feature: bind it to its intended future rule name and it flips to pass/fail on its own
-// once that rule lands.
-message ManifestItem {
-  string id = 1;
-  string title = 2;
-  string description = 3;
-  string note = 4;
-  ItemBinding binding = 5;
-}
-
-// ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
-// profile, query, present); they are mutually exclusive and a second one is a validation error, not a
-// precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than selectors, so
-// they do not count toward that limit and compose with whichever selector is set.
-message ItemBinding {
-  string rule = 1;    // a catalog rule by exact name, e.g. "profile/can-termination-missing"
-  string tag = 2;     // key=value, selecting a set of rules
-  string profile = 3; // an interface profile name (sugar for the profile tag)
-  ManifestQuery query = 4;
-  ManifestPresent present = 5;
-  // scope narrows a rule/tag binding to the nets of one or more interfaces, so a per-interface ask
-  // reflects only its bus instead of a design-wide rule's whole output (WS3-058). It requires a rule
-  // or tag to filter.
-  ManifestScope scope = 6;
-  // requirement narrows a profile binding to ONE of that profile's declared requirements (WS3-115),
-  // so a profile's requirement list can GROW without re-scoring every item already bound to it.
-  // Requires profile to be set.
-  string requirement = 7;
-  // applies_to_class gates the item on device class (WS10-014): computed-n/a when no component
-  // carries any of these classes. Values are component.class names, family tags included.
-  repeated string applies_to_class = 8;
-}
-
-// ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
-// program, whose goal must project subject; message is the finding template, where {var} is replaced
-// by the bound value. kind defaults to "component" and severity to "warning".
-message ManifestQuery {
-  string match = 1;
-  string subject = 2;
-  string kind = 3;
-  string message = 4;
-  string severity = 5;
-  // param_symbol names the datasheet symbol this query checks (e.g. "IOUT"). It does not change the
-  // query logic; the finding gains a structured datasheet citation resolved from the subject's spec.
-  string param_symbol = 6;
-}
-
-// ManifestPresent asserts that a class of component must EXIST on the design: the item passes when at
-// least one is present and fails when none is. It is never not-applicable, because the
-// component-class tier exists on any netlist, so the presence question always has a pass/fail answer.
-message ManifestPresent {
-  string class = 1;
-}
-
-// ManifestScope names the interfaces a rule/tag binding is filtered to. The effective scope is the
-// UNION of their nets, so one item can span several buses.
-message ManifestScope {
-  repeated string profiles = 1;
-}
-
-// ReviewItem and ReviewArea are NOT declared here: they live in agni.v1.checks alongside Finding
-// (WS3-103), because a per-item outcome is the review layer's core artifact rather than a fact about
-// this transport. The outcome vocabulary in particular — every verdict that is neither pass nor fail
-// — is what a written results document has to carry and what a foreign checker's flat violation list
-// cannot express, so it belongs to the contract, not to one RPC.
-
-// ReviewReport is one design's review result (the wire form of review.Report): the manifest and
-// design names plus each area's item outcomes. A client derives the tally (covered / pass / fail /
-// ...) from the item outcomes, the same pure function review.Report.Tally() applies, so the two
-// surfaces cannot drift on it.
-message ReviewReport {
-  string manifest = 1;
-  string design = 2;
-  repeated agni.v1.checks.ReviewArea areas = 3;
-}
-
-message RunReviewResponse {
-  string manifest = 1;
-  // reports is one ReviewReport per requested design, in request order (= column order in a rollup).
-  repeated ReviewReport reports = 2;
-}
+// ReviewItem, ReviewArea, and the ReviewManifest tree are NOT declared here: they live in
+// agni.v1.checks alongside Finding, because a checklist and its per-item outcomes are the review
+// layer's core artifacts rather than facts about this transport. The manifest joined them in WS9-053,
+// when a stored run had to embed the checklist it scored.
