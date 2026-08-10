@@ -12,7 +12,7 @@ If a word here is unfamiliar, that page is the glossary.
 If you have a Go toolchain, install the CLI straight onto your `PATH`:
 
 ```
-go install github.com/panyam/agni/cmd/agni@v0.1.0
+go install github.com/panyam/agni/cmd/agni@v0.1.1
 ```
 
 Pin a released version rather than `@latest` for anything whose output you keep. A check report

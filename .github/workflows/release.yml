@@ -4,19 +4,22 @@
 # the Go module release, and this workflow then builds the image from that same tag and stamps the
 # same string into the binary. Before this existed the two were kept in step by hand (`make tag-push
 # V=...` then `make image IMAGE_TAG=...`), which could ship an image tagged one version whose binary
-# reported another — exactly the confusion the version stamp exists to remove.
+# reported another, exactly the confusion the version stamp exists to remove.
 #
 # Cost note: this repo is public, so GitHub-hosted standard runners and GHCR storage/bandwidth for
 # public packages are both free. Keep to standard runners; larger runners are billed even here.
 #
-# ONE-TIME MANUAL STEP AFTER THE FIRST RUN. A newly created GHCR package is PRIVATE by default even
-# when the repository publishing it is public, and the workflow cannot change that for itself: the
-# default GITHUB_TOKEN can push to a package but not alter its visibility. So the first release
-# publishes an image that an anonymous `docker pull` cannot see, which looks like a broken build and
-# is not one. Fix it once, in the package's settings on github.com: set visibility to Public, and
-# link the package to this repository so it inherits future permissions. Subsequent releases need
-# nothing. The verify step below still passes on that first run, because it authenticates as the
-# workflow rather than anonymously, so it CANNOT catch this for you.
+# Package visibility needs NO manual step here, which is worth stating because the widely repeated
+# advice says otherwise. A GHCR package pushed by a workflow living in the repository it belongs to
+# is linked to that repository and takes its visibility, so publishing from this public repo yields a
+# publicly pullable image with nothing to configure. Measured on the first real run (v0.1.1): an
+# anonymous registry token fetched the manifest, and `docker pull` succeeded from a logged-out
+# client. The private-by-default warning applies to a package with no repository link, which is not
+# the case here.
+#
+# The distinction matters for the verify step below: it authenticates as the workflow, so it proves
+# the image runs and reports its tag, but it can say NOTHING about whether a stranger can pull it. If
+# that ever needs checking again, the only honest test is an anonymous pull from a logged-out client.
 name: release
 
 on:

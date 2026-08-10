@@ -130,7 +130,7 @@ ago and the build in front of you can be compared directly. Worth capturing alon
 you keep.
 
 ```
-agni v0.1.0
+agni v0.1.1
   built:    2026-08-10T14:46:21Z
   go:       go1.26.4
   platform: darwin/arm64
