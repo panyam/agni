@@ -29,6 +29,54 @@ Run the rule catalog and report findings. The workhorse. See
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
 | `--params <dir>` | load a datasheet parameter set, enabling datasheet-backed rules (see [Datasheets](../datasheets/)) |
 
+### `review <file>...`
+
+Run a review checklist over one or more designs and report one outcome per item. Where `check` asks
+"what is wrong with this board", `review` answers "which of our questions did we actually answer".
+Its outcome vocabulary distinguishes a check that passed from one that never ran.
+
+| flag | what it does |
+|---|---|
+| `--checklist <file>` | the review manifest (YAML) declaring areas and their items |
+| `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
+| `--profile-path <dir>` | interface-profile declarations added to the catalog |
+| `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
+| `--intent-path <file>` | a design-intent declaration, so intent-bound items resolve instead of reading `needs-design-intent` |
+| `--board-path <file>` | a board-geometry file attached to a netlist design, so board-tier items resolve instead of `n/a` |
+| `--coverage` | a per-area rollup of how many items each area decided, instead of the per-item report |
+| `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
+| `--format <fmt>` | `markdown` (default) or `json` |
+| `--results-out <file>` | also write the run as a self-contained check-result document |
+| `--render <dir>` | also write an annotated schematic SVG per design, each finding highlighted in place |
+| `--companion <file>` | a geometry file to draw `--render` images on, joined to netlist findings by net name |
+
+### `intake <file>`
+
+Extract a sanitized summary of a design: counts, class census, rail voltages, anomalies, and the
+parts list. It carries the shape of the design and structurally cannot carry a net name or a
+connection, so it is safe to hand to someone who should not see the design itself.
+
+| flag | what it does |
+|---|---|
+| `--params <dir>` | a parameter set, which populates the MPN and datasheet-gap columns |
+| `--parts <view>` | `types` (BOM by distinct part type, default) or `full` (per-component AVL) |
+| `--format <fmt>` | `md` (default) or `json` |
+
+### `results <file>`
+
+Render a check-result document written earlier by `check --results-out` or `review --results-out`.
+The document is self-contained, so this works with the design deleted.
+
+| flag | what it does |
+|---|---|
+| `--format <fmt>` | the same output formats the live run offers |
+| `--compare <file>` | compare against another results document and print the three-way entity split instead of a report |
+
+### `import-results <report.json>`
+
+Read another tool's check report (a `kicad-cli` DRC or ERC JSON report) as a check-result document,
+so it can be rendered and compared against a run of this engine with `results --compare`.
+
 ### `query <file> <query>`
 
 Search the design as data with an ad-hoc datalog query. Each answer prints with its provenance. See
@@ -81,8 +129,9 @@ Convert any design the tool reads into an IPC-2581 file (stdout if `out` is omit
 ## Advanced and developer commands
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
-(reader-health smoke over many files), `census`, and `derive` (datasheet extraction). These
-sit closer to the engine and are covered in the developer docs.
+(reader-health smoke over many files), `census`, and `derive` (datasheet extraction). `validate` is
+worth knowing as a user: point it at a folder of exports and it reports which of them this tool can
+actually read. The rest sit closer to the engine and are covered in the developer docs.
 
 ## Which formats are read
 

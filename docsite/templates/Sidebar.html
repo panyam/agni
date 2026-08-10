@@ -1,3 +1,4 @@
+{{# include "nav/TutorialNav.html" #}}
 {{# include "nav/GuideNav.html" #}}
 {{# include "nav/BuildNav.html" #}}
 {{# include "nav/ArchitectureNav.html" #}}
@@ -16,7 +17,9 @@
         {{ end }}
 
         <nav class="section-nav">
-            {{ if (Contains $currentPath "/guide/") }}
+            {{ if (Contains $currentPath "/tutorials/") }}
+                {{ template "TutorialNav" . }}
+            {{ else if (Contains $currentPath "/guide/") }}
                 {{ template "GuideNav" . }}
             {{ else if (Contains $currentPath "/build/") }}
                 {{ template "BuildNav" . }}
@@ -29,10 +32,11 @@
                     <h3>Start here</h3>
                     <ul>
                         <li><a href="{{.Site.PathPrefix}}/overview/">Overview</a></li>
-                        <li><a href="{{.Site.PathPrefix}}/guide/getting-started/">Getting started</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/tutorials/">Tutorials</a></li>
                     </ul>
                     <h3>Sections</h3>
                     <ul>
+                        <li><a href="{{.Site.PathPrefix}}/tutorials/">Tutorials</a></li>
                         <li><a href="{{.Site.PathPrefix}}/guide/">Use it</a></li>
                         <li><a href="{{.Site.PathPrefix}}/build/">Build on it</a></li>
                         <li><a href="{{.Site.PathPrefix}}/architecture/">Understand it</a></li>

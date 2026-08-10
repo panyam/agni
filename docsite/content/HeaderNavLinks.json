@@ -10,6 +10,16 @@
     "icon": "rocket"
   },
   {
+    "name": "Tutorials",
+    "url": "tutorials/",
+    "icon": "graduation-cap",
+    "children": [
+      { "name": "1. Read a design", "url": "tutorials/01-read-a-design/" },
+      { "name": "2. Run the catalog", "url": "tutorials/02-run-the-catalog/" },
+      { "name": "3. See it", "url": "tutorials/03-see-it/" }
+    ]
+  },
+  {
     "name": "Use it",
     "url": "guide/",
     "icon": "book",
