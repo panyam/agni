@@ -24,7 +24,9 @@
       { "name": "8. Write your checklist", "url": "tutorials/08-write-your-checklist/" },
       { "name": "9. Read the verdicts", "url": "tutorials/09-read-the-verdicts/" },
       { "name": "10. Compare revisions", "url": "tutorials/10-compare-revisions/" },
-      { "name": "11. Archive and gate", "url": "tutorials/11-archive-and-gate/" }
+      { "name": "11. Archive and gate", "url": "tutorials/11-archive-and-gate/" },
+      { "name": "12. Reconcile existing tools", "url": "tutorials/12-reconcile-existing-tools/" },
+      { "name": "13. Drive it in the browser", "url": "tutorials/13-drive-it-in-the-browser/" }
     ]
   },
   {

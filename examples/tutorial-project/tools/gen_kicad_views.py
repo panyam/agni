@@ -90,7 +90,11 @@ sym.append(")")
 
 # --- schematic ---------------------------------------------------------------------------------
 # Placement grid. Wide spacing so the stubs and labels never overlap a neighbouring symbol.
-COLS, DX, DY, X0, Y0 = 4, 55.0, 38.0, 35.0, 25.0
+# Every coordinate must land on KiCad's 1.27mm schematic grid. Off-grid geometry is netlist-
+# correct (this reader joins by exact coincidence, so it reads fine) but kicad-cli ERC reports
+# endpoint_off_grid, and then label_dangling and unconnected_wire_endpoint cascade from it: one
+# root cause, three symptoms per stub. All spacings below are multiples of 1.27.
+COLS, DX, DY, X0, Y0 = 4, 55.88, 38.10, 25.40, 25.40
 pin_net = {}
 for nname, conns in nets.items():
     for iid, desig in conns:
