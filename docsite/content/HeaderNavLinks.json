@@ -20,7 +20,11 @@
       { "name": "4. Your names", "url": "tutorials/04-your-names/" },
       { "name": "5. Your interfaces", "url": "tutorials/05-your-interfaces/" },
       { "name": "6. Part limits", "url": "tutorials/06-part-limits/" },
-      { "name": "7. Your architecture", "url": "tutorials/07-your-architecture/" }
+      { "name": "7. Your architecture", "url": "tutorials/07-your-architecture/" },
+      { "name": "8. Write your checklist", "url": "tutorials/08-write-your-checklist/" },
+      { "name": "9. Read the verdicts", "url": "tutorials/09-read-the-verdicts/" },
+      { "name": "10. Compare revisions", "url": "tutorials/10-compare-revisions/" },
+      { "name": "11. Archive and gate", "url": "tutorials/11-archive-and-gate/" }
     ]
   },
   {

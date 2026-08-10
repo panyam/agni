@@ -50,13 +50,12 @@ you added still work.
 
 **Run your review.**
 
-8. Write your checklist: the questions your team asks of every board, bound to the engine.
-9. Read the verdicts: why a question nobody answered must not score as a pass.
-10. Compare revisions: what changed between rev A and rev B, structurally.
-11. Archive and gate: keep the result, re-render it later, fail CI on it.
-
-Rungs 8 through 11 are being written. Until they land, `examples/tutorial-project/review.yaml` is a
-worked checklist and the [guide](../guide/) covers the underlying features one page at a time.
+8. [Write your checklist](08-write-your-checklist/): the questions your team asks of every board,
+   bound to the engine.
+9. [Read the verdicts](09-read-the-verdicts/): why a question nobody answered must not score as a
+   pass.
+10. [Compare revisions](10-compare-revisions/): what changed between rev A and rev B, structurally.
+11. [Archive and gate](11-archive-and-gate/): keep the result, re-render it later, fail CI on it.
 
 ## Running this on your own board
 
