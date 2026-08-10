@@ -593,6 +593,12 @@ func (p Profile) danglingRule() *check.Rule {
 // that is the cheaper plan; a generated one has no such excuse, because its author cannot see the
 // board it will run against.
 func mustBindHeadFirst(q query.Query) query.Query {
+	if bad := query.NonInjectiveRules(q); len(bad) > 0 {
+		panic(fmt.Sprintf("profiles: generated rule(s) %v put two variables in ONE argument position "+
+			"of one relation with nothing separating them, so datalog's homomorphic matching lets a "+
+			"single node satisfy both (WS3-127); a presence rule in that shape reports an interface "+
+			"in use on half the evidence. Add the disequality the body means", bad))
+	}
 	if bad := query.GeneratorFirstRules(q); len(bad) > 0 {
 		panic(fmt.Sprintf("profiles: generated rule(s) %v open with an unbound reaches, so the walk "+
 			"starts from every net on the board and `agni check` will not finish on a real design "+
