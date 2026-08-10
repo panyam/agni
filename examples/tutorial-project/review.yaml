@@ -1,0 +1,94 @@
+# The gateway project's review checklist: the questions this team asks of every board, in the order
+# a reviewer asks them. `agni review` runs it and reports one outcome per item.
+#
+# An item is bound to the engine in one of four ways, and all four appear below:
+#   rule:    a catalog rule decides the item (built-in, house, profile, or intent)
+#   profile: an interface profile decides it, and the item reads n/a when the interface is absent
+#   query:   an inline datalog query decides it, for a question no shipped rule asks
+#   note:    nothing automated decides it, and the note says who does
+#
+# The point of the not-automated verdicts is that a question nobody answered must not score as a
+# pass. An item bound to a profile for an interface this board does not have reads n/a, not pass.
+name: Gateway ECU design review
+areas:
+  - name: Power
+    items:
+      - id: "P1"
+        title: every rail carries a bulk capacitor
+        description: A rail with no bulk capacitance browns out on a load step.
+        rule: bulk-cap
+      - id: "P2"
+        title: every rail carries decoupling
+        rule: decoupling-present
+      - id: "P3"
+        title: the input rail is protected against reverse polarity
+        description: A harness connected backwards must not destroy the board.
+        rule: reverse-blocking-absent
+      - id: "P4"
+        title: no part is operated above its absolute-maximum supply voltage
+        description: Needs a seeded datasheet parameter for the part, else it cannot be decided.
+        rule: supply-exceeds-abs-max
+      - id: "P5"
+        title: every rail is probeable during bring-up
+        rule: test-point-coverage
+
+  - name: Interfaces
+    items:
+      - id: "I1"
+        title: the CAN interface is complete and terminated
+        description: Bound to the profile, so it reads n/a on a board with no CAN.
+        profile: CAN
+      - id: "I2"
+        title: the LIN interface is complete
+        description: >-
+          This board has no LIN. The item must not score a pass just because a check for an
+          absent interface found nothing to complain about.
+        profile: LIN
+      - id: "I3"
+        title: exposed signals have ESD protection
+        rule: esd-protection
+      - id: "I4"
+        title: every I2C bus has pull-ups
+        rule: i2c-pull-up
+
+  - name: House style
+    items:
+      - id: "H1"
+        title: net names follow house convention
+        description: Resolves only when --conventions is supplied, since the rule ships in that file.
+        rule: gateway/signal-net-naming
+      - id: "H2"
+        title: every test point sits on a recognized rail
+        description: >-
+          An inline query, because no shipped rule asks this project-specific question. Note that
+          the query matches the VIOLATION (a test point on a net that is not a rail), not the
+          healthy case. A query binding reports what it matches as findings, so matching the
+          healthy case inverts the item and a good board scores a fail.
+        query:
+          match: 'component.class(?r, "test_point"), pin.net(?r, ?p, ?n), not rail(?n) => ?r, ?n'
+          subject: r
+          message: '{r} probes {n}, which is not a recognized rail'
+      - id: "H3"
+        title: the assembly drawing lists a torque spec for every fastener
+        description: Nothing in the netlist can answer this.
+        note: manual review against the mechanical drawing package
+
+  - name: Board
+    items:
+      - id: "B1"
+        title: no track is below the fab's minimum width
+        description: >-
+          A board-tier question. This project's design.yaml entry is a netlist, which carries no
+          copper, so the item reads n/a until a board file is attached with --board-path. n/a here
+          means the question does not apply to what was loaded, which is not the same as a pass.
+        rule: track-width
+
+  - name: Architecture
+    items:
+      - id: "A1"
+        title: each rail sits at its declared voltage
+        description: Resolves only when --intent-path is supplied.
+        rule: intent/voltage-domain-mismatch
+      - id: "A2"
+        title: the declared modules are all present
+        rule: intent/module-missing

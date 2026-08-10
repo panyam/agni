@@ -1,0 +1,59 @@
+# The 12V-to-3V3 buck (U1), seeded by hand from its datasheet. Synthetic part, synthetic datasheet.
+#
+# This is the SEEDED-AND-TRUSTED half of the tutorial's datasheet pair: every row cites a page and a
+# table, and prov.method is "hand" at confidence 1, so a finding resting on it is a plain fail rather
+# than a provisional one. Compare acme-ldo-1v8.textproto, which is the untrusted half.
+mpn: "ACME-BUCK-3V3"
+manufacturer: "Agni Tutorial Works"
+device_class: "regulator"
+
+docs {
+  id: "acme-buck-3v3-rev-a"
+  title: "ACME-BUCK-3V3 Datasheet Rev A"
+  vendor: "Agni Tutorial Works"
+  locator: "synthetic"
+}
+
+parameters {
+  name: "Input voltage"
+  symbol: "VIN"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 36 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "acme-buck-3v3-rev-a" page: 3 table_or_figure: "Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Input voltage"
+  symbol: "VIN"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 6 max: 32 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "acme-buck-3v3-rev-a" page: 4 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Output voltage"
+  symbol: "VOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { typ: 3.3 }
+  unit: "V"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "acme-buck-3v3-rev-a" page: 4 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Output current"
+  symbol: "IOUT"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { max: 2 }
+  unit: "A"
+  conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "acme-buck-3v3-rev-a" page: 4 table_or_figure: "Recommended Operating Conditions" method: "hand" confidence: 1 }
+}

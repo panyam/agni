@@ -1,0 +1,21 @@
+# What the gateway board is SUPPOSED to be, declared separately from what it is. The engine has no
+# built-in opinion about a board's intended architecture, so an intent-bound review item reads
+# needs-design-intent until a file like this one is supplied with --intent-path.
+#
+# This is per-DESIGN, unlike profiles/ and params/ which are per-project: each design has its own
+# intended architecture, so the file lives beside the design rather than at the project root.
+#
+# One declaration here is deliberately WRONG. The core domain is declared at 3.3 V but its rail is
+# PMIC_IO_1V8, an actual 1.8 V rail, so the intent check has a real deviation to report. That is the
+# point of an intent file: it fails when the board stops matching what you said you were building.
+name: gateway intent
+modules:
+  - {name: regulators, class: regulator, count: 2}
+  - {name: connectors, class: connector, count: 1}
+voltage_domains:
+  - {name: main, nominal: 12.0, rails: [PMIC_MAIN_12V0]}
+  - {name: io, nominal: 3.3, rails: [PMIC_CORE_3V3]}
+  - {name: core, nominal: 3.3, rails: [PMIC_IO_1V8]}
+subsystems:
+  - {name: power tree, nets: [PMIC_MAIN_12V0, PMIC_CORE_3V3, PMIC_IO_1V8]}
+  - {name: can, nets: [CAN1_CANH, CAN1_CANL, CAN1_TXD, CAN1_RXD]}

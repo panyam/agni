@@ -1,0 +1,238 @@
+(edif GATEWAY
+  (edifVersion 2 0 0)
+  ; Gateway ECU, the tutorial board. Synthetic: every part, MPN, and vendor here is invented for the
+  ; docs, so the file is redistributable and nothing on it is anyone's real design.
+  ;
+  ; It is deliberately built so each tutorial rung has something true to show:
+  ;   - rails are named function-first (PMIC_CORE_3V3), which the BUILT-IN rail vocabulary misses, so
+  ;     the conventions.yaml lexicon has a visible job to do.
+  ;   - CAN is present and complete except for ESD, so the built-in CAN profile has one real finding,
+  ;     and the project's own CAN profile adds a standby signal the board does not route.
+  ;   - LIN is absent entirely, so the presence gate reads n/a rather than false-passing.
+  ;   - U2 (the LDO) is seeded only as a mock PartSpec, so its finding reads provisional, not fail.
+  ;
+  ; Each part cell carries its own (designator "<prefix>") BEFORE the view. That is load-bearing: the
+  ; reader takes the first designator it finds anywhere in the cell, so a cell without one picks up a
+  ; PORT's designator instead and every component of that type classifies as unknown.
+  (design GATEWAY (cellRef TOP (libraryRef WORK)))
+  (library PARTS
+    (cell CONN4
+      (cellType GENERIC)
+      (designator "J")
+      (view V (viewType NETLIST)
+        (interface
+          (port VBAT (direction INPUT) (designator "1"))
+          (port GND (direction INPUT) (designator "2"))
+          (port CANH (direction INOUT) (designator "3"))
+          (port CANL (direction INOUT) (designator "4")))))
+    (cell TVS
+      (cellType GENERIC)
+      (designator "D")
+      (view V (viewType NETLIST)
+        (interface
+          (port A (direction INOUT) (designator "1"))
+          (port K (direction INOUT) (designator "2")))))
+    (cell BUCK
+      (cellType GENERIC)
+      (designator "U")
+      (view V (viewType NETLIST)
+        (interface
+          (port VIN (direction INPUT) (designator "1"))
+          (port VOUT (direction OUTPUT) (designator "2"))
+          (port GND (direction INPUT) (designator "3"))
+          (port EN (direction INPUT) (designator "4"))
+          (port PG (direction OUTPUT) (designator "5")))))
+    (cell LDO
+      (cellType GENERIC)
+      (designator "U")
+      (view V (viewType NETLIST)
+        (interface
+          (port VIN (direction INPUT) (designator "1"))
+          (port VOUT (direction OUTPUT) (designator "2"))
+          (port GND (direction INPUT) (designator "3")))))
+    (cell MCU
+      (cellType GENERIC)
+      (designator "U")
+      (view V (viewType NETLIST)
+        (interface
+          (port VDDCORE (direction INPUT) (designator "1"))
+          (port VDDIO (direction INPUT) (designator "2"))
+          (port GND (direction INPUT) (designator "3"))
+          (port XIN (direction INPUT) (designator "4"))
+          (port XOUT (direction OUTPUT) (designator "5"))
+          (port CANTX (direction OUTPUT) (designator "6"))
+          (port CANRX (direction INPUT) (designator "7"))
+          (port SCL (direction INOUT) (designator "8"))
+          (port SDA (direction INOUT) (designator "9"))
+          (port NRST (direction INPUT) (designator "10")))))
+    (cell CANXCVR
+      (cellType GENERIC)
+      (designator "U")
+      (view V (viewType NETLIST)
+        (interface
+          (port VCC (direction INPUT) (designator "1"))
+          (port GND (direction INPUT) (designator "2"))
+          (port TXD (direction INPUT) (designator "3"))
+          (port RXD (direction OUTPUT) (designator "4"))
+          (port CANH (direction INOUT) (designator "5"))
+          (port CANL (direction INOUT) (designator "6")))))
+    (cell EEPROM
+      (cellType GENERIC)
+      (designator "U")
+      (view V (viewType NETLIST)
+        (interface
+          (port VCC (direction INPUT) (designator "1"))
+          (port GND (direction INPUT) (designator "2"))
+          (port SCL (direction INPUT) (designator "3"))
+          (port SDA (direction INOUT) (designator "4")))))
+    (cell CAP
+      (cellType GENERIC)
+      (designator "C")
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INOUT) (designator "1"))
+          (port 2 (direction INOUT) (designator "2")))))
+    (cell RES
+      (cellType GENERIC)
+      (designator "R")
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INOUT) (designator "1"))
+          (port 2 (direction INOUT) (designator "2")))))
+    (cell XTAL
+      (cellType GENERIC)
+      (designator "Y")
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INOUT) (designator "1"))
+          (port 2 (direction INOUT) (designator "2")))))
+    (cell TESTPOINT
+      (cellType GENERIC)
+      (designator "TP")
+      (view V (viewType NETLIST)
+        (interface
+          (port 1 (direction INOUT) (designator "1"))))))
+  (library WORK
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance IJ1 (viewRef V (cellRef CONN4 (libraryRef PARTS))) (designator "J1")
+            (property MPN (string "ACME-CONN-4")))
+          (instance ID1 (viewRef V (cellRef TVS (libraryRef PARTS))) (designator "D1")
+            (property MPN (string "ACME-TVS-24")))
+          (instance IU1 (viewRef V (cellRef BUCK (libraryRef PARTS))) (designator "U1")
+            (property MPN (string "ACME-BUCK-3V3")))
+          (instance IU2 (viewRef V (cellRef LDO (libraryRef PARTS))) (designator "U2")
+            (property MPN (string "ACME-LDO-1V8")))
+          (instance IU3 (viewRef V (cellRef MCU (libraryRef PARTS))) (designator "U3")
+            (property MPN (string "ACME-MCU-G1")))
+          (instance IU4 (viewRef V (cellRef CANXCVR (libraryRef PARTS))) (designator "U4")
+            (property MPN (string "ACME-CAN-XCVR"))
+            (property interface (string "CAN")))
+          (instance IU5 (viewRef V (cellRef EEPROM (libraryRef PARTS))) (designator "U5")
+            (property MPN (string "ACME-EEPROM-4K")))
+          (instance IC1 (viewRef V (cellRef CAP (libraryRef PARTS))) (designator "C1")
+            (property MPN (string "ACME-CAP-22U")) (property Value (string "22uF")))
+          (instance IC2 (viewRef V (cellRef CAP (libraryRef PARTS))) (designator "C2")
+            (property MPN (string "ACME-CAP-100N")) (property Value (string "100nF")))
+          (instance IC3 (viewRef V (cellRef CAP (libraryRef PARTS))) (designator "C3")
+            (property MPN (string "ACME-CAP-10U")) (property Value (string "10uF")))
+          (instance IC4 (viewRef V (cellRef CAP (libraryRef PARTS))) (designator "C4")
+            (property MPN (string "ACME-CAP-100N")) (property Value (string "100nF")))
+          (instance IC5 (viewRef V (cellRef CAP (libraryRef PARTS))) (designator "C5")
+            (property MPN (string "ACME-CAP-18P")) (property Value (string "18pF")))
+          (instance IC6 (viewRef V (cellRef CAP (libraryRef PARTS))) (designator "C6")
+            (property MPN (string "ACME-CAP-18P")) (property Value (string "18pF")))
+          (instance IR1 (viewRef V (cellRef RES (libraryRef PARTS))) (designator "R1")
+            (property MPN (string "ACME-RES-120R")) (property Value (string "120")))
+          (instance IR2 (viewRef V (cellRef RES (libraryRef PARTS))) (designator "R2")
+            (property MPN (string "ACME-RES-10K")) (property Value (string "10k")))
+          (instance IR3 (viewRef V (cellRef RES (libraryRef PARTS))) (designator "R3")
+            (property MPN (string "ACME-RES-10K")) (property Value (string "10k")))
+          (instance IY1 (viewRef V (cellRef XTAL (libraryRef PARTS))) (designator "Y1")
+            (property MPN (string "ACME-XTAL-16M")))
+          (instance ITP1 (viewRef V (cellRef TESTPOINT (libraryRef PARTS))) (designator "TP1"))
+          (instance ITP2 (viewRef V (cellRef TESTPOINT (libraryRef PARTS))) (designator "TP2"))
+
+          ; --- Power tree. Named function-first, which the built-in rail vocabulary does not match.
+          ; A portRef names a port by its DESIGNATOR, not by the port's name.
+          (net PMIC_MAIN_12V0 (joined
+            (portRef 1 (instanceRef IJ1))
+            (portRef 1 (instanceRef ID1))
+            (portRef 1 (instanceRef IU1))
+            (portRef 2 (instanceRef IR2))))
+          (net PMIC_CORE_3V3 (joined
+            (portRef 2 (instanceRef IU1))
+            (portRef 1 (instanceRef IU2))
+            (portRef 2 (instanceRef IU3))
+            (portRef 1 (instanceRef IU4))
+            (portRef 1 (instanceRef IU5))
+            (portRef 1 (instanceRef IC1))
+            (portRef 1 (instanceRef IC2))
+            (portRef 1 (instanceRef ITP1))))
+          (net PMIC_IO_1V8 (joined
+            (portRef 2 (instanceRef IU2))
+            (portRef 1 (instanceRef IU3))
+            (portRef 1 (instanceRef IC3))
+            (portRef 1 (instanceRef IC4))
+            (portRef 1 (instanceRef ITP2))))
+          (net GND (joined
+            (portRef 2 (instanceRef IJ1))
+            (portRef 2 (instanceRef ID1))
+            (portRef 3 (instanceRef IU1))
+            (portRef 3 (instanceRef IU2))
+            (portRef 3 (instanceRef IU3))
+            (portRef 2 (instanceRef IU4))
+            (portRef 2 (instanceRef IU5))
+            (portRef 2 (instanceRef IC1))
+            (portRef 2 (instanceRef IC2))
+            (portRef 2 (instanceRef IC3))
+            (portRef 2 (instanceRef IC4))
+            (portRef 2 (instanceRef IC5))
+            (portRef 2 (instanceRef IC6))))
+
+          ; --- CAN. Complete and terminated by R1 bridging the pair, with no ESD part on it, which is
+          ; the one real finding the built-in CAN profile has on this board.
+          (net CAN1_CANH (joined
+            (portRef 5 (instanceRef IU4))
+            (portRef 3 (instanceRef IJ1))
+            (portRef 1 (instanceRef IR1))))
+          (net CAN1_CANL (joined
+            (portRef 6 (instanceRef IU4))
+            (portRef 4 (instanceRef IJ1))
+            (portRef 2 (instanceRef IR1))))
+          (net CAN1_TXD (joined
+            (portRef 6 (instanceRef IU3))
+            (portRef 3 (instanceRef IU4))))
+          (net CAN1_RXD (joined
+            (portRef 7 (instanceRef IU3))
+            (portRef 4 (instanceRef IU4))))
+
+          ; --- Clock. Named XTAL_*, which is off this project's house convention (CLK_*).
+          (net XTAL_IN (joined
+            (portRef 4 (instanceRef IU3))
+            (portRef 1 (instanceRef IY1))
+            (portRef 1 (instanceRef IC5))))
+          (net XTAL_OUT (joined
+            (portRef 5 (instanceRef IU3))
+            (portRef 2 (instanceRef IY1))
+            (portRef 1 (instanceRef IC6))))
+
+          ; --- I2C, deliberately with no pull-ups, so the built-in i2c-pull-up rule has a finding.
+          (net I2C_SCL (joined
+            (portRef 8 (instanceRef IU3))
+            (portRef 3 (instanceRef IU5))))
+          (net I2C_SDA (joined
+            (portRef 9 (instanceRef IU3))
+            (portRef 4 (instanceRef IU5))))
+
+          ; --- Reset and enable.
+          (net MCU_NRST (joined
+            (portRef 10 (instanceRef IU3))
+            (portRef 1 (instanceRef IR3))))
+          (net PMIC_PG (joined
+            (portRef 5 (instanceRef IU1))
+            (portRef 2 (instanceRef IR3))))
+          (net PMIC_EN (joined
+            (portRef 4 (instanceRef IU1))
+            (portRef 1 (instanceRef IR2)))))))))

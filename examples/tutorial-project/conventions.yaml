@@ -1,0 +1,20 @@
+# House naming conventions, as this project supplies them to `agni check --conventions` and
+# `agni review --conventions`. The file carries two halves, wired differently.
+#
+#   lexicon: teaches the engine which of THIS project's net names are power rails. It is applied to
+#            the design READ, so it changes what the rail-quantified rules can even see.
+#   rules:   adds catalog rules, namespaced <config name>/<rule name>, so they appear as
+#            `gateway/signal-net-naming` alongside the built-ins.
+#
+# The lexicon half is the one worth understanding. This project names rails function-first
+# (PMIC_CORE_3V3), and the built-in rail vocabulary is start-anchored on VCC / VDD / +3V3, so it
+# matches none of them. Without this file the only rail on the board is GND.
+name: gateway
+lexicon:
+  rail:
+    patterns: ["_[0-9]+V[0-9]$"]
+rules:
+  - name: signal-net-naming
+    severity: warning
+    why: "house style names a clock net CLK_*, so XTAL_IN / XTAL_OUT are off-convention"
+    allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]
