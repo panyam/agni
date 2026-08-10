@@ -27,13 +27,20 @@ type CheckService struct {
 	// process was started without --params. GetComponentParams builds the model with it; a nil
 	// provider yields no joined specs (PartSpec guards nil), so the panel simply shows nothing.
 	specs param.ParamProvider
+	// baseConvention is the catalog source name of the deployment's --conventions default, "" when
+	// there is none. A request carrying its own convention REPLACES it (WS3-124), and this is how the
+	// service says which of its catalog's sources is the one to replace.
+	baseConvention string
 }
 
 // NewCheckService returns a CheckService backed by the given loader, rule catalog, and (optional)
 // datasheet provider. Pass check.DefaultCatalog() for the built-ins alone and a nil provider when no
 // datasheet corpus is wired.
-func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider) *CheckService {
-	return &CheckService{loader: loader, catalog: catalog, specs: specs}
+//
+// baseConvention names the startup convention already composed into catalog, so a request that sends
+// its own replaces it rather than stacking on it; pass "" when the catalog carries none.
+func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider, baseConvention string) *CheckService {
+	return &CheckService{loader: loader, catalog: catalog, specs: specs, baseConvention: baseConvention}
 }
 
 // ListRules returns the catalog the service runs, mapping each rule to its wire form: identity,
@@ -69,7 +76,7 @@ func (s *CheckService) ListRules(_ context.Context, _ *webapi.ListRulesRequest) 
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
 	// Per-request overlay config (WS3-102) resolves the same way it does for a review, through the one
 	// ComposeOverlay, so the two surfaces cannot read a convention file differently.
-	ov, err := ComposeOverlay(req.GetOverlay())
+	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}

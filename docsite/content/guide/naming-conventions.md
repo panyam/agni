@@ -68,6 +68,32 @@ By default a pattern matches the **leaf** of a qualified name. A hierarchical ne
 `/amp2/CTRL` is matched on `CTRL`, so one convention works across every sheet without
 encoding the hierarchy into the pattern.
 
+## On a server: a default, and how a request replaces it
+
+`agni serve --conventions house.yaml` makes that config the deployment's default. Its rules join the
+catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary, so
+everyone asking that server questions gets the house answer without doing anything.
+
+A request may carry its own convention instead, and when it does it **replaces** the server's for
+that request. Both halves go together: the request's rules replace the server's rules, and its
+lexicon replaces the server's vocabulary. Nothing of the deployment's convention survives into a
+request that named its own.
+
+Two consequences worth knowing.
+
+**Reusing the server's name is fine, and is the natural way to refine it.** A config named `house`
+sent to a server whose default is also named `house` simply replaces it. (Before this was settled,
+that combination failed outright with a duplicate-source error.)
+
+**Replacing is not the same as adding.** If your project wants the house rules *plus* its own, the
+config it sends has to contain both. That is deliberate: a request asking "what does this board look
+like under MY vocabulary" should get exactly that, and a caller who could not turn the deployment's
+rules off could not ask the question. It does mean that a finding which disappeared after switching
+conventions may have disappeared because the rule stopped running, not because the design improved.
+
+Only the convention is replaced. The built-in rules, and anything from `--profile-path` or
+`--intent-path`, are unaffected.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/): conventions findings read like any other,

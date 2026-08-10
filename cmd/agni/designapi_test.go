@@ -33,7 +33,7 @@ func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service
 
 // newCheckSvc builds a CheckService over the same os-backed loader, with the built-in catalog.
 func newCheckSvc(mounts []mounts.Mount) *service.CheckService {
-	return service.NewCheckService(&osLoader{mounts: mounts}, check.DefaultCatalog(), nil)
+	return service.NewCheckService(&osLoader{mounts: mounts}, check.DefaultCatalog(), nil, "")
 }
 
 // designFixtureSvc mounts the shared edif testdata (basic.edn netlist, sample.eds geometry)

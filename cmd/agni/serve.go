@@ -116,8 +116,13 @@ func serveCmd() *cobra.Command {
 			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 			// installed process-wide, which is the one legitimate use of a process-global (startup, before
 			// any request, never mutated after, C22). Its RULES join the catalog composition instead,
-			// inside serveRuleServices. A request that names its own conventions overrides both per
+			// inside serveRuleServices. A request that names its own conventions REPLACES both for that
 			// request, with that lexicon travelling with the read (WS3-106).
+			//
+			// "Replaces" is now true of both halves (WS3-124). The lexicon half always overrode, because
+			// it travels with the read; the catalog half used to ADD, so a request got its own rules
+			// stacked on the server's and could not turn the server's off. The two halves of one config
+			// composing differently is the shape that let WS3-102's bug hide, so they were made to agree.
 			var conventionCfg naming.Config
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
@@ -188,7 +193,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos; enables the datasheet params panel")
-	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's default: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may name its own instead")
+	c.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML) used as this server's DEFAULT: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request may carry its own, which REPLACES this one for that request (both halves); reusing this config's name is fine and is the natural way to refine it")
 	c.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations composed into the catalog every rule-running surface uses")
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
@@ -243,7 +248,8 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		noteSupersededRules(notes, catalog)
 	}
 	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-	return service.NewCheckService(loader, catalog, specs), service.NewReviewService(loader, store, catalog, byName, specs, env), nil
+	return service.NewCheckService(loader, catalog, specs, conventions.Name),
+		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name), nil
 }
 
 // healthHandler answers the container orchestrator's liveness/readiness probe. It is registered

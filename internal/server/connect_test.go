@@ -100,7 +100,7 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 		Name:  "A",
 		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
 	}}}
-	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
+	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
 	resp, err := a.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{
 		Manifest: service.ManifestProto(man), DesignRef: "d.edn",
 	}))
@@ -111,7 +111,7 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 		t.Fatalf("created review = %+v", resp.Msg)
 	}
 
-	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
+	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
 	_, err = failing.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{Manifest: service.ManifestProto(man), DesignRef: "d.edn"}))
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("want InvalidArgument, got %v", err)
@@ -127,7 +127,7 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 		Name:  "A",
 		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
 	}}}
-	a := NewReview(service.NewReviewService(memReviewLoader{man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
+	a := NewReview(service.NewReviewService(memReviewLoader{man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
 	resp, err := a.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
 	if err != nil {
 		t.Fatalf("GetReviewManifest: %v", err)
@@ -136,7 +136,7 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 		t.Fatalf("manifest = %+v", got)
 	}
 
-	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no such file: %w", service.ErrNotFound)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}))
+	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no such file: %w", service.ErrNotFound)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
 	_, err = failing.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("want NotFound, got %v", err)

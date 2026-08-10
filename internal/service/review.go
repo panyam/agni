@@ -86,6 +86,9 @@ type ReviewService struct {
 	// would be the worst of both, since it costs the full sweep and leaves nothing behind.
 	store ReviewStore
 	env   ReviewEnv
+	// baseConvention is the catalog source name of the deployment's --conventions default, "" when
+	// there is none. Same role it plays on CheckService: a request's own convention replaces it.
+	baseConvention string
 }
 
 // NewReviewService returns a ReviewService over the given loader, review store, composed rule
@@ -93,9 +96,10 @@ type ReviewService struct {
 // catalog and index are built once by the caller (serve/CLI) because they are design-independent.
 //
 // store may be nil, which disables the review resource methods; pass a MemReviewStore for a caller
-// that wants runs to work without persisting them, which is what `agni review` does.
-func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv) *ReviewService {
-	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env}
+// that wants runs to work without persisting them, which is what `agni review` does. baseConvention
+// names the startup convention a request-supplied one replaces; "" when the catalog carries none.
+func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv, baseConvention string) *ReviewService {
+	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env, baseConvention: baseConvention}
 }
 
 // reviewStore returns the configured store or an error naming the flag that configures it. Every
@@ -141,7 +145,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// Per-request overlay config (WS3-102), composed BEFORE the design is read: its lexicon half has
 	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
 	// service's own catalog and the default vocabulary in place.
-	ov, err := ComposeOverlay(req.GetOverlay())
+	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}

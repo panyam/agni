@@ -1,6 +1,9 @@
 package service
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/classify"
@@ -20,18 +23,33 @@ import (
 type Overlay struct {
 	Sources []check.RuleSource
 	Lexicon *classify.Lexicon
+	// baseConvention is the catalog source name of the SERVER's startup convention (`--conventions`),
+	// empty when the caller composed no such default. Catalog drops it before splicing this request's
+	// own, which is what makes a request-supplied convention override rather than stack (WS3-124).
+	//
+	// It is supplied by whoever built the base catalog, since only they know which of its sources came
+	// from the startup flag. The zero value replaces nothing, which is the honest answer for a caller
+	// (the CLI) whose catalog has no startup convention at all.
+	baseConvention string
 }
 
 // ComposeOverlay resolves an OverlayConfig into engine inputs. A nil or empty config yields a zero
 // Overlay, which changes nothing, so a request that names no overlay behaves exactly as before.
+//
+// baseConvention is the catalog source name of the SERVER's startup convention, which this request's
+// own convention replaces (WS3-124); "" when the caller composed no such default, and then nothing is
+// replaced. It is a REQUIRED parameter rather than an optional wither because there are three call
+// sites across two services, and "remember to also call the other thing" is precisely the shape that
+// let --conventions reach one rule-running surface and not the other (WS3-102, WS3-109). A required
+// argument makes forgetting it a compile error instead of a silently additive catalog.
 //
 // It performs no I/O: the config arrives as a value, so composing is pure and a caller can compose the
 // same inputs in a test, a CLI, or a browser without a filesystem. An invalid convention (a pattern
 // that will not compile, an unknown component class) is an ERROR, never a skip — an operator who asked
 // for their conventions and silently got the built-ins would read the resulting clean report as a
 // clean design.
-func ComposeOverlay(cfg *webapi.OverlayConfig) (Overlay, error) {
-	var o Overlay
+func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
+	o := Overlay{baseConvention: baseConvention}
 	conv := cfg.GetConventions()
 	if conv == nil {
 		return o, nil
@@ -65,6 +83,17 @@ func ComposeOverlay(cfg *webapi.OverlayConfig) (Overlay, error) {
 // tier for that run. Measured on one design, 19 items went pass -> needs-design-intent and 16 went
 // pass -> not-automated, with nothing anywhere to say why.
 //
+// A request's convention REPLACES the server's startup one rather than stacking on it (WS3-124),
+// which is what the serve flag help and the lexicon half both already promised. The replacement is a
+// tag filter: catalog composition stamps every rule with the name of the source that contributed it
+// (check.KeySource), so dropping the startup convention is dropping the rules carrying its name. Only
+// that one source goes; the built-ins and any --profile-path / --intent-path sources are not the
+// request's to remove, and a request that removed them would report a design clean by asking nothing.
+//
+// Replacement is scoped to a NAMED base convention rather than "any convention-looking source" on
+// purpose. A caller that never names one (the CLI, whose catalog has no startup convention) keeps the
+// additive behaviour, so this cannot silently subtract rules from a caller that did not opt in.
+//
 // A composition error is an error, not a panic: the sources come from a REQUEST here, and a caller
 // sending a convention whose name collides with an existing source should get a message, not a
 // crashed process.
@@ -72,7 +101,27 @@ func (o Overlay) Catalog(base *check.Catalog) (*check.Catalog, error) {
 	if len(o.Sources) == 0 {
 		return base, nil
 	}
-	return base.With(o.Sources...)
+	if o.baseConvention != "" {
+		base = base.Without(check.Facets{Tags: map[string][]string{check.KeySource: {o.baseConvention}}})
+	}
+	out, err := base.With(o.Sources...)
+	if err != nil {
+		return nil, o.explainCollision(err)
+	}
+	return out, nil
+}
+
+// explainCollision adds the one piece of context a duplicate-source error cannot carry on its own:
+// that the source it collided with may have come from a server flag rather than from this request.
+// The caller sees only their own convention, so "duplicate rule source" reads as though they sent it
+// twice, and the actual other party is invisible.
+func (o Overlay) explainCollision(err error) error {
+	if !strings.Contains(err.Error(), "duplicate rule source") {
+		return err
+	}
+	return fmt.Errorf("%w (a source of that name is already composed into this server's catalog, "+
+		"from --conventions or --profile-path; rename the convention, or name it exactly as the "+
+		"server's --conventions to replace it)", err)
 }
 
 // ReadOptions is what the overlay contributes to each design READ: the naming lexicon, or nothing.
