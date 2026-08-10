@@ -181,6 +181,12 @@ and stacks it over the same frame.
 - **The UI is islands.** Leaf components render the pushed state and emit intents back up. Panels
   live in a docking shell, and a saved layout is stamped with the panel registry at save time, so
   a newly registered panel appears without a migration.
+- **The review panel derives its own tally.** A run's document carries per-item outcomes, not a
+  tally, so the browser counts them itself with the same rules `review.Report.Tally()` applies. The
+  two implementations are checked against one committed fixture
+  (`core/review/testdata/tally_twin.json`), read by a Go test and a TypeScript test, because the
+  number they must agree on is `covered`, and a client that bucketed a verdict differently would
+  report a checklist as answered when nobody had answered it.
 - **URLs are deep-linkable.** The path is `/files/<mount>/<path>`, with query parameters for the
   sheet, the render mode, the layout, and symbol paths. A directory is the same path with a
   trailing slash. The presenter reports location changes and the composition root reflects them

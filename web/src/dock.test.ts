@@ -54,7 +54,7 @@ describe("layout persistence", () => {
 });
 
 describe("panel registry", () => {
-  it("covers exactly the ten viewer panels with unique ids", () => {
+  it("covers exactly the eleven viewer panels with unique ids", () => {
     const ids = VIEWER_PANELS.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.sort()).toEqual([
@@ -67,6 +67,7 @@ describe("panel registry", () => {
       "overview",
       "parts",
       "query",
+      "review",
       "rules",
     ]);
   });
@@ -80,6 +81,16 @@ describe("panel registry", () => {
 
   it("leaves Sheets default-open as the work page's navigation surface", () => {
     expect(VIEWER_PANELS.find((p) => p.id === "overview")?.defaultOpen).toBe(true);
+  });
+
+  // Review is secondary (WS9-052): it is only useful on a server started with --review-store, and
+  // the reconcile is what makes it appear in the menu for existing saved layouts without forcing it
+  // open on anyone.
+  it("registers Review as a secondary panel rather than a default-open one", () => {
+    const review = VIEWER_PANELS.find((p) => p.id === "review");
+    expect(review?.title).toBe("Review");
+    expect(review?.defaultOpen).toBeUndefined();
+    expect(review?.onDemand).toBeUndefined();
   });
 });
 

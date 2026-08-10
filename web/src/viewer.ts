@@ -1,7 +1,9 @@
-import type { Client } from "@connectrpc/connect";
+import { Code, ConnectError, type Client } from "@connectrpc/connect";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
+import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
+import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
@@ -14,10 +16,19 @@ import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlight
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
+import {
+  type ReviewState,
+  type ReviewView,
+  checklistOptions,
+  emptyReview,
+  reviewFromWire,
+} from "./review.js";
 
 type DesignClient = Client<typeof DesignService>;
 type CheckClient = Client<typeof CheckService>;
 type QueryClient = Client<typeof QueryService>;
+type ReviewClient = Client<typeof ReviewService>;
+type WorkspaceClient = Client<typeof WorkspaceService>;
 
 // RenderMode selects which renderer draws the current sheet: the WebGL packer, the SVG
 // verification backend, or the format's native tool (the golden reference). It maps to a
@@ -101,6 +112,9 @@ export interface ViewSink {
   coverage?: CoverageView;
   // The datasheet-params panel (WS9-035), optional like coverage; refreshParts no-ops when absent.
   parts?: PartsView;
+  // review receives the project's checklist verdict for the open design (WS9-052). Optional like
+  // coverage; every review method no-ops when it is absent.
+  review?: ReviewView;
 }
 
 // ViewerPresenter coordinates the viewer's semantic loop: a file selected in the tree is
@@ -186,6 +200,10 @@ export class ViewerPresenter {
     // query is the QueryService client for the datalog search panel (WS9-036). Optional so
     // hosts/tests without the panel construct the presenter unchanged; runQuery no-ops without it.
     private readonly query?: QueryClient,
+    // reviews is the ReviewService client for the review panel (WS9-052), and workspace lists the
+    // design's own directory to find the checklists beside it. Both optional, like query.
+    private readonly reviews?: ReviewClient,
+    private readonly workspace?: WorkspaceClient,
   ) {}
 
   // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the
@@ -340,6 +358,7 @@ export class ViewerPresenter {
       this.setBusyPhase("building report…");
       await this.refreshReport(); // the auto-layout conversion report is not a check — still eager
       await this.refreshParts(); // the datasheet-params join is a per-design read, not a check
+      await this.refreshReviews(); // stored review runs for this design, so a reviewed board opens on its latest verdict
     } catch (e) {
       this.views.summary(`error: ${String(e)}`);
     } finally {
@@ -515,6 +534,114 @@ export class ViewerPresenter {
   private expectations: RuleExpectationItem[] = [];
   private expectationFindings: FindingItem[] = [];
   private hasSidecar = false;
+
+  // ---- Review (WS9-052) ----------------------------------------------------------------------
+  //
+  // A review RUN is a resource (WS9-053), so the panel is not a "run and render" surface: it shows
+  // the runs already stored for this design, and creating one is an explicit act. That shape is the
+  // point rather than an accident of the API. A checklist verdict is compared between revisions, so
+  // a panel that could only ever show the latest run would rebuild the gap the resource model closed.
+
+  // reviewState is the panel's pushed state, held here because the presenter owns the interaction
+  // loop (which run is selected, which checklist is chosen) and the panel is a humble view (C3).
+  private reviewState: ReviewState = emptyReview();
+
+  // pushReview sends the current state to the panel, a no-op when the panel is unwired.
+  private pushReview(): void {
+    this.views.review?.setState({ ...this.reviewState });
+  }
+
+  // refreshReviews loads the runs stored for the open design plus the checklists sitting beside it.
+  // It runs on each design load, so opening a reviewed board shows its latest verdict rather than an
+  // empty panel.
+  //
+  // A server started without --review-store answers with a failed precondition, which is recorded as
+  // storeConfigured=false rather than as an error. That distinction is the panel's, and it matters:
+  // "this deployment keeps no runs" and "nobody has reviewed this board" look identical in an empty
+  // list, and a user told the wrong one goes hunting for a button that was never going to appear.
+  private async refreshReviews(): Promise<void> {
+    if (!this.views.review || !this.reviews) return;
+    this.reviewState = emptyReview();
+    if (!this.mount || !this.path) {
+      this.pushReview();
+      return;
+    }
+    this.reviewState.checklists = await this.findChecklists();
+    this.reviewState.checklist = this.reviewState.checklists[0]?.ref ?? "";
+    try {
+      const resp = await this.reviews.listReviews({ filter: `design="${this.path}"` });
+      this.reviewState.runs = resp.reviews.map(reviewFromWire);
+      // Newest first comes from the server, so the head is the latest run.
+      this.reviewState.selected = this.reviewState.runs[0]?.name ?? "";
+    } catch (e) {
+      if (isStoreUnconfigured(e)) this.reviewState.storeConfigured = false;
+      else this.reviewState.error = messageOf(e);
+    }
+    this.pushReview();
+  }
+
+  // findChecklists lists the design's own directory and keeps the YAML files. It deliberately does
+  // not read them: whether a YAML file is a checklist is decided by GetReviewManifest, which parses
+  // and validates. Guessing here would mean either hiding a user's real checklist or duplicating the
+  // parser in the browser.
+  private async findChecklists(): Promise<ReviewState["checklists"]> {
+    if (!this.workspace) return [];
+    const slash = this.path.lastIndexOf("/");
+    const dir = slash < 0 ? "" : this.path.slice(0, slash);
+    try {
+      const resp = await this.workspace.listDir({ mount: this.mount, path: dir });
+      return checklistOptions(resp.entries.map((e) => ({ name: e.name, path: e.path, isDir: e.isDir })));
+    } catch {
+      return [];
+    }
+  }
+
+  // createReview runs the chosen checklist against the open design and stores the result, then shows
+  // it. The manifest is resolved server-side first (GetReviewManifest) and sent back as a VALUE, which
+  // is the C22 seam: the browser holds a ref and no filesystem, so the one read is a named rpc rather
+  // than something the run does behind its back.
+  async createReview(): Promise<void> {
+    if (!this.views.review || !this.reviews) return;
+    if (this.reviewState.running) return;
+    if (!this.mount || !this.path || !this.reviewState.checklist) return;
+    this.reviewState = { ...this.reviewState, running: true, error: "" };
+    this.pushReview();
+    this.setBusy(true, "running review…");
+    try {
+      const man = await this.reviews.getReviewManifest({ mount: this.mount, ref: this.reviewState.checklist });
+      const created = await this.reviews.createReview({
+        mount: this.mount,
+        designRef: this.path,
+        manifest: man.manifest,
+      });
+      const run = reviewFromWire(created);
+      // Prepend rather than refetch: the new run is the newest, and the server hands the whole
+      // document back, so a second round-trip would only re-fetch what is already in hand.
+      this.reviewState.runs = [run, ...this.reviewState.runs];
+      this.reviewState.selected = run.name;
+    } catch (e) {
+      if (isStoreUnconfigured(e)) this.reviewState.storeConfigured = false;
+      else this.reviewState.error = messageOf(e);
+    } finally {
+      this.reviewState.running = false;
+      this.setBusy(false);
+      this.pushReview();
+    }
+  }
+
+  // showReview selects a stored run. The document is already held, so this is local.
+  showReview(name: string): void {
+    if (!this.views.review) return;
+    this.reviewState.selected = name;
+    this.pushReview();
+  }
+
+  // setChecklist chooses which manifest the next run scores.
+  setChecklist(ref: string): void {
+    if (!this.views.review) return;
+    this.reviewState.checklist = ref;
+    this.pushReview();
+  }
 
   // refreshCoverage fetches the interface-coverage matrix for the open design (WS9-041) and pushes
   // it to the coverage panel. Optional panel: a no-op when unwired. A design with no detected
@@ -840,4 +967,17 @@ function summaryLine(path: string, name: string, layout: string, format: string,
   if (comps) parts.push(`${comps} comps`);
   if (nets) parts.push(`${nets} nets`);
   return parts.join(" · ");
+}
+
+// isStoreUnconfigured reports the one server condition the review panel must not show as an error:
+// the deployment was started without --review-store, so it keeps no runs at all. Connect maps the
+// service's sentinel to FailedPrecondition, and matching on the CODE rather than the message keeps
+// this from breaking when the wording changes.
+function isStoreUnconfigured(e: unknown): boolean {
+  return ConnectError.from(e).code === Code.FailedPrecondition;
+}
+
+// messageOf pulls a human-readable message off a thrown value for inline display.
+function messageOf(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }

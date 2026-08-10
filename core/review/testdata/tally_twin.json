@@ -1,0 +1,88 @@
+{
+  "_comment": [
+    "Twinned tally fixture (WS9-052). Read by BOTH core/review's TestTallyTwinFixture and the web",
+    "tier's review.test.ts, so the Go and TypeScript tallies are checked against ONE set of numbers",
+    "rather than two independently-authored ones.",
+    "",
+    "The tally is derived rather than transmitted: a run's document carries per-item outcomes, and each",
+    "surface counts them itself. That is cheap and avoids a redundant wire field, but it means the two",
+    "implementations can disagree, and a disagreement here is not cosmetic. `covered` is the number a",
+    "team reads as 'how much of our checklist is actually mechanised', so a client that counted",
+    "not-automated as covered would report a checklist as answered when nobody had answered it.",
+    "",
+    "Adding an outcome to the vocabulary means adding a case here first. If only one side is updated",
+    "the fixture fails on the other, which is the point."
+  ],
+  "cases": [
+    {
+      "name": "empty",
+      "outcomes": [],
+      "want": {
+        "pass": 0, "fail": 0, "notApplicable": 0, "notAutomated": 0,
+        "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
+        "needsData": 0, "inconclusive": 0,
+        "total": 0, "covered": 0
+      }
+    },
+    {
+      "name": "plain pass fail",
+      "outcomes": ["pass", "pass", "fail"],
+      "want": {
+        "pass": 2, "fail": 1, "notApplicable": 0, "notAutomated": 0,
+        "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
+        "needsData": 0, "inconclusive": 0,
+        "total": 3, "covered": 3
+      }
+    },
+    {
+      "name": "not-automated is the only outcome that is not covered",
+      "outcomes": ["pass", "not-automated", "not-automated", "not-applicable"],
+      "want": {
+        "pass": 1, "fail": 0, "notApplicable": 1, "notAutomated": 2,
+        "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
+        "needsData": 0, "inconclusive": 0,
+        "total": 4, "covered": 2
+      }
+    },
+    {
+      "name": "every verdict in the vocabulary once",
+      "outcomes": [
+        "pass", "fail", "not-applicable", "not-automated",
+        "provisional", "needs-design-intent", "computed-n/a",
+        "needs-data", "inconclusive"
+      ],
+      "want": {
+        "pass": 1, "fail": 1, "notApplicable": 1, "notAutomated": 1,
+        "provisional": 1, "needsDesignIntent": 1, "computedNA": 1,
+        "needsData": 1, "inconclusive": 1,
+        "total": 9, "covered": 8
+      }
+    },
+    {
+      "name": "an unknown outcome counts toward the total but no bucket",
+      "outcomes": ["pass", "covered-externally", "fail"],
+      "want": {
+        "pass": 1, "fail": 1, "notApplicable": 0, "notAutomated": 0,
+        "provisional": 0, "needsDesignIntent": 0, "computedNA": 0,
+        "needsData": 0, "inconclusive": 0,
+        "total": 3, "covered": 3
+      }
+    },
+    {
+      "name": "a realistic gateway review",
+      "outcomes": [
+        "pass", "pass", "pass", "fail", "fail",
+        "not-applicable", "not-applicable",
+        "needs-design-intent", "needs-data",
+        "not-automated", "not-automated", "not-automated",
+        "provisional"
+      ],
+      "want": {
+        "pass": 3, "fail": 2, "notApplicable": 2, "notAutomated": 3,
+        "provisional": 1, "needsDesignIntent": 1, "computedNA": 0,
+        "needsData": 1, "inconclusive": 0,
+        "total": 13, "covered": 10
+      }
+    }
+  ]
+}

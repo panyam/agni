@@ -333,6 +333,48 @@
     .cov-missing .coverage-signal-state { color: #dc2626; }
     .cov-dangling, .cov-pullup_missing { border-color: #d97706; background: #fffbeb; }
     .cov-dangling .coverage-signal-state, .cov-pullup_missing .coverage-signal-state { color: #d97706; }
+
+    /* WS9-052 review panel: the project's checklist verdict over the stored runs (WS9-053). */
+    .review { padding: 4px; font-size: 12px; }
+    .rv-empty { color: #999; padding: 8px 4px; line-height: 1.5; }
+    .rv-empty code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; }
+    .rv-error { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 6px 8px; margin: 4px 0; }
+    .rv-controls { display: flex; gap: 6px; align-items: center; padding: 4px 2px; }
+    .rv-checklist, .rv-history { flex: 1; min-width: 0; font: inherit; font-size: 11px; padding: 3px; }
+    .rv-history { margin: 4px 2px; width: calc(100% - 4px); }
+    .rv-run { font: inherit; font-size: 11px; padding: 3px 10px; cursor: pointer; }
+    .rv-run:disabled { cursor: default; opacity: 0.55; }
+    .rv-summary { font-weight: 600; padding: 6px 4px 2px; }
+    .rv-provenance { color: #777; font-size: 11px; padding: 0 4px 6px; }
+    .rv-area { margin-bottom: 10px; }
+    .rv-area-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 4px 6px; border-bottom: 1px solid #eee; }
+    .rv-area-name { font-weight: 600; font-size: 13px; }
+    .rv-area-tally { color: #666; font-size: 10px; text-align: right; }
+    .rv-items { list-style: none; margin: 0; padding: 0; }
+    .rv-item { padding: 5px 6px; border-bottom: 1px solid #f4f4f4; }
+    .rv-item-head { display: flex; gap: 6px; align-items: baseline; }
+    .rv-item-id { color: #999; font-size: 10px; min-width: 2.2em; }
+    .rv-item-title { flex: 1; }
+    .rv-item-note { color: #777; font-size: 11px; padding: 2px 0 0 calc(2.2em + 6px); }
+    .rv-findings-toggle { background: none; border: none; color: #2563eb; font: inherit; font-size: 11px; cursor: pointer; padding: 2px 0 0 calc(2.2em + 6px); }
+    .rv-findings { list-style: none; margin: 2px 0 0; padding: 0 0 0 calc(2.2em + 6px); }
+    .rv-finding { display: flex; gap: 6px; width: 100%; text-align: left; background: none; border: none; font: inherit; font-size: 11px; cursor: pointer; padding: 2px 0; }
+    .rv-finding:hover { background: #f4f6f9; }
+    .rv-finding-subject { font-weight: 600; }
+    .rv-finding-message { color: #666; }
+
+    /* The outcome chip. ONLY pass reads as green; every other verdict reads as unfinished, because
+       the whole point of the vocabulary is that a question nobody answered must not score as one that
+       was. rv-unknown is an outcome this build does not recognise, styled with the unanswered group
+       rather than the passing one. */
+    .rv-outcome { font-size: 10px; padding: 1px 6px; border-radius: 8px; white-space: nowrap; border: 1px solid transparent; }
+    .rv-pass { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+    .rv-fail { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .rv-provisional { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .rv-needs-design-intent, .rv-needs-data { color: #a16207; background: #fefce8; border-color: #fef08a; }
+    .rv-inconclusive { color: #7c3aed; background: #faf5ff; border-color: #e9d5ff; }
+    .rv-not-applicable, .rv-computed-n-a { color: #6b7280; background: #f9fafb; border-color: #e5e7eb; }
+    .rv-not-automated, .rv-unknown { color: #4b5563; background: #f3f4f6; border-color: #d1d5db; border-style: dashed; }
     /* WS9-035 datasheet-params panel: one expandable row per datasheet-backed component */
     .parts { padding: 4px; font-size: 12px; }
     .parts-empty { color: #999; font-size: 12px; padding: 8px 4px; }
