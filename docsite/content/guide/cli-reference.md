@@ -26,6 +26,7 @@ Run the rule catalog and report findings. The workhorse. See
 | `--format <fmt>` | `text` (default), `markdown`, `json`, or `report` |
 | `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info` |
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
+| `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
 | `--params <dir>` | load a datasheet parameter set, enabling datasheet-backed rules (see [Datasheets](../datasheets/)) |
 
 ### `query <file> <query>`
@@ -65,6 +66,7 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--addr <addr>` | listen address (default `:8080`) |
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--theme <name>` | render palette: `default` or `dark` |
+| `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 
 ### `emit <in> [out]`
 

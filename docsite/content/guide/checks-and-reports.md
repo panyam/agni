@@ -105,7 +105,8 @@ Each rule ships with a short explainer describing what it looks for and why the 
 matters electrically. In the viewer it appears beside the finding. On the command line the
 rule name is the handle you look it up by. The catalog is open, so your team can add house
 rules on top of the built-ins. [Naming conventions](../naming-conventions/) is the simplest
-form of that, configured without any code.
+form of that, configured without any code, and [interface profiles](../interface-profiles/)
+are the same idea for a bus: declare its signals, get a rule per requirement.
 
 Here is one, in full, so you know what to expect before you go looking. Every rule in the
 [rule catalog](../../reference/rules/) carries the same shape: what it checks, why it matters in the

@@ -20,6 +20,7 @@
       { "name": "Comparing revisions", "url": "guide/comparing-revisions/" },
       { "name": "Querying", "url": "guide/querying/" },
       { "name": "Naming conventions", "url": "guide/naming-conventions/" },
+      { "name": "Interface profiles", "url": "guide/interface-profiles/" },
       { "name": "Datasheets", "url": "guide/datasheets/" },
       { "name": "CLI reference", "url": "guide/cli-reference/" }
     ]
