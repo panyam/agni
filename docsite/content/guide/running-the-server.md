@@ -12,7 +12,7 @@ If you only want the CLI, [Getting started](../getting-started/) is the shorter 
 ## The one-liner
 
 ```
-docker run -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0
+docker run -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.1
 ```
 
 Open `http://localhost:8080`. Your boards are in the file tree on the left, under a mount named
@@ -20,6 +20,13 @@ Open `http://localhost:8080`. Your boards are in the file tree on the left, unde
 
 With no `-v` at all it still runs, serving the two demo boards baked into the image, so you can
 confirm the thing works before pointing it at your own designs.
+
+The examples on this page pin a version, for the same reason
+[Getting started](../getting-started/#install) does: a report is only reproducible if you can say
+which build produced it. Every published version is on
+[the package page](https://github.com/panyam/agni/pkgs/container/agni), and `:latest` tracks the
+newest if you would rather not pin. `agni version` inside the container always tells you what you
+actually have.
 
 ## Bringing your designs
 
@@ -30,7 +37,7 @@ flags:
 docker run -p 8080:8080 \
   -v ~/boards:/workspace/boards \
   -v ~/datasheets:/workspace/datasheets \
-  ghcr.io/panyam/agni:v0.1.0
+  ghcr.io/panyam/agni:v0.1.1
 ```
 
 That gives two mounts, `boards` and `datasheets`. The mount is the containment boundary: the
@@ -60,7 +67,7 @@ The image's entrypoint is the `agni` binary and the server is only its default c
 subcommand works with the same environment the server has:
 
 ```
-docker run -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0 \
+docker run -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.1 \
   check /workspace/boards/board.kicad_pro --format json
 ```
 
@@ -86,7 +93,7 @@ surface:
 docker run -p 8080:8080 \
   -v ~/boards:/workspace/boards \
   -v ~/houserules:/etc/agni \
-  ghcr.io/panyam/agni:v0.1.0 \
+  ghcr.io/panyam/agni:v0.1.1 \
   serve --addr :8080 --mount-root /workspace \
         --profile-path /etc/agni/profiles \
         --conventions /etc/agni/conventions.yaml \
@@ -115,7 +122,7 @@ On **Linux**, bind mounts pass ownership through unchanged, so those files land 
 and you may not be able to edit them afterwards. Run as yourself instead:
 
 ```
-docker run --user $(id -u):$(id -g) -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0
+docker run --user $(id -u):$(id -g) -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.1
 ```
 
 ## What is not in the image
