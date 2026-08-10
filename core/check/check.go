@@ -239,14 +239,6 @@ func Run(m Model, rules []*Rule) []Finding {
 	return out
 }
 
-// connectivityFactPrefixes name the fact families that come from a component's PINS. A symbol that
-// fails to resolve contributes no pins, so every fact in these families is missing for its
-// placements — and missing connectivity is indistinguishable from connectivity that was never
-// drawn. The gate below reads the rule's own declared Reads (docs/15 vocabulary) rather than a new
-// per-rule annotation, so a rule authored later is covered by declaring what it reads, which it
-// must do anyway.
-var connectivityFactPrefixes = []string{"pin.", "on_net"}
-
 // unresolvedSymbolGate returns a per-rule gate that reports whether a rule cannot be DECIDED
 // because the read lost pins (WS1-052), along with the inconclusive finding to emit instead.
 //
@@ -293,10 +285,8 @@ func unresolvedSymbolGate(m Model) func(*Rule) (Finding, bool) {
 // evaluating, so the gate costs nothing where it buys nothing.
 func readsConnectivity(r *Rule) bool {
 	for _, fact := range r.Reads {
-		for _, p := range connectivityFactPrefixes {
-			if strings.HasPrefix(fact, p) {
-				return true
-			}
+		if TierOf(fact) == TierConnectivity {
+			return true
 		}
 	}
 	return false
