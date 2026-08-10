@@ -65,12 +65,15 @@ to report rather than a contrived one.
 
 ## A note on the netlist
 
-Two things about the EDIF are load-bearing, and both are easy to get wrong when writing one by hand.
-
-Each part cell carries its own `(designator "<prefix>")` **before** the view. The reader takes the
-first designator it finds anywhere in the cell, so a cell without one picks up a *port's* designator
-instead. Every component of that type then classifies as unknown, and every rule that quantifies
-over a device class silently finds nothing.
+One thing about the EDIF is load-bearing, and it is easy to get wrong when writing one by hand.
 
 A `portRef` names a port by its **designator**, not by the port's name. Use the name and the
-connection never joins to the pin, so pin-level rules see an unconnected part.
+connection never joins to the pin, so pin-level rules see an unconnected part while `stats` looks
+perfectly healthy.
+
+Each part cell here also declares its own `(designator "<prefix>")`, which is how a cell states the
+reference-designator prefix its instances use. That is good practice rather than a requirement: a
+cell that omits it falls back to the prefix on each instance's own ref-des. It used to be required
+here for a different reason, because the reader would take a *port's* designator when a cell
+declared none, and every component of that cell then classified as unknown. That was agni issue 109
+and it is fixed.

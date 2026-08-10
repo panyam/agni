@@ -15,17 +15,20 @@ node-deps:
 components: node-deps
 	node build.mjs
 
-# One-shot static build into ./dist (no server).
+# One-shot static build into ./dist (no server). Copies static/ in, because the generator emits
+# only pages: without this dist has no CSS, no JS bundle, no images and no rendered designs, so a
+# built site silently loses every stylesheet and every interactive component. That was invisible
+# for as long as the only consumer was `gh-pages`, which copied static/ itself on the way out.
 build: components
 	AGNI_DOCS_ENV=production go run . -build
+	rm -rf dist/static
+	cp -r static dist/static
 
 clean:
 	rm -rf dist static/js/gen
 
 # Deploy ./dist to the gh-pages branch of panyam/agni.
 gh-pages: build
-	rm -rf dist/static
-	cp -r static dist/static
 	@if [ -d dist/.git ]; then echo "Error: dist is a git repo; remove it first." && exit 1; fi
 	cd dist && \
 		touch .nojekyll && \

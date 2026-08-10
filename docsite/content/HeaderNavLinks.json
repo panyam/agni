@@ -24,7 +24,9 @@
       { "name": "8. Write your checklist", "url": "tutorials/08-write-your-checklist/" },
       { "name": "9. Read the verdicts", "url": "tutorials/09-read-the-verdicts/" },
       { "name": "10. Compare revisions", "url": "tutorials/10-compare-revisions/" },
-      { "name": "11. Archive and gate", "url": "tutorials/11-archive-and-gate/" }
+      { "name": "11. Archive and gate", "url": "tutorials/11-archive-and-gate/" },
+      { "name": "12. Reconcile existing tools", "url": "tutorials/12-reconcile-existing-tools/" },
+      { "name": "13. Drive it in the browser", "url": "tutorials/13-drive-it-in-the-browser/" }
     ]
   },
   {
@@ -65,6 +67,7 @@
       { "name": "Geometry and rendering", "url": "architecture/geometry-and-rendering/" },
       { "name": "Semantic diff", "url": "architecture/semantic-diff/" },
       { "name": "Rules and checks", "url": "architecture/rules-and-checks/" },
+      { "name": "Checks contract", "url": "architecture/checks-contract/" },
       { "name": "Datasheet layer", "url": "architecture/datasheet-layer/" },
       { "name": "Web app and presenter", "url": "architecture/web-app/" },
       { "name": "Stack and platform", "url": "architecture/stack/" }
