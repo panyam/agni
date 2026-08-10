@@ -28,6 +28,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/stdlib/profiles"        // registers built-in "profile" rules; LoadDir adds overlay profiles
@@ -57,22 +58,56 @@ func rootCmd() *cobra.Command {
 			"Diff and checks operate on the IR, not on source files, so they are format-neutral.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		// Gives `agni --version`. The same string internal/version stamps into a results
+		// document's provenance, so the build a user reports and the build a report claims
+		// cannot disagree. `agni version` adds the toolchain and platform detail.
+		Version: version.Version(),
 	}
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
-			"(repeatable; the schematic's own directory is always searched)")
-	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd(), importResultsCmd())
+			"(repeatable; the schematic's own directory is always searched). Defaults to "+
+			envSymbolPath+" when unset.")
+	root.AddCommand(statsCmd(), checkCmd(), diffCmd(), renderCmd(), emitCmd(), validateCmd(), censusCmd(), serveCmd(), deriveCmd(), nativeCmd(), queryCmd(), reviewCmd(), intakeCmd(), resultsCmd(), importResultsCmd(), healthcheckCmd(), versionCmd())
 	return root
 }
 
 // symbolPaths holds the --symbol-path search directories for resolving xschem/gEDA symbols.
 var symbolPaths []string
 
+// envSymbolPath names the environment variable that supplies --symbol-path when the flag is
+// absent. It exists for the container image, where the symbol libraries ship at a fixed location
+// and EVERY subcommand needs them, not just the one the image's default CMD happens to run.
+//
+// Without it, `docker run <image> check board.kicad_sch` would silently lose the symbol paths,
+// because overriding CMD replaces the whole argument list. That failure is the quiet kind: a
+// schematic naming external symbols reads short, the rules evaluate cleanly over the short read,
+// and the run reports fewer findings with no error to explain them.
+//
+// Colon-separated, like PATH, because that is what an operator expects of a path list in the
+// environment. The flag wins outright when present rather than appending, so an explicit
+// --symbol-path is never silently widened by ambient configuration.
+const envSymbolPath = "AGNI_SYMBOL_PATH"
+
+// resolveSymbolPaths applies the envSymbolPath fallback. Called once before any command runs.
+func resolveSymbolPaths(getenv func(string) string) []string {
+	if len(symbolPaths) > 0 {
+		return symbolPaths
+	}
+	var out []string
+	for p := range strings.SplitSeq(getenv(envSymbolPath), ":") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // newLoader builds the formats.Loader every command reads designs through, carrying the
-// --symbol-path flag values. Format dispatch itself lives in formats, so a second
-// entrypoint (WASM, cloud function) constructs the same loader without importing cobra.
+// --symbol-path flag values (or the envSymbolPath fallback). Format dispatch itself lives in
+// formats, so a second entrypoint (WASM, cloud function) constructs the same loader without
+// importing cobra.
 func newLoader() *formats.Loader {
-	return &formats.Loader{SymbolPaths: symbolPaths}
+	return &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv)}
 }
 
 // readDesign reads a design file into the IR through the formats registry.

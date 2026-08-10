@@ -120,11 +120,31 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 
 Convert any design the tool reads into an IPC-2581 file (stdout if `out` is omitted).
 
+### `version`
+
+Print this build's identity: the version, the commit it was built from, and the Go toolchain and
+platform. `agni --version` prints just the first line.
+
+This is the same string a results document records as its producer, so a report archived months
+ago and the build in front of you can be compared directly. Worth capturing alongside any report
+you keep.
+
+```
+agni v0.1.0
+  built:    2026-08-10T14:46:21Z
+  go:       go1.26.4
+  platform: darwin/arm64
+```
+
+A build from a source clone reports the commit rather than a release (`b020fea02643`, suffixed
+`+dirty` when the tree had uncommitted changes), because that is what it honestly is.
+
 ## Global flags
 
 | flag | what it does |
 |---|---|
-| `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. |
+| `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. Defaults to `AGNI_SYMBOL_PATH` (colon-separated) when the flag is absent, which is how the container image supplies its bundled libraries to every subcommand. |
+| `--version` | print the build version and exit. |
 
 ## Advanced and developer commands
 

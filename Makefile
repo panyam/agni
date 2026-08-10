@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image image-run tag tag-push
 
 all: proto build
 
@@ -189,3 +189,103 @@ examples-test:
 		( cd $$d && $(GO) build ./... && $(GO) test ./... ) || exit 1; \
 	done
 	@echo "examples: all modules build + test OK"
+
+# =============================================================================
+# Container image
+# =============================================================================
+
+# The packaged server (Dockerfile): engine + web viewer + the KiCad/xschem/gEDA symbol
+# libraries. Designs come in as bind mounts under /workspace, one -v per folder, no flags.
+#   make image                      # build ghcr.io/panyam/agni:dev
+#   make image IMAGE_TAG=v0.1.0     # build the release tag
+#   make image-run DESIGNS=~/boards # build and serve those designs on :8080
+IMAGE_NAME ?= ghcr.io/panyam/agni
+IMAGE_TAG ?= dev
+IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
+
+# VERSION reaches the build as --build-arg because the image has no .git to derive it from; see
+# the ARG in the Dockerfile. It defaults to IMAGE_TAG so `make image IMAGE_TAG=v0.1.0` produces a
+# binary that reports v0.1.0, keeping the image tag and the build's own claim about itself in step.
+image:
+	docker build --build-arg VERSION=$(IMAGE_TAG) -t $(IMAGE) .
+
+# Run what `make image` built. DESIGNS is a host folder to expose; it lands as a mount named
+# after its basename, the same way a user's own -v would. --rm because this is a smoke-test
+# convenience, not a deployment.
+DESIGNS ?=
+IMAGE_RUN_MOUNT := $(if $(strip $(DESIGNS)),-v $(abspath $(DESIGNS)):/workspace/$(notdir $(abspath $(DESIGNS))))
+image-run: image
+	@echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"
+	docker run --rm -p $(patsubst :%,%,$(ADDR)):8080 $(IMAGE_RUN_MOUNT) $(IMAGE)
+
+# =============================================================================
+# Release
+# =============================================================================
+#
+# For the CLI, a release is a git tag and nothing else. Go modules resolve versions from tags, so
+# `go install github.com/panyam/agni/cmd/agni@v0.1.0` works the moment the tag is pushed, with no
+# build artifacts to upload and no separate release pipeline to keep green.
+#
+# The container image does not come along for free, because a tag is not something a registry
+# serves. Cut a release from a clean main with:
+#
+#   make testall                    # the gate; CI runs exactly this
+#   make tag-push V=v0.1.0          # publishes the tag, which is the Go release
+#   make image IMAGE_TAG=v0.1.0     # builds the image, stamping the same version INTO the binary
+#   docker push ghcr.io/panyam/agni:v0.1.0
+#
+# Keep the two versions identical. `make image` stamps IMAGE_TAG into the binary via ldflags (the
+# image has no .git to derive it from), so a mismatch here produces an image tagged one version
+# that reports another, and the report it writes would name the wrong producer.
+
+# Sub-modules that get tagged alongside the root module. Every IMPORTABLE sub-module (one with
+# its own go.mod that a downstream user would `go get`) needs its own tag here, because a
+# `replace` directive in it is ignored once someone imports it rather than building it.
+#
+# Empty on purpose today. The other go.mod files in this tree are examples/*/ (the demokit
+# walkthroughs, kept out of the engine go.mod so its dependency set stays lean, per
+# examples/CONVENTIONS.md) and docsite/ (the s3gen site). Neither is meant to be imported. Add a
+# path here the moment one is, or `go get` against it resolves to a pseudo-version instead of the
+# release.
+SUB_MODS_TO_TAG :=
+
+# Every ref a release creates: the root tag plus one per importable sub-module. Computed rather
+# than repeated so tag and tag-push cannot disagree about what a release consists of, and so an
+# empty SUB_MODS_TO_TAG yields exactly one ref rather than a stray "/$(V)".
+TAG_REFS = $(V) $(foreach m,$(SUB_MODS_TO_TAG),$(m)/$(V))
+
+# Shared preconditions. V must be present and must be v-prefixed semver, which is not style
+# preference: the Go module proxy will not serve a tag in any other shape, and a mistagged
+# release is only fixable by deleting a published tag. The already-exists check catches a re-run
+# before it half-creates a set of refs.
+define check_version
+	if [ -z "$(V)" ]; then echo "Usage: make $@ V=v0.1.0"; exit 1; fi; \
+	case "$(V)" in \
+		v[0-9]*.[0-9]*.[0-9]*) ;; \
+		*) echo "V must be v-prefixed semver, e.g. v0.1.0 (the Go module proxy will not serve other shapes)"; exit 1;; \
+	esac; \
+	if git rev-parse -q --verify "refs/tags/$(V)" >/dev/null; then \
+		echo "tag $(V) already exists locally; pick the next version or delete it first"; exit 1; \
+	fi
+endef
+
+# Create the release tags locally without pushing, so you can inspect them first.
+#   make tag V=v0.1.0
+tag:
+	@$(check_version)
+	@echo "Tagging $(V) at $$(git rev-parse --short HEAD) on $$(git branch --show-current)..."
+	@for ref in $(TAG_REFS); do \
+		echo "  $$ref"; \
+		git tag -a $$ref -m "$$ref" || exit 1; \
+	done
+	@echo ""
+	@echo "Tags created locally. Push with:"
+	@echo "  git push origin $(TAG_REFS)"
+	@echo "or re-run as: make tag-push V=$(V)"
+
+# Tag and push in one step. This is the one that publishes: a pushed tag is immediately
+# resolvable by the Go module proxy and is not safely retractable afterwards.
+#   make tag-push V=v0.1.0
+tag-push:
+	@$(MAKE) tag V=$(V)
+	git push origin $(TAG_REFS)

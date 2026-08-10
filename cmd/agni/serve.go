@@ -41,6 +41,7 @@ import (
 func serveCmd() *cobra.Command {
 	var addr string
 	var mountSpecs []string
+	var mountRoot string
 	var nativeTools []string
 	var pdf2docCmd string
 	var theme string
@@ -67,10 +68,21 @@ func serveCmd() *cobra.Command {
 			if err := checkWebAssets(dir); err != nil {
 				return err
 			}
-			mounts, err := mounts.Parse(mountSpecs)
+			explicit, err := mounts.Parse(mountSpecs)
 			if err != nil {
 				return err
 			}
+			// --mount-root is the container's zero-flag path: every subdirectory under it becomes a
+			// mount named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit
+			// --mount values still win on a name collision (see mounts.Merge). Empty disables
+			// discovery entirely, which is what a local `make serve` run wants.
+			var discovered []mounts.Mount
+			if mountRoot != "" {
+				if discovered, err = mounts.Discover(mountRoot); err != nil {
+					return err
+				}
+			}
+			mounts := mounts.Merge(discovered, explicit)
 			// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
 			// Absent --params leaves it nil, so the params RPC returns no joined specs (never an
 			// error) — the same optional posture as the CLI's --params (main.go readModelWithParams).
@@ -147,6 +159,7 @@ func serveCmd() *cobra.Command {
 			// bytes are served from the mounts. A more-specific prefix than the /datasheets/ page,
 			// so ServeMux routes /datasheets/raw/... here and the page space elsewhere.
 			mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(mounts)))
+			mux.Handle("GET /healthz", healthHandler())
 			registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux)
 
 			srv := &http.Server{Addr: addr, Handler: mux}
@@ -157,6 +170,7 @@ func serveCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
 	c.Flags().StringArrayVar(&mountSpecs, "mount", nil, "expose a design folder as name=path (repeatable)")
+	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
 	c.Flags().StringVar(&theme, "theme", "default", "render palette: "+strings.Join(themeNames(), " | ")+" (applies to SVG and WebGL)")
@@ -215,6 +229,24 @@ func serveRuleServices(loader serveLoader, specs param.ParamProvider, profilePat
 		noteSupersededRules(notes, catalog)
 	}
 	return service.NewCheckService(loader, catalog, specs), service.NewReviewService(loader, catalog, byName, specs), nil
+}
+
+// healthHandler answers the container orchestrator's liveness/readiness probe. It is registered
+// on the exact path "GET /healthz" so it does not shadow the page space, and it is deliberately
+// trivial: it reports that this process is up and serving HTTP, which is the entire question a
+// restart policy acts on.
+//
+// It does NOT re-probe the mounts, the rule catalog, or the params set. Those are all validated
+// during startup — a bad --mount, --profile-path, --intent-path, or --params fails before the
+// listener exists — so a probe that re-checked them could only ever report a state the process
+// cannot be in. A probe that appears to verify more than it does is worse than a trivial one,
+// because it invites treating a 200 as evidence about configuration that it is not.
+func healthHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		io.WriteString(w, "ok\n")
+	})
 }
 
 // checkWebAssets verifies dir is the web-assets directory (the viewer template plus the built

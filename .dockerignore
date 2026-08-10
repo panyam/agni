@@ -1,6 +1,22 @@
-# Keep the native-tools build context small; only Go sources are needed to build agni.
+# Keep the build context small. Shared by Dockerfile (the packaged server) and
+# Dockerfile.nattools (the native EDA tool host).
+#
+# Note what is deliberately NOT excluded: web/ source and web/templates, which the server image
+# needs, and demo/, which it bakes in so `docker run` with no volumes still shows a board.
 .git
+.github
+
+# Rebuilt inside the image. web/static is the esbuild bundle (gitignored anyway, see
+# web/.gitignore); copying a host build in would mask a broken bundle stage.
 web/node_modules
 web/static
+
+# Host build output.
 bin
-render/testdata/prdocs
+site
+docsite/public
+docsite/.venv-docs
+
+# Example binaries that a `make testall` run leaves behind (both gitignored).
+examples/render-board/render-board
+examples/validate/validate
