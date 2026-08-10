@@ -1,0 +1,533 @@
+(kicad_pcb
+	(version 20240108)
+	(generator "agni-tutorial")
+	(title_block
+		(title "Gateway ECU (tutorial board)"))
+	(layers
+		(0 "F.Cu" signal)
+		(2 "B.Cu" signal)
+		(44 "Edge.Cuts" user)
+	)
+	(net 0 "")
+	(net 1 "PMIC_MAIN_12V0")
+	(net 2 "PMIC_CORE_3V3")
+	(net 3 "PMIC_IO_1V8")
+	(net 4 "GND")
+	(net 5 "CAN1_CANH")
+	(net 6 "CAN1_CANL")
+	(net 7 "CAN1_TXD")
+	(net 8 "CAN1_RXD")
+	(net 9 "XTAL_IN")
+	(net 10 "XTAL_OUT")
+	(net 11 "I2C_SCL")
+	(net 12 "I2C_SDA")
+	(net 13 "MCU_NRST")
+	(net 14 "PMIC_PG")
+	(net 15 "PMIC_EN")
+	(gr_rect (start 0 0) (end 120 90)
+		(layer "Edge.Cuts")
+		(uuid "edge"))
+	(footprint "Connector_PinHeader:J_1x04"
+		(layer "F.Cu")
+		(uuid "fp-j1")
+		(at 10 12 0)
+		(property "Reference" "J1"
+			(at 0 -2 0))
+		(property "Value" "CONN4"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 1 "PMIC_MAIN_12V0")
+			(uuid "p-j1-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-j1-2"))
+		(pad "3" smd roundrect
+			(at 1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 5 "CAN1_CANH")
+			(uuid "p-j1-3"))
+		(pad "4" smd roundrect
+			(at 2.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 6 "CAN1_CANL")
+			(uuid "p-j1-4")))
+	(footprint "Diode_SMD:D_SOD-323"
+		(layer "F.Cu")
+		(uuid "fp-d1")
+		(at 32 12 0)
+		(property "Reference" "D1"
+			(at 0 -2 0))
+		(property "Value" "TVS"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 1 "PMIC_MAIN_12V0")
+			(uuid "p-d1-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-d1-2")))
+	(footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+		(layer "F.Cu")
+		(uuid "fp-u1")
+		(at 54 12 0)
+		(property "Reference" "U1"
+			(at 0 -2 0))
+		(property "Value" "BUCK"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 1 "PMIC_MAIN_12V0")
+			(uuid "p-u1-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-u1-2"))
+		(pad "3" smd roundrect
+			(at 1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-u1-3"))
+		(pad "4" smd roundrect
+			(at 2.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 15 "PMIC_EN")
+			(uuid "p-u1-4"))
+		(pad "5" smd roundrect
+			(at 3.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 14 "PMIC_PG")
+			(uuid "p-u1-5")))
+	(footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+		(layer "F.Cu")
+		(uuid "fp-u2")
+		(at 76 12 0)
+		(property "Reference" "U2"
+			(at 0 -2 0))
+		(property "Value" "LDO"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-u2-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 3 "PMIC_IO_1V8")
+			(uuid "p-u2-2"))
+		(pad "3" smd roundrect
+			(at 1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-u2-3")))
+	(footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+		(layer "F.Cu")
+		(uuid "fp-u3")
+		(at 98 12 0)
+		(property "Reference" "U3"
+			(at 0 -2 0))
+		(property "Value" "MCU"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 3 "PMIC_IO_1V8")
+			(uuid "p-u3-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-u3-2"))
+		(pad "3" smd roundrect
+			(at 1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-u3-3"))
+		(pad "4" smd roundrect
+			(at 2.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 9 "XTAL_IN")
+			(uuid "p-u3-4"))
+		(pad "5" smd roundrect
+			(at 3.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 10 "XTAL_OUT")
+			(uuid "p-u3-5"))
+		(pad "6" smd roundrect
+			(at 4.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 7 "CAN1_TXD")
+			(uuid "p-u3-6"))
+		(pad "7" smd roundrect
+			(at 5.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 8 "CAN1_RXD")
+			(uuid "p-u3-7"))
+		(pad "8" smd roundrect
+			(at 6.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 11 "I2C_SCL")
+			(uuid "p-u3-8"))
+		(pad "9" smd roundrect
+			(at 7.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 12 "I2C_SDA")
+			(uuid "p-u3-9"))
+		(pad "10" smd roundrect
+			(at 8.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 13 "MCU_NRST")
+			(uuid "p-u3-10")))
+	(footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+		(layer "F.Cu")
+		(uuid "fp-u4")
+		(at 10 30 0)
+		(property "Reference" "U4"
+			(at 0 -2 0))
+		(property "Value" "CANXCVR"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-u4-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-u4-2"))
+		(pad "3" smd roundrect
+			(at 1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 7 "CAN1_TXD")
+			(uuid "p-u4-3"))
+		(pad "4" smd roundrect
+			(at 2.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 8 "CAN1_RXD")
+			(uuid "p-u4-4"))
+		(pad "5" smd roundrect
+			(at 3.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 5 "CAN1_CANH")
+			(uuid "p-u4-5"))
+		(pad "6" smd roundrect
+			(at 4.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 6 "CAN1_CANL")
+			(uuid "p-u4-6")))
+	(footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
+		(layer "F.Cu")
+		(uuid "fp-u5")
+		(at 32 30 0)
+		(property "Reference" "U5"
+			(at 0 -2 0))
+		(property "Value" "EEPROM"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-u5-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-u5-2"))
+		(pad "3" smd roundrect
+			(at 1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 11 "I2C_SCL")
+			(uuid "p-u5-3"))
+		(pad "4" smd roundrect
+			(at 2.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 12 "I2C_SDA")
+			(uuid "p-u5-4")))
+	(footprint "Capacitor_SMD:C_0402"
+		(layer "F.Cu")
+		(uuid "fp-c1")
+		(at 54 30 0)
+		(property "Reference" "C1"
+			(at 0 -2 0))
+		(property "Value" "22uF"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-c1-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-c1-2")))
+	(footprint "Capacitor_SMD:C_0402"
+		(layer "F.Cu")
+		(uuid "fp-c2")
+		(at 76 30 0)
+		(property "Reference" "C2"
+			(at 0 -2 0))
+		(property "Value" "100nF"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-c2-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-c2-2")))
+	(footprint "Capacitor_SMD:C_0402"
+		(layer "F.Cu")
+		(uuid "fp-c3")
+		(at 98 30 0)
+		(property "Reference" "C3"
+			(at 0 -2 0))
+		(property "Value" "10uF"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 3 "PMIC_IO_1V8")
+			(uuid "p-c3-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-c3-2")))
+	(footprint "Capacitor_SMD:C_0402"
+		(layer "F.Cu")
+		(uuid "fp-c4")
+		(at 10 48 0)
+		(property "Reference" "C4"
+			(at 0 -2 0))
+		(property "Value" "100nF"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 3 "PMIC_IO_1V8")
+			(uuid "p-c4-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-c4-2")))
+	(footprint "Capacitor_SMD:C_0402"
+		(layer "F.Cu")
+		(uuid "fp-c5")
+		(at 32 48 0)
+		(property "Reference" "C5"
+			(at 0 -2 0))
+		(property "Value" "18pF"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 9 "XTAL_IN")
+			(uuid "p-c5-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-c5-2")))
+	(footprint "Capacitor_SMD:C_0402"
+		(layer "F.Cu")
+		(uuid "fp-c6")
+		(at 54 48 0)
+		(property "Reference" "C6"
+			(at 0 -2 0))
+		(property "Value" "18pF"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 10 "XTAL_OUT")
+			(uuid "p-c6-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 4 "GND")
+			(uuid "p-c6-2")))
+	(footprint "Resistor_SMD:R_0402"
+		(layer "F.Cu")
+		(uuid "fp-r1")
+		(at 76 48 0)
+		(property "Reference" "R1"
+			(at 0 -2 0))
+		(property "Value" "120"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 5 "CAN1_CANH")
+			(uuid "p-r1-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 6 "CAN1_CANL")
+			(uuid "p-r1-2")))
+	(footprint "Resistor_SMD:R_0402"
+		(layer "F.Cu")
+		(uuid "fp-r2")
+		(at 98 48 0)
+		(property "Reference" "R2"
+			(at 0 -2 0))
+		(property "Value" "10k"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 15 "PMIC_EN")
+			(uuid "p-r2-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 1 "PMIC_MAIN_12V0")
+			(uuid "p-r2-2")))
+	(footprint "Resistor_SMD:R_0402"
+		(layer "F.Cu")
+		(uuid "fp-r3")
+		(at 10 66 0)
+		(property "Reference" "R3"
+			(at 0 -2 0))
+		(property "Value" "10k"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 13 "MCU_NRST")
+			(uuid "p-r3-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 14 "PMIC_PG")
+			(uuid "p-r3-2")))
+	(footprint "Crystal:Crystal_SMD_3225"
+		(layer "F.Cu")
+		(uuid "fp-y1")
+		(at 32 66 0)
+		(property "Reference" "Y1"
+			(at 0 -2 0))
+		(property "Value" "XTAL"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 9 "XTAL_IN")
+			(uuid "p-y1-1"))
+		(pad "2" smd roundrect
+			(at 0.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 10 "XTAL_OUT")
+			(uuid "p-y1-2")))
+	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
+		(layer "F.Cu")
+		(uuid "fp-tp1")
+		(at 54 66 0)
+		(property "Reference" "TP1"
+			(at 0 -2 0))
+		(property "Value" "TESTPOINT"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 2 "PMIC_CORE_3V3")
+			(uuid "p-tp1-1")))
+	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
+		(layer "F.Cu")
+		(uuid "fp-tp2")
+		(at 76 66 0)
+		(property "Reference" "TP2"
+			(at 0 -2 0))
+		(property "Value" "TESTPOINT"
+			(at 0 2 0))
+		(pad "1" smd roundrect
+			(at -1.0 0)
+			(size 0.6 0.7)
+			(layers "F.Cu" "F.Paste" "F.Mask")
+			(net 3 "PMIC_IO_1V8")
+			(uuid "p-tp2-1")))
+	(segment (start 5 78.0) (end 15 78.0) (width 0.25) (layer "F.Cu") (net 1) (uuid "seg-0"))
+	(segment (start 5 79.5) (end 21 79.5) (width 0.25) (layer "F.Cu") (net 2) (uuid "seg-1"))
+	(segment (start 5 81.0) (end 27 81.0) (width 0.25) (layer "F.Cu") (net 3) (uuid "seg-2"))
+	(segment (start 5 82.5) (end 33 82.5) (width 0.25) (layer "F.Cu") (net 4) (uuid "seg-3"))
+	(segment (start 5 84.0) (end 39 84.0) (width 0.1) (layer "F.Cu") (net 5) (uuid "seg-4"))
+	(segment (start 5 85.5) (end 45 85.5) (width 0.25) (layer "F.Cu") (net 6) (uuid "seg-5"))
+	(segment (start 5 78.0) (end 51 78.0) (width 0.25) (layer "F.Cu") (net 7) (uuid "seg-6"))
+	(segment (start 5 79.5) (end 57 79.5) (width 0.25) (layer "F.Cu") (net 8) (uuid "seg-7"))
+	(segment (start 5 81.0) (end 63 81.0) (width 0.25) (layer "F.Cu") (net 9) (uuid "seg-8"))
+	(segment (start 5 82.5) (end 69 82.5) (width 0.25) (layer "F.Cu") (net 10) (uuid "seg-9"))
+	(segment (start 5 84.0) (end 75 84.0) (width 0.25) (layer "F.Cu") (net 11) (uuid "seg-10"))
+	(segment (start 5 85.5) (end 81 85.5) (width 0.25) (layer "F.Cu") (net 12) (uuid "seg-11"))
+	(segment (start 5 78.0) (end 87 78.0) (width 0.25) (layer "F.Cu") (net 13) (uuid "seg-12"))
+	(segment (start 5 79.5) (end 93 79.5) (width 0.25) (layer "F.Cu") (net 14) (uuid "seg-13"))
+	(segment (start 5 81.0) (end 99 81.0) (width 0.25) (layer "F.Cu") (net 15) (uuid "seg-14"))
+)

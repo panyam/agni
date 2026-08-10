@@ -57,13 +57,45 @@ them.
 
 ## Faithful geometry
 
-When the design does carry geometry, drop `--layout` and you get the design's own drawing:
+When the design does carry geometry, drop `--layout` and you get the design's own drawing. The
+tutorial board ships a KiCad view of itself for exactly this:
 
 ```
-agni render my-board.kicad_sch -o board.svg
+agni render designs/gateway/gateway.kicad_sch --symbol-path designs/gateway/symbols -o gateway.svg
 ```
 
-That is the default. `--layout` is what you reach for when there is nothing to be faithful to.
+```
+wrote gateway.svg (sheet "Gateway ECU (tutorial board)", 19 placements, 56 wires)
+```
+
+That is placements and wires read out of the file rather than computed, so the result is the drawing
+somebody drew. Faithful is the default. `--layout` is what you reach for when there is nothing to be
+faithful to.
+
+## The same board, twice
+
+`gateway.edn` and `gateway.kicad_sch` are two views of one design, which raises the obvious
+question of whether they still agree. Ask directly:
+
+```
+agni diff designs/gateway/gateway.edn designs/gateway/gateway.kicad_sch \
+  --symbol-path designs/gateway/symbols
+```
+
+```
+Components: +0  -0  ~19
+Nets:       new 0  deleted 0  renamed 0  hard 0  soft 0
+```
+
+Zero net changes. The two readers converged on the same netlist, which is the premise the whole
+engine rests on: analysis runs over one internal representation, so the format you started from
+stops mattering once the file is read.
+
+The nineteen changed components are library-qualified part-type names, which differ because each
+format names its libraries its own way. That is a difference in the files, not in the board.
+
+This is also the practical way to check a CAD migration. Export from the old tool and the new one,
+diff the two, and an empty net delta is real evidence the design survived the move.
 
 ## In the browser
 

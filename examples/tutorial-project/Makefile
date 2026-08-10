@@ -18,7 +18,11 @@ CONVENTIONS_FLAG = $(if $(wildcard conventions.yaml),--conventions conventions.y
 INTENT_FLAG      = $(if $(wildcard $(DIR)/intent.yaml),--intent-path $(DIR)/intent.yaml,)
 TIERS = $(PROFILE_FLAG) $(PARAMS_FLAG) $(CONVENTIONS_FLAG) $(INTENT_FLAG)
 
-.PHONY: help stats check review coverage diff report
+.PHONY: help stats check review coverage diff report views check-views regen-views
+
+# The KiCad schematic and the board are GENERATED from the EDIF netlist, so all three views describe
+# the same design by construction. Regenerate after editing the netlist, then re-run check-views.
+PY ?= python3
 
 help: ## List targets
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/\t/'
@@ -43,3 +47,18 @@ report: ## Write the review as a self-contained results document you can re-rend
 	@$(AGNI) review $(ENTRY) --checklist review.yaml $(TIERS) \
 	  --results-out reports/$(DESIGN)/review.results.json >/dev/null
 	@echo "wrote reports/$(DESIGN)/review.results.json"
+
+views: ## Faithful render of the KiCad view (the netlist has no geometry of its own)
+	@$(AGNI) render $(DIR)/gateway.kicad_sch --symbol-path $(DIR)/symbols -o gateway-schematic.svg
+
+check-views: ## The netlist and the KiCad view must still describe the same design (no net delta)
+	@out=$$($(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway.kicad_sch --symbol-path $(DIR)/symbols); \
+	  echo "$$out" | grep -q 'new 0  deleted 0  renamed 0  hard 0  soft 0' \
+	    || { echo "VIEWS DIVERGED: the netlist and the KiCad schematic no longer agree:"; \
+	         echo "$$out"; exit 1; }; \
+	  echo "netlist and KiCad view agree (no net delta)"
+
+regen-views: ## Rebuild the KiCad schematic, symbol library, and board FROM the netlist
+	@$(PY) tools/gen_kicad_views.py $(DIR)/gateway.edn
+	@$(PY) tools/gen_kicad_board.py $(DIR)/gateway.edn
+	@$(MAKE) --no-print-directory check-views

@@ -53,10 +53,69 @@ designs/gateway/gateway.edn  edif    ok      19 comps, 15 nets
 It takes a directory too, which is the useful form when you have just been handed a folder of
 exports and want to know which of them the tool can actually read.
 
-Two failure modes worth knowing about now. A file with an extension nothing claims is reported as
-*skipped*, not failed, so a silently skipped file never becomes a missing report. And a schematic
-that names its symbols rather than embedding them needs `--symbol-path` pointing at the library
-root, or its parts resolve without pins and the netlist comes out sparse.
+A file with an extension nothing claims is reported as *skipped*, not failed, so a silently skipped
+file never becomes a missing report.
+
+## The failure that costs the most
+
+The tutorial board ships a second view of itself, `gateway.kicad_sch`, whose symbols live in a
+separate library file rather than being embedded. That is normal practice and it is the setup for
+the most common bad read there is.
+
+```
+agni stats designs/gateway/gateway.kicad_sch
+```
+
+```
+source format:       kicad-sch
+libraries:           0
+components:          19 (unique ref_des)
+sections:            19 (source instances)
+multi-section:       0 (one ref_des, several sections)
+nets:                0
+```
+
+Nineteen components and **zero nets**. The parts were found, their symbols were not, so no pins
+resolved, so nothing is connected to anything. Point `--symbol-path` at the library and the same
+file reads correctly:
+
+```
+agni stats designs/gateway/gateway.kicad_sch --symbol-path designs/gateway/symbols
+```
+
+```
+source format:       kicad-sch
+libraries:           1
+components:          19 (unique ref_des)
+sections:            19 (source instances)
+multi-section:       0 (one ref_des, several sections)
+nets:                15
+```
+
+The flag takes a directory and searches its whole subtree, so pointing it at a library root is
+enough. A KiCad project's `sym-lib-table` is picked up automatically.
+
+Now the part worth sitting with. Run the checks on the broken read and it does not error, it does
+not warn you that it read nothing, and it does not stay quiet:
+
+```
+agni check designs/gateway/gateway.kicad_sch
+```
+
+```
+findings by rule:
+  bulk-cap               1
+  cap-voltage            1
+  crystal-load-caps      1
+  ...
+94 finding(s) total
+```
+
+Ninety-four findings, against nine on the same board read correctly. Every one of them is an
+artefact of the bad read. Nothing in that output says "I could not resolve your symbols". It looks
+like a board in serious trouble, and a reader who skipped `stats` would spend an afternoon on it.
+
+That is why this rung is first.
 
 ## A summary you can share
 
