@@ -64,6 +64,7 @@
       { "name": "Geometry and rendering", "url": "architecture/geometry-and-rendering/" },
       { "name": "Semantic diff", "url": "architecture/semantic-diff/" },
       { "name": "Rules and checks", "url": "architecture/rules-and-checks/" },
+      { "name": "Checks contract", "url": "architecture/checks-contract/" },
       { "name": "Datasheet layer", "url": "architecture/datasheet-layer/" },
       { "name": "Web app and presenter", "url": "architecture/web-app/" },
       { "name": "Stack and platform", "url": "architecture/stack/" }
