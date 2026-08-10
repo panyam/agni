@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs tag tag-push
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image image-run tag tag-push
 
 all: proto build
 
@@ -183,6 +183,31 @@ examples-test:
 		( cd $$d && $(GO) build ./... && $(GO) test ./... ) || exit 1; \
 	done
 	@echo "examples: all modules build + test OK"
+
+# =============================================================================
+# Container image
+# =============================================================================
+
+# The packaged server (Dockerfile): engine + web viewer + the KiCad/xschem/gEDA symbol
+# libraries. Designs come in as bind mounts under /workspace, one -v per folder, no flags.
+#   make image                      # build ghcr.io/panyam/agni:dev
+#   make image IMAGE_TAG=v0.1.0     # build the release tag
+#   make image-run DESIGNS=~/boards # build and serve those designs on :8080
+IMAGE_NAME ?= ghcr.io/panyam/agni
+IMAGE_TAG ?= dev
+IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
+
+image:
+	docker build -t $(IMAGE) .
+
+# Run what `make image` built. DESIGNS is a host folder to expose; it lands as a mount named
+# after its basename, the same way a user's own -v would. --rm because this is a smoke-test
+# convenience, not a deployment.
+DESIGNS ?=
+IMAGE_RUN_MOUNT := $(if $(strip $(DESIGNS)),-v $(abspath $(DESIGNS)):/workspace/$(notdir $(abspath $(DESIGNS))))
+image-run: image
+	@echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"
+	docker run --rm -p $(patsubst :%,%,$(ADDR)):8080 $(IMAGE_RUN_MOUNT) $(IMAGE)
 
 # =============================================================================
 # Release

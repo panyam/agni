@@ -56,6 +56,81 @@ func Parse(specs []string) ([]Mount, error) {
 	return mounts, nil
 }
 
+// Discover turns each immediate SUBDIRECTORY of root into a mount named after it, so a
+// container can expose design folders by bind-mounting them under one path and passing no
+// flags at all (`-v ~/boards:/workspace/boards`). It is the convention-over-configuration
+// half of the mount model; Parse remains the explicit half, and the two compose.
+//
+// The subdirectories are the mounts, not root itself. Mounting root directly would make one
+// bind mount per container the only option and would put every folder behind a single name,
+// losing the per-folder handle that ListMounts roots the file tree on.
+//
+// A missing root is NOT an error: it returns no mounts. The container always passes
+// --mount-root, and an operator who bind-mounts nothing should get an empty file tree and a
+// server that still starts, not a startup failure. A root that exists but is a file is an
+// error, because that is a misconfiguration rather than an absence.
+//
+// Mount order is os.ReadDir's, which is sorted by filename, so ListMounts is stable across
+// restarts without this function sorting again. Non-directories and dotfiles are skipped, the
+// latter so a stray .DS_Store or .git in a bind-mounted parent does not surface as a design
+// folder.
+func Discover(root string) ([]Mount, error) {
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return nil, fmt.Errorf("mount root %q: %w", root, err)
+	}
+	fi, err := os.Stat(abs)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("mount root %q: %w", root, err)
+	}
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("mount root %q: %q is not a directory", root, abs)
+	}
+	entries, err := os.ReadDir(abs)
+	if err != nil {
+		return nil, fmt.Errorf("mount root %q: %w", root, err)
+	}
+	var found []Mount
+	for _, e := range entries {
+		name := e.Name()
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+		// Stat through the symlink: a bind mount can land as a link, and DirEntry.IsDir
+		// reports on the link itself, which would skip a perfectly good design folder.
+		sub := filepath.Join(abs, name)
+		si, err := os.Stat(sub)
+		if err != nil || !si.IsDir() {
+			continue
+		}
+		found = append(found, Mount{Name: name, Root: sub})
+	}
+	return found, nil
+}
+
+// Merge combines discovered mounts with explicitly configured ones, with explicit winning on a
+// name collision. That direction matters: --mount is what an operator typed for this run, while a
+// discovered mount is whatever happened to be sitting under the mount root, so the typed one is
+// the more specific intent. Order is discovered-then-explicit-extras, both already sorted or in
+// command-line order, so ListMounts stays stable.
+func Merge(discovered, explicit []Mount) []Mount {
+	byName := map[string]bool{}
+	for _, m := range explicit {
+		byName[m.Name] = true
+	}
+	merged := make([]Mount, 0, len(discovered)+len(explicit))
+	for _, m := range discovered {
+		if byName[m.Name] {
+			continue
+		}
+		merged = append(merged, m)
+	}
+	return append(merged, explicit...)
+}
+
 // SafeResolve joins a mount-relative path onto root and confirms the result stays inside
 // root, returning the cleaned absolute path. It rejects absolute inputs and any path that
 // escapes the mount via "..". This is the shared containment check every path-taking OS

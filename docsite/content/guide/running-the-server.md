@@ -1,0 +1,127 @@
+---
+title: "Running the server"
+description: "Bring up the web viewer on your own machine with Docker, and bring your designs with you."
+---
+
+The [viewer](../../architecture/web-app/) is a server you run, not a hosted service. This page is
+about bringing it up on your own machine so a team can open a browser and work, rather than each
+engineer installing a toolchain.
+
+If you only want the CLI, [Getting started](../getting-started/) is the shorter path.
+
+## The one-liner
+
+```
+docker run -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0
+```
+
+Open `http://localhost:8080`. Your boards are in the file tree on the left, under a mount named
+`boards`.
+
+With no `-v` at all it still runs, serving the two demo boards baked into the image, so you can
+confirm the thing works before pointing it at your own designs.
+
+## Bringing your designs
+
+Every subdirectory of `/workspace` becomes a mount named after itself. One `-v` per folder, no
+flags:
+
+```
+docker run -p 8080:8080 \
+  -v ~/boards:/workspace/boards \
+  -v ~/datasheets:/workspace/datasheets \
+  ghcr.io/panyam/agni:v0.1.0
+```
+
+That gives two mounts, `boards` and `datasheets`. The mount is the containment boundary: the
+browser addresses files as a mount name plus a mount-relative path, never an absolute one, and the
+server rejects any path that escapes its mount.
+
+Dotfile directories are skipped, so a `.git` sitting in a bind-mounted parent does not show up as a
+design folder.
+
+## Symbol libraries are already there
+
+A schematic that names rather than embeds its symbols needs the symbol library to resolve to
+pin-level nets. The image ships the KiCad, xschem, and gEDA symbol libraries and points
+`--symbol-path` at all three, so external symbols resolve with nothing to install.
+
+This is worth knowing because the failure it prevents is a quiet one. Without the libraries the
+design still reads, it just reads short: fewer components, fewer nets, and therefore fewer
+findings, with no error to tell you so. If your component or net counts look low, that is the first
+thing to check, whether you are running in Docker or not.
+
+## Running one-shot commands
+
+The image's entrypoint is the `agni` binary and the server is only its default command, so any
+subcommand works with the same environment the server has:
+
+```
+docker run -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0 \
+  check /workspace/boards/board.kicad_pro --format json
+```
+
+This is mostly for CI, where a container is easier than provisioning a Go toolchain, and where it
+matters that the gate and the viewer run identical engine and symbol data. At your own desk,
+installing the CLI is nicer. See [the CLI reference](../cli-reference/).
+
+## Health
+
+`GET /healthz` returns 200 while the server is up. The image declares a `HEALTHCHECK` that calls
+`agni healthcheck` against it, so an orchestrator gets liveness with no extra tooling in the image.
+
+The probe reports that the process is serving HTTP and nothing more. Mounts, the rule catalog, and
+the parameter set are all validated at startup, so a misconfigured server fails before it ever
+listens. A 200 is not evidence that your `--profile-path` was right.
+
+## House rules for the whole server
+
+The catalog overlay is deployment configuration, applied once at startup to every rule-running
+surface:
+
+```
+docker run -p 8080:8080 \
+  -v ~/boards:/workspace/boards \
+  -v ~/houserules:/etc/agni \
+  ghcr.io/panyam/agni:v0.1.0 \
+  serve --addr :8080 --mount-root /workspace \
+        --profile-path /etc/agni/profiles \
+        --conventions /etc/agni/conventions.yaml \
+        web
+```
+
+Overriding the command like this replaces the default arguments, so `--mount-root` has to be
+repeated. The symbol paths do not, because they come from the environment.
+
+Note what an overlay means here. A profile named after a built-in supersedes it for **every**
+design this server reads, so point it at rules that suit the whole mounted set rather than one
+project. See [interface profiles](../interface-profiles/) and
+[naming conventions](../naming-conventions/).
+
+## Writes and file ownership
+
+The datasheets workbench writes back into a mount: saving a PartSpec or an annotation lands a file
+in your bind-mounted folder. The container runs as a non-root user so those files are not written
+as root, but its uid will not match yours. To have writes land as you:
+
+```
+docker run --user $(id -u):$(id -g) -p 8080:8080 -v ~/boards:/workspace/boards ghcr.io/panyam/agni:v0.1.0
+```
+
+## What is not in the image
+
+Two capabilities shell out to external programs and are deliberately left out, because both are
+large and neither is needed to read, check, diff, or query a design.
+
+- **Native golden renders.** `agni native render/open` drives the format's own tool (`kicad-cli`,
+  xschem, Lepton). See [native verification](../../build/native-verification/).
+- **Datasheet extraction.** The `/datasheets` workbench's "Extract (first pass)" action shells out
+  to a doc-IR producer configured with `--pdf2doc`. Transcribing parameters by hand and reading an
+  already-extracted doc-IR both work without it.
+
+## A shared deployment
+
+Everything above assumes one engineer, one machine. There is no authentication, no per-user
+scoping, and no session isolation: anyone who can reach the port sees every mount and can write
+through the datasheets workbench. That is the right trade for localhost and the wrong one for a
+shared host. Put it behind something that authenticates before you expose it.

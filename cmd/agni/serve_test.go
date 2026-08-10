@@ -1,6 +1,9 @@
 package main
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,4 +84,35 @@ func TestServeRejectsUnknownTheme(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), `unknown --theme "solarized"`) || !strings.Contains(err.Error(), "default") {
 		t.Fatalf("want an unknown-theme error naming the valid palettes, got %v", err)
 	}
+}
+
+// TestHealthHandler asserts the probe answers 200 with a body, and that it is registered on the
+// exact path rather than as a prefix — a "/healthz/" subtree would quietly swallow page routes.
+func TestHealthHandler(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.Handle("GET /healthz", healthHandler())
+	// Stand-in for the page space that registerPages puts at "/", so a prefix-shadowing
+	// regression shows up as this handler never being reached.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "page")
+	})
+
+	t.Run("200 with a body", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("got %d, want 200", rec.Code)
+		}
+		if strings.TrimSpace(rec.Body.String()) != "ok" {
+			t.Fatalf("got body %q, want ok", rec.Body.String())
+		}
+	})
+
+	t.Run("does not shadow the page space", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz/sub", nil))
+		if rec.Body.String() != "page" {
+			t.Fatalf("/healthz/sub reached the probe, so it is registered as a subtree: %q", rec.Body.String())
+		}
+	})
 }

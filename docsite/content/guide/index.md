@@ -17,4 +17,5 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Naming conventions](naming-conventions/)**: encode house style and check it on every export.
 - **[Interface profiles](interface-profiles/)**: declare a bus's signals and have every design checked against it.
 - **[Datasheets](datasheets/)**: compare a design against a part's real limits.
+- **[Running the server](running-the-server/)**: bring the viewer up with Docker and mount your designs.
 - **[CLI reference](cli-reference/)**: the full command surface.
