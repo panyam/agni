@@ -57,6 +57,13 @@ you added still work.
 10. [Compare revisions](10-compare-revisions/): what changed between rev A and rev B, structurally.
 11. [Archive and gate](11-archive-and-gate/): keep the result, re-render it later, fail CI on it.
 
+**Live with it.**
+
+12. [Reconcile with the tools you already run](12-reconcile-existing-tools/): import your existing
+    DRC or ERC report and see where the two tools agree, differ, and cannot see each other's work.
+13. [Drive it in the browser](13-drive-it-in-the-browser/): the same catalog and the same verdicts,
+    against the drawing instead of a terminal.
+
 ## Running this on your own board
 
 The tutorial project is laid out the way a real review project is laid out, so each step maps to the
