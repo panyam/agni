@@ -191,6 +191,43 @@ func libraryOf(n *node, src string) *ir.PartLibrary {
 	return lib
 }
 
+// cellDesignator returns a cell's OWN reference-designator prefix ("U", "C?", "REF**"), or "" when
+// it declares none.
+//
+// It looks only at levels that belong to the cell: the cell, its views, and each view's interface.
+// It never descends into a port, and that restriction is the whole point. A port's designator is a
+// PIN NUMBER, and a recursive search finds one whenever the cell declares no prefix of its own. The
+// pin number then lands in PartType.DesignatorPrefix, where Lexicon.Classify prefers it over the
+// component's ref-des prefix, so prefixClasses["1"] misses and every component of that cell reads
+// UNKNOWN. Every class-quantified rule then selects zero members and stays silent, which is
+// indistinguishable from a clean design (agni issue 109).
+//
+// Real EDIF puts the prefix inside the interface, alongside the ports rather than above them:
+//
+//	(cell X (cellType GENERIC)
+//	  (view NORMAL (viewType SCHEMATIC)
+//	    (interface (designator "U")            <- the cell's prefix
+//	      (port IO1 ... (designator "1") ...)  <- a pin number
+//
+// which is why this cannot simply refuse to enter the interface. The cell and view levels are also
+// accepted because a hand-written netlist reasonably declares the prefix there.
+func cellDesignator(n *node) string {
+	if d := n.Child("designator"); d != nil {
+		return stringDisplayText(d)
+	}
+	for _, v := range n.Children("view") {
+		if d := v.Child("designator"); d != nil {
+			return stringDisplayText(d)
+		}
+		if iface := v.Child("interface"); iface != nil {
+			if d := iface.Child("designator"); d != nil {
+				return stringDisplayText(d)
+			}
+		}
+	}
+	return ""
+}
+
 // partTypeOf converts an EDIF (cell ...) node into an ir.PartType, pulling its cellType
 // (as kind), reference-designator prefix, and the ports (pins) from its view interface.
 func partTypeOf(n *node, src string) *ir.PartType {
@@ -199,11 +236,7 @@ func partTypeOf(n *node, src string) *ir.PartType {
 	if ct := n.Child("cellType"); ct != nil {
 		pt.Kind = atom(ct.Arg(1))
 	}
-	var ds []*node
-	collect(n, "designator", &ds)
-	if len(ds) > 0 {
-		pt.DesignatorPrefix = stringDisplayText(ds[0])
-	}
+	pt.DesignatorPrefix = cellDesignator(n)
 	// Cell-level MPN (WS1-046 Piece B): OrCAD names a shared part-type cell by its part number and
 	// carries the Manufacturer_PN on the CELL, not on every placed instance. Capture it (normalized
 	// to "MPN") so an instance with no inline MPN falls back to its cell's in extract(). Only a LEAF

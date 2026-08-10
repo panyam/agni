@@ -19,6 +19,20 @@ func readEDN(t *testing.T, name string) *ir.Design {
 	return d
 }
 
+// readSrc reads an EDIF document written inline, so a structural test states the exact shape it is
+// about rather than pointing at a fixture file the reader has to be cross-referenced against.
+func readSrc(t *testing.T, src string) *ir.Design {
+	t.Helper()
+	d, err := Read(strings.NewReader("("+src+")"), "inline.edn")
+	if err != nil {
+		t.Fatalf("Read inline: %v", err)
+	}
+	if len(d.Libraries) == 0 || len(d.Libraries[0].Parts) == 0 {
+		t.Fatalf("no part types extracted from inline source")
+	}
+	return d
+}
+
 // parseNode tokenizes a single name form (written as source text) into its *node, so the
 // grammar oracles exercise the real parser rather than a hand-built tree. The form is wrapped
 // in parens and the first child returned, matching how a name sits as arg(1) of a net/cell.
@@ -450,4 +464,49 @@ func TestExplicitPinDesignatorIsNotOverwritten(t *testing.T) {
 		}
 	}
 	t.Error("rename-cell-id.edn declares pin numbers distinct from port names (Vcc/4, OUTPUT/3, GND/2); the fallback has overwritten them")
+}
+
+// TestCellDesignatorIgnoresPortNumbers pins agni issue 109: a cell that declares no prefix of its
+// own must report none, not the pin number of its first port. Getting this wrong is silent all the
+// way down. The pin number lands in DesignatorPrefix, Lexicon.Classify prefers it over the
+// component's ref-des prefix, prefixClasses has no entry for "1", and every component of that cell
+// reads unknown, so each class-quantified rule selects zero members and reports nothing.
+func TestCellDesignatorIgnoresPortNumbers(t *testing.T) {
+	const noOwnPrefix = `edif T (edifVersion 2 0 0)
+	  (library P
+	    (cell CAP (cellType GENERIC) (view V (viewType NETLIST)
+	      (interface (port 1 (direction INOUT) (designator "1"))
+	                 (port 2 (direction INOUT) (designator "2"))))))`
+	d := readSrc(t, noOwnPrefix)
+	if pfx := d.Libraries[0].Parts[0].DesignatorPrefix; pfx != "" {
+		t.Errorf("cell with only port designators: prefix = %q, want %q (a pin number is not a ref-des prefix)", pfx, "")
+	}
+}
+
+// TestCellDesignatorFromInterface keeps the real-corpus form working. Mentor and OrCAD put the
+// cell's prefix INSIDE the interface, as a sibling of the ports rather than above them, so a fix
+// that simply refuses to enter the interface would drop the prefix on every such file.
+func TestCellDesignatorFromInterface(t *testing.T) {
+	const interfaceLevel = `edif T (edifVersion 2 0 0)
+	  (library P
+	    (cell TPD (cellType GENERIC) (view NORMAL (viewType SCHEMATIC)
+	      (interface (designator "U")
+	                 (port IO1 (direction INOUT) (designator "1"))
+	                 (port IO2 (direction INOUT) (designator "2"))))))`
+	d := readSrc(t, interfaceLevel)
+	if pfx := d.Libraries[0].Parts[0].DesignatorPrefix; pfx != "U" {
+		t.Errorf("interface-level designator: prefix = %q, want U", pfx)
+	}
+}
+
+// TestCellDesignatorFromCellLevel accepts the form a hand-written netlist reasonably uses.
+func TestCellDesignatorFromCellLevel(t *testing.T) {
+	const cellLevel = `edif T (edifVersion 2 0 0)
+	  (library P
+	    (cell CAP (cellType GENERIC) (designator "C") (view V (viewType NETLIST)
+	      (interface (port 1 (direction INOUT) (designator "1"))))))`
+	d := readSrc(t, cellLevel)
+	if pfx := d.Libraries[0].Parts[0].DesignatorPrefix; pfx != "C" {
+		t.Errorf("cell-level designator: prefix = %q, want C", pfx)
+	}
 }
