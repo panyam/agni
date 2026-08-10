@@ -107,6 +107,7 @@ cadences.
 | Diff | DiffDesigns | semantic diff of two designs plus the highlight maps, the wire form shared with `agni diff --format json` |
 | Query | RunQuery | evaluate an ad-hoc datalog query over the design's fact base, returning columns and provenance-linked rows, the same engine as `agni query` |
 | Query | ListRelations | the relation catalog with arg labels, summary, and kind, driving the panel's click-to-insert picker |
+| Check | GetNamingConvention | resolve a stored convention config into a value an OverlayConfig carries, parsed and validated |
 | Review | GetReviewManifest | resolve a stored checklist into a manifest value, parsed and validated |
 | Review | CreateReview | run a checklist against one design and store the result, returning the stored run |
 | Review | GetReview | one stored run, by resource name |
@@ -150,6 +151,12 @@ A few contract details bite if missed.
   answer with a failed-precondition naming it, rather than running the checks and dropping the
   result. Runs stored there are visible to every client of the server; `agni serve` has no
   authentication yet.
+- **The viewer can ask under its own vocabulary.** A naming convention is picked from the mount,
+  resolved server-side into a value, and carried on every rule-running request as an `OverlayConfig`.
+  It REPLACES the server's `--conventions` default for that request rather than adding to it, so the
+  top bar names which vocabulary produced the answers on screen. That indicator is load-bearing
+  rather than decorative: replacement can stop a rule running, a rule that stops running produces no
+  findings, and in a findings list that is indistinguishable from a design that got fixed.
 - **A stored run embeds the checklist it scored.** The document carries a manifest SNAPSHOT, not
   just the manifest's name. A checklist is an editable file, so a name would resolve to whatever it
   says today, and last quarter's review would re-render against this quarter's questions with its

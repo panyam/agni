@@ -1,6 +1,9 @@
 package service
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -176,5 +179,90 @@ func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("collision error %q does not mention %q; the caller cannot tell where the other source came from", err, want)
 		}
+	}
+}
+
+// fsConventionLoader reads convention configs from a real directory, so the resolver test can point
+// at a malformed one.
+type fsConventionLoader struct{ dir string }
+
+func (l fsConventionLoader) Convention(_ context.Context, _, ref string) (naming.Config, error) {
+	return naming.Load(filepath.Join(l.dir, ref))
+}
+
+func writeConvention(t *testing.T, dir, name, body string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestGetNamingConvention resolves a stored config into the value an OverlayConfig carries, and the
+// value it returns actually composes. This is the browser's half of C22: it holds a ref and no
+// filesystem, so the read is a named rpc and the run still takes a value.
+func TestGetNamingConvention(t *testing.T) {
+	dir := t.TempDir()
+	writeConvention(t, dir, "house.yaml", `
+name: house
+lexicon:
+  rail:
+    patterns: ["_[0-9]V[0-9]$"]
+rules:
+  - name: signal-net-naming
+    severity: warning
+    allow: ["^[A-Z][A-Z0-9_]*$"]
+`)
+	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir})
+	got, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Ref: "house.yaml"})
+	if err != nil {
+		t.Fatalf("GetNamingConvention: %v", err)
+	}
+	conv := got.GetConvention()
+	if conv.GetName() != "house" {
+		t.Errorf("name = %q, want house", conv.GetName())
+	}
+	if len(conv.GetRules()) != 1 || conv.GetRules()[0].GetName() != "signal-net-naming" {
+		t.Errorf("rules = %+v", conv.GetRules())
+	}
+	// The LEXICON half has to survive too. It is the half that reaches the design read, and a
+	// resolver that dropped it would hand back a convention that compiles rules and leaves every
+	// other rule blind to the project's rail names.
+	if pats := conv.GetLexicon().GetRail().GetPatterns(); len(pats) != 1 || pats[0] != "_[0-9]V[0-9]$" {
+		t.Errorf("lexicon rail patterns = %v, want the config's", pats)
+	}
+	// And it must be usable as-is: this is the exact round trip the browser performs.
+	if _, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conv}, ""); err != nil {
+		t.Errorf("the resolved convention does not compose: %v", err)
+	}
+}
+
+// TestGetNamingConventionRejectsBadInput: an absent ref, an absent file, and a config whose patterns
+// will not compile are each an error HERE, so a client learns once rather than on every run that
+// carries it. The malformed case is the one that matters: naming.Load parses, but a bad regex only
+// fails when the config is USED.
+func TestGetNamingConventionRejectsBadInput(t *testing.T) {
+	dir := t.TempDir()
+	writeConvention(t, dir, "bad-regex.yaml", "name: x\nrules:\n  - name: r\n    allow: [\"^(unclosed\"]\n")
+	writeConvention(t, dir, "bad-class.yaml", "name: x\nlexicon:\n  class:\n    not_a_real_class:\n      patterns: [\"^X\"]\n")
+	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir})
+	ctx := context.Background()
+	for name, ref := range map[string]string{
+		"empty ref":      "",
+		"absent file":    "nope.yaml",
+		"pattern to nil": "bad-regex.yaml",
+		"unknown class":  "bad-class.yaml",
+	} {
+		if _, err := svc.GetNamingConvention(ctx, &webapi.GetNamingConventionRequest{Ref: ref}); err == nil {
+			t.Errorf("%s: want an error, got nil", name)
+		}
+	}
+}
+
+// TestGetNamingConventionNeedsALoader: a service built without a convention loader says so rather
+// than panicking. That is the CLI's construction, which reads its own config at the edge.
+func TestGetNamingConventionNeedsALoader(t *testing.T) {
+	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", nil)
+	if _, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Ref: "x.yaml"}); err == nil {
+		t.Error("want an error from a service with no convention loader")
 	}
 }

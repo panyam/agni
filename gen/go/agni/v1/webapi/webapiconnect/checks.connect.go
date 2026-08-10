@@ -50,6 +50,9 @@ const (
 	// CheckServiceGetComponentParamsProcedure is the fully-qualified name of the CheckService's
 	// GetComponentParams RPC.
 	CheckServiceGetComponentParamsProcedure = "/agni.v1.webapi.CheckService/GetComponentParams"
+	// CheckServiceGetNamingConventionProcedure is the fully-qualified name of the CheckService's
+	// GetNamingConvention RPC.
+	CheckServiceGetNamingConventionProcedure = "/agni.v1.webapi.CheckService/GetNamingConvention"
 )
 
 // CheckServiceClient is a client for the agni.v1.webapi.CheckService service.
@@ -91,6 +94,16 @@ type CheckServiceClient interface {
 	// exposed for a UI tree rather than re-queried. A design with no joined specs (or a serve started
 	// without --params) returns an empty list (not an error), so the panel degrades gracefully.
 	GetComponentParams(context.Context, *connect.Request[webapi.GetComponentParamsRequest]) (*connect.Response[webapi.GetComponentParamsResponse], error)
+	// GetNamingConvention resolves a stored convention config into the VALUE an OverlayConfig carries
+	// (WS9-128). It parses and validates, so a client learns its config is malformed once, here, rather
+	// than on every run that carries it.
+	//
+	// It exists for the same reason GetReviewManifest does. OverlayConfig deliberately carries values
+	// rather than paths (C22), so a service composing one needs no filesystem — but a browser holds a
+	// ref and no filesystem either, and something has to bridge the two. Making that bridge its own rpc
+	// keeps the read named in the contract instead of hidden inside a check run, and a caller that
+	// already holds a convention (the CLI reads the YAML the user named) never calls it.
+	GetNamingConvention(context.Context, *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error)
 }
 
 // NewCheckServiceClient constructs a client for the agni.v1.webapi.CheckService service. By
@@ -140,6 +153,12 @@ func NewCheckServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(checkServiceMethods.ByName("GetComponentParams")),
 			connect.WithClientOptions(opts...),
 		),
+		getNamingConvention: connect.NewClient[webapi.GetNamingConventionRequest, webapi.GetNamingConventionResponse](
+			httpClient,
+			baseURL+CheckServiceGetNamingConventionProcedure,
+			connect.WithSchema(checkServiceMethods.ByName("GetNamingConvention")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -151,6 +170,7 @@ type checkServiceClient struct {
 	getCheckReport       *connect.Client[webapi.GetCheckReportRequest, webapi.GetCheckReportResponse]
 	getInterfaceCoverage *connect.Client[webapi.GetInterfaceCoverageRequest, webapi.GetInterfaceCoverageResponse]
 	getComponentParams   *connect.Client[webapi.GetComponentParamsRequest, webapi.GetComponentParamsResponse]
+	getNamingConvention  *connect.Client[webapi.GetNamingConventionRequest, webapi.GetNamingConventionResponse]
 }
 
 // ListRules calls agni.v1.webapi.CheckService.ListRules.
@@ -181,6 +201,11 @@ func (c *checkServiceClient) GetInterfaceCoverage(ctx context.Context, req *conn
 // GetComponentParams calls agni.v1.webapi.CheckService.GetComponentParams.
 func (c *checkServiceClient) GetComponentParams(ctx context.Context, req *connect.Request[webapi.GetComponentParamsRequest]) (*connect.Response[webapi.GetComponentParamsResponse], error) {
 	return c.getComponentParams.CallUnary(ctx, req)
+}
+
+// GetNamingConvention calls agni.v1.webapi.CheckService.GetNamingConvention.
+func (c *checkServiceClient) GetNamingConvention(ctx context.Context, req *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error) {
+	return c.getNamingConvention.CallUnary(ctx, req)
 }
 
 // CheckServiceHandler is an implementation of the agni.v1.webapi.CheckService service.
@@ -222,6 +247,16 @@ type CheckServiceHandler interface {
 	// exposed for a UI tree rather than re-queried. A design with no joined specs (or a serve started
 	// without --params) returns an empty list (not an error), so the panel degrades gracefully.
 	GetComponentParams(context.Context, *connect.Request[webapi.GetComponentParamsRequest]) (*connect.Response[webapi.GetComponentParamsResponse], error)
+	// GetNamingConvention resolves a stored convention config into the VALUE an OverlayConfig carries
+	// (WS9-128). It parses and validates, so a client learns its config is malformed once, here, rather
+	// than on every run that carries it.
+	//
+	// It exists for the same reason GetReviewManifest does. OverlayConfig deliberately carries values
+	// rather than paths (C22), so a service composing one needs no filesystem — but a browser holds a
+	// ref and no filesystem either, and something has to bridge the two. Making that bridge its own rpc
+	// keeps the read named in the contract instead of hidden inside a check run, and a caller that
+	// already holds a convention (the CLI reads the YAML the user named) never calls it.
+	GetNamingConvention(context.Context, *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error)
 }
 
 // NewCheckServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -267,6 +302,12 @@ func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(checkServiceMethods.ByName("GetComponentParams")),
 		connect.WithHandlerOptions(opts...),
 	)
+	checkServiceGetNamingConventionHandler := connect.NewUnaryHandler(
+		CheckServiceGetNamingConventionProcedure,
+		svc.GetNamingConvention,
+		connect.WithSchema(checkServiceMethods.ByName("GetNamingConvention")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.CheckService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CheckServiceListRulesProcedure:
@@ -281,6 +322,8 @@ func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOpti
 			checkServiceGetInterfaceCoverageHandler.ServeHTTP(w, r)
 		case CheckServiceGetComponentParamsProcedure:
 			checkServiceGetComponentParamsHandler.ServeHTTP(w, r)
+		case CheckServiceGetNamingConventionProcedure:
+			checkServiceGetNamingConventionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -312,4 +355,8 @@ func (UnimplementedCheckServiceHandler) GetInterfaceCoverage(context.Context, *c
 
 func (UnimplementedCheckServiceHandler) GetComponentParams(context.Context, *connect.Request[webapi.GetComponentParamsRequest]) (*connect.Response[webapi.GetComponentParamsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.CheckService.GetComponentParams is not implemented"))
+}
+
+func (UnimplementedCheckServiceHandler) GetNamingConvention(context.Context, *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.CheckService.GetNamingConvention is not implemented"))
 }

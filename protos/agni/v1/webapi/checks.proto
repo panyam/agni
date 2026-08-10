@@ -63,6 +63,17 @@ service CheckService {
   // exposed for a UI tree rather than re-queried. A design with no joined specs (or a serve started
   // without --params) returns an empty list (not an error), so the panel degrades gracefully.
   rpc GetComponentParams(GetComponentParamsRequest) returns (GetComponentParamsResponse);
+
+  // GetNamingConvention resolves a stored convention config into the VALUE an OverlayConfig carries
+  // (WS9-128). It parses and validates, so a client learns its config is malformed once, here, rather
+  // than on every run that carries it.
+  //
+  // It exists for the same reason GetReviewManifest does. OverlayConfig deliberately carries values
+  // rather than paths (C22), so a service composing one needs no filesystem — but a browser holds a
+  // ref and no filesystem either, and something has to bridge the two. Making that bridge its own rpc
+  // keeps the read named in the contract instead of hidden inside a check run, and a caller that
+  // already holds a convention (the CLI reads the YAML the user named) never calls it.
+  rpc GetNamingConvention(GetNamingConventionRequest) returns (GetNamingConventionResponse);
 }
 
 message CheckDesignRequest {
@@ -168,6 +179,17 @@ message GetCheckReportResponse {
   agni.v1.checks.CheckReport report = 1;
 }
 
+message GetNamingConventionRequest {
+  string mount = 1; // workspace mount the ref resolves within
+  // ref names the stored convention config, with the same ref semantics as every other artifact ref:
+  // a key the Loader resolves inside the mount, never a host path.
+  string ref = 2;
+}
+
+message GetNamingConventionResponse {
+  NamingConvention convention = 1;
+}
+
 message GetExpectationsRequest {
   string mount = 1;
   string path = 2;
@@ -201,6 +223,15 @@ message GetExpectationsResponse {
 message ListRulesRequest {
   string mount = 1;
   string path = 2;
+  // overlay carries the per-request rule-catalog configuration, so the listed catalog is the one a
+  // check run under the SAME overlay would use (WS9-128).
+  //
+  // It is here because a request convention REPLACES the server's (WS3-124), which changes which
+  // rules exist. A client that listed the server's catalog and then ran under its own convention
+  // would select rules that no longer exist and miss the ones that now do, so its own naming rules
+  // would never run and the server's would have stopped: naming checks would silently vanish, which
+  // reads as a design with no naming problems.
+  OverlayConfig overlay = 3;
 }
 
 // RuleInfo is the catalog entry for one rule: its identity, its prose (one-line summary, impact,

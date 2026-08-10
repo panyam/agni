@@ -3,6 +3,7 @@ import { DesignService, SheetFormat, SymbolSource, type SheetRef, type Conversio
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
+import { OverlayConfigSchema, type NamingConvention, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
@@ -16,7 +17,10 @@ import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlight
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
+import { create } from "@bufbuild/protobuf";
+import { type ConventionBarView } from "./conventions.js";
 import {
+  type ChecklistOption,
   type ReviewState,
   type ReviewView,
   checklistOptions,
@@ -115,6 +119,10 @@ export interface ViewSink {
   // review receives the project's checklist verdict for the open design (WS9-052). Optional like
   // coverage; every review method no-ops when it is absent.
   review?: ReviewView;
+  // conventionBar reports which naming vocabulary the answers were computed under (WS9-128).
+  // Optional like the panels; setConvention no-ops when it is absent, so a host that offers no
+  // convention picker simply always uses the server's default.
+  conventionBar?: ConventionBarView;
 }
 
 // ViewerPresenter coordinates the viewer's semantic loop: a file selected in the tree is
@@ -358,6 +366,9 @@ export class ViewerPresenter {
       this.setBusyPhase("building report…");
       await this.refreshReport(); // the auto-layout conversion report is not a check — still eager
       await this.refreshParts(); // the datasheet-params join is a per-design read, not a check
+      // One directory listing feeds the convention picker and the review checklist picker.
+      this.conventionChoices = this.views.conventionBar || this.views.review ? await this.yamlSiblings() : [];
+      this.pushConvention();
       await this.refreshReviews(); // stored review runs for this design, so a reviewed board opens on its latest verdict
     } catch (e) {
       this.views.summary(`error: ${String(e)}`);
@@ -403,7 +414,7 @@ export class ViewerPresenter {
   // (the panel shows "No rules.") rather than erroring the open.
   private async loadRules(mount: string, path: string): Promise<void> {
     try {
-      const resp = await this.checks.listRules({ mount, path });
+      const resp = await this.checks.listRules({ mount, path, overlay: this.overlay() });
       this.rules = resp.rules.map((r) => ({
         name: r.name,
         severity: r.severity,
@@ -475,7 +486,7 @@ export class ViewerPresenter {
     const missing = names.filter((n) => !this.findingCache.has(n));
     if (missing.length > 0 && this.mount && this.path) {
       try {
-        const resp = await this.checks.checkDesign({ mount: this.mount, path: this.path, rules: missing });
+        const resp = await this.checks.checkDesign({ mount: this.mount, path: this.path, rules: missing, overlay: this.overlay() });
         for (const n of missing) this.findingCache.set(n, []); // mark computed (even if it fired nothing)
         for (const f of resp.findings) {
           this.findingCache.get(f.rule)?.push({
@@ -535,6 +546,89 @@ export class ViewerPresenter {
   private expectationFindings: FindingItem[] = [];
   private hasSidecar = false;
 
+  // ---- Naming convention (WS9-128) -----------------------------------------------------------
+  //
+  // A request may carry its own naming convention, which REPLACES the server's startup default for
+  // that request (WS3-124). The presenter holds the chosen one and stamps it onto every rule-running
+  // call, so a user asking "what does this board look like under my vocabulary" gets a consistent
+  // answer across the checks panel, the report, and a review run.
+
+  // convention is the resolved value sent on each request, null while the server's default applies.
+  // conventionRef is the ref it was resolved from, so the UI can name it.
+  private convention: NamingConvention | null = null;
+  private conventionRef = "";
+
+  // overlay is what every rule-running call carries. It is a method rather than a field so a caller
+  // cannot forget: the three call sites that run rules all go through it, and a fourth added later
+  // that did not would be visibly different from its neighbours.
+  private overlay(): OverlayConfig | undefined {
+    if (!this.convention) return undefined;
+    return create(OverlayConfigSchema, { conventions: this.convention });
+  }
+
+  // setConvention resolves a stored convention config and applies it to subsequent runs, or clears
+  // back to the server's default when ref is empty.
+  //
+  // It resolves through the SERVER (GetNamingConvention) rather than parsing YAML here, because the
+  // browser holds a ref and no filesystem and because the config's validity is the engine's call: a
+  // pattern that will not compile is rejected once, here, instead of on every run that carries it.
+  //
+  // Cached findings are dropped, and that is the point rather than housekeeping. A convention changes
+  // which rules exist and what the engine believes a rail IS, so every cached finding was computed
+  // under a different question. Keeping them would mix two vocabularies in one list.
+  async setConvention(ref: string): Promise<void> {
+    if (!this.views.conventionBar) return;
+    if (ref === "") {
+      this.convention = null;
+      this.conventionRef = "";
+      await this.reloadForConvention();
+      this.pushConvention();
+      return;
+    }
+    this.pushConvention(true);
+    try {
+      const resp = await this.checks.getNamingConvention({ mount: this.mount, ref });
+      this.convention = resp.convention ?? null;
+      this.conventionRef = ref;
+      await this.reloadForConvention();
+      this.pushConvention();
+    } catch (e) {
+      this.pushConvention(false, messageOf(e));
+    }
+  }
+
+  // reloadForConvention re-reads the rule CATALOG and drops cached findings after the vocabulary
+  // changes.
+  //
+  // Reloading the catalog is the part that is easy to miss and expensive to get wrong. A request
+  // convention replaces the server's, so the set of rules that EXIST changes: the server's naming
+  // rules disappear and the request's appear under a different namespace. A client that kept the old
+  // catalog would hold a selection naming rules that no longer exist, run none of them, and show no
+  // naming findings at all — which reads as a design with no naming problems rather than as a client
+  // asking the wrong question.
+  private async reloadForConvention(): Promise<void> {
+    this.findingCache.clear();
+    if (this.mount && this.path) await this.loadRules(this.mount, this.path);
+    this.assembleFindings();
+  }
+
+  // pushConvention reports which vocabulary is in effect. It is a first-class piece of state rather
+  // than a label, because a finding that changed because the vocabulary changed and one that changed
+  // because the design changed are not the same claim, and nothing in a findings list distinguishes
+  // them (WS9-128).
+  private pushConvention(busy = false, error = ""): void {
+    this.views.conventionBar?.setState({
+      choices: this.conventionChoices,
+      active: this.conventionRef,
+      name: this.convention?.name ?? "",
+      busy,
+      error,
+    });
+  }
+
+  // conventionChoices are the convention configs found beside the open design, filled on load.
+  private conventionChoices: ChecklistOption[] = [];
+
   // ---- Review (WS9-052) ----------------------------------------------------------------------
   //
   // A review RUN is a resource (WS9-053), so the panel is not a "run and render" surface: it shows
@@ -566,7 +660,7 @@ export class ViewerPresenter {
       this.pushReview();
       return;
     }
-    this.reviewState.checklists = await this.findChecklists();
+    this.reviewState.checklists = this.conventionChoices;
     this.reviewState.checklist = this.reviewState.checklists[0]?.ref ?? "";
     try {
       const resp = await this.reviews.listReviews({ filter: `design="${this.path}"` });
@@ -580,11 +674,15 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // findChecklists lists the design's own directory and keeps the YAML files. It deliberately does
-  // not read them: whether a YAML file is a checklist is decided by GetReviewManifest, which parses
-  // and validates. Guessing here would mean either hiding a user's real checklist or duplicating the
-  // parser in the browser.
-  private async findChecklists(): Promise<ReviewState["checklists"]> {
+  // yamlSiblings lists the design's own directory and keeps the YAML files. It deliberately does not
+  // read them: whether a YAML file is a checklist or a naming convention is decided by the server
+  // (GetReviewManifest / GetNamingConvention), which parse and validate. Guessing here would mean
+  // either hiding a user's real file or duplicating two parsers in the browser.
+  //
+  // One listing feeds BOTH pickers. A project keeps its review.yaml and its conventions.yaml side by
+  // side, and two calls asking the same question of the same directory would be two chances to
+  // disagree about what is there.
+  private async yamlSiblings(): Promise<ChecklistOption[]> {
     if (!this.workspace) return [];
     const slash = this.path.lastIndexOf("/");
     const dir = slash < 0 ? "" : this.path.slice(0, slash);
@@ -613,6 +711,7 @@ export class ViewerPresenter {
         mount: this.mount,
         designRef: this.path,
         manifest: man.manifest,
+        overlay: this.overlay(),
       });
       const run = reviewFromWire(created);
       // Prepend rather than refetch: the new run is the newest, and the server hands the whole
@@ -704,7 +803,7 @@ export class ViewerPresenter {
         this.hasSidecar = exp.hasSidecar;
         this.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
         if (this.hasSidecar) {
-          const resp = await this.checks.checkDesign({ mount: this.mount, path: this.path, rules: [] });
+          const resp = await this.checks.checkDesign({ mount: this.mount, path: this.path, rules: [], overlay: this.overlay() });
           this.expectationFindings = resp.findings.map((f) => ({
             rule: f.rule,
             category: "",

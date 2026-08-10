@@ -3,6 +3,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import type { ReviewState } from "./review.js";
+import type { ConventionState } from "./conventions.js";
 
 // A run document as the server returns it: a Review resource wrapping a CheckResults.
 function doc(name: string, createdAt: string, outcomes: string[]) {
@@ -30,9 +31,10 @@ function doc(name: string, createdAt: string, outcomes: string[]) {
 
 // harness builds a presenter with only what the review path needs; every other collaborator is a
 // stub sufficient for openFile to complete.
-function harness(opts: { wireReview?: boolean; wireClients?: boolean } = {}) {
+function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConventionBar?: boolean } = {}) {
   const wireReview = opts.wireReview !== false;
   const wireClients = opts.wireClients !== false;
+  const wireConventionBar = opts.wireConventionBar !== false;
   const client = {
     getDesign: vi.fn(async () => ({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
@@ -47,12 +49,21 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean } = {}) {
     getLayoutReport: vi.fn(async () => ({ report: { components: [] } })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
+  const getNamingConvention = vi.fn(async (_req: { mount: string; ref: string }) => ({
+    convention: { name: "house", rules: [], lexicon: undefined },
+  }));
   const checks = {
-    listRules: vi.fn(async () => ({ rules: [] })),
+    // One available rule, so opening a design default-selects it and a check run actually calls
+    // checkDesign. With an empty catalog nothing is selected and the run is a no-op, which would make
+    // the overlay assertions below vacuous.
+    listRules: vi.fn(async () => ({
+      rules: [{ name: "bulk-cap", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" }],
+    })),
     checkDesign: vi.fn(async () => ({ findings: [] })),
     getExpectations: vi.fn(async () => ({ expectations: [] })),
     getInterfaceCoverage: vi.fn(async () => ({ interfaces: [] })),
     getPartParams: vi.fn(async () => ({ parts: [] })),
+    getNamingConvention,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
   const listReviews = vi.fn(async (_req: { filter?: string }) => ({
@@ -88,6 +99,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean } = {}) {
   } as any;
 
   const onReview = vi.fn();
+  const onConvention = vi.fn();
   const onSummary = vi.fn();
   const presenter = new ViewerPresenter(
     client, checks, canvas, render,
@@ -101,18 +113,24 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean } = {}) {
       rules: { setState: vi.fn() },
       report: vi.fn(),
       review: wireReview ? { setState: onReview } : undefined,
+      conventionBar: wireConventionBar ? { setState: onConvention } : undefined,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     undefined,
     wireClients ? reviews : undefined,
     wireClients ? workspace : undefined,
   );
-  return { presenter, onReview, listReviews, getReviewManifest, createReview, listDir };
+  return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules };
 }
 
 function lastState(onReview: ReturnType<typeof vi.fn>): ReviewState {
   const calls = onReview.mock.calls;
   return calls[calls.length - 1][0] as ReviewState;
+}
+
+function lastConvention(onConvention: ReturnType<typeof vi.fn>): ConventionState {
+  const calls = onConvention.mock.calls;
+  return calls[calls.length - 1][0] as ConventionState;
 }
 
 describe("review presenter — loading", () => {
@@ -265,5 +283,115 @@ describe("review presenter — selection", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     h.presenter.setChecklist("proj/other.yaml");
     expect(lastState(h.onReview).checklist).toBe("proj/other.yaml");
+  });
+});
+
+// ---- Naming convention (WS9-128) --------------------------------------------------------------
+
+function convHarness() {
+  const h = harness();
+  return h;
+}
+
+describe("naming convention", () => {
+  // The whole point of the feature: what the user picks has to reach the requests that RUN rules.
+  // Before this, OverlayConfig existed on all three and no client ever populated it.
+  it("carries the resolved convention on a review create", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.setConvention("proj/house.yaml");
+    await h.presenter.createReview();
+    const sent = h.createReview.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent.overlay).toBeDefined();
+  });
+
+  it("sends no overlay while the server's convention applies", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.createReview();
+    const sent = h.createReview.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent.overlay).toBeUndefined();
+  });
+
+  it("resolves through the server rather than parsing yaml in the browser", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.setConvention("proj/house.yaml");
+    expect(h.getNamingConvention).toHaveBeenCalledWith({ mount: "m", ref: "proj/house.yaml" });
+  });
+
+  it("reports which vocabulary is in effect, and goes back to the server's", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.setConvention("proj/house.yaml");
+    expect(lastConvention(h.onConvention).active).toBe("proj/house.yaml");
+    expect(lastConvention(h.onConvention).name).toBe("house");
+    await h.presenter.setConvention("");
+    expect(lastConvention(h.onConvention).active).toBe("");
+    expect(lastConvention(h.onConvention).name).toBe("");
+  });
+
+  // A failed resolve must leave the PREVIOUS vocabulary in effect and say so. Half-applying it would
+  // put the indicator and the findings into different worlds, which is the exact confusion the
+  // indicator exists to prevent.
+  it("keeps the previous vocabulary when a resolve fails", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.getNamingConvention.mockRejectedValueOnce(new ConnectError("pattern does not compile", Code.InvalidArgument));
+    await h.presenter.setConvention("proj/broken.yaml");
+    const s = lastConvention(h.onConvention);
+    expect(s.active).toBe("");
+    expect(s.error).toContain("does not compile");
+  });
+
+  // Cached findings were computed under a different vocabulary, and a convention changes which rules
+  // exist AND what the engine believes a rail is. Keeping them would show two vocabularies at once.
+  it("drops cached findings so the two vocabularies never mix", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runChecks();
+    const before = h.checkDesign.mock.calls.length;
+    await h.presenter.setConvention("proj/house.yaml");
+    await h.presenter.runChecks();
+    expect(h.checkDesign.mock.calls.length).toBeGreaterThan(before);
+    const last = h.checkDesign.mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(last.overlay).toBeDefined();
+  });
+
+  // Regression, found by driving the real app: switching the vocabulary changes which rules EXIST,
+  // because a request convention replaces the server's. Keeping the old catalog left a selection
+  // naming rules that no longer existed, so none of them ran and none of the new ones did either —
+  // no naming findings at all, which reads as a design with no naming problems.
+  it("re-reads the rule catalog under the new vocabulary, not just the findings", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    const before = h.listRules.mock.calls.length;
+    await h.presenter.setConvention("proj/house.yaml");
+    expect(h.listRules.mock.calls.length).toBeGreaterThan(before);
+    const last = h.listRules.mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(last.overlay, "the catalog must be listed under the SAME overlay a run would use").toBeDefined();
+  });
+
+  it("re-reads the catalog when going back to the server's vocabulary too", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.setConvention("proj/house.yaml");
+    const before = h.listRules.mock.calls.length;
+    await h.presenter.setConvention("");
+    expect(h.listRules.mock.calls.length).toBeGreaterThan(before);
+    expect((h.listRules.mock.calls.at(-1)![0] as Record<string, unknown>).overlay).toBeUndefined();
+  });
+
+  it("offers the yaml files beside the design as choices", async () => {
+    const h = convHarness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    expect(lastConvention(h.onConvention).choices.map((c) => c.label)).toEqual(["review.yaml"]);
+  });
+
+  it("does nothing when the bar is unwired", async () => {
+    const h = harness({ wireConventionBar: false });
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.setConvention("proj/house.yaml");
+    expect(h.getNamingConvention).not.toHaveBeenCalled();
   });
 });
