@@ -10,6 +10,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/service"
 )
@@ -20,16 +21,6 @@ import (
 // FIELD on the resolver rather than as ambient state a deep call site consults.
 var readAsNamed bool
 
-// cliResolveDepth bounds how far above a named path the CLI looks for a project descriptor, and is
-// also how the CLI's tree gets its root: the resolver mounts this many levels above the path and
-// lets the store walk up inside it.
-//
-// Expressing the bound as the TREE ROOT rather than as a loop counter is what keeps the CLI and the
-// server on one code path. Both call the same store, which walks up and stops at its root; they
-// differ only in where the client rooted the tree, which is a wiring choice rather than a second
-// behaviour. It also inherits containment for free: an fs.FS has no parent to climb into.
-const cliResolveDepth = 4
-
 // designResolver answers "which artifacts should this read open" for the CLI, as a client of
 // ProjectService.
 //
@@ -38,7 +29,7 @@ const cliResolveDepth = 4
 // questions that are invisible from outside: which companion supplies the board, whether an
 // unresolved ref is an error, what a malformed descriptor does.
 type designResolver struct {
-	svc *service.ProjectService
+	ws *cliWorkspace
 	// asNamed disables descriptor-driven redirection: read exactly the artifact named, even when the
 	// enclosing design declares it a companion view of a different entry.
 	//
@@ -52,15 +43,9 @@ type designResolver struct {
 // newDesignResolver reads the flag once and returns a configured resolver, the same shape as
 // newLoader beside it. The store is built per resolution, because the CLI's tree root depends on the
 // path being resolved; the service is the constant.
-func newDesignResolver() *designResolver {
-	return &designResolver{asNamed: readAsNamed}
+func newDesignResolver(ws *cliWorkspace) *designResolver {
+	return &designResolver{ws: ws, asNamed: readAsNamed}
 }
-
-// cliMount is the mount name the CLI addresses its single tree by. The CLI has no configured mounts,
-// so the name is arbitrary and never surfaces to a user; it exists because a ref is always a
-// (mount, ref) pair and inventing a path-shaped alternative for one client is how the two clients
-// stop sharing a contract.
-const cliMount = "local"
 
 // designSource is which artifact each tier of a read opens, plus the line that says so.
 //
@@ -97,14 +82,23 @@ type designSource struct {
 // capability: pointing agni at a design used to be an error, so there was no way to say "this
 // design" rather than "this file".
 func (r *designResolver) Resolve(ctx context.Context, named string) (designSource, error) {
-	plain := designSource{DesignSources: service.DesignSources{NetlistURI: named, BoardURI: named, GeometryURI: named}}
-	root, uri, isDir, ok := treeFor(named)
+	uri, err := r.ws.URI(named)
+	if err != nil {
+		return designSource{}, err
+	}
+	plain := designSource{DesignSources: service.DesignSources{NetlistURI: uri.String(), BoardURI: uri.String(), GeometryURI: uri.String()}}
+	root, ok := mountRoot(r.ws, uri)
 	if !ok {
-		// Nothing to resolve against (the path does not exist). Let the reader produce the error, so
-		// the message a user sees is the one they already know rather than a new one from here.
 		return plain, nil
 	}
-	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: cliMount, FS: os.DirFS(root)}))
+	isDir := false
+	if fi, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(uri.Path))); statErr == nil {
+		isDir = fi.IsDir()
+	}
+	// The same ProjectService a server hosts, over a store rooted at this argument's mount. Same
+	// code, different tree root, chosen by the client — which is the whole of the CLI/serve
+	// difference now.
+	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: uri.Mount, FS: os.DirFS(root)}))
 	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: uri.String()})
 	if err != nil {
 		return designSource{}, err
@@ -135,17 +129,6 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	// user typed silently never matches, and the note then claims every tier was pulled in unasked.
 	note := resolutionNote(named, uri.String(), d, tiers, namedIsTheDesign)
 
-	// Refs are tree-relative; the CLI's reader takes local paths, so rejoin at this one edge. This is
-	// the only place the CLI turns a ref back into a path, which is what keeps "a ref is not a path"
-	// true everywhere above it.
-	abs := func(s string) string {
-		u, err := artifact.Parse(s)
-		if err != nil {
-			return s
-		}
-		return filepath.Join(root, filepath.FromSlash(u.Path))
-	}
-	tiers.NetlistURI, tiers.BoardURI, tiers.GeometryURI = abs(tiers.NetlistURI), abs(tiers.BoardURI), abs(tiers.GeometryURI)
 	return designSource{DesignSources: tiers, Note: note}, nil
 }
 
@@ -157,18 +140,16 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 // the schematic still runs the board-tier rules against the declared board, which is more than was
 // asked for and therefore has to be said.
 func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSources, namedIsTheDesign bool) string {
-	// The descriptor is named relative to WHAT THE USER TYPED, not to the tree root. The tree root is
-	// a bounded ancestor the caller never chose, so a ref-relative path prints as a fragment starting
-	// from an arbitrary directory. Both branches below sit in the design folder by construction: the
-	// design folder itself was named, or a declared companion inside it was.
-	var descriptor, note string
+	// The descriptor is named by the DESIGN's own mount-relative path, not by joining onto whatever
+	// the caller typed. The caller may have typed a path or a URI, and filepath.Join on a URI mangles
+	// its scheme; the design already knows where it lives, in one spelling, in all three tiers.
+	descriptor := path.Join(uriPath(d.GetUri()), projects.DesignDescriptor)
+	var note string
 	if namedIsTheDesign {
-		descriptor = filepath.Join(named, projects.DesignDescriptor)
 		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(d.GetEntryUri()), descriptor)
 	} else {
-		descriptor = filepath.Join(filepath.Dir(named), projects.DesignDescriptor)
 		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (the design's entry)",
-			filepath.Base(named), descriptor, path.Base(d.GetEntryUri()))
+			path.Base(uriPath(named)), descriptor, path.Base(d.GetEntryUri()))
 	}
 	var extra []string
 	if g := tiers.GeometryURI; g != tiers.NetlistURI && g != ref {
@@ -184,37 +165,6 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 		note += ". Pass --as-named to read the file itself"
 	}
 	return note + ".\n"
-}
-
-// treeFor turns a local path into the (tree root, tree-relative ref) pair the store addresses,
-// rooting the tree cliResolveDepth levels above the path. It reports false when the path does not
-// exist, since there is then nothing to resolve.
-func treeFor(named string) (root string, uri artifact.URI, isDir, ok bool) {
-	absPath, err := filepath.Abs(named)
-	if err != nil {
-		return "", artifact.URI{}, false, false
-	}
-	fi, err := os.Stat(absPath)
-	if err != nil {
-		return "", artifact.URI{}, false, false
-	}
-	root = filepath.Dir(absPath)
-	for range cliResolveDepth {
-		parent := filepath.Dir(root)
-		if parent == root {
-			break
-		}
-		root = parent
-	}
-	rel, err := filepath.Rel(root, absPath)
-	if err != nil {
-		return "", artifact.URI{}, false, false
-	}
-	u, err := artifact.New(cliMount, filepath.ToSlash(rel))
-	if err != nil {
-		return "", artifact.URI{}, false, false
-	}
-	return root, u, fi.IsDir(), true
 }
 
 // edsSiblingNote is the fallback advice for a folder that declares no design: reading an EDIF
@@ -242,34 +192,22 @@ func edsSiblingNote(path string) string {
 	return ""
 }
 
-// cliURI and localPath are the matched pair that lets the CLI speak the same addressing model as
-// every other client without inventing a second one.
-//
-// The CLI's mount is the FILESYSTEM ROOT. A user types a path, `agni` turns it into
-// `mount://local/<abs path without its leading slash>`, and the loader turns it back. That is the
-// one place a local path becomes a URI and the one place it becomes a path again, so nothing between
-// them has to know the CLI is special.
-//
-// Encoding the absolute path is what makes it round-trip: a relative path would depend on the
-// working directory at the far end, and the far end is a service that deliberately has no filesystem.
-func cliURI(p string) (string, error) {
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		return "", err
+// mountRoot returns the host root a URI's mount resolves to. It reports false when the mount is
+// unknown, which for the CLI means the argument named a path that does not exist: the workspace
+// mints a mount for anything real, so an unmintable argument is one nothing could be rooted at.
+func mountRoot(ws *cliWorkspace, uri artifact.URI) (string, bool) {
+	m, ok := mounts.Find(ws.Mounts(), uri.Mount)
+	if !ok {
+		return "", false
 	}
-	u, err := artifact.New(cliMount, strings.TrimPrefix(filepath.ToSlash(abs), "/"))
-	if err != nil {
-		return "", err
-	}
-	return u.String(), nil
+	return m.Root, true
 }
 
-// mustCLIURI is cliURI for a call site with nowhere to put an error. filepath.Abs fails only when the
-// working directory cannot be read, which is not a condition a design read can do anything about.
-func mustCLIURI(p string) string {
-	u, err := cliURI(p)
-	if err != nil {
-		return p
+// uriPath is the mount-relative path of a URI, or the string unchanged when it is not one. It exists
+// so a message can name a file the same way whether the caller typed a path or a URI.
+func uriPath(s string) string {
+	if u, err := artifact.Parse(s); err == nil {
+		return u.Path
 	}
-	return u
+	return filepath.ToSlash(s)
 }

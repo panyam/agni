@@ -16,6 +16,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
+	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/readers/formats"
 )
@@ -44,7 +45,11 @@ type localLoader struct {
 func (l *localLoader) resolve(ctx context.Context, path string) (designSource, error) {
 	r := l.resolver
 	if r == nil {
-		r = newDesignResolver()
+		ws, err := workspace()
+		if err != nil {
+			return designSource{}, err
+		}
+		r = newDesignResolver(ws)
 	}
 	src, err := r.Resolve(ctx, path)
 	if err != nil {
@@ -75,7 +80,7 @@ func (l *localLoader) Design(ctx context.Context, uri artifact.URI, opts ...serv
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ReadDesign(src.NetlistURI)
+	return readerFor(l.loader, opts...).ReadDesign(localOf(src.NetlistURI))
 }
 
 func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
@@ -83,7 +88,7 @@ func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardG
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.BoardGeometry(src.BoardURI)
+	return l.loader.BoardGeometry(localOf(src.BoardURI))
 }
 
 func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool) (*geom.SchematicGeometry, error) {
@@ -91,7 +96,7 @@ func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout str
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ResolveGeometry(src.GeometryURI, layout, nil, symbolsFor(faithful))
+	return l.loader.ResolveGeometry(localOf(src.GeometryURI), layout, nil, symbolsFor(faithful))
 }
 
 func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful bool) (*graph.ConversionReport, error) {
@@ -99,7 +104,7 @@ func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful boo
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ConversionReport(src.GeometryURI, symbolsFor(faithful), nil)
+	return l.loader.ConversionReport(localOf(src.GeometryURI), symbolsFor(faithful), nil)
 }
 
 // Expectations reads the sidecar beside the ENTRY rather than beside the named file: an expectation
@@ -109,7 +114,7 @@ func (l *localLoader) Expectations(ctx context.Context, uri artifact.URI) (*expe
 	if err != nil {
 		return nil, err
 	}
-	sidecar := src.NetlistURI + ".expect.yaml"
+	sidecar := localOf(src.NetlistURI) + ".expect.yaml"
 	if _, err := os.Stat(sidecar); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -142,7 +147,7 @@ func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string,
 	if err != nil {
 		return "", err
 	}
-	return hashSource(src.NetlistURI), nil
+	return hashSource(localOf(src.NetlistURI)), nil
 }
 
 // loadManifest reads and validates a checklist from a local path. It is a package function rather
@@ -164,8 +169,28 @@ func loadManifest(path string) (review.Manifest, error) {
 //
 // This is the ONLY place the CLI unpacks a URI, and it is deliberately at the port boundary: above
 // it every caller holds one contained value, below it the readers see the plain names they have
-// always seen. It is the inverse of cliURI: the CLI's mount is the filesystem root, so the leading
-// slash that encoding stripped goes back on here.
+// always seen. It resolves through the run's mount table exactly as the served adapter does, so the
+// CLI is no longer the "no containment" sibling it used to be: every path it reads is inside a mount,
+// even when that mount was minted from the argument.
 func localPath(uri artifact.URI) string {
-	return filepath.FromSlash("/" + uri.Path)
+	ws, err := workspace()
+	if err != nil {
+		return filepath.FromSlash(uri.Path)
+	}
+	abs, err := mounts.Resolve(ws.Mounts(), uri)
+	if err != nil {
+		return filepath.FromSlash(uri.Path)
+	}
+	return abs
+}
+
+// localOf resolves an artifact URI string to a local path, for the direct readers that never go
+// through a port. It is localPath with the parse folded in, and it passes a non-URI through
+// unchanged so a caller holding a plain path is not broken by it.
+func localOf(s string) string {
+	u, err := artifact.Parse(s)
+	if err != nil {
+		return s
+	}
+	return localPath(u)
 }

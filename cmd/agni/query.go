@@ -107,7 +107,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs)
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
-				Uri: mustCLIURI(args[0]), Query: args[1], Overlay: overlay, BoardUri: mustCLIURI(boardPath),
+				Uri: cliArgURI(args[0]), Query: args[1], Overlay: overlay, BoardUri: cliArgURI(boardPath),
 			})
 			if err != nil {
 				return err

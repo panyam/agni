@@ -63,6 +63,12 @@ func rootCmd() *cobra.Command {
 		// cannot disagree. `agni version` adds the toolchain and platform detail.
 		Version: version.Version(),
 	}
+	root.PersistentFlags().StringArrayVar(&cliMountSpecs, "mount", nil,
+		"expose a folder as name=path (repeatable). Every command takes it, not just serve: with it, a "+
+			"path inside that folder is addressed through the mount, so the CLI and a server naming the "+
+			"same --mount produce identical artifact URIs for the same design and their stored reviews "+
+			"are directly comparable. Without it the CLI mints a mount per argument, rooted at the "+
+			"enclosing project when there is one.")
 	root.PersistentFlags().BoolVar(&readAsNamed, "as-named", false,
 		"read exactly the file named, even when its design.yaml declares it a companion view of a "+
 			"different entry. Without it, analysis of a declared companion (a schematic export, a board) "+
@@ -119,12 +125,16 @@ func newLoader() *formats.Loader {
 // readDesign reads a design file into the IR through the formats registry, after the enclosing
 // design's descriptor has had its say about which file that should be (resolveSource).
 func readDesign(path string) (*ir.Design, error) {
-	src, err := newDesignResolver().Resolve(context.Background(), path)
+	ws, err := workspace()
+	if err != nil {
+		return nil, err
+	}
+	src, err := newDesignResolver(ws).Resolve(context.Background(), path)
 	if err != nil {
 		return nil, err
 	}
 	noteSource(os.Stderr, src)
-	return newLoader().ReadDesign(src.NetlistURI)
+	return newLoader().ReadDesign(localOf(src.NetlistURI))
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never
@@ -162,17 +172,21 @@ func readModel(path string) (check.Model, error) {
 // connectivity against the netlist and its copper against the board, which is C21's split expressed
 // as behaviour instead of as a warning.
 func readModelWithParams(path, paramsDir string) (check.Model, error) {
-	src, err := newDesignResolver().Resolve(context.Background(), path)
+	ws, err := workspace()
+	if err != nil {
+		return nil, err
+	}
+	src, err := newDesignResolver(ws).Resolve(context.Background(), path)
 	if err != nil {
 		return nil, err
 	}
 	noteSource(os.Stderr, src)
 	l := newLoader()
-	d, err := l.ReadDesign(src.NetlistURI)
+	d, err := l.ReadDesign(localOf(src.NetlistURI))
 	if err != nil {
 		return nil, err
 	}
-	bg, err := l.BoardGeometry(src.BoardURI)
+	bg, err := l.BoardGeometry(localOf(src.BoardURI))
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +369,7 @@ func checkCmd() *cobra.Command {
 			// document rather than beside it is what makes the written artifact the SAME artifact the
 			// terminal showed, instead of a second one that happens to agree today.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: mustCLIURI(args[0]), Rules: names, Overlay: overlay})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -379,7 +393,7 @@ func checkCmd() *cobra.Command {
 			}
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: mustCLIURI(args[0]), Rules: names, Overlay: overlay})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -393,7 +407,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json — both need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: mustCLIURI(args[0]), Rules: names, Overlay: overlay})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -529,7 +543,7 @@ func reviewCmd() *cobra.Command {
 			var docs []*checkspb.CheckResults
 			for _, design := range args {
 				rv, err := svc.CreateReview(cmd.Context(), &webapi.CreateReviewRequest{
-					Manifest: service.ManifestProto(man), DesignUri: mustCLIURI(design), BoardUri: mustCLIURI(boardPath), RatifiedFloor: ratifiedFloor,
+					Manifest: service.ManifestProto(man), DesignUri: cliArgURI(design), BoardUri: cliArgURI(boardPath), RatifiedFloor: ratifiedFloor,
 					// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
 					// and the web reach one composition path, and its lexicon half travels with the design
 					// read instead of being installed in a process global.
