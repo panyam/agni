@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// This file: ProjectService, the engine's answer to "which design is this, and whose design is it"
+// (agni issue 170).
+//
+// Everything else in this API addresses a FILE. Almost everything the review layer needs is scoped to
+// something larger, and until now the engine had no name for it: a folder holding a netlist, a
+// schematic export, and a board says nothing about which of the three IS the design, and the config
+// that decides what a design is checked against (naming vocabulary, interface profiles, seeded
+// parameters, a checklist) applies to some designs and not others. With no model of the larger thing,
+// that config could only be process-wide server flags, which a deployment serving a mixed set applies
+// to every design it reads.
+//
+// Two resources, and the split follows the on-disk layout a review project already takes:
+//
+//   Project  owns what is shared across designs (a team's config).
+//   Design   owns what is specific to one: which file is the analysis source, and which files are
+//            companion VIEWS of that same design rather than independent sources of it.
+//
+// "Project" is an overloaded word here and the overloading is worth naming. A KiCad `.kicad_pro` is
+// DESIGN-scoped: it is one board's own file, and it resolves to a Design below, never to a Project. An
+// overlay repository is a Go module that extends the engine, and has nothing to do with this. The
+// engine's Project is the scope a team's REVIEW CONFIG belongs to, which is the thing neither of the
+// other two names.
+service ProjectService {
+  // GetProject returns one project by resource name.
+  rpc GetProject(GetProjectRequest) returns (Project);
+
+  // ListProjects returns the projects visible across the server's mounts.
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+
+  // GetDesign returns one design by resource name. The rpc shares its name with
+  // DesignService.GetDesign and answers a different question: that one loads a design's CONTENT from a
+  // (mount, path) pair, this one returns a design's IDENTITY and which of the files around it is
+  // which. They are distinct rpcs on distinct services, and their request messages are named apart
+  // because one proto package cannot hold two GetDesignRequest.
+  rpc GetDesign(GetProjectDesignRequest) returns (Design);
+
+  // ListDesigns returns the designs belonging to one project.
+  rpc ListDesigns(ListProjectDesignsRequest) returns (ListProjectDesignsResponse);
+
+  // ResolveDesign answers the question a viewer has when it opens a file: is this file part of a
+  // declared design, and if so which. It is the seam that keeps resolution an INTERFACE rather than a
+  // path convention — a file-backed store walks the tree for descriptors, another may consult an
+  // index, and a caller cannot tell which it is talking to.
+  //
+  // Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
+  // the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
+  // resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
+  // against some other project's rules — a structural guarantee rather than a discouraged practice.
+  rpc ResolveDesign(ResolveDesignRequest) returns (ResolveDesignResponse);
+}
+
+// Project is one declared set of designs that share configuration.
+//
+// It is READ-ONLY. There is no CreateProject, and its absence is deliberate rather than pending:
+// scaffolding a project means authoring design intent from a design, which is a judgment step with a
+// confidentiality boundary rather than a server operation. See CONSTRAINTS C23 for why a read-only
+// resource is still AIP-shaped here.
+//
+// It carries no configuration fields yet. The conventions, profiles, parameters, and checklist a
+// project owns still reach a run as serve-startup flags; they move onto this message in the change
+// that wires them, so a field never sits in the schema doing nothing.
+message Project {
+  // name is the resource name, "projects/{project}". The id is DECLARED by the operator in
+  // `project.yaml`, not derived from the folder path and not server-assigned. That is what makes it
+  // stable: a project keeps its identity when its folder is renamed or moved between mounts, and two
+  // mounts do not accidentally collide by having directories of the same name.
+  string name = 1;
+  // title is the human-readable label, falling back to the id when the descriptor gave none.
+  string title = 2;
+  // mount is the workspace mount this project's files live in.
+  string mount = 3;
+  // dir_ref is the mount-relative folder holding `project.yaml`. It is an artifact ref that the
+  // injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
+  string dir_ref = 4;
+}
+
+// Design is one declared design: an identity, an entry file, and its companion views.
+//
+// The type is named for what it is, at the cost of sharing a word with agni.v1.ir.Design. They are
+// different layers of the same idea: this is the design's IDENTITY and file layout, that is the
+// design's parsed CONTENT.
+message Design {
+  // name is the resource name, "projects/{project}/designs/{design}", with the id declared in
+  // `design.yaml` on the same terms as a project's.
+  string name = 1;
+  // title is the human-readable label, falling back to the id.
+  string title = 2;
+  // mount is the workspace mount this design's files live in.
+  string mount = 3;
+  // dir_ref is the mount-relative folder holding `design.yaml`.
+  string dir_ref = 4;
+  // entry_ref is the mount-relative ref of the file this design's ANALYSIS reads: the netlist the
+  // design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
+  // behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
+  // different component count depending on which a tool opens, and the CLI could previously only
+  // print a warning telling the operator to go consult their own descriptor, because nothing in the
+  // engine modelled "this folder is one design, and this file is its entry".
+  string entry_ref = 5;
+  // companion_refs are mount-relative refs to files that are VIEWS of this same design rather than
+  // independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
+  // render and to locate findings on, never a second component source to reconcile against the
+  // netlist (C21).
+  //
+  // Membership is declared per file rather than inferred from "everything beside the entry", because
+  // a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
+  // inferred rule would turn a diff of two revisions into a diff of one against itself.
+  repeated string companion_refs = 6;
+}
+
+message GetProjectRequest {
+  string name = 1; // "projects/{project}"
+}
+
+message ListProjectsRequest {
+  // page_size is the maximum number of projects to return. 0 uses the server default; the server may
+  // return fewer.
+  int32 page_size = 1;
+  // page_token continues a previous call. An empty token starts at the first project.
+  string page_token = 2;
+  // filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`. An unsupported
+  // filter is an error rather than a silently ignored argument, because a client that believed it had
+  // filtered and had not would read another mount's projects as its own.
+  string filter = 3;
+}
+
+message ListProjectsResponse {
+  // projects are ordered by resource name, so a listing is stable across calls.
+  repeated Project projects = 1;
+  // next_page_token is empty when the last page has been reached.
+  string next_page_token = 2;
+}
+
+message GetProjectDesignRequest {
+  string name = 1; // "projects/{project}/designs/{design}"
+}
+
+message ListProjectDesignsRequest {
+  // parent is the project whose designs to list, "projects/{project}".
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  // filter narrows the listing, on the same terms as ListProjectsRequest.filter. Only `mount` is
+  // supported.
+  string filter = 4;
+}
+
+message ListProjectDesignsResponse {
+  // designs are ordered by resource name.
+  repeated Design designs = 1;
+  string next_page_token = 2;
+}
+
+message ResolveDesignRequest {
+  // mount is the workspace mount the ref resolves within.
+  string mount = 1;
+  // ref names the file or folder to resolve, mount-relative. A ref is a key in a server-defined
+  // namespace that the injected Loader resolves, NOT a host path.
+  string ref = 2;
+}
+
+message ResolveDesignResponse {
+  // design is the design the ref belongs to and project is that design's project. They are set
+  // TOGETHER or not at all, because a design is a resource only when a project parents it: a
+  // resource name needs a parent, and inventing a second, parentless name space for a design.yaml
+  // sitting outside any project would mean two ways to address the same kind of thing.
+  //
+  // Unset is a normal answer rather than an error. A mounted folder with no descriptors is the
+  // ordinary case, and a client that gets no design shows the plain viewer and the built-in catalog.
+  //
+  // A `design.yaml` outside any project is not wasted: it still tells the CLI which file is that
+  // folder's analysis entry, since the CLI is pointed at a path by a human and needs no resource
+  // name to honour a declaration. It is only unaddressable over this API.
+  Design design = 1;
+  Project project = 2;
+}

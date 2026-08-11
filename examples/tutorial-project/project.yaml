@@ -1,0 +1,12 @@
+# What makes this folder a PROJECT: a name, and the fact that the config beside it (conventions.yaml,
+# profiles/, params/, review.yaml) belongs to every design under designs/ rather than to any one of
+# them.
+#
+# The name is the project's identity, not its folder. `agni serve` addresses this project as
+# `projects/gateway` and the board below it as `projects/gateway/designs/gateway`, so renaming the
+# folder or moving it to another mount does not rename either.
+#
+# "Project" is an overloaded word around here. KiCad's own `.kicad_pro` is DESIGN-scoped, one board's
+# file, and it lives under designs/gateway/ if a design has one. This is the other scope: the team's.
+name: gateway
+title: Gateway ECU review project

@@ -122,6 +122,14 @@ func HasFaithful(name string) bool {
 	return f != nil && f.Geometry != nil
 }
 
+// HasBoard reports whether the file's extension carries board geometry (copper, layers, courtyards)
+// the board-tier rules run against. It is the question a caller asks when a design declares several
+// companion views and only one of them can supply the board tier.
+func HasBoard(name string) bool {
+	f := ByExt(name)
+	return f != nil && f.Board != nil
+}
+
 // NetlistExts returns the sorted extensions with a netlist reader, for error text and help.
 func NetlistExts() []string {
 	var exts []string

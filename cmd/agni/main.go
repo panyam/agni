@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -63,6 +62,12 @@ func rootCmd() *cobra.Command {
 		// cannot disagree. `agni version` adds the toolchain and platform detail.
 		Version: version.Version(),
 	}
+	root.PersistentFlags().BoolVar(&readAsNamed, "as-named", false,
+		"read exactly the file named, even when its design.yaml declares it a companion view of a "+
+			"different entry. Without it, analysis of a declared companion (a schematic export, a board) "+
+			"reads the design's entry instead, because a companion is a view of the design rather than a "+
+			"second source of it. Use this to read a companion as a netlist on purpose, e.g. to check that "+
+			"two views of one design still agree.")
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched). Defaults to "+
@@ -110,28 +115,22 @@ func newLoader() *formats.Loader {
 	return &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv)}
 }
 
-// readDesign reads a design file into the IR through the formats registry.
+// readDesign reads a design file into the IR through the formats registry, after the enclosing
+// design's descriptor has had its say about which file that should be (resolveSource).
 func readDesign(path string) (*ir.Design, error) {
-	warnEdsSibling(path, os.Stderr)
-	return newLoader().ReadDesign(path)
+	src, err := resolveSource(path)
+	if err != nil {
+		return nil, err
+	}
+	noteSource(os.Stderr, src)
+	return newLoader().ReadDesign(src.Netlist)
 }
 
-// warnEdsSibling warns (to w) when reading an EDIF SCHEMATIC-geometry (.eds) export while the sibling
-// NETLIST (.edn) exists. The two read different component counts — the .eds reflects what the schematic
-// DRAWS, the .edn is authoritative for component identity — so a count taken off the .eds is a silent
-// footgun (it read test_point 565 vs the .edn's 1385 on a real board). The design.yaml entry should be
-// the .edn. Silent when there is no .eds, no sibling .edn, or the input already is the .edn.
-func warnEdsSibling(path string, w io.Writer) {
-	if !strings.EqualFold(filepath.Ext(path), ".eds") {
-		return
-	}
-	stem := strings.TrimSuffix(path, filepath.Ext(path))
-	for _, ext := range []string{".edn", ".EDN"} {
-		if _, err := os.Stat(stem + ext); err == nil {
-			fmt.Fprintf(w, "warning: %s is an EDIF schematic-geometry (.eds) export; component counts may be lower than the netlist. The sibling %s (.edn netlist) is authoritative for component identity — use it (your design.yaml entry).\n",
-				filepath.Base(path), filepath.Base(stem+ext))
-			return
-		}
+// noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never
+// contaminates a `--format json` document on stdout.
+func noteSource(w io.Writer, src designSource) {
+	if src.Note != "" {
+		fmt.Fprint(w, src.Note)
 	}
 }
 
@@ -156,13 +155,23 @@ func readModel(path string) (check.Model, error) {
 // the separate-board-export override (WS3-089's --board-path) now lives in the review path, which
 // goes through the ReviewService's BuildModel. check/query keep this local builder until they too
 // become thin clients (WS9-048).
+//
+// The two tiers are resolved through the design descriptor (resolveSource), which is what lets them
+// come from DIFFERENT files: a design that declares a netlist entry and a board companion checks its
+// connectivity against the netlist and its copper against the board, which is C21's split expressed
+// as behaviour instead of as a warning.
 func readModelWithParams(path, paramsDir string) (check.Model, error) {
-	l := newLoader()
-	d, err := l.ReadDesign(path)
+	src, err := resolveSource(path)
 	if err != nil {
 		return nil, err
 	}
-	bg, err := l.BoardGeometry(path)
+	noteSource(os.Stderr, src)
+	l := newLoader()
+	d, err := l.ReadDesign(src.Netlist)
+	if err != nil {
+		return nil, err
+	}
+	bg, err := l.BoardGeometry(src.Board)
 	if err != nil {
 		return nil, err
 	}

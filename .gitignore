@@ -15,3 +15,8 @@ docsite/docsite
 # *.kicad_prl, because two under cmd/agni/testdata/conformance/ ARE tracked deliberately: the
 # conformance fixtures carry them so a project read has the full sibling set.
 readers/kicad/testdata/*.kicad_prl
+
+# Same side effect, in the example fixture tree: kicad-cli writes a .kicad_prl beside any board
+# it opens, and the bundled demo boards get opened by example runs. Scoped to this tree for the
+# same reason as above, so the deliberately-tracked conformance ones stay visible.
+examples/common/designs/**/*.kicad_prl

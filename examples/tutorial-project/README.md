@@ -21,6 +21,7 @@ This is the shape a real review project takes. Two kinds of file live here, and 
 
 | Path | What it is |
 |---|---|
+| `project.yaml` | the project's name, which is what makes this folder a project rather than a folder |
 | `review.yaml` | the checklist: the questions this team asks of every board |
 | `conventions.yaml` | house naming: which net names are rails, and what a legal name looks like |
 | `profiles/` | interface declarations, one per bus this team designs with |
@@ -30,7 +31,7 @@ This is the shape a real review project takes. Two kinds of file live here, and 
 
 | Path | What it is |
 |---|---|
-| `design.yaml` | the design's name and which file is its entry point |
+| `design.yaml` | the design's name, which file is its entry, and which files are views of it |
 | `gateway.edn` | the netlist, and `gateway-rev-b.edn` a later revision of it |
 | `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
 | `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |
@@ -39,6 +40,13 @@ This is the shape a real review project takes. Two kinds of file live here, and 
 
 Intent is per-design because each board has its own intended architecture. Conventions, profiles,
 and parameters are per-project because they describe the team, not the board.
+
+The two descriptors are what let you name a **design** instead of a file. `agni check
+designs/gateway` reads the entry `design.yaml` declares and picks up the board companion for the
+copper checks, so the connectivity rules and the board rules run from one argument. Naming a
+declared companion (`agni check designs/gateway/gateway.kicad_pcb`) reads the entry instead and says
+so on stderr, because a board export is a view of the design rather than a second source of it. Pass
+`--as-named` when reading a view as a netlist is the point, which is what `make check-views` does.
 
 ## What the board is built to show
 

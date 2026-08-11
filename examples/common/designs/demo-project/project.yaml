@@ -1,0 +1,4 @@
+# The smallest thing that is a project: a name, and designs under it that share whatever config sits
+# beside this file. `agni serve` addresses it as `projects/demo`.
+name: demo
+title: Demo mixer project

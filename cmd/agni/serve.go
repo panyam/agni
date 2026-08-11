@@ -112,6 +112,12 @@ func serveCmd() *cobra.Command {
 			nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
 			wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(&osWorkspace{mounts: mounts})))
 			mux.Handle(wsPath, wsHandler)
+			// ProjectService (agni issue 170) resolves the project/design descriptors sitting in the
+			// mounts. It needs no flag: a mount either carries descriptors or it does not, and a mount
+			// with none resolves to nothing, which is what keeps one project's config from reaching
+			// another project's design.
+			prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(&osProjects{mounts: mounts})))
+			mux.Handle(prPath, prHandler)
 			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
 			mux.Handle(dsPath, dsHandler)
 			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is

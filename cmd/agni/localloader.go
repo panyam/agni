@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"os"
+	"sync"
 
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
@@ -21,26 +24,85 @@ import (
 // no-containment sibling behind the same Loader interface (WS9-048). It satisfies the full
 // service.Loader (the check/query thin clients) plus Manifest (the review thin client), so a CLI
 // command constructs its service over this and calls the same method the web serves.
-type localLoader struct{ loader *formats.Loader }
+type localLoader struct {
+	loader *formats.Loader
+	// notes is where a descriptor-resolution note is written, nil for os.Stderr. Notes are emitted
+	// once per named path (noted), because one BuildModel asks this loader for the netlist, the board,
+	// and the geometry of the SAME path, and a user does not need to be told three times which file
+	// was read.
+	notes io.Writer
+	mu    sync.Mutex
+	noted map[string]bool
+}
+
+// resolve runs the named path through the enclosing design's descriptor and emits the note at most
+// once. Every path-taking method below goes through it, so the CLI's thin clients (check, query,
+// review) honour a declared entry the same way the direct readers do.
+func (l *localLoader) resolve(path string) (designSource, error) {
+	src, err := resolveSource(path)
+	if err != nil {
+		return designSource{}, err
+	}
+	if src.Note == "" {
+		return src, nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.noted[path] {
+		return src, nil
+	}
+	if l.noted == nil {
+		l.noted = map[string]bool{}
+	}
+	l.noted[path] = true
+	w := l.notes
+	if w == nil {
+		w = os.Stderr
+	}
+	fmt.Fprint(w, src.Note)
+	return src, nil
+}
 
 func (l *localLoader) Design(_ context.Context, _, path string, opts ...service.ReadOption) (*ir.Design, error) {
-	return readerFor(l.loader, opts...).ReadDesign(path)
+	src, err := l.resolve(path)
+	if err != nil {
+		return nil, err
+	}
+	return readerFor(l.loader, opts...).ReadDesign(src.Netlist)
 }
 
 func (l *localLoader) Board(_ context.Context, _, path string) (*geom.BoardGeometry, error) {
-	return l.loader.BoardGeometry(path)
+	src, err := l.resolve(path)
+	if err != nil {
+		return nil, err
+	}
+	return l.loader.BoardGeometry(src.Board)
 }
 
 func (l *localLoader) Geometry(_ context.Context, _, path, layout string, faithful bool) (*geom.SchematicGeometry, error) {
-	return l.loader.ResolveGeometry(path, layout, nil, symbolsFor(faithful))
+	src, err := l.resolve(path)
+	if err != nil {
+		return nil, err
+	}
+	return l.loader.ResolveGeometry(src.Geometry, layout, nil, symbolsFor(faithful))
 }
 
 func (l *localLoader) Report(_ context.Context, _, path string, faithful bool) (*graph.ConversionReport, error) {
-	return l.loader.ConversionReport(path, symbolsFor(faithful), nil)
+	src, err := l.resolve(path)
+	if err != nil {
+		return nil, err
+	}
+	return l.loader.ConversionReport(src.Geometry, symbolsFor(faithful), nil)
 }
 
+// Expectations reads the sidecar beside the ENTRY rather than beside the named file: an expectation
+// set states what this design should read, and the design is its entry.
 func (l *localLoader) Expectations(_ context.Context, _, path string) (*expect.Expectations, error) {
-	sidecar := path + ".expect.yaml"
+	src, err := l.resolve(path)
+	if err != nil {
+		return nil, err
+	}
+	sidecar := src.Netlist + ".expect.yaml"
 	if _, err := os.Stat(sidecar); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -64,8 +126,16 @@ func (l *localLoader) Convention(_ context.Context, _, ref string) (naming.Confi
 // created through the service record identical revision identity for identical bytes. An unreadable
 // file yields "" rather than an error, which is what DesignRef.content_hash documents for a producer
 // that did not hash.
+//
+// It hashes the ENTRY the descriptor declares, not the ref the caller passed, so a run recorded
+// against a companion and one recorded against the design folder carry the same revision identity:
+// they analysed the same bytes.
 func (l *localLoader) DesignHash(_ context.Context, _, ref string) (string, error) {
-	return hashSource(ref), nil
+	src, err := l.resolve(ref)
+	if err != nil {
+		return "", err
+	}
+	return hashSource(src.Netlist), nil
 }
 
 // loadManifest reads and validates a checklist from a local path. It is a package function rather
