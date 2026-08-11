@@ -153,8 +153,19 @@ bespoke WebGL canvas is one such island and stays a semantic-command surface (C3
 one level up in the build system) while still using modern reactivity where it earns its
 place. Server routing plus per-page islands, not an SPA (thesis Principles 3, 5, 7; the
 goapplib presenter-contract reference).
+**Corollary — the composition root is the fourth edit, and it is tested.** An island is only real
+once `main.ts` constructs it and passes its view to the presenter. Because the `ViewSink` ports are
+optional (so an embedding host may leave a panel out, C13 / `build/overlay.md`), an unwired port is a
+silent no-op rather than a type error, and no panel-level test can see it: every one of them supplies
+its own collaborators. That gap shipped a broken feature twice, once with a client never passed
+(WS9-052) and once with a view never wired (agni issue 175). The rule is that the four registration
+points move together: island, template hole, `ViewSink` field, `main.ts` wiring.
+
 **Verify:** no client-side router; `solid-js` appears only in island/adapter package
-dependencies; each interactive surface is an island mounted into a server-rendered hole.
+dependencies; each interactive surface is an island mounted into a server-rendered hole;
+`cd web && pnpm exec vitest run src/composition.test.ts` boots the real entry point against the real
+`ViewerPage.html` and fails on a hole that nothing mounts, a `ViewSink` port nothing wires, or a
+client the presenter never receives.
 
 ## C12: Render style is injectable data, not scattered literals
 **Rule:** Colors and the default font are view **policy expressed as data**: a single

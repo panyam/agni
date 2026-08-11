@@ -10,6 +10,11 @@ examples/validate/validate
 # Built docsite binary (rebuilt by `make`/`go run`; never commit it)
 docsite/docsite
 
+# `go build ./cmd/agni` from the repo root drops the CLI here. `make agni` writes to bin/ (ignored
+# above), but the bare go command is the one people type, so ignore its output too rather than
+# leaving a 25 MB binary one `git add .` away from a public repo.
+/agni
+
 # KiCad per-user project-local state, written as a side effect of the kicad reader tests
 # (`make testall` leaves them behind). Scoped to the reader's testdata rather than a blanket
 # *.kicad_prl, because two under cmd/agni/testdata/conformance/ ARE tracked deliberately: the
