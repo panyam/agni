@@ -33,9 +33,15 @@ states an output current, a bound item reads needs-data rather than pass. It doe
 narrower case where some regulator is seeded and the one feeding this particular rail is not, which
 still reads pass. Seed the supplying part before treating a pass here as a sized rail.
 
-**A rating stated in milliamps is skipped, not converted.** Unlike units are under-specified for
-comparison across the whole parameter layer, and scaling here would put the engine's one silent unit
-conversion inside a rule that decides pass or fail. Seed output currents in amps.
+**A rating stated in milliamps is reduced to amps and compared.** Seed output currents as the sheet
+prints them. The parameter layer holds one conversion table, next to the comparability predicates, and
+every extractor reads through it, so no rule contains a scale factor. A unit the table does not
+recognize is skipped rather than scaled by a guess, which leaves the narrow residual that the symbol is
+seeded, needs-data does not cover it, and the item reads pass.
+
+Until agni issue 148 a milliamp rating was skipped instead, and milliamps are the ordinary spelling for
+a sub-amp regulator: a spec transcribed as printed left this rule with nothing to compare and scored
+the rail a clean pass while the architecture's own numbers over-subscribed it.
 
 `intent/rail-current-margin` reports the separate question of whether the rail clears the budget with
 headroom. **A pass here means "rated for the declared load", not "adequately sized".** A supply that

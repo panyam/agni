@@ -37,7 +37,9 @@ Every input that cannot be trusted is a skip, never a guess:
 - no MPN, unseeded MPN, or no seeded set at all -> silent (skip-not-false-pass);
 - limit rows that are under-specified or carry text-only conditions are not compared
   (param.MachineComparable, docs/20 comparison semantics);
-- units other than "V" are not converted (normalization is WS10-004);
+- a row printed in a prefixed unit (mV, kV) is reduced to volts by the parameter layer's one
+  conversion table, and BOTH bounds of the range are reduced together; a unit that table does not
+  recognize is skipped rather than scaled by a guess;
 - a rail name with no parseable nominal, or with conflicting nominals, is not compared;
 - a part that declares MORE THAN ONE recommended supply range is skipped entirely: a netlist
   does not label which power-in pin is which supply, and the range is two-sided, so an

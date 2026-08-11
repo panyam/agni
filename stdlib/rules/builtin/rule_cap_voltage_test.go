@@ -160,7 +160,7 @@ func TestCapVoltageSkipsNotFalsePasses(t *testing.T) {
 	mut("text-only condition", func(s *parampb.PartSpec) {
 		s.Parameters[0].Conditions = []*parampb.Condition{{Symbol: "TA", Raw: "over operating range"}}
 	})
-	mut("non-V unit", func(s *parampb.PartSpec) { s.Parameters[0].Unit = "mV"; *s.Parameters[0].Value.Max = 6300 })
+	mut("a unit the parameter layer does not recognize", func(s *parampb.PartSpec) { s.Parameters[0].Unit = "dBm" })
 
 	// A non-capacitor with the same seeded MPN never fires (the class gate).
 	d := capDesign("+10V", "DEMO-CAP-6V3")
@@ -169,6 +169,29 @@ func TestCapVoltageSkipsNotFalsePasses(t *testing.T) {
 	d.Nets[1].Connections[0].ComponentRef = "U1"
 	if fs := runCapRule(t, d, rated); len(fs) != 0 {
 		t.Errorf("non-capacitor component: want skip, got %v", fs)
+	}
+}
+
+// TestCapVoltageReadsMillivoltRows (agni issue 148): 6300 mV and 6.3 V are ONE rated-voltage row
+// written two ways, and a 6.3V cap on a 10V rail is under-rated either way. The millivolt spelling
+// used to fail the extractor's unit gate, so the rule compared nothing and the item scored a PASS on a
+// capacitor the design will destroy.
+func TestCapVoltageReadsMillivoltRows(t *testing.T) {
+	d := capDesign("+10V", "DEMO-CAP-6V3")
+	volts := runCapRule(t, d, param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)})
+	if len(volts) == 0 {
+		t.Fatal("a 6.3V cap on a 10V rail must fire; the fixture no longer exercises the rule")
+	}
+
+	milli := capSpec("DEMO-CAP-6V3", 6.3)
+	milli.Parameters[0].Unit = "mV"
+	*milli.Parameters[0].Value.Max = 6300
+	got := runCapRule(t, d, param.ParamSet{"DEMO-CAP-6V3": milli})
+	if len(got) != len(volts) {
+		t.Fatalf("millivolt spelling produced %d findings, want the %d the volt spelling produces", len(got), len(volts))
+	}
+	if got[0].Message != volts[0].Message {
+		t.Errorf("millivolt spelling reports:\n  %s\nwant the volt spelling's:\n  %s", got[0].Message, volts[0].Message)
 	}
 }
 

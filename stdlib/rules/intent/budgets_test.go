@@ -187,25 +187,63 @@ func TestRailBudgetSymbolAliases(t *testing.T) {
 	}
 }
 
-// TestRailBudgetSkipsMilliampRows holds the unit gate. It is exactly "A", and milliamps are NOT
-// converted: the rest of the params layer treats unlike units as under-specified for comparison until
-// the ontology lands, and scaling here would put the engine's one silent unit conversion inside a rule
-// that decides pass or fail.
+// TestRailBudgetReadsMilliampRatings is the rule half of agni issue 148, and the failure it closes is
+// the one the whole outcome vocabulary exists to prevent: a wrong PASS on a power rail.
 //
-// The value is chosen so the mutation is visible. A 0.5 row in mA compared as if it were amps falls
-// under the 0.8A budget and fires, so a test asserting silence here fails the moment the unit gate is
-// dropped. A larger mA figure would read as an enormous ampere figure and be silent either way, which
-// would make this test pass for the wrong reason.
+// MILLIAMPS ARE THE ORDINARY SPELLING for a sub-amp regulator, so a spec transcribed as the sheet
+// prints it hit this without doing anything unusual. The row used to fail the extractor's unit gate,
+// which left the rule with no supply for the rail, nothing to compare, and no finding. Neither guard
+// caught it: check.Available saw a params tier attached, and the needs-data gate saw the symbol seeded.
+// The item scored a clean pass on a rail the design over-subscribes by 60%.
 //
-// It also documents the residual: the symbol IS seeded, so needs-data does not cover this and a rail
-// supplied only by a mA-stated part reads pass. Converting units is WS10-004's job.
-func TestRailBudgetSkipsMilliampRows(t *testing.T) {
+// Both directions are asserted. A 500mA part under an 0.8A budget must fire, and the same part under a
+// 0.3A budget must not, because a conversion that fired unconditionally would look identical to a
+// correct one on the first case alone.
+func TestRailBudgetReadsMilliampRatings(t *testing.T) {
+	milliamps := func() *parampb.PartSpec {
+		spec := regCurrentSpec("ACME-REG", "IOUT", 500)
+		spec.Parameters[0].Unit = "mA"
+		return spec
+	}
+
+	d := budgetDesign("3V3", "")
+	m := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-REG": milliamps()})
+	fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Eval(m)
+	if len(fs) != 1 {
+		t.Fatalf("a 500mA supply under an 0.8A budget must fire exactly once, got %d: %+v", len(fs), fs)
+	}
+	// The message quotes the rating in the base unit the extractor returns, so a reviewer reads the
+	// same number the comparison used rather than converting it back themselves.
+	if !strings.Contains(fs[0].Message, "0.5A") {
+		t.Errorf("finding must quote the converted rating: %s", fs[0].Message)
+	}
+
+	// The volt-spelled twin of the same part must reach the identical verdict, which is the property
+	// that makes the conversion a normalization rather than a new comparison.
+	inAmps := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-REG": regCurrentSpec("ACME-REG", "IOUT", 0.5)})
+	amps := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Eval(inAmps)
+	if len(amps) != 1 || amps[0].Message != fs[0].Message {
+		t.Errorf("the mA and A spellings of one row must report identically:\n  mA: %+v\n   A: %+v", fs, amps)
+	}
+
+	// A budget the part genuinely covers stays silent, so the conversion is not simply firing always.
+	if within := railBudgetCapacityRule(budgetDecl("3V3", 0.3, 0)).Eval(m); len(within) != 0 {
+		t.Errorf("a 500mA supply covers an 0.3A budget and must stay silent, got %+v", within)
+	}
+}
+
+// TestRailBudgetSkipsUnrecognizedUnits: converting the units the layer knows must not soften its
+// refusal of the ones it does not. An unrecognized unit still yields no supply, and the residual the
+// old milliamp case documented survives here unchanged: the symbol IS seeded, so needs-data does not
+// cover it and the item reads pass. That is now a genuinely narrow gap (a vendor unit no SI scale
+// applies to) rather than the everyday milliamp row it used to be.
+func TestRailBudgetSkipsUnrecognizedUnits(t *testing.T) {
 	d := budgetDesign("3V3", "")
 	spec := regCurrentSpec("ACME-REG", "IOUT", 0.5)
-	spec.Parameters[0].Unit = "mA"
+	spec.Parameters[0].Unit = "dBm"
 	m := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-REG": spec})
 	if fs := railBudgetCapacityRule(budgetDecl("3V3", 0.8, 0)).Eval(m); len(fs) != 0 {
-		t.Errorf("a milliamp row must be skipped, never compared as amps, got %+v", fs)
+		t.Errorf("an unrecognized unit must be skipped, never scaled by a guess, got %+v", fs)
 	}
 	if !check.SeedsAnySymbol(m, check.OutputCurrentSymbols()) {
 		t.Error("the symbol IS seeded here, so needs-data is not what covers this case")

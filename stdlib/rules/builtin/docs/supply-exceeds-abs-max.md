@@ -21,7 +21,9 @@ Every input that cannot be trusted is a skip, never a guess:
 - no MPN, unseeded MPN, or no seeded set at all -> silent (skip-not-false-pass);
 - limit rows that are under-specified or carry text-only conditions are not compared
   (param.MachineComparable, docs/20 comparison semantics);
-- units other than "V" are not converted (normalization is WS10-004);
+- a row printed in a prefixed unit (mV, kV) is reduced to volts by the parameter layer's one
+  conversion table, so a spec seeded as the sheet prints it compares; a unit that table does not
+  recognize is skipped rather than scaled by a guess;
 - a rail name with no parseable nominal, or with conflicting nominals, is not compared
   (the net name is the only voltage evidence a netlist carries).
 

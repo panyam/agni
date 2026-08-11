@@ -139,10 +139,35 @@ func TestSupplySkipsNotFalsePasses(t *testing.T) {
 		t.Errorf("machine-incomparable limit row (text-only condition): skip, got %v", fs)
 	}
 
+	unknownUnit := ldoSpec("ACME-33", 4.6)
+	unknownUnit.Parameters[0].Unit = "dBm"
+	if fs := runSupplyRule(t, supplyDesign("+5V", false, "ACME-33"), param.ParamSet{"ACME-33": unknownUnit}); len(fs) != 0 {
+		t.Errorf("a unit the parameter layer does not recognize: skip, never a guessed scale, got %v", fs)
+	}
+}
+
+// TestSupplyReadsMillivoltRows (agni issue 148): 4600 mV and 4.6 V are ONE absolute-maximum row
+// written two ways, so a +5V rail violates it either way. The millivolt spelling used to fail the
+// extractor's unit gate, which left the rule with nothing to compare and scored the item a PASS on a
+// part the design genuinely over-volts.
+//
+// Asserted against the volt-spelled run rather than against a hardcoded count, so the test says the
+// thing that matters: the two spellings of one datasheet row must produce the same verdict.
+func TestSupplyReadsMillivoltRows(t *testing.T) {
+	d := supplyDesign("+5V", false, "ACME-33")
+	volts := runSupplyRule(t, d, param.ParamSet{"ACME-33": ldoSpec("ACME-33", 4.6)})
+	if len(volts) == 0 {
+		t.Fatal("a 5V rail on a 4.6V absolute maximum must fire; the fixture no longer exercises the rule")
+	}
+
 	milli := ldoSpec("ACME-33", 4600)
 	milli.Parameters[0].Unit = "mV"
-	if fs := runSupplyRule(t, supplyDesign("+5V", false, "ACME-33"), param.ParamSet{"ACME-33": milli}); len(fs) != 0 {
-		t.Errorf("non-V unit: skip (never ad-hoc convert), got %v", fs)
+	got := runSupplyRule(t, d, param.ParamSet{"ACME-33": milli})
+	if len(got) != len(volts) {
+		t.Fatalf("millivolt spelling produced %d findings, want the %d the volt spelling produces", len(got), len(volts))
+	}
+	if got[0].Message != volts[0].Message {
+		t.Errorf("millivolt spelling reports:\n  %s\nwant the volt spelling's:\n  %s", got[0].Message, volts[0].Message)
 	}
 }
 

@@ -509,18 +509,49 @@ func TestLoadSwitchTransistorIsNotAController(t *testing.T) {
 	}
 }
 
-// TestOcpThresholdLimitsUnitGate: the threshold must be in volts exactly. A millivolt row reads as no
-// row, which is the standing unlike-units posture and fails toward silence rather than toward a
-// current a thousand times too large.
-func TestOcpThresholdLimitsUnitGate(t *testing.T) {
-	spec := ctrlSpec("X", 0.05)
-	if got := OcpThresholdLimits(spec); len(got) != 1 {
-		t.Fatalf("want 1 threshold row, got %d", len(got))
+// TestOcpThresholdLimitsConvertsMillivolts is the extractor half of agni issue 148. Real controller
+// sheets print this row in MILLIVOLTS, and it used to fail the unit gate: no threshold row, so no load
+// switch resolved, so the item scored a PASS on a check that never ran.
+//
+// The two spellings are ONE datasheet row written twice, so the assertion is equality rather than mere
+// presence. 50 mV and 0.05 V must produce the identical double, which is what lets the rest of the
+// engine compare a converted row against a threshold without a tolerance.
+func TestOcpThresholdLimitsConvertsMillivolts(t *testing.T) {
+	volts := ctrlSpec("X", 0.05)
+	inVolts := OcpThresholdLimits(volts)
+	if len(inVolts) != 1 {
+		t.Fatalf("want 1 threshold row, got %d", len(inVolts))
 	}
-	spec.Parameters[0].Unit = "mV"
-	spec.Parameters[0].Value.Max = lsPtr(50)
-	if got := OcpThresholdLimits(spec); len(got) != 0 {
-		t.Errorf("a millivolt row must be skipped, not converted: got %+v", got)
+
+	millivolts := ctrlSpec("X", 0.05)
+	millivolts.Parameters[0].Unit = "mV"
+	millivolts.Parameters[0].Value.Max = lsPtr(50)
+	inMillivolts := OcpThresholdLimits(millivolts)
+	if len(inMillivolts) != 1 {
+		t.Fatalf("a millivolt row must convert, not vanish: got %d rows", len(inMillivolts))
+	}
+	if got := inMillivolts[0].Unit; got != "V" {
+		t.Errorf("returned unit = %q, want V; the extractor's contract is that its rows are in base units", got)
+	}
+	if got, want := inMillivolts[0].Value.GetMax(), inVolts[0].Value.GetMax(); got != want {
+		t.Errorf("50mV converted to %v, want exactly the %v the volt-spelled row carries", got, want)
+	}
+	if millivolts.Parameters[0].Unit != "mV" {
+		t.Error("the seeded spec was rewritten; a citation and the params panel must keep showing mV")
+	}
+}
+
+// TestOcpThresholdLimitsRefusesUnrecognizedUnits: converting the units it knows must not soften the
+// refusal of the ones it does not. An unrecognized unit is still no row, because a guessed scale on a
+// number that gets divided into an ampere rating is exactly the confident wrong answer this rule
+// family costs the most on.
+func TestOcpThresholdLimitsRefusesUnrecognizedUnits(t *testing.T) {
+	for _, unit := range []string{"dBm", "", "KV"} {
+		spec := ctrlSpec("X", 0.05)
+		spec.Parameters[0].Unit = unit
+		if got := OcpThresholdLimits(spec); len(got) != 0 {
+			t.Errorf("unit %q must be refused, got %+v", unit, got)
+		}
 	}
 }
 
@@ -560,19 +591,46 @@ func TestDrainCurrentLimitsRequiresAbsoluteMax(t *testing.T) {
 }
 
 // TestOnResistanceAcceptsBothOhmSpellings: "Ohm" (what the hand-encoded corpus writes) and the symbol
-// are two spellings of ONE unit, so accepting both is normalization. A milliohm row is a different
-// unit and stays skipped.
+// are two spellings of ONE unit, so accepting both is normalization rather than conversion. The
+// returned unit is the canonical symbol whichever way the spec spelled it, so a rule comparing a
+// datasheet resistance against a design-side one compares two identical strings.
 func TestOnResistanceAcceptsBothOhmSpellings(t *testing.T) {
-	for _, u := range []string{"Ohm", "Ω"} {
+	// "Ω" is the deprecated OHM SIGN, byte-different from and visually identical to the canonical
+	// U+03A9. Written as an escape because a literal here would be indistinguishable by eye from the
+	// entry beside it, so a duplicated row would look like coverage.
+	for _, u := range []string{"Ohm", "ohm", param.UnitOhm, "\u2126"} {
 		spec := nfetSpec("X", 3, 0.02)
 		spec.Parameters[1].Unit = u
-		if got := OnResistanceLimits(spec); len(got) != 1 {
+		got := OnResistanceLimits(spec)
+		if len(got) != 1 {
 			t.Errorf("unit %q: want 1 on-resistance row, got %d", u, len(got))
+			continue
+		}
+		if got[0].Unit != param.UnitOhm {
+			t.Errorf("unit %q: returned %q, want the canonical ohm symbol", u, got[0].Unit)
 		}
 	}
-	spec := nfetSpec("X", 3, 0.02)
-	spec.Parameters[1].Unit = "mOhm"
-	if got := OnResistanceLimits(spec); len(got) != 0 {
-		t.Errorf("a milliohm row is a different unit and must be skipped: got %+v", got)
+}
+
+// TestOnResistanceConvertsMilliohms: a MILLIOHM is the ordinary way a modern FET sheet prints
+// RDS(on), so the spelling that used to read as no row at all was the common one. 20 mΩ and 0.02 Ω are
+// one row written twice and must land on the same double (agni issue 148).
+func TestOnResistanceConvertsMilliohms(t *testing.T) {
+	ohms := OnResistanceLimits(nfetSpec("X", 3, 0.02))
+	if len(ohms) != 1 {
+		t.Fatalf("want 1 on-resistance row, got %d", len(ohms))
+	}
+	for _, u := range []string{"mOhm", "mΩ"} {
+		spec := nfetSpec("X", 3, 20)
+		spec.Parameters[1].Unit = u
+		got := OnResistanceLimits(spec)
+		if len(got) != 1 {
+			t.Errorf("unit %q: a milliohm row must convert, got %d rows", u, len(got))
+			continue
+		}
+		if got[0].Value.GetMax() != ohms[0].Value.GetMax() {
+			t.Errorf("unit %q: 20%s converted to %v, want exactly the %v the ohm-spelled row carries",
+				u, u, got[0].Value.GetMax(), ohms[0].Value.GetMax())
+		}
 	}
 }

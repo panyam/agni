@@ -115,10 +115,8 @@ func TestRailNominalSkipsNotFalsePasses(t *testing.T) {
 		s.Parameters[0].LimitKind = parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX
 	})
 	mut("non-supply symbol", func(s *parampb.PartSpec) { s.Parameters[0].Symbol = "TJ" })
-	mut("non-V unit (never ad-hoc convert)", func(s *parampb.PartSpec) {
-		s.Parameters[0].Unit = "mV"
-		*s.Parameters[0].Value.Max = 3600
-		*s.Parameters[0].Value.Min = 3000
+	mut("a unit the parameter layer does not recognize", func(s *parampb.PartSpec) {
+		s.Parameters[0].Unit = "dBm"
 	})
 	mut("under-specified row", func(s *parampb.PartSpec) {
 		s.Parameters[0].ConditionCoverage = parampb.ConditionCoverage_CONDITION_COVERAGE_PARTIAL
@@ -144,6 +142,31 @@ func TestRailNominalSkipsNotFalsePasses(t *testing.T) {
 			},
 		})
 	})
+}
+
+// TestRailNominalReadsMillivoltRows (agni issue 148): 3000..3600 mV and 3.0..3.6 V are ONE
+// recommended-operating row written two ways, and a +5V rail sits outside it either way. The millivolt
+// spelling used to fail the extractor's unit gate, so the rule had no range to compare against and the
+// item scored a PASS.
+//
+// This rule is the two-sided one, so the conversion has to carry BOTH bounds. A conversion that scaled
+// only the max would leave a 3000V minimum in place and report the rail as under-volted instead.
+func TestRailNominalReadsMillivoltRows(t *testing.T) {
+	d := supplyDesign("+5V", false, "ACME-33")
+	volts := runRailNominal(t, d, param.ParamSet{"ACME-33": ldoRecommendedSpec("ACME-33", 3.0, 3.6)})
+	if len(volts) == 0 {
+		t.Fatal("a +5V rail against a 3.0..3.6V recommended range must fire; the fixture no longer exercises the rule")
+	}
+
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	got := runRailNominal(t, d, param.ParamSet{"ACME-33": milli})
+	if len(got) != len(volts) {
+		t.Fatalf("millivolt spelling produced %d findings, want the %d the volt spelling produces", len(got), len(volts))
+	}
+	if got[0].Message != volts[0].Message {
+		t.Errorf("millivolt spelling reports:\n  %s\nwant the volt spelling's:\n  %s", got[0].Message, volts[0].Message)
+	}
 }
 
 // TestRailNominalGating pins the catalog-level behavior: a param-prefixed read gates the
