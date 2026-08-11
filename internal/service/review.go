@@ -133,6 +133,10 @@ func (s *ReviewService) reviewStore() (ReviewStore, error) {
 // carrying the checklist SNAPSHOT rather than its name, so re-rendering the run later reproduces what
 // was actually asked instead of whatever the checklist file says by then.
 func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateReviewRequest) (*webapi.Review, error) {
+	parent, err := reviewParent(req.GetParent())
+	if err != nil {
+		return nil, err
+	}
 	designURI, err := artifactURI(req.GetDesignUri())
 	if err != nil {
 		return nil, err
@@ -198,7 +202,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 		ManifestSnapshot: req.GetManifest(),
 		Areas:            reviewAreaProtos(rep),
 	}
-	name, createdAt, err := store.Create(ctx, doc)
+	name, createdAt, err := store.Create(ctx, parent, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -220,9 +224,18 @@ func (s *ReviewService) GetReview(ctx context.Context, req *webapi.GetReviewRequ
 	return &webapi.Review{Name: req.GetName(), Results: doc}, nil
 }
 
-// ListReviews returns stored runs newest first, paginated, optionally narrowed to one design.
+// ListReviews returns stored runs newest first, paginated, optionally narrowed to one project and to
+// one design.
+//
+// An empty parent lists EVERY run, parented or not. That is what keeps the two name shapes from
+// costing a client anything: a viewer asking "what runs exist" asks once, and only narrows when it
+// has a project in mind.
 func (s *ReviewService) ListReviews(ctx context.Context, req *webapi.ListReviewsRequest) (*webapi.ListReviewsResponse, error) {
 	store, err := s.reviewStore()
+	if err != nil {
+		return nil, err
+	}
+	parent, err := reviewParent(req.GetParent())
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +243,7 @@ func (s *ReviewService) ListReviews(ctx context.Context, req *webapi.ListReviews
 	if err != nil {
 		return nil, err
 	}
-	docs, names, next, err := store.List(ctx, int(req.GetPageSize()), req.GetPageToken(), design)
+	docs, names, next, err := store.List(ctx, parent, int(req.GetPageSize()), req.GetPageToken(), design)
 	if err != nil {
 		return nil, err
 	}
@@ -412,4 +425,20 @@ func reviewAreaProtos(r review.Report) []*checkspb.ReviewArea {
 		out = append(out, area)
 	}
 	return out
+}
+
+// reviewParent validates an optional parent project name. Empty is legal and means "no project",
+// which is the ordinary state of a design on a mounted folder rather than a missing argument.
+//
+// A malformed parent is an ERROR rather than a silent fallback to the unparented collection. A client
+// that believed it had scoped to its project and quietly got everything would read another team's
+// verdicts as its own, which is the same failure parseReviewFilter refuses a bad filter for.
+func reviewParent(parent string) (string, error) {
+	if parent == "" {
+		return "", nil
+	}
+	if _, ok := ProjectID(parent); !ok {
+		return "", fmt.Errorf("%w: parent %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, parent)
+	}
+	return parent, nil
 }

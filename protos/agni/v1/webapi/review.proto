@@ -73,13 +73,22 @@ service ReviewService {
 // not a new payload. Anything a consumer needs to render, diff, or archive this run is inside
 // `results`.
 message Review {
-  // name is the resource name, "reviews/{review}". The id is server-assigned, opaque, and
-  // time-sortable, so a listing is chronological without opening every document.
+  // name is the resource name. A run whose design belongs to a project is
+  // "projects/{project}/reviews/{review}"; one whose design belongs to none is "reviews/{review}".
+  // The id is server-assigned, opaque, and time-sortable, so a listing is chronological without
+  // opening every document.
   //
-  // Reviews are a FLAT collection rather than nested under a mount. A run is stored in the server's
-  // review volume, not inside the design's mount, so nesting would assert an ownership that does not
-  // exist and would break the moment a design moved between mounts. Which design a run was about is
-  // recorded where it belongs, in results.design.
+  // The two shapes are deliberate, and the second is not a degenerate case of the first. A project
+  // genuinely OWNS the runs made under it: the checklist, the rule catalog, and the vocabulary a run
+  // scored against are all the project's, so nesting states a real relationship. A design that
+  // resolves to no project is the ORDINARY state of a mounted folder, and its runs have no such
+  // owner — giving them a synthetic parent would assert exactly the ownership this message once
+  // refused to assert about mounts, where nesting under a location would have broken the moment a
+  // design moved.
+  //
+  // Listing is unified even though naming is not: ListReviews takes an OPTIONAL parent, so a client
+  // that wants everything asks once. Which design a run was about is recorded where it belongs, in
+  // results.design.
   string name = 1;
   // results is the self-contained document: meta (producer, created_at), the design ref and its
   // content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
@@ -88,6 +97,11 @@ message Review {
 }
 
 message CreateReviewRequest {
+  // parent is the project the run belongs to, "projects/{project}", empty when the design resolves
+  // to none. It is the CALLER's answer rather than something derived here, because the caller has
+  // already resolved the design to decide which config to send and re-deriving it in the service
+  // would be a second resolution that could disagree with the first.
+  string parent = 6;
   // design_uri is the one design this run is about.
   //
   // A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
@@ -111,10 +125,14 @@ message CreateReviewRequest {
 }
 
 message GetReviewRequest {
-  string name = 1; // "reviews/{review}"
+  string name = 1; // "projects/{project}/reviews/{review}", or "reviews/{review}"
 }
 
 message ListReviewsRequest {
+  // parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run the
+  // server holds, parented or not, which is what makes the two name shapes cost a client nothing: it
+  // asks once and gets everything, and only narrows when it has a project in mind.
+  string parent = 4;
   // page_size is the maximum number of reviews to return. 0 uses the server default; the server may
   // return fewer.
   int32 page_size = 1;
@@ -135,7 +153,7 @@ message ListReviewsResponse {
 }
 
 message DeleteReviewRequest {
-  string name = 1; // "reviews/{review}"
+  string name = 1; // "projects/{project}/reviews/{review}", or "reviews/{review}"
 }
 
 message GetReviewManifestRequest {

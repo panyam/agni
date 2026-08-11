@@ -31,13 +31,22 @@ const (
 // `results`.
 type Review struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// name is the resource name, "reviews/{review}". The id is server-assigned, opaque, and
-	// time-sortable, so a listing is chronological without opening every document.
+	// name is the resource name. A run whose design belongs to a project is
+	// "projects/{project}/reviews/{review}"; one whose design belongs to none is "reviews/{review}".
+	// The id is server-assigned, opaque, and time-sortable, so a listing is chronological without
+	// opening every document.
 	//
-	// Reviews are a FLAT collection rather than nested under a mount. A run is stored in the server's
-	// review volume, not inside the design's mount, so nesting would assert an ownership that does not
-	// exist and would break the moment a design moved between mounts. Which design a run was about is
-	// recorded where it belongs, in results.design.
+	// The two shapes are deliberate, and the second is not a degenerate case of the first. A project
+	// genuinely OWNS the runs made under it: the checklist, the rule catalog, and the vocabulary a run
+	// scored against are all the project's, so nesting states a real relationship. A design that
+	// resolves to no project is the ORDINARY state of a mounted folder, and its runs have no such
+	// owner — giving them a synthetic parent would assert exactly the ownership this message once
+	// refused to assert about mounts, where nesting under a location would have broken the moment a
+	// design moved.
+	//
+	// Listing is unified even though naming is not: ListReviews takes an OPTIONAL parent, so a client
+	// that wants everything asks once. Which design a run was about is recorded where it belongs, in
+	// results.design.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// results is the self-contained document: meta (producer, created_at), the design ref and its
 	// content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
@@ -93,6 +102,11 @@ func (x *Review) GetResults() *checks.CheckResults {
 
 type CreateReviewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// parent is the project the run belongs to, "projects/{project}", empty when the design resolves
+	// to none. It is the CALLER's answer rather than something derived here, because the caller has
+	// already resolved the design to decide which config to send and re-deriving it in the service
+	// would be a second resolution that could disagree with the first.
+	Parent string `protobuf:"bytes,6,opt,name=parent,proto3" json:"parent,omitempty"`
 	// design_uri is the one design this run is about.
 	//
 	// A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
@@ -147,6 +161,13 @@ func (*CreateReviewRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *CreateReviewRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
 func (x *CreateReviewRequest) GetDesignUri() string {
 	if x != nil {
 		return x.DesignUri
@@ -184,7 +205,7 @@ func (x *CreateReviewRequest) GetManifest() *checks.ReviewManifest {
 
 type GetReviewRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "reviews/{review}"
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "projects/{project}/reviews/{review}", or "reviews/{review}"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -228,6 +249,10 @@ func (x *GetReviewRequest) GetName() string {
 
 type ListReviewsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run the
+	// server holds, parented or not, which is what makes the two name shapes cost a client nothing: it
+	// asks once and gets everything, and only narrows when it has a project in mind.
+	Parent string `protobuf:"bytes,4,opt,name=parent,proto3" json:"parent,omitempty"`
 	// page_size is the maximum number of reviews to return. 0 uses the server default; the server may
 	// return fewer.
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
@@ -270,6 +295,13 @@ func (x *ListReviewsRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListReviewsRequest.ProtoReflect.Descriptor instead.
 func (*ListReviewsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListReviewsRequest) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
 }
 
 func (x *ListReviewsRequest) GetPageSize() int32 {
@@ -349,7 +381,7 @@ func (x *ListReviewsResponse) GetNextPageToken() string {
 
 type DeleteReviewRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "reviews/{review}"
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // "projects/{project}/reviews/{review}", or "reviews/{review}"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -488,8 +520,9 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
-	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\xed\x01\n" +
-	"\x13CreateReviewRequest\x12\x1d\n" +
+	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\x85\x02\n" +
+	"\x13CreateReviewRequest\x12\x16\n" +
+	"\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n" +
 	"\n" +
 	"design_uri\x18\x01 \x01(\tR\tdesignUri\x12\x1b\n" +
 	"\tboard_uri\x18\x02 \x01(\tR\bboardUri\x12%\n" +
@@ -497,8 +530,9 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
 	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"&\n" +
 	"\x10GetReviewRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"h\n" +
-	"\x12ListReviewsRequest\x12\x1b\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n" +
+	"\x12ListReviewsRequest\x12\x16\n" +
+	"\x06parent\x18\x04 \x01(\tR\x06parent\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n" +

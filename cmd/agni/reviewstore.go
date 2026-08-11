@@ -51,7 +51,28 @@ func newOSReviewStore(dir string) (*osReviewStore, error) {
 // not break a listing.
 const reviewFileSuffix = ".results.json"
 
-func (s *osReviewStore) path(id string) string { return filepath.Join(s.dir, id+reviewFileSuffix) }
+// path is where a run lives: at the store root when it belongs to no project, and in a
+// per-project subdirectory when it does.
+//
+// The layout makes the migration free and, more importantly, CORRECT. Every run written before
+// projects existed sits at the root, and the root is exactly where an unparented run belongs — so
+// old runs read back as "reviewed a file that belongs to no project", which is what they were.
+// Nothing has to be moved or rewritten, and nothing is retroactively claimed by a project that did
+// not exist when the run was made.
+func (s *osReviewStore) path(parent, id string) string {
+	return filepath.Join(s.dirFor(parent), id+reviewFileSuffix)
+}
+
+// dirFor is the directory a parent's runs live in. A parent that is not a well-formed project name
+// resolves to the root, which cannot escape the store: SplitReviewName has already rejected any
+// parent that is not "projects/{id}", and a project id cannot contain a separator.
+func (s *osReviewStore) dirFor(parent string) string {
+	id, ok := service.ProjectID(parent)
+	if !ok || id == "" {
+		return s.dir
+	}
+	return filepath.Join(s.dir, id)
+}
 
 // Create writes the document under a fresh id and returns its resource name and creation time.
 //
@@ -62,7 +83,7 @@ func (s *osReviewStore) path(id string) string { return filepath.Join(s.dir, id+
 // second, and a listing that claims to be newest-first would silently shuffle them. The random tail
 // then covers the residual tie, and O_EXCL means even an exact collision refuses rather than
 // clobbers.
-func (s *osReviewStore) Create(_ context.Context, doc *checkspb.CheckResults) (string, string, error) {
+func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.CheckResults) (string, string, error) {
 	now := time.Now().UTC()
 	createdAt := now.Format(time.RFC3339)
 	// Stamp before marshalling: the file on disk has to carry the same creation time the caller is
@@ -80,7 +101,12 @@ func (s *osReviewStore) Create(_ context.Context, doc *checkspb.CheckResults) (s
 		return "", "", err
 	}
 	id := fmt.Sprintf("%s.%09dZ-%s", now.Format("20060102T150405"), now.Nanosecond(), hex.EncodeToString(suffix[:]))
-	f, err := os.OpenFile(s.path(id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if dir := s.dirFor(parent); dir != s.dir {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return "", "", err
+		}
+	}
+	f, err := os.OpenFile(s.path(parent, id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return "", "", err
 	}
@@ -88,15 +114,15 @@ func (s *osReviewStore) Create(_ context.Context, doc *checkspb.CheckResults) (s
 	if _, err := f.Write(b); err != nil {
 		return "", "", err
 	}
-	return service.ReviewName(id), createdAt, nil
+	return service.ReviewName(parent, id), createdAt, nil
 }
 
 func (s *osReviewStore) Get(_ context.Context, name string) (*checkspb.CheckResults, error) {
-	id, ok := service.ReviewID(name)
+	parent, id, ok := service.SplitReviewName(name)
 	if !ok {
 		return nil, fmt.Errorf("%w: %q is not a review name", service.ErrInvalidArgument, name)
 	}
-	b, err := os.ReadFile(s.path(id))
+	b, err := os.ReadFile(s.path(parent, id))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("%w: no review %q", service.ErrNotFound, name)
 	}
@@ -106,27 +132,50 @@ func (s *osReviewStore) Get(_ context.Context, name string) (*checkspb.CheckResu
 	return results.Parse(b)
 }
 
-func (s *osReviewStore) List(_ context.Context, pageSize int, pageToken, designFilter string) ([]*checkspb.CheckResults, []string, string, error) {
-	entries, err := os.ReadDir(s.dir)
-	if err != nil {
-		return nil, nil, "", err
+func (s *osReviewStore) List(_ context.Context, parent string, pageSize int, pageToken, designFilter string) ([]*checkspb.CheckResults, []string, string, error) {
+	// Which directories to read: one project's, or the root plus every project's when the caller
+	// asked for everything. Either way this stays a directory read and a sort, with no document
+	// opened until a page is actually being built.
+	owners := []string{parent}
+	if parent == "" {
+		subs, err := os.ReadDir(s.dir)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		for _, e := range subs {
+			if e.IsDir() {
+				owners = append(owners, service.ProjectName(e.Name()))
+			}
+		}
 	}
 	var ids []string
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
+	owner := map[string]string{}
+	for _, o := range owners {
+		entries, err := os.ReadDir(s.dirFor(o))
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue // a project with no runs yet lists empty rather than failing
+			}
+			return nil, nil, "", err
 		}
-		if id, ok := strings.CutSuffix(e.Name(), reviewFileSuffix); ok {
-			ids = append(ids, id)
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			if id, ok := strings.CutSuffix(e.Name(), reviewFileSuffix); ok {
+				ids = append(ids, id)
+				owner[id] = o
+			}
 		}
 	}
-	// Ids lead with a timestamp, so a plain reverse string sort IS newest-first.
+	// Ids lead with a timestamp, so a plain reverse string sort IS newest-first — and because every
+	// project's ids share that shape, merging several directories needs no per-project merge step.
 	service.SortReviewIDsDescending(ids)
 	// A document that will not parse is SKIPPED rather than failing the listing. One corrupt file in a
 	// long-lived volume would otherwise make every run unlistable, and the failure a user meets would
 	// name pagination rather than the bad file.
 	return service.PageReviews(ids, pageSize, pageToken, designFilter, func(id string) *checkspb.CheckResults {
-		b, err := os.ReadFile(s.path(id))
+		b, err := os.ReadFile(s.path(owner[id], id))
 		if err != nil {
 			return nil
 		}
@@ -135,15 +184,15 @@ func (s *osReviewStore) List(_ context.Context, pageSize int, pageToken, designF
 			return nil
 		}
 		return doc
-	})
+	}, func(id string) string { return service.ReviewName(owner[id], id) })
 }
 
 func (s *osReviewStore) Delete(_ context.Context, name string) error {
-	id, ok := service.ReviewID(name)
+	parent, id, ok := service.SplitReviewName(name)
 	if !ok {
 		return fmt.Errorf("%w: %q is not a review name", service.ErrInvalidArgument, name)
 	}
-	err := os.Remove(s.path(id))
+	err := os.Remove(s.path(parent, id))
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: no review %q", service.ErrNotFound, name)
 	}
