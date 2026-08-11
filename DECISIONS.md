@@ -135,3 +135,37 @@ and vendor-independent, where parameter names are neither.
 **Reopen if** a unit turns up whose scale is genuinely context-dependent, or if the ontology work
 subsumes the table. Do not reopen to merge the two tables without first re-reading why `M` means
 different things on the two sides.
+
+---
+
+## The query engine does not implement three-valued logic
+
+**Question.** `query.Value` now carries `Absent`, so a field the source never stated is distinguishable
+from one stated as the empty string. SQL's answer to the same problem is `NULL` plus three-valued
+logic: a comparison involving NULL is neither true nor false but UNKNOWN, and UNKNOWN propagates.
+Should this engine do that? It is the well-trodden answer, and `absent = absent` being TRUE here is a
+visible deviation from it.
+
+**Answer. No, and the deviation is deliberate.** UNKNOWN is not a third result you can add to
+comparisons alone. It has to thread through negation (what does `not R(?x)` mean when `R` holds
+UNKNOWN for `?x`?), through aggregation and grouping, through the fact index, and through the
+projection that renders a row. Every one of those is a semantic decision with its own compatibility
+question, and the total is a rewrite of the evaluator's core rather than a feature.
+
+What it buys, for this engine's actual users, is close to nothing. `absent = absent` under SQL rules
+is UNKNOWN, so `param.range(?a, ?s, ?k, ?min1, ?_), param.range(?b, ?s, ?k, ?min2, ?_), ?min1 = ?min2`
+would not match two parts that both state no minimum. "Both unstated" is precisely the answer an
+engineer running that search wants. The SQL reading is correct for a database that must not conflate
+"unknown value" with "no value", and this layer only ever has the second.
+
+**What was taken instead.** The two places where treating absence as a value would give a WRONG answer
+are closed directly: an absent operand never participates in an ORDERING comparison (there is no order
+between "unstated" and 5), and an absent value indexes under its own bucket so it cannot collide with
+a stated empty string. Absence is queryable through `absent(?x)`. Equality is identity, and identity
+is total.
+
+**Reopen if** a case turns up where `not R(...)` or an aggregate genuinely needs to distinguish "no
+row" from "a row whose field is unstated" and cannot express it with `absent`. That would be evidence
+the two-valued reading is losing information, which is the only argument that should move this.
+`TestAbsentEqualsAbsentDeviatesFromSQL` is named for the deviation so it fails loudly rather than
+being quietly "corrected" toward SQL by someone who has not read this.
