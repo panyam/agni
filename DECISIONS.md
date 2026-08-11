@@ -90,3 +90,48 @@ overlay's own checklist rollup carries the `owner` nuance, which is where it bel
 **Care when extending this.** `needs-data` and `needs-config` count as COVERED in the tally, so a
 mis-derived blocker moves the coverage number a team reads. Deriving the next one is real work and is
 tracked as its own issue.
+
+---
+
+## Datasheet units are converted at READ time, in one table, and not shared with `core/classify`
+
+**Question.** Three questions that arrive together whenever someone meets `datasheet/param/unit.go`.
+Why convert units at all, when the whole parameter layer's posture was that unlike units are
+under-specified? Why convert when an extractor READS a row rather than normalizing once when a spec
+is SEEDED, which is what C20's left-shift rule would suggest? And why is there a second unit table
+when `core/classify` already has one?
+
+**Answer to the first: because refusing was not neutral.** The premise was right, that a silent scale
+factor inside a pass/fail rule is where a unit bug hides. The conclusion was wrong. Refusing to
+convert did not remove the risk, it relocated it from "wrong number" to "no check at all", and no
+check at all is the failure this codebase treats as most serious. An extractor that dropped a
+millivolt row left its rule comparing nothing, and a rule that reports nothing scores a **pass**.
+Five rule families were silently passing designs with real defects (agni issue 148). What makes
+conversion safe is location: one table beside `UnderSpecified` and `MachineComparable`, every
+extractor reading through it, no rule containing a number.
+
+**Answer to the second: `RangeValue` has no `input` field.** Normalizing at ingestion is safe for
+`ir.Quantity` precisely BECAUSE it keeps the source text in `input`, so the normalization is
+non-lossy and a wrong reading can be audited against what the source actually said. A `PartSpec`
+parameter has no such field, so normalizing on load would destroy the as-printed property that lets
+a seeded row be checked against its datasheet page by eye, and would silently change what the params
+panel and the `param` relations display. Converting at read time reproduces Quantity's split without
+a schema change: the spec plays `input`, the extractor's return value plays `value`.
+
+**Answer to the third: the two notations disagree on the character that matters most.**
+`core/classify` parses a component's value text off a design, under IEC 60062's RKM code, where `M`
+is MEGA and case is not significant. A printed unit symbol is the opposite: `m` is milli, `M` is
+mega, and `mΩ` and `MΩ` differ by nine orders of magnitude. Sharing the table would import a decision
+that is correct on the design side and inverts three orders of magnitude on the datasheet side. It
+would also be the first `datasheet/` to `core/` import, which C17's layering does not have.
+`TestUnitVocabulariesAgree` in `core/check` (the one package importing both) holds them to the same
+canonical base spellings, so the part that could genuinely drift is pinned without an import.
+
+**What this does NOT settle.** The parameter ONTOLOGY is still absent and still wanted:
+`canonical_id` stays empty and `symbol` is still matched through per-corpus alias maps in the model
+layer. Units are separable from that work and were done first because the SI prefixes are specified
+and vendor-independent, where parameter names are neither.
+
+**Reopen if** a unit turns up whose scale is genuinely context-dependent, or if the ontology work
+subsumes the table. Do not reopen to merge the two tables without first re-reading why `M` means
+different things on the two sides.

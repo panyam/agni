@@ -63,11 +63,12 @@ datasheets and the extracted database inside their own boundary, so locators are
 meaningful within one deployment and the schema carries no assumption of a shared global
 document store.
 
-### Comparison semantics before normalization
+### Comparison semantics
 
-Values, units, and symbols are stored as printed, so the comparison layer meets vendor
-variety before any normalization exists. Three rules keep comparison honest, all variants of
-one posture: when a comparison cannot be made safely, stay silent rather than improvise.
+Values, units, and symbols are STORED as printed, so the comparison layer meets vendor
+variety and a seeded row can be checked against its datasheet page by eye. Three rules keep
+comparison honest, all variants of one posture: when a comparison cannot be made safely, stay
+silent rather than improvise.
 
 - **Three trust states, not two.** `param.UnderSpecified` says a row's conditions are not
   trustworthy at all, so skip it. A row can be fully captured and still carry a condition that
@@ -76,11 +77,39 @@ one posture: when a comparison cannot be made safely, stay silent rather than im
   boundary: only rows whose every condition is structured (`eq` or `min`/`max`) may enter an
   automatic comparison. The middle state, captured but text-only, is surfaced and never
   auto-compared.
-- **Unlike unit strings are under-specified for comparison.** Until canonical units exist, a
-  comparison between values whose unit strings differ ("mA" vs "A", "mOhm" vs "Ohm") is
-  skipped or flagged rather than converted ad hoc. Conversion logic written at a call site
-  would be a second, informal normalization layer, which is the drift a real normalization
-  layer exists to prevent.
+- **A prefixed unit is reduced to its SI base before comparison, in exactly one place.** A row
+  printed in millivolts, milliamps or milliohms is converted by `param.InBaseUnit` and compared;
+  a unit that table does not recognize is skipped rather than scaled by a guess.
+
+  This used to be a refusal: unlike unit strings were treated as under-specified and skipped,
+  because conversion logic written at a call site would be a second, informal normalization
+  layer. The refusal was the wrong conclusion from a right premise, and it shipped a worse
+  failure than the one it avoided. An extractor that dropped the row left its rule with an empty
+  list, and a rule that compares nothing reports nothing, which the runner scores as a **pass**.
+  Neither guard caught it: `check.Available` saw a params tier attached, and the `needs-data`
+  gate saw the symbol seeded. Milliamps are the ordinary spelling for a sub-amp regulator, so a
+  spec transcribed as printed hit this without doing anything unusual, and five rule families
+  were silently passing designs with genuine defects.
+
+  What made conversion safe was location, not caution. One table lives in `datasheet/param`
+  beside `UnderSpecified` and `MachineComparable`, every extractor reads through it, and no rule
+  contains a scale factor. The lookup is a closed vocabulary flattened at init rather than a
+  prefix parsed off the front, so every accepted spelling exists as a key that a test can
+  enumerate. It is case-sensitive with no fallback, because `mΩ` and `MΩ` differ by nine orders
+  of magnitude and a case-insensitive retry would resolve that by guessing.
+
+  Storage is unchanged, and that is the point: the spec keeps the printed row, the extractor
+  returns a converted copy. This mirrors `ir.Quantity`'s split on the design side, where `value`
+  is normalized at ingestion and `input` keeps the source text so the normalization stays
+  non-lossy. `RangeValue` has no `input` field, which is why the parameter layer converts at
+  read time rather than at seed time.
+
+- **`core/classify`'s prefix table is deliberately NOT reused for this.** It parses a
+  component's value text off a design, where IEC 60062's RKM code reads `M` as MEGA and case is
+  not significant. That is correct for a schematic value field and inverts three orders of
+  magnitude on a printed unit symbol. The two tables agree on the canonical base spellings, and
+  `TestUnitVocabulariesAgree` in `core/check` holds them to each other without an import, since
+  the datasheet tier depends on nothing in `core` (C17).
 - **Vendor symbols never appear in rule text.** The same physical parameter prints as "VDC",
   "WV", or "Rated Voltage" depending on vendor. `symbol` is the per-vendor match key, but the
   lookup lives behind the join and Model layer as a per-corpus alias map, so a rule asks for a
@@ -91,10 +120,13 @@ one posture: when a comparison cannot be made safely, stay silent rather than im
 A field earns its place only when a second producer would populate it, and for parameters a
 "second producer" is a second vendor's datasheet. Several things are left out on that basis.
 
-- **No canonical parameter ids, no canonical units.** `Parameter.canonical_id` exists but
-  stays empty, and `symbol` and `unit` are as printed. Normalization and the ontology are a
-  later phase, and doing them early would bake one vendor's vocabulary in as "canonical". The
-  fixtures keep "IOUT = 800 mA" as 800 mA, not 0.8 A.
+- **No canonical parameter ids, no canonical symbol ontology.** `Parameter.canonical_id` exists
+  but stays empty, and `symbol` is as printed. The ontology is a later phase, and doing it early
+  would bake one vendor's vocabulary in as "canonical". `unit` is also stored as printed, and the
+  fixtures keep "IOUT = 800 mA" as 800 mA rather than 0.8 A, so a row stays checkable against its
+  datasheet page. That is a STORAGE decision only: comparison reduces a prefixed unit to its SI
+  base (see comparison semantics above), which needs no ontology because the SI prefixes are
+  specified and vendor-independent in a way parameter NAMES are not.
 - **No graph or curve data.** Derating and SOA curves are real and valuable, but they are the
   harder extraction and their shape (sampled curves, fitted models) should be designed against
   real extractor output rather than guessed.

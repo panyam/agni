@@ -170,7 +170,10 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   ref, not main.
 - **NEVER `gofmt -w` a whole directory.** This repo's committed import blocks are not gofmt-sorted,
   so a directory-wide run silently reordered imports in 18 untouched files. Format only files you
-  edited, and read `git status` before staging.
+  edited, and read `git status` before staging. **Formatting a SINGLE file is not safe either**: if
+  your change adds an import, `gofmt -w` on that one file re-sorts its whole import block, which
+  reads as an unrelated hunk in the diff. Re-read the block after formatting and restore the
+  original order.
 - **Out-of-scope items survive the PR in `OUT_OF_SCOPE.md`.** A PR body's "Out of scope" section is
   invisible once merged, so every deferred item gets a one-liner there (source PR + pickup trigger)
   in the same PR. Ticket-worthy items skip the ledger and get a GitHub issue instead: the ledger is
