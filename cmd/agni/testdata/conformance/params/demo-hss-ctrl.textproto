@@ -2,6 +2,11 @@
 # internal pass element and no current limit of its own: it states a sense THRESHOLD, and the trip
 # current only exists once an external shunt is chosen. This is the half of an external-FET load
 # switch that lives in a datasheet.
+#
+# The threshold is seeded in MILLIVOLTS, which is how a real controller sheet prints it. It was held in
+# volts until agni issue 148, because the extractors gated on the printed unit string and the millivolt
+# spelling read as no row at all: no threshold, so no load switch resolved, so a clean PASS on a check
+# that never ran. Seeding it as printed is what makes this fixture exercise the conversion end to end.
 mpn: "DEMO-HSS-CTRL"
 manufacturer: "Agni Conformance Works"
 device_class: "high-side switch controller"
@@ -16,10 +21,9 @@ parameters {
   name: "Overcurrent Protection Threshold"
   symbol: "V(OCP)"
   limit_kind: LIMIT_KIND_CHARACTERISTIC
-  value { min: 0.045 typ: 0.05 max: 0.05 }
-  unit: "V"
+  value { min: 45 typ: 50 max: 50 }
+  unit: "mV"
   conditions { symbol: "TA" eq: 25 unit: "C" raw: "TA = 25C" }
   condition_coverage: CONDITION_COVERAGE_COMPLETE
-  attributes { key: "note" value: "the sheet prints this row in millivolts; seeded in volts because unlike units are never converted" }
   prov { doc_ref: "demo-hss-ctrl-rev-a" page: 6 table_or_figure: "Electrical Characteristics" method: "hand" confidence: 1 }
 }

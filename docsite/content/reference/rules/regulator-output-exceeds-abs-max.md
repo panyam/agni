@@ -60,8 +60,10 @@ half on a low-confidence extraction would still have counted as a hard Fail.
   not-applicable without `--params`. An unseeded design reads unevaluable, never clean.
 - **Either part unseeded.** A regulator with no spec, or a load with no spec, yields no comparison —
   skip, not pass.
-- **Under-specified rows.** A parameter with unlike units, text-only conditions, or no max bound is
-  skipped rather than coerced (docs/20). A number that cannot be compared honestly is not compared.
+- **Under-specified rows.** A parameter with text-only conditions or no max bound is skipped rather
+  than coerced (docs/20). A number that cannot be compared honestly is not compared. A row printed in a
+  prefixed unit (mV, kV) is not in that category since agni issue 148: the parameter layer reduces it
+  to volts through its one conversion table, and only a unit that table does not recognize is skipped.
 
 ### Fixing a finding
 

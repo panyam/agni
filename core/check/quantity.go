@@ -79,8 +79,11 @@ func componentQuantity(m Model, refDes string) *ir.Quantity {
 // and it is deliberately a NAMED PHYSICAL OPERATION rather than a Quantity.Div.
 //
 // WHY NOT A GENERAL UNIT ALGEBRA. Every other consumer of a quantity compares within one unit, which
-// the accessors already gate: OutputVoltageLimits filters p.Unit != "V", ComponentValueIn refuses a
-// mismatched or empty unit. A dimension system that could type-check volts/ohms -> amps in general is
+// the accessors already guarantee: OutputVoltageLimits returns rows param.InBaseUnit has reduced to
+// volts, ComponentValueIn refuses a mismatched or empty unit. Scaling a prefix off a printed unit is
+// not the same problem: it stays within one dimension, which is why one table settles it and this
+// operation still cannot be expressed by one. A dimension system that could type-check
+// volts/ohms -> amps in general is
 // a large amount of machinery for six units and three operations, and it would have no second caller
 // today. A named operation carries the same guarantee in its signature: the parameter names state
 // which unit each side must already be in, so a caller passing farads is making a visible mistake

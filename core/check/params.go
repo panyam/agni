@@ -123,9 +123,9 @@ var fetBreakdownSymbols = map[string]bool{
 }
 
 // FetBreakdownLimits selects the machine-comparable drain-source breakdown rows of a spec: symbol in
-// the breakdown alias set, kind ABSOLUTE_MAX, unit exactly "V", a max bound present, and the docs/20
-// comparison gates. Breakdown IS an absolute maximum on a real datasheet (it is the voltage past which
-// the part stops being a switch), so unlike OutputVoltageLimits the kind is constrained.
+// the breakdown alias set, kind ABSOLUTE_MAX, a unit reducing to volts, a max bound present, and the
+// docs/20 comparison gates. Breakdown IS an absolute maximum on a real datasheet (it is the voltage
+// past which the part stops being a switch), so unlike OutputVoltageLimits the kind is constrained.
 //
 // The third member of the connection-aware extractor family: SupplyAbsMaxLimits reads what a part can
 // WITHSTAND on its supply, OutputVoltageLimits what a part DELIVERS, and this what a switch can BLOCK.
@@ -133,13 +133,16 @@ func FetBreakdownLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !fetBreakdownSymbols[sym] ||
-			p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
-			p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !fetBreakdownSymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -181,24 +184,31 @@ func OcpThresholdSymbols() []string {
 }
 
 // OcpThresholdLimits selects the machine-comparable overcurrent-threshold rows of a controller's
-// spec: symbol in the alias set, unit exactly "V", a max bound present, and the docs/20 comparison
-// gates. Rows failing any gate are skipped, never coerced.
+// spec: symbol in the alias set, a unit reducing to volts, a max bound present, and the docs/20
+// comparison gates. Rows failing any gate are skipped, never coerced.
 //
-// Two deliberate choices. The limit KIND is not constrained: a trip threshold is a characteristic or
+// The limit KIND is deliberately not constrained: a trip threshold is a characteristic or
 // recommended-operating row, not an absolute maximum, so filtering to one kind would find nothing on a
-// real spec (the same reasoning as OutputVoltageLimits). And the unit gate is exactly "V" while real
-// datasheets print this row in MILLIVOLTS, so a spec seeded as printed reads as no row at all and the
-// rule stays silent. That is the standing unlike-units posture (never converted, WS10-004 owns the
-// conversion), and it fails toward silence rather than toward a current a thousand times too large.
+// real spec (the same reasoning as OutputVoltageLimits).
+//
+// Real controller sheets print this row in MILLIVOLTS, and it is the row agni issue 148 was reported
+// against: the millivolt spelling used to fail the unit gate, so the resolver found no threshold, no
+// load switch resolved, and the item scored a PASS on a check that never ran. param.InBaseUnit
+// converts it now, in the one place a scale factor lives, so the returned row is always in volts and
+// the rule downstream cannot see the spelling it was seeded in.
 func OcpThresholdLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.GetParameters() {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !ocpThresholdSymbols[sym] || p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !ocpThresholdSymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -212,8 +222,8 @@ var drainCurrentSymbols = map[string]bool{
 }
 
 // DrainCurrentLimits selects the machine-comparable continuous drain-current rows of a spec: symbol in
-// the alias set, kind ABSOLUTE_MAX, unit exactly "A", a max bound present, and the docs/20 comparison
-// gates. Continuous drain current IS an absolute maximum on a real FET datasheet, so unlike
+// the alias set, kind ABSOLUTE_MAX, a unit reducing to amps, a max bound present, and the docs/20
+// comparison gates. Continuous drain current IS an absolute maximum on a real FET datasheet, so unlike
 // OcpThresholdLimits the kind is constrained.
 //
 // The rating is stated at a case or ambient temperature that the conditions carry, and a real design
@@ -224,13 +234,16 @@ func DrainCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.GetParameters() {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !drainCurrentSymbols[sym] ||
-			p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
-			p.Unit != "A" || p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !drainCurrentSymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Unit != "A" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -240,15 +253,16 @@ var onResistanceSymbols = map[string]bool{
 	"RDS(ON)": true, "RDSON": true, "RON": true,
 }
 
-// ohmUnitSpellings are the spellings of the OHM a seeded parameter may carry. Two spellings of one
-// unit, not two units: the hand-encoded corpus writes "Ohm" and a spec transcribed from a sheet that
-// prints the symbol writes "Ω". Accepting both is normalization, not conversion, so it does not
-// weaken the unlike-units posture the rest of this file holds (a milliohm row still reads as no row).
-var ohmUnitSpellings = map[string]bool{"Ohm": true, "ohm": true, "Ω": true}
-
-// OnResistanceLimits selects the machine-comparable RDS(on) rows of a spec: symbol in the alias set,
-// unit an ohm spelling, a max bound present, and the docs/20 comparison gates. The limit kind is not
+// OnResistanceLimits selects the machine-comparable RDS(on) rows of a spec: symbol in the alias set, a
+// unit reducing to ohms, a max bound present, and the docs/20 comparison gates. The limit kind is not
 // constrained, since RDS(on) is a characteristic row.
+//
+// The ohm SPELLINGS a corpus carries (the hand-encoded "Ohm", the transcribed "Ω", the deprecated
+// codepoint) used to live in a local table here, because normalizing two spellings of one unit was
+// safe in a way converting two units was not. That distinction stopped needing a separate mechanism
+// once param.InBaseUnit existed: it holds both the spellings and the scales, and a milliohm row now
+// converts where it used to vanish. RDS(on) is the row where that matters most, since a milliohm is
+// the ORDINARY way a sheet prints a modern FET's on-resistance.
 //
 // A real sheet states RDS(on) SEVERAL TIMES under different gate drives and junction temperatures (the
 // seeded BSS138 carries three), so a caller gets several rows and has to say which one it means. There
@@ -258,12 +272,15 @@ func OnResistanceLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.GetParameters() {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !onResistanceSymbols[sym] || !ohmUnitSpellings[p.Unit] ||
-			p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !onResistanceSymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != param.UnitOhm || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -278,8 +295,8 @@ var outputSymbols = map[string]bool{
 }
 
 // OutputVoltageLimits selects the machine-comparable OUTPUT-voltage rows of a spec: symbol in the
-// output alias set, unit exactly "V", a max bound present, and the docs/20 comparison gates. The
-// limit KIND is deliberately not constrained: a regulator states its output as a recommended-operating
+// output alias set, a unit reducing to volts, a max bound present, and the docs/20 comparison gates.
+// The limit KIND is deliberately not constrained: a regulator states its output as a recommended-operating
 // or characteristic row, not an absolute maximum, so filtering to one kind would find nothing on a
 // real spec. The MAX is what a downstream part is exposed to, which is the number a compatibility
 // check needs.
@@ -290,11 +307,15 @@ func OutputVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !outputSymbols[sym] || p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !outputSymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -325,24 +346,29 @@ func OutputCurrentSymbols() []string {
 }
 
 // OutputCurrentLimits selects the machine-comparable OUTPUT-CURRENT rows of a spec: symbol in the
-// output-current alias set, unit exactly "A", a max bound present, and the docs/20 comparison gates.
+// output-current alias set, a unit reducing to amps, a max bound present, and the docs/20 comparison
+// gates.
 //
 // The limit KIND is deliberately not constrained, for OutputVoltageLimits' reason: a regulator states
 // its output current as a recommended-operating or characteristic row rather than an absolute maximum,
 // so filtering to one kind would find nothing on a real spec.
 //
-// The unit is exactly "A". Milliamps are not converted, matching the rest of this file: unlike units
-// are under-specified for comparison until WS10-004, and silently scaling one here would make the one
-// place in the engine that converts also the place a unit bug hides.
+// The other row agni issue 148 was reported against. A regulator stating IOUT in MILLIAMPS used to
+// fail the unit gate, so the rail-budget rules found no supply for the rail, compared nothing, and the
+// item scored a PASS while the rail was genuinely over-subscribed. Milliamps are the ordinary spelling
+// for a sub-amp regulator, so a spec transcribed as printed hit this without doing anything unusual.
 func OutputCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
-		if !slices.Contains(outputCurrentSymbols, alnumUpper(p.Symbol)) || p.Unit != "A" ||
-			p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !slices.Contains(outputCurrentSymbols, alnumUpper(p.Symbol)) {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "A" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -378,11 +404,6 @@ func SeedsAnySymbol(m Model, syms []string) bool {
 	return false
 }
 
-// SupplyAbsMaxLimits selects the machine-comparable absolute-maximum supply-voltage
-// rows of a spec: symbol in the supply alias set, kind ABSOLUTE_MAX, unit exactly "V"
-// (unlike units are under-specified for comparison until WS10-004 — never converted),
-// a max bound present, conditions asserted complete and structured
-// (param.MachineComparable). Rows failing any gate are skipped, not coerced.
 // esdSymbols is the alias set for a part's ESD-tolerance rating: the symbols datasheets print it
 // under (the ESD-gun / handling models). Same posture as supplySymbols — the vendor spelling lives in
 // the model layer, never in rule text (docs/20).
@@ -399,27 +420,37 @@ var esdSymbols = map[string]bool{
 const icEsdFloorVolts = 2000
 
 // EsdRatingLimits selects the machine-comparable ESD-rating rows of a spec at or above the credit
-// floor: symbol in the alias set, an absolute-max limit (an ESD rating is a max survivable stress),
-// a max bound present in V or kV, and the docs/20 comparison gates. Rows failing any gate are skipped.
+// floor: symbol in the alias set, an absolute-max limit (an ESD rating is a max survivable stress), a
+// max bound present in a unit reducing to volts, and the docs/20 comparison gates. Rows failing any
+// gate are skipped.
+//
+// This extractor already converted, alone in this file, because an ESD rating is printed in KILOVOLTS
+// as often as in volts and a rule that skipped the kV spelling would have credited almost nothing. It
+// carried its own two-case scale to do it. That special case is now the general one, so the local
+// converter is gone and this reads like its nine neighbours.
 func EsdRatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		// ESD symbols come in many spellings (V_ESD, V(ESD), VESD, ESD_HBM); reduce to alphanumerics.
 		sym := alnumUpper(p.Symbol)
-		if !esdSymbols[sym] || p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !esdSymbols[sym] {
 			continue
 		}
-		v, ok := esdVolts(p)
-		if !ok || v < icEsdFloorVolts {
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.Unit != "V" || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		if q.Value.GetMax() < icEsdFloorVolts {
 			continue
 		}
 		// Only a SYSTEM-level rating (IEC 61000-4-2) protects a connector-exposed signal; a handling
 		// model (HBM/CDM) rates the part for assembly, not a field strike (WS3-077 test-model gate).
-		if !esdIsSystemLevel(p) {
+		if !esdIsSystemLevel(q) {
 			continue
 		}
-		out = append(out, p)
+		out = append(out, q)
 	}
 	return out
 }
@@ -449,20 +480,6 @@ func alnumUpper(s string) string {
 	return b.String()
 }
 
-// esdVolts reads an ESD rating's max as volts, accepting the kV unit datasheets often use.
-func esdVolts(p *parampb.Parameter) (float64, bool) {
-	if p.Value == nil || p.Value.Max == nil {
-		return 0, false
-	}
-	switch p.Unit {
-	case "V":
-		return p.Value.GetMax(), true
-	case "kV":
-		return p.Value.GetMax() * 1000, true
-	}
-	return 0, false
-}
-
 // SupplyInputPin reports whether a pin consumes a supply rail, format-neutrally — the entity both
 // datasheet rail rules (supply-exceeds-abs-max, rail-nominal-out-of-recommended) quantify over. Since
 // WS3-072 PR2 the answer is a plain PinDir == POWER_IN: the ingestion pass (classify.StampPowerInPins)
@@ -473,30 +490,33 @@ func SupplyInputPin(m Model, refDes, designator string) bool {
 }
 
 // SupplyAbsMaxLimits returns the absolute-maximum voltage rows of a PartSpec that name a supply
-// pin and are safe to compare: symbol in the supply set, LimitKind ABSOLUTE_MAX, unit V, and fully
-// specified (not under-specified, machine-comparable). It is the datasheet lookup behind
-// supply-exceeds-abs-max; text-only or under-specified rows are skipped so a rule never compares
-// against a value a human must read.
+// pin and are safe to compare: symbol in the supply set, LimitKind ABSOLUTE_MAX, a unit reducing to
+// volts, and fully specified (not under-specified, machine-comparable). It is the datasheet lookup
+// behind supply-exceeds-abs-max; text-only or under-specified rows are skipped so a rule never
+// compares against a value a human must read.
 func SupplyAbsMaxLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !supplySymbols[sym] ||
-			p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
-			p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !supplySymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX ||
+			q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
 
 // RecommendedOperatingLimits selects the machine-comparable recommended-operating
 // supply-voltage rows of a spec: symbol in the supply alias set, kind
-// RECOMMENDED_OPERATING, unit exactly "V", at least one of min/max present, and the
-// docs/20 comparison gates (unlike units and text-only conditions are skipped, never
-// coerced). Unlike SupplyAbsMaxLimits — a one-sided ceiling that is always conservative
+// RECOMMENDED_OPERATING, a unit reducing to volts, at least one of min/max present, and
+// the docs/20 comparison gates (unrecognized units and text-only conditions are skipped,
+// never coerced). Unlike SupplyAbsMaxLimits — a one-sided ceiling that is always conservative
 // to apply across every power-in pin — the recommended range is two-sided, so its
 // consumer (rail-nominal-out-of-recommended) acts only on a part that declares a SINGLE
 // such row: a netlist does not say which power-in pin is which supply, so a multi-supply
@@ -505,13 +525,16 @@ func RecommendedOperatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
-		if !supplySymbols[sym] ||
-			p.LimitKind != parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING ||
-			p.Unit != "V" || p.Value == nil || (p.Value.Min == nil && p.Value.Max == nil) ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !supplySymbols[sym] {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok || q.LimitKind != parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING ||
+			q.Unit != "V" || q.Value == nil || (q.Value.Min == nil && q.Value.Max == nil) ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }
@@ -527,21 +550,25 @@ var capRatedVoltageSymbols = map[string]bool{
 // CapRatedVoltageLimits selects the machine-comparable rated-voltage rows of a cap
 // spec: symbol in the alias set (or the printed name saying "rated voltage"), kind
 // recommended-operating or absolute-max (a rated voltage is the operating envelope;
-// some sheets state it as a maximum), unit exactly "V", a max bound present, and the
-// docs/20 comparison gates. Rows failing any gate are skipped, not coerced.
+// some sheets state it as a maximum), a unit reducing to volts, a max bound present, and
+// the docs/20 comparison gates. Rows failing any gate are skipped, not coerced.
 func CapRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
 		sym := strings.ToUpper(strings.ReplaceAll(p.Symbol, " ", ""))
 		named := strings.Contains(strings.ToLower(p.Name), "rated voltage")
-		if (!capRatedVoltageSymbols[sym] && !named) ||
-			(p.LimitKind != parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING &&
-				p.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX) ||
-			p.Unit != "V" || p.Value == nil || p.Value.Max == nil ||
-			param.UnderSpecified(p) || !param.MachineComparable(p) {
+		if !capRatedVoltageSymbols[sym] && !named {
 			continue
 		}
-		out = append(out, p)
+		q, ok := param.InBaseUnit(p)
+		if !ok ||
+			(q.LimitKind != parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING &&
+				q.LimitKind != parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX) ||
+			q.Unit != "V" || q.Value == nil || q.Value.Max == nil ||
+			param.UnderSpecified(q) || !param.MachineComparable(q) {
+			continue
+		}
+		out = append(out, q)
 	}
 	return out
 }

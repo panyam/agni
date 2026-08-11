@@ -74,9 +74,10 @@ Silence is always "I could not tell", never "this is fine".
 - **The gate net carries two candidate controllers**, or the controller has **two candidate shunts**.
   Unresolvable, so no verdict rather than a verdict computed from the wrong part.
 - **The FET's gate lands on more than one net**, or it declares no gate pin at all.
-- **The controller states no overcurrent threshold**, or states it in a unit other than volts. A
-  millivolt row reads as no row: unlike units are never converted (WS10-004 owns that), which fails
-  toward silence instead of toward a current a thousand times too large.
+- **The controller states no overcurrent threshold**, or states it in a unit the parameter layer does
+  not recognize. A millivolt row is reduced to volts and compared, which is how real controller sheets
+  print this row; a unit with no entry in the conversion table is skipped rather than scaled by a
+  guess, so the rule still fails toward silence instead of toward a current a thousand times too large.
 - **The FET is unseeded** or states no continuous drain rating. Pulsed drain current is deliberately
   not accepted in its place.
 - **The shunt's value is not stated in ohms in the design.** A component whose value the reader never

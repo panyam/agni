@@ -3,7 +3,9 @@ package check
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 func TestNominalVoltageFromName(t *testing.T) {
@@ -68,4 +70,34 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 		}
 	}
 	return d
+}
+
+// TestUnitVocabulariesAgree is a drift tripwire between the two layers that own a unit vocabulary.
+//
+// core/classify parses a component's value TEXT off a design and normalizes it to an SI base unit;
+// datasheet/param converts a seeded parameter's printed unit to the same base. They are deliberately
+// SEPARATE tables, because IEC 60062's RKM code reads M as mega and is case-insensitive on k and u,
+// which is correct for a schematic value field and inverts three orders of magnitude on a printed unit
+// symbol. The datasheet tier also imports nothing from core (C17), so there is no import to hold them
+// together.
+//
+// What they must agree on is the CANONICAL SPELLING they each normalize to. A rule comparing a
+// design-side resistance against a datasheet-side one compares two unit strings, so a divergence here
+// would make every such comparison silently find nothing, which is this file's whole failure mode.
+// This test lives in core/check because it is the one package that imports both layers.
+func TestUnitVocabulariesAgree(t *testing.T) {
+	if param.UnitOhm != classify.UnitOhm {
+		t.Errorf("ohm symbol diverged: datasheet/param has %q (%U), core/classify has %q (%U)",
+			param.UnitOhm, []rune(param.UnitOhm), classify.UnitOhm, []rune(classify.UnitOhm))
+	}
+	// Every base unit classify normalizes a design value to must survive a round trip through the
+	// parameter layer unchanged, or a datasheet row in that unit could never be compared against a
+	// component carrying it.
+	for _, unit := range []string{classify.UnitOhm, "F", "H", "A", "V"} {
+		base, exp, ok := param.BaseUnit(unit)
+		if !ok || base != unit || exp != 0 {
+			t.Errorf("classify normalizes design values to %q, but param.BaseUnit gives (%q, %d, %v)",
+				unit, base, exp, ok)
+		}
+	}
 }
