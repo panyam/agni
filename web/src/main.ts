@@ -19,6 +19,7 @@ import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
 import { conventionBarIsland } from "./conventionbar.js";
+import { projectBarIsland } from "./projectbar.js";
 import { partsPanelIsland } from "./partspanel.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
@@ -78,6 +79,7 @@ class AppRoot extends BaseComponent {
     const coverageEl = document.getElementById("coverage-panel");
     const reviewEl = document.getElementById("review-panel");
     const conventionEl = document.getElementById("convention-bar");
+    const projectEl = document.getElementById("project-bar");
     const partsEl = document.getElementById("parts-panel");
     const sheetTabsEl = document.getElementById("sheet-tabs");
     if (!canvasEl || !pickerEl || !compareTreeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
@@ -85,6 +87,7 @@ class AppRoot extends BaseComponent {
     if (!compareEl || !diffBarEl || !diffSvgA || !diffSvgB || !diffPhA || !diffPhB || !diffChangesEl)
       return children;
     if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl || !conventionEl) return children;
+    if (!projectEl) return children;
 
     // RenderView reveals whichever renderer drew the sheet: the SVG host overlays the canvas,
     // so showWebgl just hides it and showSvg fills + shows it.
@@ -255,6 +258,11 @@ class AppRoot extends BaseComponent {
     const conventionBar = conventionBarIsland(conventionEl, this._eventBus, {
       onSelect: (ref) => void presenter.setConvention(ref),
     });
+    // The project bar (agni issue 175): which project's config produced what is on screen, and the
+    // opt-out that re-runs the design under the built-in catalog so the difference is visible.
+    const projectBar = projectBarIsland(projectEl, this._eventBus, {
+      onPlain: (plain) => void presenter.setPlainCatalog(plain),
+    });
     // The review panel (WS9-052): the project's checklist verdict over the stored runs. Locating a
     // finding under an item reuses the same locateEntity path every other panel uses, so a review
     // finding highlights exactly the way a check finding does.
@@ -305,6 +313,7 @@ class AppRoot extends BaseComponent {
         coverage: coverage.view,
         review: review.view,
         conventionBar: conventionBar.view,
+        projectBar: projectBar.view,
         parts: parts.view,
       },
       queryClient(),
@@ -338,6 +347,7 @@ class AppRoot extends BaseComponent {
       coverage.island,
       review.island,
       conventionBar.island,
+      projectBar.island,
       parts.island,
     );
     return children;

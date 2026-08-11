@@ -16,6 +16,10 @@
     <div id="panels-menu" class="panels-menu"></div>
     <!-- WS9-044: the highlight-style dropdown (focus marker color / opacity / width) renders here -->
     <div id="highlight-menu" class="highlight-menu"></div>
+    <!-- agni issue 175: the project bar. Same reason as the vocabulary bar below and one level up:
+         config now resolves from the design's own project, so "whose rules are these" has to be
+         answerable from the screen. It sits FIRST because it qualifies the vocabulary too. -->
+    <div id="project-bar" class="project-bar-host" data-component="projectbar"></div>
     <!-- WS9-128: the naming-vocabulary bar. It is in the TOP bar rather than in a panel because it
          qualifies every answer on screen: a request convention replaces the server's, so which one
          is in effect has to be visible without opening anything. -->

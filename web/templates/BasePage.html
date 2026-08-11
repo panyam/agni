@@ -349,6 +349,22 @@
        the top bar keeps its height. */
     .convbar-error { color: #b91c1c; font-weight: 600; max-width: 52ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    /* agni issue 175 project bar: whose config produced the answers on screen. The overridden state
+       is styled for the same reason the vocabulary bar's is, one level up: with the built-in catalog
+       chosen, a project's rules are not running, and rules that do not run leave no trace to notice. */
+    .projbar { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 0 6px; }
+    .projbar-label { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
+    .projbar-name { color: #444; font-weight: 600; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .projbar-plain { display: flex; align-items: center; gap: 3px; color: #666; cursor: pointer; }
+    .projbar-plain-box { margin: 0; }
+    .projbar-overridden { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; }
+    .projbar-overridden .projbar-name { color: #b45309; }
+    /* The companion notice names another file and is the one line here a reader must not miss, so it
+       gets the same bounded-and-ellipsised treatment the convention error gets: full text on hover,
+       fixed top-bar height regardless of how long a design's entry name runs. */
+    .projbar-entry { color: #b45309; max-width: 44ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .projbar-error { color: #b91c1c; font-weight: 600; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     /* WS9-052 review panel: the project's checklist verdict over the stored runs (WS9-053). */
     .review { padding: 4px; font-size: 12px; }
     .rv-empty { color: #999; padding: 8px 4px; line-height: 1.5; }

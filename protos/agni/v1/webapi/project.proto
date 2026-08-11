@@ -93,6 +93,12 @@ message Project {
 
   // conventions is the project's naming policy, resolved. Absent means the engine defaults.
   NamingConvention conventions = 4;
+  // conventions_uri names the file `conventions` was read from, absent when the project declared no
+  // convention. It is redundant for COMPOSING a run, which is why the value above exists, and it is
+  // not redundant for a client that has to OFFER the project's convention as a choice: a picker
+  // needs something to pass back, and a resolved value is not a ref. Without it a viewer can state
+  // which convention is in effect but cannot let a reader re-select it after trying another.
+  string conventions_uri = 8;
   // profile_uris are the interface-profile declarations this project composes into the catalog.
   repeated string profile_uris = 5;
   // param_uris are the seeded datasheet parameter sets this project checks its parts against.
