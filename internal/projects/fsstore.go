@@ -3,6 +3,7 @@ package projects
 import (
 	"context"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"io/fs"
 	"path"
 	"sort"
@@ -118,11 +119,11 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 	if err != nil {
 		return nil, err
 	}
-	t, ok := s.tree(p.GetMount())
+	t, ok := s.tree(uriOf(p.GetUri()).Mount)
 	if !ok {
-		return nil, fmt.Errorf("%w: mount %q is no longer configured", service.ErrNotFound, p.GetMount())
+		return nil, fmt.Errorf("%w: mount %q is no longer configured", service.ErrNotFound, uriOf(p.GetUri()).Mount)
 	}
-	dirs, err := findDescriptors(t.FS, walkRoot(p.GetDirRef()), DesignDescriptor)
+	dirs, err := findDescriptors(t.FS, walkRoot(uriOf(p.GetUri()).Path), DesignDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -157,13 +158,13 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 // EMPTY `name`, because a resource name needs a parent and there is none — but the declaration is
 // still the truth about which file that folder's analysis reads, and a caller pointed at a path by a
 // human (the CLI) needs no resource name to honour it. Only addressability is missing, not meaning.
-func (s *FSStore) ResolveDesign(_ context.Context, mount, ref string) (*webapi.Design, *webapi.Project, error) {
-	t, ok := s.tree(mount)
+func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+	t, ok := s.tree(uri.Mount)
 	if !ok {
-		return nil, nil, fmt.Errorf("no such mount %q: %w", mount, service.ErrNotFound)
+		return nil, nil, fmt.Errorf("no such mount %q: %w", uri.Mount, service.ErrNotFound)
 	}
-	dir := path.Clean(strings.TrimSuffix(ref, "/"))
-	if dir == "" || dir == "." {
+	dir := uri.Path
+	if dir == "" {
 		dir = "."
 	} else if !isDir(t.FS, dir) {
 		dir = path.Dir(dir)
@@ -218,9 +219,12 @@ func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, erro
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
+	u, err := artifact.New(t.Mount, normalizeDir(dir))
+	if err != nil {
+		return "", nil, err
+	}
 	p.Name = service.ProjectName(id)
-	p.Mount = t.Mount
-	p.DirRef = normalizeDir(dir)
+	p.Uri = u.String()
 	return id, p, nil
 }
 
@@ -239,12 +243,22 @@ func (s *FSStore) loadDesign(t Tree, dir string) (string, *webapi.Design, error)
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
-	rel := normalizeDir(dir)
-	d.Mount = t.Mount
-	d.DirRef = rel
-	d.EntryRef = joinRef(rel, d.GetEntryRef())
-	for i, c := range d.GetCompanionRefs() {
-		d.CompanionRefs[i] = joinRef(rel, c)
+	base, err := artifact.New(t.Mount, normalizeDir(dir))
+	if err != nil {
+		return "", nil, err
+	}
+	entry, err := base.Join(d.GetEntryUri())
+	if err != nil {
+		return "", nil, fmt.Errorf("%s: %w", name, err)
+	}
+	d.Uri = base.String()
+	d.EntryUri = entry.String()
+	for i, c := range d.GetCompanionUris() {
+		cu, err := base.Join(c)
+		if err != nil {
+			return "", nil, fmt.Errorf("%s: %w", name, err)
+		}
+		d.CompanionUris[i] = cu.String()
 	}
 	return id, d, nil
 }
@@ -368,11 +382,13 @@ func depthUnder(root, p string) int {
 	return len(strings.Split(rel, "/"))
 }
 
-// joinRef joins a tree-relative folder and a descriptor-relative file into a tree-relative ref.
-func joinRef(dir, rel string) string {
-	clean := CleanRel(rel)
-	if dir == "" {
-		return clean
+// uriOf parses a resource's stored artifact URI. A URI this package wrote is always well formed, so
+// a parse failure means the value came from somewhere else; the zero URI then simply matches nothing
+// rather than failing a listing.
+func uriOf(s string) artifact.URI {
+	u, err := artifact.Parse(s)
+	if err != nil {
+		return artifact.URI{}
 	}
-	return dir + "/" + clean
+	return u
 }

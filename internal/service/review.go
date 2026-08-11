@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"strconv"
 	"strings"
 
@@ -36,9 +37,9 @@ var ErrReviewStoreNotConfigured = errors.New("no review store configured")
 // which exists so a client that only holds a ref can obtain that value. The refs are keys the impl
 // resolves inside a mount, never host paths the service may interpret (C22).
 type ReviewLoader interface {
-	Design(ctx context.Context, mount, ref string, opts ...ReadOption) (*ir.Design, error)
-	Board(ctx context.Context, mount, ref string) (*geom.BoardGeometry, error)
-	Manifest(ctx context.Context, mount, ref string) (review.Manifest, error)
+	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
+	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
+	Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error)
 	// DesignHash returns "sha256:<hex>" over the design's bytes, the revision identity a stored run
 	// records so a document is never silently re-read against a design that has since changed. It is on
 	// the loader because hashing means reading bytes, and this package does no I/O (C13/C22).
@@ -46,7 +47,7 @@ type ReviewLoader interface {
 	// An unreadable design is NOT an error here: the run itself already succeeded, so failing a whole
 	// create over a provenance field would be worse than a document that honestly records no hash.
 	// Return ("", nil) in that case, which DesignRef.content_hash explicitly allows.
-	DesignHash(ctx context.Context, mount, ref string) (string, error)
+	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
 }
 
 // ReviewEnv is the deployment-level provenance a stored run records: which overlay tiers were
@@ -128,11 +129,19 @@ func (s *ReviewService) reviewStore() (ReviewStore, error) {
 // carrying the checklist SNAPSHOT rather than its name, so re-rendering the run later reproduces what
 // was actually asked instead of whatever the checklist file says by then.
 func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateReviewRequest) (*webapi.Review, error) {
+	designURI, err := artifactURI(req.GetDesignUri())
+	if err != nil {
+		return nil, err
+	}
+	boardURI, err := optionalArtifactURI(req.GetBoardUri())
+	if err != nil {
+		return nil, err
+	}
 	store, err := s.reviewStore()
 	if err != nil {
 		return nil, err
 	}
-	if req.GetDesignRef() == "" {
+	if req.GetDesignUri() == "" {
 		return nil, fmt.Errorf("%w: CreateReview needs a design_ref", ErrInvalidArgument)
 	}
 	if req.GetManifest() == nil {
@@ -149,13 +158,13 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	rep, cat, err := s.runOne(ctx, req.GetMount(), req.GetDesignRef(), req.GetBoardRef(), man, req.GetRatifiedFloor(), ov)
+	rep, cat, err := s.runOne(ctx, designURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
 		return nil, err
 	}
 	// The hash is provenance, not a precondition: a design that ran but cannot be re-read still
 	// produced real outcomes, so an unreadable source records no hash rather than failing the create.
-	hash, err := s.loader.DesignHash(ctx, req.GetMount(), req.GetDesignRef())
+	hash, err := s.loader.DesignHash(ctx, designURI)
 	if err != nil {
 		hash = ""
 	}
@@ -169,7 +178,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			// pass. That is the axis an imported vendor report does not have.
 			CoverageAxis: true,
 		},
-		Design: &checkspb.DesignRef{Source: req.GetDesignRef(), ContentHash: hash},
+		Design: &checkspb.DesignRef{Source: designURI.String(), ContentHash: hash},
 		Run: &checkspb.RunConfig{
 			Params:        s.specs != nil,
 			Profiles:      s.env.Profiles,
@@ -275,10 +284,14 @@ func parseReviewFilter(filter string) (string, error) {
 // It validates before returning, so a malformed checklist is reported once, here, with the item that
 // is wrong — rather than on every subsequent run, or worse, silently at scoring time.
 func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetReviewManifestRequest) (*webapi.GetReviewManifestResponse, error) {
-	if req.GetRef() == "" {
-		return nil, fmt.Errorf("%w: GetReviewManifest needs a ref", ErrInvalidArgument)
+	if req.GetUri() == "" {
+		return nil, fmt.Errorf("%w: GetReviewManifest needs a uri", ErrInvalidArgument)
 	}
-	man, err := s.loader.Manifest(ctx, req.GetMount(), req.GetRef())
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	man, err := s.loader.Manifest(ctx, u)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -296,8 +309,8 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 // rules that ACTUALLY ran. That is the per-request catalog, overlay spliced on, not the service's
 // base one: a run shaped by a request's own naming convention would otherwise archive a rule list its
 // findings could not have come from.
-func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef string, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
-	m, err := BuildModel(ctx, s.loader, mount, design, boardRef, s.specs, ov.ReadOptions()...)
+func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
+	m, err := BuildModel(ctx, s.loader, designURI, boardURI, s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return review.Report{}, nil, err
 	}
@@ -307,7 +320,7 @@ func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef stri
 	}
 	present, scope, compScope := reviewClosures(m, s.byName)
 	return review.Run(review.RunParams{
-		Model: m, Catalog: cat, Manifest: man, Design: design,
+		Model: m, Catalog: cat, Manifest: man, Design: designURI.String(),
 		Present: present, Scope: scope, CompScope: compScope, RatifiedFloor: floor,
 		// intent.Emits narrows the intent/ prefix to the compiler's actual name space, so a pre-bound
 		// not-yet-shipped intent rule reads not-automated instead of a misleading needs-design-intent
@@ -316,7 +329,7 @@ func (s *ReviewService) runOne(ctx context.Context, mount, design, boardRef stri
 	}), cat, nil
 }
 
-// reviewClosures builds the presence and scope closures a review run needs over a design's Model and
+// reviewClosures builds the presence and scope closures a review run needs over a designURI's Model and
 // the profile index: present marks an item bound to a known-but-absent interface not-applicable, and
 // scope/compScope filter a scoped binding's findings to the interface's nets/parts (WS3-058/083). The
 // service owns this now that the CLI is a thin client of the review service (WS9-048); it keeps `review`

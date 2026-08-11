@@ -71,11 +71,13 @@ message SheetRef {
 }
 
 message GetDesignRequest {
-  string mount = 1;
-  string path = 2;
   // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
   // empty uses the default. Ignored for geometry-bearing files, which render faithfully.
   string layout = 3;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design to load, "mount://<mount>/<path>".
+  string uri = 8;
 }
 
 message GetDesignResponse {
@@ -101,8 +103,6 @@ message GetDesignResponse {
 }
 
 message GetSheetRequest {
-  string mount = 1;
-  string path = 2;
   // sheet selects by id, name, or 0-based index; empty selects the first sheet.
   string sheet = 3;
   string layout = 4;
@@ -111,6 +111,10 @@ message GetSheetRequest {
   // symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
   // faithful layout (always the design's own symbols).
   SymbolSource symbols = 6;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design the sheet belongs to.
+  string uri = 9;
 }
 
 message GetSheetResponse {
@@ -123,8 +127,6 @@ message GetSheetResponse {
 }
 
 message HighlightSheetRequest {
-  string mount = 1;
-  string path = 2;
   // sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
   string sheet = 3;
   string layout = 4;
@@ -134,6 +136,10 @@ message HighlightSheetRequest {
   SheetFormat format = 6;
   // specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
   repeated agni.v1.geom.HighlightSpec specs = 7;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design the sheet belongs to.
+  string uri = 9;
 }
 
 message HighlightSheetResponse {
@@ -146,10 +152,12 @@ message HighlightSheetResponse {
 }
 
 message GetLayoutReportRequest {
-  string mount = 1;
-  string path = 2;
   // symbols selects the node artwork the report explains; unset means GLYPH.
   SymbolSource symbols = 3;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design to report on.
+  string uri = 5;
 }
 
 message GetLayoutReportResponse {

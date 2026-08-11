@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/panyam/agni/core/check/naming"
@@ -13,6 +14,7 @@ import (
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/readers/formats"
@@ -68,62 +70,62 @@ func (l *localLoader) resolve(ctx context.Context, path string) (designSource, e
 	return src, nil
 }
 
-func (l *localLoader) Design(ctx context.Context, _, path string, opts ...service.ReadOption) (*ir.Design, error) {
-	src, err := l.resolve(ctx, path)
+func (l *localLoader) Design(ctx context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ReadDesign(src.NetlistRef)
+	return readerFor(l.loader, opts...).ReadDesign(src.NetlistURI)
 }
 
-func (l *localLoader) Board(ctx context.Context, _, path string) (*geom.BoardGeometry, error) {
-	src, err := l.resolve(ctx, path)
+func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.BoardGeometry(src.BoardRef)
+	return l.loader.BoardGeometry(src.BoardURI)
 }
 
-func (l *localLoader) Geometry(ctx context.Context, _, path, layout string, faithful bool) (*geom.SchematicGeometry, error) {
-	src, err := l.resolve(ctx, path)
+func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool) (*geom.SchematicGeometry, error) {
+	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ResolveGeometry(src.GeometryRef, layout, nil, symbolsFor(faithful))
+	return l.loader.ResolveGeometry(src.GeometryURI, layout, nil, symbolsFor(faithful))
 }
 
-func (l *localLoader) Report(ctx context.Context, _, path string, faithful bool) (*graph.ConversionReport, error) {
-	src, err := l.resolve(ctx, path)
+func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful bool) (*graph.ConversionReport, error) {
+	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ConversionReport(src.GeometryRef, symbolsFor(faithful), nil)
+	return l.loader.ConversionReport(src.GeometryURI, symbolsFor(faithful), nil)
 }
 
 // Expectations reads the sidecar beside the ENTRY rather than beside the named file: an expectation
 // set states what this design should read, and the design is its entry.
-func (l *localLoader) Expectations(ctx context.Context, _, path string) (*expect.Expectations, error) {
-	src, err := l.resolve(ctx, path)
+func (l *localLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
+	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	sidecar := src.NetlistRef + ".expect.yaml"
+	sidecar := src.NetlistURI + ".expect.yaml"
 	if _, err := os.Stat(sidecar); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
 	return expect.Load(sidecar)
 }
 
-func (l *localLoader) Manifest(_ context.Context, _, ref string) (review.Manifest, error) {
-	return loadManifest(ref)
+func (l *localLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+	return loadManifest(localPath(uri))
 }
 
 // Convention resolves a naming-convention config from a local path. The CLI reads its own
 // --conventions at the edge and sends the value, so nothing in the CLI calls this; it exists because
 // localLoader is the no-containment sibling of osLoader behind the same interfaces, and a loader that
 // satisfied all of them but one would make the two impossible to swap.
-func (l *localLoader) Convention(_ context.Context, _, ref string) (naming.Config, error) {
-	return naming.Load(ref)
+func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (naming.Config, error) {
+	return naming.Load(localPath(uri))
 }
 
 // DesignHash hashes the design's entry file for a stored run's provenance (WS9-053). It reuses the
@@ -135,12 +137,12 @@ func (l *localLoader) Convention(_ context.Context, _, ref string) (naming.Confi
 // It hashes the ENTRY the descriptor declares, not the ref the caller passed, so a run recorded
 // against a companion and one recorded against the design folder carry the same revision identity:
 // they analysed the same bytes.
-func (l *localLoader) DesignHash(ctx context.Context, _, ref string) (string, error) {
-	src, err := l.resolve(ctx, ref)
+func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string, error) {
+	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return "", err
 	}
-	return hashSource(src.NetlistRef), nil
+	return hashSource(src.NetlistURI), nil
 }
 
 // loadManifest reads and validates a checklist from a local path. It is a package function rather
@@ -156,4 +158,14 @@ func loadManifest(path string) (review.Manifest, error) {
 	}
 	defer f.Close()
 	return review.Load(f)
+}
+
+// localPath turns an artifact URI back into the local path the CLI's readers take.
+//
+// This is the ONLY place the CLI unpacks a URI, and it is deliberately at the port boundary: above
+// it every caller holds one contained value, below it the readers see the plain names they have
+// always seen. It is the inverse of cliURI: the CLI's mount is the filesystem root, so the leading
+// slash that encoding stripped goes back on here.
+func localPath(uri artifact.URI) string {
+	return filepath.FromSlash("/" + uri.Path)
 }

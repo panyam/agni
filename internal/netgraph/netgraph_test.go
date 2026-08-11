@@ -102,7 +102,7 @@ func TestBuildWithPoints(t *testing.T) {
 	}
 	anchors := []Anchor{{At: Point{300, 0}, Label: "GND"}}
 	pins := []Pin{
-		{At: Point{0, 10}, Comp: "R1", Pin: "1"}, // wire-unioned onto VOUT
+		{At: Point{0, 10}, Comp: "R1", Pin: "1"},  // wire-unioned onto VOUT
 		{At: Point{300, 0}, Comp: "R4", Pin: "2"}, // on GND
 	}
 
@@ -208,9 +208,9 @@ func TestBuildDangling(t *testing.T) {
 // local-labelled node still folding into the rail its power tap names).
 func TestBuildLabelAliasUnion(t *testing.T) {
 	wires := []Wire{
-		{A: Point{0, 0}, B: Point{10, 0}},     // node with BOTH labels
-		{A: Point{100, 0}, B: Point{110, 0}},  // cluster named only A
-		{A: Point{200, 0}, B: Point{210, 0}},  // cluster named only B
+		{A: Point{0, 0}, B: Point{10, 0}},    // node with BOTH labels
+		{A: Point{100, 0}, B: Point{110, 0}}, // cluster named only A
+		{A: Point{200, 0}, B: Point{210, 0}}, // cluster named only B
 	}
 	anchors := []Anchor{
 		{At: Point{0, 0}, Label: "A"},

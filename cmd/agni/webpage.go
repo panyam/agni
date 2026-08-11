@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	goal "github.com/panyam/goapplib"
 	"github.com/panyam/agni/internal/mounts"
+	goal "github.com/panyam/goapplib"
 )
 
 // serveApp is the goapplib application context for `agni serve`. It carries the configured

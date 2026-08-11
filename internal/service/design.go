@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 
 	"google.golang.org/protobuf/proto"
 
@@ -43,20 +44,20 @@ var (
 type Loader interface {
 	// Design returns the netlist IR (for counts and checks). A geometry-only file has none and
 	// returns an error the caller treats as "no netlist".
-	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
+	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	// Geometry resolves drawable geometry for the layout and symbol source (the design's own
 	// symbols when faithfulSymbols, else synthetic glyphs).
-	Geometry(ctx context.Context, mount, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
+	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
 	// Report classifies how an auto-layout draws each component (the conversion report).
-	Report(ctx context.Context, mount, path string, faithfulSymbols bool) (*graph.ConversionReport, error)
+	Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool) (*graph.ConversionReport, error)
 	// Expectations loads a design's `<path>.expect.yaml` sidecar (WS6-006). A design with no sidecar
 	// returns a nil map and a nil error (absence is normal), so the caller renders an empty panel
 	// rather than an error.
-	Expectations(ctx context.Context, mount, path string) (*expect.Expectations, error)
+	Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error)
 	// Board returns the physical board sidecar (WS1-006) for formats that carry one
 	// (.kicad_pcb today). nil with a nil error means the format has none — absence is
 	// normal, mirroring Expectations — and the design then simply lists no board sheet.
-	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
+	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
 }
 
 // boardSheetID is the synthetic sheet id the board renders under (WS7-034). It is a sheet
@@ -66,8 +67,8 @@ const boardSheetID = "board"
 
 // boardFor loads the board sidecar for a sheet request, classifying "this file has no
 // board" as not-found (the caller asked for a sheet that does not exist).
-func (s *DesignService) boardFor(ctx context.Context, mount, path string) (*geom.BoardGeometry, error) {
-	b, err := s.loader.Board(ctx, mount, path)
+func (s *DesignService) boardFor(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+	b, err := s.loader.Board(ctx, uri)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -98,8 +99,8 @@ var (
 // Available reports whether NATIVE can be offered for a file; Render returns the page's SVG or one
 // of the ErrNative* gate errors.
 type NativeRenderer interface {
-	Available(mount, path string) bool
-	Render(ctx context.Context, mount, path string, page int) (string, error)
+	Available(uri artifact.URI) bool
+	Render(ctx context.Context, uri artifact.URI, page int) (string, error)
 }
 
 // DesignService loads and renders one design over injected ports (CONSTRAINTS C13): it
@@ -164,28 +165,31 @@ func layoutForFile(path, requested string) string {
 // sheets. Netlist formats also carry IR counts; a geometry-only .eds does not, so its name comes
 // from the geometry's design ref and its counts stay zero.
 func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
-	mount, path := req.GetMount(), req.GetPath()
-	layout := layoutForFile(path, req.GetLayout())
-	g, err := s.loader.Geometry(ctx, mount, path, layout, false)
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	layout := layoutForFile(u.Path, req.GetLayout())
+	g, err := s.loader.Geometry(ctx, u, layout, false)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
 	resp := &webapi.GetDesignResponse{
 		Layout:           layout,
-		NativeAvailable:  s.native.Available(mount, path),
-		AvailableLayouts: availableLayouts(path),
+		NativeAvailable:  s.native.Available(u),
+		AvailableLayouts: availableLayouts(u.Path),
 	}
 	for _, sh := range g.GetSheets() {
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: sh.GetId(), Name: sh.GetName(), ParentId: sh.GetParentId()})
 	}
 	// A file with a board sidecar lists the physical board as one more sheet, after the
 	// drawable ones, regardless of the layout axis (the board is faithful by nature).
-	if b, err := s.loader.Board(ctx, mount, path); err == nil && b != nil {
+	if b, err := s.loader.Board(ctx, u); err == nil && b != nil {
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: boardSheetID, Name: "Board"})
 	}
 	if layout == faithfulLayout {
 		resp.Name = g.GetDesignRef()
-	} else if d, err := s.loader.Design(ctx, mount, path); err == nil {
+	} else if d, err := s.loader.Design(ctx, u); err == nil {
 		resp.Name = d.GetName()
 		resp.SourceFormat = d.GetSourceFormat()
 		resp.ComponentCount = int32(len(d.GetComponents()))
@@ -198,8 +202,12 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 // source. A resolve error (unknown mount / escaping path) is returned; a file with no netlist has
 // nothing to classify, so that returns an empty report rather than an error.
 func (s *DesignService) GetLayoutReport(ctx context.Context, req *webapi.GetLayoutReportRequest) (*webapi.GetLayoutReportResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	rep, err := s.loader.Report(ctx, req.GetMount(), req.GetPath(), faithful)
+	rep, err := s.loader.Report(ctx, u, faithful)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
 			return nil, err
@@ -231,13 +239,16 @@ func reportToProto(r *graph.ConversionReport) *webapi.ConversionReport {
 // tool). A bad selector classifies as ErrNotFound; an unexpected native-render failure (past the
 // ErrNative* gates) as ErrInternal.
 func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetRequest) (*webapi.GetSheetResponse, error) {
-	mount, path := req.GetMount(), req.GetPath()
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	// The synthetic board sheet renders from the board sidecar, not the schematic geometry:
 	// SVG from BoardSVG, PACKED (and UNSPECIFIED) from PackBoard — the WS7-035 tier, same
 	// envelope as the schematic pack so the canvas draws it with one extra draw mode.
 	// NATIVE has no board pages; it answers with the SVG document.
 	if req.GetSheet() == boardSheetID {
-		b, err := s.boardFor(ctx, mount, path)
+		b, err := s.boardFor(ctx, u)
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +268,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 		requested = faithfulLayout
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	g, err := s.loader.Geometry(ctx, mount, path, layoutForFile(path, requested), faithful)
+	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, requested), faithful)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -279,7 +290,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	case webapi.SheetFormat_SHEET_FORMAT_SVG:
 		resp.Content = &webapi.GetSheetResponse_Svg{Svg: render.SheetSVG(g, sheet, render.WithStyle(style))}
 	case webapi.SheetFormat_SHEET_FORMAT_NATIVE:
-		svg, err := s.native.Render(ctx, mount, path, render.SheetIndex(g, sheet)+1)
+		svg, err := s.native.Render(ctx, u, render.SheetIndex(g, sheet)+1)
 		if err != nil {
 			if errors.Is(err, ErrNativeNoTool) || errors.Is(err, ErrNativeNotEnabled) || errors.Is(err, ErrNativeNotFound) {
 				return nil, err
@@ -300,15 +311,18 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 // describes the same geometry as the base render it stacks on. NATIVE (a golden shell-out with
 // no overlay concept) classifies as ErrInvalidArgument.
 func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.HighlightSheetRequest) (*webapi.HighlightSheetResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_NATIVE {
 		return nil, fmt.Errorf("%w: no highlight overlay for the NATIVE format", ErrInvalidArgument)
 	}
-	mount, path := req.GetMount(), req.GetPath()
 	// The board sheet's overlay comes from the board join (net -> copper, ref_des -> pads):
 	// a transparent SVG framed exactly like the BoardSVG base, or primitive-index groups
 	// over the SAME PackBoard primitive table the PACKED GetSheet returned.
 	if req.GetSheet() == boardSheetID {
-		b, err := s.boardFor(ctx, mount, path)
+		b, err := s.boardFor(ctx, u)
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +336,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		}, nil
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	g, err := s.loader.Geometry(ctx, mount, path, layoutForFile(path, req.GetLayout()), faithful)
+	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, req.GetLayout()), faithful)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -338,7 +352,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	// On a NAME-ONLY canvas (a faithful .eds / WS1-047 companion schematic: wires named by net but
 	// carrying no per-instance net_id), a net spec that targets a net by id alone cannot match, so
 	// resolve those ids to their net NAMES via the netlist and add them for a name-join.
-	specs := s.nameJoinSpecs(ctx, mount, path, g, req.GetSpecs())
+	specs := s.nameJoinSpecs(ctx, u, g, req.GetSpecs())
 
 	resp := &webapi.HighlightSheetResponse{}
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_SVG {
@@ -359,11 +373,11 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 // each spec's net_id to its net NAME (from the netlist at path) and adds it, so the match lands by
 // name. It is a NO-OP on an id-capable canvas (nameOnlyCanvas is false) and when no spec carries a
 // bare net_id, so the primary-canvas per-instance precision and the goldens are untouched.
-func (s *DesignService) nameJoinSpecs(ctx context.Context, mount, path string, g *geom.SchematicGeometry, specs []*geom.HighlightSpec) []*geom.HighlightSpec {
+func (s *DesignService) nameJoinSpecs(ctx context.Context, uri artifact.URI, g *geom.SchematicGeometry, specs []*geom.HighlightSpec) []*geom.HighlightSpec {
 	if !nameOnlyCanvas(g) || !anyNetIDSpec(specs) {
 		return specs
 	}
-	d, err := s.loader.Design(ctx, mount, path)
+	d, err := s.loader.Design(ctx, uri)
 	if err != nil {
 		return specs // cannot resolve the netlist: leave specs as-is, no worse than before
 	}
@@ -420,4 +434,28 @@ func anyNetIDSpec(specs []*geom.HighlightSpec) bool {
 		}
 	}
 	return false
+}
+
+// artifactURI parses a request's artifact URI, classifying a malformed one for the transport.
+//
+// Every rpc that names an artifact funnels through here, which is what makes containment a property
+// of the type rather than a step somebody remembers: a parsed URI cannot name a location outside the
+// mount it claims, so the adapters below the ports stopped re-checking it. Before this there were 26
+// separate containment checks and any new adapter had to know to add a 27th.
+func artifactURI(s string) (artifact.URI, error) {
+	u, err := artifact.Parse(s)
+	if err != nil {
+		return artifact.URI{}, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
+	return u, nil
+}
+
+// optionalArtifactURI is artifactURI for a field whose absence is legal (a board export a design may
+// not have). An empty string yields the zero URI and no error; anything else must still parse, so a
+// typo is not silently read as "not supplied".
+func optionalArtifactURI(s string) (artifact.URI, error) {
+	if s == "" {
+		return artifact.URI{}, nil
+	}
+	return artifactURI(s)
 }

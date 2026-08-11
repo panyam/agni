@@ -7,11 +7,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/datasheet/param"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -107,7 +107,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs)
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
-				Path: args[0], Query: args[1], Overlay: overlay, BoardRef: boardPath,
+				Uri: mustCLIURI(args[0]), Query: args[1], Overlay: overlay, BoardUri: mustCLIURI(boardPath),
 			})
 			if err != nil {
 				return err

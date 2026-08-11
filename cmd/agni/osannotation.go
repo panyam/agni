@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 
@@ -67,8 +68,8 @@ func safeAuthor(author string) string {
 
 // Get returns every author's overlay for the datasheet, ordered by author for a stable union. A
 // datasheet nobody has annotated (the directory does not exist) is (nil, nil), a normal state.
-func (s *osAnnotationStore) Get(_ context.Context, mount, path string) ([]*webapi.AnnotationSet, error) {
-	dir, err := mounts.Resolve(s.mounts, mount, annotationsDir(path))
+func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*webapi.AnnotationSet, error) {
+	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +102,8 @@ func (s *osAnnotationStore) Get(_ context.Context, mount, path string) ([]*webap
 // Save writes one author's overlay, creating the annotation directory on first write and
 // overwriting just that author's file. No compare-and-swap: the per-file lock only serializes an
 // author's own concurrent writes; different authors never share a file.
-func (s *osAnnotationStore) Save(_ context.Context, mount, path, author string, set *webapi.AnnotationSet) error {
-	dir, err := mounts.Resolve(s.mounts, mount, annotationsDir(path))
+func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author string, set *webapi.AnnotationSet) error {
+	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
 	if err != nil {
 		return err
 	}

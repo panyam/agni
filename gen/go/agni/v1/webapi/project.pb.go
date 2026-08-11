@@ -40,11 +40,9 @@ type Project struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// title is the human-readable label, falling back to the id when the descriptor gave none.
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	// mount is the workspace mount this project's files live in.
-	Mount string `protobuf:"bytes,3,opt,name=mount,proto3" json:"mount,omitempty"`
-	// dir_ref is the mount-relative folder holding `project.yaml`. It is an artifact ref that the
+	// uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
 	// injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
-	DirRef        string `protobuf:"bytes,4,opt,name=dir_ref,json=dirRef,proto3" json:"dir_ref,omitempty"`
+	Uri           string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -93,16 +91,9 @@ func (x *Project) GetTitle() string {
 	return ""
 }
 
-func (x *Project) GetMount() string {
+func (x *Project) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *Project) GetDirRef() string {
-	if x != nil {
-		return x.DirRef
+		return x.Uri
 	}
 	return ""
 }
@@ -119,18 +110,16 @@ type Design struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// title is the human-readable label, falling back to the id.
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	// mount is the workspace mount this design's files live in.
-	Mount string `protobuf:"bytes,3,opt,name=mount,proto3" json:"mount,omitempty"`
-	// dir_ref is the mount-relative folder holding `design.yaml`.
-	DirRef string `protobuf:"bytes,4,opt,name=dir_ref,json=dirRef,proto3" json:"dir_ref,omitempty"`
-	// entry_ref is the mount-relative ref of the file this design's ANALYSIS reads: the netlist the
+	// uri is the folder holding `design.yaml`.
+	Uri string `protobuf:"bytes,7,opt,name=uri,proto3" json:"uri,omitempty"`
+	// entry_uri names the file this design's ANALYSIS reads: the netlist the
 	// design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
 	// behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
 	// different component count depending on which a tool opens, and the CLI could previously only
 	// print a warning telling the operator to go consult their own descriptor, because nothing in the
 	// engine modelled "this folder is one design, and this file is its entry".
-	EntryRef string `protobuf:"bytes,5,opt,name=entry_ref,json=entryRef,proto3" json:"entry_ref,omitempty"`
-	// companion_refs are mount-relative refs to files that are VIEWS of this same design rather than
+	EntryUri string `protobuf:"bytes,5,opt,name=entry_uri,json=entryUri,proto3" json:"entry_uri,omitempty"`
+	// companion_uris name files that are VIEWS of this same design rather than
 	// independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
 	// render and to locate findings on, never a second component source to reconcile against the
 	// netlist (C21).
@@ -138,7 +127,7 @@ type Design struct {
 	// Membership is declared per file rather than inferred from "everything beside the entry", because
 	// a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
 	// inferred rule would turn a diff of two revisions into a diff of one against itself.
-	CompanionRefs []string `protobuf:"bytes,6,rep,name=companion_refs,json=companionRefs,proto3" json:"companion_refs,omitempty"`
+	CompanionUris []string `protobuf:"bytes,6,rep,name=companion_uris,json=companionUris,proto3" json:"companion_uris,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -187,30 +176,23 @@ func (x *Design) GetTitle() string {
 	return ""
 }
 
-func (x *Design) GetMount() string {
+func (x *Design) GetUri() string {
 	if x != nil {
-		return x.Mount
+		return x.Uri
 	}
 	return ""
 }
 
-func (x *Design) GetDirRef() string {
+func (x *Design) GetEntryUri() string {
 	if x != nil {
-		return x.DirRef
+		return x.EntryUri
 	}
 	return ""
 }
 
-func (x *Design) GetEntryRef() string {
+func (x *Design) GetCompanionUris() []string {
 	if x != nil {
-		return x.EntryRef
-	}
-	return ""
-}
-
-func (x *Design) GetCompanionRefs() []string {
-	if x != nil {
-		return x.CompanionRefs
+		return x.CompanionUris
 	}
 	return nil
 }
@@ -266,7 +248,8 @@ type ListProjectsRequest struct {
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token continues a previous call. An empty token starts at the first project.
 	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`. An unsupported
+	// filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`, matched
+	// against the authority of the project's URI. An unsupported
 	// filter is an error rather than a silently ignored argument, because a client that believed it had
 	// filtered and had not would read another mount's projects as its own.
 	Filter        string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
@@ -549,11 +532,9 @@ func (x *ListProjectDesignsResponse) GetNextPageToken() string {
 
 type ResolveDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// mount is the workspace mount the ref resolves within.
-	Mount string `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	// ref names the file or folder to resolve, mount-relative. A ref is a key in a server-defined
+	// uri names the file or folder to resolve. A URI's authority is a key in a server-defined
 	// namespace that the injected Loader resolves, NOT a host path.
-	Ref           string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -588,16 +569,9 @@ func (*ResolveDesignRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_project_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *ResolveDesignRequest) GetMount() string {
+func (x *ResolveDesignRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *ResolveDesignRequest) GetRef() string {
-	if x != nil {
-		return x.Ref
+		return x.Uri
 	}
 	return ""
 }
@@ -674,19 +648,17 @@ var File_agni_v1_webapi_project_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\"b\n" +
+	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\"R\n" +
 	"\aProject\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
-	"\x05mount\x18\x03 \x01(\tR\x05mount\x12\x17\n" +
-	"\adir_ref\x18\x04 \x01(\tR\x06dirRef\"\xa5\x01\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
+	"\x03uri\x18\x05 \x01(\tR\x03uriJ\x04\b\x03\x10\x04R\x05mount\"\x95\x01\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
-	"\x05mount\x18\x03 \x01(\tR\x05mount\x12\x17\n" +
-	"\adir_ref\x18\x04 \x01(\tR\x06dirRef\x12\x1b\n" +
-	"\tentry_ref\x18\x05 \x01(\tR\bentryRef\x12%\n" +
-	"\x0ecompanion_refs\x18\x06 \x03(\tR\rcompanionRefs\"'\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
+	"\x03uri\x18\a \x01(\tR\x03uri\x12\x1b\n" +
+	"\tentry_uri\x18\x05 \x01(\tR\bentryUri\x12%\n" +
+	"\x0ecompanion_uris\x18\x06 \x03(\tR\rcompanionUrisJ\x04\b\x03\x10\x04R\x05mount\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +
@@ -707,10 +679,9 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06filter\x18\x04 \x01(\tR\x06filter\"v\n" +
 	"\x1aListProjectDesignsResponse\x120\n" +
 	"\adesigns\x18\x01 \x03(\v2\x16.agni.v1.webapi.DesignR\adesigns\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\">\n" +
-	"\x14ResolveDesignRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x10\n" +
-	"\x03ref\x18\x02 \x01(\tR\x03ref\"z\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"@\n" +
+	"\x14ResolveDesignRequest\x12\x10\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x03ref\"z\n" +
 	"\x15ResolveDesignResponse\x12.\n" +
 	"\x06design\x18\x01 \x01(\v2\x16.agni.v1.webapi.DesignR\x06design\x121\n" +
 	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject2\xc7\x03\n" +

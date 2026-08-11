@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 
@@ -26,7 +27,12 @@ func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 			http.Error(w, "only .pdf datasheets are served raw", http.StatusBadRequest)
 			return
 		}
-		abs, err := mounts.Resolve(ms, mountName, rel)
+		uri, err := artifact.New(mountName, rel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		abs, err := mounts.Resolve(ms, uri)
 		if err != nil {
 			// Unknown mount or a path escaping it: do not distinguish, do not echo the host path.
 			http.Error(w, "no such datasheet", http.StatusNotFound)

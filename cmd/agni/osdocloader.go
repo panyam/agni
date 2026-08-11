@@ -10,6 +10,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 
@@ -31,8 +32,8 @@ type osDocLoader struct {
 // unknown mount or a path escaping the mount is returned already classified by mounts.Resolve
 // (service.ErrNotFound / ErrInvalidPath). A missing sibling is (nil, nil); a present-but-
 // unparseable one is a parse error the service classifies as invalid.
-func (l *osDocLoader) Document(_ context.Context, mountName, path string) (*docpb.Document, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, docSibling(path))
+func (l *osDocLoader) Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
+	abs, err := resolveSibling(l.mounts, uri, docSibling)
 	if err != nil {
 		return nil, err
 	}

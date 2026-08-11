@@ -124,7 +124,7 @@ func readDesign(path string) (*ir.Design, error) {
 		return nil, err
 	}
 	noteSource(os.Stderr, src)
-	return newLoader().ReadDesign(src.NetlistRef)
+	return newLoader().ReadDesign(src.NetlistURI)
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never
@@ -168,11 +168,11 @@ func readModelWithParams(path, paramsDir string) (check.Model, error) {
 	}
 	noteSource(os.Stderr, src)
 	l := newLoader()
-	d, err := l.ReadDesign(src.NetlistRef)
+	d, err := l.ReadDesign(src.NetlistURI)
 	if err != nil {
 		return nil, err
 	}
-	bg, err := l.BoardGeometry(src.BoardRef)
+	bg, err := l.BoardGeometry(src.BoardURI)
 	if err != nil {
 		return nil, err
 	}
@@ -355,15 +355,15 @@ func checkCmd() *cobra.Command {
 			// document rather than beside it is what makes the written artifact the SAME artifact the
 			// terminal showed, instead of a second one that happens to agree today.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Path: args[0], Rules: names, Overlay: overlay})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: mustCLIURI(args[0]), Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
 				doc := resultsDoc(args[0], selected, resp.GetFindings(), &checkspb.RunConfig{
-					Params:         paramsDir != "",
-					Profiles:       profilePath != "",
-					Intent:         intentPath != "",
-					Conventions:    overlay.GetConventions().GetName(),
+					Params:      paramsDir != "",
+					Profiles:    profilePath != "",
+					Intent:      intentPath != "",
+					Conventions: overlay.GetConventions().GetName(),
 				})
 				if err := writeResults(resultsOut, doc); err != nil {
 					return err
@@ -379,7 +379,7 @@ func checkCmd() *cobra.Command {
 			}
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Path: args[0], Rules: names, Overlay: overlay})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: mustCLIURI(args[0]), Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -393,7 +393,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json — both need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Path: args[0], Rules: names, Overlay: overlay})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: mustCLIURI(args[0]), Rules: names, Overlay: overlay})
 				if err != nil {
 					return err
 				}
@@ -529,7 +529,7 @@ func reviewCmd() *cobra.Command {
 			var docs []*checkspb.CheckResults
 			for _, design := range args {
 				rv, err := svc.CreateReview(cmd.Context(), &webapi.CreateReviewRequest{
-					Manifest: service.ManifestProto(man), DesignRef: design, BoardRef: boardPath, RatifiedFloor: ratifiedFloor,
+					Manifest: service.ManifestProto(man), DesignUri: mustCLIURI(design), BoardUri: mustCLIURI(boardPath), RatifiedFloor: ratifiedFloor,
 					// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
 					// and the web reach one composition path, and its lexicon half travels with the design
 					// read instead of being installed in a process global.

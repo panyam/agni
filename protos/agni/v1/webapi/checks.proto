@@ -77,8 +77,6 @@ service CheckService {
 }
 
 message CheckDesignRequest {
-  string mount = 1;
-  string path = 2;
   // rules names the subset of rules to run (by RuleInfo.name); empty runs the full catalog, so an
   // existing caller is unchanged. A selection lets the client run only what it wants to see (and
   // avoid running expensive rules it did not select).
@@ -86,6 +84,10 @@ message CheckDesignRequest {
   // overlay carries the per-request rule-catalog configuration; empty keeps the catalog the service
   // was constructed with.
   OverlayConfig overlay = 4;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design to check.
+  string uri = 5;
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
@@ -165,14 +167,16 @@ message CheckDesignResponse {
 }
 
 message GetCheckReportRequest {
-  string mount = 1;
-  string path = 2;
   // Same selector semantics as CheckDesignRequest.rules: names the subset to run, empty = all.
   repeated string rules = 3;
   // Same semantics as CheckDesignRequest.overlay. It is here too because this RPC also RUNS the
   // rules: an overlay honored by one and not the other would make the same flag change the findings
   // in one --format and not another.
   OverlayConfig overlay = 4;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design to report on.
+  string uri = 6;
 }
 
 message GetCheckReportResponse {
@@ -180,10 +184,11 @@ message GetCheckReportResponse {
 }
 
 message GetNamingConventionRequest {
-  string mount = 1; // workspace mount the ref resolves within
-  // ref names the stored convention config, with the same ref semantics as every other artifact ref:
-  // a key the Loader resolves inside the mount, never a host path.
-  string ref = 2;
+  // 1 and 2 were `mount` and `ref`.
+  reserved 1, 2;
+  reserved "mount", "ref";
+  // uri names the stored convention config, a key the Loader resolves, never a host path.
+  string uri = 3;
 }
 
 message GetNamingConventionResponse {
@@ -191,8 +196,10 @@ message GetNamingConventionResponse {
 }
 
 message GetExpectationsRequest {
-  string mount = 1;
-  string path = 2;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design whose expectation sidecar to read.
+  string uri = 3;
 }
 
 // RuleExpectation is one expected-findings entry from a design's sidecar: a rule that should fire
@@ -221,8 +228,6 @@ message GetExpectationsResponse {
 // today), so the catalog is the same for any design. The fields are kept so availability can become
 // design-dependent (e.g. once the datasheet parameter layer lands) without a wire change.
 message ListRulesRequest {
-  string mount = 1;
-  string path = 2;
   // overlay carries the per-request rule-catalog configuration, so the listed catalog is the one a
   // check run under the SAME overlay would use (WS9-128).
   //
@@ -232,6 +237,11 @@ message ListRulesRequest {
   // would never run and the server's would have stopped: naming checks would silently vanish, which
   // reads as a design with no naming problems.
   OverlayConfig overlay = 3;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design whose availability decides which rules apply; empty lists the whole
+  // catalog without availability.
+  string uri = 4;
 }
 
 // RuleInfo is the catalog entry for one rule: its identity, its prose (one-line summary, impact,
@@ -255,8 +265,10 @@ message ListRulesResponse {
 }
 
 message GetInterfaceCoverageRequest {
-  string mount = 1;
-  string path = 2;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design to project coverage over.
+  string uri = 3;
 }
 
 // SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,
@@ -282,8 +294,10 @@ message GetInterfaceCoverageResponse {
 }
 
 message GetComponentParamsRequest {
-  string mount = 1;
-  string path = 2;
+  reserved 1, 2;
+  reserved "mount", "path";
+  // uri names the design whose components to join against the datasheet corpus.
+  string uri = 4;
 }
 
 // ComponentParams is one design component joined to its datasheet spec: the ref_des the viewer

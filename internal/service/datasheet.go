@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -29,7 +30,7 @@ var ErrExtractNotEnabled = errors.New("doc-IR extraction not enabled")
 // returned already classified (ErrNotFound / ErrInvalidPath); a present-but-unparseable doc-IR
 // is any other error, classified as invalid.
 type DocLoader interface {
-	Document(ctx context.Context, mount, path string) (*docpb.Document, error)
+	Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
 }
 
 // PartSpecStore persists and loads a datasheet's shared PartSpec (the manual backend's output).
@@ -38,8 +39,8 @@ type DocLoader interface {
 // baseVersion must equal the current on-disk version (empty asserts absence), else it returns
 // ErrConflict; the read/compare/write is atomic per path. version is an opaque content token.
 type PartSpecStore interface {
-	Get(ctx context.Context, mount, path string) (spec *parampb.PartSpec, version string, found bool, err error)
-	Save(ctx context.Context, mount, path string, spec *parampb.PartSpec, baseVersion string) (newVersion string, err error)
+	Get(ctx context.Context, uri artifact.URI) (spec *parampb.PartSpec, version string, found bool, err error)
+	Save(ctx context.Context, uri artifact.URI, spec *parampb.PartSpec, baseVersion string) (newVersion string, err error)
 }
 
 // DocExtractor runs the configured doc-IR producer (pdf2doc/docling) over a datasheet, writing the
@@ -49,7 +50,7 @@ type PartSpecStore interface {
 // or an error (a producer run/parse failure, or a bad mount/path).
 type DocExtractor interface {
 	Available() bool
-	Extract(ctx context.Context, mount, path string) (*docpb.Document, error)
+	Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
 }
 
 // AnnotationStore persists and loads a datasheet's per-author region-annotation overlays
@@ -59,8 +60,8 @@ type DocExtractor interface {
 // author's overlay for the datasheet. Get returns an empty slice (not an error) when nobody has
 // annotated yet. author is a client-supplied coordination namespace, not an authenticated identity.
 type AnnotationStore interface {
-	Get(ctx context.Context, mount, path string) ([]*webapi.AnnotationSet, error)
-	Save(ctx context.Context, mount, path, author string, set *webapi.AnnotationSet) error
+	Get(ctx context.Context, uri artifact.URI) ([]*webapi.AnnotationSet, error)
+	Save(ctx context.Context, uri artifact.URI, author string, set *webapi.AnnotationSet) error
 }
 
 // DatasheetService serves a datasheet's doc-IR and its saved PartSpec to the extraction workbench
@@ -87,7 +88,11 @@ func NewDatasheetService(loader DocLoader, store PartSpecStore, extractor DocExt
 // transport (invalid argument), while an unknown mount or containment violation keeps its loader
 // classification.
 func (s *DatasheetService) GetDocument(ctx context.Context, req *webapi.GetDocumentRequest) (*webapi.GetDocumentResponse, error) {
-	d, err := s.loader.Document(ctx, req.GetMount(), req.GetPath())
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	d, err := s.loader.Document(ctx, u)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -102,10 +107,14 @@ func (s *DatasheetService) GetDocument(ctx context.Context, req *webapi.GetDocum
 // configured rejects it as ErrExtractNotEnabled (FailedPrecondition). A producer run or parse
 // failure is a server-side error (Internal); a bad mount/path keeps its classification.
 func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *webapi.ExtractDocIRRequest) (*webapi.ExtractDocIRResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	if !s.extractor.Available() {
 		return nil, ErrExtractNotEnabled
 	}
-	d, err := s.extractor.Extract(ctx, req.GetMount(), req.GetPath())
+	d, err := s.extractor.Extract(ctx, u)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
 			return nil, err
@@ -118,7 +127,11 @@ func (s *DatasheetService) ExtractDocIR(ctx context.Context, req *webapi.Extract
 // GetPartSpec loads the datasheet's saved PartSpec and its version token. Absence is found=false
 // with an empty version (a normal first-open state), not an error.
 func (s *DatasheetService) GetPartSpec(ctx context.Context, req *webapi.GetPartSpecRequest) (*webapi.GetPartSpecResponse, error) {
-	spec, version, found, err := s.store.Get(ctx, req.GetMount(), req.GetPath())
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	spec, version, found, err := s.store.Get(ctx, u)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -128,10 +141,14 @@ func (s *DatasheetService) GetPartSpec(ctx context.Context, req *webapi.GetPartS
 // SavePartSpec persists the PartSpec with optimistic concurrency. A version mismatch surfaces as
 // ErrConflict (mapped to Aborted so the client refetches); an absent spec is an invalid argument.
 func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePartSpecRequest) (*webapi.SavePartSpecResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	if req.GetSpec() == nil {
 		return nil, fmt.Errorf("%w: SavePartSpec requires a spec", ErrInvalidArgument)
 	}
-	version, err := s.store.Save(ctx, req.GetMount(), req.GetPath(), req.GetSpec(), req.GetBaseVersion())
+	version, err := s.store.Save(ctx, u, req.GetSpec(), req.GetBaseVersion())
 	if err != nil {
 		if errors.Is(err, ErrConflict) {
 			return nil, err // keep it ErrConflict for the transport (Aborted), not invalid-argument
@@ -144,7 +161,11 @@ func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePar
 // GetAnnotations returns the region-annotation overlay for a datasheet as the union of every
 // author's overlay. An empty union (nobody has annotated) is a normal state, not an error.
 func (s *DatasheetService) GetAnnotations(ctx context.Context, req *webapi.GetAnnotationsRequest) (*webapi.GetAnnotationsResponse, error) {
-	sets, err := s.annotations.Get(ctx, req.GetMount(), req.GetPath())
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	sets, err := s.annotations.Get(ctx, u)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -155,6 +176,10 @@ func (s *DatasheetService) GetAnnotations(ctx context.Context, req *webapi.GetAn
 // datasheet. There is no optimistic concurrency: each author owns their own file. An absent set or
 // an empty author is an invalid argument (the author names the file and cannot be inferred).
 func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *webapi.SaveAnnotationsRequest) (*webapi.SaveAnnotationsResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	set := req.GetSet()
 	if set == nil {
 		return nil, fmt.Errorf("%w: SaveAnnotations requires a set", ErrInvalidArgument)
@@ -162,7 +187,7 @@ func (s *DatasheetService) SaveAnnotations(ctx context.Context, req *webapi.Save
 	if set.GetAuthor() == "" {
 		return nil, fmt.Errorf("%w: SaveAnnotations requires a non-empty author", ErrInvalidArgument)
 	}
-	if err := s.annotations.Save(ctx, req.GetMount(), req.GetPath(), set.GetAuthor(), set); err != nil {
+	if err := s.annotations.Save(ctx, u, set.GetAuthor(), set); err != nil {
 		return nil, classifyLoadErr(err)
 	}
 	return &webapi.SaveAnnotationsResponse{}, nil

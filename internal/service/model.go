@@ -3,25 +3,26 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // ModelLoader is the file surface BuildModel needs: the netlist design and its board sidecar, both
 // mount-scoped by the impl. The fat service.Loader and the review ReviewLoader both satisfy it, so
 // every service reaches BuildModel through the loader it already holds.
 type ModelLoader interface {
-	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
-	Board(ctx context.Context, mount, path string) (*geom.BoardGeometry, error)
+	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
+	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
 }
 
 // GeometryLoader is the file surface BuildGeometry needs. The fat service.Loader and DiffService's
 // DesignLoader both satisfy it.
 type GeometryLoader interface {
-	Geometry(ctx context.Context, mount, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
+	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
 }
 
 // BuildGeometry loads a design's default-layout, glyph-symbol schematic geometry for LOCATING results
@@ -32,8 +33,8 @@ type GeometryLoader interface {
 // or an unresolvable layout yields nil (NOT an error), so the caller degrades to "no sheet badges"
 // rather than failing. That nil-not-error semantics is exactly why geometry is NOT a BuildModel tier:
 // the Model's board/params tiers are load-bearing (a bad one fails the run), geometry is optional.
-func BuildGeometry(ctx context.Context, loader GeometryLoader, mount, path string) *geom.SchematicGeometry {
-	g, err := loader.Geometry(ctx, mount, path, layoutForFile(path, ""), false)
+func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI) *geom.SchematicGeometry {
+	g, err := loader.Geometry(ctx, uri, layoutForFile(uri.Path, ""), false)
 	if err != nil {
 		return nil
 	}
@@ -50,25 +51,25 @@ func BuildGeometry(ctx context.Context, loader GeometryLoader, mount, path strin
 // serve ran without --params (NewModelWithParams guards a nil provider — no joined specs, no false
 // pass). It is the service-side twin of the CLI's readModelWithParamsBoard: one tier policy, two edges.
 //
-// A boardPath override that resolves to no board reader (a non-board file type) is a loud error, never
+// A boardURI override that resolves to no board reader (a non-board file type) is a loud error, never
 // a silent nil — an explicit board request that read nothing would report the board items clean without
 // checking them. A design's OWN path that carries no board (a netlist) is not an override, so it is the
 // normal nil-board case, not an error.
-func BuildModel(ctx context.Context, loader ModelLoader, mount, path, boardPath string, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
-	d, err := loader.Design(ctx, mount, path, opts...)
+func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
+	d, err := loader.Design(ctx, uri, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	boardFrom := path
-	if boardPath != "" {
-		boardFrom = boardPath
+	boardFrom := uri
+	if !boardURI.IsZero() {
+		boardFrom = boardURI
 	}
-	bg, err := loader.Board(ctx, mount, boardFrom)
+	bg, err := loader.Board(ctx, boardFrom)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	if boardPath != "" && bg == nil {
-		return nil, fmt.Errorf("%w: board_path %q carries no board geometry", ErrInvalidArgument, boardPath)
+	if !boardURI.IsZero() && bg == nil {
+		return nil, fmt.Errorf("%w: board_uri %q carries no board geometry", ErrInvalidArgument, boardURI)
 	}
 	// The read's lexicon also reaches the MODEL, so the residual name matches that hold no net (the
 	// spec name FFIs, pin-role derivation) answer with the same vocabulary the design was stamped

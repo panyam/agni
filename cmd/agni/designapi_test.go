@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/core/render"
 )
 
 // newDesignSvc builds a DesignService over the os-backed adapters for the given mounts (no native

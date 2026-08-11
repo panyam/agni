@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/service"
 )
@@ -28,14 +29,14 @@ func (w *osWorkspace) Mounts() []service.MountInfo {
 // ListDir resolves the mount + relative path and reads one directory level. An unknown mount or a
 // missing directory returns a plain error (the service maps it to NotFound); a path escaping the
 // mount is wrapped with service.ErrInvalidPath (mapped to InvalidArgument).
-func (w *osWorkspace) ListDir(_ context.Context, mountName, rel string) ([]service.DirEntry, error) {
-	abs, err := mounts.Resolve(w.mounts, mountName, rel)
+func (w *osWorkspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
+	abs, err := mounts.Resolve(w.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
 	dirents, err := os.ReadDir(abs)
 	if err != nil {
-		return nil, fmt.Errorf("mount %q: %w", mountName, err)
+		return nil, fmt.Errorf("mount %q: %w", uri.Mount, err)
 	}
 	out := make([]service.DirEntry, 0, len(dirents))
 	for _, de := range dirents {

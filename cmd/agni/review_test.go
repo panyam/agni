@@ -592,9 +592,9 @@ func runFullOverlayReview(t *testing.T, conventions string) string {
 func TestReviewOverlayTiersCoexist(t *testing.T) {
 	got := runFullOverlayReview(t, "testdata/review/conventions.yaml")
 	for _, want := range []string{
-		"| 16 | nets named consistently | fail |",                    // the convention's own rule
-		"| 70 | rail voltage matches the declared domain | fail |",   // --intent-path survived
-		"| 71 | SIGBUS signals present | fail |",                     // --profile-path survived
+		"| 16 | nets named consistently | fail |",                  // the convention's own rule
+		"| 70 | rail voltage matches the declared domain | fail |", // --intent-path survived
+		"| 71 | SIGBUS signals present | fail |",                   // --profile-path survived
 		"intent/voltage-domain-mismatch",
 		"profile-overlay/sigbus-signal-missing",
 	} {

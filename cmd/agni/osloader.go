@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/service"
@@ -27,16 +28,16 @@ type osLoader struct {
 	loader *formats.Loader
 }
 
-func (l *osLoader) Design(_ context.Context, mountName, path string, opts ...service.ReadOption) (*ir.Design, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
+func (l *osLoader) Design(_ context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
 	return readerFor(l.loader, opts...).ReadDesign(abs)
 }
 
-func (l *osLoader) Geometry(_ context.Context, mountName, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
+func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +70,8 @@ func companionEds(abs string) string {
 	return ""
 }
 
-func (l *osLoader) Report(_ context.Context, mountName, path string, faithfulSymbols bool) (*graph.ConversionReport, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
+func (l *osLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool) (*graph.ConversionReport, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +81,8 @@ func (l *osLoader) Report(_ context.Context, mountName, path string, faithfulSym
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a
 // missing file returns (nil, nil) rather than an error; only a bad mount/path or a malformed sidecar
 // is an error.
-func (l *osLoader) Expectations(_ context.Context, mountName, path string) (*expect.Expectations, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
+func (l *osLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +103,8 @@ func symbolsFor(faithful bool) string {
 
 // Board resolves the physical board sidecar (WS1-006) through the formats registry; formats
 // without one yield (nil, nil) — absence is normal, and the service lists no board sheet.
-func (l *osLoader) Board(_ context.Context, mountName, path string) (*geom.BoardGeometry, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
+func (l *osLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +114,8 @@ func (l *osLoader) Board(_ context.Context, mountName, path string) (*geom.Board
 // Manifest resolves and parses a review checklist manifest (YAML) under the mount (WS9-047). Unlike
 // Expectations, a manifest is a required input, so an absent or malformed file is an error — the
 // review would otherwise run against no items and report a hollow pass.
-func (l *osLoader) Manifest(_ context.Context, mountName, path string) (review.Manifest, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, path)
+func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return review.Manifest{}, err
 	}
@@ -130,8 +131,8 @@ func (l *osLoader) Manifest(_ context.Context, mountName, path string) (review.M
 // review manifest it is a required input once named, so an absent or malformed file is an error: a
 // caller that asked for its own vocabulary and silently got the server's would read the resulting
 // findings as being about their naming when they are about somebody else's.
-func (l *osLoader) Convention(_ context.Context, mountName, ref string) (naming.Config, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, ref)
+func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (naming.Config, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return naming.Config{}, err
 	}
@@ -141,8 +142,8 @@ func (l *osLoader) Convention(_ context.Context, mountName, ref string) (naming.
 // DesignHash hashes a mounted design's entry file for a stored run's provenance (WS9-053). A ref that
 // escapes its mount is still an error, because containment is a security boundary and not a
 // provenance nicety; an unreadable file inside the mount yields "" the way hashSource documents.
-func (l *osLoader) DesignHash(_ context.Context, mountName, ref string) (string, error) {
-	abs, err := mounts.Resolve(l.mounts, mountName, ref)
+func (l *osLoader) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
+	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return "", err
 	}

@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	param "github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	param "github.com/panyam/agni/datasheet/param"
 )
 
 // thinBoard is a one-net board whose only track is 0.05mm wide — below the 0.127mm fab floor, so

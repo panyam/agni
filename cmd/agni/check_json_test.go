@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -89,7 +89,7 @@ func TestCheckConventionsFlag(t *testing.T) {
 	}
 	var got struct {
 		Findings []struct {
-			Rule    string `json:"rule"`
+			Rule    string               `json:"rule"`
 			Subject struct{ Ref string } `json:"subject"`
 		} `json:"findings"`
 	}

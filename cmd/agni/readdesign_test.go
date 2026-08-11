@@ -57,11 +57,11 @@ func TestResolveSourceDirectoryReadsTheDeclaredEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != filepath.Join(dir, "gateway.edn") {
-		t.Errorf("netlist = %q, want the declared entry", src.NetlistRef)
+	if src.NetlistURI != filepath.Join(dir, "gateway.edn") {
+		t.Errorf("netlist = %q, want the declared entry", src.NetlistURI)
 	}
-	if src.BoardRef != filepath.Join(dir, "gateway.kicad_pcb") {
-		t.Errorf("board = %q, want the declared board companion", src.BoardRef)
+	if src.BoardURI != filepath.Join(dir, "gateway.kicad_pcb") {
+		t.Errorf("board = %q, want the declared board companion", src.BoardURI)
 	}
 	if !strings.Contains(src.Note, "gateway.edn") || !strings.Contains(src.Note, "gateway.kicad_pcb") {
 		t.Errorf("note = %q, want it to name both files that were read", src.Note)
@@ -77,11 +77,11 @@ func TestResolveSourceCompanionRedirects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != filepath.Join(dir, "gateway.edn") {
-		t.Errorf("netlist = %q, want the declared entry", src.NetlistRef)
+	if src.NetlistURI != filepath.Join(dir, "gateway.edn") {
+		t.Errorf("netlist = %q, want the declared entry", src.NetlistURI)
 	}
-	if src.BoardRef != pcb {
-		t.Errorf("board = %q, want the named companion (it carries the copper)", src.BoardRef)
+	if src.BoardURI != pcb {
+		t.Errorf("board = %q, want the named companion (it carries the copper)", src.BoardURI)
 	}
 	if !strings.Contains(src.Note, "--as-named") {
 		t.Errorf("note = %q, want it to say how to opt out", src.Note)
@@ -95,8 +95,8 @@ func TestResolveSourceCompanionRedirects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.BoardRef != filepath.Join(dir, "gateway.kicad_pcb") {
-		t.Errorf("board = %q, want the design's declared board companion", src.BoardRef)
+	if src.BoardURI != filepath.Join(dir, "gateway.kicad_pcb") {
+		t.Errorf("board = %q, want the design's declared board companion", src.BoardURI)
 	}
 	if !strings.Contains(src.Note, "board geometry from gateway.kicad_pcb") {
 		t.Errorf("note = %q, want it to name the board it pulled in unasked", src.Note)
@@ -137,7 +137,7 @@ func TestResolveSourceLeavesUndeclaredSiblingsAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != revB || src.BoardRef != revB {
+	if src.NetlistURI != revB || src.BoardURI != revB {
 		t.Fatalf("src = %+v, want the named file untouched", src)
 	}
 	if src.Note != "" {
@@ -157,8 +157,8 @@ func TestResolveSourceAsNamedOptsOut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != sch {
-		t.Errorf("netlist = %q, want the named companion under --as-named", src.NetlistRef)
+	if src.NetlistURI != sch {
+		t.Errorf("netlist = %q, want the named companion under --as-named", src.NetlistURI)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestResolveSourceNoDescriptorIsUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != eds || src.Note != "" {
+	if src.NetlistURI != eds || src.Note != "" {
 		t.Fatalf("lone .eds: src = %+v, want the named file and no note", src)
 	}
 
@@ -182,8 +182,8 @@ func TestResolveSourceNoDescriptorIsUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != eds {
-		t.Errorf("netlist = %q: with no descriptor there is nothing to redirect to", src.NetlistRef)
+	if src.NetlistURI != eds {
+		t.Errorf("netlist = %q: with no descriptor there is nothing to redirect to", src.NetlistURI)
 	}
 	if !strings.Contains(src.Note, "board.edn") || !strings.Contains(src.Note, "authoritative") {
 		t.Errorf("note = %q, want the sibling advice naming board.edn", src.Note)
@@ -232,7 +232,7 @@ func TestResolveSourceMissingPathDefersToTheReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err = %v, want the resolver to pass through", err)
 	}
-	if src.NetlistRef != missing {
-		t.Errorf("netlist = %q, want the named path", src.NetlistRef)
+	if src.NetlistURI != missing {
+		t.Errorf("netlist = %q, want the named path", src.NetlistURI)
 	}
 }

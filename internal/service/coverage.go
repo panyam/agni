@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/stdlib/profiles"
@@ -13,7 +14,11 @@ import (
 // the coverage panel and the findings never disagree. A design with no detected interface yields an
 // empty list (not an error) — silent by construction, matching the rules.
 func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.GetInterfaceCoverageRequest) (*webapi.GetInterfaceCoverageResponse, error) {
-	m, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs)
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs)
 	if err != nil {
 		return nil, err
 	}

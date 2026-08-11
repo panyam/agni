@@ -42,11 +42,11 @@ func TestLocalLoaderResolvesEachTier(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.NetlistRef != filepath.Join(dir, "gateway.edn") {
-		t.Errorf("netlist = %q, want the declared entry", src.NetlistRef)
+	if src.NetlistURI != filepath.Join(dir, "gateway.edn") {
+		t.Errorf("netlist = %q, want the declared entry", src.NetlistURI)
 	}
-	if src.BoardRef != filepath.Join(dir, "gateway.kicad_pcb") {
-		t.Errorf("board = %q, want the named companion", src.BoardRef)
+	if src.BoardURI != filepath.Join(dir, "gateway.kicad_pcb") {
+		t.Errorf("board = %q, want the named companion", src.BoardURI)
 	}
 }
 

@@ -47,9 +47,9 @@ type WorkspaceServiceClient interface {
 	// configured. It takes no parameters and never fails for a running server.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	// ListDir lists one directory level inside a mount: its subdirectories and the files a
-	// reader can open (filtered by extension). The client addresses a location by mount name
-	// plus a mount-relative path, never an absolute host path; the server joins them inside
-	// the mount. Lazy, one level per call, so large trees stay responsive.
+	// reader can open (filtered by extension). The client addresses a location by an artifact URI
+	// whose authority is a mount, never an absolute host path; the server resolves it inside that
+	// mount. Lazy, one level per call, so large trees stay responsive.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 }
 
@@ -101,9 +101,9 @@ type WorkspaceServiceHandler interface {
 	// configured. It takes no parameters and never fails for a running server.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	// ListDir lists one directory level inside a mount: its subdirectories and the files a
-	// reader can open (filtered by extension). The client addresses a location by mount name
-	// plus a mount-relative path, never an absolute host path; the server joins them inside
-	// the mount. Lazy, one level per call, so large trees stay responsive.
+	// reader can open (filtered by extension). The client addresses a location by an artifact URI
+	// whose authority is a mount, never an absolute host path; the server resolves it inside that
+	// mount. Lazy, one level per call, so large trees stay responsive.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 }
 

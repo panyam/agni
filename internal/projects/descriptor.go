@@ -82,10 +82,9 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, err error) {
 // ParseDesign reads a `design.yaml`, returning the declared id and the wire message, with the same
 // id-separate and strict-field posture as ParseProject.
 //
-// `entry_ref` and `companion_refs` come back DESIGN-FOLDER-RELATIVE, exactly as written. They are
-// mount-relative on a served message, and the store rewrites them when it locates the design, which
-// is the only place that knows where the folder sits. Nothing outside this package observes the
-// intermediate state.
+// `entry_uri` and `companion_uris` come back holding DESIGN-FOLDER-RELATIVE NAMES, not URIs. The
+// store turns them into URIs when it locates the design, which is the only place that knows where
+// the folder sits. Nothing outside this package observes the intermediate state.
 //
 // Validation covers containment as well as shape: an entry or companion that escapes the design
 // folder is rejected here rather than where a loader would open it, because the descriptor is what
@@ -104,8 +103,11 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 	if err := validRel("entry", y.Entry); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
 	}
-	out := &webapi.Design{Title: orName(y.Title, y.Name), EntryRef: CleanRel(y.Entry)}
-	seen := map[string]bool{out.EntryRef: true}
+	// entry and companions are DESIGN-FOLDER-RELATIVE here, and become URIs when the store
+	// locates the design. Parsing knows the names; only the store knows where they live.
+	entry := CleanRel(y.Entry)
+	out := &webapi.Design{Title: orName(y.Title, y.Name), EntryUri: entry}
+	seen := map[string]bool{entry: true}
 	for _, c := range y.Companions {
 		if err := validRel("companions", c); err != nil {
 			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
@@ -117,7 +119,7 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 			return "", nil, fmt.Errorf("%s: %q is listed twice (a file is either the entry or a companion, not both)", DesignDescriptor, c)
 		}
 		seen[clean] = true
-		out.CompanionRefs = append(out.CompanionRefs, clean)
+		out.CompanionUris = append(out.CompanionUris, clean)
 	}
 	return y.Name, out, nil
 }

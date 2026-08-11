@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIiMKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCSITChFMaXN0TW91bnRzUmVxdWVzdCI7ChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQiRgoIRGlyRW50cnkSDAoEbmFtZRgBIAEoCRIMCgRwYXRoGAIgASgJEg4KBmlzX2RpchgDIAEoCBIOCgZmb3JtYXQYBCABKAkiLQoOTGlzdERpclJlcXVlc3QSDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCSI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5MrMBChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiEwoRTGlzdE1vdW50c1JlcXVlc3QiOwoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50IlEKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAMgASgIEg4KBmZvcm1hdBgEIAEoCRILCgN1cmkYBSABKAlKBAgCEANSBHBhdGgiNgoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAMgASgJSgQIARACSgQIAhADUgVtb3VudFIEcGF0aCI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5MrMBChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -32,6 +32,15 @@ export type Mount = Message<"agni.v1.webapi.Mount"> & {
    * @generated from field: string root = 2;
    */
   root: string;
+
+  /**
+   * uri names the mount itself, "mount://<name>". It is served rather than left for the client to
+   * build, because a client that concatenates a scheme by hand is a client that can get the scheme
+   * wrong, and every other artifact reference it makes will be a child of this one.
+   *
+   * @generated from field: string uri = 3;
+   */
+  uri: string;
 };
 
 /**
@@ -85,14 +94,6 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
   name: string;
 
   /**
-   * path is the mount-relative path to this entry, to pass back to ListDir (for a
-   * directory) or to a design/sheet load (for a file).
-   *
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
    * is_dir is true for a subdirectory.
    *
    * @generated from field: bool is_dir = 3;
@@ -109,6 +110,14 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
    * @generated from field: string format = 4;
    */
   format: string;
+
+  /**
+   * uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
+   * (for a file).
+   *
+   * @generated from field: string uri = 5;
+   */
+  uri: string;
 };
 
 /**
@@ -123,18 +132,12 @@ export const DirEntrySchema: GenMessage<DirEntry> = /*@__PURE__*/
  */
 export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
   /**
-   * mount is the name of a mount from ListMounts.
+   * uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
+   * mount root.
    *
-   * @generated from field: string mount = 1;
+   * @generated from field: string uri = 3;
    */
-  mount: string;
-
-  /**
-   * path is the mount-relative directory to list; empty lists the mount root.
-   *
-   * @generated from field: string path = 2;
-   */
-  path: string;
+  uri: string;
 };
 
 /**
@@ -166,8 +169,8 @@ export const ListDirResponseSchema: GenMessage<ListDirResponse> = /*@__PURE__*/
 
 /**
  * WorkspaceService exposes the read-only folders ("mounts") the server was started with
- * and their directory contents. Mounts are the security boundary: a client names
- * a mount and a mount-relative path, never an absolute host path.
+ * and their directory contents. Mounts are the security boundary: a client names an artifact by a
+ * `mount://<mount>/<path>` URI whose authority is a mount, never an absolute host path.
  *
  * @generated from service agni.v1.webapi.WorkspaceService
  */
@@ -185,9 +188,9 @@ export const WorkspaceService: GenService<{
   },
   /**
    * ListDir lists one directory level inside a mount: its subdirectories and the files a
-   * reader can open (filtered by extension). The client addresses a location by mount name
-   * plus a mount-relative path, never an absolute host path; the server joins them inside
-   * the mount. Lazy, one level per call, so large trees stay responsive.
+   * reader can open (filtered by extension). The client addresses a location by an artifact URI
+   * whose authority is a mount, never an absolute host path; the server resolves it inside that
+   * mount. Lazy, one level per call, so large trees stay responsive.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListDir
    */

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/results"
@@ -39,11 +40,15 @@ func CheckReportProto(source string, fs []check.Finding, rules []*check.Rule) *c
 // renders the one canonical report shape. Findings carry the same sheet annotation as
 // CheckDesign's (WS9-024), so the report panel shares the sheet-navigation join.
 func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckReportRequest) (*webapi.GetCheckReportResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs, ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +57,8 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 		return nil, err
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
-	rep := CheckReportProto(req.GetPath(), check.Run(m, rules), rules)
-	AnnotateReport(rep, BuildGeometry(ctx, s.loader, req.GetMount(), req.GetPath()), m)
+	rep := CheckReportProto(u.Path, check.Run(m, rules), rules)
+	AnnotateReport(rep, BuildGeometry(ctx, s.loader, u), m)
 	return &webapi.GetCheckReportResponse{Report: rep}, nil
 }
 

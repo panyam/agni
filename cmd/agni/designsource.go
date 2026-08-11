@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/service"
 )
@@ -96,15 +97,15 @@ type designSource struct {
 // capability: pointing agni at a design used to be an error, so there was no way to say "this
 // design" rather than "this file".
 func (r *designResolver) Resolve(ctx context.Context, named string) (designSource, error) {
-	plain := designSource{DesignSources: service.DesignSources{NetlistRef: named, BoardRef: named, GeometryRef: named}}
-	root, ref, isDir, ok := treeFor(named)
+	plain := designSource{DesignSources: service.DesignSources{NetlistURI: named, BoardURI: named, GeometryURI: named}}
+	root, uri, isDir, ok := treeFor(named)
 	if !ok {
 		// Nothing to resolve against (the path does not exist). Let the reader produce the error, so
 		// the message a user sees is the one they already know rather than a new one from here.
 		return plain, nil
 	}
 	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: cliMount, FS: os.DirFS(root)}))
-	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: cliMount, Ref: ref})
+	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: uri.String()})
 	if err != nil {
 		return designSource{}, err
 	}
@@ -118,13 +119,13 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 		plain.Note = edsSiblingNote(named)
 		return plain, nil
 	}
-	namedIsTheDesign := isDir && ref == d.GetDirRef()
-	if !namedIsTheDesign && (r.asNamed || !service.IsCompanion(d, ref)) {
+	namedIsTheDesign := isDir && uri.String() == d.GetUri()
+	if !namedIsTheDesign && (r.asNamed || !service.IsCompanion(d, uri.String())) {
 		return plain, nil
 	}
 
 	// Either the design itself was named, or one of its declared companions was.
-	from := ref
+	from := uri.String()
 	if namedIsTheDesign {
 		from = ""
 	}
@@ -132,13 +133,19 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	// The note is computed on REFS, before they become paths, so "did this tier come from the file
 	// the user named" is a comparison of like with like. Comparing a ref against the path string the
 	// user typed silently never matches, and the note then claims every tier was pulled in unasked.
-	note := resolutionNote(named, ref, d, tiers, namedIsTheDesign)
+	note := resolutionNote(named, uri.String(), d, tiers, namedIsTheDesign)
 
 	// Refs are tree-relative; the CLI's reader takes local paths, so rejoin at this one edge. This is
 	// the only place the CLI turns a ref back into a path, which is what keeps "a ref is not a path"
 	// true everywhere above it.
-	abs := func(s string) string { return filepath.Join(root, filepath.FromSlash(s)) }
-	tiers.NetlistRef, tiers.BoardRef, tiers.GeometryRef = abs(tiers.NetlistRef), abs(tiers.BoardRef), abs(tiers.GeometryRef)
+	abs := func(s string) string {
+		u, err := artifact.Parse(s)
+		if err != nil {
+			return s
+		}
+		return filepath.Join(root, filepath.FromSlash(u.Path))
+	}
+	tiers.NetlistURI, tiers.BoardURI, tiers.GeometryURI = abs(tiers.NetlistURI), abs(tiers.BoardURI), abs(tiers.GeometryURI)
 	return designSource{DesignSources: tiers, Note: note}, nil
 }
 
@@ -157,17 +164,17 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	var descriptor, note string
 	if namedIsTheDesign {
 		descriptor = filepath.Join(named, projects.DesignDescriptor)
-		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(d.GetEntryRef()), descriptor)
+		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(d.GetEntryUri()), descriptor)
 	} else {
 		descriptor = filepath.Join(filepath.Dir(named), projects.DesignDescriptor)
 		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (the design's entry)",
-			filepath.Base(named), descriptor, path.Base(d.GetEntryRef()))
+			filepath.Base(named), descriptor, path.Base(d.GetEntryUri()))
 	}
 	var extra []string
-	if g := tiers.GeometryRef; g != tiers.NetlistRef && g != ref {
+	if g := tiers.GeometryURI; g != tiers.NetlistURI && g != ref {
 		extra = append(extra, "sheets from "+path.Base(g))
 	}
-	if b := tiers.BoardRef; b != tiers.NetlistRef && b != ref {
+	if b := tiers.BoardURI; b != tiers.NetlistURI && b != ref {
 		extra = append(extra, "board geometry from "+path.Base(b))
 	}
 	if len(extra) > 0 {
@@ -182,16 +189,16 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 // treeFor turns a local path into the (tree root, tree-relative ref) pair the store addresses,
 // rooting the tree cliResolveDepth levels above the path. It reports false when the path does not
 // exist, since there is then nothing to resolve.
-func treeFor(named string) (root, ref string, isDir, ok bool) {
-	abs, err := filepath.Abs(named)
+func treeFor(named string) (root string, uri artifact.URI, isDir, ok bool) {
+	absPath, err := filepath.Abs(named)
 	if err != nil {
-		return "", "", false, false
+		return "", artifact.URI{}, false, false
 	}
-	fi, err := os.Stat(abs)
+	fi, err := os.Stat(absPath)
 	if err != nil {
-		return "", "", false, false
+		return "", artifact.URI{}, false, false
 	}
-	root = filepath.Dir(abs)
+	root = filepath.Dir(absPath)
 	for range cliResolveDepth {
 		parent := filepath.Dir(root)
 		if parent == root {
@@ -199,11 +206,15 @@ func treeFor(named string) (root, ref string, isDir, ok bool) {
 		}
 		root = parent
 	}
-	rel, err := filepath.Rel(root, abs)
+	rel, err := filepath.Rel(root, absPath)
 	if err != nil {
-		return "", "", false, false
+		return "", artifact.URI{}, false, false
 	}
-	return root, filepath.ToSlash(rel), fi.IsDir(), true
+	u, err := artifact.New(cliMount, filepath.ToSlash(rel))
+	if err != nil {
+		return "", artifact.URI{}, false, false
+	}
+	return root, u, fi.IsDir(), true
 }
 
 // edsSiblingNote is the fallback advice for a folder that declares no design: reading an EDIF
@@ -229,4 +240,36 @@ func edsSiblingNote(path string) string {
 		}
 	}
 	return ""
+}
+
+// cliURI and localPath are the matched pair that lets the CLI speak the same addressing model as
+// every other client without inventing a second one.
+//
+// The CLI's mount is the FILESYSTEM ROOT. A user types a path, `agni` turns it into
+// `mount://local/<abs path without its leading slash>`, and the loader turns it back. That is the
+// one place a local path becomes a URI and the one place it becomes a path again, so nothing between
+// them has to know the CLI is special.
+//
+// Encoding the absolute path is what makes it round-trip: a relative path would depend on the
+// working directory at the far end, and the far end is a service that deliberately has no filesystem.
+func cliURI(p string) (string, error) {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+	u, err := artifact.New(cliMount, strings.TrimPrefix(filepath.ToSlash(abs), "/"))
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
+}
+
+// mustCLIURI is cliURI for a call site with nowhere to put an error. filepath.Abs fails only when the
+// working directory cannot be read, which is not a condition a design read can do anything about.
+func mustCLIURI(p string) string {
+	u, err := cliURI(p)
+	if err != nil {
+		return p
+	}
+	return u
 }

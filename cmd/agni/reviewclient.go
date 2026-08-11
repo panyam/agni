@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/panyam/agni/core/check"
-	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/core/review"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
 // reportsFromDocs maps stored review documents back to the Go view-model the renderers consume — the

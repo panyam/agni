@@ -14,22 +14,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkigAEKD1J1blF1ZXJ5UmVxdWVzdBINCgVtb3VudBgBIAEoCRIMCgRwYXRoGAIgASgJEg0KBXF1ZXJ5GAMgASgJEi4KB292ZXJsYXkYBCABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3JlZhgFIAEoCSKNAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSDQoFY2l0ZXMYAiADKAkSLwoLY2VsbF9zaGVldHMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5DZWxsU2hlZXRzEjIKDGNlbGxfcmVhc29ucxgEIAMoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbiIfCgpDZWxsU2hlZXRzEhEKCXNoZWV0X2lkcxgBIAMoCSJhChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCSIWChRMaXN0UmVsYXRpb25zUmVxdWVzdCJZCgxSZWxhdGlvbkluZm8SDAoEbmFtZRgBIAEoCRIMCgRhcmdzGAIgAygJEg8KB3N1bW1hcnkYAyABKAkSDAoEa2luZBgEIAEoCRIOCgZkZXRhaWwYBSABKAkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkieAoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeTK7AQoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkiiQEKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgDIAEoCRIuCgdvdmVybGF5GAQgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYBSABKAkSCwoDdXJpGAcgASgJSgQIARACSgQIAhADUgVtb3VudFIEcGF0aCKNAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSDQoFY2l0ZXMYAiADKAkSLwoLY2VsbF9zaGVldHMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5DZWxsU2hlZXRzEjIKDGNlbGxfcmVhc29ucxgEIAMoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbiIfCgpDZWxsU2hlZXRzEhEKCXNoZWV0X2lkcxgBIAMoCSJhChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCSIWChRMaXN0UmVsYXRpb25zUmVxdWVzdCJZCgxSZWxhdGlvbkluZm8SDAoEbmFtZRgBIAEoCRIMCgRhcmdzGAIgAygJEg8KB3N1bW1hcnkYAyABKAkSDAoEa2luZBgEIAEoCRIOCgZkZXRhaWwYBSABKAkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkieAoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeTK7AQoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
  */
 export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
-  /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
   /**
    * query is the datalog text, the same surface `agni query` accepts:
    *   component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
@@ -61,14 +51,21 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
   overlay?: OverlayConfig | undefined;
 
   /**
-   * board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
+   * board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
    * relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
    * no board is attached, and those relations are then simply empty — which is indistinguishable, in
    * a result table, from a board with nothing to report. Same ref semantics as `path`.
    *
-   * @generated from field: string board_ref = 5;
+   * @generated from field: string board_uri = 5;
    */
-  boardRef: string;
+  boardUri: string;
+
+  /**
+   * uri names the design to query.
+   *
+   * @generated from field: string uri = 7;
+   */
+  uri: string;
 };
 
 /**

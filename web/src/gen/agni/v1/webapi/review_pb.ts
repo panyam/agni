@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMi4AEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDQoFbW91bnQYASABKAkSEQoJYm9hcmRfcmVmGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBEi4KB292ZXJsYXkYBiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAcgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QSEgoKZGVzaWduX3JlZhgIIAEoCUoECAIQA0oECAMQBFINbWFuaWZlc3RfcGF0aCIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiSwoSTGlzdFJldmlld3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJXChNMaXN0UmV2aWV3c1Jlc3BvbnNlEicKB3Jldmlld3MYASADKAsyFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKE0RlbGV0ZVJldmlld1JlcXVlc3QSDAoEbmFtZRgBIAEoCSI2ChhHZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QSDQoFbW91bnQYASABKAkSCwoDcmVmGAIgASgJIk0KGUdldFJldmlld01hbmlmZXN0UmVzcG9uc2USMAoIbWFuaWZlc3QYASABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdDKyAwoNUmV2aWV3U2VydmljZRJLCgxDcmVhdGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EkUKCUdldFJldmlldxIgLmFnbmkudjEud2ViYXBpLkdldFJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSVgoLTGlzdFJldmlld3MSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1Jlc3BvbnNlEksKDERlbGV0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJldmlld1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMi3gEKE0NyZWF0ZVJldmlld1JlcXVlc3QSEQoJYm9hcmRfdXJpGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBEi4KB292ZXJsYXkYBiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAcgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QSEgoKZGVzaWduX3VyaRgIIAEoCUoECAEQAkoECAIQA0oECAMQBFIFbW91bnRSDW1hbmlmZXN0X3BhdGgiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIksKEkxpc3RSZXZpZXdzUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiVwoTTGlzdFJldmlld3NSZXNwb25zZRInCgdyZXZpZXdzGAEgAygLMhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSIjChNEZWxldGVSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiPwoYR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0EgsKA3VyaRgDIAEoCUoECAEQAkoECAIQA1IFbW91bnRSA3JlZiJNChlHZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlEjAKCG1hbmlmZXN0GAEgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QysgMKDVJldmlld1NlcnZpY2USSwoMQ3JlYXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuQ3JlYXRlUmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJFCglHZXRSZXZpZXcSIC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3ElYKC0xpc3RSZXZpZXdzEiIuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXNwb25zZRJLCgxEZWxldGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5EZWxldGVSZXZpZXdSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EmgKEUdldFJldmlld01hbmlmZXN0EiguYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0GikuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
 
 /**
  * Review is one stored review run.
@@ -64,23 +64,16 @@ export const ReviewSchema: GenMessage<Review> = /*@__PURE__*/
  */
 export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> & {
   /**
-   * workspace mount the refs resolve within (mounts.Resolve containment)
-   *
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
+   * board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
    * items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
    * a netlist entry then reads its board items not-applicable, as before.
    *
    * A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
    * Nothing above the Loader may treat it as one.
    *
-   * @generated from field: string board_ref = 4;
+   * @generated from field: string board_uri = 4;
    */
-  boardRef: string;
+  boardUri: string;
 
   /**
    * ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
@@ -109,11 +102,11 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
   manifest?: ReviewManifest | undefined;
 
   /**
-   * design_ref is the one design this run is about, with the same ref semantics as board_ref.
+   * design_uri is the one design this run is about, with the same URI semantics as board_uri.
    *
-   * @generated from field: string design_ref = 8;
+   * @generated from field: string design_uri = 8;
    */
-  designRef: string;
+  designUri: string;
 };
 
 /**
@@ -229,19 +222,12 @@ export const DeleteReviewRequestSchema: GenMessage<DeleteReviewRequest> = /*@__P
  */
 export type GetReviewManifestRequest = Message<"agni.v1.webapi.GetReviewManifestRequest"> & {
   /**
-   * workspace mount the ref resolves within
+   * uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
+   * the Loader resolves, never a host path.
    *
-   * @generated from field: string mount = 1;
+   * @generated from field: string uri = 3;
    */
-  mount: string;
-
-  /**
-   * ref names the stored checklist, with the same ref semantics as CreateReviewRequest.board_ref: a
-   * key the Loader resolves, never a host path.
-   *
-   * @generated from field: string ref = 2;
-   */
-  ref: string;
+  uri: string;
 };
 
 /**
