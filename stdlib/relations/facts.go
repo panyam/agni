@@ -183,6 +183,22 @@ const (
 	RelNetDeclaredViaDrill   = "net.declared_via_drill"   // net.declared_via_drill(net, mm). doc: facts/docs/net.declared_via_drill.md
 )
 
+// unitVolt and unitMillimetre are the BASE units the numeric relations publish, named here rather
+// than spelled at each projection site so a relation cannot drift from its neighbours.
+//
+// MILLIMETRES ARE NOT THE SI BASE for length, and that is deliberate: mm is the unit every board
+// format states and every board query is written in (`?w < 0.2`), and this field's job is to stop a
+// LENGTH being compared against a VOLTAGE, not to relitigate which length unit the board tier uses.
+// The invariant it must hold is that one dimension has ONE spelling across every relation, which it
+// does. A datasheet length would have to be projected as mm to join, and nothing projects one today.
+//
+// net.pin_count and the other counts deliberately carry NO base unit: a count is dimensionless, and
+// an empty base unit is polymorphic, so `?c < 5` keeps working.
+const (
+	unitVolt       = "V"
+	unitMillimetre = "mm"
+)
+
 // Facts projects the Model into the seed fact base, deterministically ordered so the projection
 // is regenerable (two calls on one Model are equal). It composes the per-relation projectors;
 // a relation's facts are empty when the Model lacks that tier (a design read without a seeded
@@ -248,7 +264,7 @@ func netMaxVoltageFacts(m check.Model) []query.FactRow {
 	for _, n := range m.Nets() {
 		if v, ok := check.RailMaxVoltage(n, n.Name); ok {
 			vv := v
-			out = append(out, query.FactRow{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -264,7 +280,7 @@ func netNominalVoltageFacts(m check.Model) []query.FactRow {
 	for _, n := range m.Nets() {
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
 			vv := v
-			out = append(out, query.FactRow{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, Cite: irCite(n.Prov)})
+			out = append(out, query.FactRow{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
 		}
 	}
 	return out
@@ -355,7 +371,7 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 			out = append(out, query.FactRow{Relation: RelParam, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
 			continue
 		}
-		f := query.FactRow{Relation: RelParam, Subject: mpn, Object: q.Symbol, Value: rangeText(q.Value), Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		f := query.FactRow{Relation: RelParam, Subject: mpn, Object: q.Symbol, Value: rangeText(q.Value), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
 		if q.Value != nil && q.Value.Max != nil {
 			v := *q.Value.Max
 			f.Num = &v
@@ -421,7 +437,7 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 			out = append(out, query.FactRow{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: limitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
 			continue
 		}
-		f := query.FactRow{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: limitKindToken(q.LimitKind), Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		f := query.FactRow{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: limitKindToken(q.LimitKind), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
 		if q.Value != nil {
 			// BOTH bounds are reduced, and a range rule is why that matters: converting only the max
 			// would leave a "3000..3.6" row, which reads as a rail far BELOW its minimum rather than
@@ -921,11 +937,11 @@ func boardFacts(m check.Model) []query.FactRow {
 		cite := "board net " + bn.Net
 		if w, ok := minSegmentWidthNm(bn.Segments); ok {
 			mm := nmToMM(w)
-			out = append(out, query.FactRow{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, Cite: cite})
+			out = append(out, query.FactRow{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cite: cite})
 		}
 		if d, ok := minViaDrillNm(bn.Vias); ok {
 			mm := nmToMM(d)
-			out = append(out, query.FactRow{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, Cite: cite})
+			out = append(out, query.FactRow{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cite: cite})
 		}
 		for _, layer := range netLayers(bn.Segments) {
 			out = append(out, query.FactRow{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cite: cite})
@@ -995,7 +1011,7 @@ func netClassDefFacts(m check.Model) []query.FactRow {
 				continue
 			}
 			v := mm
-			out = append(out, query.FactRow{Relation: p.rel, Subject: c.GetName(), Value: mmStr(v), Num: &v, Cite: "net_settings"})
+			out = append(out, query.FactRow{Relation: p.rel, Subject: c.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre, Cite: "net_settings"})
 		}
 	}
 	return out
@@ -1068,7 +1084,7 @@ func netDeclaredFacts(m check.Model) []query.FactRow {
 				}
 				v := mm
 				out = append(out, query.FactRow{
-					Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v,
+					Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre,
 					Cite: "net_settings:" + cls,
 				})
 				break // first stating class wins for THIS field only

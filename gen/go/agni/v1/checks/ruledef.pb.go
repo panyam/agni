@@ -1800,9 +1800,23 @@ func (*DatalogTerm_Agg) isDatalogTerm_Term() {}
 // DatalogValue is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound
 // term keeps both and neither string equality nor numeric comparison needs a re-parse.
 type DatalogValue struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	S             string                 `protobuf:"bytes,1,opt,name=s,proto3" json:"s,omitempty"`
-	Num           *float64               `protobuf:"fixed64,2,opt,name=num,proto3,oneof" json:"num,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	S     string                 `protobuf:"bytes,1,opt,name=s,proto3" json:"s,omitempty"`
+	Num   *float64               `protobuf:"fixed64,2,opt,name=num,proto3,oneof" json:"num,omitempty"`
+	// absent marks a field the source did not state at all, which is NOT the same as an empty string
+	// and not the same as zero. A datasheet row stating only a maximum leaves its minimum absent, and
+	// a parameter whose unit has no known scale has no number to publish. Before this was
+	// representable, such a field bound to the empty string and an ordering comparison fell through to
+	// string order, where "" precedes every string and therefore "passed" every upper-bound test.
+	Absent bool `protobuf:"varint,3,opt,name=absent,proto3" json:"absent,omitempty"`
+	// base_unit is the SI BASE symbol the number is expressed in ("V", "A", "\u03a9"), or empty for a
+	// dimensionless value. NEVER a prefixed spelling: scale normalization happens once, far upstream
+	// (param.InBaseUnit, CONSTRAINTS C24), so a millivolt row arrives here already reduced to volts.
+	// The query layer checks DIMENSION (is this volts or amps) and never converts SCALE.
+	//
+	// Distinct from the `param.unit` RELATION, which reports the unit as the vendor PRINTED it ("mV")
+	// for a human checking a citation. This says what the number is in, for a machine comparing it.
+	BaseUnit      string `protobuf:"bytes,4,opt,name=base_unit,json=baseUnit,proto3" json:"base_unit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1849,6 +1863,20 @@ func (x *DatalogValue) GetNum() float64 {
 		return *x.Num
 	}
 	return 0
+}
+
+func (x *DatalogValue) GetAbsent() bool {
+	if x != nil {
+		return x.Absent
+	}
+	return false
+}
+
+func (x *DatalogValue) GetBaseUnit() string {
+	if x != nil {
+		return x.BaseUnit
+	}
+	return ""
 }
 
 // DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.
@@ -2258,10 +2286,12 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x03var\x18\x01 \x01(\tH\x00R\x03var\x12:\n" +
 	"\bconstant\x18\x02 \x01(\v2\x1c.agni.v1.checks.DatalogValueH\x00R\bconstant\x124\n" +
 	"\x03agg\x18\x03 \x01(\v2 .agni.v1.checks.DatalogAggregateH\x00R\x03aggB\x06\n" +
-	"\x04term\";\n" +
+	"\x04term\"p\n" +
 	"\fDatalogValue\x12\f\n" +
 	"\x01s\x18\x01 \x01(\tR\x01s\x12\x15\n" +
-	"\x03num\x18\x02 \x01(\x01H\x00R\x03num\x88\x01\x01B\x06\n" +
+	"\x03num\x18\x02 \x01(\x01H\x00R\x03num\x88\x01\x01\x12\x16\n" +
+	"\x06absent\x18\x03 \x01(\bR\x06absent\x12\x1b\n" +
+	"\tbase_unit\x18\x04 \x01(\tR\bbaseUnitB\x06\n" +
 	"\x04_num\"8\n" +
 	"\x10DatalogAggregate\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x10\n" +

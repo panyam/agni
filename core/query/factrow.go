@@ -15,6 +15,9 @@ package query
 // bound; it is nil for every one-number relation. Conditions holds a param's test conditions (""
 // otherwise). Cite is the rendered provenance — an IR source or a datasheet doc/page/table — and is
 // never empty for a well-formed fact: a fact you cannot cite is not verifiable.
+// BaseUnit is the SI BASE symbol Num and Min are expressed in ("V", "A", "\u03a9"), or "" when the
+// relation is dimensionless or non-numeric. Both numeric slots share it, since a two-sided range's
+// bounds are always the same dimension. It must never be a prefixed spelling; see Value.BaseUnit.
 type FactRow struct {
 	Relation   string
 	Subject    string
@@ -22,6 +25,7 @@ type FactRow struct {
 	Value      string
 	Num        *float64
 	Min        *float64
+	BaseUnit   string
 	Conditions string
 	Cite       string
 }

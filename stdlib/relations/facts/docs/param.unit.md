@@ -47,10 +47,15 @@ absent numeric bound the variable to the empty string and the comparison fell ba
 what makes `param.range` safe to emit with one bound absent, which it does on any ordinary max-only
 datasheet row.
 
-There is no first-class way to SELECT those rows yet. `not param.range(...)` does not find them,
-because the row exists and only its numbers are absent, and absence is not something the query
-language can currently ask about: a field with no number binds to the empty string rather than to
-nothing. Listing `param.range` and reading the blank bound is the honest answer for now.
+Select them with the `absent` predicate, which asks whether a field carried a value at all:
+
+```
+param.unit(?mpn, ?sym, ?unit), param(?mpn, ?sym, ?max), absent(?max) => ?mpn, ?sym, ?unit
+```
+
+`not param.range(...)` does NOT find them, and the distinction is the useful one: the row exists, so
+negation (which asks whether a ROW exists) sees it. Only its number is missing, which is what
+`absent` asks about.
 
 ### Go projector
 

@@ -273,6 +273,20 @@ message DatalogTerm {
 message DatalogValue {
   string s = 1;
   optional double num = 2;
+  // absent marks a field the source did not state at all, which is NOT the same as an empty string
+  // and not the same as zero. A datasheet row stating only a maximum leaves its minimum absent, and
+  // a parameter whose unit has no known scale has no number to publish. Before this was
+  // representable, such a field bound to the empty string and an ordering comparison fell through to
+  // string order, where "" precedes every string and therefore "passed" every upper-bound test.
+  bool absent = 3;
+  // base_unit is the SI BASE symbol the number is expressed in ("V", "A", "\u03a9"), or empty for a
+  // dimensionless value. NEVER a prefixed spelling: scale normalization happens once, far upstream
+  // (param.InBaseUnit, CONSTRAINTS C24), so a millivolt row arrives here already reduced to volts.
+  // The query layer checks DIMENSION (is this volts or amps) and never converts SCALE.
+  //
+  // Distinct from the `param.unit` RELATION, which reports the unit as the vendor PRINTED it ("mV")
+  // for a human checking a citation. This says what the number is in, for a machine comparing it.
+  string base_unit = 4;
 }
 
 // DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.

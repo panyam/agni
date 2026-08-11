@@ -48,6 +48,7 @@ var builtinPredicates = []RelationInfo{
 	{Name: "suffix", Args: []string{"string", "suffix"}, Summary: "the string ends with the suffix", Kind: KindPredicate},
 	{Name: "glob", Args: []string{"string", "pattern"}, Summary: "the whole string matches a shell-style glob (* any run, ? one char)", Kind: KindPredicate},
 	{Name: "match", Args: []string{"string", "regex"}, Summary: "the string matches an (unanchored) regular expression", Kind: KindPredicate},
+	{Name: "absent", Args: []string{"value"}, Summary: "the field carried no value at all, which is different from an empty string and from zero (a datasheet row stating only a maximum leaves its minimum absent); `not absent(?x)` reads \"this row states one\"", Kind: KindPredicate},
 }
 
 // Catalog returns the discoverable relation set: the built-in relations and predicates, plus any

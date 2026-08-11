@@ -31,16 +31,16 @@ func fieldValue(f FactRow, fld edbField) Value {
 		return Value{S: f.Value}
 	case fNum:
 		if f.Num != nil {
-			return Value{S: ftoa(*f.Num), Num: f.Num}
+			return Value{S: ftoa(*f.Num), Num: f.Num, BaseUnit: f.BaseUnit}
 		}
-		return Value{}
+		return Value{Absent: true}
 	case fConditions:
 		return Value{S: f.Conditions}
 	case fMin:
 		if f.Min != nil {
-			return Value{S: ftoa(*f.Min), Num: f.Min}
+			return Value{S: ftoa(*f.Min), Num: f.Min, BaseUnit: f.BaseUnit}
 		}
-		return Value{}
+		return Value{Absent: true}
 	}
-	return Value{}
+	return Value{Absent: true}
 }

@@ -84,6 +84,11 @@ var builtins = map[string]builtin{
 	"suffix":   strFilter(strings.HasSuffix),
 	"glob":     patFilter(CompileGlob),
 	"match":    patFilter(CompilePattern),
+	// absent(?x) is the only way to ASK about a field the source did not state. Before Value.Absent
+	// existed such a field bound to the empty string, so it was not merely hard to select, it was
+	// indistinguishable from one that was stated as "". Its negation is the useful half as often as
+	// not: `not absent(?min)` reads "this row states a lower bound".
+	"absent": filterBuiltin(1, func(args []Value) (bool, error) { return args[0].Absent, nil }),
 }
 
 // strFilter wraps a string(value, pattern) bool as a 2-arity filter builtin (the shape of

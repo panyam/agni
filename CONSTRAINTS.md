@@ -509,7 +509,15 @@ what makes partial ranges safe at all. Equality is untouched (asking whether two
 is meaningful across kinds) and so is ordering two non-numbers. AGGREGATION was never exposed:
 `reduce` skips a nil `Num` rather than falling back.
 
-**Known limitation:** absence is still not first-class in `query.Value`, so `=` compares an absent
-value as the empty string and there is no way to ASK for "the rows with no number". Making absence
-explicit (three-valued logic, or a unit-and-presence-carrying value) is the real fix and would
-subsume this guard.
+Since `query.Value` carries `Absent` and `BaseUnit`, the guard is REPRESENTED rather than inferred
+from a nil pointer, `absent(?x)` selects the rows with no number, and an ordering comparison across
+unlike dimensions (volts against amps) refuses as well. Bare literals stay dimension-polymorphic,
+since a query constant cannot state a unit. `Value.BaseUnit` holds an SI BASE symbol only, never a
+prefixed spelling: scale is normalized once upstream by `param.InBaseUnit`, so the query layer checks
+DIMENSION and never converts SCALE. `TestRelationBaseUnitsAreCanonical` enforces that on every
+relation, including ones added later.
+
+**Known limitation:** equality is deliberately NOT dimension-checked, because the same values also
+unify implicitly when a variable repeats across atoms and unification is identity rather than
+physics. And `absent = absent` is TRUE here rather than SQL's UNKNOWN, since full three-valued logic
+would have to thread UNKNOWN through negation, aggregation and the index.

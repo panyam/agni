@@ -193,7 +193,7 @@ func qtermProto(t Term) *checkspb.DatalogTerm {
 			Func: t.Agg.Func, Var: string(t.Agg.Var),
 		}}}
 	case t.Const != nil:
-		v := &checkspb.DatalogValue{S: t.Const.S}
+		v := &checkspb.DatalogValue{S: t.Const.S, Absent: t.Const.Absent, BaseUnit: t.Const.BaseUnit}
 		if t.Const.Num != nil {
 			v.Num = t.Const.Num
 		}
@@ -208,7 +208,7 @@ func qtermFromProto(p *checkspb.DatalogTerm) (Term, error) {
 	case *checkspb.DatalogTerm_Var:
 		return Term{Var: Var(t.Var)}, nil
 	case *checkspb.DatalogTerm_Constant:
-		v := &Value{S: t.Constant.GetS()}
+		v := &Value{S: t.Constant.GetS(), Absent: t.Constant.GetAbsent(), BaseUnit: t.Constant.GetBaseUnit()}
 		if t.Constant.Num != nil {
 			n := t.Constant.GetNum()
 			v.Num = &n
