@@ -5,6 +5,7 @@ import {
   type ConventionState,
   type ConventionBarView,
   activeLabel,
+  conventionError,
   emptyConvention,
   isOverridden,
   SERVER_DEFAULT_LABEL,
@@ -36,7 +37,7 @@ function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: st
       <span class="convbar-active">{activeLabel(props.state())}</span>
       <Show when={props.state().error}>
         <span class="convbar-error" role="alert" title={props.state().error}>
-          could not apply
+          {conventionError(props.state().error)}
         </span>
       </Show>
     </div>
