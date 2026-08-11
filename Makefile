@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image image-run tag tag-push
+.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
 
 all: proto build
 
@@ -198,7 +198,7 @@ examples-test:
 # libraries. Designs come in as bind mounts under /workspace, one -v per folder, no flags.
 #   make image                      # build ghcr.io/panyam/agni:dev
 #   make image IMAGE_TAG=v0.1.0     # build the release tag
-#   make image-run DESIGNS=~/boards # build and serve those designs on :8080
+#   make dockserve DESIGNS=~/boards # serve those designs on :8080 from the image
 IMAGE_NAME ?= ghcr.io/panyam/agni
 IMAGE_TAG ?= dev
 IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
@@ -209,14 +209,84 @@ IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
 image:
 	docker build --build-arg VERSION=$(IMAGE_TAG) -t $(IMAGE) .
 
-# Run what `make image` built. DESIGNS is a host folder to expose; it lands as a mount named
-# after its basename, the same way a user's own -v would. --rm because this is a smoke-test
-# convenience, not a deployment.
+# dockserve is serve's container twin: same MOUNTS / EXTRA_MOUNTS / DESIGNS / ADDR, run from the
+# image instead of `go run`. Each "--mount NAME=PATH" becomes "-v PATH:/workspace/NAME", and the
+# image's own CMD already passes --mount-root /workspace, so nothing needs a --mount flag inside.
+#
+#   make dockserve                                     # the fixture mounts, from the image
+#   make dockserve DESIGNS=~/boards                    # plus a folder of your own
+#   make dockserve EXTRA_MOUNTS="--mount corpus=/data" # the same flag serve takes
+#
+# THREE of serve's parameters are refused here rather than forwarded, because the image does not
+# contain what they describe and the failure would otherwise be silent:
+#
+#   NATIVE_TOOLS  no kicad-cli/xschem/Lepton inside (see the Dockerfile header). Use serve, or
+#                 reach the tools through the nattools container.
+#   PDF2DOC       no Python/docling inside, and the value is a host path.
+#   OVERLAY_FLAGS host paths that do not resolve in the container. Pass OVERLAY_DIR instead: the
+#                 folder is mounted at /overlay and the flags are rebuilt against it.
+#
+# SYMBOL_PATH is IGNORED rather than refused, because the image ships better libraries than a host
+# path would name (AGNI_SYMBOL_PATH, baked in stage 3). Refusing it would block a caller who simply
+# has the variable set for serve. It is announced on startup so the substitution is never a guess.
+#
+# The reason these are hard errors and not warnings: --symbol-path or --profile-path pointing at a
+# directory that does not exist inside the container yields a SHORT read, and a short read is the
+# quiet kind of wrong. The rules evaluate cleanly over it and report fewer findings, with no error
+# to explain them. See the Dockerfile header for the same argument about `go install`.
 DESIGNS ?=
-IMAGE_RUN_MOUNT := $(if $(strip $(DESIGNS)),-v $(abspath $(DESIGNS)):/workspace/$(notdir $(abspath $(DESIGNS))))
-image-run: image
-	@echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"
-	docker run --rm -p $(patsubst :%,%,$(ADDR)):8080 $(IMAGE_RUN_MOUNT) $(IMAGE)
+# The overlay catalog (profiles/, conventions.yaml) as a single host DIRECTORY, mounted read-only.
+# serve takes assembled flags; the container needs the folder, since it has to cross the boundary.
+OVERLAY_DIR ?=
+# Escape hatch for anything else the run needs: extra -v, --user, -e, a different --network.
+DOCKER_FLAGS ?=
+DOCKER_NAME ?= agni-dockserve
+
+dockserve:
+	@if [ -n "$(strip $(NATIVE_TOOLS))" ]; then \
+	  echo "dockserve: NATIVE_TOOLS is not available in the image (no kicad-cli/xschem/Lepton inside)." >&2; \
+	  echo "           Use 'make serve' for native golden renders." >&2; exit 1; fi
+	@if [ -n "$(strip $(PDF2DOC))" ]; then \
+	  echo "dockserve: PDF2DOC is not available in the image (no Python/docling inside), and the" >&2; \
+	  echo "           value is a host path. Use 'make serve' for the datasheet Extract action." >&2; exit 1; fi
+	@if [ -n "$(strip $(OVERLAY_FLAGS))" ]; then \
+	  echo "dockserve: OVERLAY_FLAGS names host paths that do not exist in the container." >&2; \
+	  echo "           Pass OVERLAY_DIR=<dir> instead; it is mounted at /overlay." >&2; exit 1; fi
+	@if [ -n "$(strip $(SYMBOL_PATH))" ]; then \
+	  echo "dockserve: ignoring SYMBOL_PATH; the image ships its own KiCad/xschem/gEDA libraries."; fi
+	@docker image inspect $(IMAGE) >/dev/null 2>&1 || $(MAKE) image
+	@set -e; \
+	abs() { case $$1 in /*) printf %s "$$1" ;; \
+	                     \~*) printf %s "$$HOME$${1#\~}" ;; \
+	                     *) printf %s "$(CURDIR)/$$1" ;; esac; }; \
+	vols=""; \
+	for spec in $(filter-out --mount,$(MOUNTS) $(EXTRA_MOUNTS)); do \
+	  name=$${spec%%=*}; path=$$(abs "$${spec#*=}"); \
+	  if [ ! -e "$$path" ]; then echo "dockserve: mount '$$name' has no such path: $$path" >&2; exit 1; fi; \
+	  vols="$$vols -v $$path:/workspace/$$name"; \
+	done; \
+	if [ -n "$(strip $(DESIGNS))" ]; then \
+	  d=$$(abs "$(strip $(DESIGNS))"); \
+	  if [ ! -e "$$d" ]; then echo "dockserve: DESIGNS has no such path: $$d" >&2; exit 1; fi; \
+	  vols="$$vols -v $$d:/workspace/$$(basename $$d)"; fi; \
+	overlay=""; \
+	if [ -n "$(strip $(OVERLAY_DIR))" ]; then \
+	  o=$$(abs "$(strip $(OVERLAY_DIR))"); \
+	  if [ ! -d "$$o" ]; then echo "dockserve: OVERLAY_DIR has no such directory: $$o" >&2; exit 1; fi; \
+	  vols="$$vols -v $$o:/overlay:ro"; \
+	  if [ -d "$$o/profiles" ]; then overlay="$$overlay --profile-path /overlay/profiles"; fi; \
+	  if [ -f "$$o/conventions.yaml" ]; then overlay="$$overlay --conventions /overlay/conventions.yaml"; fi; \
+	  if [ -z "$$overlay" ]; then \
+	    echo "dockserve: OVERLAY_DIR=$$o holds neither profiles/ nor conventions.yaml" >&2; exit 1; fi; \
+	  echo "dockserve: overlay$$overlay"; fi; \
+	echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"; \
+	docker run --rm --name $(DOCKER_NAME) -p $(patsubst :%,%,$(ADDR)):8080 \
+	  --user $$(id -u):$$(id -g) $$vols $(DOCKER_FLAGS) $(IMAGE) \
+	  serve --addr :8080 --mount-root /workspace $$overlay web
+
+# Stop a detached dockserve (one started with DOCKER_FLAGS=-d). A foreground one ends on Ctrl-C.
+dockstop:
+	-docker rm -f $(DOCKER_NAME)
 
 # =============================================================================
 # Release

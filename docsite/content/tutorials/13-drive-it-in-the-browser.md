@@ -24,8 +24,15 @@ agni serve --addr :8090 \
 
 ```
 note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, ...
-serving web at http://:8090/ with 1 mount(s) (Ctrl-C to stop)
+serving web at http://localhost:8090/ with 1 mount(s) (Ctrl-C to stop)
+  on this network: http://192.168.1.23:8090/ (all interfaces, no auth)
 ```
+
+That second line is the one to read twice. `--addr :8090` binds every interface, so anyone who can
+reach your machine can reach the server, and it has no authentication: whatever you mounted is
+readable by them. That is usually what you want on a workbench and rarely what you want on shared
+Wi-Fi. `--addr 127.0.0.1:8090` binds this machine only, and the line disappears when it applies to
+nobody.
 
 Those flags are the same tiers from rungs 4 through 7, in the same order, doing the same jobs. The
 supersession note from rung 5 prints here too, because the server composes its catalog exactly the

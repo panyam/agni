@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -115,4 +116,88 @@ func TestHealthHandler(t *testing.T) {
 			t.Fatalf("/healthz/sub reached the probe, so it is registered as a subtree: %q", rec.Body.String())
 		}
 	})
+}
+
+// The startup line is the only instruction most people get for reaching the server, so it has to
+// name an address they can actually open. The bug this pins: printing the bind address verbatim
+// turns the default ":8080" into "http://:8080/", which no browser resolves.
+func TestServeURLs(t *testing.T) {
+	fixedIPs := func() []string { return []string{"192.168.1.23"} }
+	noIPs := func() []string { return nil }
+
+	cases := []struct {
+		name string
+		addr string
+		ips  func() []string
+		want []string
+	}{{
+		name: "the default wildcard names localhost first, then the network",
+		addr: ":8080",
+		ips:  fixedIPs,
+		want: []string{"http://localhost:8080/", "http://192.168.1.23:8080/"},
+	}, {
+		name: "0.0.0.0 is the same wildcard spelled out",
+		addr: "0.0.0.0:8080",
+		ips:  fixedIPs,
+		want: []string{"http://localhost:8080/", "http://192.168.1.23:8080/"},
+	}, {
+		name: "the IPv6 wildcard too",
+		addr: "[::]:8080",
+		ips:  fixedIPs,
+		want: []string{"http://localhost:8080/", "http://192.168.1.23:8080/"},
+	}, {
+		name: "a wildcard with no reachable interface still gives a usable URL",
+		addr: ":8080",
+		ips:  noIPs,
+		want: []string{"http://localhost:8080/"},
+	}, {
+		name: "an explicit loopback bind is NOT advertised to the network",
+		addr: "127.0.0.1:8080",
+		ips:  fixedIPs,
+		want: []string{"http://127.0.0.1:8080/"},
+	}, {
+		name: "an explicit host is left alone",
+		addr: "example.internal:9000",
+		ips:  fixedIPs,
+		want: []string{"http://example.internal:9000/"},
+	}, {
+		name: "an IPv6 literal keeps its brackets, which separate host from port",
+		addr: "[fd00::1]:8080",
+		ips:  fixedIPs,
+		want: []string{"http://[fd00::1]:8080/"},
+	}, {
+		name: "an unparseable address is echoed rather than guessed at",
+		addr: "8080",
+		ips:  fixedIPs,
+		want: []string{"http://8080/"},
+	}}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := serveURLs(tc.addr, tc.ips)
+			if len(got) != len(tc.want) {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("got %q, want %q", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+// lanIPs reads the real machine, so this asserts the property that holds everywhere rather than a
+// specific address: whatever it returns must be usable in a URL, and must never be a loopback or a
+// self-assigned address, since printing one of those as "on this network" would be a lie.
+func TestLanIPsAreRoutable(t *testing.T) {
+	for _, s := range lanIPs() {
+		ip := net.ParseIP(s)
+		if ip == nil {
+			t.Fatalf("lanIPs returned %q, which is not an IP", s)
+		}
+		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.To4() == nil {
+			t.Fatalf("lanIPs returned %q, which is not a routable IPv4 address", s)
+		}
+	}
 }

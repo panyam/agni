@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -181,7 +182,11 @@ func serveCmd() *cobra.Command {
 			registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux)
 
 			srv := &http.Server{Addr: addr, Handler: mux}
-			fmt.Fprintf(os.Stderr, "serving %s at http://%s/ with %d mount(s) (Ctrl-C to stop)\n", dir, addr, len(mounts))
+			urls := serveURLs(addr, lanIPs)
+			fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", dir, urls[0], len(mounts))
+			for _, u := range urls[1:] {
+				fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
+			}
 			// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
 			return skhttp.ListenAndServeGraceful(srv)
 		},
@@ -251,6 +256,97 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
 	return service.NewCheckService(loader, catalog, specs, conventions.Name, loader),
 		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name), nil
+}
+
+// serveURLs turns a listen address into URLs a human can click, which the bind address by itself is
+// not: the default ":8080" prints as "http://:8080/", a string no browser opens.
+//
+// An empty, "0.0.0.0", or "::" host is the WILDCARD, so the process is reachable on every interface
+// and no single URL describes it. The first entry returned is always the one to click on this
+// machine; any others are the addresses another machine on the network reaches it by. Those are
+// worth printing rather than hiding, because this server has no authentication: a wildcard bind
+// means the mounted design folders are readable by anything that can route here. Printing the LAN
+// URL does not create that exposure, it makes an existing one visible. Bind 127.0.0.1 to remove it.
+//
+// Only IPv4 is enumerated. A link-local IPv6 address needs a zone suffix to be usable and would
+// print a URL that does not work, which is worse than printing one fewer.
+//
+// ips is a parameter so the address shaping can be tested without depending on the interfaces of
+// whatever machine runs the test; production passes lanIPs.
+func serveURLs(addr string, ips func() []string) []string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		// Not host:port. Nothing to shape, so echo it rather than guess at it.
+		return []string{"http://" + addr + "/"}
+	}
+	if host != "" && host != "0.0.0.0" && host != "::" {
+		return []string{hostURL(host, port)}
+	}
+	out := []string{hostURL("localhost", port)}
+	for _, ip := range ips() {
+		out = append(out, hostURL(ip, port))
+	}
+	return out
+}
+
+// hostURL joins a host and port into a URL. JoinHostPort is what brackets an IPv6 literal, so
+// bracketing here as well would double them and produce an address no client parses.
+func hostURL(host, port string) string {
+	return "http://" + net.JoinHostPort(host, port) + "/"
+}
+
+// lanIPs reports this host's non-loopback IPv4 addresses, for the wildcard case in serveURLs. An
+// interface that is down or has no usable address contributes nothing, and an enumeration error
+// yields no addresses rather than an error: this is decoration on a startup line, and failing to
+// serve because the interface list could not be read would be a worse trade than printing one URL.
+//
+// Inside a container it reports nothing at all. The address on a container interface (172.17.0.2
+// and the like) is reachable only from the container network, while the address that actually
+// reaches this server is the published port on the HOST, which the process cannot see: the port
+// mapping lives in the runtime, not in anything the container observes about itself. Printing the
+// internal address would hand the reader a URL that does not open, which is worse than printing
+// none. `docker run -p` is where the real one comes from, so the operator already knows it.
+func lanIPs() []string {
+	if inContainer() {
+		return nil
+	}
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, a := range addrs {
+		n, ok := a.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		ip := n.IP.To4()
+		// IsGlobalUnicast excludes loopback and multicast; IsLinkLocalUnicast drops the 169.254/16
+		// self-assigned range, which routes nowhere useful.
+		if ip == nil || !ip.IsGlobalUnicast() || ip.IsLinkLocalUnicast() {
+			continue
+		}
+		out = append(out, ip.String())
+	}
+	sort.Strings(out)
+	return out
+}
+
+// inContainer reports whether this process is running inside a container, which lanIPs uses to
+// decide that its own interface addresses are not worth printing. Both runtimes drop a marker file
+// at a fixed path for exactly this question: Docker writes /.dockerenv, Podman writes
+// /run/.containerenv.
+//
+// A false negative only costs an unhelpful line on startup, and a false positive only costs a
+// missing one, so this deliberately does not go further (parsing /proc/1/cgroup, checking pid 1)
+// to catch runtimes that leave no marker. Nothing behavioural hangs off the answer.
+func inContainer() bool {
+	for _, marker := range []string{"/.dockerenv", "/run/.containerenv"} {
+		if _, err := os.Stat(marker); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // healthHandler answers the container orchestrator's liveness/readiness probe. It is registered
