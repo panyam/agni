@@ -88,39 +88,26 @@ message Review {
 }
 
 message CreateReviewRequest {
-  // 1 was `mount`, the authority half of every ref below. It now lives inside each URI.
-  reserved 1;
-  reserved "mount";
-  // 2 was manifest_path, a locator the service resolved through its Loader. The checklist is
-  // configuration, so it travels as a VALUE (field 7) under CONSTRAINTS C22.
-  reserved 2;
-  reserved "manifest_path";
-  // 3 was design_ref (later design_uri), REPEATED: one call ran a checklist over several designs and returned a report
-  // each. A stored run is about one design, so the rollup became several creates. The name is reused
-  // below at a new number rather than in place, because `repeated string` and `string` share a wire
-  // type: a stale client's array would decode into the singular field as its last element instead of
-  // failing, and a review silently run against the wrong board is worse than a rejected request.
-  reserved 3;
+  // design_uri is the one design this run is about.
+  //
+  // A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
+  // a host path. Nothing above the Loader may treat it as one.
+  string design_uri = 1;
   // board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
   // items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
   // a netlist entry then reads its board items not-applicable, as before.
-  //
-  // A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
-  // Nothing above the Loader may treat it as one.
-  string board_uri = 4;
+  string board_uri = 2;
   // ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
   // (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
-  double ratified_floor = 5;
+  double ratified_floor = 3;
   // overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
   // service was constructed with.
-  OverlayConfig overlay = 6;
+  OverlayConfig overlay = 4;
   // manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
   // that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
   // held to exactly the same rules as one read from a file. It is also stored with the run, so the
   // archived document scores against the checklist it actually saw.
-  agni.v1.checks.ReviewManifest manifest = 7;
-  // design_uri is the one design this run is about, with the same URI semantics as board_uri.
-  string design_uri = 8;
+  agni.v1.checks.ReviewManifest manifest = 5;
 }
 
 message GetReviewRequest {
@@ -152,12 +139,9 @@ message DeleteReviewRequest {
 }
 
 message GetReviewManifestRequest {
-  // 1 and 2 were `mount` and `ref`.
-  reserved 1, 2;
-  reserved "mount", "ref";
   // uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
   // the Loader resolves, never a host path.
-  string uri = 3;
+  string uri = 1;
 }
 
 message GetReviewManifestResponse {

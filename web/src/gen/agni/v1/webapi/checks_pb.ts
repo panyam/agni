@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/checks.proto.
  */
 export const file_agni_v1_webapi_checks: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jaGVja3MucHJvdG8SDmFnbmkudjEud2ViYXBpInkKEkNoZWNrRGVzaWduUmVxdWVzdBINCgVydWxlcxgDIAMoCRIuCgdvdmVybGF5GAQgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxILCgN1cmkYBSABKAlKBAgBEAJKBAgCEANSBW1vdW50UgRwYXRoIkYKDU92ZXJsYXlDb25maWcSNQoLY29udmVudGlvbnMYASABKAsyIC5hZ25pLnYxLndlYmFwaS5OYW1pbmdDb252ZW50aW9uInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS53ZWJhcGkuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWluZ1J1bGUi1QIKDU5hbWluZ0xleGljb24SKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSMQoKc3VwcGx5X3BpbhgEIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSNwoFY2xhc3MYBSADKAsyKC5hZ25pLnYxLndlYmFwaS5OYW1pbmdMZXhpY29uLkNsYXNzRW50cnkaSwoKQ2xhc3NFbnRyeRILCgNrZXkYASABKAkSLAoFdmFsdWUYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zOgI4ASIyCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgibAoKTmFtaW5nUnVsZRIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEgsKA3doeRgDIAEoCRINCgVhbGxvdxgEIAMoCRIOCgZleGVtcHQYBSADKAkSEgoKbWF0Y2hfZnVsbBgGIAEoCCJAChNDaGVja0Rlc2lnblJlc3BvbnNlEikKCGZpbmRpbmdzGAEgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZyJ8ChVHZXRDaGVja1JlcG9ydFJlcXVlc3QSDQoFcnVsZXMYAyADKAkSLgoHb3ZlcmxheRgEIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSCwoDdXJpGAYgASgJSgQIARACSgQIAhADUgVtb3VudFIEcGF0aCJFChZHZXRDaGVja1JlcG9ydFJlc3BvbnNlEisKBnJlcG9ydBgBIAEoCzIbLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVwb3J0IkEKGkdldE5hbWluZ0NvbnZlbnRpb25SZXF1ZXN0EgsKA3VyaRgDIAEoCUoECAEQAkoECAIQA1IFbW91bnRSA3JlZiJTChtHZXROYW1pbmdDb252ZW50aW9uUmVzcG9uc2USNAoKY29udmVudGlvbhgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24iPgoWR2V0RXhwZWN0YXRpb25zUmVxdWVzdBILCgN1cmkYAyABKAlKBAgBEAJKBAgCEANSBW1vdW50UgRwYXRoIk8KD1J1bGVFeHBlY3RhdGlvbhIMCgRydWxlGAEgASgJEhAKCHN1YmplY3RzGAIgAygJEg8KB3BlbmRpbmcYAyABKAgSCwoDd2h5GAQgASgJImUKF0dldEV4cGVjdGF0aW9uc1Jlc3BvbnNlEjUKDGV4cGVjdGF0aW9ucxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLlJ1bGVFeHBlY3RhdGlvbhITCgtoYXNfc2lkZWNhchgCIAEoCCJoChBMaXN0UnVsZXNSZXF1ZXN0Ei4KB292ZXJsYXkYAyABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEgsKA3VyaRgEIAEoCUoECAEQAkoECAIQA1IFbW91bnRSBHBhdGgi+AEKCFJ1bGVJbmZvEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRINCgVyZWFkcxgEIAMoCRIwCgR0YWdzGAUgAygLMiIuYWduaS52MS53ZWJhcGkuUnVsZUluZm8uVGFnc0VudHJ5EhEKCWF2YWlsYWJsZRgGIAEoCBIaChJ1bmF2YWlsYWJsZV9yZWFzb24YByABKAkSDgoGaW1wYWN0GAggASgJEg4KBmRldGFpbBgJIAEoCRorCglUYWdzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI8ChFMaXN0UnVsZXNSZXNwb25zZRInCgVydWxlcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLlJ1bGVJbmZvIkMKG0dldEludGVyZmFjZUNvdmVyYWdlUmVxdWVzdBILCgN1cmkYAyABKAlKBAgBEAJKBAgCEANSBW1vdW50UgRwYXRoIjoKDlNpZ25hbENvdmVyYWdlEgwKBG5hbWUYASABKAkSCwoDbmV0GAIgASgJEg0KBXN0YXRlGAMgASgJImkKEUludGVyZmFjZUNvdmVyYWdlEg8KB3Byb2ZpbGUYASABKAkSEgoKYW5jaG9yX25ldBgCIAEoCRIvCgdzaWduYWxzGAMgAygLMh4uYWduaS52MS53ZWJhcGkuU2lnbmFsQ292ZXJhZ2UiVQocR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXNwb25zZRI1CgppbnRlcmZhY2VzGAEgAygLMiEuYWduaS52MS53ZWJhcGkuSW50ZXJmYWNlQ292ZXJhZ2UiQQoZR2V0Q29tcG9uZW50UGFyYW1zUmVxdWVzdBILCgN1cmkYBCABKAlKBAgBEAJKBAgCEANSBW1vdW50UgRwYXRoIlYKD0NvbXBvbmVudFBhcmFtcxIPCgdyZWZfZGVzGAEgASgJEgsKA21wbhgCIAEoCRIlCgRzcGVjGAMgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYyJRChpHZXRDb21wb25lbnRQYXJhbXNSZXNwb25zZRIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UGFyYW1zMs0FCgxDaGVja1NlcnZpY2USUAoJTGlzdFJ1bGVzEiAuYWduaS52MS53ZWJhcGkuTGlzdFJ1bGVzUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkxpc3RSdWxlc1Jlc3BvbnNlElYKC0NoZWNrRGVzaWduEiIuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXNwb25zZRJiCg9HZXRFeHBlY3RhdGlvbnMSJi5hZ25pLnYxLndlYmFwaS5HZXRFeHBlY3RhdGlvbnNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuR2V0RXhwZWN0YXRpb25zUmVzcG9uc2USXwoOR2V0Q2hlY2tSZXBvcnQSJS5hZ25pLnYxLndlYmFwaS5HZXRDaGVja1JlcG9ydFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5HZXRDaGVja1JlcG9ydFJlc3BvbnNlEnEKFEdldEludGVyZmFjZUNvdmVyYWdlEisuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXF1ZXN0GiwuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXNwb25zZRJrChJHZXRDb21wb25lbnRQYXJhbXMSKS5hZ25pLnYxLndlYmFwaS5HZXRDb21wb25lbnRQYXJhbXNSZXF1ZXN0GiouYWduaS52MS53ZWJhcGkuR2V0Q29tcG9uZW50UGFyYW1zUmVzcG9uc2USbgoTR2V0TmFtaW5nQ29udmVudGlvbhIqLmFnbmkudjEud2ViYXBpLkdldE5hbWluZ0NvbnZlbnRpb25SZXF1ZXN0GisuYWduaS52MS53ZWJhcGkuR2V0TmFtaW5nQ29udmVudGlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_param_param]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jaGVja3MucHJvdG8SDmFnbmkudjEud2ViYXBpImAKEkNoZWNrRGVzaWduUmVxdWVzdBINCgVydWxlcxgBIAMoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxILCgN1cmkYAyABKAkiRgoNT3ZlcmxheUNvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24iewoQTmFtaW5nQ29udmVudGlvbhIMCgRuYW1lGAEgASgJEi4KB2xleGljb24YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5OYW1pbmdMZXhpY29uEikKBXJ1bGVzGAMgAygLMhouYWduaS52MS53ZWJhcGkuTmFtaW5nUnVsZSLVAgoNTmFtaW5nTGV4aWNvbhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxIxCgpzdXBwbHlfcGluGAQgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxI3CgVjbGFzcxgFIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpLCgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnM6AjgBIjIKDVZvY2FiUGF0dGVybnMSEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCCJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIIkAKE0NoZWNrRGVzaWduUmVzcG9uc2USKQoIZmluZGluZ3MYASADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nImMKFUdldENoZWNrUmVwb3J0UmVxdWVzdBINCgVydWxlcxgBIAMoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxILCgN1cmkYAyABKAkiRQoWR2V0Q2hlY2tSZXBvcnRSZXNwb25zZRIrCgZyZXBvcnQYASABKAsyGy5hZ25pLnYxLmNoZWNrcy5DaGVja1JlcG9ydCIpChpHZXROYW1pbmdDb252ZW50aW9uUmVxdWVzdBILCgN1cmkYASABKAkiUwobR2V0TmFtaW5nQ29udmVudGlvblJlc3BvbnNlEjQKCmNvbnZlbnRpb24YASABKAsyIC5hZ25pLnYxLndlYmFwaS5OYW1pbmdDb252ZW50aW9uIiUKFkdldEV4cGVjdGF0aW9uc1JlcXVlc3QSCwoDdXJpGAEgASgJIk8KD1J1bGVFeHBlY3RhdGlvbhIMCgRydWxlGAEgASgJEhAKCHN1YmplY3RzGAIgAygJEg8KB3BlbmRpbmcYAyABKAgSCwoDd2h5GAQgASgJImUKF0dldEV4cGVjdGF0aW9uc1Jlc3BvbnNlEjUKDGV4cGVjdGF0aW9ucxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLlJ1bGVFeHBlY3RhdGlvbhITCgtoYXNfc2lkZWNhchgCIAEoCCJPChBMaXN0UnVsZXNSZXF1ZXN0Ei4KB292ZXJsYXkYASABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEgsKA3VyaRgCIAEoCSL4AQoIUnVsZUluZm8SDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEg0KBXJlYWRzGAQgAygJEjAKBHRhZ3MYBSADKAsyIi5hZ25pLnYxLndlYmFwaS5SdWxlSW5mby5UYWdzRW50cnkSEQoJYXZhaWxhYmxlGAYgASgIEhoKEnVuYXZhaWxhYmxlX3JlYXNvbhgHIAEoCRIOCgZpbXBhY3QYCCABKAkSDgoGZGV0YWlsGAkgASgJGisKCVRhZ3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjwKEUxpc3RSdWxlc1Jlc3BvbnNlEicKBXJ1bGVzGAEgAygLMhguYWduaS52MS53ZWJhcGkuUnVsZUluZm8iKgobR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXF1ZXN0EgsKA3VyaRgBIAEoCSI6Cg5TaWduYWxDb3ZlcmFnZRIMCgRuYW1lGAEgASgJEgsKA25ldBgCIAEoCRINCgVzdGF0ZRgDIAEoCSJpChFJbnRlcmZhY2VDb3ZlcmFnZRIPCgdwcm9maWxlGAEgASgJEhIKCmFuY2hvcl9uZXQYAiABKAkSLwoHc2lnbmFscxgDIAMoCzIeLmFnbmkudjEud2ViYXBpLlNpZ25hbENvdmVyYWdlIlUKHEdldEludGVyZmFjZUNvdmVyYWdlUmVzcG9uc2USNQoKaW50ZXJmYWNlcxgBIAMoCzIhLmFnbmkudjEud2ViYXBpLkludGVyZmFjZUNvdmVyYWdlIigKGUdldENvbXBvbmVudFBhcmFtc1JlcXVlc3QSCwoDdXJpGAEgASgJIlYKD0NvbXBvbmVudFBhcmFtcxIPCgdyZWZfZGVzGAEgASgJEgsKA21wbhgCIAEoCRIlCgRzcGVjGAMgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYyJRChpHZXRDb21wb25lbnRQYXJhbXNSZXNwb25zZRIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UGFyYW1zMs0FCgxDaGVja1NlcnZpY2USUAoJTGlzdFJ1bGVzEiAuYWduaS52MS53ZWJhcGkuTGlzdFJ1bGVzUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkxpc3RSdWxlc1Jlc3BvbnNlElYKC0NoZWNrRGVzaWduEiIuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuQ2hlY2tEZXNpZ25SZXNwb25zZRJiCg9HZXRFeHBlY3RhdGlvbnMSJi5hZ25pLnYxLndlYmFwaS5HZXRFeHBlY3RhdGlvbnNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuR2V0RXhwZWN0YXRpb25zUmVzcG9uc2USXwoOR2V0Q2hlY2tSZXBvcnQSJS5hZ25pLnYxLndlYmFwaS5HZXRDaGVja1JlcG9ydFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5HZXRDaGVja1JlcG9ydFJlc3BvbnNlEnEKFEdldEludGVyZmFjZUNvdmVyYWdlEisuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXF1ZXN0GiwuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXNwb25zZRJrChJHZXRDb21wb25lbnRQYXJhbXMSKS5hZ25pLnYxLndlYmFwaS5HZXRDb21wb25lbnRQYXJhbXNSZXF1ZXN0GiouYWduaS52MS53ZWJhcGkuR2V0Q29tcG9uZW50UGFyYW1zUmVzcG9uc2USbgoTR2V0TmFtaW5nQ29udmVudGlvbhIqLmFnbmkudjEud2ViYXBpLkdldE5hbWluZ0NvbnZlbnRpb25SZXF1ZXN0GisuYWduaS52MS53ZWJhcGkuR2V0TmFtaW5nQ29udmVudGlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_param_param]);
 
 /**
  * @generated from message agni.v1.webapi.CheckDesignRequest
@@ -25,7 +25,7 @@ export type CheckDesignRequest = Message<"agni.v1.webapi.CheckDesignRequest"> & 
    * existing caller is unchanged. A selection lets the client run only what it wants to see (and
    * avoid running expensive rules it did not select).
    *
-   * @generated from field: repeated string rules = 3;
+   * @generated from field: repeated string rules = 1;
    */
   rules: string[];
 
@@ -33,14 +33,14 @@ export type CheckDesignRequest = Message<"agni.v1.webapi.CheckDesignRequest"> & 
    * overlay carries the per-request rule-catalog configuration; empty keeps the catalog the service
    * was constructed with.
    *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 4;
+   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 2;
    */
   overlay?: OverlayConfig | undefined;
 
   /**
    * uri names the design to check.
    *
-   * @generated from field: string uri = 5;
+   * @generated from field: string uri = 3;
    */
   uri: string;
 };
@@ -277,7 +277,7 @@ export type GetCheckReportRequest = Message<"agni.v1.webapi.GetCheckReportReques
   /**
    * Same selector semantics as CheckDesignRequest.rules: names the subset to run, empty = all.
    *
-   * @generated from field: repeated string rules = 3;
+   * @generated from field: repeated string rules = 1;
    */
   rules: string[];
 
@@ -286,14 +286,14 @@ export type GetCheckReportRequest = Message<"agni.v1.webapi.GetCheckReportReques
    * rules: an overlay honored by one and not the other would make the same flag change the findings
    * in one --format and not another.
    *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 4;
+   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 2;
    */
   overlay?: OverlayConfig | undefined;
 
   /**
    * uri names the design to report on.
    *
-   * @generated from field: string uri = 6;
+   * @generated from field: string uri = 3;
    */
   uri: string;
 };
@@ -329,7 +329,7 @@ export type GetNamingConventionRequest = Message<"agni.v1.webapi.GetNamingConven
   /**
    * uri names the stored convention config, a key the Loader resolves, never a host path.
    *
-   * @generated from field: string uri = 3;
+   * @generated from field: string uri = 1;
    */
   uri: string;
 };
@@ -365,7 +365,7 @@ export type GetExpectationsRequest = Message<"agni.v1.webapi.GetExpectationsRequ
   /**
    * uri names the design whose expectation sidecar to read.
    *
-   * @generated from field: string uri = 3;
+   * @generated from field: string uri = 1;
    */
   uri: string;
 };
@@ -463,7 +463,7 @@ export type ListRulesRequest = Message<"agni.v1.webapi.ListRulesRequest"> & {
    * would never run and the server's would have stopped: naming checks would silently vanish, which
    * reads as a design with no naming problems.
    *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 3;
+   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 1;
    */
   overlay?: OverlayConfig | undefined;
 
@@ -471,7 +471,7 @@ export type ListRulesRequest = Message<"agni.v1.webapi.ListRulesRequest"> & {
    * uri names the design whose availability decides which rules apply; empty lists the whole
    * catalog without availability.
    *
-   * @generated from field: string uri = 4;
+   * @generated from field: string uri = 2;
    */
   uri: string;
 };
@@ -583,7 +583,7 @@ export type GetInterfaceCoverageRequest = Message<"agni.v1.webapi.GetInterfaceCo
   /**
    * uri names the design to project coverage over.
    *
-   * @generated from field: string uri = 3;
+   * @generated from field: string uri = 1;
    */
   uri: string;
 };
@@ -687,7 +687,7 @@ export type GetComponentParamsRequest = Message<"agni.v1.webapi.GetComponentPara
   /**
    * uri names the design whose components to join against the datasheet corpus.
    *
-   * @generated from field: string uri = 4;
+   * @generated from field: string uri = 1;
    */
   uri: string;
 };

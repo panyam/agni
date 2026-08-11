@@ -49,30 +49,23 @@ message ListMountsResponse {
 message DirEntry {
   // name is the base name (no path).
   string name = 1;
-  // 2 was `path`, the mount-relative half of a (mount, path) pair. An artifact is now named by one
-  // URI (field 5), so the pairing no longer has to be reassembled by every caller.
-  reserved 2;
-  reserved "path";
   // is_dir is true for a subdirectory.
-  bool is_dir = 3;
+  bool is_dir = 2;
   // format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
   // "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
   // has no reader for): the tree lists such files but the UI shows them disabled, so an
   // unsupported format is distinguishable from an empty folder. It is a hint for the UI;
   // ambiguous extensions are resolved for real at load time.
-  string format = 4;
+  string format = 3;
   // uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
   // (for a file).
-  string uri = 5;
+  string uri = 4;
 }
 
 message ListDirRequest {
-  // 1 and 2 were `mount` and `path`. See DirEntry.uri.
-  reserved 1, 2;
-  reserved "mount", "path";
   // uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
   // mount root.
-  string uri = 3;
+  string uri = 1;
 }
 
 message ListDirResponse {

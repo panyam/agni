@@ -73,12 +73,9 @@ message Project {
   string name = 1;
   // title is the human-readable label, falling back to the id when the descriptor gave none.
   string title = 2;
-  // 3 was `mount`, the authority half of a (mount, ref) pair. It now lives inside the URI below.
-  reserved 3;
-  reserved "mount";
   // uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
   // injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
-  string uri = 5;
+  string uri = 3;
 }
 
 // Design is one declared design: an identity, an entry file, and its companion views.
@@ -92,18 +89,15 @@ message Design {
   string name = 1;
   // title is the human-readable label, falling back to the id.
   string title = 2;
-  // 3 was `mount`; see Project.
-  reserved 3;
-  reserved "mount";
   // uri is the folder holding `design.yaml`.
-  string uri = 7;
+  string uri = 3;
   // entry_uri names the file this design's ANALYSIS reads: the netlist the
   // design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
   // behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
   // different component count depending on which a tool opens, and the CLI could previously only
   // print a warning telling the operator to go consult their own descriptor, because nothing in the
   // engine modelled "this folder is one design, and this file is its entry".
-  string entry_uri = 5;
+  string entry_uri = 4;
   // companion_uris name files that are VIEWS of this same design rather than
   // independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
   // render and to locate findings on, never a second component source to reconcile against the
@@ -112,7 +106,7 @@ message Design {
   // Membership is declared per file rather than inferred from "everything beside the entry", because
   // a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
   // inferred rule would turn a diff of two revisions into a diff of one against itself.
-  repeated string companion_uris = 6;
+  repeated string companion_uris = 5;
 }
 
 message GetProjectRequest {
@@ -160,12 +154,9 @@ message ListProjectDesignsResponse {
 }
 
 message ResolveDesignRequest {
-  // 1 and 2 were `mount` and `ref`.
-  reserved 1, 2;
-  reserved "mount", "ref";
   // uri names the file or folder to resolve. A URI's authority is a key in a server-defined
   // namespace that the injected Loader resolves, NOT a host path.
-  string uri = 3;
+  string uri = 1;
 }
 
 message ResolveDesignResponse {

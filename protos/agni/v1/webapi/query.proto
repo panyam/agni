@@ -37,7 +37,7 @@ service QueryService {
 message RunQueryRequest {
   // query is the datalog text, the same surface `agni query` accepts:
   //   component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
-  string query = 3;
+  string query = 1;
   // overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
   // only its LEXICON half does anything here — and it does a great deal.
   //
@@ -54,16 +54,14 @@ message RunQueryRequest {
   // The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
   // project keeps one conventions file carrying both halves, and a query legitimately consumes only
   // one of them.
-  OverlayConfig overlay = 4;
+  OverlayConfig overlay = 2;
   // board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
   // relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
   // no board is attached, and those relations are then simply empty — which is indistinguishable, in
   // a result table, from a board with nothing to report. Same ref semantics as `path`.
-  string board_uri = 5;
-  reserved 1, 2;
-  reserved "mount", "path";
+  string board_uri = 3;
   // uri names the design to query.
-  string uri = 7;
+  string uri = 4;
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the

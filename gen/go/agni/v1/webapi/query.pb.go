@@ -27,7 +27,7 @@ type RunQueryRequest struct {
 	// query is the datalog text, the same surface `agni query` accepts:
 	//
 	//	component.mpn(?r,?m), component-on-net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
-	Query string `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
 	// only its LEXICON half does anything here — and it does a great deal.
 	//
@@ -44,14 +44,14 @@ type RunQueryRequest struct {
 	// The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
 	// project keeps one conventions file carrying both halves, and a query legitimately consumes only
 	// one of them.
-	Overlay *OverlayConfig `protobuf:"bytes,4,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
 	// relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
 	// no board is attached, and those relations are then simply empty — which is indistinguishable, in
 	// a result table, from a board with nothing to report. Same ref semantics as `path`.
-	BoardUri string `protobuf:"bytes,5,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	BoardUri string `protobuf:"bytes,3,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	// uri names the design to query.
-	Uri           string `protobuf:"bytes,7,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -549,12 +549,12 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xa8\x01\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x8f\x01\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
-	"\x05query\x18\x03 \x01(\tR\x05query\x127\n" +
-	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
-	"\tboard_uri\x18\x05 \x01(\tR\bboardUri\x12\x10\n" +
-	"\x03uri\x18\a \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"\xb4\x01\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
+	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
+	"\tboard_uri\x18\x03 \x01(\tR\bboardUri\x12\x10\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\"\xb4\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x14\n" +
 	"\x05cites\x18\x02 \x03(\tR\x05cites\x12;\n" +

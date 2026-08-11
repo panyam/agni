@@ -66,10 +66,8 @@ service DatasheetService {
 }
 
 message GetDocumentRequest {
-  reserved 1, 2;
-  reserved "mount", "path";
   // uri names the datasheet document.
-  string uri = 3;
+  string uri = 1;
 }
 
 message GetDocumentResponse {
@@ -85,10 +83,8 @@ message GetDocumentResponse {
 }
 
 message ExtractDocIRRequest {
-  reserved 1, 2;
-  reserved "mount", "path";
   // uri names the datasheet PDF to extract.
-  string uri = 3;
+  string uri = 1;
 }
 
 message ExtractDocIRResponse {
@@ -97,10 +93,8 @@ message ExtractDocIRResponse {
 }
 
 message GetPartSpecRequest {
-  reserved 1, 2;
-  reserved "mount", "path";
   // uri names the stored PartSpec.
-  string uri = 3;
+  string uri = 1;
 }
 
 message GetPartSpecResponse {
@@ -114,14 +108,12 @@ message GetPartSpecResponse {
 }
 
 message SavePartSpecRequest {
-  agni.v1.param.PartSpec spec = 3;
+  agni.v1.param.PartSpec spec = 1;
   // base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
   // yet). A mismatch with the current on-disk version fails the save as a conflict.
-  string base_version = 4;
-  reserved 1, 2;
-  reserved "mount", "path";
+  string base_version = 2;
   // uri names the PartSpec to write.
-  string uri = 5;
+  string uri = 3;
 }
 
 message SavePartSpecResponse {
@@ -165,10 +157,8 @@ message AnnotationSet {
 }
 
 message GetAnnotationsRequest {
-  reserved 1, 2;
-  reserved "mount", "path";
   // uri names the document the annotations belong to.
-  string uri = 3;
+  string uri = 1;
 }
 
 message GetAnnotationsResponse {
@@ -180,11 +170,9 @@ message GetAnnotationsResponse {
 message SaveAnnotationsRequest {
   // set is one author's complete overlay; it REPLACES that author's prior overlay for this
   // datasheet. set.author names the file written; set.doc_id is carried through unchanged.
-  AnnotationSet set = 3;
-  reserved 1, 2;
-  reserved "mount", "path";
+  AnnotationSet set = 1;
   // uri names the document the annotations belong to.
-  string uri = 5;
+  string uri = 2;
 }
 
 message SaveAnnotationsResponse {}

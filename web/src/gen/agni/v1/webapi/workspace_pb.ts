@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiEwoRTGlzdE1vdW50c1JlcXVlc3QiOwoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50IlEKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAMgASgIEg4KBmZvcm1hdBgEIAEoCRILCgN1cmkYBSABKAlKBAgCEANSBHBhdGgiNgoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAMgASgJSgQIARACSgQIAhADUgVtb3VudFIEcGF0aCI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5MrMBChBXb3Jrc3BhY2VTZXJ2aWNlElMKCkxpc3RNb3VudHMSIS5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXNwb25zZRJKCgdMaXN0RGlyEh4uYWduaS52MS53ZWJhcGkuTGlzdERpclJlcXVlc3QaHy5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiEwoRTGlzdE1vdW50c1JlcXVlc3QiOwoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50IkUKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkiHQoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJIjwKD0xpc3REaXJSZXNwb25zZRIpCgdlbnRyaWVzGAEgAygLMhguYWduaS52MS53ZWJhcGkuRGlyRW50cnkyswEKEFdvcmtzcGFjZVNlcnZpY2USUwoKTGlzdE1vdW50cxIhLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1Jlc3BvbnNlEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -96,7 +96,7 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
   /**
    * is_dir is true for a subdirectory.
    *
-   * @generated from field: bool is_dir = 3;
+   * @generated from field: bool is_dir = 2;
    */
   isDir: boolean;
 
@@ -107,7 +107,7 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
    * unsupported format is distinguishable from an empty folder. It is a hint for the UI;
    * ambiguous extensions are resolved for real at load time.
    *
-   * @generated from field: string format = 4;
+   * @generated from field: string format = 3;
    */
   format: string;
 
@@ -115,7 +115,7 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
    * uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
    * (for a file).
    *
-   * @generated from field: string uri = 5;
+   * @generated from field: string uri = 4;
    */
   uri: string;
 };
@@ -135,7 +135,7 @@ export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
    * uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
    * mount root.
    *
-   * @generated from field: string uri = 3;
+   * @generated from field: string uri = 1;
    */
   uri: string;
 };

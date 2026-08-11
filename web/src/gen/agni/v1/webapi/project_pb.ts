@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSJACgdQcm9qZWN0EgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAUgASgJSgQIAxAEUgVtb3VudCJqCgZEZXNpZ24SDAoEbmFtZRgBIAEoCRINCgV0aXRsZRgCIAEoCRILCgN1cmkYByABKAkSEQoJZW50cnlfdXJpGAUgASgJEhYKDmNvbXBhbmlvbl91cmlzGAYgAygJSgQIAxAEUgVtb3VudCIhChFHZXRQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIkwKE0xpc3RQcm9qZWN0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIloKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEikKCHByb2plY3RzGAEgAygLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiJwoXR2V0UHJvamVjdERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJiChlMaXN0UHJvamVjdERlc2lnbnNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCRIOCgZmaWx0ZXIYBCABKAkiXgoaTGlzdFByb2plY3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiOwoUUmVzb2x2ZURlc2lnblJlcXVlc3QSCwoDdXJpGAMgASgJSgQIARACSgQIAhADUgVtb3VudFIDcmVmImkKFVJlc29sdmVEZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YASABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SKAoHcHJvamVjdBgCIAEoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QyxwMKDlByb2plY3RTZXJ2aWNlEkgKCkdldFByb2plY3QSIS5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSWQoMTGlzdFByb2plY3RzEiMuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1Jlc3BvbnNlEkwKCUdldERlc2lnbhInLmFnbmkudjEud2ViYXBpLkdldFByb2plY3REZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEmQKC0xpc3REZXNpZ25zEikuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBoqLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlElwKDVJlc29sdmVEZXNpZ24SJC5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSIzCgdQcm9qZWN0EgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJIl0KBkRlc2lnbhIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIRCgllbnRyeV91cmkYBCABKAkSFgoOY29tcGFuaW9uX3VyaXMYBSADKAkiIQoRR2V0UHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSJMChNMaXN0UHJvamVjdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJaChRMaXN0UHJvamVjdHNSZXNwb25zZRIpCghwcm9qZWN0cxgBIAMoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIicKF0dldFByb2plY3REZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkiYgoZTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJIl4KGkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlEicKB2Rlc2lnbnMYASADKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0MscDCg5Qcm9qZWN0U2VydmljZRJICgpHZXRQcm9qZWN0EiEuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0ElkKDExpc3RQcm9qZWN0cxIjLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXNwb25zZRJMCglHZXREZXNpZ24SJy5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJkCgtMaXN0RGVzaWducxIpLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1JlcXVlc3QaKi5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdERlc2lnbnNSZXNwb25zZRJcCg1SZXNvbHZlRGVzaWduEiQuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
 
 /**
  * Project is one declared set of designs that share configuration.
@@ -48,7 +48,7 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
    * uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
    * injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
    *
-   * @generated from field: string uri = 5;
+   * @generated from field: string uri = 3;
    */
   uri: string;
 };
@@ -88,7 +88,7 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   /**
    * uri is the folder holding `design.yaml`.
    *
-   * @generated from field: string uri = 7;
+   * @generated from field: string uri = 3;
    */
   uri: string;
 
@@ -100,7 +100,7 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * print a warning telling the operator to go consult their own descriptor, because nothing in the
    * engine modelled "this folder is one design, and this file is its entry".
    *
-   * @generated from field: string entry_uri = 5;
+   * @generated from field: string entry_uri = 4;
    */
   entryUri: string;
 
@@ -114,7 +114,7 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
    * inferred rule would turn a diff of two revisions into a diff of one against itself.
    *
-   * @generated from field: repeated string companion_uris = 6;
+   * @generated from field: repeated string companion_uris = 5;
    */
   companionUris: string[];
 };
@@ -296,7 +296,7 @@ export type ResolveDesignRequest = Message<"agni.v1.webapi.ResolveDesignRequest"
    * uri names the file or folder to resolve. A URI's authority is a key in a server-defined
    * namespace that the injected Loader resolves, NOT a host path.
    *
-   * @generated from field: string uri = 3;
+   * @generated from field: string uri = 1;
    */
   uri: string;
 };

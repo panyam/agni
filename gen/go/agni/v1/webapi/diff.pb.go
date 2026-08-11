@@ -27,8 +27,8 @@ const (
 type DiffDesignsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
-	AUri          string `protobuf:"bytes,5,opt,name=a_uri,json=aUri,proto3" json:"a_uri,omitempty"`
-	BUri          string `protobuf:"bytes,6,opt,name=b_uri,json=bUri,proto3" json:"b_uri,omitempty"`
+	AUri          string `protobuf:"bytes,1,opt,name=a_uri,json=aUri,proto3" json:"a_uri,omitempty"`
+	BUri          string `protobuf:"bytes,2,opt,name=b_uri,json=bUri,proto3" json:"b_uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -560,10 +560,10 @@ var File_agni_v1_webapi_diff_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"x\n" +
+	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\">\n" +
 	"\x12DiffDesignsRequest\x12\x13\n" +
-	"\x05a_uri\x18\x05 \x01(\tR\x04aUri\x12\x13\n" +
-	"\x05b_uri\x18\x06 \x01(\tR\x04bUriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\aa_mountR\x06a_pathR\ab_mountR\x06b_path\"\xc8\x04\n" +
+	"\x05a_uri\x18\x01 \x01(\tR\x04aUri\x12\x13\n" +
+	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\"\xc8\x04\n" +
 	"\n" +
 	"DiffReport\x12)\n" +
 	"\x10components_added\x18\x01 \x03(\tR\x0fcomponentsAdded\x12-\n" +

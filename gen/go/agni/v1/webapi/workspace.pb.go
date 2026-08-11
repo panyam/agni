@@ -174,16 +174,16 @@ type DirEntry struct {
 	// name is the base name (no path).
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// is_dir is true for a subdirectory.
-	IsDir bool `protobuf:"varint,3,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
+	IsDir bool `protobuf:"varint,2,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
 	// format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
 	// "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
 	// has no reader for): the tree lists such files but the UI shows them disabled, so an
 	// unsupported format is distinguishable from an empty folder. It is a hint for the UI;
 	// ambiguous extensions are resolved for real at load time.
-	Format string `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
+	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
 	// uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
 	// (for a file).
-	Uri           string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -250,7 +250,7 @@ type ListDirRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
 	// mount root.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -349,14 +349,14 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\"\x13\n" +
 	"\x11ListMountsRequest\"C\n" +
 	"\x12ListMountsResponse\x12-\n" +
-	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\"k\n" +
+	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\"_\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
-	"\x06is_dir\x18\x03 \x01(\bR\x05isDir\x12\x16\n" +
-	"\x06format\x18\x04 \x01(\tR\x06format\x12\x10\n" +
-	"\x03uri\x18\x05 \x01(\tR\x03uriJ\x04\b\x02\x10\x03R\x04path\";\n" +
+	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +
+	"\x06format\x18\x03 \x01(\tR\x06format\x12\x10\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\"\"\n" +
 	"\x0eListDirRequest\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"E\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"E\n" +
 	"\x0fListDirResponse\x122\n" +
 	"\aentries\x18\x01 \x03(\v2\x18.agni.v1.webapi.DirEntryR\aentries2\xb3\x01\n" +
 	"\x10WorkspaceService\x12S\n" +

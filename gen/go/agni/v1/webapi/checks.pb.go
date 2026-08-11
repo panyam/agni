@@ -28,12 +28,12 @@ type CheckDesignRequest struct {
 	// rules names the subset of rules to run (by RuleInfo.name); empty runs the full catalog, so an
 	// existing caller is unchanged. A selection lets the client run only what it wants to see (and
 	// avoid running expensive rules it did not select).
-	Rules []string `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
+	Rules []string `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
 	// overlay carries the per-request rule-catalog configuration; empty keeps the catalog the service
 	// was constructed with.
-	Overlay *OverlayConfig `protobuf:"bytes,4,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// uri names the design to check.
-	Uri           string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -488,13 +488,13 @@ func (x *CheckDesignResponse) GetFindings() []*checks.Finding {
 type GetCheckReportRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Same selector semantics as CheckDesignRequest.rules: names the subset to run, empty = all.
-	Rules []string `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
+	Rules []string `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
 	// Same semantics as CheckDesignRequest.overlay. It is here too because this RPC also RUNS the
 	// rules: an overlay honored by one and not the other would make the same flag change the findings
 	// in one --format and not another.
-	Overlay *OverlayConfig `protobuf:"bytes,4,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// uri names the design to report on.
-	Uri           string `protobuf:"bytes,6,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -597,7 +597,7 @@ func (x *GetCheckReportResponse) GetReport() *checks.CheckReport {
 type GetNamingConventionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the stored convention config, a key the Loader resolves, never a host path.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -686,7 +686,7 @@ func (x *GetNamingConventionResponse) GetConvention() *NamingConvention {
 type GetExpectationsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the design whose expectation sidecar to read.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -871,10 +871,10 @@ type ListRulesRequest struct {
 	// would select rules that no longer exist and miss the ones that now do, so its own naming rules
 	// would never run and the server's would have stopped: naming checks would silently vanish, which
 	// reads as a design with no naming problems.
-	Overlay *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	Overlay *OverlayConfig `protobuf:"bytes,1,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// uri names the design whose availability decides which rules apply; empty lists the whole
 	// catalog without availability.
-	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1082,7 +1082,7 @@ func (x *ListRulesResponse) GetRules() []*RuleInfo {
 type GetInterfaceCoverageRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the design to project coverage over.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1297,7 +1297,7 @@ func (x *GetInterfaceCoverageResponse) GetInterfaces() []*InterfaceCoverage {
 type GetComponentParamsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the design whose components to join against the datasheet corpus.
-	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1450,11 +1450,11 @@ var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x19agni/v1/param/param.proto\"\x8e\x01\n" +
+	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x19agni/v1/param/param.proto\"u\n" +
 	"\x12CheckDesignRequest\x12\x14\n" +
-	"\x05rules\x18\x03 \x03(\tR\x05rules\x127\n" +
-	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x05 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"S\n" +
+	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
+	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"S\n" +
 	"\rOverlayConfig\x12B\n" +
 	"\vconventions\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\"\x91\x01\n" +
 	"\x10NamingConvention\x12\x12\n" +
@@ -1485,21 +1485,21 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
 	"match_full\x18\x06 \x01(\bR\tmatchFull\"J\n" +
 	"\x13CheckDesignResponse\x123\n" +
-	"\bfindings\x18\x01 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\"\x91\x01\n" +
+	"\bfindings\x18\x01 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\"x\n" +
 	"\x15GetCheckReportRequest\x12\x14\n" +
-	"\x05rules\x18\x03 \x03(\tR\x05rules\x127\n" +
-	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x06 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"M\n" +
+	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
+	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"M\n" +
 	"\x16GetCheckReportResponse\x123\n" +
-	"\x06report\x18\x01 \x01(\v2\x1b.agni.v1.checks.CheckReportR\x06report\"F\n" +
+	"\x06report\x18\x01 \x01(\v2\x1b.agni.v1.checks.CheckReportR\x06report\".\n" +
 	"\x1aGetNamingConventionRequest\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x03ref\"_\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"_\n" +
 	"\x1bGetNamingConventionResponse\x12@\n" +
 	"\n" +
 	"convention\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\n" +
-	"convention\"C\n" +
+	"convention\"*\n" +
 	"\x16GetExpectationsRequest\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"m\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"m\n" +
 	"\x0fRuleExpectation\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bsubjects\x18\x02 \x03(\tR\bsubjects\x12\x18\n" +
@@ -1508,10 +1508,10 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x17GetExpectationsResponse\x12C\n" +
 	"\fexpectations\x18\x01 \x03(\v2\x1f.agni.v1.webapi.RuleExpectationR\fexpectations\x12\x1f\n" +
 	"\vhas_sidecar\x18\x02 \x01(\bR\n" +
-	"hasSidecar\"v\n" +
+	"hasSidecar\"]\n" +
 	"\x10ListRulesRequest\x127\n" +
-	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"\xd8\x02\n" +
+	"\aoverlay\x18\x01 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xd8\x02\n" +
 	"\bRuleInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x18\n" +
@@ -1526,9 +1526,9 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
 	"\x11ListRulesResponse\x12.\n" +
-	"\x05rules\x18\x01 \x03(\v2\x18.agni.v1.webapi.RuleInfoR\x05rules\"H\n" +
+	"\x05rules\x18\x01 \x03(\v2\x18.agni.v1.webapi.RuleInfoR\x05rules\"/\n" +
 	"\x1bGetInterfaceCoverageRequest\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"L\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"L\n" +
 	"\x0eSignalCoverage\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03net\x18\x02 \x01(\tR\x03net\x12\x14\n" +
@@ -1541,9 +1541,9 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x1cGetInterfaceCoverageResponse\x12A\n" +
 	"\n" +
 	"interfaces\x18\x01 \x03(\v2!.agni.v1.webapi.InterfaceCoverageR\n" +
-	"interfaces\"F\n" +
+	"interfaces\"-\n" +
 	"\x19GetComponentParamsRequest\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x04path\"i\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"i\n" +
 	"\x0fComponentParams\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03mpn\x18\x02 \x01(\tR\x03mpn\x12+\n" +

@@ -42,7 +42,7 @@ type Project struct {
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
 	// injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
-	Uri           string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -111,14 +111,14 @@ type Design struct {
 	// title is the human-readable label, falling back to the id.
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// uri is the folder holding `design.yaml`.
-	Uri string `protobuf:"bytes,7,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	// entry_uri names the file this design's ANALYSIS reads: the netlist the
 	// design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
 	// behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
 	// different component count depending on which a tool opens, and the CLI could previously only
 	// print a warning telling the operator to go consult their own descriptor, because nothing in the
 	// engine modelled "this folder is one design, and this file is its entry".
-	EntryUri string `protobuf:"bytes,5,opt,name=entry_uri,json=entryUri,proto3" json:"entry_uri,omitempty"`
+	EntryUri string `protobuf:"bytes,4,opt,name=entry_uri,json=entryUri,proto3" json:"entry_uri,omitempty"`
 	// companion_uris name files that are VIEWS of this same design rather than
 	// independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
 	// render and to locate findings on, never a second component source to reconcile against the
@@ -127,7 +127,7 @@ type Design struct {
 	// Membership is declared per file rather than inferred from "everything beside the entry", because
 	// a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
 	// inferred rule would turn a diff of two revisions into a diff of one against itself.
-	CompanionUris []string `protobuf:"bytes,6,rep,name=companion_uris,json=companionUris,proto3" json:"companion_uris,omitempty"`
+	CompanionUris []string `protobuf:"bytes,5,rep,name=companion_uris,json=companionUris,proto3" json:"companion_uris,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -534,7 +534,7 @@ type ResolveDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the file or folder to resolve. A URI's authority is a key in a server-defined
 	// namespace that the injected Loader resolves, NOT a host path.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -648,17 +648,17 @@ var File_agni_v1_webapi_project_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\"R\n" +
+	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\"E\n" +
 	"\aProject\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
-	"\x03uri\x18\x05 \x01(\tR\x03uriJ\x04\b\x03\x10\x04R\x05mount\"\x95\x01\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"\x88\x01\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
-	"\x03uri\x18\a \x01(\tR\x03uri\x12\x1b\n" +
-	"\tentry_uri\x18\x05 \x01(\tR\bentryUri\x12%\n" +
-	"\x0ecompanion_uris\x18\x06 \x03(\tR\rcompanionUrisJ\x04\b\x03\x10\x04R\x05mount\"'\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
+	"\tentry_uri\x18\x04 \x01(\tR\bentryUri\x12%\n" +
+	"\x0ecompanion_uris\x18\x05 \x03(\tR\rcompanionUris\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +
@@ -679,9 +679,9 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x06filter\x18\x04 \x01(\tR\x06filter\"v\n" +
 	"\x1aListProjectDesignsResponse\x120\n" +
 	"\adesigns\x18\x01 \x03(\v2\x16.agni.v1.webapi.DesignR\adesigns\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"@\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"(\n" +
 	"\x14ResolveDesignRequest\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uriJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05mountR\x03ref\"z\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"z\n" +
 	"\x15ResolveDesignResponse\x12.\n" +
 	"\x06design\x18\x01 \x01(\v2\x16.agni.v1.webapi.DesignR\x06design\x121\n" +
 	"\aproject\x18\x02 \x01(\v2\x17.agni.v1.webapi.ProjectR\aproject2\xc7\x03\n" +
