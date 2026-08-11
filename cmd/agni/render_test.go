@@ -11,10 +11,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // TestBuildRegistry covers the --class / --class-file plumbing (WS7-030): a flag rule steers

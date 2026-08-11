@@ -66,10 +66,8 @@ service DatasheetService {
 }
 
 message GetDocumentRequest {
-  // mount is the name of a mount from WorkspaceService.ListMounts.
-  string mount = 1;
-  // path is the mount-relative path to the datasheet source document (the PDF).
-  string path = 2;
+  // uri names the datasheet document.
+  string uri = 1;
 }
 
 message GetDocumentResponse {
@@ -85,8 +83,8 @@ message GetDocumentResponse {
 }
 
 message ExtractDocIRRequest {
-  string mount = 1;
-  string path = 2;
+  // uri names the datasheet PDF to extract.
+  string uri = 1;
 }
 
 message ExtractDocIRResponse {
@@ -95,8 +93,8 @@ message ExtractDocIRResponse {
 }
 
 message GetPartSpecRequest {
-  string mount = 1;
-  string path = 2;
+  // uri names the stored PartSpec.
+  string uri = 1;
 }
 
 message GetPartSpecResponse {
@@ -110,12 +108,12 @@ message GetPartSpecResponse {
 }
 
 message SavePartSpecRequest {
-  string mount = 1;
-  string path = 2;
-  agni.v1.param.PartSpec spec = 3;
+  agni.v1.param.PartSpec spec = 1;
   // base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
   // yet). A mismatch with the current on-disk version fails the save as a conflict.
-  string base_version = 4;
+  string base_version = 2;
+  // uri names the PartSpec to write.
+  string uri = 3;
 }
 
 message SavePartSpecResponse {
@@ -159,8 +157,8 @@ message AnnotationSet {
 }
 
 message GetAnnotationsRequest {
-  string mount = 1;
-  string path = 2;
+  // uri names the document the annotations belong to.
+  string uri = 1;
 }
 
 message GetAnnotationsResponse {
@@ -170,11 +168,11 @@ message GetAnnotationsResponse {
 }
 
 message SaveAnnotationsRequest {
-  string mount = 1;
-  string path = 2;
   // set is one author's complete overlay; it REPLACES that author's prior overlay for this
   // datasheet. set.author names the file written; set.doc_id is carried through unchanged.
-  AnnotationSet set = 3;
+  AnnotationSet set = 1;
+  // uri names the document the annotations belong to.
+  string uri = 2;
 }
 
 message SaveAnnotationsResponse {}

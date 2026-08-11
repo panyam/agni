@@ -43,7 +43,6 @@ import (
 // and the TS client with no hand-written JSON.
 func serveCmd() *cobra.Command {
 	var addr string
-	var mountSpecs []string
 	var mountRoot string
 	var nativeTools []string
 	var pdf2docCmd string
@@ -72,7 +71,7 @@ func serveCmd() *cobra.Command {
 			if err := checkWebAssets(dir); err != nil {
 				return err
 			}
-			explicit, err := mounts.Parse(mountSpecs)
+			explicit, err := mounts.Parse(cliMountSpecs)
 			if err != nil {
 				return err
 			}
@@ -203,7 +202,6 @@ func serveCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
-	c.Flags().StringArrayVar(&mountSpecs, "mount", nil, "expose a design folder as name=path (repeatable)")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")

@@ -28,7 +28,11 @@ type Mount struct {
 	// name is the stable handle the client passes back to address this mount.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// root is the absolute host path the mount serves, for display in the UI.
-	Root          string `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
+	Root string `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
+	// uri names the mount itself, "mount://<name>". It is served rather than left for the client to
+	// build, because a client that concatenates a scheme by hand is a client that can get the scheme
+	// wrong, and every other artifact reference it makes will be a child of this one.
+	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,6 +77,13 @@ func (x *Mount) GetName() string {
 func (x *Mount) GetRoot() string {
 	if x != nil {
 		return x.Root
+	}
+	return ""
+}
+
+func (x *Mount) GetUri() string {
+	if x != nil {
+		return x.Uri
 	}
 	return ""
 }
@@ -162,17 +173,17 @@ type DirEntry struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the base name (no path).
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// path is the mount-relative path to this entry, to pass back to ListDir (for a
-	// directory) or to a design/sheet load (for a file).
-	Path string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	// is_dir is true for a subdirectory.
-	IsDir bool `protobuf:"varint,3,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
+	IsDir bool `protobuf:"varint,2,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
 	// format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
 	// "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
 	// has no reader for): the tree lists such files but the UI shows them disabled, so an
 	// unsupported format is distinguishable from an empty folder. It is a hint for the UI;
 	// ambiguous extensions are resolved for real at load time.
-	Format        string `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
+	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
+	// uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
+	// (for a file).
+	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -214,13 +225,6 @@ func (x *DirEntry) GetName() string {
 	return ""
 }
 
-func (x *DirEntry) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 func (x *DirEntry) GetIsDir() bool {
 	if x != nil {
 		return x.IsDir
@@ -235,12 +239,18 @@ func (x *DirEntry) GetFormat() string {
 	return ""
 }
 
+func (x *DirEntry) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
 type ListDirRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// mount is the name of a mount from ListMounts.
-	Mount string `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	// path is the mount-relative directory to list; empty lists the mount root.
-	Path          string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	// uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
+	// mount root.
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -275,16 +285,9 @@ func (*ListDirRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ListDirRequest) GetMount() string {
+func (x *ListDirRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *ListDirRequest) GetPath() string {
-	if x != nil {
-		return x.Path
+		return x.Uri
 	}
 	return ""
 }
@@ -339,21 +342,21 @@ var File_agni_v1_webapi_workspace_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\"/\n" +
+	"\x1eagni/v1/webapi/workspace.proto\x12\x0eagni.v1.webapi\"A\n" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04root\x18\x02 \x01(\tR\x04root\"\x13\n" +
+	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"\x13\n" +
 	"\x11ListMountsRequest\"C\n" +
 	"\x12ListMountsResponse\x12-\n" +
-	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\"a\n" +
+	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\"_\n" +
 	"\bDirEntry\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12\x15\n" +
-	"\x06is_dir\x18\x03 \x01(\bR\x05isDir\x12\x16\n" +
-	"\x06format\x18\x04 \x01(\tR\x06format\":\n" +
-	"\x0eListDirRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"E\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
+	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +
+	"\x06format\x18\x03 \x01(\tR\x06format\x12\x10\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\"\"\n" +
+	"\x0eListDirRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"E\n" +
 	"\x0fListDirResponse\x122\n" +
 	"\aentries\x18\x01 \x03(\v2\x18.agni.v1.webapi.DirEntryR\aentries2\xb3\x01\n" +
 	"\x10WorkspaceService\x12S\n" +

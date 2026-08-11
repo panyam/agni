@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // TestGetComponentParams: the RPC surfaces only components whose MPN joins to a seeded PartSpec, with
@@ -28,7 +28,7 @@ func TestGetComponentParams(t *testing.T) {
 	})
 
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), provider, "", nil)
-	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{})
+	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestGetComponentParams(t *testing.T) {
 	}
 
 	noParams := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
-	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{})
+	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,25 +14,18 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/datasheet.proto.
  */
 export const file_agni_v1_webapi_datasheet: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS9kYXRhc2hlZXQucHJvdG8SDmFnbmkudjEud2ViYXBpIjEKEkdldERvY3VtZW50UmVxdWVzdBINCgVtb3VudBgBIAEoCRIMCgRwYXRoGAIgASgJImwKE0dldERvY3VtZW50UmVzcG9uc2USEQoJZXh0cmFjdGVkGAEgASgIEicKCGRvY3VtZW50GAIgASgLMhUuYWduaS52MS5kb2MuRG9jdW1lbnQSGQoRZXh0cmFjdF9hdmFpbGFibGUYAyABKAgiMgoTRXh0cmFjdERvY0lSUmVxdWVzdBINCgVtb3VudBgBIAEoCRIMCgRwYXRoGAIgASgJIj8KFEV4dHJhY3REb2NJUlJlc3BvbnNlEicKCGRvY3VtZW50GAEgASgLMhUuYWduaS52MS5kb2MuRG9jdW1lbnQiMQoSR2V0UGFydFNwZWNSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgwKBHBhdGgYAiABKAkiXAoTR2V0UGFydFNwZWNSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRzcGVjGAIgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYxIPCgd2ZXJzaW9uGAMgASgJIm8KE1NhdmVQYXJ0U3BlY1JlcXVlc3QSDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRIlCgRzcGVjGAMgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYxIUCgxiYXNlX3ZlcnNpb24YBCABKAkiJwoUU2F2ZVBhcnRTcGVjUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoCSLRAQoQUmVnaW9uQW5ub3RhdGlvbhIRCglyZWdpb25faWQYASABKAkSDAoEdHlwZRgCIAEoCRIkCgRiYm94GAMgASgLMhEuYWduaS52MS5kb2MuQkJveEgAiAEBEgwKBHBhZ2UYBCABKAUSDAoEa2luZBgFIAEoCRINCgVsYWJlbBgGIAEoCRIuCgxkcmFmdF9wYXJhbXMYByADKAsyGC5hZ25pLnYxLnBhcmFtLlBhcmFtZXRlchISCgpjb25maWRlbmNlGAggASgBQgcKBV9iYm94ImYKDUFubm90YXRpb25TZXQSDgoGZG9jX2lkGAEgASgJEg4KBmF1dGhvchgCIAEoCRI1Cgthbm5vdGF0aW9ucxgDIAMoCzIgLmFnbmkudjEud2ViYXBpLlJlZ2lvbkFubm90YXRpb24iNAoVR2V0QW5ub3RhdGlvbnNSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgwKBHBhdGgYAiABKAkiRQoWR2V0QW5ub3RhdGlvbnNSZXNwb25zZRIrCgRzZXRzGAEgAygLMh0uYWduaS52MS53ZWJhcGkuQW5ub3RhdGlvblNldCJhChZTYXZlQW5ub3RhdGlvbnNSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgwKBHBhdGgYAiABKAkSKgoDc2V0GAMgASgLMh0uYWduaS52MS53ZWJhcGkuQW5ub3RhdGlvblNldCIZChdTYXZlQW5ub3RhdGlvbnNSZXNwb25zZTK9BAoQRGF0YXNoZWV0U2VydmljZRJWCgtHZXREb2N1bWVudBIiLmFnbmkudjEud2ViYXBpLkdldERvY3VtZW50UmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkdldERvY3VtZW50UmVzcG9uc2USVgoLR2V0UGFydFNwZWMSIi5hZ25pLnYxLndlYmFwaS5HZXRQYXJ0U3BlY1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5HZXRQYXJ0U3BlY1Jlc3BvbnNlElkKDFNhdmVQYXJ0U3BlYxIjLmFnbmkudjEud2ViYXBpLlNhdmVQYXJ0U3BlY1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5TYXZlUGFydFNwZWNSZXNwb25zZRJZCgxFeHRyYWN0RG9jSVISIy5hZ25pLnYxLndlYmFwaS5FeHRyYWN0RG9jSVJSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuRXh0cmFjdERvY0lSUmVzcG9uc2USXwoOR2V0QW5ub3RhdGlvbnMSJS5hZ25pLnYxLndlYmFwaS5HZXRBbm5vdGF0aW9uc1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5HZXRBbm5vdGF0aW9uc1Jlc3BvbnNlEmIKD1NhdmVBbm5vdGF0aW9ucxImLmFnbmkudjEud2ViYXBpLlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5TYXZlQW5ub3RhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_doc_doc, file_agni_v1_param_param]);
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS9kYXRhc2hlZXQucHJvdG8SDmFnbmkudjEud2ViYXBpIiEKEkdldERvY3VtZW50UmVxdWVzdBILCgN1cmkYASABKAkibAoTR2V0RG9jdW1lbnRSZXNwb25zZRIRCglleHRyYWN0ZWQYASABKAgSJwoIZG9jdW1lbnQYAiABKAsyFS5hZ25pLnYxLmRvYy5Eb2N1bWVudBIZChFleHRyYWN0X2F2YWlsYWJsZRgDIAEoCCIiChNFeHRyYWN0RG9jSVJSZXF1ZXN0EgsKA3VyaRgBIAEoCSI/ChRFeHRyYWN0RG9jSVJSZXNwb25zZRInCghkb2N1bWVudBgBIAEoCzIVLmFnbmkudjEuZG9jLkRvY3VtZW50IiEKEkdldFBhcnRTcGVjUmVxdWVzdBILCgN1cmkYASABKAkiXAoTR2V0UGFydFNwZWNSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRzcGVjGAIgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYxIPCgd2ZXJzaW9uGAMgASgJIl8KE1NhdmVQYXJ0U3BlY1JlcXVlc3QSJQoEc3BlYxgBIAEoCzIXLmFnbmkudjEucGFyYW0uUGFydFNwZWMSFAoMYmFzZV92ZXJzaW9uGAIgASgJEgsKA3VyaRgDIAEoCSInChRTYXZlUGFydFNwZWNSZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJItEBChBSZWdpb25Bbm5vdGF0aW9uEhEKCXJlZ2lvbl9pZBgBIAEoCRIMCgR0eXBlGAIgASgJEiQKBGJib3gYAyABKAsyES5hZ25pLnYxLmRvYy5CQm94SACIAQESDAoEcGFnZRgEIAEoBRIMCgRraW5kGAUgASgJEg0KBWxhYmVsGAYgASgJEi4KDGRyYWZ0X3BhcmFtcxgHIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEhIKCmNvbmZpZGVuY2UYCCABKAFCBwoFX2Jib3giZgoNQW5ub3RhdGlvblNldBIOCgZkb2NfaWQYASABKAkSDgoGYXV0aG9yGAIgASgJEjUKC2Fubm90YXRpb25zGAMgAygLMiAuYWduaS52MS53ZWJhcGkuUmVnaW9uQW5ub3RhdGlvbiIkChVHZXRBbm5vdGF0aW9uc1JlcXVlc3QSCwoDdXJpGAEgASgJIkUKFkdldEFubm90YXRpb25zUmVzcG9uc2USKwoEc2V0cxgBIAMoCzIdLmFnbmkudjEud2ViYXBpLkFubm90YXRpb25TZXQiUQoWU2F2ZUFubm90YXRpb25zUmVxdWVzdBIqCgNzZXQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5Bbm5vdGF0aW9uU2V0EgsKA3VyaRgCIAEoCSIZChdTYXZlQW5ub3RhdGlvbnNSZXNwb25zZTK9BAoQRGF0YXNoZWV0U2VydmljZRJWCgtHZXREb2N1bWVudBIiLmFnbmkudjEud2ViYXBpLkdldERvY3VtZW50UmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkdldERvY3VtZW50UmVzcG9uc2USVgoLR2V0UGFydFNwZWMSIi5hZ25pLnYxLndlYmFwaS5HZXRQYXJ0U3BlY1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5HZXRQYXJ0U3BlY1Jlc3BvbnNlElkKDFNhdmVQYXJ0U3BlYxIjLmFnbmkudjEud2ViYXBpLlNhdmVQYXJ0U3BlY1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5TYXZlUGFydFNwZWNSZXNwb25zZRJZCgxFeHRyYWN0RG9jSVISIy5hZ25pLnYxLndlYmFwaS5FeHRyYWN0RG9jSVJSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuRXh0cmFjdERvY0lSUmVzcG9uc2USXwoOR2V0QW5ub3RhdGlvbnMSJS5hZ25pLnYxLndlYmFwaS5HZXRBbm5vdGF0aW9uc1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5HZXRBbm5vdGF0aW9uc1Jlc3BvbnNlEmIKD1NhdmVBbm5vdGF0aW9ucxImLmFnbmkudjEud2ViYXBpLlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5TYXZlQW5ub3RhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_doc_doc, file_agni_v1_param_param]);
 
 /**
  * @generated from message agni.v1.webapi.GetDocumentRequest
  */
 export type GetDocumentRequest = Message<"agni.v1.webapi.GetDocumentRequest"> & {
   /**
-   * mount is the name of a mount from WorkspaceService.ListMounts.
+   * uri names the datasheet document.
    *
-   * @generated from field: string mount = 1;
+   * @generated from field: string uri = 1;
    */
-  mount: string;
-
-  /**
-   * path is the mount-relative path to the datasheet source document (the PDF).
-   *
-   * @generated from field: string path = 2;
-   */
-  path: string;
+  uri: string;
 };
 
 /**
@@ -83,14 +76,11 @@ export const GetDocumentResponseSchema: GenMessage<GetDocumentResponse> = /*@__P
  */
 export type ExtractDocIRRequest = Message<"agni.v1.webapi.ExtractDocIRRequest"> & {
   /**
-   * @generated from field: string mount = 1;
+   * uri names the datasheet PDF to extract.
+   *
+   * @generated from field: string uri = 1;
    */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
+  uri: string;
 };
 
 /**
@@ -124,14 +114,11 @@ export const ExtractDocIRResponseSchema: GenMessage<ExtractDocIRResponse> = /*@_
  */
 export type GetPartSpecRequest = Message<"agni.v1.webapi.GetPartSpecRequest"> & {
   /**
-   * @generated from field: string mount = 1;
+   * uri names the stored PartSpec.
+   *
+   * @generated from field: string uri = 1;
    */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
+  uri: string;
 };
 
 /**
@@ -180,17 +167,7 @@ export const GetPartSpecResponseSchema: GenMessage<GetPartSpecResponse> = /*@__P
  */
 export type SavePartSpecRequest = Message<"agni.v1.webapi.SavePartSpecRequest"> & {
   /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
-   * @generated from field: agni.v1.param.PartSpec spec = 3;
+   * @generated from field: agni.v1.param.PartSpec spec = 1;
    */
   spec?: PartSpec | undefined;
 
@@ -198,9 +175,16 @@ export type SavePartSpecRequest = Message<"agni.v1.webapi.SavePartSpecRequest"> 
    * base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
    * yet). A mismatch with the current on-disk version fails the save as a conflict.
    *
-   * @generated from field: string base_version = 4;
+   * @generated from field: string base_version = 2;
    */
   baseVersion: string;
+
+  /**
+   * uri names the PartSpec to write.
+   *
+   * @generated from field: string uri = 3;
+   */
+  uri: string;
 };
 
 /**
@@ -340,14 +324,11 @@ export const AnnotationSetSchema: GenMessage<AnnotationSet> = /*@__PURE__*/
  */
 export type GetAnnotationsRequest = Message<"agni.v1.webapi.GetAnnotationsRequest"> & {
   /**
-   * @generated from field: string mount = 1;
+   * uri names the document the annotations belong to.
+   *
+   * @generated from field: string uri = 1;
    */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
+  uri: string;
 };
 
 /**
@@ -382,22 +363,19 @@ export const GetAnnotationsResponseSchema: GenMessage<GetAnnotationsResponse> = 
  */
 export type SaveAnnotationsRequest = Message<"agni.v1.webapi.SaveAnnotationsRequest"> & {
   /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
    * set is one author's complete overlay; it REPLACES that author's prior overlay for this
    * datasheet. set.author names the file written; set.doc_id is carried through unchanged.
    *
-   * @generated from field: agni.v1.webapi.AnnotationSet set = 3;
+   * @generated from field: agni.v1.webapi.AnnotationSet set = 1;
    */
   set?: AnnotationSet | undefined;
+
+  /**
+   * uri names the document the annotations belong to.
+   *
+   * @generated from field: string uri = 2;
+   */
+  uri: string;
 };
 
 /**

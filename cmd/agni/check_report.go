@@ -41,6 +41,7 @@ func reportFindings(rep *checkspb.CheckReport) []*checkspb.Finding {
 // report reads without the tool. Rendering from the proto — not from raw findings — keeps
 // this and the web report panel showing one canonical pivot.
 func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
+	rep = forDisplay(rep)
 	fmt.Fprintf(w, "# agni check — %s\n\n", rep.GetSource())
 	total := 0
 	for _, s := range rep.GetSections() {

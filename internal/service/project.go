@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"sort"
 	"strings"
 
@@ -43,7 +44,7 @@ type ProjectStore interface {
 	// A MISS is (nil, nil, nil), never ErrNotFound. A ref that belongs to no declared design is the
 	// ORDINARY case on a mounted folder, and a store that raised an error for it would make callers
 	// treat the common path as exceptional.
-	ResolveDesign(ctx context.Context, mount, ref string) (*webapi.Design, *webapi.Project, error)
+	ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error)
 }
 
 // Resource-name prefixes and separators, written once so a store dealing in ids and an API dealing
@@ -94,19 +95,19 @@ func validResourceID(id string) bool {
 }
 
 // DesignSources is which artifact each tier of a read comes from, once a design's declaration has
-// had its say. They are REFS, not paths: a ref is a key the injected Loader resolves, and no caller
-// above the Loader may treat one as a host path (CONSTRAINTS C22).
+// had its say. They are URIs the injected Loader resolves, and no caller above the Loader may treat
+// one as a host path (CONSTRAINTS C22).
 type DesignSources struct {
-	// NetlistRef is the artifact component and connectivity ANALYSIS reads: the netlist the design
+	// NetlistURI is the artifact component and connectivity ANALYSIS reads: the netlist the design
 	// team produces (C21).
-	NetlistRef string
-	// BoardRef is where the board tier's copper comes from. Often the same artifact, and different
+	NetlistURI string
+	// BoardURI is where the board tier's copper comes from. Often the same artifact, and different
 	// when a design declares a separate board companion.
-	BoardRef string
-	// GeometryRef is where schematic sheets are rendered and findings located from. A netlist entry
+	BoardURI string
+	// GeometryURI is where schematic sheets are rendered and findings located from. A netlist entry
 	// carries none of its own, so a design declaring a schematic companion locates on that
 	// companion's sheets, which is what C21 means by a companion being a canvas rather than a source.
-	GeometryRef string
+	GeometryURI string
 }
 
 // SourcesFor resolves a design's declaration into the artifact each tier reads.
@@ -120,22 +121,22 @@ type DesignSources struct {
 // companion KEEPS whatever tier it alone can supply — a board file's copper, a schematic's sheets —
 // because that is why the caller pointed at it; only the netlist tier ever moves.
 func SourcesFor(d *webapi.Design, named string) DesignSources {
-	entry := d.GetEntryRef()
-	s := DesignSources{NetlistRef: entry, BoardRef: entry, GeometryRef: entry}
+	entry := d.GetEntryUri()
+	s := DesignSources{NetlistURI: entry, BoardURI: entry, GeometryURI: entry}
 	if named != "" {
 		if formats.HasBoard(named) {
-			s.BoardRef = named
+			s.BoardURI = named
 		}
 		if formats.HasFaithful(named) {
-			s.GeometryRef = named
+			s.GeometryURI = named
 		}
 	}
-	for _, c := range d.GetCompanionRefs() {
-		if s.BoardRef == entry && formats.HasBoard(c) {
-			s.BoardRef = c
+	for _, c := range d.GetCompanionUris() {
+		if s.BoardURI == entry && formats.HasBoard(c) {
+			s.BoardURI = c
 		}
-		if s.GeometryRef == entry && formats.HasFaithful(c) {
-			s.GeometryRef = c
+		if s.GeometryURI == entry && formats.HasFaithful(c) {
+			s.GeometryURI = c
 		}
 	}
 	return s
@@ -143,7 +144,7 @@ func SourcesFor(d *webapi.Design, named string) DesignSources {
 
 // IsCompanion reports whether ref is one of the views this design declared of itself.
 func IsCompanion(d *webapi.Design, ref string) bool {
-	for _, c := range d.GetCompanionRefs() {
+	for _, c := range d.GetCompanionUris() {
 		if c == ref {
 			return true
 		}
@@ -164,7 +165,7 @@ const (
 // classifies errors for the transport.
 //
 // It is AIP-shaped with GET and LIST only, no mutators — the read-only-resource case in CONSTRAINTS
-// C23. What earns it a resource name rather than a (mount, ref) pair is that a project's identity is
+// C23. What earns it a resource name rather than an artifact URI is that a project's identity is
 // DECLARED by an operator rather than derived from its path, so the name survives the folder being
 // renamed or moved between mounts, and so reviews can later be parented by it.
 //
@@ -210,7 +211,7 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 	}
 	var kept []*webapi.Project
 	for _, p := range all {
-		if mount == "" || p.GetMount() == mount {
+		if mount == "" || uriMount(p.GetUri()) == mount {
 			kept = append(kept, p)
 		}
 	}
@@ -256,7 +257,7 @@ func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjec
 	}
 	var kept []*webapi.Design
 	for _, d := range all {
-		if mount == "" || d.GetMount() == mount {
+		if mount == "" || uriMount(d.GetUri()) == mount {
 			kept = append(kept, d)
 		}
 	}
@@ -277,10 +278,14 @@ func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjec
 // Turning the ordinary case into an error would push every caller into treating a failure path as
 // normal, which is how a real failure stops being noticed.
 func (s *ProjectService) ResolveDesign(ctx context.Context, req *webapi.ResolveDesignRequest) (*webapi.ResolveDesignResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	if s.store == nil {
 		return &webapi.ResolveDesignResponse{}, nil
 	}
-	d, p, err := s.store.ResolveDesign(ctx, req.GetMount(), req.GetRef())
+	d, p, err := s.store.ResolveDesign(ctx, u)
 	if err != nil {
 		return nil, err
 	}
@@ -340,4 +345,15 @@ func paginate(n int, pageSize int32, pageToken string, nameAt func(int) string) 
 		nextToken = nameAt(end)
 	}
 	return indexes, nextToken
+}
+
+// uriMount reads the authority out of a resource's artifact URI, for the one filter that narrows by
+// mount. A URI that will not parse yields "", which simply never matches: a listing is not the place
+// to fail on a stored value, and the resource itself carries the malformed URI for a client to see.
+func uriMount(s string) string {
+	u, err := artifact.Parse(s)
+	if err != nil {
+		return ""
+	}
+	return u.Mount
 }

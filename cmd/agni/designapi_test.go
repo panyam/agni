@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/service"
-	"github.com/panyam/agni/core/render"
 )
 
 // newDesignSvc builds a DesignService over the os-backed adapters for the given mounts (no native
@@ -55,7 +55,12 @@ func edifFixtureMounts(t *testing.T) []mounts.Mount {
 func TestDesignServiceGetDesign(t *testing.T) {
 	svc := designFixtureSvc(t)
 	get := func(path string) (*webapi.GetDesignResponse, error) {
-		return svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "t", Path: path})
+		return svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: uriStr("t", path)})
+	}
+	// A malformed URI arrives as a STRING from the wire, so it is sent verbatim rather than built:
+	// uriStr would reject it before the service ever saw it, which is the guarantee, not the test.
+	getRaw := func(uri string) (*webapi.GetDesignResponse, error) {
+		return svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: uri})
 	}
 
 	t.Run("netlist gets grid layout, sheets, and IR counts", func(t *testing.T) {
@@ -88,16 +93,25 @@ func TestDesignServiceGetDesign(t *testing.T) {
 	})
 
 	t.Run("unknown mount classifies as not-found", func(t *testing.T) {
-		_, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "nope", Path: "basic.edn"})
+		_, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://nope/basic.edn"})
 		if !errors.Is(err, service.ErrNotFound) {
 			t.Fatalf("want ErrNotFound, got %v", err)
 		}
 	})
 
-	t.Run("traversal keeps its invalid-path classification", func(t *testing.T) {
-		_, err := get("../../secret")
-		if !errors.Is(err, service.ErrInvalidPath) {
-			t.Fatalf("want ErrInvalidPath, got %v", err)
+	// A traversal is now refused when the URI is PARSED rather than when the path is joined, so it
+	// classifies as an invalid argument. That is the whole point of the typed URI: the check happens
+	// once, at the edge, and no adapter below it can be reached with an escaping value.
+	t.Run("traversal is refused at the parse", func(t *testing.T) {
+		_, err := getRaw("mount://t/../../secret")
+		if !errors.Is(err, service.ErrInvalidArgument) {
+			t.Fatalf("want ErrInvalidArgument, got %v", err)
+		}
+	})
+
+	t.Run("a bare path is not an artifact URI", func(t *testing.T) {
+		if _, err := getRaw("basic.edn"); !errors.Is(err, service.ErrInvalidArgument) {
+			t.Fatalf("want ErrInvalidArgument, got %v", err)
 		}
 	})
 }
@@ -125,7 +139,7 @@ func TestDesignServiceCheckDesign(t *testing.T) {
 	}
 	svc := newCheckSvc([]mounts.Mount{{Name: "t", Root: dir}})
 
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "t", Path: "chk.edn"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://t/chk.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +157,7 @@ func TestDesignServiceCheckDesign(t *testing.T) {
 	}
 
 	t.Run("unknown mount classifies as not-found", func(t *testing.T) {
-		_, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "nope", Path: "chk.edn"})
+		_, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://nope/chk.edn"})
 		if !errors.Is(err, service.ErrNotFound) {
 			t.Fatalf("want ErrNotFound, got %v", err)
 		}
@@ -151,7 +165,7 @@ func TestDesignServiceCheckDesign(t *testing.T) {
 
 	t.Run("an EDIF schematic (.eds) checks via its netlist, not an invalid-argument dead end", func(t *testing.T) {
 		edif := newCheckSvc(edifFixtureMounts(t)) // sample.eds: an EDIF schematic view carries a netlist
-		_, err := edif.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "t", Path: "sample.eds"})
+		_, err := edif.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://t/sample.eds"})
 		if err != nil {
 			t.Fatalf("a .eds now carries a netlist and should check, got %v", err)
 		}
@@ -168,13 +182,13 @@ func TestDesignServiceGetCheckReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := newCheckSvc([]mounts.Mount{{Name: "t", Root: root}})
-	resp, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Mount: "t", Path: "fires.edn"})
+	resp, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Uri: "mount://t/fires.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	rep := resp.GetReport()
-	if rep.GetSource() != "fires.edn" || rep.GetRulesRun() == 0 {
-		t.Errorf("report header = %q / %d rules, want fires.edn / >0", rep.GetSource(), rep.GetRulesRun())
+	if rep.GetSource() != "mount://t/fires.edn" || rep.GetRulesRun() == 0 {
+		t.Errorf("report header = %q / %d rules, want the design URI / >0", rep.GetSource(), rep.GetRulesRun())
 	}
 	var sevs []string
 	for _, s := range rep.GetSections() {
@@ -212,7 +226,7 @@ pending:
 	}
 	svc := newCheckSvc([]mounts.Mount{{Name: "t", Root: dir}})
 
-	resp, err := svc.GetExpectations(context.Background(), &webapi.GetExpectationsRequest{Mount: "t", Path: "d.edn"})
+	resp, err := svc.GetExpectations(context.Background(), &webapi.GetExpectationsRequest{Uri: "mount://t/d.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +255,7 @@ pending:
 
 	t.Run("no sidecar returns empty, not an error", func(t *testing.T) {
 		clean := newCheckSvc(edifFixtureMounts(t)) // basic.edn has no sidecar
-		r, err := clean.GetExpectations(context.Background(), &webapi.GetExpectationsRequest{Mount: "t", Path: "basic.edn"})
+		r, err := clean.GetExpectations(context.Background(), &webapi.GetExpectationsRequest{Uri: "mount://t/basic.edn"})
 		if err != nil {
 			t.Fatalf("missing sidecar should not error: %v", err)
 		}
@@ -259,7 +273,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
 
 	t.Run("kicad_sch renders faithfully with a packed sheet", func(t *testing.T) {
-		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "k", Path: "geom.kicad_sch"})
+		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://k/geom.kicad_sch"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -269,7 +283,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 		if len(d.GetSheets()) == 0 {
 			t.Fatal("want at least one faithful sheet")
 		}
-		s, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "k", Path: "geom.kicad_sch"})
+		s, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://k/geom.kicad_sch"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -279,7 +293,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 	})
 
 	t.Run("kicad_pcb falls back to grid", func(t *testing.T) {
-		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "k", Path: "pcb.kicad_pcb"})
+		d, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://k/pcb.kicad_pcb"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -294,7 +308,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 	t.Run("grid honors the symbols choice", func(t *testing.T) {
 		render := func(sym webapi.SymbolSource) string {
 			r, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-				Mount: "k", Path: "geom.kicad_sch", Layout: "grid",
+				Uri: "mount://k/geom.kicad_sch", Layout: "grid",
 				Format: webapi.SheetFormat_SHEET_FORMAT_SVG, Symbols: sym,
 			})
 			if err != nil {
@@ -317,7 +331,7 @@ func TestDesignServiceGetLayoutReport(t *testing.T) {
 	}
 	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
 	get := func(sym webapi.SymbolSource) *webapi.ConversionReport {
-		r, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Mount: "k", Path: "geom.kicad_sch", Symbols: sym})
+		r, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://k/geom.kicad_sch", Symbols: sym})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -357,7 +371,7 @@ func TestSymbolsFor(t *testing.T) {
 func TestDesignServiceGetSheetFormats(t *testing.T) {
 	svc := designFixtureSvc(t)
 	req := func(format webapi.SheetFormat) *webapi.GetSheetRequest {
-		return &webapi.GetSheetRequest{Mount: "t", Path: "sample.eds", Format: format}
+		return &webapi.GetSheetRequest{Uri: "mount://t/sample.eds", Format: format}
 	}
 
 	t.Run("SVG format returns an svg document", func(t *testing.T) {
@@ -382,7 +396,7 @@ func TestDesignServiceMultiSheet(t *testing.T) {
 	svc := designFixtureSvc(t)
 
 	t.Run("GetDesign lists both sheets in order", func(t *testing.T) {
-		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "t", Path: "multisheet.eds"})
+		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://t/multisheet.eds"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -397,7 +411,7 @@ func TestDesignServiceMultiSheet(t *testing.T) {
 	})
 
 	packed := func(sheet string) int {
-		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "t", Path: "multisheet.eds", Sheet: sheet})
+		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://t/multisheet.eds", Sheet: sheet})
 		if err != nil {
 			t.Fatalf("GetSheet %q: %v", sheet, err)
 		}
@@ -422,7 +436,7 @@ func TestDesignServiceKicadHierarchy(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "k", Path: "hier.kicad_sch"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://k/hier.kicad_sch"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -446,7 +460,7 @@ func TestLayoutAxis(t *testing.T) {
 	t.Run("GetDesign reports available_layouts and grid re-derives", func(t *testing.T) {
 		root, _ := filepath.Abs(filepath.Join("..", "..", "readers", "kicad", "testdata"))
 		svc := newDesignSvc([]mounts.Mount{{Name: "k", Root: root}})
-		faithful, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "k", Path: "geom.kicad_sch"})
+		faithful, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://k/geom.kicad_sch"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -456,7 +470,7 @@ func TestLayoutAxis(t *testing.T) {
 		if faithful.GetLayout() != "faithful" {
 			t.Errorf("default layout = %q, want faithful", faithful.GetLayout())
 		}
-		grid, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "k", Path: "geom.kicad_sch", Layout: "grid"})
+		grid, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://k/geom.kicad_sch", Layout: "grid"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -482,7 +496,7 @@ func TestDesignServiceGetSheet(t *testing.T) {
 	svc := designFixtureSvc(t)
 
 	t.Run("default format packs geometry", func(t *testing.T) {
-		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "t", Path: "sample.eds", Sheet: "0"})
+		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://t/sample.eds", Sheet: "0"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -493,13 +507,13 @@ func TestDesignServiceGetSheet(t *testing.T) {
 	})
 
 	t.Run("empty selector picks the first sheet", func(t *testing.T) {
-		if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "t", Path: "sample.eds"}); err != nil {
+		if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://t/sample.eds"}); err != nil {
 			t.Fatalf("empty selector errored: %v", err)
 		}
 	})
 
 	t.Run("bad sheet selector classifies as not-found", func(t *testing.T) {
-		_, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "t", Path: "sample.eds", Sheet: "no-such-sheet"})
+		_, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://t/sample.eds", Sheet: "no-such-sheet"})
 		if !errors.Is(err, service.ErrNotFound) {
 			t.Fatalf("want ErrNotFound, got %v", err)
 		}

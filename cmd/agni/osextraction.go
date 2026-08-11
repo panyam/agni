@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/service"
 )
@@ -52,8 +53,8 @@ func versionOf(b []byte) string {
 
 // Get reads the datasheet's PartSpec sibling. Absence is (nil, "", false, nil): a normal first-open
 // state, not an error. version is the file's content hash, passed back as base_version on save.
-func (s *osPartSpecStore) Get(_ context.Context, mount, path string) (*parampb.PartSpec, string, bool, error) {
-	abs, err := mounts.Resolve(s.mounts, mount, partSpecSibling(path))
+func (s *osPartSpecStore) Get(ctx context.Context, uri artifact.URI) (*parampb.PartSpec, string, bool, error) {
+	abs, err := resolveSibling(s.mounts, uri, partSpecSibling)
 	if err != nil {
 		return nil, "", false, err
 	}
@@ -75,8 +76,8 @@ func (s *osPartSpecStore) Get(_ context.Context, mount, path string) (*parampb.P
 // current version, requires it to equal baseVersion (empty means "expected absent"), then writes.
 // A mismatch is service.ErrConflict. The returned version is the hash of the bytes written, which
 // a subsequent Get reproduces from the same file bytes.
-func (s *osPartSpecStore) Save(_ context.Context, mount, path string, spec *parampb.PartSpec, baseVersion string) (string, error) {
-	abs, err := mounts.Resolve(s.mounts, mount, partSpecSibling(path))
+func (s *osPartSpecStore) Save(ctx context.Context, uri artifact.URI, spec *parampb.PartSpec, baseVersion string) (string, error) {
+	abs, err := resolveSibling(s.mounts, uri, partSpecSibling)
 	if err != nil {
 		return "", err
 	}

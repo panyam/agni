@@ -37,7 +37,7 @@ requirements:
 	}
 	var got struct {
 		Findings []struct {
-			Rule    string `json:"rule"`
+			Rule    string               `json:"rule"`
 			Subject struct{ Ref string } `json:"subject"`
 		} `json:"findings"`
 	}

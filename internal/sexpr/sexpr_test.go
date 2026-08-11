@@ -64,9 +64,9 @@ func TestEDIFPercentEscape(t *testing.T) {
 		{`(x "1: TOC%10%2: HDR")`, "1: TOC\n2: HDR"}, // %10% -> newline (the TOC bug)
 		{`(x "%72 73%")`, "HI"},                      // multiple codes decode in order
 		{`(x "%9%tab")`, "\ttab"},
-		{`(x "50% done")`, "50% done"},   // lone '%' not an escape -> literal
-		{`(x "%abc% x")`, "%abc% x"},     // non-numeric body -> literal, both percents kept
-		{`(x "100%")`, "100%"},           // trailing '%' before the closing quote -> literal
+		{`(x "50% done")`, "50% done"}, // lone '%' not an escape -> literal
+		{`(x "%abc% x")`, "%abc% x"},   // non-numeric body -> literal, both percents kept
+		{`(x "100%")`, "100%"},         // trailing '%' before the closing quote -> literal
 	}
 	for _, c := range cases {
 		if got := parse(t, c.src, EDIFStrings).Arg(1).Text(); got != c.want {

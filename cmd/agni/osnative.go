@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/service"
@@ -20,8 +21,8 @@ type osNative struct {
 
 // Available reports whether a NATIVE render can be offered for the file (a tool exists for the
 // format and the operator enabled it). An unresolvable path is simply unavailable.
-func (n *osNative) Available(mountName, path string) bool {
-	abs, err := mounts.Resolve(n.mounts, mountName, path)
+func (n *osNative) Available(uri artifact.URI) bool {
+	abs, err := mounts.Resolve(n.mounts, uri)
 	if err != nil {
 		return false
 	}
@@ -30,8 +31,8 @@ func (n *osNative) Available(mountName, path string) bool {
 
 // Render shells out to the native tool for the 1-based page, mapping the cmd gate errors to the
 // service's ErrNative* sentinels.
-func (n *osNative) Render(ctx context.Context, mountName, path string, page int) (string, error) {
-	abs, err := mounts.Resolve(n.mounts, mountName, path)
+func (n *osNative) Render(ctx context.Context, uri artifact.URI, page int) (string, error) {
+	abs, err := mounts.Resolve(n.mounts, uri)
 	if err != nil {
 		return "", err
 	}

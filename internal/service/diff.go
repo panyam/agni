@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -22,8 +23,8 @@ const sharedPlacementCap = 50
 // geometry is best-effort there, see annotateDiffSheets). Declared separately so DiffService
 // states its dependencies; the server's osLoader (and any Loader) satisfies it.
 type DesignLoader interface {
-	Design(ctx context.Context, mount, path string, opts ...ReadOption) (*ir.Design, error)
-	Geometry(ctx context.Context, mount, path, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
+	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
+	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
 }
 
 // DiffService computes the semantic diff between two designs over an injected loader (C13): it
@@ -45,17 +46,25 @@ func NewDiffService(loader DesignLoader) *DiffService {
 // (unknown mount -> ErrNotFound, escaping path or parse failure -> invalid argument); there
 // is no partial diff.
 func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRequest) (*webapi.DiffDesignsResponse, error) {
-	a, err := s.loader.Design(ctx, req.GetAMount(), req.GetAPath())
+	aURI, err := artifactURI(req.GetAUri())
+	if err != nil {
+		return nil, err
+	}
+	bURI, err := artifactURI(req.GetBUri())
+	if err != nil {
+		return nil, err
+	}
+	a, err := s.loader.Design(ctx, aURI)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	b, err := s.loader.Design(ctx, req.GetBMount(), req.GetBPath())
+	b, err := s.loader.Design(ctx, bURI)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
 	resp := DiffResponseProto(diff.Designs(a, b))
-	gA := BuildGeometry(ctx, s.loader, req.GetAMount(), req.GetAPath())
-	gB := BuildGeometry(ctx, s.loader, req.GetBMount(), req.GetBPath())
+	gA := BuildGeometry(ctx, s.loader, aURI)
+	gB := BuildGeometry(ctx, s.loader, bURI)
 	// Plain netlist models on purpose (NOT BuildModel): diff runs no rules — the model is used only
 	// for per-sheet net annotation (annotateDiffSheets reads Nets()), so the board/params tiers would
 	// be dead weight. This is the intentional exception to the WS9-048 full-model rule, not drift.

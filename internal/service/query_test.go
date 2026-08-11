@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/panyam/agni/internal/artifact"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -33,7 +34,7 @@ func queryDesign() *ir.Design {
 func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.edn",
+		Uri:   "mount://m/x.edn",
 		Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
@@ -76,7 +77,7 @@ func TestRunQueryColumnKinds(t *testing.T) {
 		{`component.mpn(?r,?m) => ?r, ?m`, []string{"component", ""}}, // mpn is a scalar label
 	}
 	for _, tc := range cases {
-		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Mount: "m", Path: "x.edn", Query: tc.query})
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: tc.query})
 		if err != nil {
 			t.Fatalf("%s: %v", tc.query, err)
 		}
@@ -101,7 +102,7 @@ func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 	}}
 	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: g}, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +125,7 @@ func TestRunQueryNetCellSheetsFromNetlist(t *testing.T) {
 	d.Nets[0].Attributes = map[string]string{netgraph.AttrSheets: netgraph.EncodeSheets([]string{"s1", "s2"})}
 	svc := NewQueryService(fakeLoader{design: d}, nil) // no geometry
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.edn", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -156,7 +157,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 	}}}
 	svc := NewQueryService(fakeLoader{design: d, geom: g}, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
+		Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -190,7 +191,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.edn", Query: "compnent-on-net(?r,?n) => ?r",
+		Uri: "mount://m/x.edn", Query: "compnent-on-net(?r,?n) => ?r",
 	})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument", err)
@@ -203,7 +204,7 @@ func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.edn", Query: `component-on-net(?r,?n =>`,
+		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n =>`,
 	})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for a parse failure", err)
@@ -213,7 +214,7 @@ func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
 func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Mount: "m", Path: "x.edn",
+		Uri:   "mount://m/x.edn",
 		Query: `component-on-net(?r,?n), ?n = "NOSUCHNET" => ?r`,
 	})
 	if err != nil {
@@ -226,7 +227,7 @@ func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 
 func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{err: errors.New("no netlist")}, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Mount: "m", Path: "x.eds", Query: `component-on-net(?r,?n) => ?r`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.eds", Query: `component-on-net(?r,?n) => ?r`})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for an unloadable design", err)
 	}
@@ -234,7 +235,7 @@ func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 
 func TestRunQueryNotFoundPropagates(t *testing.T) {
 	svc := NewQueryService(fakeLoader{err: ErrNotFound}, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Mount: "bad", Path: "x.edn", Query: `component-on-net(?r,?n) => ?r`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://bad/x.edn", Query: `component-on-net(?r,?n) => ?r`})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound to pass through", err)
 	}
@@ -297,7 +298,7 @@ func TestExamplesEvaluate(t *testing.T) {
 	}
 	for _, e := range resp.GetExamples() {
 		if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Mount: "m", Path: "x.edn", Query: e.GetQuery(),
+			Uri: "mount://m/x.edn", Query: e.GetQuery(),
 		}); err != nil {
 			t.Errorf("example %q failed to evaluate: %v", e.GetLabel(), err)
 		}
@@ -307,7 +308,7 @@ func TestExamplesEvaluate(t *testing.T) {
 // guard: the malformed-query message reaches the caller (the panel shows it inline).
 func TestRunQueryParseErrorMessagePreserved(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Mount: "m", Path: "x.edn", Query: `!!!`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: `!!!`})
 	if err == nil || strings.TrimSpace(err.Error()) == "" {
 		t.Fatalf("want a non-empty parse error message, got %v", err)
 	}
@@ -321,8 +322,8 @@ type fsQueryLoader struct {
 	base string
 }
 
-func (l fsQueryLoader) Design(_ context.Context, _, path string, opts ...ReadOption) (*ir.Design, error) {
-	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, path))
+func (l fsQueryLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, uri.Path))
 }
 
 // houseConvention is the fixture project's vocabulary: its rails are named function-first
@@ -365,7 +366,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 	ask := func(ov *webapi.OverlayConfig) []string {
 		t.Helper()
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Path: "review/conv-demo.edn", Query: "rail(?n) => ?n", Overlay: ov,
+			Uri: "mount://m/review/conv-demo.edn", Query: "rail(?n) => ?n", Overlay: ov,
 		})
 		if err != nil {
 			t.Fatalf("RunQuery: %v", err)
@@ -397,7 +398,7 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
 	conv.Rules = append(conv.Rules, &webapi.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Path: "review/conv-demo.edn", Query: "rail(?n) => ?n",
+		Uri: "mount://m/review/conv-demo.edn", Query: "rail(?n) => ?n",
 		Overlay: &webapi.OverlayConfig{Conventions: conv},
 	})
 	if err != nil {

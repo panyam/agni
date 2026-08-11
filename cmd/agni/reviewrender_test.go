@@ -91,7 +91,7 @@ func TestReviewRenderCompanion(t *testing.T) {
 			{Kind: check.KindNet, Subject: "SIGA", Severity: "warning"},
 		}}},
 	}}}
-	summary, err := renderReviewImages([]review.Report{r}, dir, "")
+	summary, err := renderReviewImages([]review.Report{r}, sourcesOf([]review.Report{r}), dir, "")
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestReviewRenderCompanionMismatch(t *testing.T) {
 			{Kind: check.KindNet, Subject: "CAN_CANH", Severity: "warning"},
 		}}},
 	}}}
-	summary, err := renderReviewImages([]review.Report{r}, dir, "testdata/review/companion-demo.eds")
+	summary, err := renderReviewImages([]review.Report{r}, sourcesOf([]review.Report{r}), dir, "testdata/review/companion-demo.eds")
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
@@ -163,4 +163,15 @@ func TestReviewCmdRender(t *testing.T) {
 	if !strings.Contains(string(b), "stroke-opacity") {
 		t.Error("annotated SVG has no highlight overlay")
 	}
+}
+
+// sourcesOf gives renderReviewImages the addressable source for each report. In production those
+// come from the documents; a test that builds reports directly re-uses the reading name, which is a
+// real path here.
+func sourcesOf(reports []review.Report) []string {
+	out := make([]string, 0, len(reports))
+	for _, r := range reports {
+		out = append(out, r.Design)
+	}
+	return out
 }

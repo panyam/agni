@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/datasheet/param"
-	"github.com/panyam/agni/core/query"
 )
 
 // QueryService evaluates ad-hoc datalog queries over a design's fact base (WS3-029) for the web
@@ -43,6 +43,14 @@ func NewQueryService(loader Loader, specs param.ParamProvider) *QueryService {
 // panel shows the parse error inline rather than treating it as a server fault. A well-formed query
 // that matches nothing returns an empty row set (not an error).
 func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest) (*webapi.RunQueryResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	boardURI, err := optionalArtifactURI(req.GetBoardUri())
+	if err != nil {
+		return nil, err
+	}
 	q, err := query.Parse(req.GetQuery())
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
@@ -62,7 +70,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// One FULL Model over the design (netlist + board + params, WS9-048): the query evaluator reads
 	// it, and the per-cell locate classifier (WS9-039) shares its indexes rather than re-scanning the
 	// raw IR. The board/params tiers back the board.* / param.* query relations, matching `agni query`.
-	model, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), req.GetBoardRef(), s.specs, ov.ReadOptions()...)
+	model, err := BuildModel(ctx, s.loader, u, boardURI, s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +103,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// emitted (the design renders via an auto-layout that draws every entity).
 	var drawnComps, drawnNets map[string]bool
 	if navigable {
-		g := BuildGeometry(ctx, s.loader, req.GetMount(), req.GetPath())
+		g := BuildGeometry(ctx, s.loader, u)
 		ix = indexSheets(g, model)
 		if g != nil {
 			drawnComps, drawnNets = drawnEntities(g)

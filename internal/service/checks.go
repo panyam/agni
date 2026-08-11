@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -46,7 +47,7 @@ type CheckService struct {
 // the request (C22), so CheckDesign needs no filesystem; this backs the separate resolver rpc that a
 // client with a ref and no filesystem calls first.
 type ConventionLoader interface {
-	Convention(ctx context.Context, mount, ref string) (naming.Config, error)
+	Convention(ctx context.Context, uri artifact.URI) (naming.Config, error)
 }
 
 // NewCheckService returns a CheckService backed by the given loader, rule catalog, and (optional)
@@ -63,13 +64,17 @@ func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamPro
 // It validates before returning, so a malformed config is reported once, here, naming what is wrong,
 // rather than on every run that sends it.
 func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetNamingConventionRequest) (*webapi.GetNamingConventionResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	if s.conventions == nil {
 		return nil, fmt.Errorf("%w: this server cannot resolve stored naming conventions", ErrInvalidArgument)
 	}
-	if req.GetRef() == "" {
-		return nil, fmt.Errorf("%w: GetNamingConvention needs a ref", ErrInvalidArgument)
+	if req.GetUri() == "" {
+		return nil, fmt.Errorf("%w: GetNamingConvention needs a uri", ErrInvalidArgument)
 	}
-	cfg, err := s.conventions.Convention(ctx, req.GetMount(), req.GetRef())
+	cfg, err := s.conventions.Convention(ctx, u)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -129,13 +134,17 @@ func (s *CheckService) ListRules(_ context.Context, req *webapi.ListRulesRequest
 // design's default-layout geometry (WS9-024); a design with no resolvable geometry degrades to
 // findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	// Per-request overlay config (WS3-102) resolves the same way it does for a review, through the one
 	// ComposeOverlay, so the two surfaces cannot read a convention file differently.
 	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs, ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +154,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
 	resp := &webapi.CheckDesignResponse{Findings: FindingProtos(check.Run(m, rules))}
-	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, req.GetMount(), req.GetPath()), m)
+	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, u), m)
 	return resp, nil
 }
 
@@ -154,7 +163,11 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 // invalid mount/path or a malformed sidecar is an error. The `fires` entries come first, then the
 // `pending` ones, each flattened to a RuleExpectation the client reconciles against CheckDesign.
 func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpectationsRequest) (*webapi.GetExpectationsResponse, error) {
-	e, err := s.loader.Expectations(ctx, req.GetMount(), req.GetPath())
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	e, err := s.loader.Expectations(ctx, u)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -172,7 +185,11 @@ func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpec
 // an empty list — never an error — so the panel degrades gracefully. Board geometry is irrelevant to
 // the join, so nil is passed.
 func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetComponentParamsRequest) (*webapi.GetComponentParamsResponse, error) {
-	m, err := BuildModel(ctx, s.loader, req.GetMount(), req.GetPath(), "", s.specs)
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs)
 	if err != nil {
 		return nil, err
 	}

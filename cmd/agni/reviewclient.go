@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/panyam/agni/core/check"
-	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/core/review"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
 // reportsFromDocs maps stored review documents back to the Go view-model the renderers consume — the
@@ -14,7 +14,7 @@ import (
 func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
 	reports := make([]review.Report, 0, len(docs))
 	for _, doc := range docs {
-		r := review.Report{Manifest: doc.GetManifest(), Design: doc.GetDesign().GetSource()}
+		r := review.Report{Manifest: doc.GetManifest(), Design: displayName(doc.GetDesign().GetSource())}
 		for _, pa := range doc.GetAreas() {
 			ar := review.AreaResult{Area: review.Area{Name: pa.GetName()}}
 			for _, pi := range pa.GetItems() {
@@ -80,4 +80,17 @@ func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation 
 		Method:     c.GetMethod(),
 		Confidence: c.GetConfidence(),
 	}
+}
+
+// designSourcesOf returns each document's design URI, positionally matching reportsFromDocs.
+//
+// The reports carry a READING name and the documents carry the address, and a renderer that has to
+// open the file needs the second. Keeping them as parallel slices rather than folding the URI into
+// review.Report keeps `core/review` free of any notion of how an artifact is addressed.
+func designSourcesOf(docs []*checkspb.CheckResults) []string {
+	out := make([]string, 0, len(docs))
+	for _, doc := range docs {
+		out = append(out, doc.GetDesign().GetSource())
+	}
+	return out
 }

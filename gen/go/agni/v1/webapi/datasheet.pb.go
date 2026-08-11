@@ -25,10 +25,8 @@ const (
 
 type GetDocumentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// mount is the name of a mount from WorkspaceService.ListMounts.
-	Mount string `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	// path is the mount-relative path to the datasheet source document (the PDF).
-	Path          string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	// uri names the datasheet document.
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -63,16 +61,9 @@ func (*GetDocumentRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *GetDocumentRequest) GetMount() string {
+func (x *GetDocumentRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetDocumentRequest) GetPath() string {
-	if x != nil {
-		return x.Path
+		return x.Uri
 	}
 	return ""
 }
@@ -144,9 +135,9 @@ func (x *GetDocumentResponse) GetExtractAvailable() bool {
 }
 
 type ExtractDocIRRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mount         string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// uri names the datasheet PDF to extract.
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -181,16 +172,9 @@ func (*ExtractDocIRRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ExtractDocIRRequest) GetMount() string {
+func (x *ExtractDocIRRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *ExtractDocIRRequest) GetPath() string {
-	if x != nil {
-		return x.Path
+		return x.Uri
 	}
 	return ""
 }
@@ -241,9 +225,9 @@ func (x *ExtractDocIRResponse) GetDocument() *doc.Document {
 }
 
 type GetPartSpecRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mount         string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// uri names the stored PartSpec.
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -278,16 +262,9 @@ func (*GetPartSpecRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetPartSpecRequest) GetMount() string {
+func (x *GetPartSpecRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetPartSpecRequest) GetPath() string {
-	if x != nil {
-		return x.Path
+		return x.Uri
 	}
 	return ""
 }
@@ -358,12 +335,12 @@ func (x *GetPartSpecResponse) GetVersion() string {
 
 type SavePartSpecRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path  string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
-	Spec  *param.PartSpec        `protobuf:"bytes,3,opt,name=spec,proto3" json:"spec,omitempty"`
+	Spec  *param.PartSpec        `protobuf:"bytes,1,opt,name=spec,proto3" json:"spec,omitempty"`
 	// base_version is the version GetPartSpec returned (or "" to assert the sibling does not exist
 	// yet). A mismatch with the current on-disk version fails the save as a conflict.
-	BaseVersion   string `protobuf:"bytes,4,opt,name=base_version,json=baseVersion,proto3" json:"base_version,omitempty"`
+	BaseVersion string `protobuf:"bytes,2,opt,name=base_version,json=baseVersion,proto3" json:"base_version,omitempty"`
+	// uri names the PartSpec to write.
+	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -398,20 +375,6 @@ func (*SavePartSpecRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *SavePartSpecRequest) GetMount() string {
-	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *SavePartSpecRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 func (x *SavePartSpecRequest) GetSpec() *param.PartSpec {
 	if x != nil {
 		return x.Spec
@@ -422,6 +385,13 @@ func (x *SavePartSpecRequest) GetSpec() *param.PartSpec {
 func (x *SavePartSpecRequest) GetBaseVersion() string {
 	if x != nil {
 		return x.BaseVersion
+	}
+	return ""
+}
+
+func (x *SavePartSpecRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
 	}
 	return ""
 }
@@ -650,9 +620,9 @@ func (x *AnnotationSet) GetAnnotations() []*RegionAnnotation {
 }
 
 type GetAnnotationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mount         string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// uri names the document the annotations belong to.
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -687,16 +657,9 @@ func (*GetAnnotationsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *GetAnnotationsRequest) GetMount() string {
+func (x *GetAnnotationsRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetAnnotationsRequest) GetPath() string {
-	if x != nil {
-		return x.Path
+		return x.Uri
 	}
 	return ""
 }
@@ -749,11 +712,11 @@ func (x *GetAnnotationsResponse) GetSets() []*AnnotationSet {
 
 type SaveAnnotationsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path  string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	// set is one author's complete overlay; it REPLACES that author's prior overlay for this
 	// datasheet. set.author names the file written; set.doc_id is carried through unchanged.
-	Set           *AnnotationSet `protobuf:"bytes,3,opt,name=set,proto3" json:"set,omitempty"`
+	Set *AnnotationSet `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
+	// uri names the document the annotations belong to.
+	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -788,25 +751,18 @@ func (*SaveAnnotationsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *SaveAnnotationsRequest) GetMount() string {
-	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *SaveAnnotationsRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 func (x *SaveAnnotationsRequest) GetSet() *AnnotationSet {
 	if x != nil {
 		return x.Set
 	}
 	return nil
+}
+
+func (x *SaveAnnotationsRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
 }
 
 type SaveAnnotationsResponse struct {
@@ -849,31 +805,27 @@ var File_agni_v1_webapi_datasheet_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_datasheet_proto_rawDesc = "" +
 	"\n" +
-	"\x1eagni/v1/webapi/datasheet.proto\x12\x0eagni.v1.webapi\x1a\x15agni/v1/doc/doc.proto\x1a\x19agni/v1/param/param.proto\">\n" +
-	"\x12GetDocumentRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"\x93\x01\n" +
+	"\x1eagni/v1/webapi/datasheet.proto\x12\x0eagni.v1.webapi\x1a\x15agni/v1/doc/doc.proto\x1a\x19agni/v1/param/param.proto\"&\n" +
+	"\x12GetDocumentRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"\x93\x01\n" +
 	"\x13GetDocumentResponse\x12\x1c\n" +
 	"\textracted\x18\x01 \x01(\bR\textracted\x121\n" +
 	"\bdocument\x18\x02 \x01(\v2\x15.agni.v1.doc.DocumentR\bdocument\x12+\n" +
-	"\x11extract_available\x18\x03 \x01(\bR\x10extractAvailable\"?\n" +
-	"\x13ExtractDocIRRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"I\n" +
+	"\x11extract_available\x18\x03 \x01(\bR\x10extractAvailable\"'\n" +
+	"\x13ExtractDocIRRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"I\n" +
 	"\x14ExtractDocIRResponse\x121\n" +
-	"\bdocument\x18\x01 \x01(\v2\x15.agni.v1.doc.DocumentR\bdocument\">\n" +
-	"\x12GetPartSpecRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"r\n" +
+	"\bdocument\x18\x01 \x01(\v2\x15.agni.v1.doc.DocumentR\bdocument\"&\n" +
+	"\x12GetPartSpecRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"r\n" +
 	"\x13GetPartSpecResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12+\n" +
 	"\x04spec\x18\x02 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12\x18\n" +
-	"\aversion\x18\x03 \x01(\tR\aversion\"\x8f\x01\n" +
-	"\x13SavePartSpecRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12+\n" +
-	"\x04spec\x18\x03 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12!\n" +
-	"\fbase_version\x18\x04 \x01(\tR\vbaseVersion\"0\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"w\n" +
+	"\x13SavePartSpecRequest\x12+\n" +
+	"\x04spec\x18\x01 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12!\n" +
+	"\fbase_version\x18\x02 \x01(\tR\vbaseVersion\x12\x10\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"0\n" +
 	"\x14SavePartSpecResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\"\x93\x02\n" +
 	"\x10RegionAnnotation\x12\x1b\n" +
@@ -891,16 +843,14 @@ const file_agni_v1_webapi_datasheet_proto_rawDesc = "" +
 	"\rAnnotationSet\x12\x15\n" +
 	"\x06doc_id\x18\x01 \x01(\tR\x05docId\x12\x16\n" +
 	"\x06author\x18\x02 \x01(\tR\x06author\x12B\n" +
-	"\vannotations\x18\x03 \x03(\v2 .agni.v1.webapi.RegionAnnotationR\vannotations\"A\n" +
-	"\x15GetAnnotationsRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"K\n" +
+	"\vannotations\x18\x03 \x03(\v2 .agni.v1.webapi.RegionAnnotationR\vannotations\")\n" +
+	"\x15GetAnnotationsRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"K\n" +
 	"\x16GetAnnotationsResponse\x121\n" +
-	"\x04sets\x18\x01 \x03(\v2\x1d.agni.v1.webapi.AnnotationSetR\x04sets\"s\n" +
-	"\x16SaveAnnotationsRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12/\n" +
-	"\x03set\x18\x03 \x01(\v2\x1d.agni.v1.webapi.AnnotationSetR\x03set\"\x19\n" +
+	"\x04sets\x18\x01 \x03(\v2\x1d.agni.v1.webapi.AnnotationSetR\x04sets\"[\n" +
+	"\x16SaveAnnotationsRequest\x12/\n" +
+	"\x03set\x18\x01 \x01(\v2\x1d.agni.v1.webapi.AnnotationSetR\x03set\x12\x10\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x19\n" +
 	"\x17SaveAnnotationsResponse2\xbd\x04\n" +
 	"\x10DatasheetService\x12V\n" +
 	"\vGetDocument\x12\".agni.v1.webapi.GetDocumentRequest\x1a#.agni.v1.webapi.GetDocumentResponse\x12V\n" +

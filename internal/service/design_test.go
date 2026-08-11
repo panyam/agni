@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"strings"
 	"testing"
 
@@ -75,30 +76,30 @@ type fakeLoader struct {
 	geomErr error
 }
 
-func (f fakeLoader) Design(context.Context, string, string, ...ReadOption) (*ir.Design, error) {
+func (f fakeLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
 	return f.design, f.err
 }
-func (f fakeLoader) Geometry(context.Context, string, string, string, bool) (*geom.SchematicGeometry, error) {
+func (f fakeLoader) Geometry(context.Context, artifact.URI, string, bool) (*geom.SchematicGeometry, error) {
 	if f.geomErr != nil {
 		return nil, f.geomErr
 	}
 	return f.geom, f.err
 }
-func (f fakeLoader) Report(context.Context, string, string, bool) (*graph.ConversionReport, error) {
+func (f fakeLoader) Report(context.Context, artifact.URI, bool) (*graph.ConversionReport, error) {
 	return f.report, f.err
 }
-func (f fakeLoader) Expectations(context.Context, string, string) (*expect.Expectations, error) {
+func (f fakeLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
 	return f.expect, f.err
 }
-func (f fakeLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
+func (f fakeLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
 	return f.board, f.err // nil board is normal (netlist-only); a board fixture drives the tier
 }
 
 // noNative is a NativeRenderer that offers nothing (the common server default in tests).
 type noNative struct{}
 
-func (noNative) Available(string, string) bool { return false }
-func (noNative) Render(context.Context, string, string, int) (string, error) {
+func (noNative) Available(artifact.URI) bool { return false }
+func (noNative) Render(context.Context, artifact.URI, int) (string, error) {
 	return "", ErrNativeNoTool
 }
 
@@ -110,7 +111,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}, {ComponentRef: "U2", PinRef: "5"}},
 	}}}
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "m", Path: "x.edn"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +127,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 
 	// A loader ErrNotFound (unknown mount) stays classified as not-found for the transport.
 	bad := NewCheckService(fakeLoader{err: fmt.Errorf("no such mount: %w", ErrNotFound)}, check.DefaultCatalog(), nil, "", nil)
-	if _, err := bad.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "no", Path: "x"}); !errors.Is(err, ErrNotFound) {
+	if _, err := bad.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://no/x"}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("want ErrNotFound, got %v", err)
 	}
 }
@@ -144,7 +145,7 @@ func TestGetInterfaceCoverage(t *testing.T) {
 		{Name: "SPI_IO3", Connections: []*ir.Connection{conn("U1", "6")}}, // single-pin -> dangling
 	}}
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
-	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Mount: "m", Path: "x.edn"})
+	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +172,7 @@ func TestListRules(t *testing.T) {
 	// catalog's own count, not the built-in slice.
 	catalog := check.DefaultCatalog()
 	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil)
-	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{})
+	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
 
 	// Full run: both rules fire.
-	full, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "m", Path: "x.edn"})
+	full, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +234,7 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 
 	// Subset: only i2c-pull-up requested, so unconnected-component must not appear.
 	sub, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{
-		Mount: "m", Path: "x.edn", Rules: []string{"i2c-pull-up"},
+		Uri: "mount://m/x.edn", Rules: []string{"i2c-pull-up"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -282,7 +283,7 @@ func TestCheckDesignSheets(t *testing.T) {
 		},
 	}}
 	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "m", Path: "x.edn"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +299,7 @@ func TestCheckDesignSheets(t *testing.T) {
 	}
 
 	// The severity pivot carries the same join (the report panel shares the navigation).
-	rep, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Mount: "m", Path: "x.edn"})
+	rep, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +319,7 @@ func TestCheckDesignSheets(t *testing.T) {
 
 	// Geometry failure degrades to empty sheets, not an error.
 	noGeom := NewCheckService(fakeLoader{design: d, geomErr: fmt.Errorf("no geometry")}, check.DefaultCatalog(), nil, "", nil)
-	resp, err = noGeom.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "m", Path: "x.edn"})
+	resp, err = noGeom.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +367,7 @@ func TestCheckDesignNetSheetsFromAttribute(t *testing.T) {
 		{Id: "/b"},
 	}}
 	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Mount: "m", Path: "x.kicad_pro"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.kicad_pro"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +409,7 @@ func TestHighlightSheet(t *testing.T) {
 
 	// PACKED (the default): primitives 0 (NET1 wire), 1 (R1 rect), 2 (R1 pin).
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Mount: "m", Path: "x.eds", Specs: specs,
+		Uri: "mount://m/x.eds", Specs: specs,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -423,7 +424,7 @@ func TestHighlightSheet(t *testing.T) {
 
 	// SVG: a transparent overlay document carrying the spec color.
 	resp, err = svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Mount: "m", Path: "x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_SVG, Specs: specs,
+		Uri: "mount://m/x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_SVG, Specs: specs,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -435,7 +436,7 @@ func TestHighlightSheet(t *testing.T) {
 
 	// NATIVE has no overlay: classified invalid-argument for the transport.
 	if _, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Mount: "m", Path: "x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
+		Uri: "mount://m/x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 	}); !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("want ErrInvalidArgument for NATIVE, got %v", err)
 	}
@@ -467,7 +468,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 	}}}
 	svc := NewCheckService(fakeLoader{design: d}, catalog, nil, "", nil)
 
-	list, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{})
+	list, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +483,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 	}
 
 	sub, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{
-		Mount: "m", Path: "x.edn", Rules: []string{"demo/every-net"},
+		Uri: "mount://m/x.edn", Rules: []string{"demo/every-net"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -501,7 +502,7 @@ type boardLoader struct {
 	board *geom.BoardGeometry
 }
 
-func (b boardLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
+func (b boardLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
 	return b.board, nil
 }
 
@@ -523,7 +524,7 @@ func TestGetDesignListsBoardSheet(t *testing.T) {
 		board:      testBoard(),
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "m", Path: "x.kicad_pcb"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.kicad_pcb"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -545,7 +546,7 @@ func TestGetSheetBoard(t *testing.T) {
 		board:      testBoard(),
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
-	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "m", Path: "x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
+	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -554,7 +555,7 @@ func TestGetSheetBoard(t *testing.T) {
 		t.Fatalf("SVG format must answer with the board document, ok=%v", ok)
 	}
 	// PACKED gets the WS7-035 packed board: same envelope, board sheet id, triangle records.
-	resp, err = svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "m", Path: "x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})
+	resp, err = svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -571,7 +572,7 @@ func TestHighlightSheetBoard(t *testing.T) {
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Mount: "m", Path: "x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
+		Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}},
 	})
 	if err != nil {
@@ -588,14 +589,14 @@ func TestHighlightSheetBoard(t *testing.T) {
 func TestBoardSheetAbsent(t *testing.T) {
 	ld := fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "m", Path: "x.edn"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(resp.GetSheets()) != 1 {
 		t.Fatalf("no-board file lists %d sheets, want 1", len(resp.GetSheets()))
 	}
-	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Mount: "m", Path: "x.edn", Sheet: "board"}); !errors.Is(err, ErrNotFound) {
+	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.edn", Sheet: "board"}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("board sheet on a boardless file = %v, want ErrNotFound", err)
 	}
 }
@@ -613,7 +614,7 @@ func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{})
 
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Mount: "m", Path: "x.edn", Sheet: "P1",
+		Uri: "mount://m/x.edn", Sheet: "P1",
 		Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Specs:  []*geom.HighlightSpec{{NetIds: []string{"n1"}}},
 	})
@@ -640,4 +641,15 @@ func TestNameOnlyCanvas(t *testing.T) {
 	if nameOnlyCanvas(empty) {
 		t.Error("no wires is not name-only")
 	}
+}
+
+// uriStr builds an artifact URI string for a request literal in a test. A fixture URI that will not
+// parse is a broken test rather than a condition under test, so it panics instead of returning an
+// error nobody would check.
+func uriStr(mount, p string) string {
+	u, err := artifact.New(mount, p)
+	if err != nil {
+		panic(err)
+	}
+	return u.String()
 }

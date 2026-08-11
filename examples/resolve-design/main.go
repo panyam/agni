@@ -18,6 +18,7 @@ import (
 
 	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/service"
 )
@@ -30,8 +31,8 @@ var walkthroughMD []byte
 // is relative to it, never a host path.
 const fixtureRoot = "../common/designs/demo-project"
 
-// mount is the name this one tree is addressed by. A ref is always a (mount, ref) pair, so even a
-// single-tree client names its tree rather than inventing a path-shaped alternative.
+// mount is the name this one tree is addressed by. An artifact URI always carries an authority, so
+// even a single-tree client names its tree rather than inventing a path-shaped alternative.
 const mount = "fixtures"
 
 func main() {
@@ -74,7 +75,7 @@ func main() {
 	})
 
 	demo.Bind("resolve").Run(func(demokit.StepContext) *demokit.StepResult {
-		resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: mount, Ref: ref.Path()})
+		resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: artifactUri(ref.Path())})
 		if err != nil {
 			return demokit.Errf("resolve: %v", err)
 		}
@@ -87,34 +88,51 @@ func main() {
 		}
 		fmt.Printf("resource:   %s\n", d.GetName())
 		fmt.Printf("project:    %s\n", resp.GetProject().GetName())
-		fmt.Printf("entry:      %s\n", d.GetEntryRef())
-		fmt.Printf("companions: %s\n", strings.Join(d.GetCompanionRefs(), ", "))
+		fmt.Printf("entry:      %s\n", d.GetEntryUri())
+		fmt.Printf("companions: %s\n", strings.Join(d.GetCompanionUris(), ", "))
 		// Which artifact each TIER opens is decided once, above every client, so the CLI and the
 		// browser cannot disagree about which companion supplies the board.
 		src := service.SourcesFor(d, "")
-		fmt.Printf("tiers:      netlist=%s board=%s sheets=%s\n", src.NetlistRef, src.BoardRef, src.GeometryRef)
+		fmt.Printf("tiers:      netlist=%s board=%s sheets=%s\n", src.NetlistURI, src.BoardURI, src.GeometryURI)
 		return nil
 	})
 
 	demo.Bind("read").Run(func(demokit.StepContext) *demokit.StepResult {
-		named := ref.Path()
+		named := artifactUri(ref.Path())
 		entry := named
-		if resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: mount, Ref: named}); err == nil && resp.GetDesign() != nil {
-			entry = resp.GetDesign().GetEntryRef()
+		if resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: named}); err == nil && resp.GetDesign() != nil {
+			entry = resp.GetDesign().GetEntryUri()
 		}
 		// Reading BOTH is what makes the point visible. On this small fixture the two answers happen
 		// to match; neither of them says which file it came from, which is exactly why a divergence
 		// on a real export would be invisible.
-		for _, r := range []struct{ label, rel string }{{"as named", named}, {"the design's entry", entry}} {
-			d, err := common.Load(fixtureRoot + "/" + r.rel)
+		// Both sides are addressed the same way, so the comparison is of what was READ rather than of
+		// how it was spelled. Turning a URI back into a path happens once, here, at the file edge.
+		for _, r := range []struct{ label, uri string }{{"as named", named}, {"the design's entry", entry}} {
+			u, err := artifact.Parse(r.uri)
 			if err != nil {
-				return demokit.Errf("load %s: %v", r.rel, err)
+				return demokit.Errf("parse %s: %v", r.uri, err)
 			}
-			fmt.Printf("%-20s %-34s %d components, %d nets\n", r.label, r.rel, len(d.Components), len(d.Nets))
+			d, err := common.Load(fixtureRoot + "/" + u.Path)
+			if err != nil {
+				return demokit.Errf("load %s: %v", r.uri, err)
+			}
+			fmt.Printf("%-20s %-46s %d components, %d nets\n", r.label, r.uri, len(d.Components), len(d.Nets))
 		}
 		return nil
 	})
 
 	common.SetupRenderer(demo)
 	demo.Execute()
+}
+
+// artifactUri names a file inside the bundled fixture tree. The example declares one mount, so the
+// authority is fixed and only the path varies; a server does the same thing with the mounts an
+// operator configured.
+func artifactUri(rel string) string {
+	u, err := artifact.New(mount, rel)
+	if err != nil {
+		return rel
+	}
+	return u.String()
 }

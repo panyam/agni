@@ -379,10 +379,30 @@ YAML file the CLI read, a form a browser filled, a registry a deployment queried
 business.
 
 ARTIFACTS are the deliberate exception: a design, a board export, and any large parsed input are named
-by an opaque REF (`mount` + key) that the injected Loader port resolves (C13), because they are
-megabytes, need format-reader dispatch, and are re-requested across many RPCs. A ref is not a host path;
-it is a key in a server-defined namespace, and nothing above the Loader may treat it as a filesystem
-path.
+by an opaque URI (`mount://<mount>/<path>`) that the injected Loader port resolves (C13), because they
+are megabytes, need format-reader dispatch, and are re-requested across many RPCs. The authority is a
+key in a server-defined namespace and the URI is not a host path; nothing above the Loader may treat
+it as a filesystem path.
+
+The URI replaced a `(mount, path)` PAIR (agni issue 177). The Loader was indifferent to which form it
+got, but nothing above it was: two fields that mean one thing must travel together, and 24 request
+messages repeated that pairing by hand. Two properties came with the collapse. **Parsing IS the
+containment check**, so a parsed `artifact.URI` cannot name a location outside the mount it claims and
+the 26 call sites that re-checked stopped needing to — an adapter can no longer forget, because it
+cannot receive a bad value. And **relative resolution became specified rather than hand-rolled**: a
+schematic naming its sub-sheets or a symbol library resolves against the file being read, and a URI
+path is always slash-separated, so the `path`-vs-`filepath` split that `formats.Loader` warned was
+"invisible on unix, breaks every sibling lookup on Windows" has nowhere to hide.
+
+The authority is always `mount`, never `s3://` or `db://`. What a mount resolves to is the
+deployment's business, and a per-store scheme would put the storage kind in the client's hands, which
+is the indirection the Loader and ProjectStore ports exist to keep.
+
+RESOURCE NAMES are a different system and are NOT URIs. `projects/{project}` and `reviews/{review}`
+are AIP paths naming IDENTITY, not location: a project keeps its name when its folder is renamed or
+moved between mounts, which is the whole reason its id is declared rather than derived. Addressing
+answers "where are the bytes"; a resource name answers "what is this thing". Collapsing them would
+give up that stability (C23).
 
 **Why:** both failure modes were shipped and both cost real time. `agni review` could not load a
 `--conventions` config at all (WS3-102), so any review item bound to a naming rule read `not-automated`
@@ -406,24 +426,20 @@ free of I/O while still serving a browser, which holds a ref and no filesystem: 
 it is named in the contract instead of hiding inside a run, and a caller that already has the value
 never triggers it.
 
-**Verify:** no `*_path` field on a CONFIG message in `protos/agni/v1/webapi/` (artifact refs are
-exempt and should be named `*_ref`); no `os`/`path/filepath`/`io/fs` import in `internal/service/`
+**Verify:** no `mount` + `path` PAIR and no `*_path` or `*_ref` field in `protos/agni/v1/webapi/` — an
+artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
+travels as a value; no `os`/`path/filepath`/`io/fs` import in `internal/service/`
 impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabulary installers
 (`naming.ApplyLexicon`, `classify.SetActive*`) are called only from entrypoint startup wiring
 (`cmd/agni`), never from a service method or any per-run path.
 
-**Known outstanding violation:** `DiffDesignsRequest.a_path` / `b_path` are artifact refs wearing a
-misleading `_path` name, the same misnaming WS9-050 fixed on the review request. Unlike that one they
-have live web consumers, so the rename is a real wire break rather than a free one and is tracked in
-`OUT_OF_SCOPE.md`. Recorded here rather than left implicit, so the constraint is not read as already
-satisfied.
 
 ## C23: Stateful resources are AIP-shaped; stateless compute stays verb-shaped
 **Rule:** An API surface that owns state with a lifetime of its own is modelled as a RESOURCE:
 a `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
 `filter` and AIP-158 `page_size` / `page_token` on the list. Everything else in
 `protos/agni/v1/webapi/` stays verb-shaped (`GetDesign`, `ListDir`, `RunQuery`, `DiffDesigns`,
-`CheckDesign`), addressed by a `(mount, ref)` pair. The resources today are `ReviewService`'s
+`CheckDesign`), addressed by an artifact URI (C22). The resources today are `ReviewService`'s
 `Review` (WS9-053) and `ProjectService`'s `Project` / `Design` (agni issue 170). A new rpc picks its
 side by ONE question: does what it returns still exist after the call? A derived view of files on
 disk does not, and is verb-shaped. Persisted state does, and is a resource.

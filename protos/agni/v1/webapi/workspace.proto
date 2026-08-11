@@ -12,17 +12,17 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 // This file: WorkspaceService, the mounted folders and their contents (the "Files" resource).
 
 // WorkspaceService exposes the read-only folders ("mounts") the server was started with
-// and their directory contents. Mounts are the security boundary: a client names
-// a mount and a mount-relative path, never an absolute host path.
+// and their directory contents. Mounts are the security boundary: a client names an artifact by a
+// `mount://<mount>/<path>` URI whose authority is a mount, never an absolute host path.
 service WorkspaceService {
   // ListMounts returns the mounts the server is serving, in the order they were
   // configured. It takes no parameters and never fails for a running server.
   rpc ListMounts(ListMountsRequest) returns (ListMountsResponse);
 
   // ListDir lists one directory level inside a mount: its subdirectories and the files a
-  // reader can open (filtered by extension). The client addresses a location by mount name
-  // plus a mount-relative path, never an absolute host path; the server joins them inside
-  // the mount. Lazy, one level per call, so large trees stay responsive.
+  // reader can open (filtered by extension). The client addresses a location by an artifact URI
+  // whose authority is a mount, never an absolute host path; the server resolves it inside that
+  // mount. Lazy, one level per call, so large trees stay responsive.
   rpc ListDir(ListDirRequest) returns (ListDirResponse);
 }
 
@@ -33,6 +33,10 @@ message Mount {
   string name = 1;
   // root is the absolute host path the mount serves, for display in the UI.
   string root = 2;
+  // uri names the mount itself, "mount://<name>". It is served rather than left for the client to
+  // build, because a client that concatenates a scheme by hand is a client that can get the scheme
+  // wrong, and every other artifact reference it makes will be a child of this one.
+  string uri = 3;
 }
 
 message ListMountsRequest {}
@@ -45,24 +49,23 @@ message ListMountsResponse {
 message DirEntry {
   // name is the base name (no path).
   string name = 1;
-  // path is the mount-relative path to this entry, to pass back to ListDir (for a
-  // directory) or to a design/sheet load (for a file).
-  string path = 2;
   // is_dir is true for a subdirectory.
-  bool is_dir = 3;
+  bool is_dir = 2;
   // format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
   // "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
   // has no reader for): the tree lists such files but the UI shows them disabled, so an
   // unsupported format is distinguishable from an empty folder. It is a hint for the UI;
   // ambiguous extensions are resolved for real at load time.
-  string format = 4;
+  string format = 3;
+  // uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
+  // (for a file).
+  string uri = 4;
 }
 
 message ListDirRequest {
-  // mount is the name of a mount from ListMounts.
-  string mount = 1;
-  // path is the mount-relative directory to list; empty lists the mount root.
-  string path = 2;
+  // uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
+  // mount root.
+  string uri = 1;
 }
 
 message ListDirResponse {

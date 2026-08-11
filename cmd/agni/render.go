@@ -14,11 +14,11 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/readers/formats"
-	"github.com/panyam/agni/core/render"
 )
 
 // The layout/--symbols vocabulary is shared with the service tier via formats.

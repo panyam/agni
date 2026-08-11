@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { artifactUri, uriPath } from "./uri.js";
 import { fileTreeIsland } from "./filetree.jsx";
 import type { SheetsState } from "./sheets.js";
 
@@ -12,7 +13,8 @@ const fake = vi.hoisted(() => ({
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
-    listDir: async ({ path }: { mount: string; path: string }) => {
+    listDir: async ({ uri }: { uri: string }) => {
+      const path = uriPath(uri);
       fake.calls.push(path);
       const entries = fake.dirs[path];
       if (!entries) throw new Error(`no such dir ${path}`);
@@ -21,8 +23,8 @@ vi.mock("./api.js", () => ({
   }),
 }));
 
-const dir = (name: string, path: string) => ({ name, path, isDir: true, format: "" });
-const file = (name: string, path: string, format = "edif") => ({ name, path, isDir: false, format });
+const dir = (name: string, path: string) => ({ name, uri: artifactUri("m", path), isDir: true, format: "" });
+const file = (name: string, path: string, format = "edif") => ({ name, uri: artifactUri("m", path), isDir: false, format });
 
 function mountTree() {
   const handlers = {

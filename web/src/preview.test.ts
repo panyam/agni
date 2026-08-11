@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { artifactUri, uriPath } from "./uri.js";
 import { DesignPreview, captionFor, pickPreviewSheet, type PreviewView } from "./preview.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 
@@ -46,10 +47,9 @@ describe("DesignPreview", () => {
     // An EMPTY layout is the request that makes the preview faithful-first: the server resolves
     // "" to the faithful layout whenever the file carries geometry. Pinning it stops a later edit
     // from hard-coding a layout and silently drawing every design as a netlist graph.
-    expect(h.getDesign).toHaveBeenCalledWith({ mount: "corpus", path: "boards/amp.kicad_sch", layout: "" });
+    expect(h.getDesign).toHaveBeenCalledWith({ uri: artifactUri("corpus", "boards/amp.kicad_sch"), layout: "" });
     expect(h.getSheet).toHaveBeenCalledWith({
-      mount: "corpus",
-      path: "boards/amp.kicad_sch",
+      uri: artifactUri("corpus", "boards/amp.kicad_sch"),
       sheet: "s1",
       layout: "",
       format: SheetFormat.SVG,
@@ -90,8 +90,8 @@ describe("DesignPreview", () => {
   it("drops a stale load still waiting on the design lookup", async () => {
     const slow = deferred<{ sheets: { id: string; name: string }[] }>();
     const base = { name: "Fast", sourceFormat: "kicad-sch", componentCount: 1, netCount: 1 };
-    const getDesign = vi.fn((req: { path: string }) =>
-      req.path === "slow.kicad_sch" ? slow.promise : Promise.resolve({ ...base, sheets: [{ id: "f1", name: "Fast" }] }),
+    const getDesign = vi.fn((req: { uri: string }) =>
+      uriPath(req.uri) === "slow.kicad_sch" ? slow.promise : Promise.resolve({ ...base, sheets: [{ id: "f1", name: "Fast" }] }),
     );
     const h = harness({ getDesign });
 
@@ -109,8 +109,8 @@ describe("DesignPreview", () => {
 
   it("drops a stale load already waiting on the sheet render", async () => {
     const slow = deferred<{ content: { case: "svg"; value: string } }>();
-    const getSheet = vi.fn((req: { path: string }) =>
-      req.path === "slow.kicad_sch" ? slow.promise : Promise.resolve({ content: { case: "svg" as const, value: "<svg id='fast'/>" } }),
+    const getSheet = vi.fn((req: { uri: string }) =>
+      uriPath(req.uri) === "slow.kicad_sch" ? slow.promise : Promise.resolve({ content: { case: "svg" as const, value: "<svg id='fast'/>" } }),
     );
     const h = harness({ getSheet });
 

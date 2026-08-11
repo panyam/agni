@@ -194,11 +194,11 @@ func (x *SheetRef) GetParentId() string {
 
 type GetDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path  string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	// layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
 	// empty uses the default. Ignored for geometry-bearing files, which render faithfully.
-	Layout        string `protobuf:"bytes,3,opt,name=layout,proto3" json:"layout,omitempty"`
+	Layout string `protobuf:"bytes,1,opt,name=layout,proto3" json:"layout,omitempty"`
+	// uri names the design to load, "mount://<mount>/<path>".
+	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -233,23 +233,16 @@ func (*GetDesignRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetDesignRequest) GetMount() string {
-	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetDesignRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 func (x *GetDesignRequest) GetLayout() string {
 	if x != nil {
 		return x.Layout
+	}
+	return ""
+}
+
+func (x *GetDesignRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
 	}
 	return ""
 }
@@ -367,16 +360,16 @@ func (x *GetDesignResponse) GetAvailableLayouts() []string {
 
 type GetSheetRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path  string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	// sheet selects by id, name, or 0-based index; empty selects the first sheet.
-	Sheet  string `protobuf:"bytes,3,opt,name=sheet,proto3" json:"sheet,omitempty"`
-	Layout string `protobuf:"bytes,4,opt,name=layout,proto3" json:"layout,omitempty"`
+	Sheet  string `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	Layout string `protobuf:"bytes,2,opt,name=layout,proto3" json:"layout,omitempty"`
 	// format selects the renderer; unset means PACKED.
-	Format SheetFormat `protobuf:"varint,5,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
+	Format SheetFormat `protobuf:"varint,3,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
 	// symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
 	// faithful layout (always the design's own symbols).
-	Symbols       SymbolSource `protobuf:"varint,6,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
+	Symbols SymbolSource `protobuf:"varint,4,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
+	// uri names the design the sheet belongs to.
+	Uri           string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -411,20 +404,6 @@ func (*GetSheetRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *GetSheetRequest) GetMount() string {
-	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetSheetRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 func (x *GetSheetRequest) GetSheet() string {
 	if x != nil {
 		return x.Sheet
@@ -451,6 +430,13 @@ func (x *GetSheetRequest) GetSymbols() SymbolSource {
 		return x.Symbols
 	}
 	return SymbolSource_SYMBOL_SOURCE_UNSPECIFIED
+}
+
+func (x *GetSheetRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
 }
 
 type GetSheetResponse struct {
@@ -540,17 +526,17 @@ func (*GetSheetResponse_Svg) isGetSheetResponse_Content() {}
 
 type HighlightSheetRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path  string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	// sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
-	Sheet   string       `protobuf:"bytes,3,opt,name=sheet,proto3" json:"sheet,omitempty"`
-	Layout  string       `protobuf:"bytes,4,opt,name=layout,proto3" json:"layout,omitempty"`
-	Symbols SymbolSource `protobuf:"varint,5,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
+	Sheet   string       `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
+	Layout  string       `protobuf:"bytes,2,opt,name=layout,proto3" json:"layout,omitempty"`
+	Symbols SymbolSource `protobuf:"varint,3,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
 	// format selects the overlay projection: PACKED or SVG (NATIVE is InvalidArgument).
 	// Unset means PACKED, matching GetSheet.
-	Format SheetFormat `protobuf:"varint,6,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
+	Format SheetFormat `protobuf:"varint,4,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
 	// specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
-	Specs         []*geom.HighlightSpec `protobuf:"bytes,7,rep,name=specs,proto3" json:"specs,omitempty"`
+	Specs []*geom.HighlightSpec `protobuf:"bytes,5,rep,name=specs,proto3" json:"specs,omitempty"`
+	// uri names the design the sheet belongs to.
+	Uri           string `protobuf:"bytes,6,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -583,20 +569,6 @@ func (x *HighlightSheetRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use HighlightSheetRequest.ProtoReflect.Descriptor instead.
 func (*HighlightSheetRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *HighlightSheetRequest) GetMount() string {
-	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *HighlightSheetRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
 }
 
 func (x *HighlightSheetRequest) GetSheet() string {
@@ -632,6 +604,13 @@ func (x *HighlightSheetRequest) GetSpecs() []*geom.HighlightSpec {
 		return x.Specs
 	}
 	return nil
+}
+
+func (x *HighlightSheetRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
 }
 
 type HighlightSheetResponse struct {
@@ -721,10 +700,10 @@ func (*HighlightSheetResponse_Svg) isHighlightSheetResponse_Content() {}
 
 type GetLayoutReportRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
-	Path  string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	// symbols selects the node artwork the report explains; unset means GLYPH.
-	Symbols       SymbolSource `protobuf:"varint,3,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
+	Symbols SymbolSource `protobuf:"varint,1,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
+	// uri names the design to report on.
+	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -759,25 +738,18 @@ func (*GetLayoutReportRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetLayoutReportRequest) GetMount() string {
-	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetLayoutReportRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
 func (x *GetLayoutReportRequest) GetSymbols() SymbolSource {
 	if x != nil {
 		return x.Symbols
 	}
 	return SymbolSource_SYMBOL_SOURCE_UNSPECIFIED
+}
+
+func (x *GetLayoutReportRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
 }
 
 type GetLayoutReportResponse struct {
@@ -954,11 +926,10 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
-	"\tparent_id\x18\x03 \x01(\tR\bparentId\"T\n" +
-	"\x10GetDesignRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12\x16\n" +
-	"\x06layout\x18\x03 \x01(\tR\x06layout\"\xb4\x02\n" +
+	"\tparent_id\x18\x03 \x01(\tR\bparentId\"<\n" +
+	"\x10GetDesignRequest\x12\x16\n" +
+	"\x06layout\x18\x01 \x01(\tR\x06layout\x12\x10\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xb4\x02\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -967,34 +938,31 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x06layout\x18\x05 \x01(\tR\x06layout\x120\n" +
 	"\x06sheets\x18\x06 \x03(\v2\x18.agni.v1.webapi.SheetRefR\x06sheets\x12)\n" +
 	"\x10native_available\x18\a \x01(\bR\x0fnativeAvailable\x12+\n" +
-	"\x11available_layouts\x18\b \x03(\tR\x10availableLayouts\"\xd6\x01\n" +
+	"\x11available_layouts\x18\b \x03(\tR\x10availableLayouts\"\xbe\x01\n" +
 	"\x0fGetSheetRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
-	"\x05sheet\x18\x03 \x01(\tR\x05sheet\x12\x16\n" +
-	"\x06layout\x18\x04 \x01(\tR\x06layout\x123\n" +
-	"\x06format\x18\x05 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x126\n" +
-	"\asymbols\x18\x06 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\"f\n" +
+	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
+	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +
+	"\x06format\x18\x03 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x126\n" +
+	"\asymbols\x18\x04 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
+	"\x03uri\x18\x05 \x01(\tR\x03uri\"f\n" +
 	"\x10GetSheetResponse\x123\n" +
 	"\x06packed\x18\x01 \x01(\v2\x19.agni.v1.geom.PackedSheetH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svgB\t\n" +
-	"\acontent\"\x8f\x02\n" +
+	"\acontent\"\xf7\x01\n" +
 	"\x15HighlightSheetRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
-	"\x05sheet\x18\x03 \x01(\tR\x05sheet\x12\x16\n" +
-	"\x06layout\x18\x04 \x01(\tR\x06layout\x126\n" +
-	"\asymbols\x18\x05 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x123\n" +
-	"\x06format\x18\x06 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x121\n" +
-	"\x05specs\x18\a \x03(\v2\x1b.agni.v1.geom.HighlightSpecR\x05specs\"p\n" +
+	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
+	"\x06layout\x18\x02 \x01(\tR\x06layout\x126\n" +
+	"\asymbols\x18\x03 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x123\n" +
+	"\x06format\x18\x04 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x121\n" +
+	"\x05specs\x18\x05 \x03(\v2\x1b.agni.v1.geom.HighlightSpecR\x05specs\x12\x10\n" +
+	"\x03uri\x18\x06 \x01(\tR\x03uri\"p\n" +
 	"\x16HighlightSheetResponse\x127\n" +
 	"\x06packed\x18\x01 \x01(\v2\x1d.agni.v1.geom.PackedHighlightH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svgB\t\n" +
-	"\acontent\"z\n" +
-	"\x16GetLayoutReportRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x126\n" +
-	"\asymbols\x18\x03 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\"S\n" +
+	"\acontent\"b\n" +
+	"\x16GetLayoutReportRequest\x126\n" +
+	"\asymbols\x18\x01 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"S\n" +
 	"\x17GetLayoutReportResponse\x128\n" +
 	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"S\n" +
 	"\x10ConversionReport\x12?\n" +

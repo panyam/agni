@@ -71,11 +71,11 @@ message SheetRef {
 }
 
 message GetDesignRequest {
-  string mount = 1;
-  string path = 2;
   // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
   // empty uses the default. Ignored for geometry-bearing files, which render faithfully.
-  string layout = 3;
+  string layout = 1;
+  // uri names the design to load, "mount://<mount>/<path>".
+  string uri = 2;
 }
 
 message GetDesignResponse {
@@ -101,16 +101,16 @@ message GetDesignResponse {
 }
 
 message GetSheetRequest {
-  string mount = 1;
-  string path = 2;
   // sheet selects by id, name, or 0-based index; empty selects the first sheet.
-  string sheet = 3;
-  string layout = 4;
+  string sheet = 1;
+  string layout = 2;
   // format selects the renderer; unset means PACKED.
-  SheetFormat format = 5;
+  SheetFormat format = 3;
   // symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
   // faithful layout (always the design's own symbols).
-  SymbolSource symbols = 6;
+  SymbolSource symbols = 4;
+  // uri names the design the sheet belongs to.
+  string uri = 5;
 }
 
 message GetSheetResponse {
@@ -123,17 +123,17 @@ message GetSheetResponse {
 }
 
 message HighlightSheetRequest {
-  string mount = 1;
-  string path = 2;
   // sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
-  string sheet = 3;
-  string layout = 4;
-  SymbolSource symbols = 5;
+  string sheet = 1;
+  string layout = 2;
+  SymbolSource symbols = 3;
   // format selects the overlay projection: PACKED or SVG (NATIVE is InvalidArgument).
   // Unset means PACKED, matching GetSheet.
-  SheetFormat format = 6;
+  SheetFormat format = 4;
   // specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
-  repeated agni.v1.geom.HighlightSpec specs = 7;
+  repeated agni.v1.geom.HighlightSpec specs = 5;
+  // uri names the design the sheet belongs to.
+  string uri = 6;
 }
 
 message HighlightSheetResponse {
@@ -146,10 +146,10 @@ message HighlightSheetResponse {
 }
 
 message GetLayoutReportRequest {
-  string mount = 1;
-  string path = 2;
   // symbols selects the node artwork the report explains; unset means GLYPH.
-  SymbolSource symbols = 3;
+  SymbolSource symbols = 1;
+  // uri names the design to report on.
+  string uri = 2;
 }
 
 message GetLayoutReportResponse {

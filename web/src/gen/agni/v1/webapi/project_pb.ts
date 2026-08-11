@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSJGCgdQcm9qZWN0EgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSDQoFbW91bnQYAyABKAkSDwoHZGlyX3JlZhgEIAEoCSJwCgZEZXNpZ24SDAoEbmFtZRgBIAEoCRINCgV0aXRsZRgCIAEoCRINCgVtb3VudBgDIAEoCRIPCgdkaXJfcmVmGAQgASgJEhEKCWVudHJ5X3JlZhgFIAEoCRIWCg5jb21wYW5pb25fcmVmcxgGIAMoCSIhChFHZXRQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIkwKE0xpc3RQcm9qZWN0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIloKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEikKCHByb2plY3RzGAEgAygLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiJwoXR2V0UHJvamVjdERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJiChlMaXN0UHJvamVjdERlc2lnbnNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCRIOCgZmaWx0ZXIYBCABKAkiXgoaTGlzdFByb2plY3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiMgoUUmVzb2x2ZURlc2lnblJlcXVlc3QSDQoFbW91bnQYASABKAkSCwoDcmVmGAIgASgJImkKFVJlc29sdmVEZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YASABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SKAoHcHJvamVjdBgCIAEoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QyxwMKDlByb2plY3RTZXJ2aWNlEkgKCkdldFByb2plY3QSIS5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSWQoMTGlzdFByb2plY3RzEiMuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1Jlc3BvbnNlEkwKCUdldERlc2lnbhInLmFnbmkudjEud2ViYXBpLkdldFByb2plY3REZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEmQKC0xpc3REZXNpZ25zEikuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBoqLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlElwKDVJlc29sdmVEZXNpZ24SJC5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSIzCgdQcm9qZWN0EgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJIl0KBkRlc2lnbhIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIRCgllbnRyeV91cmkYBCABKAkSFgoOY29tcGFuaW9uX3VyaXMYBSADKAkiIQoRR2V0UHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSJMChNMaXN0UHJvamVjdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJaChRMaXN0UHJvamVjdHNSZXNwb25zZRIpCghwcm9qZWN0cxgBIAMoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIicKF0dldFByb2plY3REZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkiYgoZTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJIl4KGkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlEicKB2Rlc2lnbnMYASADKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0MscDCg5Qcm9qZWN0U2VydmljZRJICgpHZXRQcm9qZWN0EiEuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0ElkKDExpc3RQcm9qZWN0cxIjLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXNwb25zZRJMCglHZXREZXNpZ24SJy5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJkCgtMaXN0RGVzaWducxIpLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1JlcXVlc3QaKi5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdERlc2lnbnNSZXNwb25zZRJcCg1SZXNvbHZlRGVzaWduEiQuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
 
 /**
  * Project is one declared set of designs that share configuration.
@@ -45,19 +45,12 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
   title: string;
 
   /**
-   * mount is the workspace mount this project's files live in.
-   *
-   * @generated from field: string mount = 3;
-   */
-  mount: string;
-
-  /**
-   * dir_ref is the mount-relative folder holding `project.yaml`. It is an artifact ref that the
+   * uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
    * injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
    *
-   * @generated from field: string dir_ref = 4;
+   * @generated from field: string uri = 3;
    */
-  dirRef: string;
+  uri: string;
 };
 
 /**
@@ -93,33 +86,26 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   title: string;
 
   /**
-   * mount is the workspace mount this design's files live in.
+   * uri is the folder holding `design.yaml`.
    *
-   * @generated from field: string mount = 3;
+   * @generated from field: string uri = 3;
    */
-  mount: string;
+  uri: string;
 
   /**
-   * dir_ref is the mount-relative folder holding `design.yaml`.
-   *
-   * @generated from field: string dir_ref = 4;
-   */
-  dirRef: string;
-
-  /**
-   * entry_ref is the mount-relative ref of the file this design's ANALYSIS reads: the netlist the
+   * entry_uri names the file this design's ANALYSIS reads: the netlist the
    * design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
    * behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
    * different component count depending on which a tool opens, and the CLI could previously only
    * print a warning telling the operator to go consult their own descriptor, because nothing in the
    * engine modelled "this folder is one design, and this file is its entry".
    *
-   * @generated from field: string entry_ref = 5;
+   * @generated from field: string entry_uri = 4;
    */
-  entryRef: string;
+  entryUri: string;
 
   /**
-   * companion_refs are mount-relative refs to files that are VIEWS of this same design rather than
+   * companion_uris name files that are VIEWS of this same design rather than
    * independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
    * render and to locate findings on, never a second component source to reconcile against the
    * netlist (C21).
@@ -128,9 +114,9 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
    * inferred rule would turn a diff of two revisions into a diff of one against itself.
    *
-   * @generated from field: repeated string companion_refs = 6;
+   * @generated from field: repeated string companion_uris = 5;
    */
-  companionRefs: string[];
+  companionUris: string[];
 };
 
 /**
@@ -179,7 +165,8 @@ export type ListProjectsRequest = Message<"agni.v1.webapi.ListProjectsRequest"> 
   pageToken: string;
 
   /**
-   * filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`. An unsupported
+   * filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`, matched
+   * against the authority of the project's URI. An unsupported
    * filter is an error rather than a silently ignored argument, because a client that believed it had
    * filtered and had not would read another mount's projects as its own.
    *
@@ -306,19 +293,12 @@ export const ListProjectDesignsResponseSchema: GenMessage<ListProjectDesignsResp
  */
 export type ResolveDesignRequest = Message<"agni.v1.webapi.ResolveDesignRequest"> & {
   /**
-   * mount is the workspace mount the ref resolves within.
-   *
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * ref names the file or folder to resolve, mount-relative. A ref is a key in a server-defined
+   * uri names the file or folder to resolve. A URI's authority is a key in a server-defined
    * namespace that the injected Loader resolves, NOT a host path.
    *
-   * @generated from field: string ref = 2;
+   * @generated from field: string uri = 1;
    */
-  ref: string;
+  uri: string;
 };
 
 /**

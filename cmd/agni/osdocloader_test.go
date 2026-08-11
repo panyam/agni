@@ -31,7 +31,7 @@ func TestOsDocLoaderDocument(t *testing.T) {
 	l := &osDocLoader{mounts: []mounts.Mount{{Name: "m", Root: dir}}}
 
 	// A datasheet whose sibling doc-IR exists parses it.
-	doc, err := l.Document(context.Background(), "m", "d.pdf")
+	doc, err := l.Document(context.Background(), mustURI("m", "d.pdf"))
 	if err != nil {
 		t.Fatalf("Document: %v", err)
 	}
@@ -40,13 +40,13 @@ func TestOsDocLoaderDocument(t *testing.T) {
 	}
 
 	// A datasheet with no sibling is (nil, nil): "not yet extracted", a normal state.
-	missing, err := l.Document(context.Background(), "m", "other.pdf")
+	missing, err := l.Document(context.Background(), mustURI("m", "other.pdf"))
 	if err != nil || missing != nil {
 		t.Fatalf("absent sibling => (%v, %v), want (nil, nil)", missing, err)
 	}
 
 	// An unknown mount is a classified error, not a panic.
-	if _, err := l.Document(context.Background(), "nope", "d.pdf"); err == nil {
+	if _, err := l.Document(context.Background(), mustURI("nope", "d.pdf")); err == nil {
 		t.Fatal("unknown mount should error")
 	}
 }

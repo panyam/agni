@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 	"path/filepath"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestOsLoaderCompanionGeometry(t *testing.T) {
 	l := &osLoader{mounts: []mounts.Mount{{Name: "m", Root: filepath.Join("testdata", "review")}}, loader: &formats.Loader{}}
 
 	// With a sibling .eds -> the companion schematic (its page sheet "P1", its named wire SIGA).
-	g, err := l.Geometry(context.Background(), "m", "companion-demo.edn", graph.DefaultStrategy, false)
+	g, err := l.Geometry(context.Background(), mustURI("m", "companion-demo.edn"), graph.DefaultStrategy, false)
 	if err != nil {
 		t.Fatalf("companion geometry: %v", err)
 	}
@@ -46,7 +47,7 @@ func TestOsLoaderCompanionGeometry(t *testing.T) {
 	}
 
 	// Without a sibling -> the auto-layout graph, as before.
-	g2, err := l.Geometry(context.Background(), "m", "can-broken.edn", graph.DefaultStrategy, false)
+	g2, err := l.Geometry(context.Background(), mustURI("m", "can-broken.edn"), graph.DefaultStrategy, false)
 	if err != nil {
 		t.Fatalf("auto-layout geometry: %v", err)
 	}
@@ -72,4 +73,14 @@ func hasWireNet(g *geom.SchematicGeometry, net string) bool {
 		}
 	}
 	return false
+}
+
+// mustURI builds an artifact URI from a (mount, path) pair the test itself declared. It panics
+// rather than returning an error: a fixture URI that will not parse is a broken test.
+func mustURI(mount, p string) artifact.URI {
+	u, err := artifact.New(mount, p)
+	if err != nil {
+		panic(err)
+	}
+	return u
 }

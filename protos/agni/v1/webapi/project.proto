@@ -73,11 +73,9 @@ message Project {
   string name = 1;
   // title is the human-readable label, falling back to the id when the descriptor gave none.
   string title = 2;
-  // mount is the workspace mount this project's files live in.
-  string mount = 3;
-  // dir_ref is the mount-relative folder holding `project.yaml`. It is an artifact ref that the
+  // uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
   // injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
-  string dir_ref = 4;
+  string uri = 3;
 }
 
 // Design is one declared design: an identity, an entry file, and its companion views.
@@ -91,18 +89,16 @@ message Design {
   string name = 1;
   // title is the human-readable label, falling back to the id.
   string title = 2;
-  // mount is the workspace mount this design's files live in.
-  string mount = 3;
-  // dir_ref is the mount-relative folder holding `design.yaml`.
-  string dir_ref = 4;
-  // entry_ref is the mount-relative ref of the file this design's ANALYSIS reads: the netlist the
+  // uri is the folder holding `design.yaml`.
+  string uri = 3;
+  // entry_uri names the file this design's ANALYSIS reads: the netlist the
   // design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
   // behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
   // different component count depending on which a tool opens, and the CLI could previously only
   // print a warning telling the operator to go consult their own descriptor, because nothing in the
   // engine modelled "this folder is one design, and this file is its entry".
-  string entry_ref = 5;
-  // companion_refs are mount-relative refs to files that are VIEWS of this same design rather than
+  string entry_uri = 4;
+  // companion_uris name files that are VIEWS of this same design rather than
   // independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
   // render and to locate findings on, never a second component source to reconcile against the
   // netlist (C21).
@@ -110,7 +106,7 @@ message Design {
   // Membership is declared per file rather than inferred from "everything beside the entry", because
   // a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
   // inferred rule would turn a diff of two revisions into a diff of one against itself.
-  repeated string companion_refs = 6;
+  repeated string companion_uris = 5;
 }
 
 message GetProjectRequest {
@@ -123,7 +119,8 @@ message ListProjectsRequest {
   int32 page_size = 1;
   // page_token continues a previous call. An empty token starts at the first project.
   string page_token = 2;
-  // filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`. An unsupported
+  // filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`, matched
+  // against the authority of the project's URI. An unsupported
   // filter is an error rather than a silently ignored argument, because a client that believed it had
   // filtered and had not would read another mount's projects as its own.
   string filter = 3;
@@ -157,11 +154,9 @@ message ListProjectDesignsResponse {
 }
 
 message ResolveDesignRequest {
-  // mount is the workspace mount the ref resolves within.
-  string mount = 1;
-  // ref names the file or folder to resolve, mount-relative. A ref is a key in a server-defined
+  // uri names the file or folder to resolve. A URI's authority is a key in a server-defined
   // namespace that the injected Loader resolves, NOT a host path.
-  string ref = 2;
+  string uri = 1;
 }
 
 message ResolveDesignResponse {

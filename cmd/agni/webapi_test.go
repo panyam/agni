@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/panyam/agni/internal/artifact"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +26,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 
 	svc := service.NewWorkspaceService(&osWorkspace{mounts: []mounts.Mount{{Name: "m", Root: root}}})
 	list := func(mount, path string) (*webapi.ListDirResponse, error) {
-		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Mount: mount, Path: path})
+		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr(mount, path)})
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +67,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := msg.GetEntries()
-		if len(got) != 1 || got[0].GetName() != "inner.xml" || got[0].GetPath() != "sub/inner.xml" {
+		if len(got) != 1 || got[0].GetName() != "inner.xml" || got[0].GetUri() != "mount://m/sub/inner.xml" {
 			t.Fatalf("want [sub/inner.xml], got %+v", got)
 		}
 	})
@@ -77,9 +78,13 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		}
 	})
 
-	t.Run("traversal keeps its invalid-path classification", func(t *testing.T) {
-		if _, err := list("m", "../.."); !errors.Is(err, service.ErrInvalidPath) {
-			t.Fatalf("want ErrInvalidPath, got %v", err)
+	// A traversal is refused when the URI is PARSED, not when the adapter joins it, so it classifies
+	// as an invalid argument. The malformed value is sent as a raw string because building it through
+	// the URI constructor is exactly what is now impossible.
+	t.Run("traversal is refused at the parse", func(t *testing.T) {
+		_, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: "mount://m/../.."})
+		if !errors.Is(err, service.ErrInvalidArgument) {
+			t.Fatalf("want ErrInvalidArgument, got %v", err)
 		}
 	})
 
@@ -114,4 +119,15 @@ func TestWorkspaceServiceListMounts(t *testing.T) {
 	if len(got) != 2 || got[0].GetName() != "a" || got[0].GetRoot() != "/x" || got[1].GetName() != "b" {
 		t.Fatalf("unexpected mounts: %+v", got)
 	}
+}
+
+// uriStr builds an artifact URI string for a request literal in a test. A fixture URI that will not
+// parse is a broken test rather than a condition under test, so it panics instead of returning an
+// error nobody would check.
+func uriStr(mount, p string) string {
+	u, err := artifact.New(mount, p)
+	if err != nil {
+		panic(err)
+	}
+	return u.String()
 }

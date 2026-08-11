@@ -23,13 +23,12 @@ const (
 )
 
 // DiffDesignsRequest names the two designs: a is the old revision, b the new, each as a
-// (mount, mount-relative path) pair like every other file-addressing request.
+// artifact URI like every other file-addressing request.
 type DiffDesignsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AMount        string                 `protobuf:"bytes,1,opt,name=a_mount,json=aMount,proto3" json:"a_mount,omitempty"`
-	APath         string                 `protobuf:"bytes,2,opt,name=a_path,json=aPath,proto3" json:"a_path,omitempty"`
-	BMount        string                 `protobuf:"bytes,3,opt,name=b_mount,json=bMount,proto3" json:"b_mount,omitempty"`
-	BPath         string                 `protobuf:"bytes,4,opt,name=b_path,json=bPath,proto3" json:"b_path,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
+	AUri          string `protobuf:"bytes,1,opt,name=a_uri,json=aUri,proto3" json:"a_uri,omitempty"`
+	BUri          string `protobuf:"bytes,2,opt,name=b_uri,json=bUri,proto3" json:"b_uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -64,30 +63,16 @@ func (*DiffDesignsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_diff_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *DiffDesignsRequest) GetAMount() string {
+func (x *DiffDesignsRequest) GetAUri() string {
 	if x != nil {
-		return x.AMount
+		return x.AUri
 	}
 	return ""
 }
 
-func (x *DiffDesignsRequest) GetAPath() string {
+func (x *DiffDesignsRequest) GetBUri() string {
 	if x != nil {
-		return x.APath
-	}
-	return ""
-}
-
-func (x *DiffDesignsRequest) GetBMount() string {
-	if x != nil {
-		return x.BMount
-	}
-	return ""
-}
-
-func (x *DiffDesignsRequest) GetBPath() string {
-	if x != nil {
-		return x.BPath
+		return x.BUri
 	}
 	return ""
 }
@@ -575,12 +560,10 @@ var File_agni_v1_webapi_diff_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"t\n" +
-	"\x12DiffDesignsRequest\x12\x17\n" +
-	"\aa_mount\x18\x01 \x01(\tR\x06aMount\x12\x15\n" +
-	"\x06a_path\x18\x02 \x01(\tR\x05aPath\x12\x17\n" +
-	"\ab_mount\x18\x03 \x01(\tR\x06bMount\x12\x15\n" +
-	"\x06b_path\x18\x04 \x01(\tR\x05bPath\"\xc8\x04\n" +
+	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\">\n" +
+	"\x12DiffDesignsRequest\x12\x13\n" +
+	"\x05a_uri\x18\x01 \x01(\tR\x04aUri\x12\x13\n" +
+	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\"\xc8\x04\n" +
 	"\n" +
 	"DiffReport\x12)\n" +
 	"\x10components_added\x18\x01 \x03(\tR\x0fcomponentsAdded\x12-\n" +

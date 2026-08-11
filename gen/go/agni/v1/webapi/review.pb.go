@@ -93,27 +93,26 @@ func (x *Review) GetResults() *checks.CheckResults {
 
 type CreateReviewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"` // workspace mount the refs resolve within (mounts.Resolve containment)
-	// board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
+	// design_uri is the one design this run is about.
+	//
+	// A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
+	// a host path. Nothing above the Loader may treat it as one.
+	DesignUri string `protobuf:"bytes,1,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
+	// board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
 	// items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
 	// a netlist entry then reads its board items not-applicable, as before.
-	//
-	// A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
-	// Nothing above the Loader may treat it as one.
-	BoardRef string `protobuf:"bytes,4,opt,name=board_ref,json=boardRef,proto3" json:"board_ref,omitempty"`
+	BoardUri string `protobuf:"bytes,2,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
 	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
-	RatifiedFloor float64 `protobuf:"fixed64,5,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
+	RatifiedFloor float64 `protobuf:"fixed64,3,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
 	// overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
 	// service was constructed with.
-	Overlay *OverlayConfig `protobuf:"bytes,6,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	Overlay *OverlayConfig `protobuf:"bytes,4,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
 	// that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
 	// held to exactly the same rules as one read from a file. It is also stored with the run, so the
 	// archived document scores against the checklist it actually saw.
-	Manifest *checks.ReviewManifest `protobuf:"bytes,7,opt,name=manifest,proto3" json:"manifest,omitempty"`
-	// design_ref is the one design this run is about, with the same ref semantics as board_ref.
-	DesignRef     string `protobuf:"bytes,8,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"`
+	Manifest      *checks.ReviewManifest `protobuf:"bytes,5,opt,name=manifest,proto3" json:"manifest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -148,16 +147,16 @@ func (*CreateReviewRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CreateReviewRequest) GetMount() string {
+func (x *CreateReviewRequest) GetDesignUri() string {
 	if x != nil {
-		return x.Mount
+		return x.DesignUri
 	}
 	return ""
 }
 
-func (x *CreateReviewRequest) GetBoardRef() string {
+func (x *CreateReviewRequest) GetBoardUri() string {
 	if x != nil {
-		return x.BoardRef
+		return x.BoardUri
 	}
 	return ""
 }
@@ -181,13 +180,6 @@ func (x *CreateReviewRequest) GetManifest() *checks.ReviewManifest {
 		return x.Manifest
 	}
 	return nil
-}
-
-func (x *CreateReviewRequest) GetDesignRef() string {
-	if x != nil {
-		return x.DesignRef
-	}
-	return ""
 }
 
 type GetReviewRequest struct {
@@ -401,10 +393,9 @@ func (x *DeleteReviewRequest) GetName() string {
 
 type GetReviewManifestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Mount string                 `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"` // workspace mount the ref resolves within
-	// ref names the stored checklist, with the same ref semantics as CreateReviewRequest.board_ref: a
-	// key the Loader resolves, never a host path.
-	Ref           string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	// uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
+	// the Loader resolves, never a host path.
+	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -439,16 +430,9 @@ func (*GetReviewManifestRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetReviewManifestRequest) GetMount() string {
+func (x *GetReviewManifestRequest) GetUri() string {
 	if x != nil {
-		return x.Mount
-	}
-	return ""
-}
-
-func (x *GetReviewManifestRequest) GetRef() string {
-	if x != nil {
-		return x.Ref
+		return x.Uri
 	}
 	return ""
 }
@@ -504,15 +488,14 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x1bagni/v1/webapi/review.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\"T\n" +
 	"\x06Review\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x126\n" +
-	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\x9e\x02\n" +
-	"\x13CreateReviewRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x1b\n" +
-	"\tboard_ref\x18\x04 \x01(\tR\bboardRef\x12%\n" +
-	"\x0eratified_floor\x18\x05 \x01(\x01R\rratifiedFloor\x127\n" +
-	"\aoverlay\x18\x06 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
-	"\bmanifest\x18\a \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x1d\n" +
+	"\aresults\x18\x02 \x01(\v2\x1c.agni.v1.checks.CheckResultsR\aresults\"\xed\x01\n" +
+	"\x13CreateReviewRequest\x12\x1d\n" +
 	"\n" +
-	"design_ref\x18\b \x01(\tR\tdesignRefJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\rmanifest_path\"&\n" +
+	"design_uri\x18\x01 \x01(\tR\tdesignUri\x12\x1b\n" +
+	"\tboard_uri\x18\x02 \x01(\tR\bboardUri\x12%\n" +
+	"\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x127\n" +
+	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
+	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"&\n" +
 	"\x10GetReviewRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"h\n" +
 	"\x12ListReviewsRequest\x12\x1b\n" +
@@ -524,10 +507,9 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\areviews\x18\x01 \x03(\v2\x16.agni.v1.webapi.ReviewR\areviews\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\")\n" +
 	"\x13DeleteReviewRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"B\n" +
-	"\x18GetReviewManifestRequest\x12\x14\n" +
-	"\x05mount\x18\x01 \x01(\tR\x05mount\x12\x10\n" +
-	"\x03ref\x18\x02 \x01(\tR\x03ref\"W\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\",\n" +
+	"\x18GetReviewManifestRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"W\n" +
 	"\x19GetReviewManifestResponse\x12:\n" +
 	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest2\xb2\x03\n" +
 	"\rReviewService\x12K\n" +

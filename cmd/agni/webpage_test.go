@@ -35,7 +35,7 @@ func TestViewerPageRendersShell(t *testing.T) {
 		`data-component`,            // islands mount by this marker
 		`id="sheet-tabs"`,           // WS9-049: hole for the visited-sheet tab strip
 		"/static/app.js",            // the bundle reference
-		"Agni viewer",              // page title from Load
+		"Agni viewer",               // page title from Load
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("rendered page missing %q", want)
@@ -65,8 +65,8 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
 
 	for _, path := range []string{
-		"/designs/",                               // the space root
-		"/designs/corpus/",                        // a mount root (folder form)
+		"/designs/",        // the space root
+		"/designs/corpus/", // a mount root (folder form)
 		"/designs/corpus/boards/b.kicad_sch/view", // a design (work page)
 	} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -99,10 +99,10 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 		path       string
 		want, deny []string
 	}{
-		{"/", browseMarkers, workMarkers},                          // the landing page is browse
-		{"/designs/", browseMarkers, workMarkers},                  // the space root
-		{"/designs/corpus/", browseMarkers, workMarkers},           // a mount root
-		{"/designs/corpus/boards/", browseMarkers, workMarkers},    // a subfolder
+		{"/", browseMarkers, workMarkers},                       // the landing page is browse
+		{"/designs/", browseMarkers, workMarkers},               // the space root
+		{"/designs/corpus/", browseMarkers, workMarkers},        // a mount root
+		{"/designs/corpus/boards/", browseMarkers, workMarkers}, // a subfolder
 		{"/designs/corpus/b.kicad_sch/view", workMarkers, browseMarkers},
 		{"/designs/corpus/boards/b.kicad_sch/view?sheet=root", workMarkers, browseMarkers},
 	} {
@@ -139,10 +139,10 @@ func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 
 	body := rec.Body.String()
 	for _, deny := range []string{
-		`id="view"`,       // the WebGL canvas
-		`id="controls"`,   // the render-mode / layout control bar
-		`id="findings"`,   // the checks panel
-		`id="rules"`,      // the rule catalog
+		`id="view"`,     // the WebGL canvas
+		`id="controls"`, // the render-mode / layout control bar
+		`id="findings"`, // the checks panel
+		`id="rules"`,    // the rule catalog
 		`id="query-panel"`,
 		`id="diff-bar"`,   // the comparison chrome (phase 3 initiates a diff, it does not host one)
 		`id="sheet-tabs"`, // sheet navigation belongs to the work page
@@ -194,11 +194,11 @@ func TestDatasheetsPageRendersShell(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, want := range []string{
-		`id="ds-tree"`,               // hole for the datasheet tree island
-		`id="ds-view"`,               // hole for the region viewer island
-		`data-component="ds-tree"`,   // islands mount by this marker
-		"/static/datasheets.js",      // the workbench's own bundle (not the viewer's app.js)
-		"Agni datasheets",           // page title from Load
+		`id="ds-tree"`,             // hole for the datasheet tree island
+		`id="ds-view"`,             // hole for the region viewer island
+		`data-component="ds-tree"`, // islands mount by this marker
+		"/static/datasheets.js",    // the workbench's own bundle (not the viewer's app.js)
+		"Agni datasheets",          // page title from Load
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("rendered datasheets page missing %q", want)

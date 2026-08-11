@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"strings"
 	"testing"
 
@@ -20,13 +21,13 @@ type memWorkspace struct {
 
 func (m *memWorkspace) Mounts() []MountInfo { return m.mounts }
 
-func (m *memWorkspace) ListDir(_ context.Context, mount, rel string) ([]DirEntry, error) {
-	if strings.Contains(rel, "..") {
-		return nil, fmt.Errorf("%w: %q", ErrInvalidPath, rel)
+func (m *memWorkspace) ListDir(_ context.Context, uri artifact.URI) ([]DirEntry, error) {
+	if strings.Contains(uri.Path, "..") {
+		return nil, fmt.Errorf("%w: %q", ErrInvalidPath, uri.Path)
 	}
-	e, ok := m.entries[mount+"\x00"+rel]
+	e, ok := m.entries[uri.Mount+"\x00"+uri.Path]
 	if !ok {
-		return nil, fmt.Errorf("no such dir %q", rel)
+		return nil, fmt.Errorf("no such dir %q", uri.Path)
 	}
 	return e, nil
 }
@@ -44,7 +45,7 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 		},
 	})
 	req := func(path string) *webapi.ListDirRequest {
-		return &webapi.ListDirRequest{Mount: "m", Path: path}
+		return &webapi.ListDirRequest{Uri: uriStr("m", path)}
 	}
 
 	t.Run("dir first, files sorted, dotfile skipped, format labeled", func(t *testing.T) {
@@ -67,9 +68,13 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 		}
 	})
 
-	t.Run("containment keeps its invalid-path classification", func(t *testing.T) {
-		if _, err := svc.ListDir(context.Background(), req("../x")); !errors.Is(err, ErrInvalidPath) {
-			t.Fatalf("want ErrInvalidPath, got %v", err)
+	// Containment is enforced when the URI is PARSED, not when the adapter joins it, so an escaping
+	// ref classifies as an invalid argument. The value is sent raw because building it through the
+	// URI constructor is precisely what is now impossible.
+	t.Run("containment is enforced at the parse", func(t *testing.T) {
+		_, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: "mount://m/../x"})
+		if !errors.Is(err, ErrInvalidArgument) {
+			t.Fatalf("want ErrInvalidArgument, got %v", err)
 		}
 	})
 

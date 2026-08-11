@@ -30,7 +30,7 @@ func kicadSvc(t *testing.T, enabled map[string]bool) *service.DesignService {
 func TestGetSheetNativeGates(t *testing.T) {
 	native := func(t *testing.T, svc *service.DesignService, mount, path string) error {
 		_, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-			Mount: mount, Path: path, Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
+			Uri: uriStr(mount, path), Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 		})
 		return err
 	}
@@ -57,7 +57,7 @@ func TestGetSheetNativeRender(t *testing.T) {
 	}
 	svc := kicadSvc(t, map[string]bool{"kicad-cli": true})
 	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-		Mount: "k", Path: "geom.kicad_sch", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
+		Uri: "mount://k/geom.kicad_sch", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestGetSheetNativeRenderPcb(t *testing.T) {
 	}
 	svc := kicadSvc(t, map[string]bool{"kicad-cli": true})
 	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-		Mount: "k", Path: "pcb.kicad_pcb", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
+		Uri: "mount://k/pcb.kicad_pcb", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 	})
 	if err != nil {
 		t.Fatal(err)

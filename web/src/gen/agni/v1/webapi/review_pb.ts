@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMi4AEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDQoFbW91bnQYASABKAkSEQoJYm9hcmRfcmVmGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBEi4KB292ZXJsYXkYBiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAcgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QSEgoKZGVzaWduX3JlZhgIIAEoCUoECAIQA0oECAMQBFINbWFuaWZlc3RfcGF0aCIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiSwoSTGlzdFJldmlld3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJXChNMaXN0UmV2aWV3c1Jlc3BvbnNlEicKB3Jldmlld3MYASADKAsyFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKE0RlbGV0ZVJldmlld1JlcXVlc3QSDAoEbmFtZRgBIAEoCSI2ChhHZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QSDQoFbW91bnQYASABKAkSCwoDcmVmGAIgASgJIk0KGUdldFJldmlld01hbmlmZXN0UmVzcG9uc2USMAoIbWFuaWZlc3QYASABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdDKyAwoNUmV2aWV3U2VydmljZRJLCgxDcmVhdGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EkUKCUdldFJldmlldxIgLmFnbmkudjEud2ViYXBpLkdldFJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSVgoLTGlzdFJldmlld3MSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1Jlc3BvbnNlEksKDERlbGV0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJldmlld1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMitgEKE0NyZWF0ZVJldmlld1JlcXVlc3QSEgoKZGVzaWduX3VyaRgBIAEoCRIRCglib2FyZF91cmkYAiABKAkSFgoOcmF0aWZpZWRfZmxvb3IYAyABKAESLgoHb3ZlcmxheRgEIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSMAoIbWFuaWZlc3QYBSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdCIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiSwoSTGlzdFJldmlld3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJXChNMaXN0UmV2aWV3c1Jlc3BvbnNlEicKB3Jldmlld3MYASADKAsyFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKE0RlbGV0ZVJldmlld1JlcXVlc3QSDAoEbmFtZRgBIAEoCSInChhHZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QSCwoDdXJpGAEgASgJIk0KGUdldFJldmlld01hbmlmZXN0UmVzcG9uc2USMAoIbWFuaWZlc3QYASABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdDKyAwoNUmV2aWV3U2VydmljZRJLCgxDcmVhdGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EkUKCUdldFJldmlldxIgLmFnbmkudjEud2ViYXBpLkdldFJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSVgoLTGlzdFJldmlld3MSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1Jlc3BvbnNlEksKDERlbGV0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJldmlld1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
 
 /**
  * Review is one stored review run.
@@ -64,29 +64,29 @@ export const ReviewSchema: GenMessage<Review> = /*@__PURE__*/
  */
 export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> & {
   /**
-   * workspace mount the refs resolve within (mounts.Resolve containment)
+   * design_uri is the one design this run is about.
    *
-   * @generated from field: string mount = 1;
+   * A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
+   * a host path. Nothing above the Loader may treat it as one.
+   *
+   * @generated from field: string design_uri = 1;
    */
-  mount: string;
+  designUri: string;
 
   /**
-   * board_ref attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
+   * board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC
    * items resolve pass/fail rather than not-applicable (WS3-089). Empty means no board is attached;
    * a netlist entry then reads its board items not-applicable, as before.
    *
-   * A ref is a key in a server-defined namespace that the injected Loader resolves, NOT a host path.
-   * Nothing above the Loader may treat it as one.
-   *
-   * @generated from field: string board_ref = 4;
+   * @generated from field: string board_uri = 2;
    */
-  boardRef: string;
+  boardUri: string;
 
   /**
    * ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
    * (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
    *
-   * @generated from field: double ratified_floor = 5;
+   * @generated from field: double ratified_floor = 3;
    */
   ratifiedFloor: number;
 
@@ -94,7 +94,7 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
    * overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
    * service was constructed with.
    *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 6;
+   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 4;
    */
   overlay?: OverlayConfig | undefined;
 
@@ -104,16 +104,9 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
    * held to exactly the same rules as one read from a file. It is also stored with the run, so the
    * archived document scores against the checklist it actually saw.
    *
-   * @generated from field: agni.v1.checks.ReviewManifest manifest = 7;
+   * @generated from field: agni.v1.checks.ReviewManifest manifest = 5;
    */
   manifest?: ReviewManifest | undefined;
-
-  /**
-   * design_ref is the one design this run is about, with the same ref semantics as board_ref.
-   *
-   * @generated from field: string design_ref = 8;
-   */
-  designRef: string;
 };
 
 /**
@@ -229,19 +222,12 @@ export const DeleteReviewRequestSchema: GenMessage<DeleteReviewRequest> = /*@__P
  */
 export type GetReviewManifestRequest = Message<"agni.v1.webapi.GetReviewManifestRequest"> & {
   /**
-   * workspace mount the ref resolves within
+   * uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
+   * the Loader resolves, never a host path.
    *
-   * @generated from field: string mount = 1;
+   * @generated from field: string uri = 1;
    */
-  mount: string;
-
-  /**
-   * ref names the stored checklist, with the same ref semantics as CreateReviewRequest.board_ref: a
-   * key the Loader resolves, never a host path.
-   *
-   * @generated from field: string ref = 2;
-   */
-  ref: string;
+  uri: string;
 };
 
 /**

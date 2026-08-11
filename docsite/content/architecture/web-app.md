@@ -134,11 +134,11 @@ A few contract details bite if missed.
   rows here. The evaluator is dependency-free Go, so a later revision could evaluate it in the
   browser instead.
 - **A design is named, a checklist is sent.** CreateReview carries the review manifest as a value
-  while the design stays a mount-relative ref, and the split is deliberate. A design is megabytes,
+  while the design stays an artifact URI, and the split is deliberate. A design is megabytes,
   needs a reader chosen by extension, and is re-requested across many calls, so re-sending it every
   time would be absurd. A checklist is a small declaration the caller already holds, and a service
   that took a path for it would need a filesystem to do its job. GetReviewManifest is the bridge for
-  a client that holds a ref and no filesystem: it reads and validates once, and the client sends the
+  a client that holds a URI and no filesystem: it reads and validates once, and the client sends the
   value it got back. The CLI skips it, because reading the file the user named is its own job.
 - **Reviews are the one resource; everything else is a verb.** A review RUN outlives the call that
   made it, so it has a name and the four standard methods, with paging and filtering following AIP.

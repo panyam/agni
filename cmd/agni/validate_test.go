@@ -15,8 +15,8 @@ import (
 func TestBuildValidateReport(t *testing.T) {
 	l := &formats.Loader{}
 	rep, err := buildValidateReport(l, []string{
-		"../../readers/edif/testdata/basic.edn",  // netlist-only, healthy
-		"../../readers/edif/testdata/sample.eds", // EDIF schematic: netlist + geometry, healthy
+		"../../readers/edif/testdata/basic.edn",                // netlist-only, healthy
+		"../../readers/edif/testdata/sample.eds",               // EDIF schematic: netlist + geometry, healthy
 		"testdata/conformance/nets_from_wires.fires.kicad_sch", // both tiers
 	})
 	if err != nil {

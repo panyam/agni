@@ -12,7 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
+	"github.com/panyam/agni/internal/artifact"
 	"sort"
 	"strings"
 
@@ -43,7 +43,7 @@ type DirEntry struct {
 // (WS9-011 discussion).
 type Workspace interface {
 	Mounts() []MountInfo
-	ListDir(ctx context.Context, mount, rel string) ([]DirEntry, error)
+	ListDir(ctx context.Context, uri artifact.URI) ([]DirEntry, error)
 }
 
 // FormatForExt returns the design format label for a file name, or "" when the tree should
@@ -70,7 +70,11 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 func (s *WorkspaceService) ListMounts(_ context.Context, _ *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
 	resp := &webapi.ListMountsResponse{}
 	for _, m := range s.ws.Mounts() {
-		resp.Mounts = append(resp.Mounts, &webapi.Mount{Name: m.Name, Root: m.Root})
+		uri, err := artifact.New(m.Name, "")
+		if err != nil {
+			return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
+		}
+		resp.Mounts = append(resp.Mounts, &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String()})
 	}
 	return resp, nil
 }
@@ -80,8 +84,11 @@ func (s *WorkspaceService) ListMounts(_ context.Context, _ *webapi.ListMountsReq
 // transport: a containment violation keeps ErrInvalidPath; anything else from the adapter
 // (unknown mount, missing directory) is wrapped as ErrNotFound.
 func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error) {
-	rel := req.GetPath()
-	entries, err := s.ws.ListDir(ctx, req.GetMount(), rel)
+	u, err := artifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	entries, err := s.ws.ListDir(ctx, u)
 	if err != nil {
 		if errors.Is(err, ErrInvalidPath) {
 			return nil, err
@@ -94,14 +101,19 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 		if strings.HasPrefix(de.Name, ".") {
 			continue // skip dotfiles/dirs
 		}
-		entryPath := path.Join(rel, de.Name) // forward-slash, mount-relative
+		entry, joinErr := u.Join(de.Name)
+		if joinErr != nil {
+			// A name the mount itself produced cannot escape it; if one ever did, skipping it is
+			// better than serving a listing entry nothing can open.
+			continue
+		}
 		if de.IsDir {
-			dirs = append(dirs, &webapi.DirEntry{Name: de.Name, Path: entryPath, IsDir: true})
+			dirs = append(dirs, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), IsDir: true})
 			continue
 		}
 		// Every non-dotfile is listed so a folder is never silently empty; an unrecognized file has
 		// an empty format and the UI shows it disabled, so "no reader yet" differs from "empty".
-		files = append(files, &webapi.DirEntry{Name: de.Name, Path: entryPath, Format: FormatForExt(de.Name)})
+		files = append(files, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), Format: FormatForExt(de.Name)})
 	}
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })

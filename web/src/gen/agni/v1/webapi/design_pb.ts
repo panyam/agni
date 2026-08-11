@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/design.proto.
  */
 export const file_agni_v1_webapi_design: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIj8KEEdldERlc2lnblJlcXVlc3QSDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRIOCgZsYXlvdXQYAyABKAki0wEKEUdldERlc2lnblJlc3BvbnNlEgwKBG5hbWUYASABKAkSFQoNc291cmNlX2Zvcm1hdBgCIAEoCRIXCg9jb21wb25lbnRfY291bnQYAyABKAUSEQoJbmV0X2NvdW50GAQgASgFEg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJIqkBCg9HZXRTaGVldFJlcXVlc3QSDQoFbW91bnQYASABKAkSDAoEcGF0aBgCIAEoCRINCgVzaGVldBgDIAEoCRIOCgZsYXlvdXQYBCABKAkSKwoGZm9ybWF0GAUgASgOMhsuYWduaS52MS53ZWJhcGkuU2hlZXRGb3JtYXQSLQoHc3ltYm9scxgGIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZSJZChBHZXRTaGVldFJlc3BvbnNlEisKBnBhY2tlZBgBIAEoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRTaGVldEgAEg0KA3N2ZxgCIAEoCUgAQgkKB2NvbnRlbnQi2wEKFUhpZ2hsaWdodFNoZWV0UmVxdWVzdBINCgVtb3VudBgBIAEoCRIMCgRwYXRoGAIgASgJEg0KBXNoZWV0GAMgASgJEg4KBmxheW91dBgEIAEoCRItCgdzeW1ib2xzGAUgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEisKBmZvcm1hdBgGIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0EioKBXNwZWNzGAcgAygLMhsuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNwZWMiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJkChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0Eg0KBW1vdW50GAEgASgJEgwKBHBhdGgYAiABKAkSLQoHc3ltYm9scxgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZSJLChdHZXRMYXlvdXRSZXBvcnRSZXNwb25zZRIwCgZyZXBvcnQYASABKAsyIC5hZ25pLnYxLndlYmFwaS5Db252ZXJzaW9uUmVwb3J0IkcKEENvbnZlcnNpb25SZXBvcnQSMwoKY29tcG9uZW50cxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLkNvbXBvbmVudFJlcG9ydCJkCg9Db21wb25lbnRSZXBvcnQSDwoHcmVmX2RlcxgBIAEoCRIOCgZzeW1ib2wYAiABKAkSFAoMZGV2aWNlX2NsYXNzGAMgASgJEgwKBGNlbGwYBCABKAkSDAoEa2luZBgFIAEoCSpzCgtTaGVldEZvcm1hdBIcChhTSEVFVF9GT1JNQVRfVU5TUEVDSUZJRUQQABIXChNTSEVFVF9GT1JNQVRfUEFDS0VEEAESFAoQU0hFRVRfRk9STUFUX1NWRxACEhcKE1NIRUVUX0ZPUk1BVF9OQVRJVkUQAypiCgxTeW1ib2xTb3VyY2USHQoZU1lNQk9MX1NPVVJDRV9VTlNQRUNJRklFRBAAEhcKE1NZTUJPTF9TT1VSQ0VfR0xZUEgQARIaChZTWU1CT0xfU09VUkNFX0ZBSVRIRlVMEAIy9QIKDURlc2lnblNlcnZpY2USUAoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlc3BvbnNlEk0KCEdldFNoZWV0Eh8uYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXNwb25zZRJfCg5IaWdobGlnaHRTaGVldBIlLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVzcG9uc2USYgoPR2V0TGF5b3V0UmVwb3J0EiYuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_geom_geom_packed]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIi8KEEdldERlc2lnblJlcXVlc3QSDgoGbGF5b3V0GAEgASgJEgsKA3VyaRgCIAEoCSLTAQoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSDgoGbGF5b3V0GAUgASgJEigKBnNoZWV0cxgGIAMoCzIYLmFnbmkudjEud2ViYXBpLlNoZWV0UmVmEhgKEG5hdGl2ZV9hdmFpbGFibGUYByABKAgSGQoRYXZhaWxhYmxlX2xheW91dHMYCCADKAkimQEKD0dldFNoZWV0UmVxdWVzdBINCgVzaGVldBgBIAEoCRIOCgZsYXlvdXQYAiABKAkSKwoGZm9ybWF0GAMgASgOMhsuYWduaS52MS53ZWJhcGkuU2hlZXRGb3JtYXQSLQoHc3ltYm9scxgEIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRILCgN1cmkYBSABKAkiWQoQR2V0U2hlZXRSZXNwb25zZRIrCgZwYWNrZWQYASABKAsyGS5hZ25pLnYxLmdlb20uUGFja2VkU2hlZXRIABINCgNzdmcYAiABKAlIAEIJCgdjb250ZW50IssBChVIaWdobGlnaHRTaGVldFJlcXVlc3QSDQoFc2hlZXQYASABKAkSDgoGbGF5b3V0GAIgASgJEi0KB3N5bWJvbHMYAyABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2USKwoGZm9ybWF0GAQgASgOMhsuYWduaS52MS53ZWJhcGkuU2hlZXRGb3JtYXQSKgoFc3BlY3MYBSADKAsyGy5hZ25pLnYxLmdlb20uSGlnaGxpZ2h0U3BlYxILCgN1cmkYBiABKAkiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJUChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0Ei0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2USCwoDdXJpGAIgASgJIksKF0dldExheW91dFJlcG9ydFJlc3BvbnNlEjAKBnJlcG9ydBgBIAEoCzIgLmFnbmkudjEud2ViYXBpLkNvbnZlcnNpb25SZXBvcnQiRwoQQ29udmVyc2lvblJlcG9ydBIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UmVwb3J0ImQKD0NvbXBvbmVudFJlcG9ydBIPCgdyZWZfZGVzGAEgASgJEg4KBnN5bWJvbBgCIAEoCRIUCgxkZXZpY2VfY2xhc3MYAyABKAkSDAoEY2VsbBgEIAEoCRIMCgRraW5kGAUgASgJKnMKC1NoZWV0Rm9ybWF0EhwKGFNIRUVUX0ZPUk1BVF9VTlNQRUNJRklFRBAAEhcKE1NIRUVUX0ZPUk1BVF9QQUNLRUQQARIUChBTSEVFVF9GT1JNQVRfU1ZHEAISFwoTU0hFRVRfRk9STUFUX05BVElWRRADKmIKDFN5bWJvbFNvdXJjZRIdChlTWU1CT0xfU09VUkNFX1VOU1BFQ0lGSUVEEAASFwoTU1lNQk9MX1NPVVJDRV9HTFlQSBABEhoKFlNZTUJPTF9TT1VSQ0VfRkFJVEhGVUwQAjL1AgoNRGVzaWduU2VydmljZRJQCglHZXREZXNpZ24SIC5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXF1ZXN0GiEuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVzcG9uc2USTQoIR2V0U2hlZXQSHy5hZ25pLnYxLndlYmFwaS5HZXRTaGVldFJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5HZXRTaGVldFJlc3BvbnNlEl8KDkhpZ2hsaWdodFNoZWV0EiUuYWduaS52MS53ZWJhcGkuSGlnaGxpZ2h0U2hlZXRSZXF1ZXN0GiYuYWduaS52MS53ZWJhcGkuSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRJiCg9HZXRMYXlvdXRSZXBvcnQSJi5hZ25pLnYxLndlYmFwaS5HZXRMYXlvdXRSZXBvcnRSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_geom_geom_packed]);
 
 /**
  * SheetRef identifies a drawable sheet within a design.
@@ -52,22 +52,19 @@ export const SheetRefSchema: GenMessage<SheetRef> = /*@__PURE__*/
  */
 export type GetDesignRequest = Message<"agni.v1.webapi.GetDesignRequest"> & {
   /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
    * layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
    * empty uses the default. Ignored for geometry-bearing files, which render faithfully.
    *
-   * @generated from field: string layout = 3;
+   * @generated from field: string layout = 1;
    */
   layout: string;
+
+  /**
+   * uri names the design to load, "mount://<mount>/<path>".
+   *
+   * @generated from field: string uri = 2;
+   */
+  uri: string;
 };
 
 /**
@@ -152,31 +149,21 @@ export const GetDesignResponseSchema: GenMessage<GetDesignResponse> = /*@__PURE_
  */
 export type GetSheetRequest = Message<"agni.v1.webapi.GetSheetRequest"> & {
   /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
    * sheet selects by id, name, or 0-based index; empty selects the first sheet.
    *
-   * @generated from field: string sheet = 3;
+   * @generated from field: string sheet = 1;
    */
   sheet: string;
 
   /**
-   * @generated from field: string layout = 4;
+   * @generated from field: string layout = 2;
    */
   layout: string;
 
   /**
    * format selects the renderer; unset means PACKED.
    *
-   * @generated from field: agni.v1.webapi.SheetFormat format = 5;
+   * @generated from field: agni.v1.webapi.SheetFormat format = 3;
    */
   format: SheetFormat;
 
@@ -184,9 +171,16 @@ export type GetSheetRequest = Message<"agni.v1.webapi.GetSheetRequest"> & {
    * symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
    * faithful layout (always the design's own symbols).
    *
-   * @generated from field: agni.v1.webapi.SymbolSource symbols = 6;
+   * @generated from field: agni.v1.webapi.SymbolSource symbols = 4;
    */
   symbols: SymbolSource;
+
+  /**
+   * uri names the design the sheet belongs to.
+   *
+   * @generated from field: string uri = 5;
+   */
+  uri: string;
 };
 
 /**
@@ -237,29 +231,19 @@ export const GetSheetResponseSchema: GenMessage<GetSheetResponse> = /*@__PURE__*
  */
 export type HighlightSheetRequest = Message<"agni.v1.webapi.HighlightSheetRequest"> & {
   /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
    * sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
    *
-   * @generated from field: string sheet = 3;
+   * @generated from field: string sheet = 1;
    */
   sheet: string;
 
   /**
-   * @generated from field: string layout = 4;
+   * @generated from field: string layout = 2;
    */
   layout: string;
 
   /**
-   * @generated from field: agni.v1.webapi.SymbolSource symbols = 5;
+   * @generated from field: agni.v1.webapi.SymbolSource symbols = 3;
    */
   symbols: SymbolSource;
 
@@ -267,16 +251,23 @@ export type HighlightSheetRequest = Message<"agni.v1.webapi.HighlightSheetReques
    * format selects the overlay projection: PACKED or SVG (NATIVE is InvalidArgument).
    * Unset means PACKED, matching GetSheet.
    *
-   * @generated from field: agni.v1.webapi.SheetFormat format = 6;
+   * @generated from field: agni.v1.webapi.SheetFormat format = 4;
    */
   format: SheetFormat;
 
   /**
    * specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
    *
-   * @generated from field: repeated agni.v1.geom.HighlightSpec specs = 7;
+   * @generated from field: repeated agni.v1.geom.HighlightSpec specs = 5;
    */
   specs: HighlightSpec[];
+
+  /**
+   * uri names the design the sheet belongs to.
+   *
+   * @generated from field: string uri = 6;
+   */
+  uri: string;
 };
 
 /**
@@ -323,21 +314,18 @@ export const HighlightSheetResponseSchema: GenMessage<HighlightSheetResponse> = 
  */
 export type GetLayoutReportRequest = Message<"agni.v1.webapi.GetLayoutReportRequest"> & {
   /**
-   * @generated from field: string mount = 1;
-   */
-  mount: string;
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path: string;
-
-  /**
    * symbols selects the node artwork the report explains; unset means GLYPH.
    *
-   * @generated from field: agni.v1.webapi.SymbolSource symbols = 3;
+   * @generated from field: agni.v1.webapi.SymbolSource symbols = 1;
    */
   symbols: SymbolSource;
+
+  /**
+   * uri names the design to report on.
+   *
+   * @generated from field: string uri = 2;
+   */
+  uri: string;
 };
 
 /**

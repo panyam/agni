@@ -1,4 +1,5 @@
 import { createEffect, createResource, createSignal, onCleanup, For, Show } from "solid-js";
+import { artifactUri } from "./uri.js";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
@@ -133,9 +134,9 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
       const client = datasheetClient();
       const [doc, docResp, part, ann] = await Promise.all([
         loadPdf(rawDatasheetUrl(s.mount, s.path)),
-        client.getDocument({ mount: s.mount, path: s.path }),
-        client.getPartSpec({ mount: s.mount, path: s.path }),
-        client.getAnnotations({ mount: s.mount, path: s.path }),
+        client.getDocument({ uri: artifactUri(s.mount, s.path) }),
+        client.getPartSpec({ uri: artifactUri(s.mount, s.path) }),
+        client.getAnnotations({ uri: artifactUri(s.mount, s.path) }),
       ]);
       const docIR = docResp.document as Document | undefined;
       spec = part.found && part.spec ? part.spec : emptySpec(s.path, docIR?.title || s.path);
@@ -166,7 +167,7 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     setExtracting(true);
     setNote("");
     try {
-      await datasheetClient().extractDocIR({ mount: s.mount, path: s.path });
+      await datasheetClient().extractDocIR({ uri: artifactUri(s.mount, s.path) });
       setReload((r) => r + 1);
     } catch (e) {
       console.error("extract failed", e);
@@ -203,11 +204,11 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     if (!s || !spec) return;
     const client = datasheetClient();
     try {
-      const resp = await client.savePartSpec({ mount: s.mount, path: s.path, spec, baseVersion: version });
+      const resp = await client.savePartSpec({ uri: artifactUri(s.mount, s.path), spec, baseVersion: version });
       version = resp.version;
     } catch (e) {
       if (e instanceof ConnectError && e.code === Code.Aborted) {
-        const resp = await client.getPartSpec({ mount: s.mount, path: s.path });
+        const resp = await client.getPartSpec({ uri: artifactUri(s.mount, s.path) });
         spec = resp.found && resp.spec ? resp.spec : spec;
         version = resp.version;
         setSelected("");
@@ -228,8 +229,7 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     if (!s) return;
     try {
       await datasheetClient().saveAnnotations({
-        mount: s.mount,
-        path: s.path,
+        uri: artifactUri(s.mount, s.path),
         set: uiToSet(docId(s.path), author, { userRegions, types }),
       });
     } catch (e) {

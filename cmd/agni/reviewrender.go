@@ -28,7 +28,7 @@ const companionOverlapFloor = 0.5
 // click-to-locate. Designs with no findings are skipped; a per-design failure is reported and
 // skipped, never fatal. When a companion's net names poorly overlap the design's, it is flagged
 // (likely mis-paired) rather than silently mis-highlighted. Returns a human summary.
-func renderReviewImages(reports []review.Report, outDir, companionFlag string) (string, error) {
+func renderReviewImages(reports []review.Report, sources []string, outDir, companionFlag string) (string, error) {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return "", fmt.Errorf("--render %s: %w", outDir, err)
 	}
@@ -39,7 +39,7 @@ func renderReviewImages(reports []review.Report, outDir, companionFlag string) (
 	l := newLoader()
 
 	var lines []string
-	for _, r := range reports {
+	for i, r := range reports {
 		specs := findingSpecs(reviewReportFindings(r))
 		if len(specs) == 0 {
 			continue // nothing flagged: no picture to draw
@@ -48,12 +48,19 @@ func renderReviewImages(reports []review.Report, outDir, companionFlag string) (
 		if err != nil {
 			return "", err // an explicit --companion misuse is a user error, not a per-design skip
 		}
-		g, warn, err := reviewGeometry(l, reg, r.Design, comp)
+		// r.Design is the report's READING name; the file to open is the design's URI from the
+		// document it came from. They differ by design (option 3): one is for a person, one addresses
+		// an artifact, and only the second can be handed to a loader.
+		src := r.Design
+		if i < len(sources) {
+			src = localOf(sources[i])
+		}
+		g, warn, err := reviewGeometry(l, reg, src, comp)
 		if err != nil {
 			lines = append(lines, fmt.Sprintf("  %s: skipped (%v)", r.Design, err))
 			continue
 		}
-		stem := strings.TrimSuffix(filepath.Base(r.Design), filepath.Ext(r.Design))
+		stem := strings.TrimSuffix(filepath.Base(src), filepath.Ext(src))
 		destDir := filepath.Join(outDir, stem)
 		if err := os.MkdirAll(destDir, 0o755); err != nil {
 			return "", fmt.Errorf("--render: %w", err)

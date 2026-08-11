@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { artifactUri, uriPath } from "./uri.js";
 import { comparePickerIsland } from "./comparepicker.js";
 
 // The picker's tree builds its own client via workspaceClient(); swap in an in-memory workspace,
@@ -8,11 +9,11 @@ const fake = vi.hoisted(() => ({ dirs: {} as Record<string, unknown[]> }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
-    listDir: async ({ path }: { mount: string; path: string }) => ({ entries: fake.dirs[path] ?? [] }),
+    listDir: async ({ uri }: { uri: string }) => ({ entries: fake.dirs[uriPath(uri)] ?? [] }),
   }),
 }));
 
-const file = (name: string, path: string, format = "kicad") => ({ name, path, isDir: false, format });
+const file = (name: string, path: string, format = "kicad") => ({ name, uri: artifactUri("m", path), isDir: false, format });
 
 function mountPicker() {
   const host = document.createElement("div");

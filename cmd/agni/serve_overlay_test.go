@@ -173,7 +173,7 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	}
 	resp, err := reviewSvc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  service.ManifestProto(man),
-		DesignRef: "testdata/review/conv-demo.edn",
+		DesignUri: "mount://m/testdata/review/conv-demo.edn",
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -277,7 +277,7 @@ func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 
 	// A request naming its own convention gets ITS rule and not the server's.
 	resp, err := checkSvc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{
-		Path: "testdata/review/conv-demo.edn",
+		Uri: "mount://m/testdata/review/conv-demo.edn",
 		Overlay: &webapi.OverlayConfig{Conventions: &webapi.NamingConvention{
 			Name: "acme",
 			Rules: []*webapi.NamingRule{{

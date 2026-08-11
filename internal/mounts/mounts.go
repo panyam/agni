@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/service"
 )
 
@@ -157,17 +158,25 @@ func Find(mounts []Mount, name string) (Mount, bool) {
 	return Mount{}, false
 }
 
-// Resolve maps (mount, mount-relative path) to an absolute host path inside the mount for
-// the OS-backed service adapters. An unknown mount returns service.ErrNotFound (mapped to
-// NotFound) and a path escaping the mount returns service.ErrInvalidPath (mapped to
-// InvalidArgument), so the service classifies without importing os.
-func Resolve(mounts []Mount, mountName, rel string) (string, error) {
-	m, ok := Find(mounts, mountName)
+// Resolve maps an artifact URI to an absolute host path inside its mount, for the OS-backed service
+// adapters. An unknown mount returns service.ErrNotFound (mapped to NotFound), so the service
+// classifies without importing os.
+//
+// It no longer re-checks containment, and that is the point. A parsed artifact.URI cannot carry a
+// path that escapes its mount, because artifact.Parse is where that is decided; re-checking here
+// would be a second implementation of one rule, and the failure mode of two implementations is that
+// they disagree. SafeResolve remains for the one caller that still joins a path it did not receive
+// as a URI (mount discovery), and as the belt-and-braces assertion below.
+func Resolve(mounts []Mount, uri artifact.URI) (string, error) {
+	m, ok := Find(mounts, uri.Mount)
 	if !ok {
-		return "", fmt.Errorf("no such mount %q: %w", mountName, service.ErrNotFound)
+		return "", fmt.Errorf("no such mount %q: %w", uri.Mount, service.ErrNotFound)
 	}
-	abs, err := SafeResolve(m.Root, rel)
+	abs, err := SafeResolve(m.Root, uri.Path)
 	if err != nil {
+		// Unreachable for a parsed URI. Kept as an assertion rather than deleted: if it ever fires,
+		// artifact.Parse and this join have come to disagree, and a silent traversal is the worst
+		// possible way to find that out.
 		return "", fmt.Errorf("%w: %s", service.ErrInvalidPath, err)
 	}
 	return abs, nil

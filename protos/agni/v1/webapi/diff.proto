@@ -20,12 +20,11 @@ service DiffService {
 }
 
 // DiffDesignsRequest names the two designs: a is the old revision, b the new, each as a
-// (mount, mount-relative path) pair like every other file-addressing request.
+// artifact URI like every other file-addressing request.
 message DiffDesignsRequest {
-  string a_mount = 1;
-  string a_path = 2;
-  string b_mount = 3;
-  string b_path = 4;
+  // a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
+  string a_uri = 1;
+  string b_uri = 2;
 }
 
 // DiffReport is the wire form of diff.Report: the classified component and net changes

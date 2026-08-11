@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/panyam/agni/internal/artifact"
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/graph"
+	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/core/graph"
-	"github.com/panyam/agni/core/render"
 )
 
 // twoSheetGeom is a minimal drawable geometry with two identifiable sheets, enough for
@@ -31,11 +32,11 @@ func twoSheetGeom() *geom.SchematicGeometry {
 // native_available bit independently of the render path.
 type availNative struct{ noNative }
 
-func (availNative) Available(string, string) bool { return true }
+func (availNative) Available(artifact.URI) bool { return true }
 
 func TestGetDesignFaithful(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, availNative{}, render.Style{})
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "m", Path: "x.eds"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +71,7 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 		Nets:         []*ir.Net{{Name: "A"}, {Name: "B"}, {Name: "C"}},
 	}
 	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{})
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Mount: "m", Path: "x.edn"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +91,7 @@ func TestGetSheetSelectorAndFormats(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{})
 	get := func(sel string, format webapi.SheetFormat) (*webapi.GetSheetResponse, error) {
 		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-			Mount: "m", Path: "x.eds", Sheet: sel, Format: format,
+			Uri: "mount://m/x.eds", Sheet: sel, Format: format,
 		})
 		if err != nil {
 			return nil, err
@@ -132,7 +133,7 @@ func TestGetLayoutReport(t *testing.T) {
 		{RefDes: "U9", Cell: "box", Kind: graph.KindBox},
 	}}
 	svc := NewDesignService(fakeLoader{report: rep}, noNative{}, render.Style{})
-	resp, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Mount: "m", Path: "x.edn"})
+	resp, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,14 +150,14 @@ func TestGetLayoutReport(t *testing.T) {
 
 	// A build failure (e.g. no netlist to classify) yields an empty report, not an error.
 	failing := NewDesignService(fakeLoader{err: errors.New("no netlist")}, noNative{}, render.Style{})
-	resp, err = failing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Mount: "m", Path: "x.eds"})
+	resp, err = failing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://m/x.eds"})
 	if err != nil || len(resp.GetReport().GetComponents()) != 0 {
 		t.Errorf("build failure = (%+v, %v), want an empty report and no error", resp.GetReport(), err)
 	}
 
 	// But a resolve failure (unknown mount) is still an error, not an empty report.
 	missing := NewDesignService(fakeLoader{err: ErrNotFound}, noNative{}, render.Style{})
-	if _, err = missing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Mount: "no", Path: "x"}); !errors.Is(err, ErrNotFound) {
+	if _, err = missing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://no/x"}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unknown mount err = %v, want ErrNotFound", err)
 	}
 }

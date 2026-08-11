@@ -9,6 +9,7 @@ import (
 
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 
@@ -31,12 +32,12 @@ func (e *osDocExtractor) Available() bool { return len(e.cmd) > 0 }
 // returning the parsed + validated Document. Both the source PDF and the output sibling resolve
 // inside the mount (containment via mounts.Resolve, the write path). A non-zero exit, an unreadable
 // output, or an invalid doc-IR is an error the service maps to Internal.
-func (e *osDocExtractor) Extract(ctx context.Context, mountName, path string) (*docpb.Document, error) {
-	pdfAbs, err := mounts.Resolve(e.mounts, mountName, path)
+func (e *osDocExtractor) Extract(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
+	pdfAbs, err := mounts.Resolve(e.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
-	outAbs, err := mounts.Resolve(e.mounts, mountName, docSibling(path))
+	outAbs, err := resolveSibling(e.mounts, uri, docSibling)
 	if err != nil {
 		return nil, err
 	}
