@@ -58,9 +58,10 @@ The relations a datalog query joins over. Each documented relation links to its 
 |---|---|
 | [`component.device_class(ref_des, class)`](component.device_class/) | the device class the part's datasheet declares (authoritative over the ref-des/keyword class; needs --params) |
 | [`component.esd_rated(ref_des)`](component.esd_rated/) | the part carries a datasheet ESD rating at or above the credit floor (needs --params) |
-| [`param(mpn, symbol, max)`](param/) | a datasheet parameter's max value for a part (needs --params) |
+| [`param(mpn, symbol, max)`](param/) | a datasheet parameter's max value for a part, in its SI base unit (needs --params) |
 | [`param.prov(mpn, symbol, doc, page, section)`](param.prov/) | the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params) |
-| [`param.range(mpn, symbol, kind, min, max)`](param.range/) | a datasheet parameter's two-sided limit with its kind (absolute_max / recommended_operating / characteristic; needs --params) |
+| [`param.range(mpn, symbol, kind, min, max)`](param.range/) | a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params) |
+| [`param.unit(mpn, symbol, unit)`](param.unit/) | the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params) |
 | [`part.audience(mpn, who)`](part.audience/) | a team/license entitled to see a part's datasheet data (record-only, needs --params) |
 
 ## predicate

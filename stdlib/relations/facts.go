@@ -60,6 +60,13 @@ const (
 	// gets them via check.DatasheetProvFor. Empty without --params, the same posture as param.
 	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's Citation. doc: facts/docs/param.prov.md
 
+	// param.unit(mpn, symbol, unit) is the unit a parameter is PRINTED in (agni issue 165). The
+	// numbers in param and param.range are reduced to SI base units so a comparison can trust them;
+	// this keeps the vendor's own spelling queryable, which is what a reviewer checking a citation
+	// against a datasheet page reads, and what tells apart two rows that now carry the same number.
+	// String-valued, so no ordering comparison can bind it.
+	RelParamUnit = "param.unit" // param.unit(mpn, symbol, unit): the unit a parameter is printed in. doc: facts/docs/param.unit.md
+
 	// Board-geometry relations (the board tier, WS1-006): derived per-net values, not raw geometry.
 	// They demonstrate the query surface is tier-general — a new tier is queryable by adding
 	// projectors, no consumer change. Widths/drills are millimetres.
@@ -188,6 +195,7 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, componentMPNFacts(m)...)
 	out = append(out, paramFacts(m)...)
 	out = append(out, paramRangeFacts(m)...)
+	out = append(out, paramUnitFacts(m)...)
 	out = append(out, paramProvFacts(m)...)
 	out = append(out, audienceFacts(m)...)
 	out = append(out, componentOnNetFacts(m)...)
@@ -310,18 +318,92 @@ func limitKindToken(k parampb.LimitKind) string {
 	}
 }
 
-// specParamRows projects the `param` facts of one PartSpec — one row per parameter, keyed by mpn.
-// Shared by the design-scoped join (paramFacts) and the library-wide projection (SpecLibFacts) so the two
-// surfaces emit identical rows; the only difference is which specs they iterate.
+// EVERY NUMBER THE QUERY SURFACE EMITS FOR A PARAMETER IS IN ITS SI BASE UNIT (agni issue 165).
+//
+// A FactRow has no unit slot, so a datalog rule comparing `param.range(?m,"VDD",_,_,?max), ?max < 5.0`
+// is comparing a bare number. Projected as printed, a spec seeded 4600 mV compared as 4600 against a
+// 5.0 volt threshold, with no gate anywhere to refuse it. That is agni issue 148's failure on a
+// surface where there is not even a unit string to gate on, so the fix is the same one: reduce
+// through param.InBaseUnit, in the one place that owns the scale (C24).
+//
+// A row whose unit that table does not recognize keeps its symbol, kind, conditions and citation and
+// has its NUMERIC slots left empty. It is not dropped, because `param` answers "what does this part
+// specify" as much as it feeds a comparison, and a silently shortened list is its own quiet wrong
+// answer.
+//
+// That is only safe because the evaluator was fixed in the same change. An absent Num used to bind a
+// variable to the EMPTY STRING, and eval's comparison then fell back to string ordering, where
+// "" < "5.0" is true; a row with no number would have satisfied a numeric guard rather than failed to
+// match it. evalCompare now refuses to ORDER an absent number against a present one, so an
+// unmeasurable value is unorderable by construction rather than by this projector omitting it. The
+// same fix is what makes param.range safe to emit with one bound absent, which it does on any
+// ordinary max-only datasheet row.
+
+// specParamRows projects the `param` facts of one PartSpec — one row per parameter, keyed by mpn,
+// with the upper bound in its SI base unit. Shared by the design-scoped join (paramFacts) and the
+// library-wide projection (SpecLibFacts) so the two surfaces emit identical rows; the only difference
+// is which specs they iterate.
 func specParamRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 	out := make([]query.FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		f := query.FactRow{Relation: RelParam, Subject: mpn, Object: p.Symbol, Value: rangeText(p.Value), Conditions: conditionsText(p.Conditions), Cite: check.Citation(spec, p)}
-		if p.Value != nil && p.Value.Max != nil {
-			v := *p.Value.Max
+		q, ok := param.InBaseUnit(p)
+		if !ok {
+			// The unit has no known scale, so there is no number to publish. The row still appears,
+			// carrying its symbol, conditions and citation, with the numeric slot EMPTY: an
+			// unmeasurable value must not be orderable, and evalCompare refuses to order an absent
+			// number against a present one.
+			out = append(out, query.FactRow{Relation: RelParam, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
+			continue
+		}
+		f := query.FactRow{Relation: RelParam, Subject: mpn, Object: q.Symbol, Value: rangeText(q.Value), Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		if q.Value != nil && q.Value.Max != nil {
+			v := *q.Value.Max
 			f.Num = &v
 		}
 		out = append(out, f)
+	}
+	return out
+}
+
+// specParamUnitRows projects the `param.unit` facts of one PartSpec: the unit each parameter is
+// PRINTED in, one row per parameter.
+//
+// It exists because normalizing the numbers would otherwise destroy information the query surface
+// used to carry. `param` and `param.range` now answer "how big is it" in a unit a comparison can
+// trust; this answers "what did the vendor actually print", which is what a reviewer checking a
+// citation against a datasheet page needs. Splitting them follows `param.prov`'s precedent: a
+// separate relation rather than more columns on `param`, so no existing query changes arity.
+//
+// EVERY parameter is emitted, including one whose unit the conversion table does not recognize and
+// which therefore has no row in `param` or `param.range`. This relation is the reason dropping those
+// is a narrowing of the NUMERIC surface rather than a disappearance.
+func specParamUnitRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	out := make([]query.FactRow, 0, len(spec.Parameters))
+	for _, p := range spec.Parameters {
+		out = append(out, query.FactRow{
+			Relation: RelParamUnit, Subject: mpn, Object: p.GetSymbol(), Value: p.GetUnit(),
+			Cite: check.Citation(spec, p),
+		})
+	}
+	return out
+}
+
+// paramUnitFacts emits the printed unit of each joined datasheet parameter, deduped by MPN and empty
+// without --params, the same silent-by-construction posture as paramFacts.
+func paramUnitFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	seen := map[string]bool{}
+	for _, c := range m.Components() {
+		mpn := m.ComponentMPN(c.RefDes)
+		if mpn == "" || seen[mpn] {
+			continue
+		}
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil {
+			continue
+		}
+		seen[mpn] = true
+		out = append(out, specParamUnitRows(mpn, spec)...)
 	}
 	return out
 }
@@ -332,14 +414,24 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 func specParamRangeRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 	out := make([]query.FactRow, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		f := query.FactRow{Relation: RelParamRange, Subject: mpn, Object: p.Symbol, Value: limitKindToken(p.LimitKind), Conditions: conditionsText(p.Conditions), Cite: check.Citation(spec, p)}
-		if p.Value != nil {
-			if p.Value.Min != nil {
-				v := *p.Value.Min
+		q, ok := param.InBaseUnit(p)
+		if !ok {
+			// Same posture as specParamRows: the kind and the citation are still true, the bounds are
+			// not knowable, so both numeric slots stay empty rather than the row disappearing.
+			out = append(out, query.FactRow{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: limitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
+			continue
+		}
+		f := query.FactRow{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: limitKindToken(q.LimitKind), Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		if q.Value != nil {
+			// BOTH bounds are reduced, and a range rule is why that matters: converting only the max
+			// would leave a "3000..3.6" row, which reads as a rail far BELOW its minimum rather than
+			// within range, and would fire the opposite finding.
+			if q.Value.Min != nil {
+				v := *q.Value.Min
 				f.Min = &v
 			}
-			if p.Value.Max != nil {
-				v := *p.Value.Max
+			if q.Value.Max != nil {
+				v := *q.Value.Max
 				f.Num = &v
 			}
 		}
@@ -454,6 +546,7 @@ func SpecLibFacts(specs []*parampb.PartSpec) []query.FactRow {
 		}
 		out = append(out, specParamRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamRangeRows(spec.GetMpn(), spec)...)
+		out = append(out, specParamUnitRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamProvRows(spec.GetMpn(), spec)...)
 		out = append(out, audienceRows(spec.GetMpn(), spec)...)
 	}

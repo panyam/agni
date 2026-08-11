@@ -681,3 +681,109 @@ func TestUnresolvedSymbolFactsEmptyWhenClean(t *testing.T) {
 		t.Errorf("rows = %v, want none", rows)
 	}
 }
+
+// TestParamFactsAreInBaseUnits (agni issue 165): the query surface carries a parameter's number in
+// its SI base unit, so a datalog threshold is written once and does not change meaning because one
+// vendor printed millivolts and another printed volts.
+//
+// A FactRow has no unit column, so before this a rule comparing `?max < 5.0` against a spec seeded
+// 4600 mV compared 4600 against 5.0 with nothing anywhere to refuse it. The assertion is equality
+// against the volt-spelled twin rather than a literal, because the property is that two spellings of
+// ONE datasheet row project identically.
+func TestParamFactsAreInBaseUnits(t *testing.T) {
+	volts := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+
+	d := supplyDesign("+5V", false, "ACME-33")
+	inVolts := factsByRelation(Facts(check.NewModelWithParams(d, nil, param.ParamSet{"ACME-33": volts})))
+	inMilli := factsByRelation(Facts(check.NewModelWithParams(d, nil, param.ParamSet{"ACME-33": milli})))
+
+	v, mv := inVolts[RelParam], inMilli[RelParam]
+	if len(v) != 1 || len(mv) != 1 {
+		t.Fatalf("param rows = %d volt-spelled / %d millivolt-spelled, want 1 each", len(v), len(mv))
+	}
+	if mv[0].Num == nil || v[0].Num == nil || *mv[0].Num != *v[0].Num {
+		t.Errorf("param max = %v millivolt-spelled, %v volt-spelled; the two spellings must project identically", mv[0].Num, v[0].Num)
+	}
+}
+
+// TestParamRangeFactsConvertBothBounds: param.range is the two-sided relation, so a conversion that
+// scaled only the max would leave a "3000..3.6" row. That does not merely report the wrong number, it
+// reports the OPPOSITE finding: a 5V rail reads as below a 3000V minimum rather than above a 3.6V
+// maximum.
+func TestParamRangeFactsConvertBothBounds(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+
+	pr := factsByRelation(Facts(m))[RelParamRange]
+	if len(pr) != 1 {
+		t.Fatalf("param.range = %+v, want one", pr)
+	}
+	if pr[0].Min == nil || *pr[0].Min != 3.0 || pr[0].Num == nil || *pr[0].Num != 3.6 {
+		t.Errorf("param.range min/max = %v/%v, want 3/3.6", pr[0].Min, pr[0].Num)
+	}
+	if pr[0].Value != "recommended_operating" {
+		t.Errorf("kind token = %q, want recommended_operating (conversion must not disturb it)", pr[0].Value)
+	}
+}
+
+// TestParamUnitFactExposesPrintedUnit: normalizing the numbers must not destroy what the vendor
+// actually printed, which is what a reviewer checking a citation against a datasheet page reads.
+func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+
+	pu := factsByRelation(Facts(m))[RelParamUnit]
+	if len(pu) != 1 {
+		t.Fatalf("param.unit = %+v, want one", pu)
+	}
+	if pu[0].Subject != "ACME-33" || pu[0].Object != "VDD" || pu[0].Value != "mV" {
+		t.Errorf("param.unit = (%s, %s, %s), want (ACME-33, VDD, mV) as PRINTED", pu[0].Subject, pu[0].Object, pu[0].Value)
+	}
+}
+
+// TestParamFactsKeepUnconvertibleRowsWithoutNumbers: a row whose unit has no known scale keeps its
+// symbol, kind, conditions and citation, and loses only its NUMBER. `param` answers "what does this
+// part specify" as much as it feeds a comparison, so a silently shortened list would be its own quiet
+// wrong answer.
+//
+// This is safe only because evalCompare refuses to ORDER an absent number against a present one
+// (TestCompareRefusesToOrderAbsentAgainstPresent). Before that fix an absent Num bound the variable to
+// the empty string and ordering fell through to lexicography, where "" < "5.0" is true, so a row with
+// no number would have satisfied every upper-bound guard.
+func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	spec.Parameters[0].Unit = "dBm"
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	byRel := factsByRelation(Facts(m))
+
+	pf := byRel[RelParam]
+	if len(pf) != 1 {
+		t.Fatalf("param = %+v, want the row kept", pf)
+	}
+	if pf[0].Object != "VDD" || pf[0].Num != nil {
+		t.Errorf("param row = symbol %q num %v, want VDD with NO number", pf[0].Object, pf[0].Num)
+	}
+	if pf[0].Cite == "" {
+		t.Error("a kept row must still carry its citation; it is still a real datasheet row")
+	}
+
+	pr := byRel[RelParamRange]
+	if len(pr) != 1 {
+		t.Fatalf("param.range = %+v, want the row kept", pr)
+	}
+	if pr[0].Min != nil || pr[0].Num != nil {
+		t.Errorf("param.range bounds = %v/%v, want both absent", pr[0].Min, pr[0].Num)
+	}
+	if pr[0].Value != "recommended_operating" {
+		t.Errorf("kind token = %q, want it preserved even with no numbers", pr[0].Value)
+	}
+
+	pu := byRel[RelParamUnit]
+	if len(pu) != 1 || pu[0].Value != "dBm" {
+		t.Errorf("param.unit = %+v, want the printed unit reported", pu)
+	}
+}

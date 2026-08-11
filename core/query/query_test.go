@@ -371,12 +371,19 @@ func TestAggregationCount(t *testing.T) {
 }
 
 // TestAggregationMax (WS3-029 fast-follow): max over a numeric column reduces per group.
+//
+// Both rows are VOLTS on purpose. The fixture used to pair a 20 V row with an 800 mA one and assert
+// 800, which made the assertion depend on 800 being the larger PRINTED number across two different
+// units. That is not a comparison with a meaning, and since agni issue 165 reduced the query
+// surface's numbers to SI base units it is not even the larger number (800 mA is 0.8 A). The
+// property under test is that max() reduces per group, so the fixture states two quantities that
+// can actually be ordered.
 func TestAggregationMax(t *testing.T) {
 	spec := regSpec("REG-24", 20)
 	// add a second numeric param so max has something to choose
 	spec.Parameters = append(spec.Parameters, &parampb.Parameter{
-		Name: "Iout", Symbol: "IOUT", LimitKind: parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX,
-		Value: &parampb.RangeValue{Max: f64(800)}, Unit: "mA",
+		Name: "ESD tolerance", Symbol: "VESD", LimitKind: parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX,
+		Value: &parampb.RangeValue{Max: f64(800)}, Unit: "V",
 		Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 4, Method: "hand", Confidence: 1},
 	})
 	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": spec})
@@ -764,5 +771,75 @@ func TestBusRelation(t *testing.T) {
 	aliases := runQuery(t, m, `bus(?label, "bus_alias") => ?label`)
 	if len(aliases) != 1 || aliases[0].Bind[Var("label")].S != "DATA" {
 		t.Errorf("bus(?label, \"bus_alias\") = %v, want just DATA", aliases)
+	}
+}
+
+// TestCompareRefusesToOrderAbsentAgainstPresent is the guard behind every one-sided datasheet row.
+//
+// A FactRow field with no number yields Value{} (schema.go), so `?min` on a row that states only a
+// maximum binds to the EMPTY STRING rather than to nothing. Ordering then used to fall through to
+// cmpStr and answer by LEXICOGRAPHY, which made the result depend on how the author phrased the
+// inequality and on the sign of the constant:
+//
+//	"" <= "5.0" -> true    "" >= "3.0" -> false    "5.0" <= "" -> false    "" <= "-2" -> true
+//
+// The negative-threshold case is the one that shows it was never semantics: "" precedes every string,
+// so an absent bound "passed" against minus two. Ordering now refuses the mixed case and the row goes
+// unjudged instead.
+func TestCompareRefusesToOrderAbsentAgainstPresent(t *testing.T) {
+	n := func(x float64) Value { return Value{S: ftoa(x), Num: &x} }
+	absent := Value{}
+
+	for _, op := range []string{"<", "<=", ">", ">="} {
+		for _, c := range []struct {
+			name string
+			l, r Value
+		}{
+			{"absent on the left", absent, n(5.0)},
+			{"absent on the right", n(5.0), absent},
+			{"absent against a negative threshold", absent, n(-2)},
+		} {
+			got, err := evalCompare(Compare{Left: Term{Const: &c.l}, Op: op, Right: Term{Const: &c.r}}, newBinding())
+			if err != nil {
+				t.Fatalf("%s %s: unexpected error %v", c.name, op, err)
+			}
+			if got {
+				t.Errorf("%s: %q must not match; an unmeasurable value is not orderable", c.name, op)
+			}
+		}
+	}
+}
+
+// TestCompareStillOrdersTwoStrings: the refusal is about MIXING kinds, not about strings. Ordering two
+// non-numeric values is what an author asked for when they wrote it, so it keeps working.
+func TestCompareStillOrdersTwoStrings(t *testing.T) {
+	lo, hi := Value{S: "ALPHA"}, Value{S: "BETA"}
+	got, err := evalCompare(Compare{Left: Term{Const: &lo}, Op: "<", Right: Term{Const: &hi}}, newBinding())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got {
+		t.Error(`"ALPHA" < "BETA" must still hold; string ordering is a feature, the MIXED case was the bug`)
+	}
+}
+
+// TestCompareStillEqualsAcrossKinds: equality is unaffected. Asking whether two values are the same is
+// meaningful across kinds (a number and a word are simply not equal), which is why only the ordering
+// operators are guarded. An absent bound must read as "not equal to 5", not as an error.
+func TestCompareStillEqualsAcrossKinds(t *testing.T) {
+	five := 5.0
+	num := Value{S: ftoa(five), Num: &five}
+	absent := Value{}
+	for _, c := range []struct {
+		op   string
+		want bool
+	}{{"=", false}, {"!=", true}} {
+		got, err := evalCompare(Compare{Left: Term{Const: &absent}, Op: c.op, Right: Term{Const: &num}}, newBinding())
+		if err != nil {
+			t.Fatalf("%s: unexpected error %v", c.op, err)
+		}
+		if got != c.want {
+			t.Errorf("absent %s 5 = %v, want %v", c.op, got, c.want)
+		}
 	}
 }

@@ -231,3 +231,51 @@ func TestQueryBoardPathCLI(t *testing.T) {
 		t.Errorf("want board facts with the export attached:\n%s", withBoard)
 	}
 }
+
+// TestQuerySpecLibUnitsCLI (agni issue 165) is the end-to-end proof that the query surface's numbers
+// are in SI base units, run over the real conformance corpus rather than a hand-built model.
+//
+// DEMO-HSS-CTRL seeds its overcurrent threshold in MILLIVOLTS, as a real controller sheet prints it.
+// Before this, `param(?mpn,"V(OCP)",?max)` yielded 50 and a rule written `?max < 0.1` (a
+// hundred-millivolt sanity bound) would have compared 50 against 0.1 and read as wildly over. The
+// same query now yields 0.05, and the threshold means what it says.
+//
+// The companion assertion is the point of the split: param.unit still reports "mV", so normalizing
+// the number did not erase what the vendor printed.
+func TestQuerySpecLibUnitsCLI(t *testing.T) {
+	run := func(q string) string {
+		t.Helper()
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+		cmd := queryCmd()
+		cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", q})
+		err := cmd.Execute()
+		w.Close()
+		os.Stdout = old
+		out, _ := io.ReadAll(r)
+		if err != nil {
+			t.Fatalf("query %q: %v", q, err)
+		}
+		return string(out)
+	}
+
+	// The threshold is seeded as 50 mV; the query surface must report it in volts.
+	got := run(`param(?mpn, "V(OCP)", ?max) => ?mpn, ?max`)
+	if !strings.Contains(got, "0.05") {
+		t.Errorf("V(OCP) must project as 0.05 V, not its printed 50 mV:\n%s", got)
+	}
+	if strings.Contains(got, "50") && !strings.Contains(got, "0.05") {
+		t.Errorf("V(OCP) still projecting the printed millivolt number:\n%s", got)
+	}
+
+	// A numeric comparison against a volt-denominated bound now behaves: 0.05 < 0.1 holds.
+	if bounded := run(`param(?mpn, "V(OCP)", ?max), ?max < 0.1 => ?mpn`); !strings.Contains(bounded, "DEMO-HSS-CTRL") {
+		t.Errorf("a 50mV threshold must satisfy a 0.1V bound:\n%s", bounded)
+	}
+
+	// And the printed spelling is still queryable.
+	if units := run(`param.unit(?mpn, "V(OCP)", ?u) => ?mpn, ?u`); !strings.Contains(units, "mV") {
+		t.Errorf("param.unit must still report the printed mV:\n%s", units)
+	}
+}
