@@ -4,6 +4,7 @@ import { DesignService, SheetFormat, SymbolSource, type SheetRef, type Conversio
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
+import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import { OverlayConfigSchema, type NamingConvention, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
@@ -33,6 +34,7 @@ type DesignClient = Client<typeof DesignService>;
 type CheckClient = Client<typeof CheckService>;
 type QueryClient = Client<typeof QueryService>;
 type ReviewClient = Client<typeof ReviewService>;
+type ProjectClient = Client<typeof ProjectService>;
 type WorkspaceClient = Client<typeof WorkspaceService>;
 
 // RenderMode selects which renderer draws the current sheet: the WebGL packer, the SVG
@@ -213,6 +215,10 @@ export class ViewerPresenter {
     // design's own directory to find the checklists beside it. Both optional, like query.
     private readonly reviews?: ReviewClient,
     private readonly workspace?: WorkspaceClient,
+    // projects resolves the open design to its project, so a review is stored under the project
+    // whose config scored it. Optional like the rest: without it a run stores unparented, which is
+    // the correct answer for a design that belongs to no project anyway.
+    private readonly projects?: ProjectClient,
   ) {}
 
   // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the
@@ -670,7 +676,7 @@ export class ViewerPresenter {
     this.reviewState.checklists = this.conventionChoices;
     this.reviewState.checklist = this.reviewState.checklists[0]?.ref ?? "";
     try {
-      const resp = await this.reviews.listReviews({ filter: `design="${this.path}"` });
+      const resp = await this.reviews.listReviews({ filter: `design="${artifactUri(this.mount, this.path)}"` });
       this.reviewState.runs = resp.reviews.map(reviewFromWire);
       // Newest first comes from the server, so the head is the latest run.
       this.reviewState.selected = this.reviewState.runs[0]?.name ?? "";
@@ -701,6 +707,19 @@ export class ViewerPresenter {
     }
   }
 
+  // designParent is the project resource name the open design belongs to, "" when it belongs to none
+  // or when resolution fails. A failure is not worth surfacing here: the run still stores, just
+  // unparented, which is strictly better than refusing to record a review that ran.
+  private async designParent(): Promise<string> {
+    if (!this.projects || !this.mount || !this.path) return "";
+    try {
+      const resp = await this.projects.resolveDesign({ uri: artifactUri(this.mount, this.path) });
+      return resp.project?.name ?? "";
+    } catch {
+      return "";
+    }
+  }
+
   // createReview runs the chosen checklist against the open design and stores the result, then shows
   // it. The manifest is resolved server-side first (GetReviewManifest) and sent back as a VALUE, which
   // is the C22 seam: the browser holds a ref and no filesystem, so the one read is a named rpc rather
@@ -715,6 +734,11 @@ export class ViewerPresenter {
     try {
       const man = await this.reviews.getReviewManifest({ uri: artifactUri(this.mount, this.reviewState.checklist) });
       const created = await this.reviews.createReview({
+        // A run is stored under the design's project when it has one. Resolving it here rather than
+        // letting the server re-derive it keeps the run filed under the same project whose config
+        // scored it, and an empty parent is a real answer: a design on a mounted folder often
+        // belongs to no project, and its runs belong to none either.
+        parent: await this.designParent(),
         designUri: artifactUri(this.mount, this.path),
         manifest: man.manifest,
         overlay: this.overlay(),

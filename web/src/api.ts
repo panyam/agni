@@ -7,6 +7,7 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { DesignService } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { DiffService } from "./gen/agni/v1/webapi/diff_pb.js";
+import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import { DatasheetService } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
@@ -37,6 +38,12 @@ export function checksClient(baseUrl?: string): Client<typeof CheckService> {
 // plus the highlight maps the visual diff joins to geometry, WS9-005).
 export function diffClient(baseUrl?: string): Client<typeof DiffService> {
   return createClient(DiffService, newTransport(baseUrl));
+}
+
+// projectClient returns a typed client for ProjectService (which project a design belongs to, and
+// the config that project supplies).
+export function projectClient(baseUrl?: string): Client<typeof ProjectService> {
+  return createClient(ProjectService, newTransport(baseUrl));
 }
 
 // datasheetClient returns a typed client for DatasheetService (a datasheet's doc-IR for the

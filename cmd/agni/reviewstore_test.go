@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/results"
@@ -37,7 +38,7 @@ func TestOSReviewStoreRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	name, createdAt, err := st.Create(ctx, storeDoc("board.edn"))
+	name, createdAt, err := st.Create(ctx, "", storeDoc("board.edn"))
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -82,13 +83,13 @@ func TestOSReviewStoreListsNewestFirst(t *testing.T) {
 	ctx := context.Background()
 	var created []string
 	for _, d := range []string{"a.edn", "b.edn", "c.edn"} {
-		name, _, err := st.Create(ctx, storeDoc(d))
+		name, _, err := st.Create(ctx, "", storeDoc(d))
 		if err != nil {
 			t.Fatal(err)
 		}
 		created = append(created, name)
 	}
-	_, names, _, err := st.List(ctx, 0, "", "")
+	_, names, _, err := st.List(ctx, "", 0, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -100,7 +101,7 @@ func TestOSReviewStoreListsNewestFirst(t *testing.T) {
 			t.Errorf("position %d = %s, want %s (newest first)", i, name, want)
 		}
 	}
-	_, filtered, _, err := st.List(ctx, 0, "", "b.edn")
+	_, filtered, _, err := st.List(ctx, "", 0, "", "b.edn")
 	if err != nil {
 		t.Fatalf("List(filter): %v", err)
 	}
@@ -120,7 +121,7 @@ func TestOSReviewStoreSkipsUnreadableFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	good, _, err := st.Create(ctx, storeDoc("a.edn"))
+	good, _, err := st.Create(ctx, "", storeDoc("a.edn"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +132,7 @@ func TestOSReviewStoreSkipsUnreadableFiles(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "README.txt"), []byte("this volume holds review runs"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, names, _, err := st.List(ctx, 0, "", "")
+	_, names, _, err := st.List(ctx, "", 0, "", "")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -149,10 +150,10 @@ func TestOSReviewStoreMissingAndBadNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	if _, err := st.Get(ctx, service.ReviewName("nope")); !errors.Is(err, service.ErrNotFound) {
+	if _, err := st.Get(ctx, service.ReviewName("", "nope")); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("Get(absent) = %v, want ErrNotFound", err)
 	}
-	if err := st.Delete(ctx, service.ReviewName("nope")); !errors.Is(err, service.ErrNotFound) {
+	if err := st.Delete(ctx, service.ReviewName("", "nope")); !errors.Is(err, service.ErrNotFound) {
 		t.Errorf("Delete(absent) = %v, want ErrNotFound", err)
 	}
 	// The traversal attempt must fail as a bad NAME, and must not have written or read anything outside
@@ -183,5 +184,57 @@ func TestNewOSReviewStoreCreatesAndValidates(t *testing.T) {
 	}
 	if _, err := newOSReviewStore(file); err == nil {
 		t.Error("--review-store at a regular file must fail at startup")
+	}
+}
+
+// TestOldFlatRunsReadAsUnparented is the migration, and it is a no-op by construction.
+//
+// Every run written before projects existed sits directly in the store directory, and that is
+// exactly where an unparented run belongs now. So the old files need no move and no rewrite, and
+// they read back as what they actually were: reviews of designs that belonged to no project. A
+// layout that had claimed them for some project would have been retroactively asserting an ownership
+// that did not exist when the run was made.
+func TestOldFlatRunsReadAsUnparented(t *testing.T) {
+	dir := t.TempDir()
+	st, err := newOSReviewStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	// A run as an older agni wrote it: a file at the store root.
+	old, _, err := st.Create(ctx, "", storeDoc("legacy.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(old, "reviews/") {
+		t.Fatalf("legacy run name = %q, want the flat form", old)
+	}
+	// A run made now, under a project.
+	owned, _, err := st.Create(ctx, "projects/gateway", storeDoc("gw.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Both are readable by name, and an unfiltered listing returns both.
+	for _, name := range []string{old, owned} {
+		if _, err := st.Get(ctx, name); err != nil {
+			t.Errorf("Get(%q): %v", name, err)
+		}
+	}
+	_, all, _, err := st.List(ctx, "", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("unfiltered listing = %v, want both the legacy and the parented run", all)
+	}
+	// Narrowing to the project excludes the legacy run rather than adopting it.
+	_, owning, _, err := st.List(ctx, "projects/gateway", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(owning) != 1 || owning[0] != owned {
+		t.Errorf("listing projects/gateway = %v, want only the run made under it", owning)
 	}
 }

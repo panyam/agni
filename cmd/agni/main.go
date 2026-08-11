@@ -526,6 +526,12 @@ func reviewCmd() *cobra.Command {
 			var docs []*checkspb.CheckResults
 			for _, design := range args {
 				rv, err := svc.CreateReview(cmd.Context(), &webapi.CreateReviewRequest{
+					// The run is stored under the design's project when it has one. It is resolved here
+					// rather than inside CreateReview because the caller has already resolved this design
+					// to compose its config, and a second resolution in the service could disagree with
+					// the first — the run would then be filed under a project other than the one whose
+					// rules scored it.
+					Parent:   cliProjectParent(cmd.Context(), design),
 					Manifest: service.ManifestProto(man), DesignUri: cliArgURI(design), BoardUri: cliArgURI(boardPath), RatifiedFloor: ratifiedFloor,
 					// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
 					// and the web reach one composition path, and its lexicon half travels with the design
