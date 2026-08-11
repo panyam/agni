@@ -7,11 +7,11 @@ import (
 	"io/fs"
 	"path"
 	"sort"
-	"strings"
 
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
+	"google.golang.org/protobuf/proto"
 )
 
 // MaxDepth bounds the downward walk that discovers descriptors under a tree, counting the tree root
@@ -37,16 +37,31 @@ type Tree struct {
 // projects in a directory hierarchy, and a store backed by a database with design files on object
 // storage answers the same five questions without any of it.
 //
-// It holds NO CACHE, deliberately. A descriptor is a small file an operator edits while a server is
-// running, and a cached index would answer with a design's old entry after they fixed it, which is
-// precisely the class of silent-wrong-answer this feature exists to remove. The cost is a bounded
-// directory walk per call, which is nothing beside parsing a design.
+// It caches, and the cache never trusts itself: every read revalidates against the filesystem before
+// returning, so an operator's edit is visible on the very next request. That property is not
+// negotiable here — a descriptor is a small file someone changes while the server runs, and answering
+// with the version before their fix is the silent-wrong-answer this whole feature exists to remove.
+// What the cache buys is turning an expensive question (walk every directory, parse every descriptor)
+// into a cheap one (stat what we looked at last time). See cache.go.
 type FSStore struct {
 	trees []Tree
+	// The caches. They never answer from memory alone: each revalidates against the filesystem
+	// before returning, which is what keeps an operator's edit visible on the very next request.
+	// See cache.go for why discovery and content are keyed on different things.
+	walks    *walkCache
+	projectC *parseCache[*webapi.Project]
+	designC  *parseCache[*webapi.Design]
 }
 
 // NewFSStore returns a store over the given trees, searched in order.
-func NewFSStore(trees ...Tree) *FSStore { return &FSStore{trees: trees} }
+func NewFSStore(trees ...Tree) *FSStore {
+	return &FSStore{
+		trees:    trees,
+		walks:    newWalkCache(),
+		projectC: newParseCache[*webapi.Project](),
+		designC:  newParseCache[*webapi.Design](),
+	}
+}
 
 // located pairs a parsed descriptor with where it was found.
 type locatedProject struct {
@@ -124,7 +139,7 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 	if !ok {
 		return nil, fmt.Errorf("%w: mount %q is no longer configured", service.ErrNotFound, uriOf(p.GetUri()).Mount)
 	}
-	dirs, err := findDescriptors(t.FS, walkRoot(uriOf(p.GetUri()).Path), DesignDescriptor)
+	dirs, err := s.walks.find(t.FS, walkRoot(uriOf(p.GetUri()).Path), DesignDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +207,7 @@ func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.De
 
 // projectsIn discovers the project descriptors in one tree.
 func (s *FSStore) projectsIn(t Tree) ([]locatedProject, error) {
-	dirs, err := findDescriptors(t.FS, ".", ProjectDescriptor)
+	dirs, err := s.walks.find(t.FS, ".", ProjectDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -211,6 +226,16 @@ func (s *FSStore) projectsIn(t Tree) ([]locatedProject, error) {
 // name, which tree it came from, and where in that tree.
 func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, error) {
 	name := path.Join(walkRoot(dir), ProjectDescriptor)
+	// The dependencies are every file this load reads, plus the containing directory so the existence
+	// probes in attachConfig are covered: adding params/ moves the directory's mtime even though no
+	// file read here changed.
+	deps := []string{walkRoot(dir), name, path.Join(walkRoot(dir), defaultConventions)}
+	return s.projectC.get(t.FS, t.Mount+"\x00"+name, deps, func() (string, *webapi.Project, error) {
+		return s.readProject(t, dir, name)
+	}, cloneProject)
+}
+
+func (s *FSStore) readProject(t Tree, dir, name string) (string, *webapi.Project, error) {
 	f, err := t.FS.Open(name)
 	if err != nil {
 		return "", nil, err
@@ -286,6 +311,13 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 // folder sits. The caller sets Name, which needs the parent.
 func (s *FSStore) loadDesign(t Tree, dir string) (string, *webapi.Design, error) {
 	name := path.Join(walkRoot(dir), DesignDescriptor)
+	deps := []string{walkRoot(dir), name}
+	return s.designC.get(t.FS, t.Mount+"\x00"+name, deps, func() (string, *webapi.Design, error) {
+		return s.readDesign(t, dir, name)
+	}, cloneDesign)
+}
+
+func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, error) {
 	f, err := t.FS.Open(name)
 	if err != nil {
 		return "", nil, err
@@ -335,45 +367,6 @@ func (s *FSStore) tree(mount string) (Tree, bool) {
 		}
 	}
 	return Tree{}, false
-}
-
-// findDescriptors returns the tree-relative folders under root (root included) holding a descriptor
-// of the given name, to MaxDepth.
-//
-// It does NOT descend into a folder that already holds the descriptor it is looking for: a project
-// inside a project would be an ambiguity nobody meant, and stopping there also keeps the walk off a
-// design's own symbol and sheet subfolders once the design has been found. Dot-directories are
-// skipped so a `.git` or `.venv` never costs a traversal.
-func findDescriptors(fsys fs.FS, root, name string) ([]string, error) {
-	var out []string
-	err := fs.WalkDir(fsys, root, func(p string, e fs.DirEntry, err error) error {
-		if err != nil {
-			// A directory that cannot be read is not a reason to fail every listing; it simply holds
-			// no descriptors as far as this caller is concerned.
-			if e != nil && e.IsDir() {
-				return fs.SkipDir
-			}
-			return nil
-		}
-		if !e.IsDir() {
-			return nil
-		}
-		if base := path.Base(p); p != root && strings.HasPrefix(base, ".") {
-			return fs.SkipDir
-		}
-		if depthUnder(root, p) > MaxDepth {
-			return fs.SkipDir
-		}
-		if exists(fsys, path.Join(p, name)) {
-			out = append(out, p)
-			return fs.SkipDir
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 // findAbove walks up from dir looking for a descriptor, stopping at the tree root. The root is the
@@ -434,19 +427,6 @@ func displayDir(dir string) string {
 	return "the tree root"
 }
 
-// depthUnder counts the path segments between root and p.
-func depthUnder(root, p string) int {
-	if root == p {
-		return 0
-	}
-	rel := strings.TrimPrefix(p, walkRoot(root))
-	rel = strings.Trim(rel, "/")
-	if rel == "" {
-		return 0
-	}
-	return len(strings.Split(rel, "/"))
-}
-
 // uriOf parses a resource's stored artifact URI. A URI this package wrote is always well formed, so
 // a parse failure means the value came from somewhere else; the zero URI then simply matches nothing
 // rather than failing a listing.
@@ -457,3 +437,12 @@ func uriOf(s string) artifact.URI {
 	}
 	return u
 }
+
+// cloneProject and cloneDesign keep a cached message from being handed out by pointer.
+//
+// The store MUTATES what it loads — it fills in resource names and rewrites descriptor-relative refs
+// into URIs — so returning the cached value itself would let one request's fill-in become the next
+// request's starting point, and the second call would join a URI onto a URI.
+func cloneProject(p *webapi.Project) *webapi.Project { return proto.CloneOf(p) }
+
+func cloneDesign(d *webapi.Design) *webapi.Design { return proto.CloneOf(d) }
