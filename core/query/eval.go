@@ -333,7 +333,36 @@ func valueEq(a, b Value) bool {
 	return a.S == b.S
 }
 
-// evalCompare evaluates a comparison once both operands are bound: numeric when both carry a number.
+// orderingOps are the comparisons that ask which of two values is LARGER. Equality and inequality are
+// deliberately not here: asking whether two values are the same is meaningful across kinds (a number
+// and a word are simply not equal), while asking which is larger is not.
+var orderingOps = map[string]bool{"<": true, "<=": true, ">": true, ">=": true}
+
+// evalCompare evaluates a comparison once both operands are bound: numeric when both carry a number,
+// string otherwise.
+//
+// AN ORDERING COMPARISON REFUSES TO MIX A NUMBER WITH A NON-NUMBER, and that guard is the point of
+// this function rather than a detail of it. A FactRow field with no number yields Value{} (schema.go),
+// so `?min` on a datasheet row that states only a maximum binds to the EMPTY STRING rather than to
+// nothing. Without the guard the comparison silently changed kind and answered by LEXICOGRAPHY:
+//
+//	"" <= "5.0"  -> true      an absent lower bound passes a lower-bound test
+//	"" >= "3.0"  -> false     the same absent bound, opposite phrasing, opposite answer
+//	"5.0" <= ""  -> false     an absent upper bound fails an upper-bound test
+//	"" <= "-2"   -> true      an absent bound "passes" against MINUS TWO, since "" precedes everything
+//
+// The answer depended on how the author phrased the inequality and on the sign of the constant, which
+// no author could predict. One-sided rows are not exotic (param.range emits them by design, because
+// real datasheets state plenty of max-only limits), so this was reachable on ordinary data.
+//
+// It evaluates to NO MATCH rather than an error, and the choice matters. An error aborts the whole
+// query, so a single max-only row among many would make a legitimate range query unusable. No-match
+// leaves the row unjudged, which is this engine's standing posture everywhere else: silence means "I
+// could not tell", never "this is fine". An author who wants an absent lower bound to count as
+// unbounded-below writes that clause explicitly instead of inheriting it from string ordering.
+//
+// STRING ORDERING BETWEEN TWO NON-NUMBERS IS UNAFFECTED (`?name < "M"` still splits alphabetically),
+// because there both operands are the same kind and lexicographic order is what the author asked for.
 func evalCompare(c Compare, bnd *binding) (bool, error) {
 	l, okl := resolve(c.Left, bnd)
 	r, okr := resolve(c.Right, bnd)
@@ -342,6 +371,9 @@ func evalCompare(c Compare, bnd *binding) (bool, error) {
 	}
 	if l.Num != nil && r.Num != nil {
 		return cmpNum(*l.Num, c.Op, *r.Num), nil
+	}
+	if orderingOps[c.Op] && (l.Num != nil) != (r.Num != nil) {
+		return false, nil
 	}
 	return cmpStr(l.S, c.Op, r.S), nil
 }

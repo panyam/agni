@@ -745,29 +745,45 @@ func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
 	}
 }
 
-// TestParamFactsDropUnconvertibleRowsButKeepThemInParamUnit is the asymmetry this design turns on.
+// TestParamFactsKeepUnconvertibleRowsWithoutNumbers: a row whose unit has no known scale keeps its
+// symbol, kind, conditions and citation, and loses only its NUMBER. `param` answers "what does this
+// part specify" as much as it feeds a comparison, so a silently shortened list would be its own quiet
+// wrong answer.
 //
-// A row whose unit the conversion table does not recognize CANNOT be left in the numeric relations
-// with an empty number: query.fieldValue yields an empty Value for a nil Num, and eval's comparison
-// then falls back to STRING comparison, where "" < "5.0" is TRUE. The row would satisfy a numeric
-// guard rather than fail to match it, which is the wrong-pass this change exists to remove.
-//
-// So the numeric relations carry only rows whose scale is known, and param.unit carries every row.
-// Nothing disappears; the numeric surface narrows and the introspection surface does not.
-func TestParamFactsDropUnconvertibleRowsButKeepThemInParamUnit(t *testing.T) {
+// This is safe only because evalCompare refuses to ORDER an absent number against a present one
+// (TestCompareRefusesToOrderAbsentAgainstPresent). Before that fix an absent Num bound the variable to
+// the empty string and ordering fell through to lexicography, where "" < "5.0" is true, so a row with
+// no number would have satisfied every upper-bound guard.
+func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
 	spec.Parameters[0].Unit = "dBm"
 	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
 	byRel := factsByRelation(Facts(m))
 
-	if got := byRel[RelParam]; len(got) != 0 {
-		t.Errorf("param must drop a row whose unit has no known scale, got %+v", got)
+	pf := byRel[RelParam]
+	if len(pf) != 1 {
+		t.Fatalf("param = %+v, want the row kept", pf)
 	}
-	if got := byRel[RelParamRange]; len(got) != 0 {
-		t.Errorf("param.range must drop a row whose unit has no known scale, got %+v", got)
+	if pf[0].Object != "VDD" || pf[0].Num != nil {
+		t.Errorf("param row = symbol %q num %v, want VDD with NO number", pf[0].Object, pf[0].Num)
 	}
+	if pf[0].Cite == "" {
+		t.Error("a kept row must still carry its citation; it is still a real datasheet row")
+	}
+
+	pr := byRel[RelParamRange]
+	if len(pr) != 1 {
+		t.Fatalf("param.range = %+v, want the row kept", pr)
+	}
+	if pr[0].Min != nil || pr[0].Num != nil {
+		t.Errorf("param.range bounds = %v/%v, want both absent", pr[0].Min, pr[0].Num)
+	}
+	if pr[0].Value != "recommended_operating" {
+		t.Errorf("kind token = %q, want it preserved even with no numbers", pr[0].Value)
+	}
+
 	pu := byRel[RelParamUnit]
 	if len(pu) != 1 || pu[0].Value != "dBm" {
-		t.Errorf("param.unit = %+v, want the dropped row still listed with its printed unit", pu)
+		t.Errorf("param.unit = %+v, want the printed unit reported", pu)
 	}
 }

@@ -495,10 +495,21 @@ without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the
 separately, because a `FactRow` has no unit column and adding one would be advisory: a rule could
 ignore it and compare raw numbers, which is the failure this constraint exists to prevent.
 
-A row whose unit has no known scale is DROPPED from the numeric relations rather than emitted with
-an empty number, and the reason is specific to the evaluator: `query.fieldValue` yields an empty
-`Value` for a nil `Num`, and `eval`'s comparison then falls back to STRING comparison, where
-`"" < "5.0"` is true. Such a row would satisfy a numeric guard instead of failing to match it.
-`param.unit` carries every row including the dropped ones, so the numeric surface narrows and the
-introspection surface does not. AGGREGATION is unaffected either way: `reduce` skips a nil `Num`
-rather than falling back.
+A row whose unit has no known scale keeps its symbol, kind, conditions and citation and loses only
+its NUMBER, so a relation that answers "what does this part specify" never shortens its list
+silently.
+
+That is safe because ORDERING REFUSES TO MIX AN ABSENT NUMBER WITH A PRESENT ONE (`evalCompare`).
+Absence is not otherwise representable in a bound value: `query.fieldValue` yields an empty `Value`
+for a nil `Num`, and ordering used to fall back to string comparison, where `"" < "5.0"` is true and
+`"" <= "-2"` is also true, since the empty string precedes everything. The answer depended on the
+author's phrasing and on the sign of the constant. This is not a datasheet-tier concern:
+`param.range` emits a one-sided row for any ordinary max-only datasheet limit, so the same guard is
+what makes partial ranges safe at all. Equality is untouched (asking whether two values are the same
+is meaningful across kinds) and so is ordering two non-numbers. AGGREGATION was never exposed:
+`reduce` skips a nil `Num` rather than falling back.
+
+**Known limitation:** absence is still not first-class in `query.Value`, so `=` compares an absent
+value as the empty string and there is no way to ASK for "the rows with no number". Making absence
+explicit (three-valued logic, or a unit-and-presence-carrying value) is the real fix and would
+subsume this guard.

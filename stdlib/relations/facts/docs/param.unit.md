@@ -35,13 +35,22 @@ optional column is advisory and a normalized number is structural (CONSTRAINTS C
 exists so normalizing loses nothing: the printed spelling is still queryable, it is just no longer
 something a numeric comparison can silently get wrong.
 
-**A parameter whose unit the conversion table does not recognize appears HERE but not in `param` or
-`param.range`.** That asymmetry is deliberate and specific to this evaluator. An absent numeric does
-not make a variable unbindable: `query.fieldValue` yields an empty `Value` and the comparison falls
-back to STRING comparison, where `"" < "5.0"` is true. Leaving such a row in the numeric relations
-would let it satisfy a numeric guard rather than fail to match one. So the numeric relations carry
-only rows whose scale is known, and this relation carries every row, which is how you find the ones
-that were dropped.
+**A parameter whose unit the conversion table does not recognize still appears in `param` and
+`param.range`, with its NUMBER absent.** It keeps its symbol, kind, conditions and citation, because a
+relation that answers "what does this part specify" must not shorten its list silently. Only the
+number goes, since an unknown scale means there is no number to publish.
+
+That is safe because ordering was fixed in the same change: `evalCompare` refuses to ORDER an absent
+number against a present one, so an unmeasurable value is unorderable by construction. Before that, an
+absent numeric bound the variable to the empty string and the comparison fell back to lexicography
+(`"" < "5.0"` is true), so a row with no number satisfied every upper-bound guard. The same fix is
+what makes `param.range` safe to emit with one bound absent, which it does on any ordinary max-only
+datasheet row.
+
+There is no first-class way to SELECT those rows yet. `not param.range(...)` does not find them,
+because the row exists and only its numbers are absent, and absence is not something the query
+language can currently ask about: a field with no number binds to the empty string rather than to
+nothing. Listing `param.range` and reading the blank bound is the honest answer for now.
 
 ### Go projector
 
@@ -65,9 +74,3 @@ Show a value next to the unit it was printed in, remembering that `?max` is in t
 param(?mpn, ?sym, ?max), param.unit(?mpn, ?sym, ?unit) => ?mpn, ?sym, ?max, ?unit
 ```
 
-Find the parameters whose unit this engine could not place, which are exactly the ones missing from
-the numeric relations:
-
-```
-param.unit(?mpn, ?sym, ?unit), not param(?mpn, ?sym, ?_) => ?mpn, ?sym, ?unit
-```

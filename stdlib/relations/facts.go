@@ -63,9 +63,8 @@ const (
 	// param.unit(mpn, symbol, unit) is the unit a parameter is PRINTED in (agni issue 165). The
 	// numbers in param and param.range are reduced to SI base units so a comparison can trust them;
 	// this keeps the vendor's own spelling queryable, which is what a reviewer checking a citation
-	// against a datasheet page reads. It is also the relation that makes dropping an
-	// unconvertible row from the numeric relations a narrowing rather than a disappearance: every
-	// parameter appears here, whatever its unit. String-valued, so no comparison can be fooled by it.
+	// against a datasheet page reads, and what tells apart two rows that now carry the same number.
+	// String-valued, so no ordering comparison can bind it.
 	RelParamUnit = "param.unit" // param.unit(mpn, symbol, unit): the unit a parameter is printed in. doc: facts/docs/param.unit.md
 
 	// Board-geometry relations (the board tier, WS1-006): derived per-net values, not raw geometry.
@@ -327,13 +326,18 @@ func limitKindToken(k parampb.LimitKind) string {
 // surface where there is not even a unit string to gate on, so the fix is the same one: reduce
 // through param.InBaseUnit, in the one place that owns the scale (C24).
 //
-// A row whose unit that table does not recognize is DROPPED from `param` and `param.range` rather
-// than emitted with its numeric slots empty, and the reason is specific to this evaluator. An absent
-// Num does not make a variable unbindable: query.fieldValue yields Value{} and eval's comparison
-// falls back to STRING comparison, where "" < "5.0" is true. An unconvertible row left in place would
-// therefore satisfy a numeric guard rather than fail to match it, which is the wrong-pass this whole
-// change exists to remove. Nothing is hidden by the drop: `param.unit` carries every row, including
-// the dropped ones, so "what does this part specify" stays answerable.
+// A row whose unit that table does not recognize keeps its symbol, kind, conditions and citation and
+// has its NUMERIC slots left empty. It is not dropped, because `param` answers "what does this part
+// specify" as much as it feeds a comparison, and a silently shortened list is its own quiet wrong
+// answer.
+//
+// That is only safe because the evaluator was fixed in the same change. An absent Num used to bind a
+// variable to the EMPTY STRING, and eval's comparison then fell back to string ordering, where
+// "" < "5.0" is true; a row with no number would have satisfied a numeric guard rather than failed to
+// match it. evalCompare now refuses to ORDER an absent number against a present one, so an
+// unmeasurable value is unorderable by construction rather than by this projector omitting it. The
+// same fix is what makes param.range safe to emit with one bound absent, which it does on any
+// ordinary max-only datasheet row.
 
 // specParamRows projects the `param` facts of one PartSpec — one row per parameter, keyed by mpn,
 // with the upper bound in its SI base unit. Shared by the design-scoped join (paramFacts) and the
@@ -344,6 +348,11 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 	for _, p := range spec.Parameters {
 		q, ok := param.InBaseUnit(p)
 		if !ok {
+			// The unit has no known scale, so there is no number to publish. The row still appears,
+			// carrying its symbol, conditions and citation, with the numeric slot EMPTY: an
+			// unmeasurable value must not be orderable, and evalCompare refuses to order an absent
+			// number against a present one.
+			out = append(out, query.FactRow{Relation: RelParam, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
 			continue
 		}
 		f := query.FactRow{Relation: RelParam, Subject: mpn, Object: q.Symbol, Value: rangeText(q.Value), Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
@@ -407,6 +416,9 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 	for _, p := range spec.Parameters {
 		q, ok := param.InBaseUnit(p)
 		if !ok {
+			// Same posture as specParamRows: the kind and the citation are still true, the bounds are
+			// not knowable, so both numeric slots stay empty rather than the row disappearing.
+			out = append(out, query.FactRow{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: limitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
 			continue
 		}
 		f := query.FactRow{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: limitKindToken(q.LimitKind), Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}

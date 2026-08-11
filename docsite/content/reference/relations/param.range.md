@@ -14,7 +14,7 @@ the source did not label it). A bound the datasheet did not state is absent (the
 nothing), so `param.range(?m, "VDD", "recommended_operating", ?min, ?max)` with a max-only row leaves
 `?min` unbound. BOTH bounds are in the parameter's SI base unit whatever the vendor printed, so a
 range test means the same thing across vendors; join `param.unit` for the printed spelling, and note
-that a parameter whose unit has no known scale is omitted here (agni issue 165). Every row carries a
+that a parameter whose unit has no known scale appears here with both bounds absent (agni issue 165). Every row carries a
 citation back to the datasheet page and table.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with

@@ -9,8 +9,9 @@ that parameter's SI base unit** (volts, amps, ohms) whatever the vendor printed,
 written against it means the same thing across vendors. Join `param.unit` for the printed spelling.
 Each row also carries the rendered value range and its test conditions, plus a citation back to
 the datasheet page and table. One MPN can be shared by several components, so the projector
-dedupes by MPN and emits each parameter once. A parameter whose unit has no known scale is omitted
-here and appears only in `param.unit` (agni issue 165).
+dedupes by MPN and emits each parameter once. A parameter whose unit has no known scale still appears
+here with its NUMBER absent, and an ordering comparison refuses to bind an absent number against a
+present one rather than answering by string order (agni issue 165).
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
 `--params <dir>` pointing at a seeded `PartSpec` corpus. That is skip-not-false-pass by
