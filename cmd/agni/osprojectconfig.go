@@ -19,11 +19,14 @@ import (
 // seeded parameters a project names, from the mounts. All filesystem access stays at the cmd edge
 // (C1/C13).
 //
-// It holds NO CACHE, for the same reason the project store does not. An operator edits a profile or
-// seeds a part while the server runs, and an index that answered with the previous version would
-// produce a confident wrong verdict — which is the failure this whole workstream exists to remove.
-// A large parameter corpus re-read per request is a cost, and a visible one; a stale one is not.
-// agni issue 176 is where that trade gets revisited if a deployment ever feels it.
+// It holds NO CACHE. An operator edits a profile or seeds a part while the server runs, and an index
+// that answered with the previous version would produce a confident wrong verdict, which is the
+// failure this whole workstream exists to remove. A large parameter corpus re-read per request is a
+// cost, and a visible one; a stale one is not.
+//
+// If a deployment ever feels that cost, internal/projects/cache.go is the shape to copy rather than
+// the trade to reopen: it caches, and it still stats every file it depends on before answering, so
+// the speedup never comes out of freshness.
 type osProjectConfig struct {
 	mounts []mounts.Mount
 }
