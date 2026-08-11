@@ -36,6 +36,12 @@ type ProjectResolver struct {
 func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
 	var p *webapi.Project
 	var d *webapi.Design
+	// A caller asking for the built-in catalog is asking to be treated as though this design belonged
+	// to no project, so the resolution simply does not happen. Filtering the config out afterwards
+	// would be a second implementation of "no project" that could drift from the real one.
+	if req.GetIgnoreProject() {
+		return OverlayFor(ctx, nil, nil, nil, req, fallback, baseConvention)
+	}
 	if r != nil && r.Store != nil {
 		if design, project, err := r.Store.ResolveDesign(ctx, uri); err == nil {
 			p, d = project, design

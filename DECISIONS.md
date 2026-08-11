@@ -169,3 +169,29 @@ row" from "a row whose field is unstated" and cannot express it with `absent`. T
 the two-valued reading is losing information, which is the only argument that should move this.
 `TestAbsentEqualsAbsentDeviatesFromSQL` is named for the deviation so it fails loudly rather than
 being quietly "corrected" toward SQL by someone who has not read this.
+
+---
+
+## The served design loader reads the ref it is given; the viewer resolves and says so
+
+**Question.** The CLI resolves a design's declared entry: point it at a board companion and it reads
+the netlist the descriptor names, printing a line saying it did. `serve`'s loader does not — it reads
+exactly the artifact the request named. Should it resolve too, so the two surfaces behave alike?
+
+**Answer. No, and the asymmetry is the point.** The CLI's redirect is safe BECAUSE it can print a
+line. A browser has no equivalent: a user picks a file in a tree, and a loader that quietly swapped in
+a different one would leave them looking at something they did not choose with nothing on screen to
+say so. The same behaviour that is honest at a terminal is invisible in a viewer.
+
+So the client resolves and SHOWS. `ProjectService.ResolveDesign` gives the viewer the design, its
+project, and its declared entry; the project bar states which project is in effect and, when the open
+file is a companion, says that analysis reads the entry instead. Acting on it stays the user's move.
+
+**What this is not.** It is not a gap waiting to be closed by making the loader smarter, and it is not
+a claim that silent resolution is wrong in general — the CLI does exactly that. It is a claim that
+"resolve silently" and "resolve visibly" are different features, and which one is correct depends on
+whether the surface can afford to say what it did.
+
+**Reopen if** a served surface appears that has no way to display a notice and genuinely needs the
+redirect — a headless API consumer, say. Even then the answer is more likely a field on the response
+saying which artifact was read than a loader that swaps files without telling anyone.

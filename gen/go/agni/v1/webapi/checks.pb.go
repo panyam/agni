@@ -106,7 +106,20 @@ func (x *CheckDesignRequest) GetUri() string {
 type OverlayConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// conventions is the operator naming convention this run applies. Absent means the engine defaults.
-	Conventions   *NamingConvention `protobuf:"bytes,1,opt,name=conventions,proto3" json:"conventions,omitempty"`
+	Conventions *NamingConvention `protobuf:"bytes,1,opt,name=conventions,proto3" json:"conventions,omitempty"`
+	// ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
+	// project: no project conventions, profiles, parameters, or intent.
+	//
+	// It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
+	// real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
+	// re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
+	// was the project's. Without it the only way to see the built-in catalog would be to move the
+	// design out of its project, which nobody is going to do to answer a question.
+	//
+	// It does NOT disable a convention the request itself carries. Those are different acts: one says
+	// "ignore what my project declares", the other says "use this instead", and a caller doing both
+	// means both.
+	IgnoreProject bool `protobuf:"varint,3,opt,name=ignore_project,json=ignoreProject,proto3" json:"ignore_project,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -146,6 +159,13 @@ func (x *OverlayConfig) GetConventions() *NamingConvention {
 		return x.Conventions
 	}
 	return nil
+}
+
+func (x *OverlayConfig) GetIgnoreProject() bool {
+	if x != nil {
+		return x.IgnoreProject
+	}
+	return false
 }
 
 // NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It
@@ -1454,9 +1474,10 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x12CheckDesignRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"S\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"z\n" +
 	"\rOverlayConfig\x12B\n" +
-	"\vconventions\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\"\x91\x01\n" +
+	"\vconventions\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12%\n" +
+	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProject\"\x91\x01\n" +
 	"\x10NamingConvention\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\alexicon\x18\x02 \x01(\v2\x1d.agni.v1.webapi.NamingLexiconR\alexicon\x120\n" +

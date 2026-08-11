@@ -105,6 +105,19 @@ message CheckDesignRequest {
 message OverlayConfig {
   // conventions is the operator naming convention this run applies. Absent means the engine defaults.
   NamingConvention conventions = 1;
+  // ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
+  // project: no project conventions, profiles, parameters, or intent.
+  //
+  // It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
+  // real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
+  // re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
+  // was the project's. Without it the only way to see the built-in catalog would be to move the
+  // design out of its project, which nobody is going to do to answer a question.
+  //
+  // It does NOT disable a convention the request itself carries. Those are different acts: one says
+  // "ignore what my project declares", the other says "use this instead", and a caller doing both
+  // means both.
+  bool ignore_project = 3;
   // Reserved for the registry indirection: a stable id a server-side provider resolves to a
   // NamingConvention, for deployments that share one house convention across many requests rather than
   // sending it each time. Not wired yet, so it is not declared yet.

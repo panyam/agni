@@ -189,3 +189,56 @@ func contains(hay []string, want string) bool {
 }
 
 var _ = check.Rule{}
+
+// TestIgnoreProjectYieldsTheBuiltInCatalog: a reviewer asking "is this finding the engine's opinion
+// or my project's" answers it by subtraction, so the opt-out has to produce EXACTLY what a design in
+// no project produces — not a filtered approximation of it.
+func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
+	r := resolverFor(map[string]*webapi.Project{
+		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+	})
+	owned, _ := artifact.Parse("mount://m/acme/board.edn")
+	ctx := context.Background()
+
+	plain, err := r.Overlay(ctx, owned, &webapi.OverlayConfig{IgnoreProject: true}, Overlay{}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := sourceNames(plain); len(names) != 0 {
+		t.Errorf("ignore_project composed %v, want the built-in catalog only", names)
+	}
+	if plain.Lexicon != nil {
+		t.Error("ignore_project must not leave the project's vocabulary in effect")
+	}
+
+	// It is the same answer a design in no project gets, which is what makes the comparison honest.
+	loose, _ := artifact.Parse("mount://m/loose/board.edn")
+	unowned, err := r.Overlay(ctx, loose, nil, Overlay{}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sourceNames(plain)) != len(sourceNames(unowned)) {
+		t.Errorf("ignore_project = %v but an unparented design = %v; they must agree", sourceNames(plain), sourceNames(unowned))
+	}
+}
+
+// TestIgnoreProjectKeepsTheRequestsOwnConvention: "ignore what my project declares" and "use this
+// instead" are different acts, and a caller doing both means both.
+func TestIgnoreProjectKeepsTheRequestsOwnConvention(t *testing.T) {
+	r := resolverFor(map[string]*webapi.Project{
+		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+	})
+	u, _ := artifact.Parse("mount://m/acme/board.edn")
+	ov, err := r.Overlay(context.Background(), u,
+		&webapi.OverlayConfig{IgnoreProject: true, Conventions: conventionNaming("mine", "^MINE_")}, Overlay{}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := sourceNames(ov)
+	if !contains(names, "mine") {
+		t.Errorf("composed %v, want the request's own convention", names)
+	}
+	if contains(names, "acme") {
+		t.Errorf("composed %v, which still includes the project's", names)
+	}
+}

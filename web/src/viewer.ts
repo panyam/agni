@@ -1,10 +1,12 @@
 import { Code, ConnectError, type Client } from "@connectrpc/connect";
+import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
 import { artifactUri, uriPath } from "./uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
+import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
 import { OverlayConfigSchema, type NamingConvention, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
@@ -126,6 +128,10 @@ export interface ViewSink {
   // Optional like the panels; setConvention no-ops when it is absent, so a host that offers no
   // convention picker simply always uses the server's default.
   conventionBar?: ConventionBarView;
+  // projectBar states which project the open design resolved to and whether the built-in catalog is
+  // in effect (agni issue 175). Optional like the rest: a host without it simply never says, which is
+  // the pre-project behaviour.
+  projectBar?: ProjectBarView;
 }
 
 // ViewerPresenter coordinates the viewer's semantic loop: a file selected in the tree is
@@ -363,6 +369,10 @@ export class ViewerPresenter {
       if (!d.nativeAvailable && this.mode === "native") this.mode = "svg";
       this.nativeAvailable = d.nativeAvailable;
       this.pushControls();
+      // Resolve the project as soon as the design is known, before the report and parts work. Whose
+      // config is in effect is something a reader needs while the rest is still loading, and it is
+      // what the pickers below are filtered by.
+      await this.resolveProject();
       const target = (wantSheet && d.sheets.find((s) => s.id === wantSheet)) || d.sheets[0];
       this.pushSheets(target?.id ?? "");
       if (target) await this.showSheet(target.id);
@@ -377,7 +387,7 @@ export class ViewerPresenter {
       await this.refreshReport(); // the auto-layout conversion report is not a check — still eager
       await this.refreshParts(); // the datasheet-params join is a per-design read, not a check
       // One directory listing feeds the convention picker and the review checklist picker.
-      this.conventionChoices = this.views.conventionBar || this.views.review ? await this.yamlSiblings() : [];
+      this.conventionChoices = this.views.conventionBar || this.views.review ? await this.pickerChoices() : [];
       this.pushConvention();
       await this.refreshReviews(); // stored review runs for this design, so a reviewed board opens on its latest verdict
     } catch (e) {
@@ -572,8 +582,72 @@ export class ViewerPresenter {
   // cannot forget: the three call sites that run rules all go through it, and a fourth added later
   // that did not would be visibly different from its neighbours.
   private overlay(): OverlayConfig | undefined {
-    if (!this.convention) return undefined;
-    return create(OverlayConfigSchema, { conventions: this.convention });
+    if (!this.convention && !this.projectState.plain) return undefined;
+    return create(OverlayConfigSchema, {
+      conventions: this.convention ?? undefined,
+      // ignore_project is the "show me the built-in catalog" choice. It rides on every rule-running
+      // request rather than being applied once, because each surface composes its own overlay: a
+      // toggle that reached the check panel but not the rules list would show findings from one
+      // catalog beside the rule set of another.
+      ignoreProject: this.projectState.plain,
+    });
+  }
+
+  // resolveProject asks which project the open design belongs to and pushes the answer to the bar.
+  //
+  // The viewer resolves and SHOWS, rather than the server's loader silently swapping in the design's
+  // entry. That was the open question from the resource work, and the browser is what settles it: the
+  // CLI can print a line saying which file it actually read, and a silent swap in a viewer has no
+  // equivalent — the user picked a file in a tree and would be looking at a different one.
+  private async resolveProject(): Promise<void> {
+    if (!this.views.projectBar && !this.views.review && !this.views.conventionBar) return;
+    const plain = this.projectState.plain;
+    this.projectState = { ...emptyProject(), plain, busy: true };
+    this.pushProject();
+    if (!this.projects || !this.mount || !this.path) {
+      this.projectState = { ...emptyProject(), plain };
+      this.pushProject();
+      return;
+    }
+    const uri = artifactUri(this.mount, this.path);
+    try {
+      const resp = await this.projects.resolveDesign({ uri });
+      const d = resp.design;
+      this.projectState = {
+        ...emptyProject(),
+        plain,
+        project: resp.project?.name ?? "",
+        title: resp.project?.title ?? "",
+        design: d?.name ?? "",
+        entry: d?.entryUri ?? "",
+        // A design that resolved to nothing has no entry to differ from, so the file the user opened
+        // is trivially the one being read.
+        namedIsEntry: !d || d.entryUri === "" || d.entryUri === uri,
+      };
+      this.projectResolved = resp;
+    } catch (e) {
+      this.projectState = { ...emptyProject(), plain, error: messageOf(e) };
+      this.projectResolved = undefined;
+    }
+    this.pushProject();
+  }
+
+  private pushProject(): void {
+    this.views.projectBar?.setState(this.projectState);
+  }
+
+  // setPlainCatalog switches between this design's project config and the built-in catalog, then
+  // re-runs whatever is on screen. Re-running is the point: the toggle answers "whose rules are
+  // these" by subtraction, and subtraction needs the second run.
+  async setPlainCatalog(plain: boolean): Promise<void> {
+    if (this.projectState.plain === plain) return;
+    this.projectState = { ...this.projectState, plain };
+    this.pushProject();
+    // The rule LIST is recomposed too, not just the findings. A toggle that changed which rules ran
+    // but left the panel listing the other catalog's rules would show findings from one and the rule
+    // set of another, which is the drift the toggle exists to make visible.
+    await this.loadRules(this.mount, this.path);
+    await this.runChecks();
   }
 
   // setConvention resolves a stored convention config and applies it to subsequent runs, or clears
@@ -641,6 +715,10 @@ export class ViewerPresenter {
 
   // conventionChoices are the convention configs found beside the open design, filled on load.
   private conventionChoices: ChecklistOption[] = [];
+  // projectState is what the project bar shows, and projectResolved is the resolution it came from,
+  // kept so the pickers can offer what the PROJECT declares rather than every YAML beside the design.
+  private projectState: ProjectState = emptyProject();
+  private projectResolved?: ResolveDesignResponse;
 
   // ---- Review (WS9-052) ----------------------------------------------------------------------
   //
@@ -685,6 +763,32 @@ export class ViewerPresenter {
       else this.reviewState.error = messageOf(e);
     }
     this.pushReview();
+  }
+
+  // pickerChoices are the config files the convention and checklist pickers offer.
+  //
+  // When the design resolves to a project, they are what the PROJECT DECLARES — because it does
+  // declare them, and a declaration beats a guess. Before this the pickers listed every YAML sitting
+  // beside the design and could not tell which were really their own kind, so they offered
+  // design-intent files and descriptors that could never resolve; conventionbar's own doc called
+  // choosing one "an EXPECTED path, not an edge case".
+  //
+  // A design with no project falls back to listing the siblings, which is the honest answer: nothing
+  // declared anything, so the picker cannot know, and offering a file that turns out not to be a
+  // checklist costs one clear error where hiding a real one costs a user their own file.
+  private async pickerChoices(): Promise<ChecklistOption[]> {
+    const declared = this.declaredChoices();
+    return declared.length > 0 ? declared : this.yamlSiblings();
+  }
+
+  // declaredChoices are the project's own config files, as options.
+  private declaredChoices(): ChecklistOption[] {
+    const p = this.projectResolved?.project;
+    if (!p) return [];
+    const out: ChecklistOption[] = [];
+    if (p.checklistUri) out.push({ ref: uriPath(p.checklistUri), label: baseOf(p.checklistUri) });
+    for (const uri of p.profileUris ?? []) out.push({ ref: uriPath(uri), label: baseOf(uri) });
+    return out;
   }
 
   // yamlSiblings lists the design's own directory and keeps the YAML files. It deliberately does not
@@ -1108,4 +1212,11 @@ function isStoreUnconfigured(e: unknown): boolean {
 // messageOf pulls a human-readable message off a thrown value for inline display.
 function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+// baseOf is the final path element of an artifact URI, for a picker label.
+function baseOf(uri: string): string {
+  const p = uriPath(uri);
+  const i = p.lastIndexOf("/");
+  return i < 0 ? p : p.slice(i + 1);
 }
