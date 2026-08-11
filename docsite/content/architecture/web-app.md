@@ -198,6 +198,16 @@ and stacks it over the same frame.
   sheet, the render mode, the layout, and symbol paths. A directory is the same path with a
   trailing slash. The presenter reports location changes and the composition root reflects them
   into the browser URL.
+- **The composition root is tested, because everything else being tested is what hid its bugs.**
+  Every other web test constructs its subject with collaborators supplied. `main.ts` is the one
+  thing nothing constructs: it resolves each island hole, builds each client, and assembles the
+  presenter. Twice that gap shipped a feature that was green in CI and inert in the browser, once
+  because a client was never passed and once because a view was never wired. `web/src/composition.test.ts`
+  boots the real entry point under jsdom against the real `ViewerPage.html`, replays a design URL
+  through the restore loop with stubbed transport, and asserts three things: every island hole the
+  page declares gets mounted, every port `ViewSink` declares gets a view, and every client gets used.
+  It asserts wiring only. Nothing rendered is checked, because jsdom does not render; the flows that
+  need a real browser are tracked in agni issue 136.
 - **The diff view** is side-by-side synced panes, a changes panel with click-to-locate, and an
   overlay (union) mode gated by an alignment check. Netlist-only formats, whose auto-layout node
   positions shift between revisions, refuse the overlay by design, while faithful-geometry
