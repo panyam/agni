@@ -165,7 +165,7 @@ const (
 // classifies errors for the transport.
 //
 // It is AIP-shaped with GET and LIST only, no mutators — the read-only-resource case in CONSTRAINTS
-// C23. What earns it a resource name rather than a (mount, ref) pair is that a project's identity is
+// C23. What earns it a resource name rather than an artifact URI is that a project's identity is
 // DECLARED by an operator rather than derived from its path, so the name survives the folder being
 // renamed or moved between mounts, and so reviews can later be parented by it.
 //

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { uriPath } from "./uri.js";
+import { artifactUri, uriPath } from "./uri.js";
 import { fileTreeIsland } from "./filetree.jsx";
 import type { SheetsState } from "./sheets.js";
 
@@ -23,8 +23,8 @@ vi.mock("./api.js", () => ({
   }),
 }));
 
-const dir = (name: string, path: string) => ({ name, path, isDir: true, format: "" });
-const file = (name: string, path: string, format = "edif") => ({ name, path, isDir: false, format });
+const dir = (name: string, path: string) => ({ name, uri: artifactUri("m", path), isDir: true, format: "" });
+const file = (name: string, path: string, format = "edif") => ({ name, uri: artifactUri("m", path), isDir: false, format });
 
 function mountTree() {
   const handlers = {

@@ -73,16 +73,16 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   const getReviewManifest = vi.fn(async (_req: { mount: string; ref: string }) => ({
     manifest: { name: "Gateway ECU review", areas: [] },
   }));
-  const createReview = vi.fn(async (_req: { mount: string; designRef: string; manifest: unknown }) =>
+  const createReview = vi.fn(async (_req: { designUri: string; manifest: unknown }) =>
     doc("reviews/r3", "2026-08-11T08:00:00Z", ["pass", "pass", "fail"]),
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reviews = { listReviews, getReviewManifest, createReview } as any;
   const listDir = vi.fn(async (_req: { uri: string }) => ({
     entries: [
-      { name: "board.edn", path: "proj/board.edn", isDir: false, format: "edif" },
-      { name: "review.yaml", path: "proj/review.yaml", isDir: false, format: "" },
-      { name: "profiles", path: "proj/profiles", isDir: true, format: "" },
+      { name: "board.edn", uri: "mount://m/proj/board.edn", isDir: false, format: "edif" },
+      { name: "review.yaml", uri: "mount://m/proj/review.yaml", isDir: false, format: "" },
+      { name: "profiles", uri: "mount://m/proj/profiles", isDir: true, format: "" },
     ],
   }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -228,8 +228,7 @@ describe("review presenter — creating", () => {
     await h.presenter.createReview();
     expect(h.getReviewManifest).toHaveBeenCalledWith({ uri: artifactUri("m", "proj/review.yaml") });
     expect(h.createReview).toHaveBeenCalledWith({
-      mount: "m",
-      designRef: "proj/board.edn",
+      designUri: artifactUri("m", "proj/board.edn"),
       manifest: { name: "Gateway ECU review", areas: [] },
     });
     const s = lastState(h.onReview);
@@ -248,7 +247,7 @@ describe("review presenter — creating", () => {
     const sent = h.createReview.mock.calls[0][0];
     expect(sent.manifest).toBeDefined();
     expect(Object.keys(sent)).not.toContain("manifestPath");
-    expect(sent.designRef).toBe("proj/board.edn");
+    expect(sent.designUri).toBe(artifactUri("m", "proj/board.edn"));
   });
 
   it("reports a bad checklist inline and keeps the existing history", async () => {

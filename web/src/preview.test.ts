@@ -49,8 +49,7 @@ describe("DesignPreview", () => {
     // from hard-coding a layout and silently drawing every design as a netlist graph.
     expect(h.getDesign).toHaveBeenCalledWith({ uri: artifactUri("corpus", "boards/amp.kicad_sch"), layout: "" });
     expect(h.getSheet).toHaveBeenCalledWith({
-      mount: "corpus",
-      path: "boards/amp.kicad_sch",
+      uri: artifactUri("corpus", "boards/amp.kicad_sch"),
       sheet: "s1",
       layout: "",
       format: SheetFormat.SVG,

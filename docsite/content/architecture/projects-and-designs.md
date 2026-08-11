@@ -99,6 +99,12 @@ design-folder-relative paths, and the upward walk are all facts about one storag
 in `internal/projects`, and nothing above the port imports it — including the CLI, which reaches
 projects through the same `ProjectService` a browser does.
 
+Artifacts are named by a single URI, `mount://<mount>/<path>`, so a design's entry and its companions
+are one string each rather than a mount paired with a path (see
+[C22](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md)). Resource names are the other system
+and stay AIP paths: `projects/gateway` names an identity that survives the folder moving, where a URI
+names where the bytes are.
+
 The shipped store is built on `fs.FS`, which makes containment **structural** rather than checked:
 an `fs.FS` has no parent to climb into, so an upward resolution walk stops at the tree root and a ref
 carrying `..` never opens a file at all. The CLI uses that property rather than a special case. It

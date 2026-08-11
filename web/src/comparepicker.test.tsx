@@ -13,7 +13,7 @@ vi.mock("./api.js", () => ({
   }),
 }));
 
-const file = (name: string, path: string, format = "kicad") => ({ name, path, isDir: false, format });
+const file = (name: string, path: string, format = "kicad") => ({ name, uri: artifactUri("m", path), isDir: false, format });
 
 function mountPicker() {
   const host = document.createElement("div");
@@ -80,7 +80,7 @@ describe("comparePickerIsland", () => {
 
     buttonFor(treeEl, "b.kicad_sch")?.click();
 
-    expect(onPick).toHaveBeenCalledWith({ uri: artifactUri("m", "b.kicad_sch") });
+    expect(onPick).toHaveBeenCalledWith({ mount: "m", path: "b.kicad_sch" });
     expect(picker.isOpen()).toBe(false);
     expect(host.classList.contains("on")).toBe(false);
   });
@@ -129,6 +129,6 @@ describe("comparePickerIsland", () => {
     await settle();
 
     buttonFor(treeEl, "a.kicad_sch")?.click();
-    expect(onPick).toHaveBeenCalledWith({ uri: artifactUri("m", "a.kicad_sch") });
+    expect(onPick).toHaveBeenCalledWith({ mount: "m", path: "a.kicad_sch" });
   });
 });
