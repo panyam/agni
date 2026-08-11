@@ -226,3 +226,39 @@ only about the case where there is nothing to read.
 **Reopen if** a deployment turns up where the loose-file case is the common one rather than the
 exception, and the list is long enough that the right file is genuinely hard to find. The fix then is
 probably to make the server classify a directory in one rpc, not to guess better in the browser.
+
+---
+
+## The project store revalidates on read rather than watching the filesystem
+
+**Question.** `internal/projects.FSStore` re-walked its mounts on every call, ~19 ms on a mount with a
+few hundred directories, which a browse UI pays on every listing (agni issue 176). That issue offered
+two ways out: a filesystem watch, or a cache that still stats what it depends on before answering.
+A watch is strictly faster, since a warm answer costs nothing at all. Why take the slower one?
+
+**Answer. Because the two fail differently, and only one of them fails loudly.** A watch is correct
+exactly as long as every event is delivered. When one is dropped — an editor writing through a
+temporary file, a network mount, a container bind mount, a platform limit on watched descriptors —
+the cache goes stale and there is no way to notice. The answer is confident, wrong, and identical in
+every observable way to a correct one. Worse, it is unfalsifiable after the fact: nothing in a
+findings list records which version of a descriptor produced it.
+
+Revalidate-on-read can only ever be as wrong as the filesystem is. It re-stats every dependency
+before returning, so an operator editing a descriptor while the server runs is seen on the very next
+request, which is the property issue 176 required of any cache here. The cost of that choice is
+measured rather than assumed: the largest case tested lands at 1.2 ms against ~0 ms for a watch,
+versus 19 ms for no cache at all. Buying the last millisecond with a silent-staleness risk is the
+wrong trade in a tool whose entire value is that its answers can be trusted.
+
+The stats are cheap for a structural reason worth keeping in mind if this is ever revisited: a stat
+is a fraction of a `ReadDir` and comparing a stat is a fraction of parsing YAML, so the revalidation
+is cheap exactly where the work is expensive. That is what makes the safe option affordable.
+
+**What this is not.** It is not a claim that watches are wrong in general, and not a rule about
+caching elsewhere. `cmd/agni/osprojectconfig.go` holds no cache at all for the same freshness reason
+and would copy this shape, not reopen this trade, if a deployment ever felt its cost.
+
+**Reopen if** a deployment appears where 1.2 ms per listing is genuinely the bottleneck AND the
+mounts are on a filesystem whose event delivery can be trusted. Even then the answer is more likely
+a watch that INVALIDATES the existing revalidating cache (turning a stat into a no-op on the common
+path while a dropped event costs only a stat, not a stale answer) than a watch the cache believes.

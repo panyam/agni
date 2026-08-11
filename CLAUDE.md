@@ -131,6 +131,22 @@ tracked and world-readable. A parked section sat there for months in exactly tha
 something to `_hidden/` is a publishing decision and never a confidentiality one. Anything genuinely
 sensitive has to leave the repo and its history.
 
+## Web viewer wiring
+
+**FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island
+(`web/src/<panel>.tsx`), its hole in `web/templates/ViewerPage.html` (`data-component="..."`), its
+field on `ViewSink` in `web/src/viewer.ts`, and its construction plus wiring in `web/src/main.ts`.
+
+`main.ts` is the composition root and nothing else constructs it, so a missed fourth edit is invisible
+to every other test: the presenter's view ports are OPTIONAL by design (an embedding host may leave a
+panel out, see `build/overlay.md`), which means an unwired port is a silent no-op rather than a type
+error. That has shipped a green-CI, broken-in-the-browser feature twice, once with a client never
+passed and once with a view never wired.
+
+`web/src/composition.test.ts` now boots the real `main.ts` under jsdom against the real page and fails
+on any of those omissions, so let the test tell you what you forgot. Read its header comment before
+changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
+
 ## Parallel development across multiple checkouts
 
 Concurrent sessions work against separate clones (or worktrees) of this repo, one per lane of work.
@@ -214,6 +230,12 @@ and cold in the other. These sections exist so a PR is reviewable by both.
   showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),
   `examples/tutorial-project/`, or a tiny hand-authored fixture. **Never from a real customer
   board**, for the reasons below.
+  A browser-automation screenshot lands in the CWD, which is the REPO ROOT, and a bare `.png` there
+  is not ignored (`bin/` and `.playwright-mcp/` are). Move captures out of the tree before staging
+  and stage by explicit path, or a stray screenshot rides into a public repo on a directory `add`.
+  To embed the pair in the PR body, use the committed-asset + pinned-raw-URL pattern from the global
+  CLAUDE.md: commit to `pr-assets/`, reference `.../raw/<full-SHA>/pr-assets/x.png`, then `git rm` it
+  in a follow-up commit so it never reaches `main`.
 
 ## Architectural constraints
 
