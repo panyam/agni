@@ -343,7 +343,11 @@
     .convbar-active { color: #666; }
     .convbar-overridden { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; }
     .convbar-overridden .convbar-active { color: #b45309; font-weight: 600; }
-    .convbar-error { color: #b91c1c; font-weight: 600; }
+    /* The message is the server's own and can run long (a YAML error names a file, a line, and a
+       field), so it is bounded and ellipsised here rather than truncated in the code: the title
+       carries the full text, and clipping in CSS keeps every character available to a hover while
+       the top bar keeps its height. */
+    .convbar-error { color: #b91c1c; font-weight: 600; max-width: 52ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* WS9-052 review panel: the project's checklist verdict over the stored runs (WS9-053). */
     .review { padding: 4px; font-size: 12px; }
