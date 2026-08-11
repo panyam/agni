@@ -44,11 +44,11 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	if err != nil {
 		return nil, err
 	}
-	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs, ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

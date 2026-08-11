@@ -32,7 +32,7 @@ func queryDesign() *ir.Design {
 }
 
 func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri:   "mount://m/x.edn",
 		Query: `component-on-net(?r,?n) => ?r, ?n`,
@@ -68,7 +68,7 @@ func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
 // "component", a net column is "net", and anything else (an mpn string, a scalar) is "". It is
 // returned for the query shape regardless of whether any row matched (WS9-038).
 func TestRunQueryColumnKinds(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	cases := []struct {
 		query string
 		want  []string
@@ -100,7 +100,7 @@ func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 		{Id: "s1"},
 		{Id: "s2", Placements: []*geom.SymbolPlacement{{RefDes: "R1"}}},
 	}}
-	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: g}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
@@ -123,7 +123,7 @@ func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 func TestRunQueryNetCellSheetsFromNetlist(t *testing.T) {
 	d := queryDesign()
 	d.Nets[0].Attributes = map[string]string{netgraph.AttrSheets: netgraph.EncodeSheets([]string{"s1", "s2"})}
-	svc := NewQueryService(fakeLoader{design: d}, nil) // no geometry
+	svc := NewQueryService(fakeLoader{design: d}, nil, nil) // no geometry
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
@@ -155,7 +155,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 		Placements: []*geom.SymbolPlacement{{RefDes: "R1"}, {RefDes: "U1"}},
 		Wires:      []*geom.WireGeometry{{Net: "SIG"}},
 	}}}
-	svc := NewQueryService(fakeLoader{design: d, geom: g}, nil)
+	svc := NewQueryService(fakeLoader{design: d, geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/x.kicad_sch", Query: `component-on-net(?r,?n) => ?r, ?n`,
 	})
@@ -189,7 +189,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 // A typo'd relation name reaches the panel/CLI as an invalid-argument whose message suggests the
 // closest catalog relation (WS14-003) — teaching the vocabulary at the point of the mistake.
 func TestRunQueryUnknownRelationSuggests(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/x.edn", Query: "compnent-on-net(?r,?n) => ?r",
 	})
@@ -202,7 +202,7 @@ func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 }
 
 func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n =>`,
 	})
@@ -212,7 +212,7 @@ func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
 }
 
 func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri:   "mount://m/x.edn",
 		Query: `component-on-net(?r,?n), ?n = "NOSUCHNET" => ?r`,
@@ -226,7 +226,7 @@ func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 }
 
 func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
-	svc := NewQueryService(fakeLoader{err: errors.New("no netlist")}, nil)
+	svc := NewQueryService(fakeLoader{err: errors.New("no netlist")}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.eds", Query: `component-on-net(?r,?n) => ?r`})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for an unloadable design", err)
@@ -234,7 +234,7 @@ func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 }
 
 func TestRunQueryNotFoundPropagates(t *testing.T) {
-	svc := NewQueryService(fakeLoader{err: ErrNotFound}, nil)
+	svc := NewQueryService(fakeLoader{err: ErrNotFound}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://bad/x.edn", Query: `component-on-net(?r,?n) => ?r`})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound to pass through", err)
@@ -242,7 +242,7 @@ func TestRunQueryNotFoundPropagates(t *testing.T) {
 }
 
 func TestListRelationsReturnsCatalog(t *testing.T) {
-	svc := NewQueryService(fakeLoader{}, nil) // no design needed — the catalog is static
+	svc := NewQueryService(fakeLoader{}, nil, nil) // no design needed — the catalog is static
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -272,7 +272,7 @@ func TestListRelationsReturnsCatalog(t *testing.T) {
 }
 
 func TestListRelationsIncludesExamples(t *testing.T) {
-	svc := NewQueryService(fakeLoader{}, nil)
+	svc := NewQueryService(fakeLoader{}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -291,7 +291,7 @@ func TestListRelationsIncludesExamples(t *testing.T) {
 // relation renamed out from under an example fails here (RunQuery returns InvalidArgument on a bad
 // relation), not silently in the panel.
 func TestExamplesEvaluate(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -307,7 +307,7 @@ func TestExamplesEvaluate(t *testing.T) {
 
 // guard: the malformed-query message reaches the caller (the panel shows it inline).
 func TestRunQueryParseErrorMessagePreserved(t *testing.T) {
-	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: `!!!`})
 	if err == nil || strings.TrimSpace(err.Error()) == "" {
 		t.Fatalf("want a non-empty parse error message, got %v", err)
@@ -362,7 +362,7 @@ func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
 // is a loop of writing a pattern and asking which nets are rails now, and query is the tool for that
 // loop.
 func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
-	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil)
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil, nil)
 	ask := func(ov *webapi.OverlayConfig) []string {
 		t.Helper()
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -393,7 +393,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 // compile into a catalog must still answer, because a query composes no catalog at all — the
 // alternative is refusing a config that is fine for the question being asked.
 func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
-	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil)
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil, nil)
 	conv := houseConvention(t)
 	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
 	conv.Rules = append(conv.Rules, &webapi.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})

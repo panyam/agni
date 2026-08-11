@@ -39,6 +39,14 @@ const (
 type projectYAML struct {
 	Name  string `yaml:"name"`
 	Title string `yaml:"title"`
+	// The config this project owns. Each is OPTIONAL and defaults to the conventional name beside
+	// `project.yaml` (see defaultProjectConfig), so the layout a review project already takes needs
+	// no declaration at all. Declaring is for the cases convention cannot express: a conventions file
+	// shared by several projects, a differently-named checklist, or opting out with an empty value.
+	Conventions *string `yaml:"conventions"`
+	Profiles    *string `yaml:"profiles"`
+	Params      *string `yaml:"params"`
+	Checklist   *string `yaml:"checklist"`
 }
 
 type designYAML struct {
@@ -46,6 +54,47 @@ type designYAML struct {
 	Title      string   `yaml:"title"`
 	Entry      string   `yaml:"entry"`
 	Companions []string `yaml:"companions"`
+	// Intent is this design's declared architecture, optional and defaulting to `intent.yaml` beside
+	// the descriptor. It is per-DESIGN because each board has its own intended architecture, where
+	// conventions and profiles describe the team.
+	Intent *string `yaml:"intent"`
+}
+
+// The conventional names a project's config takes when `project.yaml` declares none. They are the
+// layout `examples/tutorial-project` already uses, so convention covers the ordinary case and
+// declaration is only needed to depart from it.
+const (
+	defaultConventions = "conventions.yaml"
+	defaultProfiles    = "profiles"
+	defaultParams      = "params"
+	defaultChecklist   = "review.yaml"
+	defaultIntent      = "intent.yaml"
+)
+
+// ProjectConfigNames is what a parsed project descriptor says its config is called, before anything
+// checks whether those files exist. An empty entry means the project opted OUT of that tier, which is
+// distinct from "not declared, so use the default".
+type ProjectConfigNames struct {
+	Conventions string
+	Profiles    string
+	Params      string
+	Checklist   string
+}
+
+// ConfigNames resolves a project descriptor's declarations against the defaults.
+func (y projectYAML) configNames() ProjectConfigNames {
+	pick := func(declared *string, fallback string) string {
+		if declared == nil {
+			return fallback
+		}
+		return CleanRel(*declared)
+	}
+	return ProjectConfigNames{
+		Conventions: pick(y.Conventions, defaultConventions),
+		Profiles:    pick(y.Profiles, defaultProfiles),
+		Params:      pick(y.Params, defaultParams),
+		Checklist:   pick(y.Checklist, defaultChecklist),
+	}
 }
 
 // idPattern is what a project or design id may look like. It is the AIP-122 resource-id shape
@@ -68,15 +117,24 @@ var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 // hand-writes and then trusts, so a misspelled key that silently does nothing is the failure mode
 // worth spending strictness on: the operator believes they configured something and no message says
 // otherwise.
-func ParseProject(r io.Reader) (id string, p *webapi.Project, err error) {
+func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfigNames, err error) {
 	var y projectYAML
 	if err := decodeStrict(r, &y); err != nil {
-		return "", nil, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 	}
 	if err := validID("name", y.Name); err != nil {
-		return "", nil, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 	}
-	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name)}, nil
+	names = y.configNames()
+	for field, rel := range map[string]string{"conventions": names.Conventions, "profiles": names.Profiles, "params": names.Params, "checklist": names.Checklist} {
+		if rel == "" {
+			continue
+		}
+		if err := validRel(field, rel); err != nil {
+			return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+		}
+	}
+	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name)}, names, nil
 }
 
 // ParseDesign reads a `design.yaml`, returning the declared id and the wire message, with the same
@@ -120,6 +178,14 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 		}
 		seen[clean] = true
 		out.CompanionUris = append(out.CompanionUris, clean)
+	}
+	if y.Intent == nil {
+		out.IntentUri = defaultIntent
+	} else if clean := CleanRel(*y.Intent); clean != "" {
+		if err := validRel("intent", clean); err != nil {
+			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
+		}
+		out.IntentUri = clean
 	}
 	return y.Name, out, nil
 }

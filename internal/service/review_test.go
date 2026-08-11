@@ -74,7 +74,7 @@ func outcomeOf(rv *webapi.Review, id string) (string, bool) {
 
 func newReviewSvc() *ReviewService {
 	base := filepath.Join("..", "..", "cmd", "agni", "testdata")
-	return NewReviewService(fsReviewLoader{base: base}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "")
+	return NewReviewService(fsReviewLoader{base: base}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
 }
 
 // fixtureManifest reads a checklist fixture and returns its WIRE form, which is how a manifest now
@@ -280,7 +280,7 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	}}}}
 	cat := check.CatalogWith(profiles.Source("t", []profiles.Profile{p}))
 	byName := map[string][]profiles.Profile{p.Name: {p}}
-	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), cat, byName, nil, testReviewEnv, "")
+	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), cat, byName, nil, testReviewEnv, "", nil)
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d"})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -414,7 +414,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 		srcs = append(srcs, profiles.Source("profile-overlay", ps[1:]))
 	}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), check.CatalogWith(srcs...),
-		map[string][]profiles.Profile{name: ps}, nil, testReviewEnv, "")
+		map[string][]profiles.Profile{name: ps}, nil, testReviewEnv, "", nil)
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d"})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -428,7 +428,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 // naming different conventions, must each see their own. Run concurrently and repeatedly so a shared
 // mutable vocabulary would show up as a race or a flipped outcome rather than passing by luck.
 func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
-	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "")
+	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
 	req := func(conventions string) *webapi.CreateReviewRequest {
 		r := &webapi.CreateReviewRequest{
 			Manifest:  fixtureManifest(t, "review/conv.yaml"),

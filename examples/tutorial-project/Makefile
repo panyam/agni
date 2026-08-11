@@ -13,13 +13,13 @@ DESIGN ?= gateway
 # the CLI could be pointed at.
 DIR = designs/$(DESIGN)
 
-# The overlay tiers. Each is passed only when this project actually has one, so a project that has
-# not written conventions yet still runs. The intent file is PER-DESIGN, unlike the others.
-PROFILE_FLAG     = $(if $(wildcard profiles/*.yaml),--profile-path profiles,)
-PARAMS_FLAG      = $(if $(wildcard params/*.textproto),--params params,)
-CONVENTIONS_FLAG = $(if $(wildcard conventions.yaml),--conventions conventions.yaml,)
-INTENT_FLAG      = $(if $(wildcard $(DIR)/intent.yaml),--intent-path $(DIR)/intent.yaml,)
-TIERS = $(PROFILE_FLAG) $(PARAMS_FLAG) $(CONVENTIONS_FLAG) $(INTENT_FLAG)
+# No tier flags. agni resolves this design to its project and reads the project's own conventions,
+# profiles, params, and the design's intent from beside the descriptors — so the config a board is
+# checked against is the config its team declared, not whatever the command line happened to carry.
+#
+# There used to be four --profile-path/--params/--conventions/--intent-path flags here, each guarded
+# by a wildcard so a project missing a tier still ran. That is what per-design config replaced.
+TIERS =
 
 .PHONY: help stats check review coverage diff report views check-views regen-views
 

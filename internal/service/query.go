@@ -22,8 +22,12 @@ import (
 // because serve wires no params dir and datasheet data stays deployment-bound (C16), so a query
 // over `param` yields no rows rather than an error.
 type QueryService struct {
-	loader Loader
-	eval   query.Evaluator
+	// projects resolves a design to its project and loads that project's config; nil when this
+	// deployment declares none. fallback is the deployment default used for a design with no project.
+	projects *ProjectResolver
+	fallback Overlay
+	loader   Loader
+	eval     query.Evaluator
 	// specs is the datasheet provider the model's param.* relations read (WS9-048), nil when serve
 	// ran without --params. Without it a query over param.* / component.device_class returned no rows
 	// while the CLI's `agni query --params` did — the same board/params drift BuildModel closes.
@@ -33,7 +37,7 @@ type QueryService struct {
 // NewQueryService returns a QueryService backed by the given loader and (optional) datasheet
 // provider, using the default naive datalog evaluator. Pass a nil provider when no datasheet corpus
 // is wired; the model's param.* relations then yield no rows (never an error).
-func NewQueryService(loader Loader, specs param.ParamProvider) *QueryService {
+func NewQueryService(loader Loader, specs param.ParamProvider, projects *ProjectResolver) *QueryService {
 	return &QueryService{loader: loader, eval: query.Naive{}, specs: specs}
 }
 
@@ -63,14 +67,14 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// keeps one conventions file carrying both halves, so refusing it over rules this call will never
 	// run would reject a config that is perfectly valid for the question being asked. There is no base
 	// convention to replace for the same reason: nothing here holds a catalog.
-	ov, err := ComposeOverlay(req.GetOverlay(), "")
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, "")
 	if err != nil {
 		return nil, err
 	}
 	// One FULL Model over the design (netlist + board + params, WS9-048): the query evaluator reads
 	// it, and the per-cell locate classifier (WS9-039) shares its indexes rather than re-scanning the
 	// raw IR. The board/params tiers back the board.* / param.* query relations, matching `agni query`.
-	model, err := BuildModel(ctx, s.loader, u, boardURI, s.specs, ov.ReadOptions()...)
+	model, err := BuildModel(ctx, s.loader, u, boardURI, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

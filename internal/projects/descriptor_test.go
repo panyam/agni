@@ -80,7 +80,7 @@ func TestParseDesignRejects(t *testing.T) {
 }
 
 func TestParseProject(t *testing.T) {
-	id, p, err := ParseProject(strings.NewReader("name: gateway\ntitle: Gateway program\n"))
+	id, p, _, err := ParseProject(strings.NewReader("name: gateway\ntitle: Gateway program\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,10 +90,10 @@ func TestParseProject(t *testing.T) {
 	if p.GetName() != "" {
 		t.Errorf("name = %q, want it left to the store", p.GetName())
 	}
-	if _, _, err := ParseProject(strings.NewReader("name: Gateway\n")); err == nil {
+	if _, _, _, err := ParseProject(strings.NewReader("name: Gateway\n")); err == nil {
 		t.Error("an id that is not a valid resource-name segment should be rejected")
 	}
-	if _, _, err := ParseProject(strings.NewReader("naem: gateway\n")); err == nil {
+	if _, _, _, err := ParseProject(strings.NewReader("naem: gateway\n")); err == nil {
 		t.Error("an unknown field should be rejected")
 	}
 }

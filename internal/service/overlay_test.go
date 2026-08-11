@@ -213,7 +213,7 @@ rules:
     severity: warning
     allow: ["^[A-Z][A-Z0-9_]*$"]
 `)
-	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir})
+	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir}, nil)
 	got, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Uri: "mount://m/house.yaml"})
 	if err != nil {
 		t.Fatalf("GetNamingConvention: %v", err)
@@ -245,7 +245,7 @@ func TestGetNamingConventionRejectsBadInput(t *testing.T) {
 	dir := t.TempDir()
 	writeConvention(t, dir, "bad-regex.yaml", "name: x\nrules:\n  - name: r\n    allow: [\"^(unclosed\"]\n")
 	writeConvention(t, dir, "bad-class.yaml", "name: x\nlexicon:\n  class:\n    not_a_real_class:\n      patterns: [\"^X\"]\n")
-	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir})
+	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir}, nil)
 	ctx := context.Background()
 	for name, ref := range map[string]string{
 		"empty ref":      "",
@@ -262,7 +262,7 @@ func TestGetNamingConventionRejectsBadInput(t *testing.T) {
 // TestGetNamingConventionNeedsALoader: a service built without a convention loader says so rather
 // than panicking. That is the CLI's construction, which reads its own config at the edge.
 func TestGetNamingConventionNeedsALoader(t *testing.T) {
-	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", nil)
+	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", nil, nil)
 	if _, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Uri: "mount://m/x.yaml"}); err == nil {
 		t.Error("want an error from a service with no convention loader")
 	}

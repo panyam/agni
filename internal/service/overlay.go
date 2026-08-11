@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -23,6 +25,14 @@ import (
 type Overlay struct {
 	Sources []check.RuleSource
 	Lexicon *classify.Lexicon
+	// Specs is the datasheet corpus this run checks part limits against, nil when there is none. It
+	// rides here because a project owns its parameters the same way it owns its profiles, so the two
+	// have to arrive together or a run could compose one team's rules against another's data.
+	Specs param.ParamProvider
+	// conventionName is the source name of the convention THIS overlay currently carries, whether it
+	// came from a project or from the deployment default. A request-supplied convention replaces it
+	// (WS3-124), and replacement is by name, so the name has to travel with the value.
+	conventionName string
 	// baseConvention is the catalog source name of the SERVER's startup convention (`--conventions`),
 	// empty when the caller composed no such default. Catalog drops it before splicing this request's
 	// own, which is what makes a request-supplied convention override rather than stack (WS3-124).
@@ -196,4 +206,118 @@ func vocabProto(v naming.VocabConfig) *webapi.VocabPatterns {
 		return nil
 	}
 	return &webapi.VocabPatterns{Patterns: v.Patterns, Replace: v.Replace}
+}
+
+// ProjectConfigLoader turns the config a project OWNS into the engine inputs a run needs. It is the
+// port that makes per-design config possible without putting file I/O in a service (C13): a project
+// names its profiles and parameters as URIs, and only an adapter can read them.
+//
+// It is modelled on ConventionLoader above it, and for the same reason. A convention arrives on the
+// Project message already resolved, because it is small and C22 wants config as a value; profiles
+// and parameters are DIRECTORIES of many files, so they arrive as URIs and are loaded here.
+//
+// A tier the project does not have is a ZERO VALUE, never an error. Most projects declare some of
+// this and not the rest, and a loader that failed on absence would make the ordinary case the error
+// path.
+type ProjectConfigLoader interface {
+	// ProjectConfig loads the rule sources and datasheet corpus a project supplies, plus the design's
+	// own declared intent.
+	//
+	// The design travels with the project because INTENT is per-design where the rest is per-project:
+	// each board has its own intended architecture, while conventions and profiles describe the team.
+	// Loading them together is what keeps a run from composing one design's intent against another's
+	// profiles, which two separate calls would eventually allow.
+	ProjectConfig(ctx context.Context, p *webapi.Project, d *webapi.Design) (ProjectConfig, error)
+}
+
+// ProjectConfig is what a project contributes to a run, as engine values.
+type ProjectConfig struct {
+	// Sources are the catalog extensions the project supplies: its interface profiles, and the rules
+	// half of its naming convention.
+	Sources []check.RuleSource
+	// Specs is the project's seeded datasheet corpus, nil when it has none. A nil provider is legal
+	// and means the datasheet-backed rules read needs-data rather than failing.
+	Specs param.ParamProvider
+}
+
+// OverlayFor composes the engine inputs for one design: the project's config where the design
+// resolves to one, and the caller's fallback where it does not.
+//
+// This is the whole point of the resource model, and the reason it is one function. Before it, the
+// config a run checked against came from `agni serve` startup flags, so a deployment mounting a
+// mixed set applied one team's config to every design it read — an overlay's profiles superseding
+// the built-ins for every board, an overlay's rail lexicon changing net roles on designs that never
+// asked. Both were correct in isolation and aimed at the wrong design.
+//
+// The fix is structural rather than a guard: a design that resolves to NO project gets no project
+// config, so it cannot be checked against another project's rules. There is no flag to forget.
+//
+// `fallback` is the deployment default (the serve flags), used only for a design with no project. It
+// keeps every existing single-project deployment working unchanged while making the mixed case
+// correct, which is what lets this land without a migration.
+//
+// A REQUEST's own overlay still wins over both. A caller that named its conventions is answering for
+// itself, and the project is the default it is overriding.
+func OverlayFor(ctx context.Context, loader ProjectConfigLoader, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
+	if p == nil {
+		return overlayWithRequest(req, fallback, baseConvention)
+	}
+	var o Overlay
+	if loader != nil {
+		cfg, err := loader.ProjectConfig(ctx, p, d)
+		if err != nil {
+			return Overlay{}, err
+		}
+		o.Sources = cfg.Sources
+		o.Specs = cfg.Specs
+	}
+	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
+	if conv := p.GetConventions(); conv != nil {
+		projectOv, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conv}, baseConvention)
+		if err != nil {
+			return Overlay{}, err
+		}
+		o.Lexicon = projectOv.Lexicon
+		o.Sources = append(o.Sources, projectOv.Sources...)
+		o.conventionName = conv.GetName()
+	}
+	o.baseConvention = baseConvention
+	return overlayWithRequest(req, o, baseConvention)
+}
+
+// overlayWithRequest lets a request's own config override whatever it was layered on.
+func overlayWithRequest(req *webapi.OverlayConfig, base Overlay, baseConvention string) (Overlay, error) {
+	reqOv, err := ComposeOverlay(req, baseConvention)
+	if err != nil {
+		return Overlay{}, err
+	}
+	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 {
+		return base, nil
+	}
+	// A request convention REPLACES rather than stacks (WS3-124), which is what the serve flag help
+	// and the lexicon half both already promised. Same rule, one layer out.
+	out := base
+	if reqOv.Lexicon != nil {
+		out.Lexicon = reqOv.Lexicon
+	}
+	// The request's convention REPLACES whatever this overlay already carried, project or deployment
+	// (WS3-124). Replacement is by source NAME, so the one already in place is dropped rather than
+	// stacked on: keeping both would run two vocabularies at once, and when the two are the same
+	// config — an operator passing --conventions for the file their project already declares — it is
+	// a duplicate-source error rather than a merge.
+	kept := make([]check.RuleSource, 0, len(base.Sources))
+	for _, src := range base.Sources {
+		if base.conventionName != "" && src.Name() == base.conventionName {
+			continue
+		}
+		kept = append(kept, src)
+	}
+	out.Sources = append(kept, reqOv.Sources...)
+	out.conventionName = ConventionFromProto(req.GetConventions()).Name
+	// Carry the base convention's NAME through, because that is what makes replacement work:
+	// Overlay.Catalog drops the sources tagged with it before splicing these on. Inheriting whatever
+	// the fallback happened to hold would leave the server's convention running alongside the
+	// request's, which is the stacking WS3-124 removed.
+	out.baseConvention = baseConvention
+	return out, nil
 }

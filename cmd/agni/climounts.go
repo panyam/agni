@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/service"
 )
 
 // cliMountSpecs holds the --mount flag values. It is a root PERSISTENT flag, so the same
@@ -191,7 +195,7 @@ func projectRootAbove(abs string) (root, id string) {
 	for range maxProjectWalk + 1 {
 		f, err := os.Open(filepath.Join(dir, projects.ProjectDescriptor))
 		if err == nil {
-			declared, _, parseErr := projects.ParseProject(f)
+			declared, _, _, parseErr := projects.ParseProject(f)
 			f.Close()
 			if parseErr == nil {
 				return dir, declared
@@ -250,4 +254,121 @@ func cliArgURI(arg string) string {
 		return arg
 	}
 	return u.String()
+}
+
+// cliProjects is the CLI's project resolver: the same filesystem-backed store and config loader a
+// server uses, over the mounts this run has (declared with --mount, or minted per argument).
+//
+// The CLI resolves projects for the same reason serve does, and through the same code. A design
+// checked from the terminal and the same design checked in the browser have to compose the same
+// config, or the two surfaces disagree about what a board was measured against — which is the drift
+// this whole workstream is closing, not one to reintroduce at the CLI edge.
+func cliProjects() *service.ProjectResolver {
+	return &service.ProjectResolver{Store: cliProjectStore{}, Config: cliProjectConfig{}}
+}
+
+// cliProjectStore and cliProjectConfig read the run's mounts at CALL time rather than holding a
+// snapshot.
+//
+// That is not fussiness. The CLI mints a mount lazily, when an argument is first turned into a URI,
+// and the services are constructed BEFORE the first argument is resolved. A resolver built from
+// `ws.Mounts()` at construction therefore holds an empty list forever, and every design silently
+// resolves to no project — a failure that looks exactly like a design which genuinely has none.
+type cliProjectStore struct{}
+
+func (cliProjectStore) store() (*projects.FSStore, error) {
+	ws, err := workspace()
+	if err != nil {
+		return nil, err
+	}
+	return projects.NewFSStore(projectTrees(ws.Mounts())...), nil
+}
+
+func (c cliProjectStore) Project(ctx context.Context, name string) (*webapi.Project, error) {
+	s, err := c.store()
+	if err != nil {
+		return nil, err
+	}
+	return s.Project(ctx, name)
+}
+
+func (c cliProjectStore) Projects(ctx context.Context) ([]*webapi.Project, error) {
+	s, err := c.store()
+	if err != nil {
+		return nil, err
+	}
+	return s.Projects(ctx)
+}
+
+func (c cliProjectStore) Design(ctx context.Context, name string) (*webapi.Design, error) {
+	s, err := c.store()
+	if err != nil {
+		return nil, err
+	}
+	return s.Design(ctx, name)
+}
+
+func (c cliProjectStore) Designs(ctx context.Context, parent string) ([]*webapi.Design, error) {
+	s, err := c.store()
+	if err != nil {
+		return nil, err
+	}
+	return s.Designs(ctx, parent)
+}
+
+func (c cliProjectStore) ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+	s, err := c.store()
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.ResolveDesign(ctx, uri)
+}
+
+type cliProjectConfig struct{}
+
+func (cliProjectConfig) ProjectConfig(ctx context.Context, p *webapi.Project, d *webapi.Design) (service.ProjectConfig, error) {
+	ws, err := workspace()
+	if err != nil {
+		return service.ProjectConfig{}, err
+	}
+	return (&osProjectConfig{mounts: ws.Mounts()}).ProjectConfig(ctx, p, d)
+}
+
+// withProjectRules splices the rules a design's project supplies onto a catalog, for the CLI's own
+// facet resolution.
+//
+// The CLI resolves `--rule` and `--tag` to rule NAMES before calling the service, so its local
+// catalog has to span the same name space the run will. Without this a project's own rule is
+// unselectable — `--rule gateway/signal-net-naming` reports "no rules selected" for a rule that
+// would have run — and, worse, the unfiltered case sends the local catalog's full name list as an
+// explicit selection, which silently EXCLUDES every project rule from the run.
+//
+// It goes through service.OverlayFor rather than splicing by hand, so the CLI and the service cannot
+// disagree about the result. Composing them separately is what produced a duplicate-source error the
+// moment an operator passed `--conventions` for the file their project already declares: two code
+// paths, one adding what the other replaced.
+//
+// A design that resolves to no project returns the catalog unchanged, and a resolution failure is
+// not fatal: the run still has its own composition, and failing the whole command because some
+// unrelated descriptor is malformed would be worse than listing one fewer rule.
+func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req *webapi.OverlayConfig) (*check.Catalog, error) {
+	r := cliProjects()
+	// A project may not resolve, and that is fine — but the REQUEST's own config still has to reach
+	// this catalog. Bailing out early on a miss dropped `--conventions` from facet resolution, so
+	// `--rule <config>/<rule>` selected nothing and the empty selection silently ran the whole
+	// catalog instead of the one rule asked for.
+	var p *webapi.Project
+	var d *webapi.Design
+	if ws, err := workspace(); err == nil {
+		if u, err := ws.URI(arg); err == nil {
+			if design, resolved, err := r.Store.ResolveDesign(ctx, u); err == nil {
+				p, d = resolved, design
+			}
+		}
+	}
+	ov, err := service.OverlayFor(ctx, r.Config, p, d, req, service.Overlay{}, "")
+	if err != nil {
+		return nil, err
+	}
+	return ov.Catalog(base)
 }

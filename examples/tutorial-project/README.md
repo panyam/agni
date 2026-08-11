@@ -13,6 +13,12 @@ make review
 That runs the checklist in `review.yaml` over the bundled board with every tier this project
 supplies, and prints one outcome per item. `make help` lists the rest.
 
+Note what the command does **not** carry: no `--conventions`, no `--profile-path`, no `--params`, no
+`--intent-path`. The board resolves to this project, and the project's config is read from beside
+`project.yaml`. That is also what keeps it from reaching anywhere else — a design in another project,
+or in none, cannot be checked against these rules, because config travels along the design-to-project
+edge rather than along the command line.
+
 ## Layout
 
 This is the shape a real review project takes. Two kinds of file live here, and the split matters.
