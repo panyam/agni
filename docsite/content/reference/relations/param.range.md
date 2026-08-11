@@ -1,6 +1,6 @@
 ---
 title: "param.range"
-description: "a datasheet parameter's two-sided limit with its kind (absolute_max / recommended_operating / characteristic; needs --params)"
+description: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params)"
 ---
 
 ### What it is
@@ -12,7 +12,10 @@ BOTH bounds — the lower `min` and the upper `max` — and the `kind` token tha
 the row came from: `absolute_max`, `recommended_operating`, or `characteristic` (`unspecified` when
 the source did not label it). A bound the datasheet did not state is absent (the argument binds to
 nothing), so `param.range(?m, "VDD", "recommended_operating", ?min, ?max)` with a max-only row leaves
-`?min` unbound. Every row carries a citation back to the datasheet page and table.
+`?min` unbound. BOTH bounds are in the parameter's SI base unit whatever the vendor printed, so a
+range test means the same thing across vendors; join `param.unit` for the printed spelling, and note
+that a parameter whose unit has no known scale is omitted here (agni issue 165). Every row carries a
+citation back to the datasheet page and table.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
 `--params <dir>` pointing at a seeded `PartSpec` corpus — skip-not-false-pass by construction: with

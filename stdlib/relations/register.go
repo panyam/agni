@@ -35,6 +35,7 @@ var builtinSchema = map[string][]query.Field{
 	RelParam:             {query.FieldSubject, query.FieldObject, query.FieldNum},                                          // param(mpn, symbol, max)
 	RelParamRange:        {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldMin, query.FieldNum},        // param.range(mpn, symbol, kind, min, max)
 	RelParamProv:         {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldNum, query.FieldConditions}, // param.prov(mpn, symbol, doc, page, section)
+	RelParamUnit:         {query.FieldSubject, query.FieldObject, query.FieldValue},                                        // param.unit(mpn, symbol, unit)
 	RelPartAudience:      {query.FieldSubject, query.FieldObject},                                                          // part.audience(mpn, who)
 	RelComponentOnNet:    {query.FieldSubject, query.FieldObject},                                                          // component-on-net(ref, net)
 	// Pin tier (WS3-038) — pin-granular relations, queryable with no evaluator change.
@@ -123,8 +124,9 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "has_netclass_defs", Args: []string{"present"}, Summary: "one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean)", Kind: query.KindNetlist},
 	{Name: "net.declared_track_width", Args: []string{"net", "mm"}, Summary: "the track width a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: query.KindNetlist},
 	{Name: "net.declared_via_drill", Args: []string{"net", "mm"}, Summary: "the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: query.KindNetlist},
-	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part (needs --params)", Kind: query.KindDatasheet},
-	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind (absolute_max / recommended_operating / characteristic; needs --params)", Kind: query.KindDatasheet},
+	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part, in its SI base unit (needs --params)", Kind: query.KindDatasheet},
+	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params)", Kind: query.KindDatasheet},
+	{Name: "param.unit", Args: []string{"mpn", "symbol", "unit"}, Summary: "the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params)", Kind: query.KindDatasheet},
 	{Name: "part.audience", Args: []string{"mpn", "who"}, Summary: "a team/license entitled to see a part's datasheet data (record-only, needs --params)", Kind: query.KindDatasheet},
 }

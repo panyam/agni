@@ -371,12 +371,19 @@ func TestAggregationCount(t *testing.T) {
 }
 
 // TestAggregationMax (WS3-029 fast-follow): max over a numeric column reduces per group.
+//
+// Both rows are VOLTS on purpose. The fixture used to pair a 20 V row with an 800 mA one and assert
+// 800, which made the assertion depend on 800 being the larger PRINTED number across two different
+// units. That is not a comparison with a meaning, and since agni issue 165 reduced the query
+// surface's numbers to SI base units it is not even the larger number (800 mA is 0.8 A). The
+// property under test is that max() reduces per group, so the fixture states two quantities that
+// can actually be ordered.
 func TestAggregationMax(t *testing.T) {
 	spec := regSpec("REG-24", 20)
 	// add a second numeric param so max has something to choose
 	spec.Parameters = append(spec.Parameters, &parampb.Parameter{
-		Name: "Iout", Symbol: "IOUT", LimitKind: parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX,
-		Value: &parampb.RangeValue{Max: f64(800)}, Unit: "mA",
+		Name: "ESD tolerance", Symbol: "VESD", LimitKind: parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX,
+		Value: &parampb.RangeValue{Max: f64(800)}, Unit: "V",
 		Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 4, Method: "hand", Confidence: 1},
 	})
 	m := check.NewModelWithParams(regDesign("+24V"), nil, param.ParamSet{"REG-24": spec})

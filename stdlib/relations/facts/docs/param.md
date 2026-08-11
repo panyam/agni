@@ -4,10 +4,13 @@
 
 `param(mpn, symbol, max)` yields one row per parameter of a datasheet spec that joined to a
 part in the design, keyed by manufacturer part number (`mpn`) and the parameter's datasheet
-symbol (e.g. `VDD`, `VIN`, `RDS(on)`). The third argument is the parameter's numeric maximum;
-each row also carries the rendered value range and its test conditions, plus a citation back to
+symbol (e.g. `VDD`, `VIN`, `RDS(on)`). The third argument is the parameter's numeric maximum, **in
+that parameter's SI base unit** (volts, amps, ohms) whatever the vendor printed, so a threshold
+written against it means the same thing across vendors. Join `param.unit` for the printed spelling.
+Each row also carries the rendered value range and its test conditions, plus a citation back to
 the datasheet page and table. One MPN can be shared by several components, so the projector
-dedupes by MPN and emits each parameter once.
+dedupes by MPN and emits each parameter once. A parameter whose unit has no known scale is omitted
+here and appears only in `param.unit` (agni issue 165).
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
 `--params <dir>` pointing at a seeded `PartSpec` corpus. That is skip-not-false-pass by

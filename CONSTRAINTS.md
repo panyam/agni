@@ -489,7 +489,16 @@ invariant that actually discriminates is that the RAW row's unit is never read o
 `datasheet/param`. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
-**Deliberately not extended to the query surface.** The `param(...)` and `param.range(...)` datalog
-relations project a bare number with NO unit, so a datalog-authored rule can still compare
-millivolts against volts with no gate at all. Same failure family, tracked as its own issue; this
-constraint covers the Go path only until that lands.
+**This covers the query surface too.** The `param(...)` and `param.range(...)` datalog relations
+project their numbers through the same conversion, so a datalog-authored rule compares base units
+without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
+separately, because a `FactRow` has no unit column and adding one would be advisory: a rule could
+ignore it and compare raw numbers, which is the failure this constraint exists to prevent.
+
+A row whose unit has no known scale is DROPPED from the numeric relations rather than emitted with
+an empty number, and the reason is specific to the evaluator: `query.fieldValue` yields an empty
+`Value` for a nil `Num`, and `eval`'s comparison then falls back to STRING comparison, where
+`"" < "5.0"` is true. Such a row would satisfy a numeric guard instead of failing to match it.
+`param.unit` carries every row including the dropped ones, so the numeric surface narrows and the
+introspection surface does not. AGGREGATION is unaffected either way: `reduce` skips a nil `Num`
+rather than falling back.
