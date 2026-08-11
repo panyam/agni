@@ -113,8 +113,16 @@ SYMBOL_FLAGS := $(foreach p,$(SYMBOL_PATH),--symbol-path $(p))
 # An overlay is per-DEPLOYMENT config: a profile named after a built-in supersedes it for every
 # design this server reads, so point it at an overlay that suits the whole mounted set.
 OVERLAY_FLAGS ?=
+# REVIEW_STORE is the WRITABLE directory stored review runs live in (--review-store), created if
+# absent. It is what the viewer's Review panel reads: without it the review resource methods answer
+# "no review store configured" and the panel can show nothing, on any design. Deliberately separate
+# from the read-only design mounts, and empty by default because a server that stores runs should
+# say where, rather than inheriting a guess. E.g.
+#   make serve REVIEW_STORE=/tmp/agni-reviews
+REVIEW_STORE ?=
+REVIEW_FLAGS := $(if $(strip $(REVIEW_STORE)),--review-store $(REVIEW_STORE))
 serve: ui
-	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) web
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS) web
 
 # One-command self-contained demo. Builds the web bundle and serves the viewer with only the
 # shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
@@ -226,6 +234,10 @@ image:
 #   OVERLAY_FLAGS host paths that do not resolve in the container. Pass OVERLAY_DIR instead: the
 #                 folder is mounted at /overlay and the flags are rebuilt against it.
 #
+# REVIEW_STORE crosses the same way OVERLAY_DIR does, mounted at /var/lib/agni/reviews, except
+# WRITABLE: stored runs are the one thing this server produces rather than reads. It is created on
+# the host first so the bind mount does not materialize as a root-owned directory.
+#
 # SYMBOL_PATH is IGNORED rather than refused, because the image ships better libraries than a host
 # path would name (AGNI_SYMBOL_PATH, baked in stage 3). Refusing it would block a caller who simply
 # has the variable set for serve. It is announced on startup so the substitution is never a guess.
@@ -279,10 +291,16 @@ dockserve:
 	  if [ -z "$$overlay" ]; then \
 	    echo "dockserve: OVERLAY_DIR=$$o holds neither profiles/ nor conventions.yaml" >&2; exit 1; fi; \
 	  echo "dockserve: overlay$$overlay"; fi; \
+	review=""; \
+	if [ -n "$(strip $(REVIEW_STORE))" ]; then \
+	  r=$$(abs "$(strip $(REVIEW_STORE))"); \
+	  mkdir -p "$$r"; \
+	  vols="$$vols -v $$r:/var/lib/agni/reviews"; \
+	  review="--review-store /var/lib/agni/reviews"; fi; \
 	echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"; \
 	docker run --rm --name $(DOCKER_NAME) -p $(patsubst :%,%,$(ADDR)):8080 \
 	  --user $$(id -u):$$(id -g) $$vols $(DOCKER_FLAGS) $(IMAGE) \
-	  serve --addr :8080 --mount-root /workspace $$overlay web
+	  serve --addr :8080 --mount-root /workspace $$overlay $$review web
 
 # Stop a detached dockserve (one started with DOCKER_FLAGS=-d). A foreground one ends on Ctrl-C.
 dockstop:
