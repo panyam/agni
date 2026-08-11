@@ -24,7 +24,9 @@ import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
 import { SvgView } from "./svgview.js";
 import { compareButton } from "./compare.js";
-import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient } from "./api.js";
+import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
+  projectClient,
+} from "./api.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
 import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
@@ -308,6 +310,7 @@ class AppRoot extends BaseComponent {
       queryClient(),
       reviewClient(),
       workspaceClient(),
+      projectClient(),
     );
     this.presenter = presenter;
 

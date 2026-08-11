@@ -25,38 +25,67 @@ import (
 // the service pure: ReviewService composes a document from its inputs and never calls a clock, so its
 // output for given inputs is fixed and its tests need no injected time.
 type ReviewStore interface {
-	// Create stores a completed run and returns it with its assigned name and stamped creation time.
-	// The document passed in has no name and no created_at; the store fills both, so a caller cannot
-	// mint an id that collides or backdate a run.
-	Create(ctx context.Context, results *checkspb.CheckResults) (name string, createdAt string, err error)
+	// Create stores a completed run under a parent project ("" for a design that belongs to none) and
+	// returns it with its assigned name and stamped creation time. The document passed in has no name
+	// and no created_at; the store fills both, so a caller cannot mint an id that collides or backdate
+	// a run.
+	Create(ctx context.Context, parent string, results *checkspb.CheckResults) (name string, createdAt string, err error)
 	// Get returns a stored run. A name that names nothing is ErrNotFound.
 	Get(ctx context.Context, name string) (*checkspb.CheckResults, error)
 	// List returns runs newest first, at most pageSize of them, starting after pageToken (empty starts
-	// at the newest). designFilter, when non-empty, keeps only runs whose DesignRef.source matches it
-	// exactly. The returned token is empty when the last page has been reached.
-	List(ctx context.Context, pageSize int, pageToken, designFilter string) (results []*checkspb.CheckResults, names []string, nextPageToken string, err error)
+	// at the newest).
+	//
+	// parent narrows to one project's runs; EMPTY means every run the store holds, parented or not,
+	// which is what keeps the two name shapes from costing a client an extra call. designFilter, when
+	// non-empty, keeps only runs whose DesignRef.source matches it exactly. The returned token is
+	// empty when the last page has been reached.
+	List(ctx context.Context, parent string, pageSize int, pageToken, designFilter string) (results []*checkspb.CheckResults, names []string, nextPageToken string, err error)
 	// Delete removes a stored run. Deleting an absent run is ErrNotFound, not a silent success: a
 	// client asking to remove something that is not there holds a stale view and is better told.
 	Delete(ctx context.Context, name string) error
 }
 
-// reviewNamePrefix is the resource-name prefix every stored run carries, per AIP-122.
-const reviewNamePrefix = "reviews/"
+// reviewsSegment is the collection name every stored run carries, per AIP-122.
+const reviewsSegment = "reviews/"
 
-// ReviewName builds a resource name from a bare store id, and ReviewID is its inverse. They exist so
-// the "reviews/" prefix is written once: a store deals in ids, the API deals in names, and having
-// both spell the boundary by hand is how one of them ends up storing a name as an id.
-func ReviewName(id string) string { return reviewNamePrefix + id }
-
-// ReviewID extracts the store id from a resource name, reporting whether the name was well formed. A
-// name with no prefix, an empty id, or a path separator in the id is rejected: an id reaches a
-// filesystem-backed adapter, so a caller must not be able to steer it out of the store directory.
-func ReviewID(name string) (string, bool) {
-	id, ok := strings.CutPrefix(name, reviewNamePrefix)
-	if !ok || id == "" || strings.ContainsAny(id, "/\\") || id == "." || id == ".." {
-		return "", false
+// ReviewName builds a resource name from a parent and a bare store id, and SplitReviewName is its
+// inverse. They exist so the shape is written once: a store deals in (parent, id), the API deals in
+// names, and having both spell the boundary by hand is how one of them ends up storing a name as an
+// id.
+//
+// An empty parent yields the unparented form, "reviews/{id}". That is a real state rather than a
+// missing value: a design that belongs to no project has runs that belong to no project either.
+func ReviewName(parent, id string) string {
+	if parent == "" {
+		return reviewsSegment + id
 	}
-	return id, true
+	return parent + "/" + reviewsSegment + id
+}
+
+// SplitReviewName splits a review resource name into its parent project name (empty when the run is
+// unparented) and its store id, reporting whether the name was well formed.
+//
+// An empty id, a separator inside the id, or a `.`/`..` id is rejected: an id reaches a
+// filesystem-backed adapter, so a caller must not be able to steer it out of the store directory.
+// The parent, when present, is validated as a project resource name for the same reason.
+func SplitReviewName(name string) (parent, id string, ok bool) {
+	rest, found := strings.CutPrefix(name, reviewsSegment)
+	if found {
+		return "", rest, validReviewID(rest)
+	}
+	cut := strings.LastIndex(name, "/"+reviewsSegment)
+	if cut < 0 {
+		return "", "", false
+	}
+	parent, id = name[:cut], name[cut+len("/"+reviewsSegment):]
+	if _, ok := ProjectID(parent); !ok {
+		return "", "", false
+	}
+	return parent, id, validReviewID(id)
+}
+
+func validReviewID(id string) bool {
+	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\")
 }
 
 // MemReviewStore is an in-memory ReviewStore. It backs `agni review`, which is a thin client of
@@ -70,6 +99,10 @@ type MemReviewStore struct {
 	seq  int
 	ids  []string // insertion order, oldest first
 	docs map[string]*checkspb.CheckResults
+	// parents keys each stored id to the project it belongs to, "" for an unparented run. It is kept
+	// beside the document rather than inside it because a parent is where a run LIVES, not something
+	// the run recorded about itself: the document already names the design it scored.
+	parents map[string]string
 	// Clock, when set, stamps created_at. Nil leaves it empty, which is what the CLI wants: a run it
 	// never persists has no meaningful creation record to invent.
 	Clock func() string
@@ -77,10 +110,10 @@ type MemReviewStore struct {
 
 // NewMemReviewStore returns an empty in-memory store.
 func NewMemReviewStore() *MemReviewStore {
-	return &MemReviewStore{docs: map[string]*checkspb.CheckResults{}}
+	return &MemReviewStore{docs: map[string]*checkspb.CheckResults{}, parents: map[string]string{}}
 }
 
-func (m *MemReviewStore) Create(_ context.Context, results *checkspb.CheckResults) (string, string, error) {
+func (m *MemReviewStore) Create(_ context.Context, parent string, results *checkspb.CheckResults) (string, string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.seq++
@@ -93,12 +126,13 @@ func (m *MemReviewStore) Create(_ context.Context, results *checkspb.CheckResult
 	// it would let a later edit through that pointer rewrite history in place.
 	stored := proto.Clone(results).(*checkspb.CheckResults)
 	m.docs[id] = stored
+	m.parents[id] = parent
 	m.ids = append(m.ids, id)
-	return ReviewName(id), createdAt, nil
+	return ReviewName(parent, id), createdAt, nil
 }
 
 func (m *MemReviewStore) Get(_ context.Context, name string) (*checkspb.CheckResults, error) {
-	id, ok := ReviewID(name)
+	_, id, ok := SplitReviewName(name)
 	if !ok {
 		return nil, fmt.Errorf("%w: %q is not a review name", ErrInvalidArgument, name)
 	}
@@ -111,20 +145,25 @@ func (m *MemReviewStore) Get(_ context.Context, name string) (*checkspb.CheckRes
 	return proto.Clone(doc).(*checkspb.CheckResults), nil
 }
 
-func (m *MemReviewStore) List(_ context.Context, pageSize int, pageToken, designFilter string) ([]*checkspb.CheckResults, []string, string, error) {
+func (m *MemReviewStore) List(_ context.Context, parent string, pageSize int, pageToken, designFilter string) ([]*checkspb.CheckResults, []string, string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	newest := make([]string, len(m.ids))
-	for i, id := range m.ids {
-		newest[len(m.ids)-1-i] = id
+	newest := make([]string, 0, len(m.ids))
+	for i := len(m.ids) - 1; i >= 0; i-- {
+		id := m.ids[i]
+		// An empty parent lists everything, parented or not; a set one narrows to that project.
+		if parent != "" && m.parents[id] != parent {
+			continue
+		}
+		newest = append(newest, id)
 	}
 	return PageReviews(newest, pageSize, pageToken, designFilter, func(id string) *checkspb.CheckResults {
 		return proto.Clone(m.docs[id]).(*checkspb.CheckResults)
-	})
+	}, func(id string) string { return ReviewName(m.parents[id], id) })
 }
 
 func (m *MemReviewStore) Delete(_ context.Context, name string) error {
-	id, ok := ReviewID(name)
+	_, id, ok := SplitReviewName(name)
 	if !ok {
 		return fmt.Errorf("%w: %q is not a review name", ErrInvalidArgument, name)
 	}
@@ -134,6 +173,7 @@ func (m *MemReviewStore) Delete(_ context.Context, name string) error {
 		return fmt.Errorf("%w: no review %q", ErrNotFound, name)
 	}
 	delete(m.docs, id)
+	delete(m.parents, id)
 	m.ids = slicesDelete(m.ids, id)
 	return nil
 }
@@ -147,7 +187,11 @@ func (m *MemReviewStore) Delete(_ context.Context, name string) error {
 // The token is the id to resume AFTER, so it stays valid when runs are created or deleted between
 // pages. An offset would shift under exactly that, and a review store is append-mostly, so new runs
 // arriving mid-pagination is the normal case rather than the edge one.
-func PageReviews(newestFirst []string, pageSize int, pageToken, designFilter string, load func(string) *checkspb.CheckResults) ([]*checkspb.CheckResults, []string, string, error) {
+// nameOf builds each kept run's resource name, which the store supplies because only it knows which
+// parent an id lives under. It is a parameter rather than a fixed ReviewName call so an adapter that
+// stores parented and unparented runs together does not have to re-derive the shape and get it
+// subtly different from this one.
+func PageReviews(newestFirst []string, pageSize int, pageToken, designFilter string, load func(string) *checkspb.CheckResults, nameOf func(string) string) ([]*checkspb.CheckResults, []string, string, error) {
 	if pageSize <= 0 {
 		pageSize = defaultReviewPageSize
 	}
@@ -184,7 +228,7 @@ func PageReviews(newestFirst []string, pageSize int, pageToken, designFilter str
 			return docs, names, last, nil
 		}
 		docs = append(docs, doc)
-		names = append(names, ReviewName(id))
+		names = append(names, nameOf(id))
 		last = id
 	}
 	return docs, names, "", nil

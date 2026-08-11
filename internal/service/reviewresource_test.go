@@ -320,12 +320,21 @@ func TestParseReviewFilter(t *testing.T) {
 // TestReviewNameRoundTrip: a name survives the id boundary, and a name that could steer a
 // filesystem-backed store out of its directory is rejected rather than resolved.
 func TestReviewNameRoundTrip(t *testing.T) {
-	if id, ok := ReviewID(ReviewName("abc")); !ok || id != "abc" {
-		t.Errorf("ReviewID(ReviewName(abc)) = %q,%v", id, ok)
+	if parent, id, ok := SplitReviewName(ReviewName("", "abc")); !ok || id != "abc" || parent != "" {
+		t.Errorf("unparented round trip = %q/%q,%v", parent, id, ok)
 	}
-	for _, bad := range []string{"abc", "reviews/", "reviews/../etc/passwd", "reviews/a/b", `reviews/a\b`, "reviews/.", "reviews/.."} {
-		if _, ok := ReviewID(bad); ok {
-			t.Errorf("ReviewID(%q) accepted a name that must not reach a store", bad)
+	// A parented run round-trips through both halves, which is what lets a store key by (project, id)
+	// without re-deriving the shape.
+	if parent, id, ok := SplitReviewName(ReviewName("projects/gateway", "abc")); !ok || id != "abc" || parent != "projects/gateway" {
+		t.Errorf("parented round trip = %q/%q,%v", parent, id, ok)
+	}
+	for _, bad := range []string{
+		"abc", "reviews/", "reviews/../etc/passwd", "reviews/a/b", `reviews/a\b`, "reviews/.", "reviews/..",
+		// A parented name is rejected on the same terms, in either half.
+		"projects//reviews/abc", "projects/../reviews/abc", "projects/gateway/reviews/", "projects/gateway/reviews/..",
+	} {
+		if _, _, ok := SplitReviewName(bad); ok {
+			t.Errorf("SplitReviewName(%q) accepted a name that must not reach a store", bad)
 		}
 	}
 }
@@ -336,4 +345,68 @@ func names(list *webapi.ListReviewsResponse) []string {
 		out = append(out, rv.GetName())
 	}
 	return out
+}
+
+// TestRunsNestUnderTheirProject is what this shape is for: a project's runs list under that project,
+// and a run made against a design in no project is still creatable and still listable.
+//
+// The second half matters as much as the first. A design that belongs to no project is the ORDINARY
+// state of a mounted folder, so "I reviewed a loose file" must not become an error, and its run must
+// not be filed under a project that does not own it.
+func TestRunsNestUnderTheirProject(t *testing.T) {
+	st := NewMemReviewStore()
+	ctx := context.Background()
+
+	parented, _, err := st.Create(ctx, "projects/gateway", nestDoc("mount://m/gw.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parented != "projects/gateway/reviews/00000001" {
+		t.Errorf("parented name = %q", parented)
+	}
+	loose, _, err := st.Create(ctx, "", nestDoc("mount://m/loose.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loose != "reviews/00000002" {
+		t.Errorf("unparented name = %q, want the flat form: a run with no project has no parent", loose)
+	}
+
+	// Narrowed to the project: only its own runs.
+	_, got, _, err := st.List(ctx, "projects/gateway", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != parented {
+		t.Errorf("listing projects/gateway = %v, want just its own run", got)
+	}
+
+	// Empty parent lists EVERYTHING, which is what keeps the two name shapes from costing a client an
+	// extra call: a viewer asking "what runs exist" asks once.
+	_, all, _, err := st.List(ctx, "", 0, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("unfiltered listing = %v, want both runs", all)
+	}
+
+	// Both fetch and delete by their own name, so neither shape is a second-class citizen.
+	for _, name := range []string{parented, loose} {
+		if _, err := st.Get(ctx, name); err != nil {
+			t.Errorf("Get(%q): %v", name, err)
+		}
+		if err := st.Delete(ctx, name); err != nil {
+			t.Errorf("Delete(%q): %v", name, err)
+		}
+	}
+}
+
+// nestDoc is the smallest document a store will accept: the nesting tests care about where a run is
+// filed, not what it found.
+func nestDoc(design string) *checkspb.CheckResults {
+	return &checkspb.CheckResults{
+		Meta:   &checkspb.ResultsMeta{ProducerVersion: "test"},
+		Design: &checkspb.DesignRef{Source: design},
+	}
 }

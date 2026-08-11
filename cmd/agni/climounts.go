@@ -372,3 +372,25 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 	}
 	return ov.Catalog(base)
 }
+
+// cliProjectParent is the project resource name a design's review should be stored under, empty when
+// the design belongs to none.
+//
+// Empty is a real answer rather than a failure. Reviewing a loose file is the ordinary case on a
+// mounted folder, and such a run is stored unparented — giving it a synthetic parent would assert an
+// ownership that does not exist.
+func cliProjectParent(ctx context.Context, arg string) string {
+	ws, err := workspace()
+	if err != nil {
+		return ""
+	}
+	u, err := ws.URI(arg)
+	if err != nil {
+		return ""
+	}
+	_, p, err := cliProjects().Store.ResolveDesign(ctx, u)
+	if err != nil || p == nil {
+		return ""
+	}
+	return p.GetName()
+}

@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMitgEKE0NyZWF0ZVJldmlld1JlcXVlc3QSEgoKZGVzaWduX3VyaRgBIAEoCRIRCglib2FyZF91cmkYAiABKAkSFgoOcmF0aWZpZWRfZmxvb3IYAyABKAESLgoHb3ZlcmxheRgEIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSMAoIbWFuaWZlc3QYBSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdCIgChBHZXRSZXZpZXdSZXF1ZXN0EgwKBG5hbWUYASABKAkiSwoSTGlzdFJldmlld3NSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJXChNMaXN0UmV2aWV3c1Jlc3BvbnNlEicKB3Jldmlld3MYASADKAsyFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKE0RlbGV0ZVJldmlld1JlcXVlc3QSDAoEbmFtZRgBIAEoCSInChhHZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QSCwoDdXJpGAEgASgJIk0KGUdldFJldmlld01hbmlmZXN0UmVzcG9uc2USMAoIbWFuaWZlc3QYASABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdDKyAwoNUmV2aWV3U2VydmljZRJLCgxDcmVhdGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5DcmVhdGVSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EkUKCUdldFJldmlldxIgLmFnbmkudjEud2ViYXBpLkdldFJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSVgoLTGlzdFJldmlld3MSIi5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5MaXN0UmV2aWV3c1Jlc3BvbnNlEksKDERlbGV0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkRlbGV0ZVJldmlld1JlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSaAoRR2V0UmV2aWV3TWFuaWZlc3QSKC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdNYW5pZmVzdFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIkUKBlJldmlldxIMCgRuYW1lGAEgASgJEi0KB3Jlc3VsdHMYAiABKAsyHC5hZ25pLnYxLmNoZWNrcy5DaGVja1Jlc3VsdHMixgEKE0NyZWF0ZVJldmlld1JlcXVlc3QSDgoGcGFyZW50GAYgASgJEhIKCmRlc2lnbl91cmkYASABKAkSEQoJYm9hcmRfdXJpGAIgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAMgASgBEi4KB292ZXJsYXkYBCABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEjAKCG1hbmlmZXN0GAUgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXZpZXdzUmVxdWVzdBIOCgZwYXJlbnQYBCABKAkSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlcKE0xpc3RSZXZpZXdzUmVzcG9uc2USJwoHcmV2aWV3cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJldmlldxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIicKGEdldFJldmlld01hbmlmZXN0UmVxdWVzdBILCgN1cmkYASABKAkiTQoZR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRIwCghtYW5pZmVzdBgBIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0MrIDCg1SZXZpZXdTZXJ2aWNlEksKDENyZWF0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSRQoJR2V0UmV2aWV3EiAuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJWCgtMaXN0UmV2aWV3cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVzcG9uc2USSwoMRGVsZXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmV2aWV3UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJoChFHZXRSZXZpZXdNYW5pZmVzdBIoLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVxdWVzdBopLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_google_protobuf_empty]);
 
 /**
  * Review is one stored review run.
@@ -30,13 +30,22 @@ export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
  */
 export type Review = Message<"agni.v1.webapi.Review"> & {
   /**
-   * name is the resource name, "reviews/{review}". The id is server-assigned, opaque, and
-   * time-sortable, so a listing is chronological without opening every document.
+   * name is the resource name. A run whose design belongs to a project is
+   * "projects/{project}/reviews/{review}"; one whose design belongs to none is "reviews/{review}".
+   * The id is server-assigned, opaque, and time-sortable, so a listing is chronological without
+   * opening every document.
    *
-   * Reviews are a FLAT collection rather than nested under a mount. A run is stored in the server's
-   * review volume, not inside the design's mount, so nesting would assert an ownership that does not
-   * exist and would break the moment a design moved between mounts. Which design a run was about is
-   * recorded where it belongs, in results.design.
+   * The two shapes are deliberate, and the second is not a degenerate case of the first. A project
+   * genuinely OWNS the runs made under it: the checklist, the rule catalog, and the vocabulary a run
+   * scored against are all the project's, so nesting states a real relationship. A design that
+   * resolves to no project is the ORDINARY state of a mounted folder, and its runs have no such
+   * owner — giving them a synthetic parent would assert exactly the ownership this message once
+   * refused to assert about mounts, where nesting under a location would have broken the moment a
+   * design moved.
+   *
+   * Listing is unified even though naming is not: ListReviews takes an OPTIONAL parent, so a client
+   * that wants everything asks once. Which design a run was about is recorded where it belongs, in
+   * results.design.
    *
    * @generated from field: string name = 1;
    */
@@ -63,6 +72,16 @@ export const ReviewSchema: GenMessage<Review> = /*@__PURE__*/
  * @generated from message agni.v1.webapi.CreateReviewRequest
  */
 export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> & {
+  /**
+   * parent is the project the run belongs to, "projects/{project}", empty when the design resolves
+   * to none. It is the CALLER's answer rather than something derived here, because the caller has
+   * already resolved the design to decide which config to send and re-deriving it in the service
+   * would be a second resolution that could disagree with the first.
+   *
+   * @generated from field: string parent = 6;
+   */
+  parent: string;
+
   /**
    * design_uri is the one design this run is about.
    *
@@ -121,7 +140,7 @@ export const CreateReviewRequestSchema: GenMessage<CreateReviewRequest> = /*@__P
  */
 export type GetReviewRequest = Message<"agni.v1.webapi.GetReviewRequest"> & {
   /**
-   * "reviews/{review}"
+   * "projects/{project}/reviews/{review}", or "reviews/{review}"
    *
    * @generated from field: string name = 1;
    */
@@ -139,6 +158,15 @@ export const GetReviewRequestSchema: GenMessage<GetReviewRequest> = /*@__PURE__*
  * @generated from message agni.v1.webapi.ListReviewsRequest
  */
 export type ListReviewsRequest = Message<"agni.v1.webapi.ListReviewsRequest"> & {
+  /**
+   * parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run the
+   * server holds, parented or not, which is what makes the two name shapes cost a client nothing: it
+   * asks once and gets everything, and only narrows when it has a project in mind.
+   *
+   * @generated from field: string parent = 4;
+   */
+  parent: string;
+
   /**
    * page_size is the maximum number of reviews to return. 0 uses the server default; the server may
    * return fewer.
@@ -203,7 +231,7 @@ export const ListReviewsResponseSchema: GenMessage<ListReviewsResponse> = /*@__P
  */
 export type DeleteReviewRequest = Message<"agni.v1.webapi.DeleteReviewRequest"> & {
   /**
-   * "reviews/{review}"
+   * "projects/{project}/reviews/{review}", or "reviews/{review}"
    *
    * @generated from field: string name = 1;
    */

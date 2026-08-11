@@ -73,7 +73,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   const getReviewManifest = vi.fn(async (_req: { mount: string; ref: string }) => ({
     manifest: { name: "Gateway ECU review", areas: [] },
   }));
-  const createReview = vi.fn(async (_req: { designUri: string; manifest: unknown }) =>
+  const createReview = vi.fn(async (_req: { parent: string; designUri: string; manifest: unknown }) =>
     doc("reviews/r3", "2026-08-11T08:00:00Z", ["pass", "pass", "fail"]),
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,7 +155,7 @@ describe("review presenter — loading", () => {
   it("filters the listing to the open design", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
-    expect(h.listReviews).toHaveBeenCalledWith({ filter: 'design="proj/board.edn"' });
+    expect(h.listReviews).toHaveBeenCalledWith({ filter: `design="${artifactUri("m", "proj/board.edn")}"` });
   });
 
   it("offers the checklists sitting beside the design, and nothing else in the directory", async () => {
@@ -228,6 +228,9 @@ describe("review presenter — creating", () => {
     await h.presenter.createReview();
     expect(h.getReviewManifest).toHaveBeenCalledWith({ uri: artifactUri("m", "proj/review.yaml") });
     expect(h.createReview).toHaveBeenCalledWith({
+      // No project client in this harness, so the run stores unparented — which is the right answer
+      // for a design that resolves to none.
+      parent: "",
       designUri: artifactUri("m", "proj/board.edn"),
       manifest: { name: "Gateway ECU review", areas: [] },
     });
