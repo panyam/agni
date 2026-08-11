@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 	"os"
 	"path/filepath"
 	"sync"
@@ -27,20 +28,20 @@ type fsReviewLoader struct{ base string }
 // Design HONORS the read options rather than discarding them, because that is the whole point of the
 // seam: a loader that dropped the lexicon would make a per-request convention silently no-op, and a
 // test helper that dropped it would assert nothing.
-func (l fsReviewLoader) Design(_ context.Context, _, path string, opts ...ReadOption) (*ir.Design, error) {
-	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, path))
+func (l fsReviewLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+	return (&formats.Loader{Lexicon: ReadOpts(opts...).Lexicon}).ReadDesign(filepath.Join(l.base, uri.Path))
 }
 
-func (l fsReviewLoader) Board(_ context.Context, _, path string) (*geom.BoardGeometry, error) {
-	return (&formats.Loader{}).BoardGeometry(filepath.Join(l.base, path))
+func (l fsReviewLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+	return (&formats.Loader{}).BoardGeometry(filepath.Join(l.base, uri.Path))
 }
 
-func (l fsReviewLoader) DesignHash(_ context.Context, _, path string) (string, error) {
-	return "sha256:" + path, nil
+func (l fsReviewLoader) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
+	return "sha256:" + uri.Path, nil
 }
 
-func (l fsReviewLoader) Manifest(_ context.Context, _, path string) (review.Manifest, error) {
-	f, err := os.Open(filepath.Join(l.base, path))
+func (l fsReviewLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+	f, err := os.Open(filepath.Join(l.base, uri.Path))
 	if err != nil {
 		return review.Manifest{}, err
 	}
@@ -82,7 +83,7 @@ func newReviewSvc() *ReviewService {
 // hand-built proto that could drift from what the YAML actually parses to.
 func fixtureManifest(t *testing.T, name string) *checkspb.ReviewManifest {
 	t.Helper()
-	man, err := fsReviewLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}.Manifest(context.Background(), "", name)
+	man, err := fsReviewLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}.Manifest(context.Background(), testURI(t, "m", name))
 	if err != nil {
 		t.Fatalf("load manifest fixture %s: %v", name, err)
 	}
@@ -97,8 +98,8 @@ func TestCreateReviewOverFixtures(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignRef: "review/can-broken.edn",
-		BoardRef:  "conformance/drc.fires.kicad_pcb",
+		DesignUri: "mount://m/review/can-broken.edn",
+		BoardUri:  "conformance/drc.fires.kicad_pcb",
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -126,13 +127,13 @@ func TestCreateReviewOverFixtures(t *testing.T) {
 	}
 }
 
-// TestCreateReviewBoardRefGate: with no board_ref the board item is not-applicable (mirroring the CLI);
+// TestCreateReviewBoardURIGate: with no board_ref the board item is not-applicable (mirroring the CLI);
 // attaching the fires board flips it to fail. Pins the served side of WS3-089.
-func TestCreateReviewBoardRefGate(t *testing.T) {
+func TestCreateReviewBoardURIGate(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignRef: "review/can-broken.edn",
+		DesignUri: "mount://m/review/can-broken.edn",
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -160,9 +161,9 @@ func TestCreateReviewErrors(t *testing.T) {
 	design := "review/can-broken.edn"
 	cases := map[string]*webapi.CreateReviewRequest{
 		"empty design_ref": {Manifest: fixtureManifest(t, "review/mini.yaml")},
-		"absent manifest":  {DesignRef: design},
-		"invalid manifest": {Manifest: twoBindings, DesignRef: design},
-		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignRef: design, BoardRef: "review/can-broken.edn"},
+		"absent manifest":  {DesignUri: design},
+		"invalid manifest": {Manifest: twoBindings, DesignUri: design},
+		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignUri: design, BoardUri: "mount://m/review/can-broken.edn"},
 	}
 	for name, req := range cases {
 		if _, err := svc.CreateReview(ctx, req); err == nil {
@@ -177,7 +178,7 @@ func TestCreateReviewErrors(t *testing.T) {
 func TestGetReviewManifest(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
-	got, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Ref: "review/mini.yaml"})
+	got, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/review/mini.yaml"})
 	if err != nil {
 		t.Fatalf("GetReviewManifest: %v", err)
 	}
@@ -186,7 +187,7 @@ func TestGetReviewManifest(t *testing.T) {
 	}
 	resp, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{
 		Manifest:  got.GetManifest(),
-		DesignRef: "review/can-broken.edn",
+		DesignUri: "mount://m/review/can-broken.edn",
 	})
 	if err != nil {
 		t.Fatalf("CreateReview with the resolved manifest: %v", err)
@@ -202,9 +203,9 @@ func TestGetReviewManifestErrors(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
 	cases := map[string]*webapi.GetReviewManifestRequest{
-		"empty ref":      {},
-		"absent file":    {Ref: "review/does-not-exist.yaml"},
-		"not a manifest": {Ref: "review/can-broken.edn"},
+		"empty uri":      {},
+		"absent file":    {Uri: "mount://m/review/does-not-exist.yaml"},
+		"not a manifest": {Uri: "mount://m/review/can-broken.edn"},
 	}
 	for name, req := range cases {
 		if _, err := svc.GetReviewManifest(ctx, req); err == nil {
@@ -259,16 +260,16 @@ type stubReviewLoader struct {
 	man    review.Manifest
 }
 
-func (l stubReviewLoader) Design(context.Context, string, string, ...ReadOption) (*ir.Design, error) {
+func (l stubReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
 	return l.design, nil
 }
-func (l stubReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
+func (l stubReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
-func (l stubReviewLoader) DesignHash(context.Context, string, string) (string, error) {
+func (l stubReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
 	return "", nil
 }
-func (l stubReviewLoader) Manifest(context.Context, string, string) (review.Manifest, error) {
+func (l stubReviewLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
 	return l.man, nil
 }
 
@@ -280,7 +281,7 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	cat := check.CatalogWith(profiles.Source("t", []profiles.Profile{p}))
 	byName := map[string][]profiles.Profile{p.Name: {p}}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), cat, byName, nil, testReviewEnv, "")
-	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignRef: "d"})
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "d"})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -414,7 +415,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), check.CatalogWith(srcs...),
 		map[string][]profiles.Profile{name: ps}, nil, testReviewEnv, "")
-	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignRef: "d"})
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "d"})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -431,7 +432,7 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 	req := func(conventions string) *webapi.CreateReviewRequest {
 		r := &webapi.CreateReviewRequest{
 			Manifest:  fixtureManifest(t, "review/conv.yaml"),
-			DesignRef: "review/conv-demo.edn",
+			DesignUri: "mount://m/review/conv-demo.edn",
 		}
 		if conventions != "" {
 			// The convention travels as a VALUE, so the caller decides where it came from; here that is

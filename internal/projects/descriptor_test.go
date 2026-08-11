@@ -25,11 +25,11 @@ companions:
 	}
 	// Parsing leaves the refs DESIGN-FOLDER-RELATIVE; the store rewrites them once it knows where the
 	// folder sits. The `./` spelling is normalized here so a companion is recognisable by comparison.
-	if d.GetEntryRef() != "gateway.edn" {
-		t.Errorf("entry ref = %q, want it design-relative", d.GetEntryRef())
+	if d.GetEntryUri() != "gateway.edn" {
+		t.Errorf("entry ref = %q, want it design-relative", d.GetEntryUri())
 	}
 	want := []string{"gateway.kicad_sch", "gateway.kicad_pcb"}
-	got := d.GetCompanionRefs()
+	got := d.GetCompanionUris()
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("companion refs = %v, want %v normalized and in declared order", got, want)
 	}

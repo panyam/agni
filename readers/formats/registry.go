@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/readers/edif"
-	"github.com/panyam/agni/readers/geda"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/readers/edif"
+	"github.com/panyam/agni/readers/geda"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/readers/kicad"
 	"github.com/panyam/agni/readers/xschem"

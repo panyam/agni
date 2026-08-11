@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,17 +22,17 @@ import (
 // value alone there is no file to go stale.
 type dirReviewLoader struct{ dir string }
 
-func (l dirReviewLoader) Design(context.Context, string, string, ...ReadOption) (*ir.Design, error) {
+func (l dirReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
 	return &ir.Design{}, nil
 }
-func (l dirReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
+func (l dirReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
-func (l dirReviewLoader) DesignHash(context.Context, string, string) (string, error) {
+func (l dirReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
 	return "sha256:fixed", nil
 }
-func (l dirReviewLoader) Manifest(_ context.Context, _, ref string) (review.Manifest, error) {
-	f, err := os.Open(filepath.Join(l.dir, ref))
+func (l dirReviewLoader) Manifest(_ context.Context, uri artifact.URI) (review.Manifest, error) {
+	f, err := os.Open(filepath.Join(l.dir, uri.Path))
 	if err != nil {
 		return review.Manifest{}, err
 	}
@@ -73,12 +74,12 @@ areas:
       - {id: "P1", title: "every rail carries a bulk capacitor", rule: bulk-cap}
       - {id: "P2", title: "reviewed by hand", note: "the EE signs this off"}
 `)
-	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Ref: "review.yaml"})
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/review.yaml"})
 	if err != nil {
 		t.Fatalf("GetReviewManifest: %v", err)
 	}
 	created, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{
-		Manifest: man.GetManifest(), DesignRef: "board.edn",
+		Manifest: man.GetManifest(), DesignUri: "mount://m/board.edn",
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -125,11 +126,11 @@ func TestCreateReviewRecordsProvenance(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
 	ctx := context.Background()
-	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Ref: "m.yaml"})
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignRef: "board.edn", RatifiedFloor: 0.5})
+	rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: "mount://m/board.edn", RatifiedFloor: 0.5})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -157,13 +158,13 @@ func TestReviewResourceLifecycle(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
 	ctx := context.Background()
-	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Ref: "m.yaml"})
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	create := func(design string) string {
 		t.Helper()
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignRef: design})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: design})
 		if err != nil {
 			t.Fatalf("CreateReview(%s): %v", design, err)
 		}
@@ -209,13 +210,13 @@ func TestListReviewsPaging(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
 	ctx := context.Background()
-	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Ref: "m.yaml"})
+	man, err := svc.GetReviewManifest(ctx, &webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	var created []string
 	for i := range 5 {
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignRef: fmt.Sprintf("d%d.edn", i)})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: fmt.Sprintf("d%d.edn", i)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -261,7 +262,7 @@ func TestReviewResourcesNeedAStore(t *testing.T) {
 	}}}
 	calls := map[string]func() error{
 		"CreateReview": func() error {
-			_, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man, DesignRef: "d.edn"})
+			_, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man, DesignUri: "mount://m/d.edn"})
 			return err
 		},
 		"GetReview": func() error {

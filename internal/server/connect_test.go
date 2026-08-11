@@ -14,6 +14,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/service"
 )
 
@@ -48,7 +49,7 @@ func TestToConnectErr(t *testing.T) {
 type memWS struct{ err error }
 
 func (m memWS) Mounts() []service.MountInfo { return []service.MountInfo{{Name: "m", Root: "/x"}} }
-func (m memWS) ListDir(context.Context, string, string) ([]service.DirEntry, error) {
+func (m memWS) ListDir(context.Context, artifact.URI) ([]service.DirEntry, error) {
 	return nil, m.err
 }
 
@@ -66,7 +67,7 @@ func TestAdapterRoundTrip(t *testing.T) {
 	}
 
 	failing := NewWorkspace(service.NewWorkspaceService(memWS{err: errors.New("boom")}))
-	_, err = failing.ListDir(context.Background(), connect.NewRequest(&webapi.ListDirRequest{Mount: "m"}))
+	_, err = failing.ListDir(context.Background(), connect.NewRequest(&webapi.ListDirRequest{Uri: "mount://m"}))
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("want NotFound (the service classifies unknown workspace errors), got %v", err)
 	}
@@ -79,16 +80,16 @@ type memReviewLoader struct {
 	err    error
 }
 
-func (m memReviewLoader) Design(context.Context, string, string, ...service.ReadOption) (*ir.Design, error) {
+func (m memReviewLoader) Design(context.Context, artifact.URI, ...service.ReadOption) (*ir.Design, error) {
 	return m.design, m.err
 }
-func (m memReviewLoader) Board(context.Context, string, string) (*geom.BoardGeometry, error) {
+func (m memReviewLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
 	return nil, nil
 }
-func (m memReviewLoader) DesignHash(context.Context, string, string) (string, error) {
+func (m memReviewLoader) DesignHash(context.Context, artifact.URI) (string, error) {
 	return "sha256:stub", nil
 }
-func (m memReviewLoader) Manifest(context.Context, string, string) (review.Manifest, error) {
+func (m memReviewLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
 	return m.man, m.err
 }
 
@@ -102,7 +103,7 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 	}}}
 	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
 	resp, err := a.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{
-		Manifest: service.ManifestProto(man), DesignRef: "d.edn",
+		Manifest: service.ManifestProto(man), DesignUri: "mount://m/d.edn",
 	}))
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -112,7 +113,7 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 	}
 
 	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
-	_, err = failing.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{Manifest: service.ManifestProto(man), DesignRef: "d.edn"}))
+	_, err = failing.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{Manifest: service.ManifestProto(man), DesignUri: "mount://m/d.edn"}))
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("want InvalidArgument, got %v", err)
 	}
@@ -128,7 +129,7 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
 	}}}
 	a := NewReview(service.NewReviewService(memReviewLoader{man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
-	resp, err := a.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
+	resp, err := a.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"}))
 	if err != nil {
 		t.Fatalf("GetReviewManifest: %v", err)
 	}
@@ -137,7 +138,7 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 	}
 
 	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no such file: %w", service.ErrNotFound)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, ""))
-	_, err = failing.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Ref: "m.yaml"}))
+	_, err = failing.GetReviewManifest(context.Background(), connect.NewRequest(&webapi.GetReviewManifestRequest{Uri: "mount://m/m.yaml"}))
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("want NotFound, got %v", err)
 	}

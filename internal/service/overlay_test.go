@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 	"os"
 	"path/filepath"
 	"strings"
@@ -186,8 +187,8 @@ func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
 // at a malformed one.
 type fsConventionLoader struct{ dir string }
 
-func (l fsConventionLoader) Convention(_ context.Context, _, ref string) (naming.Config, error) {
-	return naming.Load(filepath.Join(l.dir, ref))
+func (l fsConventionLoader) Convention(_ context.Context, uri artifact.URI) (naming.Config, error) {
+	return naming.Load(filepath.Join(l.dir, uri.Path))
 }
 
 func writeConvention(t *testing.T, dir, name, body string) {
@@ -213,7 +214,7 @@ rules:
     allow: ["^[A-Z][A-Z0-9_]*$"]
 `)
 	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", fsConventionLoader{dir: dir})
-	got, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Ref: "house.yaml"})
+	got, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Uri: "mount://m/house.yaml"})
 	if err != nil {
 		t.Fatalf("GetNamingConvention: %v", err)
 	}
@@ -252,7 +253,7 @@ func TestGetNamingConventionRejectsBadInput(t *testing.T) {
 		"pattern to nil": "bad-regex.yaml",
 		"unknown class":  "bad-class.yaml",
 	} {
-		if _, err := svc.GetNamingConvention(ctx, &webapi.GetNamingConventionRequest{Ref: ref}); err == nil {
+		if _, err := svc.GetNamingConvention(ctx, &webapi.GetNamingConventionRequest{Uri: "mount://m/" + ref}); err == nil {
 			t.Errorf("%s: want an error, got nil", name)
 		}
 	}
@@ -262,7 +263,7 @@ func TestGetNamingConventionRejectsBadInput(t *testing.T) {
 // than panicking. That is the CLI's construction, which reads its own config at the edge.
 func TestGetNamingConventionNeedsALoader(t *testing.T) {
 	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", nil)
-	if _, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Ref: "x.yaml"}); err == nil {
+	if _, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Uri: "mount://m/x.yaml"}); err == nil {
 		t.Error("want an error from a service with no convention loader")
 	}
 }

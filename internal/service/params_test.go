@@ -28,7 +28,7 @@ func TestGetComponentParams(t *testing.T) {
 	})
 
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), provider, "", nil)
-	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{})
+	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestGetComponentParams(t *testing.T) {
 	}
 
 	noParams := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
-	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{})
+	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}

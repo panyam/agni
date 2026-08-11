@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/readers/kicad"
 )

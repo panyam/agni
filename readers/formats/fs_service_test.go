@@ -15,6 +15,7 @@ import (
 	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/readers/formats"
@@ -54,7 +55,8 @@ func (m *memLoader) loader(mount string, opts ...service.ReadOption) (*formats.L
 	return &formats.Loader{FS: fsys, Lexicon: service.ReadOpts(opts...).Lexicon}, nil
 }
 
-func (m *memLoader) Design(_ context.Context, mount, p string, opts ...service.ReadOption) (*ir.Design, error) {
+func (m *memLoader) Design(_ context.Context, uri artifact.URI, opts ...service.ReadOption) (*ir.Design, error) {
+	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount, opts...)
 	if err != nil {
 		return nil, err
@@ -62,7 +64,8 @@ func (m *memLoader) Design(_ context.Context, mount, p string, opts ...service.R
 	return l.ReadDesign(p)
 }
 
-func (m *memLoader) Geometry(_ context.Context, mount, p, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
+func (m *memLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
+	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
 		return nil, err
@@ -74,7 +77,8 @@ func (m *memLoader) Geometry(_ context.Context, mount, p, layout string, faithfu
 	return l.ResolveGeometry(p, layout, nil, symbols)
 }
 
-func (m *memLoader) Report(_ context.Context, mount, p string, faithfulSymbols bool) (*graph.ConversionReport, error) {
+func (m *memLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool) (*graph.ConversionReport, error) {
+	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
 		return nil, err
@@ -86,11 +90,12 @@ func (m *memLoader) Report(_ context.Context, mount, p string, faithfulSymbols b
 	return l.ConversionReport(p, symbols, nil)
 }
 
-func (m *memLoader) Expectations(context.Context, string, string) (*expect.Expectations, error) {
+func (m *memLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
 	return nil, nil
 }
 
-func (m *memLoader) Board(_ context.Context, mount, p string) (*geom.BoardGeometry, error) {
+func (m *memLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeometry, error) {
+	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
 		return nil, err
@@ -114,26 +119,37 @@ func TestInMemoryServiceLoader(t *testing.T) {
 	}}
 	ctx := context.Background()
 
-	d, err := l.Design(ctx, "designs", "boards/basic.edn")
+	d, err := l.Design(ctx, uriOf(t, "designs", "boards/basic.edn"))
 	if err != nil || len(d.Components) == 0 {
 		t.Fatalf("Design over an in-memory mount = (%v components, %v), want a read design", len(d.GetComponents()), err)
 	}
 	// The per-request lexicon override must survive the FS: readerFor-style copying carries the
 	// whole Loader, so a served request can set project conventions without losing its host.
 	lex := classify.DefaultLexicon()
-	if _, err := l.Design(ctx, "designs", "boards/basic.edn", service.WithLexicon(lex)); err != nil {
+	if _, err := l.Design(ctx, uriOf(t, "designs", "boards/basic.edn"), service.WithLexicon(lex)); err != nil {
 		t.Errorf("Design with a lexicon option over an FS mount: %v", err)
 	}
-	if g, err := l.Geometry(ctx, "designs", "boards/basic.edn", "grid", false); err != nil || len(g.Sheets) == 0 {
+	if g, err := l.Geometry(ctx, uriOf(t, "designs", "boards/basic.edn"), "grid", false); err != nil || len(g.Sheets) == 0 {
 		t.Errorf("Geometry over an in-memory mount = (%v sheets, %v), want an auto-layout", len(g.GetSheets()), err)
 	}
-	if r, err := l.Report(ctx, "designs", "boards/basic.edn", false); err != nil || r == nil {
+	if r, err := l.Report(ctx, uriOf(t, "designs", "boards/basic.edn"), false); err != nil || r == nil {
 		t.Errorf("Report over an in-memory mount = (%v, %v)", r, err)
 	}
-	if b, err := l.Board(ctx, "designs", "boards/board.kicad_pcb"); err != nil || b == nil {
+	if b, err := l.Board(ctx, uriOf(t, "designs", "boards/board.kicad_pcb")); err != nil || b == nil {
 		t.Errorf("Board over an in-memory mount = (%v, %v)", b, err)
 	}
-	if _, err := l.Design(ctx, "nosuch", "boards/basic.edn"); err == nil {
+	if _, err := l.Design(ctx, uriOf(t, "nosuch", "boards/basic.edn")); err == nil {
 		t.Error("an unknown mount resolved; want an error")
 	}
+}
+
+// uriOf builds an artifact URI for a test, failing rather than returning an error: a hard-coded
+// fixture URI that will not parse is a broken test, not a condition under test.
+func uriOf(t *testing.T, mount, p string) artifact.URI {
+	t.Helper()
+	u, err := artifact.New(mount, p)
+	if err != nil {
+		t.Fatalf("artifact.New(%q, %q): %v", mount, p, err)
+	}
+	return u
 }

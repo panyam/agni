@@ -31,7 +31,7 @@ func TestOsDocExtractor(t *testing.T) {
 	}
 
 	// A run writes the sibling and returns the parsed + validated doc-IR.
-	d, err := e.Extract(context.Background(), "m", "LM1117.pdf")
+	d, err := e.Extract(context.Background(), mustURI("m", "LM1117.pdf"))
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestOsDocExtractor(t *testing.T) {
 
 	// A failing command is an error (not a silent success).
 	bad := &osDocExtractor{mounts: e.mounts, cmd: []string{"false"}}
-	if _, err := bad.Extract(context.Background(), "m", "LM1117.pdf"); err == nil {
+	if _, err := bad.Extract(context.Background(), mustURI("m", "LM1117.pdf")); err == nil {
 		t.Error("a failing producer command should error")
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"strings"
 	"testing"
 
@@ -20,13 +21,13 @@ type memWorkspace struct {
 
 func (m *memWorkspace) Mounts() []MountInfo { return m.mounts }
 
-func (m *memWorkspace) ListDir(_ context.Context, mount, rel string) ([]DirEntry, error) {
-	if strings.Contains(rel, "..") {
-		return nil, fmt.Errorf("%w: %q", ErrInvalidPath, rel)
+func (m *memWorkspace) ListDir(_ context.Context, uri artifact.URI) ([]DirEntry, error) {
+	if strings.Contains(uri.Path, "..") {
+		return nil, fmt.Errorf("%w: %q", ErrInvalidPath, uri.Path)
 	}
-	e, ok := m.entries[mount+"\x00"+rel]
+	e, ok := m.entries[uri.Mount+"\x00"+uri.Path]
 	if !ok {
-		return nil, fmt.Errorf("no such dir %q", rel)
+		return nil, fmt.Errorf("no such dir %q", uri.Path)
 	}
 	return e, nil
 }
@@ -44,7 +45,7 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 		},
 	})
 	req := func(path string) *webapi.ListDirRequest {
-		return &webapi.ListDirRequest{Mount: "m", Path: path}
+		return &webapi.ListDirRequest{Uri: uriStr("m", path)}
 	}
 
 	t.Run("dir first, files sorted, dotfile skipped, format labeled", func(t *testing.T) {

@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"github.com/panyam/agni/internal/artifact"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -43,10 +44,10 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ps) != 1 || ps[0].GetName() != "projects/gateway" || ps[0].GetDirRef() != "" {
+	if len(ps) != 1 || ps[0].GetName() != "projects/gateway" || uriOf(ps[0].GetUri()).Path != "" {
 		t.Fatalf("projects = %+v, want one named at the tree root", ps)
 	}
-	if ps[0].GetTitle() != "Gateway program" || ps[0].GetMount() != "m" {
+	if ps[0].GetTitle() != "Gateway program" || uriOf(ps[0].GetUri()).Mount != "m" {
 		t.Errorf("project = %+v, want the store to fill title and mount", ps[0])
 	}
 
@@ -59,11 +60,11 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 	}
 	// Descriptor-relative names become mount-relative refs HERE, once, because every consumer above
 	// the port addresses files by (mount, ref) and none knows where the design folder sits.
-	if ds[0].GetEntryRef() != "designs/gateway/gateway.edn" {
-		t.Errorf("entry ref = %q", ds[0].GetEntryRef())
+	if ds[0].GetEntryUri() != "mount://m/designs/gateway/gateway.edn" {
+		t.Errorf("entry ref = %q", ds[0].GetEntryUri())
 	}
-	want := []string{"designs/gateway/gateway.kicad_pcb", "designs/gateway/gateway.kicad_sch"}
-	got := ds[0].GetCompanionRefs()
+	want := []string{"mount://m/designs/gateway/gateway.kicad_pcb", "mount://m/designs/gateway/gateway.kicad_sch"}
+	got := ds[0].GetCompanionUris()
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("companion refs = %v, want %v in declared order", got, want)
 	}
@@ -72,7 +73,7 @@ func TestFSStoreProjectsAndDesigns(t *testing.T) {
 	if p, err := s.Project(ctx, "projects/gateway"); err != nil || p.GetTitle() != "Gateway program" {
 		t.Errorf("Project = %+v, %v", p, err)
 	}
-	if d, err := s.Design(ctx, "projects/gateway/designs/gateway"); err != nil || d.GetEntryRef() == "" {
+	if d, err := s.Design(ctx, "projects/gateway/designs/gateway"); err != nil || d.GetEntryUri() == "" {
 		t.Errorf("Design = %+v, %v", d, err)
 	}
 }
@@ -87,7 +88,7 @@ func TestFSStoreResolve(t *testing.T) {
 		"designs/gateway/",
 		"designs/gateway/symbols/gateway.kicad_sym", // a subfolder still resolves to its design
 	} {
-		d, p, err := s.ResolveDesign(ctx, "m", ref)
+		d, p, err := s.ResolveDesign(ctx, testURI(t, "m", ref))
 		if err != nil || d == nil {
 			t.Fatalf("ResolveDesign(%q) = %v, err %v", ref, d, err)
 		}
@@ -96,7 +97,7 @@ func TestFSStoreResolve(t *testing.T) {
 		}
 	}
 
-	d, _, err := s.ResolveDesign(ctx, "m", "scratch/loose.edn")
+	d, _, err := s.ResolveDesign(ctx, testURI(t, "m", "scratch/loose.edn"))
 	if err != nil {
 		t.Fatalf("a ref under no design is the ordinary case, not an error: %v", err)
 	}
@@ -113,15 +114,15 @@ func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 		"board/design.yaml": "name: board\nentry: board.edn\n",
 		"board/board.edn":   "x",
 	})})
-	d, p, err := s.ResolveDesign(context.Background(), "m", "board/board.edn")
+	d, p, err := s.ResolveDesign(context.Background(), testURI(t, "m", "board/board.edn"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if d == nil {
 		t.Fatal("a design with no project still declares its entry and must resolve")
 	}
-	if d.GetEntryRef() != "board/board.edn" {
-		t.Errorf("entry ref = %q", d.GetEntryRef())
+	if d.GetEntryUri() != "mount://m/board/board.edn" {
+		t.Errorf("entry ref = %q", d.GetEntryUri())
 	}
 	if d.GetName() != "" {
 		t.Errorf("name = %q, want empty: a resource name needs a parent", d.GetName())
@@ -199,7 +200,7 @@ func TestFSStoreNestedProjectsDoNotCompound(t *testing.T) {
 // checked: an fs.FS has no parent to climb into, so an upward walk stops at the root and a ref
 // carrying `..` never opens a file at all.
 func TestFSStoreCannotEscapeItsTree(t *testing.T) {
-	d, _, err := demoStore().ResolveDesign(context.Background(), "m", "../elsewhere/design.yaml")
+	d, _, err := demoStore().ResolveDesign(context.Background(), testURI(t, "m", "elsewhere/design.yaml"))
 	if d != nil || err != nil {
 		t.Fatalf("ResolveDesign(escaping) = %v, err %v; want a miss with no error", d, err)
 	}
@@ -207,7 +208,18 @@ func TestFSStoreCannotEscapeItsTree(t *testing.T) {
 
 // TestFSStoreUnknownMount is classified so the service can hand the transport a code.
 func TestFSStoreUnknownMount(t *testing.T) {
-	if _, _, err := demoStore().ResolveDesign(context.Background(), "nope", "a.edn"); err == nil {
+	if _, _, err := demoStore().ResolveDesign(context.Background(), testURI(t, "nope", "a.edn")); err == nil {
 		t.Fatal("an unknown mount should be an error, not a miss")
 	}
+}
+
+// testURI builds an artifact URI for a test, failing rather than returning an error: a hard-coded
+// fixture URI that will not parse is a broken test, not a condition under test.
+func testURI(t *testing.T, mount, p string) artifact.URI {
+	t.Helper()
+	u, err := artifact.New(mount, p)
+	if err != nil {
+		t.Fatalf("artifact.New(%q, %q): %v", mount, p, err)
+	}
+	return u
 }

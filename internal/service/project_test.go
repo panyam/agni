@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/panyam/agni/internal/artifact"
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -53,8 +54,8 @@ func (m *memProjects) Designs(ctx context.Context, parent string) ([]*webapi.Des
 	return m.designs[parent], nil
 }
 
-func (m *memProjects) ResolveDesign(ctx context.Context, mount, ref string) (*webapi.Design, *webapi.Project, error) {
-	d, ok := m.resolve[mount+":"+ref]
+func (m *memProjects) ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
+	d, ok := m.resolve[uri.String()]
 	if !ok {
 		return nil, nil, nil
 	}
@@ -65,17 +66,17 @@ func (m *memProjects) ResolveDesign(ctx context.Context, mount, ref string) (*we
 
 func fixtureStore() *memProjects {
 	gw := &webapi.Design{
-		Name: "projects/gateway/designs/gateway", Title: "Gateway ECU", Mount: "boards",
-		DirRef: "designs/gateway", EntryRef: "designs/gateway/gateway.edn",
-		CompanionRefs: []string{"designs/gateway/gateway.kicad_pcb"},
+		Name: "projects/gateway/designs/gateway", Title: "Gateway ECU",
+		Uri: "mount://boards/designs/gateway", EntryUri: "mount://boards/designs/gateway/gateway.edn",
+		CompanionUris: []string{"mount://boards/designs/gateway/gateway.kicad_pcb"},
 	}
 	return &memProjects{
 		projects: []*webapi.Project{
-			{Name: "projects/gateway", Title: "Gateway program", Mount: "boards"},
-			{Name: "projects/sensor", Title: "sensor", Mount: "other", DirRef: "sensor"},
+			{Name: "projects/gateway", Title: "Gateway program", Uri: "mount://boards"},
+			{Name: "projects/sensor", Title: "sensor", Uri: "mount://other/sensor"},
 		},
 		designs: map[string][]*webapi.Design{"projects/gateway": {gw}},
-		resolve: map[string]*webapi.Design{"boards:designs/gateway/gateway.kicad_pcb": gw},
+		resolve: map[string]*webapi.Design{"mount://boards/designs/gateway/gateway.kicad_pcb": gw},
 	}
 }
 
@@ -87,7 +88,7 @@ func TestGetProjectAndDesign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.GetName() != "projects/gateway" || p.GetTitle() != "Gateway program" || p.GetMount() != "boards" {
+	if p.GetName() != "projects/gateway" || p.GetTitle() != "Gateway program" || p.GetUri() != "mount://boards" {
 		t.Fatalf("project = %+v", p)
 	}
 
@@ -95,8 +96,8 @@ func TestGetProjectAndDesign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.GetEntryRef() != "designs/gateway/gateway.edn" {
-		t.Errorf("entry_ref = %q, want the declared entry", d.GetEntryRef())
+	if d.GetEntryUri() != "mount://boards/designs/gateway/gateway.edn" {
+		t.Errorf("entry_ref = %q, want the declared entry", d.GetEntryUri())
 	}
 }
 
@@ -173,7 +174,7 @@ func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
 	ctx := context.Background()
 
-	hit, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: "boards", Ref: "designs/gateway/gateway.kicad_pcb"})
+	hit, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: "mount://boards/designs/gateway/gateway.kicad_pcb"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +185,7 @@ func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 		t.Errorf("project = %+v, want the design's parent", hit.GetProject())
 	}
 
-	miss, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: "boards", Ref: "scratch/notes.edn"})
+	miss, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: "mount://boards/scratch/notes.edn"})
 	if err != nil {
 		t.Fatalf("an unresolved ref is the ordinary case, not an error: %v", err)
 	}
@@ -198,7 +199,7 @@ func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 func TestNilStoreAnswersAsUnconfigured(t *testing.T) {
 	svc := NewProjectService(nil)
 	ctx := context.Background()
-	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: "m", Ref: "a.edn"})
+	resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Uri: "mount://m/a.edn"})
 	if err != nil || resp.GetDesign() != nil {
 		t.Fatalf("ResolveDesign = %+v, %v; want an empty response and no error", resp, err)
 	}
@@ -237,39 +238,39 @@ func TestResourceNameRoundTrip(t *testing.T) {
 // about which companion supplies the board.
 func TestSourcesFor(t *testing.T) {
 	d := &webapi.Design{
-		EntryRef:      "d/board.edn",
-		CompanionRefs: []string{"d/board.kicad_sch", "d/board.kicad_pcb"},
+		EntryUri:      "mount://m/d/board.edn",
+		CompanionUris: []string{"mount://m/d/board.kicad_sch", "mount://m/d/board.kicad_pcb"},
 	}
 
 	// Naming the design itself: every tier comes from the declaration.
 	s := SourcesFor(d, "")
-	if s.NetlistRef != "d/board.edn" || s.BoardRef != "d/board.kicad_pcb" || s.GeometryRef != "d/board.kicad_sch" {
+	if s.NetlistURI != "mount://m/d/board.edn" || s.BoardURI != "mount://m/d/board.kicad_pcb" || s.GeometryURI != "mount://m/d/board.kicad_sch" {
 		t.Fatalf("design-named sources = %+v", s)
 	}
 
 	// Naming a companion: only the NETLIST tier moves. The named artifact keeps whatever it alone
 	// supplies, because that is why the caller pointed at it.
-	s = SourcesFor(d, "d/board.kicad_pcb")
-	if s.NetlistRef != "d/board.edn" || s.BoardRef != "d/board.kicad_pcb" {
+	s = SourcesFor(d, "mount://m/d/board.kicad_pcb")
+	if s.NetlistURI != "mount://m/d/board.edn" || s.BoardURI != "mount://m/d/board.kicad_pcb" {
 		t.Fatalf("companion-named sources = %+v", s)
 	}
 
 	// A design with no companions leaves every tier on the entry rather than inventing one.
-	bare := &webapi.Design{EntryRef: "d/board.edn"}
+	bare := &webapi.Design{EntryUri: "mount://m/d/board.edn"}
 	s = SourcesFor(bare, "")
-	if s.BoardRef != "d/board.edn" || s.GeometryRef != "d/board.edn" {
+	if s.BoardURI != "mount://m/d/board.edn" || s.GeometryURI != "mount://m/d/board.edn" {
 		t.Fatalf("bare sources = %+v", s)
 	}
 }
 
 func TestIsCompanion(t *testing.T) {
-	d := &webapi.Design{EntryRef: "d/a.edn", CompanionRefs: []string{"d/a.kicad_pcb"}}
-	if !IsCompanion(d, "d/a.kicad_pcb") {
+	d := &webapi.Design{EntryUri: "mount://m/d/a.edn", CompanionUris: []string{"mount://m/d/a.kicad_pcb"}}
+	if !IsCompanion(d, "mount://m/d/a.kicad_pcb") {
 		t.Error("a declared companion should be recognised")
 	}
 	// The reason companions are declared rather than inferred: an undeclared sibling is a legitimate
 	// analysis source in its own right.
-	if IsCompanion(d, "d/a-rev-b.edn") || IsCompanion(d, "d/a.edn") {
+	if IsCompanion(d, "mount://m/d/a-rev-b.edn") || IsCompanion(d, "mount://m/d/a.edn") {
 		t.Error("only declared companions are companions")
 	}
 }
