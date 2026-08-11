@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { uriPath } from "./uri.js";
 import { fileTreeIsland } from "./filetree.jsx";
 import type { SheetsState } from "./sheets.js";
 
@@ -12,7 +13,8 @@ const fake = vi.hoisted(() => ({
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
-    listDir: async ({ path }: { mount: string; path: string }) => {
+    listDir: async ({ uri }: { uri: string }) => {
+      const path = uriPath(uri);
       fake.calls.push(path);
       const entries = fake.dirs[path];
       if (!entries) throw new Error(`no such dir ${path}`);

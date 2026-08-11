@@ -1,4 +1,5 @@
 import { Code, ConnectError, type Client } from "@connectrpc/connect";
+import { artifactUri, uriPath } from "./uri.js";
 import { DesignService, SheetFormat, SymbolSource, type SheetRef, type ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "./gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
@@ -230,7 +231,7 @@ export class ViewerPresenter {
       // The overlay goes here too, or the vocabulary bar lies. The bar names the vocabulary the
       // answers on screen were computed under, and a Query panel answering under the server's while
       // the bar said otherwise would be the exact over-claim the bar exists to prevent (WS3-113).
-      const resp = await this.query.runQuery({ mount: this.mount, path: this.path, query: text, overlay: this.overlay() });
+      const resp = await this.query.runQuery({ uri: artifactUri(this.mount, this.path), query: text, overlay: this.overlay() });
       this.views.query.setState(resultFromResponse(resp, (ids) => this.sheetBadges(ids)));
     } catch (e) {
       this.views.query.setState(errorResult(e instanceof Error ? e.message : String(e)));
@@ -279,7 +280,7 @@ export class ViewerPresenter {
       return;
     }
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
-    const resp = await this.client.getLayoutReport({ mount: this.mount, path: this.path, symbols });
+    const resp = await this.client.getLayoutReport({ uri: artifactUri(this.mount, this.path), symbols });
     this.views.report(resp.report ?? null);
   }
 
@@ -339,7 +340,7 @@ export class ViewerPresenter {
     this.path = path;
     this.setBusy(true, "loading design…");
     try {
-      const d = await this.client.getDesign({ mount, path, layout: this.currentLayout });
+      const d = await this.client.getDesign({ uri: artifactUri(mount, path), layout: this.currentLayout });
       this.sheets = d.sheets;
       // Adopt the effective layout the server chose (the request may have been empty or
       // unavailable for this file), and report the options to the UI.
@@ -417,7 +418,7 @@ export class ViewerPresenter {
   // (the panel shows "No rules.") rather than erroring the open.
   private async loadRules(mount: string, path: string): Promise<void> {
     try {
-      const resp = await this.checks.listRules({ mount, path, overlay: this.overlay() });
+      const resp = await this.checks.listRules({ uri: artifactUri(mount, path), overlay: this.overlay() });
       this.rules = resp.rules.map((r) => ({
         name: r.name,
         severity: r.severity,
@@ -489,7 +490,7 @@ export class ViewerPresenter {
     const missing = names.filter((n) => !this.findingCache.has(n));
     if (missing.length > 0 && this.mount && this.path) {
       try {
-        const resp = await this.checks.checkDesign({ mount: this.mount, path: this.path, rules: missing, overlay: this.overlay() });
+        const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: missing, overlay: this.overlay() });
         for (const n of missing) this.findingCache.set(n, []); // mark computed (even if it fired nothing)
         for (const f of resp.findings) {
           this.findingCache.get(f.rule)?.push({
@@ -590,7 +591,7 @@ export class ViewerPresenter {
     }
     this.pushConvention(true);
     try {
-      const resp = await this.checks.getNamingConvention({ mount: this.mount, ref });
+      const resp = await this.checks.getNamingConvention({ uri: artifactUri(this.mount, ref) });
       this.convention = resp.convention ?? null;
       this.conventionRef = ref;
       await this.reloadForConvention();
@@ -693,8 +694,8 @@ export class ViewerPresenter {
     const slash = this.path.lastIndexOf("/");
     const dir = slash < 0 ? "" : this.path.slice(0, slash);
     try {
-      const resp = await this.workspace.listDir({ mount: this.mount, path: dir });
-      return checklistOptions(resp.entries.map((e) => ({ name: e.name, path: e.path, isDir: e.isDir })));
+      const resp = await this.workspace.listDir({ uri: artifactUri(this.mount, dir) });
+      return checklistOptions(resp.entries.map((e) => ({ name: e.name, path: uriPath(e.uri), isDir: e.isDir })));
     } catch {
       return [];
     }
@@ -712,10 +713,9 @@ export class ViewerPresenter {
     this.pushReview();
     this.setBusy(true, "running review…");
     try {
-      const man = await this.reviews.getReviewManifest({ mount: this.mount, ref: this.reviewState.checklist });
+      const man = await this.reviews.getReviewManifest({ uri: artifactUri(this.mount, this.reviewState.checklist) });
       const created = await this.reviews.createReview({
-        mount: this.mount,
-        designRef: this.path,
+        designUri: artifactUri(this.mount, this.path),
         manifest: man.manifest,
         overlay: this.overlay(),
       });
@@ -759,7 +759,7 @@ export class ViewerPresenter {
       return;
     }
     try {
-      const resp = await this.checks.getInterfaceCoverage({ mount: this.mount, path: this.path });
+      const resp = await this.checks.getInterfaceCoverage({ uri: artifactUri(this.mount, this.path) });
       this.views.coverage.setState(coverageFromResponse(resp));
     } catch {
       this.views.coverage.setState(emptyCoverage());
@@ -777,7 +777,7 @@ export class ViewerPresenter {
       return;
     }
     try {
-      const resp = await this.checks.getComponentParams({ mount: this.mount, path: this.path });
+      const resp = await this.checks.getComponentParams({ uri: artifactUri(this.mount, this.path) });
       this.views.parts.setState(partsFromResponse(resp));
     } catch {
       this.views.parts.setState(emptyParts());
@@ -805,11 +805,11 @@ export class ViewerPresenter {
     this.hasSidecar = false;
     if (this.mount && this.path) {
       try {
-        const exp = await this.checks.getExpectations({ mount: this.mount, path: this.path });
+        const exp = await this.checks.getExpectations({ uri: artifactUri(this.mount, this.path) });
         this.hasSidecar = exp.hasSidecar;
         this.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
         if (this.hasSidecar) {
-          const resp = await this.checks.checkDesign({ mount: this.mount, path: this.path, rules: [], overlay: this.overlay() });
+          const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: [], overlay: this.overlay() });
           this.expectationFindings = resp.findings.map((f) => ({
             rule: f.rule,
             category: "",
@@ -877,8 +877,7 @@ export class ViewerPresenter {
     }
     try {
       const resp = await this.client.highlightSheet({
-        mount: this.mount,
-        path: this.path,
+        uri: artifactUri(this.mount, this.path),
         sheet: this.currentSheet,
         layout: this.currentLayout,
         symbols: this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH,
@@ -987,7 +986,7 @@ export class ViewerPresenter {
   // the native slot's view (native and SVG share the SVG host). Throws on RPC failure.
   private async renderSheet(sheetId: string, format: SheetFormat): Promise<void> {
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
-    const resp = await this.client.getSheet({ mount: this.mount, path: this.path, sheet: sheetId, layout: this.currentLayout, format, symbols });
+    const resp = await this.client.getSheet({ uri: artifactUri(this.mount, this.path), sheet: sheetId, layout: this.currentLayout, format, symbols });
     switch (resp.content.case) {
       case "packed":
         this.canvas.showSheet(resp.content.value);

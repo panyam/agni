@@ -1,4 +1,5 @@
 import { createEffect, createSignal, For, Show, type Accessor } from "solid-js";
+import { artifactUri, uriPath } from "./uri.js";
 import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
@@ -76,7 +77,7 @@ function SheetNode(props: { ctx: Ctx; node: SheetNodeData; depth: number }) {
 // forest renders nested beneath it (driven by the presenter-pushed SheetsState). On a deep-link
 // restore the file becomes active without a click, so it scrolls itself into view.
 function FileNode(props: { ctx: Ctx; mount: string; entry: DirEntry; depth: number }) {
-  const isOpen = (): boolean => props.ctx.sheets().mount === props.mount && props.ctx.sheets().path === props.entry.path;
+  const isOpen = (): boolean => props.ctx.sheets().mount === props.mount && props.ctx.sheets().path === uriPath(props.entry.uri);
   let btn: HTMLButtonElement | undefined;
   createEffect(() => {
     if (isOpen()) btn?.scrollIntoView({ block: "nearest" });
@@ -87,7 +88,7 @@ function FileNode(props: { ctx: Ctx; mount: string; entry: DirEntry; depth: numb
         ref={btn}
         class={`node file${isOpen() ? " active" : ""}`}
         style={{ "padding-left": `${props.depth * 12 + 4}px` }}
-        onClick={() => props.ctx.onFileSelect(props.mount, props.entry.path)}
+        onClick={() => props.ctx.onFileSelect(props.mount, uriPath(props.entry.uri))}
       >
         <span class="twist" /> {props.entry.name} <span class="fmt">{props.entry.format}</span>
       </button>
@@ -130,7 +131,7 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   const loadEntries = async (): Promise<void> => {
     if (entries() !== null) return;
     try {
-      const resp = await props.ctx.client.listDir({ mount: props.mount, path: props.path });
+      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path) });
       setEntries(resp.entries);
     } catch (e) {
       setError(String(e));
@@ -171,7 +172,7 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
           <For each={(entries() ?? []).filter((e) => e.isDir || e.format)}>
             {(e) =>
               e.isDir ? (
-                <DirNode ctx={props.ctx} mount={props.mount} path={e.path} label={e.name} depth={props.depth + 1} />
+                <DirNode ctx={props.ctx} mount={props.mount} path={uriPath(e.uri)} label={e.name} depth={props.depth + 1} />
               ) : (
                 <FileNode ctx={props.ctx} mount={props.mount} entry={e} depth={props.depth + 1} />
               )

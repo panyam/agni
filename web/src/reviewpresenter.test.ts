@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { artifactUri } from "./uri.js";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
@@ -77,7 +78,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reviews = { listReviews, getReviewManifest, createReview } as any;
-  const listDir = vi.fn(async (_req: { mount: string; path: string }) => ({
+  const listDir = vi.fn(async (_req: { uri: string }) => ({
     entries: [
       { name: "board.edn", path: "proj/board.edn", isDir: false, format: "edif" },
       { name: "review.yaml", path: "proj/review.yaml", isDir: false, format: "" },
@@ -98,7 +99,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 
-  const runQuery = vi.fn(async (_req: { mount: string; path: string; query: string; overlay?: unknown }) => ({
+  const runQuery = vi.fn(async (_req: { uri: string; query: string; overlay?: unknown }) => ({
     columns: ["n"], columnKinds: [], rows: [],
   }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,7 +164,7 @@ describe("review presenter — loading", () => {
     const s = lastState(h.onReview);
     expect(s.checklists.map((c) => c.label)).toEqual(["review.yaml"]);
     expect(s.checklist).toBe("proj/review.yaml");
-    expect(h.listDir).toHaveBeenCalledWith({ mount: "m", path: "proj" });
+    expect(h.listDir).toHaveBeenCalledWith({ uri: artifactUri("m", "proj") });
   });
 
   // A server with no --review-store is a DEPLOYMENT state, not a failure of this request, so it must
@@ -225,7 +226,7 @@ describe("review presenter — creating", () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.createReview();
-    expect(h.getReviewManifest).toHaveBeenCalledWith({ mount: "m", ref: "proj/review.yaml" });
+    expect(h.getReviewManifest).toHaveBeenCalledWith({ uri: artifactUri("m", "proj/review.yaml") });
     expect(h.createReview).toHaveBeenCalledWith({
       mount: "m",
       designRef: "proj/board.edn",
@@ -323,7 +324,7 @@ describe("naming convention", () => {
     const h = convHarness();
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.setConvention("proj/house.yaml");
-    expect(h.getNamingConvention).toHaveBeenCalledWith({ mount: "m", ref: "proj/house.yaml" });
+    expect(h.getNamingConvention).toHaveBeenCalledWith({ uri: artifactUri("m", "proj/house.yaml") });
   });
 
   it("reports which vocabulary is in effect, and goes back to the server's", async () => {

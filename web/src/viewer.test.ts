@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { artifactUri } from "./uri.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { HighlightShape } from "./highlights.js";
 import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
@@ -25,10 +26,10 @@ function harness() {
       ? { content: { case: "svg", value: "<svg data-mode='svg'/>" } }
       : { content: { case: "packed", value: { sheetId: "s1" } } },
   );
-  const checkDesign = vi.fn(async (_req: { mount: string; path: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[] }[] }));
+  const checkDesign = vi.fn(async (_req: { uri: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[] }[] }));
   // listRules returns a small two-rule catalog by default (one connectivity, one naming), both
   // available, so opening a file default-selects both. Tests that need a specific catalog override.
-  const listRules = vi.fn(async (_req: { mount: string; path: string }) => ({
+  const listRules = vi.fn(async (_req: { uri: string }) => ({
     rules: [
       { name: "single-pin-net", severity: "info", summary: "stub net", reads: ["net.pin_count"], tags: { category: "connectivity" }, available: true, unavailableReason: "" },
       { name: "diff-pair-naming", severity: "warning", summary: "diff pair", reads: ["net.names"], tags: { category: "naming" }, available: true, unavailableReason: "" },
@@ -41,7 +42,7 @@ function harness() {
   const highlightSheet = vi.fn(async (_req: object) => ({ content: { case: "svg", value: "<svg data-overlay/>" } }));
   // getExpectations returns no sidecar by default, so opening a file leaves the panel empty; tests
   // that exercise the expectations panel override it.
-  const getExpectations = vi.fn(async (_req: { mount: string; path: string }) => ({
+  const getExpectations = vi.fn(async (_req: { uri: string }) => ({
     expectations: [] as { rule: string; subjects: string[]; pending: boolean }[],
     hasSidecar: false,
   }));
@@ -388,7 +389,7 @@ describe("ViewerPresenter", () => {
     });
     await openAndCheck(h, "m", "board.edn");
     // The active ruleset is the default (both catalog rules), run in one call by the Run button.
-    expect(h.checkDesign).toHaveBeenCalledWith({ mount: "m", path: "board.edn", rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net", "diff-pair-naming"] });
     const last = lastFindings(h);
     expect(last.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(last.selected).toBe("");
@@ -545,7 +546,7 @@ describe("ViewerPresenter", () => {
   it("opening a file fetches the rule catalog and default-selects the available rules", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");
-    expect(h.listRules).toHaveBeenCalledWith({ mount: "m", path: "board.edn" });
+    expect(h.listRules).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn") });
     const rs = lastRules(h);
     expect(rs.rules.map((r: { name: string }) => r.name)).toEqual(["single-pin-net", "diff-pair-naming"]);
     expect(rs.selected).toEqual(["single-pin-net", "diff-pair-naming"]);
@@ -565,7 +566,7 @@ describe("ViewerPresenter", () => {
     });
     await openAndCheck(h, "m", "board.edn");
 
-    expect(h.getExpectations).toHaveBeenCalledWith({ mount: "m", path: "board.edn" });
+    expect(h.getExpectations).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn") });
     // Caption (the non-anchored verdict): single-pin-net matched exactly; the pending row is excluded.
     const capCalls = h.onExpectCaption.mock.calls;
     expect(capCalls[capCalls.length - 1][0]).toMatchObject({ pass: true, expected: 1, matched: 1, unexpected: 0, silent: false });
@@ -768,7 +769,7 @@ describe("on-demand checks (WS9)", () => {
     });
     await h.presenter.openFile("m", "board.edn");
     await h.presenter.runChecks();
-    expect(h.checkDesign).toHaveBeenCalledWith({ mount: "m", path: "board.edn", rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net", "diff-pair-naming"] });
     const fs = lastFindings(h);
     expect(fs.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(fs.pending).toBe(0);
@@ -781,7 +782,7 @@ describe("on-demand checks (WS9)", () => {
     await h.presenter.setRuleSelection(["single-pin-net"]); // toggle only — no fetch
     expect(h.checkDesign).not.toHaveBeenCalled();
     await h.presenter.runChecks(); // runs only the selected rule
-    expect(h.checkDesign).toHaveBeenCalledWith({ mount: "m", path: "board.edn", rules: ["single-pin-net"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net"] });
     h.checkDesign.mockClear();
     await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]); // adds an unrun rule
     expect(h.checkDesign).not.toHaveBeenCalled(); // still no fetch on a toggle

@@ -7,6 +7,7 @@
 // single-file viewer keeps its own file/sheet/highlight state while a diff is open.
 
 import type { Client } from "@connectrpc/connect";
+import { artifactUri } from "./uri.js";
 import { DesignService, SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { DiffService, type DiffDesignsResponse } from "./gen/agni/v1/webapi/diff_pb.js";
 import {
@@ -178,9 +179,9 @@ export class DiffPresenter {
     this.view.setBusy(true);
     try {
       const [resp, da, db] = await Promise.all([
-        this.diff.diffDesigns({ aMount: a.mount, aPath: a.path, bMount: b.mount, bPath: b.path }),
-        this.designs.getDesign({ mount: a.mount, path: a.path, layout: "" }),
-        this.designs.getDesign({ mount: b.mount, path: b.path, layout: "" }),
+        this.diff.diffDesigns({ aUri: artifactUri(a.mount, a.path), bUri: artifactUri(b.mount, b.path) }),
+        this.designs.getDesign({ uri: artifactUri(a.mount, a.path), layout: "" }),
+        this.designs.getDesign({ uri: artifactUri(b.mount, b.path), layout: "" }),
       ]);
       this.componentStatus = resp.componentStatus;
       this.netStatus = resp.netStatus;
@@ -355,8 +356,7 @@ export class DiffPresenter {
     if (sheetId) {
       try {
         const resp = await this.designs.getSheet({
-          mount: ref.mount,
-          path: ref.path,
+          uri: artifactUri(ref.mount, ref.path),
           sheet: sheetId,
           layout,
           format: SheetFormat.SVG,
@@ -457,8 +457,7 @@ export class DiffPresenter {
   private async fetchOverlay(ref: DiffFileRef, layout: string, sheetId: string, specs: ReturnType<typeof sideSpecs>): Promise<string> {
     try {
       const o = await this.designs.highlightSheet({
-        mount: ref.mount,
-        path: ref.path,
+        uri: artifactUri(ref.mount, ref.path),
         sheet: sheetId,
         layout,
         symbols: SymbolSource.GLYPH,

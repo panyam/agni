@@ -6,6 +6,7 @@
 // It lives apart from browse.ts (the page's boot wiring) so the load sequence is unit-testable
 // against fake clients without standing up a DOM root.
 import type { Client } from "@connectrpc/connect";
+import { artifactUri } from "./uri.js";
 import { DesignService, SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 
 type DesignClient = Client<typeof DesignService>;
@@ -101,14 +102,14 @@ export class DesignPreview {
     this.view.setCaption(baseName(path), "");
     this.view.showNote("rendering preview…", "info");
     try {
-      const d = await this.client.getDesign({ mount, path, layout: "" });
+      const d = await this.client.getDesign({ uri: artifactUri(mount, path), layout: "" });
       if (token !== this.seq) return;
       const sheet = pickPreviewSheet(d);
       if (!sheet) {
         this.view.showNote("This file has no drawable sheet.", "info");
         return;
       }
-      const resp = await this.client.getSheet({ mount, path, sheet: sheet.id, layout: "", format: SheetFormat.SVG });
+      const resp = await this.client.getSheet({ uri: artifactUri(mount, path), sheet: sheet.id, layout: "", format: SheetFormat.SVG });
       if (token !== this.seq) return;
       if (resp.content.case !== "svg" || !resp.content.value) {
         this.view.showNote("The server returned no drawing for this sheet.", "error");

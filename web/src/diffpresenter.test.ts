@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { artifactUri, uriPath } from "./uri.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView, type DiffState } from "./diffpresenter.js";
 import { DIFF_COLORS } from "./diff.js";
 
@@ -23,18 +24,18 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn> } = {}) {
     }));
   // Each side's design carries its path so per-side requests are distinguishable; the layout
   // echoes a per-path value to prove renderSide uses each side's own effective layout.
-  const getDesign = vi.fn(async (req: { mount: string; path: string }) => ({
-    layout: `layout-${req.path}`,
+  const getDesign = vi.fn(async (req: { uri: string }) => ({
+    layout: `layout-${uriPath(req.uri)}`,
     sheets: [
       { id: "s1", name: "Top" },
-      { id: "s2", name: req.path === "a.edn" ? "OldOnly" : "NewOnly" },
+      { id: "s2", name: uriPath(req.uri) === "a.edn" ? "OldOnly" : "NewOnly" },
     ],
   }));
-  const getSheet = vi.fn(async (req: { path: string; sheet: string }) => ({
-    content: { case: "svg" as const, value: `<svg data-doc="${req.path}/${req.sheet}"/>` },
+  const getSheet = vi.fn(async (req: { uri: string; sheet: string }) => ({
+    content: { case: "svg" as const, value: `<svg data-doc="${uriPath(req.uri)}/${req.sheet}"/>` },
   }));
-  const highlightSheet = vi.fn(async (req: { path: string }) => ({
-    content: { case: "svg" as const, value: `<svg data-overlay="${req.path}"/>` },
+  const highlightSheet = vi.fn(async (req: { uri: string }) => ({
+    content: { case: "svg" as const, value: `<svg data-overlay="${uriPath(req.uri)}"/>` },
   }));
 
   const side = (): DiffSideView & {
@@ -77,17 +78,17 @@ describe("DiffPresenter.open", () => {
     const h = harness();
     await h.presenter.open(h.A, h.B);
 
-    expect(h.diffDesigns).toHaveBeenCalledWith({ aMount: "m", aPath: "a.edn", bMount: "m", bPath: "b.edn" });
+    expect(h.diffDesigns).toHaveBeenCalledWith({ aUri: artifactUri("m", "a.edn"), bUri: artifactUri("m", "b.edn") });
     // Both sides drew their own sheet document in their own effective layout.
     expect(h.a.svg).toHaveBeenCalledWith('<svg data-doc="a.edn/s1"/>');
     expect(h.b.svg).toHaveBeenCalledWith('<svg data-doc="b.edn/s1"/>');
-    const sheetReqs = h.getSheet.mock.calls.map((c) => c[0] as unknown as { path: string; layout: string });
-    expect(sheetReqs.find((r) => r.path === "a.edn")?.layout).toBe("layout-a.edn");
-    expect(sheetReqs.find((r) => r.path === "b.edn")?.layout).toBe("layout-b.edn");
+    const sheetReqs = h.getSheet.mock.calls.map((c) => c[0] as unknown as { uri: string; layout: string });
+    expect(sheetReqs.find((r) => uriPath(r.uri) === "a.edn")?.layout).toBe("layout-a.edn");
+    expect(sheetReqs.find((r) => uriPath(r.uri) === "b.edn")?.layout).toBe("layout-b.edn");
     // Overlay specs are side-filtered: removed only on A, added only on B, renamed on both.
-    const hlReqs = h.highlightSheet.mock.calls.map((c) => c[0] as { path: string; specs: { color?: string; components?: string[]; nets?: string[] }[] });
-    const aSpecs = hlReqs.find((r) => r.path === "a.edn")!.specs;
-    const bSpecs = hlReqs.find((r) => r.path === "b.edn")!.specs;
+    const hlReqs = h.highlightSheet.mock.calls.map((c) => c[0] as { uri: string; specs: { color?: string; components?: string[]; nets?: string[] }[] });
+    const aSpecs = hlReqs.find((r) => uriPath(r.uri) === "a.edn")!.specs;
+    const bSpecs = hlReqs.find((r) => uriPath(r.uri) === "b.edn")!.specs;
     expect(aSpecs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["R2", "R3"]));
     expect(aSpecs.flatMap((s) => s.components ?? [])).not.toContain("R4");
     expect(bSpecs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["R3", "R4"]));
@@ -181,8 +182,8 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
     expect(last(h.states).selected).toBe("component:R2");
     // A removed component emphasizes only on the old side; the new side's overlay clears
     // without a round-trip.
-    const reqs = h.highlightSheet.mock.calls.map((c) => c[0] as unknown as { path: string; specs: { components?: string[] }[] });
-    expect(reqs.map((r) => r.path)).toEqual(["a.edn"]);
+    const reqs = h.highlightSheet.mock.calls.map((c) => c[0] as unknown as { uri: string; specs: { components?: string[] }[] });
+    expect(reqs.map((r) => uriPath(r.uri))).toEqual(["a.edn"]);
     expect(reqs[0].specs.flatMap((s) => s.components ?? [])).toEqual(["R2"]);
     expect(h.b.overlay).toHaveBeenCalledWith("");
     // The old side reveals (removed lives only there) — no sheet re-render for a same-pair focus.
@@ -197,10 +198,10 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
     h.highlightSheet.mockClear();
     await h.presenter.selectItem("component:R2");
     expect(last(h.states).selected).toBe("");
-    const reqs = h.highlightSheet.mock.calls.map((c) => c[0] as unknown as { path: string; specs: { components?: string[] }[] });
+    const reqs = h.highlightSheet.mock.calls.map((c) => c[0] as unknown as { uri: string; specs: { components?: string[] }[] });
     // Both sides fetch full overlays again (multi-entity specs).
-    expect(reqs.map((r) => r.path).sort()).toEqual(["a.edn", "b.edn"]);
-    expect(reqs.find((r) => r.path === "a.edn")!.specs.flatMap((s) => s.components ?? [])).toEqual(
+    expect(reqs.map((r) => uriPath(r.uri)).sort()).toEqual(["a.edn", "b.edn"]);
+    expect(reqs.find((r) => uriPath(r.uri) === "a.edn")!.specs.flatMap((s) => s.components ?? [])).toEqual(
       expect.arrayContaining(["R2", "R3"]),
     );
     expect(h.a.reveal).toHaveBeenCalledTimes(1); // only the select revealed, not the deselect
@@ -218,8 +219,8 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
         netSheetsB: {},
       })),
     });
-    h.getDesign.mockImplementation(async (req: { mount: string; path: string }) => ({
-      layout: `layout-${req.path}`,
+    h.getDesign.mockImplementation(async (req: { uri: string }) => ({
+      layout: `layout-${uriPath(req.uri)}`,
       sheets: [
         { id: "s1", name: "Top" },
         { id: "s2", name: "Power" },
@@ -251,8 +252,8 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
         netSheetsB: { "/sub/OUT": { ids: ["s2"] } },
       })),
     });
-    h.getDesign.mockImplementation(async (req: { mount: string; path: string }) => ({
-      layout: `layout-${req.path}`,
+    h.getDesign.mockImplementation(async (req: { uri: string }) => ({
+      layout: `layout-${uriPath(req.uri)}`,
       sheets: [
         { id: "s1", name: "Top" },
         { id: "s2", name: "sub" },
@@ -296,12 +297,12 @@ describe("DiffPresenter overlay mode (WS9-007)", () => {
   // shared placements).
   function framedHarness(over: Parameters<typeof harness>[0] = {}) {
     const h = harness(over);
-    h.getSheet.mockImplementation(async (req: { path: string; sheet: string }) => ({
-      content: { case: "svg" as const, value: `<svg width="1000.0" height="800.0" data-doc="${req.path}/${req.sheet}"/>` },
+    h.getSheet.mockImplementation(async (req: { uri: string; sheet: string }) => ({
+      content: { case: "svg" as const, value: `<svg width="1000.0" height="800.0" data-doc="${uriPath(req.uri)}/${req.sheet}"/>` },
     }));
     return h;
   }
-  type HlReq = { path: string; specs: { components?: string[]; nets?: string[] }[] };
+  type HlReq = { uri: string; specs: { components?: string[]; nets?: string[] }[] };
 
   it("offers overlay for aligned pairs and composes the union from retained docs", async () => {
     const h = framedHarness();
@@ -319,10 +320,10 @@ describe("DiffPresenter overlay mode (WS9-007)", () => {
     expect(h.getSheet.mock.calls.length).toBe(sheetFetches);
     // Two layers: b's own change classes on b's sheet, removed-only ghosts on a's sheet.
     const reqs = h.highlightSheet.mock.calls.map((c) => c[0] as unknown as HlReq);
-    const ghost = reqs.find((r) => r.path === "a.edn")!;
+    const ghost = reqs.find((r) => uriPath(r.uri) === "a.edn")!;
     expect(ghost.specs.flatMap((s) => s.components ?? [])).toEqual(["R2"]);
     expect(ghost.specs.flatMap((s) => s.nets ?? [])).toEqual([]);
-    const bLayer = reqs.find((r) => r.path === "b.edn")!;
+    const bLayer = reqs.find((r) => uriPath(r.uri) === "b.edn")!;
     expect(bLayer.specs.flatMap((s) => s.components ?? [])).toEqual(expect.arrayContaining(["R3", "R4"]));
     expect(h.a.overlays).toHaveBeenCalledTimes(1);
   });
@@ -373,7 +374,7 @@ describe("DiffPresenter overlay mode (WS9-007)", () => {
     await h.presenter.setMode("overlay");
     h.highlightSheet.mockClear();
     await h.presenter.selectItem("component:R2"); // removed: ghost layer only
-    const reqs = h.highlightSheet.mock.calls.map((c) => (c[0] as unknown as HlReq).path);
+    const reqs = h.highlightSheet.mock.calls.map((c) => uriPath((c[0] as unknown as HlReq).uri));
     expect(reqs).toEqual(["a.edn"]);
     expect(h.a.reveal).toHaveBeenCalledTimes(1);
     expect(h.b.reveal).not.toHaveBeenCalled();
@@ -405,15 +406,15 @@ describe("DiffPresenter.close", () => {
 describe("DiffPresenter render errors", () => {
   it("turns a failed sheet render into that side's placeholder while the other side draws", async () => {
     const h = harness();
-    h.getSheet.mockImplementation(async (req: { path: string; sheet: string }) => {
-      if (req.path === "a.edn") throw new Error("boom");
-      return { content: { case: "svg" as const, value: `<svg data-doc="${req.path}/${req.sheet}"/>` } };
+    h.getSheet.mockImplementation(async (req: { uri: string; sheet: string }) => {
+      if (uriPath(req.uri) === "a.edn") throw new Error("boom");
+      return { content: { case: "svg" as const, value: `<svg data-doc="${uriPath(req.uri)}/${req.sheet}"/>` } };
     });
     await h.presenter.open(h.A, h.B);
     expect(h.a.ph).toHaveBeenCalledWith(expect.stringContaining("boom"));
     expect(h.b.svg).toHaveBeenCalledWith('<svg data-doc="b.edn/s1"/>');
     // The failed side fetches no overlay; the healthy side still does.
-    const hlPaths = h.highlightSheet.mock.calls.map((c) => (c[0] as { path: string }).path);
+    const hlPaths = h.highlightSheet.mock.calls.map((c) => uriPath((c[0] as { uri: string }).uri));
     expect(hlPaths).toEqual(["b.edn"]);
   });
 

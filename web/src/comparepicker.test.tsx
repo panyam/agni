@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { artifactUri, uriPath } from "./uri.js";
 import { comparePickerIsland } from "./comparepicker.js";
 
 // The picker's tree builds its own client via workspaceClient(); swap in an in-memory workspace,
@@ -8,7 +9,7 @@ const fake = vi.hoisted(() => ({ dirs: {} as Record<string, unknown[]> }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
-    listDir: async ({ path }: { mount: string; path: string }) => ({ entries: fake.dirs[path] ?? [] }),
+    listDir: async ({ uri }: { uri: string }) => ({ entries: fake.dirs[uriPath(uri)] ?? [] }),
   }),
 }));
 
@@ -79,7 +80,7 @@ describe("comparePickerIsland", () => {
 
     buttonFor(treeEl, "b.kicad_sch")?.click();
 
-    expect(onPick).toHaveBeenCalledWith({ mount: "m", path: "b.kicad_sch" });
+    expect(onPick).toHaveBeenCalledWith({ uri: artifactUri("m", "b.kicad_sch") });
     expect(picker.isOpen()).toBe(false);
     expect(host.classList.contains("on")).toBe(false);
   });
@@ -128,6 +129,6 @@ describe("comparePickerIsland", () => {
     await settle();
 
     buttonFor(treeEl, "a.kicad_sch")?.click();
-    expect(onPick).toHaveBeenCalledWith({ mount: "m", path: "a.kicad_sch" });
+    expect(onPick).toHaveBeenCalledWith({ uri: artifactUri("m", "a.kicad_sch") });
   });
 });
