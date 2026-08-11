@@ -23,7 +23,8 @@ of them at once.
 | 6 | [render-schematic/](render-schematic/) | Read schematic geometry (`.eds`) into the sidecar and render one sheet two ways: SVG (offline) and the tier-2 pack the `web/` WebGL2 viewer loads. | ready |
 | 7 | [render-highlight/](render-highlight/) | Run the rule catalog, then bake each finding's subject into one rendered SVG so a report finding becomes a picture of the real design. The walkthrough form of `agni render --highlight`. | ready |
 | 8 | [validate/](validate/) | Run the reader-health invariants (`validate.Design` / `validate.Geometry`) over a design and read the problem lists. The walkthrough form of `agni validate`. | ready |
-| 9 | [whole-enchilada/](whole-enchilada/) | The capstone: all of the above end to end in one tour — convergence, checks, diff, emit, and both renderers. | ready |
+| 9 | [resolve-design/](resolve-design/) | Which design does this file belong to? `project.yaml` / `design.yaml` descriptors, and resolving a file to the design that declares its entry. What is behind `agni check <design-folder>`. | ready |
+| 10 | [whole-enchilada/](whole-enchilada/) | The capstone: all of the above end to end in one tour — convergence, checks, diff, emit, and both renderers. | ready |
 
 New here? Start with `whole-enchilada` for the full tour, then use rungs 1-6 to go deep on
 each step. Examples are tracked as roadmap tickets (workstream WS8).

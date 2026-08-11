@@ -71,8 +71,8 @@ same step on your own design by changing which files it points at.
 
 | Rung | In the tutorial | On your project |
 |---|---|---|
-| 1 | `make stats` | point `designs/<name>/design.yaml` at your netlist |
-| 2 | `make check` | same command, your entry file |
+| 1 | `make stats` | point `designs/<name>/design.yaml` at your netlist, and list your board and schematic exports under `companions` |
+| 2 | `make check` | same command, your design folder |
 | 4 | the bundled `conventions.yaml` | your team's rail names and naming rules |
 | 5 | the bundled `profiles/can.yaml` | one file per bus your team designs with |
 | 6 | the bundled `params/` | a seeded PartSpec per part worth checking |

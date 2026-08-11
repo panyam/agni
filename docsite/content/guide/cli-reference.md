@@ -7,6 +7,11 @@ The commands and flags a user reaches for. `agni <command> --help` always prints
 authoritative, up-to-date detail. This page is the map. The reader for a file is chosen by
 its extension, so you pass the design file directly and never name a format.
 
+Where a `<file>` is expected you may also name a **design folder** — one holding a `design.yaml`
+that declares which file is the design's entry. Agni then reads that entry and picks up the
+companion views the descriptor lists, so a netlist's connectivity rules and a board's copper rules
+run from one argument. See [Projects and designs](../../architecture/projects-and-designs/).
+
 ## Commands
 
 ### `stats <file>`
@@ -147,6 +152,7 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 | flag | what it does |
 |---|---|
 | `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. Defaults to `AGNI_SYMBOL_PATH` (colon-separated) when the flag is absent, which is how the container image supplies its bundled libraries to every subcommand. |
+| `--as-named` | read exactly the file named, even when its `design.yaml` declares it a companion view of a different entry. Without it, analysing a declared companion (a schematic export, a board) reads the design's entry instead, because a companion is a view of the design rather than a second source of it. Reach for this when reading a view as a netlist is the point, such as checking that two views of one design still agree. |
 | `--version` | print the build version and exit. |
 
 ## Advanced and developer commands

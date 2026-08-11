@@ -22,6 +22,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
+	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/internal/version"
@@ -112,6 +113,16 @@ func serveCmd() *cobra.Command {
 			nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
 			wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(&osWorkspace{mounts: mounts})))
 			mux.Handle(wsPath, wsHandler)
+			// ProjectService (agni issue 170) resolves the project/design descriptors sitting in the
+			// mounts. It needs no flag: a mount either carries descriptors or it does not, and a mount
+			// with none resolves to nothing, which is what keeps one project's config from reaching
+			// another project's design.
+			//
+			// Each mount becomes one tree in the filesystem-backed store, which is the ONLY place the
+			// serve wiring knows projects live in directories. Swapping in an index- or database-backed
+			// service.ProjectStore is this line and nothing else.
+			prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projects.NewFSStore(projectTrees(mounts)...))))
+			mux.Handle(prPath, prHandler)
 			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
 			mux.Handle(dsPath, dsHandler)
 			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
@@ -203,6 +214,17 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
+}
+
+// projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is
+// the whole of the OS adapter for projects: one os.DirFS per mount, which also makes containment
+// structural rather than checked, since an fs.FS has no parent to climb into.
+func projectTrees(ms []mounts.Mount) []projects.Tree {
+	out := make([]projects.Tree, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, projects.Tree{Mount: m.Name, FS: os.DirFS(m.Root)})
+	}
+	return out
 }
 
 // serveLoader is what the two rule-running services need between them. The CheckService and the

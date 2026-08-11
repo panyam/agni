@@ -6,6 +6,8 @@ description: "How the internals fit together, by subsystem."
 These pages explain how Agni works, grouped by subsystem rather than by the order the pieces
 were built. Read them in any order. Each stands on its own.
 
+- **[Projects and designs](projects-and-designs/)**: naming a design and a set of designs, so
+  "which file is this design" and "whose config applies" stop being guesses.
 - **[Ingestion and IR](ingestion-and-ir/)**: readers into one neutral representation, with
   provenance and maturity tiers.
 - **[Net solving and hierarchy](net-solving/)**: how implicit connectivity becomes nets, and how

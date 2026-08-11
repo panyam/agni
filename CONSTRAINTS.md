@@ -420,13 +420,32 @@ satisfied.
 
 ## C23: Stateful resources are AIP-shaped; stateless compute stays verb-shaped
 **Rule:** An API surface that owns state with a lifetime of its own is modelled as a RESOURCE:
-a server-assigned `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
+a `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
 `filter` and AIP-158 `page_size` / `page_token` on the list. Everything else in
 `protos/agni/v1/webapi/` stays verb-shaped (`GetDesign`, `ListDir`, `RunQuery`, `DiffDesigns`,
-`CheckDesign`), addressed by a `(mount, ref)` pair. Today the only resource is
-`ReviewService`'s `Review` (WS9-053). A new rpc picks its side by ONE question: does what it
-returns still exist after the call? A derived view of files on disk does not, and is verb-shaped.
-Persisted state does, and is a resource.
+`CheckDesign`), addressed by a `(mount, ref)` pair. The resources today are `ReviewService`'s
+`Review` (WS9-053) and `ProjectService`'s `Project` / `Design` (agni issue 170). A new rpc picks its
+side by ONE question: does what it returns still exist after the call? A derived view of files on
+disk does not, and is verb-shaped. Persisted state does, and is a resource.
+
+**Third case — a DECLARED-identity resource is AIP-shaped and READ-ONLY.** A resource whose id is
+declared by an OPERATOR (a `name:` an operator writes in a descriptor) rather than assigned by the
+server or derived from a path is AIP-shaped with `Get` and `List` and NO mutators. This is a real
+third case rather than a loosening of the first two, and the two-question test that separates it is:
+is the identity the caller's to invent (verb-shaped, the arguments ARE the input), the server's to
+assign (a full resource), or the operator's to declare (this case)?
+
+A `Project` is derived from files, which by the question above sounds verb-shaped. It is not, for
+two reasons that `GetDesign(mount, path)` cannot claim. Its id is DECLARED, so it is not a cache key
+over its arguments: the project keeps its identity when its folder is renamed or moved between
+mounts, and a `(mount, ref)` pair does not. And it is a PARENT — reviews nest under
+`projects/{p}/reviews/{r}` — which a thing with no name cannot be. Mutators are absent because
+creation is genuinely out of scope rather than pending: scaffolding a project means authoring design
+intent, a judgment step with a confidentiality boundary, not a server operation.
+
+The read-only carve-out is narrow on purpose. It does NOT license a stateless query to wear a
+`name`; that failure is called out below and is unchanged. It licenses exactly the case where an
+identity exists in the world, was written down by a person, and the server only reads it.
 
 **Why:** two conventions in one API is a cost, so it is worth being explicit that this is
 deliberate rather than drift. Every verb-shaped rpc here is a pure function of files: `GetDesign`
@@ -443,11 +462,12 @@ The boundary also has to be defended in the other direction: a stateless rpc dre
 is worse than either convention. It invites clients to hold a `name` that is really a query, cache
 what was never stable, and eventually ask why deleting it does not work.
 
-**Verify:** every message in `protos/agni/v1/webapi/` carrying a server-assigned `name` field is
-served by the four standard methods and no bespoke mutator; every rpc that reads a design and
-returns a derived view takes `(mount, ref)` and returns no `name`; a resource's `List` carries
-`page_size`, `page_token`, and `filter`, and its service rejects a filter it does not implement
-rather than ignoring it (`service.parseReviewFilter`).
+**Verify:** every message in `protos/agni/v1/webapi/` carrying a `name` field is served by the
+standard methods and no bespoke mutator — the four of them for a server-assigned id, `Get` and
+`List` alone for a declared one; every rpc that reads a design and returns a derived view takes
+`(mount, ref)` and returns no `name`; a resource's `List` carries `page_size`, `page_token`, and
+`filter`, and its service rejects a filter it does not implement rather than ignoring it
+(`service.parseReviewFilter`, `service.parseProjectFilter`).
 
 **Known limitation:** stored reviews are visible to every client of a server, because `agni serve`
 has no authentication at all. That is a deployment assumption (one team, one trusted network), not

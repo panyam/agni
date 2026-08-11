@@ -62,6 +62,7 @@
     "url": "architecture/",
     "icon": "book-open",
     "children": [
+      { "name": "Projects and designs", "url": "architecture/projects-and-designs/" },
       { "name": "Ingestion and IR", "url": "architecture/ingestion-and-ir/" },
       { "name": "Net solving and hierarchy", "url": "architecture/net-solving/" },
       { "name": "Geometry and rendering", "url": "architecture/geometry-and-rendering/" },

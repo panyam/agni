@@ -325,3 +325,52 @@ func (a *Review) GetReviewManifest(ctx context.Context, req *connect.Request[web
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// Project adapts service.ProjectService to the generated Connect handler interface.
+type Project struct {
+	webapiconnect.UnimplementedProjectServiceHandler
+	svc *service.ProjectService
+}
+
+// NewProject wraps svc for Connect.
+func NewProject(svc *service.ProjectService) *Project { return &Project{svc: svc} }
+
+func (a *Project) GetProject(ctx context.Context, req *connect.Request[webapi.GetProjectRequest]) (*connect.Response[webapi.Project], error) {
+	resp, err := a.svc.GetProject(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Project) ListProjects(ctx context.Context, req *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error) {
+	resp, err := a.svc.ListProjects(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Project) GetDesign(ctx context.Context, req *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error) {
+	resp, err := a.svc.GetDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Project) ListDesigns(ctx context.Context, req *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error) {
+	resp, err := a.svc.ListDesigns(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Project) ResolveDesign(ctx context.Context, req *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error) {
+	resp, err := a.svc.ResolveDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}

@@ -1,0 +1,8 @@
+# The netlist is the design; the board is a view of it. Without these three lines a tool opening this
+# folder has two openable files and no way to know that one is the source of truth and the other is a
+# canvas to draw findings on.
+name: mixer
+title: Mixer board
+entry: mixer.edn
+companions:
+  - mixer.kicad_pcb

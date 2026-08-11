@@ -1,2 +1,21 @@
+# What makes this folder a DESIGN: a name, and a statement of which file is which.
+#
+# `entry` is the file analysis reads. It is the netlist the design team produces, because that is the
+# design's system of record; everything else here is a view of it. Declaring it is what lets you point
+# agni at the DESIGN (`agni stats designs/gateway`) rather than at a file, and what lets the tool stop
+# guessing when a folder holds several files that all look openable.
+#
+# `companions` are those other views: the same board drawn as a KiCad schematic, and its copper. They
+# are geometry to render and to locate findings on, never a second component source to reconcile
+# against the netlist. Asking for analysis of one reads the entry instead and says so; `--as-named`
+# overrides that when reading a view as a netlist is the point (see the Makefile's check-views).
+#
+# `gateway-rev-b.edn` is deliberately NOT listed. It is a later revision, an analysis source in its
+# own right, and `make diff` compares it against the entry. That is why companions are declared file
+# by file instead of inferred from "everything beside the entry".
 name: gateway
+title: Gateway ECU
 entry: gateway.edn
+companions:
+  - gateway.kicad_sch
+  - gateway.kicad_pcb

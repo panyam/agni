@@ -7,8 +7,11 @@
 AGNI   ?= go run github.com/panyam/agni/cmd/agni
 DESIGN ?= gateway
 
-DIR   = designs/$(DESIGN)
-ENTRY = $(DIR)/$(shell awk -F': ' '/^entry:/{print $$2}' $(DIR)/design.yaml)
+# Naming the design FOLDER is naming the design: agni reads design.yaml, analyses the declared entry,
+# and picks up the declared board and schematic companions for the tiers a netlist has none of. This
+# used to be an awk that scraped `entry:` out of the descriptor, because a folder was not something
+# the CLI could be pointed at.
+DIR = designs/$(DESIGN)
 
 # The overlay tiers. Each is passed only when this project actually has one, so a project that has
 # not written conventions yet still runs. The intent file is PER-DESIGN, unlike the others.
@@ -28,31 +31,35 @@ help: ## List targets
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/\t/'
 
 stats: ## What the tool read (run this before trusting anything downstream)
-	@$(AGNI) stats $(ENTRY)
+	@$(AGNI) stats $(DIR)
 
 check: ## Run the rule catalog with every tier this project supplies
-	@$(AGNI) check $(ENTRY) $(TIERS)
+	@$(AGNI) check $(DIR) $(TIERS)
 
 review: ## Run the review checklist and print per-item outcomes
-	@$(AGNI) review $(ENTRY) --checklist review.yaml $(TIERS)
+	@$(AGNI) review $(DIR) --checklist review.yaml $(TIERS)
 
 coverage: ## Per-area rollup: how many items each area actually decided
-	@$(AGNI) review $(ENTRY) --checklist review.yaml $(TIERS) --coverage
+	@$(AGNI) review $(DIR) --checklist review.yaml $(TIERS) --coverage
 
 diff: ## Structural diff of the two bundled revisions
 	@$(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway-rev-b.edn
 
 report: ## Write the review as a self-contained results document you can re-render later
 	@mkdir -p reports/$(DESIGN)
-	@$(AGNI) review $(ENTRY) --checklist review.yaml $(TIERS) \
+	@$(AGNI) review $(DIR) --checklist review.yaml $(TIERS) \
 	  --results-out reports/$(DESIGN)/review.results.json >/dev/null
 	@echo "wrote reports/$(DESIGN)/review.results.json"
 
 views: ## Faithful render of the KiCad view (the netlist has no geometry of its own)
 	@$(AGNI) render $(DIR)/gateway.kicad_sch --symbol-path $(DIR)/symbols -o gateway-schematic.svg
 
+# --as-named is required here and nowhere else. The schematic is a declared COMPANION, so analysing it
+# normally reads the design's entry instead — which would make this target diff the netlist against
+# itself and pass unconditionally. Reading a view as a netlist is exactly the point of this check, so
+# it opts out.
 check-views: ## The netlist and the KiCad view must still describe the same design (no net delta)
-	@out=$$($(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway.kicad_sch --symbol-path $(DIR)/symbols); \
+	@out=$$($(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway.kicad_sch --as-named --symbol-path $(DIR)/symbols); \
 	  echo "$$out" | grep -q 'new 0  deleted 0  renamed 0  hard 0  soft 0' \
 	    || { echo "VIEWS DIVERGED: the netlist and the KiCad schematic no longer agree:"; \
 	         echo "$$out"; exit 1; }; \
