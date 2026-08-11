@@ -453,3 +453,43 @@ rather than ignoring it (`service.parseReviewFilter`).
 has no authentication at all. That is a deployment assumption (one team, one trusted network), not
 an access-control boundary, and it is recorded rather than implied so nobody reads the resource
 model as having brought isolation with it. Auth is deliberately deferred; see `OUT_OF_SCOPE.md`.
+
+## C24: A datasheet parameter is compared in SI base units, converted in one place
+**Rule:** Any code that COMPARES a seeded datasheet parameter's value against anything reads the
+row through `param.InBaseUnit` and gates on the CONVERTED row's unit. No package outside
+`datasheet/param` reads a raw `Parameter.Unit`, and no rule or extractor contains a scale factor.
+A unit the conversion table does not recognize is skipped, never scaled by a guess or assumed to
+be the base unit. Storage is unaffected: a `PartSpec` keeps every row exactly as the datasheet
+printed it, and only the value handed to a comparison is reduced.
+
+**Why:** this is the C20 left-shift rule applied to units, and it is here because the alternative
+already shipped a wrong answer. Before agni issue 148 each extractor gated on the printed unit
+string, so a row in a prefixed unit was DROPPED from the slice it returned. A rule that receives an
+empty list compares nothing, reports nothing, and the runner scores the item a **pass**. Neither
+existing guard could catch it: `check.Available` saw a params tier attached, and the `needs-data`
+gate saw the symbol seeded. Milliamps are the ordinary spelling for a sub-amp regulator and
+millivolts for a controller's sense threshold, so a spec transcribed as printed hit this without
+doing anything unusual, and five rule families silently passed designs with genuine defects.
+
+The constraint is about LOCATION rather than caution. The original instinct, that a silent scale
+factor inside a pass/fail rule is where a unit bug hides, was correct; refusing to convert did not
+remove that risk, it relocated it from "wrong number" to "no check at all", which is the failure
+this codebase treats as most serious. One table beside `UnderSpecified` and `MachineComparable` is
+auditable in a way ten hand-written unit gates were not.
+
+Returning a CONVERTED ROW rather than exposing a "convert this for me" accessor is what makes the
+rule structural instead of advisory: membership in an extractor's result set IS the guarantee that
+the number is in base units, so a consumer cannot forget to convert. An accessor would relocate the
+same bug to whichever call site forgot it, silently.
+
+**Verify:** `grep -rnE '\bp\.(Unit|GetUnit\(\))' --include='*.go' core/ stdlib/ readers/ internal/
+cmd/ | grep -v '_test.go'` returns nothing. The naive sweep for `.Unit != "` does NOT work and must
+not be substituted: the extractors legitimately compare `q.Unit` on the converted row, so the
+invariant that actually discriminates is that the RAW row's unit is never read outside
+`datasheet/param`. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
+spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
+
+**Deliberately not extended to the query surface.** The `param(...)` and `param.range(...)` datalog
+relations project a bare number with NO unit, so a datalog-authored rule can still compare
+millivolts against volts with no gate at all. Same failure family, tracked as its own issue; this
+constraint covers the Go path only until that lands.
