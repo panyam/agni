@@ -173,7 +173,10 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   edited, and read `git status` before staging.
 - **Out-of-scope items survive the PR in `OUT_OF_SCOPE.md`.** A PR body's "Out of scope" section is
   invisible once merged, so every deferred item gets a one-liner there (source PR + pickup trigger)
-  in the same PR. Ticket-worthy items skip the ledger and get a GitHub issue instead.
+  in the same PR. Ticket-worthy items skip the ledger and get a GitHub issue instead: the ledger is
+  only for work nobody could pick up deliberately, which becomes cheap the moment an unrelated
+  trigger fires. A question that was asked and ANSWERED is neither — it can never be closed, so it
+  goes in `DECISIONS.md` instead of quietly filling the ledger with entries nobody can act on.
 
 Two shell traps that have burned real work. **zsh does NOT word-split an unquoted `$var`**, so
 `files=$(ls ...)` then `for f in $files` iterates ONCE over the whole blob (a sweep silently compared
