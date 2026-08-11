@@ -110,7 +110,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 		Name:        "SDA",
 		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}, {ComponentRef: "U2", PinRef: "5"}},
 	}}}
-	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
+	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 	}
 
 	// A loader ErrNotFound (unknown mount) stays classified as not-found for the transport.
-	bad := NewCheckService(fakeLoader{err: fmt.Errorf("no such mount: %w", ErrNotFound)}, check.DefaultCatalog(), nil, "", nil)
+	bad := NewCheckService(fakeLoader{err: fmt.Errorf("no such mount: %w", ErrNotFound)}, check.DefaultCatalog(), nil, "", nil, nil)
 	if _, err := bad.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://no/x"}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("want ErrNotFound, got %v", err)
 	}
@@ -144,7 +144,7 @@ func TestGetInterfaceCoverage(t *testing.T) {
 		{Name: "SPI_IO1", Connections: []*ir.Connection{conn("U1", "4"), conn("U2", "4")}},
 		{Name: "SPI_IO3", Connections: []*ir.Connection{conn("U1", "6")}}, // single-pin -> dangling
 	}}
-	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
+	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
 	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -171,7 +171,7 @@ func TestListRules(t *testing.T) {
 	// via profiles.init(), pulled in by this package's coverage handler), so assert against the
 	// catalog's own count, not the built-in slice.
 	catalog := check.DefaultCatalog()
-	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil)
+	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil, nil)
 	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {
 		t.Fatal(err)
@@ -217,7 +217,7 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}, {ComponentRef: "U2", PinRef: "5"}},
 		}},
 	}
-	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil)
+	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
 
 	// Full run: both rules fire.
 	full, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
@@ -282,7 +282,7 @@ func TestCheckDesignSheets(t *testing.T) {
 			Placements: []*geom.SymbolPlacement{{RefDes: "R9", Transform: &geom.Transform{Origin: &geom.Point{X: 5, Y: 5}}}},
 		},
 	}}
-	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil)
+	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil, nil)
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -318,7 +318,7 @@ func TestCheckDesignSheets(t *testing.T) {
 	}
 
 	// Geometry failure degrades to empty sheets, not an error.
-	noGeom := NewCheckService(fakeLoader{design: d, geomErr: fmt.Errorf("no geometry")}, check.DefaultCatalog(), nil, "", nil)
+	noGeom := NewCheckService(fakeLoader{design: d, geomErr: fmt.Errorf("no geometry")}, check.DefaultCatalog(), nil, "", nil, nil)
 	resp, err = noGeom.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -366,7 +366,7 @@ func TestCheckDesignNetSheetsFromAttribute(t *testing.T) {
 		{Id: "/amp2"},
 		{Id: "/b"},
 	}}
-	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil)
+	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil, nil)
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.kicad_pro"})
 	if err != nil {
 		t.Fatal(err)
@@ -466,7 +466,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 		Name:        "N1",
 		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}, {ComponentRef: "U2", PinRef: "1"}},
 	}}}
-	svc := NewCheckService(fakeLoader{design: d}, catalog, nil, "", nil)
+	svc := NewCheckService(fakeLoader{design: d}, catalog, nil, "", nil, nil)
 
 	list, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
 	if err != nil {

@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { NamingConvention } from "./checks_pb";
+import { file_agni_v1_webapi_checks } from "./checks_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSIzCgdQcm9qZWN0EgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJIl0KBkRlc2lnbhIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIRCgllbnRyeV91cmkYBCABKAkSFgoOY29tcGFuaW9uX3VyaXMYBSADKAkiIQoRR2V0UHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSJMChNMaXN0UHJvamVjdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJaChRMaXN0UHJvamVjdHNSZXNwb25zZRIpCghwcm9qZWN0cxgBIAMoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIicKF0dldFByb2plY3REZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkiYgoZTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJIl4KGkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlEicKB2Rlc2lnbnMYASADKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0MscDCg5Qcm9qZWN0U2VydmljZRJICgpHZXRQcm9qZWN0EiEuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0ElkKDExpc3RQcm9qZWN0cxIjLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXNwb25zZRJMCglHZXREZXNpZ24SJy5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJkCgtMaXN0RGVzaWducxIpLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1JlcXVlc3QaKi5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdERlc2lnbnNSZXNwb25zZRJcCg1SZXNvbHZlRGVzaWduEiQuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKrAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRI1Cgtjb252ZW50aW9ucxgEIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAUgAygJEhIKCnBhcmFtX3VyaXMYBiADKAkSFQoNY2hlY2tsaXN0X3VyaRgHIAEoCSJxCgZEZXNpZ24SDAoEbmFtZRgBIAEoCRINCgV0aXRsZRgCIAEoCRILCgN1cmkYAyABKAkSEQoJZW50cnlfdXJpGAQgASgJEhYKDmNvbXBhbmlvbl91cmlzGAUgAygJEhIKCmludGVudF91cmkYBiABKAkiIQoRR2V0UHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSJMChNMaXN0UHJvamVjdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJaChRMaXN0UHJvamVjdHNSZXNwb25zZRIpCghwcm9qZWN0cxgBIAMoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIicKF0dldFByb2plY3REZXNpZ25SZXF1ZXN0EgwKBG5hbWUYASABKAkiYgoZTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBIOCgZwYXJlbnQYASABKAkSEQoJcGFnZV9zaXplGAIgASgFEhIKCnBhZ2VfdG9rZW4YAyABKAkSDgoGZmlsdGVyGAQgASgJIl4KGkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlEicKB2Rlc2lnbnMYASADKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIiMKFFJlc29sdmVEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCSJpChVSZXNvbHZlRGVzaWduUmVzcG9uc2USJgoGZGVzaWduGAEgASgLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEigKB3Byb2plY3QYAiABKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0MscDCg5Qcm9qZWN0U2VydmljZRJICgpHZXRQcm9qZWN0EiEuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdFJlcXVlc3QaFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0ElkKDExpc3RQcm9qZWN0cxIjLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXNwb25zZRJMCglHZXREZXNpZ24SJy5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0RGVzaWduUmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLkRlc2lnbhJkCgtMaXN0RGVzaWducxIpLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1JlcXVlc3QaKi5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdERlc2lnbnNSZXNwb25zZRJcCg1SZXNvbHZlRGVzaWduEiQuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_checks]);
 
 /**
  * Project is one declared set of designs that share configuration.
@@ -51,6 +53,35 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
    * @generated from field: string uri = 3;
    */
   uri: string;
+
+  /**
+   * conventions is the project's naming policy, resolved. Absent means the engine defaults.
+   *
+   * @generated from field: agni.v1.webapi.NamingConvention conventions = 4;
+   */
+  conventions?: NamingConvention | undefined;
+
+  /**
+   * profile_uris are the interface-profile declarations this project composes into the catalog.
+   *
+   * @generated from field: repeated string profile_uris = 5;
+   */
+  profileUris: string[];
+
+  /**
+   * param_uris are the seeded datasheet parameter sets this project checks its parts against.
+   *
+   * @generated from field: repeated string param_uris = 6;
+   */
+  paramUris: string[];
+
+  /**
+   * checklist_uri names the review manifest this project runs. It is NOT loaded with the rest: a
+   * checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
+   *
+   * @generated from field: string checklist_uri = 7;
+   */
+  checklistUri: string;
 };
 
 /**
@@ -117,6 +148,17 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
    * @generated from field: repeated string companion_uris = 5;
    */
   companionUris: string[];
+
+  /**
+   * intent_uri names this design's declared architecture: its domains, modules, and subsystems.
+   *
+   * Intent is per-DESIGN where the rest of a project's config is per-project, because each board has
+   * its own intended architecture while conventions and profiles describe the team. That asymmetry
+   * is the one the on-disk layout already had, and it is why this field is here and not on Project.
+   *
+   * @generated from field: string intent_uri = 6;
+   */
+  intentUri: string;
 };
 
 /**

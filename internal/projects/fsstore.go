@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
 )
@@ -215,7 +216,7 @@ func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, erro
 		return "", nil, err
 	}
 	defer f.Close()
-	id, p, err := ParseProject(f)
+	id, p, names, err := ParseProject(f)
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -225,7 +226,58 @@ func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, erro
 	}
 	p.Name = service.ProjectName(id)
 	p.Uri = u.String()
+	if err := s.attachConfig(t, dir, u, names, p); err != nil {
+		return "", nil, fmt.Errorf("%s: %w", name, err)
+	}
 	return id, p, nil
+}
+
+// attachConfig fills in the config a project owns, as URIs for what exists.
+//
+// A declared name that names nothing is SILENTLY ABSENT rather than an error, and that asymmetry is
+// deliberate. The names default (conventions.yaml, profiles/, params/, review.yaml), so a project
+// that never declared anything would otherwise fail for lacking files it never claimed to have.
+// A project that DECLARES a name explicitly is a different case, and one worth failing on — but the
+// descriptor cannot currently tell the two apart, so this errs toward serving the project.
+//
+// The conventions file is the one tier read HERE rather than handed on as a URI: it is small, it is
+// a value under C22, and composing it must need no I/O.
+func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names ProjectConfigNames, p *webapi.Project) error {
+	rel := func(n string) (string, bool) {
+		if n == "" {
+			return "", false
+		}
+		full := path.Join(walkRoot(dir), n)
+		if !exists(t.FS, full) {
+			return "", false
+		}
+		u, err := base.Join(n)
+		if err != nil {
+			return "", false
+		}
+		return u.String(), true
+	}
+	if uri, ok := rel(names.Conventions); ok {
+		b, err := fs.ReadFile(t.FS, path.Join(walkRoot(dir), names.Conventions))
+		if err != nil {
+			return err
+		}
+		cfg, err := naming.Parse(b)
+		if err != nil {
+			return fmt.Errorf("%s: %w", uri, err)
+		}
+		p.Conventions = service.ConventionProto(cfg)
+	}
+	if uri, ok := rel(names.Profiles); ok {
+		p.ProfileUris = []string{uri}
+	}
+	if uri, ok := rel(names.Params); ok {
+		p.ParamUris = []string{uri}
+	}
+	if uri, ok := rel(names.Checklist); ok {
+		p.ChecklistUri = uri
+	}
+	return nil
 }
 
 // loadDesign parses one design descriptor and rewrites its declared, design-folder-relative refs
@@ -253,6 +305,19 @@ func (s *FSStore) loadDesign(t Tree, dir string) (string, *webapi.Design, error)
 	}
 	d.Uri = base.String()
 	d.EntryUri = entry.String()
+	// Intent is a NAME until here; it becomes a URI only if the file is actually there, so a design
+	// that never wrote one reads as having none rather than as naming a file that is missing.
+	if d.GetIntentUri() != "" {
+		if exists(t.FS, path.Join(walkRoot(dir), d.GetIntentUri())) {
+			iu, err := base.Join(d.GetIntentUri())
+			if err != nil {
+				return "", nil, err
+			}
+			d.IntentUri = iu.String()
+		} else {
+			d.IntentUri = ""
+		}
+	}
 	for i, c := range d.GetCompanionUris() {
 		cu, err := base.Join(c)
 		if err != nil {

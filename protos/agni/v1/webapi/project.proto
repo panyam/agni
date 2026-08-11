@@ -4,6 +4,8 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/webapi/checks.proto";
+
 // This file: ProjectService, the engine's answer to "which design is this, and whose design is it"
 // (agni issue 170).
 //
@@ -76,6 +78,28 @@ message Project {
   // uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
   // injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
   string uri = 3;
+
+  // The config a project owns, and the reason the resource exists. Naming conventions, interface
+  // profiles, and seeded parameters describe the TEAM rather than any one board, so they belong to
+  // the project and reach a run through the design's edge to it. Before this they could only be
+  // `agni serve` startup flags, which a deployment mounting a mixed set applied to every design it
+  // read: an overlay's profiles superseded the built-ins for every board on the server, and an
+  // overlay's rail lexicon changed net roles on designs that never asked for it.
+  //
+  // The value/URI split follows CONSTRAINTS C22. A naming convention is small and arrives RESOLVED,
+  // so a service composes it with no I/O. Profiles and parameters are DIRECTORIES of many files, so
+  // they arrive as URIs and are loaded by the injected port — the same reason a design is a ref
+  // rather than an inlined megabyte.
+
+  // conventions is the project's naming policy, resolved. Absent means the engine defaults.
+  NamingConvention conventions = 4;
+  // profile_uris are the interface-profile declarations this project composes into the catalog.
+  repeated string profile_uris = 5;
+  // param_uris are the seeded datasheet parameter sets this project checks its parts against.
+  repeated string param_uris = 6;
+  // checklist_uri names the review manifest this project runs. It is NOT loaded with the rest: a
+  // checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
+  string checklist_uri = 7;
 }
 
 // Design is one declared design: an identity, an entry file, and its companion views.
@@ -107,6 +131,12 @@ message Design {
   // a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
   // inferred rule would turn a diff of two revisions into a diff of one against itself.
   repeated string companion_uris = 5;
+  // intent_uri names this design's declared architecture: its domains, modules, and subsystems.
+  //
+  // Intent is per-DESIGN where the rest of a project's config is per-project, because each board has
+  // its own intended architecture while conventions and profiles describe the team. That asymmetry
+  // is the one the on-disk layout already had, and it is why this field is here and not on Project.
+  string intent_uri = 6;
 }
 
 message GetProjectRequest {

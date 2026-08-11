@@ -19,7 +19,11 @@ import (
 // DesignService (WS9-026): checks are their own concern, run on demand and independent of
 // rendering. It knows no transport.
 type CheckService struct {
-	loader Loader
+	// projects resolves a design to its project and loads that project's config; nil when this
+	// deployment declares none. fallback is the deployment default used for a design with no project.
+	projects *ProjectResolver
+	fallback Overlay
+	loader   Loader
 	// catalog is the composed rule set the service lists and runs (WS3-006). It is injected
 	// rather than read from package state so an embedder composes its own sources (a customer
 	// suite, later the DSL compiler's output) alongside the built-ins:
@@ -56,8 +60,8 @@ type ConventionLoader interface {
 //
 // baseConvention names the startup convention already composed into catalog, so a request that sends
 // its own replaces it rather than stacking on it; pass "" when the catalog carries none.
-func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider, baseConvention string, conventions ConventionLoader) *CheckService {
-	return &CheckService{loader: loader, catalog: catalog, specs: specs, baseConvention: baseConvention, conventions: conventions}
+func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider, baseConvention string, conventions ConventionLoader, projects *ProjectResolver) *CheckService {
+	return &CheckService{loader: loader, catalog: catalog, specs: specs, baseConvention: baseConvention, conventions: conventions, projects: projects}
 }
 
 // GetNamingConvention resolves a stored convention config into the value an OverlayConfig carries.
@@ -97,11 +101,19 @@ func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetN
 // and whether it can run now (from check.Available). The request's mount/path are advisory today
 // since availability derives from each rule's Reads (design-independent); the design is not
 // loaded, so ListRules works before a file is chosen and never fails on a bad path.
-func (s *CheckService) ListRules(_ context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
+func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
+	// The uri is optional here (an empty one lists the whole catalog before a file is chosen), but
+	// when it is given it decides WHOSE catalog is listed: a design in a project sees that project's
+	// rules. Listing a different catalog from the one a run would use is the same invisible failure
+	// as running the wrong one, just one step earlier.
+	u, err := optionalArtifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
 	// The listed catalog is the one a run under the SAME overlay would use. A request convention
 	// replaces the server's (WS3-124), so listing the service's own catalog would advertise rules that
 	// will not run and hide the ones that will.
-	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
@@ -140,11 +152,11 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	}
 	// Per-request overlay config (WS3-102) resolves the same way it does for a review, through the one
 	// ComposeOverlay, so the two surfaces cannot read a convention file differently.
-	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, s.specs, ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

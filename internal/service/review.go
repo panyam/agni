@@ -74,8 +74,12 @@ type ReviewEnv struct {
 // its catalog and --params specs); only the Model and its presence/scope closures are per design. It
 // knows no transport (C13).
 type ReviewService struct {
-	loader  ReviewLoader
-	catalog *check.Catalog
+	// projects resolves a design to its project and loads that project's config; nil when this
+	// deployment declares none. fallback is the deployment default used for a design with no project.
+	projects *ProjectResolver
+	fallback Overlay
+	loader   ReviewLoader
+	catalog  *check.Catalog
 	// byName is every profile (built-in + overlay) keyed by Name, for the interface-absence check that
 	// marks a profile item not-applicable when its interface is absent from the design.
 	byName map[string][]profiles.Profile
@@ -99,8 +103,8 @@ type ReviewService struct {
 // store may be nil, which disables the review resource methods; pass a MemReviewStore for a caller
 // that wants runs to work without persisting them, which is what `agni review` does. baseConvention
 // names the startup convention a request-supplied one replaces; "" when the catalog carries none.
-func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv, baseConvention string) *ReviewService {
-	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env, baseConvention: baseConvention}
+func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv, baseConvention string, projects *ProjectResolver) *ReviewService {
+	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env, baseConvention: baseConvention, projects: projects}
 }
 
 // reviewStore returns the configured store or an error naming the flag that configures it. Every
@@ -154,7 +158,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// Per-request overlay config (WS3-102), composed BEFORE the design is read: its lexicon half has
 	// to reach the read, since net roles are resolved at ingestion. An empty overlay leaves the
 	// service's own catalog and the default vocabulary in place.
-	ov, err := ComposeOverlay(req.GetOverlay(), s.baseConvention)
+	ov, err := s.projects.Overlay(ctx, designURI, req.GetOverlay(), s.fallback, s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +314,7 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 // base one: a run shaped by a request's own naming convention would otherwise archive a rule list its
 // findings could not have come from.
 func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, error) {
-	m, err := BuildModel(ctx, s.loader, designURI, boardURI, s.specs, ov.ReadOptions()...)
+	m, err := BuildModel(ctx, s.loader, designURI, boardURI, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return review.Report{}, nil, err
 	}

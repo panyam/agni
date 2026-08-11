@@ -120,7 +120,12 @@ func serveCmd() *cobra.Command {
 			// Each mount becomes one tree in the filesystem-backed store, which is the ONLY place the
 			// serve wiring knows projects live in directories. Swapping in an index- or database-backed
 			// service.ProjectStore is this line and nothing else.
-			prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projects.NewFSStore(projectTrees(mounts)...))))
+			projectStore := projects.NewFSStore(projectTrees(mounts)...)
+			// One resolver for every rule-running surface. Per-design config reaches a run through
+			// this rather than through the startup flags below, which are now only the DEFAULT for a
+			// design that resolves to no project (agni issue 173).
+			projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
+			prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projectStore)))
 			mux.Handle(prPath, prHandler)
 			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
 			mux.Handle(dsPath, dsHandler)
@@ -156,7 +161,7 @@ func serveCmd() *cobra.Command {
 				}
 				reviewStore = st
 			}
-			checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, intentPath, conventionCfg, cmd.ErrOrStderr())
+			checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, intentPath, conventionCfg, projectResolver, cmd.ErrOrStderr())
 			if err != nil {
 				return err
 			}
@@ -166,7 +171,7 @@ func serveCmd() *cobra.Command {
 			mux.Handle(diffPath, diffHandler)
 			dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
 			mux.Handle(dtPath, dtHandler)
-			qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs)))
+			qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
 			mux.Handle(qPath, qHandler)
 			// ReviewService (WS9-047): the served analogue of `agni review`, built alongside the
 			// CheckService above from the one composed catalog.
@@ -253,7 +258,7 @@ type serveLoader interface {
 // conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
 // is a process-global install the caller does once at startup, and doing it inside a function tests
 // call would leak one test's vocabulary into the next.
-func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
 		return nil, nil, err
@@ -274,8 +279,8 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		noteSupersededRules(notes, catalog)
 	}
 	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-	return service.NewCheckService(loader, catalog, specs, conventions.Name, loader),
-		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name), nil
+	return service.NewCheckService(loader, catalog, specs, conventions.Name, loader, projects),
+		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name, projects), nil
 }
 
 // serveURLs turns a listen address into URLs a human can click, which the bind address by itself is

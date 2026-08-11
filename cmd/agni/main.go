@@ -286,14 +286,6 @@ func checkCmd() *cobra.Command {
 			// silently drop registered sources. The flags accumulate so they may be combined.
 			overlay := &webapi.OverlayConfig{}
 			var extra []check.RuleSource
-			// convSource is the convention's rules, kept OUT of the catalog handed to the service and
-			// composed only into the local catalog facets resolve against (WS3-107). The service composes
-			// the convention itself from the request, so putting it in both would ask it to add a source
-			// the base already carries — a duplicate-source error now that composing EXTENDS the base
-			// rather than rebuilding it. The two jobs are genuinely different: the service needs the
-			// authoritative catalog, and the CLI needs a name space to resolve `--rule <config>/<rule>`
-			// against before it calls.
-			var convSource check.RuleSource
 			// --conventions: the CLI reads the file (files are the CLI's world, not the service's) and
 			// sends the convention as a VALUE on the request, which the service composes (WS3-102).
 			if conventions != "" {
@@ -302,13 +294,6 @@ func checkCmd() *cobra.Command {
 					return err
 				}
 				overlay.Conventions = service.ConventionProto(cfg)
-				if len(cfg.Rules) > 0 {
-					src, err := naming.Source(cfg)
-					if err != nil {
-						return err
-					}
-					convSource = src
-				}
 			}
 			if profilePath != "" {
 				ps, err := profiles.LoadDir(profilePath)
@@ -330,15 +315,13 @@ func checkCmd() *cobra.Command {
 				noteSupersededRules(cmd.ErrOrStderr(), catalog)
 			}
 			// Resolve the --rule/--tag facets to rule NAMES against the catalog the RUN will use, which is
-			// the service's catalog plus the convention the request carries. CheckDesign / GetCheckReport
-			// select by name and the CLI owns facet resolution, so the two must see the same name space —
-			// but only this local copy carries the convention, or the service would compose it twice.
-			resolveAgainst := catalog
-			if convSource != nil {
-				var err error
-				if resolveAgainst, err = catalog.With(convSource); err != nil {
-					return err
-				}
+			// the service's catalog plus the convention the request carries AND the resolved project's
+			// own rules. CheckDesign / GetCheckReport select by name and the CLI owns facet resolution,
+			// so the two must see the same name space — and a project's rules are part of it, or
+			// `--rule gateway/signal-net-naming` would report "no rules selected" for a rule that runs.
+			resolveAgainst, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
+			if err != nil {
+				return err
 			}
 			selected := resolveAgainst.Filter(facets)
 			if len(selected) == 0 && format == "text" {
@@ -361,7 +344,7 @@ func checkCmd() *cobra.Command {
 				}
 				specs = set
 			}
-			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "", nil)
+			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "", nil, cliProjects())
 			ctx := cmd.Context()
 			var failFindings []*checkspb.Finding
 			// --results-out takes one path through the service for every format (WS3-103): the document
@@ -537,7 +520,7 @@ func reviewCmd() *cobra.Command {
 			// explicit, user-asked-for way to write one. Same engine path as a served create, so the two
 			// surfaces still cannot disagree about an outcome.
 			env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-			svc := service.NewReviewService(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), catalog, byName, specs, env, "")
+			svc := service.NewReviewService(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
 			// One create per design: a stored run is about ONE design, so the CLI's multi-design rollup is
 			// several runs rather than one call. The loop is the rollup.
 			var docs []*checkspb.CheckResults

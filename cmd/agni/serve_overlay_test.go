@@ -75,7 +75,7 @@ func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath strin
 		}
 		cfg = loaded
 	}
-	svc, _, err := serveRuleServices(nil, service.NewMemReviewStore(), nil, profileDir, intentPath, cfg, nil)
+	svc, _, err := serveRuleServices(nil, service.NewMemReviewStore(), nil, profileDir, intentPath, cfg, nil, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, reviewSvc, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil,
-		"testdata/review/profiles", "testdata/review/intent.yaml", cfg, nil)
+		"testdata/review/profiles", "testdata/review/intent.yaml", cfg, nil, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkSvc, _, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil, "", "", house, nil)
+	checkSvc, _, err := serveRuleServices(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), nil, "", "", house, nil, nil)
 	if err != nil {
 		t.Fatalf("serveRuleServices: %v", err)
 	}
