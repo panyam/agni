@@ -10,11 +10,16 @@ joined to a part in the design, keyed by manufacturer part number (`mpn`) and th
 datasheet symbol (e.g. `VDD`, `VIN`). Unlike the thin `param(mpn, symbol, max)`, each row carries
 BOTH bounds — the lower `min` and the upper `max` — and the `kind` token that says which limit table
 the row came from: `absolute_max`, `recommended_operating`, or `characteristic` (`unspecified` when
-the source did not label it). A bound the datasheet did not state is absent (the argument binds to
-nothing), so `param.range(?m, "VDD", "recommended_operating", ?min, ?max)` with a max-only row leaves
-`?min` unbound. BOTH bounds are in the parameter's SI base unit whatever the vendor printed, so a
-range test means the same thing across vendors; join `param.unit` for the printed spelling, and note
-that a parameter whose unit has no known scale appears here with both bounds absent (agni issue 165). Every row carries a
+the source did not label it). A bound the datasheet did not state is ABSENT: the argument still binds,
+to a value marked absent, so a max-only row still appears in a listing and the relation never shortens
+its own answer. What an absent bound cannot do is take part in an ORDERING comparison, and
+`absent(?min)` selects exactly those rows. This text used to say the argument "binds to nothing",
+which was never true. It bound to the empty string, and an ordering comparison then answered by
+string order, where `""` precedes every number.
+
+BOTH bounds are in the parameter's SI base unit whatever the vendor printed, so a range test means the
+same thing across vendors; join `param.unit` for the printed spelling, and note that a parameter whose
+unit has no known scale appears here with both bounds absent (agni issue 165). Every row carries a
 citation back to the datasheet page and table.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with

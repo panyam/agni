@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -278,4 +279,68 @@ func TestQuerySpecLibUnitsCLI(t *testing.T) {
 	if units := run(`param.unit(?mpn, "V(OCP)", ?u) => ?mpn, ?u`); !strings.Contains(units, "mV") {
 		t.Errorf("param.unit must still report the printed mV:\n%s", units)
 	}
+}
+
+// TestQueryAbsentPredicateCLI is the end-to-end payoff of making absence representable: selecting the
+// rows a datasheet did not state is now a query rather than an apology in a doc.
+//
+// The conformance controller states V(OCP) as min/typ/max, so it has a lower bound; the MCU's
+// absolute-maximum rows are one-sided, so they do not. Before this, both bound their missing side to
+// the empty string and nothing could tell them apart, which is why `param.unit.md` shipped a note
+// saying there was no way to ask.
+func TestQueryAbsentPredicateCLI(t *testing.T) {
+	run := func(q string) string {
+		t.Helper()
+		old := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+		cmd := queryCmd()
+		cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params", q})
+		err := cmd.Execute()
+		w.Close()
+		os.Stdout = old
+		out, _ := io.ReadAll(r)
+		if err != nil {
+			t.Fatalf("query %q: %v", q, err)
+		}
+		return string(out)
+	}
+
+	// A one-sided row: absolute maximums are stated as a ceiling with no floor.
+	oneSided := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), absent(?min) => ?m, ?s, ?max`)
+	if !strings.Contains(oneSided, "result(s)") || strings.Contains(oneSided, "no results") {
+		t.Errorf("absent(?min) must select the one-sided absolute-max rows:\n%s", oneSided)
+	}
+
+	// Its negation is the other half, and the two must partition the same relation.
+	twoSided := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), not absent(?min) => ?m, ?s, ?min, ?max`)
+	all := run(`param.range(?m, ?s, "absolute_max", ?min, ?max) => ?m, ?s`)
+	if countResults(t, oneSided)+countResults(t, twoSided) != countResults(t, all) {
+		t.Errorf("absent(?min) and not absent(?min) must partition the relation:\none-sided:\n%s\ntwo-sided:\n%s\nall:\n%s",
+			oneSided, twoSided, all)
+	}
+
+	// An absent bound must not satisfy a numeric guard, which is what it did by string order before.
+	guarded := run(`param.range(?m, ?s, "absolute_max", ?min, ?max), ?min < 0.1 => ?m, ?s`)
+	if !strings.Contains(guarded, "no results") {
+		t.Errorf("an absent lower bound must not satisfy `?min < 0.1`:\n%s", guarded)
+	}
+}
+
+// countResults reads the "N result(s)" trailer the query renderer prints.
+func countResults(t *testing.T, out string) int {
+	t.Helper()
+	if strings.Contains(out, "no results") {
+		return 0
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasSuffix(strings.TrimSpace(line), "result(s)") {
+			var n int
+			if _, err := fmt.Sscanf(strings.TrimSpace(line), "%d result(s)", &n); err == nil {
+				return n
+			}
+		}
+	}
+	t.Fatalf("no result count in output:\n%s", out)
+	return 0
 }

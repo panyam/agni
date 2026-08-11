@@ -68,6 +68,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 
 | Relation | Summary |
 |---|---|
+| `absent(value)` | the field carried no value at all, which is different from an empty string and from zero (a datasheet row stating only a maximum leaves its minimum absent); `not absent(?x)` reads "this row states one" |
 | `contains(string, substring)` | the string contains the substring |
 | `glob(string, pattern)` | the whole string matches a shell-style glob (* any run, ? one char) |
 | `match(string, regex)` | the string matches an (unanchored) regular expression |

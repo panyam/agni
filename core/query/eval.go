@@ -326,7 +326,16 @@ func resolve(t Term, bnd *binding) (Value, bool) {
 }
 
 // valueEq compares two values: numeric when both carry a number, string otherwise.
+//
+// ABSENT UNIFIES ONLY WITH ABSENT, which is what stops it colliding with the empty string. Two
+// unstated bounds ARE the same answer to "what does this row state", so this is true rather than
+// SQL's UNKNOWN. That is a deliberate deviation: full three-valued logic would have to thread UNKNOWN
+// through negation, aggregation and the index, and "both unstated" is the reading an engineer running
+// a search actually wants.
 func valueEq(a, b Value) bool {
+	if a.Absent || b.Absent {
+		return a.Absent && b.Absent
+	}
 	if a.Num != nil && b.Num != nil {
 		return *a.Num == *b.Num
 	}
@@ -341,35 +350,66 @@ var orderingOps = map[string]bool{"<": true, "<=": true, ">": true, ">=": true}
 // evalCompare evaluates a comparison once both operands are bound: numeric when both carry a number,
 // string otherwise.
 //
-// AN ORDERING COMPARISON REFUSES TO MIX A NUMBER WITH A NON-NUMBER, and that guard is the point of
-// this function rather than a detail of it. A FactRow field with no number yields Value{} (schema.go),
-// so `?min` on a datasheet row that states only a maximum binds to the EMPTY STRING rather than to
-// nothing. Without the guard the comparison silently changed kind and answered by LEXICOGRAPHY:
+// THREE REFUSALS, and they are the point of this function rather than details of it. Each answers a
+// question that HAS no answer, and each previously answered it anyway.
+//
+// 1. AN ABSENT OPERAND IS NOT COMPARABLE. A datasheet row stating only a maximum leaves its minimum
+// absent. Before Value.Absent existed such a field bound to the EMPTY STRING, and ordering fell
+// through to cmpStr and answered by LEXICOGRAPHY:
 //
 //	"" <= "5.0"  -> true      an absent lower bound passes a lower-bound test
 //	"" >= "3.0"  -> false     the same absent bound, opposite phrasing, opposite answer
 //	"5.0" <= ""  -> false     an absent upper bound fails an upper-bound test
 //	"" <= "-2"   -> true      an absent bound "passes" against MINUS TWO, since "" precedes everything
 //
-// The answer depended on how the author phrased the inequality and on the sign of the constant, which
-// no author could predict. One-sided rows are not exotic (param.range emits them by design, because
-// real datasheets state plenty of max-only limits), so this was reachable on ordinary data.
+// The answer depended on how the author phrased the inequality and on the sign of the constant. This
+// now refuses on the FLAG rather than on a nil Num, which matters because a non-numeric string also
+// has a nil Num: inferring absence from that coincidence conflated two different things.
 //
-// It evaluates to NO MATCH rather than an error, and the choice matters. An error aborts the whole
-// query, so a single max-only row among many would make a legitimate range query unusable. No-match
-// leaves the row unjudged, which is this engine's standing posture everywhere else: silence means "I
-// could not tell", never "this is fine". An author who wants an absent lower bound to count as
-// unbounded-below writes that clause explicitly instead of inheriting it from string ordering.
+// 2. A NUMBER AND A NON-NUMBER HAVE NO ORDER. `?name < 5` is a question about nothing, and cmpStr
+// used to answer it by comparing "ALPHA" against "5".
 //
-// STRING ORDERING BETWEEN TWO NON-NUMBERS IS UNAFFECTED (`?name < "M"` still splits alphabetically),
-// because there both operands are the same kind and lexicographic order is what the author asked for.
+// 3. UNLIKE DIMENSIONS HAVE NO ORDER. Volts are not smaller or larger than amps. Both sides must
+// carry a base unit for this to fire, because a bare literal cannot state one: `?vmax < 5.0` has to
+// keep working, so an empty BaseUnit is polymorphic rather than a dimension of its own. SCALE is not
+// this layer's problem and never reaches it (param.InBaseUnit, C24), so this compares "V" against "A"
+// and never "mV" against "V".
+//
+// ALL THREE EVALUATE TO NO MATCH RATHER THAN AN ERROR. An error aborts the whole query, so one
+// max-only row among many would make a legitimate range query unusable. No-match leaves that row
+// unjudged, which is this engine's posture everywhere else: silence means "I could not tell", never
+// "this is fine". An author who wants an absent lower bound to count as unbounded-below writes that
+// clause explicitly instead of inheriting it from string ordering.
+//
+// EQUALITY IS DELIBERATELY NOT DIMENSION-CHECKED, and ordering two non-numbers is untouched
+// (`?name < "M"` still splits alphabetically). Equality here is the author's explicit operator, but
+// the same values also unify implicitly when a variable repeats across atoms, and unification is
+// identity rather than physics. Making one unit-aware and not the other would be incoherent, and
+// making both would break joins and the fact index, which bucket by string value.
 func evalCompare(c Compare, bnd *binding) (bool, error) {
 	l, okl := resolve(c.Left, bnd)
 	r, okr := resolve(c.Right, bnd)
 	if !okl || !okr {
 		return false, fmt.Errorf("query: comparison operand is unbound (a variable must appear in a relation before it is compared)")
 	}
+	if l.Absent || r.Absent {
+		// An unstated value has no ORDER, but it does have an IDENTITY: two unstated bounds are the
+		// same answer to "what does this row state". Routing equality through valueEq keeps the
+		// explicit operator and implicit unification agreeing, which is the property that stops
+		// `?a = ?b` and a repeated `?a` meaning different things.
+		if orderingOps[c.Op] {
+			return false, nil
+		}
+		eq := valueEq(l, r)
+		if c.Op == "!=" {
+			return !eq, nil
+		}
+		return eq, nil
+	}
 	if l.Num != nil && r.Num != nil {
+		if orderingOps[c.Op] && l.BaseUnit != "" && r.BaseUnit != "" && l.BaseUnit != r.BaseUnit {
+			return false, nil
+		}
 		return cmpNum(*l.Num, c.Op, *r.Num), nil
 	}
 	if orderingOps[c.Op] && (l.Num != nil) != (r.Num != nil) {

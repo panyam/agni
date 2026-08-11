@@ -787,3 +787,83 @@ func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 		t.Errorf("param.unit = %+v, want the printed unit reported", pu)
 	}
 }
+
+// TestRelationBaseUnitsAreCanonical is the tripwire behind Value.BaseUnit's whole contract.
+//
+// The field must hold an SI BASE symbol, never a prefixed spelling, because scale normalization
+// happens once and far upstream (param.InBaseUnit, C24). A projector that set "mV" here would make a
+// volts-against-millivolts comparison REFUSE as a dimension mismatch rather than convert, which is a
+// fresh silent wrong answer wearing the fix's clothes. Naming the field BaseUnit discourages that;
+// this test is what actually prevents it, including for a relation added later.
+//
+// The board tier's "mm" is deliberately exempt from the SI-base check and is asserted by name
+// instead: millimetres are what every board format states and every board query is written in, and
+// the invariant that matters is one spelling per dimension across all relations, not SI purity.
+func TestRelationBaseUnitsAreCanonical(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+
+	seen := map[string]string{} // base unit -> a relation that publishes it
+	for _, f := range Facts(m) {
+		u := f.BaseUnit
+		if u == "" {
+			continue // dimensionless (a count, or a non-numeric relation)
+		}
+		if u == "mm" {
+			seen[u] = f.Relation
+			continue
+		}
+		base, exp, ok := param.BaseUnit(u)
+		if !ok || base != u || exp != 0 {
+			t.Errorf("relation %q publishes BaseUnit %q, which is not a canonical base symbol "+
+				"(param.BaseUnit gives %q exp %d ok %v); scale is normalized upstream, so this field "+
+				"must never carry a prefixed spelling", f.Relation, u, base, exp, ok)
+		}
+		seen[u] = f.Relation
+	}
+	// The millivolt-seeded spec must reach the fact base as VOLTS, which is the end-to-end statement
+	// that upstream normalization and this field agree.
+	if got := seen["V"]; got == "" {
+		t.Error("no relation published volts; the mV-seeded fixture should have arrived as V")
+	}
+	if _, bad := seen["mV"]; bad {
+		t.Error("a relation published mV; scale must be normalized before it reaches a fact")
+	}
+}
+
+// TestParamFactsCarryBaseUnit: the number and its dimension travel together, so a comparison can
+// refuse volts-against-amps without any rule having to remember to join a unit column.
+func TestParamFactsCarryBaseUnit(t *testing.T) {
+	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
+	milli.Parameters[0].Unit = "mV"
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": milli})
+	byRel := factsByRelation(Facts(m))
+
+	if pf := byRel[RelParam]; len(pf) != 1 || pf[0].BaseUnit != "V" {
+		t.Errorf("param BaseUnit = %+v, want V (converted from the printed mV)", pf)
+	}
+	if pr := byRel[RelParamRange]; len(pr) != 1 || pr[0].BaseUnit != "V" {
+		t.Errorf("param.range BaseUnit = %+v, want V", pr)
+	}
+	// param.unit reports the PRINTED spelling; the two must not be confused.
+	if pu := byRel[RelParamUnit]; len(pu) != 1 || pu[0].Value != "mV" {
+		t.Errorf("param.unit = %+v, want the printed mV; it answers a different question from BaseUnit", pu)
+	}
+}
+
+// TestParamFactsMarkUnconvertibleRowsAbsent: a row whose unit has no known scale has no number to
+// publish, and that is now REPRESENTED rather than inferred from a nil pointer.
+func TestParamFactsMarkUnconvertibleRowsAbsent(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	spec.Parameters[0].Unit = "dBm"
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	byRel := factsByRelation(Facts(m))
+
+	if pf := byRel[RelParam]; len(pf) != 1 || pf[0].Num != nil || pf[0].BaseUnit != "" {
+		t.Errorf("param = %+v, want the row kept with no number and no base unit", pf)
+	}
+	if pr := byRel[RelParamRange]; len(pr) != 1 || pr[0].Min != nil || pr[0].Num != nil {
+		t.Errorf("param.range = %+v, want the row kept with both bounds absent", pr)
+	}
+}

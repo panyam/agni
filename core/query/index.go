@@ -54,6 +54,12 @@ type idxKey struct {
 // returns one key. It is a query constant like `10.0`, or a rule head deriving one, that produces
 // two.
 func valueKeys(v Value) []string {
+	// An absent field must not share a bucket with a legitimately empty string, or a probe for one
+	// would find the other and the exact comparison would then have to reject it. The sentinel is a
+	// byte no fact value can contain, so it cannot collide with real content.
+	if v.Absent {
+		return []string{absentKey}
+	}
 	if v.Num == nil {
 		return []string{v.S}
 	}
@@ -62,6 +68,11 @@ func valueKeys(v Value) []string {
 	}
 	return []string{v.S}
 }
+
+// absentKey is the index bucket an ABSENT value files under. A NUL byte cannot appear in a fact
+// value read from any supported source, so it is unreachable as real content, which is what makes it
+// safe as a sentinel rather than merely unlikely.
+const absentKey = "\x00absent"
 
 // tupleKeys expands values into every bucket key the tuple may be filed or found under: the cross
 // product of each value's keys. One key in the common case, and bounded by 2^k for k values that
