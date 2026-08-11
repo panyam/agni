@@ -165,17 +165,22 @@ message ResolveDesignRequest {
 }
 
 message ResolveDesignResponse {
-  // design is the design the ref belongs to and project is that design's project. They are set
-  // TOGETHER or not at all, because a design is a resource only when a project parents it: a
-  // resource name needs a parent, and inventing a second, parentless name space for a design.yaml
-  // sitting outside any project would mean two ways to address the same kind of thing.
+  // design is the design the ref belongs to, UNSET when it belongs to none.
   //
-  // Unset is a normal answer rather than an error. A mounted folder with no descriptors is the
-  // ordinary case, and a client that gets no design shows the plain viewer and the built-in catalog.
-  //
-  // A `design.yaml` outside any project is not wasted: it still tells the CLI which file is that
-  // folder's analysis entry, since the CLI is pointed at a path by a human and needs no resource
-  // name to honour a declaration. It is only unaddressable over this API.
+  // Unset is a normal answer rather than an error. A mounted folder with no declared designs is the
+  // ordinary case, and a client that gets nothing back shows the plain viewer and the built-in
+  // catalog. Turning the common path into an error would push every caller into treating a failure
+  // path as normal, which is how a real failure stops being noticed.
   Design design = 1;
+  // project is the design's project, UNSET when the design has none above it.
+  //
+  // A design without a project is a real design, not a half-resolved one. Its declaration still says
+  // which file that folder's analysis reads, which is all a caller pointed at a path by a human
+  // needs. What it lacks is a NAME: a resource name needs a parent, so such a design comes back with
+  // `Design.name` empty and cannot be fetched by name later. Meaning without addressability.
+  //
+  // This is also the shape of the guarantee. Project config reaches a design through this edge, so a
+  // design with no project has no project config to apply and cannot be checked against another
+  // project's rules — structural rather than discouraged.
   Project project = 2;
 }

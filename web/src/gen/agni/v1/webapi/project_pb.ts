@@ -333,18 +333,28 @@ export const ResolveDesignRequestSchema: GenMessage<ResolveDesignRequest> = /*@_
  */
 export type ResolveDesignResponse = Message<"agni.v1.webapi.ResolveDesignResponse"> & {
   /**
-   * design is the design the ref belongs to, UNSET when it belongs to none. Unset is a normal answer
-   * rather than an error: a mounted folder with no descriptors is the ordinary case, and a client
-   * that gets no design shows the plain viewer and the built-in catalog.
+   * design is the design the ref belongs to, UNSET when it belongs to none.
+   *
+   * Unset is a normal answer rather than an error. A mounted folder with no declared designs is the
+   * ordinary case, and a client that gets nothing back shows the plain viewer and the built-in
+   * catalog. Turning the common path into an error would push every caller into treating a failure
+   * path as normal, which is how a real failure stops being noticed.
    *
    * @generated from field: agni.v1.webapi.Design design = 1;
    */
   design?: Design | undefined;
 
   /**
-   * project is the design's project, UNSET when the design belongs to none, and always unset when
-   * `design` is. A design outside any project is legitimate — it simply has no shared config — and is
-   * reported as such rather than as a failure to find one.
+   * project is the design's project, UNSET when the design has none above it.
+   *
+   * A design without a project is a real design, not a half-resolved one. Its declaration still says
+   * which file that folder's analysis reads, which is all a caller pointed at a path by a human
+   * needs. What it lacks is a NAME: a resource name needs a parent, so such a design comes back with
+   * `Design.name` empty and cannot be fetched by name later. Meaning without addressability.
+   *
+   * This is also the shape of the guarantee. Project config reaches a design through this edge, so a
+   * design with no project has no project config to apply and cannot be checked against another
+   * project's rules — structural rather than discouraged.
    *
    * @generated from field: agni.v1.webapi.Project project = 2;
    */
@@ -436,9 +446,9 @@ export const ProjectService: GenService<{
    * index, and a caller cannot tell which it is talking to.
    *
    * Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
-   * the ordinary case, and it is what makes the project surfaces impossible to misapply. A design
-   * that resolves to no project has no project config, so it cannot be checked against another
-   * project's rules — a structural guarantee rather than a discouraged practice.
+   * the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
+   * resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
+   * against some other project's rules — a structural guarantee rather than a discouraged practice.
    *
    * @generated from rpc agni.v1.webapi.ProjectService.ResolveDesign
    */

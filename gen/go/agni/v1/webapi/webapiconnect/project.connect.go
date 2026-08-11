@@ -70,9 +70,9 @@ type ProjectServiceClient interface {
 	// index, and a caller cannot tell which it is talking to.
 	//
 	// Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
-	// the ordinary case, and it is what makes the project surfaces impossible to misapply. A design
-	// that resolves to no project has no project config, so it cannot be checked against another
-	// project's rules — a structural guarantee rather than a discouraged practice.
+	// the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
+	// resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
+	// against some other project's rules — a structural guarantee rather than a discouraged practice.
 	ResolveDesign(context.Context, *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error)
 }
 
@@ -174,9 +174,9 @@ type ProjectServiceHandler interface {
 	// index, and a caller cannot tell which it is talking to.
 	//
 	// Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
-	// the ordinary case, and it is what makes the project surfaces impossible to misapply. A design
-	// that resolves to no project has no project config, so it cannot be checked against another
-	// project's rules — a structural guarantee rather than a discouraged practice.
+	// the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
+	// resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
+	// against some other project's rules — a structural guarantee rather than a discouraged practice.
 	ResolveDesign(context.Context, *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error)
 }
 

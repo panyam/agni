@@ -7,76 +7,48 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/readers/formats"
 )
 
-// ProjectStore resolves the project/design descriptors on a deployment (agni issue 170). It is the
+// ProjectStore resolves the projects and designs a deployment declares (agni issue 170). It is the
 // fourth injected port in this package, after PartSpecStore, AnnotationStore, and ReviewStore, and
-// follows their shape: the interface lives here, the os-backed adapter lives in cmd/agni and owns all
-// I/O (C1/C13).
+// follows their shape: the interface lives here, an implementation lives behind it.
+//
+// The port is deliberately free of any notion of a filesystem. The implementation that ships
+// (`internal/projects`) walks a directory tree for descriptor files, but a store backed by a
+// database, with design files on object storage, answers all five of these without a tree, a
+// descriptor, or a parent directory to walk up from. Nothing in these signatures names a file, a
+// path, or a walk, which is what makes that substitution a wiring change rather than a redesign.
 //
 // It is READ-ONLY, and deliberately so. Creating a project means authoring design intent from a
-// design, which is a judgment step with a confidentiality boundary rather than a server operation, so
-// there is nothing here that writes.
+// design, which is a judgment step with a confidentiality boundary rather than a server operation.
 //
-// The port is what keeps resolution an INTERFACE rather than a path convention. The adapter that
-// ships walks a mount for `project.yaml` and `design.yaml`; another may consult an index, a database,
-// or a PLM system. No caller can tell, because none of these methods names a file.
+// Every method deals in the WIRE types. There is no parallel value type for a project here, and
+// that is a decision rather than an omission: a `Project` is a resource whose whole content is the
+// message, so a runtime-neutral twin would be a field-for-field copy and one more place for the two
+// to disagree (CONSTRAINTS C2, C8). This differs from `MountInfo` / `DirEntry` above, which project
+// a raw filesystem listing into something the service still has to interpret.
 type ProjectStore interface {
-	// Project returns one project by its declared id. An id naming nothing is ErrNotFound.
-	Project(ctx context.Context, projectID string) (ProjectInfo, error)
-	// Projects returns every visible project, ordered by id.
-	Projects(ctx context.Context) ([]ProjectInfo, error)
-	// Design returns one design within a project. Either id naming nothing is ErrNotFound.
-	Design(ctx context.Context, projectID, designID string) (DesignInfo, error)
-	// Designs returns a project's designs, ordered by id. A project id naming nothing is ErrNotFound,
-	// distinct from a project that exists and holds no designs yet (an empty slice).
-	Designs(ctx context.Context, projectID string) ([]DesignInfo, error)
-	// Resolve maps a mount-relative ref (a design file, or the design folder itself) to the design
-	// containing it and that design's project, reporting whether one was found.
+	// Project returns one project by resource name. A name naming nothing is ErrNotFound.
+	Project(ctx context.Context, name string) (*webapi.Project, error)
+	// Projects returns every visible project, ordered by resource name.
+	Projects(ctx context.Context) ([]*webapi.Project, error)
+	// Design returns one design by resource name. A name naming nothing is ErrNotFound.
+	Design(ctx context.Context, name string) (*webapi.Design, error)
+	// Designs returns a project's designs, ordered by resource name. A parent naming nothing is
+	// ErrNotFound, distinct from a project that exists and holds no designs (an empty slice).
+	Designs(ctx context.Context, parent string) ([]*webapi.Design, error)
+	// ResolveDesign maps an artifact ref to the design containing it and that design's project.
 	//
-	// Not found is reported as ok=false with a nil error, never as ErrNotFound. A ref that belongs to
-	// no declared design is the ORDINARY case on a mounted folder, and a store that raised an error
-	// for it would make callers treat the common path as exceptional.
-	Resolve(ctx context.Context, mount, ref string) (DesignInfo, ProjectInfo, bool, error)
+	// A MISS is (nil, nil, nil), never ErrNotFound. A ref that belongs to no declared design is the
+	// ORDINARY case on a mounted folder, and a store that raised an error for it would make callers
+	// treat the common path as exceptional.
+	ResolveDesign(ctx context.Context, mount, ref string) (*webapi.Design, *webapi.Project, error)
 }
 
-// ProjectInfo is one project as the port reports it: the descriptor's declared identity plus where
-// its files are. It is the runtime-neutral twin of webapi.Project, in the same way MountInfo is of
-// webapi.Mount, so an adapter never constructs a wire message.
-type ProjectInfo struct {
-	// ID is the operator-declared id from `project.yaml`, the last segment of "projects/{id}".
-	ID string
-	// Title is the human-readable label; the adapter has already applied the id fallback.
-	Title string
-	// Mount is the workspace mount the project's files live in.
-	Mount string
-	// DirRef is the mount-relative folder holding the descriptor.
-	DirRef string
-}
-
-// DesignInfo is one design as the port reports it.
-type DesignInfo struct {
-	// ProjectID is the id of the project this design belongs to. It is always set: a design is
-	// addressable only under a parent, so a store never reports a parentless one.
-	ProjectID string
-	// ID is the operator-declared id from `design.yaml`.
-	ID string
-	// Title is the human-readable label, id fallback already applied.
-	Title string
-	// Mount is the workspace mount the design's files live in.
-	Mount string
-	// DirRef is the mount-relative design folder.
-	DirRef string
-	// EntryRef is the mount-relative ref of the file analysis reads (C21).
-	EntryRef string
-	// CompanionRefs are mount-relative refs to views of this same design: a schematic export, a
-	// board, an IPC-2581. They are geometry to render and locate on, never a second component source.
-	CompanionRefs []string
-}
-
-// Resource-name prefixes and separators, written once so a store dealing in ids and an API dealing in
-// names cannot each spell the boundary by hand — which is how one of them ends up storing a name as
-// an id.
+// Resource-name prefixes and separators, written once so a store dealing in ids and an API dealing
+// in names cannot each spell the boundary by hand — which is how one of them ends up storing a name
+// as an id.
 const (
 	projectNamePrefix = "projects/"
 	designNameInfix   = "/designs/"
@@ -86,9 +58,9 @@ const (
 func ProjectName(id string) string { return projectNamePrefix + id }
 
 // ProjectID extracts the declared id from a project resource name, reporting whether the name was
-// well formed. A missing prefix, an empty id, or a separator inside the id is rejected: an id reaches
-// a filesystem-backed adapter, so a caller must not be able to steer it out of the tree it was meant
-// to address.
+// well formed. A missing prefix, an empty id, or a separator inside the id is rejected: an id
+// reaches a store that may resolve it against a filesystem, so a caller must not be able to steer it
+// out of the tree it was meant to address.
 func ProjectID(name string) (string, bool) {
 	id, ok := strings.CutPrefix(name, projectNamePrefix)
 	if !ok {
@@ -98,29 +70,85 @@ func ProjectID(name string) (string, bool) {
 }
 
 // DesignName builds a design resource name, "projects/{project}/designs/{design}".
-func DesignName(projectID, designID string) string {
-	return projectNamePrefix + projectID + designNameInfix + designID
-}
+func DesignName(parent, id string) string { return parent + designNameInfix + id }
 
-// DesignID splits a design resource name into its project and design ids, with the same containment
-// rejections as ProjectID applied to both halves.
-func DesignID(name string) (projectID, designID string, ok bool) {
+// SplitDesignName splits a design resource name into its parent project name and its design id,
+// with the same containment rejections as ProjectID applied to both halves.
+func SplitDesignName(name string) (parent, id string, ok bool) {
 	rest, found := strings.CutPrefix(name, projectNamePrefix)
 	if !found {
 		return "", "", false
 	}
-	projectID, designID, found = strings.Cut(rest, designNameInfix)
+	projectID, designID, found := strings.Cut(rest, designNameInfix)
 	if !found || !validResourceID(projectID) || !validResourceID(designID) {
 		return "", "", false
 	}
-	return projectID, designID, true
+	return ProjectName(projectID), designID, true
 }
 
-// validResourceID rejects an id that could escape the store's tree or split one resource name into
+// validResourceID rejects an id that could escape a store's tree or split one resource name into
 // two. It is a containment check rather than a full syntax check: the descriptor loader already
-// validated the id's shape when it parsed the file, and this guards the path from the wire.
+// validated the id's shape when it parsed the file, and this guards the id arriving from the wire.
 func validResourceID(id string) bool {
 	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\")
+}
+
+// DesignSources is which artifact each tier of a read comes from, once a design's declaration has
+// had its say. They are REFS, not paths: a ref is a key the injected Loader resolves, and no caller
+// above the Loader may treat one as a host path (CONSTRAINTS C22).
+type DesignSources struct {
+	// NetlistRef is the artifact component and connectivity ANALYSIS reads: the netlist the design
+	// team produces (C21).
+	NetlistRef string
+	// BoardRef is where the board tier's copper comes from. Often the same artifact, and different
+	// when a design declares a separate board companion.
+	BoardRef string
+	// GeometryRef is where schematic sheets are rendered and findings located from. A netlist entry
+	// carries none of its own, so a design declaring a schematic companion locates on that
+	// companion's sheets, which is what C21 means by a companion being a canvas rather than a source.
+	GeometryRef string
+}
+
+// SourcesFor resolves a design's declaration into the artifact each tier reads.
+//
+// It lives here, above the store and below every client, because CLI and web must not each decide
+// which companion supplies the board. Two implementations of "pick the companion with copper" is one
+// more than the number of answers that can be right, and the failure mode is silent: a tier resolved
+// differently in two places produces two findings lists with nothing to say why they differ.
+//
+// `named` is the ref the caller actually asked for, "" when they named the design itself. A named
+// companion KEEPS whatever tier it alone can supply — a board file's copper, a schematic's sheets —
+// because that is why the caller pointed at it; only the netlist tier ever moves.
+func SourcesFor(d *webapi.Design, named string) DesignSources {
+	entry := d.GetEntryRef()
+	s := DesignSources{NetlistRef: entry, BoardRef: entry, GeometryRef: entry}
+	if named != "" {
+		if formats.HasBoard(named) {
+			s.BoardRef = named
+		}
+		if formats.HasFaithful(named) {
+			s.GeometryRef = named
+		}
+	}
+	for _, c := range d.GetCompanionRefs() {
+		if s.BoardRef == entry && formats.HasBoard(c) {
+			s.BoardRef = c
+		}
+		if s.GeometryRef == entry && formats.HasFaithful(c) {
+			s.GeometryRef = c
+		}
+	}
+	return s
+}
+
+// IsCompanion reports whether ref is one of the views this design declared of itself.
+func IsCompanion(d *webapi.Design, ref string) bool {
+	for _, c := range d.GetCompanionRefs() {
+		if c == ref {
+			return true
+		}
+	}
+	return false
 }
 
 // defaultProjectPageSize and maxProjectPageSize bound a listing. Projects and designs are counted in
@@ -131,14 +159,19 @@ const (
 	maxProjectPageSize     = 200
 )
 
-// ProjectService serves the project and design resources over an injected ProjectStore (C13). It does
-// no file I/O itself: it maps the port's value types to proto, applies AIP-158 pagination and the one
-// supported AIP-160 filter, and classifies errors for the transport.
+// ProjectService serves the project and design resources over an injected ProjectStore (C13). It
+// does no I/O itself: it applies AIP-158 pagination and the one supported AIP-160 filter, and
+// classifies errors for the transport.
 //
 // It is AIP-shaped with GET and LIST only, no mutators — the read-only-resource case in CONSTRAINTS
 // C23. What earns it a resource name rather than a (mount, ref) pair is that a project's identity is
 // DECLARED by an operator rather than derived from its path, so the name survives the folder being
 // renamed or moved between mounts, and so reviews can later be parented by it.
+//
+// Every caller goes through here, including the CLI. That is not ceremony: the alternative is a
+// second access path reaching the store directly, and the two then drift on exactly the questions
+// that are invisible from the outside — which companion supplies the board, whether an unresolved
+// ref is an error, what a malformed descriptor does.
 type ProjectService struct {
 	store ProjectStore
 }
@@ -151,21 +184,16 @@ func NewProjectService(store ProjectStore) *ProjectService {
 }
 
 // GetProject returns one project by resource name. A malformed name is ErrInvalidArgument and a
-// well-formed name for a project that does not exist is ErrNotFound, so a client can tell a typo from
-// a project it lacks.
+// well-formed name for a project that does not exist is ErrNotFound, so a client can tell a typo
+// from a project it lacks.
 func (s *ProjectService) GetProject(ctx context.Context, req *webapi.GetProjectRequest) (*webapi.Project, error) {
-	id, ok := ProjectID(req.GetName())
-	if !ok {
+	if _, ok := ProjectID(req.GetName()); !ok {
 		return nil, fmt.Errorf("%w: %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, req.GetName())
 	}
 	if s.store == nil {
 		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, req.GetName())
 	}
-	p, err := s.store.Project(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return projectProto(p), nil
+	return s.store.Project(ctx, req.GetName())
 }
 
 // ListProjects returns the projects visible across the server's mounts, ordered by resource name.
@@ -174,23 +202,23 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 	if err != nil {
 		return nil, err
 	}
-	var all []ProjectInfo
+	var all []*webapi.Project
 	if s.store != nil {
 		if all, err = s.store.Projects(ctx); err != nil {
 			return nil, err
 		}
 	}
-	var kept []ProjectInfo
+	var kept []*webapi.Project
 	for _, p := range all {
-		if mount == "" || p.Mount == mount {
+		if mount == "" || p.GetMount() == mount {
 			kept = append(kept, p)
 		}
 	}
-	sort.Slice(kept, func(i, j int) bool { return kept[i].ID < kept[j].ID })
-	page, next := paginate(len(kept), req.GetPageSize(), req.GetPageToken(), func(i int) string { return kept[i].ID })
+	sort.Slice(kept, func(i, j int) bool { return kept[i].GetName() < kept[j].GetName() })
+	page, next := paginate(len(kept), req.GetPageSize(), req.GetPageToken(), func(i int) string { return kept[i].GetName() })
 	resp := &webapi.ListProjectsResponse{NextPageToken: next}
 	for _, i := range page {
-		resp.Projects = append(resp.Projects, projectProto(kept[i]))
+		resp.Projects = append(resp.Projects, kept[i])
 	}
 	return resp, nil
 }
@@ -198,27 +226,21 @@ func (s *ProjectService) ListProjects(ctx context.Context, req *webapi.ListProje
 // GetDesign returns one design by resource name, with the same malformed-vs-absent split as
 // GetProject.
 func (s *ProjectService) GetDesign(ctx context.Context, req *webapi.GetProjectDesignRequest) (*webapi.Design, error) {
-	projectID, designID, ok := DesignID(req.GetName())
-	if !ok {
+	if _, _, ok := SplitDesignName(req.GetName()); !ok {
 		return nil, fmt.Errorf("%w: %q is not a design resource name (want \"projects/{project}/designs/{design}\")", ErrInvalidArgument, req.GetName())
 	}
 	if s.store == nil {
 		return nil, fmt.Errorf("%w: no design %q", ErrNotFound, req.GetName())
 	}
-	d, err := s.store.Design(ctx, projectID, designID)
-	if err != nil {
-		return nil, err
-	}
-	return designProto(d), nil
+	return s.store.Design(ctx, req.GetName())
 }
 
-// ListDesigns returns one project's designs, ordered by resource name. A parent naming a project that
-// does not exist is ErrNotFound rather than an empty list, because "this project has no designs" and
-// "there is no such project" are different answers and only one of them means the client's parent was
-// wrong.
+// ListDesigns returns one project's designs, ordered by resource name. A parent naming a project
+// that does not exist is ErrNotFound rather than an empty list, because "this project has no
+// designs" and "there is no such project" are different answers and only one of them means the
+// client's parent was wrong.
 func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjectDesignsRequest) (*webapi.ListProjectDesignsResponse, error) {
-	projectID, ok := ProjectID(req.GetParent())
-	if !ok {
+	if _, ok := ProjectID(req.GetParent()); !ok {
 		return nil, fmt.Errorf("%w: parent %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, req.GetParent())
 	}
 	mount, err := parseProjectFilter(req.GetFilter())
@@ -228,52 +250,52 @@ func (s *ProjectService) ListDesigns(ctx context.Context, req *webapi.ListProjec
 	if s.store == nil {
 		return nil, fmt.Errorf("%w: no project %q", ErrNotFound, req.GetParent())
 	}
-	all, err := s.store.Designs(ctx, projectID)
+	all, err := s.store.Designs(ctx, req.GetParent())
 	if err != nil {
 		return nil, err
 	}
-	var kept []DesignInfo
+	var kept []*webapi.Design
 	for _, d := range all {
-		if mount == "" || d.Mount == mount {
+		if mount == "" || d.GetMount() == mount {
 			kept = append(kept, d)
 		}
 	}
-	sort.Slice(kept, func(i, j int) bool { return kept[i].ID < kept[j].ID })
-	page, next := paginate(len(kept), req.GetPageSize(), req.GetPageToken(), func(i int) string { return kept[i].ID })
+	sort.Slice(kept, func(i, j int) bool { return kept[i].GetName() < kept[j].GetName() })
+	page, next := paginate(len(kept), req.GetPageSize(), req.GetPageToken(), func(i int) string { return kept[i].GetName() })
 	resp := &webapi.ListProjectDesignsResponse{NextPageToken: next}
 	for _, i := range page {
-		resp.Designs = append(resp.Designs, designProto(kept[i]))
+		resp.Designs = append(resp.Designs, kept[i])
 	}
 	return resp, nil
 }
 
-// ResolveDesign answers whether a mount-relative ref belongs to a declared design, and if so which.
+// ResolveDesign answers whether an artifact ref belongs to a declared design, and if so which.
 //
 // A ref that resolves to nothing yields an EMPTY response, not an error. That is the load-bearing
 // part of the contract: most files on a mount belong to no declared design, and a client reading an
-// empty response shows the plain viewer and the built-in catalog rather than another project's
-// config. Turning the ordinary case into an error would push every caller into treating a failure
-// path as normal, which is how a real failure stops being noticed.
+// empty response falls back to the plain built-in catalog rather than another project's config.
+// Turning the ordinary case into an error would push every caller into treating a failure path as
+// normal, which is how a real failure stops being noticed.
 func (s *ProjectService) ResolveDesign(ctx context.Context, req *webapi.ResolveDesignRequest) (*webapi.ResolveDesignResponse, error) {
 	if s.store == nil {
 		return &webapi.ResolveDesignResponse{}, nil
 	}
-	d, p, ok, err := s.store.Resolve(ctx, req.GetMount(), req.GetRef())
+	d, p, err := s.store.ResolveDesign(ctx, req.GetMount(), req.GetRef())
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
+	if d == nil {
 		return &webapi.ResolveDesignResponse{}, nil
 	}
-	return &webapi.ResolveDesignResponse{Design: designProto(d), Project: projectProto(p)}, nil
+	return &webapi.ResolveDesignResponse{Design: d, Project: p}, nil
 }
 
-// parseProjectFilter reads the one supported AIP-160 filter, `mount="..."`, returning the mount or ""
-// for an empty filter.
+// parseProjectFilter reads the one supported AIP-160 filter, `mount="..."`, returning the mount or
+// "" for an empty filter.
 //
 // An unsupported filter is an ERROR rather than an ignored argument, for the same reason
-// parseReviewFilter refuses one: a client that believed it had narrowed to one mount and silently got
-// every mount would read another team's projects as its own.
+// parseReviewFilter refuses one: a client that believed it had narrowed to one mount and silently
+// got every mount would read another team's projects as its own.
 func parseProjectFilter(filter string) (string, error) {
 	f := strings.TrimSpace(filter)
 	if f == "" {
@@ -293,11 +315,12 @@ func parseProjectFilter(filter string) (string, error) {
 // paginate applies AIP-158 page_size / page_token to a sorted collection of n items, returning the
 // indexes on this page and the token for the next.
 //
-// The token is the id of the FIRST item on the next page rather than an offset, so a listing stays
-// correct when a project is added or removed between calls: an offset would silently skip or repeat a
-// neighbour, where an id resumes at the right place or, if that item is gone, at the next one after
-// it. Ordering is by id and ids are unique within a collection, which is what makes that resumable.
-func paginate(n int, pageSize int32, pageToken string, idAt func(int) string) (indexes []int, nextToken string) {
+// The token is the resource name of the FIRST item on the next page rather than an offset, so a
+// listing stays correct when a project is added or removed between calls: an offset would silently
+// skip or repeat a neighbour, where a name resumes at the right place or, if that item is gone, at
+// the next one after it. Ordering is by name and names are unique, which is what makes that
+// resumable.
+func paginate(n int, pageSize int32, pageToken string, nameAt func(int) string) (indexes []int, nextToken string) {
 	size := int(pageSize)
 	switch {
 	case size <= 0:
@@ -307,34 +330,14 @@ func paginate(n int, pageSize int32, pageToken string, idAt func(int) string) (i
 	}
 	start := 0
 	if pageToken != "" {
-		start = sort.Search(n, func(i int) bool { return idAt(i) >= pageToken })
+		start = sort.Search(n, func(i int) bool { return nameAt(i) >= pageToken })
 	}
 	end := min(start+size, n)
 	for i := start; i < end; i++ {
 		indexes = append(indexes, i)
 	}
 	if end < n {
-		nextToken = idAt(end)
+		nextToken = nameAt(end)
 	}
 	return indexes, nextToken
-}
-
-func projectProto(p ProjectInfo) *webapi.Project {
-	return &webapi.Project{
-		Name:   ProjectName(p.ID),
-		Title:  p.Title,
-		Mount:  p.Mount,
-		DirRef: p.DirRef,
-	}
-}
-
-func designProto(d DesignInfo) *webapi.Design {
-	return &webapi.Design{
-		Name:          DesignName(d.ProjectID, d.ID),
-		Title:         d.Title,
-		Mount:         d.Mount,
-		DirRef:        d.DirRef,
-		EntryRef:      d.EntryRef,
-		CompanionRefs: d.CompanionRefs,
-	}
 }

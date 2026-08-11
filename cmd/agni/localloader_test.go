@@ -38,15 +38,15 @@ func TestLocalLoaderResolvesEachTier(t *testing.T) {
 	dir := designFolder(t)
 	l := &localLoader{loader: &formats.Loader{}, notes: &bytes.Buffer{}}
 
-	src, err := l.resolve(filepath.Join(dir, "gateway.kicad_pcb"))
+	src, err := l.resolve(context.Background(), filepath.Join(dir, "gateway.kicad_pcb"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src.Netlist != filepath.Join(dir, "gateway.edn") {
-		t.Errorf("netlist = %q, want the declared entry", src.Netlist)
+	if src.NetlistRef != filepath.Join(dir, "gateway.edn") {
+		t.Errorf("netlist = %q, want the declared entry", src.NetlistRef)
 	}
-	if src.Board != filepath.Join(dir, "gateway.kicad_pcb") {
-		t.Errorf("board = %q, want the named companion", src.Board)
+	if src.BoardRef != filepath.Join(dir, "gateway.kicad_pcb") {
+		t.Errorf("board = %q, want the named companion", src.BoardRef)
 	}
 }
 

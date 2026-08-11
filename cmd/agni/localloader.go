@@ -25,7 +25,8 @@ import (
 // service.Loader (the check/query thin clients) plus Manifest (the review thin client), so a CLI
 // command constructs its service over this and calls the same method the web serves.
 type localLoader struct {
-	loader *formats.Loader
+	loader   *formats.Loader
+	resolver *designResolver
 	// notes is where a descriptor-resolution note is written, nil for os.Stderr. Notes are emitted
 	// once per named path (noted), because one BuildModel asks this loader for the netlist, the board,
 	// and the geometry of the SAME path, and a user does not need to be told three times which file
@@ -38,8 +39,12 @@ type localLoader struct {
 // resolve runs the named path through the enclosing design's descriptor and emits the note at most
 // once. Every path-taking method below goes through it, so the CLI's thin clients (check, query,
 // review) honour a declared entry the same way the direct readers do.
-func (l *localLoader) resolve(path string) (designSource, error) {
-	src, err := resolveSource(path)
+func (l *localLoader) resolve(ctx context.Context, path string) (designSource, error) {
+	r := l.resolver
+	if r == nil {
+		r = newDesignResolver()
+	}
+	src, err := r.Resolve(ctx, path)
 	if err != nil {
 		return designSource{}, err
 	}
@@ -63,46 +68,46 @@ func (l *localLoader) resolve(path string) (designSource, error) {
 	return src, nil
 }
 
-func (l *localLoader) Design(_ context.Context, _, path string, opts ...service.ReadOption) (*ir.Design, error) {
-	src, err := l.resolve(path)
+func (l *localLoader) Design(ctx context.Context, _, path string, opts ...service.ReadOption) (*ir.Design, error) {
+	src, err := l.resolve(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ReadDesign(src.Netlist)
+	return readerFor(l.loader, opts...).ReadDesign(src.NetlistRef)
 }
 
-func (l *localLoader) Board(_ context.Context, _, path string) (*geom.BoardGeometry, error) {
-	src, err := l.resolve(path)
+func (l *localLoader) Board(ctx context.Context, _, path string) (*geom.BoardGeometry, error) {
+	src, err := l.resolve(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.BoardGeometry(src.Board)
+	return l.loader.BoardGeometry(src.BoardRef)
 }
 
-func (l *localLoader) Geometry(_ context.Context, _, path, layout string, faithful bool) (*geom.SchematicGeometry, error) {
-	src, err := l.resolve(path)
+func (l *localLoader) Geometry(ctx context.Context, _, path, layout string, faithful bool) (*geom.SchematicGeometry, error) {
+	src, err := l.resolve(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ResolveGeometry(src.Geometry, layout, nil, symbolsFor(faithful))
+	return l.loader.ResolveGeometry(src.GeometryRef, layout, nil, symbolsFor(faithful))
 }
 
-func (l *localLoader) Report(_ context.Context, _, path string, faithful bool) (*graph.ConversionReport, error) {
-	src, err := l.resolve(path)
+func (l *localLoader) Report(ctx context.Context, _, path string, faithful bool) (*graph.ConversionReport, error) {
+	src, err := l.resolve(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ConversionReport(src.Geometry, symbolsFor(faithful), nil)
+	return l.loader.ConversionReport(src.GeometryRef, symbolsFor(faithful), nil)
 }
 
 // Expectations reads the sidecar beside the ENTRY rather than beside the named file: an expectation
 // set states what this design should read, and the design is its entry.
-func (l *localLoader) Expectations(_ context.Context, _, path string) (*expect.Expectations, error) {
-	src, err := l.resolve(path)
+func (l *localLoader) Expectations(ctx context.Context, _, path string) (*expect.Expectations, error) {
+	src, err := l.resolve(ctx, path)
 	if err != nil {
 		return nil, err
 	}
-	sidecar := src.Netlist + ".expect.yaml"
+	sidecar := src.NetlistRef + ".expect.yaml"
 	if _, err := os.Stat(sidecar); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -130,12 +135,12 @@ func (l *localLoader) Convention(_ context.Context, _, ref string) (naming.Confi
 // It hashes the ENTRY the descriptor declares, not the ref the caller passed, so a run recorded
 // against a companion and one recorded against the design folder carry the same revision identity:
 // they analysed the same bytes.
-func (l *localLoader) DesignHash(_ context.Context, _, ref string) (string, error) {
-	src, err := l.resolve(ref)
+func (l *localLoader) DesignHash(ctx context.Context, _, ref string) (string, error) {
+	src, err := l.resolve(ctx, ref)
 	if err != nil {
 		return "", err
 	}
-	return hashSource(src.Netlist), nil
+	return hashSource(src.NetlistRef), nil
 }
 
 // loadManifest reads and validates a checklist from a local path. It is a package function rather

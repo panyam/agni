@@ -8,6 +8,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -16,16 +17,22 @@ import (
 	"github.com/panyam/demokit"
 
 	"github.com/panyam/agni/examples/common"
-	"github.com/panyam/agni/project"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/projects"
+	"github.com/panyam/agni/internal/service"
 )
 
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// fixtureRoot is the bundled project the walkthrough resolves against. A project.Tree is rooted at
+// fixtureRoot is the bundled project the walkthrough resolves against. A store's tree is rooted at
 // one filesystem, which on a server is a mount; here it is this folder. Everything the example names
 // is relative to it, never a host path.
 const fixtureRoot = "../common/designs/demo-project"
+
+// mount is the name this one tree is addressed by. A ref is always a (mount, ref) pair, so even a
+// single-tree client names its tree rather than inventing a path-shaped alternative.
+const mount = "fixtures"
 
 func main() {
 	// The ref the walkthrough resolves. It defaults to the BOARD rather than the netlist on purpose:
@@ -36,7 +43,11 @@ func main() {
 		Dir("resolve-design").
 		FromMarkdownBytes(walkthroughMD)
 
-	tree := project.Tree{FS: os.DirFS(fixtureRoot)}
+	// The same ProjectService a server hosts, over the same filesystem-backed store, differing only
+	// in which tree it was pointed at. That is the whole shape: clients pick a store, everyone asks
+	// the service.
+	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: mount, FS: os.DirFS(fixtureRoot)}))
+	ctx := context.Background()
 
 	demo.Bind("pick").Input(ref.Def()).Run(func(c demokit.StepContext) *demokit.StepResult {
 		ref.Capture(c)
@@ -45,45 +56,51 @@ func main() {
 	})
 
 	demo.Bind("list").Run(func(demokit.StepContext) *demokit.StepResult {
-		ps, err := tree.Projects()
+		ps, err := svc.ListProjects(ctx, &webapi.ListProjectsRequest{})
 		if err != nil {
 			return demokit.Errf("list projects: %v", err)
 		}
-		for _, p := range ps {
-			fmt.Printf("projects/%-16s %s\n", p.Name, p.DisplayName())
-			ds, err := tree.Designs(p.Dir)
+		for _, p := range ps.GetProjects() {
+			fmt.Printf("%-34s %s\n", p.GetName(), p.GetTitle())
+			ds, err := svc.ListDesigns(ctx, &webapi.ListProjectDesignsRequest{Parent: p.GetName()})
 			if err != nil {
 				return demokit.Errf("list designs: %v", err)
 			}
-			for _, d := range ds {
-				fmt.Printf("  designs/%-14s %s\n", d.Name, d.DisplayName())
+			for _, d := range ds.GetDesigns() {
+				fmt.Printf("  %-32s %s\n", d.GetName(), d.GetTitle())
 			}
 		}
 		return nil
 	})
 
 	demo.Bind("resolve").Run(func(demokit.StepContext) *demokit.StepResult {
-		d, p, ok, err := tree.Resolve(ref.Path())
+		resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: mount, Ref: ref.Path()})
 		if err != nil {
 			return demokit.Errf("resolve: %v", err)
 		}
-		if !ok {
+		d := resp.GetDesign()
+		if d == nil {
 			// Not an error. Most files in a tree belong to no declared design, and a caller that
 			// gets nothing back falls through to the plain behaviour and the built-in catalog.
 			fmt.Printf("%s belongs to no declared design.\n", ref.Path())
 			return nil
 		}
-		fmt.Printf("resource:   projects/%s/designs/%s\n", p.Name, d.Name)
-		fmt.Printf("entry:      %s\n", d.EntryRef())
-		fmt.Printf("companions: %s\n", strings.Join(d.CompanionRefs(), ", "))
+		fmt.Printf("resource:   %s\n", d.GetName())
+		fmt.Printf("project:    %s\n", resp.GetProject().GetName())
+		fmt.Printf("entry:      %s\n", d.GetEntryRef())
+		fmt.Printf("companions: %s\n", strings.Join(d.GetCompanionRefs(), ", "))
+		// Which artifact each TIER opens is decided once, above every client, so the CLI and the
+		// browser cannot disagree about which companion supplies the board.
+		src := service.SourcesFor(d, "")
+		fmt.Printf("tiers:      netlist=%s board=%s sheets=%s\n", src.NetlistRef, src.BoardRef, src.GeometryRef)
 		return nil
 	})
 
 	demo.Bind("read").Run(func(demokit.StepContext) *demokit.StepResult {
 		named := ref.Path()
 		entry := named
-		if d, _, ok, err := tree.Resolve(named); err == nil && ok {
-			entry = d.EntryRef()
+		if resp, err := svc.ResolveDesign(ctx, &webapi.ResolveDesignRequest{Mount: mount, Ref: named}); err == nil && resp.GetDesign() != nil {
+			entry = resp.GetDesign().GetEntryRef()
 		}
 		// Reading BOTH is what makes the point visible. On this small fixture the two answers happen
 		// to match; neither of them says which file it came from, which is exactly why a divergence

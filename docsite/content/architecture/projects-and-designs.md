@@ -90,11 +90,25 @@ and diffing them. The tutorial project's `check-views` target does exactly that.
 
 The service tier holds a port (`service.ProjectStore`), not a directory walk. The implementation
 that ships walks a tree for descriptors; another may consult an index, a database, or a PLM system,
-and no caller can tell, because none of the port's methods names a file.
+and no caller can tell, because none of the port's five methods names a file, a path, or a parent
+directory to walk up from.
 
-The shipped tree walk lives in the public `project` package and is built on `fs.FS`. That makes
-containment **structural** rather than checked: an `fs.FS` has no parent to climb into, so an upward
-resolution walk stops at the mount and a ref carrying `..` never opens a file at all.
+That layering is load-bearing enough to be worth stating as a rule: **everything that is true only
+of storing projects in directories lives behind the port.** Tree walking, the descriptor file names,
+design-folder-relative paths, and the upward walk are all facts about one storage shape. They live
+in `internal/projects`, and nothing above the port imports it — including the CLI, which reaches
+projects through the same `ProjectService` a browser does.
+
+The shipped store is built on `fs.FS`, which makes containment **structural** rather than checked:
+an `fs.FS` has no parent to climb into, so an upward resolution walk stops at the tree root and a ref
+carrying `..` never opens a file at all. The CLI uses that property rather than a special case. It
+roots its tree a bounded number of levels above the path you named and asks the same service, so the
+CLI and the server run one code path and differ only in where the client rooted the tree.
+
+There is also no separate Go type for a project anywhere in this stack. The descriptors parse
+straight into the wire messages, the port passes those, and the service serves them. A
+runtime-neutral twin of a resource whose whole content is the message would be a field-for-field
+copy and one more place for two layers to disagree about what a design is.
 
 Discovery is bounded and uncached, both deliberately. Bounded, because a mount is a folder an
 operator handed the server and may contain a build directory or a home directory. Uncached, because

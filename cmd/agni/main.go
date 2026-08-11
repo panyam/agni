@@ -9,6 +9,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -118,12 +119,12 @@ func newLoader() *formats.Loader {
 // readDesign reads a design file into the IR through the formats registry, after the enclosing
 // design's descriptor has had its say about which file that should be (resolveSource).
 func readDesign(path string) (*ir.Design, error) {
-	src, err := resolveSource(path)
+	src, err := newDesignResolver().Resolve(context.Background(), path)
 	if err != nil {
 		return nil, err
 	}
 	noteSource(os.Stderr, src)
-	return newLoader().ReadDesign(src.Netlist)
+	return newLoader().ReadDesign(src.NetlistRef)
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never
@@ -161,17 +162,17 @@ func readModel(path string) (check.Model, error) {
 // connectivity against the netlist and its copper against the board, which is C21's split expressed
 // as behaviour instead of as a warning.
 func readModelWithParams(path, paramsDir string) (check.Model, error) {
-	src, err := resolveSource(path)
+	src, err := newDesignResolver().Resolve(context.Background(), path)
 	if err != nil {
 		return nil, err
 	}
 	noteSource(os.Stderr, src)
 	l := newLoader()
-	d, err := l.ReadDesign(src.Netlist)
+	d, err := l.ReadDesign(src.NetlistRef)
 	if err != nil {
 		return nil, err
 	}
-	bg, err := l.BoardGeometry(src.Board)
+	bg, err := l.BoardGeometry(src.BoardRef)
 	if err != nil {
 		return nil, err
 	}

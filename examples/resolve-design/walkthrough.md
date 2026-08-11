@@ -22,23 +22,23 @@ Two small YAML files remove the guess. `project.yaml` names a set of designs tha
 
 ## What the tree declares {#list}
 
-> A Tree discovers descriptors in one filesystem. On a server that filesystem is a mount; here it is the fixture folder. Discovery walks down for descriptors and stops as soon as it finds one, so a design's own subfolders never turn into designs of their own.
+> The example builds the same ProjectService a server hosts, over a store pointed at the fixture folder instead of at mounts. Discovery walks down for descriptors and stops as soon as it finds one, so a design's own subfolders never turn into designs of their own. That the walk exists at all is a fact about this store, not about the service: a database-backed one answers the same questions without a directory anywhere.
 
 ```mermaid
 sequenceDiagram
-You ->> Agni: Tree.Projects()
+You ->> Agni: ListProjects()
 Agni -->> You: projects/demo
-You ->> Agni: Tree.Designs("")
+You ->> Agni: ListDesigns(projects/demo)
 Agni -->> You: projects/demo/designs/mixer
 ```
 
 ## Resolve the file {#resolve}
 
-> Resolution walks UP from the file, so the answer costs a few stats no matter how many designs the tree holds. A file belonging to no declared design is a MISS rather than an error, because that is the ordinary state of a mounted folder — and a design with no project above it is a miss too, since a resource name needs a parent.
+> Resolution walks UP from the file, so the answer costs a few stats no matter how many designs the tree holds. A file belonging to no declared design is a MISS rather than an error, because that is the ordinary state of a mounted folder. A design with no project above it is NOT a miss: its declaration still says which file analysis reads, it just has no resource name, since a name needs a parent.
 
 ```mermaid
 sequenceDiagram
-You ->> Agni: Tree.Resolve("designs/mixer/mixer.kicad_pcb")
+You ->> Agni: ResolveDesign(designs/mixer/mixer.kicad_pcb)
 Agni -->> You: design + project + the declared entry
 ```
 
