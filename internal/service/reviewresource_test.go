@@ -135,8 +135,8 @@ func TestCreateReviewRecordsProvenance(t *testing.T) {
 		t.Fatalf("CreateReview: %v", err)
 	}
 	doc := rv.GetResults()
-	if doc.GetDesign().GetSource() != "board.edn" || doc.GetDesign().GetContentHash() != "sha256:fixed" {
-		t.Errorf("design ref = %+v, want the ref and its hash", doc.GetDesign())
+	if doc.GetDesign().GetSource() != "mount://m/board.edn" || doc.GetDesign().GetContentHash() != "sha256:fixed" {
+		t.Errorf("design ref = %+v, want the design URI and its hash", doc.GetDesign())
 	}
 	if doc.GetMeta().GetProducerVersion() != "test" || !doc.GetMeta().GetCoverageAxis() {
 		t.Errorf("meta = %+v, want the producer version and a declared coverage axis", doc.GetMeta())
@@ -164,7 +164,7 @@ func TestReviewResourceLifecycle(t *testing.T) {
 	}
 	create := func(design string) string {
 		t.Helper()
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: design})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: "mount://m/" + design})
 		if err != nil {
 			t.Fatalf("CreateReview(%s): %v", design, err)
 		}
@@ -184,7 +184,7 @@ func TestReviewResourceLifecycle(t *testing.T) {
 	}
 
 	// The design filter answers the question a client actually has.
-	only, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{Filter: `design="a.edn"`})
+	only, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{Filter: `design="mount://m/a.edn"`})
 	if err != nil {
 		t.Fatalf("ListReviews(filter): %v", err)
 	}
@@ -216,7 +216,7 @@ func TestListReviewsPaging(t *testing.T) {
 	}
 	var created []string
 	for i := range 5 {
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: fmt.Sprintf("d%d.edn", i)})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: "mount://m/" + fmt.Sprintf("d%d.edn", i)})
 		if err != nil {
 			t.Fatal(err)
 		}

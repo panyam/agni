@@ -68,9 +68,13 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 		}
 	})
 
-	t.Run("containment keeps its invalid-path classification", func(t *testing.T) {
-		if _, err := svc.ListDir(context.Background(), req("../x")); !errors.Is(err, ErrInvalidPath) {
-			t.Fatalf("want ErrInvalidPath, got %v", err)
+	// Containment is enforced when the URI is PARSED, not when the adapter joins it, so an escaping
+	// ref classifies as an invalid argument. The value is sent raw because building it through the
+	// URI constructor is precisely what is now impossible.
+	t.Run("containment is enforced at the parse", func(t *testing.T) {
+		_, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: "mount://m/../x"})
+		if !errors.Is(err, ErrInvalidArgument) {
+			t.Fatalf("want ErrInvalidArgument, got %v", err)
 		}
 	})
 

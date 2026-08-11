@@ -57,7 +57,10 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 		return nil, err
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
-	rep := CheckReportProto(u.Path, check.Run(m, rules), rules)
+	// The report names the design by its URI, not by the mount-relative half. A report is a wire
+	// shape a client may store, and half an address is not an address: a renderer shortens it for
+	// reading, but what travels has to be able to name the design on another machine.
+	rep := CheckReportProto(u.String(), check.Run(m, rules), rules)
 	AnnotateReport(rep, BuildGeometry(ctx, s.loader, u), m)
 	return &webapi.GetCheckReportResponse{Report: rep}, nil
 }

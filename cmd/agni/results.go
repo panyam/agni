@@ -13,8 +13,10 @@ import (
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/version"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 // This file is the CLI edge of the checks results contract (WS3-103): writing a run to a
@@ -106,7 +108,7 @@ func renderReviewResults(w io.Writer, doc *checkspb.CheckResults, format string,
 	if format == "" {
 		format = "markdown"
 	}
-	rep := review.Report{Manifest: doc.GetManifest(), Design: doc.GetDesign().GetSource()}
+	rep := review.Report{Manifest: doc.GetManifest(), Design: displayName(doc.GetDesign().GetSource())}
 	for _, pa := range doc.GetAreas() {
 		ar := review.AreaResult{Area: review.Area{Name: pa.GetName()}}
 		for _, pi := range pa.GetItems() {
@@ -157,7 +159,7 @@ func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding
 			// pass. That is the axis an imported vendor report does not have.
 			CoverageAxis: true,
 		},
-		Design:   &checkspb.DesignRef{Source: source, ContentHash: hashSource(source)},
+		Design:   &checkspb.DesignRef{Source: source, ContentHash: hashSource(localOf(source))},
 		Run:      run,
 		Catalog:  results.RuleRecords(rules),
 		Findings: findings,
@@ -192,4 +194,45 @@ func hashSource(path string) string {
 		return ""
 	}
 	return "sha256:" + hex.EncodeToString(h.Sum(nil))
+}
+
+// displayName is how an artifact URI is shown to a person: its mount-relative path.
+//
+// This is the reading half of the split option 3 settles. A stored document records the URI, because
+// a document outlives the machine that made it and has to say WHICH design it scored in terms that
+// survive the move. A terminal report is read now, by someone who typed the path a second ago, and
+// `mount://local/Users/…/fires.edn` tells them nothing `fires.edn` does not.
+//
+// The PATH rather than the base name, because a rollup lists several designs at once and two boards
+// called gateway.edn in different folders would render identically. It is also what a user typed in
+// the ordinary case, so the report reads back the way the command was written.
+//
+// A value that is not a URI passes through unchanged, so a document written before this renders.
+func displayName(s string) string {
+	if u, err := artifact.Parse(s); err == nil {
+		if u.Path != "" {
+			return u.Path
+		}
+		return u.Mount
+	}
+	return s
+}
+
+// forDisplay returns a shallow copy of a check report with every source rendered for reading. It
+// copies rather than mutating because the caller's document is the artifact that gets stored, and a
+// renderer that shortened the design's name in place would quietly write the un-portable form to
+// disk on the next --results-out.
+func forDisplay(rep *checkspb.CheckReport) *checkspb.CheckReport {
+	out := proto.CloneOf(rep)
+	out.Source = displayName(rep.GetSource())
+	for _, s := range out.GetSections() {
+		for _, g := range s.GetRules() {
+			for _, f := range g.GetFindings() {
+				if p := f.GetProvenance(); p.GetSourceFile() != "" {
+					p.SourceFile = displayName(p.GetSourceFile())
+				}
+			}
+		}
+	}
+	return out
 }

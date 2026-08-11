@@ -134,13 +134,13 @@ func TestGetPartSpecFound(t *testing.T) {
 func TestSavePartSpecConflictAndValidation(t *testing.T) {
 	// A store conflict propagates as ErrConflict (the transport maps it to Aborted, "refetch").
 	conflict := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{saveErr: ErrConflict}, &fakeDocExtractor{}, &fakeAnnotationStore{})
-	_, err := conflict.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Spec: &parampb.PartSpec{Mpn: "X"}})
+	_, err := conflict.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: &parampb.PartSpec{Mpn: "X"}})
 	if !errors.Is(err, ErrConflict) {
 		t.Errorf("store conflict => %v, want ErrConflict", err)
 	}
 	// A nil spec is rejected before touching the store.
 	empty := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
-	if _, err := empty.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := empty.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("nil spec => %v, want ErrInvalidArgument", err)
 	}
 }
@@ -176,7 +176,7 @@ func TestGetDocumentReportsExtractAvailable(t *testing.T) {
 func TestSaveAnnotationsValidation(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
 	// A nil set is rejected before the store.
-	if _, err := svc.SaveAnnotations(context.Background(), &webapi.SaveAnnotationsRequest{}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := svc.SaveAnnotations(context.Background(), &webapi.SaveAnnotationsRequest{Uri: "mount://m/d"}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("nil set => %v, want ErrInvalidArgument", err)
 	}
 	// An empty author is rejected: the author names the file and cannot be inferred.

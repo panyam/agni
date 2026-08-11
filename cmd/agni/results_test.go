@@ -111,8 +111,10 @@ func TestResultsDocumentRecordsTheRun(t *testing.T) {
 	if got.Meta.Producer != "agni" || got.Meta.ProducerVersion == "" || got.Meta.CreatedAt == "" {
 		t.Errorf("meta = %+v, want a named producer with a build identity and a timestamp", got.Meta)
 	}
-	if got.Design.Source != design {
-		t.Errorf("design.source = %q, want %q", got.Design.Source, design)
+	// The document records the design's URI, not the path as typed: a stored document outlives the
+	// machine that made it, and a renderer shortens the URI for reading (displayName).
+	if got.Design.Source != cliArgURI(design) {
+		t.Errorf("design.source = %q, want the design URI %q", got.Design.Source, cliArgURI(design))
 	}
 	if !strings.HasPrefix(got.Design.ContentHash, "sha256:") || len(got.Design.ContentHash) != len("sha256:")+64 {
 		t.Errorf("design.contentHash = %q, want a sha256 hex digest", got.Design.ContentHash)

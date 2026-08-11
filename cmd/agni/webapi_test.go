@@ -78,9 +78,13 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		}
 	})
 
-	t.Run("traversal keeps its invalid-path classification", func(t *testing.T) {
-		if _, err := list("m", "../.."); !errors.Is(err, service.ErrInvalidPath) {
-			t.Fatalf("want ErrInvalidPath, got %v", err)
+	// A traversal is refused when the URI is PARSED, not when the adapter joins it, so it classifies
+	// as an invalid argument. The malformed value is sent as a raw string because building it through
+	// the URI constructor is exactly what is now impossible.
+	t.Run("traversal is refused at the parse", func(t *testing.T) {
+		_, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: "mount://m/../.."})
+		if !errors.Is(err, service.ErrInvalidArgument) {
+			t.Fatalf("want ErrInvalidArgument, got %v", err)
 		}
 	})
 

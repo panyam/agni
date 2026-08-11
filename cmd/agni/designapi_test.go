@@ -187,8 +187,8 @@ func TestDesignServiceGetCheckReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	rep := resp.GetReport()
-	if rep.GetSource() != "fires.edn" || rep.GetRulesRun() == 0 {
-		t.Errorf("report header = %q / %d rules, want fires.edn / >0", rep.GetSource(), rep.GetRulesRun())
+	if rep.GetSource() != "mount://t/fires.edn" || rep.GetRulesRun() == 0 {
+		t.Errorf("report header = %q / %d rules, want the design URI / >0", rep.GetSource(), rep.GetRulesRun())
 	}
 	var sevs []string
 	for _, s := range rep.GetSections() {

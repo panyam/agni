@@ -99,7 +99,7 @@ func TestCreateReviewOverFixtures(t *testing.T) {
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
 		Manifest:  fixtureManifest(t, "review/mini.yaml"),
 		DesignUri: "mount://m/review/can-broken.edn",
-		BoardUri:  "conformance/drc.fires.kicad_pcb",
+		BoardUri:  "mount://m/conformance/drc.fires.kicad_pcb",
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -161,9 +161,9 @@ func TestCreateReviewErrors(t *testing.T) {
 	design := "review/can-broken.edn"
 	cases := map[string]*webapi.CreateReviewRequest{
 		"empty design_ref": {Manifest: fixtureManifest(t, "review/mini.yaml")},
-		"absent manifest":  {DesignUri: design},
-		"invalid manifest": {Manifest: twoBindings, DesignUri: design},
-		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignUri: design, BoardUri: "mount://m/review/can-broken.edn"},
+		"absent manifest":  {DesignUri: "mount://m/" + design},
+		"invalid manifest": {Manifest: twoBindings, DesignUri: "mount://m/" + design},
+		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignUri: "mount://m/" + design, BoardUri: "mount://m/review/can-broken.edn"},
 	}
 	for name, req := range cases {
 		if _, err := svc.CreateReview(ctx, req); err == nil {
@@ -281,7 +281,7 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	cat := check.CatalogWith(profiles.Source("t", []profiles.Profile{p}))
 	byName := map[string][]profiles.Profile{p.Name: {p}}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), cat, byName, nil, testReviewEnv, "")
-	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "d"})
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d"})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -415,7 +415,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), check.CatalogWith(srcs...),
 		map[string][]profiles.Profile{name: ps}, nil, testReviewEnv, "")
-	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "d"})
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d"})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}

@@ -73,7 +73,7 @@ func TestBuildGeometryBestEffort(t *testing.T) {
 // check.Available gated every board.* rule to not-applicable and the panel showed nothing).
 func TestCheckDesignRunsBoardRules(t *testing.T) {
 	svc := NewCheckService(fakeLoader{design: &ir.Design{}, board: thinBoard()}, check.DefaultCatalog(), nil, "", nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Rules: []string{"track-width"}})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/d", Rules: []string{"track-width"}})
 	if err != nil {
 		t.Fatalf("CheckDesign: %v", err)
 	}

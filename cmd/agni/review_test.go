@@ -92,8 +92,8 @@ func TestReviewCmdMultiDesign(t *testing.T) {
 		"# Review rollup: Mini ECU review",
 		"**5 of 6 items covered** (manifest-level), 1 not-automated.", // coverage stated once, not 10 of 12
 		"## Per-design outcomes",
-		"| `testdata/review/can-broken.edn` | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
-		"| `testdata/profiles/overlay-bus.edn` | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
+		"| `can-broken.edn` | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
+		"| `overlay-bus.edn` | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
 		"## Traceability matrix",
 		"### CAN Interface",
 		"| 202 | termination strategy | fail | pass |",                    // per-design outcome, same item
@@ -165,8 +165,8 @@ func TestReviewCmdMultiJSON(t *testing.T) {
 		for _, it := range a.Items {
 			if it.ID == "202" {
 				found = true
-				if it.Outcomes["testdata/review/can-broken.edn"] != "fail" {
-					t.Errorf("item 202 on can-broken = %q, want fail", it.Outcomes["testdata/review/can-broken.edn"])
+				if it.Outcomes["can-broken.edn"] != "fail" {
+					t.Errorf("item 202 on can-broken = %q, want fail", it.Outcomes["can-broken.edn"])
 				}
 			}
 		}

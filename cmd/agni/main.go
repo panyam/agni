@@ -373,7 +373,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				doc := resultsDoc(args[0], selected, resp.GetFindings(), &checkspb.RunConfig{
+				doc := resultsDoc(cliArgURI(args[0]), selected, resp.GetFindings(), &checkspb.RunConfig{
 					Params:      paramsDir != "",
 					Profiles:    profilePath != "",
 					Intent:      intentPath != "",
@@ -560,7 +560,7 @@ func reviewCmd() *cobra.Command {
 			// --render bakes each design's findings into annotated schematic SVGs (WS7-043): the report's
 			// finding->picture side. The summary goes to stderr so stdout stays a clean report to redirect.
 			if renderDir != "" {
-				summary, err := renderReviewImages(reports, renderDir, companion)
+				summary, err := renderReviewImages(reports, designSourcesOf(docs), renderDir, companion)
 				if err != nil {
 					return err
 				}
