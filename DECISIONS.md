@@ -195,3 +195,34 @@ whether the surface can afford to say what it did.
 **Reopen if** a served surface appears that has no way to display a notice and genuinely needs the
 redirect — a headless API consumer, say. Even then the answer is more likely a field on the response
 saying which artifact was read than a loader that swaps files without telling anyone.
+
+---
+
+## A design in no project gets a guessed picker list, not an empty one
+
+**Question.** When a design resolves to a project, the config pickers offer what the project DECLARES:
+the vocabulary picker its conventions file, the review picker its checklist. When a design belongs to
+no project, nothing has declared anything, so the browser cannot know which kind a given YAML file is.
+It falls back to listing every YAML sitting beside the design. On a mount of loose files that can be
+dozens of entries, most of which will not resolve as either kind. Should the fallback be narrowed, or
+dropped in favour of offering nothing?
+
+**Answer. Keep the guess, and keep it wide.** The two failure modes are not symmetric. Offering a file
+that turns out to be the wrong kind costs one clear error, once, naming the file and the field that
+did not parse — the user learns something and picks again. Hiding a file that WAS the right kind costs
+them their own config with no error and nothing to look at, and the only signal is a picker that does
+not list a file they know is there. A silent omission is not discoverable; a loud rejection is.
+
+Narrowing by filename convention (`*conventions*.yaml` and the like) would trade the loud failure for
+the silent one and buy a shorter list with it, which is the wrong side of that trade. Reading each
+file to classify it would mean duplicating two parsers in the browser, which is why the server owns
+validation (`GetNamingConvention` / `GetReviewManifest`) in the first place.
+
+**What this is not.** It is not an argument that guessing is fine in general. Where a declaration
+EXISTS the pickers use it and do not guess at all, and they keep the kinds apart, because a checklist
+offered as a vocabulary fails exactly the way an intent file did (agni issue 175, PR 184). This is
+only about the case where there is nothing to read.
+
+**Reopen if** a deployment turns up where the loose-file case is the common one rather than the
+exception, and the list is long enough that the right file is genuinely hard to find. The fix then is
+probably to make the server classify a directory in one rpc, not to guess better in the browser.
