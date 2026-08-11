@@ -292,6 +292,7 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 			return fmt.Errorf("%s: %w", uri, err)
 		}
 		p.Conventions = service.ConventionProto(cfg)
+		p.ConventionsUri = uri
 	}
 	if uri, ok := rel(names.Profiles); ok {
 		p.ProfileUris = []string{uri}

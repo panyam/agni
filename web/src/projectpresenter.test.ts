@@ -5,20 +5,27 @@ import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "
 
 // A viewer harness wired with a ProjectService whose resolution the test controls. Everything else
 // is stubbed to the minimum the presenter touches on open.
-function harness(resolve: unknown) {
+function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDir: boolean }[] = []) {
   const onProject = vi.fn();
+  const onConvention = vi.fn();
+  const onReview = vi.fn();
+  const listReviews = vi.fn(async () => ({ reviews: [] }));
   const resolveDesign = vi.fn(async () => resolve);
   const listRules = vi.fn(async () => ({ rules: [{ name: "bulk-cap", severity: "warning", summary: "", available: true }] }));
   const checkDesign = vi.fn(async () => ({ findings: [] }));
   const getDesign = vi.fn(async () => ({ layout: "grid", sheets: [{ id: "s1", name: "Top" }], availableLayouts: ["grid"] }));
   const getSheet = vi.fn(async () => ({ content: { case: "svg" as const, value: "<svg/>" } }));
-  const listDir = vi.fn(async () => ({ entries: [] }));
+  // The load path walks past resolution into the report and parts reads before it fills the pickers,
+  // so both are stubbed: a throw there aborts the load and the pickers are never pushed at all.
+  const getLayoutReport = vi.fn(async () => ({ report: undefined }));
+  const getComponentParams = vi.fn(async () => ({ components: [] }));
+  const listDir = vi.fn(async () => ({ entries: dirEntries }));
 
   const presenter = new ViewerPresenter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { getDesign, getSheet } as any,
+    { getDesign, getSheet, getLayoutReport } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { listRules, checkDesign, getExpectations: async () => ({ expectations: [] }) } as any,
+    { listRules, checkDesign, getComponentParams, getExpectations: async () => ({ expectations: [] }) } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { showSheet: vi.fn(), setHighlights: vi.fn() } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,16 +43,19 @@ function harness(resolve: unknown) {
       rules: { setState: vi.fn() },
       report: vi.fn(),
       projectBar: { setState: onProject },
+      conventionBar: { setState: onConvention },
+      review: { setState: onReview },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     undefined,
-    undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { listReviews } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { listDir } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { resolveDesign } as any,
   );
-  return { presenter, onProject, resolveDesign, listRules, checkDesign };
+  return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir };
 }
 
 // last is the most recent state the bar was pushed, which is what a user is actually looking at.
@@ -57,8 +67,25 @@ function last(onProject: ReturnType<typeof vi.fn>): ProjectState {
 
 const inProject = {
   design: { name: "projects/gateway/designs/gateway", entryUri: "mount://m/d/gateway.edn" },
-  project: { name: "projects/gateway", title: "Gateway ECU", checklistUri: "mount://m/review.yaml", profileUris: [] },
+  project: {
+    name: "projects/gateway",
+    title: "Gateway ECU",
+    conventionsUri: "mount://m/conventions.yaml",
+    checklistUri: "mount://m/review.yaml",
+    profileUris: ["mount://m/profiles"],
+  },
 };
+
+// refs is what a picker was last offered, which is what a user can actually choose.
+function refs(push: ReturnType<typeof vi.fn>, key: "choices" | "checklists"): string[] {
+  const calls = push.mock.calls;
+  for (let i = calls.length - 1; i >= 0; i--) {
+    const state = calls[i][0] as Record<string, { ref: string }[] | undefined>;
+    const list = state[key];
+    if (list) return list.map((c) => c.ref);
+  }
+  return [];
+}
 
 describe("project resolution is visible", () => {
   it("names the project whose config produced the answers", async () => {
@@ -138,5 +165,44 @@ describe("the built-in catalog toggle", () => {
     const before = h.checkDesign.mock.calls.length;
     await h.presenter.setPlainCatalog(false);
     expect(h.checkDesign.mock.calls.length).toBe(before);
+  });
+});
+
+// The pickers offer what the project DECLARES, and each offers only its own kind. A shared list was
+// the first shape and it moved the bug rather than fixing it: a checklist chosen as a vocabulary
+// fails on a field the naming schema has never heard of, exactly as an intent file did.
+describe("the config pickers offer one kind each", () => {
+  it("offers the project's conventions to the vocabulary picker", async () => {
+    const h = harness(inProject);
+    await h.presenter.openFile("m", "d/gateway.edn");
+    expect(refs(h.onConvention, "choices")).toEqual(["conventions.yaml"]);
+  });
+
+  it("offers the project's checklist to the review picker", async () => {
+    const h = harness(inProject);
+    await h.presenter.openFile("m", "d/gateway.edn");
+    expect(refs(h.onReview, "checklists")).toEqual(["review.yaml"]);
+  });
+
+  // A profile is composed into the catalog, never selected as a vocabulary or run as a checklist, so
+  // there is no picker it is an answer to.
+  it("offers profiles to neither picker", async () => {
+    const h = harness(inProject);
+    await h.presenter.openFile("m", "d/gateway.edn");
+    expect(refs(h.onConvention, "choices")).not.toContain("profiles");
+    expect(refs(h.onReview, "checklists")).not.toContain("profiles");
+  });
+
+  // Nothing declared anything, so the picker cannot know what kind a file is. Listing the siblings is
+  // the honest fallback: offering one that turns out to be the wrong kind costs a clear error, where
+  // hiding a real one costs a user their own file.
+  it("falls back to the design's YAML siblings when there is no project", async () => {
+    const h = harness({}, [
+      { name: "house.yaml", uri: "mount://m/d/house.yaml", isDir: false },
+      { name: "gateway.edn", uri: "mount://m/d/gateway.edn", isDir: false },
+    ]);
+    await h.presenter.openFile("m", "d/gateway.edn");
+    expect(refs(h.onConvention, "choices")).toEqual(["d/house.yaml"]);
+    expect(refs(h.onReview, "checklists")).toEqual(["d/house.yaml"]);
   });
 });

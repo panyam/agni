@@ -386,8 +386,13 @@ export class ViewerPresenter {
       this.setBusyPhase("building report…");
       await this.refreshReport(); // the auto-layout conversion report is not a check — still eager
       await this.refreshParts(); // the datasheet-params join is a per-design read, not a check
-      // One directory listing feeds the convention picker and the review checklist picker.
-      this.conventionChoices = this.views.conventionBar || this.views.review ? await this.pickerChoices() : [];
+      // One resolution feeds both pickers, each with the kind it can actually parse.
+      const choices =
+        this.views.conventionBar || this.views.review
+          ? await this.pickerChoices()
+          : { conventions: [], checklists: [] };
+      this.conventionChoices = choices.conventions;
+      this.checklistChoices = choices.checklists;
       this.pushConvention();
       await this.refreshReviews(); // stored review runs for this design, so a reviewed board opens on its latest verdict
     } catch (e) {
@@ -713,8 +718,12 @@ export class ViewerPresenter {
     });
   }
 
-  // conventionChoices are the convention configs found beside the open design, filled on load.
+  // conventionChoices and checklistChoices are what each picker offers, filled on load. They are
+  // separate fields rather than one shared list because the two pickers resolve their ref through
+  // different rpcs against different schemas, so a file that is a valid answer to one is a parse
+  // error in the other.
   private conventionChoices: ChecklistOption[] = [];
+  private checklistChoices: ChecklistOption[] = [];
   // projectState is what the project bar shows, and projectResolved is the resolution it came from,
   // kept so the pickers can offer what the PROJECT declares rather than every YAML beside the design.
   private projectState: ProjectState = emptyProject();
@@ -751,7 +760,7 @@ export class ViewerPresenter {
       this.pushReview();
       return;
     }
-    this.reviewState.checklists = this.conventionChoices;
+    this.reviewState.checklists = this.checklistChoices;
     this.reviewState.checklist = this.reviewState.checklists[0]?.ref ?? "";
     try {
       const resp = await this.reviews.listReviews({ filter: `design="${artifactUri(this.mount, this.path)}"` });
@@ -765,7 +774,7 @@ export class ViewerPresenter {
     this.pushReview();
   }
 
-  // pickerChoices are the config files the convention and checklist pickers offer.
+  // pickerChoices are the config files the convention and checklist pickers offer, ONE LIST PER KIND.
   //
   // When the design resolves to a project, they are what the PROJECT DECLARES — because it does
   // declare them, and a declaration beats a guess. Before this the pickers listed every YAML sitting
@@ -773,22 +782,26 @@ export class ViewerPresenter {
   // design-intent files and descriptors that could never resolve; conventionbar's own doc called
   // choosing one "an EXPECTED path, not an edge case".
   //
-  // A design with no project falls back to listing the siblings, which is the honest answer: nothing
-  // declared anything, so the picker cannot know, and offering a file that turns out not to be a
-  // checklist costs one clear error where hiding a real one costs a user their own file.
-  private async pickerChoices(): Promise<ChecklistOption[]> {
-    const declared = this.declaredChoices();
-    return declared.length > 0 ? declared : this.yamlSiblings();
-  }
-
-  // declaredChoices are the project's own config files, as options.
-  private declaredChoices(): ChecklistOption[] {
+  // The kinds are kept APART. A checklist and a naming convention are different file formats parsed
+  // by different rpcs, so a single shared list only moves the problem: offering `review.yaml` in the
+  // vocabulary picker fails exactly the way offering `intent.yaml` did, with a YAML error naming a
+  // field the other schema has never heard of. Profiles appear in NEITHER, because a profile is
+  // composed into the catalog rather than selected as a vocabulary or run as a checklist; there is no
+  // picker it is an answer to.
+  //
+  // A design with no project falls back to listing the siblings for both, which is the honest answer:
+  // nothing declared anything, so the picker cannot know, and offering a file that turns out not to be
+  // a checklist costs one clear error where hiding a real one costs a user their own file.
+  private async pickerChoices(): Promise<{ conventions: ChecklistOption[]; checklists: ChecklistOption[] }> {
     const p = this.projectResolved?.project;
-    if (!p) return [];
-    const out: ChecklistOption[] = [];
-    if (p.checklistUri) out.push({ ref: uriPath(p.checklistUri), label: baseOf(p.checklistUri) });
-    for (const uri of p.profileUris ?? []) out.push({ ref: uriPath(uri), label: baseOf(uri) });
-    return out;
+    if (p && (p.conventionsUri || p.checklistUri)) {
+      return {
+        conventions: optionsFor(p.conventionsUri),
+        checklists: optionsFor(p.checklistUri),
+      };
+    }
+    const siblings = await this.yamlSiblings();
+    return { conventions: siblings, checklists: siblings };
   }
 
   // yamlSiblings lists the design's own directory and keeps the YAML files. It deliberately does not
@@ -1219,4 +1232,11 @@ function baseOf(uri: string): string {
   const p = uriPath(uri);
   const i = p.lastIndexOf("/");
   return i < 0 ? p : p.slice(i + 1);
+}
+
+// optionsFor turns one declared URI into a picker's option list, empty when the project declared
+// none. A project that declares no convention offers only the server's, which is the truthful state:
+// there is no project convention to go back to.
+function optionsFor(uri: string | undefined): ChecklistOption[] {
+  return uri ? [{ ref: uriPath(uri), label: baseOf(uri) }] : [];
 }

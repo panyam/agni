@@ -223,3 +223,32 @@ func testURI(t *testing.T, mount, p string) artifact.URI {
 	}
 	return u
 }
+
+// TestFSStoreNamesTheConventionsFile: the conventions VALUE is what composes a run, and the URI is
+// what a client needs to offer the project's convention back as a choice. A picker has to pass
+// something, and a resolved value is not a ref, so without this a viewer can say which convention is
+// in effect but cannot let a reader re-select it after trying another.
+func TestFSStoreNamesTheConventionsFile(t *testing.T) {
+	p, err := demoStore().Project(context.Background(), "projects/gateway")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.GetConventionsUri(); got != "mount://m/conventions.yaml" {
+		t.Errorf("conventions uri = %q, want the file the value was read from", got)
+	}
+}
+
+// TestFSStoreConventionsUriAbsentWhenUndeclared keeps the URI honest: a project with no conventions
+// file must not advertise one, or a picker offers a ref that resolves to nothing.
+func TestFSStoreConventionsUriAbsentWhenUndeclared(t *testing.T) {
+	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
+		"project.yaml": "name: bare\n",
+	})})
+	p, err := s.Project(context.Background(), "projects/bare")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.GetConventionsUri(); got != "" {
+		t.Errorf("conventions uri = %q, want empty for a project that declares none", got)
+	}
+}

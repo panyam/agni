@@ -45,6 +45,12 @@ type Project struct {
 	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	// conventions is the project's naming policy, resolved. Absent means the engine defaults.
 	Conventions *NamingConvention `protobuf:"bytes,4,opt,name=conventions,proto3" json:"conventions,omitempty"`
+	// conventions_uri names the file `conventions` was read from, absent when the project declared no
+	// convention. It is redundant for COMPOSING a run, which is why the value above exists, and it is
+	// not redundant for a client that has to OFFER the project's convention as a choice: a picker
+	// needs something to pass back, and a resolved value is not a ref. Without it a viewer can state
+	// which convention is in effect but cannot let a reader re-select it after trying another.
+	ConventionsUri string `protobuf:"bytes,8,opt,name=conventions_uri,json=conventionsUri,proto3" json:"conventions_uri,omitempty"`
 	// profile_uris are the interface-profile declarations this project composes into the catalog.
 	ProfileUris []string `protobuf:"bytes,5,rep,name=profile_uris,json=profileUris,proto3" json:"profile_uris,omitempty"`
 	// param_uris are the seeded datasheet parameter sets this project checks its parts against.
@@ -112,6 +118,13 @@ func (x *Project) GetConventions() *NamingConvention {
 		return x.Conventions
 	}
 	return nil
+}
+
+func (x *Project) GetConventionsUri() string {
+	if x != nil {
+		return x.ConventionsUri
+	}
+	return ""
 }
 
 func (x *Project) GetProfileUris() []string {
@@ -698,12 +711,13 @@ var File_agni_v1_webapi_project_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\"\xf0\x01\n" +
+	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\"\x99\x02\n" +
 	"\aProject\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x12B\n" +
-	"\vconventions\x18\x04 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12!\n" +
+	"\vconventions\x18\x04 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12'\n" +
+	"\x0fconventions_uri\x18\b \x01(\tR\x0econventionsUri\x12!\n" +
 	"\fprofile_uris\x18\x05 \x03(\tR\vprofileUris\x12\x1d\n" +
 	"\n" +
 	"param_uris\x18\x06 \x03(\tR\tparamUris\x12#\n" +
