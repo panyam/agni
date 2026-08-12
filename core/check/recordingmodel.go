@@ -92,6 +92,11 @@ func (r *RecordingModel) PinDeclared(refDes, pin string) bool {
 	return r.Model.PinDeclared(refDes, pin)
 }
 
+func (r *RecordingModel) PinName(refDes, pin string) string {
+	r.note(TierConnectivity)
+	return r.Model.PinName(refDes, pin)
+}
+
 func (r *RecordingModel) PinConnected(refDes, pin string) bool {
 	r.note(TierConnectivity)
 	return r.Model.PinConnected(refDes, pin)
