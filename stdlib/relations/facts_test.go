@@ -867,3 +867,178 @@ func TestParamFactsMarkUnconvertibleRowsAbsent(t *testing.T) {
 		t.Errorf("param.range = %+v, want the row kept with both bounds absent", pr)
 	}
 }
+
+// TestParamPinFactsDeclarePinsWithFunction: the pin dimension table is keyed by the spec-local id,
+// carries the printed name as a value, and renders the function as a token.
+func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamPin]
+	if len(rows) != 4 {
+		t.Fatalf("param.pin = %d rows, want one per declared pin (4)", len(rows))
+	}
+	got := map[string][2]string{}
+	for _, r := range rows {
+		if r.Subject != "ACME-XLAT" {
+			t.Errorf("param.pin subject = %q, want the mpn", r.Subject)
+		}
+		if r.Cite == "" {
+			t.Errorf("param.pin %q has no citation; a pin function is an extracted claim", r.Object)
+		}
+		got[r.Object] = [2]string{r.Value, r.Qualifier}
+	}
+	if got["vcca"] != [2]string{"VCCA", "power_input"} {
+		t.Errorf("pin vcca = %v, want (VCCA, power_input)", got["vcca"])
+	}
+	if got["a1"] != [2]string{"A1", "bidirectional"} {
+		t.Errorf("pin a1 = %v, want (A1, bidirectional)", got["a1"])
+	}
+}
+
+// TestParamPinRangeFactsAnswerPerTerminal is the whole reason the pin tier exists: two supply pins
+// with different windows produce two DIFFERENT answers, where param.range collapses them onto one
+// symbol-keyed pair of rows a query cannot tell apart by terminal.
+func TestParamPinRangeFactsAnswerPerTerminal(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+
+	byPinKind := map[string]query.FactRow{}
+	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
+		byPinKind[r.Object+"/"+r.Qualifier] = r
+	}
+
+	a := byPinKind["vcca/recommended_operating"]
+	b := byPinKind["vccb/recommended_operating"]
+	if a.Min == nil || b.Min == nil {
+		t.Fatalf("want a recommended row for each supply pin, got %+v", byPinKind)
+	}
+	if *a.Min != 1.2 || *a.Num != 3.6 {
+		t.Errorf("vcca recommended = %v..%v, want 1.2..3.6", *a.Min, *a.Num)
+	}
+	if *b.Min != 1.65 || *b.Num != 5.5 {
+		t.Errorf("vccb recommended = %v..%v, want 1.65..5.5", *b.Min, *b.Num)
+	}
+	if a.Value != "VCCA" || b.Value != "VCCB" {
+		t.Errorf("symbols = %q/%q, want VCCA/VCCB in the Value slot", a.Value, b.Value)
+	}
+	// The kind must survive in its own slot rather than displacing the symbol.
+	if absMax := byPinKind["vcca/absolute_max"]; absMax.Value != "VCCA" || absMax.Num == nil || *absMax.Num != 4.6 {
+		t.Errorf("vcca absolute_max = %+v, want the 4.6 V row distinct from the recommended one", absMax)
+	}
+}
+
+// TestParamPinRangeFanOutsAGroupBinding: a row stated once for several terminals must be findable
+// from each of them, or a rule asking about one pin misses a limit the datasheet does state for it.
+func TestParamPinRangeFanOutsAGroupBinding(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+
+	seen := map[string]bool{}
+	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
+		if r.Value == "VO" {
+			seen[r.Object] = true
+		}
+	}
+	if !seen["a1"] || !seen["b1"] || len(seen) != 2 {
+		t.Errorf("the VO row binds a1 and b1; want a row for each, got %v", seen)
+	}
+}
+
+// TestParamPinRangeOmitsPartWideRows: an empty binding is a fact about the DIE. Emitting it against
+// every pin would read as each terminal carrying that limit itself, which is the collapse the pin
+// tier undoes, re-created one layer down. Those rows stay on param.range.
+func TestParamPinRangeOmitsPartWideRows(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	byRel := factsByRelation(Facts(m))
+
+	for _, r := range byRel[RelParamPinRange] {
+		if r.Value == "TJ" {
+			t.Errorf("part-wide TJ row must not appear on param.pin_range, got it on pin %q", r.Object)
+		}
+	}
+	var onRange bool
+	for _, r := range byRel[RelParamRange] {
+		if r.Object == "TJ" {
+			onRange = true
+		}
+	}
+	if !onRange {
+		t.Error("the part-wide TJ row must still be reachable on param.range")
+	}
+}
+
+// TestParamPinFactsEmptyWithoutPinData: every spec seeded before pin binding is in this state, so
+// the pin relations must be silent rather than wrong. Skip-not-false-pass by construction.
+func TestParamPinFactsEmptyWithoutPinData(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6) // no Pins, no Packages
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+	byRel := factsByRelation(Facts(m))
+
+	if n := len(byRel[RelParamPin]); n != 0 {
+		t.Errorf("param.pin = %d rows for a spec with no pins, want 0", n)
+	}
+	if n := len(byRel[RelParamPinRange]); n != 0 {
+		t.Errorf("param.pin_range = %d rows for a spec with no pin bindings, want 0", n)
+	}
+	if n := len(byRel[RelParamRange]); n == 0 {
+		t.Error("the symbol-keyed tier must be unaffected; param.range should still have rows")
+	}
+}
+
+// TestPinRelationsBindPositionallyThroughDatalog is the field-layout guard. The projector tests in
+// facts_test.go read FactRow fields directly, so they pass even if register.go binds the positional
+// arguments to the wrong slots — a swap of Value and Qualifier would leave every projector test green
+// and make every real query return the symbol where the kind belongs.
+//
+// This runs an actual query end to end, so the assertion is on what a rule author would SEE.
+func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
+	spec := dualSupplySpec("ACME-XLAT")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
+	base := query.NewBase(m)
+
+	rows, err := (query.Naive{}).Eval(
+		query.MustParse(`param.pin(?mpn, "vccb", ?name, ?fn) => ?mpn, ?name, ?fn`), base)
+	if err != nil {
+		t.Fatalf("param.pin query errored: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("param.pin for vccb = %d rows, want 1", len(rows))
+	}
+	if got := rows[0].Bind["name"].S; got != "VCCB" {
+		t.Errorf("arg 3 (name) bound to %q, want VCCB", got)
+	}
+	if got := rows[0].Bind["fn"].S; got != "power_input" {
+		t.Errorf("arg 4 (function) bound to %q, want power_input", got)
+	}
+
+	// Six positional args, and the two that share the widened tuple must not cross.
+	rows, err = (query.Naive{}).Eval(
+		query.MustParse(`param.pin_range(?mpn, "vccb", ?sym, "recommended_operating", ?min, ?max) => ?sym, ?min, ?max`), base)
+	if err != nil {
+		t.Fatalf("param.pin_range query errored: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("param.pin_range recommended for vccb = %d rows, want 1", len(rows))
+	}
+	if got := rows[0].Bind["sym"].S; got != "VCCB" {
+		t.Errorf("arg 3 (symbol) bound to %q, want VCCB — Value and Qualifier are crossed", got)
+	}
+	if n := rows[0].Bind["max"].Num; n == nil || *n != 5.5 {
+		t.Errorf("arg 6 (max) bound to %v, want 5.5", rows[0].Bind["max"].S)
+	}
+	if n := rows[0].Bind["min"].Num; n == nil || *n != 1.65 {
+		t.Errorf("arg 5 (min) bound to %v, want 1.65", rows[0].Bind["min"].S)
+	}
+
+	// The kind must actually discriminate: filtering to absolute_max returns the other row, not this one.
+	rows, err = (query.Naive{}).Eval(
+		query.MustParse(`param.pin_range(?mpn, "vcca", ?sym, "absolute_max", ?min, ?max) => ?max`), base)
+	if err != nil {
+		t.Fatalf("param.pin_range absolute_max query errored: %v", err)
+	}
+	if len(rows) != 1 || rows[0].Bind["max"].Num == nil || *rows[0].Bind["max"].Num != 4.6 {
+		t.Fatalf("filtering vcca by absolute_max = %d rows (want the 4.6 V one), got %+v", len(rows), rows)
+	}
+}

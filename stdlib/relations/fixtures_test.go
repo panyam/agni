@@ -178,3 +178,42 @@ func drcBoard() *geom.BoardGeometry {
 			Vias: []*geom.Via{via(40, 42, 0.8, 0.4)}},
 	}}
 }
+
+// dualSupplySpec hand-builds the shape the pin tier exists for: two supply terminals with DIFFERENT
+// recommended windows, plus a group-bound row covering both I/O pins and a part-wide row bound to
+// nothing. Mirrors the real TXB0104 encoding in datasheet/param/testdata without depending on it,
+// so a change to that fixture cannot silently reshape these assertions.
+func dualSupplySpec(mpn string) *parampb.PartSpec {
+	f := func(v float64) *float64 { return &v }
+	prov := func() *parampb.ParamProvenance {
+		return &parampb.ParamProvenance{DocRef: "ds", Page: 4, TableOrFigure: "Pin Functions", Method: "hand", Confidence: 1}
+	}
+	pin := func(id, name string, fn parampb.PinFunction) *parampb.Pin {
+		return &parampb.Pin{Id: id, Name: name, Function: fn, Prov: prov()}
+	}
+	row := func(sym string, kind parampb.LimitKind, min, max float64, unit string, refs ...string) *parampb.Parameter {
+		return &parampb.Parameter{
+			Symbol: sym, LimitKind: kind, Value: &parampb.RangeValue{Min: f(min), Max: f(max)}, Unit: unit,
+			ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+			PinRefs:           refs, Prov: prov(),
+		}
+	}
+	return &parampb.PartSpec{
+		Mpn: mpn, Manufacturer: "Agni",
+		Docs:     []*parampb.SourceDoc{{Id: "ds", Title: "DEMO-XLAT Rev A", Vendor: "Agni"}},
+		Packages: []*parampb.Package{{Id: "pw", Name: "PW (TSSOP-14)", MpnSuffix: "PW"}},
+		Pins: []*parampb.Pin{
+			pin("vcca", "VCCA", parampb.PinFunction_PIN_FUNCTION_POWER_INPUT),
+			pin("vccb", "VCCB", parampb.PinFunction_PIN_FUNCTION_POWER_INPUT),
+			pin("a1", "A1", parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL),
+			pin("b1", "B1", parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL),
+		},
+		Parameters: []*parampb.Parameter{
+			row("VCCA", parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, 1.2, 3.6, "V", "vcca"),
+			row("VCCB", parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, 1.65, 5.5, "V", "vccb"),
+			row("VCCA", parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, -0.5, 4.6, "V", "vcca"),
+			row("VO", parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, 0, 3.6, "V", "a1", "b1"),
+			row("TJ", parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, -40, 150, "C"), // part-wide: no binding
+		},
+	}
+}

@@ -36,8 +36,15 @@ var builtinSchema = map[string][]query.Field{
 	RelParamRange:        {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldMin, query.FieldNum},        // param.range(mpn, symbol, kind, min, max)
 	RelParamProv:         {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldNum, query.FieldConditions}, // param.prov(mpn, symbol, doc, page, section)
 	RelParamUnit:         {query.FieldSubject, query.FieldObject, query.FieldValue},                                        // param.unit(mpn, symbol, unit)
-	RelPartAudience:      {query.FieldSubject, query.FieldObject},                                                          // part.audience(mpn, who)
-	RelComponentOnNet:    {query.FieldSubject, query.FieldObject},                                                          // component-on-net(ref, net)
+	RelParamPin:          {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldQualifier},                  // param.pin(mpn, pin, name, function)
+	// param.pin_range is the widest relation the fact base carries, and the one FieldQualifier was
+	// added for: mpn/pin/symbol fill Subject/Object/Value, leaving the limit kind nowhere to go.
+	// Conditions is NOT reused for it — every param relation carries the test conditions there as
+	// unbound metadata, and spending that slot would strip the trust context from exactly the rows a
+	// pin-rating rule compares against.
+	RelParamPinRange:  {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldQualifier, query.FieldMin, query.FieldNum}, // param.pin_range(mpn, pin, symbol, kind, min, max)
+	RelPartAudience:   {query.FieldSubject, query.FieldObject},                                                                         // part.audience(mpn, who)
+	RelComponentOnNet: {query.FieldSubject, query.FieldObject},                                                                         // component-on-net(ref, net)
 	// Pin tier (WS3-038) — pin-granular relations, queryable with no evaluator change.
 	RelPin:           {query.FieldSubject, query.FieldObject},                   // pin(ref, pin)
 	RelPinRole:       {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin.role(ref, pin, role)
@@ -128,5 +135,7 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.unit", Args: []string{"mpn", "symbol", "unit"}, Summary: "the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params)", Kind: query.KindDatasheet},
+	{Name: "param.pin", Args: []string{"mpn", "pin", "name", "function"}, Summary: "a pin the part's datasheet declares, keyed by its spec-local id, with the printed name and its function (power_input / ground / bidirectional / no_connect / ...; needs --params)", Kind: query.KindDatasheet},
+	{Name: "param.pin_range", Args: []string{"mpn", "pin", "symbol", "kind", "min", "max"}, Summary: "a datasheet limit bound to ONE pin, both bounds in the SI base unit — the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params)", Kind: query.KindDatasheet},
 	{Name: "part.audience", Args: []string{"mpn", "who"}, Summary: "a team/license entitled to see a part's datasheet data (record-only, needs --params)", Kind: query.KindDatasheet},
 }
