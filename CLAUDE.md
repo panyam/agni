@@ -282,6 +282,16 @@ Never commit:
   transcribed from a datasheet into a fixture are fine, because facts are not copyrightable, but
   cite the document revision and page.
 
+  **A FIXTURE IS NOT A CORPUS, and the difference is size.** A fixture carries the few rows its
+  tests need, cited, and lives in `datasheet/param/testdata/` so `make testall` passes on a clean
+  clone. A seeded corpus is the part's actual parameter set, belongs with the source PDFs, and lives
+  OUTSIDE this repo — which is what `SourceDoc.locator`'s corpus-local posture and `--params <dir>`
+  already assume. Transcribing a whole vendor table because it makes a better demonstration is how a
+  fixture drifts into being an extracted parameter document; `txb0104.textproto` reached 389 lines
+  that way and was cut back. If a new fixture is much larger than its neighbours, that is the signal.
+
+  Anything user-facing (`examples/`, the tutorial project) uses SYNTHETIC parts, not transcriptions.
+
 **Sanitize at the point of writing rather than cleaning up later.** The engineering content nearly
 always survives sanitizing and only the provenance goes. "Customer item 112 mock-failed against a
 fake RSTRAP threshold" becomes "a strap resistor's value is a design choice, not a datasheet

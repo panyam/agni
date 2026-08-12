@@ -204,7 +204,9 @@ different producers, different consumers, and a different lifecycle.
 ### Worked examples
 
 Three fixtures are transcribed by hand from the cited datasheet revision, values and units as
-printed.
+printed. They are FIXTURES rather than corpus entries: each carries the few rows its properties
+need, not the part's parameter set. A seeded corpus lives with its source documents, outside this
+repo, which is what `SourceDoc.locator`'s corpus-local posture already assumes.
 
 - **`datasheet/param/testdata/lm1117.textproto`** (TI LM1117 LDO, SNOS412Q rev Jan 2023) shows the
   three limit kinds on one part: abs-max VIN 20 V, recommended-operating VIN 15 V, and dropout
@@ -223,10 +225,10 @@ printed.
   1.2 to 3.6 V against 1.65 to 5.5 V), which is the collapse pin binding undoes. The same die
   ships in a TSSOP-14, a UQFN-12 and a DSBGA-12, and the renumbering is not a relabelling: number
   11 is the `B3` data I/O in one body and the `VCCB` supply in another, which is the argument for
-  the name-first precedence in one line. It also carries a row bound to a group of terminals (the
-  A-port and B-port ESD ratings differ six-fold), a name printed on two pins (`NC`), pins present
-  in one package and absent from another, and ball designators, which is why a pin number is a
-  string rather than an integer.
+  the name-first precedence in one line. It also carries a row bound to a group of terminals (one
+  continuous-current limit stated for both supplies and ground at once), a name printed on two pins
+  (`NC`), pins present in one package and absent from another, and ball designators, which is why a
+  pin number is a string rather than an integer.
 
 `datasheet/param/param_test.go` and `datasheet/param/pins_test.go` assert that all three fixtures
 validate and that these encodings are present, so the worked examples are executable rather than
