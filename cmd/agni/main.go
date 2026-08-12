@@ -418,7 +418,7 @@ func checkCmd() *cobra.Command {
 				}
 				if failOn != "" && failsAtProto(resp.GetFindings(), failOn) {
 					cmd.SilenceUsage = true
-					return fmt.Errorf("findings at or above --fail-on %s", failOn)
+					return &gateError{msg: fmt.Sprintf("findings at or above --fail-on %s", failOn)}
 				}
 				return nil
 			}
@@ -453,7 +453,7 @@ func checkCmd() *cobra.Command {
 			}
 			if failOn != "" && failsAtProto(failFindings, failOn) {
 				cmd.SilenceUsage = true
-				return fmt.Errorf("findings at or above --fail-on %s", failOn)
+				return &gateError{msg: fmt.Sprintf("findings at or above --fail-on %s", failOn)}
 			}
 			return nil
 		},
