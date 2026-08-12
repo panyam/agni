@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/param/param.proto.
  */
 export const file_agni_v1_param_param: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ25pL3YxL3BhcmFtL3BhcmFtLnByb3RvEg1hZ25pLnYxLnBhcmFtIokCCghQYXJ0U3BlYxILCgNtcG4YASABKAkSFAoMbWFudWZhY3R1cmVyGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRImCgRkb2NzGAQgAygLMhguYWduaS52MS5wYXJhbS5Tb3VyY2VEb2MSLAoKcGFyYW1ldGVycxgFIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEjsKCmF0dHJpYnV0ZXMYDiADKAsyJy5hZ25pLnYxLnBhcmFtLlBhcnRTcGVjLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJHCglTb3VyY2VEb2MSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDgoGdmVuZG9yGAMgASgJEg8KB2xvY2F0b3IYBCABKAkiWgoKUmFuZ2VWYWx1ZRIQCgNtaW4YASABKAFIAIgBARIQCgN0eXAYAiABKAFIAYgBARIQCgNtYXgYAyABKAFIAogBAUIGCgRfbWluQgYKBF90eXBCBgoEX21heCKCAQoJQ29uZGl0aW9uEg4KBnN5bWJvbBgBIAEoCRIPCgJlcRgCIAEoAUgAiAEBEhAKA21pbhgDIAEoAUgBiAEBEhAKA21heBgEIAEoAUgCiAEBEgwKBHVuaXQYBSABKAkSCwoDcmF3GAYgASgJQgUKA19lcUIGCgRfbWluQgYKBF9tYXgixAMKCVBhcmFtZXRlchIMCgRuYW1lGAEgASgJEg4KBnN5bWJvbBgCIAEoCRIUCgxjYW5vbmljYWxfaWQYAyABKAkSLAoKbGltaXRfa2luZBgEIAEoDjIYLmFnbmkudjEucGFyYW0uTGltaXRLaW5kEigKBXZhbHVlGAUgASgLMhkuYWduaS52MS5wYXJhbS5SYW5nZVZhbHVlEgwKBHVuaXQYBiABKAkSLAoKY29uZGl0aW9ucxgHIAMoCzIYLmFnbmkudjEucGFyYW0uQ29uZGl0aW9uEjwKEmNvbmRpdGlvbl9jb3ZlcmFnZRgIIAEoDjIgLmFnbmkudjEucGFyYW0uQ29uZGl0aW9uQ292ZXJhZ2USEgoKYXBwbGllc190bxgJIAEoCRI8CgphdHRyaWJ1dGVzGA4gAygLMiguYWduaS52MS5wYXJhbS5QYXJhbWV0ZXIuQXR0cmlidXRlc0VudHJ5EiwKBHByb3YYECABKAsyHi5hZ25pLnYxLnBhcmFtLlBhcmFtUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJtCg9QYXJhbVByb3ZlbmFuY2USDwoHZG9jX3JlZhgBIAEoCRIMCgRwYWdlGAIgASgFEhcKD3RhYmxlX29yX2ZpZ3VyZRgDIAEoCRIOCgZtZXRob2QYBCABKAkSEgoKY29uZmlkZW5jZRgFIAEoASqJAQoJTGltaXRLaW5kEhoKFkxJTUlUX0tJTkRfVU5TUEVDSUZJRUQQABIbChdMSU1JVF9LSU5EX0FCU09MVVRFX01BWBABEiQKIExJTUlUX0tJTkRfUkVDT01NRU5ERURfT1BFUkFUSU5HEAISHQoZTElNSVRfS0lORF9DSEFSQUNURVJJU1RJQxADKp4BChFDb25kaXRpb25Db3ZlcmFnZRIiCh5DT05ESVRJT05fQ09WRVJBR0VfVU5TUEVDSUZJRUQQABIfChtDT05ESVRJT05fQ09WRVJBR0VfQ09NUExFVEUQARIeChpDT05ESVRJT05fQ09WRVJBR0VfUEFSVElBTBACEiQKIENPTkRJVElPTl9DT1ZFUkFHRV9VTkNPTkRJVElPTkFMEANCLVorZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9wYXJhbWIGcHJvdG8z");
+  fileDesc("ChlhZ25pL3YxL3BhcmFtL3BhcmFtLnByb3RvEg1hZ25pLnYxLnBhcmFtItUCCghQYXJ0U3BlYxILCgNtcG4YASABKAkSFAoMbWFudWZhY3R1cmVyGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRImCgRkb2NzGAQgAygLMhguYWduaS52MS5wYXJhbS5Tb3VyY2VEb2MSLAoKcGFyYW1ldGVycxgFIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEigKCHBhY2thZ2VzGAYgAygLMhYuYWduaS52MS5wYXJhbS5QYWNrYWdlEiAKBHBpbnMYByADKAsyEi5hZ25pLnYxLnBhcmFtLlBpbhI7CgphdHRyaWJ1dGVzGA4gAygLMicuYWduaS52MS5wYXJhbS5QYXJ0U3BlYy5BdHRyaWJ1dGVzRW50cnkaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiuQEKB1BhY2thZ2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRISCgptcG5fc3VmZml4GAMgASgJEhEKCXBpbl9jb3VudBgEIAEoBRI6CgphdHRyaWJ1dGVzGA4gAygLMiYuYWduaS52MS5wYXJhbS5QYWNrYWdlLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASIwCglQaW5OdW1iZXISEwoLcGFja2FnZV9yZWYYASABKAkSDgoGbnVtYmVyGAIgASgJIqYCCgNQaW4SCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIsCghmdW5jdGlvbhgDIAEoDjIaLmFnbmkudjEucGFyYW0uUGluRnVuY3Rpb24SEwoLZGVzY3JpcHRpb24YBCABKAkSKQoHbnVtYmVycxgFIAMoCzIYLmFnbmkudjEucGFyYW0uUGluTnVtYmVyEjYKCmF0dHJpYnV0ZXMYDiADKAsyIi5hZ25pLnYxLnBhcmFtLlBpbi5BdHRyaWJ1dGVzRW50cnkSLAoEcHJvdhgQIAEoCzIeLmFnbmkudjEucGFyYW0uUGFyYW1Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIkcKCVNvdXJjZURvYxIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRIOCgZ2ZW5kb3IYAyABKAkSDwoHbG9jYXRvchgEIAEoCSJaCgpSYW5nZVZhbHVlEhAKA21pbhgBIAEoAUgAiAEBEhAKA3R5cBgCIAEoAUgBiAEBEhAKA21heBgDIAEoAUgCiAEBQgYKBF9taW5CBgoEX3R5cEIGCgRfbWF4IoIBCglDb25kaXRpb24SDgoGc3ltYm9sGAEgASgJEg8KAmVxGAIgASgBSACIAQESEAoDbWluGAMgASgBSAGIAQESEAoDbWF4GAQgASgBSAKIAQESDAoEdW5pdBgFIAEoCRILCgNyYXcYBiABKAlCBQoDX2VxQgYKBF9taW5CBgoEX21heCLWAwoJUGFyYW1ldGVyEgwKBG5hbWUYASABKAkSDgoGc3ltYm9sGAIgASgJEhQKDGNhbm9uaWNhbF9pZBgDIAEoCRIsCgpsaW1pdF9raW5kGAQgASgOMhguYWduaS52MS5wYXJhbS5MaW1pdEtpbmQSKAoFdmFsdWUYBSABKAsyGS5hZ25pLnYxLnBhcmFtLlJhbmdlVmFsdWUSDAoEdW5pdBgGIAEoCRIsCgpjb25kaXRpb25zGAcgAygLMhguYWduaS52MS5wYXJhbS5Db25kaXRpb24SPAoSY29uZGl0aW9uX2NvdmVyYWdlGAggASgOMiAuYWduaS52MS5wYXJhbS5Db25kaXRpb25Db3ZlcmFnZRISCgphcHBsaWVzX3RvGAkgASgJEhAKCHBpbl9yZWZzGAogAygJEjwKCmF0dHJpYnV0ZXMYDiADKAsyKC5hZ25pLnYxLnBhcmFtLlBhcmFtZXRlci5BdHRyaWJ1dGVzRW50cnkSLAoEcHJvdhgQIAEoCzIeLmFnbmkudjEucGFyYW0uUGFyYW1Qcm92ZW5hbmNlGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIm0KD1BhcmFtUHJvdmVuYW5jZRIPCgdkb2NfcmVmGAEgASgJEgwKBHBhZ2UYAiABKAUSFwoPdGFibGVfb3JfZmlndXJlGAMgASgJEg4KBm1ldGhvZBgEIAEoCRISCgpjb25maWRlbmNlGAUgASgBKokCCgtQaW5GdW5jdGlvbhIcChhQSU5fRlVOQ1RJT05fVU5TUEVDSUZJRUQQABIcChhQSU5fRlVOQ1RJT05fUE9XRVJfSU5QVVQQARIdChlQSU5fRlVOQ1RJT05fUE9XRVJfT1VUUFVUEAISFwoTUElOX0ZVTkNUSU9OX0dST1VORBADEhYKElBJTl9GVU5DVElPTl9JTlBVVBAEEhcKE1BJTl9GVU5DVElPTl9PVVRQVVQQBRIeChpQSU5fRlVOQ1RJT05fQklESVJFQ1RJT05BTBAGEhgKFFBJTl9GVU5DVElPTl9QQVNTSVZFEAcSGwoXUElOX0ZVTkNUSU9OX05PX0NPTk5FQ1QQCCqJAQoJTGltaXRLaW5kEhoKFkxJTUlUX0tJTkRfVU5TUEVDSUZJRUQQABIbChdMSU1JVF9LSU5EX0FCU09MVVRFX01BWBABEiQKIExJTUlUX0tJTkRfUkVDT01NRU5ERURfT1BFUkFUSU5HEAISHQoZTElNSVRfS0lORF9DSEFSQUNURVJJU1RJQxADKp4BChFDb25kaXRpb25Db3ZlcmFnZRIiCh5DT05ESVRJT05fQ09WRVJBR0VfVU5TUEVDSUZJRUQQABIfChtDT05ESVRJT05fQ09WRVJBR0VfQ09NUExFVEUQARIeChpDT05ESVRJT05fQ09WRVJBR0VfUEFSVElBTBACEiQKIENPTkRJVElPTl9DT1ZFUkFHRV9VTkNPTkRJVElPTkFMEANCLVorZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9wYXJhbWIGcHJvdG8z");
 
 /**
  * PartSpec is the root message: every extracted parameter for one part, with the
@@ -52,6 +52,21 @@ export type PartSpec = Message<"agni.v1.param.PartSpec"> & {
   parameters: Parameter[];
 
   /**
+   * The package options this document covers, and the part's pins. Both are OPTIONAL and
+   * empty on every spec seeded before pin binding existed: a consumer that finds no pins
+   * behaves exactly as it did then (CONSTRAINTS C9, degrade-safe), so an unseeded or
+   * pin-less corpus is not a silent behavior change.
+   *
+   * @generated from field: repeated agni.v1.param.Package packages = 6;
+   */
+  packages: Package[];
+
+  /**
+   * @generated from field: repeated agni.v1.param.Pin pins = 7;
+   */
+  pins: Pin[];
+
+  /**
    * @generated from field: map<string, string> attributes = 14;
    */
   attributes: { [key: string]: string };
@@ -63,6 +78,177 @@ export type PartSpec = Message<"agni.v1.param.PartSpec"> & {
  */
 export const PartSpecSchema: GenMessage<PartSpec> = /*@__PURE__*/
   messageDesc(file_agni_v1_param_param, 0);
+
+/**
+ * Package is one physical body this part ships in (a TSSOP-14, a UQFN-12, a DSBGA). It
+ * exists because a PIN NUMBER IS A FACT ABOUT A PACKAGE, NOT ABOUT THE DIE: the same
+ * silicon wired into a different body gets different terminal numbering, so a number is
+ * meaningless without saying which body it belongs to. On the real TXB0104, number 11 is
+ * the data I/O "B3" in the TSSOP-14 and the "VCCB" supply in the UQFN-12.
+ *
+ * @generated from message agni.v1.param.Package
+ */
+export type Package = Message<"agni.v1.param.Package"> & {
+  /**
+   * Local key within this PartSpec, referenced by PinNumber.package_ref.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Package as the document names it, e.g. "PW (TSSOP-14)". As printed; no canonical
+   * package taxonomy is assigned here (that is WS10-004's problem, if ever).
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * The orderable-MPN suffix that selects this package ("PW", "RGY"), when the vendor
+   * uses one. Empty when the document does not state it. This is a HINT for narrowing a
+   * design's MPN to one package, never a parser input: a suffix that does not match is
+   * "package unknown", not "package absent".
+   *
+   * @generated from field: string mpn_suffix = 3;
+   */
+  mpnSuffix: string;
+
+  /**
+   * Terminal count, as a cheap coherence check against a design's footprint.
+   *
+   * @generated from field: int32 pin_count = 4;
+   */
+  pinCount: number;
+
+  /**
+   * @generated from field: map<string, string> attributes = 14;
+   */
+  attributes: { [key: string]: string };
+};
+
+/**
+ * Describes the message agni.v1.param.Package.
+ * Use `create(PackageSchema)` to create a new message.
+ */
+export const PackageSchema: GenMessage<Package> = /*@__PURE__*/
+  messageDesc(file_agni_v1_param_param, 1);
+
+/**
+ * PinNumber is one package's designator for a pin: a STRING, because ball-grid packages
+ * number in row-column form ("B2", "A3") and a numeric field would force those through a
+ * lossy encoding. Sparse on purpose -- a pin present in one package and absent in another
+ * (a no-connect that only the 14-pin body has) simply carries no PinNumber for the body it
+ * is missing from, rather than a sentinel.
+ *
+ * @generated from message agni.v1.param.PinNumber
+ */
+export type PinNumber = Message<"agni.v1.param.PinNumber"> & {
+  /**
+   * Package.id within the enclosing PartSpec.
+   *
+   * @generated from field: string package_ref = 1;
+   */
+  packageRef: string;
+
+  /**
+   * The designator as printed in that package's pinout ("11", "B2").
+   *
+   * @generated from field: string number = 2;
+   */
+  number: string;
+};
+
+/**
+ * Describes the message agni.v1.param.PinNumber.
+ * Use `create(PinNumberSchema)` to create a new message.
+ */
+export const PinNumberSchema: GenMessage<PinNumber> = /*@__PURE__*/
+  messageDesc(file_agni_v1_param_param, 2);
+
+/**
+ * Pin is one terminal of the DIE, with the numbers each package assigns it. It is the
+ * binding target for Parameter.pin_refs.
+ *
+ * A PIN IS A PROPERTY OF THE PART TYPE, NEVER OF A PLACEMENT. One PartSpec describes one
+ * MPN, and a design may place fifty instances of it; nothing here may be per-instance. In
+ * particular NO REFERENCE DESIGNATOR EVER APPEARS IN THIS CONTRACT and `id` must not encode
+ * one. A rule fans a type-level pin fact out across instances (each landing on its own
+ * net); the fan-out is the rule's job, and admitting an instance key here would rot the
+ * contract the first time two instances disagreed.
+ *
+ * @generated from message agni.v1.param.Pin
+ */
+export type Pin = Message<"agni.v1.param.Pin"> & {
+  /**
+   * Spec-local key, unique within this PartSpec, and the ONLY thing Parameter.pin_refs
+   * points at. Neither the name nor a number is the binding key: the name is not unique
+   * (see below) and a number is package-relative, so binding to either would make a
+   * parameter's target ambiguous in exactly the cases pin binding exists to serve. An
+   * opaque local id is unique by construction, which is what lets param.Validate reject an
+   * incoherent binding instead of having to resolve one.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Pin name as printed in the pin function table ("VCCA", "GND", "NC").
+   *
+   * NOT UNIQUE, and that is the whole reason this message exists. A part routinely prints
+   * one name across several terminals -- the TXB0104 prints "NC" on two -- and a large IC
+   * printing "VDD" on three pins with different limits is the multi-supply collapse this
+   * contract is here to fix. Consumers resolving a design pin by name must handle several
+   * hits (see the resolution note on Parameter.pin_refs).
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: agni.v1.param.PinFunction function = 3;
+   */
+  function: PinFunction;
+
+  /**
+   * The pin's description column as printed ("A-port supply voltage 1.2V <= VCCA <= 3.6V").
+   * Retained verbatim: pin-to-pin constraints live in this prose today and have no
+   * structured shape yet, so discarding it would discard the only record of them.
+   *
+   * @generated from field: string description = 4;
+   */
+  description: string;
+
+  /**
+   * This pin's designator in each package that has it. Empty when the document gives a
+   * function table but no package pinout, which is a real and usable state: the NAME
+   * channel still resolves.
+   *
+   * @generated from field: repeated agni.v1.param.PinNumber numbers = 5;
+   */
+  numbers: PinNumber[];
+
+  /**
+   * @generated from field: map<string, string> attributes = 14;
+   */
+  attributes: { [key: string]: string };
+
+  /**
+   * Provenance, required by param.Validate exactly as it is on a Parameter. A pin function
+   * is an extracted claim like any other, and an extracted claim nobody can verify against
+   * a page is a liability.
+   *
+   * @generated from field: agni.v1.param.ParamProvenance prov = 16;
+   */
+  prov?: ParamProvenance | undefined;
+};
+
+/**
+ * Describes the message agni.v1.param.Pin.
+ * Use `create(PinSchema)` to create a new message.
+ */
+export const PinSchema: GenMessage<Pin> = /*@__PURE__*/
+  messageDesc(file_agni_v1_param_param, 3);
 
 /**
  * SourceDoc is one source document (a datasheet, an app note). Parameters reference
@@ -108,7 +294,7 @@ export type SourceDoc = Message<"agni.v1.param.SourceDoc"> & {
  * Use `create(SourceDocSchema)` to create a new message.
  */
 export const SourceDocSchema: GenMessage<SourceDoc> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 1);
+  messageDesc(file_agni_v1_param_param, 4);
 
 /**
  * RangeValue is a min/typ/max triple with explicit presence. An absolute-max table
@@ -139,7 +325,7 @@ export type RangeValue = Message<"agni.v1.param.RangeValue"> & {
  * Use `create(RangeValueSchema)` to create a new message.
  */
 export const RangeValueSchema: GenMessage<RangeValue> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 2);
+  messageDesc(file_agni_v1_param_param, 5);
 
 /**
  * Condition is one test condition a value is valid under: an exact point
@@ -197,7 +383,7 @@ export type Condition = Message<"agni.v1.param.Condition"> & {
  * Use `create(ConditionSchema)` to create a new message.
  */
 export const ConditionSchema: GenMessage<Condition> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 3);
+  messageDesc(file_agni_v1_param_param, 6);
 
 /**
  * Parameter is one datasheet parameter row: identity as printed, a limit kind, a
@@ -268,6 +454,42 @@ export type Parameter = Message<"agni.v1.param.Parameter"> & {
   appliesTo: string;
 
   /**
+   * The pins this row applies to, as Pin.id values. EMPTY MEANS THE PART AS A WHOLE
+   * (a junction-temperature rating, a storage range), which is also what every spec
+   * seeded before pin binding existed says, so empty must keep meaning exactly what it
+   * meant then. Several ids express a row stated once for a GROUP of terminals: the
+   * TXB0104 gives one output-voltage range for all four A-port I/Os and a different one
+   * for the four B-port I/Os.
+   *
+   * ORTHOGONAL TO applies_to, not a second spelling of it. `applies_to` narrows WHICH
+   * VARIANT of the part the row covers; this narrows WHICH TERMINAL. A row carrying both
+   * is the conjunction: on this variant, for this pin.
+   *
+   * HOW A DESIGN PIN RESOLVES TO ONE OF THESE (settled here; consumed by the query
+   * relations and the pin-rating rule). The design side reaches a terminal as
+   * Connection{component_ref, pin_ref} -> the section's PartType -> ir.Pin, which carries
+   * BOTH a `name` and a package-relative `designator`. The datasheet side offers the same
+   * two channels. The precedence is:
+   *
+   *   1. MATCH ON NAME. Both sides copy it off the same pin function table, so it is
+   *      die-relative and survives repackaging.
+   *   2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins, and only
+   *      inside a package the design is known to place and this spec declares.
+   *   3. REFUSE when the two channels DISAGREE, and refuse when a name is ambiguous and no
+   *      package is identified. Skip-not-false-pass: a wrong terminal evaluates cleanly and
+   *      reports about the wrong thing, which is worse than reporting nothing.
+   *
+   * The number is deliberately NOT the primary key even though it looks like the precise
+   * one. It is precise about a PACKAGE; a parameter is a fact about a DIE. Leading with it
+   * silently misreports a part seeded from one body and placed in another -- on the real
+   * TXB0104, number 11 is a data I/O in the TSSOP-14 and the B-side supply in the UQFN-12,
+   * so the comparison would run against the wrong terminal and look fine doing it.
+   *
+   * @generated from field: repeated string pin_refs = 10;
+   */
+  pinRefs: string[];
+
+  /**
    * @generated from field: map<string, string> attributes = 14;
    */
   attributes: { [key: string]: string };
@@ -283,7 +505,7 @@ export type Parameter = Message<"agni.v1.param.Parameter"> & {
  * Use `create(ParameterSchema)` to create a new message.
  */
 export const ParameterSchema: GenMessage<Parameter> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 4);
+  messageDesc(file_agni_v1_param_param, 7);
 
 /**
  * ParamProvenance locates a parameter in its source document: the parameter-domain
@@ -340,7 +562,74 @@ export type ParamProvenance = Message<"agni.v1.param.ParamProvenance"> & {
  * Use `create(ParamProvenanceSchema)` to create a new message.
  */
 export const ParamProvenanceSchema: GenMessage<ParamProvenance> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 5);
+  messageDesc(file_agni_v1_param_param, 8);
+
+/**
+ * PinFunction is the pin-table "Type"/"I/O" column as a closed vocabulary. It is admitted
+ * as an enum rather than free text (the field-discipline rule in the header) because every
+ * vendor's pin function table prints this same small set -- I, O, I/O, P, G, NC -- so it
+ * is a RECORDED fact, not a normalization this layer invented. The printed spelling is
+ * kept in Pin.attributes["function_raw"], mirroring ir.Pin's "direction_raw".
+ *
+ * Unlike LimitKind, UNSPECIFIED is LEGAL and does not fail validation: a document may give
+ * a pin table with no type column at all, and a pin whose name and number are known is
+ * still worth recording. "We do not know this pin's function" is honest; refusing the pin
+ * would lose its numbering.
+ *
+ * @generated from enum agni.v1.param.PinFunction
+ */
+export enum PinFunction {
+  /**
+   * @generated from enum value: PIN_FUNCTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_POWER_INPUT = 1;
+   */
+  POWER_INPUT = 1,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_POWER_OUTPUT = 2;
+   */
+  POWER_OUTPUT = 2,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_GROUND = 3;
+   */
+  GROUND = 3,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_INPUT = 4;
+   */
+  INPUT = 4,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_OUTPUT = 5;
+   */
+  OUTPUT = 5,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_BIDIRECTIONAL = 6;
+   */
+  BIDIRECTIONAL = 6,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_PASSIVE = 7;
+   */
+  PASSIVE = 7,
+
+  /**
+   * @generated from enum value: PIN_FUNCTION_NO_CONNECT = 8;
+   */
+  NO_CONNECT = 8,
+}
+
+/**
+ * Describes the enum agni.v1.param.PinFunction.
+ */
+export const PinFunctionSchema: GenEnum<PinFunction> = /*@__PURE__*/
+  enumDesc(file_agni_v1_param_param, 0);
 
 /**
  * LimitKind is the first-class distinction that makes static checks safe: an
@@ -385,7 +674,7 @@ export enum LimitKind {
  * Describes the enum agni.v1.param.LimitKind.
  */
 export const LimitKindSchema: GenEnum<LimitKind> = /*@__PURE__*/
-  enumDesc(file_agni_v1_param_param, 0);
+  enumDesc(file_agni_v1_param_param, 1);
 
 /**
  * ConditionCoverage states, explicitly, how complete a parameter's condition list
@@ -431,5 +720,5 @@ export enum ConditionCoverage {
  * Describes the enum agni.v1.param.ConditionCoverage.
  */
 export const ConditionCoverageSchema: GenEnum<ConditionCoverage> = /*@__PURE__*/
-  enumDesc(file_agni_v1_param_param, 1);
+  enumDesc(file_agni_v1_param_param, 2);
 

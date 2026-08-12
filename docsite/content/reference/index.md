@@ -10,6 +10,8 @@ description: "The software analogy and the format primers."
   Generated from the shipped fact base.
 - **[The software analogy](analogy/)**: a map of EE concepts to software ones, for engineers
   coming from code.
+- **[Pins and packages](pins-and-packages/)**: why a pin number belongs to the plastic body rather
+  than to the chip, and what that means for joining a design to a datasheet.
 - **[EDIF netlist primer](edif-primer/)**: the EDIF 2.0.0 netlist format Agni ingests.
 - **[EDIF schematic primer](edif-schematic-primer/)**: the `.eds` schematic export: geometry,
   orientation, join keys.

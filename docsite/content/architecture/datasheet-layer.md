@@ -115,6 +115,59 @@ silent rather than improvise.
   lookup lives behind the join and Model layer as a per-corpus alias map, so a rule asks for a
   concept and no rule hardcodes one vendor's spelling.
 
+### Pin binding
+
+A parameter can name the pins it applies to. Without that, a part printing the same concept on
+several terminals with different limits collapses into one concept, and the most common review
+question about a power or interface net ("does this connection meet what this pin actually
+requires") has no answer. `PartSpec` therefore carries `pins` and `packages`, and `Parameter`
+carries `pin_refs`.
+
+**Inside the spec the binding key is a spec-local `Pin.id`, which is neither the name nor a
+number.** Both of those are ambiguous in ways the spec itself can resolve, and an opaque local id
+is unique by construction, which is what lets `param.Validate` reject a parameter bound to a pin
+the spec never declared. A dangling binding is worth catching at load precisely because
+downstream it does not look like an error: the parameter simply stops applying to anything, and
+the rule that wanted it reports nothing.
+
+`pin_refs` is orthogonal to `applies_to`, not a second spelling of it. `applies_to` narrows which
+*variant* a row covers; `pin_refs` narrows which *terminal*. A row carrying both is the
+conjunction. An empty `pin_refs` means the row is a fact about the part as a whole (a junction
+temperature, a storage range), which is also what every spec seeded before pin binding says, so
+empty keeps meaning exactly what it always meant.
+
+A pin is a property of the **part type**, never of a placement. One `PartSpec` describes one MPN
+and a design may place fifty instances of it, so no reference designator appears anywhere in this
+contract. A rule fans a type-level pin fact out across instances, each landing on its own net; the
+fan-out belongs to the rule.
+
+#### Why the name leads and the number only breaks ties
+
+The design side reaches a terminal as `Connection{component_ref, pin_ref}` to the section's
+`PartType` to an `ir.Pin`, which carries both a `name` and a package-relative `designator`. The
+datasheet side offers the same two channels. The precedence is name first, number as a tie-breaker
+inside an identified package, refusal when the two disagree.
+
+Leading with the number is the tempting choice and the wrong one. **A pin number is a fact about a
+package; a datasheet parameter is a fact about the die.** The same silicon wired into a different
+body renumbers its terminals, so a number-keyed join on a part seeded from one package and placed
+in another reports about the wrong terminal, evaluates cleanly, and looks healthy doing it. That
+is worse than reporting nothing. The seeded TXB0104 carries the real collision: number 11 is the
+data I/O `B3` in the TSSOP-14 and the `VCCB` supply in the UQFN-12.
+
+A name comes off the same pin function table on both sides, so it survives repackaging. Its
+weakness is that it is not unique, and that is exactly what the number repairs: a name printed on
+several terminals is disambiguated by the designator within a package the design is known to
+place. Where no package is identified, `param.ResolvePin` still uses the number if every declared
+package agrees on it (`VCCA` is number 1 in both the TSSOP and the UQFN, so the body cannot change
+that answer) and refuses only where the packages genuinely disagree. Every refusal is a distinct
+sentinel, so a caller can tell "this spec has no pin data at all" (`ErrNoPinData`, the older-corpus
+case, fall back to the part-level path) from "the evidence is ambiguous" (`ErrPinAmbiguous`) and
+from "the two channels contradict each other" (`ErrPinConflict`).
+
+Pin data is optional throughout. A spec that carries none validates and behaves exactly as it did
+before pin binding existed, so an older corpus is unaffected (C9).
+
 ### What is deliberately absent
 
 A field earns its place only when a second producer would populate it, and for parameters a
@@ -133,9 +186,10 @@ A field earns its place only when a second producer would populate it, and for p
 - **No verification-workflow state** (reviewed-by, approved). That workflow belongs to the
   extraction pipeline and store. Until it exists, `method` and `confidence` carry what the
   schema needs, and anything extra goes in `attributes`.
-- **No package or pin data.** Package-compatibility checks join through the design IR's
-  footprint tier when they arrive. Duplicating package data here would create a second source
-  of truth.
+- **No package GEOMETRY.** `Package` carries an id, the name as printed, the orderable-MPN
+  suffix, and a terminal count, which is what pin numbering needs and nothing more.
+  Land patterns, body dimensions, and package-compatibility checks join through the design IR's
+  footprint tier when they arrive; duplicating that here would create a second source of truth.
 
 ### Why proto
 
@@ -149,7 +203,7 @@ different producers, different consumers, and a different lifecycle.
 
 ### Worked examples
 
-Two fixtures are transcribed by hand from the cited datasheet revision, values and units as
+Three fixtures are transcribed by hand from the cited datasheet revision, values and units as
 printed.
 
 - **`datasheet/param/testdata/lm1117.textproto`** (TI LM1117 LDO, SNOS412Q rev Jan 2023) shows the
@@ -163,8 +217,20 @@ printed.
   an explicit condition rather than silently dropped, and the pulse-test footnote retained in
   `attributes`.
 
-`datasheet/param/param_test.go` asserts that both fixtures validate and that these encodings are
-present, so the worked examples are executable rather than prose.
+- **`datasheet/param/testdata/txb0104.textproto`** (TI TXB0104 level translator, SCES650K rev Mar
+  2025) is the pin-binding example, and one real part covers both cases the binding has to
+  survive. `VCCA` and `VCCB` are two supply terminals with genuinely different ranges (recommended
+  1.2 to 3.6 V against 1.65 to 5.5 V), which is the collapse pin binding undoes. The same die
+  ships in a TSSOP-14, a UQFN-12 and a DSBGA-12, and the renumbering is not a relabelling: number
+  11 is the `B3` data I/O in one body and the `VCCB` supply in another, which is the argument for
+  the name-first precedence in one line. It also carries a row bound to a group of terminals (the
+  A-port and B-port ESD ratings differ six-fold), a name printed on two pins (`NC`), pins present
+  in one package and absent from another, and ball designators, which is why a pin number is a
+  string rather than an integer.
+
+`datasheet/param/param_test.go` and `datasheet/param/pins_test.go` assert that all three fixtures
+validate and that these encodings are present, so the worked examples are executable rather than
+prose.
 
 ## The document contract
 
@@ -506,9 +572,10 @@ underneath, so search and checks share one cache and one resolution path.
 
 - The resolver interface signature and where it lives (a params-tier provider in the Model
   versus a `check`-level service) is not settled.
-- The home for a pin-function mapping (an extension to the parameter-IR versus a sibling
-  contract) is open. The scalar shape comes first, and the seam must not preclude the pin-table
-  result type.
+- The home for a pin-function mapping is **settled**: it is an extension to the parameter-IR
+  (`PartSpec.pins`, `PartSpec.packages`, `Parameter.pin_refs`), not a sibling contract. See
+  [pin binding](#pin-binding) above for the shape and for the name-over-number precedence a
+  resolver must follow. What remains open is the extraction, not the target.
 - Async resolution UX for the slow model and human backends: the fast path resolves inline,
   and a slow path likely returns "pending" and re-answers on completion.
 - The recall store's key and similarity metric (exact family/param versus embedding
@@ -523,6 +590,13 @@ The join key is part identity: `PartSpec.mpn` plus `PartSpec.manufacturer`, matc
 the design IR never import the parameter layer, and the validation join consumes both
 contracts. When a design carries no BOM or MPN data (a bare netlist), the join has no key and
 parameter checks skip, the same skip-not-false-pass behavior used for unseeded parts.
+
+That join is by part identity only. The finer per-pin join described under
+[pin binding](#pin-binding) is a property of the contract today and no rule consumes it yet: the
+shipped rules still reach a terminal through a vendor-symbol alias table meeting a pin-type
+inference, which is why they cannot tell two supply pins of one part apart. Pin-level query
+relations and a pin-rating rule are separate work, and both are expected to keep the alias path as
+the fallback for a part with no pin data.
 
 `param.Set` and `param.LoadSet` hold the seeded corpus. The check Model's params tier
 (`check.NewModelWithParams`, `Model.PartSpec`) is the join. It takes the BomLine MPN first,

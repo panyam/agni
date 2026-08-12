@@ -24,7 +24,10 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/param";
 // It joins to the design IR by part identity -- PartSpec.mpn / PartSpec.manufacturer
 // match ir.BomLine.mpn / ir.BomLine.manufacturer (WS10-003) -- and is never imported
 // by the readers or the IR itself; the dependency points from the validation join
-// down into both contracts.
+// down into both contracts. Within that join there is a second, finer one: a Parameter
+// may bind to specific Pins, so a part with several supply terminals answers per
+// terminal instead of collapsing to one "supply" concept. The precedence rule for
+// resolving a design pin to a spec pin is stated on Parameter.pin_refs.
 
 // PartSpec is the root message: every extracted parameter for one part, with the
 // source documents they came from. One PartSpec per part per corpus; fixture files
@@ -42,7 +45,113 @@ message PartSpec {
   repeated SourceDoc docs = 4;
   repeated Parameter parameters = 5;
 
+  // The package options this document covers, and the part's pins. Both are OPTIONAL and
+  // empty on every spec seeded before pin binding existed: a consumer that finds no pins
+  // behaves exactly as it did then (CONSTRAINTS C9, degrade-safe), so an unseeded or
+  // pin-less corpus is not a silent behavior change.
+  repeated Package packages = 6;
+  repeated Pin pins = 7;
+
   map<string, string> attributes = 14;
+}
+
+// Package is one physical body this part ships in (a TSSOP-14, a UQFN-12, a DSBGA). It
+// exists because a PIN NUMBER IS A FACT ABOUT A PACKAGE, NOT ABOUT THE DIE: the same
+// silicon wired into a different body gets different terminal numbering, so a number is
+// meaningless without saying which body it belongs to. On the real TXB0104, number 11 is
+// the data I/O "B3" in the TSSOP-14 and the "VCCB" supply in the UQFN-12.
+message Package {
+  // Local key within this PartSpec, referenced by PinNumber.package_ref.
+  string id = 1;
+  // Package as the document names it, e.g. "PW (TSSOP-14)". As printed; no canonical
+  // package taxonomy is assigned here (that is WS10-004's problem, if ever).
+  string name = 2;
+  // The orderable-MPN suffix that selects this package ("PW", "RGY"), when the vendor
+  // uses one. Empty when the document does not state it. This is a HINT for narrowing a
+  // design's MPN to one package, never a parser input: a suffix that does not match is
+  // "package unknown", not "package absent".
+  string mpn_suffix = 3;
+  // Terminal count, as a cheap coherence check against a design's footprint.
+  int32 pin_count = 4;
+
+  map<string, string> attributes = 14;
+}
+
+// PinFunction is the pin-table "Type"/"I/O" column as a closed vocabulary. It is admitted
+// as an enum rather than free text (the field-discipline rule in the header) because every
+// vendor's pin function table prints this same small set -- I, O, I/O, P, G, NC -- so it
+// is a RECORDED fact, not a normalization this layer invented. The printed spelling is
+// kept in Pin.attributes["function_raw"], mirroring ir.Pin's "direction_raw".
+//
+// Unlike LimitKind, UNSPECIFIED is LEGAL and does not fail validation: a document may give
+// a pin table with no type column at all, and a pin whose name and number are known is
+// still worth recording. "We do not know this pin's function" is honest; refusing the pin
+// would lose its numbering.
+enum PinFunction {
+  PIN_FUNCTION_UNSPECIFIED = 0;
+  PIN_FUNCTION_POWER_INPUT = 1;
+  PIN_FUNCTION_POWER_OUTPUT = 2;
+  PIN_FUNCTION_GROUND = 3;
+  PIN_FUNCTION_INPUT = 4;
+  PIN_FUNCTION_OUTPUT = 5;
+  PIN_FUNCTION_BIDIRECTIONAL = 6;
+  PIN_FUNCTION_PASSIVE = 7;
+  PIN_FUNCTION_NO_CONNECT = 8;
+}
+
+// PinNumber is one package's designator for a pin: a STRING, because ball-grid packages
+// number in row-column form ("B2", "A3") and a numeric field would force those through a
+// lossy encoding. Sparse on purpose -- a pin present in one package and absent in another
+// (a no-connect that only the 14-pin body has) simply carries no PinNumber for the body it
+// is missing from, rather than a sentinel.
+message PinNumber {
+  // Package.id within the enclosing PartSpec.
+  string package_ref = 1;
+  // The designator as printed in that package's pinout ("11", "B2").
+  string number = 2;
+}
+
+// Pin is one terminal of the DIE, with the numbers each package assigns it. It is the
+// binding target for Parameter.pin_refs.
+//
+// A PIN IS A PROPERTY OF THE PART TYPE, NEVER OF A PLACEMENT. One PartSpec describes one
+// MPN, and a design may place fifty instances of it; nothing here may be per-instance. In
+// particular NO REFERENCE DESIGNATOR EVER APPEARS IN THIS CONTRACT and `id` must not encode
+// one. A rule fans a type-level pin fact out across instances (each landing on its own
+// net); the fan-out is the rule's job, and admitting an instance key here would rot the
+// contract the first time two instances disagreed.
+message Pin {
+  // Spec-local key, unique within this PartSpec, and the ONLY thing Parameter.pin_refs
+  // points at. Neither the name nor a number is the binding key: the name is not unique
+  // (see below) and a number is package-relative, so binding to either would make a
+  // parameter's target ambiguous in exactly the cases pin binding exists to serve. An
+  // opaque local id is unique by construction, which is what lets param.Validate reject an
+  // incoherent binding instead of having to resolve one.
+  string id = 1;
+  // Pin name as printed in the pin function table ("VCCA", "GND", "NC").
+  //
+  // NOT UNIQUE, and that is the whole reason this message exists. A part routinely prints
+  // one name across several terminals -- the TXB0104 prints "NC" on two -- and a large IC
+  // printing "VDD" on three pins with different limits is the multi-supply collapse this
+  // contract is here to fix. Consumers resolving a design pin by name must handle several
+  // hits (see the resolution note on Parameter.pin_refs).
+  string name = 2;
+  PinFunction function = 3;
+  // The pin's description column as printed ("A-port supply voltage 1.2V <= VCCA <= 3.6V").
+  // Retained verbatim: pin-to-pin constraints live in this prose today and have no
+  // structured shape yet, so discarding it would discard the only record of them.
+  string description = 4;
+  // This pin's designator in each package that has it. Empty when the document gives a
+  // function table but no package pinout, which is a real and usable state: the NAME
+  // channel still resolves.
+  repeated PinNumber numbers = 5;
+
+  map<string, string> attributes = 14;
+
+  // Provenance, required by param.Validate exactly as it is on a Parameter. A pin function
+  // is an extracted claim like any other, and an extracted claim nobody can verify against
+  // a page is a liability.
+  ParamProvenance prov = 16;
 }
 
 // SourceDoc is one source document (a datasheet, an app note). Parameters reference
@@ -150,6 +259,38 @@ message Parameter {
   // an automotive grade). Empty when the row covers every variant the document
   // covers.
   string applies_to = 9;
+
+  // The pins this row applies to, as Pin.id values. EMPTY MEANS THE PART AS A WHOLE
+  // (a junction-temperature rating, a storage range), which is also what every spec
+  // seeded before pin binding existed says, so empty must keep meaning exactly what it
+  // meant then. Several ids express a row stated once for a GROUP of terminals: the
+  // TXB0104 gives one output-voltage range for all four A-port I/Os and a different one
+  // for the four B-port I/Os.
+  //
+  // ORTHOGONAL TO applies_to, not a second spelling of it. `applies_to` narrows WHICH
+  // VARIANT of the part the row covers; this narrows WHICH TERMINAL. A row carrying both
+  // is the conjunction: on this variant, for this pin.
+  //
+  // HOW A DESIGN PIN RESOLVES TO ONE OF THESE (settled here; consumed by the query
+  // relations and the pin-rating rule). The design side reaches a terminal as
+  // Connection{component_ref, pin_ref} -> the section's PartType -> ir.Pin, which carries
+  // BOTH a `name` and a package-relative `designator`. The datasheet side offers the same
+  // two channels. The precedence is:
+  //
+  //   1. MATCH ON NAME. Both sides copy it off the same pin function table, so it is
+  //      die-relative and survives repackaging.
+  //   2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins, and only
+  //      inside a package the design is known to place and this spec declares.
+  //   3. REFUSE when the two channels DISAGREE, and refuse when a name is ambiguous and no
+  //      package is identified. Skip-not-false-pass: a wrong terminal evaluates cleanly and
+  //      reports about the wrong thing, which is worse than reporting nothing.
+  //
+  // The number is deliberately NOT the primary key even though it looks like the precise
+  // one. It is precise about a PACKAGE; a parameter is a fact about a DIE. Leading with it
+  // silently misreports a part seeded from one body and placed in another -- on the real
+  // TXB0104, number 11 is a data I/O in the TSSOP-14 and the B-side supply in the UQFN-12,
+  // so the comparison would run against the wrong terminal and look fine doing it.
+  repeated string pin_refs = 10;
 
   map<string, string> attributes = 14;
 

@@ -1,0 +1,392 @@
+# Hand-encoded worked example for pin binding (WS10): TI TXB0104 voltage-level translator.
+# Every value transcribed from the datasheet cited in `docs`; provenance points at the exact
+# section table and page. This part is the fixture for pin binding because ONE real device
+# carries both cases the contract has to survive:
+#
+#   - MULTI-SUPPLY. VCCA and VCCB are two distinct supply pins with genuinely DIFFERENT
+#     ranges (recommended 1.2-3.6 V vs 1.65-5.5 V; abs-max 4.6 V vs 6.5 V). Without pin
+#     binding both collapse into one "supply" concept and a rule can only answer once for a
+#     part that has two different answers.
+#
+#   - REPACKAGING. The same die ships in a TSSOP-14, a UQFN-12 and a DSBGA-12, and the
+#     numbering is NOT a relabelling: pin NUMBER 11 is the data I/O "B3" in the TSSOP-14 and
+#     the "VCCB" supply in the UQFN-12. A number-keyed join therefore compares a rail against
+#     an I/O pin's rating and looks perfectly healthy doing it. That single collision is why
+#     the name is the primary channel and the number is only a tie-breaker.
+#
+# The DSBGA column also shows why PinNumber.number is a STRING: its designators are "A2",
+# "B2", "C1". And "NC" shows why Pin.name is not unique: the 14-pin bodies print it twice,
+# on 6 and on 9, while the 12-pin bodies have no such pin at all (so those Pins carry a
+# PinNumber for `pw` only -- absence is sparseness, not a sentinel).
+#
+# Trust states, both present on purpose (see the comparison semantics in the datasheet-layer
+# doc): the abs-max rows carry the table header's temperature phrase as a RAW condition and
+# are therefore captured-but-not-machine-comparable, the same encoding lm1117.textproto uses;
+# the recommended-operating rows carry the TA range that the SAME table states as a row
+# (-40 to 85 C), so they are structured and machine-comparable.
+mpn: "TXB0104"
+manufacturer: "Texas Instruments"
+device_class: "level translator"
+
+docs {
+  id: "sces650k"
+  title: "SCES650K - APRIL 2006 - REVISED MARCH 2025"
+  vendor: "Texas Instruments"
+  locator: "datasheets/ti/TXB0104.pdf"
+}
+
+packages {
+  id: "pw"
+  name: "PW (TSSOP-14)"
+  mpn_suffix: "PW"
+  pin_count: 14
+}
+
+packages {
+  id: "rut"
+  name: "RUT (UQFN-12)"
+  mpn_suffix: "RUT"
+  pin_count: 12
+}
+
+packages {
+  id: "yzt"
+  name: "YZT (DSBGA-12)"
+  mpn_suffix: "YZT"
+  pin_count: 12
+}
+
+# --- Pin function table (Table 4-1, page 4) ---
+# The two supply pins first: they are what the multi-supply story turns on.
+
+pins {
+  id: "vcca"
+  name: "VCCA"
+  function: PIN_FUNCTION_POWER_INPUT
+  description: "A-port supply voltage 1.2V <= VCCA <= 3.6V and VCCA <= VCCB."
+  numbers { package_ref: "pw" number: "1" }
+  numbers { package_ref: "rut" number: "1" }
+  numbers { package_ref: "yzt" number: "B2" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "vccb"
+  name: "VCCB"
+  function: PIN_FUNCTION_POWER_INPUT
+  description: "B-port supply voltage 1.65V <= VCCB <= 5.5V."
+  numbers { package_ref: "pw" number: "14" }
+  # 11 in the UQFN-12 is this supply pin; 11 in the TSSOP-14 is the B3 data I/O below.
+  numbers { package_ref: "rut" number: "11" }
+  numbers { package_ref: "yzt" number: "A2" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a1"
+  name: "A1"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 1. Referenced to VCCA."
+  numbers { package_ref: "pw" number: "2" }
+  numbers { package_ref: "rut" number: "2" }
+  numbers { package_ref: "yzt" number: "A3" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a2"
+  name: "A2"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 2. Referenced to VCCA."
+  numbers { package_ref: "pw" number: "3" }
+  numbers { package_ref: "rut" number: "3" }
+  numbers { package_ref: "yzt" number: "B3" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a3"
+  name: "A3"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 3. Referenced to VCCA."
+  numbers { package_ref: "pw" number: "4" }
+  numbers { package_ref: "rut" number: "4" }
+  numbers { package_ref: "yzt" number: "C3" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "a4"
+  name: "A4"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 4. Referenced to VCCA."
+  numbers { package_ref: "pw" number: "5" }
+  numbers { package_ref: "rut" number: "5" }
+  numbers { package_ref: "yzt" number: "D3" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b1"
+  name: "B1"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 1. Referenced to VCCB."
+  numbers { package_ref: "pw" number: "13" }
+  numbers { package_ref: "rut" number: "10" }
+  numbers { package_ref: "yzt" number: "A1" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b2"
+  name: "B2"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 2. Referenced to VCCB."
+  numbers { package_ref: "pw" number: "12" }
+  numbers { package_ref: "rut" number: "9" }
+  numbers { package_ref: "yzt" number: "B1" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b3"
+  name: "B3"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 3. Referenced to VCCB."
+  # The collision: 11 here is a data I/O in the TSSOP-14, and the VCCB supply in the UQFN-12.
+  numbers { package_ref: "pw" number: "11" }
+  numbers { package_ref: "rut" number: "8" }
+  numbers { package_ref: "yzt" number: "C1" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "b4"
+  name: "B4"
+  function: PIN_FUNCTION_BIDIRECTIONAL
+  description: "Input/output 4. Referenced to VCCB."
+  numbers { package_ref: "pw" number: "10" }
+  numbers { package_ref: "rut" number: "7" }
+  numbers { package_ref: "yzt" number: "D1" }
+  attributes { key: "function_raw" value: "I/O" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "oe"
+  name: "OE"
+  function: PIN_FUNCTION_INPUT
+  description: "Tri-state output-mode enable. Pull OE low to place all outputs in tri-state mode. Referenced to VCCA."
+  numbers { package_ref: "pw" number: "8" }
+  numbers { package_ref: "rut" number: "12" }
+  numbers { package_ref: "yzt" number: "C2" }
+  attributes { key: "function_raw" value: "I" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "gnd"
+  name: "GND"
+  function: PIN_FUNCTION_GROUND
+  description: "Ground"
+  numbers { package_ref: "pw" number: "7" }
+  numbers { package_ref: "rut" number: "6" }
+  numbers { package_ref: "yzt" number: "D2" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+# One NAME, two terminals, and only in the 14-pin bodies. The name channel alone cannot
+# resolve a design pin to one of these two.
+pins {
+  id: "nc6"
+  name: "NC"
+  function: PIN_FUNCTION_NO_CONNECT
+  description: "No connection. Not internally connected."
+  numbers { package_ref: "pw" number: "6" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "nc9"
+  name: "NC"
+  function: PIN_FUNCTION_NO_CONNECT
+  description: "No connection. Not internally connected."
+  numbers { package_ref: "pw" number: "9" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+# --- 5.1 Absolute Maximum Ratings (page 5) ---
+# Two supply pins, two different ceilings. This is the pair that collapses without binding.
+
+parameters {
+  name: "Supply voltage, VCCA"
+  symbol: "VCCA"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -0.5 max: 4.6 }
+  unit: "V"
+  conditions {
+    symbol: "TA"
+    raw: "over operating free-air temperature range (unless otherwise noted)"
+  }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "vcca"
+  prov { doc_ref: "sces650k" page: 5 table_or_figure: "5.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage, VCCB"
+  symbol: "VCCB"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -0.5 max: 6.5 }
+  unit: "V"
+  conditions {
+    symbol: "TA"
+    raw: "over operating free-air temperature range (unless otherwise noted)"
+  }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "vccb"
+  prov { doc_ref: "sces650k" page: 5 table_or_figure: "5.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+# Part-wide rows: no pin_refs, exactly as every pre-pin-binding spec reads.
+parameters {
+  name: "Junction temperature range, TJ"
+  symbol: "TJ"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 150 }
+  unit: "C"
+  conditions {
+    symbol: "TA"
+    raw: "over operating free-air temperature range (unless otherwise noted)"
+  }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "sces650k" page: 5 table_or_figure: "5.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Storage temperature range, Tstg"
+  symbol: "Tstg"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { min: -65 max: 150 }
+  unit: "C"
+  conditions {
+    symbol: "TA"
+    raw: "over operating free-air temperature range (unless otherwise noted)"
+  }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  prov { doc_ref: "sces650k" page: 5 table_or_figure: "5.1 Absolute Maximum Ratings" method: "hand" confidence: 1 }
+}
+
+# --- 5.2 ESD Ratings (page 5) ---
+# The A port and the B port are rated six times apart. A part-level ESD number cannot say
+# that; the binding to a GROUP of pins can.
+
+parameters {
+  name: "Electrostatic discharge, human-body model (HBM), A port"
+  symbol: "V(ESD)"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 2.5 }
+  unit: "kV"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "a1"
+  pin_refs: "a2"
+  pin_refs: "a3"
+  pin_refs: "a4"
+  attributes { key: "esd_test_model" value: "hbm" }
+  prov { doc_ref: "sces650k" page: 5 table_or_figure: "5.2 ESD Ratings" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Electrostatic discharge, human-body model (HBM), B port"
+  symbol: "V(ESD)"
+  limit_kind: LIMIT_KIND_ABSOLUTE_MAX
+  value { max: 15 }
+  unit: "kV"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "b1"
+  pin_refs: "b2"
+  pin_refs: "b3"
+  pin_refs: "b4"
+  attributes { key: "esd_test_model" value: "hbm" }
+  prov { doc_ref: "sces650k" page: 5 table_or_figure: "5.2 ESD Ratings" method: "hand" confidence: 1 }
+}
+
+# --- 5.3 Recommended Operating Conditions (page 6) ---
+# The TA range is a row of THIS table, so it is encoded structurally rather than as the
+# header phrase: these rows are machine-comparable.
+
+parameters {
+  name: "Supply voltage, VCCA"
+  symbol: "VCCA"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 1.2 max: 3.6 }
+  unit: "V"
+  conditions { symbol: "TA" min: -40 max: 85 unit: "C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "vcca"
+  prov { doc_ref: "sces650k" page: 6 table_or_figure: "5.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Supply voltage, VCCB"
+  symbol: "VCCB"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 1.65 max: 5.5 }
+  unit: "V"
+  conditions { symbol: "TA" min: -40 max: 85 unit: "C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "vccb"
+  prov { doc_ref: "sces650k" page: 6 table_or_figure: "5.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+# One row stated once for a GROUP of four terminals, and a different one for the other four.
+parameters {
+  name: "Voltage applied to any output in the high-impedance or power-off state, A-port"
+  symbol: "VO"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 0 max: 3.6 }
+  unit: "V"
+  conditions { symbol: "VCCA" min: 1.2 max: 3.6 unit: "V" }
+  conditions { symbol: "VCCB" min: 1.65 max: 5.5 unit: "V" }
+  conditions { symbol: "TA" min: -40 max: 85 unit: "C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "a1"
+  pin_refs: "a2"
+  pin_refs: "a3"
+  pin_refs: "a4"
+  prov { doc_ref: "sces650k" page: 6 table_or_figure: "5.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Voltage applied to any output in the high-impedance or power-off state, B-port"
+  symbol: "VO"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: 0 max: 5.5 }
+  unit: "V"
+  conditions { symbol: "VCCA" min: 1.2 max: 3.6 unit: "V" }
+  conditions { symbol: "VCCB" min: 1.65 max: 5.5 unit: "V" }
+  conditions { symbol: "TA" min: -40 max: 85 unit: "C" }
+  condition_coverage: CONDITION_COVERAGE_COMPLETE
+  pin_refs: "b1"
+  pin_refs: "b2"
+  pin_refs: "b3"
+  pin_refs: "b4"
+  prov { doc_ref: "sces650k" page: 6 table_or_figure: "5.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}
+
+parameters {
+  name: "Operating free-air temperature, TA"
+  symbol: "TA"
+  limit_kind: LIMIT_KIND_RECOMMENDED_OPERATING
+  value { min: -40 max: 85 }
+  unit: "C"
+  condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  prov { doc_ref: "sces650k" page: 6 table_or_figure: "5.3 Recommended Operating Conditions" method: "hand" confidence: 1 }
+}

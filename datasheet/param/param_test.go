@@ -24,7 +24,7 @@ func readFixture(t *testing.T, name string) *parampb.PartSpec {
 }
 
 func TestFixturesValidate(t *testing.T) {
-	for _, name := range []string{"lm1117.textproto", "bss138.textproto"} {
+	for _, name := range []string{"lm1117.textproto", "bss138.textproto", "txb0104.textproto"} {
 		spec := readFixture(t, name)
 		if err := Validate(spec); err != nil {
 			t.Errorf("%s: Validate: %v", name, err)
@@ -260,6 +260,74 @@ func TestValidateRejects(t *testing.T) {
 		err := Validate(spec)
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: Validate = %v, want error mentioning %q", tc.name, err, tc.want)
+		}
+	}
+}
+
+// Pin binding is only worth having if an incoherent one is caught at load: a parameter
+// naming a pin the spec never declares, or a pin numbered into a package that does not
+// exist, would otherwise sit in a corpus until a rule silently resolved nothing.
+func TestValidateRejectsPinBinding(t *testing.T) {
+	cases := []struct {
+		name string
+		mut  func(*parampb.PartSpec)
+		want string
+	}{
+		{"parameter binds to an undeclared pin", func(s *parampb.PartSpec) {
+			s.Parameters[0].PinRefs = []string{"no_such_pin"}
+		}, "pin_refs"},
+		{"pin without an id cannot be bound to", func(s *parampb.PartSpec) {
+			s.Pins[0].Id = ""
+		}, "id"},
+		{"two pins claiming one id make a binding ambiguous", func(s *parampb.PartSpec) {
+			s.Pins[1].Id = s.Pins[0].Id
+		}, "duplicate"},
+		{"pin without a name loses the channel that survives repackaging", func(s *parampb.PartSpec) {
+			s.Pins[0].Name = ""
+		}, "name"},
+		{"pin numbered into an undeclared package", func(s *parampb.PartSpec) {
+			s.Pins[0].Numbers[0].PackageRef = "nope"
+		}, "package_ref"},
+		{"a number claimed by two pins in one package", func(s *parampb.PartSpec) {
+			s.Pins[1].Numbers[0].PackageRef = s.Pins[0].Numbers[0].PackageRef
+			s.Pins[1].Numbers[0].Number = s.Pins[0].Numbers[0].Number
+		}, "number"},
+		{"package without an id cannot be referenced", func(s *parampb.PartSpec) {
+			s.Packages[0].Id = ""
+		}, "id"},
+		{"two packages claiming one id", func(s *parampb.PartSpec) {
+			s.Packages[1].Id = s.Packages[0].Id
+		}, "duplicate"},
+		{"pin without provenance", func(s *parampb.PartSpec) {
+			s.Pins[0].Prov = nil
+		}, "prov"},
+		{"pin provenance with a dangling doc_ref", func(s *parampb.PartSpec) {
+			s.Pins[0].Prov.DocRef = "nope"
+		}, "doc_ref"},
+		{"pin provenance nobody stands behind", func(s *parampb.PartSpec) {
+			s.Pins[0].Prov.Confidence = 0
+		}, "confidence"},
+	}
+	for _, tc := range cases {
+		spec := readFixture(t, "txb0104.textproto")
+		tc.mut(spec)
+		err := Validate(spec)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: Validate = %v, want error mentioning %q", tc.name, err, tc.want)
+		}
+	}
+}
+
+// Degrade-safety (C9): the pin rules must fire only on specs that carry pin data. A spec
+// seeded before pin binding existed validates exactly as it did.
+func TestValidateAcceptsPinlessSpecs(t *testing.T) {
+	for _, name := range []string{"lm1117.textproto", "bss138.textproto"} {
+		spec := readFixture(t, name)
+		if len(spec.Pins) != 0 || len(spec.Packages) != 0 {
+			t.Fatalf("%s: fixture is expected to carry no pin or package data", name)
+		}
+		if err := Validate(spec); err != nil {
+			t.Errorf("%s: Validate: %v", name, err)
 		}
 	}
 }
