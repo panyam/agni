@@ -86,6 +86,35 @@ says what it did, on stderr, because which file was read is not recoverable from
 schematic export and the netlist still describe the same design means reading **both** as netlists
 and diffing them. The tutorial project's `check-views` target does exactly that.
 
+## Sharing config between projects
+
+A project can declare that it layers on another's config:
+
+```yaml
+# project.yaml
+name: gateway
+extends: projects/house
+```
+
+`projects/house` is an ordinary project that happens to declare config and no designs. That reuse is
+the point: shared config is not a second kind of document with its own format, its own loader and its
+own id rules, it is a project with nothing under `designs/`.
+
+The chain composes **root-first**, so a project overrides what it inherits, matching every other layer
+here (a request overrides a project, a project overrides the deployment default). The ref-shaped tiers
+ACCUMULATE — inheriting a profile set and declaring your own runs both — while the naming convention
+REPLACES, because two naming vocabularies cannot both be in effect and the nearest declaration wins.
+
+**Inheritance is declared, never ambient, and that is the whole safety property.** A deployment-wide
+config that applied unless overridden is precisely the bug per-design config fixed: one team's
+profiles reaching every board on the server. An `extends` is written in a descriptor, scoped to the
+project that wrote it, and reaches no design that did not ask for it.
+
+Cycles are an error naming the loop, and the chain is bounded at four levels. Both refuse rather than
+resolving partway, for the reason everything else in this layer refuses: a config that silently
+stopped resolving would compose a subset of what the operator declared, and the run would look clean
+for a reason nobody could see.
+
 ## Resolution is an interface, not a path convention
 
 The service tier holds a port (`service.ProjectStore`), not a directory walk. The implementation

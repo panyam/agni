@@ -59,7 +59,7 @@ func TestRequestConfigResolvesRefTiers(t *testing.T) {
 		ParamUris:   []string{"mount://m/params"},
 		IntentUri:   "mount://m/intent.yaml",
 	}}
-	ov, err := OverlayFor(context.Background(), res, nil, nil, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), res, nil, nil, nil, req, Overlay{}, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestRequestConfigLayersOverTheProject(t *testing.T) {
 		Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/acme/profiles"}},
 	}
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/mine"}}}
-	ov, err := OverlayFor(context.Background(), res, project, &webapi.Design{}, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), res, nil, project, &webapi.Design{}, req, Overlay{}, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
 	project := &webapi.Project{Name: "projects/acme", Config: &webapi.AnalysisConfig{}}
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ParamUris: []string{"mount://m/mine"}}}
-	ov, err := OverlayFor(context.Background(), res, project, &webapi.Design{}, req, Overlay{}, "")
+	ov, err := OverlayFor(context.Background(), res, nil, project, &webapi.Design{}, req, Overlay{}, "")
 	if err != nil {
 		t.Fatalf("OverlayFor: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 	ctx := context.Background()
 	refs := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/profiles"}}}
-	_, err := OverlayFor(ctx, nil, nil, nil, refs, Overlay{}, "")
+	_, err := OverlayFor(ctx, nil, nil, nil, nil, refs, Overlay{}, "")
 	if err == nil {
 		t.Fatal("a host that cannot resolve refs must refuse rather than silently drop the tier")
 	}
@@ -144,7 +144,7 @@ func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 
 	// The no-I/O path is untouched: a resolved convention still composes with no resolver at all.
 	valueOnly := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("house", "^H_")}}
-	ov, err := OverlayFor(ctx, nil, nil, nil, valueOnly, Overlay{}, "")
+	ov, err := OverlayFor(ctx, nil, nil, nil, nil, valueOnly, Overlay{}, "")
 	if err != nil {
 		t.Fatalf("a value-shaped config must still compose with no resolver: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestProjectRefsAlsoNeedAResolver(t *testing.T) {
 		Name:   "projects/acme",
 		Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/acme/profiles"}},
 	}
-	_, err := OverlayFor(context.Background(), nil, project, &webapi.Design{}, nil, Overlay{}, "")
+	_, err := OverlayFor(context.Background(), nil, nil, project, &webapi.Design{}, nil, Overlay{}, "")
 	if err == nil {
 		t.Fatal("a project declaring refs on a resolver-less host must refuse")
 	}

@@ -56,9 +56,23 @@ message AnalysisConfig {
   // the scopes apart, and it is now visible in the descriptors rather than asserted in a comment.
   string intent_uri = 6;
 
-  // Field 7 is reserved for `extends`, the declared import of shared config (agni issue 224). It is
-  // not declared until it is wired: a field that sits in the schema doing nothing is a promise a
-  // reader cannot tell from a capability.
+  // extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
+  // when it inherits nothing.
+  //
+  // It is a project resource name rather than a file URI because a shared config IS a project: one
+  // with config and no designs. That reuses the store, the descriptor format and the id rules already
+  // in place instead of inventing a second kind of config document, and it means shared config is
+  // discoverable by the same ListProjects a viewer already calls.
+  //
+  // Inheritance is DECLARED, never ambient, and that is the whole safety property. A deployment
+  // default that applied unless overridden is precisely the bug per-design config fixed — one team's
+  // profiles reaching every board on the server. An extends is visible in the descriptor, scoped to
+  // the project that wrote it, and reaches no design that did not ask for it.
+  //
+  // The chain layers root-most FIRST, so a project overrides what it inherits. It is bounded and
+  // cycle-checked: a cycle is an error naming the loop, because a config that silently stopped
+  // resolving partway would compose a subset of what the operator declared.
+  string extends = 7;
 }
 
 // NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It

@@ -41,7 +41,7 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	// to no project, so the resolution simply does not happen. Filtering the config out afterwards
 	// would be a second implementation of "no project" that could drift from the real one.
 	if req.GetIgnoreProject() {
-		return OverlayFor(ctx, nil, nil, nil, req, fallback, baseConvention)
+		return OverlayFor(ctx, nil, nil, nil, nil, req, fallback, baseConvention)
 	}
 	if r != nil && r.Store != nil {
 		if design, project, err := r.Store.ResolveDesign(ctx, uri); err == nil {
@@ -52,7 +52,11 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	if r != nil {
 		resolver = r.Config
 	}
-	return OverlayFor(ctx, resolver, p, d, req, fallback, baseConvention)
+	var store ProjectStore
+	if r != nil {
+		store = r.Store
+	}
+	return OverlayFor(ctx, resolver, store, p, d, req, fallback, baseConvention)
 }
 
 // RunProvenance is which config tiers a run actually had attached, the value a results document's
