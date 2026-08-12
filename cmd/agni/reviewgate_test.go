@@ -208,6 +208,31 @@ func TestReviewGateRejectsUnknownOutcome(t *testing.T) {
 	}
 }
 
+// TestCheckGateExitsTwo: `check --fail-on` now returns the same code `review`'s gates do, so one CI
+// script can treat every gate in this CLI alike rather than parsing stderr to tell a red board from a
+// broken tool.
+func TestCheckGateExitsTwo(t *testing.T) {
+	cmd := checkCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--fail-on", "info", brokenDesign})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("findings at or above the threshold must trip the gate")
+	}
+	if got := exitCode(err); got != gateExitCode {
+		t.Errorf("a tripped --fail-on should exit %d, got %d (%v)", gateExitCode, got, err)
+	}
+	// A RUN failure still exits 1, which is the distinction the code exists to make.
+	bad := checkCmd()
+	bad.SetOut(&bytes.Buffer{})
+	bad.SetErr(&bytes.Buffer{})
+	bad.SetArgs([]string{"testdata/review/does-not-exist.edn"})
+	if got := exitCode(bad.Execute()); got != 1 {
+		t.Errorf("an unreadable design is a run failure, want exit 1, got %d", got)
+	}
+}
+
 // TestExitCode is the mapping main() applies. It is tested here rather than by spawning a process
 // because the decision, not the os.Exit call, is what can be wrong.
 func TestExitCode(t *testing.T) {

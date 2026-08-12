@@ -114,7 +114,7 @@ all you need to put it in CI:
 ```console verify
 $ agni check designs/gateway/gateway.edn --fail-on error > /dev/null
 $ echo $?
-1
+2
 ```
 
 The board has two `error` findings, so the command fails. With those gone it passes:

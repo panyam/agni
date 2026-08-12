@@ -50,10 +50,10 @@ moved on several versions, the document still says what was checked and what was
 ```console verify
 $ agni check designs/gateway/gateway.edn --conventions conventions.yaml --params params --fail-on error > /dev/null
 $ echo $?
-1
+2
 ```
 
-Non-zero, so CI fails. Put that one line in your pipeline and a board with an error-severity finding
+Exit `2` is a tripped gate, so CI fails. Put that one line in your pipeline and a board with an error-severity finding
 cannot merge.
 
 ## The gate reads severity, not verdict
@@ -61,13 +61,10 @@ cannot merge.
 Here is the part that surprises people. Rev B fixed the I2C pull-ups and the naming, and its review
 went from 8 failures to 6. Run the gate on it:
 
-```
-agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --params params --fail-on error
-echo $?
-```
-
-```
-1
+```console verify
+$ agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --params params --fail-on error > /dev/null
+$ echo $?
+2
 ```
 
 Still failing. The remaining error is the datasheet finding on U2, the one the review reported as
@@ -82,14 +79,16 @@ answers. Leave it gating and treat the block as pressure to go transcribe the re
 which is usually the right instinct. Or drop the parameter tier out of the gate command until the
 corpus is trustworthy, and accept that those checks are not gating yet:
 
-```
-agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --fail-on error
-echo $?
+```console verify
+$ agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --fail-on error > /dev/null
+$ echo $?
+2
 ```
 
-```
-0
-```
+Still `2`, and the reason is worth stopping on: dropping the parameter tier removed the *datasheet*
+error, and a different one was underneath it — a CAN host declaring the interface without its `STB`
+signal. Narrowing what a gate can see does not make a board pass, it only changes which failure you
+are looking at. If you want to know what remains, run without `--fail-on` and read the list.
 
 What you should not do is lower the severity of the rule to make the gate pass. That changes what
 the tool claims about consequence in order to change an exit code, and every future reader of that

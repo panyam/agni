@@ -24,10 +24,10 @@ import (
 
 // gateExitCode is the process exit status for a tripped gate, distinct from 1 (the run itself failed).
 //
-// The distinction is the point. `agni check --fail-on` returns 1 for both "this board has errors" and
-// "the design would not parse", which is tolerable with one gate and gets genuinely ambiguous with
-// two: a pipeline that cannot tell a red board from a broken tool retries the wrong one. `check` keeps
-// its single code for now rather than having its documented CI contract changed underneath it.
+// The distinction is the point: a pipeline that cannot tell a red board from a broken tool retries the
+// wrong one. `check --fail-on` and `review`'s two gates now share it, so one script can treat every
+// gate in this CLI alike. `check` kept a single code for one release, so that the review gate landed
+// without changing a documented CI contract underneath it in the same PR.
 const gateExitCode = 2
 
 // gateError is a gate trip. It carries an exit code so main can distinguish it from an ordinary

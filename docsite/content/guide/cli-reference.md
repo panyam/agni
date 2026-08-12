@@ -86,7 +86,8 @@ run. Exit codes:
 | `2` | a gate tripped |
 | `1` | the run itself failed: an unreadable design, an invalid manifest, an unknown outcome name |
 
-`check` still returns `1` for both a tripped gate and a failed run.
+`check --fail-on` uses the same codes, so one CI script can treat every gate in this CLI alike: `2`
+means the design has problems, `1` means the tool could not do its job.
 
 ### Machine configuration: `agni.yaml`
 
