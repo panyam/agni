@@ -86,6 +86,46 @@ says what it did, on stderr, because which file was read is not recoverable from
 schematic export and the netlist still describe the same design means reading **both** as netlists
 and diffing them. The tutorial project's `check-views` target does exactly that.
 
+## Three tiers of configuration
+
+Config reaching a run splits three ways, and the split is worth stating because two of the tiers look
+alike from a command line where they are both "flags".
+
+| Tier | What it decides | Where it lives |
+|---|---|---|
+| **Environment** | where bytes are, what tools exist | `agni.yaml`, and `serve`'s own startup flags |
+| **Analysis** | what a design is checked against | a project's and a design's `AnalysisConfig` |
+| **Invocation** | this run's question and output | flags: `--rule`, `--format`, `--fail-on`, `--coverage` |
+
+**The test that assigns a knob to a tier: does it change WHAT is checked, or only WHERE bytes are
+found?** Naming conventions, interface profiles, seeded parameters, design intent and a review
+checklist all change the answer, so they are analysis config, scoped to the designs that declared
+them. Mounts only locate input, so they are environment config and a plain machine-wide file is safe.
+
+Symbol search paths are the interesting case, and they landed in **analysis** config despite only
+locating bytes. The deciding question is not what a knob does but how it fails: a schematic naming a
+library nothing resolves reads SHORT, the components it could not resolve are simply absent, every
+rule then evaluates cleanly over the shortened read, and the run reports fewer findings with no error.
+A tier whose absence changes the answer while still looking like an answer belongs with the config
+that changes the answer.
+
+That boundary is load-bearing rather than tidy. An analysis tier in the machine-wide file would apply
+to every design a CLI opened, which is exactly the bug per-design config fixed: one team's vocabulary
+reaching another team's board, correct in isolation and aimed at the wrong design. `agni.yaml`
+rejects unknown keys so that reaching for `conventions:` there is an error rather than a silent
+global.
+
+One `AnalysisConfig` carries the analysis tier everywhere it appears — on a `Project`, on a `Design`,
+and on a request — so adding a tier is one schema change every surface gets. Which fields each
+populates is what keeps the scopes apart: a `Design` sets only its intent, because a board has its own
+architecture where conventions and profiles describe the team. The message's own header in
+`protos/agni/v1/webapi/config.proto` carries the rest.
+
+Whether a given host can RESOLVE the ref-shaped tiers is a property of the deployment, not of the
+schema. A host wired with no resolver still composes a value-shaped config with no file access, and
+REFUSES one naming a directory rather than dropping the tier — see the C22 amendment in
+`CONSTRAINTS.md`.
+
 ## Sharing config between projects
 
 A project can declare that it layers on another's config:
