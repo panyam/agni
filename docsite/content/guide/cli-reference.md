@@ -87,6 +87,50 @@ run. Exit codes:
 
 `check` still returns `1` for both a tripped gate and a failed run.
 
+### `start <design-file> [dir]`
+
+Scaffold a review project around an existing design file, so the commands above can stop taking
+flags. `dir` defaults to the current directory.
+
+```
+agni start boards/gateway.edn ./gateway-review
+```
+
+```
+gateway-review/
+├── project.yaml            declares the project's id
+├── conventions.yaml        stub — your team's naming vocabulary
+├── review.yaml             seeded from the shipped catalog
+└── designs/gateway/
+    ├── design.yaml         names the entry and its companion views
+    ├── gateway.edn         copied
+    └── gateway.kicad_pcb   copied, declared as a companion
+```
+
+After it, `agni check gateway-review/designs/gateway` and `agni review …` resolve the whole
+configuration from the descriptors.
+
+| flag | what it does |
+|---|---|
+| `--name <id>` | the project's declared id; defaults to the target directory's name, lowercased with anything outside `[a-z0-9._-]` replaced by `-` |
+| `--title <text>` | the human-readable label; defaults to the id |
+
+**The design is copied, and the project owns its copy.** Editing the original afterwards does not
+reach the project. The command prints what it copied and from where, and the generated `design.yaml`
+records the origin in a comment.
+
+**Companions are detected, not guessed at.** A sibling is declared a companion only when it shares
+the design's stem *and* carries schematic geometry or a board. That excludes a later revision
+(`gateway-rev-b.edn`, a different stem and a legitimate analysis source of its own) and a second
+netlist encoding (`gateway.edf`, same stem but no view to contribute). Check the generated
+`design.yaml` and edit it: membership is declared per file precisely because it cannot be inferred
+reliably.
+
+**Nothing is overwritten.** An existing file stops the command and is named, and every planned write
+is checked before any write happens, so a refusal leaves nothing half-created. Pointing at a folder
+that already holds a `project.yaml` **adds** the design to that project rather than nesting a second
+one.
+
 ### `intake <file>`
 
 Extract a sanitized summary of a design: counts, class census, rail voltages, anomalies, and the

@@ -133,6 +133,40 @@ it can sit in CI:
 agni check <file> --fail-on error   # fails the build only on errors
 ```
 
+## Stop passing flags
+
+Everything above addresses a single file, and the flags pile up as you turn things on: your naming
+conventions, your interface profiles, your parameter corpus, your checklist. A **project** is where
+those live instead, declared once beside the design.
+
+`agni start` builds one from a design you already have:
+
+```
+agni start boards/gateway.edn ./gateway-review
+```
+
+```
+Created project "gateway-review".
+
+  gateway-review/project.yaml
+  gateway-review/conventions.yaml        (stub — your team's naming vocabulary)
+  gateway-review/review.yaml             (seeded from the shipped catalog — edit it)
+  gateway-review/designs/gateway/design.yaml
+  gateway-review/designs/gateway/gateway.edn   (copied)
+```
+
+From then on the commands take a design and nothing else, because the project answers the rest:
+
+```
+agni check gateway-review/designs/gateway
+agni review gateway-review/designs/gateway
+```
+
+The design is **copied** into the project, which now owns its copy — edits to the original do not
+reach it. And the generated `review.yaml` is a starting point seeded from the shipped catalog, not a
+finished checklist; [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning
+it into your team's.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/): narrow to one rule or category, read the
