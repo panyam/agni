@@ -42,7 +42,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 | flag | what it does |
 |---|---|
-| `--checklist <file>` | the review manifest (YAML) declaring areas and their items |
+| `--checklist <file>` | the review manifest (YAML) declaring areas and their items. Optional when the design belongs to a project that declares one; passing it overrides the project's |
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |

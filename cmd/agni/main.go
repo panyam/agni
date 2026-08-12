@@ -485,9 +485,6 @@ func reviewCmd() *cobra.Command {
 			"traceability matrix. Automation is manifest-level (stated once); pass/fail/n-a is per design.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if checklist == "" {
-				return fmt.Errorf("review needs --checklist <manifest.yaml>")
-			}
 			// Parsed BEFORE anything is read, so a typo in a CI config fails in the first millisecond
 			// rather than after a full run over a family of boards. The gate is otherwise applied last,
 			// on every exit path below.
@@ -495,6 +492,16 @@ func reviewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// The checklist is configuration, so it travels as a value and where it came from stays the
+			// caller's business (WS9-050). When the operator names none, the design's PROJECT is asked,
+			// since a project declares its checklist the same way it declares its conventions and
+			// profiles. The note says which one was chosen: a checklist nobody typed is not recoverable
+			// from the outcomes it produced.
+			man, checklistNote, err := reviewManifestFor(cmd.Context(), checklist, args)
+			if err != nil {
+				return err
+			}
+			noteChecklist(cmd.ErrOrStderr(), checklistNote)
 			// The CLI is a thin client of the in-process ReviewService (WS9-048): it composes the
 			// design-independent overlay config (catalog + profile index from --profile-path/--intent-path,
 			// specs from --params) and constructs the service over a local no-containment loader, then
@@ -512,14 +519,6 @@ func reviewCmd() *cobra.Command {
 					return err
 				}
 				overlay.Conventions = service.ConventionProto(cfg)
-			}
-			// The checklist is read here for the same reason (WS9-050): it is configuration, so it
-			// travels as a value and where it came from stays the caller's business. The CLI's answer
-			// is "a YAML file the user named"; a browser resolves one through GetReviewManifest
-			// instead, and neither answer is in the service's contract.
-			man, err := loadManifest(checklist)
-			if err != nil {
-				return err
 			}
 			var specs param.ParamProvider
 			if paramsDir != "" {
