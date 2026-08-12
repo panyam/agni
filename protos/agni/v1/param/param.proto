@@ -71,8 +71,14 @@ message Package {
   // design's MPN to one package, never a parser input: a suffix that does not match is
   // "package unknown", not "package absent".
   string mpn_suffix = 3;
-  // Terminal count, as a cheap coherence check against a design's footprint.
-  int32 pin_count = 4;
+
+  // 4 held pin_count, a terminal count admitted as "a cheap coherence check against a
+  // design's footprint" and then read by nothing. It failed the field-discipline test in
+  // the header from the weak side: a vendor would populate it, but no consumer wanted it,
+  // and a field that only producers care about is a field that goes stale unnoticed. If a
+  // real check needs the count later it can be re-added deliberately, with the caller that
+  // justifies it in the same change.
+  reserved 4;
 
   map<string, string> attributes = 14;
 }
