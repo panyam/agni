@@ -162,6 +162,19 @@ passed and once with a view never wired.
 on any of those omissions, so let the test tell you what you forgot. Read its header comment before
 changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
 
+**A JSX expression that reads only PLAIN OBJECT properties never re-runs.** Solid wraps an attribute
+or child expression in an effect over the signals it reads, so `class={p.pinRefs.includes(x) ? "on" :
+""}` — where `p` came from a list and is not itself reactive — subscribes to NOTHING and renders once.
+The data changes, the DOM does not. Read through the accessor instead (`props.spec().parameters.some(
+...)`), which tracks. This shipped an inert set of buttons with every unit test green, because the
+helpers were correct and only the subscription was missing; a component test is the only thing that
+sees it, and `transcribe.tsx` still has none (OUT_OF_SCOPE).
+
+**Never `window.confirm` / `alert` / `prompt` in a panel.** A native dialog blocks the page, which
+blocks browser automation outright: the screenshot and drive-the-app flows stop responding with no
+error. Use an inline two-step (the `deletePackage` confirm in `transcribe.tsx`), which is also better
+UX, since it can name what is about to be lost rather than asking a generic "are you sure".
+
 ## Parallel development across multiple checkouts
 
 Concurrent sessions work against separate clones (or worktrees) of this repo, one per lane of work.
