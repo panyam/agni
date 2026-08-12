@@ -29,6 +29,8 @@ type Overlay struct {
 	// rides here because a project owns its parameters the same way it owns its profiles, so the two
 	// have to arrive together or a run could compose one team's rules against another's data.
 	Specs param.ParamProvider
+	// SymbolPaths are the symbol-library directories this run's config named, added to the read.
+	SymbolPaths []string
 	// Profiles and Intent record whether this overlay's Sources include a project's interface profiles
 	// and a design's intent declaration. See ProjectConfig for why the flags travel rather than being
 	// derived from Sources.
@@ -141,10 +143,14 @@ func (o Overlay) explainCollision(err error) error {
 
 // ReadOptions is what the overlay contributes to each design READ: the naming lexicon, or nothing.
 func (o Overlay) ReadOptions() []ReadOption {
-	if o.Lexicon == nil {
-		return nil
+	var opts []ReadOption
+	if o.Lexicon != nil {
+		opts = append(opts, WithLexicon(o.Lexicon))
 	}
-	return []ReadOption{WithLexicon(o.Lexicon)}
+	if len(o.SymbolPaths) > 0 {
+		opts = append(opts, WithSymbolPaths(o.SymbolPaths))
+	}
+	return opts
 }
 
 // ConventionFromProto converts the wire form to the engine's config value. It lives here, not in
@@ -241,6 +247,8 @@ type ResolvedConfig struct {
 	// Specs is the seeded datasheet corpus, nil when there is none. A nil provider is legal and means
 	// the datasheet-backed rules read needs-data rather than failing.
 	Specs param.ParamProvider
+	// SymbolPaths are the resolved symbol-library directories, as host paths the reader can search.
+	SymbolPaths []string
 	// Profiles and Intent record WHICH tiers the Sources came from, because by the time they are rule
 	// sources that is no longer answerable: a compiled interface profile and a compiled intent
 	// declaration are both just rules in a catalog. A results document has to state which tiers were
@@ -259,7 +267,8 @@ type ResolvedConfig struct {
 // loaded — the silent-pass failure this whole layer exists to prevent. So it is an error that names
 // what could not be resolved, on the same terms GetNamingConvention refuses a stored convention.
 func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
-	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 || cfg.GetIntentUri() != ""
+	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 || cfg.GetIntentUri() != "" ||
+		len(cfg.GetSymbolPathUris()) > 0
 }
 
 // OverlayFor composes the engine inputs for one design: the project's config where the design
@@ -302,6 +311,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 			return Overlay{}, err
 		}
 		o.Sources, o.Specs, o.Profiles, o.Intent = cfg.Sources, cfg.Specs, cfg.Profiles, cfg.Intent
+		o.SymbolPaths = cfg.SymbolPaths
 	} else if configNeedsResolver(merged) {
 		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
 	}
@@ -342,10 +352,11 @@ const requestNamespace = "request"
 // replace would make a design that declares intent drop its project's profiles.
 func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 	out := &webapi.AnalysisConfig{
-		ProfileUris:  append(append([]string{}, a.GetProfileUris()...), b.GetProfileUris()...),
-		ParamUris:    append(append([]string{}, a.GetParamUris()...), b.GetParamUris()...),
-		IntentUri:    a.GetIntentUri(),
-		ChecklistUri: a.GetChecklistUri(),
+		ProfileUris:    append(append([]string{}, a.GetProfileUris()...), b.GetProfileUris()...),
+		ParamUris:      append(append([]string{}, a.GetParamUris()...), b.GetParamUris()...),
+		SymbolPathUris: append(append([]string{}, a.GetSymbolPathUris()...), b.GetSymbolPathUris()...),
+		IntentUri:      a.GetIntentUri(),
+		ChecklistUri:   a.GetChecklistUri(),
 	}
 	if b.GetIntentUri() != "" {
 		out.IntentUri = b.GetIntentUri()
@@ -377,7 +388,11 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 			return Overlay{}, err
 		}
 	}
-	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 && reqResolved.Specs == nil {
+	// Every tier the request could have contributed has to appear in this guard. A tier missing from it
+	// is silently dropped for a request that carries ONLY that tier, which is the shape symbol paths
+	// arrive in and the shape a reader would never suspect.
+	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 &&
+		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 {
 		return base, nil
 	}
 	// A request convention REPLACES rather than stacks (WS3-124), which is what the serve flag help
@@ -405,6 +420,9 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	if reqResolved.Specs != nil {
 		out.Specs = reqResolved.Specs
 	}
+	// Symbol paths ACCUMULATE: a request naming a library is adding somewhere to look, not replacing
+	// where the project already looks.
+	out.SymbolPaths = append(append([]string{}, out.SymbolPaths...), reqResolved.SymbolPaths...)
 	out.Profiles = out.Profiles || reqResolved.Profiles
 	out.Intent = out.Intent || reqResolved.Intent
 	out.conventionName = ConventionFromProto(req.GetConfig().GetConventions()).Name

@@ -28,7 +28,7 @@ func TestDescriptorRoundTrip(t *testing.T) {
 		}
 		// Declaring nothing must resolve to the conventional names, which is the whole reason a
 		// scaffolder can write the layout without naming any of it.
-		want := ProjectConfigNames{Conventions: defaultConventions, Profiles: defaultProfiles, Params: defaultParams, Checklist: defaultChecklist}
+		want := ProjectConfigNames{Conventions: defaultConventions, Profiles: defaultProfiles, Params: defaultParams, Checklist: defaultChecklist, Symbols: defaultSymbols}
 		if names != want {
 			t.Errorf("undeclared config should fall back to the defaults, got %+v want %+v", names, want)
 		}
@@ -36,7 +36,7 @@ func TestDescriptorRoundTrip(t *testing.T) {
 
 	t.Run("project, config declared", func(t *testing.T) {
 		var b bytes.Buffer
-		in := ProjectConfigNames{Conventions: "house.yaml", Profiles: "ifaces", Params: "specs", Checklist: "checklists/board.yaml"}
+		in := ProjectConfigNames{Conventions: "house.yaml", Profiles: "ifaces", Params: "specs", Checklist: "checklists/board.yaml", Symbols: "syms"}
 		if err := WriteProject(&b, "", "p", "P", &in); err != nil {
 			t.Fatalf("WriteProject: %v", err)
 		}

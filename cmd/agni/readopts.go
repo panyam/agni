@@ -14,13 +14,21 @@ import (
 // than being dereferenced; the copy then starts from a zero loader carrying only the lexicon.
 func readerFor(base *formats.Loader, opts ...service.ReadOption) *formats.Loader {
 	o := service.ReadOpts(opts...)
-	if o.Lexicon == nil {
+	if o.Lexicon == nil && len(o.SymbolPaths) == 0 {
 		return base
 	}
 	cp := formats.Loader{}
 	if base != nil {
 		cp = *base
 	}
-	cp.Lexicon = o.Lexicon
+	if o.Lexicon != nil {
+		cp.Lexicon = o.Lexicon
+	}
+	// ADDED to whatever the loader was built with rather than replacing it, so an operator's
+	// --symbol-path and a project's declared library both resolve. The flag stays the escape hatch for
+	// a library the project does not know about.
+	if len(o.SymbolPaths) > 0 {
+		cp.SymbolPaths = append(append([]string{}, cp.SymbolPaths...), o.SymbolPaths...)
+	}
 	return &cp
 }

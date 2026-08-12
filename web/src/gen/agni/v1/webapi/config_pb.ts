@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIsYBCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS53ZWJhcGkuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWluZ1J1bGUi1QIKDU5hbWluZ0xleGljb24SKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSMQoKc3VwcGx5X3BpbhgEIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSNwoFY2xhc3MYBSADKAsyKC5hZ25pLnYxLndlYmFwaS5OYW1pbmdMZXhpY29uLkNsYXNzRW50cnkaSwoKQ2xhc3NFbnRyeRILCgNrZXkYASABKAkSLAoFdmFsdWUYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zOgI4ASIyCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgibAoKTmFtaW5nUnVsZRIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEgsKA3doeRgDIAEoCRINCgVhbGxvdxgEIAMoCRIOCgZleGVtcHQYBSADKAkSEgoKbWF0Y2hfZnVsbBgGIAEoCEIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIuABCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkiewoQTmFtaW5nQ29udmVudGlvbhIMCgRuYW1lGAEgASgJEi4KB2xleGljb24YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5OYW1pbmdMZXhpY29uEikKBXJ1bGVzGAMgAygLMhouYWduaS52MS53ZWJhcGkuTmFtaW5nUnVsZSLVAgoNTmFtaW5nTGV4aWNvbhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxIxCgpzdXBwbHlfcGluGAQgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxI3CgVjbGFzcxgFIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpLCgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnM6AjgBIjIKDVZvY2FiUGF0dGVybnMSEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCCJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -118,6 +118,24 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * @generated from field: string extends = 7;
    */
   extends: string;
+
+  /**
+   * symbol_path_uris are directories of symbol files a schematic's external library references need
+   * (xschem/gEDA `.sym`, KiCad `.kicad_sym`). Each is searched with its whole subtree, so one entry
+   * can be a library root.
+   *
+   * It is here rather than in environment config even though it only LOCATES bytes, and the reason is
+   * its failure mode. A schematic naming a library nothing resolves reads SHORT: the components it
+   * could not resolve are simply absent, every rule then evaluates cleanly over the shortened read,
+   * and the run reports fewer findings with no error to explain them. A tier whose absence changes
+   * the answer belongs with the config that changes the answer.
+   *
+   * A design's own symbol library and a team's shared one are both ordinary cases, so a Project and a
+   * Design may each declare some and they accumulate rather than replace.
+   *
+   * @generated from field: repeated string symbol_path_uris = 8;
+   */
+  symbolPathUris: string[];
 };
 
 /**

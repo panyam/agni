@@ -13,6 +13,10 @@ import "github.com/panyam/agni/core/classify"
 type ReadOptions struct {
 	// Lexicon is the naming vocabulary to stamp the design with; nil means the engine defaults.
 	Lexicon *classify.Lexicon
+	// SymbolPaths are directories to search for the schematic's external symbol libraries, ADDED to
+	// whatever the loader was built with. They ride the read rather than the catalog because an
+	// unresolved symbol changes what the design CONTAINS, not what is checked about it.
+	SymbolPaths []string
 }
 
 // ReadOption configures one read.
@@ -22,6 +26,12 @@ type ReadOption func(*ReadOptions)
 // the built-in one, so which nets count as rails and grounds follows the request's conventions.
 func WithLexicon(lex *classify.Lexicon) ReadOption {
 	return func(o *ReadOptions) { o.Lexicon = lex }
+}
+
+// WithSymbolPaths adds a config's symbol search directories to one read, so a design whose project
+// declares its libraries resolves them without the caller passing a flag.
+func WithSymbolPaths(dirs []string) ReadOption {
+	return func(o *ReadOptions) { o.SymbolPaths = append(o.SymbolPaths, dirs...) }
 }
 
 // ReadOpts resolves options to a value, for a loader implementation to read. Exported because the

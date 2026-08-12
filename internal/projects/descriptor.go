@@ -48,6 +48,7 @@ type projectYAML struct {
 	Conventions *string `yaml:"conventions"`
 	Profiles    *string `yaml:"profiles"`
 	Params      *string `yaml:"params"`
+	Symbols     *string `yaml:"symbols"`
 	Checklist   *string `yaml:"checklist"`
 }
 
@@ -60,6 +61,9 @@ type designYAML struct {
 	// the descriptor. It is per-DESIGN because each board has its own intended architecture, where
 	// conventions and profiles describe the team.
 	Intent *string `yaml:"intent"`
+	// Symbols is this design's own symbol library, optional and defaulting to `symbols` beside the
+	// descriptor. A design usually carries the libraries its own schematic references.
+	Symbols *string `yaml:"symbols"`
 }
 
 // The conventional names a project's config takes when `project.yaml` declares none. They are the
@@ -69,6 +73,7 @@ const (
 	defaultConventions = "conventions.yaml"
 	defaultProfiles    = "profiles"
 	defaultParams      = "params"
+	defaultSymbols     = "symbols"
 	defaultChecklist   = "review.yaml"
 	defaultIntent      = "intent.yaml"
 )
@@ -81,6 +86,7 @@ type ProjectConfigNames struct {
 	Profiles    string
 	Params      string
 	Checklist   string
+	Symbols     string
 }
 
 // ConfigNames resolves a project descriptor's declarations against the defaults.
@@ -89,6 +95,12 @@ func (y projectYAML) configNames() ProjectConfigNames {
 		if declared == nil {
 			return fallback
 		}
+		// An explicitly EMPTY declaration is how a project opts a tier out, so it stays empty rather
+		// than going through CleanRel — which turns "" into ".", a name that then fails validation as
+		// "empty" and turns an opt-out into an error.
+		if strings.TrimSpace(*declared) == "" {
+			return ""
+		}
 		return CleanRel(*declared)
 	}
 	return ProjectConfigNames{
@@ -96,6 +108,7 @@ func (y projectYAML) configNames() ProjectConfigNames {
 		Profiles:    pick(y.Profiles, defaultProfiles),
 		Params:      pick(y.Params, defaultParams),
 		Checklist:   pick(y.Checklist, defaultChecklist),
+		Symbols:     pick(y.Symbols, defaultSymbols),
 	}
 }
 
@@ -128,7 +141,7 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 	}
 	names = y.configNames()
-	for field, rel := range map[string]string{"conventions": names.Conventions, "profiles": names.Profiles, "params": names.Params, "checklist": names.Checklist} {
+	for field, rel := range map[string]string{"conventions": names.Conventions, "profiles": names.Profiles, "params": names.Params, "checklist": names.Checklist, "symbols": names.Symbols} {
 		if rel == "" {
 			continue
 		}
@@ -190,6 +203,14 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 	// A design's config carries only its intent (see Design.config): conventions, profiles and
 	// parameters describe the team and live on the Project.
 	out.Config = &webapi.AnalysisConfig{}
+	if y.Symbols == nil {
+		out.Config.SymbolPathUris = []string{defaultSymbols}
+	} else if clean := CleanRel(*y.Symbols); clean != "" {
+		if err := validRel("symbols", clean); err != nil {
+			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
+		}
+		out.Config.SymbolPathUris = []string{clean}
+	}
 	if y.Intent == nil {
 		out.Config.IntentUri = defaultIntent
 	} else if clean := CleanRel(*y.Intent); clean != "" {
@@ -284,6 +305,7 @@ func WriteProjectExtending(w io.Writer, header, id, title, extends string, names
 	if names != nil {
 		y.Conventions, y.Profiles = &names.Conventions, &names.Profiles
 		y.Params, y.Checklist = &names.Params, &names.Checklist
+		y.Symbols = &names.Symbols
 	}
 	return writeDescriptor(w, header, y)
 }
