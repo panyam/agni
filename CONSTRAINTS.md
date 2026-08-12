@@ -389,6 +389,27 @@ carries the config as a message (`OverlayConfig.conventions` is a `NamingConvent
 YAML file the CLI read, a form a browser filled, a registry a deployment queried — stays the caller's
 business.
 
+**Amended (agni issue 224): a config tier that is a CORPUS travels as a ref, resolved through an
+injected port, and a host that cannot resolve one refuses.** The value rule above holds for config
+that is small enough to inline — a naming convention is a message, never a `conventions_path`, and
+that is what lets a filesystem-free host honour one. It never held for interface profiles, seeded
+parameters, or a design's intent, which are DIRECTORIES of many files: a project has always named
+those as URIs that `ProjectConfigLoader` read, so "the service composes with no file I/O" described
+the request tier only, and the schema froze that asymmetry into a request being able to carry one
+config tier out of five.
+
+`AnalysisConfig` is one shape for all of them, carried by a request and declared by a project alike,
+and `ConfigResolver` is the one port that resolves the ref-shaped tiers of either. The no-I/O property
+becomes a property of the DEPLOYMENT rather than of the schema: a host wired with no resolver still
+composes a value-shaped config with no file access, and REFUSES a config naming a directory rather
+than silently dropping the tier. Refusing is the load-bearing half. A dropped tier reports a clean run
+against config that never loaded, which is the silent-pass failure this whole layer exists to prevent,
+and it is the same posture `GetNamingConvention` already took for a host that cannot resolve a stored
+convention.
+
+What is still forbidden is unchanged: ambient process state, and a config tier whose only form is a
+locator when a value would do.
+
 ARTIFACTS are the deliberate exception: a design, a board export, and any large parsed input are named
 by an opaque URI (`mount://<mount>/<path>`) that the injected Loader port resolves (C13), because they
 are megabytes, need format-reader dispatch, and are re-requested across many RPCs. The authority is a

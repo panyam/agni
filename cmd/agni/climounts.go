@@ -326,12 +326,12 @@ func (c cliProjectStore) ResolveDesign(ctx context.Context, uri artifact.URI) (*
 
 type cliProjectConfig struct{}
 
-func (cliProjectConfig) ProjectConfig(ctx context.Context, p *webapi.Project, d *webapi.Design) (service.ProjectConfig, error) {
+func (cliProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
 	ws, err := workspace()
 	if err != nil {
-		return service.ProjectConfig{}, err
+		return service.ResolvedConfig{}, err
 	}
-	return (&osProjectConfig{mounts: ws.Mounts()}).ProjectConfig(ctx, p, d)
+	return (&osProjectConfig{mounts: ws.Mounts()}).ResolveConfig(ctx, cfg, namespace)
 }
 
 // withProjectRules splices the rules a design's project supplies onto a catalog, for the CLI's own
