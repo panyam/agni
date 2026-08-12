@@ -292,6 +292,25 @@ export function newPin(f: NewPinFields, region: Region, page: number, docRef: st
   });
 }
 
+// derivePinId turns a pin's printed name into a spec-local id, suffixing when the obvious id is
+// already taken: NC, then nc2, then nc3.
+//
+// The suffix is not a nicety. A part that prints ONE NAME ON SEVERAL TERMINALS is precisely the case
+// pin binding exists for, and the seeded TXB0104 is one: it prints NC twice. Deriving from the name
+// alone hands those two pins the same id, which two pins may never share, so the author would be
+// walked into a rejected save on the exact part the contract was designed around. Returns "" for an
+// empty name, which the caller treats as "not ready to add" rather than as an id.
+export function derivePinId(name: string, taken: Iterable<string>): string {
+  const base = name.trim().toLowerCase().replace(/\s+/g, "_");
+  if (!base) return "";
+  const used = new Set(taken);
+  if (!used.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base}${n}`;
+    if (!used.has(candidate)) return candidate;
+  }
+}
+
 // newPackage declares one body the part ships in. It carries no provenance: a package is the label a
 // pin number is relative to rather than a claim about the part's behaviour, and param.Validate asks
 // nothing of it beyond a unique id.

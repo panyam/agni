@@ -1,7 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import { LimitKind, PinFunction, type PartSpec, type Parameter, type Pin } from "./gen/agni/v1/param/param_pb.js";
 import { REGION_TYPES, type Region, type RegionType } from "./regions.js";
-import { paramsForRegion, pinsForRegion, pinProblems, type NewParamFields, type NewPinFields } from "./bank.js";
+import { paramsForRegion, pinsForRegion, pinProblems, derivePinId, type NewParamFields, type NewPinFields } from "./bank.js";
 
 // The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike the limit kinds above,
 // because a pin table may genuinely have no type column and a pin whose name and number are known is
@@ -115,13 +115,13 @@ function ParamEditor(props: { onAdd: (f: NewParamFields) => void }) {
 // PinEditor transcribes one pin of a pin table. The id defaults from the name (lowercased) because
 // that is right almost always and the two are edited together; it stays editable because a part that
 // prints one name on several terminals needs distinct ids for exactly those pins.
-function PinEditor(props: { onAdd: (f: NewPinFields) => void }) {
+function PinEditor(props: { onAdd: (f: NewPinFields) => void; taken: () => string[] }) {
   const [id, setId] = createSignal("");
   const [name, setName] = createSignal("");
   const [fn, setFn] = createSignal<PinFunction>(PinFunction.POWER_INPUT);
   const [desc, setDesc] = createSignal("");
   const [idTouched, setIdTouched] = createSignal(false);
-  const effectiveId = (): string => (idTouched() ? id() : name().trim().toLowerCase().replace(/\s+/g, "_"));
+  const effectiveId = (): string => (idTouched() ? id() : derivePinId(name(), props.taken()));
 
   const add = (): void => {
     if (!name().trim() || !effectiveId()) return;
@@ -260,7 +260,7 @@ export function TranscribePanel(props: TranscribeHandlers) {
                 </ul>
               </Show>
               <h4 class="tx-pins-head">Pins</h4>
-              <PinEditor onAdd={props.addPin} />
+              <PinEditor onAdd={props.addPin} taken={() => props.spec().pins.map((x) => x.id)} />
               <ul class="tx-pins">
                 <For each={pinsForRegion(props.spec(), r().id)}>
                   {(pin) => (

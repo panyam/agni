@@ -139,27 +139,21 @@ func MachineComparable(p *parampb.Parameter) bool {
 	return true
 }
 
-// ValidatePins checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
+// validatePinsInto checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
 // numbers that resolve to a declared package with no two pins claiming one number within it, and
-// every Parameter.pin_refs resolving to a declared pin.
+// every Parameter.pin_refs resolving to a declared pin. It returns the errors unjoined so Validate
+// can fold them in with its own rather than nesting a joined error inside a joined error.
 //
-// IT IS DELIBERATELY NARROWER THAN Validate, and the line between them is whether a violation can
-// be an honest work-in-progress state. A spec being transcribed has no MPN yet, carries parameters
-// whose limit kind is still unset, and grows a pin at a time; Validate rejects all of that, which is
-// correct for "is this fit for the corpus" and wrong for "may I save my progress". Nothing here can
-// be a not-yet-filled-in state: two pins sharing an id, or a binding to a pin that does not exist,
-// is wrong the moment it is written and stays wrong.
+// It is split out rather than inlined because the structural rules differ in KIND from the rest of
+// Validate: they are the ones that can never be an honest work-in-progress state. A spec being
+// transcribed has no MPN and carries unclassified rows, which Validate rightly rejects; two pins
+// sharing an id is wrong the moment it is written and stays wrong.
 //
-// That is what lets the workbench enforce this on every save while leaving completeness to an
-// explicit publish. Validate calls the same code, so the two cannot drift.
-//
-// Returns nil for a spec with no pin data at all, which is every spec seeded before pin binding.
-func ValidatePins(spec *parampb.PartSpec) error {
-	return errors.Join(validatePinsInto(spec)...)
-}
-
-// validatePinsInto is the shared body, returning the errors unjoined so Validate can fold them in
-// with its own rather than nesting a joined error inside a joined error.
+// That distinction is currently only documentation. It is UNEXPORTED because nothing outside this
+// package needs the narrow check: the workbench's draft is not gated on it (saving records what an
+// author has, and param.LoadSet reads *.textproto so a draft cannot reach the corpus by sitting on
+// disk), and the editor mirrors these few rules in TS for live feedback. Export it when a caller
+// exists, not before.
 func validatePinsInto(spec *parampb.PartSpec) []error {
 	var errs []error
 	packages := make(map[string]bool, len(spec.Packages))

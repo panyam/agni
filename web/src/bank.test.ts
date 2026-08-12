@@ -24,6 +24,7 @@ import {
   type UiState,
   newPin,
   newPackage,
+  derivePinId,
   pinsForRegion,
   setPinNumber,
   bindParam,
@@ -251,6 +252,27 @@ describe("bank pin authoring", () => {
     bindParam(param, "ghost");
     clean.parameters.push(param);
     expect(pinProblems(clean).join(" ")).toContain("ghost");
+  });
+
+  // The two-NC-pins case, which is the real TXB0104 shape: a part prints one name on several
+  // terminals, and those terminals need distinct ids. Deriving the id from the name alone walks the
+  // author into a duplicate that blocks the save, on exactly the part this contract exists for.
+  it("derivePinId suffixes rather than colliding when a name repeats", () => {
+    expect(derivePinId("VCCA", [])).toBe("vcca");
+    expect(derivePinId("NC", ["nc"])).toBe("nc2");
+    expect(derivePinId("NC", ["nc", "nc2"])).toBe("nc3");
+    expect(derivePinId("Thermal pad", [])).toBe("thermal_pad");
+    expect(derivePinId("", ["x"])).toBe("");
+  });
+
+  it("a derived id never collides with an existing pin, so pinProblems stays clean", () => {
+    const spec = emptySpec("d.pdf", "D");
+    for (const _ of [0, 1, 2]) {
+      const id = derivePinId("NC", spec.pins.map((p) => p.id));
+      spec.pins.push(newPin(pinFields({ id, name: "NC" }), region, 4, spec.docs[0].id));
+    }
+    expect(spec.pins.map((p) => p.id)).toEqual(["nc", "nc2", "nc3"]);
+    expect(pinProblems(spec)).toEqual([]);
   });
 
   it("pinProblems is silent on a spec with no pin data", () => {

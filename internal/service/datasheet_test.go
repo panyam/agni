@@ -207,38 +207,41 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 	}
 }
 
-// A save must reject a spec whose pin data is structurally incoherent, because such a spec reaching
-// disk breaks param.LoadSet for the ENTIRE corpus, not just this file. It must equally NOT reject a
-// spec that is merely incomplete, which is what every spec under transcription is.
-func TestSavePartSpecRejectsIncoherentPinsButNotIncompleteness(t *testing.T) {
+// Saving records what the author has. It is NOT a judgment about whether the spec is any good, so
+// neither incompleteness nor structural incoherence may block a write: a rejected save costs work,
+// and every mutation path would otherwise have to preserve an invariant or strand the document.
+//
+// Nothing downstream needs the gate. The sibling is <stem>.partspec.json and param.LoadSet reads
+// *.textproto, so a draft cannot reach the corpus by sitting on disk; promotion is a separate step
+// and that is where param.Validate belongs.
+func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
+	save := func(spec *parampb.PartSpec) error {
+		_, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: spec})
+		return err
+	}
 
 	// No mpn, no parameters: the ordinary state of a datasheet someone has started transcribing.
-	wip := &parampb.PartSpec{
+	if err := save(&parampb.PartSpec{
 		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
 		Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}},
-	}
-	if _, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: wip}); err != nil {
-		t.Errorf("an incomplete spec must still save; got %v", err)
+	}); err != nil {
+		t.Errorf("an incomplete spec must save; got %v", err)
 	}
 
-	// Two pins sharing an id is wrong at any stage, and a binding cannot be resolved past it.
-	broken := &parampb.PartSpec{
+	// Structurally incoherent too. param.Validate would reject both of these, and that is the right
+	// answer for loading a corpus and the wrong one for persisting a draft.
+	if err := save(&parampb.PartSpec{
 		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
 		Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}, {Id: "vcc", Name: "VCC2"}},
+	}); err != nil {
+		t.Errorf("a duplicate pin id is a problem to SHOW, not one to refuse a save over; got %v", err)
 	}
-	_, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: broken})
-	if !errors.Is(err, ErrInvalidArgument) {
-		t.Errorf("duplicate pin id => %v, want ErrInvalidArgument", err)
-	}
-
-	// A dangling binding is the one that fails silently downstream, so it must fail loudly here.
-	dangling := &parampb.PartSpec{
+	if err := save(&parampb.PartSpec{
 		Docs:       []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
 		Pins:       []*parampb.Pin{{Id: "vcc", Name: "VCC"}},
 		Parameters: []*parampb.Parameter{{Symbol: "VCC", PinRefs: []string{"ghost"}}},
-	}
-	if _, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: dangling}); !errors.Is(err, ErrInvalidArgument) {
-		t.Errorf("dangling pin_refs => %v, want ErrInvalidArgument", err)
+	}); err != nil {
+		t.Errorf("a dangling binding must not strand the document; got %v", err)
 	}
 }

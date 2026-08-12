@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/panyam/agni/internal/artifact"
 
-	"github.com/panyam/agni/datasheet/param"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -149,15 +148,18 @@ func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePar
 	if req.GetSpec() == nil {
 		return nil, fmt.Errorf("%w: SavePartSpec requires a spec", ErrInvalidArgument)
 	}
-	// STRUCTURAL coherence only, never param.Validate. A spec under transcription has no MPN yet and
-	// grows a parameter at a time, all of which Validate rightly rejects for corpus purposes and
-	// none of which should block saving progress. What ValidatePins covers cannot be a
-	// not-yet-filled-in state: a duplicate pin id or a binding to a pin that does not exist is wrong
-	// the moment it is written, and letting it reach disk breaks param.LoadSet for the whole corpus,
-	// not just this file.
-	if err := param.ValidatePins(req.GetSpec()); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
-	}
+	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has; whether it is any good is
+	// a separate question, answered as status and correctable later. Coupling the two lets a judgment
+	// destroy work: every mutation path would have to preserve the invariant or leave a document its
+	// author cannot save and cannot escape through the UI.
+	//
+	// Nothing downstream forces the coupling either. This sibling is <stem>.partspec.json, and
+	// param.LoadSet reads *.textproto only, so an incoherent draft cannot reach the corpus by sitting
+	// on disk. Promotion to a seeded corpus is a separate, deliberate step, and that is where
+	// param.Validate belongs.
+	//
+	// The editor surfaces the same structural problems live (bank.ts pinProblems), which is the right
+	// place for them: advisory, immediate, and unable to cost anyone their work.
 	version, err := s.store.Save(ctx, u, req.GetSpec(), req.GetBaseVersion())
 	if err != nil {
 		if errors.Is(err, ErrConflict) {
