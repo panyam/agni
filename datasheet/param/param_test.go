@@ -351,7 +351,7 @@ func TestStructuralCheckAcceptsWorkInProgressButNotIncoherence(t *testing.T) {
 			Prov:    &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
 		}},
 	}
-	if err := errors.Join(validatePinsInto(wip)...); err != nil {
+	if err := errors.Join(structuralProblems(wip)...); err != nil {
 		t.Errorf("a work-in-progress spec must pass the structural check: %v", err)
 	}
 	if err := Validate(wip); err == nil {
@@ -383,7 +383,7 @@ func TestStructuralCheckAcceptsWorkInProgressButNotIncoherence(t *testing.T) {
 	for _, tc := range cases {
 		spec := proto.Clone(wip).(*parampb.PartSpec)
 		tc.mut(spec)
-		err := errors.Join(validatePinsInto(spec)...)
+		err := errors.Join(structuralProblems(spec)...)
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: structural check = %v, want an error mentioning %q", tc.name, err, tc.want)
 		}
@@ -394,7 +394,7 @@ func TestStructuralCheckAcceptsWorkInProgressButNotIncoherence(t *testing.T) {
 // silent on it rather than inventing a reason to block a save.
 func TestStructuralCheckSilentWithoutPinData(t *testing.T) {
 	for _, name := range []string{"lm1117.textproto", "bss138.textproto"} {
-		if err := errors.Join(validatePinsInto(readFixture(t, name))...); err != nil {
+		if err := errors.Join(structuralProblems(readFixture(t, name))...); err != nil {
 			t.Errorf("%s: structural check: %v", name, err)
 		}
 	}

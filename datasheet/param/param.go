@@ -48,6 +48,52 @@ func Load(r io.Reader) (*parampb.PartSpec, error) {
 // did before pin binding existed, so an older corpus is unaffected (CONSTRAINTS C9).
 func Validate(spec *parampb.PartSpec) error {
 	var errs []error
+	for _, p := range Problems(spec) {
+		errs = append(errs, errors.New(p.Message))
+	}
+	return errors.Join(errs...)
+}
+
+// ProblemKind separates the two questions Problems answers, because a consumer usually wants only
+// one of them. STRUCTURAL means the spec contradicts itself and is wrong now, at any stage of
+// authoring. COMPLETENESS means it is merely unfinished: true of every spec under transcription and
+// only interesting when deciding whether it is ready to be relied on.
+type ProblemKind string
+
+const (
+	ProblemStructural   ProblemKind = "structural"
+	ProblemCompleteness ProblemKind = "completeness"
+)
+
+// Problem is one validation finding, kept separate from its siblings rather than folded into a
+// joined error, so a caller can render them individually and act on the kinds differently.
+type Problem struct {
+	Kind    ProblemKind
+	Message string
+}
+
+// Problems reports everything wrong with a spec, classified. It is the form the workbench consumes:
+// the editor shows structural problems as things to fix now and completeness ones as what still
+// stands between a draft and a corpus. Validate is this, joined, for callers that only need a verdict.
+//
+// An empty result means the spec would load into a corpus today.
+func Problems(spec *parampb.PartSpec) []Problem {
+	var out []Problem
+	for _, e := range structuralProblems(spec) {
+		out = append(out, Problem{Kind: ProblemStructural, Message: e.Error()})
+	}
+	for _, e := range completenessProblems(spec) {
+		out = append(out, Problem{Kind: ProblemCompleteness, Message: e.Error()})
+	}
+	return out
+}
+
+// completenessProblems reports what a spec still lacks to be trusted as corpus data: a join key, and
+// on every parameter a classified limit kind, a value with at least one bound, and resolvable
+// provenance. Every one of these is a legitimate state mid-transcription, which is exactly what
+// separates them from structuralProblems.
+func completenessProblems(spec *parampb.PartSpec) []error {
+	var errs []error
 	if spec.Mpn == "" {
 		errs = append(errs, errors.New("part spec has no mpn (the join key to the design IR)"))
 	}
@@ -58,7 +104,6 @@ func Validate(spec *parampb.PartSpec) error {
 		}
 		docs[d.Id] = true
 	}
-	errs = append(errs, validatePinsInto(spec)...)
 	for i, p := range spec.Pins {
 		id := p.Id
 		if id == "" {
@@ -76,7 +121,6 @@ func Validate(spec *parampb.PartSpec) error {
 			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
 		}
 	}
-
 	for i, p := range spec.Parameters {
 		id := p.Symbol
 		if id == "" {
@@ -99,7 +143,7 @@ func Validate(spec *parampb.PartSpec) error {
 			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
 		}
 	}
-	return errors.Join(errs...)
+	return errs
 }
 
 // UnderSpecified reports whether a parameter's value must not be treated as a plain
@@ -139,7 +183,7 @@ func MachineComparable(p *parampb.Parameter) bool {
 	return true
 }
 
-// validatePinsInto checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
+// structuralProblems checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
 // numbers that resolve to a declared package with no two pins claiming one number within it, and
 // every Parameter.pin_refs resolving to a declared pin. It returns the errors unjoined so Validate
 // can fold them in with its own rather than nesting a joined error inside a joined error.
@@ -154,7 +198,7 @@ func MachineComparable(p *parampb.Parameter) bool {
 // author has, and param.LoadSet reads *.textproto so a draft cannot reach the corpus by sitting on
 // disk), and the editor mirrors these few rules in TS for live feedback. Export it when a caller
 // exists, not before.
-func validatePinsInto(spec *parampb.PartSpec) []error {
+func structuralProblems(spec *parampb.PartSpec) []error {
 	var errs []error
 	packages := make(map[string]bool, len(spec.Packages))
 	for i, pkg := range spec.Packages {

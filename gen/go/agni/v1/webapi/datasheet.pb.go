@@ -23,6 +23,60 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ValidationProblem_Kind int32
+
+const (
+	ValidationProblem_KIND_UNSPECIFIED ValidationProblem_Kind = 0
+	// The spec contradicts itself: two pins sharing an id, one designator claimed twice within a
+	// package, a parameter bound to a pin that is not declared. Wrong at any stage of authoring.
+	ValidationProblem_KIND_STRUCTURAL ValidationProblem_Kind = 1
+	// The spec is merely unfinished: no part number yet, a row with no limit kind, missing
+	// provenance. True of every spec under transcription, and only decisive when promoting one
+	// into a corpus.
+	ValidationProblem_KIND_COMPLETENESS ValidationProblem_Kind = 2
+)
+
+// Enum value maps for ValidationProblem_Kind.
+var (
+	ValidationProblem_Kind_name = map[int32]string{
+		0: "KIND_UNSPECIFIED",
+		1: "KIND_STRUCTURAL",
+		2: "KIND_COMPLETENESS",
+	}
+	ValidationProblem_Kind_value = map[string]int32{
+		"KIND_UNSPECIFIED":  0,
+		"KIND_STRUCTURAL":   1,
+		"KIND_COMPLETENESS": 2,
+	}
+)
+
+func (x ValidationProblem_Kind) Enum() *ValidationProblem_Kind {
+	p := new(ValidationProblem_Kind)
+	*p = x
+	return p
+}
+
+func (x ValidationProblem_Kind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ValidationProblem_Kind) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_datasheet_proto_enumTypes[0].Descriptor()
+}
+
+func (ValidationProblem_Kind) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_datasheet_proto_enumTypes[0]
+}
+
+func (x ValidationProblem_Kind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ValidationProblem_Kind.Descriptor instead.
+func (ValidationProblem_Kind) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{8, 0}
+}
+
 type GetDocumentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri names the datasheet document.
@@ -399,7 +453,18 @@ func (x *SavePartSpecRequest) GetUri() string {
 type SavePartSpecResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// version is the new version after this write; the client keeps it for its next save.
-	Version       string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	// problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE:
+	// saving records what an author has, and whether it is any good is a separate question answered
+	// as status and correctable later. Coupling the two would let a judgement destroy work, and would
+	// oblige every editing action to preserve an invariant or strand the document.
+	//
+	// Returned here rather than from a validate endpoint because the workbench already saves on every
+	// edit, so the judgement rides a request that is happening anyway. It is also the reason the
+	// client does not reimplement these rules: one implementation, in Go, reported back.
+	//
+	// Empty means the spec would load into a corpus today.
+	Problems      []*ValidationProblem `protobuf:"bytes,2,rep,name=problems,proto3" json:"problems,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -441,6 +506,70 @@ func (x *SavePartSpecResponse) GetVersion() string {
 	return ""
 }
 
+func (x *SavePartSpecResponse) GetProblems() []*ValidationProblem {
+	if x != nil {
+		return x.Problems
+	}
+	return nil
+}
+
+// ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
+// kinds differently: STRUCTURAL is wrong now and worth interrupting for, COMPLETENESS is the
+// ordinary state of unfinished work and is better shown as progress toward being publishable.
+type ValidationProblem struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Kind  ValidationProblem_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=agni.v1.webapi.ValidationProblem_Kind" json:"kind,omitempty"`
+	// Human-readable, already naming its subject ("vcca: duplicate pin id"). Not a code: these are
+	// shown to the person who just typed the thing, not dispatched on.
+	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidationProblem) Reset() {
+	*x = ValidationProblem{}
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidationProblem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidationProblem) ProtoMessage() {}
+
+func (x *ValidationProblem) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidationProblem.ProtoReflect.Descriptor instead.
+func (*ValidationProblem) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ValidationProblem) GetKind() ValidationProblem_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return ValidationProblem_KIND_UNSPECIFIED
+}
+
+func (x *ValidationProblem) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 // RegionAnnotation is one human judgement about one region of a datasheet: its routing type, its
 // geometry (only for a user-drawn region — a doc-IR region already has geometry server-side), and
 // the draft parameter assertions transcribed from it. The document it belongs to is the enclosing
@@ -472,7 +601,7 @@ type RegionAnnotation struct {
 
 func (x *RegionAnnotation) Reset() {
 	*x = RegionAnnotation{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -484,7 +613,7 @@ func (x *RegionAnnotation) String() string {
 func (*RegionAnnotation) ProtoMessage() {}
 
 func (x *RegionAnnotation) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -497,7 +626,7 @@ func (x *RegionAnnotation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegionAnnotation.ProtoReflect.Descriptor instead.
 func (*RegionAnnotation) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RegionAnnotation) GetRegionId() string {
@@ -570,7 +699,7 @@ type AnnotationSet struct {
 
 func (x *AnnotationSet) Reset() {
 	*x = AnnotationSet{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +711,7 @@ func (x *AnnotationSet) String() string {
 func (*AnnotationSet) ProtoMessage() {}
 
 func (x *AnnotationSet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +724,7 @@ func (x *AnnotationSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnnotationSet.ProtoReflect.Descriptor instead.
 func (*AnnotationSet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AnnotationSet) GetDocId() string {
@@ -629,7 +758,7 @@ type GetAnnotationsRequest struct {
 
 func (x *GetAnnotationsRequest) Reset() {
 	*x = GetAnnotationsRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -641,7 +770,7 @@ func (x *GetAnnotationsRequest) String() string {
 func (*GetAnnotationsRequest) ProtoMessage() {}
 
 func (x *GetAnnotationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -654,7 +783,7 @@ func (x *GetAnnotationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnnotationsRequest.ProtoReflect.Descriptor instead.
 func (*GetAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetAnnotationsRequest) GetUri() string {
@@ -675,7 +804,7 @@ type GetAnnotationsResponse struct {
 
 func (x *GetAnnotationsResponse) Reset() {
 	*x = GetAnnotationsResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +816,7 @@ func (x *GetAnnotationsResponse) String() string {
 func (*GetAnnotationsResponse) ProtoMessage() {}
 
 func (x *GetAnnotationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +829,7 @@ func (x *GetAnnotationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnnotationsResponse.ProtoReflect.Descriptor instead.
 func (*GetAnnotationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetAnnotationsResponse) GetSets() []*AnnotationSet {
@@ -723,7 +852,7 @@ type SaveAnnotationsRequest struct {
 
 func (x *SaveAnnotationsRequest) Reset() {
 	*x = SaveAnnotationsRequest{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +864,7 @@ func (x *SaveAnnotationsRequest) String() string {
 func (*SaveAnnotationsRequest) ProtoMessage() {}
 
 func (x *SaveAnnotationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +877,7 @@ func (x *SaveAnnotationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveAnnotationsRequest.ProtoReflect.Descriptor instead.
 func (*SaveAnnotationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SaveAnnotationsRequest) GetSet() *AnnotationSet {
@@ -773,7 +902,7 @@ type SaveAnnotationsResponse struct {
 
 func (x *SaveAnnotationsResponse) Reset() {
 	*x = SaveAnnotationsResponse{}
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -785,7 +914,7 @@ func (x *SaveAnnotationsResponse) String() string {
 func (*SaveAnnotationsResponse) ProtoMessage() {}
 
 func (x *SaveAnnotationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_datasheet_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -798,7 +927,7 @@ func (x *SaveAnnotationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveAnnotationsResponse.ProtoReflect.Descriptor instead.
 func (*SaveAnnotationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_datasheet_proto_rawDescGZIP(), []int{14}
 }
 
 var File_agni_v1_webapi_datasheet_proto protoreflect.FileDescriptor
@@ -825,9 +954,17 @@ const file_agni_v1_webapi_datasheet_proto_rawDesc = "" +
 	"\x13SavePartSpecRequest\x12+\n" +
 	"\x04spec\x18\x01 \x01(\v2\x17.agni.v1.param.PartSpecR\x04spec\x12!\n" +
 	"\fbase_version\x18\x02 \x01(\tR\vbaseVersion\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"0\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"o\n" +
 	"\x14SavePartSpecResponse\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion\"\x93\x02\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12=\n" +
+	"\bproblems\x18\x02 \x03(\v2!.agni.v1.webapi.ValidationProblemR\bproblems\"\xb3\x01\n" +
+	"\x11ValidationProblem\x12:\n" +
+	"\x04kind\x18\x01 \x01(\x0e2&.agni.v1.webapi.ValidationProblem.KindR\x04kind\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"H\n" +
+	"\x04Kind\x12\x14\n" +
+	"\x10KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fKIND_STRUCTURAL\x10\x01\x12\x15\n" +
+	"\x11KIND_COMPLETENESS\x10\x02\"\x93\x02\n" +
 	"\x10RegionAnnotation\x12\x1b\n" +
 	"\tregion_id\x18\x01 \x01(\tR\bregionId\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12*\n" +
@@ -872,54 +1009,59 @@ func file_agni_v1_webapi_datasheet_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_datasheet_proto_rawDescData
 }
 
-var file_agni_v1_webapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agni_v1_webapi_datasheet_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_agni_v1_webapi_datasheet_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agni_v1_webapi_datasheet_proto_goTypes = []any{
-	(*GetDocumentRequest)(nil),      // 0: agni.v1.webapi.GetDocumentRequest
-	(*GetDocumentResponse)(nil),     // 1: agni.v1.webapi.GetDocumentResponse
-	(*ExtractDocIRRequest)(nil),     // 2: agni.v1.webapi.ExtractDocIRRequest
-	(*ExtractDocIRResponse)(nil),    // 3: agni.v1.webapi.ExtractDocIRResponse
-	(*GetPartSpecRequest)(nil),      // 4: agni.v1.webapi.GetPartSpecRequest
-	(*GetPartSpecResponse)(nil),     // 5: agni.v1.webapi.GetPartSpecResponse
-	(*SavePartSpecRequest)(nil),     // 6: agni.v1.webapi.SavePartSpecRequest
-	(*SavePartSpecResponse)(nil),    // 7: agni.v1.webapi.SavePartSpecResponse
-	(*RegionAnnotation)(nil),        // 8: agni.v1.webapi.RegionAnnotation
-	(*AnnotationSet)(nil),           // 9: agni.v1.webapi.AnnotationSet
-	(*GetAnnotationsRequest)(nil),   // 10: agni.v1.webapi.GetAnnotationsRequest
-	(*GetAnnotationsResponse)(nil),  // 11: agni.v1.webapi.GetAnnotationsResponse
-	(*SaveAnnotationsRequest)(nil),  // 12: agni.v1.webapi.SaveAnnotationsRequest
-	(*SaveAnnotationsResponse)(nil), // 13: agni.v1.webapi.SaveAnnotationsResponse
-	(*doc.Document)(nil),            // 14: agni.v1.doc.Document
-	(*param.PartSpec)(nil),          // 15: agni.v1.param.PartSpec
-	(*doc.BBox)(nil),                // 16: agni.v1.doc.BBox
-	(*param.Parameter)(nil),         // 17: agni.v1.param.Parameter
+	(ValidationProblem_Kind)(0),     // 0: agni.v1.webapi.ValidationProblem.Kind
+	(*GetDocumentRequest)(nil),      // 1: agni.v1.webapi.GetDocumentRequest
+	(*GetDocumentResponse)(nil),     // 2: agni.v1.webapi.GetDocumentResponse
+	(*ExtractDocIRRequest)(nil),     // 3: agni.v1.webapi.ExtractDocIRRequest
+	(*ExtractDocIRResponse)(nil),    // 4: agni.v1.webapi.ExtractDocIRResponse
+	(*GetPartSpecRequest)(nil),      // 5: agni.v1.webapi.GetPartSpecRequest
+	(*GetPartSpecResponse)(nil),     // 6: agni.v1.webapi.GetPartSpecResponse
+	(*SavePartSpecRequest)(nil),     // 7: agni.v1.webapi.SavePartSpecRequest
+	(*SavePartSpecResponse)(nil),    // 8: agni.v1.webapi.SavePartSpecResponse
+	(*ValidationProblem)(nil),       // 9: agni.v1.webapi.ValidationProblem
+	(*RegionAnnotation)(nil),        // 10: agni.v1.webapi.RegionAnnotation
+	(*AnnotationSet)(nil),           // 11: agni.v1.webapi.AnnotationSet
+	(*GetAnnotationsRequest)(nil),   // 12: agni.v1.webapi.GetAnnotationsRequest
+	(*GetAnnotationsResponse)(nil),  // 13: agni.v1.webapi.GetAnnotationsResponse
+	(*SaveAnnotationsRequest)(nil),  // 14: agni.v1.webapi.SaveAnnotationsRequest
+	(*SaveAnnotationsResponse)(nil), // 15: agni.v1.webapi.SaveAnnotationsResponse
+	(*doc.Document)(nil),            // 16: agni.v1.doc.Document
+	(*param.PartSpec)(nil),          // 17: agni.v1.param.PartSpec
+	(*doc.BBox)(nil),                // 18: agni.v1.doc.BBox
+	(*param.Parameter)(nil),         // 19: agni.v1.param.Parameter
 }
 var file_agni_v1_webapi_datasheet_proto_depIdxs = []int32{
-	14, // 0: agni.v1.webapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
-	14, // 1: agni.v1.webapi.ExtractDocIRResponse.document:type_name -> agni.v1.doc.Document
-	15, // 2: agni.v1.webapi.GetPartSpecResponse.spec:type_name -> agni.v1.param.PartSpec
-	15, // 3: agni.v1.webapi.SavePartSpecRequest.spec:type_name -> agni.v1.param.PartSpec
-	16, // 4: agni.v1.webapi.RegionAnnotation.bbox:type_name -> agni.v1.doc.BBox
-	17, // 5: agni.v1.webapi.RegionAnnotation.draft_params:type_name -> agni.v1.param.Parameter
-	8,  // 6: agni.v1.webapi.AnnotationSet.annotations:type_name -> agni.v1.webapi.RegionAnnotation
-	9,  // 7: agni.v1.webapi.GetAnnotationsResponse.sets:type_name -> agni.v1.webapi.AnnotationSet
-	9,  // 8: agni.v1.webapi.SaveAnnotationsRequest.set:type_name -> agni.v1.webapi.AnnotationSet
-	0,  // 9: agni.v1.webapi.DatasheetService.GetDocument:input_type -> agni.v1.webapi.GetDocumentRequest
-	4,  // 10: agni.v1.webapi.DatasheetService.GetPartSpec:input_type -> agni.v1.webapi.GetPartSpecRequest
-	6,  // 11: agni.v1.webapi.DatasheetService.SavePartSpec:input_type -> agni.v1.webapi.SavePartSpecRequest
-	2,  // 12: agni.v1.webapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.webapi.ExtractDocIRRequest
-	10, // 13: agni.v1.webapi.DatasheetService.GetAnnotations:input_type -> agni.v1.webapi.GetAnnotationsRequest
-	12, // 14: agni.v1.webapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.webapi.SaveAnnotationsRequest
-	1,  // 15: agni.v1.webapi.DatasheetService.GetDocument:output_type -> agni.v1.webapi.GetDocumentResponse
-	5,  // 16: agni.v1.webapi.DatasheetService.GetPartSpec:output_type -> agni.v1.webapi.GetPartSpecResponse
-	7,  // 17: agni.v1.webapi.DatasheetService.SavePartSpec:output_type -> agni.v1.webapi.SavePartSpecResponse
-	3,  // 18: agni.v1.webapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.webapi.ExtractDocIRResponse
-	11, // 19: agni.v1.webapi.DatasheetService.GetAnnotations:output_type -> agni.v1.webapi.GetAnnotationsResponse
-	13, // 20: agni.v1.webapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.webapi.SaveAnnotationsResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	16, // 0: agni.v1.webapi.GetDocumentResponse.document:type_name -> agni.v1.doc.Document
+	16, // 1: agni.v1.webapi.ExtractDocIRResponse.document:type_name -> agni.v1.doc.Document
+	17, // 2: agni.v1.webapi.GetPartSpecResponse.spec:type_name -> agni.v1.param.PartSpec
+	17, // 3: agni.v1.webapi.SavePartSpecRequest.spec:type_name -> agni.v1.param.PartSpec
+	9,  // 4: agni.v1.webapi.SavePartSpecResponse.problems:type_name -> agni.v1.webapi.ValidationProblem
+	0,  // 5: agni.v1.webapi.ValidationProblem.kind:type_name -> agni.v1.webapi.ValidationProblem.Kind
+	18, // 6: agni.v1.webapi.RegionAnnotation.bbox:type_name -> agni.v1.doc.BBox
+	19, // 7: agni.v1.webapi.RegionAnnotation.draft_params:type_name -> agni.v1.param.Parameter
+	10, // 8: agni.v1.webapi.AnnotationSet.annotations:type_name -> agni.v1.webapi.RegionAnnotation
+	11, // 9: agni.v1.webapi.GetAnnotationsResponse.sets:type_name -> agni.v1.webapi.AnnotationSet
+	11, // 10: agni.v1.webapi.SaveAnnotationsRequest.set:type_name -> agni.v1.webapi.AnnotationSet
+	1,  // 11: agni.v1.webapi.DatasheetService.GetDocument:input_type -> agni.v1.webapi.GetDocumentRequest
+	5,  // 12: agni.v1.webapi.DatasheetService.GetPartSpec:input_type -> agni.v1.webapi.GetPartSpecRequest
+	7,  // 13: agni.v1.webapi.DatasheetService.SavePartSpec:input_type -> agni.v1.webapi.SavePartSpecRequest
+	3,  // 14: agni.v1.webapi.DatasheetService.ExtractDocIR:input_type -> agni.v1.webapi.ExtractDocIRRequest
+	12, // 15: agni.v1.webapi.DatasheetService.GetAnnotations:input_type -> agni.v1.webapi.GetAnnotationsRequest
+	14, // 16: agni.v1.webapi.DatasheetService.SaveAnnotations:input_type -> agni.v1.webapi.SaveAnnotationsRequest
+	2,  // 17: agni.v1.webapi.DatasheetService.GetDocument:output_type -> agni.v1.webapi.GetDocumentResponse
+	6,  // 18: agni.v1.webapi.DatasheetService.GetPartSpec:output_type -> agni.v1.webapi.GetPartSpecResponse
+	8,  // 19: agni.v1.webapi.DatasheetService.SavePartSpec:output_type -> agni.v1.webapi.SavePartSpecResponse
+	4,  // 20: agni.v1.webapi.DatasheetService.ExtractDocIR:output_type -> agni.v1.webapi.ExtractDocIRResponse
+	13, // 21: agni.v1.webapi.DatasheetService.GetAnnotations:output_type -> agni.v1.webapi.GetAnnotationsResponse
+	15, // 22: agni.v1.webapi.DatasheetService.SaveAnnotations:output_type -> agni.v1.webapi.SaveAnnotationsResponse
+	17, // [17:23] is the sub-list for method output_type
+	11, // [11:17] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_datasheet_proto_init() }
@@ -927,19 +1069,20 @@ func file_agni_v1_webapi_datasheet_proto_init() {
 	if File_agni_v1_webapi_datasheet_proto != nil {
 		return
 	}
-	file_agni_v1_webapi_datasheet_proto_msgTypes[8].OneofWrappers = []any{}
+	file_agni_v1_webapi_datasheet_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_datasheet_proto_rawDesc), len(file_agni_v1_webapi_datasheet_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   14,
+			NumEnums:      1,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_agni_v1_webapi_datasheet_proto_goTypes,
 		DependencyIndexes: file_agni_v1_webapi_datasheet_proto_depIdxs,
+		EnumInfos:         file_agni_v1_webapi_datasheet_proto_enumTypes,
 		MessageInfos:      file_agni_v1_webapi_datasheet_proto_msgTypes,
 	}.Build()
 	File_agni_v1_webapi_datasheet_proto = out.File

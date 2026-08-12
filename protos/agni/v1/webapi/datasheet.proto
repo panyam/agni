@@ -119,6 +119,38 @@ message SavePartSpecRequest {
 message SavePartSpecResponse {
   // version is the new version after this write; the client keeps it for its next save.
   string version = 1;
+
+  // problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE:
+  // saving records what an author has, and whether it is any good is a separate question answered
+  // as status and correctable later. Coupling the two would let a judgement destroy work, and would
+  // oblige every editing action to preserve an invariant or strand the document.
+  //
+  // Returned here rather than from a validate endpoint because the workbench already saves on every
+  // edit, so the judgement rides a request that is happening anyway. It is also the reason the
+  // client does not reimplement these rules: one implementation, in Go, reported back.
+  //
+  // Empty means the spec would load into a corpus today.
+  repeated ValidationProblem problems = 2;
+}
+
+// ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
+// kinds differently: STRUCTURAL is wrong now and worth interrupting for, COMPLETENESS is the
+// ordinary state of unfinished work and is better shown as progress toward being publishable.
+message ValidationProblem {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    // The spec contradicts itself: two pins sharing an id, one designator claimed twice within a
+    // package, a parameter bound to a pin that is not declared. Wrong at any stage of authoring.
+    KIND_STRUCTURAL = 1;
+    // The spec is merely unfinished: no part number yet, a row with no limit kind, missing
+    // provenance. True of every spec under transcription, and only decisive when promoting one
+    // into a corpus.
+    KIND_COMPLETENESS = 2;
+  }
+  Kind kind = 1;
+  // Human-readable, already naming its subject ("vcca: duplicate pin id"). Not a code: these are
+  // shown to the person who just typed the thing, not dispatched on.
+  string message = 2;
 }
 
 // RegionAnnotation is one human judgement about one region of a datasheet: its routing type, its

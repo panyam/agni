@@ -5,6 +5,7 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Document } from "./gen/agni/v1/doc/doc_pb.js";
 import type { PartSpec, Parameter, Pin } from "./gen/agni/v1/param/param_pb.js";
+import type { ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
 import { loadPdf, renderPage, rawDatasheetUrl, type PDFDocumentProxy, type RenderedPage } from "./pdfrender.js";
 import {
@@ -205,6 +206,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     setSelected(regionId);
   };
 
+  // problems is the server's verdict on the last save. It starts empty, which reads as "nothing
+  // known yet" rather than "nothing wrong" — correct, because no save has happened.
+  const [problems, setProblems] = createSignal<ValidationProblem[]>([]);
+
   const serverSave = async (): Promise<void> => {
     const s = props.state();
     if (!s || !spec) return;
@@ -212,6 +217,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     try {
       const resp = await client.savePartSpec({ uri: artifactUri(s.mount, s.path), spec, baseVersion: version });
       version = resp.version;
+      // The judgement rides the save. The client does NOT recompute these: one implementation lives
+      // in Go (param.Problems) and this renders what it said, so the two cannot drift.
+      setProblems(resp.problems);
+      setRev((v) => v + 1);
     } catch (e) {
       if (e instanceof ConnectError && e.code === Code.Aborted) {
         const resp = await client.getPartSpec({ uri: artifactUri(s.mount, s.path) });
@@ -402,6 +411,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     spec: () => {
       rev();
       return spec ?? PLACEHOLDER_SPEC;
+    },
+    problems: (): ValidationProblem[] => {
+      rev();
+      return problems();
     },
     region: selectedRegion,
     regionType: (): RegionType => {

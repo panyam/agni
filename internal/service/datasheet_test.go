@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/panyam/agni/internal/artifact"
+	"strings"
 	"testing"
 
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
@@ -243,5 +244,55 @@ func TestSavePartSpecRecordsWhateverTheAuthorHas(t *testing.T) {
 		Parameters: []*parampb.Parameter{{Symbol: "VCC", PinRefs: []string{"ghost"}}},
 	}); err != nil {
 		t.Errorf("a dangling binding must not strand the document; got %v", err)
+	}
+}
+
+// The save response is where the editor learns what is wrong, so the two kinds have to arrive
+// distinguishable: structural problems are worth interrupting for, completeness ones are the
+// ordinary state of unfinished work.
+func TestSavePartSpecReportsClassifiedProblems(t *testing.T) {
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
+	resp, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{
+		Uri: "mount://m/d",
+		Spec: &parampb.PartSpec{ // no mpn (incomplete) AND a duplicate pin id (incoherent)
+			Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
+			Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}, {Id: "vcc", Name: "VCC2"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("save must succeed regardless of problems: %v", err)
+	}
+	byKind := map[webapi.ValidationProblem_Kind][]string{}
+	for _, p := range resp.GetProblems() {
+		byKind[p.GetKind()] = append(byKind[p.GetKind()], p.GetMessage())
+	}
+	if got := strings.Join(byKind[webapi.ValidationProblem_KIND_STRUCTURAL], " "); !strings.Contains(got, "duplicate pin id") {
+		t.Errorf("structural problems = %q, want the duplicate pin id", got)
+	}
+	if got := strings.Join(byKind[webapi.ValidationProblem_KIND_COMPLETENESS], " "); !strings.Contains(got, "mpn") {
+		t.Errorf("completeness problems = %q, want the missing mpn", got)
+	}
+	// A spec good enough to load reports nothing, so the editor shows an empty panel rather than
+	// having to filter noise.
+	clean, _ := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: cleanSpec()})
+	if n := len(clean.GetProblems()); n != 0 {
+		t.Errorf("a corpus-ready spec reports %d problems, want 0: %v", n, clean.GetProblems())
+	}
+}
+
+// cleanSpec is the minimum spec param.Validate accepts, so the no-problems case is asserted against
+// something real rather than against an empty message.
+func cleanSpec() *parampb.PartSpec {
+	f := func(v float64) *float64 { return &v }
+	return &parampb.PartSpec{
+		Mpn:  "ACME-1",
+		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
+		Parameters: []*parampb.Parameter{{
+			Symbol:    "VIN",
+			LimitKind: parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX,
+			Value:     &parampb.RangeValue{Max: f(20)},
+			Unit:      "V",
+			Prov:      &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
+		}},
 	}
 }

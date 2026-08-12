@@ -1,7 +1,8 @@
 import { createSignal, For, Show } from "solid-js";
 import { LimitKind, PinFunction, type PartSpec, type Parameter, type Pin } from "./gen/agni/v1/param/param_pb.js";
 import { REGION_TYPES, type Region, type RegionType } from "./regions.js";
-import { paramsForRegion, pinsForRegion, pinProblems, derivePinId, type NewParamFields, type NewPinFields } from "./bank.js";
+import { paramsForRegion, pinsForRegion, derivePinId, type NewParamFields, type NewPinFields } from "./bank.js";
+import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 
 // The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike the limit kinds above,
 // because a pin table may genuinely have no type column and a pin whose name and number are known is
@@ -44,6 +45,8 @@ export interface TranscribeHandlers {
   addPackage: (id: string, name: string, suffix: string) => void;
   deletePackage: (id: string) => void;
   toggleBinding: (p: Parameter, pinId: string) => void;
+  // The server's verdict on the last save. The editor renders it and never recomputes it.
+  problems: () => ValidationProblem[];
 }
 
 // numOrUndef parses an editor numeric field, leaving it unset (RangeValue has explicit presence) for
@@ -152,6 +155,13 @@ function PackageList(props: { spec: () => PartSpec; onAdd: (id: string, name: st
   const [id, setId] = createSignal("");
   const [name, setName] = createSignal("");
   const [suffix, setSuffix] = createSignal("");
+  // Deleting a package takes every designator recorded against it, so it asks first. The confirm is
+  // INLINE rather than window.confirm: a native dialog blocks the page, which breaks browser
+  // automation outright, and it has to name the count anyway — "delete" and "delete and lose 14 pin
+  // numbers" are different decisions.
+  const [confirming, setConfirming] = createSignal("");
+  const numbersIn = (pkgId: string): number =>
+    props.spec().pins.reduce((n, pin) => n + pin.numbers.filter((x) => x.packageRef === pkgId).length, 0);
   const add = (): void => {
     if (!id().trim()) return;
     props.onAdd(id(), name(), suffix());
@@ -166,7 +176,19 @@ function PackageList(props: { spec: () => PartSpec; onAdd: (id: string, name: st
             <li class="tx-row">
               <span class="tx-pkg-id">{p.id}</span>
               <span class="tx-pkg-name">{p.name}</span>
-              <button class="tx-del" title="delete package" onClick={() => props.onDelete(p.id)}>×</button>
+              <Show
+                when={confirming() === p.id}
+                fallback={<button class="tx-del" title="delete package" onClick={() => setConfirming(p.id)}>×</button>}
+              >
+                <button
+                  class="tx-confirm"
+                  title={`permanently drops ${numbersIn(p.id)} designator(s)`}
+                  onClick={() => { props.onDelete(p.id); setConfirming(""); }}
+                >
+                  drop {numbersIn(p.id)} number{numbersIn(p.id) === 1 ? "" : "s"}?
+                </button>
+                <button class="tx-cancel" onClick={() => setConfirming("")}>cancel</button>
+              </Show>
             </li>
           )}
         </For>
@@ -195,12 +217,27 @@ export function TranscribePanel(props: TranscribeHandlers) {
         <label class="tx-field">Device class<input placeholder="ldo" value={props.spec().deviceClass} onInput={(e) => props.setMeta({ deviceClass: e.currentTarget.value })} /></label>
         <PackageList spec={props.spec} onAdd={props.addPackage} onDelete={props.deletePackage} />
       </div>
-      {/* The structural problems a save would be rejected for, shown while they are being created.
-          Silent on a merely incomplete spec, which is what every spec under transcription is. */}
-      <Show when={pinProblems(props.spec()).length}>
+      {/* The server's verdict on the last save, split by kind. Structural problems are things to
+          fix; completeness ones are what still stands between this draft and a corpus, so they read
+          as a checklist rather than as errors. Neither blocks anything. */}
+      <Show when={props.problems().some((p) => p.kind === ValidationProblem_Kind.STRUCTURAL)}>
         <ul class="tx-problems">
-          <For each={pinProblems(props.spec())}>{(msg) => <li>{msg}</li>}</For>
+          <For each={props.problems().filter((p) => p.kind === ValidationProblem_Kind.STRUCTURAL)}>
+            {(p) => <li>{p.message}</li>}
+          </For>
         </ul>
+      </Show>
+      <Show when={props.problems().some((p) => p.kind === ValidationProblem_Kind.COMPLETENESS)}>
+        <details class="tx-todo">
+          <summary>
+            {props.problems().filter((p) => p.kind === ValidationProblem_Kind.COMPLETENESS).length} to fix before this can be seeded
+          </summary>
+          <ul>
+            <For each={props.problems().filter((p) => p.kind === ValidationProblem_Kind.COMPLETENESS)}>
+              {(p) => <li>{p.message}</li>}
+            </For>
+          </ul>
+        </details>
       </Show>
       <Show when={props.region()} fallback={<div class="tx-hint">Select a region, or drag on the page to draw one, to transcribe it.</div>}>
         {(r) => (

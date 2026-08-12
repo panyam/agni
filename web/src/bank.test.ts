@@ -29,7 +29,6 @@ import {
   setPinNumber,
   bindParam,
   unbindParam,
-  pinProblems,
 } from "./bank.js";
 
 const bbox = (): BBox => ({ x: 0, y: 0, width: 1, height: 1 }) as unknown as BBox;
@@ -237,23 +236,7 @@ describe("bank pin authoring", () => {
 
   // The editor's own guard, mirroring the structural half of param.Validate so the author sees a
   // problem before saving rather than as a rejected write.
-  it("pinProblems names exactly what the server would reject", () => {
-    const spec = emptySpec("d.pdf", "D");
-    spec.packages.push(newPackage("pw", "PW (TSSOP-14)"));
-    spec.pins.push(newPin(pinFields(), region, 4, spec.docs[0].id));
-    expect(pinProblems(spec)).toEqual([]);
-
-    spec.pins.push(newPin(pinFields({ name: "VCCA (again)" }), region, 4, spec.docs[0].id));
-    expect(pinProblems(spec).join(" ")).toContain("vcca");
-
-    const clean = emptySpec("d.pdf", "D");
-    clean.pins.push(newPin(pinFields(), region, 4, clean.docs[0].id));
-    const param = newParameter(fields(), region, 4, clean.docs[0].id);
-    bindParam(param, "ghost");
-    clean.parameters.push(param);
-    expect(pinProblems(clean).join(" ")).toContain("ghost");
-  });
-
+  
   // The two-NC-pins case, which is the real TXB0104 shape: a part prints one name on several
   // terminals, and those terminals need distinct ids. Deriving the id from the name alone walks the
   // author into a duplicate that blocks the save, on exactly the part this contract exists for.
@@ -265,19 +248,14 @@ describe("bank pin authoring", () => {
     expect(derivePinId("", ["x"])).toBe("");
   });
 
-  it("a derived id never collides with an existing pin, so pinProblems stays clean", () => {
+  it("a derived id never collides with an existing pin, so nothing collides", () => {
     const spec = emptySpec("d.pdf", "D");
     for (const _ of [0, 1, 2]) {
       const id = derivePinId("NC", spec.pins.map((p) => p.id));
       spec.pins.push(newPin(pinFields({ id, name: "NC" }), region, 4, spec.docs[0].id));
     }
     expect(spec.pins.map((p) => p.id)).toEqual(["nc", "nc2", "nc3"]);
-    expect(pinProblems(spec)).toEqual([]);
+    expect(new Set(spec.pins.map((p) => p.id)).size).toBe(3); // no collision to report
   });
 
-  it("pinProblems is silent on a spec with no pin data", () => {
-    const spec = emptySpec("d.pdf", "D");
-    spec.parameters.push(newParameter(fields(), region, 4, spec.docs[0].id));
-    expect(pinProblems(spec)).toEqual([]);
   });
-});
