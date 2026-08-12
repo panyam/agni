@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"google.golang.org/protobuf/proto"
+
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
@@ -333,3 +335,66 @@ func TestValidateAcceptsPinlessSpecs(t *testing.T) {
 }
 
 func f64(v float64) *float64 { return &v }
+
+// ValidatePins and Validate ask different questions, and the workbench depends on the difference:
+// a spec being transcribed has no MPN and half-filled parameters, which Validate rightly rejects and
+// which must not block a save. Nothing ValidatePins checks can be a not-yet-filled-in state.
+func TestValidatePinsAcceptsWorkInProgressButNotIncoherence(t *testing.T) {
+	// The shape bank.ts emptySpec() produces, plus one hand-added pin: no mpn, no parameters.
+	wip := &parampb.PartSpec{
+		Docs:     []*parampb.SourceDoc{{Id: "ds", Title: "Some datasheet"}},
+		Packages: []*parampb.Package{{Id: "pw", Name: "PW"}},
+		Pins: []*parampb.Pin{{
+			Id: "vcc", Name: "VCC",
+			Numbers: []*parampb.PinNumber{{PackageRef: "pw", Number: "1"}},
+			Prov:    &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
+		}},
+	}
+	if err := ValidatePins(wip); err != nil {
+		t.Errorf("a work-in-progress spec must be saveable; ValidatePins: %v", err)
+	}
+	if err := Validate(wip); err == nil {
+		t.Error("Validate must still reject it: no mpn means it cannot join to a design")
+	}
+
+	cases := []struct {
+		name string
+		mut  func(*parampb.PartSpec)
+		want string
+	}{
+		{"two pins claiming one id", func(s *parampb.PartSpec) {
+			s.Pins = append(s.Pins, &parampb.Pin{Id: "vcc", Name: "VCC2"})
+		}, "duplicate"},
+		{"a number claimed twice in one package", func(s *parampb.PartSpec) {
+			s.Pins = append(s.Pins, &parampb.Pin{Id: "gnd", Name: "GND",
+				Numbers: []*parampb.PinNumber{{PackageRef: "pw", Number: "1"}}})
+		}, "already claimed"},
+		{"a number in an undeclared package", func(s *parampb.PartSpec) {
+			s.Pins[0].Numbers[0].PackageRef = "nope"
+		}, "package_ref"},
+		{"a binding to a pin that does not exist", func(s *parampb.PartSpec) {
+			s.Parameters = append(s.Parameters, &parampb.Parameter{Symbol: "VCC", PinRefs: []string{"ghost"}})
+		}, "pin_refs"},
+		{"two packages claiming one id", func(s *parampb.PartSpec) {
+			s.Packages = append(s.Packages, &parampb.Package{Id: "pw", Name: "other"})
+		}, "duplicate"},
+	}
+	for _, tc := range cases {
+		spec := proto.Clone(wip).(*parampb.PartSpec)
+		tc.mut(spec)
+		err := ValidatePins(spec)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: ValidatePins = %v, want an error mentioning %q", tc.name, err, tc.want)
+		}
+	}
+}
+
+// A spec with no pin data at all is every spec seeded before pin binding; the narrow check must be
+// silent on it rather than inventing a reason to block a save.
+func TestValidatePinsSilentWithoutPinData(t *testing.T) {
+	for _, name := range []string{"lm1117.textproto", "bss138.textproto"} {
+		if err := ValidatePins(readFixture(t, name)); err != nil {
+			t.Errorf("%s: ValidatePins: %v", name, err)
+		}
+	}
+}

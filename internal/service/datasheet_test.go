@@ -206,3 +206,39 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 		t.Errorf("union = %d sets, want 2", len(resp.GetSets()))
 	}
 }
+
+// A save must reject a spec whose pin data is structurally incoherent, because such a spec reaching
+// disk breaks param.LoadSet for the ENTIRE corpus, not just this file. It must equally NOT reject a
+// spec that is merely incomplete, which is what every spec under transcription is.
+func TestSavePartSpecRejectsIncoherentPinsButNotIncompleteness(t *testing.T) {
+	svc := NewDatasheetService(&fakeDocLoader{}, &fakePartSpecStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{})
+
+	// No mpn, no parameters: the ordinary state of a datasheet someone has started transcribing.
+	wip := &parampb.PartSpec{
+		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
+		Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}},
+	}
+	if _, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: wip}); err != nil {
+		t.Errorf("an incomplete spec must still save; got %v", err)
+	}
+
+	// Two pins sharing an id is wrong at any stage, and a binding cannot be resolved past it.
+	broken := &parampb.PartSpec{
+		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
+		Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}, {Id: "vcc", Name: "VCC2"}},
+	}
+	_, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: broken})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Errorf("duplicate pin id => %v, want ErrInvalidArgument", err)
+	}
+
+	// A dangling binding is the one that fails silently downstream, so it must fail loudly here.
+	dangling := &parampb.PartSpec{
+		Docs:       []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
+		Pins:       []*parampb.Pin{{Id: "vcc", Name: "VCC"}},
+		Parameters: []*parampb.Parameter{{Symbol: "VCC", PinRefs: []string{"ghost"}}},
+	}
+	if _, err := svc.SavePartSpec(context.Background(), &webapi.SavePartSpecRequest{Uri: "mount://m/d", Spec: dangling}); !errors.Is(err, ErrInvalidArgument) {
+		t.Errorf("dangling pin_refs => %v, want ErrInvalidArgument", err)
+	}
+}

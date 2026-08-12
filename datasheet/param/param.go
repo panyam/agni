@@ -58,51 +58,14 @@ func Validate(spec *parampb.PartSpec) error {
 		}
 		docs[d.Id] = true
 	}
-	packages := make(map[string]bool, len(spec.Packages))
-	for i, pkg := range spec.Packages {
-		if pkg.Id == "" {
-			errs = append(errs, fmt.Errorf("packages[%d] has no id", i))
-			continue
-		}
-		if packages[pkg.Id] {
-			errs = append(errs, fmt.Errorf("packages[%d]: duplicate package id %q", i, pkg.Id))
-		}
-		packages[pkg.Id] = true
-	}
-
-	pins := make(map[string]bool, len(spec.Pins))
-	// A pin NUMBER belongs to one pin within one package. Names may repeat (that is the
-	// multi-supply case pin binding exists for) but a package cannot send one terminal to
-	// two pins, and a corpus that says otherwise would make the tie-breaking channel
-	// unusable.
-	claimed := map[string]string{}
+	errs = append(errs, validatePinsInto(spec)...)
 	for i, p := range spec.Pins {
 		id := p.Id
 		if id == "" {
 			id = fmt.Sprintf("pins[%d]", i)
-			errs = append(errs, fmt.Errorf("%s has no id; a parameter cannot bind to it", id))
-		} else {
-			if pins[p.Id] {
-				errs = append(errs, fmt.Errorf("%s: duplicate pin id", id))
-			}
-			pins[p.Id] = true
 		}
 		if p.Name == "" {
 			errs = append(errs, fmt.Errorf("%s: no name; the name is the channel that survives repackaging", id))
-		}
-		for j, n := range p.Numbers {
-			if n.Number == "" {
-				errs = append(errs, fmt.Errorf("%s: numbers[%d] has no number", id, j))
-			}
-			if !packages[n.PackageRef] {
-				errs = append(errs, fmt.Errorf("%s: numbers[%d] package_ref %q does not resolve to a declared package", id, j, n.PackageRef))
-				continue
-			}
-			key := n.PackageRef + "\x00" + normalizePinNumber(n.Number)
-			if prev, dup := claimed[key]; dup {
-				errs = append(errs, fmt.Errorf("%s: number %q in package %q is already claimed by pin %q", id, n.Number, n.PackageRef, prev))
-			}
-			claimed[key] = id
 		}
 		switch {
 		case p.Prov == nil:
@@ -118,11 +81,6 @@ func Validate(spec *parampb.PartSpec) error {
 		id := p.Symbol
 		if id == "" {
 			id = fmt.Sprintf("parameters[%d]", i)
-		}
-		for _, ref := range p.PinRefs {
-			if !pins[ref] {
-				errs = append(errs, fmt.Errorf("%s: pin_refs %q does not resolve to a declared pin", id, ref))
-			}
 		}
 		if p.LimitKind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
 			errs = append(errs, fmt.Errorf("%s: limit_kind is unspecified; classify or drop", id))
@@ -179,4 +137,86 @@ func MachineComparable(p *parampb.Parameter) bool {
 		}
 	}
 	return true
+}
+
+// ValidatePins checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
+// numbers that resolve to a declared package with no two pins claiming one number within it, and
+// every Parameter.pin_refs resolving to a declared pin.
+//
+// IT IS DELIBERATELY NARROWER THAN Validate, and the line between them is whether a violation can
+// be an honest work-in-progress state. A spec being transcribed has no MPN yet, carries parameters
+// whose limit kind is still unset, and grows a pin at a time; Validate rejects all of that, which is
+// correct for "is this fit for the corpus" and wrong for "may I save my progress". Nothing here can
+// be a not-yet-filled-in state: two pins sharing an id, or a binding to a pin that does not exist,
+// is wrong the moment it is written and stays wrong.
+//
+// That is what lets the workbench enforce this on every save while leaving completeness to an
+// explicit publish. Validate calls the same code, so the two cannot drift.
+//
+// Returns nil for a spec with no pin data at all, which is every spec seeded before pin binding.
+func ValidatePins(spec *parampb.PartSpec) error {
+	return errors.Join(validatePinsInto(spec)...)
+}
+
+// validatePinsInto is the shared body, returning the errors unjoined so Validate can fold them in
+// with its own rather than nesting a joined error inside a joined error.
+func validatePinsInto(spec *parampb.PartSpec) []error {
+	var errs []error
+	packages := make(map[string]bool, len(spec.Packages))
+	for i, pkg := range spec.Packages {
+		if pkg.Id == "" {
+			errs = append(errs, fmt.Errorf("packages[%d] has no id", i))
+			continue
+		}
+		if packages[pkg.Id] {
+			errs = append(errs, fmt.Errorf("packages[%d]: duplicate package id %q", i, pkg.Id))
+		}
+		packages[pkg.Id] = true
+	}
+
+	pins := make(map[string]bool, len(spec.Pins))
+	// A pin NUMBER belongs to one pin within one package. Names may repeat (that is the
+	// multi-supply case pin binding exists for) but a package cannot send one terminal to
+	// two pins, and a corpus that says otherwise would make the tie-breaking channel
+	// unusable.
+	claimed := map[string]string{}
+	for i, p := range spec.Pins {
+		id := p.Id
+		if id == "" {
+			id = fmt.Sprintf("pins[%d]", i)
+			errs = append(errs, fmt.Errorf("%s has no id; a parameter cannot bind to it", id))
+		} else {
+			if pins[p.Id] {
+				errs = append(errs, fmt.Errorf("%s: duplicate pin id", id))
+			}
+			pins[p.Id] = true
+		}
+		for j, n := range p.Numbers {
+			if n.Number == "" {
+				errs = append(errs, fmt.Errorf("%s: numbers[%d] has no number", id, j))
+			}
+			if !packages[n.PackageRef] {
+				errs = append(errs, fmt.Errorf("%s: numbers[%d] package_ref %q does not resolve to a declared package", id, j, n.PackageRef))
+				continue
+			}
+			key := n.PackageRef + "\x00" + normalizePinNumber(n.Number)
+			if prev, dup := claimed[key]; dup {
+				errs = append(errs, fmt.Errorf("%s: number %q in package %q is already claimed by pin %q", id, n.Number, n.PackageRef, prev))
+			}
+			claimed[key] = id
+		}
+	}
+
+	for _, p := range spec.Parameters {
+		id := p.Symbol
+		if id == "" {
+			id = "a parameter"
+		}
+		for _, ref := range p.PinRefs {
+			if !pins[ref] {
+				errs = append(errs, fmt.Errorf("%s: pin_refs %q does not resolve to a declared pin", id, ref))
+			}
+		}
+	}
+	return errs
 }
