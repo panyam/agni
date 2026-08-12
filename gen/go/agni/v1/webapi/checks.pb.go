@@ -33,7 +33,16 @@ type CheckDesignRequest struct {
 	// was constructed with.
 	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// uri names the design to check.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	// board_uri attaches a SEPARATE board-geometry export to a netlist design, so board-tier rules
+	// resolve pass/fail instead of not-applicable. Empty uses the design's own board — its sidecar, or
+	// the layout its descriptor declares as a companion — which is the ordinary case.
+	//
+	// It exists for the board that is NOT a declared companion: a fab's returned file, or a layout under
+	// review that has not landed in the design yet. `review` and `query` have taken one since WS3-089;
+	// `check` could not, so the one command most likely to be asked "does this layout pass" was the one
+	// that could not be pointed at a layout.
+	BoardUri      string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -85,6 +94,13 @@ func (x *CheckDesignRequest) GetOverlay() *OverlayConfig {
 func (x *CheckDesignRequest) GetUri() string {
 	if x != nil {
 		return x.Uri
+	}
+	return ""
+}
+
+func (x *CheckDesignRequest) GetBoardUri() string {
+	if x != nil {
+		return x.BoardUri
 	}
 	return ""
 }
@@ -224,7 +240,9 @@ type GetCheckReportRequest struct {
 	// in one --format and not another.
 	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// uri names the design to report on.
-	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	// Same semantics as CheckDesignRequest.board_uri.
+	BoardUri      string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -276,6 +294,13 @@ func (x *GetCheckReportRequest) GetOverlay() *OverlayConfig {
 func (x *GetCheckReportRequest) GetUri() string {
 	if x != nil {
 		return x.Uri
+	}
+	return ""
+}
+
+func (x *GetCheckReportRequest) GetBoardUri() string {
+	if x != nil {
+		return x.BoardUri
 	}
 	return ""
 }
@@ -1180,20 +1205,22 @@ var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"u\n" +
+	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\x92\x01\n" +
 	"\x12CheckDesignRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"z\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
+	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\"z\n" +
 	"\rOverlayConfig\x126\n" +
 	"\x06config\x18\x04 \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12%\n" +
 	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProjectJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03\"J\n" +
 	"\x13CheckDesignResponse\x123\n" +
-	"\bfindings\x18\x01 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\"x\n" +
+	"\bfindings\x18\x01 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\"\x95\x01\n" +
 	"\x15GetCheckReportRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"M\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
+	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\"M\n" +
 	"\x16GetCheckReportResponse\x123\n" +
 	"\x06report\x18\x01 \x01(\v2\x1b.agni.v1.checks.CheckReportR\x06report\".\n" +
 	"\x1aGetNamingConventionRequest\x12\x10\n" +

@@ -87,6 +87,15 @@ message CheckDesignRequest {
   OverlayConfig overlay = 2;
   // uri names the design to check.
   string uri = 3;
+  // board_uri attaches a SEPARATE board-geometry export to a netlist design, so board-tier rules
+  // resolve pass/fail instead of not-applicable. Empty uses the design's own board — its sidecar, or
+  // the layout its descriptor declares as a companion — which is the ordinary case.
+  //
+  // It exists for the board that is NOT a declared companion: a fab's returned file, or a layout under
+  // review that has not landed in the design yet. `review` and `query` have taken one since WS3-089;
+  // `check` could not, so the one command most likely to be asked "does this layout pass" was the one
+  // that could not be pointed at a layout.
+  string board_uri = 4;
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
@@ -143,6 +152,8 @@ message GetCheckReportRequest {
   OverlayConfig overlay = 2;
   // uri names the design to report on.
   string uri = 3;
+  // Same semantics as CheckDesignRequest.board_uri.
+  string board_uri = 4;
 }
 
 message GetCheckReportResponse {

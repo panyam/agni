@@ -33,6 +33,7 @@ Run the rule catalog and report findings. The workhorse. See
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
 | `--params <dir>` | load a datasheet parameter set, enabling datasheet-backed rules (see [Datasheets](../datasheets/)) |
+| `--board-path <file>` | attach a board that is NOT a declared companion of the design, so board-tier rules resolve instead of finding no copper |
 
 ### `review <file>...`
 
