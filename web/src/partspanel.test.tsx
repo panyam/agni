@@ -52,12 +52,24 @@ const pinBound = {
           { name: "Supply voltage", symbol: "VCCB", unit: "V", limitKind: 1, value: { max: 6.5 }, conditions: [], pinRefs: ["vccb"] },
           { name: "Output voltage", symbol: "VO", unit: "V", limitKind: 2, value: { max: 3.6 }, conditions: [], pinRefs: ["a1", "a2"] },
           { name: "Junction temperature", symbol: "TJ", unit: "C", limitKind: 1, value: { max: 150 }, conditions: [], pinRefs: [] },
+          // A port-wide rating: one datasheet row covering every I/O terminal. Eight is what the real
+          // TXB0104 has, and it is the case that decides whether a chip row needs truncating.
+          {
+            name: "ESD (HBM)", symbol: "V(ESD)", unit: "kV", limitKind: 1, value: { max: 2.5 }, conditions: [],
+            pinRefs: ["a1", "a2", "a3", "a4", "b1", "b2", "b3", "b4"],
+          },
         ],
         pins: [
           { id: "vcca", name: "VCCA" },
           { id: "vccb", name: "VCCB" },
           { id: "a1", name: "A1" },
           { id: "a2", name: "A2" },
+          { id: "a3", name: "A3" },
+          { id: "a4", name: "A4" },
+          { id: "b1", name: "B1" },
+          { id: "b2", name: "B2" },
+          { id: "b3", name: "B3" },
+          { id: "b4", name: "B4" },
         ],
       },
     },
@@ -115,9 +127,22 @@ describe("partsPanel", () => {
     expect(el.querySelector(".parts-pin-wide")).toBeTruthy();
   });
 
+  // Characterisation, not an endorsement: a row bound to eight terminals currently renders all eight
+  // names inline. Truncation is deliberately deferred (no user has met a part where it hurts yet),
+  // and this test is what has to change when it lands, so the decision cannot be reversed silently.
+  it("renders every terminal of a wide group binding, untruncated", () => {
+    const { el } = mount(pinBound);
+    (el.querySelector(".parts-toggle") as HTMLButtonElement).click();
+    const chips = [...el.querySelectorAll(".parts-pin")].map((c) => c.textContent ?? "");
+    const wide = chips.find((c) => c.includes("B4")); // the 8-pin ESD row, not the 2-pin VO one
+    expect(wide).toBe("A1, A2, A3, A4, B1, B2, B3, B4");
+    expect(wide).not.toContain("…");
+    expect(wide).not.toMatch(/\+\d+/); // no "+4 more" affordance either
+  });
+
   it("counts the declared pins in the header", () => {
     const { el } = mount(pinBound);
-    expect([...el.querySelectorAll(".parts-count")].map((c) => c.textContent)).toContain("4 pins");
+    expect([...el.querySelectorAll(".parts-count")].map((c) => c.textContent)).toContain("10 pins");
   });
 
   // Degrade-safety: a spec seeded before pin binding declares no pins, so the panel must render
