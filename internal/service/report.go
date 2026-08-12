@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/internal/artifact"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/results"
@@ -48,7 +47,11 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, u, artifact.URI{}, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	board, err := optionalArtifactURI(req.GetBoardUri())
+	if err != nil {
+		return nil, err
+	}
+	m, err := BuildModel(ctx, s.loader, u, board, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

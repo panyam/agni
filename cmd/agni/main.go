@@ -290,7 +290,7 @@ func statsCmd() *cobra.Command {
 
 func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
-	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut string
+	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -394,7 +394,7 @@ func checkCmd() *cobra.Command {
 			// document rather than beside it is what makes the written artifact the SAME artifact the
 			// terminal showed, instead of a second one that happens to agree today.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay, BoardUri: cliArgURI(boardPath)})
 				if err != nil {
 					return err
 				}
@@ -424,7 +424,7 @@ func checkCmd() *cobra.Command {
 			}
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay, BoardUri: cliArgURI(boardPath)})
 				if err != nil {
 					return err
 				}
@@ -438,7 +438,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json — both need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay, BoardUri: cliArgURI(boardPath)})
 				if err != nil {
 					return err
 				}
@@ -466,6 +466,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
 	cmd.Flags().StringVar(&conventions, "conventions", "", "compose an operator naming-convention config (YAML) into the catalog; its rules appear namespaced as <config name>/<rule name>")
 	cmd.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration (expected modules, voltage domains); its rules join the catalog")
+	cmd.Flags().StringVar(&boardPath, "board-path", "", "a board-geometry file (.kicad_pcb / IPC-2581 .xml|.cvg) attached to the netlist design so board-tier rules resolve instead of reading not-applicable. Only needed for a board that is NOT a declared companion of the design: a fab's returned file, or a layout not yet landed")
 	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; render it later with `agni results`")
 	return cmd
 }
