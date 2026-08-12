@@ -298,3 +298,34 @@ stated once there and implemented once in `param.ResolvePin`. The physical backg
 component, without going through an orderable-MPN suffix. Even then the answer is not "key by
 number", it is that the tie-breaking channel becomes reliable more often. The name still leads,
 because it is the one that means the same thing in every body.
+
+---
+
+## `PartSpec` keeps its name, and the type-versus-instance invariant lives in the proto instead
+
+**Question.** Why is the parameter-IR root called `PartSpec`? It collides with `core/check.Spec` (a
+rule spec), and unlike `ir.PartType` it does not say whether it describes a part TYPE or a placement.
+Asked during the #200 review, and the repo could not answer it: the message arrived in the squashed
+initial commit with no rationale recorded anywhere.
+
+**Answer. The name stays, and the ambiguity is closed in the schema rather than in the identifier.**
+The reading that fits is the datasheet sense of "specification", the vendor's published spec for one
+part, parallel to `ir.Design` for one design and `doc.Document` for one document. That is
+reconstructed rather than cited, and it is good enough.
+
+Both objections are real. `Spec` genuinely is overloaded. And "part" genuinely does not distinguish
+the definition from the placement, which is the distinction `ir.PartType` was deliberately named to
+carry. But the failure a bad name would cause is someone modelling per-instance data on a type-level
+contract, and that is now prevented where it actually bites: `Pin`'s doc comment states that a pin is
+a property of the part type, that no reference designator appears anywhere in this contract, and that
+`Pin.id` must not encode one, with fan-out across instances belonging to the rule. `param.ResolvePin`
+takes no `ref_des` for the same reason. A comment at the field a mistaken author would be editing
+beats a suffix on a type name they would read once.
+
+**What this leaves open.** Nothing about the schema. If `Spec` overloading ever costs something
+concrete, the cheaper fix is renaming `check.Spec`, which has one meaning inside one package, rather
+than a contract shared across Go, TypeScript, textproto fixtures, and the docsite.
+
+**Reopen if** someone actually models instance data on `PartSpec` despite the proto comments. That
+would be evidence the comment is not carrying the weight this decision assigns it, and the name
+should then take some of the load.
