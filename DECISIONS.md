@@ -462,3 +462,38 @@ declaration alongside `StrapGroup`. A datasheet's sequencing requirement is unev
 netlist, but it is perfectly evaluable against a second artifact stating what the designer intended.
 That would make this a comparison between two declarations rather than a check against a design, and
 the answer changes.
+
+---
+
+## Machine-wide config carries where-bytes-are, never what-is-checked
+
+**Question.** `agni.yaml` exists for mounts and symbol search paths. Naming conventions, interface
+profiles and seeded parameters are configured far more often than mounts are. Why can they not go in
+the same file, defaulting for every design and overridden per project where it matters?
+
+**Answer. No, and it is the bug per-design config was built to fix.** Before projects existed, those
+tiers could only be `agni serve` startup flags, and a deployment mounting a mixed set applied one
+team's config to every design it read: an overlay's profiles superseded the built-ins for every board
+on the server, and an overlay's rail lexicon changed net roles on designs that never asked. Both were
+correct in isolation and aimed at the wrong design. A machine-wide `conventions:` is that failure
+with a different file name.
+
+The rule that separates them is not what a knob does but **how it fails**. A wrong mount produces a
+loud immediate error: the file is not there. A wrong naming vocabulary produces a confident wrong
+answer that looks exactly like a right one. Config whose absence or wrongness is SILENT belongs where
+it is scoped — to a project, reaching only the designs that declared it.
+
+That is also why symbol search paths are analysis config rather than environment config even though
+they only locate bytes. A schematic naming a library nothing resolves reads short, the missing parts
+are simply absent, and the run reports fewer findings with no error to explain them. `agni.yaml`
+carries a machine-wide symbol-path DEFAULT for a system-installed vendor library, which is honest at
+that scope; a project's own libraries belong in its descriptor, where they travel with the design and
+reach a served surface too.
+
+**What this leaves open.** Sharing across projects, which is the real need behind the question, is
+`extends` — declared in a descriptor, scoped to the project that wrote it, reaching no design that did
+not ask. Declared beats inherited. `agni.yaml` rejects unknown keys so the boundary is enforced rather
+than documented.
+
+**Reopen if** a tier appears whose wrongness is loud rather than silent. That is the property that
+decides, not how convenient a global would be.

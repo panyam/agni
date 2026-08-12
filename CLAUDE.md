@@ -20,6 +20,7 @@ expensive to rediscover.
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
 | The checks contract (CLI/service seam) | `architecture/checks-contract.md` |
+| Config: what a run is checked against, and where it comes from | `architecture/projects-and-designs.md` |
 | Semantic diff | `architecture/semantic-diff.md` |
 | The datasheet param/doc/derive layer | `architecture/datasheet-layer.md` |
 | Extending the engine from outside | `build/overlay.md` |
@@ -162,6 +163,13 @@ passed and once with a view never wired.
 on any of those omissions, so let the test tell you what you forgot. Read its header comment before
 changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
 
+**A test fixture that is a PLAIN OBJECT LITERAL standing in for a proto message is invisible to
+`pnpm run typecheck`.** Nesting `Project`'s config fields under `config` left
+`projectpresenter.test.ts` structurally wrong and the typecheck green; only the runtime assertion
+caught it. So after a proto reshape, `pnpm run typecheck` passing is NOT evidence the web side is
+done — run `make testall`. Prefer `create(SomeSchema, {...})` in a new fixture, which does get
+checked.
+
 **A JSX expression that reads only PLAIN OBJECT properties never re-runs.** Solid wraps an attribute
 or child expression in an effect over the signals it reads, so `class={p.pinRefs.includes(x) ? "on" :
 ""}` — where `p` came from a list and is not itself reactive — subscribes to NOTHING and renders once.
@@ -191,9 +199,13 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 - **`git add` by path does NOT protect a SHARED checkout.** `git commit` commits the whole index,
   including what another session staged. Use an explicit pathspec (`git commit -m "..." -- <paths>`)
   or check `git status` for foreign staged entries first.
-- **A pathspec commit silently drops your OWN late edits.** A file changed after you wrote the list
-  just stays dirty and the PR merges without it. After every pathspec commit, `git status` and
-  account for each remaining dirty file.
+- **A pathspec commit silently drops your OWN late edits, and whole directories you forgot to list.**
+  A file changed after you wrote the list just stays dirty and the PR merges without it. So does a
+  directory you never named: a commit listing `protos/ gen/ internal/ docsite/` dropped a one-line
+  `cmd/` call-site fix, `make testall` passed locally because the WORKING TREE had it, and CI on the
+  pushed branch failed to compile. Local green proves nothing about a pathspec commit. After every
+  one, `git status` and account for each remaining dirty file — and prefer staging exactly your slice
+  and committing WITHOUT a pathspec when the change spans more than two directories.
 - **A pathspec commit takes WORKING-TREE content, overriding the index**, so a staged
   `git rm --cached` named in the pathspec gets recommitted instead of deleted. For deletions and
   untracking, stage exactly the intended slice and commit WITHOUT a pathspec.
@@ -225,7 +237,10 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   trigger fires. A question that was asked and ANSWERED is neither — it can never be closed, so it
   goes in `DECISIONS.md` instead of quietly filling the ledger with entries nobody can act on.
 
-Two shell traps that have burned real work. **zsh does NOT word-split an unquoted `$var`**, so
+Three shell traps that have burned real work. **Backticks inside a double-quoted `git commit -m` run
+as COMMAND SUBSTITUTION**, so a message quoting `` `reserved` `` committed the sentence with the word
+missing and no error. Anything with backticks, `$`, or `!` goes through `git commit -F <file>` or a
+quoted heredoc (`<<'MSG'`), never `-m "..."`. **zsh does NOT word-split an unquoted `$var`**, so
 `files=$(ls ...)` then `for f in $files` iterates ONCE over the whole blob (a sweep silently compared
 one file and reported success). Glob directly in the `for`, or use an array. And use
 **`git worktree add <tmp> main`, never `git stash`**, to build a "before" binary: stash leaves
