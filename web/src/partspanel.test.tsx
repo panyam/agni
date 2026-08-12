@@ -29,8 +29,35 @@ const state = {
             limitKind: 1,
             value: { max: 20 },
             conditions: [{ raw: "TA=25C", symbol: "TA" }],
+            pinRefs: [],
             prov: { docRef: "SNOS412Q", page: 4, tableOrFigure: "7.1" },
           },
+        ],
+        pins: [],
+      },
+    },
+  ],
+} as unknown as PartsState;
+
+// A two-supply part: the shape the panel used to render as four indistinguishable rows. VCCA and
+// VCCB carry different limits, one row is bound to a GROUP of two terminals, and one is part-wide.
+const pinBound = {
+  parts: [
+    {
+      refDes: "U7",
+      mpn: "ACME-XLAT",
+      spec: {
+        parameters: [
+          { name: "Supply voltage", symbol: "VCCA", unit: "V", limitKind: 1, value: { max: 4.6 }, conditions: [], pinRefs: ["vcca"] },
+          { name: "Supply voltage", symbol: "VCCB", unit: "V", limitKind: 1, value: { max: 6.5 }, conditions: [], pinRefs: ["vccb"] },
+          { name: "Output voltage", symbol: "VO", unit: "V", limitKind: 2, value: { max: 3.6 }, conditions: [], pinRefs: ["a1", "a2"] },
+          { name: "Junction temperature", symbol: "TJ", unit: "C", limitKind: 1, value: { max: 150 }, conditions: [], pinRefs: [] },
+        ],
+        pins: [
+          { id: "vcca", name: "VCCA" },
+          { id: "vccb", name: "VCCB" },
+          { id: "a1", name: "A1" },
+          { id: "a2", name: "A2" },
         ],
       },
     },
@@ -57,6 +84,49 @@ describe("partsPanel", () => {
     const { el, onLocate } = mount(state);
     (el.querySelector(".parts-ref") as HTMLButtonElement).click();
     expect(onLocate).toHaveBeenCalledWith("U1");
+  });
+
+  // The reason this change exists: two rows printing the same kind of limit are only
+  // distinguishable by the terminal they apply to, and the panel showed no terminal at all.
+  it("names the terminal each parameter is bound to, by its printed pin name", () => {
+    const { el } = mount(pinBound);
+    (el.querySelector(".parts-toggle") as HTMLButtonElement).click();
+    const rows = [...el.querySelectorAll(".parts-param")].map((r) => r.textContent ?? "");
+
+    expect(rows[0]).toContain("VCCA");
+    expect(rows[0]).toContain("max 4.6");
+    expect(rows[1]).toContain("VCCB");
+    expect(rows[1]).toContain("max 6.5");
+
+    // The ids are spec-local and opaque; the panel must resolve them to printed names.
+    expect(el.querySelector(".parts-pin")?.textContent).toBe("VCCA");
+    expect(rows.join("")).not.toContain("vcca");
+  });
+
+  it("lists every terminal of a group binding, and labels a part-wide row as such", () => {
+    const { el } = mount(pinBound);
+    (el.querySelector(".parts-toggle") as HTMLButtonElement).click();
+    const chips = [...el.querySelectorAll(".parts-pin")].map((c) => c.textContent ?? "");
+
+    expect(chips).toContain("A1, A2");
+    // An unbound row on a spec that DECLARES pins is a fact about the die, not an unrendered
+    // binding, and the two must not look alike.
+    expect(chips).toContain("part-wide");
+    expect(el.querySelector(".parts-pin-wide")).toBeTruthy();
+  });
+
+  it("counts the declared pins in the header", () => {
+    const { el } = mount(pinBound);
+    expect([...el.querySelectorAll(".parts-count")].map((c) => c.textContent)).toContain("4 pins");
+  });
+
+  // Degrade-safety: a spec seeded before pin binding declares no pins, so the panel must render
+  // exactly as it did — no chips at all, not even the part-wide label.
+  it("shows no pin chips for a spec with no pin data", () => {
+    const { el } = mount(state);
+    (el.querySelector(".parts-toggle") as HTMLButtonElement).click();
+    expect(el.querySelectorAll(".parts-pin")).toHaveLength(0);
+    expect([...el.querySelectorAll(".parts-count")].map((c) => c.textContent)).not.toContain("0 pins");
   });
 
   it("shows an empty hint when no parts are datasheet-backed", () => {

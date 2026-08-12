@@ -2,7 +2,7 @@ import { For, Show, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { type PartsState, type PartsView, emptyParts } from "./parts.js";
-import type { Parameter } from "./gen/agni/v1/param/param_pb.js";
+import type { Parameter, PartSpec } from "./gen/agni/v1/param/param_pb.js";
 
 // LIMIT_LABEL maps the PartSpec LimitKind enum (0 unspecified / 1 abs-max / 2 recommended /
 // 3 characteristic) to the short badge a parameter row shows; the `lk-<n>` class colors it.
@@ -29,6 +29,20 @@ function fmtConditions(p: Parameter): string {
     .map((c) => c.raw || c.symbol)
     .filter(Boolean)
     .join(", ");
+}
+
+// fmtPins names the terminals a parameter is bound to, resolving each spec-local pin id to the pin's
+// PRINTED name, which is what a reviewer reads on the schematic and the datasheet. An id that does
+// not resolve falls back to the id itself rather than vanishing, so a malformed spec is visible
+// rather than silently rendering as part-wide.
+//
+// Empty for an unbound row. On a spec that declares pins that means the row is a fact about the
+// whole part, which the caller labels explicitly, because on such a spec an unlabelled row would
+// otherwise be indistinguishable from one the panel failed to render.
+function fmtPins(p: Parameter, spec: PartSpec | undefined): string {
+  if (!p.pinRefs.length) return "";
+  const names = new Map((spec?.pins ?? []).map((pin) => [pin.id, pin.name]));
+  return p.pinRefs.map((r) => names.get(r) || r).join(", ");
 }
 
 // fmtCitation renders the provenance back to the datasheet: doc ref + page + table/figure. WS9-034
@@ -74,6 +88,9 @@ function PartsPanel(props: { state: () => PartsState; onLocate: (refDes: string)
                 </button>
                 <span class="parts-mpn">{part.mpn}</span>
                 <span class="parts-count">{part.spec?.parameters.length ?? 0} params</span>
+                <Show when={part.spec?.pins.length}>
+                  <span class="parts-count">{part.spec?.pins.length} pins</span>
+                </Show>
               </div>
               <Show when={open().has(part.refDes)}>
                 <ul class="parts-params">
@@ -84,6 +101,12 @@ function PartsPanel(props: { state: () => PartsState; onLocate: (refDes: string)
                         <span class="parts-pval">{fmtVal(p)}</span>
                         <Show when={p.limitKind}>
                           <span class={`parts-limit lk-${p.limitKind}`}>{LIMIT_LABEL[p.limitKind] ?? ""}</span>
+                        </Show>
+                        <Show when={fmtPins(p, part.spec)}>
+                          <span class="parts-pin">{fmtPins(p, part.spec)}</span>
+                        </Show>
+                        <Show when={!p.pinRefs.length && (part.spec?.pins.length ?? 0) > 0}>
+                          <span class="parts-pin parts-pin-wide">part-wide</span>
                         </Show>
                         <Show when={fmtConditions(p)}>
                           <span class="parts-cond">@ {fmtConditions(p)}</span>
