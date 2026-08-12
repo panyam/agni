@@ -262,3 +262,39 @@ and would copy this shape, not reopen this trade, if a deployment ever felt its 
 mounts are on a filesystem whose event delivery can be trusted. Even then the answer is more likely
 a watch that INVALIDATES the existing revalidating cache (turning a stat into a no-op on the common
 path while a dropped event costs only a stat, not a stale answer) than a watch the cache believes.
+
+---
+
+## A datasheet parameter binds to a pin by NAME first, never by pin number
+
+**Question.** A `param.Pin` records both a name (`VCCB`) and a per-package number (`11`). When a rule
+resolves a design's pin to a spec's pin, the number looks like the precise key and the name looks
+like the loose one. Why is it the other way round?
+
+**Answer. Because a pin NUMBER is a fact about a PACKAGE, and a parameter is a fact about the DIE.**
+The same silicon ships in several bodies and each body numbers its terminals differently, so a
+number-keyed join is silently wrong for any part seeded from one package and placed in another.
+Silently is the operative word: the wrong terminal is still a real terminal with real limits, so the
+comparison runs, produces a confident answer about the wrong thing, and nothing downstream looks
+broken. The seeded TXB0104 carries the case as data — number 11 is the `B3` data I/O in the TSSOP-14
+and the `VCCB` supply in the UQFN-12.
+
+A name is copied off the same pin function table by both the vendor and the symbol library, so it
+survives repackaging. Its one weakness is that it is not unique, and the number exists to repair
+exactly that: it is a TIE-BREAKER, not a fallback.
+
+**What this leaves open, and what it does not.** The number is still used, in two bounded ways: to
+separate several pins sharing a name inside a package the design is known to place, and, with no
+package identified, when every declared package agrees on it anyway. What is closed is leading with
+it. Where the two channels disagree, `param.ResolvePin` refuses rather than picking, because either
+channel alone would have produced a confident wrong answer.
+
+The full precedence, the four refusal sentinels, and the degrade-safe path for a spec with no pin
+data are in [the datasheet layer](https://panyam.github.io/agni/architecture/datasheet-layer/#pin-binding),
+stated once there and implemented once in `param.ResolvePin`. The physical background is
+[pins and packages](https://panyam.github.io/agni/reference/pins-and-packages/).
+
+**Reopen if** a design source appears that identifies a placed package with certainty, for every
+component, without going through an orderable-MPN suffix. Even then the answer is not "key by
+number", it is that the tie-breaking channel becomes reliable more often. The name still leads,
+because it is the one that means the same thing in every body.

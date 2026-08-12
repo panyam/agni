@@ -126,6 +126,21 @@ branch and the section silently renders the generic fallback nav.
 so a missed edit fails the gate instead of shipping. It found two live drifts when it landed. If you
 are adding a section, let the test tell you what you forgot rather than working from this list.
 
+**A blank line inside raw HTML SPLITS it, and the render breaks silently.** Content pages may embed
+raw HTML (inline SVG figures, the home page's cards) because the renderer passes it through. But
+CommonMark ends an HTML block at the first blank line, so a `<figure>` broken up for readability
+becomes several blocks and the fragments after the first get parsed as markdown. Keep an embedded
+figure contiguous, no blank lines between the opening and closing tag. Nothing in the gate catches
+this: `nav_test.go` checks wiring, not rendering.
+
+**Style raw SVG through `--accent-color` and `currentColor`, never a literal.** `static/css/main.css`
+defines the palette for both themes, and the docsite has a dark mode. A hardcoded hex reads fine in
+whichever theme it was authored in and badly in the other.
+
+**`content/HeaderNavLinks.json` is hand-formatted with one compact object per line.** Read it as text
+before editing. Piping it through a pretty-printer to find the insertion point produces a shape that
+does not exist in the file, so the edit fails to match.
+
 **`docsite/_hidden/` hides pages from the SITE BUILD, not from the repo.** Files under it stay
 tracked and world-readable. A parked section sat there for months in exactly that state. Moving
 something to `_hidden/` is a publishing decision and never a confidentiality one. Anything genuinely
@@ -201,7 +216,10 @@ Two shell traps that have burned real work. **zsh does NOT word-split an unquote
 `files=$(ls ...)` then `for f in $files` iterates ONCE over the whole blob (a sweep silently compared
 one file and reported success). Glob directly in the `for`, or use an array. And use
 **`git worktree add <tmp> main`, never `git stash`**, to build a "before" binary: stash leaves
-untracked new files on disk referencing stashed-away code.
+untracked new files on disk referencing stashed-away code. That is about reconstructing a whole
+BEFORE state. Stashing ONE tracked file (`git stash push -- path/to/file.go`, run the test, pop) is
+a different move and a good one: it is how you prove a new test is red for the reason you think,
+rather than red because the package does not compile.
 
 ## PR prose conventions
 
