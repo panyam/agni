@@ -2,6 +2,7 @@ package param
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -38,32 +39,29 @@ func TestTXB0104MultiSupplyPinsStayDistinct(t *testing.T) {
 	}
 }
 
-// A row may bind to a GROUP of terminals: the A-port and B-port output ranges are each
-// stated once for four pins, and the two ESD ratings differ six-fold across the same split.
+// A row may bind to a GROUP of terminals: the continuous-current limit is stated once for the two
+// supplies and ground together, so each of the three has to find it.
 func TestTXB0104GroupBinding(t *testing.T) {
 	spec := readFixture(t, "txb0104.textproto")
 
-	var esdA, esdB *parampb.Parameter
+	var group *parampb.Parameter
 	for _, p := range spec.Parameters {
-		if p.Symbol != "V(ESD)" {
-			continue
-		}
-		switch p.Value.GetMax() {
-		case 2.5:
-			esdA = p
-		case 15:
-			esdB = p
+		if len(p.PinRefs) > 1 {
+			group = p
 		}
 	}
-	if esdA == nil || esdB == nil {
-		t.Fatal("want both the A-port (2.5 kV) and B-port (15 kV) ESD rows")
+	if group == nil {
+		t.Fatal("want a row bound to several terminals")
 	}
-	if len(esdA.PinRefs) != 4 || len(esdB.PinRefs) != 4 {
-		t.Errorf("each ESD row binds to its port's four I/O pins, got %d and %d", len(esdA.PinRefs), len(esdB.PinRefs))
+	if got := group.PinRefs; len(got) != 3 {
+		t.Errorf("the continuous-current row covers VCCA, VCCB and GND; got %v", got)
 	}
-	for _, id := range esdA.PinRefs {
+	for _, id := range group.PinRefs {
 		if PinByID(spec, id) == nil {
-			t.Errorf("A-port ESD row binds to undeclared pin %q", id)
+			t.Errorf("group row binds to undeclared pin %q", id)
+		}
+		if !slices.ContainsFunc(PinParameters(spec, id), func(p *parampb.Parameter) bool { return p == group }) {
+			t.Errorf("pin %q cannot find the row that binds it", id)
 		}
 	}
 }
@@ -152,8 +150,10 @@ func TestResolvePin(t *testing.T) {
 			wantID: "nc9",
 		},
 		{
+			// 6 is NC in the TSSOP-14 and GND in the UQFN-12, so the number cannot break the tie
+			// either until a package is named.
 			name:    "an ambiguous name with no package identified refuses",
-			pinName: "NC", designator: "9", packageRef: "",
+			pinName: "NC", designator: "6", packageRef: "",
 			wantErr: ErrPinAmbiguous,
 		},
 		{
@@ -241,26 +241,23 @@ func TestPinParameters(t *testing.T) {
 	spec := readFixture(t, "txb0104.textproto")
 
 	vccb := PinParameters(spec, "vccb")
-	if len(vccb) != 2 {
-		t.Fatalf("vccb: want the abs-max and recommended rows, got %d", len(vccb))
+	if len(vccb) != 3 {
+		t.Fatalf("vccb: want its abs-max, the group current row, and its recommended row; got %d", len(vccb))
 	}
 	kinds := map[parampb.LimitKind]bool{}
 	for _, p := range vccb {
 		kinds[p.LimitKind] = true
-		if p.Symbol != "VCCB" {
-			t.Errorf("vccb row has symbol %q", p.Symbol)
-		}
 	}
 	if !kinds[parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX] || !kinds[parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING] {
 		t.Errorf("vccb: want both limit kinds, got %v", kinds)
 	}
 
-	// A pin in a bound GROUP gets that group's row.
-	if got := len(PinParameters(spec, "a3")); got != 2 {
-		t.Errorf("a3: want the A-port VO and ESD rows, got %d", got)
+	// A pin whose ONLY limit arrives through a group binding still finds it.
+	if got := PinParameters(spec, "gnd"); len(got) != 1 || got[0].Symbol != "I" {
+		t.Errorf("gnd: want just the group current row, got %+v", got)
 	}
-	// Part-wide rows belong to no pin: an empty binding must NOT read as "every pin", or a
-	// caller would credit a die-level rating as a terminal's own limit.
+	// Part-wide rows belong to no pin: an empty binding must NOT read as "every pin", or a caller
+	// would credit a die-level rating as a terminal's own limit.
 	for _, p := range PinParameters(spec, "gnd") {
 		if len(p.PinRefs) == 0 {
 			t.Errorf("gnd: part-wide row %q must not be returned as a pin's parameter", p.Symbol)
