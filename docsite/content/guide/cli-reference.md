@@ -87,6 +87,31 @@ run. Exit codes:
 
 `check` still returns `1` for both a tripped gate and a failed run.
 
+### Machine configuration: `agni.yaml`
+
+The flags that say *where bytes are* can live in a file instead of on every command. `agni.yaml` is
+searched for beside the working directory, upward a few levels, then in `$XDG_CONFIG_HOME/agni/`
+(or `~/.config/agni/`). The first one found wins outright.
+
+```yaml
+# agni.yaml
+mounts:
+  boards: /srv/boards
+  shared: /srv/shared
+symbol_paths:
+  - /usr/share/kicad/symbols
+```
+
+A run says which file it took config from, on stderr. An explicit `--mount` or `--symbol-path` wins
+outright rather than merging: naming a mount table is answering for the whole table.
+
+**It carries only tier-1 config, and that is a boundary rather than a to-do.** Naming conventions,
+interface profiles, seeded parameters, design intent and a review checklist decide *what a design is
+checked against*, so they belong to a project where they are scoped to the designs that declared them.
+A machine-wide conventions file applying to every design a CLI opened is the bug per-design config
+fixed. Unknown keys are rejected, so reaching for `conventions:` here is told no rather than quietly
+becoming a global analysis tier. For those, see [Projects and designs](https://panyam.github.io/agni/architecture/projects-and-designs/).
+
 ### `start <design-file> [dir]`
 
 Scaffold a review project around an existing design file, so the commands above can stop taking

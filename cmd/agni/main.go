@@ -58,6 +58,11 @@ func rootCmd() *cobra.Command {
 			"Diff and checks operate on the IR, not on source files, so they are format-neutral.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		// Tier-1 config is applied before ANY command runs, so a mount declared in a file is in the
+		// table by the time the first argument is turned into a URI.
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			return applyEnvConfig(cmd.ErrOrStderr(), os.Getenv)
+		},
 		// Gives `agni --version`. The same string internal/version stamps into a results
 		// document's provenance, so the build a user reports and the build a report claims
 		// cannot disagree. `agni version` adds the toolchain and platform detail.
@@ -99,6 +104,43 @@ var symbolPaths []string
 // environment. The flag wins outright when present rather than appending, so an explicit
 // --symbol-path is never silently widened by ambient configuration.
 const envSymbolPath = "AGNI_SYMBOL_PATH"
+
+// applyEnvConfig fills the tier-1 flags from the nearest agni.yaml, for the ones the operator did not
+// pass. It runs once, before any command.
+//
+// A passed flag WINS OUTRIGHT rather than merging, matching how --symbol-path already treats its
+// environment variable: an operator who named a mount table is answering for the whole table, and a
+// file quietly adding a mount they did not ask for is the ambient-config failure this tier is only
+// allowed because it cannot change an answer.
+//
+// The file that was used is announced on stderr, for the same reason every other resolution here is:
+// a mount table nobody typed is not recoverable from the output of a run that used it.
+func applyEnvConfig(w io.Writer, getenv func(string) string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	cfg, path, err := loadEnvConfig(cwd, getenv)
+	if err != nil {
+		return err
+	}
+	if path == "" {
+		return nil
+	}
+	var used []string
+	if len(cliMountSpecs) == 0 && len(cfg.Mounts) > 0 {
+		cliMountSpecs = cfg.mountSpecs()
+		used = append(used, fmt.Sprintf("%d mount(s)", len(cfg.Mounts)))
+	}
+	if len(symbolPaths) == 0 && len(cfg.SymbolPaths) > 0 {
+		symbolPaths = cfg.SymbolPaths
+		used = append(used, fmt.Sprintf("%d symbol path(s)", len(cfg.SymbolPaths)))
+	}
+	if len(used) > 0 {
+		fmt.Fprintf(w, "note: using %s from %s.\n", strings.Join(used, " and "), path)
+	}
+	return nil
+}
 
 // resolveSymbolPaths applies the envSymbolPath fallback. Called once before any command runs.
 func resolveSymbolPaths(getenv func(string) string) []string {
