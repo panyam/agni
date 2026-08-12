@@ -568,3 +568,28 @@ relation, including ones added later.
 unify implicitly when a variable repeats across atoms and unification is identity rather than
 physics. And `absent = absent` is TRUE here rather than SQL's UNKNOWN, since full three-valued logic
 would have to thread UNKNOWN through negation, aggregation and the index.
+
+## C25: A run's recorded provenance is derived from the resolved overlay, never from the caller's flags
+**Rule:** The `RunConfig` a results document records — which datasheet corpus, interface profiles,
+design intent and naming convention a run had attached — is computed from the RESOLVED
+`service.Overlay`, through `Overlay.Provenance` and `service.RunConfigProto`. No other code
+constructs a `checkspb.RunConfig`. A surface must not derive it from its own flags, its startup
+config, or the request message, because none of those is what the run used once a design resolves to
+a project.
+**Why:** the alternative already shipped a wrong document, and it was wrong in the reassuring
+direction. `agni check designs/gateway --results-out` inside a project declaring `conventions.yaml`,
+`profiles/` and `params/` composed all three and recorded `"run": {}`, because no flag named any of
+them. `RunConfig` exists precisely so a reader can tell a design with no datasheet violations from a
+run that had no datasheet corpus, so recording `false` for an attached corpus makes a clean report
+read as better founded than it is. Nothing in the document contradicts it except the `catalog`
+snapshot, which nobody cross-reads. This is C22's value-not-locator rule applied to the RECORD of a
+run rather than to its inputs, and it is a single-writer constraint for the same reason
+`service.FindingProto` is: two places that build one message agree until the day they do not.
+**Verify:** `grep -rn 'checkspb.RunConfig{' --include='*.go' . | grep -v _test.go` returns only
+`internal/service/projectoverlay.go`. Test files are excluded because a fixture legitimately builds a
+document to render (`core/results/results_test.go`); the rule is about who WRITES a run's record. Quote
+the `--include` glob, or zsh expands it and grep never sees the flag.
+**Note:** which tier a rule source came from is NOT recoverable after composition — a compiled
+interface profile and a compiled intent declaration are both just rules in a catalog — so the flags
+travel on `service.ProjectConfig` rather than being derived from `Overlay.Sources`. Rationale in
+[the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
