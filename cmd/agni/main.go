@@ -45,7 +45,7 @@ const diffListLimit = 40
 func main() {
 	if err := rootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
-		os.Exit(1)
+		os.Exit(exitCode(err))
 	}
 }
 
@@ -319,7 +319,7 @@ func checkCmd() *cobra.Command {
 			// own rules. CheckDesign / GetCheckReport select by name and the CLI owns facet resolution,
 			// so the two must see the same name space — and a project's rules are part of it, or
 			// `--rule gateway/signal-net-naming` would report "no rules selected" for a rule that runs.
-			resolveAgainst, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
+			resolveAgainst, runOverlay, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
 			if err != nil {
 				return err
 			}
@@ -356,12 +356,18 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				doc := resultsDoc(cliArgURI(args[0]), selected, resp.GetFindings(), &checkspb.RunConfig{
-					Params:      paramsDir != "",
-					Profiles:    profilePath != "",
-					Intent:      intentPath != "",
-					Conventions: overlay.GetConventions().GetName(),
-				})
+				// Provenance comes off the composed overlay, not off the flags, for the same reason it
+				// does on the review path: `agni check designs/gateway --results-out` inside a project
+				// that declares conventions.yaml, profiles/ and params/ ran against all three and
+				// recorded `run: {}`, because none of those three flags was passed. The flag values are
+				// the DEPLOYMENT half of the union; the project's half comes from the overlay.
+				doc := resultsDoc(cliArgURI(args[0]), selected, resp.GetFindings(), service.RunConfigProto(
+					runOverlay.Provenance(service.RunProvenance{
+						Params:      paramsDir != "",
+						Profiles:    profilePath != "",
+						Intent:      intentPath != "",
+						Conventions: overlay.GetConventions().GetName(),
+					}), 0))
 				if err := writeResults(resultsOut, doc); err != nil {
 					return err
 				}
@@ -463,6 +469,8 @@ func reviewCmd() *cobra.Command {
 	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut string
 	var coverage bool
 	var ratifiedFloor float64
+	var failOnOutcome string
+	var minAnswered int
 	cmd := &cobra.Command{
 		Use:   "review <file>...",
 		Short: "Run a review checklist (manifest) over one or more designs and report per-item outcomes",
@@ -479,6 +487,13 @@ func reviewCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if checklist == "" {
 				return fmt.Errorf("review needs --checklist <manifest.yaml>")
+			}
+			// Parsed BEFORE anything is read, so a typo in a CI config fails in the first millisecond
+			// rather than after a full run over a family of boards. The gate is otherwise applied last,
+			// on every exit path below.
+			gate, err := parseReviewGate(failOnOutcome, minAnswered)
+			if err != nil {
+				return err
 			}
 			// The CLI is a thin client of the in-process ReviewService (WS9-048): it composes the
 			// design-independent overlay config (catalog + profile index from --profile-path/--intent-path,
@@ -571,7 +586,14 @@ func reviewCmd() *cobra.Command {
 				if err := writeResults(resultsOut, doc); err != nil {
 					return err
 				}
-				return renderReviewResults(cmd.OutOrStdout(), doc, format, coverage)
+				if err := renderReviewResults(cmd.OutOrStdout(), doc, format, coverage); err != nil {
+					return err
+				}
+				// The gate applies here too. This path returned early before, which is exactly the shape
+				// that lets a flag work on two of three code paths and silently not on the third — and it
+				// would have been the CI path, since a pipeline that gates is also the one archiving its
+				// results document.
+				return gateReview(cmd, gate, reports)
 			}
 			// --coverage is the rollup shortcut; --format {markdown,json} picks the surface. JSON carries the
 			// FULL finding list per item (markdown caps the Detail cell), so tooling keeps every finding.
@@ -604,8 +626,10 @@ func reviewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, err = fmt.Fprint(cmd.OutOrStdout(), out)
-			return err
+			if _, err := fmt.Fprint(cmd.OutOrStdout(), out); err != nil {
+				return err
+			}
+			return gateReview(cmd, gate, reports)
 		},
 	}
 	cmd.Flags().StringVar(&checklist, "checklist", "", "review manifest (YAML) declaring review areas and their checklist items")
@@ -620,7 +644,22 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
 	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; one design only. Render it later with `agni results`")
+	cmd.Flags().StringVar(&failOnOutcome, "fail-on-outcome", "", "exit non-zero when any checklist ITEM sits at one of these outcomes (comma-separated, e.g. fail or fail,provisional). This is the coverage axis, not `check --fail-on`'s severity axis: it asks whether a question was answered, not how bad the answer was. Off by default")
+	cmd.Flags().IntVar(&minAnswered, "min-answered", 0, "exit non-zero when fewer than N checklist items produced an ANSWER (pass, fail, provisional, or computed-n/a). Distinct from the covered count, which still counts an item whose rule is present but whose inputs are absent; that is the regression a severity gate cannot see. Off by default")
 	return cmd
+}
+
+// gateReview applies the CI gate after the report has been rendered, so a tripped pipeline still gets
+// its full report on stdout rather than only an error on stderr.
+//
+// SilenceUsage matches what `check --fail-on` does on a trip: a gate firing is the command working as
+// asked, and dumping the usage text under it reads as a mistyped invocation.
+func gateReview(cmd *cobra.Command, g reviewGate, reports []review.Report) error {
+	if err := g.trip(reports); err != nil {
+		cmd.SilenceUsage = true
+		return err
+	}
+	return nil
 }
 
 // composeReviewInputs builds the design-INDEPENDENT review inputs shared by the CLI (reviewCmd) and
