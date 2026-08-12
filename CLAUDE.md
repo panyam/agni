@@ -68,6 +68,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 **After ANY proto change run BOTH `make proto` (Go) AND `cd web && pnpm run gen` (TS).** Additive
 fields build green, so a skipped `pnpm run gen` goes unnoticed until the next regen churns.
 
+**An editor reporting the generated types as MISSING is usually a stale language server, not stale
+generated code.** After a branch switch or a merge, the LSP can insist `Module ... has no exported
+member 'Foo'` and `Property 'bar' does not exist` for symbols that are present in the file. It reads
+exactly like the real hazard above, which is why it is worth naming: the two are told apart by
+checking the FILE and a fresh `cd web && npx tsc --noEmit`, never the editor. A green `make testall`
+alongside editor errors is the cache, not a bug; genuine staleness fails the gate.
+
 `examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on: a
 synthetic gateway ECU in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
 library, a `.kicad_pcb`) with `review.yaml`, `conventions.yaml`, `profiles/`, `params/`, and a
