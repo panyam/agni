@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/panyam/agni/internal/artifact"
 
+	"github.com/panyam/agni/datasheet/param"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -148,6 +149,18 @@ func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePar
 	if req.GetSpec() == nil {
 		return nil, fmt.Errorf("%w: SavePartSpec requires a spec", ErrInvalidArgument)
 	}
+	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has; whether it is any good is
+	// a separate question, answered as status and correctable later. Coupling the two lets a judgment
+	// destroy work: every mutation path would have to preserve the invariant or leave a document its
+	// author cannot save and cannot escape through the UI.
+	//
+	// Nothing downstream forces the coupling either. This sibling is <stem>.partspec.json, and
+	// param.LoadSet reads *.textproto only, so an incoherent draft cannot reach the corpus by sitting
+	// on disk. Promotion to a seeded corpus is a separate, deliberate step, and that is where
+	// param.Validate belongs.
+	//
+	// The editor surfaces the same structural problems live (bank.ts pinProblems), which is the right
+	// place for them: advisory, immediate, and unable to cost anyone their work.
 	version, err := s.store.Save(ctx, u, req.GetSpec(), req.GetBaseVersion())
 	if err != nil {
 		if errors.Is(err, ErrConflict) {
@@ -155,7 +168,32 @@ func (s *DatasheetService) SavePartSpec(ctx context.Context, req *webapi.SavePar
 		}
 		return nil, classifyLoadErr(err)
 	}
-	return &webapi.SavePartSpecResponse{Version: version}, nil
+	// Judged AFTER the write, and reported rather than enforced. The client renders these; it does
+	// not reimplement them, which is the point of returning them here rather than leaving the editor
+	// to keep its own copy of the rules in sync.
+	return &webapi.SavePartSpecResponse{Version: version, Problems: validationProblems(req.GetSpec())}, nil
+}
+
+// validationProblems renders param's classified findings onto the wire type. The mapping is total on
+// purpose: a kind this does not recognize would silently vanish from the editor, so an unknown kind
+// travels as UNSPECIFIED and still shows its message.
+func validationProblems(spec *parampb.PartSpec) []*webapi.ValidationProblem {
+	found := param.Problems(spec)
+	if len(found) == 0 {
+		return nil
+	}
+	out := make([]*webapi.ValidationProblem, 0, len(found))
+	for _, p := range found {
+		kind := webapi.ValidationProblem_KIND_UNSPECIFIED
+		switch p.Kind {
+		case param.ProblemStructural:
+			kind = webapi.ValidationProblem_KIND_STRUCTURAL
+		case param.ProblemCompleteness:
+			kind = webapi.ValidationProblem_KIND_COMPLETENESS
+		}
+		out = append(out, &webapi.ValidationProblem{Kind: kind, Message: p.Message})
+	}
+	return out
 }
 
 // GetAnnotations returns the region-annotation overlay for a datasheet as the union of every

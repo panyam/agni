@@ -11,10 +11,16 @@ import {
   RangeValueSchema,
   ConditionSchema,
   ParamProvenanceSchema,
+  PinSchema,
+  PackageSchema,
+  PinNumberSchema,
   LimitKind,
   ConditionCoverage,
+  PinFunction,
   type PartSpec,
   type Parameter,
+  type Pin,
+  type Package,
 } from "./gen/agni/v1/param/param_pb.js";
 import {
   AnnotationSetSchema,
@@ -251,3 +257,92 @@ export function newParameter(f: NewParamFields, region: Region, page: number, do
 export function paramsForRegion(spec: PartSpec, regionId: string): Parameter[] {
   return spec.parameters.filter((p) => p.attributes[REGION_ATTR] === regionId);
 }
+
+// NewPinFields is the transcribe editor's input for one pin, before it becomes a param.Pin. The id
+// is the author's rather than generated: it is what Parameter.pin_refs points at and what a
+// validation message names, so an opaque generated key would make both harder to read.
+export interface NewPinFields {
+  id: string;
+  name: string;
+  fn: PinFunction;
+  description: string;
+}
+
+// newPin builds a param.Pin from editor fields and the region it was transcribed from, stamping the
+// same provenance newParameter does (page + region label, method "hand", confidence 1.0).
+//
+// Provenance is not decoration here: param.Validate REQUIRES it on every pin, on the same grounds it
+// requires it on every value. A pin function is an extracted claim, and one nobody can check against
+// a page is a liability. Anchoring to the region the author is already looking at makes that free
+// rather than a form field they would fill in twice.
+export function newPin(f: NewPinFields, region: Region, page: number, docRef: string): Pin {
+  return create(PinSchema, {
+    id: f.id.trim(),
+    name: f.name.trim(),
+    function: f.fn,
+    description: f.description.trim(),
+    attributes: { [REGION_ATTR]: region.id },
+    prov: create(ParamProvenanceSchema, {
+      docRef,
+      page,
+      tableOrFigure: region.label || region.id,
+      method: "hand",
+      confidence: 1.0,
+    }),
+  });
+}
+
+// derivePinId turns a pin's printed name into a spec-local id, suffixing when the obvious id is
+// already taken: NC, then nc2, then nc3.
+//
+// The suffix is not a nicety. A part that prints ONE NAME ON SEVERAL TERMINALS is precisely the case
+// pin binding exists for, and the seeded TXB0104 is one: it prints NC twice. Deriving from the name
+// alone hands those two pins the same id, which two pins may never share, so the author would be
+// walked into a rejected save on the exact part the contract was designed around. Returns "" for an
+// empty name, which the caller treats as "not ready to add" rather than as an id.
+export function derivePinId(name: string, taken: Iterable<string>): string {
+  const base = name.trim().toLowerCase().replace(/\s+/g, "_");
+  if (!base) return "";
+  const used = new Set(taken);
+  if (!used.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base}${n}`;
+    if (!used.has(candidate)) return candidate;
+  }
+}
+
+// newPackage declares one body the part ships in. It carries no provenance: a package is the label a
+// pin number is relative to rather than a claim about the part's behaviour, and param.Validate asks
+// nothing of it beyond a unique id.
+export function newPackage(id: string, name: string, mpnSuffix = ""): Package {
+  return create(PackageSchema, { id: id.trim(), name: name.trim(), mpnSuffix: mpnSuffix.trim() });
+}
+
+// pinsForRegion returns the pins transcribed against a region id, the pin counterpart of
+// paramsForRegion, so a panel can show what a region has yielded so far.
+export function pinsForRegion(spec: PartSpec, regionId: string): Pin[] {
+  return spec.pins.filter((p) => p.attributes[REGION_ATTR] === regionId);
+}
+
+// setPinNumber records a pin's designator within one package, REPLACING any existing entry for that
+// package rather than appending. An empty number removes the entry, which is how a mistyped
+// designator is cleared; leaving it would have the pin claim a terminal it does not have, and two
+// pins claiming one number in a package is exactly what ValidatePins rejects.
+export function setPinNumber(pin: Pin, packageRef: string, number: string): void {
+  const rest = pin.numbers.filter((n) => n.packageRef !== packageRef);
+  const trimmed = number.trim();
+  pin.numbers = trimmed ? [...rest, create(PinNumberSchema, { packageRef, number: trimmed })] : rest;
+}
+
+// bindParam binds a parameter to a terminal, idempotently. Several calls express a row the datasheet
+// states once for a group of pins.
+export function bindParam(p: Parameter, pinId: string): void {
+  if (!p.pinRefs.includes(pinId)) p.pinRefs = [...p.pinRefs, pinId];
+}
+
+// unbindParam removes one terminal from a parameter's binding. Removing the last one returns the row
+// to part-wide, which is a meaningful state (a die-level rating) rather than an error.
+export function unbindParam(p: Parameter, pinId: string): void {
+  p.pinRefs = p.pinRefs.filter((r) => r !== pinId);
+}
+

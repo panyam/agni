@@ -89,6 +89,26 @@
   .tx-p-name { font-weight: 600; flex: 1 1 auto; }
   .tx-p-val { color: #555; }
   .tx-del { border: 0; background: none; color: #b00; cursor: pointer; font-size: 14px; line-height: 1; }
+  .tx-packages { margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; }
+  .tx-packages h4, .tx-pins-head { margin: 0 0 6px; font-size: 12px; color: #666; font-weight: 600; }
+  .tx-pkg-list, .tx-pins { list-style: none; margin: 0 0 6px; padding: 0; }
+  .tx-pkg-id, .tx-pin-id { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: #7c3aed; }
+  .tx-pkg-name { color: #555; flex: 1 1 auto; }
+  .tx-pins-head { margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px; }
+  .tx-nums { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tx-num { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #888; }
+  .tx-num input { width: 40px; font: inherit; font-size: 11px; padding: 1px 3px; border: 1px solid #ccc; border-radius: 3px; }
+  .tx-binds { display: flex; gap: 3px; flex-wrap: wrap; }
+  .tx-bind { font: inherit; font-size: 10px; padding: 0 4px; border-radius: 3px; cursor: pointer; border: 1px solid #ccc; background: none; color: #888; }
+  .tx-bind.on { border-color: #7c3aed; color: #7c3aed; font-weight: 600; }
+  .tx-problems { list-style: none; margin: 8px 0 0; padding: 6px 8px; background: #fdf0ee; border: 1px solid #e6b8ae; border-radius: 4px; color: #9c3025; font-size: 11px; }
+  .tx-problems li { padding: 1px 0; }
+  .tx-todo { margin: 6px 0 0; padding: 5px 8px; background: #f7f7f5; border: 1px solid #e2e2dd; border-radius: 4px; font-size: 11px; color: #666; }
+  .tx-todo summary { cursor: pointer; color: #555; }
+  .tx-todo ul { margin: 4px 0 0; padding-left: 16px; }
+  .tx-todo li { padding: 1px 0; }
+  .tx-confirm { border: 1px solid #b00; background: #fff5f4; color: #b00; border-radius: 4px; font: inherit; font-size: 10px; padding: 1px 6px; cursor: pointer; }
+  .tx-cancel { border: 0; background: none; color: #888; font: inherit; font-size: 10px; cursor: pointer; }
 </style>
 {{ end }}
 

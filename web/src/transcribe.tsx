@@ -1,7 +1,23 @@
 import { createSignal, For, Show } from "solid-js";
-import { LimitKind, type PartSpec, type Parameter } from "./gen/agni/v1/param/param_pb.js";
+import { LimitKind, PinFunction, type PartSpec, type Parameter, type Pin } from "./gen/agni/v1/param/param_pb.js";
 import { REGION_TYPES, type Region, type RegionType } from "./regions.js";
-import { paramsForRegion, type NewParamFields } from "./bank.js";
+import { paramsForRegion, pinsForRegion, derivePinId, type NewParamFields, type NewPinFields } from "./bank.js";
+import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
+
+// The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike the limit kinds above,
+// because a pin table may genuinely have no type column and a pin whose name and number are known is
+// still worth recording; refusing it would lose the numbering.
+const PIN_FUNCTIONS: [PinFunction, string][] = [
+  [PinFunction.POWER_INPUT, "Power input"],
+  [PinFunction.POWER_OUTPUT, "Power output"],
+  [PinFunction.GROUND, "Ground"],
+  [PinFunction.INPUT, "Input"],
+  [PinFunction.OUTPUT, "Output"],
+  [PinFunction.BIDIRECTIONAL, "Bidirectional (I/O)"],
+  [PinFunction.PASSIVE, "Passive"],
+  [PinFunction.NO_CONNECT, "No connect"],
+  [PinFunction.UNSPECIFIED, "Not stated"],
+];
 
 // The limit kinds the editor offers, with human labels (UNSPECIFIED is excluded: a manual row must
 // classify, since a rule cannot dispatch on an unknown kind).
@@ -23,6 +39,14 @@ export interface TranscribeHandlers {
   setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string }>) => void;
   addParam: (f: NewParamFields) => void;
   deleteParam: (p: Parameter) => void;
+  addPin: (f: NewPinFields) => void;
+  deletePin: (p: Pin) => void;
+  setPinNumber: (pin: Pin, packageRef: string, number: string) => void;
+  addPackage: (id: string, name: string, suffix: string) => void;
+  deletePackage: (id: string) => void;
+  toggleBinding: (p: Parameter, pinId: string) => void;
+  // The server's verdict on the last save. The editor renders it and never recomputes it.
+  problems: () => ValidationProblem[];
 }
 
 // numOrUndef parses an editor numeric field, leaving it unset (RangeValue has explicit presence) for
@@ -91,6 +115,94 @@ function ParamEditor(props: { onAdd: (f: NewParamFields) => void }) {
   );
 }
 
+// PinEditor transcribes one pin of a pin table. The id defaults from the name (lowercased) because
+// that is right almost always and the two are edited together; it stays editable because a part that
+// prints one name on several terminals needs distinct ids for exactly those pins.
+function PinEditor(props: { onAdd: (f: NewPinFields) => void; taken: () => string[] }) {
+  const [id, setId] = createSignal("");
+  const [name, setName] = createSignal("");
+  const [fn, setFn] = createSignal<PinFunction>(PinFunction.POWER_INPUT);
+  const [desc, setDesc] = createSignal("");
+  const [idTouched, setIdTouched] = createSignal(false);
+  const effectiveId = (): string => (idTouched() ? id() : derivePinId(name(), props.taken()));
+
+  const add = (): void => {
+    if (!name().trim() || !effectiveId()) return;
+    props.onAdd({ id: effectiveId(), name: name().trim(), fn: fn(), description: desc().trim() });
+    setId(""); setName(""); setDesc(""); setIdTouched(false);
+  };
+
+  return (
+    <div class="tx-editor">
+      <label class="tx-field">Pin name<input placeholder="VCCA" value={name()} onInput={(e) => setName(e.currentTarget.value)} /></label>
+      <label class="tx-field">Id
+        <input placeholder="vcca" value={effectiveId()} onInput={(e) => { setIdTouched(true); setId(e.currentTarget.value); }} />
+      </label>
+      <label class="tx-field">Function
+        <select value={fn()} onChange={(e) => setFn(Number(e.currentTarget.value) as PinFunction)}>
+          <For each={PIN_FUNCTIONS}>{([v, l]) => <option value={v}>{l}</option>}</For>
+        </select>
+      </label>
+      <label class="tx-field">Description<input placeholder="A-port supply voltage…" value={desc()} onInput={(e) => setDesc(e.currentTarget.value)} /></label>
+      <button class="tx-add" onClick={add}>Add pin</button>
+    </div>
+  );
+}
+
+// PackageList declares the bodies the part ships in. It sits with the datasheet metadata rather than
+// under a region because a package is a property of the part, not of any one table.
+function PackageList(props: { spec: () => PartSpec; onAdd: (id: string, name: string, suffix: string) => void; onDelete: (id: string) => void }) {
+  const [id, setId] = createSignal("");
+  const [name, setName] = createSignal("");
+  const [suffix, setSuffix] = createSignal("");
+  // Deleting a package takes every designator recorded against it, so it asks first. The confirm is
+  // INLINE rather than window.confirm: a native dialog blocks the page, which breaks browser
+  // automation outright, and it has to name the count anyway — "delete" and "delete and lose 14 pin
+  // numbers" are different decisions.
+  const [confirming, setConfirming] = createSignal("");
+  const numbersIn = (pkgId: string): number =>
+    props.spec().pins.reduce((n, pin) => n + pin.numbers.filter((x) => x.packageRef === pkgId).length, 0);
+  const add = (): void => {
+    if (!id().trim()) return;
+    props.onAdd(id(), name(), suffix());
+    setId(""); setName(""); setSuffix("");
+  };
+  return (
+    <div class="tx-packages">
+      <h4>Packages</h4>
+      <ul class="tx-pkg-list">
+        <For each={props.spec().packages}>
+          {(p) => (
+            <li class="tx-row">
+              <span class="tx-pkg-id">{p.id}</span>
+              <span class="tx-pkg-name">{p.name}</span>
+              <Show
+                when={confirming() === p.id}
+                fallback={<button class="tx-del" title="delete package" onClick={() => setConfirming(p.id)}>×</button>}
+              >
+                <button
+                  class="tx-confirm"
+                  title={`permanently drops ${numbersIn(p.id)} designator(s)`}
+                  onClick={() => { props.onDelete(p.id); setConfirming(""); }}
+                >
+                  drop {numbersIn(p.id)} number{numbersIn(p.id) === 1 ? "" : "s"}?
+                </button>
+                <button class="tx-cancel" onClick={() => setConfirming("")}>cancel</button>
+              </Show>
+            </li>
+          )}
+        </For>
+      </ul>
+      <div class="tx-range">
+        <label class="tx-field">id<input placeholder="pw" value={id()} onInput={(e) => setId(e.currentTarget.value)} /></label>
+        <label class="tx-field">name<input placeholder="PW (TSSOP-14)" value={name()} onInput={(e) => setName(e.currentTarget.value)} /></label>
+        <label class="tx-field">MPN suffix<input placeholder="PW" value={suffix()} onInput={(e) => setSuffix(e.currentTarget.value)} /></label>
+      </div>
+      <button class="tx-add" onClick={add}>Add package</button>
+    </div>
+  );
+}
+
 // TranscribePanel is the manual backend's editor: datasheet metadata (once), a region's routing
 // type, and, for a table region, the parameter rows transcribed against it. A non-table type shows
 // where its extraction lands (WS13-002/003) rather than a table editor, so the tag is captured but
@@ -103,7 +215,30 @@ export function TranscribePanel(props: TranscribeHandlers) {
         <label class="tx-field">MPN<input placeholder="LM1117" value={props.spec().mpn} onInput={(e) => props.setMeta({ mpn: e.currentTarget.value })} /></label>
         <label class="tx-field">Manufacturer<input value={props.spec().manufacturer} onInput={(e) => props.setMeta({ manufacturer: e.currentTarget.value })} /></label>
         <label class="tx-field">Device class<input placeholder="ldo" value={props.spec().deviceClass} onInput={(e) => props.setMeta({ deviceClass: e.currentTarget.value })} /></label>
+        <PackageList spec={props.spec} onAdd={props.addPackage} onDelete={props.deletePackage} />
       </div>
+      {/* The server's verdict on the last save, split by kind. Structural problems are things to
+          fix; completeness ones are what still stands between this draft and a corpus, so they read
+          as a checklist rather than as errors. Neither blocks anything. */}
+      <Show when={props.problems().some((p) => p.kind === ValidationProblem_Kind.STRUCTURAL)}>
+        <ul class="tx-problems">
+          <For each={props.problems().filter((p) => p.kind === ValidationProblem_Kind.STRUCTURAL)}>
+            {(p) => <li>{p.message}</li>}
+          </For>
+        </ul>
+      </Show>
+      <Show when={props.problems().some((p) => p.kind === ValidationProblem_Kind.COMPLETENESS)}>
+        <details class="tx-todo">
+          <summary>
+            {props.problems().filter((p) => p.kind === ValidationProblem_Kind.COMPLETENESS).length} to fix before this can be seeded
+          </summary>
+          <ul>
+            <For each={props.problems().filter((p) => p.kind === ValidationProblem_Kind.COMPLETENESS)}>
+              {(p) => <li>{p.message}</li>}
+            </For>
+          </ul>
+        </details>
+      </Show>
       <Show when={props.region()} fallback={<div class="tx-hint">Select a region, or drag on the page to draw one, to transcribe it.</div>}>
         {(r) => (
           <div class="tx-region">
@@ -119,17 +254,73 @@ export function TranscribePanel(props: TranscribeHandlers) {
               </select>
             </label>
             <Show
-              when={props.regionType() === "table"}
+              when={props.regionType() === "table" || props.regionType() === "pinout"}
               fallback={<div class="tx-hint">Transcription for “{props.regionType()}” lands with its backend (schematic → WS13-002, chart → WS13-003). Tagged here so coverage tracks it.</div>}
             >
-              <ParamEditor onAdd={props.addParam} />
-              <ul class="tx-params">
-                <For each={paramsForRegion(props.spec(), r().id)}>
-                  {(p) => (
+              {/* A pin function table IS a table, so a table region offers both; a pinout drawing
+                  yields pins only. */}
+              <Show when={props.regionType() === "table"}>
+                <ParamEditor onAdd={props.addParam} />
+                <ul class="tx-params">
+                  <For each={paramsForRegion(props.spec(), r().id)}>
+                    {(p) => (
+                      <li class="tx-row">
+                        <span class="tx-p-name">{p.name || p.symbol}</span>
+                        <span class="tx-p-val">{fmtRange(p)} {p.unit}</span>
+                        <Show when={props.spec().pins.length}>
+                          <span class="tx-binds">
+                            <For each={props.spec().pins}>
+                              {(pin) => {
+                                // Reads through props.spec() rather than the captured p, so the
+                                // chip TRACKS. A plain p.pinRefs read is not a signal, so Solid
+                                // would wrap this in an effect with no dependencies: the binding
+                                // would change in the data and never on screen.
+                                const bound = (): boolean =>
+                                  props.spec().parameters.some((x) => x === p && x.pinRefs.includes(pin.id));
+                                return (
+                                  <button
+                                    class={`tx-bind ${bound() ? "on" : ""}`}
+                                    title={bound() ? `unbind ${pin.name}` : `bind to ${pin.name}`}
+                                    onClick={() => props.toggleBinding(p, pin.id)}
+                                  >
+                                    {pin.name}
+                                  </button>
+                                );
+                              }}
+                            </For>
+                          </span>
+                        </Show>
+                        <button class="tx-del" title="delete" onClick={() => props.deleteParam(p)}>×</button>
+                      </li>
+                    )}
+                  </For>
+                </ul>
+              </Show>
+              <h4 class="tx-pins-head">Pins</h4>
+              <PinEditor onAdd={props.addPin} taken={() => props.spec().pins.map((x) => x.id)} />
+              <ul class="tx-pins">
+                <For each={pinsForRegion(props.spec(), r().id)}>
+                  {(pin) => (
                     <li class="tx-row">
-                      <span class="tx-p-name">{p.name || p.symbol}</span>
-                      <span class="tx-p-val">{fmtRange(p)} {p.unit}</span>
-                      <button class="tx-del" title="delete" onClick={() => props.deleteParam(p)}>×</button>
+                      <span class="tx-p-name">{pin.name}</span>
+                      <span class="tx-pin-id">{pin.id}</span>
+                      <span class="tx-nums">
+                        <For each={props.spec().packages}>
+                          {(pkg) => (
+                            <label class="tx-num" title={`${pin.name} designator in ${pkg.name || pkg.id}`}>
+                              {pkg.id}
+                              <input
+                                value={
+                                  props.spec().pins.find((x) => x.id === pin.id)?.numbers
+                                    .find((n) => n.packageRef === pkg.id)?.number ?? ""
+                                }
+                                onChange={(e) => props.setPinNumber(pin, pkg.id, e.currentTarget.value)}
+                              />
+                            </label>
+                          )}
+                        </For>
+                      </span>
+                      <button class="tx-del" title="delete pin" onClick={() => props.deletePin(pin)}>×</button>
                     </li>
                   )}
                 </For>

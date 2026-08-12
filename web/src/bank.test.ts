@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { LimitKind, ConditionCoverage } from "./gen/agni/v1/param/param_pb.js";
+import { LimitKind, ConditionCoverage, PinFunction } from "./gen/agni/v1/param/param_pb.js";
 import type { BBox } from "./gen/agni/v1/doc/doc_pb.js";
 import type { Region } from "./regions.js";
 import {
@@ -20,7 +20,15 @@ import {
   DEFAULT_LAYERS,
   REGION_ATTR,
   type NewParamFields,
+  type NewPinFields,
   type UiState,
+  newPin,
+  newPackage,
+  derivePinId,
+  pinsForRegion,
+  setPinNumber,
+  bindParam,
+  unbindParam,
 } from "./bank.js";
 
 const bbox = (): BBox => ({ x: 0, y: 0, width: 1, height: 1 }) as unknown as BBox;
@@ -166,3 +174,88 @@ describe("bank", () => {
     expect(got[0].name).toBe("a");
   });
 });
+
+describe("bank pin authoring", () => {
+  const pinFields = (over: Partial<NewPinFields> = {}): NewPinFields => ({
+    id: "vcca",
+    name: "VCCA",
+    fn: PinFunction.POWER_INPUT,
+    description: "A-port supply.",
+    ...over,
+  });
+
+  // A pin function is an extracted claim like a value, and param.Validate requires provenance on it,
+  // so authoring one has to stamp the region it was read from exactly as newParameter does.
+  it("newPin stamps region provenance, so an authored pin can pass param.Validate", () => {
+    const p = newPin(pinFields(), region, 4, "LM1117");
+    expect(p.id).toBe("vcca");
+    expect(p.name).toBe("VCCA");
+    expect(p.function).toBe(PinFunction.POWER_INPUT);
+    expect(p.prov?.docRef).toBe("LM1117");
+    expect(p.prov?.page).toBe(4);
+    expect(p.prov?.method).toBe("hand");
+    expect(p.prov?.confidence).toBe(1);
+    expect(p.attributes[REGION_ATTR]).toBe("p1.t1");
+  });
+
+  it("pinsForRegion lists only the pins transcribed against a region", () => {
+    const spec = emptySpec("d.pdf", "D");
+    spec.pins.push(newPin(pinFields(), region, 4, spec.docs[0].id));
+    spec.pins.push(newPin(pinFields({ id: "gnd", name: "GND" }), { ...region, id: "p9.t2" }, 9, spec.docs[0].id));
+    expect(pinsForRegion(spec, "p1.t1").map((p) => p.id)).toEqual(["vcca"]);
+  });
+
+  // A designator is meaningless without saying which body it belongs to, so a number is only
+  // authorable against a declared package.
+  it("setPinNumber records a designator per package and replaces rather than duplicating", () => {
+    const pin = newPin(pinFields(), region, 4, "d");
+    setPinNumber(pin, "pw", "1");
+    setPinNumber(pin, "rut", "1");
+    expect(pin.numbers.map((n) => [n.packageRef, n.number])).toEqual([["pw", "1"], ["rut", "1"]]);
+    setPinNumber(pin, "pw", "14"); // corrected, not appended
+    expect(pin.numbers.filter((n) => n.packageRef === "pw").map((n) => n.number)).toEqual(["14"]);
+  });
+
+  it("setPinNumber clears a designator when given an empty string", () => {
+    const pin = newPin(pinFields(), region, 4, "d");
+    setPinNumber(pin, "pw", "1");
+    setPinNumber(pin, "pw", "");
+    expect(pin.numbers).toHaveLength(0);
+  });
+
+  it("bindParam and unbindParam edit a parameter's terminals without duplicating", () => {
+    const p = newParameter(fields(), region, 4, "d");
+    bindParam(p, "vcca");
+    bindParam(p, "vcca");
+    expect(p.pinRefs).toEqual(["vcca"]);
+    bindParam(p, "vccb");
+    expect(p.pinRefs).toEqual(["vcca", "vccb"]);
+    unbindParam(p, "vcca");
+    expect(p.pinRefs).toEqual(["vccb"]);
+  });
+
+  // The editor's own guard, mirroring the structural half of param.Validate so the author sees a
+  // problem before saving rather than as a rejected write.
+  
+  // The two-NC-pins case, which is the real TXB0104 shape: a part prints one name on several
+  // terminals, and those terminals need distinct ids. Deriving the id from the name alone walks the
+  // author into a duplicate that blocks the save, on exactly the part this contract exists for.
+  it("derivePinId suffixes rather than colliding when a name repeats", () => {
+    expect(derivePinId("VCCA", [])).toBe("vcca");
+    expect(derivePinId("NC", ["nc"])).toBe("nc2");
+    expect(derivePinId("NC", ["nc", "nc2"])).toBe("nc3");
+    expect(derivePinId("Thermal pad", [])).toBe("thermal_pad");
+    expect(derivePinId("", ["x"])).toBe("");
+  });
+
+  it("a derived id never collides with an existing pin, so nothing collides", () => {
+    const spec = emptySpec("d.pdf", "D");
+    for (const _ of [0, 1, 2]) {
+      const id = derivePinId("NC", spec.pins.map((p) => p.id));
+      spec.pins.push(newPin(pinFields({ id, name: "NC" }), region, 4, spec.docs[0].id));
+    }
+    expect(spec.pins.map((p) => p.id)).toEqual(["nc", "nc2", "nc3"]);
+    expect(new Set(spec.pins.map((p) => p.id)).size).toBe(3); // no collision to report
+  });
+
+  });

@@ -2,8 +2,8 @@
 // @generated from file agni/v1/webapi/datasheet.proto (package agni.v1.webapi, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { BBox, Document } from "../doc/doc_pb";
 import { file_agni_v1_doc_doc } from "../doc/doc_pb";
 import type { Parameter, PartSpec } from "../param/param_pb";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/datasheet.proto.
  */
 export const file_agni_v1_webapi_datasheet: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS9kYXRhc2hlZXQucHJvdG8SDmFnbmkudjEud2ViYXBpIiEKEkdldERvY3VtZW50UmVxdWVzdBILCgN1cmkYASABKAkibAoTR2V0RG9jdW1lbnRSZXNwb25zZRIRCglleHRyYWN0ZWQYASABKAgSJwoIZG9jdW1lbnQYAiABKAsyFS5hZ25pLnYxLmRvYy5Eb2N1bWVudBIZChFleHRyYWN0X2F2YWlsYWJsZRgDIAEoCCIiChNFeHRyYWN0RG9jSVJSZXF1ZXN0EgsKA3VyaRgBIAEoCSI/ChRFeHRyYWN0RG9jSVJSZXNwb25zZRInCghkb2N1bWVudBgBIAEoCzIVLmFnbmkudjEuZG9jLkRvY3VtZW50IiEKEkdldFBhcnRTcGVjUmVxdWVzdBILCgN1cmkYASABKAkiXAoTR2V0UGFydFNwZWNSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRzcGVjGAIgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYxIPCgd2ZXJzaW9uGAMgASgJIl8KE1NhdmVQYXJ0U3BlY1JlcXVlc3QSJQoEc3BlYxgBIAEoCzIXLmFnbmkudjEucGFyYW0uUGFydFNwZWMSFAoMYmFzZV92ZXJzaW9uGAIgASgJEgsKA3VyaRgDIAEoCSInChRTYXZlUGFydFNwZWNSZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJItEBChBSZWdpb25Bbm5vdGF0aW9uEhEKCXJlZ2lvbl9pZBgBIAEoCRIMCgR0eXBlGAIgASgJEiQKBGJib3gYAyABKAsyES5hZ25pLnYxLmRvYy5CQm94SACIAQESDAoEcGFnZRgEIAEoBRIMCgRraW5kGAUgASgJEg0KBWxhYmVsGAYgASgJEi4KDGRyYWZ0X3BhcmFtcxgHIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEhIKCmNvbmZpZGVuY2UYCCABKAFCBwoFX2Jib3giZgoNQW5ub3RhdGlvblNldBIOCgZkb2NfaWQYASABKAkSDgoGYXV0aG9yGAIgASgJEjUKC2Fubm90YXRpb25zGAMgAygLMiAuYWduaS52MS53ZWJhcGkuUmVnaW9uQW5ub3RhdGlvbiIkChVHZXRBbm5vdGF0aW9uc1JlcXVlc3QSCwoDdXJpGAEgASgJIkUKFkdldEFubm90YXRpb25zUmVzcG9uc2USKwoEc2V0cxgBIAMoCzIdLmFnbmkudjEud2ViYXBpLkFubm90YXRpb25TZXQiUQoWU2F2ZUFubm90YXRpb25zUmVxdWVzdBIqCgNzZXQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5Bbm5vdGF0aW9uU2V0EgsKA3VyaRgCIAEoCSIZChdTYXZlQW5ub3RhdGlvbnNSZXNwb25zZTK9BAoQRGF0YXNoZWV0U2VydmljZRJWCgtHZXREb2N1bWVudBIiLmFnbmkudjEud2ViYXBpLkdldERvY3VtZW50UmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkdldERvY3VtZW50UmVzcG9uc2USVgoLR2V0UGFydFNwZWMSIi5hZ25pLnYxLndlYmFwaS5HZXRQYXJ0U3BlY1JlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5HZXRQYXJ0U3BlY1Jlc3BvbnNlElkKDFNhdmVQYXJ0U3BlYxIjLmFnbmkudjEud2ViYXBpLlNhdmVQYXJ0U3BlY1JlcXVlc3QaJC5hZ25pLnYxLndlYmFwaS5TYXZlUGFydFNwZWNSZXNwb25zZRJZCgxFeHRyYWN0RG9jSVISIy5hZ25pLnYxLndlYmFwaS5FeHRyYWN0RG9jSVJSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuRXh0cmFjdERvY0lSUmVzcG9uc2USXwoOR2V0QW5ub3RhdGlvbnMSJS5hZ25pLnYxLndlYmFwaS5HZXRBbm5vdGF0aW9uc1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5HZXRBbm5vdGF0aW9uc1Jlc3BvbnNlEmIKD1NhdmVBbm5vdGF0aW9ucxImLmFnbmkudjEud2ViYXBpLlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5TYXZlQW5ub3RhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_doc_doc, file_agni_v1_param_param]);
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS9kYXRhc2hlZXQucHJvdG8SDmFnbmkudjEud2ViYXBpIiEKEkdldERvY3VtZW50UmVxdWVzdBILCgN1cmkYASABKAkibAoTR2V0RG9jdW1lbnRSZXNwb25zZRIRCglleHRyYWN0ZWQYASABKAgSJwoIZG9jdW1lbnQYAiABKAsyFS5hZ25pLnYxLmRvYy5Eb2N1bWVudBIZChFleHRyYWN0X2F2YWlsYWJsZRgDIAEoCCIiChNFeHRyYWN0RG9jSVJSZXF1ZXN0EgsKA3VyaRgBIAEoCSI/ChRFeHRyYWN0RG9jSVJSZXNwb25zZRInCghkb2N1bWVudBgBIAEoCzIVLmFnbmkudjEuZG9jLkRvY3VtZW50IiEKEkdldFBhcnRTcGVjUmVxdWVzdBILCgN1cmkYASABKAkiXAoTR2V0UGFydFNwZWNSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRzcGVjGAIgASgLMhcuYWduaS52MS5wYXJhbS5QYXJ0U3BlYxIPCgd2ZXJzaW9uGAMgASgJIl8KE1NhdmVQYXJ0U3BlY1JlcXVlc3QSJQoEc3BlYxgBIAEoCzIXLmFnbmkudjEucGFyYW0uUGFydFNwZWMSFAoMYmFzZV92ZXJzaW9uGAIgASgJEgsKA3VyaRgDIAEoCSJcChRTYXZlUGFydFNwZWNSZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEjMKCHByb2JsZW1zGAIgAygLMiEuYWduaS52MS53ZWJhcGkuVmFsaWRhdGlvblByb2JsZW0ipAEKEVZhbGlkYXRpb25Qcm9ibGVtEjQKBGtpbmQYASABKA4yJi5hZ25pLnYxLndlYmFwaS5WYWxpZGF0aW9uUHJvYmxlbS5LaW5kEg8KB21lc3NhZ2UYAiABKAkiSAoES2luZBIUChBLSU5EX1VOU1BFQ0lGSUVEEAASEwoPS0lORF9TVFJVQ1RVUkFMEAESFQoRS0lORF9DT01QTEVURU5FU1MQAiLRAQoQUmVnaW9uQW5ub3RhdGlvbhIRCglyZWdpb25faWQYASABKAkSDAoEdHlwZRgCIAEoCRIkCgRiYm94GAMgASgLMhEuYWduaS52MS5kb2MuQkJveEgAiAEBEgwKBHBhZ2UYBCABKAUSDAoEa2luZBgFIAEoCRINCgVsYWJlbBgGIAEoCRIuCgxkcmFmdF9wYXJhbXMYByADKAsyGC5hZ25pLnYxLnBhcmFtLlBhcmFtZXRlchISCgpjb25maWRlbmNlGAggASgBQgcKBV9iYm94ImYKDUFubm90YXRpb25TZXQSDgoGZG9jX2lkGAEgASgJEg4KBmF1dGhvchgCIAEoCRI1Cgthbm5vdGF0aW9ucxgDIAMoCzIgLmFnbmkudjEud2ViYXBpLlJlZ2lvbkFubm90YXRpb24iJAoVR2V0QW5ub3RhdGlvbnNSZXF1ZXN0EgsKA3VyaRgBIAEoCSJFChZHZXRBbm5vdGF0aW9uc1Jlc3BvbnNlEisKBHNldHMYASADKAsyHS5hZ25pLnYxLndlYmFwaS5Bbm5vdGF0aW9uU2V0IlEKFlNhdmVBbm5vdGF0aW9uc1JlcXVlc3QSKgoDc2V0GAEgASgLMh0uYWduaS52MS53ZWJhcGkuQW5ub3RhdGlvblNldBILCgN1cmkYAiABKAkiGQoXU2F2ZUFubm90YXRpb25zUmVzcG9uc2UyvQQKEERhdGFzaGVldFNlcnZpY2USVgoLR2V0RG9jdW1lbnQSIi5hZ25pLnYxLndlYmFwaS5HZXREb2N1bWVudFJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5HZXREb2N1bWVudFJlc3BvbnNlElYKC0dldFBhcnRTcGVjEiIuYWduaS52MS53ZWJhcGkuR2V0UGFydFNwZWNSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuR2V0UGFydFNwZWNSZXNwb25zZRJZCgxTYXZlUGFydFNwZWMSIy5hZ25pLnYxLndlYmFwaS5TYXZlUGFydFNwZWNSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuU2F2ZVBhcnRTcGVjUmVzcG9uc2USWQoMRXh0cmFjdERvY0lSEiMuYWduaS52MS53ZWJhcGkuRXh0cmFjdERvY0lSUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkV4dHJhY3REb2NJUlJlc3BvbnNlEl8KDkdldEFubm90YXRpb25zEiUuYWduaS52MS53ZWJhcGkuR2V0QW5ub3RhdGlvbnNSZXF1ZXN0GiYuYWduaS52MS53ZWJhcGkuR2V0QW5ub3RhdGlvbnNSZXNwb25zZRJiCg9TYXZlQW5ub3RhdGlvbnMSJi5hZ25pLnYxLndlYmFwaS5TYXZlQW5ub3RhdGlvbnNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuU2F2ZUFubm90YXRpb25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_doc_doc, file_agni_v1_param_param]);
 
 /**
  * @generated from message agni.v1.webapi.GetDocumentRequest
@@ -204,6 +204,22 @@ export type SavePartSpecResponse = Message<"agni.v1.webapi.SavePartSpecResponse"
    * @generated from field: string version = 1;
    */
   version: string;
+
+  /**
+   * problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE:
+   * saving records what an author has, and whether it is any good is a separate question answered
+   * as status and correctable later. Coupling the two would let a judgement destroy work, and would
+   * oblige every editing action to preserve an invariant or strand the document.
+   *
+   * Returned here rather than from a validate endpoint because the workbench already saves on every
+   * edit, so the judgement rides a request that is happening anyway. It is also the reason the
+   * client does not reimplement these rules: one implementation, in Go, reported back.
+   *
+   * Empty means the spec would load into a corpus today.
+   *
+   * @generated from field: repeated agni.v1.webapi.ValidationProblem problems = 2;
+   */
+  problems: ValidationProblem[];
 };
 
 /**
@@ -212,6 +228,68 @@ export type SavePartSpecResponse = Message<"agni.v1.webapi.SavePartSpecResponse"
  */
 export const SavePartSpecResponseSchema: GenMessage<SavePartSpecResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_datasheet, 7);
+
+/**
+ * ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
+ * kinds differently: STRUCTURAL is wrong now and worth interrupting for, COMPLETENESS is the
+ * ordinary state of unfinished work and is better shown as progress toward being publishable.
+ *
+ * @generated from message agni.v1.webapi.ValidationProblem
+ */
+export type ValidationProblem = Message<"agni.v1.webapi.ValidationProblem"> & {
+  /**
+   * @generated from field: agni.v1.webapi.ValidationProblem.Kind kind = 1;
+   */
+  kind: ValidationProblem_Kind;
+
+  /**
+   * Human-readable, already naming its subject ("vcca: duplicate pin id"). Not a code: these are
+   * shown to the person who just typed the thing, not dispatched on.
+   *
+   * @generated from field: string message = 2;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.ValidationProblem.
+ * Use `create(ValidationProblemSchema)` to create a new message.
+ */
+export const ValidationProblemSchema: GenMessage<ValidationProblem> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_datasheet, 8);
+
+/**
+ * @generated from enum agni.v1.webapi.ValidationProblem.Kind
+ */
+export enum ValidationProblem_Kind {
+  /**
+   * @generated from enum value: KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The spec contradicts itself: two pins sharing an id, one designator claimed twice within a
+   * package, a parameter bound to a pin that is not declared. Wrong at any stage of authoring.
+   *
+   * @generated from enum value: KIND_STRUCTURAL = 1;
+   */
+  STRUCTURAL = 1,
+
+  /**
+   * The spec is merely unfinished: no part number yet, a row with no limit kind, missing
+   * provenance. True of every spec under transcription, and only decisive when promoting one
+   * into a corpus.
+   *
+   * @generated from enum value: KIND_COMPLETENESS = 2;
+   */
+  COMPLETENESS = 2,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.ValidationProblem.Kind.
+ */
+export const ValidationProblem_KindSchema: GenEnum<ValidationProblem_Kind> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_datasheet, 8, 0);
 
 /**
  * RegionAnnotation is one human judgement about one region of a datasheet: its routing type, its
@@ -286,7 +364,7 @@ export type RegionAnnotation = Message<"agni.v1.webapi.RegionAnnotation"> & {
  * Use `create(RegionAnnotationSchema)` to create a new message.
  */
 export const RegionAnnotationSchema: GenMessage<RegionAnnotation> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_datasheet, 8);
+  messageDesc(file_agni_v1_webapi_datasheet, 9);
 
 /**
  * AnnotationSet is ONE author's overlay for ONE datasheet: their drawn/tagged regions. doc_id is
@@ -317,7 +395,7 @@ export type AnnotationSet = Message<"agni.v1.webapi.AnnotationSet"> & {
  * Use `create(AnnotationSetSchema)` to create a new message.
  */
 export const AnnotationSetSchema: GenMessage<AnnotationSet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_datasheet, 9);
+  messageDesc(file_agni_v1_webapi_datasheet, 10);
 
 /**
  * @generated from message agni.v1.webapi.GetAnnotationsRequest
@@ -336,7 +414,7 @@ export type GetAnnotationsRequest = Message<"agni.v1.webapi.GetAnnotationsReques
  * Use `create(GetAnnotationsRequestSchema)` to create a new message.
  */
 export const GetAnnotationsRequestSchema: GenMessage<GetAnnotationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_datasheet, 10);
+  messageDesc(file_agni_v1_webapi_datasheet, 11);
 
 /**
  * @generated from message agni.v1.webapi.GetAnnotationsResponse
@@ -356,7 +434,7 @@ export type GetAnnotationsResponse = Message<"agni.v1.webapi.GetAnnotationsRespo
  * Use `create(GetAnnotationsResponseSchema)` to create a new message.
  */
 export const GetAnnotationsResponseSchema: GenMessage<GetAnnotationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_datasheet, 11);
+  messageDesc(file_agni_v1_webapi_datasheet, 12);
 
 /**
  * @generated from message agni.v1.webapi.SaveAnnotationsRequest
@@ -383,7 +461,7 @@ export type SaveAnnotationsRequest = Message<"agni.v1.webapi.SaveAnnotationsRequ
  * Use `create(SaveAnnotationsRequestSchema)` to create a new message.
  */
 export const SaveAnnotationsRequestSchema: GenMessage<SaveAnnotationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_datasheet, 12);
+  messageDesc(file_agni_v1_webapi_datasheet, 13);
 
 /**
  * @generated from message agni.v1.webapi.SaveAnnotationsResponse
@@ -396,7 +474,7 @@ export type SaveAnnotationsResponse = Message<"agni.v1.webapi.SaveAnnotationsRes
  * Use `create(SaveAnnotationsResponseSchema)` to create a new message.
  */
 export const SaveAnnotationsResponseSchema: GenMessage<SaveAnnotationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_datasheet, 13);
+  messageDesc(file_agni_v1_webapi_datasheet, 14);
 
 /**
  * DatasheetService serves a datasheet's doc-IR to the extraction workbench. It is the analogue

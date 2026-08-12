@@ -4,7 +4,8 @@ import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Document } from "./gen/agni/v1/doc/doc_pb.js";
-import type { PartSpec, Parameter } from "./gen/agni/v1/param/param_pb.js";
+import type { PartSpec, Parameter, Pin } from "./gen/agni/v1/param/param_pb.js";
+import type { ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
 import { loadPdf, renderPage, rawDatasheetUrl, type PDFDocumentProxy, type RenderedPage } from "./pdfrender.js";
 import {
@@ -36,7 +37,13 @@ import {
   newParameter,
   paramsForRegion,
   REGION_ATTR,
+  newPin,
+  newPackage,
+  setPinNumber,
+  bindParam,
+  unbindParam,
   type NewParamFields,
+  type NewPinFields,
 } from "./bank.js";
 import { TranscribePanel } from "./transcribe.js";
 
@@ -199,6 +206,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     setSelected(regionId);
   };
 
+  // problems is the server's verdict on the last save. It starts empty, which reads as "nothing
+  // known yet" rather than "nothing wrong" — correct, because no save has happened.
+  const [problems, setProblems] = createSignal<ValidationProblem[]>([]);
+
   const serverSave = async (): Promise<void> => {
     const s = props.state();
     if (!s || !spec) return;
@@ -206,6 +217,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     try {
       const resp = await client.savePartSpec({ uri: artifactUri(s.mount, s.path), spec, baseVersion: version });
       version = resp.version;
+      // The judgement rides the save. The client does NOT recompute these: one implementation lives
+      // in Go (param.Problems) and this renders what it said, so the two cannot drift.
+      setProblems(resp.problems);
+      setRev((v) => v + 1);
     } catch (e) {
       if (e instanceof ConnectError && e.code === Code.Aborted) {
         const resp = await client.getPartSpec({ uri: artifactUri(s.mount, s.path) });
@@ -397,6 +412,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
       rev();
       return spec ?? PLACEHOLDER_SPEC;
     },
+    problems: (): ValidationProblem[] => {
+      rev();
+      return problems();
+    },
     region: selectedRegion,
     regionType: (): RegionType => {
       const r = selectedRegion();
@@ -428,6 +447,43 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     deleteParam: (p: Parameter): void => {
       if (!spec) return;
       spec.parameters = spec.parameters.filter((x) => x !== p);
+      commit();
+    },
+    addPin: (f: NewPinFields): void => {
+      const r = selectedRegion();
+      if (r && spec) {
+        spec.pins.push(newPin(f, r, r.page ?? pageNum(), spec.docs[0]?.id ?? ""));
+        commit();
+      }
+    },
+    deletePin: (p: Pin): void => {
+      if (!spec) return;
+      // Unbind before removing, or every parameter that named this pin is left dangling — which
+      // ValidatePins rejects on the next save, turning a delete into a stuck document.
+      for (const param of spec.parameters) unbindParam(param, p.id);
+      spec.pins = spec.pins.filter((x) => x !== p);
+      commit();
+    },
+    setPinNumber: (pin: Pin, packageRef: string, number: string): void => {
+      setPinNumber(pin, packageRef, number);
+      commit();
+    },
+    addPackage: (id: string, name: string, suffix: string): void => {
+      if (!spec) return;
+      spec.packages.push(newPackage(id, name, suffix));
+      commit();
+    },
+    deletePackage: (id: string): void => {
+      if (!spec) return;
+      // Drop the package's numbers with it, for deletePin's reason: a PinNumber pointing at a
+      // package that no longer exists fails the save.
+      for (const pin of spec.pins) pin.numbers = pin.numbers.filter((n) => n.packageRef !== id);
+      spec.packages = spec.packages.filter((p) => p.id !== id);
+      commit();
+    },
+    toggleBinding: (p: Parameter, pinId: string): void => {
+      if (p.pinRefs.includes(pinId)) unbindParam(p, pinId);
+      else bindParam(p, pinId);
       commit();
     },
   };

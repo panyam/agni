@@ -48,6 +48,52 @@ func Load(r io.Reader) (*parampb.PartSpec, error) {
 // did before pin binding existed, so an older corpus is unaffected (CONSTRAINTS C9).
 func Validate(spec *parampb.PartSpec) error {
 	var errs []error
+	for _, p := range Problems(spec) {
+		errs = append(errs, errors.New(p.Message))
+	}
+	return errors.Join(errs...)
+}
+
+// ProblemKind separates the two questions Problems answers, because a consumer usually wants only
+// one of them. STRUCTURAL means the spec contradicts itself and is wrong now, at any stage of
+// authoring. COMPLETENESS means it is merely unfinished: true of every spec under transcription and
+// only interesting when deciding whether it is ready to be relied on.
+type ProblemKind string
+
+const (
+	ProblemStructural   ProblemKind = "structural"
+	ProblemCompleteness ProblemKind = "completeness"
+)
+
+// Problem is one validation finding, kept separate from its siblings rather than folded into a
+// joined error, so a caller can render them individually and act on the kinds differently.
+type Problem struct {
+	Kind    ProblemKind
+	Message string
+}
+
+// Problems reports everything wrong with a spec, classified. It is the form the workbench consumes:
+// the editor shows structural problems as things to fix now and completeness ones as what still
+// stands between a draft and a corpus. Validate is this, joined, for callers that only need a verdict.
+//
+// An empty result means the spec would load into a corpus today.
+func Problems(spec *parampb.PartSpec) []Problem {
+	var out []Problem
+	for _, e := range structuralProblems(spec) {
+		out = append(out, Problem{Kind: ProblemStructural, Message: e.Error()})
+	}
+	for _, e := range completenessProblems(spec) {
+		out = append(out, Problem{Kind: ProblemCompleteness, Message: e.Error()})
+	}
+	return out
+}
+
+// completenessProblems reports what a spec still lacks to be trusted as corpus data: a join key, and
+// on every parameter a classified limit kind, a value with at least one bound, and resolvable
+// provenance. Every one of these is a legitimate state mid-transcription, which is exactly what
+// separates them from structuralProblems.
+func completenessProblems(spec *parampb.PartSpec) []error {
+	var errs []error
 	if spec.Mpn == "" {
 		errs = append(errs, errors.New("part spec has no mpn (the join key to the design IR)"))
 	}
@@ -58,51 +104,13 @@ func Validate(spec *parampb.PartSpec) error {
 		}
 		docs[d.Id] = true
 	}
-	packages := make(map[string]bool, len(spec.Packages))
-	for i, pkg := range spec.Packages {
-		if pkg.Id == "" {
-			errs = append(errs, fmt.Errorf("packages[%d] has no id", i))
-			continue
-		}
-		if packages[pkg.Id] {
-			errs = append(errs, fmt.Errorf("packages[%d]: duplicate package id %q", i, pkg.Id))
-		}
-		packages[pkg.Id] = true
-	}
-
-	pins := make(map[string]bool, len(spec.Pins))
-	// A pin NUMBER belongs to one pin within one package. Names may repeat (that is the
-	// multi-supply case pin binding exists for) but a package cannot send one terminal to
-	// two pins, and a corpus that says otherwise would make the tie-breaking channel
-	// unusable.
-	claimed := map[string]string{}
 	for i, p := range spec.Pins {
 		id := p.Id
 		if id == "" {
 			id = fmt.Sprintf("pins[%d]", i)
-			errs = append(errs, fmt.Errorf("%s has no id; a parameter cannot bind to it", id))
-		} else {
-			if pins[p.Id] {
-				errs = append(errs, fmt.Errorf("%s: duplicate pin id", id))
-			}
-			pins[p.Id] = true
 		}
 		if p.Name == "" {
 			errs = append(errs, fmt.Errorf("%s: no name; the name is the channel that survives repackaging", id))
-		}
-		for j, n := range p.Numbers {
-			if n.Number == "" {
-				errs = append(errs, fmt.Errorf("%s: numbers[%d] has no number", id, j))
-			}
-			if !packages[n.PackageRef] {
-				errs = append(errs, fmt.Errorf("%s: numbers[%d] package_ref %q does not resolve to a declared package", id, j, n.PackageRef))
-				continue
-			}
-			key := n.PackageRef + "\x00" + normalizePinNumber(n.Number)
-			if prev, dup := claimed[key]; dup {
-				errs = append(errs, fmt.Errorf("%s: number %q in package %q is already claimed by pin %q", id, n.Number, n.PackageRef, prev))
-			}
-			claimed[key] = id
 		}
 		switch {
 		case p.Prov == nil:
@@ -113,16 +121,10 @@ func Validate(spec *parampb.PartSpec) error {
 			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
 		}
 	}
-
 	for i, p := range spec.Parameters {
 		id := p.Symbol
 		if id == "" {
 			id = fmt.Sprintf("parameters[%d]", i)
-		}
-		for _, ref := range p.PinRefs {
-			if !pins[ref] {
-				errs = append(errs, fmt.Errorf("%s: pin_refs %q does not resolve to a declared pin", id, ref))
-			}
 		}
 		if p.LimitKind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
 			errs = append(errs, fmt.Errorf("%s: limit_kind is unspecified; classify or drop", id))
@@ -141,7 +143,7 @@ func Validate(spec *parampb.PartSpec) error {
 			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
 		}
 	}
-	return errors.Join(errs...)
+	return errs
 }
 
 // UnderSpecified reports whether a parameter's value must not be treated as a plain
@@ -179,4 +181,80 @@ func MachineComparable(p *parampb.Parameter) bool {
 		}
 	}
 	return true
+}
+
+// structuralProblems checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
+// numbers that resolve to a declared package with no two pins claiming one number within it, and
+// every Parameter.pin_refs resolving to a declared pin. It returns the errors unjoined so Validate
+// can fold them in with its own rather than nesting a joined error inside a joined error.
+//
+// It is split out rather than inlined because the structural rules differ in KIND from the rest of
+// Validate: they are the ones that can never be an honest work-in-progress state. A spec being
+// transcribed has no MPN and carries unclassified rows, which Validate rightly rejects; two pins
+// sharing an id is wrong the moment it is written and stays wrong.
+//
+// That distinction is currently only documentation. It is UNEXPORTED because nothing outside this
+// package needs the narrow check: the workbench's draft is not gated on it (saving records what an
+// author has, and param.LoadSet reads *.textproto so a draft cannot reach the corpus by sitting on
+// disk), and the editor mirrors these few rules in TS for live feedback. Export it when a caller
+// exists, not before.
+func structuralProblems(spec *parampb.PartSpec) []error {
+	var errs []error
+	packages := make(map[string]bool, len(spec.Packages))
+	for i, pkg := range spec.Packages {
+		if pkg.Id == "" {
+			errs = append(errs, fmt.Errorf("packages[%d] has no id", i))
+			continue
+		}
+		if packages[pkg.Id] {
+			errs = append(errs, fmt.Errorf("packages[%d]: duplicate package id %q", i, pkg.Id))
+		}
+		packages[pkg.Id] = true
+	}
+
+	pins := make(map[string]bool, len(spec.Pins))
+	// A pin NUMBER belongs to one pin within one package. Names may repeat (that is the
+	// multi-supply case pin binding exists for) but a package cannot send one terminal to
+	// two pins, and a corpus that says otherwise would make the tie-breaking channel
+	// unusable.
+	claimed := map[string]string{}
+	for i, p := range spec.Pins {
+		id := p.Id
+		if id == "" {
+			id = fmt.Sprintf("pins[%d]", i)
+			errs = append(errs, fmt.Errorf("%s has no id; a parameter cannot bind to it", id))
+		} else {
+			if pins[p.Id] {
+				errs = append(errs, fmt.Errorf("%s: duplicate pin id", id))
+			}
+			pins[p.Id] = true
+		}
+		for j, n := range p.Numbers {
+			if n.Number == "" {
+				errs = append(errs, fmt.Errorf("%s: numbers[%d] has no number", id, j))
+			}
+			if !packages[n.PackageRef] {
+				errs = append(errs, fmt.Errorf("%s: numbers[%d] package_ref %q does not resolve to a declared package", id, j, n.PackageRef))
+				continue
+			}
+			key := n.PackageRef + "\x00" + normalizePinNumber(n.Number)
+			if prev, dup := claimed[key]; dup {
+				errs = append(errs, fmt.Errorf("%s: number %q in package %q is already claimed by pin %q", id, n.Number, n.PackageRef, prev))
+			}
+			claimed[key] = id
+		}
+	}
+
+	for _, p := range spec.Parameters {
+		id := p.Symbol
+		if id == "" {
+			id = "a parameter"
+		}
+		for _, ref := range p.PinRefs {
+			if !pins[ref] {
+				errs = append(errs, fmt.Errorf("%s: pin_refs %q does not resolve to a declared pin", id, ref))
+			}
+		}
+	}
+	return errs
 }
