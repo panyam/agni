@@ -94,7 +94,6 @@ message Design {
   repeated Component components = 5;
   repeated Net nets = 6;
   repeated Sheet sheets = 7;
-  reserved 13;                              // was: dangling_endpoints; now under input_diagnostics
   InputDiagnostics input_diagnostics = 17;  // reader-emitted, front-end origin (see docs/19)
 
   // Semantic layer, tier 2 (physical) -- PROVISIONAL (see file header, CONSTRAINTS C9).
