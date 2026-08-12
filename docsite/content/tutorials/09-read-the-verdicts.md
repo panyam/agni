@@ -30,11 +30,12 @@ and the distinction is the point. `pass` is a claim, and a claim needs someone t
 
 ## Coverage before results
 
-```
-make coverage
-```
+```console verify
+$ agni review designs/gateway --coverage
+# Review coverage: Gateway ECU design review
 
-```
+Design: `designs/gateway`
+
 **13 of 15 covered**, **13 answered** — 3 pass, 9 fail, 0 n/a; 2 not-automated
 
 Of the covered: 1 provisional (awaiting datasheet data), 0 needs-design-intent (awaiting a declaration), 0 needs-data (awaiting a datasheet seed), 0 inconclusive (the check ran and could not decide), 0 computed-n/a

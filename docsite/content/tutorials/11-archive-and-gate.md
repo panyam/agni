@@ -47,12 +47,9 @@ moved on several versions, the document still says what was checked and what was
 
 ## Gate a merge
 
-```
-agni check designs/gateway/gateway.edn --conventions conventions.yaml --params params --fail-on error
-echo $?
-```
-
-```
+```console verify
+$ agni check designs/gateway/gateway.edn --conventions conventions.yaml --params params --fail-on error > /dev/null
+$ echo $?
 1
 ```
 
