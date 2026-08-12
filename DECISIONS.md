@@ -388,3 +388,77 @@ same rules that the refusing version had needed.
 **Reopen if** a draft ever becomes something another consumer loads automatically. Today the only
 route from draft to corpus is manual, and issue #209 is where that step — and full `param.Validate`
 with it — belongs.
+
+---
+
+## A pin-to-pin bound is a value with a modality, not a comparison operator
+
+**Question.** The first pin-to-pin constraint anyone reads is "VCC(A) must be less than or equal to
+VCC(B)", and the obvious shape for it is a comparison operator between two pin references. #191 asks
+for a tracking relation. Why is it not `{subject, op, reference}`?
+
+**Answer. Because the operator is the least stable part of the sentence.** Five instances read across
+four vendors, and three of the five carry a non-zero offset that an operator cannot express at all:
+
+| Document | The bound |
+|---|---|
+| TXB0104 §9; Nexperia NXB0104 Rev. 4, Table 4 fn [1] (p4) | zero: "must be less than or equal to" |
+| Microchip LAN8671, p246 | 0.5 V: "shall never exceed the VDDAU pin by more than 0.5 V" |
+| NXP NVT2008/NVT2010 Rev. 1, fn [1] (p6) | 1 V: "should be at least 1 V higher than Vref(A)" |
+| TI MSP430FR2355 (SLASEC4D), p113 | stated BY REFERENCE to the Absolute Maximum Ratings section |
+| NXP S32K3xx Rev. 14, p92 | 100 mV, and only for transient, not for DC |
+
+So the shape is a bound on the DIFFERENCE, subject minus reference, which reuses `RangeValue` and its
+absent-bound semantics unchanged. "Less than or equal to" is a max of 0; a symmetric "within ±0.3 V
+of" is min -0.3 and max +0.3. Nothing new is invented, and the three non-zero cases fit.
+
+**Modality is part of the claim, not decoration.** "Shall never exceed" and "should be at least 1 V
+higher for best translator operation" are different statements about the same kind of relation, and a
+contract that records only the numbers cannot tell #192 whether a violation is an error or a note.
+The vendor's own modal verb is the only evidence of which it is.
+
+**What this leaves open.** Two questions this does not answer, both with real instances above:
+
+- The **by-reference** bound. The MSP430FR2355 points at another table instead of printing a number,
+  so the relation may need to name a parameter rather than carry a literal.
+- The **regime qualifier**. The LAN8671 scopes its bound to power-up, power-down and normal
+  operation; the S32K3xx scopes its 100 mV to transient and explicitly not to DC. A bound recorded
+  without its regime is wrong on both, and in opposite directions.
+
+**Reopen if** a wider survey than the 62-document one behind this finds non-zero offsets rare enough
+that the value slot is dead weight. The measured split is three of five, so that is not the current
+evidence.
+
+---
+
+## A datasheet's power-sequencing requirement stays out of the parameter contract
+
+**Question.** Datasheets state sequencing between pins as plainly as they state ordering: the
+TXB0104 requires OE held low until both supplies are ramped and stable, the LAN8671 (p252) requires
+that "VDDA must not be powered for an extended period of time without VDDP also at operational
+levels", and the NVT2010 (p1) requires EN LOW through power-up and power-down. It is common, it is
+safety-relevant, and #191 asks which pin-to-pin forms the contract should carry. Why is this not one
+of them?
+
+**Answer. No, and not because it is unimportant. Nothing can ever evaluate it, and nothing is lost by
+leaving it out.** Two independent reasons, either sufficient:
+
+A netlist carries no ordering-in-time evidence whatsoever. There is no rule #192 could write over the
+design IR that would check a sequencing requirement, so admitting the shape would put a constraint in
+the contract that every run silently skips. That is the exact failure the skip-not-false-pass
+discipline exists to prevent, one layer earlier.
+
+And the text is already retained. Sequencing prose lives in the pin table's description column, which
+`Pin.description` preserves verbatim, so the workbench and the parts panel can already show a human
+the sentence. A dedicated field would therefore be a field with a producer and no consumer, which is
+what PR 202 removed `Package.pin_count` for.
+
+**What this leaves open.** Displaying it better. The sentence is on `Pin.description` today, but
+nothing marks it as a sequencing requirement rather than ordinary prose, so a reader has to notice it.
+Surfacing it is a workbench question, not a contract one.
+
+**Reopen if** a design source starts declaring intended power-up order, most likely as an `intent`
+declaration alongside `StrapGroup`. A datasheet's sequencing requirement is unevaluable against a
+netlist, but it is perfectly evaluable against a second artifact stating what the designer intended.
+That would make this a comparison between two declarations rather than a check against a design, and
+the answer changes.
