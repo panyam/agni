@@ -201,6 +201,28 @@ func PinParameters(spec *parampb.PartSpec, pinID string) []*parampb.Parameter {
 	return out
 }
 
+// PinRelations returns every relation this pin takes part in, on EITHER end. A relation is
+// between two terminals and belongs to neither, so a caller asking "what constrains this pin"
+// wants both the ones it is the subject of and the ones it is the reference for.
+//
+// The two ends mean opposite things, and the caller must read subject_pin_ref to tell them
+// apart: the bound is on subject MINUS reference, so treating a returned relation as though
+// this pin were always the subject inverts the sign on half of them. Returning one list is
+// still right, because the alternative is two accessors that every caller has to remember to
+// call both of.
+func PinRelations(spec *parampb.PartSpec, pinID string) []*parampb.PinRelation {
+	if pinID == "" {
+		return nil
+	}
+	var out []*parampb.PinRelation
+	for _, r := range spec.GetRelations() {
+		if r.GetSubjectPinRef() == pinID || r.GetReferencePinRef() == pinID {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // PackageForMPN narrows an orderable MPN to one declared package by its suffix, so a caller
 // can supply ResolvePin's packageRef instead of leaving the number channel package-blind.
 // It returns nil when no declared suffix matches, which includes the ordinary case of a

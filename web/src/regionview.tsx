@@ -4,7 +4,7 @@ import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Document } from "./gen/agni/v1/doc/doc_pb.js";
-import type { PartSpec, Parameter, Pin } from "./gen/agni/v1/param/param_pb.js";
+import type { PartSpec, Parameter, Pin, PinRelation } from "./gen/agni/v1/param/param_pb.js";
 import type { ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
 import { loadPdf, renderPage, rawDatasheetUrl, type PDFDocumentProxy, type RenderedPage } from "./pdfrender.js";
@@ -39,11 +39,13 @@ import {
   REGION_ATTR,
   newPin,
   newPackage,
+  newRelation,
   setPinNumber,
   bindParam,
   unbindParam,
   type NewParamFields,
   type NewPinFields,
+  type NewRelationFields,
 } from "./bank.js";
 import { TranscribePanel } from "./transcribe.js";
 
@@ -461,6 +463,12 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
       // Unbind before removing, or every parameter that named this pin is left dangling — which
       // ValidatePins rejects on the next save, turning a delete into a stuck document.
       for (const param of spec.parameters) unbindParam(param, p.id);
+      // A relation naming this pin is dangling for the same reason, and unlike a parameter it
+      // cannot be repaired by dropping one ref: a relation with one end gone says nothing, so the
+      // whole relation goes.
+      spec.relations = spec.relations.filter(
+        (r) => r.subjectPinRef !== p.id && r.referencePinRef !== p.id,
+      );
       spec.pins = spec.pins.filter((x) => x !== p);
       commit();
     },
@@ -484,6 +492,18 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     toggleBinding: (p: Parameter, pinId: string): void => {
       if (p.pinRefs.includes(pinId)) unbindParam(p, pinId);
       else bindParam(p, pinId);
+      commit();
+    },
+    addRelation: (f: NewRelationFields): void => {
+      const r = selectedRegion();
+      if (r && spec) {
+        spec.relations.push(newRelation(f, r, r.page ?? pageNum(), spec.docs[0]?.id ?? ""));
+        commit();
+      }
+    },
+    deleteRelation: (rel: PinRelation): void => {
+      if (!spec) return;
+      spec.relations = spec.relations.filter((x) => x !== rel);
       commit();
     },
   };

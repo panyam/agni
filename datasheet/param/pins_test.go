@@ -296,3 +296,39 @@ func pinIDs(pins []*parampb.Pin) []string {
 	}
 	return out
 }
+
+// A relation belongs to neither end, so it must be reachable from both. The TXB0104 states its
+// supply ordering once, and a caller asking either supply what constrains it has to find it.
+func TestPinRelations(t *testing.T) {
+	spec := readFixture(t, "txb0104.textproto")
+
+	subject := PinRelations(spec, "vcca")
+	reference := PinRelations(spec, "vccb")
+	if len(subject) != 1 || len(reference) != 1 {
+		t.Fatalf("want the one relation from both ends; got %d from vcca and %d from vccb", len(subject), len(reference))
+	}
+	if subject[0] != reference[0] {
+		t.Error("both ends must return the same relation, not a copy per end")
+	}
+
+	// The bound is on subject MINUS reference, so the direction is the part a caller must read
+	// rather than assume: VCCA - VCCB <= 0 says VCCA is the one held down.
+	rel := subject[0]
+	if rel.GetSubjectPinRef() != "vcca" || rel.GetReferencePinRef() != "vccb" {
+		t.Errorf("direction: got %q vs %q, want vcca vs vccb", rel.GetSubjectPinRef(), rel.GetReferencePinRef())
+	}
+	if rel.Difference.GetMax() != 0 || rel.Difference.Min != nil {
+		t.Errorf("want a max-of-zero one-sided bound, got %+v", rel.Difference)
+	}
+	if rel.GetModality() != parampb.Modality_MODALITY_REQUIRED {
+		t.Errorf("modality = %v, want REQUIRED; the datasheet says must", rel.GetModality())
+	}
+
+	// A pin in no relation, and a spec with none at all, both answer empty rather than panicking.
+	if got := PinRelations(spec, "gnd"); len(got) != 0 {
+		t.Errorf("gnd is in no relation, got %d", len(got))
+	}
+	if got := PinRelations(readFixture(t, "lm1117.textproto"), "anything"); len(got) != 0 {
+		t.Errorf("a relationless spec must answer empty, got %d", len(got))
+	}
+}

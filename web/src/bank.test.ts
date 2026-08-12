@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { LimitKind, ConditionCoverage, PinFunction } from "./gen/agni/v1/param/param_pb.js";
+import { LimitKind, ConditionCoverage, PinFunction, PinRelationKind, Modality } from "./gen/agni/v1/param/param_pb.js";
 import type { BBox } from "./gen/agni/v1/doc/doc_pb.js";
 import type { Region } from "./regions.js";
 import {
@@ -29,6 +29,10 @@ import {
   setPinNumber,
   bindParam,
   unbindParam,
+  newRelation,
+  relationsForRegion,
+  fmtRelation,
+  type NewRelationFields,
 } from "./bank.js";
 
 const bbox = (): BBox => ({ x: 0, y: 0, width: 1, height: 1 }) as unknown as BBox;
@@ -259,3 +263,64 @@ describe("bank pin authoring", () => {
   });
 
   });
+
+describe("bank relation authoring", () => {
+  const relFields = (over: Partial<NewRelationFields> = {}): NewRelationFields => ({
+    subjectPinRef: "vcca",
+    referencePinRef: "vccb",
+    min: undefined,
+    max: 0,
+    unit: "V",
+    modality: Modality.REQUIRED,
+    raw: "VCCA <= VCCB",
+    ...over,
+  });
+
+  // Same argument as newPin: param.Validate requires provenance on a relation, so authoring one has
+  // to stamp the region it was read in or the draft can never be seeded.
+  it("newRelation stamps region provenance and the only admitted kind", () => {
+    const r = newRelation(relFields(), region, 4, "LM1117");
+    expect(r.subjectPinRef).toBe("vcca");
+    expect(r.referencePinRef).toBe("vccb");
+    expect(r.kind).toBe(PinRelationKind.TRACKING);
+    expect(r.difference?.max).toBe(0);
+    expect(r.difference?.min).toBeUndefined();
+    expect(r.prov?.docRef).toBe("LM1117");
+    expect(r.prov?.page).toBe(4);
+    expect(r.prov?.confidence).toBe(1);
+    expect(r.attributes[REGION_ATTR]).toBe("p1.t1");
+  });
+
+  // A max of 0 is a real bound and a missing max is not one. RangeValue has explicit presence for
+  // exactly this reason, and collapsing the two would turn "VCCA <= VCCB" into "unbounded".
+  it("newRelation keeps a zero bound distinct from an absent one", () => {
+    expect(newRelation(relFields({ max: 0 }), region, 4, "D").difference?.max).toBe(0);
+    expect(newRelation(relFields({ max: undefined }), region, 4, "D").difference?.max).toBeUndefined();
+  });
+
+  it("relationsForRegion lists only the relations transcribed against a region", () => {
+    const spec = emptySpec("d.pdf", "D");
+    const other: Region = { id: "p2.t1", kind: "table", label: "Other", bbox: bbox(), page: 9 };
+    spec.relations = [
+      newRelation(relFields(), region, 4, "D"),
+      newRelation(relFields({ subjectPinRef: "a", referencePinRef: "b" }), other, 9, "D"),
+    ];
+    expect(relationsForRegion(spec, "p1.t1")).toHaveLength(1);
+    expect(relationsForRegion(spec, "p1.t1")[0].subjectPinRef).toBe("vcca");
+    expect(relationsForRegion(spec, "nope")).toHaveLength(0);
+  });
+
+  // The author transcribed a sentence, so the list has to read back as that sentence. Showing the
+  // stored "max 0" instead would make a correct entry look wrong.
+  it("fmtRelation reads back as the datasheet states it", () => {
+    const name = (id: string): string => ({ vcca: "VCCA", vccb: "VCCB" })[id] ?? id;
+    const of = (over: Partial<NewRelationFields>): string =>
+      fmtRelation(newRelation(relFields(over), region, 4, "D"), name);
+
+    expect(of({ max: 0 })).toBe("VCCA <= VCCB");
+    expect(of({ max: 0.5 })).toBe("VCCA <= VCCB + 0.5 V");
+    expect(of({ min: 0, max: undefined })).toBe("VCCA >= VCCB");
+    expect(of({ min: -0.3, max: 0.3 })).toBe("VCCA - VCCB within -0.3 .. 0.3 V");
+    expect(of({ min: undefined, max: undefined })).toBe("VCCA ? VCCB");
+  });
+});

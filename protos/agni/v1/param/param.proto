@@ -52,6 +52,11 @@ message PartSpec {
   repeated Package packages = 6;
   repeated Pin pins = 7;
 
+  // Constraints that hold BETWEEN two of this part's pins. OPTIONAL and empty on every
+  // spec seeded before they existed, under the same degrade-safe rule as packages/pins:
+  // a consumer that finds none behaves exactly as it did before.
+  repeated PinRelation relations = 8;
+
   map<string, string> attributes = 14;
 }
 
@@ -149,6 +154,95 @@ message Pin {
   // Provenance, required by param.Validate exactly as it is on a Parameter. A pin function
   // is an extracted claim like any other, and an extracted claim nobody can verify against
   // a page is a liability.
+  ParamProvenance prov = 16;
+}
+
+// PinRelationKind is what a relation asserts. One member today, deliberately: the
+// field-discipline rule in the header wants a second vendor able to populate a shape
+// before it exists, and a read of 62 datasheets plus three vendors' documents found
+// exactly one form clearing that bar. Common-net (NXP only) and mutual same-state (one
+// second-source document lineage) are recorded in issue #191 and are NOT enum members
+// yet, because an unpopulated member reads to a consumer as a form that never occurs
+// rather than one nobody has evidence for.
+enum PinRelationKind {
+  // Unknown. A relation with this kind fails param.Validate, matching LimitKind:
+  // extractors must classify or drop.
+  PIN_RELATION_KIND_UNSPECIFIED = 0;
+  // The subject pin's voltage is bounded relative to the reference pin's.
+  PIN_RELATION_KIND_TRACKING = 1;
+}
+
+// Modality is whether the document REQUIRES the relation or merely RECOMMENDS it, taken
+// from the vendor's own modal verb. It is recorded because "shall never exceed" and
+// "should be at least 1 V higher for best translator operation" are different claims
+// about the same kind of relation, and a consumer that sees only the numbers cannot tell
+// a violation from a suboptimality. The printed wording survives in PinRelation.raw.
+enum Modality {
+  MODALITY_UNSPECIFIED = 0;
+  // must / shall / never.
+  MODALITY_REQUIRED = 1;
+  // should / recommended / "for best operation".
+  MODALITY_RECOMMENDED = 2;
+}
+
+// PinRelation is a constraint between two pins of one part, the shape `Parameter` cannot
+// carry: a Parameter states a value ABOUT ONE QUANTITY, and its `pin_refs` already means
+// "this row applies to these terminals", so expressing a relation there would make
+// pin_refs mean two different things depending on kind.
+//
+// THE BOUND IS A VALUE, NOT A COMPARISON OPERATOR, which is the whole reason this message
+// looks the way it does. The obvious shape for "VCC(A) must be less than or equal to
+// VCC(B)" is {subject, op, reference}, and it cannot express three of the five instances
+// found across four vendors: a 0.5 V allowance, a 1 V allowance, and a 100 mV one. So the
+// bound is on the DIFFERENCE and reuses RangeValue unchanged. Less-than-or-equal is a max
+// of 0; a symmetric "within 0.3 V of" is min -0.3 and max +0.3. See DECISIONS.md,
+// "A pin-to-pin bound is a value with a modality, not a comparison operator".
+//
+// It lives on PartSpec rather than on Pin because a relation is BETWEEN two terminals and
+// is not owned by either. Hanging it off the subject would imply an asymmetry that a
+// symmetric tolerance does not have.
+message PinRelation {
+  // Pin.id values within the enclosing PartSpec. Both required, and they must differ: a
+  // pin cannot track itself, and a spec saying so is incoherent rather than merely
+  // unfinished, so param.Validate rejects it structurally.
+  //
+  // The bound below is on subject MINUS reference, so the order is load-bearing and
+  // swapping them inverts the meaning.
+  string subject_pin_ref = 1;
+  string reference_pin_ref = 2;
+
+  PinRelationKind kind = 3;
+
+  // Bound on (subject - reference), in `unit`. An absent bound on a side means unbounded
+  // there, exactly as it does on a Parameter's value, so a one-sided requirement needs no
+  // sentinel. A relation with NEITHER bound set says nothing; that is a completeness
+  // problem (a draft mid-authoring) rather than a structural one, matching the workbench
+  // decision that saving records and judging is separate.
+  RangeValue difference = 4;
+  // Unit as printed; normalization is WS10-004, as everywhere else in this contract.
+  string unit = 5;
+
+  Modality modality = 6;
+
+  // The REGIME the bound holds in, when the document scopes it. Reuses Condition rather
+  // than inventing a regime enum, because "transient only, not for DC" and "applies to
+  // power-up, power-down and normal operation" are test conditions in exactly the sense
+  // Condition already models, down to its `raw` escape hatch. Two of the five instances
+  // carry one, and a bound recorded without its regime is wrong in both directions: it
+  // over-applies a transient allowance to DC, and under-applies an operating limit that
+  // the vendor extended across power-up.
+  repeated Condition conditions = 7;
+
+  // The sentence as printed, always. Pin-to-pin constraints are prose, and the structured
+  // fields deliberately do not model every instance: one document states its bound by
+  // reference to another table instead of printing a number, which stays in `raw` until a
+  // second producer does the same.
+  string raw = 8;
+
+  map<string, string> attributes = 14;
+
+  // Provenance, required by param.Validate exactly as on a Parameter and a Pin. An
+  // extracted claim nobody can verify against a page is a liability.
   ParamProvenance prov = 16;
 }
 

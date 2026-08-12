@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/param/param.proto.
  */
 export const file_agni_v1_param_param: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ25pL3YxL3BhcmFtL3BhcmFtLnByb3RvEg1hZ25pLnYxLnBhcmFtItUCCghQYXJ0U3BlYxILCgNtcG4YASABKAkSFAoMbWFudWZhY3R1cmVyGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRImCgRkb2NzGAQgAygLMhguYWduaS52MS5wYXJhbS5Tb3VyY2VEb2MSLAoKcGFyYW1ldGVycxgFIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEigKCHBhY2thZ2VzGAYgAygLMhYuYWduaS52MS5wYXJhbS5QYWNrYWdlEiAKBHBpbnMYByADKAsyEi5hZ25pLnYxLnBhcmFtLlBpbhI7CgphdHRyaWJ1dGVzGA4gAygLMicuYWduaS52MS5wYXJhbS5QYXJ0U3BlYy5BdHRyaWJ1dGVzRW50cnkaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEipgEKB1BhY2thZ2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRISCgptcG5fc3VmZml4GAMgASgJEjoKCmF0dHJpYnV0ZXMYBCADKAsyJi5hZ25pLnYxLnBhcmFtLlBhY2thZ2UuQXR0cmlidXRlc0VudHJ5GjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjAKCVBpbk51bWJlchITCgtwYWNrYWdlX3JlZhgBIAEoCRIOCgZudW1iZXIYAiABKAkipgIKA1BpbhIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEiwKCGZ1bmN0aW9uGAMgASgOMhouYWduaS52MS5wYXJhbS5QaW5GdW5jdGlvbhITCgtkZXNjcmlwdGlvbhgEIAEoCRIpCgdudW1iZXJzGAUgAygLMhguYWduaS52MS5wYXJhbS5QaW5OdW1iZXISNgoKYXR0cmlidXRlcxgOIAMoCzIiLmFnbmkudjEucGFyYW0uUGluLkF0dHJpYnV0ZXNFbnRyeRIsCgRwcm92GBAgASgLMh4uYWduaS52MS5wYXJhbS5QYXJhbVByb3ZlbmFuY2UaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiRwoJU291cmNlRG9jEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg4KBnZlbmRvchgDIAEoCRIPCgdsb2NhdG9yGAQgASgJIloKClJhbmdlVmFsdWUSEAoDbWluGAEgASgBSACIAQESEAoDdHlwGAIgASgBSAGIAQESEAoDbWF4GAMgASgBSAKIAQFCBgoEX21pbkIGCgRfdHlwQgYKBF9tYXgiggEKCUNvbmRpdGlvbhIOCgZzeW1ib2wYASABKAkSDwoCZXEYAiABKAFIAIgBARIQCgNtaW4YAyABKAFIAYgBARIQCgNtYXgYBCABKAFIAogBARIMCgR1bml0GAUgASgJEgsKA3JhdxgGIAEoCUIFCgNfZXFCBgoEX21pbkIGCgRfbWF4ItYDCglQYXJhbWV0ZXISDAoEbmFtZRgBIAEoCRIOCgZzeW1ib2wYAiABKAkSFAoMY2Fub25pY2FsX2lkGAMgASgJEiwKCmxpbWl0X2tpbmQYBCABKA4yGC5hZ25pLnYxLnBhcmFtLkxpbWl0S2luZBIoCgV2YWx1ZRgFIAEoCzIZLmFnbmkudjEucGFyYW0uUmFuZ2VWYWx1ZRIMCgR1bml0GAYgASgJEiwKCmNvbmRpdGlvbnMYByADKAsyGC5hZ25pLnYxLnBhcmFtLkNvbmRpdGlvbhI8ChJjb25kaXRpb25fY292ZXJhZ2UYCCABKA4yIC5hZ25pLnYxLnBhcmFtLkNvbmRpdGlvbkNvdmVyYWdlEhIKCmFwcGxpZXNfdG8YCSABKAkSEAoIcGluX3JlZnMYCiADKAkSPAoKYXR0cmlidXRlcxgOIAMoCzIoLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyLkF0dHJpYnV0ZXNFbnRyeRIsCgRwcm92GBAgASgLMh4uYWduaS52MS5wYXJhbS5QYXJhbVByb3ZlbmFuY2UaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEibQoPUGFyYW1Qcm92ZW5hbmNlEg8KB2RvY19yZWYYASABKAkSDAoEcGFnZRgCIAEoBRIXCg90YWJsZV9vcl9maWd1cmUYAyABKAkSDgoGbWV0aG9kGAQgASgJEhIKCmNvbmZpZGVuY2UYBSABKAEqiQIKC1BpbkZ1bmN0aW9uEhwKGFBJTl9GVU5DVElPTl9VTlNQRUNJRklFRBAAEhwKGFBJTl9GVU5DVElPTl9QT1dFUl9JTlBVVBABEh0KGVBJTl9GVU5DVElPTl9QT1dFUl9PVVRQVVQQAhIXChNQSU5fRlVOQ1RJT05fR1JPVU5EEAMSFgoSUElOX0ZVTkNUSU9OX0lOUFVUEAQSFwoTUElOX0ZVTkNUSU9OX09VVFBVVBAFEh4KGlBJTl9GVU5DVElPTl9CSURJUkVDVElPTkFMEAYSGAoUUElOX0ZVTkNUSU9OX1BBU1NJVkUQBxIbChdQSU5fRlVOQ1RJT05fTk9fQ09OTkVDVBAIKokBCglMaW1pdEtpbmQSGgoWTElNSVRfS0lORF9VTlNQRUNJRklFRBAAEhsKF0xJTUlUX0tJTkRfQUJTT0xVVEVfTUFYEAESJAogTElNSVRfS0lORF9SRUNPTU1FTkRFRF9PUEVSQVRJTkcQAhIdChlMSU1JVF9LSU5EX0NIQVJBQ1RFUklTVElDEAMqngEKEUNvbmRpdGlvbkNvdmVyYWdlEiIKHkNPTkRJVElPTl9DT1ZFUkFHRV9VTlNQRUNJRklFRBAAEh8KG0NPTkRJVElPTl9DT1ZFUkFHRV9DT01QTEVURRABEh4KGkNPTkRJVElPTl9DT1ZFUkFHRV9QQVJUSUFMEAISJAogQ09ORElUSU9OX0NPVkVSQUdFX1VOQ09ORElUSU9OQUwQA0ItWitnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3BhcmFtYgZwcm90bzM");
+  fileDesc("ChlhZ25pL3YxL3BhcmFtL3BhcmFtLnByb3RvEg1hZ25pLnYxLnBhcmFtIoQDCghQYXJ0U3BlYxILCgNtcG4YASABKAkSFAoMbWFudWZhY3R1cmVyGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRImCgRkb2NzGAQgAygLMhguYWduaS52MS5wYXJhbS5Tb3VyY2VEb2MSLAoKcGFyYW1ldGVycxgFIAMoCzIYLmFnbmkudjEucGFyYW0uUGFyYW1ldGVyEigKCHBhY2thZ2VzGAYgAygLMhYuYWduaS52MS5wYXJhbS5QYWNrYWdlEiAKBHBpbnMYByADKAsyEi5hZ25pLnYxLnBhcmFtLlBpbhItCglyZWxhdGlvbnMYCCADKAsyGi5hZ25pLnYxLnBhcmFtLlBpblJlbGF0aW9uEjsKCmF0dHJpYnV0ZXMYDiADKAsyJy5hZ25pLnYxLnBhcmFtLlBhcnRTcGVjLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKmAQoHUGFja2FnZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhIKCm1wbl9zdWZmaXgYAyABKAkSOgoKYXR0cmlidXRlcxgEIAMoCzImLmFnbmkudjEucGFyYW0uUGFja2FnZS5BdHRyaWJ1dGVzRW50cnkaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiMAoJUGluTnVtYmVyEhMKC3BhY2thZ2VfcmVmGAEgASgJEg4KBm51bWJlchgCIAEoCSKmAgoDUGluEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSLAoIZnVuY3Rpb24YAyABKA4yGi5hZ25pLnYxLnBhcmFtLlBpbkZ1bmN0aW9uEhMKC2Rlc2NyaXB0aW9uGAQgASgJEikKB251bWJlcnMYBSADKAsyGC5hZ25pLnYxLnBhcmFtLlBpbk51bWJlchI2CgphdHRyaWJ1dGVzGA4gAygLMiIuYWduaS52MS5wYXJhbS5QaW4uQXR0cmlidXRlc0VudHJ5EiwKBHByb3YYECABKAsyHi5hZ25pLnYxLnBhcmFtLlBhcmFtUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKzAwoLUGluUmVsYXRpb24SFwoPc3ViamVjdF9waW5fcmVmGAEgASgJEhkKEXJlZmVyZW5jZV9waW5fcmVmGAIgASgJEiwKBGtpbmQYAyABKA4yHi5hZ25pLnYxLnBhcmFtLlBpblJlbGF0aW9uS2luZBItCgpkaWZmZXJlbmNlGAQgASgLMhkuYWduaS52MS5wYXJhbS5SYW5nZVZhbHVlEgwKBHVuaXQYBSABKAkSKQoIbW9kYWxpdHkYBiABKA4yFy5hZ25pLnYxLnBhcmFtLk1vZGFsaXR5EiwKCmNvbmRpdGlvbnMYByADKAsyGC5hZ25pLnYxLnBhcmFtLkNvbmRpdGlvbhILCgNyYXcYCCABKAkSPgoKYXR0cmlidXRlcxgOIAMoCzIqLmFnbmkudjEucGFyYW0uUGluUmVsYXRpb24uQXR0cmlidXRlc0VudHJ5EiwKBHByb3YYECABKAsyHi5hZ25pLnYxLnBhcmFtLlBhcmFtUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJHCglTb3VyY2VEb2MSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDgoGdmVuZG9yGAMgASgJEg8KB2xvY2F0b3IYBCABKAkiWgoKUmFuZ2VWYWx1ZRIQCgNtaW4YASABKAFIAIgBARIQCgN0eXAYAiABKAFIAYgBARIQCgNtYXgYAyABKAFIAogBAUIGCgRfbWluQgYKBF90eXBCBgoEX21heCKCAQoJQ29uZGl0aW9uEg4KBnN5bWJvbBgBIAEoCRIPCgJlcRgCIAEoAUgAiAEBEhAKA21pbhgDIAEoAUgBiAEBEhAKA21heBgEIAEoAUgCiAEBEgwKBHVuaXQYBSABKAkSCwoDcmF3GAYgASgJQgUKA19lcUIGCgRfbWluQgYKBF9tYXgi1gMKCVBhcmFtZXRlchIMCgRuYW1lGAEgASgJEg4KBnN5bWJvbBgCIAEoCRIUCgxjYW5vbmljYWxfaWQYAyABKAkSLAoKbGltaXRfa2luZBgEIAEoDjIYLmFnbmkudjEucGFyYW0uTGltaXRLaW5kEigKBXZhbHVlGAUgASgLMhkuYWduaS52MS5wYXJhbS5SYW5nZVZhbHVlEgwKBHVuaXQYBiABKAkSLAoKY29uZGl0aW9ucxgHIAMoCzIYLmFnbmkudjEucGFyYW0uQ29uZGl0aW9uEjwKEmNvbmRpdGlvbl9jb3ZlcmFnZRgIIAEoDjIgLmFnbmkudjEucGFyYW0uQ29uZGl0aW9uQ292ZXJhZ2USEgoKYXBwbGllc190bxgJIAEoCRIQCghwaW5fcmVmcxgKIAMoCRI8CgphdHRyaWJ1dGVzGA4gAygLMiguYWduaS52MS5wYXJhbS5QYXJhbWV0ZXIuQXR0cmlidXRlc0VudHJ5EiwKBHByb3YYECABKAsyHi5hZ25pLnYxLnBhcmFtLlBhcmFtUHJvdmVuYW5jZRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJtCg9QYXJhbVByb3ZlbmFuY2USDwoHZG9jX3JlZhgBIAEoCRIMCgRwYWdlGAIgASgFEhcKD3RhYmxlX29yX2ZpZ3VyZRgDIAEoCRIOCgZtZXRob2QYBCABKAkSEgoKY29uZmlkZW5jZRgFIAEoASqJAgoLUGluRnVuY3Rpb24SHAoYUElOX0ZVTkNUSU9OX1VOU1BFQ0lGSUVEEAASHAoYUElOX0ZVTkNUSU9OX1BPV0VSX0lOUFVUEAESHQoZUElOX0ZVTkNUSU9OX1BPV0VSX09VVFBVVBACEhcKE1BJTl9GVU5DVElPTl9HUk9VTkQQAxIWChJQSU5fRlVOQ1RJT05fSU5QVVQQBBIXChNQSU5fRlVOQ1RJT05fT1VUUFVUEAUSHgoaUElOX0ZVTkNUSU9OX0JJRElSRUNUSU9OQUwQBhIYChRQSU5fRlVOQ1RJT05fUEFTU0lWRRAHEhsKF1BJTl9GVU5DVElPTl9OT19DT05ORUNUEAgqVAoPUGluUmVsYXRpb25LaW5kEiEKHVBJTl9SRUxBVElPTl9LSU5EX1VOU1BFQ0lGSUVEEAASHgoaUElOX1JFTEFUSU9OX0tJTkRfVFJBQ0tJTkcQASpVCghNb2RhbGl0eRIYChRNT0RBTElUWV9VTlNQRUNJRklFRBAAEhUKEU1PREFMSVRZX1JFUVVJUkVEEAESGAoUTU9EQUxJVFlfUkVDT01NRU5ERUQQAiqJAQoJTGltaXRLaW5kEhoKFkxJTUlUX0tJTkRfVU5TUEVDSUZJRUQQABIbChdMSU1JVF9LSU5EX0FCU09MVVRFX01BWBABEiQKIExJTUlUX0tJTkRfUkVDT01NRU5ERURfT1BFUkFUSU5HEAISHQoZTElNSVRfS0lORF9DSEFSQUNURVJJU1RJQxADKp4BChFDb25kaXRpb25Db3ZlcmFnZRIiCh5DT05ESVRJT05fQ09WRVJBR0VfVU5TUEVDSUZJRUQQABIfChtDT05ESVRJT05fQ09WRVJBR0VfQ09NUExFVEUQARIeChpDT05ESVRJT05fQ09WRVJBR0VfUEFSVElBTBACEiQKIENPTkRJVElPTl9DT1ZFUkFHRV9VTkNPTkRJVElPTkFMEANCLVorZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9wYXJhbWIGcHJvdG8z");
 
 /**
  * PartSpec is the root message: every extracted parameter for one part, with the
@@ -65,6 +65,15 @@ export type PartSpec = Message<"agni.v1.param.PartSpec"> & {
    * @generated from field: repeated agni.v1.param.Pin pins = 7;
    */
   pins: Pin[];
+
+  /**
+   * Constraints that hold BETWEEN two of this part's pins. OPTIONAL and empty on every
+   * spec seeded before they existed, under the same degrade-safe rule as packages/pins:
+   * a consumer that finds none behaves exactly as it did before.
+   *
+   * @generated from field: repeated agni.v1.param.PinRelation relations = 8;
+   */
+  relations: PinRelation[];
 
   /**
    * @generated from field: map<string, string> attributes = 14;
@@ -244,6 +253,116 @@ export const PinSchema: GenMessage<Pin> = /*@__PURE__*/
   messageDesc(file_agni_v1_param_param, 3);
 
 /**
+ * PinRelation is a constraint between two pins of one part, the shape `Parameter` cannot
+ * carry: a Parameter states a value ABOUT ONE QUANTITY, and its `pin_refs` already means
+ * "this row applies to these terminals", so expressing a relation there would make
+ * pin_refs mean two different things depending on kind.
+ *
+ * THE BOUND IS A VALUE, NOT A COMPARISON OPERATOR, which is the whole reason this message
+ * looks the way it does. The obvious shape for "VCC(A) must be less than or equal to
+ * VCC(B)" is {subject, op, reference}, and it cannot express three of the five instances
+ * found across four vendors: a 0.5 V allowance, a 1 V allowance, and a 100 mV one. So the
+ * bound is on the DIFFERENCE and reuses RangeValue unchanged. Less-than-or-equal is a max
+ * of 0; a symmetric "within 0.3 V of" is min -0.3 and max +0.3. See DECISIONS.md,
+ * "A pin-to-pin bound is a value with a modality, not a comparison operator".
+ *
+ * It lives on PartSpec rather than on Pin because a relation is BETWEEN two terminals and
+ * is not owned by either. Hanging it off the subject would imply an asymmetry that a
+ * symmetric tolerance does not have.
+ *
+ * @generated from message agni.v1.param.PinRelation
+ */
+export type PinRelation = Message<"agni.v1.param.PinRelation"> & {
+  /**
+   * Pin.id values within the enclosing PartSpec. Both required, and they must differ: a
+   * pin cannot track itself, and a spec saying so is incoherent rather than merely
+   * unfinished, so param.Validate rejects it structurally.
+   *
+   * The bound below is on subject MINUS reference, so the order is load-bearing and
+   * swapping them inverts the meaning.
+   *
+   * @generated from field: string subject_pin_ref = 1;
+   */
+  subjectPinRef: string;
+
+  /**
+   * @generated from field: string reference_pin_ref = 2;
+   */
+  referencePinRef: string;
+
+  /**
+   * @generated from field: agni.v1.param.PinRelationKind kind = 3;
+   */
+  kind: PinRelationKind;
+
+  /**
+   * Bound on (subject - reference), in `unit`. An absent bound on a side means unbounded
+   * there, exactly as it does on a Parameter's value, so a one-sided requirement needs no
+   * sentinel. A relation with NEITHER bound set says nothing; that is a completeness
+   * problem (a draft mid-authoring) rather than a structural one, matching the workbench
+   * decision that saving records and judging is separate.
+   *
+   * @generated from field: agni.v1.param.RangeValue difference = 4;
+   */
+  difference?: RangeValue | undefined;
+
+  /**
+   * Unit as printed; normalization is WS10-004, as everywhere else in this contract.
+   *
+   * @generated from field: string unit = 5;
+   */
+  unit: string;
+
+  /**
+   * @generated from field: agni.v1.param.Modality modality = 6;
+   */
+  modality: Modality;
+
+  /**
+   * The REGIME the bound holds in, when the document scopes it. Reuses Condition rather
+   * than inventing a regime enum, because "transient only, not for DC" and "applies to
+   * power-up, power-down and normal operation" are test conditions in exactly the sense
+   * Condition already models, down to its `raw` escape hatch. Two of the five instances
+   * carry one, and a bound recorded without its regime is wrong in both directions: it
+   * over-applies a transient allowance to DC, and under-applies an operating limit that
+   * the vendor extended across power-up.
+   *
+   * @generated from field: repeated agni.v1.param.Condition conditions = 7;
+   */
+  conditions: Condition[];
+
+  /**
+   * The sentence as printed, always. Pin-to-pin constraints are prose, and the structured
+   * fields deliberately do not model every instance: one document states its bound by
+   * reference to another table instead of printing a number, which stays in `raw` until a
+   * second producer does the same.
+   *
+   * @generated from field: string raw = 8;
+   */
+  raw: string;
+
+  /**
+   * @generated from field: map<string, string> attributes = 14;
+   */
+  attributes: { [key: string]: string };
+
+  /**
+   * Provenance, required by param.Validate exactly as on a Parameter and a Pin. An
+   * extracted claim nobody can verify against a page is a liability.
+   *
+   * @generated from field: agni.v1.param.ParamProvenance prov = 16;
+   */
+  prov?: ParamProvenance | undefined;
+};
+
+/**
+ * Describes the message agni.v1.param.PinRelation.
+ * Use `create(PinRelationSchema)` to create a new message.
+ */
+export const PinRelationSchema: GenMessage<PinRelation> = /*@__PURE__*/
+  messageDesc(file_agni_v1_param_param, 4);
+
+/**
  * SourceDoc is one source document (a datasheet, an app note). Parameters reference
  * it via ParamProvenance.doc_ref so the document identity (vendor doc number +
  * revision) is stated once, not repeated per parameter.
@@ -287,7 +406,7 @@ export type SourceDoc = Message<"agni.v1.param.SourceDoc"> & {
  * Use `create(SourceDocSchema)` to create a new message.
  */
 export const SourceDocSchema: GenMessage<SourceDoc> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 4);
+  messageDesc(file_agni_v1_param_param, 5);
 
 /**
  * RangeValue is a min/typ/max triple with explicit presence. An absolute-max table
@@ -318,7 +437,7 @@ export type RangeValue = Message<"agni.v1.param.RangeValue"> & {
  * Use `create(RangeValueSchema)` to create a new message.
  */
 export const RangeValueSchema: GenMessage<RangeValue> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 5);
+  messageDesc(file_agni_v1_param_param, 6);
 
 /**
  * Condition is one test condition a value is valid under: an exact point
@@ -376,7 +495,7 @@ export type Condition = Message<"agni.v1.param.Condition"> & {
  * Use `create(ConditionSchema)` to create a new message.
  */
 export const ConditionSchema: GenMessage<Condition> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 6);
+  messageDesc(file_agni_v1_param_param, 7);
 
 /**
  * Parameter is one datasheet parameter row: identity as printed, a limit kind, a
@@ -498,7 +617,7 @@ export type Parameter = Message<"agni.v1.param.Parameter"> & {
  * Use `create(ParameterSchema)` to create a new message.
  */
 export const ParameterSchema: GenMessage<Parameter> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 7);
+  messageDesc(file_agni_v1_param_param, 8);
 
 /**
  * ParamProvenance locates a parameter in its source document: the parameter-domain
@@ -555,7 +674,7 @@ export type ParamProvenance = Message<"agni.v1.param.ParamProvenance"> & {
  * Use `create(ParamProvenanceSchema)` to create a new message.
  */
 export const ParamProvenanceSchema: GenMessage<ParamProvenance> = /*@__PURE__*/
-  messageDesc(file_agni_v1_param_param, 8);
+  messageDesc(file_agni_v1_param_param, 9);
 
 /**
  * PinFunction is the pin-table "Type"/"I/O" column as a closed vocabulary. It is admitted
@@ -625,6 +744,76 @@ export const PinFunctionSchema: GenEnum<PinFunction> = /*@__PURE__*/
   enumDesc(file_agni_v1_param_param, 0);
 
 /**
+ * PinRelationKind is what a relation asserts. One member today, deliberately: the
+ * field-discipline rule in the header wants a second vendor able to populate a shape
+ * before it exists, and a read of 62 datasheets plus three vendors' documents found
+ * exactly one form clearing that bar. Common-net (NXP only) and mutual same-state (one
+ * second-source document lineage) are recorded in issue #191 and are NOT enum members
+ * yet, because an unpopulated member reads to a consumer as a form that never occurs
+ * rather than one nobody has evidence for.
+ *
+ * @generated from enum agni.v1.param.PinRelationKind
+ */
+export enum PinRelationKind {
+  /**
+   * Unknown. A relation with this kind fails param.Validate, matching LimitKind:
+   * extractors must classify or drop.
+   *
+   * @generated from enum value: PIN_RELATION_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The subject pin's voltage is bounded relative to the reference pin's.
+   *
+   * @generated from enum value: PIN_RELATION_KIND_TRACKING = 1;
+   */
+  TRACKING = 1,
+}
+
+/**
+ * Describes the enum agni.v1.param.PinRelationKind.
+ */
+export const PinRelationKindSchema: GenEnum<PinRelationKind> = /*@__PURE__*/
+  enumDesc(file_agni_v1_param_param, 1);
+
+/**
+ * Modality is whether the document REQUIRES the relation or merely RECOMMENDS it, taken
+ * from the vendor's own modal verb. It is recorded because "shall never exceed" and
+ * "should be at least 1 V higher for best translator operation" are different claims
+ * about the same kind of relation, and a consumer that sees only the numbers cannot tell
+ * a violation from a suboptimality. The printed wording survives in PinRelation.raw.
+ *
+ * @generated from enum agni.v1.param.Modality
+ */
+export enum Modality {
+  /**
+   * @generated from enum value: MODALITY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * must / shall / never.
+   *
+   * @generated from enum value: MODALITY_REQUIRED = 1;
+   */
+  REQUIRED = 1,
+
+  /**
+   * should / recommended / "for best operation".
+   *
+   * @generated from enum value: MODALITY_RECOMMENDED = 2;
+   */
+  RECOMMENDED = 2,
+}
+
+/**
+ * Describes the enum agni.v1.param.Modality.
+ */
+export const ModalitySchema: GenEnum<Modality> = /*@__PURE__*/
+  enumDesc(file_agni_v1_param_param, 2);
+
+/**
  * LimitKind is the first-class distinction that makes static checks safe: an
  * absolute-max rating, a recommended-operating bound, and a measured characteristic
  * mean different things to a rule, and free text cannot be dispatched on.
@@ -667,7 +856,7 @@ export enum LimitKind {
  * Describes the enum agni.v1.param.LimitKind.
  */
 export const LimitKindSchema: GenEnum<LimitKind> = /*@__PURE__*/
-  enumDesc(file_agni_v1_param_param, 1);
+  enumDesc(file_agni_v1_param_param, 3);
 
 /**
  * ConditionCoverage states, explicitly, how complete a parameter's condition list
@@ -713,5 +902,5 @@ export enum ConditionCoverage {
  * Describes the enum agni.v1.param.ConditionCoverage.
  */
 export const ConditionCoverageSchema: GenEnum<ConditionCoverage> = /*@__PURE__*/
-  enumDesc(file_agni_v1_param_param, 2);
+  enumDesc(file_agni_v1_param_param, 4);
 
