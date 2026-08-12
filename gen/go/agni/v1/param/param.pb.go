@@ -348,9 +348,7 @@ type Package struct {
 	// uses one. Empty when the document does not state it. This is a HINT for narrowing a
 	// design's MPN to one package, never a parser input: a suffix that does not match is
 	// "package unknown", not "package absent".
-	MpnSuffix string `protobuf:"bytes,3,opt,name=mpn_suffix,json=mpnSuffix,proto3" json:"mpn_suffix,omitempty"`
-	// Terminal count, as a cheap coherence check against a design's footprint.
-	PinCount      int32             `protobuf:"varint,4,opt,name=pin_count,json=pinCount,proto3" json:"pin_count,omitempty"`
+	MpnSuffix     string            `protobuf:"bytes,3,opt,name=mpn_suffix,json=mpnSuffix,proto3" json:"mpn_suffix,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -405,13 +403,6 @@ func (x *Package) GetMpnSuffix() string {
 		return x.MpnSuffix
 	}
 	return ""
-}
-
-func (x *Package) GetPinCount() int32 {
-	if x != nil {
-		return x.PinCount
-	}
-	return 0
 }
 
 func (x *Package) GetAttributes() map[string]string {
@@ -1124,19 +1115,18 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf0\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd9\x01\n" +
 	"\aPackage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
-	"mpn_suffix\x18\x03 \x01(\tR\tmpnSuffix\x12\x1b\n" +
-	"\tpin_count\x18\x04 \x01(\x05R\bpinCount\x12F\n" +
+	"mpn_suffix\x18\x03 \x01(\tR\tmpnSuffix\x12F\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2&.agni.v1.param.Package.AttributesEntryR\n" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"D\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x04\x10\x05\"D\n" +
 	"\tPinNumber\x12\x1f\n" +
 	"\vpackage_ref\x18\x01 \x01(\tR\n" +
 	"packageRef\x12\x16\n" +

@@ -39,21 +39,18 @@ packages {
   id: "pw"
   name: "PW (TSSOP-14)"
   mpn_suffix: "PW"
-  pin_count: 14
 }
 
 packages {
   id: "rut"
   name: "RUT (UQFN-12)"
   mpn_suffix: "RUT"
-  pin_count: 12
 }
 
 packages {
   id: "yzt"
   name: "YZT (DSBGA-12)"
   mpn_suffix: "YZT"
-  pin_count: 12
 }
 
 # --- Pin function table (Table 4-1, page 4) ---
