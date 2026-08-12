@@ -399,3 +399,151 @@ func TestStructuralCheckSilentWithoutPinData(t *testing.T) {
 		}
 	}
 }
+
+// A relation naming a pin the spec never declares, or naming one pin twice, is incoherent at any
+// stage of authoring: there is no editing state in which "VCCA tracks a pin that does not exist" is
+// a step toward a finished document. Same argument as the pin-binding checks above.
+func TestStructuralCheckRejectsIncoherentRelations(t *testing.T) {
+	cases := []struct {
+		name string
+		rel  *parampb.PinRelation
+		want string
+	}{
+		{"subject names an undeclared pin",
+			&parampb.PinRelation{SubjectPinRef: "ghost", ReferencePinRef: "vcc"}, "subject_pin_ref"},
+		{"reference names an undeclared pin",
+			&parampb.PinRelation{SubjectPinRef: "vcc", ReferencePinRef: "ghost"}, "reference_pin_ref"},
+		{"a pin tracking itself",
+			&parampb.PinRelation{SubjectPinRef: "vcc", ReferencePinRef: "vcc"}, "itself"},
+	}
+	for _, tc := range cases {
+		spec := relationWIP()
+		spec.Relations = []*parampb.PinRelation{tc.rel}
+		err := errors.Join(structuralProblems(spec)...)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: structural check = %v, want an error mentioning %q", tc.name, err, tc.want)
+		}
+	}
+}
+
+// The bound is the part an author fills in last, so an unfinished relation must not read as a broken
+// one. This is the same split the workbench depends on everywhere else: saving records, judging is
+// separate.
+func TestUnboundedRelationIsIncompleteNotIncoherent(t *testing.T) {
+	spec := relationWIP()
+	spec.Relations = []*parampb.PinRelation{{
+		SubjectPinRef: "vcca", ReferencePinRef: "vcc",
+		Kind: parampb.PinRelationKind_PIN_RELATION_KIND_TRACKING,
+		Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
+	}}
+	if err := errors.Join(structuralProblems(spec)...); err != nil {
+		t.Errorf("a relation with no bound yet must pass the structural check: %v", err)
+	}
+	got := errors.Join(completenessProblems(spec)...)
+	if got == nil || !strings.Contains(got.Error(), "no min or max") {
+		t.Errorf("completeness = %v, want an error mentioning %q", got, "no min or max")
+	}
+}
+
+// Completeness mirrors the Parameter rules one for one: an unclassified kind, a reversed bound, and
+// missing or unverifiable provenance are all "not finished", never "contradicts itself".
+func TestRelationCompletenessMirrorsParameterRules(t *testing.T) {
+	full := func() *parampb.PinRelation {
+		return &parampb.PinRelation{
+			SubjectPinRef: "vcca", ReferencePinRef: "vcc",
+			Kind:       parampb.PinRelationKind_PIN_RELATION_KIND_TRACKING,
+			Difference: &parampb.RangeValue{Max: f64(0)},
+			Unit:       "V",
+			Prov:       &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
+		}
+	}
+	cases := []struct {
+		name string
+		mut  func(*parampb.PinRelation)
+		want string
+	}{
+		{"kind never classified", func(r *parampb.PinRelation) {
+			r.Kind = parampb.PinRelationKind_PIN_RELATION_KIND_UNSPECIFIED
+		}, "kind is unspecified"},
+		{"bound reversed", func(r *parampb.PinRelation) {
+			r.Difference = &parampb.RangeValue{Min: f64(1), Max: f64(-1)}
+		}, "above max"},
+		{"no provenance", func(r *parampb.PinRelation) { r.Prov = nil }, "no prov"},
+		{"provenance cites an undeclared doc", func(r *parampb.PinRelation) {
+			r.Prov.DocRef = "nope"
+		}, "does not resolve"},
+	}
+	for _, tc := range cases {
+		spec := relationWIP()
+		rel := full()
+		tc.mut(rel)
+		spec.Relations = []*parampb.PinRelation{rel}
+		if err := errors.Join(structuralProblems(spec)...); err != nil {
+			t.Errorf("%s: must not be structural: %v", tc.name, err)
+		}
+		got := errors.Join(completenessProblems(spec)...)
+		if got == nil || !strings.Contains(got.Error(), tc.want) {
+			t.Errorf("%s: completeness = %v, want an error mentioning %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// The non-zero offset is the case a comparison operator could not have expressed, and it is why the
+// bound is a RangeValue over the difference. Held as an in-memory spec rather than a fixture file:
+// the corpus-vs-fixture line means a fixture carries only the rows its tests need.
+func TestNonZeroAndSymmetricBoundsRoundTrip(t *testing.T) {
+	spec := relationWIP()
+	spec.Mpn = "SOME-PART"
+	spec.Relations = []*parampb.PinRelation{
+		{ // "shall never exceed the reference by more than 0.5 V"
+			SubjectPinRef: "vcca", ReferencePinRef: "vcc",
+			Kind:       parampb.PinRelationKind_PIN_RELATION_KIND_TRACKING,
+			Difference: &parampb.RangeValue{Max: f64(0.5)},
+			Unit:       "V", Modality: parampb.Modality_MODALITY_REQUIRED,
+			Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
+		},
+		{ // a symmetric "within 0.3 V of"
+			SubjectPinRef: "vcc", ReferencePinRef: "vcca",
+			Kind:       parampb.PinRelationKind_PIN_RELATION_KIND_TRACKING,
+			Difference: &parampb.RangeValue{Min: f64(-0.3), Max: f64(0.3)},
+			Unit:       "V", Modality: parampb.Modality_MODALITY_RECOMMENDED,
+			Prov: &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1},
+		},
+	}
+	if err := Validate(spec); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if got := spec.Relations[0].Difference.GetMax(); got != 0.5 {
+		t.Errorf("one-sided bound max = %v, want 0.5", got)
+	}
+	if got := spec.Relations[1].Difference.GetMin(); got != -0.3 {
+		t.Errorf("symmetric bound min = %v, want -0.3", got)
+	}
+}
+
+// Degrade-safety (C9) for relations, the same promise packages and pins made: a spec seeded before
+// they existed validates exactly as it did, and the relation checks stay silent.
+func TestValidateAcceptsRelationlessSpecs(t *testing.T) {
+	for _, name := range []string{"lm1117.textproto", "bss138.textproto", "txb0104.textproto"} {
+		spec := readFixture(t, name)
+		before := len(Problems(spec))
+		spec.Relations = nil
+		if got := len(Problems(spec)); got != before {
+			t.Errorf("%s: clearing relations changed the problem count %d -> %d", name, before, got)
+		}
+	}
+}
+
+// The shape the workbench produces mid-transcription, with two pins to relate.
+func relationWIP() *parampb.PartSpec {
+	prov := func() *parampb.ParamProvenance {
+		return &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1}
+	}
+	return &parampb.PartSpec{
+		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "Some datasheet"}},
+		Pins: []*parampb.Pin{
+			{Id: "vcc", Name: "VCC", Prov: prov()},
+			{Id: "vcca", Name: "VCCA", Prov: prov()},
+		},
+	}
+}

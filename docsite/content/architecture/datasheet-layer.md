@@ -168,6 +168,47 @@ from "the two channels contradict each other" (`ErrPinConflict`).
 Pin data is optional throughout. A spec that carries none validates and behaves exactly as it did
 before pin binding existed, so an older corpus is unaffected (C9).
 
+### Constraints between two pins
+
+Some requirements hold between two terminals rather than about one: a supply that must stay at or
+below another, a reference that must sit at least a volt above its companion. A `Parameter` cannot
+say this. It states a value about one quantity, and its `pin_refs` already means "this row applies
+to these terminals", so expressing a relation there would make `pin_refs` mean two different things
+depending on the row. `PinRelation` is the separate shape, held on `PartSpec` rather than on a
+`Pin`, because a relation is between two terminals and is owned by neither.
+
+**The bound is a value, not a comparison operator.** The obvious shape for "VCC(A) must be less
+than or equal to VCC(B)" is a subject, an operator and a reference, and it breaks on the next
+document. Read across four vendors, three of five instances carry a non-zero allowance: one part
+requires its analog supply never exceed another by more than 0.5 V, another wants its high-side
+reference at least 1 V above the low, a third permits 100 mV of difference but only as a transient.
+So the bound is on the DIFFERENCE, subject minus reference, and reuses `RangeValue` unchanged:
+
+| The document says | `difference` |
+|---|---|
+| `VCCA <= VCCB` | `max: 0` |
+| never exceeds by more than 0.5 V | `max: 0.5` |
+| at least 1 V higher | `min: 1` |
+| within 0.3 V of | `min: -0.3, max: 0.3` |
+
+Because the bound is signed, the ORDER of the two ends is load-bearing and swapping them inverts
+the requirement. `param.PinRelations` returns the relations a pin takes part in from either end, so
+a caller has to read `subject_pin_ref` rather than assume the pin it asked about is the subject.
+
+**Modality is recorded because it changes what a violation means.** "Shall never exceed" and
+"should be at least 1 V higher for best operation" are different claims, and a consumer holding only
+the numbers cannot tell a defect from a suboptimality. The vendor's own modal verb is the only
+evidence of which one it is, and the printed sentence is kept in `raw` regardless.
+
+**A regime is a `Condition`, not a new field.** Two of the five instances scope their bound: one to
+transient behaviour and explicitly not to DC, another across power-up, power-down and normal
+operation. Those are test conditions in the sense `Condition` already models, down to its `raw`
+escape hatch, so a relation carries `conditions` and nothing new was invented for it. A bound
+recorded without its regime is wrong in both directions: it over-applies a transient allowance to
+steady state, and under-applies a limit the vendor extended across power-up.
+
+Relations are optional on the same terms as pins. A spec carrying none validates exactly as before.
+
 ### What is deliberately absent
 
 A field earns its place only when a second producer would populate it, and for parameters a
@@ -186,10 +227,20 @@ A field earns its place only when a second producer would populate it, and for p
 - **No verification-workflow state** (reviewed-by, approved). That workflow belongs to the
   extraction pipeline and store. Until it exists, `method` and `confidence` carry what the
   schema needs, and anything extra goes in `attributes`.
-- **No package GEOMETRY.** `Package` carries an id, the name as printed, the orderable-MPN
-  suffix, and a terminal count, which is what pin numbering needs and nothing more.
+- **No package GEOMETRY.** `Package` carries an id, the name as printed, and the orderable-MPN
+  suffix, which is what pin numbering needs and nothing more.
   Land patterns, body dimensions, and package-compatibility checks join through the design IR's
   footprint tier when they arrive; duplicating that here would create a second source of truth.
+- **Only one kind of pin relation.** `PinRelationKind` has a single member, `TRACKING`, because
+  that is the only form a read across four vendors found more than one producer for. Two others
+  are real and recorded on the issue rather than in the schema: a common-net requirement (found
+  only in one vendor's documents so far) and a mutual same-state requirement for unused pin pairs
+  (found only in two second-source parts whose wording is nearly identical, which is one document
+  lineage rather than two producers). An unpopulated enum member reads to a consumer as a form
+  that never occurs, which is a different and worse claim than one nobody has evidence for yet.
+- **No power-sequencing shape.** Datasheets state sequencing between pins as plainly as they state
+  ordering, but a netlist carries no evidence of order in time, so no rule could ever evaluate one.
+  The prose survives verbatim on `Pin.description`, which is where a human reads it.
 
 ### Why proto
 

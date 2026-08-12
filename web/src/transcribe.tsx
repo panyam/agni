@@ -1,7 +1,10 @@
 import { createSignal, For, Show } from "solid-js";
-import { LimitKind, PinFunction, type PartSpec, type Parameter, type Pin } from "./gen/agni/v1/param/param_pb.js";
+import { LimitKind, PinFunction, Modality, type PartSpec, type Parameter, type Pin, type PinRelation } from "./gen/agni/v1/param/param_pb.js";
 import { REGION_TYPES, type Region, type RegionType } from "./regions.js";
-import { paramsForRegion, pinsForRegion, derivePinId, type NewParamFields, type NewPinFields } from "./bank.js";
+import {
+  paramsForRegion, pinsForRegion, relationsForRegion, derivePinId, fmtRelation,
+  type NewParamFields, type NewPinFields, type NewRelationFields,
+} from "./bank.js";
 import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 
 // The pin functions the editor offers. UNSPECIFIED IS INCLUDED here, unlike the limit kinds above,
@@ -27,6 +30,15 @@ const LIMIT_LABELS: [LimitKind, string][] = [
   [LimitKind.CHARACTERISTIC, "Characteristic"],
 ];
 
+// Modality is taken from the vendor's own modal verb, so the labels quote the words an author is
+// looking at on the page rather than naming the enum. UNSPECIFIED is excluded for the same reason
+// LimitKind's is: a hand-transcribed relation has a sentence in front of it and can always say
+// which of the two it is.
+const MODALITY_LABELS: [Modality, string][] = [
+  [Modality.REQUIRED, "must / shall / never"],
+  [Modality.RECOMMENDED, "should / recommended"],
+];
+
 // TranscribeHandlers is everything the panel reads and writes, provided by the workbench which owns
 // the bank state. The accessors are reactive (they re-read on any bank edit); the mutators persist.
 export interface TranscribeHandlers {
@@ -45,6 +57,8 @@ export interface TranscribeHandlers {
   addPackage: (id: string, name: string, suffix: string) => void;
   deletePackage: (id: string) => void;
   toggleBinding: (p: Parameter, pinId: string) => void;
+  addRelation: (f: NewRelationFields) => void;
+  deleteRelation: (r: PinRelation) => void;
   // The server's verdict on the last save. The editor renders it and never recomputes it.
   problems: () => ValidationProblem[];
 }
@@ -145,6 +159,74 @@ function PinEditor(props: { onAdd: (f: NewPinFields) => void; taken: () => strin
       </label>
       <label class="tx-field">Description<input placeholder="A-port supply voltage…" value={desc()} onInput={(e) => setDesc(e.currentTarget.value)} /></label>
       <button class="tx-add" onClick={add}>Add pin</button>
+    </div>
+  );
+}
+
+// RelationEditor transcribes one pin-to-pin constraint. It sits under the pins rather than with the
+// packages because its source text is the pin table's own description column, which is also where
+// its provenance comes from.
+//
+// The bound is entered as a min and a max ON THE DIFFERENCE, subject minus reference, and the
+// placeholders say so. Offering a comparison picker instead would have to translate to a difference
+// somewhere, and that translation is where a sign error would live. The list below reads each stored
+// relation back as a comparison, so the author still checks their work against the printed sentence.
+function RelationEditor(props: { pins: () => Pin[]; onAdd: (f: NewRelationFields) => void }) {
+  const [subject, setSubject] = createSignal("");
+  const [reference, setReference] = createSignal("");
+  const [min, setMin] = createSignal("");
+  const [max, setMax] = createSignal("");
+  const [unit, setUnit] = createSignal("V");
+  const [modality, setModality] = createSignal<Modality>(Modality.REQUIRED);
+  const [raw, setRaw] = createSignal("");
+
+  // A pin cannot track itself, which param.Validate rejects structurally. Refusing it here means the
+  // author never authors the one thing the contract calls incoherent, rather than being told after
+  // a round trip.
+  const usable = (): boolean => !!subject() && !!reference() && subject() !== reference();
+
+  const add = (): void => {
+    if (!usable()) return;
+    props.onAdd({
+      subjectPinRef: subject(),
+      referencePinRef: reference(),
+      min: numOrUndef(min()),
+      max: numOrUndef(max()),
+      unit: unit().trim(),
+      modality: modality(),
+      raw: raw().trim(),
+    });
+    setMin(""); setMax(""); setRaw("");
+  };
+
+  return (
+    <div class="tx-editor">
+      <div class="tx-range">
+        <label class="tx-field">Pin
+          <select value={subject()} onChange={(e) => setSubject(e.currentTarget.value)}>
+            <option value="">select…</option>
+            <For each={props.pins()}>{(p) => <option value={p.id}>{p.name || p.id}</option>}</For>
+          </select>
+        </label>
+        <label class="tx-field">tracks
+          <select value={reference()} onChange={(e) => setReference(e.currentTarget.value)}>
+            <option value="">select…</option>
+            <For each={props.pins()}>{(p) => <option value={p.id}>{p.name || p.id}</option>}</For>
+          </select>
+        </label>
+      </div>
+      <div class="tx-range">
+        <label class="tx-field">min diff<input placeholder="unbounded" value={min()} onInput={(e) => setMin(e.currentTarget.value)} /></label>
+        <label class="tx-field">max diff<input placeholder="0" value={max()} onInput={(e) => setMax(e.currentTarget.value)} /></label>
+        <label class="tx-field">unit<input placeholder="V" value={unit()} onInput={(e) => setUnit(e.currentTarget.value)} /></label>
+        <label class="tx-field">Wording
+          <select value={modality()} onChange={(e) => setModality(Number(e.currentTarget.value) as Modality)}>
+            <For each={MODALITY_LABELS}>{([v, l]) => <option value={v}>{l}</option>}</For>
+          </select>
+        </label>
+      </div>
+      <label class="tx-field">As printed<input placeholder="VCCA <= VCCB" value={raw()} onInput={(e) => setRaw(e.currentTarget.value)} /></label>
+      <button class="tx-add" disabled={!usable()} onClick={add}>Add relation</button>
     </div>
   );
 }
@@ -325,6 +407,35 @@ export function TranscribePanel(props: TranscribeHandlers) {
                   )}
                 </For>
               </ul>
+              {/* Relating two pins needs two pins, and the hint says which is missing rather than
+                  offering an editor whose selects are both empty. */}
+              <h4 class="tx-rel-head">Pin relations</h4>
+              <Show
+                when={props.spec().pins.length >= 2}
+                fallback={<div class="tx-hint">Declare at least two pins to relate one to another.</div>}
+              >
+                <RelationEditor pins={() => props.spec().pins} onAdd={props.addRelation} />
+                <ul class="tx-relations">
+                  <For each={relationsForRegion(props.spec(), r().id)}>
+                    {(rel) => {
+                      // Resolved through props.spec() on every read, so renaming a pin updates the
+                      // sentence. Capturing the names once would freeze them at author time, the
+                      // same non-tracking mistake the binding chips above call out.
+                      const nameOf = (id: string): string =>
+                        props.spec().pins.find((p) => p.id === id)?.name || id;
+                      return (
+                        <li class="tx-row">
+                          <span class="tx-rel-text">{fmtRelation(rel, nameOf)}</span>
+                          <span class="tx-rel-mode">
+                            {rel.modality === Modality.RECOMMENDED ? "should" : "must"}
+                          </span>
+                          <button class="tx-del" title="delete relation" onClick={() => props.deleteRelation(rel)}>×</button>
+                        </li>
+                      );
+                    }}
+                  </For>
+                </ul>
+              </Show>
             </Show>
           </div>
         )}
