@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIrUBCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCSJ7ChBOYW1pbmdDb252ZW50aW9uEgwKBG5hbWUYASABKAkSLgoHbGV4aWNvbhgCIAEoCzIdLmFnbmkudjEud2ViYXBpLk5hbWluZ0xleGljb24SKQoFcnVsZXMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5OYW1pbmdSdWxlItUCCg1OYW1pbmdMZXhpY29uEisKBHJhaWwYASABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zEi0KBmdyb3VuZBgCIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSLwoIZmVlZGJhY2sYAyABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zEjEKCnN1cHBseV9waW4YBCABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zEjcKBWNsYXNzGAUgAygLMiguYWduaS52MS53ZWJhcGkuTmFtaW5nTGV4aWNvbi5DbGFzc0VudHJ5GksKCkNsYXNzRW50cnkSCwoDa2V5GAEgASgJEiwKBXZhbHVlGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJuczoCOAEiMgoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIImwKCk5hbWluZ1J1bGUSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRILCgN3aHkYAyABKAkSDQoFYWxsb3cYBCADKAkSDgoGZXhlbXB0GAUgAygJEhIKCm1hdGNoX2Z1bGwYBiABKAhCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw");
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIsYBCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS53ZWJhcGkuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWluZ1J1bGUi1QIKDU5hbWluZ0xleGljb24SKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSMQoKc3VwcGx5X3BpbhgEIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnMSNwoFY2xhc3MYBSADKAsyKC5hZ25pLnYxLndlYmFwaS5OYW1pbmdMZXhpY29uLkNsYXNzRW50cnkaSwoKQ2xhc3NFbnRyeRILCgNrZXkYASABKAkSLAoFdmFsdWUYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zOgI4ASIyCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgibAoKTmFtaW5nUnVsZRIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEgsKA3doeRgDIAEoCRINCgVhbGxvdxgEIAMoCRIOCgZleGVtcHQYBSADKAkSEgoKbWF0Y2hfZnVsbBgGIAEoCEIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -96,6 +96,28 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * @generated from field: string intent_uri = 6;
    */
   intentUri: string;
+
+  /**
+   * extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
+   * when it inherits nothing.
+   *
+   * It is a project resource name rather than a file URI because a shared config IS a project: one
+   * with config and no designs. That reuses the store, the descriptor format and the id rules already
+   * in place instead of inventing a second kind of config document, and it means shared config is
+   * discoverable by the same ListProjects a viewer already calls.
+   *
+   * Inheritance is DECLARED, never ambient, and that is the whole safety property. A deployment
+   * default that applied unless overridden is precisely the bug per-design config fixed — one team's
+   * profiles reaching every board on the server. An extends is visible in the descriptor, scoped to
+   * the project that wrote it, and reaches no design that did not ask for it.
+   *
+   * The chain layers root-most FIRST, so a project overrides what it inherits. It is bounded and
+   * cycle-checked: a cycle is an error naming the loop, because a config that silently stopped
+   * resolving partway would compose a subset of what the operator declared.
+   *
+   * @generated from field: string extends = 7;
+   */
+  extends: string;
 };
 
 /**

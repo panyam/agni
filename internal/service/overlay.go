@@ -280,7 +280,7 @@ func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 //
 // A REQUEST's own overlay still wins over both. A caller that named its conventions is answering for
 // itself, and the project is the default it is overriding.
-func OverlayFor(ctx context.Context, resolver ConfigResolver, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
+func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
 	if p == nil {
 		return overlayWithRequest(ctx, resolver, req, fallback, baseConvention)
 	}
@@ -288,7 +288,13 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, p *webapi.Project,
 	// the design's where the rest is the project's, and loading them in one call is what keeps a run
 	// from composing one design's intent against another's profiles — which two separate calls would
 	// eventually allow.
-	merged := mergeConfig(p.GetConfig(), d.GetConfig())
+	// Whatever the project inherits is layered in FIRST, so `merged` below is the project's whole
+	// config rather than only what its own descriptor spelled out.
+	inherited, err := resolveExtends(ctx, store, p)
+	if err != nil {
+		return Overlay{}, err
+	}
+	merged := mergeConfig(inherited, d.GetConfig())
 	var o Overlay
 	if resolver != nil {
 		cfg, err := resolver.ResolveConfig(ctx, merged, projectNamespace(p))
@@ -300,7 +306,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, p *webapi.Project,
 		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
 	}
 	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
-	if conv := p.GetConfig().GetConventions(); conv != nil {
+	if conv := inherited.GetConventions(); conv != nil {
 		projectOv, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}}, baseConvention)
 		if err != nil {
 			return Overlay{}, err

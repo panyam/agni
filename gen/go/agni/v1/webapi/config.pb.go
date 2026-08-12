@@ -72,7 +72,24 @@ type AnalysisConfig struct {
 	// intended architecture while conventions and profiles describe the team. One message carries both
 	// because the SHAPE is the same; which fields a Project sets and which a Design sets is what keeps
 	// the scopes apart, and it is now visible in the descriptors rather than asserted in a comment.
-	IntentUri     string `protobuf:"bytes,6,opt,name=intent_uri,json=intentUri,proto3" json:"intent_uri,omitempty"`
+	IntentUri string `protobuf:"bytes,6,opt,name=intent_uri,json=intentUri,proto3" json:"intent_uri,omitempty"`
+	// extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
+	// when it inherits nothing.
+	//
+	// It is a project resource name rather than a file URI because a shared config IS a project: one
+	// with config and no designs. That reuses the store, the descriptor format and the id rules already
+	// in place instead of inventing a second kind of config document, and it means shared config is
+	// discoverable by the same ListProjects a viewer already calls.
+	//
+	// Inheritance is DECLARED, never ambient, and that is the whole safety property. A deployment
+	// default that applied unless overridden is precisely the bug per-design config fixed — one team's
+	// profiles reaching every board on the server. An extends is visible in the descriptor, scoped to
+	// the project that wrote it, and reaches no design that did not ask for it.
+	//
+	// The chain layers root-most FIRST, so a project overrides what it inherits. It is bounded and
+	// cycle-checked: a cycle is an error naming the loop, because a config that silently stopped
+	// resolving partway would compose a subset of what the operator declared.
+	Extends       string `protobuf:"bytes,7,opt,name=extends,proto3" json:"extends,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +162,13 @@ func (x *AnalysisConfig) GetChecklistUri() string {
 func (x *AnalysisConfig) GetIntentUri() string {
 	if x != nil {
 		return x.IntentUri
+	}
+	return ""
+}
+
+func (x *AnalysisConfig) GetExtends() string {
+	if x != nil {
+		return x.Extends
 	}
 	return ""
 }
@@ -445,7 +469,7 @@ var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\"\x83\x02\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\"\x9d\x02\n" +
 	"\x0eAnalysisConfig\x12B\n" +
 	"\vconventions\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12'\n" +
 	"\x0fconventions_uri\x18\x02 \x01(\tR\x0econventionsUri\x12!\n" +
@@ -454,7 +478,8 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"param_uris\x18\x04 \x03(\tR\tparamUris\x12#\n" +
 	"\rchecklist_uri\x18\x05 \x01(\tR\fchecklistUri\x12\x1d\n" +
 	"\n" +
-	"intent_uri\x18\x06 \x01(\tR\tintentUri\"\x91\x01\n" +
+	"intent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n" +
+	"\aextends\x18\a \x01(\tR\aextends\"\x91\x01\n" +
 	"\x10NamingConvention\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\alexicon\x18\x02 \x01(\v2\x1d.agni.v1.webapi.NamingLexiconR\alexicon\x120\n" +

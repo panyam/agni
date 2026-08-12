@@ -370,7 +370,7 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 			}
 		}
 	}
-	ov, err := service.OverlayFor(ctx, r.Config, p, d, req, service.Overlay{}, "")
+	ov, err := service.OverlayFor(ctx, r.Config, r.Store, p, d, req, service.Overlay{}, "")
 	if err != nil {
 		return nil, service.Overlay{}, err
 	}

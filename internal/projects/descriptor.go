@@ -43,6 +43,8 @@ type projectYAML struct {
 	// `project.yaml` (see defaultProjectConfig), so the layout a review project already takes needs
 	// no declaration at all. Declaring is for the cases convention cannot express: a conventions file
 	// shared by several projects, a differently-named checklist, or opting out with an empty value.
+	// Extends names another project whose config this one layers on top of, "projects/{project}".
+	Extends     string  `yaml:"extends"`
 	Conventions *string `yaml:"conventions"`
 	Profiles    *string `yaml:"profiles"`
 	Params      *string `yaml:"params"`
@@ -137,7 +139,10 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 	// Config is always non-nil, even for a project that declares nothing, so every caller that fills
 	// or reads a tier can do so without a nil check and an absent tier is an empty field rather than
 	// an absent message.
-	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name), Config: &webapi.AnalysisConfig{}}, names, nil
+	return y.Name, &webapi.Project{
+		Title:  orName(y.Title, y.Name),
+		Config: &webapi.AnalysisConfig{Extends: strings.TrimSpace(y.Extends)},
+	}, names, nil
 }
 
 // ParseDesign reads a `design.yaml`, returning the declared id and the wire message, with the same
@@ -266,10 +271,16 @@ func validRel(field, rel string) error {
 // generated and can be edited — and threading yaml.Node comments through every field to say it would
 // be a lot of machinery for a paragraph.
 func WriteProject(w io.Writer, header, id, title string, names *ProjectConfigNames) error {
+	return WriteProjectExtending(w, header, id, title, "", names)
+}
+
+// WriteProjectExtending is WriteProject plus a declared `extends`, for a scaffolder writing a project
+// that inherits shared config. An empty extends writes no key at all.
+func WriteProjectExtending(w io.Writer, header, id, title, extends string, names *ProjectConfigNames) error {
 	if !idPattern.MatchString(id) {
 		return fmt.Errorf("project id %q must match %s", id, idPattern)
 	}
-	y := projectYAML{Name: id, Title: title}
+	y := projectYAML{Name: id, Title: title, Extends: extends}
 	if names != nil {
 		y.Conventions, y.Profiles = &names.Conventions, &names.Profiles
 		y.Params, y.Checklist = &names.Params, &names.Checklist
