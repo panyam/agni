@@ -293,7 +293,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				overlay.Conventions = service.ConventionProto(cfg)
+				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
 			}
 			if profilePath != "" {
 				ps, err := profiles.LoadDir(profilePath)
@@ -366,7 +366,7 @@ func checkCmd() *cobra.Command {
 						Params:      paramsDir != "",
 						Profiles:    profilePath != "",
 						Intent:      intentPath != "",
-						Conventions: overlay.GetConventions().GetName(),
+						Conventions: overlay.GetConfig().GetConventions().GetName(),
 					}), 0))
 				if err := writeResults(resultsOut, doc); err != nil {
 					return err
@@ -518,7 +518,7 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				overlay.Conventions = service.ConventionProto(cfg)
+				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
 			}
 			var specs param.ParamProvider
 			if paramsDir != "" {

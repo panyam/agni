@@ -4,7 +4,7 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
-import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/config.proto";
 
 // This file: ProjectService, the engine's answer to "which design is this, and whose design is it"
 // (agni issue 170).
@@ -64,9 +64,12 @@ service ProjectService {
 // confidentiality boundary rather than a server operation. See CONSTRAINTS C23 for why a read-only
 // resource is still AIP-shaped here.
 //
-// It carries no configuration fields yet. The conventions, profiles, parameters, and checklist a
-// project owns still reach a run as serve-startup flags; they move onto this message in the change
-// that wires them, so a field never sits in the schema doing nothing.
+// Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which is
+// the same boundary drawn from the other side: writing descriptors into a folder an operator named is
+// not a server mutating a mount.
+//
+// Its configuration is an AnalysisConfig, the same message a request carries and a Design declares, so
+// a config tier is added once and every surface gets it (agni issue 224).
 message Project {
   // name is the resource name, "projects/{project}". The id is DECLARED by the operator in
   // `project.yaml`, not derived from the folder path and not server-assigned. That is what makes it
@@ -79,33 +82,21 @@ message Project {
   // injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
   string uri = 3;
 
-  // The config a project owns, and the reason the resource exists. Naming conventions, interface
-  // profiles, and seeded parameters describe the TEAM rather than any one board, so they belong to
-  // the project and reach a run through the design's edge to it. Before this they could only be
-  // `agni serve` startup flags, which a deployment mounting a mixed set applied to every design it
-  // read: an overlay's profiles superseded the built-ins for every board on the server, and an
-  // overlay's rail lexicon changed net roles on designs that never asked for it.
+  // config is what this project's designs are checked against, and the reason the resource exists.
+  // Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
+  // one board, so they belong to the project and reach a run through the design's edge to it. Before
+  // this they could only be `agni serve` startup flags, which a deployment mounting a mixed set
+  // applied to every design it read: an overlay's profiles superseded the built-ins for every board
+  // on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
   //
-  // The value/URI split follows CONSTRAINTS C22. A naming convention is small and arrives RESOLVED,
-  // so a service composes it with no I/O. Profiles and parameters are DIRECTORIES of many files, so
-  // they arrive as URIs and are loaded by the injected port — the same reason a design is a ref
-  // rather than an inlined megabyte.
+  // A Project populates every field EXCEPT intent_uri, which is a design's own (see Design.config).
+  // The scopes are kept apart by which fields each descriptor sets rather than by two message shapes,
+  // because the shape genuinely is the same and two copies of it would be one more place for two
+  // layers to disagree about what config is.
+  AnalysisConfig config = 9;
 
-  // conventions is the project's naming policy, resolved. Absent means the engine defaults.
-  NamingConvention conventions = 4;
-  // conventions_uri names the file `conventions` was read from, absent when the project declared no
-  // convention. It is redundant for COMPOSING a run, which is why the value above exists, and it is
-  // not redundant for a client that has to OFFER the project's convention as a choice: a picker
-  // needs something to pass back, and a resolved value is not a ref. Without it a viewer can state
-  // which convention is in effect but cannot let a reader re-select it after trying another.
-  string conventions_uri = 8;
-  // profile_uris are the interface-profile declarations this project composes into the catalog.
-  repeated string profile_uris = 5;
-  // param_uris are the seeded datasheet parameter sets this project checks its parts against.
-  repeated string param_uris = 6;
-  // checklist_uri names the review manifest this project runs. It is NOT loaded with the rest: a
-  // checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
-  string checklist_uri = 7;
+  // conventions, profile_uris, param_uris, checklist_uri, conventions_uri — now inside config.
+  reserved 4, 5, 6, 7, 8;
 }
 
 // Design is one declared design: an identity, an entry file, and its companion views.
@@ -137,12 +128,14 @@ message Design {
   // a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
   // inferred rule would turn a diff of two revisions into a diff of one against itself.
   repeated string companion_uris = 5;
-  // intent_uri names this design's declared architecture: its domains, modules, and subsystems.
-  //
-  // Intent is per-DESIGN where the rest of a project's config is per-project, because each board has
-  // its own intended architecture while conventions and profiles describe the team. That asymmetry
-  // is the one the on-disk layout already had, and it is why this field is here and not on Project.
-  string intent_uri = 6;
+  // config is this design's own analysis config. A Design populates only intent_uri: each board has
+  // its own intended architecture, where conventions, profiles and parameters describe the team and
+  // live on the Project. That asymmetry is the one the on-disk layout already had, and carrying both
+  // in one message shape is what lets a composer layer them without knowing which tier it holds.
+  AnalysisConfig config = 7;
+
+  // intent_uri — now config.intent_uri.
+  reserved 6;
 }
 
 message GetProjectRequest {

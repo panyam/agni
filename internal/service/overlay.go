@@ -65,7 +65,7 @@ type Overlay struct {
 // clean design.
 func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	o := Overlay{baseConvention: baseConvention}
-	conv := cfg.GetConventions()
+	conv := cfg.GetConfig().GetConventions()
 	if conv == nil {
 		return o, nil
 	}
@@ -287,8 +287,8 @@ func OverlayFor(ctx context.Context, loader ProjectConfigLoader, p *webapi.Proje
 		o.Intent = cfg.Intent
 	}
 	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
-	if conv := p.GetConventions(); conv != nil {
-		projectOv, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conv}, baseConvention)
+	if conv := p.GetConfig().GetConventions(); conv != nil {
+		projectOv, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}}, baseConvention)
 		if err != nil {
 			return Overlay{}, err
 		}
@@ -328,7 +328,7 @@ func overlayWithRequest(req *webapi.OverlayConfig, base Overlay, baseConvention 
 		kept = append(kept, src)
 	}
 	out.Sources = append(kept, reqOv.Sources...)
-	out.conventionName = ConventionFromProto(req.GetConventions()).Name
+	out.conventionName = ConventionFromProto(req.GetConfig().GetConventions()).Name
 	// Carry the base convention's NAME through, because that is what makes replacement work:
 	// Overlay.Catalog drops the sources tagged with it before splicing these on. Inheriting whatever
 	// the fallback happened to hold would leave the server's convention running alongside the

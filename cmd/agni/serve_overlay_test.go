@@ -278,12 +278,12 @@ func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 	// A request naming its own convention gets ITS rule and not the server's.
 	resp, err := checkSvc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{
 		Uri: "mount://m/testdata/review/conv-demo.edn",
-		Overlay: &webapi.OverlayConfig{Conventions: &webapi.NamingConvention{
+		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &webapi.NamingConvention{
 			Name: "acme",
 			Rules: []*webapi.NamingRule{{
 				Name: "signal-net-naming", Severity: "warning", Allow: []string{"^ACME_"},
 			}},
-		}},
+		}}},
 	})
 	if err != nil {
 		t.Fatalf("GetCheckReport: %v", err)

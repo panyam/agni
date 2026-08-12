@@ -63,7 +63,7 @@ func ruleNames(cat *check.Catalog) map[string]bool {
 // One config whose two halves compose differently is the shape that let WS3-102's bug hide.
 func TestRequestConventionOverridesServerDefault(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
-	ov, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conventionProto("acme", "acme-nets")}, "house")
+	ov, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionProto("acme", "acme-nets")}}, "house")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestRequestConventionOverridesServerDefault(t *testing.T) {
 // name — simply works.
 func TestRequestConventionMayReuseTheServersName(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
-	ov, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conventionProto("house", "house-nets-v2")}, "house")
+	ov, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionProto("house", "house-nets-v2")}}, "house")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestAbsentRequestConventionKeepsTheServerDefault(t *testing.T) {
 // own --conventions spliced in and has no separate startup default for a request to replace.
 func TestOverrideOnlyDropsTheNamedBaseConvention(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
-	ov, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conventionProto("acme", "acme-nets")}, "")
+	ov, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionProto("acme", "acme-nets")}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ov, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conventionProto("house", "r2")}, "")
+	ov, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionProto("house", "r2")}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ rules:
 		t.Errorf("lexicon rail patterns = %v, want the config's", pats)
 	}
 	// And it must be usable as-is: this is the exact round trip the browser performs.
-	if _, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conv}, ""); err != nil {
+	if _, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}}, ""); err != nil {
 		t.Errorf("the resolved convention does not compose: %v", err)
 	}
 }

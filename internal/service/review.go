@@ -197,7 +197,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			Params:      s.specs != nil,
 			Profiles:    s.env.Profiles,
 			Intent:      s.env.Intent,
-			Conventions: req.GetOverlay().GetConventions().GetName(),
+			Conventions: req.GetOverlay().GetConfig().GetConventions().GetName(),
 		}), req.GetRatifiedFloor()),
 		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's
 		// base: a reader has to see the rules that actually ran, or a per-request convention's rules

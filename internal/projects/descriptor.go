@@ -134,7 +134,10 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfi
 			return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
 		}
 	}
-	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name)}, names, nil
+	// Config is always non-nil, even for a project that declares nothing, so every caller that fills
+	// or reads a tier can do so without a nil check and an absent tier is an empty field rather than
+	// an absent message.
+	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name), Config: &webapi.AnalysisConfig{}}, names, nil
 }
 
 // ParseDesign reads a `design.yaml`, returning the declared id and the wire message, with the same
@@ -179,13 +182,16 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 		seen[clean] = true
 		out.CompanionUris = append(out.CompanionUris, clean)
 	}
+	// A design's config carries only its intent (see Design.config): conventions, profiles and
+	// parameters describe the team and live on the Project.
+	out.Config = &webapi.AnalysisConfig{}
 	if y.Intent == nil {
-		out.IntentUri = defaultIntent
+		out.Config.IntentUri = defaultIntent
 	} else if clean := CleanRel(*y.Intent); clean != "" {
 		if err := validRel("intent", clean); err != nil {
 			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
 		}
-		out.IntentUri = clean
+		out.Config.IntentUri = clean
 	}
 	return y.Name, out, nil
 }

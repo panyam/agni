@@ -379,7 +379,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 		t.Fatal("the built-in vocabulary already matches the project's rail names; the fixture no longer demonstrates the gap")
 	}
 
-	house := ask(&webapi.OverlayConfig{Conventions: houseConvention(t)})
+	house := ask(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: houseConvention(t)}})
 	if !slices.Contains(house, "PMIC_VDD_LPM_1V8") {
 		t.Errorf("rail(?n) under the project's own vocabulary = %v, want it to include PMIC_VDD_LPM_1V8", house)
 	}
@@ -399,7 +399,7 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 	conv.Rules = append(conv.Rules, &webapi.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/review/conv-demo.edn", Query: "rail(?n) => ?n",
-		Overlay: &webapi.OverlayConfig{Conventions: conv},
+		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}},
 	})
 	if err != nil {
 		t.Fatalf("a query must not fail on the rules half of a convention it does not use: %v", err)

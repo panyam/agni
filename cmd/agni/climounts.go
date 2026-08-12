@@ -429,5 +429,5 @@ func cliProjectChecklist(ctx context.Context, arg string) (uri, project string) 
 	if err != nil || p == nil {
 		return "", ""
 	}
-	return p.GetChecklistUri(), p.GetName()
+	return p.GetConfig().GetChecklistUri(), p.GetName()
 }

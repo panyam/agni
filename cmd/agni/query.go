@@ -103,7 +103,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				overlay.Conventions = service.ConventionProto(cfg)
+				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
 			}
 			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs, cliProjects())
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{

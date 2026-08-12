@@ -441,7 +441,7 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 			if err != nil {
 				t.Fatalf("naming.Load: %v", err)
 			}
-			r.Overlay = &webapi.OverlayConfig{Conventions: ConventionProto(cfg)}
+			r.Overlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: ConventionProto(cfg)}}
 		}
 		return r
 	}
