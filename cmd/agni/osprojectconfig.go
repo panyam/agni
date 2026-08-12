@@ -31,52 +31,49 @@ type osProjectConfig struct {
 	mounts []mounts.Mount
 }
 
-// ProjectConfig loads what a project's URIs point at.
+// ResolveConfig loads what an AnalysisConfig's URIs point at, whether it came from a project
+// descriptor or from a request.
 //
 // A tier that fails to load is an ERROR, not a skip. An operator who wrote a profiles directory and
 // silently got the built-ins would read the resulting clean report as a clean design, which is the
-// same silent-pass failure C24 was written for. A tier the project simply does not have never
-// reaches here: the store only sets a URI for a file that exists.
-func (c *osProjectConfig) ProjectConfig(_ context.Context, p *webapi.Project, d *webapi.Design) (service.ProjectConfig, error) {
-	var out service.ProjectConfig
-	for _, uri := range p.GetConfig().GetProfileUris() {
+// same silent-pass failure C24 was written for. A tier the config simply does not name never reaches
+// here as an error: the loops below run zero times.
+func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
+	var out service.ResolvedConfig
+	for _, uri := range cfg.GetProfileUris() {
 		dir, err := c.dir(uri)
 		if err != nil {
-			return service.ProjectConfig{}, err
+			return service.ResolvedConfig{}, err
 		}
 		ps, err := profiles.LoadDir(dir)
 		if err != nil {
-			return service.ProjectConfig{}, fmt.Errorf("%s profiles %s: %w", p.GetName(), uri, err)
+			return service.ResolvedConfig{}, fmt.Errorf("%s profiles %s: %w", namespace, uri, err)
 		}
-		// Namespaced by the project's id rather than by a fixed "profile-overlay", because two
-		// projects on one server would otherwise contribute rule sources of the same name and the
-		// second would collide with the first. The `-profiles` suffix keeps it clear of the project's
-		// naming convention, which claims the bare id as its own namespace.
-		out.Sources = append(out.Sources, profiles.Source(projectSourceName(p), ps))
+		out.Sources = append(out.Sources, profiles.Source(sourceName(namespace), ps))
 		out.Profiles = true
 	}
-	for _, uri := range p.GetConfig().GetParamUris() {
+	for _, uri := range cfg.GetParamUris() {
 		dir, err := c.dir(uri)
 		if err != nil {
-			return service.ProjectConfig{}, err
+			return service.ResolvedConfig{}, err
 		}
 		set, err := param.LoadSet(os.DirFS(dir))
 		if err != nil {
-			return service.ProjectConfig{}, fmt.Errorf("%s params %s: %w", p.GetName(), uri, err)
+			return service.ResolvedConfig{}, fmt.Errorf("%s params %s: %w", namespace, uri, err)
 		}
 		out.Specs = set
 	}
-	// Intent is the design's, not the project's, and composes as its own rule source. A design that
-	// declared none simply contributes nothing, which is how the intent-bound checklist items read
-	// needs-design-intent rather than passing on an architecture nobody stated.
-	if uri := d.GetConfig().GetIntentUri(); uri != "" {
+	// Intent composes as its own rule source. A config that declared none simply contributes nothing,
+	// which is how the intent-bound checklist items read needs-design-intent rather than passing on an
+	// architecture nobody stated.
+	if uri := cfg.GetIntentUri(); uri != "" {
 		abs, err := c.file(uri)
 		if err != nil {
-			return service.ProjectConfig{}, err
+			return service.ResolvedConfig{}, err
 		}
 		decl, err := intent.LoadFile(abs)
 		if err != nil {
-			return service.ProjectConfig{}, fmt.Errorf("%s intent %s: %w", d.GetName(), uri, err)
+			return service.ResolvedConfig{}, fmt.Errorf("%s intent %s: %w", namespace, uri, err)
 		}
 		out.Sources = append(out.Sources, intent.Source("intent", decl))
 		out.Intent = true
@@ -104,10 +101,12 @@ func (c *osProjectConfig) dir(uri string) (string, error) {
 
 // projectSourceName is the catalog namespace a project's interface profiles appear under, so a
 // finding reads `gateway-profiles/can-esd-missing` and says which project asked for it.
-func projectSourceName(p *webapi.Project) string {
-	id, ok := service.ProjectID(p.GetName())
-	if !ok {
-		id = "project"
+func sourceName(namespace string) string {
+	if id, ok := service.ProjectID(namespace); ok {
+		return id + "-profiles"
 	}
-	return id + "-profiles"
+	// A namespace that is not a project resource name is a request's. It keeps the same `-profiles`
+	// suffix so the two read alike in a catalog snapshot, and it cannot collide with a project's,
+	// because a project id can never be the literal "request".
+	return namespace + "-profiles"
 }

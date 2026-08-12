@@ -213,44 +213,53 @@ func vocabProto(v naming.VocabConfig) *webapi.VocabPatterns {
 	return &webapi.VocabPatterns{Patterns: v.Patterns, Replace: v.Replace}
 }
 
-// ProjectConfigLoader turns the config a project OWNS into the engine inputs a run needs. It is the
-// port that makes per-design config possible without putting file I/O in a service (C13): a project
-// names its profiles and parameters as URIs, and only an adapter can read them.
+// ConfigResolver turns the ref-shaped tiers of an AnalysisConfig into the engine inputs a run needs.
+// It is the port that keeps file I/O out of a service (C13): a config names its profiles and
+// parameters as URIs, and only an adapter can read them.
 //
-// It is modelled on ConventionLoader above it, and for the same reason. A convention arrives on the
-// Project message already resolved, because it is small and C22 wants config as a value; profiles
-// and parameters are DIRECTORIES of many files, so they arrive as URIs and are loaded here.
+// It resolves ANY AnalysisConfig, not only a project's. That is the point of the shared message: a
+// request that carries profile_uris is asking the same question a project asking it does, and two
+// resolvers would eventually answer it differently. Which config is being resolved shows up only as
+// the namespace.
 //
-// A tier the project does not have is a ZERO VALUE, never an error. Most projects declare some of
-// this and not the rest, and a loader that failed on absence would make the ordinary case the error
-// path.
-type ProjectConfigLoader interface {
-	// ProjectConfig loads the rule sources and datasheet corpus a project supplies, plus the design's
-	// own declared intent.
+// A tier the config does not name is a ZERO VALUE, never an error. Most configs declare some of this
+// and not the rest, and a resolver that failed on absence would make the ordinary case the error path.
+type ConfigResolver interface {
+	// ResolveConfig loads what cfg's URIs point at.
 	//
-	// The design travels with the project because INTENT is per-design where the rest is per-project:
-	// each board has its own intended architecture, while conventions and profiles describe the team.
-	// Loading them together is what keeps a run from composing one design's intent against another's
-	// profiles, which two separate calls would eventually allow.
-	ProjectConfig(ctx context.Context, p *webapi.Project, d *webapi.Design) (ProjectConfig, error)
+	// namespace is the catalog source name a profile set is registered under. It is a parameter rather
+	// than something the resolver derives, because the same config shape arrives from a project (whose
+	// id namespaces it) and from a request (which has no id), and two projects on one server would
+	// otherwise contribute rule sources of the same name.
+	ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, namespace string) (ResolvedConfig, error)
 }
 
-// ProjectConfig is what a project contributes to a run, as engine values.
-type ProjectConfig struct {
-	// Sources are the catalog extensions the project supplies: its interface profiles, and the rules
-	// half of its naming convention.
+// ResolvedConfig is what one AnalysisConfig contributes to a run, as engine values.
+type ResolvedConfig struct {
+	// Sources are the catalog extensions it supplies: interface profiles, a design's intent.
 	Sources []check.RuleSource
-	// Specs is the project's seeded datasheet corpus, nil when it has none. A nil provider is legal
-	// and means the datasheet-backed rules read needs-data rather than failing.
+	// Specs is the seeded datasheet corpus, nil when there is none. A nil provider is legal and means
+	// the datasheet-backed rules read needs-data rather than failing.
 	Specs param.ParamProvider
-	// Profiles and Intent record WHICH tiers the Sources above came from, because by the time they are
-	// rule sources that is no longer answerable: a compiled interface profile and a compiled intent
+	// Profiles and Intent record WHICH tiers the Sources came from, because by the time they are rule
+	// sources that is no longer answerable: a compiled interface profile and a compiled intent
 	// declaration are both just rules in a catalog. A results document has to state which tiers were
-	// attached (RunConfig exists so a reader can tell a design with no datasheet violations from a run
-	// that had no corpus), and a run that guessed those flags from its own startup config would report
-	// false for a tier its project supplied.
+	// attached, and a run that guessed those flags from its own startup config would report false for
+	// a tier its config supplied.
 	Profiles bool
 	Intent   bool
+}
+
+// configNeedsResolver reports whether cfg names anything only an adapter can read.
+//
+// It is what makes the capability honest. A host with no resolver (a browser running the engine in
+// WASM, a service constructed without one) can still honour a config carrying only a resolved
+// convention, because that composes with no I/O. A config naming a directory is a different request,
+// and answering it by silently dropping the tier would report a clean run against config that never
+// loaded — the silent-pass failure this whole layer exists to prevent. So it is an error that names
+// what could not be resolved, on the same terms GetNamingConvention refuses a stored convention.
+func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
+	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 || cfg.GetIntentUri() != ""
 }
 
 // OverlayFor composes the engine inputs for one design: the project's config where the design
@@ -271,20 +280,24 @@ type ProjectConfig struct {
 //
 // A REQUEST's own overlay still wins over both. A caller that named its conventions is answering for
 // itself, and the project is the default it is overriding.
-func OverlayFor(ctx context.Context, loader ProjectConfigLoader, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
+func OverlayFor(ctx context.Context, resolver ConfigResolver, p *webapi.Project, d *webapi.Design, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
 	if p == nil {
-		return overlayWithRequest(req, fallback, baseConvention)
+		return overlayWithRequest(ctx, resolver, req, fallback, baseConvention)
 	}
+	// The project's config and the design's are resolved TOGETHER, as one AnalysisConfig. Intent is
+	// the design's where the rest is the project's, and loading them in one call is what keeps a run
+	// from composing one design's intent against another's profiles — which two separate calls would
+	// eventually allow.
+	merged := mergeConfig(p.GetConfig(), d.GetConfig())
 	var o Overlay
-	if loader != nil {
-		cfg, err := loader.ProjectConfig(ctx, p, d)
+	if resolver != nil {
+		cfg, err := resolver.ResolveConfig(ctx, merged, projectNamespace(p))
 		if err != nil {
 			return Overlay{}, err
 		}
-		o.Sources = cfg.Sources
-		o.Specs = cfg.Specs
-		o.Profiles = cfg.Profiles
-		o.Intent = cfg.Intent
+		o.Sources, o.Specs, o.Profiles, o.Intent = cfg.Sources, cfg.Specs, cfg.Profiles, cfg.Intent
+	} else if configNeedsResolver(merged) {
+		return Overlay{}, fmt.Errorf("%w: %s declares config this deployment cannot resolve (no config resolver wired)", ErrInvalidArgument, p.GetName())
 	}
 	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
 	if conv := p.GetConfig().GetConventions(); conv != nil {
@@ -297,16 +310,68 @@ func OverlayFor(ctx context.Context, loader ProjectConfigLoader, p *webapi.Proje
 		o.conventionName = conv.GetName()
 	}
 	o.baseConvention = baseConvention
-	return overlayWithRequest(req, o, baseConvention)
+	return overlayWithRequest(ctx, resolver, req, o, baseConvention)
+}
+
+// projectNamespace is the catalog source name a project's profiles are registered under.
+//
+// It is the project's resource name rather than a fixed label, because two projects on one server
+// would otherwise contribute rule sources of the same name and the second would collide with the
+// first.
+func projectNamespace(p *webapi.Project) string { return p.GetName() }
+
+// requestNamespace is the source name a REQUEST's profiles are registered under.
+//
+// It is a fixed string, and it has to be distinct from any project's: a request that supplies its own
+// profiles is layered ON TOP of whatever the project already contributed, so two sources sharing a
+// name would collide rather than override. Being visibly not a resource name is also the point — a
+// reader seeing `request-profiles/…` in a catalog snapshot knows the rule came from the call, not
+// from the project the run was filed under.
+const requestNamespace = "request"
+
+// mergeConfig layers b over a, field by field, for the tiers that are refs.
+//
+// It is a field-wise layer rather than a whole-message replace because the two configs describe
+// DIFFERENT tiers of one run: a Project sets everything but intent, a Design sets only intent. A
+// replace would make a design that declares intent drop its project's profiles.
+func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
+	out := &webapi.AnalysisConfig{
+		ProfileUris:  append(append([]string{}, a.GetProfileUris()...), b.GetProfileUris()...),
+		ParamUris:    append(append([]string{}, a.GetParamUris()...), b.GetParamUris()...),
+		IntentUri:    a.GetIntentUri(),
+		ChecklistUri: a.GetChecklistUri(),
+	}
+	if b.GetIntentUri() != "" {
+		out.IntentUri = b.GetIntentUri()
+	}
+	if b.GetChecklistUri() != "" {
+		out.ChecklistUri = b.GetChecklistUri()
+	}
+	return out
 }
 
 // overlayWithRequest lets a request's own config override whatever it was layered on.
-func overlayWithRequest(req *webapi.OverlayConfig, base Overlay, baseConvention string) (Overlay, error) {
+func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webapi.OverlayConfig, base Overlay, baseConvention string) (Overlay, error) {
 	reqOv, err := ComposeOverlay(req, baseConvention)
 	if err != nil {
 		return Overlay{}, err
 	}
-	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 {
+	// The request's REF-shaped tiers resolve through the same port a project's do, and layer ON TOP of
+	// whatever the project contributed rather than replacing it. That is the difference between this
+	// and the convention below: a caller sending profiles is adding to the run, where a caller sending
+	// a convention is answering for the whole naming vocabulary and cannot stack two.
+	reqCfg := req.GetConfig()
+	var reqResolved ResolvedConfig
+	if configNeedsResolver(reqCfg) {
+		if resolver == nil {
+			return Overlay{}, fmt.Errorf("%w: this deployment cannot resolve config refs (profiles, parameters, intent); send a resolved convention or run against a host that can", ErrInvalidArgument)
+		}
+		reqResolved, err = resolver.ResolveConfig(ctx, reqCfg, requestNamespace)
+		if err != nil {
+			return Overlay{}, err
+		}
+	}
+	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 && reqResolved.Specs == nil {
 		return base, nil
 	}
 	// A request convention REPLACES rather than stacks (WS3-124), which is what the serve flag help
@@ -327,7 +392,15 @@ func overlayWithRequest(req *webapi.OverlayConfig, base Overlay, baseConvention 
 		}
 		kept = append(kept, src)
 	}
-	out.Sources = append(kept, reqOv.Sources...)
+	out.Sources = append(append(kept, reqResolved.Sources...), reqOv.Sources...)
+	// A request corpus WINS over the project's, on the same rule SpecsOr follows one layer down: the
+	// caller named it for this run, and merging two corpora would let one team's transcribed limits
+	// decide another's pass/fail.
+	if reqResolved.Specs != nil {
+		out.Specs = reqResolved.Specs
+	}
+	out.Profiles = out.Profiles || reqResolved.Profiles
+	out.Intent = out.Intent || reqResolved.Intent
 	out.conventionName = ConventionFromProto(req.GetConfig().GetConventions()).Name
 	// Carry the base convention's NAME through, because that is what makes replacement work:
 	// Overlay.Catalog drops the sources tagged with it before splicing these on. Inheriting whatever

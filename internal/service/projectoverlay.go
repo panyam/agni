@@ -24,7 +24,7 @@ import (
 // behaved before projects existed at all.
 type ProjectResolver struct {
 	Store  ProjectStore
-	Config ProjectConfigLoader
+	Config ConfigResolver
 }
 
 // Overlay composes the config for one design: its project's where it has one, the fallback where it
@@ -48,11 +48,11 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 			p, d = project, design
 		}
 	}
-	var loader ProjectConfigLoader
+	var resolver ConfigResolver
 	if r != nil {
-		loader = r.Config
+		resolver = r.Config
 	}
-	return OverlayFor(ctx, loader, p, d, req, fallback, baseConvention)
+	return OverlayFor(ctx, resolver, p, d, req, fallback, baseConvention)
 }
 
 // RunProvenance is which config tiers a run actually had attached, the value a results document's
