@@ -40,7 +40,12 @@ to any one caller.
   identity, which is what makes a findings diff between two revisions meaningful and what stops a
   stale document from being silently read against a design that has since changed.
 - **`run`**: which overlay tiers were attached. Without this a reader cannot tell a design with no
-  datasheet violations from a run that had no datasheet corpus.
+  datasheet violations from a run that had no datasheet corpus. It is derived from the RESOLVED
+  overlay, never from the caller's flags, because those are two different questions once a design
+  belongs to a project: the run composes the project's config whether or not anyone passed
+  `--params`. Building it from the caller's own flags is a bug this document already shipped, and it
+  failed in the reassuring direction (see [Provenance is read off the resolved
+  overlay](#provenance-is-read-off-the-resolved-overlay)).
 - **`catalog`**: the rules that actually ran. This is what distinguishes a clean design from a run
   that checked nothing.
 - **`findings`**, and for a review run **`areas`** of per-item outcomes.
@@ -71,6 +76,62 @@ That asymmetry is a feature of the schema, not a gap in it. When a foreign tool'
 imported, they must arrive visibly weaker than a native run rather than having a coverage axis
 manufactured for them. `outcome` is a string rather than an enum for the same reason `severity` is:
 a new honest verdict should be a review-layer change, not a schema migration.
+
+### Covered and answered are two numbers, and the gap between them is the point
+
+`Tally` derives two counts over those outcomes, and a reader who treats them as one will draw a wrong
+conclusion from a real report.
+
+`Covered()` is `Total - NotAutomated`: how many items a MECHANISM exists for. It moves when a rule
+leaves the catalog, which is what a moved profiles directory or a renamed conventions file does.
+
+`Answered()` is `Pass + Fail + Provisional + ComputedNA`: how many items the run actually DECIDED. It
+moves for a second reason, and that reason is invisible to the first count. A rule can be present,
+selected, and unable to run, because `check.Available` gates it on a fact tier the model does not
+carry. That item reads `not-applicable`, which `Covered()` counts as covered.
+
+The split matters because the two failure modes look identical in a findings list and only one of them
+is visible in the coverage number. Measured on `examples/tutorial-project/`, removing the `params/`
+directory moves `Covered()` by **zero** while a datasheet-backed item stops being answered:
+
+```
+with params/     **13 of 15 covered**, **13 answered** — 3 pass,  9 fail, 0 n/a; 2 not-automated
+without          **13 of 15 covered**, **12 answered** — 2 pass, 10 fail, 1 n/a; 2 not-automated
+```
+
+`ComputedNA` sits on the answered side and `NotApplicable` does not, which is the one assignment worth
+arguing about. They are opposite events wearing the same word. `computed-n/a` is the DESIGN settling
+the question — no crystal on this board, so the crystal rule does not apply — which is the branch a
+human reviewer takes and is a real determination. `not-applicable` is the rule's inputs being absent,
+which is the question going unasked. `NeedsData`, `NeedsDesignIntent` and `Inconclusive` are on the
+unanswered side for the same reason.
+
+Both numbers are rendered, and `agni review` gates on the second (`--min-answered`). Gating on
+`Covered()` would have shipped a flag that cannot see the case it was built for.
+
+### Provenance is read off the resolved overlay
+
+`run` records what the run HAD, so it has to be derived from the same value the run used. That is
+`service.Overlay`, after the project's config and the request's own have been composed onto the
+deployment's. It is not the caller's flags, and the two stopped agreeing the moment a project could
+supply config: a design under a project declaring `conventions.yaml`, `profiles/` and `params/` is
+scored against all three by `agni check designs/gateway` with no flags at all.
+
+`Overlay.Provenance` is the one place that value is computed and `RunConfigProto` the one place it
+becomes the message, so the CLI's check path and the service's review path cannot describe one run
+differently. It UNIONS the deployment's tiers with the overlay's, because a server started with
+`--profile-path` serving a project that also declares profiles genuinely ran both. The naming
+convention is the exception and does not union: a request-supplied one has already REPLACED whatever
+was in place by then, so the deployment's name is only the fallback.
+
+Which tier a rule source came from is not recoverable after composition, since a compiled interface
+profile and a compiled intent declaration are both just rules in a catalog. That is why the flags
+travel on `ProjectConfig` rather than being derived from `Overlay.Sources`.
+
+The failure direction is why this is worth stating. Recording `false` for a corpus that WAS attached
+makes a clean report read as better founded than it is, and nothing in the document contradicts it
+except the `catalog` snapshot, which nobody cross-reads. It is the same silence-reads-as-coverage
+shape the outcome vocabulary exists to remove, one layer up.
 
 ## Versioning
 

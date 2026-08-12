@@ -298,3 +298,64 @@ stated once there and implemented once in `param.ResolvePin`. The physical backg
 component, without going through an orderable-MPN suffix. Even then the answer is not "key by
 number", it is that the tie-breaking channel becomes reliable more often. The name still leads,
 because it is the one that means the same thing in every body.
+
+---
+
+## The review gate counts answered items, not covered ones
+
+**Question.** `Covered()` is the documented coverage axis, `Total - NotAutomated`, and the review
+report has printed it since the outcome vocabulary landed. When `agni review` grew a CI gate
+(agni issue 199), should the floor read that number?
+
+**Answer. No, and the ticket's own motivating example is the reason.** Issue 199 opens with "a
+checklist can go from 40 covered items to 12 because a `--params` directory moved". Measured on
+`examples/tutorial-project/` before writing the flag, removing `params/` moves the covered count by
+**zero**. The affected item's rule is still in the catalog and still selected; it merely has no facts
+to read, so `check.Available` gates it and the item reads `not-applicable` — which `Covered()` counts
+as covered. `NotAutomated` moves only when a rule leaves the CATALOG, which is what a moved
+`profiles/` or a renamed `conventions.yaml` does, not a moved corpus.
+
+So a floor over `Covered()` would have shipped the flag and not caught the case it was written for,
+in the direction that reads as success. `Tally.Answered()` is the second count: `Pass + Fail +
+Provisional + ComputedNA`, the items the run actually decided.
+
+**What this leaves open.** `Covered()` is unchanged and still rendered. The two answer different
+questions — "do we have a mechanism for this" and "did we get an answer" — and a checklist where they
+diverge is reporting something true. The one assignment worth arguing about is that `ComputedNA`
+counts as answered and `NotApplicable` does not: the first is the DESIGN settling the question, which
+is a real determination, and the second is the question going unasked.
+
+**Reopen if** a third count is proposed. The bar is the same one this cleared: name the regression the
+existing counts cannot see, and measure it on a real fixture before adding a number a team will gate
+on. The full rationale is in [the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
+
+---
+
+## Both review gates are opt-in, and a provisional does not trip the default one
+
+**Question.** `agni review` has always exited 0. Once it can gate, should it gate by default — and
+should `provisional` count as a failure?
+
+**Answer. No to both, and the first was measured rather than argued.** Default-on breaks 32 existing
+CLI test invocations (the review fixtures fail on purpose, which is what makes them fixtures), three
+targets in `examples/tutorial-project/Makefile`, and both `agni review` invocations in tutorial rung
+8 — none of which anyone could have opted out of in advance, because the flag did not exist to be set.
+It would also have destroyed the red-before-green signal for the gate's own tests, since a suite where
+everything is red cannot show that a new test is red for the right reason. The benefit was one less
+flag to type.
+
+`provisional` is a genuine failure resting on mock or below-floor datasheet data. Gating on it by
+default fails a pipeline on data QUALITY rather than on design quality, and the reliable outcome of a
+gate that goes red for reasons a team cannot act on is that somebody switches the gate off. It gates
+when named: `--fail-on-outcome fail,provisional`.
+
+**What this leaves open.** The vocabulary `--fail-on-outcome` accepts is deliberately the WHOLE
+outcome set, not the two or three a team is likely to want. Each outcome exists because a check that
+did not evaluate had been scoring as a pass, and a team deciding `needs-data` should block their
+release is making exactly the judgment the vocabulary was built to allow.
+
+**Reopen the default-on half if** the compatibility cost goes away, which means the fixtures and the
+tutorial rungs no longer depend on a zero exit. That is a real possibility and not close. Do not
+reopen the provisional half on the argument that a real defect can hide behind one: that is true, and
+the answer is a ratified corpus or an explicit `--fail-on-outcome fail,provisional`, not a default
+that trains people to disable the gate.

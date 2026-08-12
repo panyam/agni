@@ -35,7 +35,7 @@ make coverage
 ```
 
 ```
-**13 of 15 covered** — 3 pass, 8 fail, 1 n/a; 2 not-automated
+**13 of 15 covered**, **13 answered** — 3 pass, 9 fail, 0 n/a; 2 not-automated
 
 Of the covered: 1 provisional (awaiting datasheet data), 0 needs-design-intent (awaiting a declaration), 0 needs-data (awaiting a datasheet seed), 0 inconclusive (the check ran and could not decide), 0 computed-n/a
 
@@ -44,14 +44,19 @@ Of the covered: 1 provisional (awaiting datasheet data), 0 needs-design-intent (
 | Power | 5/5 | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Interfaces | 3/4 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | House style | 2/3 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| Board | 1/1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| Board | 1/1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Architecture | 2/2 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| **Total** | 13/15 | 3 | 8 | 1 | 0 | 0 | 0 | 0 | 1 | 2 |
+| **Total** | 13/15 | 3 | 9 | 1 | 0 | 0 | 0 | 0 | 0 | 2 |
 ```
 
-Read **13 of 15** before reading anything else. It is how much of your checklist the run actually
-decided. A board with zero failures and a coverage of 4 of 15 has not been reviewed, and the failure
-count alone would have told you it was perfect.
+Read the two leading numbers before reading anything else. A board with zero failures and a coverage
+of 4 of 15 has not been reviewed, and the failure count alone would have told you it was perfect.
+
+**Covered** is how many items a mechanism exists for. **Answered** is how many the run actually
+decided, and it is the stricter of the two. They are equal here, and the case where they separate is
+the one worth knowing about: a rule can be in the catalog, selected, and still unable to run because
+the facts it reads are absent. That item reads `not-applicable` and still counts as covered. Rung 11
+gates a pipeline on the answered number for exactly that reason.
 
 Coverage is also the number that tells you where to invest. Interfaces sits at 3 of 4 because of an
 absent bus, which is fine and will never improve. House style sits at 2 of 3 because of a genuinely
