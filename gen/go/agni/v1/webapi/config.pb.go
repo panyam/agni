@@ -89,9 +89,22 @@ type AnalysisConfig struct {
 	// The chain layers root-most FIRST, so a project overrides what it inherits. It is bounded and
 	// cycle-checked: a cycle is an error naming the loop, because a config that silently stopped
 	// resolving partway would compose a subset of what the operator declared.
-	Extends       string `protobuf:"bytes,7,opt,name=extends,proto3" json:"extends,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Extends string `protobuf:"bytes,7,opt,name=extends,proto3" json:"extends,omitempty"`
+	// symbol_path_uris are directories of symbol files a schematic's external library references need
+	// (xschem/gEDA `.sym`, KiCad `.kicad_sym`). Each is searched with its whole subtree, so one entry
+	// can be a library root.
+	//
+	// It is here rather than in environment config even though it only LOCATES bytes, and the reason is
+	// its failure mode. A schematic naming a library nothing resolves reads SHORT: the components it
+	// could not resolve are simply absent, every rule then evaluates cleanly over the shortened read,
+	// and the run reports fewer findings with no error to explain them. A tier whose absence changes
+	// the answer belongs with the config that changes the answer.
+	//
+	// A design's own symbol library and a team's shared one are both ordinary cases, so a Project and a
+	// Design may each declare some and they accumulate rather than replace.
+	SymbolPathUris []string `protobuf:"bytes,8,rep,name=symbol_path_uris,json=symbolPathUris,proto3" json:"symbol_path_uris,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AnalysisConfig) Reset() {
@@ -171,6 +184,13 @@ func (x *AnalysisConfig) GetExtends() string {
 		return x.Extends
 	}
 	return ""
+}
+
+func (x *AnalysisConfig) GetSymbolPathUris() []string {
+	if x != nil {
+		return x.SymbolPathUris
+	}
+	return nil
 }
 
 // NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It
@@ -469,7 +489,7 @@ var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\"\x9d\x02\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\"\xc7\x02\n" +
 	"\x0eAnalysisConfig\x12B\n" +
 	"\vconventions\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12'\n" +
 	"\x0fconventions_uri\x18\x02 \x01(\tR\x0econventionsUri\x12!\n" +
@@ -479,7 +499,8 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\rchecklist_uri\x18\x05 \x01(\tR\fchecklistUri\x12\x1d\n" +
 	"\n" +
 	"intent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n" +
-	"\aextends\x18\a \x01(\tR\aextends\"\x91\x01\n" +
+	"\aextends\x18\a \x01(\tR\aextends\x12(\n" +
+	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUris\"\x91\x01\n" +
 	"\x10NamingConvention\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\alexicon\x18\x02 \x01(\v2\x1d.agni.v1.webapi.NamingLexiconR\alexicon\x120\n" +

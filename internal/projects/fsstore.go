@@ -303,6 +303,9 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 	if uri, ok := rel(names.Checklist); ok {
 		p.Config.ChecklistUri = uri
 	}
+	if uri, ok := rel(names.Symbols); ok {
+		p.Config.SymbolPathUris = []string{uri}
+	}
 	return nil
 }
 
@@ -350,6 +353,23 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 		} else {
 			d.Config.IntentUri = ""
 		}
+	}
+	// Symbols is a NAME until here, and becomes a URI only if the directory is actually there, on the
+	// same terms intent does: a design that never wrote one reads as having none rather than as naming
+	// a directory that is missing.
+	if names := d.GetConfig().GetSymbolPathUris(); len(names) > 0 {
+		var resolved []string
+		for _, n := range names {
+			if !exists(t.FS, path.Join(walkRoot(dir), n)) {
+				continue
+			}
+			su, err := base.Join(n)
+			if err != nil {
+				return "", nil, err
+			}
+			resolved = append(resolved, su.String())
+		}
+		d.Config.SymbolPathUris = resolved
 	}
 	for i, c := range d.GetCompanionUris() {
 		cu, err := base.Join(c)

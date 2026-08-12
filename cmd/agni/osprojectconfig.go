@@ -63,6 +63,13 @@ func (c *osProjectConfig) ResolveConfig(_ context.Context, cfg *webapi.AnalysisC
 		}
 		out.Specs = set
 	}
+	for _, uri := range cfg.GetSymbolPathUris() {
+		dir, err := c.dir(uri)
+		if err != nil {
+			return service.ResolvedConfig{}, err
+		}
+		out.SymbolPaths = append(out.SymbolPaths, dir)
+	}
 	// Intent composes as its own rule source. A config that declared none simply contributes nothing,
 	// which is how the intent-bound checklist items read needs-design-intent rather than passing on an
 	// architecture nobody stated.
