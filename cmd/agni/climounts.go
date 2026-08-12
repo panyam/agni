@@ -399,3 +399,35 @@ func cliProjectParent(ctx context.Context, arg string) string {
 	}
 	return p.GetName()
 }
+
+// cliProjectChecklist reports the review manifest a design's project declares, and the project it
+// came from.
+//
+// It returns THREE distinguishable states rather than a single "found or not", because the caller
+// has three different things to say:
+//
+//	("", "")            the design belongs to no project
+//	("", "projects/x")  it belongs to one, and that project declares no checklist
+//	("mount://…", "projects/x")  it belongs to one that declares this checklist
+//
+// Collapsing the middle case into the first would tell an operator with a real project to "pass
+// --checklist" when the actionable fix is a `checklist:` line in the project.yaml they already have.
+//
+// A resolution failure reads as "no project", on the same terms as cliProjectParent: reviewing a
+// loose file is ordinary, and failing the whole command because some unrelated descriptor on the
+// mount is malformed would be worse than asking for the flag.
+func cliProjectChecklist(ctx context.Context, arg string) (uri, project string) {
+	ws, err := workspace()
+	if err != nil {
+		return "", ""
+	}
+	u, err := ws.URI(arg)
+	if err != nil {
+		return "", ""
+	}
+	_, p, err := cliProjects().Store.ResolveDesign(ctx, u)
+	if err != nil || p == nil {
+		return "", ""
+	}
+	return p.GetChecklistUri(), p.GetName()
+}

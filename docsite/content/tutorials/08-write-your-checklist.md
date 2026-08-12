@@ -86,19 +86,29 @@ item just looks like a finding you have not got round to.
 ## Running it
 
 ```
-agni review designs/gateway/gateway.edn --checklist review.yaml \
-  --conventions conventions.yaml --params params \
-  --profile-path profiles --intent-path designs/gateway/intent.yaml
+agni review designs/gateway
 ```
 
-Or `make review`, which is the same command with the flags filled in from what the project has.
+That is the whole command. Every input a review needs is something this project already declares:
+`review.yaml` is its checklist, `conventions.yaml` its naming vocabulary, `profiles/` its interfaces,
+`params/` its part limits, and `designs/gateway/design.yaml` names the netlist to read and the board
+beside it. Naming the design is enough because the project answers the rest.
+
+It says which checklist it picked, on stderr:
+
+```
+note: running the checklist projects/gateway declares (mount://gateway/review.yaml); pass --checklist to run a different one.
+```
+
+That note matters more than it looks. Which checklist scored a run is not recoverable from the
+outcomes it produced, so a checklist you did not type has to announce itself.
 
 ```
 # Review: Gateway ECU design review
 
-Design: `designs/gateway/gateway.edn`
+Design: `designs/gateway`
 
-**3 pass, 8 fail, 1 n/a, 2 not-automated, 1 provisional (of 15)**
+**3 pass, 9 fail, 0 n/a, 2 not-automated, 1 provisional (of 15)**
 
 ## Power
 
@@ -124,28 +134,29 @@ Some questions are about copper, and a netlist has none:
 - {id: "B1", title: no track is below the fab's minimum width, rule: track-width}
 ```
 
+On this project it resolves, because `design.yaml` declares the board as a companion of the netlist
+and the run reads both:
+
+```
+| B1 | no track is below the fab's minimum width | fail | track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor) |
+```
+
+To see what the item does with no copper, read the netlist on its own with `--as-named`, which is the
+flag that says "exactly the file I named, not the design it belongs to":
+
+```
+agni review --as-named designs/gateway/gateway.edn --checklist review.yaml
+```
+
 ```
 | B1 | no track is below the fab's minimum width | not-applicable | design carries no board geometry (WS1-006 sidecar) |
 ```
 
-`not-applicable` means the question does not apply to what was loaded. Attach the board and the same
-item resolves against real copper:
-
-```
-agni review designs/gateway/gateway.edn --checklist review.yaml \
-  --conventions conventions.yaml --params params --profile-path profiles \
-  --intent-path designs/gateway/intent.yaml \
-  --board-path designs/gateway/gateway.kicad_pcb
-```
-
-```
-**3 pass, 9 fail, 0 n/a, 2 not-automated, 1 provisional (of 15)**
-
-| B1 | no track is below the fab's minimum width | fail | track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor) |
-```
-
-Nothing about the item changed. One flag changed what it had to work with, and a question that could
+Nothing about the item changed. What changed is what it had to work with, and a question that could
 not be asked became a defect with a named net.
+
+`--board-path` does the same job for a board that is *not* a declared companion: a fab's returned
+file, or a layout under review that has not landed in the design yet.
 
 Worth being precise about what that proves. The `n/a` was not hiding a failure and it was not
 standing in for a pass. It was the honest report of a question with nothing to evaluate, and the
@@ -164,5 +175,5 @@ parallel without conflicting.
 
 ## Next
 
-[Read the verdicts](../09-read-the-verdicts/), which is about why "8 fail" is a much better number
+[Read the verdicts](../09-read-the-verdicts/), which is about why "9 fail" is a much better number
 than it looks.
