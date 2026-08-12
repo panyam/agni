@@ -252,6 +252,11 @@ func (m *irModel) PinRole(refDes, pin string) PinRole {
 	return classifyPinRole(m, m.pinName[refDes+"\x00"+pin], m.ComponentClass(refDes))
 }
 
+// PinName exposes the declared pin name the model already indexes for role derivation. It is
+// promoted to the Model interface because the datasheet pin join leads with the NAME: a designator
+// is that pin's position in one package, and the same die in another body renumbers it.
+func (m *irModel) PinName(refDes, pin string) string { return m.pinName[refDes+"\x00"+pin] }
+
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }
 
 func (m *irModel) PinNetConflicts() []PinNetConflict { return m.pinNetDup }

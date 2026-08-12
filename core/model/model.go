@@ -68,6 +68,12 @@ type Model interface {
 	// declared-but-untyped pins (unspecified-pin-with-driver) must not read a read gap as an
 	// authoring gap.
 	PinDeclared(refDes, pin string) bool
+	// traverse / param-join: the pin's NAME as its part type declares it ("VCCA", "GND"), or "" when
+	// the source carries no part-type pin data. Distinct from the designator, which is the pin's
+	// position in one package and therefore changes when the same die ships in a different body.
+	// The name is the die-relative channel, so it is what a datasheet join leads with; see
+	// param.ResolvePin for the precedence and why the designator only breaks ties.
+	PinName(refDes, pin string) string
 	// on_net: whether a ref_des appears on at least one net (section-aware).
 	IsConnected(refDes string) bool
 	// membership: whether a ref_des is known to the design at all — a listed component OR a

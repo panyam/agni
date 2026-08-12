@@ -31,6 +31,13 @@ var supplyExceedsAbsMax = &check.Rule{
 			if spec == nil {
 				continue
 			}
+			// A spec with pin bindings is pin-exceeds-abs-max's to answer, per terminal. Deferring
+			// here is not only about double-reporting: the most-restrictive-row shortcut below is a
+			// FALSE POSITIVE on a part whose supplies differ, since it checks a 6.5 V terminal
+			// against a 4.6 V one. The alias path stays for every part without pin data (C9).
+			if pinBoundSpec(m, c.RefDes) != nil {
+				continue
+			}
 			limits := check.SupplyAbsMaxLimits(spec)
 			if len(limits) == 0 {
 				continue

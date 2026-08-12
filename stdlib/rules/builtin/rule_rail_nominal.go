@@ -42,6 +42,12 @@ var railNominalOutOfRecommended = &check.Rule{
 			if spec == nil {
 				continue
 			}
+			// A spec with pin bindings is pin-out-of-recommended's to answer. That rule is the
+			// per-pin supply mapping this one's header names as the follow-up, so where it applies
+			// the single-row restriction below is no longer the best available answer.
+			if pinBoundSpec(m, c.RefDes) != nil {
+				continue
+			}
 			// Exactly one recommended supply row: 0 => nothing to check; >1 => the
 			// pin-to-supply mapping is ambiguous, so skip rather than risk a false finding.
 			limits := check.RecommendedOperatingLimits(spec)

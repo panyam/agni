@@ -50,6 +50,8 @@ var rules = []*check.Rule{
 	loadSwitchTripAboveFetRating,
 	reverseBlockingAbsent,
 	railNominalOutOfRecommended,
+	pinExceedsAbsMax,
+	pinOutOfRecommended,
 	capVoltage,
 	diffPairNaming,
 	trackWidth,
