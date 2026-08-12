@@ -53,6 +53,7 @@ func (c *osProjectConfig) ProjectConfig(_ context.Context, p *webapi.Project, d 
 		// second would collide with the first. The `-profiles` suffix keeps it clear of the project's
 		// naming convention, which claims the bare id as its own namespace.
 		out.Sources = append(out.Sources, profiles.Source(projectSourceName(p), ps))
+		out.Profiles = true
 	}
 	for _, uri := range p.GetParamUris() {
 		dir, err := c.dir(uri)
@@ -78,6 +79,7 @@ func (c *osProjectConfig) ProjectConfig(_ context.Context, p *webapi.Project, d 
 			return service.ProjectConfig{}, fmt.Errorf("%s intent %s: %w", d.GetName(), uri, err)
 		}
 		out.Sources = append(out.Sources, intent.Source("intent", decl))
+		out.Intent = true
 	}
 	return out, nil
 }

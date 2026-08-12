@@ -351,7 +351,11 @@ func (cliProjectConfig) ProjectConfig(ctx context.Context, p *webapi.Project, d 
 // A design that resolves to no project returns the catalog unchanged, and a resolution failure is
 // not fatal: the run still has its own composition, and failing the whole command because some
 // unrelated descriptor is malformed would be worse than listing one fewer rule.
-func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req *webapi.OverlayConfig) (*check.Catalog, error) {
+// It returns the composed Overlay alongside the catalog so a caller writing a results document records
+// the tiers the RUN had attached rather than the ones its own flags named. Both come from the one
+// OverlayFor call for the same reason the catalog does: a second composition to answer "were profiles
+// attached" could disagree with the first.
+func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req *webapi.OverlayConfig) (*check.Catalog, service.Overlay, error) {
 	r := cliProjects()
 	// A project may not resolve, and that is fine — but the REQUEST's own config still has to reach
 	// this catalog. Bailing out early on a miss dropped `--conventions` from facet resolution, so
@@ -368,9 +372,10 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 	}
 	ov, err := service.OverlayFor(ctx, r.Config, p, d, req, service.Overlay{}, "")
 	if err != nil {
-		return nil, err
+		return nil, service.Overlay{}, err
 	}
-	return ov.Catalog(base)
+	cat, err := ov.Catalog(base)
+	return cat, ov, err
 }
 
 // cliProjectParent is the project resource name a design's review should be stored under, empty when

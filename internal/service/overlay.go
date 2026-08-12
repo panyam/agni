@@ -29,6 +29,11 @@ type Overlay struct {
 	// rides here because a project owns its parameters the same way it owns its profiles, so the two
 	// have to arrive together or a run could compose one team's rules against another's data.
 	Specs param.ParamProvider
+	// Profiles and Intent record whether this overlay's Sources include a project's interface profiles
+	// and a design's intent declaration. See ProjectConfig for why the flags travel rather than being
+	// derived from Sources.
+	Profiles bool
+	Intent   bool
 	// conventionName is the source name of the convention THIS overlay currently carries, whether it
 	// came from a project or from the deployment default. A request-supplied convention replaces it
 	// (WS3-124), and replacement is by name, so the name has to travel with the value.
@@ -238,6 +243,14 @@ type ProjectConfig struct {
 	// Specs is the project's seeded datasheet corpus, nil when it has none. A nil provider is legal
 	// and means the datasheet-backed rules read needs-data rather than failing.
 	Specs param.ParamProvider
+	// Profiles and Intent record WHICH tiers the Sources above came from, because by the time they are
+	// rule sources that is no longer answerable: a compiled interface profile and a compiled intent
+	// declaration are both just rules in a catalog. A results document has to state which tiers were
+	// attached (RunConfig exists so a reader can tell a design with no datasheet violations from a run
+	// that had no corpus), and a run that guessed those flags from its own startup config would report
+	// false for a tier its project supplied.
+	Profiles bool
+	Intent   bool
 }
 
 // OverlayFor composes the engine inputs for one design: the project's config where the design
@@ -270,6 +283,8 @@ func OverlayFor(ctx context.Context, loader ProjectConfigLoader, p *webapi.Proje
 		}
 		o.Sources = cfg.Sources
 		o.Specs = cfg.Specs
+		o.Profiles = cfg.Profiles
+		o.Intent = cfg.Intent
 	}
 	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
 	if conv := p.GetConventions(); conv != nil {
