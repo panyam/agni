@@ -14,13 +14,17 @@ import {
   PinSchema,
   PackageSchema,
   PinNumberSchema,
+  PinRelationSchema,
   LimitKind,
   ConditionCoverage,
   PinFunction,
+  PinRelationKind,
+  Modality,
   type PartSpec,
   type Parameter,
   type Pin,
   type Package,
+  type PinRelation,
 } from "./gen/agni/v1/param/param_pb.js";
 import {
   AnnotationSetSchema,
@@ -344,5 +348,77 @@ export function bindParam(p: Parameter, pinId: string): void {
 // to part-wide, which is a meaningful state (a die-level rating) rather than an error.
 export function unbindParam(p: Parameter, pinId: string): void {
   p.pinRefs = p.pinRefs.filter((r) => r !== pinId);
+}
+
+// NewRelationFields is the editor's input for one pin-to-pin constraint. The bound is entered as a
+// min and a max ON THE DIFFERENCE (subject minus reference), not as a comparison, because that is
+// what the contract stores and what lets one shape hold both "VCCA <= VCCB" (max 0) and "never
+// exceeds by more than 0.5 V" (max 0.5). Entering it any other way would need translating here,
+// which is where a sign error would live.
+export interface NewRelationFields {
+  subjectPinRef: string;
+  referencePinRef: string;
+  min: number | undefined;
+  max: number | undefined;
+  unit: string;
+  modality: Modality;
+  raw: string;
+}
+
+// newRelation builds a param.PinRelation from editor fields and the region it was read in, stamping
+// the same provenance newPin does. Anchored to a region because the source text is a pin table's
+// description column, so the author is already looking at the page the citation needs.
+//
+// Kind is TRACKING unconditionally: it is the only member the contract admits today, so offering a
+// picker would present a choice that does not exist. When a second kind earns its place the field
+// becomes an editor input, and this is the line that changes.
+export function newRelation(f: NewRelationFields, region: Region, page: number, docRef: string): PinRelation {
+  return create(PinRelationSchema, {
+    subjectPinRef: f.subjectPinRef,
+    referencePinRef: f.referencePinRef,
+    kind: PinRelationKind.TRACKING,
+    difference: create(RangeValueSchema, { min: f.min, max: f.max }),
+    unit: f.unit.trim(),
+    modality: f.modality,
+    raw: f.raw.trim(),
+    attributes: { [REGION_ATTR]: region.id },
+    prov: create(ParamProvenanceSchema, {
+      docRef,
+      page,
+      tableOrFigure: region.label || region.id,
+      method: "hand",
+      confidence: 1.0,
+    }),
+  });
+}
+
+// relationsForRegion returns the relations transcribed against a region id, matching paramsForRegion
+// and pinsForRegion so the panel shows what this region has yielded.
+export function relationsForRegion(spec: PartSpec, regionId: string): PinRelation[] {
+  return spec.relations.filter((r) => r.attributes[REGION_ATTR] === regionId);
+}
+
+// fmtRelation renders a relation the way the datasheet states it, rather than as the difference
+// bound it is stored as. An author transcribing "VCCA <= VCCB" needs to see that sentence back to
+// know the transcription is right; showing them "max 0" would make a correct entry look wrong and a
+// sign error look plausible. The two one-sided cases collapse to a comparison, and only a genuine
+// two-sided bound is shown as a range.
+export function fmtRelation(r: PinRelation, nameOf: (pinId: string) => string): string {
+  const subject = nameOf(r.subjectPinRef);
+  const reference = nameOf(r.referencePinRef);
+  const d = r.difference;
+  const unit = r.unit ? ` ${r.unit}` : "";
+  if (!d || (d.min === undefined && d.max === undefined)) return `${subject} ? ${reference}`;
+  if (d.min === undefined && d.max !== undefined) {
+    return d.max === 0
+      ? `${subject} <= ${reference}`
+      : `${subject} <= ${reference} + ${d.max}${unit}`;
+  }
+  if (d.max === undefined && d.min !== undefined) {
+    return d.min === 0
+      ? `${subject} >= ${reference}`
+      : `${subject} >= ${reference} + ${d.min}${unit}`;
+  }
+  return `${subject} - ${reference} within ${d.min} .. ${d.max}${unit}`;
 }
 

@@ -19,6 +19,10 @@
 #
 #   - A GROUP BINDING. The continuous-current row is stated once for three terminals at once.
 #
+#   - A PIN-TO-PIN RELATION. "VCCA <= VCCB" constrains one supply against the other, which no
+#     Parameter can say. Its bound is the max-of-zero end of the range that also has to hold a
+#     0.5 V allowance on other parts, which is why the bound is a value and not a comparison.
+#
 # The DSBGA column also shows why PinNumber.number is a STRING ("A2", "B2"), and the 12-pin bodies
 # have no NC pin, so a PinNumber is absent rather than a sentinel.
 mpn: "TXB0104"
@@ -115,6 +119,20 @@ pins {
   function: PIN_FUNCTION_NO_CONNECT
   description: "No connection. Not internally connected."
   numbers { package_ref: "pw" number: "9" }
+  prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
+}
+
+# --- Pin-to-pin relations ---
+# VCCA <= VCCB, printed in the A-port supply's own description column and so already retained
+# verbatim on that pin above. As a bound on (VCCA - VCCB) the requirement is simply a max of 0.
+relations {
+  subject_pin_ref: "vcca"
+  reference_pin_ref: "vccb"
+  kind: PIN_RELATION_KIND_TRACKING
+  difference { max: 0 }
+  unit: "V"
+  modality: MODALITY_REQUIRED
+  raw: "VCCA <= VCCB"
   prov { doc_ref: "sces650k" page: 4 table_or_figure: "Table 4-1. Pin Functions" method: "hand" confidence: 1 }
 }
 

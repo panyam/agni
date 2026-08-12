@@ -143,6 +143,27 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
 		}
 	}
+	for i, r := range spec.Relations {
+		id := fmt.Sprintf("relations[%d]", i)
+		if r.Kind == parampb.PinRelationKind_PIN_RELATION_KIND_UNSPECIFIED {
+			errs = append(errs, fmt.Errorf("%s: kind is unspecified; classify or drop", id))
+		}
+		// A relation asserting no bound at all says nothing, which is the relation-shaped
+		// version of a parameter with no min, typ or max.
+		if r.Difference == nil || (r.Difference.Min == nil && r.Difference.Max == nil) {
+			errs = append(errs, fmt.Errorf("%s: difference has no min or max", id))
+		} else if r.Difference.Min != nil && r.Difference.Max != nil && r.Difference.GetMin() > r.Difference.GetMax() {
+			errs = append(errs, fmt.Errorf("%s: difference min %v above max %v", id, r.Difference.GetMin(), r.Difference.GetMax()))
+		}
+		switch {
+		case r.Prov == nil:
+			errs = append(errs, fmt.Errorf("%s: no prov; every relation carries provenance", id))
+		case !docs[r.Prov.DocRef]:
+			errs = append(errs, fmt.Errorf("%s: prov.doc_ref %q does not resolve to a declared source doc", id, r.Prov.DocRef))
+		case r.Prov.Confidence <= 0 || r.Prov.Confidence > 1:
+			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, r.Prov.Confidence))
+		}
+	}
 	return errs
 }
 
@@ -254,6 +275,21 @@ func structuralProblems(spec *parampb.PartSpec) []error {
 			if !pins[ref] {
 				errs = append(errs, fmt.Errorf("%s: pin_refs %q does not resolve to a declared pin", id, ref))
 			}
+		}
+	}
+
+	// A relation's two ends are the only thing about it that can be wrong rather than merely
+	// unfinished. Everything else (the bound, the kind, the provenance) is something an author
+	// fills in later, and lives in completenessProblems with the Parameter rules it mirrors.
+	for i, r := range spec.Relations {
+		if !pins[r.SubjectPinRef] {
+			errs = append(errs, fmt.Errorf("relations[%d]: subject_pin_ref %q does not resolve to a declared pin", i, r.SubjectPinRef))
+		}
+		if !pins[r.ReferencePinRef] {
+			errs = append(errs, fmt.Errorf("relations[%d]: reference_pin_ref %q does not resolve to a declared pin", i, r.ReferencePinRef))
+		}
+		if r.SubjectPinRef != "" && r.SubjectPinRef == r.ReferencePinRef {
+			errs = append(errs, fmt.Errorf("relations[%d]: subject and reference are both %q; a pin cannot track itself", i, r.SubjectPinRef))
 		}
 	}
 	return errs
