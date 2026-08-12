@@ -359,3 +359,32 @@ tutorial rungs no longer depend on a zero exit. That is a real possibility and n
 reopen the provisional half on the argument that a real defect can hide behind one: that is true, and
 the answer is a ratified corpus or an explicit `--fail-on-outcome fail,provisional`, not a default
 that trains people to disable the gate.
+
+---
+
+## Saving a workbench draft does not validate it
+
+**Question.** The extraction workbench writes a `PartSpec` that `param.Validate` would reject, over
+and over, all day. Should `SavePartSpec` refuse the ones that are structurally incoherent — two pins
+sharing an id, a parameter bound to a pin that does not exist — to keep bad data off disk?
+
+**Answer. No. Saving records what the author has; judging it is separate.** A refused save costs
+work, and it obliges every editing action to preserve the invariant or leave a document its author
+can neither fix nor escape through the UI. That obligation is not hypothetical: `deletePin` and
+`deletePackage` already had to unbind and drop numbers respectively, purely so an ordinary delete did
+not strand the document.
+
+**The argument for refusing rested on a false premise, which is the part worth remembering.** It was
+justified by "an incoherent spec on disk breaks `param.LoadSet` for the whole corpus". It cannot:
+`LoadSet` reads `*.textproto` (`datasheet/param/set.go`) and the workbench writes
+`<stem>.partspec.json`. A draft cannot reach a corpus by sitting on disk, so there was nothing on the
+other side of the trade. Check the premise before designing around it.
+
+**What replaced it.** `SavePartSpecResponse` carries the problems back, classified as STRUCTURAL
+(wrong now) or COMPLETENESS (merely unfinished, which every draft is). The write always succeeds. The
+client renders them and computes nothing, which also deleted a TypeScript reimplementation of the
+same rules that the refusing version had needed.
+
+**Reopen if** a draft ever becomes something another consumer loads automatically. Today the only
+route from draft to corpus is manual, and issue #209 is where that step — and full `param.Validate`
+with it — belongs.
