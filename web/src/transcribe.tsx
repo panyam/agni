@@ -233,15 +233,23 @@ export function TranscribePanel(props: TranscribeHandlers) {
                         <Show when={props.spec().pins.length}>
                           <span class="tx-binds">
                             <For each={props.spec().pins}>
-                              {(pin) => (
-                                <button
-                                  class={`tx-bind ${p.pinRefs.includes(pin.id) ? "on" : ""}`}
-                                  title={p.pinRefs.includes(pin.id) ? `unbind ${pin.name}` : `bind to ${pin.name}`}
-                                  onClick={() => props.toggleBinding(p, pin.id)}
-                                >
-                                  {pin.name}
-                                </button>
-                              )}
+                              {(pin) => {
+                                // Reads through props.spec() rather than the captured p, so the
+                                // chip TRACKS. A plain p.pinRefs read is not a signal, so Solid
+                                // would wrap this in an effect with no dependencies: the binding
+                                // would change in the data and never on screen.
+                                const bound = (): boolean =>
+                                  props.spec().parameters.some((x) => x === p && x.pinRefs.includes(pin.id));
+                                return (
+                                  <button
+                                    class={`tx-bind ${bound() ? "on" : ""}`}
+                                    title={bound() ? `unbind ${pin.name}` : `bind to ${pin.name}`}
+                                    onClick={() => props.toggleBinding(p, pin.id)}
+                                  >
+                                    {pin.name}
+                                  </button>
+                                );
+                              }}
                             </For>
                           </span>
                         </Show>
@@ -265,7 +273,10 @@ export function TranscribePanel(props: TranscribeHandlers) {
                             <label class="tx-num" title={`${pin.name} designator in ${pkg.name || pkg.id}`}>
                               {pkg.id}
                               <input
-                                value={pin.numbers.find((n) => n.packageRef === pkg.id)?.number ?? ""}
+                                value={
+                                  props.spec().pins.find((x) => x.id === pin.id)?.numbers
+                                    .find((n) => n.packageRef === pkg.id)?.number ?? ""
+                                }
                                 onChange={(e) => props.setPinNumber(pin, pkg.id, e.currentTarget.value)}
                               />
                             </label>
