@@ -42,6 +42,25 @@ func (t *Tally) add(o Outcome) {
 // Covered is the coverage axis: how many items a mechanism exists for (every outcome but not-automated).
 func (t Tally) Covered() int { return t.Total - t.NotAutomated }
 
+// Answered is the stricter axis: how many items the run actually produced an answer for.
+//
+// It exists because Covered() cannot see a whole class of regression. Covered() subtracts only
+// NotAutomated, which moves when a rule leaves the CATALOG — a profiles directory that moved, a
+// convention file that was renamed. It does not move when a rule is present but its INPUTS are gone:
+// a datasheet-backed item whose corpus vanished resolves to a rule, fails check.Available, and reads
+// not-applicable, which Covered() counts as covered. Removing `params/` from the tutorial project
+// moves Covered() by zero while an item silently stops being answered.
+//
+// So the tiers are three, not two. Pass, Fail and Provisional are verdicts: the rule ran and decided.
+// ComputedNA is also an answer, because the DESIGN determined the item does not apply (no crystal on
+// the board), which is the same branch a human takes. Everything else is an item nobody answered:
+// NotApplicable (the mechanism exists, its inputs are absent), NotAutomated, NeedsData,
+// NeedsDesignIntent, and Inconclusive (the rule ran and could not decide).
+//
+// Covered() stays exactly as it was and is still rendered. The two numbers answer different
+// questions, and a checklist where they diverge is telling you something true.
+func (t Tally) Answered() int { return t.Pass + t.Fail + t.Provisional + t.ComputedNA }
+
 func (t Tally) String() string {
 	s := fmt.Sprintf("%d pass, %d fail, %d n/a, %d not-automated", t.Pass, t.Fail, t.NotApplicable, t.NotAutomated)
 	// Show the ratification states only when present, so an unseeded review reads exactly as before.
@@ -114,8 +133,8 @@ func RenderCoverageMarkdown(r Report) string {
 	// Two axes (WS10-014): coverage (a mechanism exists) then, among covered items, the ratification
 	// breakdown — provisional (awaiting a datasheet value) and needs-intent (awaiting a declaration) are
 	// the HITL worklists, distinct from a clean pass/fail or a genuine not-automated.
-	fmt.Fprintf(&b, "**%d of %d covered** — %d pass, %d fail, %d n/a; %d not-automated",
-		tot.Covered(), tot.Total, tot.Pass, tot.Fail, tot.NotApplicable, tot.NotAutomated)
+	fmt.Fprintf(&b, "**%d of %d covered**, **%d answered** — %d pass, %d fail, %d n/a; %d not-automated",
+		tot.Covered(), tot.Total, tot.Answered(), tot.Pass, tot.Fail, tot.NotApplicable, tot.NotAutomated)
 	if tot.Provisional > 0 || tot.NeedsDesignIntent > 0 || tot.NeedsData > 0 || tot.ComputedNA > 0 || tot.Inconclusive > 0 {
 		fmt.Fprintf(&b, "\n\nOf the covered: %d provisional (awaiting datasheet data), %d needs-design-intent (awaiting a declaration), %d needs-data (awaiting a datasheet seed), %d inconclusive (the check ran and could not decide), %d computed-n/a",
 			tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.Inconclusive, tot.ComputedNA)

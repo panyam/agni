@@ -54,19 +54,26 @@ func writeAggregateSummary(b *strings.Builder, a Aggregate) {
 			t0.Covered(), t0.Total, t0.NotAutomated)
 	}
 	b.WriteString("## Per-design outcomes\n\n")
-	b.WriteString("| Design | Pass | Fail | Provisional | Needs-intent | Needs-data | Computed-n/a | N/A |\n")
-	b.WriteString("|--------|------|------|-------------|--------------|------------|--------------|-----|\n")
+	// Answered is per DESIGN where coverage is per manifest: two designs run against one checklist can
+	// answer different numbers of it, because a rule's inputs are a property of the board rather than of
+	// the checklist. That is exactly the column a rollup gate reads, so it is a column rather than a
+	// number a reader has to reconstruct from the other seven.
+	b.WriteString("| Design | Answered | Pass | Fail | Provisional | Needs-intent | Needs-data | Computed-n/a | N/A |\n")
+	b.WriteString("|--------|----------|------|------|-------------|--------------|------------|--------------|-----|\n")
 	var tot Tally
 	for _, r := range a.Reports {
 		t := r.Tally()
-		fmt.Fprintf(b, "| `%s` | %d | %d | %d | %d | %d | %d | %d |\n",
-			r.Design, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.NeedsData, t.ComputedNA, t.NotApplicable)
+		fmt.Fprintf(b, "| `%s` | %d/%d | %d | %d | %d | %d | %d | %d | %d |\n",
+			r.Design, t.Answered(), t.Total, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.NeedsData, t.ComputedNA, t.NotApplicable)
 		tot.Pass, tot.Fail, tot.NotApplicable = tot.Pass+t.Pass, tot.Fail+t.Fail, tot.NotApplicable+t.NotApplicable
 		tot.Provisional, tot.NeedsDesignIntent, tot.ComputedNA = tot.Provisional+t.Provisional, tot.NeedsDesignIntent+t.NeedsDesignIntent, tot.ComputedNA+t.ComputedNA
 		tot.NeedsData += t.NeedsData
+		// Total accumulates so the answered cell can read x/y like the per-design rows. Nothing else in
+		// this rollup uses it, which is why it was not summed before.
+		tot.Total += t.Total
 	}
-	fmt.Fprintf(b, "| **Total** | %d | %d | %d | %d | %d | %d | %d |\n\n",
-		tot.Pass, tot.Fail, tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.ComputedNA, tot.NotApplicable)
+	fmt.Fprintf(b, "| **Total** | %d/%d | %d | %d | %d | %d | %d | %d | %d |\n\n",
+		tot.Answered(), tot.Total, tot.Pass, tot.Fail, tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.ComputedNA, tot.NotApplicable)
 }
 
 // RenderAggregateCoverageMarkdown is the multi-design analogue of RenderCoverageMarkdown: the automation
@@ -128,7 +135,12 @@ type jsonAggregate struct {
 }
 
 type jsonDesignSummary struct {
-	Design            string `json:"design"`
+	Design string `json:"design"`
+	// Answered is the per-design gate input, alongside the manifest-level Covered/NotAutomated above.
+	// A rollup gate reads this row by row, so a design that stopped answering its checklist is visible
+	// here without the consumer recounting outcomes.
+	Answered          int    `json:"answered"`
+	Total             int    `json:"total"`
 	Pass              int    `json:"pass"`
 	Fail              int    `json:"fail"`
 	Provisional       int    `json:"provisional"`
@@ -160,7 +172,8 @@ func RenderAggregateJSON(a Aggregate) (string, error) {
 	for _, r := range a.Reports {
 		t := r.Tally()
 		out.PerDesign = append(out.PerDesign, jsonDesignSummary{
-			Design: r.Design, Pass: t.Pass, Fail: t.Fail, NotApplicable: t.NotApplicable,
+			Design: r.Design, Answered: t.Answered(), Total: t.Total,
+			Pass: t.Pass, Fail: t.Fail, NotApplicable: t.NotApplicable,
 			Provisional: t.Provisional, NeedsDesignIntent: t.NeedsDesignIntent, NeedsData: t.NeedsData, ComputedNA: t.ComputedNA,
 		})
 	}

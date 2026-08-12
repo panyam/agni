@@ -13,9 +13,26 @@ import (
 // a marshal of the internal structs so the wire shape stays decoupled from check.Finding's proto
 // provenance and can evolve independently.
 type jsonReport struct {
-	Manifest string     `json:"manifest"`
-	Design   string     `json:"design"`
-	Areas    []jsonArea `json:"areas"`
+	Manifest string      `json:"manifest"`
+	Design   string      `json:"design"`
+	Summary  jsonSummary `json:"summary"`
+	Areas    []jsonArea  `json:"areas"`
+}
+
+// jsonSummary is the counts a pipeline gates on, stated rather than left to be recomputed. It carries
+// exactly the inputs of the two gates `agni review` exposes (--fail-on-outcome and --min-answered) so
+// a consumer reading this document sees the same numbers the exit code was derived from. Deriving them
+// by counting items is possible and is how every consumer did it before; two implementations of
+// Answered() is precisely how a gate and a report come to disagree.
+type jsonSummary struct {
+	Total    int `json:"total"`
+	Covered  int `json:"covered"`
+	Answered int `json:"answered"`
+	Pass     int `json:"pass"`
+	Fail     int `json:"fail"`
+	// Provisional is broken out because it is the one outcome whose gating is a per-team choice: it is
+	// a fail resting on unratified datasheet data, so a consumer may want to treat it either way.
+	Provisional int `json:"provisional"`
 }
 
 type jsonArea struct {
@@ -59,7 +76,14 @@ type jsonDatasheet struct {
 // RenderJSON emits the report as indented JSON with the full finding list for every item. It is the
 // tooling surface behind `agni review --format json`; the markdown renderers are the human surfaces.
 func RenderJSON(r Report) (string, error) {
-	out := jsonReport{Manifest: r.Manifest, Design: r.Design}
+	t := r.Tally()
+	out := jsonReport{
+		Manifest: r.Manifest, Design: r.Design,
+		Summary: jsonSummary{
+			Total: t.Total, Covered: t.Covered(), Answered: t.Answered(),
+			Pass: t.Pass, Fail: t.Fail, Provisional: t.Provisional,
+		},
+	}
 	for _, a := range r.Areas {
 		ja := jsonArea{Name: a.Area.Name}
 		for _, it := range a.Items {

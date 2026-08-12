@@ -98,6 +98,67 @@ What you should not do is lower the severity of the rule to make the gate pass. 
 the tool claims about consequence in order to change an exit code, and every future reader of that
 finding inherits the lie.
 
+## Gate on the checklist too
+
+The gate above cannot see one whole class of regression, and it is worth meeting before you rely on
+it. Run the review with a floor under how many items it has to answer:
+
+```
+agni review designs/gateway --checklist review.yaml --min-answered 13
+echo $?
+```
+
+```
+0
+```
+
+Thirteen of the fifteen items get answered, so the floor holds. Now move the parameter corpus out of
+the way, as somebody reorganising a repository eventually will, and run exactly the same two commands
+you have been gating with:
+
+```
+mv params params-old
+agni review designs/gateway --checklist review.yaml --coverage
+```
+
+```
+**13 of 15 covered**, **12 answered** — 2 pass, 10 fail, 1 n/a; 2 not-automated
+```
+
+**Covered did not move.** It is still 13 of 15. The item that used to check a part against its
+datasheet now reads `not-applicable`, because its rule is still in the catalog and merely has nothing
+to read, and `not-applicable` counts as covered. Nothing in the failure count says so either.
+
+`--min-answered` is the number that moved:
+
+```
+agni review designs/gateway --checklist review.yaml --min-answered 13
+echo $?
+```
+
+```
+2
+```
+
+```
+error: designs/gateway answered 12 of 15 checklist items, below --min-answered 13
+```
+
+That is the whole reason `review` has a gate of its own. `check --fail-on` asks how bad the answers
+were; this asks whether the questions were answered. A checklist quietly answering fewer of its own
+items looks identical to a clean board on every other number you have.
+
+Put `params` back before continuing:
+
+```
+mv params-old params
+```
+
+Two notes on using it. A `provisional` does not trip `--fail-on-outcome fail`, because it is a failure
+resting on placeholder data and a pipeline that goes red on data quality is a pipeline somebody
+switches off. Ask for it by name when you want it: `--fail-on-outcome fail,provisional`. And a tripped
+gate exits `2` where a broken run exits `1`, so a script can tell a bad board from a bad tool.
+
 ## Where to start gating
 
 `--fail-on error` first. Errors are things that will not work at all, which almost nobody argues

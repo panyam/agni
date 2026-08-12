@@ -29,7 +29,7 @@ Run the rule catalog and report findings. The workhorse. See
 | `--rule <name>` | run only this rule (repeatable) |
 | `--tag <key>=<value>` | run only rules with this tag, e.g. `--tag category=power` (repeatable) |
 | `--format <fmt>` | `text` (default), `markdown`, `json`, or `report` |
-| `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info` |
+| `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info`. This is the **severity** axis. For the coverage axis, see `review --fail-on-outcome` and `--min-answered` below |
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
 | `--params <dir>` | load a datasheet parameter set, enabling datasheet-backed rules (see [Datasheets](../datasheets/)) |
@@ -50,10 +50,42 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--board-path <file>` | a board-geometry file attached to a netlist design, so board-tier items resolve instead of `n/a` |
 | `--coverage` | a per-area rollup of how many items each area decided, instead of the per-item report |
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
+| `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
+| `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |
 | `--format <fmt>` | `markdown` (default) or `json` |
 | `--results-out <file>` | also write the run as a self-contained check-result document |
 | `--render <dir>` | also write an annotated schematic SVG per design, each finding highlighted in place |
 | `--companion <file>` | a geometry file to draw `--render` images on, joined to netlist findings by net name |
+
+#### Gating a pipeline on a review
+
+`check --fail-on` and the two flags above gate on different axes, and the difference is not a matter
+of taste. `--fail-on` pivots on finding **severity**, which states how bad an answer was.
+`--fail-on-outcome` and `--min-answered` pivot on item **outcome**, which states whether the question
+was answered at all. A checklist can stop answering four of its items with its failure count unchanged
+at zero, and no severity predicate can see that.
+
+`--min-answered` counts the items that produced an answer: `pass`, `fail`, `provisional`, and
+`computed-n/a`. It is deliberately stricter than the covered count the report also shows. Covered
+subtracts only `not-automated`, which moves when a rule leaves the catalog; it does not move when a
+rule is present and its inputs are gone. A datasheet-backed item whose corpus moved reads
+`not-applicable`, which still counts as covered and does not count as answered. That gap is the
+regression worth gating on.
+
+A `provisional` does not trip `--fail-on-outcome fail`. It is a failure resting on mock or
+below-floor datasheet data, so gating on it by default fails a pipeline on data quality rather than on
+design quality. Name it explicitly when you want it: `--fail-on-outcome fail,provisional`.
+
+With several designs the gate reads every one of them, and the first design to violate it stops the
+run. Exit codes:
+
+| code | meaning |
+|---|---|
+| `0` | the run completed and no gate tripped |
+| `2` | a gate tripped |
+| `1` | the run itself failed: an unreadable design, an invalid manifest, an unknown outcome name |
+
+`check` still returns `1` for both a tripped gate and a failed run.
 
 ### `intake <file>`
 
