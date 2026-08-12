@@ -111,16 +111,16 @@ agni check designs/gateway/gateway.edn --tag category=power
 `--fail-on` makes `check` exit non-zero when anything at or above a severity is present, which is
 all you need to put it in CI:
 
-```
-$ agni check designs/gateway/gateway.edn --fail-on error
+```console verify
+$ agni check designs/gateway/gateway.edn --fail-on error > /dev/null
 $ echo $?
 1
 ```
 
 The board has two `error` findings, so the command fails. With those gone it passes:
 
-```
-$ agni check designs/gateway/gateway.edn --fail-on error --rule test-point-coverage
+```console verify
+$ agni check designs/gateway/gateway.edn --fail-on error --rule test-point-coverage > /dev/null
 $ echo $?
 0
 ```
