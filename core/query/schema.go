@@ -9,7 +9,8 @@ const (
 	fValue
 	fNum
 	fConditions
-	fMin // the SECOND numeric slot (FactRow.Min) — a two-sided relation's lower bound (param.range)
+	fMin       // the SECOND numeric slot (FactRow.Min) — a two-sided relation's lower bound (param.range)
+	fQualifier // the SECOND string-value slot (FactRow.Qualifier) — Min is to Num as this is to Value
 )
 
 // edbSchema maps each fact-base relation to its positional argument layout, so a flat FactRow is
@@ -36,6 +37,8 @@ func fieldValue(f FactRow, fld edbField) Value {
 		return Value{Absent: true}
 	case fConditions:
 		return Value{S: f.Conditions}
+	case fQualifier:
+		return Value{S: f.Qualifier}
 	case fMin:
 		if f.Min != nil {
 			return Value{S: ftoa(*f.Min), Num: f.Min, BaseUnit: f.BaseUnit}

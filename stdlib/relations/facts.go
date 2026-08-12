@@ -67,6 +67,18 @@ const (
 	// String-valued, so no ordering comparison can bind it.
 	RelParamUnit = "param.unit" // param.unit(mpn, symbol, unit): the unit a parameter is printed in. doc: facts/docs/param.unit.md
 
+	// The PIN tier of the datasheet surface (agni issue 189), over the WS10 pin-binding contract.
+	// Every relation above is keyed by (mpn, symbol) and so cannot express a question about one
+	// TERMINAL: a part with three supply pins at three different limits answers once. These add the
+	// pin column, so "which pins in this design sit on a net outside that pin's own rating" becomes
+	// writable by joining component.mpn to the part and pin.net to the connection.
+	//
+	// Both are keyed by the spec-local Pin.id rather than the pin's printed name, because a name is
+	// not unique on the parts this exists for. Mapping a DESIGN pin onto an id is param.ResolvePin,
+	// not a datalog join, since resolution can refuse and a join cannot.
+	RelParamPin      = "param.pin"       // param.pin(mpn, pin, name, function): a declared pin of a part. doc: facts/docs/param.pin.md
+	RelParamPinRange = "param.pin_range" // param.pin_range(mpn, pin, symbol, kind, min, max): a limit bound to one pin. doc: facts/docs/param.pin_range.md
+
 	// Board-geometry relations (the board tier, WS1-006): derived per-net values, not raw geometry.
 	// They demonstrate the query surface is tier-general — a new tier is queryable by adding
 	// projectors, no consumer change. Widths/drills are millimetres.
@@ -213,6 +225,8 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, paramRangeFacts(m)...)
 	out = append(out, paramUnitFacts(m)...)
 	out = append(out, paramProvFacts(m)...)
+	out = append(out, paramPinFacts(m)...)
+	out = append(out, paramPinRangeFacts(m)...)
 	out = append(out, audienceFacts(m)...)
 	out = append(out, componentOnNetFacts(m)...)
 	out = append(out, pinFacts(m)...)
@@ -377,6 +391,146 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
 			f.Num = &v
 		}
 		out = append(out, f)
+	}
+	return out
+}
+
+// pinFunctionToken renders a pin's PinFunction as the lowercase token the query surface uses,
+// matching limitKindToken's posture: enum-ish facts surface as string tokens, never proto enum
+// numbers. "unspecified" is a legal and common answer here, unlike for a limit kind, because a pin
+// function table may have no type column at all.
+func pinFunctionToken(f parampb.PinFunction) string {
+	switch f {
+	case parampb.PinFunction_PIN_FUNCTION_POWER_INPUT:
+		return "power_input"
+	case parampb.PinFunction_PIN_FUNCTION_POWER_OUTPUT:
+		return "power_output"
+	case parampb.PinFunction_PIN_FUNCTION_GROUND:
+		return "ground"
+	case parampb.PinFunction_PIN_FUNCTION_INPUT:
+		return "input"
+	case parampb.PinFunction_PIN_FUNCTION_OUTPUT:
+		return "output"
+	case parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL:
+		return "bidirectional"
+	case parampb.PinFunction_PIN_FUNCTION_PASSIVE:
+		return "passive"
+	case parampb.PinFunction_PIN_FUNCTION_NO_CONNECT:
+		return "no_connect"
+	default:
+		return "unspecified"
+	}
+}
+
+// specParamPinRows projects the `param.pin` facts of one PartSpec: one row per declared pin, keyed
+// by mpn, carrying the pin's spec-local id (Object), its printed name (Value) and its function
+// (Qualifier).
+//
+// The ID IS THE JOIN KEY, not the name. A part routinely prints one name on several terminals, so a
+// name-keyed relation would silently merge two pins with different limits, which is the collapse
+// pin binding exists to undo. The name is published as a value so a query can match on it and a
+// finding can print it; resolving a DESIGN pin onto one of these ids is param.ResolvePin's job and
+// deliberately not a datalog join, because it can refuse and a join cannot.
+//
+// Empty for every spec seeded before pin binding, so a design read against an older corpus produces
+// no rows here rather than wrong ones.
+func specParamPinRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	out := make([]query.FactRow, 0, len(spec.GetPins()))
+	for _, pin := range spec.GetPins() {
+		out = append(out, query.FactRow{
+			Relation: RelParamPin, Subject: mpn, Object: pin.GetId(),
+			Value: pin.GetName(), Qualifier: pinFunctionToken(pin.GetFunction()),
+			Cite: check.PinCitation(spec, pin),
+		})
+	}
+	return out
+}
+
+// specParamPinRangeRows projects the `param.pin_range` facts of one PartSpec: one row per
+// (parameter, bound pin) pair, carrying the symbol (Value), the limit kind (Qualifier), and both
+// bounds in SI base units (Min/Num).
+//
+// A parameter bound to four pins emits FOUR rows, one per pin. That is the point: the TXB0104
+// states one output range for its whole A port, and a rule asking about pin a3 must find it without
+// knowing it was stated as a group.
+//
+// PART-WIDE ROWS ARE DELIBERATELY ABSENT. A parameter with no pin_refs is a fact about the die (a
+// junction-temperature rating), and emitting it against every pin would read as each terminal
+// carrying that limit itself, re-creating the collapse in a new place. Those rows are already on
+// `param.range`, which is where a query that wants them should look; this relation answers only
+// "what does THIS terminal require", and a part with no pin bindings answers nothing here.
+//
+// An unconvertible unit keeps the row with both numeric slots empty, the same posture
+// specParamRangeRows takes: the pin, symbol, kind and citation are still true, and an unmeasurable
+// value must not become orderable.
+func specParamPinRangeRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	var out []query.FactRow
+	for _, p := range spec.GetParameters() {
+		// A short-circuit, not the mechanism: the loop below already emits nothing for an empty
+		// binding. Kept because it states the exclusion where a reader looks for it, and skips a
+		// pointless unit conversion on every part-wide row.
+		if len(p.GetPinRefs()) == 0 {
+			continue
+		}
+		q, ok := param.InBaseUnit(p)
+		for _, ref := range p.GetPinRefs() {
+			f := query.FactRow{
+				Relation: RelParamPinRange, Subject: mpn, Object: ref,
+				Value: p.GetSymbol(), Qualifier: limitKindToken(p.GetLimitKind()),
+				Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p),
+			}
+			if ok {
+				f.Value, f.Qualifier = q.Symbol, limitKindToken(q.LimitKind)
+				f.BaseUnit, f.Conditions = q.Unit, conditionsText(q.Conditions)
+				if q.Value != nil {
+					// BOTH bounds reduce together, for specParamRangeRows' reason: converting only
+					// one would leave a row whose min reads above its max.
+					if q.Value.Min != nil {
+						v := *q.Value.Min
+						f.Min = &v
+					}
+					if q.Value.Max != nil {
+						v := *q.Value.Max
+						f.Num = &v
+					}
+				}
+			}
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// paramPinFacts emits the declared pins of each joined part, deduped by MPN and empty without
+// --params, the same silent-by-construction posture as paramFacts.
+func paramPinFacts(m check.Model) []query.FactRow {
+	return perJoinedSpec(m, specParamPinRows)
+}
+
+// paramPinRangeFacts emits the pin-bound limits of each joined part, deduped by MPN and empty
+// without --params.
+func paramPinRangeFacts(m check.Model) []query.FactRow {
+	return perJoinedSpec(m, specParamPinRangeRows)
+}
+
+// perJoinedSpec walks each component's joined PartSpec once per MPN and concatenates rows from one
+// per-spec projector. The dedup matters because a design places many instances of one part and a
+// PartSpec describes the TYPE, so emitting per component would multiply every datasheet fact by its
+// placement count.
+func perJoinedSpec(m check.Model, rows func(string, *parampb.PartSpec) []query.FactRow) []query.FactRow {
+	var out []query.FactRow
+	seen := map[string]bool{}
+	for _, c := range m.Components() {
+		mpn := m.ComponentMPN(c.RefDes)
+		if mpn == "" || seen[mpn] {
+			continue
+		}
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil {
+			continue
+		}
+		seen[mpn] = true
+		out = append(out, rows(mpn, spec)...)
 	}
 	return out
 }

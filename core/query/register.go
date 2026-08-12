@@ -29,6 +29,7 @@ const (
 	FieldNum        = Field(fNum)        // FactRow.Num — the numeric value (for range/compare)
 	FieldConditions = Field(fConditions) // FactRow.Conditions — a parameter's test conditions
 	FieldMin        = Field(fMin)        // FactRow.Min — the SECOND numeric slot (a two-sided range's lower bound)
+	FieldQualifier  = Field(fQualifier)  // FactRow.Qualifier — the SECOND string slot (a discriminator when Value is spent)
 )
 
 // Projector derives a relation's fact rows from a Model, the same shape as check's per-relation

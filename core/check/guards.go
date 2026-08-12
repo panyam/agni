@@ -22,13 +22,27 @@ import (
 // travels in Finding.Prov; the same facts also travel structured in Finding.DatasheetProv (built via
 // DatasheetCitationOf, which this shares), so a renderer can column them instead of parsing this text.
 func Citation(spec *parampb.PartSpec, p *parampb.Parameter) string {
-	c := DatasheetCitationOf(spec, p)
-	doc := c.Doc
+	return citationText(spec, p.GetProv())
+}
+
+// PinCitation renders the datasheet citation for a PIN's declaration, the same way Citation does for
+// a parameter's. A pin function is an extracted claim like any other and param.Validate requires
+// provenance on it, so a pin-level fact is as verifiable against a page as a value-level one. The
+// two share a formatter rather than one wrapping the other, because a Pin is not a Parameter and
+// nothing about the citation depends on which of them carried the provenance.
+func PinCitation(spec *parampb.PartSpec, pin *parampb.Pin) string {
+	return citationText(spec, pin.GetProv())
+}
+
+// citationText formats one ParamProvenance against its spec. An unresolvable doc_ref renders as
+// "unknown source" rather than an empty pair of quotes, so a citation is never silently blank.
+func citationText(spec *parampb.PartSpec, prov *parampb.ParamProvenance) string {
+	doc := DocTitle(spec, prov.GetDocRef())
 	if doc == "" {
 		doc = "unknown source"
 	}
 	return fmt.Sprintf("datasheet %q page %d, %q (%s, confidence %g)",
-		doc, c.Page, c.Section, c.Method, c.Confidence)
+		doc, prov.GetPage(), prov.GetTableOrFigure(), prov.GetMethod(), prov.GetConfidence())
 }
 
 // DiffConventionPresent reports whether the design uses differential-pair naming at all: at

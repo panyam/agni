@@ -99,6 +99,13 @@ func fieldLabel(f edbField) string {
 		return "n"
 	case fConditions:
 		return "conditions"
+	case fMin:
+		// Was falling through to "arg" since fMin landed, so a registered two-sided overlay relation
+		// synthesized a nameless lower bound. Named here because adding fQualifier beside it and
+		// leaving this one unlabelled would read as a deliberate distinction.
+		return "min"
+	case fQualifier:
+		return "qualifier"
 	}
 	return "arg"
 }
