@@ -5,6 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
+import "agni/v1/webapi/config.proto";
 import "agni/v1/param/param.proto";
 
 // This file: CheckService, the rule checks over a loaded design (WS9-026 extracted it from
@@ -99,12 +100,14 @@ message CheckDesignRequest {
 // resolve one from a shared registry by id. None of that belongs in the API contract, and a service that
 // took a path would have to own file I/O to do its job.
 //
-// Only the inputs that are actually WIRED appear here. The other catalog extensions
-// (--profile-path / --intent-path / --params) are still service-construction config; they move here as
-// they are wired, so a field never silently does nothing.
+// The config it carries is an AnalysisConfig, the same message a Project declares, so a tier added
+// there is a tier a request can carry without a second edit here (agni issue 224). Whether a given
+// host can RESOLVE the ref-shaped fields of a request-supplied config is a property of that
+// deployment, not of this schema.
 message OverlayConfig {
-  // conventions is the operator naming convention this run applies. Absent means the engine defaults.
-  NamingConvention conventions = 1;
+  // config is what this request wants the design checked against, layered over whatever the design's
+  // project declares.
+  AnalysisConfig config = 4;
   // ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
   // project: no project conventions, profiles, parameters, or intent.
   //
@@ -118,58 +121,12 @@ message OverlayConfig {
   // "ignore what my project declares", the other says "use this instead", and a caller doing both
   // means both.
   bool ignore_project = 3;
-  // Reserved for the registry indirection: a stable id a server-side provider resolves to a
-  // NamingConvention, for deployments that share one house convention across many requests rather than
-  // sending it each time. Not wired yet, so it is not declared yet.
-  // string conventions_id = 2;
-}
-
-// NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It
-// carries two halves that do different jobs and land in different places.
-//
-// `rules` become catalog rules, namespaced <name>/<rule name>. `lexicon` extends the vocabularies that
-// decide which net names are power rails, grounds, and feedback nodes, and which pin names are
-// supplies. The lexicon is applied to the design READ, not to the catalog, because those roles are
-// resolved once at ingestion — which is also why it can be per-request at all: the vocabulary travels
-// with the read as a value (WS3-106) rather than being installed in a process global a concurrent
-// request would see.
-message NamingConvention {
-  string name = 1; // the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
-  NamingLexicon lexicon = 2;
-  repeated NamingRule rules = 3;
-}
-
-// NamingLexicon overrides the engine's built-in role vocabularies. Each dimension is a DISTINCT name
-// space: a supply PIN is named VDD or VIN, while a rail NET is named 3V3 or +5V, so a pattern that
-// belongs in one is wrong in the other.
-message NamingLexicon {
-  VocabPatterns rail = 1;
-  VocabPatterns ground = 2;
-  VocabPatterns feedback = 3;
-  VocabPatterns supply_pin = 4;
-  map<string, VocabPatterns> class = 5; // component-class name (e.g. "tvs") -> the patterns that mark it
-}
-
-// VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
-// leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
-// whole set — so a project normally teaches the engine additional names rather than discarding what it
-// already knows.
-message VocabPatterns {
-  repeated string patterns = 1;
-  bool replace = 2;
-}
-
-// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
-// any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
-// they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
-// the reader's scoping rather than the author's spelling.
-message NamingRule {
-  string name = 1;
-  string severity = 2; // error | warning | info; empty means warning
-  string why = 3;      // one line of intent, shown in the rule prose
-  repeated string allow = 4;
-  repeated string exempt = 5;
-  bool match_full = 6;
+  // Fields 1 and 2 were `conventions` (now AnalysisConfig.conventions) and a reserved
+  // `conventions_id`. Both are retired rather than reused: nothing persists an OverlayConfig — the
+  // stored results document carries its own RunConfig — so there is no reader of an old wire form to
+  // keep compatible, and a number reused for a different meaning is a trap for anyone reading a
+  // capture.
+  reserved 1, 2;
 }
 
 message CheckDesignResponse {

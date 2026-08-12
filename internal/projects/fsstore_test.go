@@ -233,7 +233,7 @@ func TestFSStoreNamesTheConventionsFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.GetConventionsUri(); got != "mount://m/conventions.yaml" {
+	if got := p.GetConfig().GetConventionsUri(); got != "mount://m/conventions.yaml" {
 		t.Errorf("conventions uri = %q, want the file the value was read from", got)
 	}
 }
@@ -248,7 +248,7 @@ func TestFSStoreConventionsUriAbsentWhenUndeclared(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.GetConventionsUri(); got != "" {
+	if got := p.GetConfig().GetConventionsUri(); got != "" {
 		t.Errorf("conventions uri = %q, want empty for a project that declares none", got)
 	}
 }

@@ -39,7 +39,7 @@ type osProjectConfig struct {
 // reaches here: the store only sets a URI for a file that exists.
 func (c *osProjectConfig) ProjectConfig(_ context.Context, p *webapi.Project, d *webapi.Design) (service.ProjectConfig, error) {
 	var out service.ProjectConfig
-	for _, uri := range p.GetProfileUris() {
+	for _, uri := range p.GetConfig().GetProfileUris() {
 		dir, err := c.dir(uri)
 		if err != nil {
 			return service.ProjectConfig{}, err
@@ -55,7 +55,7 @@ func (c *osProjectConfig) ProjectConfig(_ context.Context, p *webapi.Project, d 
 		out.Sources = append(out.Sources, profiles.Source(projectSourceName(p), ps))
 		out.Profiles = true
 	}
-	for _, uri := range p.GetParamUris() {
+	for _, uri := range p.GetConfig().GetParamUris() {
 		dir, err := c.dir(uri)
 		if err != nil {
 			return service.ProjectConfig{}, err
@@ -69,7 +69,7 @@ func (c *osProjectConfig) ProjectConfig(_ context.Context, p *webapi.Project, d 
 	// Intent is the design's, not the project's, and composes as its own rule source. A design that
 	// declared none simply contributes nothing, which is how the intent-bound checklist items read
 	// needs-design-intent rather than passing on an architecture nobody stated.
-	if uri := d.GetIntentUri(); uri != "" {
+	if uri := d.GetConfig().GetIntentUri(); uri != "" {
 		abs, err := c.file(uri)
 		if err != nil {
 			return service.ProjectConfig{}, err

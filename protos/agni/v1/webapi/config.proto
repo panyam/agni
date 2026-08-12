@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+// This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
+//
+// It exists because that config reached a run through three unrelated mechanisms and was spelled
+// differently by each: a project declared it as five loose fields, a request could carry exactly one
+// of the five, and `agni serve` took the rest as startup flags. Adding a tier meant adding it in every
+// one of those places, and the request tier's inability to carry four of them is why a browser could
+// be handed one fifth of the configuration the CLI could (agni issue 224).
+//
+// The tier this message names is deliberately narrow. Config splits three ways, and only the middle
+// one belongs here:
+//
+//   environment  where bytes are and what tools exist: mounts, symbol search paths, the review store,
+//                a native tool's availability. Facts about a machine, not about a design.
+//   ANALYSIS     what a design is checked against: its naming vocabulary, interface profiles, seeded
+//                parameters, declared intent, review checklist. THIS MESSAGE.
+//   invocation   this run's question and output: which rules, which format, which gate. Arguments,
+//                not configuration.
+//
+// The test that assigns a field: does it change WHAT is checked, or only WHERE bytes are found? Only
+// the first belongs here. A field that merely locates input can live in environment config without
+// any of the isolation this tier needs.
+message AnalysisConfig {
+  // conventions is the naming policy, RESOLVED. Absent means the engine defaults.
+  //
+  // It is a value where its neighbours are URIs, and that asymmetry is CONSTRAINTS C22 rather than an
+  // oversight. A convention is small, so a service composes it with no I/O and a filesystem-free host
+  // can honour one that arrived on a request. Profiles and parameters are directories of many files,
+  // so they arrive as refs the injected port loads — the same reason a design is a ref rather than an
+  // inlined megabyte.
+  NamingConvention conventions = 1;
+  // conventions_uri names the file `conventions` was read from, absent when none was declared.
+  //
+  // It is redundant for COMPOSING a run, which is why the value above exists, and not redundant for a
+  // client that has to OFFER the convention as a choice: a picker needs something to pass back, and a
+  // resolved value is not a ref. Without it a viewer can state which convention is in effect but
+  // cannot let a reader re-select it after trying another.
+  string conventions_uri = 2;
+  // profile_uris are the interface-profile declarations composed into the catalog.
+  repeated string profile_uris = 3;
+  // param_uris are the seeded datasheet parameter sets part limits are checked against.
+  repeated string param_uris = 4;
+  // checklist_uri names the review manifest a review run scores. It is NOT loaded with the rest: a
+  // checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
+  string checklist_uri = 5;
+  // intent_uri names a design's declared architecture: its domains, modules, and subsystems.
+  //
+  // Intent is per-DESIGN where the rest of this message is per-project, because each board has its own
+  // intended architecture while conventions and profiles describe the team. One message carries both
+  // because the SHAPE is the same; which fields a Project sets and which a Design sets is what keeps
+  // the scopes apart, and it is now visible in the descriptors rather than asserted in a comment.
+  string intent_uri = 6;
+
+  // Field 7 is reserved for `extends`, the declared import of shared config (agni issue 224). It is
+  // not declared until it is wired: a field that sits in the schema doing nothing is a promise a
+  // reader cannot tell from a capability.
+}
+
+// NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It
+// carries two halves that do different jobs and land in different places.
+//
+// `rules` become catalog rules, namespaced <name>/<rule name>. `lexicon` extends the vocabularies that
+// decide which net names are power rails, grounds, and feedback nodes, and which pin names are
+// supplies. The lexicon is applied to the design READ, not to the catalog, because those roles are
+// resolved once at ingestion — which is also why it can be per-request at all: the vocabulary travels
+// with the read as a value (WS3-106) rather than being installed in a process global a concurrent
+// request would see.
+message NamingConvention {
+  string name = 1; // the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
+  NamingLexicon lexicon = 2;
+  repeated NamingRule rules = 3;
+}
+
+// NamingLexicon overrides the engine's built-in role vocabularies. Each dimension is a DISTINCT name
+// space: a supply PIN is named VDD or VIN, while a rail NET is named 3V3 or +5V, so a pattern that
+// belongs in one is wrong in the other.
+message NamingLexicon {
+  VocabPatterns rail = 1;
+  VocabPatterns ground = 2;
+  VocabPatterns feedback = 3;
+  VocabPatterns supply_pin = 4;
+  map<string, VocabPatterns> class = 5; // component-class name (e.g. "tvs") -> the patterns that mark it
+}
+
+// VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
+// leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
+// whole set — so a project normally teaches the engine additional names rather than discarding what it
+// already knows.
+message VocabPatterns {
+  repeated string patterns = 1;
+  bool replace = 2;
+}
+
+// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
+// any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
+// they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
+// the reader's scoping rather than the author's spelling.
+message NamingRule {
+  string name = 1;
+  string severity = 2; // error | warning | info; empty means warning
+  string why = 3;      // one line of intent, shown in the rule prose
+  repeated string allow = 4;
+  repeated string exempt = 5;
+  bool match_full = 6;
+}

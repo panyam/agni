@@ -70,9 +70,11 @@ const inProject = {
   project: {
     name: "projects/gateway",
     title: "Gateway ECU",
-    conventionsUri: "mount://m/conventions.yaml",
-    checklistUri: "mount://m/review.yaml",
-    profileUris: ["mount://m/profiles"],
+    config: {
+      conventionsUri: "mount://m/conventions.yaml",
+      checklistUri: "mount://m/review.yaml",
+      profileUris: ["mount://m/profiles"],
+    },
   },
 };
 

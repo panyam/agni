@@ -7,7 +7,8 @@ import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
-import { OverlayConfigSchema, type NamingConvention, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import { type NamingConvention } from "./gen/agni/v1/webapi/config_pb.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
@@ -589,7 +590,9 @@ export class ViewerPresenter {
   private overlay(): OverlayConfig | undefined {
     if (!this.convention && !this.projectState.plain) return undefined;
     return create(OverlayConfigSchema, {
-      conventions: this.convention ?? undefined,
+      // The convention rides inside the shared AnalysisConfig, the same message a Project declares, so
+      // a config tier added there is one a request can carry without a second edit here.
+      config: { conventions: this.convention ?? undefined },
       // ignore_project is the "show me the built-in catalog" choice. It rides on every rule-running
       // request rather than being applied once, because each surface composes its own overlay: a
       // toggle that reached the check panel but not the rules list would show findings from one
@@ -793,11 +796,11 @@ export class ViewerPresenter {
   // nothing declared anything, so the picker cannot know, and offering a file that turns out not to be
   // a checklist costs one clear error where hiding a real one costs a user their own file.
   private async pickerChoices(): Promise<{ conventions: ChecklistOption[]; checklists: ChecklistOption[] }> {
-    const p = this.projectResolved?.project;
-    if (p && (p.conventionsUri || p.checklistUri)) {
+    const cfg = this.projectResolved?.project?.config;
+    if (cfg && (cfg.conventionsUri || cfg.checklistUri)) {
       return {
-        conventions: optionsFor(p.conventionsUri),
-        checklists: optionsFor(p.checklistUri),
+        conventions: optionsFor(cfg.conventionsUri),
+        checklists: optionsFor(cfg.checklistUri),
       };
     }
     const siblings = await this.yamlSiblings();

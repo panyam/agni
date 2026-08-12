@@ -291,17 +291,17 @@ func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names Proj
 		if err != nil {
 			return fmt.Errorf("%s: %w", uri, err)
 		}
-		p.Conventions = service.ConventionProto(cfg)
-		p.ConventionsUri = uri
+		p.Config.Conventions = service.ConventionProto(cfg)
+		p.Config.ConventionsUri = uri
 	}
 	if uri, ok := rel(names.Profiles); ok {
-		p.ProfileUris = []string{uri}
+		p.Config.ProfileUris = []string{uri}
 	}
 	if uri, ok := rel(names.Params); ok {
-		p.ParamUris = []string{uri}
+		p.Config.ParamUris = []string{uri}
 	}
 	if uri, ok := rel(names.Checklist); ok {
-		p.ChecklistUri = uri
+		p.Config.ChecklistUri = uri
 	}
 	return nil
 }
@@ -340,15 +340,15 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 	d.EntryUri = entry.String()
 	// Intent is a NAME until here; it becomes a URI only if the file is actually there, so a design
 	// that never wrote one reads as having none rather than as naming a file that is missing.
-	if d.GetIntentUri() != "" {
-		if exists(t.FS, path.Join(walkRoot(dir), d.GetIntentUri())) {
-			iu, err := base.Join(d.GetIntentUri())
+	if d.GetConfig().GetIntentUri() != "" {
+		if exists(t.FS, path.Join(walkRoot(dir), d.GetConfig().GetIntentUri())) {
+			iu, err := base.Join(d.GetConfig().GetIntentUri())
 			if err != nil {
 				return "", nil, err
 			}
-			d.IntentUri = iu.String()
+			d.Config.IntentUri = iu.String()
 		} else {
-			d.IntentUri = ""
+			d.Config.IntentUri = ""
 		}
 	}
 	for i, c := range d.GetCompanionUris() {

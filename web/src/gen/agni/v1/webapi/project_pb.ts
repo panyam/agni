@@ -4,15 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { NamingConvention } from "./checks_pb";
-import { file_agni_v1_webapi_checks } from "./checks_pb";
+import type { AnalysisConfig } from "./config_pb";
+import { file_agni_v1_webapi_config } from "./config_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/project.proto.
  */
 export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSLEAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRI1Cgtjb252ZW50aW9ucxgEIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAggASgJEhQKDHByb2ZpbGVfdXJpcxgFIAMoCRISCgpwYXJhbV91cmlzGAYgAygJEhUKDWNoZWNrbGlzdF91cmkYByABKAkicQoGRGVzaWduEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJEhEKCWVudHJ5X3VyaRgEIAEoCRIWCg5jb21wYW5pb25fdXJpcxgFIAMoCRISCgppbnRlbnRfdXJpGAYgASgJIiEKEUdldFByb2plY3RSZXF1ZXN0EgwKBG5hbWUYASABKAkiTAoTTGlzdFByb2plY3RzUmVxdWVzdBIRCglwYWdlX3NpemUYASABKAUSEgoKcGFnZV90b2tlbhgCIAEoCRIOCgZmaWx0ZXIYAyABKAkiWgoUTGlzdFByb2plY3RzUmVzcG9uc2USKQoIcHJvamVjdHMYASADKAsyFy5hZ25pLnYxLndlYmFwaS5Qcm9qZWN0EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSInChdHZXRQcm9qZWN0RGVzaWduUmVxdWVzdBIMCgRuYW1lGAEgASgJImIKGUxpc3RQcm9qZWN0RGVzaWduc1JlcXVlc3QSDgoGcGFyZW50GAEgASgJEhEKCXBhZ2Vfc2l6ZRgCIAEoBRISCgpwYWdlX3Rva2VuGAMgASgJEg4KBmZpbHRlchgEIAEoCSJeChpMaXN0UHJvamVjdERlc2lnbnNSZXNwb25zZRInCgdkZXNpZ25zGAEgAygLMhYuYWduaS52MS53ZWJhcGkuRGVzaWduEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSIjChRSZXNvbHZlRGVzaWduUmVxdWVzdBILCgN1cmkYASABKAkiaQoVUmVzb2x2ZURlc2lnblJlc3BvbnNlEiYKBmRlc2lnbhgBIAEoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIoCgdwcm9qZWN0GAIgASgLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdDLHAwoOUHJvamVjdFNlcnZpY2USSAoKR2V0UHJvamVjdBIhLmFnbmkudjEud2ViYXBpLkdldFByb2plY3RSZXF1ZXN0GhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBJZCgxMaXN0UHJvamVjdHMSIy5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdHNSZXF1ZXN0GiQuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVzcG9uc2USTAoJR2V0RGVzaWduEicuYWduaS52MS53ZWJhcGkuR2V0UHJvamVjdERlc2lnblJlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SZAoLTGlzdERlc2lnbnMSKS5hZ25pLnYxLndlYmFwaS5MaXN0UHJvamVjdERlc2lnbnNSZXF1ZXN0GiouYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3REZXNpZ25zUmVzcG9uc2USXAoNUmVzb2x2ZURlc2lnbhIkLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuUmVzb2x2ZURlc2lnblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_checks]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9wcm9qZWN0LnByb3RvEg5hZ25pLnYxLndlYmFwaSKBAQoHUHJvamVjdBIMCgRuYW1lGAEgASgJEg0KBXRpdGxlGAIgASgJEgsKA3VyaRgDIAEoCRIuCgZjb25maWcYCSABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZ0oECAQQBUoECAUQBkoECAYQB0oECAcQCEoECAgQCSKTAQoGRGVzaWduEgwKBG5hbWUYASABKAkSDQoFdGl0bGUYAiABKAkSCwoDdXJpGAMgASgJEhEKCWVudHJ5X3VyaRgEIAEoCRIWCg5jb21wYW5pb25fdXJpcxgFIAMoCRIuCgZjb25maWcYByABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZ0oECAYQByIhChFHZXRQcm9qZWN0UmVxdWVzdBIMCgRuYW1lGAEgASgJIkwKE0xpc3RQcm9qZWN0c1JlcXVlc3QSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIloKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEikKCHByb2plY3RzGAEgAygLMhcuYWduaS52MS53ZWJhcGkuUHJvamVjdBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiJwoXR2V0UHJvamVjdERlc2lnblJlcXVlc3QSDAoEbmFtZRgBIAEoCSJiChlMaXN0UHJvamVjdERlc2lnbnNSZXF1ZXN0Eg4KBnBhcmVudBgBIAEoCRIRCglwYWdlX3NpemUYAiABKAUSEgoKcGFnZV90b2tlbhgDIAEoCRIOCgZmaWx0ZXIYBCABKAkiXgoaTGlzdFByb2plY3REZXNpZ25zUmVzcG9uc2USJwoHZGVzaWducxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLkRlc2lnbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoUUmVzb2x2ZURlc2lnblJlcXVlc3QSCwoDdXJpGAEgASgJImkKFVJlc29sdmVEZXNpZ25SZXNwb25zZRImCgZkZXNpZ24YASABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SKAoHcHJvamVjdBgCIAEoCzIXLmFnbmkudjEud2ViYXBpLlByb2plY3QyxwMKDlByb2plY3RTZXJ2aWNlEkgKCkdldFByb2plY3QSIS5hZ25pLnYxLndlYmFwaS5HZXRQcm9qZWN0UmVxdWVzdBoXLmFnbmkudjEud2ViYXBpLlByb2plY3QSWQoMTGlzdFByb2plY3RzEiMuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3RzUmVxdWVzdBokLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0c1Jlc3BvbnNlEkwKCUdldERlc2lnbhInLmFnbmkudjEud2ViYXBpLkdldFByb2plY3REZXNpZ25SZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuRGVzaWduEmQKC0xpc3REZXNpZ25zEikuYWduaS52MS53ZWJhcGkuTGlzdFByb2plY3REZXNpZ25zUmVxdWVzdBoqLmFnbmkudjEud2ViYXBpLkxpc3RQcm9qZWN0RGVzaWduc1Jlc3BvbnNlElwKDVJlc29sdmVEZXNpZ24SJC5hZ25pLnYxLndlYmFwaS5SZXNvbHZlRGVzaWduUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlJlc29sdmVEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_config]);
 
 /**
  * Project is one declared set of designs that share configuration.
@@ -22,9 +22,12 @@ export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
  * confidentiality boundary rather than a server operation. See CONSTRAINTS C23 for why a read-only
  * resource is still AIP-shaped here.
  *
- * It carries no configuration fields yet. The conventions, profiles, parameters, and checklist a
- * project owns still reach a run as serve-startup flags; they move onto this message in the change
- * that wires them, so a field never sits in the schema doing nothing.
+ * Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which is
+ * the same boundary drawn from the other side: writing descriptors into a folder an operator named is
+ * not a server mutating a mount.
+ *
+ * Its configuration is an AnalysisConfig, the same message a request carries and a Design declares, so
+ * a config tier is added once and every surface gets it (agni issue 224).
  *
  * @generated from message agni.v1.webapi.Project
  */
@@ -55,44 +58,21 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
   uri: string;
 
   /**
-   * conventions is the project's naming policy, resolved. Absent means the engine defaults.
+   * config is what this project's designs are checked against, and the reason the resource exists.
+   * Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
+   * one board, so they belong to the project and reach a run through the design's edge to it. Before
+   * this they could only be `agni serve` startup flags, which a deployment mounting a mixed set
+   * applied to every design it read: an overlay's profiles superseded the built-ins for every board
+   * on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
    *
-   * @generated from field: agni.v1.webapi.NamingConvention conventions = 4;
-   */
-  conventions?: NamingConvention | undefined;
-
-  /**
-   * conventions_uri names the file `conventions` was read from, absent when the project declared no
-   * convention. It is redundant for COMPOSING a run, which is why the value above exists, and it is
-   * not redundant for a client that has to OFFER the project's convention as a choice: a picker
-   * needs something to pass back, and a resolved value is not a ref. Without it a viewer can state
-   * which convention is in effect but cannot let a reader re-select it after trying another.
+   * A Project populates every field EXCEPT intent_uri, which is a design's own (see Design.config).
+   * The scopes are kept apart by which fields each descriptor sets rather than by two message shapes,
+   * because the shape genuinely is the same and two copies of it would be one more place for two
+   * layers to disagree about what config is.
    *
-   * @generated from field: string conventions_uri = 8;
+   * @generated from field: agni.v1.webapi.AnalysisConfig config = 9;
    */
-  conventionsUri: string;
-
-  /**
-   * profile_uris are the interface-profile declarations this project composes into the catalog.
-   *
-   * @generated from field: repeated string profile_uris = 5;
-   */
-  profileUris: string[];
-
-  /**
-   * param_uris are the seeded datasheet parameter sets this project checks its parts against.
-   *
-   * @generated from field: repeated string param_uris = 6;
-   */
-  paramUris: string[];
-
-  /**
-   * checklist_uri names the review manifest this project runs. It is NOT loaded with the rest: a
-   * checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
-   *
-   * @generated from field: string checklist_uri = 7;
-   */
-  checklistUri: string;
+  config?: AnalysisConfig | undefined;
 };
 
 /**
@@ -161,15 +141,14 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   companionUris: string[];
 
   /**
-   * intent_uri names this design's declared architecture: its domains, modules, and subsystems.
+   * config is this design's own analysis config. A Design populates only intent_uri: each board has
+   * its own intended architecture, where conventions, profiles and parameters describe the team and
+   * live on the Project. That asymmetry is the one the on-disk layout already had, and carrying both
+   * in one message shape is what lets a composer layer them without knowing which tier it holds.
    *
-   * Intent is per-DESIGN where the rest of a project's config is per-project, because each board has
-   * its own intended architecture while conventions and profiles describe the team. That asymmetry
-   * is the one the on-disk layout already had, and it is why this field is here and not on Project.
-   *
-   * @generated from field: string intent_uri = 6;
+   * @generated from field: agni.v1.webapi.AnalysisConfig config = 7;
    */
-  intentUri: string;
+  config?: AnalysisConfig | undefined;
 };
 
 /**

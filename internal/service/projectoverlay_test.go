@@ -50,8 +50,8 @@ func resolverFor(byURI map[string]*webapi.Project) *ProjectResolver {
 // runs under the wrong project's name is a finding a team cannot act on, and the failure is silent:
 // nothing in a findings list says which config produced it.
 func TestConfigDoesNotCrossProjects(t *testing.T) {
-	acme := &webapi.Project{Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")}
-	globex := &webapi.Project{Name: "projects/globex", Conventions: conventionNaming("globex", "^GBX_")}
+	acme := &webapi.Project{Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}}
+	globex := &webapi.Project{Name: "projects/globex", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("globex", "^GBX_")}}
 	r := resolverFor(map[string]*webapi.Project{
 		"mount://m/acme/board.edn":   acme,
 		"mount://m/globex/board.edn": globex,
@@ -85,7 +85,7 @@ func TestConfigDoesNotCrossProjects(t *testing.T) {
 // from. It is a property of the shape rather than a flag someone remembers to leave off.
 func TestNoProjectGetsNoProjectConfig(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
-		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
 	u, err := artifact.Parse("mount://m/loose/board.edn")
 	if err != nil {
@@ -106,12 +106,12 @@ func TestNoProjectGetsNoProjectConfig(t *testing.T) {
 // TestFallbackAppliesOnlyWithoutAProject keeps every existing single-project deployment working: the
 // serve flags stay the default, and a design that resolves to a project stops using them.
 func TestFallbackAppliesOnlyWithoutAProject(t *testing.T) {
-	fallbackOv, err := ComposeOverlay(&webapi.OverlayConfig{Conventions: conventionNaming("deployment", "^DEP_")}, "")
+	fallbackOv, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	r := resolverFor(map[string]*webapi.Project{
-		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
 	ctx := context.Background()
 
@@ -138,11 +138,11 @@ func TestFallbackAppliesOnlyWithoutAProject(t *testing.T) {
 // and the project is the default it is overriding (WS3-124's rule, one layer out).
 func TestRequestOverridesTheProject(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
-		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
 	u, _ := artifact.Parse("mount://m/acme/board.edn")
 	ov, err := r.Overlay(context.Background(), u,
-		&webapi.OverlayConfig{Conventions: conventionNaming("mine", "^MINE_")}, Overlay{}, "")
+		&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, Overlay{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestRequestOverridesTheProject(t *testing.T) {
 // TestNilResolverFallsBack: a deployment with no descriptors behaves exactly as it did before
 // projects existed, which is what lets this land without a migration.
 func TestNilResolverFallsBack(t *testing.T) {
-	fallbackOv, _ := ComposeOverlay(&webapi.OverlayConfig{Conventions: conventionNaming("deployment", "^DEP_")}, "")
+	fallbackOv, _ := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionNaming("deployment", "^DEP_")}}, "")
 	var r *ProjectResolver
 	u, _ := artifact.Parse("mount://m/any/board.edn")
 	ov, err := r.Overlay(context.Background(), u, nil, fallbackOv, "")
@@ -195,7 +195,7 @@ var _ = check.Rule{}
 // no project produces — not a filtered approximation of it.
 func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
-		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
 	owned, _ := artifact.Parse("mount://m/acme/board.edn")
 	ctx := context.Background()
@@ -226,11 +226,11 @@ func TestIgnoreProjectYieldsTheBuiltInCatalog(t *testing.T) {
 // instead" are different acts, and a caller doing both means both.
 func TestIgnoreProjectKeepsTheRequestsOwnConvention(t *testing.T) {
 	r := resolverFor(map[string]*webapi.Project{
-		"mount://m/acme/board.edn": {Name: "projects/acme", Conventions: conventionNaming("acme", "^ACME_")},
+		"mount://m/acme/board.edn": {Name: "projects/acme", Config: &webapi.AnalysisConfig{Conventions: conventionNaming("acme", "^ACME_")}},
 	})
 	u, _ := artifact.Parse("mount://m/acme/board.edn")
 	ov, err := r.Overlay(context.Background(), u,
-		&webapi.OverlayConfig{IgnoreProject: true, Conventions: conventionNaming("mine", "^MINE_")}, Overlay{}, "")
+		&webapi.OverlayConfig{IgnoreProject: true, Config: &webapi.AnalysisConfig{Conventions: conventionNaming("mine", "^MINE_")}}, Overlay{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}

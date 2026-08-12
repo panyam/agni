@@ -28,9 +28,12 @@ const (
 // confidentiality boundary rather than a server operation. See CONSTRAINTS C23 for why a read-only
 // resource is still AIP-shaped here.
 //
-// It carries no configuration fields yet. The conventions, profiles, parameters, and checklist a
-// project owns still reach a run as serve-startup flags; they move onto this message in the change
-// that wires them, so a field never sits in the schema doing nothing.
+// Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which is
+// the same boundary drawn from the other side: writing descriptors into a folder an operator named is
+// not a server mutating a mount.
+//
+// Its configuration is an AnalysisConfig, the same message a request carries and a Design declares, so
+// a config tier is added once and every surface gets it (agni issue 224).
 type Project struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the resource name, "projects/{project}". The id is DECLARED by the operator in
@@ -43,21 +46,18 @@ type Project struct {
 	// uri is the folder holding `project.yaml`, "mount://<mount>/<dir>". It is an artifact URI the
 	// injected Loader resolves, NOT a host path, and nothing above the Loader may treat it as one.
 	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	// conventions is the project's naming policy, resolved. Absent means the engine defaults.
-	Conventions *NamingConvention `protobuf:"bytes,4,opt,name=conventions,proto3" json:"conventions,omitempty"`
-	// conventions_uri names the file `conventions` was read from, absent when the project declared no
-	// convention. It is redundant for COMPOSING a run, which is why the value above exists, and it is
-	// not redundant for a client that has to OFFER the project's convention as a choice: a picker
-	// needs something to pass back, and a resolved value is not a ref. Without it a viewer can state
-	// which convention is in effect but cannot let a reader re-select it after trying another.
-	ConventionsUri string `protobuf:"bytes,8,opt,name=conventions_uri,json=conventionsUri,proto3" json:"conventions_uri,omitempty"`
-	// profile_uris are the interface-profile declarations this project composes into the catalog.
-	ProfileUris []string `protobuf:"bytes,5,rep,name=profile_uris,json=profileUris,proto3" json:"profile_uris,omitempty"`
-	// param_uris are the seeded datasheet parameter sets this project checks its parts against.
-	ParamUris []string `protobuf:"bytes,6,rep,name=param_uris,json=paramUris,proto3" json:"param_uris,omitempty"`
-	// checklist_uri names the review manifest this project runs. It is NOT loaded with the rest: a
-	// checklist is chosen per run, and GetReviewManifest is the rpc that resolves it (C22, WS9-050).
-	ChecklistUri  string `protobuf:"bytes,7,opt,name=checklist_uri,json=checklistUri,proto3" json:"checklist_uri,omitempty"`
+	// config is what this project's designs are checked against, and the reason the resource exists.
+	// Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
+	// one board, so they belong to the project and reach a run through the design's edge to it. Before
+	// this they could only be `agni serve` startup flags, which a deployment mounting a mixed set
+	// applied to every design it read: an overlay's profiles superseded the built-ins for every board
+	// on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
+	//
+	// A Project populates every field EXCEPT intent_uri, which is a design's own (see Design.config).
+	// The scopes are kept apart by which fields each descriptor sets rather than by two message shapes,
+	// because the shape genuinely is the same and two copies of it would be one more place for two
+	// layers to disagree about what config is.
+	Config        *AnalysisConfig `protobuf:"bytes,9,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -113,39 +113,11 @@ func (x *Project) GetUri() string {
 	return ""
 }
 
-func (x *Project) GetConventions() *NamingConvention {
+func (x *Project) GetConfig() *AnalysisConfig {
 	if x != nil {
-		return x.Conventions
+		return x.Config
 	}
 	return nil
-}
-
-func (x *Project) GetConventionsUri() string {
-	if x != nil {
-		return x.ConventionsUri
-	}
-	return ""
-}
-
-func (x *Project) GetProfileUris() []string {
-	if x != nil {
-		return x.ProfileUris
-	}
-	return nil
-}
-
-func (x *Project) GetParamUris() []string {
-	if x != nil {
-		return x.ParamUris
-	}
-	return nil
-}
-
-func (x *Project) GetChecklistUri() string {
-	if x != nil {
-		return x.ChecklistUri
-	}
-	return ""
 }
 
 // Design is one declared design: an identity, an entry file, and its companion views.
@@ -178,12 +150,11 @@ type Design struct {
 	// a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
 	// inferred rule would turn a diff of two revisions into a diff of one against itself.
 	CompanionUris []string `protobuf:"bytes,5,rep,name=companion_uris,json=companionUris,proto3" json:"companion_uris,omitempty"`
-	// intent_uri names this design's declared architecture: its domains, modules, and subsystems.
-	//
-	// Intent is per-DESIGN where the rest of a project's config is per-project, because each board has
-	// its own intended architecture while conventions and profiles describe the team. That asymmetry
-	// is the one the on-disk layout already had, and it is why this field is here and not on Project.
-	IntentUri     string `protobuf:"bytes,6,opt,name=intent_uri,json=intentUri,proto3" json:"intent_uri,omitempty"`
+	// config is this design's own analysis config. A Design populates only intent_uri: each board has
+	// its own intended architecture, where conventions, profiles and parameters describe the team and
+	// live on the Project. That asymmetry is the one the on-disk layout already had, and carrying both
+	// in one message shape is what lets a composer layer them without knowing which tier it holds.
+	Config        *AnalysisConfig `protobuf:"bytes,7,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -253,11 +224,11 @@ func (x *Design) GetCompanionUris() []string {
 	return nil
 }
 
-func (x *Design) GetIntentUri() string {
+func (x *Design) GetConfig() *AnalysisConfig {
 	if x != nil {
-		return x.IntentUri
+		return x.Config
 	}
-	return ""
+	return nil
 }
 
 type GetProjectRequest struct {
@@ -711,25 +682,19 @@ var File_agni_v1_webapi_project_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\"\x99\x02\n" +
+	"\x1cagni/v1/webapi/project.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/config.proto\"\x9b\x01\n" +
 	"\aProject\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\x12B\n" +
-	"\vconventions\x18\x04 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12'\n" +
-	"\x0fconventions_uri\x18\b \x01(\tR\x0econventionsUri\x12!\n" +
-	"\fprofile_uris\x18\x05 \x03(\tR\vprofileUris\x12\x1d\n" +
-	"\n" +
-	"param_uris\x18\x06 \x03(\tR\tparamUris\x12#\n" +
-	"\rchecklist_uri\x18\a \x01(\tR\fchecklistUri\"\xa7\x01\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\x126\n" +
+	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06configJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xc6\x01\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
 	"\tentry_uri\x18\x04 \x01(\tR\bentryUri\x12%\n" +
-	"\x0ecompanion_uris\x18\x05 \x03(\tR\rcompanionUris\x12\x1d\n" +
-	"\n" +
-	"intent_uri\x18\x06 \x01(\tR\tintentUri\"'\n" +
+	"\x0ecompanion_uris\x18\x05 \x03(\tR\rcompanionUris\x126\n" +
+	"\x06config\x18\a \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06configJ\x04\b\x06\x10\a\"'\n" +
 	"\x11GetProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"i\n" +
 	"\x13ListProjectsRequest\x12\x1b\n" +
@@ -788,29 +753,30 @@ var file_agni_v1_webapi_project_proto_goTypes = []any{
 	(*ListProjectDesignsResponse)(nil), // 7: agni.v1.webapi.ListProjectDesignsResponse
 	(*ResolveDesignRequest)(nil),       // 8: agni.v1.webapi.ResolveDesignRequest
 	(*ResolveDesignResponse)(nil),      // 9: agni.v1.webapi.ResolveDesignResponse
-	(*NamingConvention)(nil),           // 10: agni.v1.webapi.NamingConvention
+	(*AnalysisConfig)(nil),             // 10: agni.v1.webapi.AnalysisConfig
 }
 var file_agni_v1_webapi_project_proto_depIdxs = []int32{
-	10, // 0: agni.v1.webapi.Project.conventions:type_name -> agni.v1.webapi.NamingConvention
-	0,  // 1: agni.v1.webapi.ListProjectsResponse.projects:type_name -> agni.v1.webapi.Project
-	1,  // 2: agni.v1.webapi.ListProjectDesignsResponse.designs:type_name -> agni.v1.webapi.Design
-	1,  // 3: agni.v1.webapi.ResolveDesignResponse.design:type_name -> agni.v1.webapi.Design
-	0,  // 4: agni.v1.webapi.ResolveDesignResponse.project:type_name -> agni.v1.webapi.Project
-	2,  // 5: agni.v1.webapi.ProjectService.GetProject:input_type -> agni.v1.webapi.GetProjectRequest
-	3,  // 6: agni.v1.webapi.ProjectService.ListProjects:input_type -> agni.v1.webapi.ListProjectsRequest
-	5,  // 7: agni.v1.webapi.ProjectService.GetDesign:input_type -> agni.v1.webapi.GetProjectDesignRequest
-	6,  // 8: agni.v1.webapi.ProjectService.ListDesigns:input_type -> agni.v1.webapi.ListProjectDesignsRequest
-	8,  // 9: agni.v1.webapi.ProjectService.ResolveDesign:input_type -> agni.v1.webapi.ResolveDesignRequest
-	0,  // 10: agni.v1.webapi.ProjectService.GetProject:output_type -> agni.v1.webapi.Project
-	4,  // 11: agni.v1.webapi.ProjectService.ListProjects:output_type -> agni.v1.webapi.ListProjectsResponse
-	1,  // 12: agni.v1.webapi.ProjectService.GetDesign:output_type -> agni.v1.webapi.Design
-	7,  // 13: agni.v1.webapi.ProjectService.ListDesigns:output_type -> agni.v1.webapi.ListProjectDesignsResponse
-	9,  // 14: agni.v1.webapi.ProjectService.ResolveDesign:output_type -> agni.v1.webapi.ResolveDesignResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	10, // 0: agni.v1.webapi.Project.config:type_name -> agni.v1.webapi.AnalysisConfig
+	10, // 1: agni.v1.webapi.Design.config:type_name -> agni.v1.webapi.AnalysisConfig
+	0,  // 2: agni.v1.webapi.ListProjectsResponse.projects:type_name -> agni.v1.webapi.Project
+	1,  // 3: agni.v1.webapi.ListProjectDesignsResponse.designs:type_name -> agni.v1.webapi.Design
+	1,  // 4: agni.v1.webapi.ResolveDesignResponse.design:type_name -> agni.v1.webapi.Design
+	0,  // 5: agni.v1.webapi.ResolveDesignResponse.project:type_name -> agni.v1.webapi.Project
+	2,  // 6: agni.v1.webapi.ProjectService.GetProject:input_type -> agni.v1.webapi.GetProjectRequest
+	3,  // 7: agni.v1.webapi.ProjectService.ListProjects:input_type -> agni.v1.webapi.ListProjectsRequest
+	5,  // 8: agni.v1.webapi.ProjectService.GetDesign:input_type -> agni.v1.webapi.GetProjectDesignRequest
+	6,  // 9: agni.v1.webapi.ProjectService.ListDesigns:input_type -> agni.v1.webapi.ListProjectDesignsRequest
+	8,  // 10: agni.v1.webapi.ProjectService.ResolveDesign:input_type -> agni.v1.webapi.ResolveDesignRequest
+	0,  // 11: agni.v1.webapi.ProjectService.GetProject:output_type -> agni.v1.webapi.Project
+	4,  // 12: agni.v1.webapi.ProjectService.ListProjects:output_type -> agni.v1.webapi.ListProjectsResponse
+	1,  // 13: agni.v1.webapi.ProjectService.GetDesign:output_type -> agni.v1.webapi.Design
+	7,  // 14: agni.v1.webapi.ProjectService.ListDesigns:output_type -> agni.v1.webapi.ListProjectDesignsResponse
+	9,  // 15: agni.v1.webapi.ProjectService.ResolveDesign:output_type -> agni.v1.webapi.ResolveDesignResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_project_proto_init() }
@@ -818,7 +784,7 @@ func file_agni_v1_webapi_project_proto_init() {
 	if File_agni_v1_webapi_project_proto != nil {
 		return
 	}
-	file_agni_v1_webapi_checks_proto_init()
+	file_agni_v1_webapi_config_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
