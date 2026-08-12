@@ -92,8 +92,10 @@ func TestReviewCmdMultiDesign(t *testing.T) {
 		"# Review rollup: Mini ECU review",
 		"**5 of 6 items covered** (manifest-level), 1 not-automated.", // coverage stated once, not 10 of 12
 		"## Per-design outcomes",
-		"| `can-broken.edn` | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
-		"| `overlay-bus.edn` | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
+		// The leading cell is answered/total, which differs per design even though coverage does not:
+		// can-broken answers 3 of 6 (1 pass + 2 fail), overlay-bus answers 2 (2 pass, 3 not-applicable).
+		"| `can-broken.edn` | 3/6 | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
+		"| `overlay-bus.edn` | 2/6 | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
 		"## Traceability matrix",
 		"### CAN Interface",
 		"| 202 | termination strategy | fail | pass |",                    // per-design outcome, same item

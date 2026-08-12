@@ -135,6 +135,24 @@ agni check showcase.fires.kicad_pro --fail-on error   # non-zero here (1 error)
 agni check showcase.passes.kicad_pro --fail-on error  # exit 0 (clean)
 ```
 
+That gate reads **severity**, which is a statement about consequence. It has nothing to say about the
+distinction the section above is built on: a check that decided, versus one that never ran. A design
+whose datasheet corpus moved keeps passing this gate, because a rule that could not evaluate produces
+no findings and no findings is what clean looks like.
+
+`review` gates on the other axis:
+
+```
+agni review designs/gateway --checklist review.yaml --fail-on-outcome fail
+agni review designs/gateway --checklist review.yaml --min-answered 13
+```
+
+`--min-answered` counts the items that produced an answer (`pass`, `fail`, `provisional`,
+`computed-n/a`), which is stricter than the covered count the report also prints. Covered subtracts
+only `not-automated`, so an item whose rule is present and whose inputs are gone still counts as
+covered. Both gates are off by default, and a tripped one exits `2` where a failed run exits `1`. See
+the [CLI reference](../cli-reference/#gating-a-pipeline-on-a-review) for the full vocabulary.
+
 ## Where to go next
 
 - [Datasheets](../datasheets/): turn on the rules that compare your design against a part's

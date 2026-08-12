@@ -187,13 +187,18 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			CoverageAxis: true,
 		},
 		Design: &checkspb.DesignRef{Source: designURI.String(), ContentHash: hash},
-		Run: &checkspb.RunConfig{
-			Params:        s.specs != nil,
-			Profiles:      s.env.Profiles,
-			Intent:        s.env.Intent,
-			Conventions:   req.GetOverlay().GetConventions().GetName(),
-			RatifiedFloor: req.GetRatifiedFloor(),
-		},
+		// Provenance comes off the RESOLVED overlay, not off this service's startup config. The run used
+		// ov.SpecsOr(s.specs) and ov.Catalog(s.catalog), so reading the flags back from s.specs/s.env
+		// described the deployment rather than the run: a design in a project that declares params/,
+		// profiles/ and conventions.yaml scored against all three and recorded `run: {}`, while the same
+		// document's own catalog snapshot listed the project's rules. A reader comparing two runs would
+		// have concluded the corpus was never attached.
+		Run: RunConfigProto(ov.Provenance(RunProvenance{
+			Params:      s.specs != nil,
+			Profiles:    s.env.Profiles,
+			Intent:      s.env.Intent,
+			Conventions: req.GetOverlay().GetConventions().GetName(),
+		}), req.GetRatifiedFloor()),
 		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's
 		// base: a reader has to see the rules that actually ran, or a per-request convention's rules
 		// would be missing from the record of a run they shaped.
