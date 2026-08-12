@@ -36,6 +36,16 @@ func Load(r io.Reader) (*parampb.PartSpec, error) {
 // someone stands behind (in (0, 1]). All violations are reported, joined into one
 // error; nil means the spec is trustworthy as data (not that its values are true --
 // that is what the provenance is for).
+//
+// When a spec carries pin data it must also be COHERENT: unique package and pin ids,
+// a name on every pin, numbers that resolve to a declared package with no two pins
+// claiming one number within it, provenance on every pin, and every Parameter.pin_refs
+// resolving to a declared pin. A dangling binding is the failure worth catching at load,
+// because downstream it does not look like an error -- the parameter simply stops
+// applying to anything and the rule that wanted it reports nothing.
+//
+// Pin data is entirely OPTIONAL. A spec with no pins or packages validates exactly as it
+// did before pin binding existed, so an older corpus is unaffected (CONSTRAINTS C9).
 func Validate(spec *parampb.PartSpec) error {
 	var errs []error
 	if spec.Mpn == "" {
@@ -48,10 +58,71 @@ func Validate(spec *parampb.PartSpec) error {
 		}
 		docs[d.Id] = true
 	}
+	packages := make(map[string]bool, len(spec.Packages))
+	for i, pkg := range spec.Packages {
+		if pkg.Id == "" {
+			errs = append(errs, fmt.Errorf("packages[%d] has no id", i))
+			continue
+		}
+		if packages[pkg.Id] {
+			errs = append(errs, fmt.Errorf("packages[%d]: duplicate package id %q", i, pkg.Id))
+		}
+		packages[pkg.Id] = true
+	}
+
+	pins := make(map[string]bool, len(spec.Pins))
+	// A pin NUMBER belongs to one pin within one package. Names may repeat (that is the
+	// multi-supply case pin binding exists for) but a package cannot send one terminal to
+	// two pins, and a corpus that says otherwise would make the tie-breaking channel
+	// unusable.
+	claimed := map[string]string{}
+	for i, p := range spec.Pins {
+		id := p.Id
+		if id == "" {
+			id = fmt.Sprintf("pins[%d]", i)
+			errs = append(errs, fmt.Errorf("%s has no id; a parameter cannot bind to it", id))
+		} else {
+			if pins[p.Id] {
+				errs = append(errs, fmt.Errorf("%s: duplicate pin id", id))
+			}
+			pins[p.Id] = true
+		}
+		if p.Name == "" {
+			errs = append(errs, fmt.Errorf("%s: no name; the name is the channel that survives repackaging", id))
+		}
+		for j, n := range p.Numbers {
+			if n.Number == "" {
+				errs = append(errs, fmt.Errorf("%s: numbers[%d] has no number", id, j))
+			}
+			if !packages[n.PackageRef] {
+				errs = append(errs, fmt.Errorf("%s: numbers[%d] package_ref %q does not resolve to a declared package", id, j, n.PackageRef))
+				continue
+			}
+			key := n.PackageRef + "\x00" + normalizePinNumber(n.Number)
+			if prev, dup := claimed[key]; dup {
+				errs = append(errs, fmt.Errorf("%s: number %q in package %q is already claimed by pin %q", id, n.Number, n.PackageRef, prev))
+			}
+			claimed[key] = id
+		}
+		switch {
+		case p.Prov == nil:
+			errs = append(errs, fmt.Errorf("%s: no prov; a pin function is an extracted claim like any other", id))
+		case !docs[p.Prov.DocRef]:
+			errs = append(errs, fmt.Errorf("%s: prov.doc_ref %q does not resolve to a declared source doc", id, p.Prov.DocRef))
+		case p.Prov.Confidence <= 0 || p.Prov.Confidence > 1:
+			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
+		}
+	}
+
 	for i, p := range spec.Parameters {
 		id := p.Symbol
 		if id == "" {
 			id = fmt.Sprintf("parameters[%d]", i)
+		}
+		for _, ref := range p.PinRefs {
+			if !pins[ref] {
+				errs = append(errs, fmt.Errorf("%s: pin_refs %q does not resolve to a declared pin", id, ref))
+			}
 		}
 		if p.LimitKind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
 			errs = append(errs, fmt.Errorf("%s: limit_kind is unspecified; classify or drop", id))

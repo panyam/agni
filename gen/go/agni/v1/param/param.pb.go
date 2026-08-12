@@ -21,6 +21,83 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PinFunction is the pin-table "Type"/"I/O" column as a closed vocabulary. It is admitted
+// as an enum rather than free text (the field-discipline rule in the header) because every
+// vendor's pin function table prints this same small set -- I, O, I/O, P, G, NC -- so it
+// is a RECORDED fact, not a normalization this layer invented. The printed spelling is
+// kept in Pin.attributes["function_raw"], mirroring ir.Pin's "direction_raw".
+//
+// Unlike LimitKind, UNSPECIFIED is LEGAL and does not fail validation: a document may give
+// a pin table with no type column at all, and a pin whose name and number are known is
+// still worth recording. "We do not know this pin's function" is honest; refusing the pin
+// would lose its numbering.
+type PinFunction int32
+
+const (
+	PinFunction_PIN_FUNCTION_UNSPECIFIED   PinFunction = 0
+	PinFunction_PIN_FUNCTION_POWER_INPUT   PinFunction = 1
+	PinFunction_PIN_FUNCTION_POWER_OUTPUT  PinFunction = 2
+	PinFunction_PIN_FUNCTION_GROUND        PinFunction = 3
+	PinFunction_PIN_FUNCTION_INPUT         PinFunction = 4
+	PinFunction_PIN_FUNCTION_OUTPUT        PinFunction = 5
+	PinFunction_PIN_FUNCTION_BIDIRECTIONAL PinFunction = 6
+	PinFunction_PIN_FUNCTION_PASSIVE       PinFunction = 7
+	PinFunction_PIN_FUNCTION_NO_CONNECT    PinFunction = 8
+)
+
+// Enum value maps for PinFunction.
+var (
+	PinFunction_name = map[int32]string{
+		0: "PIN_FUNCTION_UNSPECIFIED",
+		1: "PIN_FUNCTION_POWER_INPUT",
+		2: "PIN_FUNCTION_POWER_OUTPUT",
+		3: "PIN_FUNCTION_GROUND",
+		4: "PIN_FUNCTION_INPUT",
+		5: "PIN_FUNCTION_OUTPUT",
+		6: "PIN_FUNCTION_BIDIRECTIONAL",
+		7: "PIN_FUNCTION_PASSIVE",
+		8: "PIN_FUNCTION_NO_CONNECT",
+	}
+	PinFunction_value = map[string]int32{
+		"PIN_FUNCTION_UNSPECIFIED":   0,
+		"PIN_FUNCTION_POWER_INPUT":   1,
+		"PIN_FUNCTION_POWER_OUTPUT":  2,
+		"PIN_FUNCTION_GROUND":        3,
+		"PIN_FUNCTION_INPUT":         4,
+		"PIN_FUNCTION_OUTPUT":        5,
+		"PIN_FUNCTION_BIDIRECTIONAL": 6,
+		"PIN_FUNCTION_PASSIVE":       7,
+		"PIN_FUNCTION_NO_CONNECT":    8,
+	}
+)
+
+func (x PinFunction) Enum() *PinFunction {
+	p := new(PinFunction)
+	*p = x
+	return p
+}
+
+func (x PinFunction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PinFunction) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_param_param_proto_enumTypes[0].Descriptor()
+}
+
+func (PinFunction) Type() protoreflect.EnumType {
+	return &file_agni_v1_param_param_proto_enumTypes[0]
+}
+
+func (x PinFunction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PinFunction.Descriptor instead.
+func (PinFunction) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{0}
+}
+
 // LimitKind is the first-class distinction that makes static checks safe: an
 // absolute-max rating, a recommended-operating bound, and a measured characteristic
 // mean different things to a rule, and free text cannot be dispatched on.
@@ -66,11 +143,11 @@ func (x LimitKind) String() string {
 }
 
 func (LimitKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_param_param_proto_enumTypes[0].Descriptor()
+	return file_agni_v1_param_param_proto_enumTypes[1].Descriptor()
 }
 
 func (LimitKind) Type() protoreflect.EnumType {
-	return &file_agni_v1_param_param_proto_enumTypes[0]
+	return &file_agni_v1_param_param_proto_enumTypes[1]
 }
 
 func (x LimitKind) Number() protoreflect.EnumNumber {
@@ -79,7 +156,7 @@ func (x LimitKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use LimitKind.Descriptor instead.
 func (LimitKind) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{0}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{1}
 }
 
 // ConditionCoverage states, explicitly, how complete a parameter's condition list
@@ -128,11 +205,11 @@ func (x ConditionCoverage) String() string {
 }
 
 func (ConditionCoverage) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_param_param_proto_enumTypes[1].Descriptor()
+	return file_agni_v1_param_param_proto_enumTypes[2].Descriptor()
 }
 
 func (ConditionCoverage) Type() protoreflect.EnumType {
-	return &file_agni_v1_param_param_proto_enumTypes[1]
+	return &file_agni_v1_param_param_proto_enumTypes[2]
 }
 
 func (x ConditionCoverage) Number() protoreflect.EnumNumber {
@@ -141,7 +218,7 @@ func (x ConditionCoverage) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConditionCoverage.Descriptor instead.
 func (ConditionCoverage) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{2}
 }
 
 // PartSpec is the root message: every extracted parameter for one part, with the
@@ -155,9 +232,15 @@ type PartSpec struct {
 	Manufacturer string `protobuf:"bytes,2,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
 	// Free-form device class ("ldo", "nfet"). A canonical taxonomy is WS10-004; until
 	// then this is a hint, not a key.
-	DeviceClass   string            `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"`
-	Docs          []*SourceDoc      `protobuf:"bytes,4,rep,name=docs,proto3" json:"docs,omitempty"`
-	Parameters    []*Parameter      `protobuf:"bytes,5,rep,name=parameters,proto3" json:"parameters,omitempty"`
+	DeviceClass string       `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"`
+	Docs        []*SourceDoc `protobuf:"bytes,4,rep,name=docs,proto3" json:"docs,omitempty"`
+	Parameters  []*Parameter `protobuf:"bytes,5,rep,name=parameters,proto3" json:"parameters,omitempty"`
+	// The package options this document covers, and the part's pins. Both are OPTIONAL and
+	// empty on every spec seeded before pin binding existed: a consumer that finds no pins
+	// behaves exactly as it did then (CONSTRAINTS C9, degrade-safe), so an unseeded or
+	// pin-less corpus is not a silent behavior change.
+	Packages      []*Package        `protobuf:"bytes,6,rep,name=packages,proto3" json:"packages,omitempty"`
+	Pins          []*Pin            `protobuf:"bytes,7,rep,name=pins,proto3" json:"pins,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -228,9 +311,294 @@ func (x *PartSpec) GetParameters() []*Parameter {
 	return nil
 }
 
+func (x *PartSpec) GetPackages() []*Package {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
+func (x *PartSpec) GetPins() []*Pin {
+	if x != nil {
+		return x.Pins
+	}
+	return nil
+}
+
 func (x *PartSpec) GetAttributes() map[string]string {
 	if x != nil {
 		return x.Attributes
+	}
+	return nil
+}
+
+// Package is one physical body this part ships in (a TSSOP-14, a UQFN-12, a DSBGA). It
+// exists because a PIN NUMBER IS A FACT ABOUT A PACKAGE, NOT ABOUT THE DIE: the same
+// silicon wired into a different body gets different terminal numbering, so a number is
+// meaningless without saying which body it belongs to. On the real TXB0104, number 11 is
+// the data I/O "B3" in the TSSOP-14 and the "VCCB" supply in the UQFN-12.
+type Package struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Local key within this PartSpec, referenced by PinNumber.package_ref.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Package as the document names it, e.g. "PW (TSSOP-14)". As printed; no canonical
+	// package taxonomy is assigned here (that is WS10-004's problem, if ever).
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// The orderable-MPN suffix that selects this package ("PW", "RGY"), when the vendor
+	// uses one. Empty when the document does not state it. This is a HINT for narrowing a
+	// design's MPN to one package, never a parser input: a suffix that does not match is
+	// "package unknown", not "package absent".
+	MpnSuffix string `protobuf:"bytes,3,opt,name=mpn_suffix,json=mpnSuffix,proto3" json:"mpn_suffix,omitempty"`
+	// Terminal count, as a cheap coherence check against a design's footprint.
+	PinCount      int32             `protobuf:"varint,4,opt,name=pin_count,json=pinCount,proto3" json:"pin_count,omitempty"`
+	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Package) Reset() {
+	*x = Package{}
+	mi := &file_agni_v1_param_param_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Package) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Package) ProtoMessage() {}
+
+func (x *Package) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_param_param_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Package.ProtoReflect.Descriptor instead.
+func (*Package) Descriptor() ([]byte, []int) {
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Package) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Package) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Package) GetMpnSuffix() string {
+	if x != nil {
+		return x.MpnSuffix
+	}
+	return ""
+}
+
+func (x *Package) GetPinCount() int32 {
+	if x != nil {
+		return x.PinCount
+	}
+	return 0
+}
+
+func (x *Package) GetAttributes() map[string]string {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+// PinNumber is one package's designator for a pin: a STRING, because ball-grid packages
+// number in row-column form ("B2", "A3") and a numeric field would force those through a
+// lossy encoding. Sparse on purpose -- a pin present in one package and absent in another
+// (a no-connect that only the 14-pin body has) simply carries no PinNumber for the body it
+// is missing from, rather than a sentinel.
+type PinNumber struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Package.id within the enclosing PartSpec.
+	PackageRef string `protobuf:"bytes,1,opt,name=package_ref,json=packageRef,proto3" json:"package_ref,omitempty"`
+	// The designator as printed in that package's pinout ("11", "B2").
+	Number        string `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PinNumber) Reset() {
+	*x = PinNumber{}
+	mi := &file_agni_v1_param_param_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PinNumber) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PinNumber) ProtoMessage() {}
+
+func (x *PinNumber) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_param_param_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PinNumber.ProtoReflect.Descriptor instead.
+func (*PinNumber) Descriptor() ([]byte, []int) {
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PinNumber) GetPackageRef() string {
+	if x != nil {
+		return x.PackageRef
+	}
+	return ""
+}
+
+func (x *PinNumber) GetNumber() string {
+	if x != nil {
+		return x.Number
+	}
+	return ""
+}
+
+// Pin is one terminal of the DIE, with the numbers each package assigns it. It is the
+// binding target for Parameter.pin_refs.
+//
+// A PIN IS A PROPERTY OF THE PART TYPE, NEVER OF A PLACEMENT. One PartSpec describes one
+// MPN, and a design may place fifty instances of it; nothing here may be per-instance. In
+// particular NO REFERENCE DESIGNATOR EVER APPEARS IN THIS CONTRACT and `id` must not encode
+// one. A rule fans a type-level pin fact out across instances (each landing on its own
+// net); the fan-out is the rule's job, and admitting an instance key here would rot the
+// contract the first time two instances disagreed.
+type Pin struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Spec-local key, unique within this PartSpec, and the ONLY thing Parameter.pin_refs
+	// points at. Neither the name nor a number is the binding key: the name is not unique
+	// (see below) and a number is package-relative, so binding to either would make a
+	// parameter's target ambiguous in exactly the cases pin binding exists to serve. An
+	// opaque local id is unique by construction, which is what lets param.Validate reject an
+	// incoherent binding instead of having to resolve one.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Pin name as printed in the pin function table ("VCCA", "GND", "NC").
+	//
+	// NOT UNIQUE, and that is the whole reason this message exists. A part routinely prints
+	// one name across several terminals -- the TXB0104 prints "NC" on two -- and a large IC
+	// printing "VDD" on three pins with different limits is the multi-supply collapse this
+	// contract is here to fix. Consumers resolving a design pin by name must handle several
+	// hits (see the resolution note on Parameter.pin_refs).
+	Name     string      `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Function PinFunction `protobuf:"varint,3,opt,name=function,proto3,enum=agni.v1.param.PinFunction" json:"function,omitempty"`
+	// The pin's description column as printed ("A-port supply voltage 1.2V <= VCCA <= 3.6V").
+	// Retained verbatim: pin-to-pin constraints live in this prose today and have no
+	// structured shape yet, so discarding it would discard the only record of them.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// This pin's designator in each package that has it. Empty when the document gives a
+	// function table but no package pinout, which is a real and usable state: the NAME
+	// channel still resolves.
+	Numbers    []*PinNumber      `protobuf:"bytes,5,rep,name=numbers,proto3" json:"numbers,omitempty"`
+	Attributes map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Provenance, required by param.Validate exactly as it is on a Parameter. A pin function
+	// is an extracted claim like any other, and an extracted claim nobody can verify against
+	// a page is a liability.
+	Prov          *ParamProvenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Pin) Reset() {
+	*x = Pin{}
+	mi := &file_agni_v1_param_param_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Pin) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Pin) ProtoMessage() {}
+
+func (x *Pin) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_param_param_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Pin.ProtoReflect.Descriptor instead.
+func (*Pin) Descriptor() ([]byte, []int) {
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Pin) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Pin) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Pin) GetFunction() PinFunction {
+	if x != nil {
+		return x.Function
+	}
+	return PinFunction_PIN_FUNCTION_UNSPECIFIED
+}
+
+func (x *Pin) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Pin) GetNumbers() []*PinNumber {
+	if x != nil {
+		return x.Numbers
+	}
+	return nil
+}
+
+func (x *Pin) GetAttributes() map[string]string {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+func (x *Pin) GetProv() *ParamProvenance {
+	if x != nil {
+		return x.Prov
 	}
 	return nil
 }
@@ -257,7 +625,7 @@ type SourceDoc struct {
 
 func (x *SourceDoc) Reset() {
 	*x = SourceDoc{}
-	mi := &file_agni_v1_param_param_proto_msgTypes[1]
+	mi := &file_agni_v1_param_param_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +637,7 @@ func (x *SourceDoc) String() string {
 func (*SourceDoc) ProtoMessage() {}
 
 func (x *SourceDoc) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_param_param_proto_msgTypes[1]
+	mi := &file_agni_v1_param_param_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -282,7 +650,7 @@ func (x *SourceDoc) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceDoc.ProtoReflect.Descriptor instead.
 func (*SourceDoc) Descriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SourceDoc) GetId() string {
@@ -327,7 +695,7 @@ type RangeValue struct {
 
 func (x *RangeValue) Reset() {
 	*x = RangeValue{}
-	mi := &file_agni_v1_param_param_proto_msgTypes[2]
+	mi := &file_agni_v1_param_param_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -339,7 +707,7 @@ func (x *RangeValue) String() string {
 func (*RangeValue) ProtoMessage() {}
 
 func (x *RangeValue) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_param_param_proto_msgTypes[2]
+	mi := &file_agni_v1_param_param_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -352,7 +720,7 @@ func (x *RangeValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RangeValue.ProtoReflect.Descriptor instead.
 func (*RangeValue) Descriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RangeValue) GetMin() float64 {
@@ -401,7 +769,7 @@ type Condition struct {
 
 func (x *Condition) Reset() {
 	*x = Condition{}
-	mi := &file_agni_v1_param_param_proto_msgTypes[3]
+	mi := &file_agni_v1_param_param_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -413,7 +781,7 @@ func (x *Condition) String() string {
 func (*Condition) ProtoMessage() {}
 
 func (x *Condition) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_param_param_proto_msgTypes[3]
+	mi := &file_agni_v1_param_param_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -426,7 +794,7 @@ func (x *Condition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Condition.ProtoReflect.Descriptor instead.
 func (*Condition) Descriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Condition) GetSymbol() string {
@@ -494,7 +862,38 @@ type Parameter struct {
 	// The variant/grade this row covers when the document specs several ("LM1117-3.3",
 	// an automotive grade). Empty when the row covers every variant the document
 	// covers.
-	AppliesTo     string            `protobuf:"bytes,9,opt,name=applies_to,json=appliesTo,proto3" json:"applies_to,omitempty"`
+	AppliesTo string `protobuf:"bytes,9,opt,name=applies_to,json=appliesTo,proto3" json:"applies_to,omitempty"`
+	// The pins this row applies to, as Pin.id values. EMPTY MEANS THE PART AS A WHOLE
+	// (a junction-temperature rating, a storage range), which is also what every spec
+	// seeded before pin binding existed says, so empty must keep meaning exactly what it
+	// meant then. Several ids express a row stated once for a GROUP of terminals: the
+	// TXB0104 gives one output-voltage range for all four A-port I/Os and a different one
+	// for the four B-port I/Os.
+	//
+	// ORTHOGONAL TO applies_to, not a second spelling of it. `applies_to` narrows WHICH
+	// VARIANT of the part the row covers; this narrows WHICH TERMINAL. A row carrying both
+	// is the conjunction: on this variant, for this pin.
+	//
+	// HOW A DESIGN PIN RESOLVES TO ONE OF THESE (settled here; consumed by the query
+	// relations and the pin-rating rule). The design side reaches a terminal as
+	// Connection{component_ref, pin_ref} -> the section's PartType -> ir.Pin, which carries
+	// BOTH a `name` and a package-relative `designator`. The datasheet side offers the same
+	// two channels. The precedence is:
+	//
+	//  1. MATCH ON NAME. Both sides copy it off the same pin function table, so it is
+	//     die-relative and survives repackaging.
+	//  2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins, and only
+	//     inside a package the design is known to place and this spec declares.
+	//  3. REFUSE when the two channels DISAGREE, and refuse when a name is ambiguous and no
+	//     package is identified. Skip-not-false-pass: a wrong terminal evaluates cleanly and
+	//     reports about the wrong thing, which is worse than reporting nothing.
+	//
+	// The number is deliberately NOT the primary key even though it looks like the precise
+	// one. It is precise about a PACKAGE; a parameter is a fact about a DIE. Leading with it
+	// silently misreports a part seeded from one body and placed in another -- on the real
+	// TXB0104, number 11 is a data I/O in the TSSOP-14 and the B-side supply in the UQFN-12,
+	// so the comparison would run against the wrong terminal and look fine doing it.
+	PinRefs       []string          `protobuf:"bytes,10,rep,name=pin_refs,json=pinRefs,proto3" json:"pin_refs,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Prov          *ParamProvenance  `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -503,7 +902,7 @@ type Parameter struct {
 
 func (x *Parameter) Reset() {
 	*x = Parameter{}
-	mi := &file_agni_v1_param_param_proto_msgTypes[4]
+	mi := &file_agni_v1_param_param_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -515,7 +914,7 @@ func (x *Parameter) String() string {
 func (*Parameter) ProtoMessage() {}
 
 func (x *Parameter) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_param_param_proto_msgTypes[4]
+	mi := &file_agni_v1_param_param_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -528,7 +927,7 @@ func (x *Parameter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Parameter.ProtoReflect.Descriptor instead.
 func (*Parameter) Descriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Parameter) GetName() string {
@@ -594,6 +993,13 @@ func (x *Parameter) GetAppliesTo() string {
 	return ""
 }
 
+func (x *Parameter) GetPinRefs() []string {
+	if x != nil {
+		return x.PinRefs
+	}
+	return nil
+}
+
 func (x *Parameter) GetAttributes() map[string]string {
 	if x != nil {
 		return x.Attributes
@@ -635,7 +1041,7 @@ type ParamProvenance struct {
 
 func (x *ParamProvenance) Reset() {
 	*x = ParamProvenance{}
-	mi := &file_agni_v1_param_param_proto_msgTypes[5]
+	mi := &file_agni_v1_param_param_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -647,7 +1053,7 @@ func (x *ParamProvenance) String() string {
 func (*ParamProvenance) ProtoMessage() {}
 
 func (x *ParamProvenance) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_param_param_proto_msgTypes[5]
+	mi := &file_agni_v1_param_param_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -660,7 +1066,7 @@ func (x *ParamProvenance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParamProvenance.ProtoReflect.Descriptor instead.
 func (*ParamProvenance) Descriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ParamProvenance) GetDocRef() string {
@@ -702,7 +1108,7 @@ var File_agni_v1_param_param_proto protoreflect.FileDescriptor
 
 const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/param/param.proto\x12\ragni.v1.param\"\xd3\x02\n" +
+	"\x19agni/v1/param/param.proto\x12\ragni.v1.param\"\xaf\x03\n" +
 	"\bPartSpec\x12\x10\n" +
 	"\x03mpn\x18\x01 \x01(\tR\x03mpn\x12\"\n" +
 	"\fmanufacturer\x18\x02 \x01(\tR\fmanufacturer\x12!\n" +
@@ -710,10 +1116,41 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\x04docs\x18\x04 \x03(\v2\x18.agni.v1.param.SourceDocR\x04docs\x128\n" +
 	"\n" +
 	"parameters\x18\x05 \x03(\v2\x18.agni.v1.param.ParameterR\n" +
-	"parameters\x12G\n" +
+	"parameters\x122\n" +
+	"\bpackages\x18\x06 \x03(\v2\x16.agni.v1.param.PackageR\bpackages\x12&\n" +
+	"\x04pins\x18\a \x03(\v2\x12.agni.v1.param.PinR\x04pins\x12G\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2'.agni.v1.param.PartSpec.AttributesEntryR\n" +
 	"attributes\x1a=\n" +
+	"\x0fAttributesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf0\x01\n" +
+	"\aPackage\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"mpn_suffix\x18\x03 \x01(\tR\tmpnSuffix\x12\x1b\n" +
+	"\tpin_count\x18\x04 \x01(\x05R\bpinCount\x12F\n" +
+	"\n" +
+	"attributes\x18\x0e \x03(\v2&.agni.v1.param.Package.AttributesEntryR\n" +
+	"attributes\x1a=\n" +
+	"\x0fAttributesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"D\n" +
+	"\tPinNumber\x12\x1f\n" +
+	"\vpackage_ref\x18\x01 \x01(\tR\n" +
+	"packageRef\x12\x16\n" +
+	"\x06number\x18\x02 \x01(\tR\x06number\"\xee\x02\n" +
+	"\x03Pin\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x126\n" +
+	"\bfunction\x18\x03 \x01(\x0e2\x1a.agni.v1.param.PinFunctionR\bfunction\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x122\n" +
+	"\anumbers\x18\x05 \x03(\v2\x18.agni.v1.param.PinNumberR\anumbers\x12B\n" +
+	"\n" +
+	"attributes\x18\x0e \x03(\v2\".agni.v1.param.Pin.AttributesEntryR\n" +
+	"attributes\x122\n" +
+	"\x04prov\x18\x10 \x01(\v2\x1e.agni.v1.param.ParamProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"c\n" +
@@ -739,7 +1176,7 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\x03raw\x18\x06 \x01(\tR\x03rawB\x05\n" +
 	"\x03_eqB\x06\n" +
 	"\x04_minB\x06\n" +
-	"\x04_max\"\xbf\x04\n" +
+	"\x04_max\"\xda\x04\n" +
 	"\tParameter\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06symbol\x18\x02 \x01(\tR\x06symbol\x12!\n" +
@@ -753,7 +1190,9 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"conditions\x12O\n" +
 	"\x12condition_coverage\x18\b \x01(\x0e2 .agni.v1.param.ConditionCoverageR\x11conditionCoverage\x12\x1d\n" +
 	"\n" +
-	"applies_to\x18\t \x01(\tR\tappliesTo\x12H\n" +
+	"applies_to\x18\t \x01(\tR\tappliesTo\x12\x19\n" +
+	"\bpin_refs\x18\n" +
+	" \x03(\tR\apinRefs\x12H\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2(.agni.v1.param.Parameter.AttributesEntryR\n" +
 	"attributes\x122\n" +
@@ -768,7 +1207,17 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\x06method\x18\x04 \x01(\tR\x06method\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x05 \x01(\x01R\n" +
-	"confidence*\x89\x01\n" +
+	"confidence*\x89\x02\n" +
+	"\vPinFunction\x12\x1c\n" +
+	"\x18PIN_FUNCTION_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18PIN_FUNCTION_POWER_INPUT\x10\x01\x12\x1d\n" +
+	"\x19PIN_FUNCTION_POWER_OUTPUT\x10\x02\x12\x17\n" +
+	"\x13PIN_FUNCTION_GROUND\x10\x03\x12\x16\n" +
+	"\x12PIN_FUNCTION_INPUT\x10\x04\x12\x17\n" +
+	"\x13PIN_FUNCTION_OUTPUT\x10\x05\x12\x1e\n" +
+	"\x1aPIN_FUNCTION_BIDIRECTIONAL\x10\x06\x12\x18\n" +
+	"\x14PIN_FUNCTION_PASSIVE\x10\a\x12\x1b\n" +
+	"\x17PIN_FUNCTION_NO_CONNECT\x10\b*\x89\x01\n" +
 	"\tLimitKind\x12\x1a\n" +
 	"\x16LIMIT_KIND_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17LIMIT_KIND_ABSOLUTE_MAX\x10\x01\x12$\n" +
@@ -792,35 +1241,48 @@ func file_agni_v1_param_param_proto_rawDescGZIP() []byte {
 	return file_agni_v1_param_param_proto_rawDescData
 }
 
-var file_agni_v1_param_param_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_param_param_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_agni_v1_param_param_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agni_v1_param_param_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agni_v1_param_param_proto_goTypes = []any{
-	(LimitKind)(0),          // 0: agni.v1.param.LimitKind
-	(ConditionCoverage)(0),  // 1: agni.v1.param.ConditionCoverage
-	(*PartSpec)(nil),        // 2: agni.v1.param.PartSpec
-	(*SourceDoc)(nil),       // 3: agni.v1.param.SourceDoc
-	(*RangeValue)(nil),      // 4: agni.v1.param.RangeValue
-	(*Condition)(nil),       // 5: agni.v1.param.Condition
-	(*Parameter)(nil),       // 6: agni.v1.param.Parameter
-	(*ParamProvenance)(nil), // 7: agni.v1.param.ParamProvenance
-	nil,                     // 8: agni.v1.param.PartSpec.AttributesEntry
-	nil,                     // 9: agni.v1.param.Parameter.AttributesEntry
+	(PinFunction)(0),        // 0: agni.v1.param.PinFunction
+	(LimitKind)(0),          // 1: agni.v1.param.LimitKind
+	(ConditionCoverage)(0),  // 2: agni.v1.param.ConditionCoverage
+	(*PartSpec)(nil),        // 3: agni.v1.param.PartSpec
+	(*Package)(nil),         // 4: agni.v1.param.Package
+	(*PinNumber)(nil),       // 5: agni.v1.param.PinNumber
+	(*Pin)(nil),             // 6: agni.v1.param.Pin
+	(*SourceDoc)(nil),       // 7: agni.v1.param.SourceDoc
+	(*RangeValue)(nil),      // 8: agni.v1.param.RangeValue
+	(*Condition)(nil),       // 9: agni.v1.param.Condition
+	(*Parameter)(nil),       // 10: agni.v1.param.Parameter
+	(*ParamProvenance)(nil), // 11: agni.v1.param.ParamProvenance
+	nil,                     // 12: agni.v1.param.PartSpec.AttributesEntry
+	nil,                     // 13: agni.v1.param.Package.AttributesEntry
+	nil,                     // 14: agni.v1.param.Pin.AttributesEntry
+	nil,                     // 15: agni.v1.param.Parameter.AttributesEntry
 }
 var file_agni_v1_param_param_proto_depIdxs = []int32{
-	3, // 0: agni.v1.param.PartSpec.docs:type_name -> agni.v1.param.SourceDoc
-	6, // 1: agni.v1.param.PartSpec.parameters:type_name -> agni.v1.param.Parameter
-	8, // 2: agni.v1.param.PartSpec.attributes:type_name -> agni.v1.param.PartSpec.AttributesEntry
-	0, // 3: agni.v1.param.Parameter.limit_kind:type_name -> agni.v1.param.LimitKind
-	4, // 4: agni.v1.param.Parameter.value:type_name -> agni.v1.param.RangeValue
-	5, // 5: agni.v1.param.Parameter.conditions:type_name -> agni.v1.param.Condition
-	1, // 6: agni.v1.param.Parameter.condition_coverage:type_name -> agni.v1.param.ConditionCoverage
-	9, // 7: agni.v1.param.Parameter.attributes:type_name -> agni.v1.param.Parameter.AttributesEntry
-	7, // 8: agni.v1.param.Parameter.prov:type_name -> agni.v1.param.ParamProvenance
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	7,  // 0: agni.v1.param.PartSpec.docs:type_name -> agni.v1.param.SourceDoc
+	10, // 1: agni.v1.param.PartSpec.parameters:type_name -> agni.v1.param.Parameter
+	4,  // 2: agni.v1.param.PartSpec.packages:type_name -> agni.v1.param.Package
+	6,  // 3: agni.v1.param.PartSpec.pins:type_name -> agni.v1.param.Pin
+	12, // 4: agni.v1.param.PartSpec.attributes:type_name -> agni.v1.param.PartSpec.AttributesEntry
+	13, // 5: agni.v1.param.Package.attributes:type_name -> agni.v1.param.Package.AttributesEntry
+	0,  // 6: agni.v1.param.Pin.function:type_name -> agni.v1.param.PinFunction
+	5,  // 7: agni.v1.param.Pin.numbers:type_name -> agni.v1.param.PinNumber
+	14, // 8: agni.v1.param.Pin.attributes:type_name -> agni.v1.param.Pin.AttributesEntry
+	11, // 9: agni.v1.param.Pin.prov:type_name -> agni.v1.param.ParamProvenance
+	1,  // 10: agni.v1.param.Parameter.limit_kind:type_name -> agni.v1.param.LimitKind
+	8,  // 11: agni.v1.param.Parameter.value:type_name -> agni.v1.param.RangeValue
+	9,  // 12: agni.v1.param.Parameter.conditions:type_name -> agni.v1.param.Condition
+	2,  // 13: agni.v1.param.Parameter.condition_coverage:type_name -> agni.v1.param.ConditionCoverage
+	15, // 14: agni.v1.param.Parameter.attributes:type_name -> agni.v1.param.Parameter.AttributesEntry
+	11, // 15: agni.v1.param.Parameter.prov:type_name -> agni.v1.param.ParamProvenance
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_param_param_proto_init() }
@@ -828,15 +1290,15 @@ func file_agni_v1_param_param_proto_init() {
 	if File_agni_v1_param_param_proto != nil {
 		return
 	}
-	file_agni_v1_param_param_proto_msgTypes[2].OneofWrappers = []any{}
-	file_agni_v1_param_param_proto_msgTypes[3].OneofWrappers = []any{}
+	file_agni_v1_param_param_proto_msgTypes[5].OneofWrappers = []any{}
+	file_agni_v1_param_param_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_param_param_proto_rawDesc), len(file_agni_v1_param_param_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   8,
+			NumEnums:      3,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
