@@ -245,3 +245,69 @@ func validRel(field, rel string) error {
 	}
 	return nil
 }
+
+// WriteProject writes a `project.yaml`. It is the write half of ParseProject, and it lives here for
+// the reason the package doc gives for the parse half: the descriptor SHAPE is this package's, and a
+// scaffolder that marshalled its own struct would be the second definition of it that the "no third
+// Go shape" rule exists to prevent. A round-trip test pins the two against each other.
+//
+// names is optional. Passing nil declares nothing, which is what a scaffolder writing the conventional
+// layout wants: the defaults already name `conventions.yaml`, `profiles`, `params` and `review.yaml`,
+// so declaring them would be noise that then has to be kept in step with the files beside it.
+//
+// header is prose written as a YAML comment above the document, "" for none. It is a plain string
+// rather than per-field comments because a generated descriptor needs to say ONE thing — that it was
+// generated and can be edited — and threading yaml.Node comments through every field to say it would
+// be a lot of machinery for a paragraph.
+func WriteProject(w io.Writer, header, id, title string, names *ProjectConfigNames) error {
+	if !idPattern.MatchString(id) {
+		return fmt.Errorf("project id %q must match %s", id, idPattern)
+	}
+	y := projectYAML{Name: id, Title: title}
+	if names != nil {
+		y.Conventions, y.Profiles = &names.Conventions, &names.Profiles
+		y.Params, y.Checklist = &names.Params, &names.Checklist
+	}
+	return writeDescriptor(w, header, y)
+}
+
+// WriteDesign writes a `design.yaml`, the write half of ParseDesign.
+//
+// entry and companions are descriptor-relative names, cleaned on the way in on the same terms
+// ParseDesign cleans them, so a caller cannot write a descriptor its own parser would reject.
+func WriteDesign(w io.Writer, header, id, title, entry string, companions []string) error {
+	if !idPattern.MatchString(id) {
+		return fmt.Errorf("design id %q must match %s", id, idPattern)
+	}
+	if entry == "" {
+		return fmt.Errorf("design %q needs an entry", id)
+	}
+	y := designYAML{Name: id, Title: title, Entry: CleanRel(entry)}
+	for _, c := range companions {
+		y.Companions = append(y.Companions, CleanRel(c))
+	}
+	return writeDescriptor(w, header, y)
+}
+
+// writeDescriptor emits the optional comment header then the marshalled document.
+func writeDescriptor(w io.Writer, header string, doc any) error {
+	if header != "" {
+		for line := range strings.SplitSeq(strings.TrimRight(header, "\n"), "\n") {
+			var err error
+			if line == "" {
+				_, err = fmt.Fprintln(w, "#")
+			} else {
+				_, err = fmt.Fprintln(w, "# "+line)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+	b, err := yaml.Marshal(doc)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
+}
