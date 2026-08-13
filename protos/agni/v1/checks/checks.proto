@@ -234,6 +234,39 @@ message ReviewItem {
   string outcome = 3;
   string note = 4; // why, for an outcome that is neither pass nor fail
   repeated Finding findings = 5; // the rule firings that made the item fail
+  // The datasheet facts this item needed and did not find, when outcome is needs-data.
+  // Empty for every other outcome.
+  repeated UnmetDependency unmet = 6;
+}
+
+// UnmetDependency names ONE datasheet fact a check reached for and did not find. It exists because
+// the blocked-on-data outcome already knew this at the moment it gave up, and then flattened it into
+// a sentence: the symbol is computed to decide the outcome, and which parts lack it is computed to
+// decide whether ANY part has it. Both were discarded, so every consumer wanting to act on the
+// outcome had to re-derive them from prose or not act at all.
+//
+// The unit is (part, symbol), NOT (component, symbol). A PartSpec is per-MPN, so ten placements of
+// one part are one thing to go seed, and deduplicating by MPN is what keeps this a work list rather
+// than a restatement of the bill of materials.
+//
+// WHAT IS DELIBERATELY ABSENT: no limit_kind, no pin_ref, no unit. Nothing derives them at the site
+// this is produced, and an always-empty field would mean two different things forever ("the rule was
+// not asking per-terminal" and "we cannot work it out yet"), which is the ambiguity RangeValue's
+// explicit presence exists to avoid one layer down. proto3 fields are additive, so admitting one the
+// day something populates it costs nothing; shipping it empty costs the distinction permanently.
+message UnmetDependency {
+  // The design-side part identity (ir.BomLine.mpn, else the MPN attribute) that needs the fact.
+  string mpn = 1;
+  // Manufacturer as the seeded spec states it. EMPTY WHEN NO SPEC EXISTS, which is precisely the
+  // case where a document has to be found in the first place, so a consumer must treat it as a hint
+  // and never as a search key.
+  string manufacturer = 2;
+  // The parameter symbol as the check asked for it ("VCC", "VIN"), matching the rule's param_symbol.
+  string symbol = 3;
+  // True when the part has NO seeded spec at all, false when a spec exists but states no such
+  // symbol. Different next steps: extract a document, versus find one fact in a document already
+  // extracted. One boolean rather than two message types because the pair is exhaustive.
+  bool spec_absent = 4;
 }
 
 // ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).

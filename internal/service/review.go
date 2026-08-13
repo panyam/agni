@@ -425,6 +425,7 @@ func reviewAreaProtos(r review.Report) []*checkspb.ReviewArea {
 				Outcome:  string(it.Outcome),
 				Note:     review.JoinNonEmpty(it.Note, it.Item.Note),
 				Findings: FindingProtos(it.Findings),
+				Unmet:    unmetProtos(it.Unmet),
 			})
 		}
 		out = append(out, area)
@@ -446,4 +447,20 @@ func reviewParent(parent string) (string, error) {
 		return "", fmt.Errorf("%w: parent %q is not a project resource name (want \"projects/{project}\")", ErrInvalidArgument, parent)
 	}
 	return parent, nil
+}
+
+// unmetProtos carries a needs-data item's unmet dependencies onto the wire. Order is preserved
+// because UnseededSymbols already sorted them, and the results document's byte-for-byte re-render
+// guarantee depends on it.
+func unmetProtos(deps []check.UnmetDependency) []*checkspb.UnmetDependency {
+	if len(deps) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.UnmetDependency, 0, len(deps))
+	for _, d := range deps {
+		out = append(out, &checkspb.UnmetDependency{
+			Mpn: d.MPN, Manufacturer: d.Manufacturer, Symbol: d.Symbol, SpecAbsent: d.SpecAbsent,
+		})
+	}
+	return out
 }

@@ -3,6 +3,8 @@ package review
 import (
 	"fmt"
 	"strings"
+
+	"github.com/panyam/agni/core/check"
 )
 
 // Tally counts item outcomes across a report (or one area). It carries both axes (WS10-014): the
@@ -190,7 +192,11 @@ func detail(it ItemResult) string {
 		// NotAutomated may carry a runtime reason too (WS3-090: a host-bound interface declared on no
 		// component), and NeedsData carries the unseeded-symbol reason (WS3-097), so join the runtime
 		// note with any manifest note rather than showing the manifest note alone.
-		return JoinNonEmpty(it.Note, it.Item.Note)
+		//
+		// A needs-data item also names the parts to seed. The sentence says WHICH SYMBOL is missing
+		// and the list says WHICH PARTS need it, which the sentence cannot: it is design-wide by
+		// construction ("on this design").
+		return JoinNonEmpty(it.Note, unmetSummary(it.Unmet), it.Item.Note)
 	default: // Pass
 		return it.Item.Note
 	}
@@ -205,4 +211,35 @@ func JoinNonEmpty(parts ...string) string {
 		}
 	}
 	return strings.Join(kept, "; ")
+}
+
+// maxUnmetListed caps the parts a needs-data cell names inline, for the reason maxDetailFindings
+// caps findings: a symbol common across a large board can be unseeded on dozens of parts, and one
+// unreadable markdown cell helps nobody. ItemResult.Unmet keeps the full list either way.
+const maxUnmetListed = 5
+
+// unmetSummary renders the parts a needs-data item needs seeded, as "seed X on A, B". The
+// spec-absent case is called out separately because the next step differs: a part with no spec at
+// all needs a document extracted before any symbol can be found in it.
+func unmetSummary(deps []check.UnmetDependency) string {
+	if len(deps) == 0 {
+		return ""
+	}
+	shown := len(deps)
+	if shown > maxUnmetListed {
+		shown = maxUnmetListed
+	}
+	parts := make([]string, 0, shown)
+	for _, d := range deps[:shown] {
+		s := fmt.Sprintf("%s on %s", d.Symbol, d.MPN)
+		if d.SpecAbsent {
+			s += " (no spec)"
+		}
+		parts = append(parts, s)
+	}
+	s := "seed " + strings.Join(parts, ", ")
+	if len(deps) > shown {
+		s += fmt.Sprintf(" (+%d more)", len(deps)-shown)
+	}
+	return s
 }

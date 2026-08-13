@@ -3,6 +3,7 @@ package check
 import (
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -399,6 +400,84 @@ func SeedsAnySymbol(m Model, syms []string) bool {
 			if want[alnumUpper(p.GetSymbol())] {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// UnmetDependency names one datasheet fact a check reached for and did not find: which part, which
+// symbol, and whether the part has any seeded spec at all.
+//
+// The unit is the PART, not the placement. A PartSpec is per-MPN, so ten instances of one component
+// are one thing to go seed; deduplicating by MPN is what makes this a work list rather than a
+// restatement of the bill of materials.
+type UnmetDependency struct {
+	MPN          string
+	Manufacturer string // as the seeded spec states it; empty when SpecAbsent
+	Symbol       string
+	// SpecAbsent distinguishes "no spec for this part" from "a spec that states no such symbol",
+	// because the next step differs: extract a document, versus find one fact in one already read.
+	SpecAbsent bool
+}
+
+// UnseededSymbols reports the (part, symbol) pairs that SeedsAnySymbol found nothing for. It is the
+// same walk that decides the needs-data outcome, keeping what that one discards: SeedsAnySymbol
+// answers "does ANY part seed this", which is the right question for the verdict and the wrong one
+// for acting on it.
+//
+// classes gates the walk to an item's applies_to_class when it declares one, for the same reason the
+// computed-n/a path does: without it a symbol needed by three parts would name every part on the
+// design that lacks it, and a work list nobody can act on is not better than prose.
+//
+// The result is deduplicated by (mpn, symbol) and sorted, so a run written and re-read reproduces
+// byte for byte. A component with no resolvable MPN yields nothing: there is no part to name, and a
+// dependency naming nothing cannot be acted on.
+func UnseededSymbols(m Model, syms []string, classes []string) []UnmetDependency {
+	if len(syms) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []UnmetDependency
+	for _, c := range m.Components() {
+		if len(classes) > 0 && !hasAnyClass(m, c.RefDes, classes) {
+			continue
+		}
+		mpn := m.ComponentMPN(c.RefDes)
+		if mpn == "" {
+			continue
+		}
+		spec := m.PartSpec(c.RefDes)
+		have := map[string]bool{}
+		for _, prm := range spec.GetParameters() {
+			have[alnumUpper(prm.GetSymbol())] = true
+		}
+		for _, s := range syms {
+			if s == "" || have[alnumUpper(s)] {
+				continue
+			}
+			key := strings.ToUpper(mpn) + "\x00" + alnumUpper(s)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			out = append(out, UnmetDependency{
+				MPN: mpn, Manufacturer: spec.GetManufacturer(), Symbol: s, SpecAbsent: spec == nil,
+			})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].MPN != out[j].MPN {
+			return out[i].MPN < out[j].MPN
+		}
+		return out[i].Symbol < out[j].Symbol
+	})
+	return out
+}
+
+func hasAnyClass(m Model, refDes string, classes []string) bool {
+	for _, cl := range classes {
+		if m.HasClass(refDes, ComponentClass(cl)) {
+			return true
 		}
 	}
 	return false
