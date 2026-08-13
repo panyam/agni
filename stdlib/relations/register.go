@@ -31,6 +31,7 @@ func init() {
 var builtinSchema = map[string][]query.Field{
 	RelNetMaxVoltage:     {query.FieldSubject, query.FieldNum},                                                             // net.max_voltage(net, volts)
 	RelNetNominalVoltage: {query.FieldSubject, query.FieldNum},                                                             // net.nominal_voltage(net, volts)
+	RelNetSignalLevel:    {query.FieldSubject, query.FieldNum},                                                             // net.signal_level(net, volts)
 	RelComponentMPN:      {query.FieldSubject, query.FieldValue},                                                           // component.mpn(ref, mpn)
 	RelParam:             {query.FieldSubject, query.FieldObject, query.FieldNum},                                          // param(mpn, symbol, max)
 	RelParamRange:        {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldMin, query.FieldNum},        // param.range(mpn, symbol, kind, min, max)
@@ -99,7 +100,8 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "component.mpn", Args: []string{"ref_des", "mpn"}, Summary: "the design-side part identity (manufacturer part number)", Kind: query.KindNetlist},
 	{Name: "component-on-net", Args: []string{"ref_des", "net"}, Summary: "a component sits on a net", Kind: query.KindNetlist},
 	{Name: "net.max_voltage", Args: []string{"net", "volts"}, Summary: "a net's declared rail voltage", Kind: query.KindNetlist},
-	{Name: "net.nominal_voltage", Args: []string{"net", "volts"}, Summary: "a rail's nominal voltage derived from its net name (3V3 -> 3.3)", Kind: query.KindNetlist},
+	{Name: "net.nominal_voltage", Args: []string{"net", "volts"}, Summary: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level", Kind: query.KindNetlist},
+	{Name: "net.signal_level", Args: []string{"net", "volts"}, Summary: "the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal", Kind: query.KindNetlist},
 	{Name: "board.layer", Args: []string{"net", "layer"}, Summary: "a net appears on a board copper layer", Kind: query.KindBoard},
 	{Name: "board.track_width", Args: []string{"net", "mm"}, Summary: "a copper track's width on a net (millimetres)", Kind: query.KindBoard},
 	{Name: "board.via_drill", Args: []string{"net", "mm"}, Summary: "a via's drill diameter on a net (millimetres)", Kind: query.KindBoard},
