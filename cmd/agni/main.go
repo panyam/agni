@@ -167,16 +167,50 @@ func newLoader() *formats.Loader {
 // readDesign reads a design file into the IR through the formats registry, after the enclosing
 // design's descriptor has had its say about which file that should be (resolveSource).
 func readDesign(path string) (*ir.Design, error) {
+	ctx := context.Background()
 	ws, err := workspace()
 	if err != nil {
 		return nil, err
 	}
-	src, err := newDesignResolver(ws).Resolve(context.Background(), path)
+	src, err := newDesignResolver(ws).Resolve(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 	noteSource(os.Stderr, src)
-	return newLoader().ReadDesign(localOf(src.NetlistURI))
+	// The design's PROJECT config reaches the read, the same way it reaches a service-backed one.
+	//
+	// This is the choke point for every command that does not go through a service — stats, diff,
+	// emit, render, intake, profilediag — and it built its loader with no options at all, so all six
+	// read under the BUILT-IN naming vocabulary however their project was configured. That is not a
+	// cosmetic difference: net roles are resolved once at ingestion, so on the tutorial project the
+	// built-ins see one rail where the project's own vocabulary sees four (agni issue 228).
+	//
+	// A resolution failure is NOT fatal, matching every other place the CLI resolves a project: a
+	// malformed descriptor somewhere on a mount should not make an unrelated design unreadable, and
+	// the design still reads under the defaults.
+	return readerFor(newLoader(), designReadOptions(ctx, path)...).ReadDesign(localOf(src.NetlistURI))
+}
+
+// designReadOptions composes the per-read config a design's project supplies: its naming vocabulary,
+// and the symbol libraries it declares.
+//
+// It returns nothing rather than an error when the project cannot be resolved, on the same terms
+// cliProjectParent and withProjectRules already take. A design that belongs to no project genuinely
+// has no config, which is the ordinary case for a loose file.
+func designReadOptions(ctx context.Context, path string) []service.ReadOption {
+	ws, err := workspace()
+	if err != nil {
+		return nil
+	}
+	u, err := ws.URI(path)
+	if err != nil {
+		return nil
+	}
+	ov, err := cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, service.Overlay{}, "")
+	if err != nil {
+		return nil
+	}
+	return ov.ReadOptions()
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never

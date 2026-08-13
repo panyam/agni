@@ -21,3 +21,53 @@ func TestProjectLexiconReachesTheRead(t *testing.T) {
 		}
 	}
 }
+
+// TestReadDesignResolvesProjectConfig covers the commands that never touch a service: stats, diff,
+// emit, render, intake and profilediag all read through readDesign, which built its loader with no
+// options at all. So every one of them read under the BUILT-IN naming vocabulary however their
+// project was configured, and saw none of its declared symbol libraries (agni issue 228).
+//
+// Asserted on the stamped roles rather than through a command's output, because that is what the
+// read produces and what every one of those commands then derives from. A command-level assertion
+// would test one derivation and leave the other five uncovered.
+func TestReadDesignResolvesProjectConfig(t *testing.T) {
+	d, err := readDesign("../../examples/tutorial-project/designs/gateway/gateway.edn")
+	if err != nil {
+		t.Fatalf("readDesign: %v", err)
+	}
+	// The tutorial project names rails function-first, which the start-anchored built-in vocabulary
+	// does not match. Its conventions.yaml says so: without that file the only rail is GND.
+	var rails int
+	for _, n := range d.GetNets() {
+		for _, r := range n.GetRoles() {
+			if r == "rail" {
+				rails++
+			}
+		}
+	}
+	if rails < 3 {
+		t.Errorf("expected the project's declared rails to be stamped, got %d rail-stamped nets (the built-in vocabulary alone stamps none of them)", rails)
+	}
+}
+
+// TestReadDesignResolvesSymbolPaths is the other half, and the acceptance criterion agni issue 229
+// left unmet: a design's declared symbol library reaches a read that no service mediates, so the
+// tutorial project's own Makefile no longer passes --symbol-path.
+//
+// A schematic whose external library does not resolve reads SHORT rather than failing, so the count
+// is the assertion: `libraries` is 0 without the library and 1 with it.
+func TestReadDesignResolvesSymbolPaths(t *testing.T) {
+	// as-named reads exactly the schematic rather than the netlist its design.yaml declares as the
+	// entry. Set directly because it is a ROOT persistent flag.
+	saved := readAsNamed
+	readAsNamed = true
+	defer func() { readAsNamed = saved }()
+
+	d, err := readDesign("../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
+	if err != nil {
+		t.Fatalf("readDesign: %v", err)
+	}
+	if n := len(d.GetLibraries()); n != 1 {
+		t.Errorf("the design declares symbols/, so its external library should resolve with no --symbol-path; got %d libraries", n)
+	}
+}
