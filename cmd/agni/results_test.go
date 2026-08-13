@@ -228,3 +228,35 @@ func TestResultsRejectsAForeignDocument(t *testing.T) {
 		}
 	}
 }
+
+// TestResultsCarriesSkippedRules: a document records what could NOT be checked as well as what was.
+//
+// It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design from
+// a run that checked nothing; this separates a clean design from one whose questions were GATED. A
+// document carrying one without the other lets a reader conclude the run was broader than it was —
+// and a re-render is meant to reproduce the original output, which it could not while one surface
+// knew something the other did not.
+func TestResultsCarriesSkippedRules(t *testing.T) {
+	design := isolatedDesign(t, "testdata/review/can-broken.edn")
+	out := filepath.Join(t.TempDir(), "run.results.json")
+	runCLI(t, checkCmd(), "--results-out", out, design)
+
+	b, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Skipped []struct{ Name, Reason string } `json:"skipped"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Skipped) == 0 {
+		t.Fatal("a netlist cannot support every shipped rule; the document must say which it could not run")
+	}
+	for _, s := range doc.Skipped {
+		if s.Name == "" || s.Reason == "" {
+			t.Errorf("a skipped rule needs both a name and the engine's reason, got %+v", s)
+		}
+	}
+}

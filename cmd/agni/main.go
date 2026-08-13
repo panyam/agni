@@ -403,7 +403,7 @@ func checkCmd() *cobra.Command {
 				// that declares conventions.yaml, profiles/ and params/ ran against all three and
 				// recorded `run: {}`, because none of those three flags was passed. The flag values are
 				// the DEPLOYMENT half of the union; the project's half comes from the overlay.
-				doc := resultsDoc(cliArgURI(args[0]), selected, resp.GetFindings(), service.RunConfigProto(
+				doc := resultsDoc(cliArgURI(args[0]), selected, resp.GetFindings(), skippedProtos(resp.GetSkipped()), service.RunConfigProto(
 					runOverlay.Provenance(service.RunProvenance{
 						Params:      paramsDir != "",
 						Profiles:    profilePath != "",
@@ -500,17 +500,7 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
 // marshals it verbatim — the conformance runner parses the same `.findings[]` whether it shells out or
 // calls the API.
 func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
-	// `skipped` is dropped here, and the reason is a contract rather than an oversight. `agni results`
-	// re-renders a stored CheckResults document and must reproduce this output byte for byte — the
-	// property the checks contract calls self-containment, and that TestResultsRoundTripWithoutTheDesign
-	// pins by deleting the design first. The document has no field for which rules could not run, so
-	// emitting it here would break parity the moment it was populated.
-	//
-	// The information is not lost: it reaches the served surface, which is where the silence-reads-as-
-	// coverage failure actually bites. Carrying it in the document, so the CLI and a re-render can both
-	// show it, is agni issue 245.
-	out := &webapi.CheckDesignResponse{Findings: resp.GetFindings()}
-	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(out)
+	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
 	if err != nil {
 		return err
 	}

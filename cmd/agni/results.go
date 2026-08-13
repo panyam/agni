@@ -92,7 +92,12 @@ func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) 
 		writeCheckText(w, findingsFromProto(doc.GetFindings()), len(doc.GetCatalog()))
 		return nil
 	case "json":
-		return writeCheckDesignJSON(w, &webapi.CheckDesignResponse{Findings: doc.GetFindings()})
+		// Skipped travels back too, or the round trip stops being one: `check --format json` now emits
+		// it, and self-containment means a re-render reproduces that output byte for byte.
+		return writeCheckDesignJSON(w, &webapi.CheckDesignResponse{
+			Findings: doc.GetFindings(),
+			Skipped:  skippedFromDoc(doc.GetSkipped()),
+		})
 	case "markdown":
 		return writeCheckMarkdown(w, results.Report(doc))
 	case "report":
@@ -147,7 +152,7 @@ func renderReviewResults(w io.Writer, doc *checkspb.CheckResults, format string,
 // service is deliberately filesystem-free: it resolves an opaque mount/path key through an injected
 // loader and never reads bytes itself (C13). Hashing is the producing edge's job for the same reason
 // reading the design is.
-func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding, run *checkspb.RunConfig) *checkspb.CheckResults {
+func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding, skipped []*checkspb.SkippedRule, run *checkspb.RunConfig) *checkspb.CheckResults {
 	return &checkspb.CheckResults{
 		Meta: &checkspb.ResultsMeta{
 			Schema:          results.Schema,
@@ -162,6 +167,7 @@ func resultsDoc(source string, rules []*check.Rule, findings []*checkspb.Finding
 		Design:   &checkspb.DesignRef{Source: source, ContentHash: hashSource(localOf(source))},
 		Run:      run,
 		Catalog:  results.RuleRecords(rules),
+		Skipped:  skipped,
 		Findings: findings,
 	}
 }
@@ -233,6 +239,35 @@ func forDisplay(rep *checkspb.CheckReport) *checkspb.CheckReport {
 				}
 			}
 		}
+	}
+	return out
+}
+
+// skippedProtos converts the served response's skipped list to the document's.
+//
+// Two messages for one idea, because the wire API and the results DOCUMENT are separate contracts:
+// agni.v1.checks declares no service and imports no transport, which is what lets a document be
+// written, mailed and re-read by something that never spoke to this server. One shared message would
+// make the document import the web API.
+func skippedProtos(in []*webapi.SkippedRule) []*checkspb.SkippedRule {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.SkippedRule, len(in))
+	for i, s := range in {
+		out[i] = &checkspb.SkippedRule{Name: s.GetName(), Reason: s.GetReason()}
+	}
+	return out
+}
+
+// skippedFromDoc is skippedProtos in the other direction, for re-rendering a stored document.
+func skippedFromDoc(in []*checkspb.SkippedRule) []*webapi.SkippedRule {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]*webapi.SkippedRule, len(in))
+	for i, s := range in {
+		out[i] = &webapi.SkippedRule{Name: s.GetName(), Reason: s.GetReason()}
 	}
 	return out
 }

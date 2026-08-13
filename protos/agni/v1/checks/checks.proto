@@ -260,6 +260,18 @@ message CheckResults {
   // catalog surface, and copying it into every document would multiply the same markdown across
   // every archived run.
   repeated RuleRecord catalog = 4;
+  // skipped names the selected rules that could NOT evaluate on this design, and why.
+  //
+  // It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design
+  // from a run that checked nothing; this separates a clean design from one whose questions were
+  // GATED — a board rule on a netlist, a datasheet rule with no corpus. Both are silence that reads
+  // as coverage, and a document carrying one without the other lets a reader conclude the run was
+  // broader than it was.
+  //
+  // An IMPORTED vendor report leaves it empty, on the same terms `meta.coverage_axis` is false for
+  // one: a foreign checker has no notion of a rule it declined to run, and manufacturing the field
+  // would give an import a property it does not have.
+  repeated SkippedRule skipped = 10;
   // findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and carries
   // its findings per item instead, and that is not an oversight: a review runs each item's bound rules
   // scoped to that item, so a flat union would assert a design-wide sweep that never happened.
@@ -359,6 +371,19 @@ message RunConfig {
   // engine defaults.
   string conventions = 4;
   double ratified_floor = 5; // review only: the datasheet-confidence floor for a ratified fail
+}
+
+// SkippedRule is one selected rule that could not evaluate, and the reason the rule itself gave.
+//
+// A separate list rather than a field on RuleRecord, because `catalog` means "the rules that ran" and
+// a reader counts it. Folding these in would make that count mean "rules considered", silently
+// changing a number every existing consumer already reads.
+message SkippedRule {
+  // name is the catalog rule name.
+  string name = 1;
+  // reason is check.Available's own explanation ("design carries no board geometry"). The rule
+  // decides why it cannot run; a sentence reconstructed elsewhere would be a second opinion.
+  string reason = 2;
 }
 
 // RuleRecord is one rule as the run saw it: enough to render and group a report without the engine's

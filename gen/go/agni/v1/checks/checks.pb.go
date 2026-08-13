@@ -1101,6 +1101,18 @@ type CheckResults struct {
 	// catalog surface, and copying it into every document would multiply the same markdown across
 	// every archived run.
 	Catalog []*RuleRecord `protobuf:"bytes,4,rep,name=catalog,proto3" json:"catalog,omitempty"`
+	// skipped names the selected rules that could NOT evaluate on this design, and why.
+	//
+	// It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design
+	// from a run that checked nothing; this separates a clean design from one whose questions were
+	// GATED — a board rule on a netlist, a datasheet rule with no corpus. Both are silence that reads
+	// as coverage, and a document carrying one without the other lets a reader conclude the run was
+	// broader than it was.
+	//
+	// An IMPORTED vendor report leaves it empty, on the same terms `meta.coverage_axis` is false for
+	// one: a foreign checker has no notion of a rule it declined to run, and manufacturing the field
+	// would give an import a property it does not have.
+	Skipped []*SkippedRule `protobuf:"bytes,10,rep,name=skipped,proto3" json:"skipped,omitempty"`
 	// findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and carries
 	// its findings per item instead, and that is not an oversight: a review runs each item's bound rules
 	// scoped to that item, so a flat union would assert a design-wide sweep that never happened.
@@ -1182,6 +1194,13 @@ func (x *CheckResults) GetRun() *RunConfig {
 func (x *CheckResults) GetCatalog() []*RuleRecord {
 	if x != nil {
 		return x.Catalog
+	}
+	return nil
+}
+
+func (x *CheckResults) GetSkipped() []*SkippedRule {
+	if x != nil {
+		return x.Skipped
 	}
 	return nil
 }
@@ -1588,6 +1607,66 @@ func (x *RunConfig) GetRatifiedFloor() float64 {
 	return 0
 }
 
+// SkippedRule is one selected rule that could not evaluate, and the reason the rule itself gave.
+//
+// A separate list rather than a field on RuleRecord, because `catalog` means "the rules that ran" and
+// a reader counts it. Folding these in would make that count mean "rules considered", silently
+// changing a number every existing consumer already reads.
+type SkippedRule struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name is the catalog rule name.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// reason is check.Available's own explanation ("design carries no board geometry"). The rule
+	// decides why it cannot run; a sentence reconstructed elsewhere would be a second opinion.
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkippedRule) Reset() {
+	*x = SkippedRule{}
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkippedRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkippedRule) ProtoMessage() {}
+
+func (x *SkippedRule) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkippedRule.ProtoReflect.Descriptor instead.
+func (*SkippedRule) Descriptor() ([]byte, []int) {
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *SkippedRule) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SkippedRule) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 // RuleRecord is one rule as the run saw it: enough to render and group a report without the engine's
 // catalog. Availability is deliberately absent — it is a per-design question answered by the item
 // outcomes and the not-applicable reasons they carry, and a snapshot field claiming it would have to
@@ -1604,7 +1683,7 @@ type RuleRecord struct {
 
 func (x *RuleRecord) Reset() {
 	*x = RuleRecord{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1616,7 +1695,7 @@ func (x *RuleRecord) String() string {
 func (*RuleRecord) ProtoMessage() {}
 
 func (x *RuleRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[19]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1629,7 +1708,7 @@ func (x *RuleRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuleRecord.ProtoReflect.Descriptor instead.
 func (*RuleRecord) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RuleRecord) GetName() string {
@@ -1671,7 +1750,7 @@ type CheckReport_SeveritySection struct {
 
 func (x *CheckReport_SeveritySection) Reset() {
 	*x = CheckReport_SeveritySection{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1683,7 +1762,7 @@ func (x *CheckReport_SeveritySection) String() string {
 func (*CheckReport_SeveritySection) ProtoMessage() {}
 
 func (x *CheckReport_SeveritySection) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[20]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1731,7 +1810,7 @@ type CheckReport_RuleGroup struct {
 
 func (x *CheckReport_RuleGroup) Reset() {
 	*x = CheckReport_RuleGroup{}
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1743,7 +1822,7 @@ func (x *CheckReport_RuleGroup) String() string {
 func (*CheckReport_RuleGroup) ProtoMessage() {}
 
 func (x *CheckReport_RuleGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_checks_proto_msgTypes[21]
+	mi := &file_agni_v1_checks_checks_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1869,12 +1948,14 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\n" +
 	"ReviewArea\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x120\n" +
-	"\x05items\x18\x02 \x03(\v2\x1a.agni.v1.checks.ReviewItemR\x05items\"\xeb\x03\n" +
+	"\x05items\x18\x02 \x03(\v2\x1a.agni.v1.checks.ReviewItemR\x05items\"\xa2\x04\n" +
 	"\fCheckResults\x12/\n" +
 	"\x04meta\x18\x01 \x01(\v2\x1b.agni.v1.checks.ResultsMetaR\x04meta\x121\n" +
 	"\x06design\x18\x02 \x01(\v2\x19.agni.v1.checks.DesignRefR\x06design\x12+\n" +
 	"\x03run\x18\x03 \x01(\v2\x19.agni.v1.checks.RunConfigR\x03run\x124\n" +
-	"\acatalog\x18\x04 \x03(\v2\x1a.agni.v1.checks.RuleRecordR\acatalog\x123\n" +
+	"\acatalog\x18\x04 \x03(\v2\x1a.agni.v1.checks.RuleRecordR\acatalog\x125\n" +
+	"\askipped\x18\n" +
+	" \x03(\v2\x1b.agni.v1.checks.SkippedRuleR\askipped\x123\n" +
 	"\bfindings\x18\x05 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\x12\x1a\n" +
 	"\bmanifest\x18\x06 \x01(\tR\bmanifest\x120\n" +
 	"\x05areas\x18\a \x03(\v2\x1a.agni.v1.checks.ReviewAreaR\x05areas\x12D\n" +
@@ -1903,7 +1984,10 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\bprofiles\x18\x02 \x01(\bR\bprofiles\x12\x16\n" +
 	"\x06intent\x18\x03 \x01(\bR\x06intent\x12 \n" +
 	"\vconventions\x18\x04 \x01(\tR\vconventions\x12%\n" +
-	"\x0eratified_floor\x18\x05 \x01(\x01R\rratifiedFloor\"\xc9\x01\n" +
+	"\x0eratified_floor\x18\x05 \x01(\x01R\rratifiedFloor\"9\n" +
+	"\vSkippedRule\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xc9\x01\n" +
 	"\n" +
 	"RuleRecord\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
@@ -1934,7 +2018,7 @@ func file_agni_v1_checks_checks_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_checks_checks_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_checks_checks_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_agni_v1_checks_checks_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_agni_v1_checks_checks_proto_goTypes = []any{
 	(LocateReason)(0),                   // 0: agni.v1.checks.LocateReason
 	(*Subject)(nil),                     // 1: agni.v1.checks.Subject
@@ -1956,18 +2040,19 @@ var file_agni_v1_checks_checks_proto_goTypes = []any{
 	(*ResultsMeta)(nil),                 // 17: agni.v1.checks.ResultsMeta
 	(*DesignRef)(nil),                   // 18: agni.v1.checks.DesignRef
 	(*RunConfig)(nil),                   // 19: agni.v1.checks.RunConfig
-	(*RuleRecord)(nil),                  // 20: agni.v1.checks.RuleRecord
-	(*CheckReport_SeveritySection)(nil), // 21: agni.v1.checks.CheckReport.SeveritySection
-	(*CheckReport_RuleGroup)(nil),       // 22: agni.v1.checks.CheckReport.RuleGroup
-	nil,                                 // 23: agni.v1.checks.RuleRecord.TagsEntry
-	(*ir.Provenance)(nil),               // 24: agni.v1.ir.Provenance
+	(*SkippedRule)(nil),                 // 20: agni.v1.checks.SkippedRule
+	(*RuleRecord)(nil),                  // 21: agni.v1.checks.RuleRecord
+	(*CheckReport_SeveritySection)(nil), // 22: agni.v1.checks.CheckReport.SeveritySection
+	(*CheckReport_RuleGroup)(nil),       // 23: agni.v1.checks.CheckReport.RuleGroup
+	nil,                                 // 24: agni.v1.checks.RuleRecord.TagsEntry
+	(*ir.Provenance)(nil),               // 25: agni.v1.ir.Provenance
 }
 var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.checks.Finding.subject:type_name -> agni.v1.checks.Subject
-	24, // 1: agni.v1.checks.Finding.provenance:type_name -> agni.v1.ir.Provenance
+	25, // 1: agni.v1.checks.Finding.provenance:type_name -> agni.v1.ir.Provenance
 	0,  // 2: agni.v1.checks.Finding.locate_reason:type_name -> agni.v1.checks.LocateReason
 	2,  // 3: agni.v1.checks.Finding.datasheets:type_name -> agni.v1.checks.DatasheetCitation
-	21, // 4: agni.v1.checks.CheckReport.sections:type_name -> agni.v1.checks.CheckReport.SeveritySection
+	22, // 4: agni.v1.checks.CheckReport.sections:type_name -> agni.v1.checks.CheckReport.SeveritySection
 	6,  // 5: agni.v1.checks.ReviewManifest.areas:type_name -> agni.v1.checks.ManifestArea
 	7,  // 6: agni.v1.checks.ManifestArea.items:type_name -> agni.v1.checks.ManifestItem
 	8,  // 7: agni.v1.checks.ManifestItem.binding:type_name -> agni.v1.checks.ItemBinding
@@ -1979,20 +2064,21 @@ var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	17, // 13: agni.v1.checks.CheckResults.meta:type_name -> agni.v1.checks.ResultsMeta
 	18, // 14: agni.v1.checks.CheckResults.design:type_name -> agni.v1.checks.DesignRef
 	19, // 15: agni.v1.checks.CheckResults.run:type_name -> agni.v1.checks.RunConfig
-	20, // 16: agni.v1.checks.CheckResults.catalog:type_name -> agni.v1.checks.RuleRecord
-	3,  // 17: agni.v1.checks.CheckResults.findings:type_name -> agni.v1.checks.Finding
-	13, // 18: agni.v1.checks.CheckResults.areas:type_name -> agni.v1.checks.ReviewArea
-	15, // 19: agni.v1.checks.CheckResults.import_summary:type_name -> agni.v1.checks.ImportSummary
-	5,  // 20: agni.v1.checks.CheckResults.manifest_snapshot:type_name -> agni.v1.checks.ReviewManifest
-	16, // 21: agni.v1.checks.ImportSummary.unjoined:type_name -> agni.v1.checks.UnjoinedReason
-	23, // 22: agni.v1.checks.RuleRecord.tags:type_name -> agni.v1.checks.RuleRecord.TagsEntry
-	22, // 23: agni.v1.checks.CheckReport.SeveritySection.rules:type_name -> agni.v1.checks.CheckReport.RuleGroup
-	3,  // 24: agni.v1.checks.CheckReport.RuleGroup.findings:type_name -> agni.v1.checks.Finding
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	21, // 16: agni.v1.checks.CheckResults.catalog:type_name -> agni.v1.checks.RuleRecord
+	20, // 17: agni.v1.checks.CheckResults.skipped:type_name -> agni.v1.checks.SkippedRule
+	3,  // 18: agni.v1.checks.CheckResults.findings:type_name -> agni.v1.checks.Finding
+	13, // 19: agni.v1.checks.CheckResults.areas:type_name -> agni.v1.checks.ReviewArea
+	15, // 20: agni.v1.checks.CheckResults.import_summary:type_name -> agni.v1.checks.ImportSummary
+	5,  // 21: agni.v1.checks.CheckResults.manifest_snapshot:type_name -> agni.v1.checks.ReviewManifest
+	16, // 22: agni.v1.checks.ImportSummary.unjoined:type_name -> agni.v1.checks.UnjoinedReason
+	24, // 23: agni.v1.checks.RuleRecord.tags:type_name -> agni.v1.checks.RuleRecord.TagsEntry
+	23, // 24: agni.v1.checks.CheckReport.SeveritySection.rules:type_name -> agni.v1.checks.CheckReport.RuleGroup
+	3,  // 25: agni.v1.checks.CheckReport.RuleGroup.findings:type_name -> agni.v1.checks.Finding
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_checks_proto_init() }
@@ -2006,7 +2092,7 @@ func file_agni_v1_checks_checks_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_checks_checks_proto_rawDesc), len(file_agni_v1_checks_checks_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

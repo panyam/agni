@@ -81,9 +81,10 @@ with the MODEL, where `ListRules` asks it with a nil one: "can this rule ever ru
 this design" are different questions, and only the second can tell a reader their result is narrower
 than their selection.
 
-`agni check --format json` does not carry it yet, because a stored results document has no field for
-it and that document must re-render byte for byte. The asymmetry is
-[agni issue 245](https://github.com/panyam/agni/issues/245), not a property worth keeping.
+The results document carries it too, beside `catalog`, so `agni check --format json` and an
+`agni results` re-render both show it and self-containment holds. An IMPORTED vendor report leaves it
+empty, on the same terms `meta.coverage_axis` is false for one: a foreign checker has no notion of a
+rule it declined to run, and manufacturing the field would give an import a property it does not have.
 
 ## The outcome vocabulary is the interesting part
 
