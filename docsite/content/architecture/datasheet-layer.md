@@ -102,6 +102,34 @@ and revising one must not invalidate values read from the other. And the hash li
 rather than being resolved from `locator` on demand, because a check must not do I/O to learn whether
 its evidence is current (C22) and the engine runs in hosts with no filesystem at all.
 
+#### The revision snapshot, and why it is not the key
+
+A hash decides staleness correctly and tells a person nothing. `Verification.doc_revision` is the
+document's identity AS PRINTED at the moment of verification, snapshotted from the `SourceDoc.title`
+of the day. It is what turns a flag into a task:
+
+> Re-confirm VDD abs-max: verified against SCES650K, corpus now holds SCES650L, page 4.
+
+It is on `Verification` rather than on `SourceDoc` for a reason that is easy to get backwards. A
+re-seed REWRITES `SourceDoc`, both the hash and the title. That rewrite is the event that makes a
+verification stale, so a revision recorded there would be destroyed by the one thing that makes it
+worth having. Frozen beside the hash it was taken with, it survives. `SourceDoc.title` still names
+the revision the corpus holds NOW, and a citation carries both, which is why a report can name each
+side.
+
+`param.MarkVerified` takes the `SourceDoc` itself rather than a hash and a title separately, so the
+key and the snapshot are read from one place and cannot disagree. Splitting them would let a caller
+pin one revision's hash beside another's printed name, and that record would be wrong in the only way
+nothing downstream can detect: it would go stale correctly and then name the wrong document to the
+person asked to re-confirm it.
+
+**The snapshot is display only and must never become a comparison input.** Vendors reissue documents
+silently without moving the printed revision, and move the printed revision without changing content,
+so two files both stamped "Rev K" may differ and two differing strings may describe identical bytes.
+Deciding staleness on the printed name would reintroduce exactly the silent decay the hash exists to
+prevent, with a more convincing cover story. It is not orderable either: K/L/M, but also 1.0/1.1,
+A/B, bare dates and "Rev K.1", so "how many revisions behind" has no general answer.
+
 ### Comparison semantics
 
 Values, units, and symbols are STORED as printed, so the comparison layer meets vendor

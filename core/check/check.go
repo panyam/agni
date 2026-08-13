@@ -99,6 +99,13 @@ type DatasheetCitation struct {
 	// can move afterwards. A stale verification is the case worth naming: it reads as maximally
 	// trustworthy by every older signal precisely because someone did check it once.
 	Verification string
+	// VerifiedRevision is the document identity as printed when the verification was performed, "" if
+	// nothing was ever verified. It exists so a stale citation can name the revision that WAS checked
+	// and not only the one the corpus now holds: Doc above is resolved from the CURRENT SourceDoc, so
+	// after a re-seed it names the new revision, and the old one survives nowhere else. Reporting
+	// "verified against SCES650K, corpus now holds SCES650L" is a re-confirm task someone can act on;
+	// reporting two hashes is not. Display only, never compared.
+	VerifiedRevision string
 }
 
 // Finding subject kinds: what a Finding.Subject refers to.

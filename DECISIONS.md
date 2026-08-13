@@ -608,3 +608,39 @@ document revision could falsify.
 invalidation: if the cited table's own content hash did not change across the revision, carry the
 verification forward. `derive.Patch` already keys on a table content hash, so the input exists. That is
 strictly harder and should be driven by a real corpus, not designed against a guess.
+
+## A document revision is recorded for the reader, and never compared
+
+**Question.** Staleness is decided by content hash. A hash is unreadable, so a stale fact could report
+only "these two hashes differ", which nobody can act on. Should the schema also carry the revision as
+printed ("SCES650K"), and if so where?
+
+**Answer. Yes, on `Verification`, as display only.** Two parts, and the second is the one that is easy
+to get backwards.
+
+*Why it is needed at all.* Provisional exists to generate a re-confirm task a human picks up. "Verified
+against SCES650K, corpus now holds SCES650L, page 4" is that task. Two hashes is not. The revision is
+the only part of the record a person can act on.
+
+*Why it is NOT on `SourceDoc`.* That was the obvious home and it does not work. A re-seed rewrites
+`SourceDoc`, both hash and title, and that rewrite is precisely the event that makes a verification
+stale. A revision recorded there would be destroyed by the one thing that makes it worth having. It has
+to be snapshotted onto the `Verification` at the moment of verification, frozen beside the hash it was
+taken with. `SourceDoc.title` continues to name the revision the corpus holds now, so a citation
+carries both sides and a report can name each.
+
+**`MarkVerified` takes the document, not a hash.** The key and the snapshot are read from one place so
+they cannot disagree. Passing them separately would permit a record that goes stale correctly and then
+names the wrong revision to the person asked to re-confirm it, which is wrong in the only way nothing
+downstream can detect.
+
+**Never a comparison input, and this is load-bearing rather than cautious.** Vendors reissue silently
+without moving the printed revision, and move the printed revision without changing content. Two files
+stamped "Rev K" may differ; two differing strings may describe identical bytes. Deciding staleness on
+the printed name reintroduces exactly the silent decay the hash prevents, with a better cover story.
+The field is also not orderable (K/L/M, 1.0/1.1, A/B, bare dates, "Rev K.1"), so there is no general
+"how many revisions behind". The proto comment says all of this at the field, because the pressure to
+short-circuit on it will arrive from someone who has not read this file.
+
+**Reopen if** a vendor-neutral structured revision ever becomes extractable and someone wants ordering.
+The answer would still not be to compare it; it would be to render it better.

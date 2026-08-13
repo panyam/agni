@@ -1343,7 +1343,26 @@ type Verification struct {
 	// never computed on.
 	At string `protobuf:"bytes,3,opt,name=at,proto3" json:"at,omitempty"`
 	// What the verifier wants the next reader to know ("value is per-channel, not total").
-	Note          string `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
+	Note string `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
+	// The document's identity AS PRINTED when the verification was performed, snapshotted from the
+	// SourceDoc.title of the moment ("SCES650K - JUNE 2005 - REVISED JANUARY 2023"). It is a whole
+	// as-printed document identity rather than a bare revision letter, because that is what vendors
+	// print and what SourceDoc.title is already required to carry.
+	//
+	// DISPLAY ONLY. NEVER A COMPARISON INPUT. Staleness is decided by doc_content_hash and nothing
+	// else. Vendors reissue documents silently without moving the printed revision, and move the
+	// printed revision without changing content, so two files both stamped "Rev K" may differ and two
+	// differing strings may describe identical bytes. Comparing on this field would reintroduce
+	// exactly the silent staleness the hash exists to prevent, with a more convincing cover story. It
+	// is also NOT ORDERABLE: vendors use K/L/M, 1.0/1.1, A/B, bare dates and "Rev K.1", so "how many
+	// revisions behind" has no general answer.
+	//
+	// It lives here rather than on SourceDoc because SourceDoc is REWRITTEN by a re-seed, which is
+	// what makes staleness happen at all. A revision recorded there would be overwritten by the very
+	// event that makes it interesting. Frozen beside the hash it was taken with, it survives, which is
+	// what lets a stale fact say "verified against Rev K, corpus now holds Rev L" instead of quoting
+	// two hashes at a person who has to act on it.
+	DocRevision   string `protobuf:"bytes,5,opt,name=doc_revision,json=docRevision,proto3" json:"doc_revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1402,6 +1421,13 @@ func (x *Verification) GetAt() string {
 func (x *Verification) GetNote() string {
 	if x != nil {
 		return x.Note
+	}
+	return ""
+}
+
+func (x *Verification) GetDocRevision() string {
+	if x != nil {
+		return x.DocRevision
 	}
 	return ""
 }
@@ -1613,12 +1639,13 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\fverification\x18\x11 \x01(\v2\x1b.agni.v1.param.VerificationR\fverification\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"l\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8f\x01\n" +
 	"\fVerification\x12\x0e\n" +
 	"\x02by\x18\x01 \x01(\tR\x02by\x12(\n" +
 	"\x10doc_content_hash\x18\x02 \x01(\tR\x0edocContentHash\x12\x0e\n" +
 	"\x02at\x18\x03 \x01(\tR\x02at\x12\x12\n" +
-	"\x04note\x18\x04 \x01(\tR\x04note\"\x9e\x01\n" +
+	"\x04note\x18\x04 \x01(\tR\x04note\x12!\n" +
+	"\fdoc_revision\x18\x05 \x01(\tR\vdocRevision\"\x9e\x01\n" +
 	"\x0fParamProvenance\x12\x17\n" +
 	"\adoc_ref\x18\x01 \x01(\tR\x06docRef\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12&\n" +

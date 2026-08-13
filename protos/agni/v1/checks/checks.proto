@@ -71,6 +71,11 @@ message DatasheetCitation {
   // corpus no longer holds, so the confirmation is not evidence about the document in hand.
   // Empty for a citation carrying no parameter (a pin declaration, a relation bound).
   string verification = 7;
+  // The document identity as printed when the verification was performed
+  // (Verification.doc_revision), so a stale citation can name the revision that WAS checked rather
+  // than only the one the corpus now holds. Display only, never compared; see the field's own
+  // comment in param.proto. Empty when nothing was ever verified.
+  string verified_revision = 8;
 }
 
 // Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join

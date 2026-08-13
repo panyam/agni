@@ -75,6 +75,10 @@ type jsonDatasheet struct {
 	// parameter behind it. A consumer reading this report to decide whether to trust a fail wants
 	// "stale" to stand out, since confidence alone reports such a value as fully trustworthy.
 	Verification string `json:"verification,omitempty"`
+	// VerifiedRevision: the document identity as printed when the verification was performed. Beside
+	// `doc` (which is the revision the corpus holds NOW) it turns a "stale" flag into a re-confirm
+	// task naming both sides. Omitted when nothing was ever verified.
+	VerifiedRevision string `json:"verified_revision,omitempty"`
 }
 
 // RenderJSON emits the report as indented JSON with the full finding list for every item. It is the
@@ -146,8 +150,9 @@ func datasheetProv(f check.Finding) []jsonDatasheet {
 			Page:         c.Page,
 			Section:      c.Section,
 			Method:       c.Method,
-			Confidence:   c.Confidence,
-			Verification: c.Verification,
+			Confidence:       c.Confidence,
+			Verification:     c.Verification,
+			VerifiedRevision: c.VerifiedRevision,
 		})
 	}
 	return out

@@ -6,9 +6,15 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
+// docAt is the document as the corpus held it at some revision: the hash is the invalidation key and
+// the title is what a person reads.
+func docAt(hash, title string) *parampb.SourceDoc {
+	return &parampb.SourceDoc{Id: "d", Title: title, ContentHash: hash}
+}
+
 func verifiedParam(hash string) *parampb.Parameter {
 	p := &parampb.Parameter{Symbol: "VCC", Prov: &parampb.ParamProvenance{DocRef: "d", Confidence: 0.9}}
-	MarkVerified(p, "sri", hash, "2026-08-13", "")
+	MarkVerified(p, "sri", docAt(hash, "ACME-1 "+hash), "2026-08-13", "")
 	return p
 }
 
@@ -54,13 +60,65 @@ func TestMarkVerifiedKeepsTheOlderSignalInStep(t *testing.T) {
 // A verification nobody can invalidate is the failure this type exists to prevent.
 func TestMarkVerifiedRefusesAnUnanchoredClaim(t *testing.T) {
 	p := &parampb.Parameter{Symbol: "VCC"}
-	if MarkVerified(p, "sri", "", "2026-08-13", "") {
+	if MarkVerified(p, "sri", nil, "2026-08-13", "") {
 		t.Error("verifying against no document must be refused")
 	}
-	if MarkVerified(p, "", "sha256:a", "2026-08-13", "") {
+	if MarkVerified(p, "sri", docAt("", "ACME-1 Rev K"), "2026-08-13", "") {
+		t.Error("a document whose revision the corpus never recorded cannot anchor a verification")
+	}
+	if MarkVerified(p, "", docAt("sha256:a", "ACME-1 Rev K"), "2026-08-13", "") {
 		t.Error("an anonymous verification cannot be questioned and must be refused")
 	}
 	if p.GetVerification() != nil {
+		t.Error("a refused verification must leave no record")
+	}
+}
+
+// The snapshot is what makes a stale fact actionable: the corpus overwrites SourceDoc on a re-seed,
+// so the revision that was CHECKED survives only if it was frozen beside the hash it was taken with.
+func TestVerificationSnapshotsTheRevisionItCheckedAgainst(t *testing.T) {
+	spec := &parampb.PartSpec{
+		Mpn:  "ACME-1",
+		Docs: []*parampb.SourceDoc{docAt("sha256:relK", "SCES650K - REVISED JANUARY 2023")},
+		Parameters: []*parampb.Parameter{
+			{Symbol: "VCC", Prov: &parampb.ParamProvenance{DocRef: "d", Confidence: 0.9}},
+		},
+	}
+	p := spec.Parameters[0]
+	if !MarkVerifiedIn(spec, p, "sri", "2026-08-13", "") {
+		t.Fatal("verifying against the spec's own document must succeed")
+	}
+	if got := p.GetVerification().GetDocRevision(); got != "SCES650K - REVISED JANUARY 2023" {
+		t.Errorf("revision snapshot = %q, want the title as it stood at verification time", got)
+	}
+
+	// The vendor ships rev L and the corpus re-seeds: BOTH SourceDoc fields are overwritten.
+	spec.Docs[0].ContentHash = "sha256:relL"
+	spec.Docs[0].Title = "SCES650L - REVISED MARCH 2026"
+
+	if got := VerificationOfIn(spec, p); got != Stale {
+		t.Fatalf("state = %q, want %q", got, Stale)
+	}
+	// The whole point: a re-confirm task can name both sides.
+	if got := p.GetVerification().GetDocRevision(); got != "SCES650K - REVISED JANUARY 2023" {
+		t.Errorf("the re-seed overwrote the snapshot (%q); it must survive the event that makes it interesting", got)
+	}
+}
+
+// A doc_ref naming no document in the spec cannot be verified against: there is nothing to have
+// checked, and inventing an empty anchor would produce a record that can never go stale.
+func TestMarkVerifiedInRefusesAnUnresolvableDocRef(t *testing.T) {
+	spec := &parampb.PartSpec{
+		Mpn:  "ACME-1",
+		Docs: []*parampb.SourceDoc{docAt("sha256:relK", "SCES650K")},
+		Parameters: []*parampb.Parameter{
+			{Symbol: "VCC", Prov: &parampb.ParamProvenance{DocRef: "nosuchdoc", Confidence: 0.9}},
+		},
+	}
+	if MarkVerifiedIn(spec, spec.Parameters[0], "sri", "2026-08-13", "") {
+		t.Error("a value citing a document the spec does not have must not be verifiable")
+	}
+	if spec.Parameters[0].GetVerification() != nil {
 		t.Error("a refused verification must leave no record")
 	}
 }
@@ -109,14 +167,17 @@ func TestStaleVerificationsAfterARevision(t *testing.T) {
 // is a false alarm on a shape that is ordinary rather than exotic.
 func TestStalenessIsPerDocumentNotPerSpec(t *testing.T) {
 	ds := &parampb.Parameter{Symbol: "VCC", Prov: &parampb.ParamProvenance{DocRef: "ds", Confidence: 0.9}}
-	MarkVerified(ds, "sri", "sha256:relL", "2026-08-13", "")
 	an := &parampb.Parameter{Symbol: "RPULLUP", Prov: &parampb.ParamProvenance{DocRef: "an", Confidence: 0.9}}
-	MarkVerified(an, "sri", "sha256:note1", "2026-08-13", "")
 
 	spec := &parampb.PartSpec{Mpn: "ACME-1", Parameters: []*parampb.Parameter{ds, an}, Docs: []*parampb.SourceDoc{
 		{Id: "ds", Title: "ACME-1 datasheet", ContentHash: "sha256:relL"},
 		{Id: "an", Title: "ACME-1 application note", ContentHash: "sha256:note1"},
 	}}
+	for _, p := range spec.Parameters {
+		if !MarkVerifiedIn(spec, p, "sri", "2026-08-13", "") {
+			t.Fatalf("%s: verifying against its own cited document must succeed", p.GetSymbol())
+		}
+	}
 	if got := StaleVerifications(spec); len(got) != 0 {
 		t.Fatalf("both values match their own document's revision, nothing is stale: %d", len(got))
 	}

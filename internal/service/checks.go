@@ -303,8 +303,9 @@ func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitat
 		Page:         c.Page,
 		Section:      c.Section,
 		Method:       c.Method,
-		Confidence:   c.Confidence,
-		Verification: c.Verification,
+		Confidence:       c.Confidence,
+		Verification:     c.Verification,
+		VerifiedRevision: c.VerifiedRevision,
 	}
 }
 

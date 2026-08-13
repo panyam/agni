@@ -187,9 +187,14 @@ type DatasheetCitation struct {
 	// anyone checked. "stale" is the load-bearing one: a human confirmed it against a revision the
 	// corpus no longer holds, so the confirmation is not evidence about the document in hand.
 	// Empty for a citation carrying no parameter (a pin declaration, a relation bound).
-	Verification  string `protobuf:"bytes,7,opt,name=verification,proto3" json:"verification,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Verification string `protobuf:"bytes,7,opt,name=verification,proto3" json:"verification,omitempty"`
+	// The document identity as printed when the verification was performed
+	// (Verification.doc_revision), so a stale citation can name the revision that WAS checked rather
+	// than only the one the corpus now holds. Display only, never compared; see the field's own
+	// comment in param.proto. Empty when nothing was ever verified.
+	VerifiedRevision string `protobuf:"bytes,8,opt,name=verified_revision,json=verifiedRevision,proto3" json:"verified_revision,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *DatasheetCitation) Reset() {
@@ -267,6 +272,13 @@ func (x *DatasheetCitation) GetConfidence() float64 {
 func (x *DatasheetCitation) GetVerification() string {
 	if x != nil {
 		return x.Verification
+	}
+	return ""
+}
+
+func (x *DatasheetCitation) GetVerifiedRevision() string {
+	if x != nil {
+		return x.VerifiedRevision
 	}
 	return ""
 }
@@ -2044,7 +2056,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x10\n" +
 	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x15\n" +
 	"\x06net_id\x18\x04 \x01(\tR\x05netId\x12\x15\n" +
-	"\x06bus_id\x18\x05 \x01(\tR\x05busId\"\xc8\x01\n" +
+	"\x06bus_id\x18\x05 \x01(\tR\x05busId\"\xf5\x01\n" +
 	"\x11DatasheetCitation\x12\x10\n" +
 	"\x03doc\x18\x01 \x01(\tR\x03doc\x12\x17\n" +
 	"\adoc_ref\x18\x02 \x01(\tR\x06docRef\x12\x12\n" +
@@ -2054,7 +2066,8 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\n" +
 	"confidence\x18\x06 \x01(\x01R\n" +
 	"confidence\x12\"\n" +
-	"\fverification\x18\a \x01(\tR\fverification\"\x80\x03\n" +
+	"\fverification\x18\a \x01(\tR\fverification\x12+\n" +
+	"\x11verified_revision\x18\b \x01(\tR\x10verifiedRevision\"\x80\x03\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x121\n" +
