@@ -1,8 +1,7 @@
 # Rung 11: the answered floor holds while the parameter corpus is in place.
 fixture: examples/tutorial-project
 script: |
-  agni review designs/gateway --min-answered 13 > /dev/null 2>&1
-  echo $?
-show: |
   agni review designs/gateway --min-answered 13
-  echo $?
+# The lesson is the exit code, not the report.
+capture: none
+exit: true

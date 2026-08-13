@@ -1,13 +1,9 @@
 # Rung 11: the same checklist after the parameter corpus moves away. DESTRUCTIVE — the `mv` is the
-# whole point of the lesson, and it is safe because every run gets a scratch copy of the fixture.
-#
-# Only the header line is shown: the page is making a point about two numbers, and the per-area table
-# below it belongs to rung 9. Filtering here rather than in the page is why the spec is a file and not
-# an inline command — the plumbing stays out of the tutorial.
+# lesson, and it is safe because every run gets a scratch copy of the fixture.
 fixture: examples/tutorial-project
 script: |
   mv params params-old
-  agni review designs/gateway --coverage 2>/dev/null | sed -n '5p'
-show: |
-  mv params params-old
   agni review designs/gateway --coverage
+# The two leading numbers are what this rung is about; the per-area table belongs to rung 9. Selected
+# by SHAPE rather than by line number, so adding a line to the rollup cannot silently show the wrong one.
+match: '^\*\*.*covered'

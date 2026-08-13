@@ -3,10 +3,12 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"sync"
@@ -92,6 +94,30 @@ type runSpec struct {
 	// Script is the shell to run. A shell rather than an argv because the transcripts show `echo $?`
 	// to teach exit codes, and some pipe through `head`.
 	Script string `yaml:"script"`
+	// Capture selects which stream the block shows: "stdout" (default), "stderr", "both", or "none"
+	// for a lesson that is only about the exit code.
+	//
+	// A field rather than a shell redirect because the redirect was the thing making specs fragile.
+	// Resolution notes and a gate's message share stderr, so a spec that wanted the message was writing
+	// `> /dev/null 2>/tmp/err` and then grepping a temp file — plumbing that had to be re-derived every
+	// time and that `show` then had to hide.
+	Capture string `yaml:"capture"`
+	// Exit appends "exit N" to the block, for the rungs whose lesson IS the exit code.
+	//
+	// It replaces `echo $?`, which only worked because the runner used a shell, and which forced the
+	// preceding command to redirect its real output away to keep the block small.
+	Exit bool `yaml:"exit"`
+	// Match keeps only the lines matching this RE2 pattern, empty to keep everything.
+	//
+	// It replaces positional filtering. A spec once said `sed -n '5p'` to pull one line out of a
+	// coverage rollup, which is correct until that output gains a line and then silently shows the
+	// wrong one — the exact failure mode this whole mechanism exists to remove, reintroduced in the
+	// tool meant to prevent it. A pattern selects what the lesson is ABOUT rather than where it
+	// happened to sit.
+	//
+	// Matching nothing is an ERROR, not an empty block. A filter that stops matching has to say so:
+	// silently rendering nothing is how a page ends up teaching from a blank space.
+	Match string `yaml:"match"`
 	// Show is the command as the READER should see it, defaulting to Script.
 	//
 	// It exists because the page used to hand-write the command in its own fence above the generated
@@ -203,7 +229,12 @@ func inputHash(spec []byte, fixture string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil))[:16], nil
 }
 
-// execute runs the spec's script in a scratch copy of its fixture, with a freshly built agni on PATH.
+// execute runs the spec's script in a scratch copy of its fixture and applies the spec's capture
+// rules, returning the block body.
+//
+// The stream selection, exit code and line filter are applied HERE rather than by shell plumbing in
+// the script. That is the whole point of them being fields: a spec says what the lesson is about, and
+// the fragile mechanics of getting there are written once, in Go, where they can be tested.
 func execute(spec runSpec) (string, error) {
 	bin, err := buildAgni()
 	if err != nil {
@@ -221,21 +252,72 @@ func execute(spec runSpec) (string, error) {
 			return "", fmt.Errorf("copying fixture: %v: %s", err, out)
 		}
 	}
-	// A SHELL is needed: the transcripts use echo $? to teach exit codes and some pipe through head.
-	// The script is checked-in yaml from this repo own content tree, never input from elsewhere, so
-	// there is no injection boundary: anyone who can edit a run spec can already edit this file.
+	// A SHELL is still needed: a lesson may be several steps (rung 11 moves a directory before running
+	// anything), and those steps are the tutorial's content rather than plumbing. The script is
+	// checked-in yaml from this repo own content tree, never input from elsewhere, so there is no
+	// injection boundary: anyone who can edit a run spec can already edit this file.
 	cmd := exec.Command("sh", "-c", spec.Script)
 	cmd.Dir = work
 	cmd.Env = append(os.Environ(), "PATH="+filepath.Dir(bin)+string(os.PathListSeparator)+os.Getenv("PATH"))
-	var stdout strings.Builder
+	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
-	// STDOUT only. Resolution notes ("reading gateway.edn, the entry design.yaml declares") go to
-	// stderr precisely so a redirected report stays clean, and the pages do not show them.
-	//
-	// The exit status is ignored: several rungs exist to demonstrate a gate TRIPPING, so a non-zero
-	// exit is the lesson rather than a failure.
-	_ = cmd.Run()
-	return stdout.String(), nil
+	cmd.Stderr = &stderr
+	// The exit status is not an error here: several rungs exist to demonstrate a gate TRIPPING, so a
+	// non-zero exit is the lesson.
+	runErr := cmd.Run()
+
+	var body string
+	switch spec.Capture {
+	case "", "stdout":
+		body = stdout.String()
+	case "stderr":
+		body = stderr.String()
+	case "both":
+		body = stdout.String() + stderr.String()
+	case "none":
+		// A rung whose lesson IS the exit code shows no report. Expressed as a capture rather than by
+		// filtering everything out, because "keep only the lines matching nothing" is the sort of idiom
+		// that reads as a mistake and gets helpfully "fixed" later.
+		body = ""
+	default:
+		return "", fmt.Errorf("unknown capture %q (want stdout, stderr or both)", spec.Capture)
+	}
+	if spec.Match != "" {
+		re, err := regexp.Compile(spec.Match)
+		if err != nil {
+			return "", fmt.Errorf("match %q: %w", spec.Match, err)
+		}
+		var kept []string
+		for _, l := range strings.Split(strings.TrimRight(body, "\n"), "\n") {
+			if re.MatchString(l) {
+				kept = append(kept, l)
+			}
+		}
+		if len(kept) == 0 {
+			return "", fmt.Errorf("match %q selected no lines; the output it filtered has changed shape", spec.Match)
+		}
+		body = strings.Join(kept, "\n") + "\n"
+	}
+	if spec.Exit {
+		body = strings.TrimRight(body, "\n")
+		if body != "" {
+			body += "\n"
+		}
+		body += fmt.Sprintf("exit %d\n", exitStatus(runErr))
+	}
+	return body, nil
+}
+
+// exitStatus extracts a process exit code, 0 when it succeeded.
+func exitStatus(err error) int {
+	if err == nil {
+		return 0
+	}
+	var ee *exec.ExitError
+	if errors.As(err, &ee) {
+		return ee.ExitCode()
+	}
+	return -1
 }
 
 // buildAgni compiles the CLI once per process into a cached location.
