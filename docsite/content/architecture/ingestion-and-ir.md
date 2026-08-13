@@ -209,6 +209,41 @@ Two mechanisms keep the schema from drifting toward whatever format is read most
 1. **The promotion rule.** A field enters the semantic layer only once a *second* format's reader would populate it. Until then it lives in the `attributes` map or the fidelity layer. This blocks both EDIF-shaped fields and speculative ones, and keeps the IR genuinely format-neutral: no reader adds a field another format could not fill.
 2. **Reader reconciliation.** Every new reader reconciles its concepts against the cross-format map before adding fields. A concept the map missed updates the map. A key that recurs in `attributes` across two readers becomes a promotion candidate. A first-class rename updates the proto and the map together. This is how new concepts introduced by new formats get absorbed over time instead of accreting as one-off fields.
 
+## Derived fields, and the tiers that fill them
+
+Some fields no reader populates. A net's role (rail / ground / feedback) and a component's device
+class are *derived* from the already-read IR by a shared, format-neutral pass, so every format gets
+them the same way rather than each reader inventing its own answer.
+
+Those passes originally all ran at ingestion, and the rule was one shared pass per field. That
+assumed everything a derived field needs is available at read time. It stopped being true when the
+datasheet tier arrived: seeded parameters attach at model construction, *after* the read, so a field
+derivable from a vendor's pin table cannot be filled by an ingestion pass at all.
+
+So a derived field is now filled by **one pass per evidence tier**, under two conditions that keep
+the original guarantees intact.
+
+**The field records which tier established each value.** `ir.Net.roles` is the worked example: each
+role carries a `RoleSource`, so a role read off a naming convention is distinguishable from one the
+source format declared and from one a datasheet's pin function established. Without that the tiers
+union into a flat set and "how do we know this" stops being answerable at the point of use, which is
+what made a naming convention and a vendor fact look identical for as long as they did.
+
+**A later tier may only add, never remove or downgrade.** This is what makes admitting a tier safe:
+switching one on can reveal more, and can never cost a value an earlier tier would have found. So a
+design read without the datasheet tier classifies exactly as it did before that tier existed, and no
+tier's absence can silently narrow an answer.
+
+The two instances today are `enrichClassesFromParams` (a datasheet's declared device class) and
+`enrichRolesFromParams` (a datasheet's pin functions establishing rail and ground). Both live where
+the params tier does, at model construction. The rule they share, including what a duplicate means,
+has one home in `classify.AddNetRole`.
+
+Why it is worth the machinery: a net was a rail because of its NAME, and the built-in vocabulary is
+start-anchored, so a project naming rails function-first had to declare its own lexicon or the engine
+could not see its rails. On a real 1700-net board that was the difference between 13 rails and 91,
+with no error and no warning. A vendor pin table settles it without consulting any name.
+
 ## Versioning
 
 `Design.ir_version` and `Design.source_format` are stamped on every document. Proto3 retains unknown fields on parse, which together with the `attributes` map and the fidelity fragments gives forward-compatible carry-through across schema changes.

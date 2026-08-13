@@ -163,6 +163,20 @@ use it at all. The same measurement then found a live silent bug in the opposite
 shape on a real design before designing to it; it is one query and it has twice changed what was
 worth building.
 
+**A feature no fixture EXERCISES cannot fail a test, and that reads exactly like working.** The
+datasheet role tier shipped against a corpus where not one seeded spec declared pins, so the pass had
+no evidence to read: every test passed, the real boards were unchanged, and nothing could have gone
+red if it were wrong. The fix was to give the shipped fixture the data the feature consumes, which is
+what turned it from unfalsifiable into demonstrable (0 rails to 3 on the tutorial netlist). Before
+believing a green run, check that some committed fixture actually carries the input.
+
+**A long-lived ticket's PREMISE erodes silently, so re-verify it against the code before planning.**
+Three substantial issues this month had aged out before anyone picked them up: one was mostly shipped
+already, one rested on a convention the only real boards contradicted, and one had landed in pieces
+under other work. Nothing was wrong with any of them when filed; adjacent work moved underneath and
+the ticket text kept asserting the old world. Read the comment thread, not just the body, and check
+the claims against the tree. It costs minutes and has now saved three wasted PRs.
+
 ## Docsite wiring
 
 **FOUR edits for a new page in an existing section, FIVE for a new SECTION.** A page needs the file,
@@ -209,6 +223,15 @@ rung arguing that narrowing a gate makes a board pass (it reveals the next failu
 query` printing an absolute host path in provenance, and two rungs whose numbers had drifted. Treat a
 mismatch as a question, never as "regenerate and move on" — regenerating blesses whatever the code
 currently does, which is right when the doc drifted and wrong when the code regressed.
+
+**Changing the tutorial FIXTURE can invalidate a rung's lesson, and the fix is a judgement about what
+the rung teaches.** Seeding pin functions into the tutorial's two synthetic specs made rung 4's
+"without this project's naming vocabulary, only GND is a rail" false, because the datasheet then
+classified those rails regardless. Both statements were true; they just could not share a run. The
+rung now moves the params corpus aside along with `conventions.yaml` so it isolates NAMING as it
+intends, and the page says why. Regenerating instead would have shipped a page contradicting its own
+output. When a fixture edit changes a capture's CONTENT rather than its stamp, find which page reads
+it and decide what that page is for.
 
 **Style raw SVG through `--accent-color` and `currentColor`, never a literal.** `static/css/main.css`
 defines the palette for both themes, and the docsite has a dark mode. A hardcoded hex reads fine in
