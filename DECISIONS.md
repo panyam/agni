@@ -573,3 +573,38 @@ of claim is.
 **Reopen if** a type is genuinely never leaving the process. The cost of proto is real (regeneration
 on both runtimes, presence semantics), and paying it for something that will only ever be a Go
 intermediate is waste.
+
+## A stale verification is untrustworthy data, not trustworthy data
+
+**Question.** The review layer's ratification axis decides whether a fail ran on data worth acting on.
+It judged by extraction method and confidence. Once a value can carry a human verification pinned to a
+document revision, what does that axis do when the document has moved past the revision that was
+checked? Treating it as untrustworthy demotes every finding resting on a revised document to
+Provisional, which is safe and potentially very noisy.
+
+**Answer. Stale and unknown are both untrustworthy.** A verification is a claim about a specific
+revision. Once the corpus holds a different one, the claim is not evidence about the document in hand,
+and the honest report is "someone checked this, but not this version of it" — which is exactly what
+Provisional means here: a re-confirm task, not a defect and not a clean pass. `unknown` (a
+verification exists but no revision is recorded to compare against) goes the same way, because a
+caller that cannot check must not be told the answer is fine.
+
+The noise concern is real and it is the point rather than a side effect. A vendor revision genuinely
+does invalidate the evidence under every value read from that document, and re-confirming a known row
+against a known page is a much smaller job than finding it in the first place. Provisional is already
+the bucket for exactly this: work a human owes the corpus.
+
+**What made it non-optional.** `param.MarkVerified` raises `confidence` to 1.0 to keep the older
+signal in step, and nothing ever lowers it. So a confidence-only test does not merely miss staleness,
+it INVERTS it: a verification of a superseded revision scores as the most trustworthy data in the
+system precisely because a person once checked it. Leaving the axis alone was not a neutral choice.
+
+**What is deliberately unaffected.** A value with no verification record at all reads `unverified` and
+is judged on method and confidence exactly as before. Anything else would demote every hand-seeded
+fixture in the corpus the moment this landed, and "nobody has verified this" was never a claim that a
+document revision could falsify.
+
+**Reopen if** a deployment finds re-confirmation cost dominates. The upgrade is diff-aware
+invalidation: if the cited table's own content hash did not change across the revision, carry the
+verification forward. `derive.Patch` already keys on a table content hash, so the input exists. That is
+strictly harder and should be driven by a real corpus, not designed against a guess.

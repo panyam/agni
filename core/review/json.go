@@ -71,6 +71,10 @@ type jsonDatasheet struct {
 	Section    string  `json:"section,omitempty"`
 	Method     string  `json:"method,omitempty"`
 	Confidence float64 `json:"confidence,omitempty"`
+	// Verification: "unverified" | "verified" | "stale" | "unknown". Omitted when a citation has no
+	// parameter behind it. A consumer reading this report to decide whether to trust a fail wants
+	// "stale" to stand out, since confidence alone reports such a value as fully trustworthy.
+	Verification string `json:"verification,omitempty"`
 }
 
 // RenderJSON emits the report as indented JSON with the full finding list for every item. It is the
@@ -137,12 +141,13 @@ func datasheetProv(f check.Finding) []jsonDatasheet {
 			continue
 		}
 		out = append(out, jsonDatasheet{
-			Doc:        c.Doc,
-			DocRef:     c.DocRef,
-			Page:       c.Page,
-			Section:    c.Section,
-			Method:     c.Method,
-			Confidence: c.Confidence,
+			Doc:          c.Doc,
+			DocRef:       c.DocRef,
+			Page:         c.Page,
+			Section:      c.Section,
+			Method:       c.Method,
+			Confidence:   c.Confidence,
+			Verification: c.Verification,
 		})
 	}
 	return out

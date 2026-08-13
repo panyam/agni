@@ -1,14 +1,22 @@
 package check
 
 import (
+	"github.com/panyam/agni/datasheet/param"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // DatasheetCitationOf builds the structured datasheet Citation for one seeded parameter: it resolves
-// the SourceDoc title from the parameter's doc_ref and copies the page, section, method, and
-// confidence. It is the shared core of both the string Citation() and the typed Finding.DatasheetProv.
+// the SourceDoc title from the parameter's doc_ref, copies the page, section, method, and confidence,
+// and derives the verification state against the revision that SourceDoc records. It is the shared
+// core of both the string Citation() and the typed Finding.DatasheetProv.
+//
+// Verification is derived here rather than stored on the finding because it is a fact about the
+// document as the corpus holds it right now. Computing it at citation time means a re-seed changes
+// every subsequent answer without anything having to be re-stamped.
 func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *DatasheetCitation {
-	return DatasheetCitationOfProv(spec, p.GetProv())
+	c := DatasheetCitationOfProv(spec, p.GetProv())
+	c.Verification = string(param.VerificationOfIn(spec, p))
+	return c
 }
 
 // DatasheetCitationOfProv is the same build from a bare ParamProvenance, for the rows that carry one

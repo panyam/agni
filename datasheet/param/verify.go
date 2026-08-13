@@ -52,6 +52,32 @@ func VerificationOf(p *parampb.Parameter, currentDocHash string) VerificationSta
 	return Verified
 }
 
+// VerificationOfIn is VerificationOf with the current revision resolved from the spec the parameter
+// belongs to, by following its provenance doc_ref to that SourceDoc's content_hash.
+//
+// This is the form nearly every caller wants, and it exists because the alternative is worse than
+// verbose. A caller that has to source the hash itself has to know where a corpus keeps documents,
+// which puts filesystem knowledge on the check path and gives every call site its own chance to pass
+// the wrong document's hash. Here the join is the one the data already states: a value cites a doc_ref,
+// and that SourceDoc says which revision the corpus holds.
+//
+// An unresolvable doc_ref, or a SourceDoc with no recorded hash, yields Unknown for a verified value
+// rather than Verified. A missing comparison input is a missing answer, never a passing one.
+func VerificationOfIn(spec *parampb.PartSpec, p *parampb.Parameter) VerificationState {
+	return VerificationOf(p, DocContentHash(spec, p.GetProv().GetDocRef()))
+}
+
+// DocContentHash resolves a doc_ref to the content hash of the revision the spec describes; "" when
+// the id names no doc or the corpus recorded none, which every caller must read as unknown.
+func DocContentHash(spec *parampb.PartSpec, docRef string) string {
+	for _, d := range spec.GetDocs() {
+		if d.GetId() == docRef {
+			return d.GetContentHash()
+		}
+	}
+	return ""
+}
+
 // MarkVerified records that a person checked a value against a specific revision.
 //
 // It also raises provenance confidence to 1.0, which is not decoration: the pre-existing convention
@@ -77,15 +103,20 @@ func MarkVerified(p *parampb.Parameter, by, docContentHash, at, note string) boo
 }
 
 // StaleVerifications lists the parameters of a spec whose verification was performed against a
-// different revision than the one in hand, so a portal can offer "re-confirm these" after a document
-// updates rather than waiting for someone to notice.
+// different revision than the one the spec now describes, so a portal can offer "re-confirm these"
+// after a document updates rather than waiting for someone to notice.
+//
+// Each parameter is compared against the document IT cites, not against one hash for the whole spec.
+// That distinction is not hypothetical: a spec routinely carries a datasheet and an app note, and
+// judging every parameter against a single revision reports every value citing the OTHER document as
+// stale the moment either one moves.
 //
 // A spec with nothing verified returns nothing, which is the ordinary state of a freshly seeded
 // corpus and not a problem to report.
-func StaleVerifications(spec *parampb.PartSpec, currentDocHash string) []*parampb.Parameter {
+func StaleVerifications(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.GetParameters() {
-		if VerificationOf(p, currentDocHash) == Stale {
+		if VerificationOfIn(spec, p) == Stale {
 			out = append(out, p)
 		}
 	}

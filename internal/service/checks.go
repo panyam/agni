@@ -298,12 +298,13 @@ func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitat
 		return nil
 	}
 	return &checkspb.DatasheetCitation{
-		Doc:        c.Doc,
-		DocRef:     c.DocRef,
-		Page:       c.Page,
-		Section:    c.Section,
-		Method:     c.Method,
-		Confidence: c.Confidence,
+		Doc:          c.Doc,
+		DocRef:       c.DocRef,
+		Page:         c.Page,
+		Section:      c.Section,
+		Method:       c.Method,
+		Confidence:   c.Confidence,
+		Verification: c.Verification,
 	}
 }
 

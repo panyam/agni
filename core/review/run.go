@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 )
 
 // Outcome is how one checklist item resolved on a design. The states are honest along TWO axes
@@ -450,12 +451,25 @@ func bindsIntent(it Item, known func(ruleName string) bool) bool {
 // trustworthy finding among several makes the item a real Fail — they are independent claims and one
 // standing up is enough. Within a finding, the citations are conjunctive evidence, so all of them
 // have to stand up.
+// A citation also fails the floor when a human verification exists but no longer applies to the
+// revision the corpus holds (Stale), or cannot be checked against one (Unknown). This case CANNOT be
+// caught by the confidence test above, and that is the whole reason it is written out separately:
+// param.MarkVerified raises confidence to 1.0 to keep the older signal in step, and that 1.0 stays
+// after the vendor revises the document. Judging on confidence alone would therefore treat a
+// verification of a superseded revision as the most trustworthy evidence in the system, which
+// inverts what the verification record was added to express. A value nobody ever verified is not
+// affected: it has no verification record, reads as Unverified, and is judged on its confidence
+// exactly as before.
 func isUnratified(f check.Finding, floor float64) bool {
 	for _, dp := range f.DatasheetProv {
 		if dp == nil {
 			continue
 		}
 		if dp.Method == "mock" || dp.Confidence < floor {
+			return true
+		}
+		switch param.VerificationState(dp.Verification) {
+		case param.Stale, param.Unknown:
 			return true
 		}
 	}

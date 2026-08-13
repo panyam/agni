@@ -63,6 +63,45 @@ datasheets and the extracted database inside their own boundary, so locators are
 meaningful within one deployment and the schema carries no assumption of a shared global
 document store.
 
+### Verification, and why it expires
+
+Provenance says how a value was PRODUCED. It cannot say whether anyone has since agreed with it, and
+an extractor can never write that claim on its own behalf. `Parameter.verification` is the separate
+record: who checked the value, when, and against WHICH REVISION.
+
+The revision is the whole reason this is a message rather than a boolean. A value checked against
+rev K is not thereby true of rev L, and a verification that survives a revision is worse than no
+verification at all. An unverified value is honest about what it is. A stale-verified one is a
+confident wrong answer with a person's name attached, and it is trusted precisely because someone
+did once check it.
+
+So staleness is DERIVED, never stored. `SourceDoc.content_hash` records the revision the corpus
+currently holds, `Verification.doc_content_hash` records the one that was checked, and
+`param.VerificationOfIn` compares them on every read:
+
+| State | Meaning |
+|---|---|
+| `unverified` | Nobody has confirmed this value. The ordinary state of anything an extractor produced. |
+| `verified` | A person confirmed it against the revision the corpus holds. |
+| `stale` | A person confirmed it against a DIFFERENT revision. Needs re-confirming, which is much smaller than finding it again. |
+| `unknown` | A verification exists but no current revision is recorded, so drift cannot be ruled out. |
+
+`unknown` is deliberately not folded into `verified`. A caller that cannot check must not be told the
+answer is fine, which is the same discipline the outcome vocabulary applies to a check that could not
+run.
+
+This is the mechanism `derive.Patch` already uses one layer over. A patch is keyed by content hash,
+so a revision invalidates it by construction: it stops matching and the manifest reports it
+unapplied. Nothing decays silently because the key stops resolving. Facts now behave the same way,
+and the invalidation happens at the moment a re-seed rewrites `SourceDoc.content_hash` rather than
+when someone remembers to go looking.
+
+Two consequences worth knowing. Each parameter is judged against the document IT cites, not against
+one revision for the whole spec, because a spec routinely carries a datasheet and an application note
+and revising one must not invalidate values read from the other. And the hash lives on `SourceDoc`
+rather than being resolved from `locator` on demand, because a check must not do I/O to learn whether
+its evidence is current (C22) and the engine runs in hosts with no filesystem at all.
+
 ### Comparison semantics
 
 Values, units, and symbols are STORED as printed, so the comparison layer meets vendor
@@ -224,9 +263,12 @@ A field earns its place only when a second producer would populate it, and for p
 - **No graph or curve data.** Derating and SOA curves are real and valuable, but they are the
   harder extraction and their shape (sampled curves, fitted models) should be designed against
   real extractor output rather than guessed.
-- **No verification-workflow state** (reviewed-by, approved). That workflow belongs to the
-  extraction pipeline and store. Until it exists, `method` and `confidence` carry what the
-  schema needs, and anything extra goes in `attributes`.
+- **No verification WORKFLOW** (assignment, review queues, approval gates). That belongs to the
+  extraction pipeline and store, and only the workflow's OUTCOME is in the contract: `Verification`
+  records that a person stood behind a value against a stated revision (see "Verification, and why it
+  expires" above). Who was asked to check it, what state their review is in, and who may approve are
+  all workflow, and stay out. The line is that a fact carries what a reader needs in order to decide
+  whether to trust it, and nothing about how the checking was organised.
 - **No package GEOMETRY.** `Package` carries an id, the name as printed, and the orderable-MPN
   suffix, which is what pin numbering needs and nothing more.
   Land patterns, body dimensions, and package-compatibility checks join through the design IR's
@@ -453,6 +495,12 @@ incremental.
 - Derived confidence is a constant 0.9, below the human ceiling. The verification queue
   upgrades confirmed rows to `method: "human-verified"`, confidence 1, and demotions become
   patches.
+- That confidence upgrade is a SECOND signal, not the record itself. `param.MarkVerified` writes the
+  `Verification` and raises confidence to 1 alongside it, so a consumer reading only the older float
+  is not misled while the explicit state becomes available. But confidence cannot expire and a
+  verification can, so anything deciding whether to TRUST a value reads the verification state.
+  Judging on the float alone rates a verification of a superseded revision as the most trustworthy
+  data in the system, for the reason above: the 1.0 stays after the document moves.
 
 ### The manifest, coverage accounting
 
@@ -705,6 +753,14 @@ datasheet citation (document revision, page, table, method, confidence) in the m
 rule is already a right-to-left query: it starts from the design's supply net and interrogates
 the datasheet, citing both sides. The demand-driven scheduling model above generalizes that one
 shape rather than introducing a new one.
+
+A citation also carries the value's verification state, derived at citation time from the revision
+its `SourceDoc` records. That is what lets the review layer's ratification axis tell a fail backed by
+a confirmed value apart from one backed by a confirmation of a superseded revision: `isUnratified`
+treats `stale` and `unknown` as untrustworthy data, so the item reads Provisional (a re-confirm task)
+rather than a hard Fail. Deriving it at citation time rather than stamping it on the finding means a
+re-seed changes every subsequent answer with nothing to re-stamp. A value nobody verified is
+unaffected and is still judged by method and confidence alone.
 
 The second rule, `cap-voltage`, is the first spec-authored datasheet rule with no Go twin (see
 [Rules and checks](../rules-and-checks/) for the spec-and-twin model). Its body is a
