@@ -183,11 +183,38 @@ func TestPinTrackingUnstatedModalityIsReportedInconclusive(t *testing.T) {
 // name encodes a level would be compared as though it were a supply rail. The name tier reads a name
 // only after the net classifies as a rail; the connectivity tier is unaffected because it reads no
 // name at all.
+//
+// THE SPEC'S PIN FUNCTIONS ARE STRIPPED ON PURPOSE, to isolate the name tier. With them present the
+// datasheet establishes the rail role directly (agni issue 280 phase 2) and the name is never
+// consulted, which is correct but tests the other tier. The original fixture here wired a
+// signal-NAMED net to a pin the spec types as a supply input, so it only read as a signal while the
+// name was the sole evidence; the case where a datasheet overrules the name is asserted below.
 func TestPinTrackingNameTierRequiresBothNetsToBeRails(t *testing.T) {
-	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED),
-		"U3_12_U7_4_3V3", "+1V8")
+	spec := trackSpec("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED))
+	for _, p := range spec.Pins {
+		p.Function = parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED
+	}
+	m := check.NewModelWithParams(xlatDesign("ACME-XLAT", "U3_12_U7_4_3V3", "+1V8"), nil,
+		param.ParamSet{"ACME-XLAT": spec})
+
 	if fs := pinTrackingViolated.Eval(m); len(fs) != 0 {
 		t.Errorf("a signal net carrying a voltage token is not a rail nominal; want 0 findings, got %+v", fs)
+	}
+}
+
+// The other side of that, and the point of the datasheet evidence tier: a net whose NAME reads as a
+// signal is a rail anyway when it feeds a terminal the vendor types as a power input. The name is a
+// claim about spelling; the pin function is evidence about the circuit, and it wins.
+func TestPinTrackingDatasheetEvidenceBeatsASignalLookingName(t *testing.T) {
+	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED),
+		"U3_12_U7_4_3V3", "+1V8")
+
+	fs := pinTrackingViolated.Eval(m)
+	if len(fs) != 1 {
+		t.Fatalf("the spec types both terminals as supply inputs, so both nets are rails; want 1 finding, got %d: %+v", len(fs), fs)
+	}
+	if !strings.Contains(fs[0].Message, "1.5") {
+		t.Errorf("the comparison should proceed on both rails, got %q", fs[0].Message)
 	}
 }
 

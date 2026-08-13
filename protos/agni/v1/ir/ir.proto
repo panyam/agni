@@ -340,6 +340,17 @@ enum RoleSource {
   // than a convention: the tool that wrote the file asserted it, rather than it being inferred from
   // spelling.
   ROLE_SOURCE_DECLARED = 2;
+  // A DATASHEET pin function established it: the net reaches a terminal a vendor types as a power
+  // input, a power output, or ground, so what the net carries follows from the silicon rather than
+  // from anything anyone named. The only source here that is evidence about the CIRCUIT instead of a
+  // claim about the design's spelling or annotation, which is why it ranks highest.
+  //
+  // Ranking it above DECLARED is a judgement rather than a derivation. A format declaration is direct
+  // (it is about THIS net) while a datasheet function is inferential (this net touches a ground pin,
+  // so it is ground), but a declaration is a CAD tool's annotation that can go stale against the
+  // design while a vendor's pin table cannot. Ordering only decides which source is RECORDED when two
+  // establish the same role, never whether the role is present, so the cost of being wrong is small.
+  ROLE_SOURCE_DATASHEET = 3;
 }
 
 // NetRole is one role a net carries, with the evidence that established it. Two facts about the same

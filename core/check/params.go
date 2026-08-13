@@ -55,7 +55,91 @@ func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamP
 		}
 	}
 	m.enrichClassesFromParams()
+	m.enrichRolesFromParams()
 	return m
+}
+
+// enrichRolesFromParams adds net roles the DATASHEET establishes, the second evidence tier C9's
+// evidence-tier variant admits (agni issue 280). It is the sibling of enrichClassesFromParams and
+// runs for the same reason: the mpn map and the seeded specs only exist once a params tier is
+// attached, so this cannot happen in the ingestion pass that stamps the name-derived roles.
+//
+// WHAT MAKES IT WORTH DOING. Until now a net was a rail because of its NAME, and the built-in
+// vocabulary is start-anchored (VCC, VDD, +3V3), so a project naming rails function-first had to
+// declare its own lexicon or the engine could not see its rails at all. Measured on a real 1700-net
+// board that was the difference between 13 rails and 91. A datasheet pin function is evidence no
+// name can supply: a terminal the vendor types as a power input is fed by a supply, whatever anyone
+// called the net.
+//
+// ADDITIVE ONLY, which is what makes admitting a tier safe. A datasheet fact can never remove or
+// downgrade a role the name or the format established, so a design read WITHOUT --params classifies
+// exactly as it did before this existed, and adding a corpus can only ever reveal more rails. It is
+// also idempotent: building two models over one design merges rather than duplicating, because the
+// merge upgrades a role in place rather than appending.
+func (m *irModel) enrichRolesFromParams() {
+	fn := m.datasheetPinFunctions()
+	if len(fn) == 0 {
+		return
+	}
+	for _, n := range m.d.GetNets() {
+		for _, c := range n.GetConnections() {
+			role := roleForPinFunction(fn[c.GetComponentRef()+"\x00"+c.GetPinRef()])
+			if role == "" {
+				continue
+			}
+			classify.AddNetRole(n, role, ir.RoleSource_ROLE_SOURCE_DATASHEET)
+		}
+	}
+}
+
+// roleForPinFunction maps a vendor pin function onto the net role it evidences. A net reaching a
+// power INPUT or a power OUTPUT is a rail either way: one is fed by a supply, the other is driven as
+// one. Everything else (signal pins, passives, no-connects) evidences nothing about the net, which is
+// why the default is silence rather than a guess.
+func roleForPinFunction(f parampb.PinFunction) string {
+	switch f {
+	case parampb.PinFunction_PIN_FUNCTION_POWER_INPUT, parampb.PinFunction_PIN_FUNCTION_POWER_OUTPUT:
+		return NetRoleRail
+	case parampb.PinFunction_PIN_FUNCTION_GROUND:
+		return NetRoleGround
+	default:
+		return ""
+	}
+}
+
+// datasheetPinFunctions resolves every seeded component's design pins onto its spec pins ONCE, keyed
+// by "refDes\x00designator". Built up front rather than per net because the alternative is running
+// param.ResolvePin per net-connection, which on a board with a few thousand nets means repeating the
+// same per-component resolution thousands of times.
+//
+// A pin that does not resolve to exactly one spec pin contributes nothing. param.ResolvePin refuses
+// on an ambiguous name or a name/number disagreement, and a guessed terminal here would stamp a role
+// off the wrong pin's function.
+func (m *irModel) datasheetPinFunctions() map[string]parampb.PinFunction {
+	out := map[string]parampb.PinFunction{}
+	for _, c := range m.d.GetComponents() {
+		spec := m.PartSpec(c.RefDes)
+		if spec == nil || len(spec.GetPins()) == 0 {
+			continue
+		}
+		pkg := ""
+		if p := param.PackageForMPN(spec, m.ComponentMPN(c.RefDes)); p != nil {
+			pkg = p.GetId()
+		}
+		for _, pin := range m.Pins() {
+			if pin.Component.RefDes != c.RefDes {
+				continue
+			}
+			specPin, err := param.ResolvePin(spec, m.PinName(c.RefDes, pin.Designator), pin.Designator, pkg)
+			if err != nil {
+				continue
+			}
+			if f := specPin.GetFunction(); f != parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED {
+				out[c.RefDes+"\x00"+pin.Designator] = f
+			}
+		}
+	}
+	return out
 }
 
 // enrichClassesFromParams merges each component's datasheet-declared device class into its
