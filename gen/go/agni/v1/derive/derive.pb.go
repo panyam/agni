@@ -21,6 +21,76 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PinColumnAxis says what the SUB-COLUMNS under a pin table's banded "PIN" header
+// mean. It is declared by the recipe rather than inferred, and that is the whole
+// reason this field exists.
+//
+// A banded pin table looks identical whether its sub-columns are package codes
+// ("D, PW" | "RUT" | "YZT") or part variants ("ADS1113" | "ADS1114" | "ADS1115"),
+// and the two are semantically opposite: the first is per-package numbering of one
+// die, the second is three different parts sharing a pinout description. Inferring
+// from the header text was tried and rejected. Measured over a 63-document corpus,
+// the banded shape appears 44 times: six are variant columns, one is package
+// columns, and the rest carry no sub-columns at all. A rule keyed on "looks like a
+// short all-caps token" would therefore be fitted to a single example and would
+// silently mint packages named after part numbers on six others.
+//
+// UNSPECIFIED is the safe default and is NOT an error: the pins are still extracted,
+// they simply carry no PinNumber, and the run records a gap naming the columns it
+// declined to interpret. Silence never reads as coverage.
+type PinColumnAxis int32
+
+const (
+	PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED PinColumnAxis = 0
+	// Each sub-column is one package, or several when the header cell names several
+	// ("D, PW" is two packages sharing one column of numbers).
+	PinColumnAxis_PIN_COLUMN_AXIS_PACKAGE PinColumnAxis = 1
+	// Each sub-column is a part variant. The parameter contract has no per-variant
+	// pin numbering, so pins are emitted without numbers and the run gaps the columns.
+	PinColumnAxis_PIN_COLUMN_AXIS_VARIANT PinColumnAxis = 2
+)
+
+// Enum value maps for PinColumnAxis.
+var (
+	PinColumnAxis_name = map[int32]string{
+		0: "PIN_COLUMN_AXIS_UNSPECIFIED",
+		1: "PIN_COLUMN_AXIS_PACKAGE",
+		2: "PIN_COLUMN_AXIS_VARIANT",
+	}
+	PinColumnAxis_value = map[string]int32{
+		"PIN_COLUMN_AXIS_UNSPECIFIED": 0,
+		"PIN_COLUMN_AXIS_PACKAGE":     1,
+		"PIN_COLUMN_AXIS_VARIANT":     2,
+	}
+)
+
+func (x PinColumnAxis) Enum() *PinColumnAxis {
+	p := new(PinColumnAxis)
+	*p = x
+	return p
+}
+
+func (x PinColumnAxis) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PinColumnAxis) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_derive_derive_proto_enumTypes[0].Descriptor()
+}
+
+func (PinColumnAxis) Type() protoreflect.EnumType {
+	return &file_agni_v1_derive_derive_proto_enumTypes[0]
+}
+
+func (x PinColumnAxis) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PinColumnAxis.Descriptor instead.
+func (PinColumnAxis) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{0}
+}
+
 // Recipe is one doc-family's extraction rules: how to classify this family's tables
 // into limit kinds. It matches by document title (the vendor doc-number line the
 // producer read), never by content hash: a recipe covers a family of documents and
@@ -31,11 +101,17 @@ type Recipe struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// RE2 pattern over Document.title selecting the documents this recipe understands.
 	// An empty pattern matches nothing (a recipe must opt in).
-	DocTitlePattern string            `protobuf:"bytes,2,opt,name=doc_title_pattern,json=docTitlePattern,proto3" json:"doc_title_pattern,omitempty"`
-	Tables          []*TableRule      `protobuf:"bytes,3,rep,name=tables,proto3" json:"tables,omitempty"`
-	Attributes      map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	DocTitlePattern string       `protobuf:"bytes,2,opt,name=doc_title_pattern,json=docTitlePattern,proto3" json:"doc_title_pattern,omitempty"`
+	Tables          []*TableRule `protobuf:"bytes,3,rep,name=tables,proto3" json:"tables,omitempty"`
+	// Pin FUNCTION tables, which yield agni.v1.param.Pin and Package rather than
+	// Parameter. A separate list from `tables` rather than an axis on TableRule
+	// because TableRule.limit_kind is required and validated non-zero; making it
+	// optional to accommodate pins would weaken a live invariant, and "every
+	// TableRule yields parameters" is worth keeping true.
+	PinTables     []*PinTableRule   `protobuf:"bytes,4,rep,name=pin_tables,json=pinTables,proto3" json:"pin_tables,omitempty"`
+	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Recipe) Reset() {
@@ -85,6 +161,13 @@ func (x *Recipe) GetDocTitlePattern() string {
 func (x *Recipe) GetTables() []*TableRule {
 	if x != nil {
 		return x.Tables
+	}
+	return nil
+}
+
+func (x *Recipe) GetPinTables() []*PinTableRule {
+	if x != nil {
+		return x.PinTables
 	}
 	return nil
 }
@@ -155,6 +238,61 @@ func (x *TableRule) GetLimitKind() string {
 	return ""
 }
 
+// PinTableRule classifies a pin function table. Unlike TableRule it carries no limit
+// kind: a pin table's rows are terminals, not values.
+type PinTableRule struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// RE2 pattern over the table's title after title attachment.
+	TitlePattern  string        `protobuf:"bytes,1,opt,name=title_pattern,json=titlePattern,proto3" json:"title_pattern,omitempty"`
+	ColumnAxis    PinColumnAxis `protobuf:"varint,2,opt,name=column_axis,json=columnAxis,proto3,enum=agni.v1.derive.PinColumnAxis" json:"column_axis,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PinTableRule) Reset() {
+	*x = PinTableRule{}
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PinTableRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PinTableRule) ProtoMessage() {}
+
+func (x *PinTableRule) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PinTableRule.ProtoReflect.Descriptor instead.
+func (*PinTableRule) Descriptor() ([]byte, []int) {
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PinTableRule) GetTitlePattern() string {
+	if x != nil {
+		return x.TitlePattern
+	}
+	return ""
+}
+
+func (x *PinTableRule) GetColumnAxis() PinColumnAxis {
+	if x != nil {
+		return x.ColumnAxis
+	}
+	return PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED
+}
+
 // Patch is one pinned human correction to one cell of one table of one exact
 // document: the layer applied LAST in a derivation, so a verified fix can never be
 // regressed by a re-run. Keys are content hashes, so a new document revision or a
@@ -186,7 +324,7 @@ type Patch struct {
 
 func (x *Patch) Reset() {
 	*x = Patch{}
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[2]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -198,7 +336,7 @@ func (x *Patch) String() string {
 func (*Patch) ProtoMessage() {}
 
 func (x *Patch) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[2]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -211,7 +349,7 @@ func (x *Patch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Patch.ProtoReflect.Descriptor instead.
 func (*Patch) Descriptor() ([]byte, []int) {
-	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Patch) GetName() string {
@@ -291,6 +429,11 @@ type RunManifest struct {
 	PatchesApplied []string `protobuf:"bytes,7,rep,name=patches_applied,json=patchesApplied,proto3" json:"patches_applied,omitempty"`
 	// Parameters emitted into the PartSpec (post-Validate).
 	ParametersEmitted int32 `protobuf:"varint,8,opt,name=parameters_emitted,json=parametersEmitted,proto3" json:"parameters_emitted,omitempty"`
+	// Pins and packages emitted into the PartSpec (post-Validate). Counted separately
+	// from parameters because a run over a document with only a pin table emits zero
+	// parameters, and one number reading zero would otherwise look like a failed run.
+	PinsEmitted     int32 `protobuf:"varint,12,opt,name=pins_emitted,json=pinsEmitted,proto3" json:"pins_emitted,omitempty"`
+	PackagesEmitted int32 `protobuf:"varint,13,opt,name=packages_emitted,json=packagesEmitted,proto3" json:"packages_emitted,omitempty"`
 	// Ensemble agreement stats: zero until a second extraction path exists (the
 	// VLM/ensemble gate of docs/17). Declared here so the manifest shape is stable.
 	EnsembleAgreed    int32  `protobuf:"varint,9,opt,name=ensemble_agreed,json=ensembleAgreed,proto3" json:"ensemble_agreed,omitempty"`
@@ -302,7 +445,7 @@ type RunManifest struct {
 
 func (x *RunManifest) Reset() {
 	*x = RunManifest{}
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +457,7 @@ func (x *RunManifest) String() string {
 func (*RunManifest) ProtoMessage() {}
 
 func (x *RunManifest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +470,7 @@ func (x *RunManifest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunManifest.ProtoReflect.Descriptor instead.
 func (*RunManifest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RunManifest) GetDocContentHash() string {
@@ -386,6 +529,20 @@ func (x *RunManifest) GetParametersEmitted() int32 {
 	return 0
 }
 
+func (x *RunManifest) GetPinsEmitted() int32 {
+	if x != nil {
+		return x.PinsEmitted
+	}
+	return 0
+}
+
+func (x *RunManifest) GetPackagesEmitted() int32 {
+	if x != nil {
+		return x.PackagesEmitted
+	}
+	return 0
+}
+
 func (x *RunManifest) GetEnsembleAgreed() int32 {
 	if x != nil {
 		return x.EnsembleAgreed
@@ -424,7 +581,7 @@ type Gap struct {
 
 func (x *Gap) Reset() {
 	*x = Gap{}
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +593,7 @@ func (x *Gap) String() string {
 func (*Gap) ProtoMessage() {}
 
 func (x *Gap) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +606,7 @@ func (x *Gap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Gap.ProtoReflect.Descriptor instead.
 func (*Gap) Descriptor() ([]byte, []int) {
-	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Gap) GetKind() string {
@@ -477,11 +634,13 @@ var File_agni_v1_derive_derive_proto protoreflect.FileDescriptor
 
 const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/derive/derive.proto\x12\x0eagni.v1.derive\"\x82\x02\n" +
+	"\x1bagni/v1/derive/derive.proto\x12\x0eagni.v1.derive\"\xbf\x02\n" +
 	"\x06Recipe\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12*\n" +
 	"\x11doc_title_pattern\x18\x02 \x01(\tR\x0fdocTitlePattern\x121\n" +
-	"\x06tables\x18\x03 \x03(\v2\x19.agni.v1.derive.TableRuleR\x06tables\x12F\n" +
+	"\x06tables\x18\x03 \x03(\v2\x19.agni.v1.derive.TableRuleR\x06tables\x12;\n" +
+	"\n" +
+	"pin_tables\x18\x04 \x03(\v2\x1c.agni.v1.derive.PinTableRuleR\tpinTables\x12F\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2&.agni.v1.derive.Recipe.AttributesEntryR\n" +
 	"attributes\x1a=\n" +
@@ -491,7 +650,11 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\tTableRule\x12#\n" +
 	"\rtitle_pattern\x18\x01 \x01(\tR\ftitlePattern\x12\x1d\n" +
 	"\n" +
-	"limit_kind\x18\x02 \x01(\tR\tlimitKind\"\xd7\x01\n" +
+	"limit_kind\x18\x02 \x01(\tR\tlimitKind\"s\n" +
+	"\fPinTableRule\x12#\n" +
+	"\rtitle_pattern\x18\x01 \x01(\tR\ftitlePattern\x12>\n" +
+	"\vcolumn_axis\x18\x02 \x01(\x0e2\x1d.agni.v1.derive.PinColumnAxisR\n" +
+	"columnAxis\"\xd7\x01\n" +
 	"\x05Patch\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12(\n" +
 	"\x10doc_content_hash\x18\x02 \x01(\tR\x0edocContentHash\x12,\n" +
@@ -500,7 +663,7 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\x03col\x18\x05 \x01(\x05R\x03col\x12\x12\n" +
 	"\x04text\x18\x06 \x01(\tR\x04text\x12\x12\n" +
 	"\x04note\x18\a \x01(\tR\x04note\x12\x16\n" +
-	"\x06author\x18\b \x01(\tR\x06author\"\xaa\x03\n" +
+	"\x06author\x18\b \x01(\tR\x06author\"\xf8\x03\n" +
 	"\vRunManifest\x12(\n" +
 	"\x10doc_content_hash\x18\x01 \x01(\tR\x0edocContentHash\x12!\n" +
 	"\fdoc_producer\x18\x02 \x01(\tR\vdocProducer\x12%\n" +
@@ -509,7 +672,9 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\fmanufacturer\x18\x05 \x01(\tR\fmanufacturer\x12\x18\n" +
 	"\arecipes\x18\x06 \x03(\tR\arecipes\x12'\n" +
 	"\x0fpatches_applied\x18\a \x03(\tR\x0epatchesApplied\x12-\n" +
-	"\x12parameters_emitted\x18\b \x01(\x05R\x11parametersEmitted\x12'\n" +
+	"\x12parameters_emitted\x18\b \x01(\x05R\x11parametersEmitted\x12!\n" +
+	"\fpins_emitted\x18\f \x01(\x05R\vpinsEmitted\x12)\n" +
+	"\x10packages_emitted\x18\r \x01(\x05R\x0fpackagesEmitted\x12'\n" +
 	"\x0fensemble_agreed\x18\t \x01(\x05R\x0eensembleAgreed\x12-\n" +
 	"\x12ensemble_disagreed\x18\n" +
 	" \x01(\x05R\x11ensembleDisagreed\x12'\n" +
@@ -517,7 +682,11 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\x03Gap\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x16\n" +
-	"\x06detail\x18\x03 \x01(\tR\x06detailB.Z,github.com/panyam/agni/gen/go/agni/v1/deriveb\x06proto3"
+	"\x06detail\x18\x03 \x01(\tR\x06detail*j\n" +
+	"\rPinColumnAxis\x12\x1f\n" +
+	"\x1bPIN_COLUMN_AXIS_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17PIN_COLUMN_AXIS_PACKAGE\x10\x01\x12\x1b\n" +
+	"\x17PIN_COLUMN_AXIS_VARIANT\x10\x02B.Z,github.com/panyam/agni/gen/go/agni/v1/deriveb\x06proto3"
 
 var (
 	file_agni_v1_derive_derive_proto_rawDescOnce sync.Once
@@ -531,24 +700,29 @@ func file_agni_v1_derive_derive_proto_rawDescGZIP() []byte {
 	return file_agni_v1_derive_derive_proto_rawDescData
 }
 
-var file_agni_v1_derive_derive_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_agni_v1_derive_derive_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_agni_v1_derive_derive_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_agni_v1_derive_derive_proto_goTypes = []any{
-	(*Recipe)(nil),      // 0: agni.v1.derive.Recipe
-	(*TableRule)(nil),   // 1: agni.v1.derive.TableRule
-	(*Patch)(nil),       // 2: agni.v1.derive.Patch
-	(*RunManifest)(nil), // 3: agni.v1.derive.RunManifest
-	(*Gap)(nil),         // 4: agni.v1.derive.Gap
-	nil,                 // 5: agni.v1.derive.Recipe.AttributesEntry
+	(PinColumnAxis)(0),   // 0: agni.v1.derive.PinColumnAxis
+	(*Recipe)(nil),       // 1: agni.v1.derive.Recipe
+	(*TableRule)(nil),    // 2: agni.v1.derive.TableRule
+	(*PinTableRule)(nil), // 3: agni.v1.derive.PinTableRule
+	(*Patch)(nil),        // 4: agni.v1.derive.Patch
+	(*RunManifest)(nil),  // 5: agni.v1.derive.RunManifest
+	(*Gap)(nil),          // 6: agni.v1.derive.Gap
+	nil,                  // 7: agni.v1.derive.Recipe.AttributesEntry
 }
 var file_agni_v1_derive_derive_proto_depIdxs = []int32{
-	1, // 0: agni.v1.derive.Recipe.tables:type_name -> agni.v1.derive.TableRule
-	5, // 1: agni.v1.derive.Recipe.attributes:type_name -> agni.v1.derive.Recipe.AttributesEntry
-	4, // 2: agni.v1.derive.RunManifest.gaps:type_name -> agni.v1.derive.Gap
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2, // 0: agni.v1.derive.Recipe.tables:type_name -> agni.v1.derive.TableRule
+	3, // 1: agni.v1.derive.Recipe.pin_tables:type_name -> agni.v1.derive.PinTableRule
+	7, // 2: agni.v1.derive.Recipe.attributes:type_name -> agni.v1.derive.Recipe.AttributesEntry
+	0, // 3: agni.v1.derive.PinTableRule.column_axis:type_name -> agni.v1.derive.PinColumnAxis
+	6, // 4: agni.v1.derive.RunManifest.gaps:type_name -> agni.v1.derive.Gap
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_derive_derive_proto_init() }
@@ -561,13 +735,14 @@ func file_agni_v1_derive_derive_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_derive_derive_proto_rawDesc), len(file_agni_v1_derive_derive_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   6,
+			NumEnums:      1,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_agni_v1_derive_derive_proto_goTypes,
 		DependencyIndexes: file_agni_v1_derive_derive_proto_depIdxs,
+		EnumInfos:         file_agni_v1_derive_derive_proto_enumTypes,
 		MessageInfos:      file_agni_v1_derive_derive_proto_msgTypes,
 	}.Build()
 	File_agni_v1_derive_derive_proto = out.File
