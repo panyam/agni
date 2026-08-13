@@ -261,6 +261,23 @@ message SourceDoc {
   // internal-seed posture (WS10-002) means documents never leave the customer
   // boundary, so this locator is meaningful only inside one deployment.
   string locator = 4;
+  // The doc-IR Document.content_hash of the revision this spec currently describes, as
+  // held by the corpus. This is the OTHER HALF of Verification: a verification records
+  // the hash it was performed against, and staleness is that hash disagreeing with this
+  // one. Without it a reader holding only a PartSpec has nothing to compare against and
+  // can never conclude anything but "unknown".
+  //
+  // It lives here rather than being resolved from `locator` on demand because a check
+  // must not do I/O to learn whether its evidence is current (C22: configuration travels
+  // as a value, never as a locator the callee resolves), and because the engine runs in
+  // hosts with no filesystem at all.
+  //
+  // A re-seed from a new vendor revision REWRITES this, which is what makes staleness
+  // happen to a fact rather than being remembered about it: every Verification pinned to
+  // the old hash stops matching in the same instant, exactly as a derive.Patch stops
+  // applying. Empty when the corpus never recorded one, which reads as unknown and
+  // never as current.
+  string content_hash = 5;
 }
 
 // LimitKind is the first-class distinction that makes static checks safe: an

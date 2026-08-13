@@ -13,7 +13,9 @@ import (
 
 // supplyModel builds a one-part design (U1, VDD power-in pin on a +5V rail) joined to a seeded spec
 // whose VDD abs-max is 4.6 V, so supply-exceeds-abs-max fires; method/confidence drive the data-trust.
-func supplyModel(method string, confidence float64) check.Model {
+// tweak runs against the built spec before the model is constructed, for the cases that need a
+// document revision or a verification record rather than just a method and a confidence.
+func supplyModel(method string, confidence float64, tweak ...func(*parampb.PartSpec)) check.Model {
 	f := func(v float64) *float64 { return &v }
 	d := &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
@@ -38,7 +40,70 @@ func supplyModel(method string, confidence float64) check.Model {
 			Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: 4, TableOrFigure: "Absolute Maximum Ratings", Method: method, Confidence: confidence},
 		}},
 	}
+	for _, fn := range tweak {
+		fn(spec)
+	}
 	return check.NewModelWithParams(d, nil, param.ParamSet{"ACME-33": spec})
+}
+
+// --- provisional: a fail on a verification the document has outrun ---
+
+// A human verification is pinned to the revision it was performed against, so when the vendor ships a
+// new one the confirmation stops being evidence about the document in hand. The value itself is
+// unchanged and its confidence is 1.0, which is exactly what makes this dangerous: every signal that
+// existed before the verification record reports a stale value as the most trustworthy data in the
+// system, because a person really did check it once.
+//
+// This is the case the ratified floor could not see on its own. param.MarkVerified raises confidence
+// to 1.0 and nothing lowers it afterwards, so a floor test alone rates a superseded verification as a
+// hard Fail forever.
+func TestStaleVerificationIsNotRatified(t *testing.T) {
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
+	}}}}
+	outcome := func(m check.Model) Outcome {
+		return Run(RunParams{Model: m, Catalog: check.DefaultCatalog(), Manifest: man, Design: "d", RatifiedFloor: 0.9}).Areas[0].Items[0].Outcome
+	}
+
+	// Verified against the revision the corpus holds: a trustworthy fail.
+	verifiedAgainst := func(specHash, checkedHash string) func(*parampb.PartSpec) {
+		return func(s *parampb.PartSpec) {
+			s.Docs[0].ContentHash = specHash
+			param.MarkVerified(s.Parameters[0], "sri", checkedHash, "2026-08-13", "")
+		}
+	}
+	if got := outcome(supplyModel("hand", 0.95, verifiedAgainst("sha256:relB", "sha256:relB"))); got != Fail {
+		t.Errorf("verified against the revision in hand: want %s, got %s", Fail, got)
+	}
+
+	// The vendor ships rev C and the corpus re-seeds. Nothing about the verification changed, and its
+	// confidence is still 1.0, but it now describes a document nobody has.
+	if got := outcome(supplyModel("hand", 0.95, verifiedAgainst("sha256:relC", "sha256:relB"))); got != Provisional {
+		t.Errorf("verification of a superseded revision: want %s, got %s", Provisional, got)
+	}
+
+	// The corpus never recorded which revision it holds, so drift cannot be ruled out. A caller that
+	// cannot check must not be told the answer is fine.
+	if got := outcome(supplyModel("hand", 0.95, verifiedAgainst("", "sha256:relB"))); got != Provisional {
+		t.Errorf("no revision to compare against: want %s, got %s", Provisional, got)
+	}
+}
+
+// The converse, and the reason the fix is additive: a value nobody ever verified is judged exactly as
+// it was before verification records existed. If this regressed, every hand-seeded fixture in the
+// corpus would drop to Provisional at once.
+func TestUnverifiedDataIsJudgedOnConfidenceAsBefore(t *testing.T) {
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
+		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
+	}}}}
+	movedOn := func(s *parampb.PartSpec) { s.Docs[0].ContentHash = "sha256:relC" }
+	got := Run(RunParams{
+		Model: supplyModel("hand", 1.0, movedOn), Catalog: check.DefaultCatalog(),
+		Manifest: man, Design: "d", RatifiedFloor: 0.9,
+	}).Areas[0].Items[0].Outcome
+	if got != Fail {
+		t.Errorf("a document revision must not demote a value nobody claimed to have verified: got %s, want %s", got, Fail)
+	}
 }
 
 // TestProvisionalFromMockData: an item whose datasheet rule fires is Provisional when the seed is mock

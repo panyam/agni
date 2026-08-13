@@ -174,13 +174,20 @@ func (x *Subject) GetBusId() string {
 // flags a low confidence) as structured data rather than only inside the finding message. The wire
 // form of check.DatasheetCitation.
 type DatasheetCitation struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Doc           string                 `protobuf:"bytes,1,opt,name=doc,proto3" json:"doc,omitempty"`                     // the SourceDoc title (vendor doc number + revision), "" if unresolved
-	DocRef        string                 `protobuf:"bytes,2,opt,name=doc_ref,json=docRef,proto3" json:"doc_ref,omitempty"` // the SourceDoc id the value cites (the stable join key into PartSpec.docs)
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`                  // 1-based page in the document
-	Section       string                 `protobuf:"bytes,4,opt,name=section,proto3" json:"section,omitempty"`             // the table or figure the value was read from
-	Method        string                 `protobuf:"bytes,5,opt,name=method,proto3" json:"method,omitempty"`               // how the value was extracted ("hand", "derive/v0", "mock", ...)
-	Confidence    float64                `protobuf:"fixed64,6,opt,name=confidence,proto3" json:"confidence,omitempty"`     // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Doc        string                 `protobuf:"bytes,1,opt,name=doc,proto3" json:"doc,omitempty"`                     // the SourceDoc title (vendor doc number + revision), "" if unresolved
+	DocRef     string                 `protobuf:"bytes,2,opt,name=doc_ref,json=docRef,proto3" json:"doc_ref,omitempty"` // the SourceDoc id the value cites (the stable join key into PartSpec.docs)
+	Page       int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`                  // 1-based page in the document
+	Section    string                 `protobuf:"bytes,4,opt,name=section,proto3" json:"section,omitempty"`             // the table or figure the value was read from
+	Method     string                 `protobuf:"bytes,5,opt,name=method,proto3" json:"method,omitempty"`               // how the value was extracted ("hand", "derive/v0", "mock", ...)
+	Confidence float64                `protobuf:"fixed64,6,opt,name=confidence,proto3" json:"confidence,omitempty"`     // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+	// Whether a PERSON has stood behind this value, and whether that still holds given the revision
+	// the corpus now has: "unverified" | "verified" | "stale" | "unknown" (param.VerificationState).
+	// Distinct from confidence, which says how the value was PRODUCED and cannot say which revision
+	// anyone checked. "stale" is the load-bearing one: a human confirmed it against a revision the
+	// corpus no longer holds, so the confirmation is not evidence about the document in hand.
+	// Empty for a citation carrying no parameter (a pin declaration, a relation bound).
+	Verification  string `protobuf:"bytes,7,opt,name=verification,proto3" json:"verification,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -255,6 +262,13 @@ func (x *DatasheetCitation) GetConfidence() float64 {
 		return x.Confidence
 	}
 	return 0
+}
+
+func (x *DatasheetCitation) GetVerification() string {
+	if x != nil {
+		return x.Verification
+	}
+	return ""
 }
 
 // Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join
@@ -2030,7 +2044,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x10\n" +
 	"\x03pin\x18\x03 \x01(\tR\x03pin\x12\x15\n" +
 	"\x06net_id\x18\x04 \x01(\tR\x05netId\x12\x15\n" +
-	"\x06bus_id\x18\x05 \x01(\tR\x05busId\"\xa4\x01\n" +
+	"\x06bus_id\x18\x05 \x01(\tR\x05busId\"\xc8\x01\n" +
 	"\x11DatasheetCitation\x12\x10\n" +
 	"\x03doc\x18\x01 \x01(\tR\x03doc\x12\x17\n" +
 	"\adoc_ref\x18\x02 \x01(\tR\x06docRef\x12\x12\n" +
@@ -2039,7 +2053,8 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x06method\x18\x05 \x01(\tR\x06method\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x06 \x01(\x01R\n" +
-	"confidence\"\x80\x03\n" +
+	"confidence\x12\"\n" +
+	"\fverification\x18\a \x01(\tR\fverification\"\x80\x03\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x121\n" +

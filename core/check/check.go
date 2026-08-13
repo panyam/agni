@@ -89,6 +89,16 @@ type DatasheetCitation struct {
 	Section    string  // the table or figure the value was read from
 	Method     string  // how the value was extracted ("hand", "derive/v0", "mock", ...)
 	Confidence float64 // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+	// Verification is whether a person has stood behind this value AND whether that still holds for
+	// the revision the corpus now has: param.Unverified/Verified/Stale/Unknown, "" for a citation with
+	// no parameter behind it (a pin declaration, a relation bound).
+	//
+	// It is separate from Confidence because the two answer different questions and only one of them
+	// can go out of date. Confidence describes an extraction and is fixed the moment the value is
+	// produced; verification describes a person's agreement with a specific revision, and the document
+	// can move afterwards. A stale verification is the case worth naming: it reads as maximally
+	// trustworthy by every older signal precisely because someone did check it once.
+	Verification string
 }
 
 // Finding subject kinds: what a Finding.Subject refers to.

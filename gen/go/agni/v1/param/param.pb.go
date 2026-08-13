@@ -889,7 +889,24 @@ type SourceDoc struct {
 	// Where this corpus keeps the document (path or URL). Corpus-local by design: the
 	// internal-seed posture (WS10-002) means documents never leave the customer
 	// boundary, so this locator is meaningful only inside one deployment.
-	Locator       string `protobuf:"bytes,4,opt,name=locator,proto3" json:"locator,omitempty"`
+	Locator string `protobuf:"bytes,4,opt,name=locator,proto3" json:"locator,omitempty"`
+	// The doc-IR Document.content_hash of the revision this spec currently describes, as
+	// held by the corpus. This is the OTHER HALF of Verification: a verification records
+	// the hash it was performed against, and staleness is that hash disagreeing with this
+	// one. Without it a reader holding only a PartSpec has nothing to compare against and
+	// can never conclude anything but "unknown".
+	//
+	// It lives here rather than being resolved from `locator` on demand because a check
+	// must not do I/O to learn whether its evidence is current (C22: configuration travels
+	// as a value, never as a locator the callee resolves), and because the engine runs in
+	// hosts with no filesystem at all.
+	//
+	// A re-seed from a new vendor revision REWRITES this, which is what makes staleness
+	// happen to a fact rather than being remembered about it: every Verification pinned to
+	// the old hash stops matching in the same instant, exactly as a derive.Patch stops
+	// applying. Empty when the corpus never recorded one, which reads as unknown and
+	// never as current.
+	ContentHash   string `protobuf:"bytes,5,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -948,6 +965,13 @@ func (x *SourceDoc) GetVendor() string {
 func (x *SourceDoc) GetLocator() string {
 	if x != nil {
 		return x.Locator
+	}
+	return ""
+}
+
+func (x *SourceDoc) GetContentHash() string {
+	if x != nil {
+		return x.ContentHash
 	}
 	return ""
 }
@@ -1541,12 +1565,13 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x1e.agni.v1.param.ParamProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"c\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x86\x01\n" +
 	"\tSourceDoc\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
 	"\x06vendor\x18\x03 \x01(\tR\x06vendor\x12\x18\n" +
-	"\alocator\x18\x04 \x01(\tR\alocator\"i\n" +
+	"\alocator\x18\x04 \x01(\tR\alocator\x12!\n" +
+	"\fcontent_hash\x18\x05 \x01(\tR\vcontentHash\"i\n" +
 	"\n" +
 	"RangeValue\x12\x15\n" +
 	"\x03min\x18\x01 \x01(\x01H\x00R\x03min\x88\x01\x01\x12\x15\n" +

@@ -64,6 +64,13 @@ message DatasheetCitation {
   string section = 4;     // the table or figure the value was read from
   string method = 5;      // how the value was extracted ("hand", "derive/v0", "mock", ...)
   double confidence = 6;  // extraction confidence in (0, 1]; a low value flags "verify before trusting"
+  // Whether a PERSON has stood behind this value, and whether that still holds given the revision
+  // the corpus now has: "unverified" | "verified" | "stale" | "unknown" (param.VerificationState).
+  // Distinct from confidence, which says how the value was PRODUCED and cannot say which revision
+  // anyone checked. "stale" is the load-bearing one: a human confirmed it against a revision the
+  // corpus no longer holds, so the confirmation is not evidence about the document in hand.
+  // Empty for a citation carrying no parameter (a pin declaration, a relation bound).
+  string verification = 7;
 }
 
 // Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join

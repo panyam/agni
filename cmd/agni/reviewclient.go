@@ -80,6 +80,11 @@ func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation 
 		Section:    c.GetSection(),
 		Method:     c.GetMethod(),
 		Confidence: c.GetConfidence(),
+		// Carried back explicitly. Dropping it here would not lose a display field, it would
+		// re-open the defect on the service path only: the client re-runs the ratified-floor
+		// judgement locally, and an empty verification reads as Unverified, which falls through to
+		// the confidence a stale verification pinned at 1.0.
+		Verification: c.GetVerification(),
 	}
 }
 
