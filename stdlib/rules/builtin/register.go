@@ -54,6 +54,7 @@ var rules = []*check.Rule{
 	pinOutOfRecommended,
 	pinTrackingViolated,
 	pinTrackingAdvisory,
+	railNotClassified,
 	capVoltage,
 	diffPairNaming,
 	trackWidth,
