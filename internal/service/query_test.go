@@ -408,3 +408,34 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 		t.Error("the lexicon half did not reach the read")
 	}
 }
+
+// TestPortableCites is the fix for a cite that named a host directory.
+//
+// A reader stamps provenance with the path it was handed, and the loader hands it an ABSOLUTE host
+// path, so query was the one surface where "/Users/someone/work/..." escaped into output a user
+// pastes into issues and commits into reports. It is also the only surface that did: `review` prints
+// the design as given and a finding's source_file is relative.
+func TestPortableCites(t *testing.T) {
+	const design = "designs/gateway/gateway.edn"
+	for name, tc := range map[string]struct{ in, want string }{
+		"an absolute host path is cut back to the design": {
+			"/Users/someone/work/agni/examples/tutorial-project/designs/gateway/gateway.edn:GND",
+			"designs/gateway/gateway.edn:GND"},
+		"a cite already relative is untouched": {
+			"designs/gateway/gateway.edn:GND", "designs/gateway/gateway.edn:GND"},
+		// A datasheet citation names a document and a page, never a file. Truncating it on a guess
+		// would destroy provenance that was correct.
+		"a citation that is not a path is left alone": {
+			"ACME-LDO-1V8 Datasheet Rev A page 7", "ACME-LDO-1V8 Datasheet Rev A page 7"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := portableCites([]string{tc.in}, design)
+			if got[0] != tc.want {
+				t.Errorf("got %q, want %q", got[0], tc.want)
+			}
+		})
+	}
+	if got := portableCites(nil, design); got != nil {
+		t.Errorf("no cites should stay nil, got %v", got)
+	}
+}
