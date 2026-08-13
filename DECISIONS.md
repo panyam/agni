@@ -497,3 +497,44 @@ than documented.
 
 **Reopen if** a tier appears whose wrongness is loud rather than silent. That is the property that
 decides, not how convenient a global would be.
+
+---
+
+## `check` stays the primitive; it does not become a rendering of a review run
+
+**Question.** `review.Run` already calls `check.Run`, both surfaces compose config through one seam,
+and both produce a `CheckResults` document. So why are they two execution paths? Issue 198 proposed
+collapsing them: `check` becomes an auto-manifest review with the store as the only difference between
+a dry run and a kept one.
+
+**Answer. No, and the reason it looked attractive has been removed.** The pressure behind it was that
+one surface could not say something the other could: tick a rule this design cannot support and the
+Checks panel showed an empty list, indistinguishable from a clean board, while the review layer had a
+whole vocabulary for it. That was fixed in #220 by reporting `check.Available`'s verdict for the rules
+already selected — the same gate `review.Run` consults, asked at the finding tier. No manifest, no
+per-item execution, and the panel now distinguishes "checked and clean" from "never ran".
+
+What remains after that is two genuinely different questions over one engine. `check` sweeps N rules
+once and reports findings on a SEVERITY axis. `review` scores N checklist items, each bound to rules
+and each scoped to that item, on a COVERAGE axis. Merging them means either handing a flat sweep a
+checklist it does not have, or handing a checklist a design-wide union it never ran — and the second
+is a claim the review layer explicitly refuses to make (`CheckResults.findings` is empty for a review
+run for exactly this reason).
+
+**The cost argument that blocked it also did not survive, and that is worth recording separately,
+because it was cited in #220's favour as well.** Issue 198's step 5 held that an auto-manifest turns
+one sweep over N rules into N sweeps of one, on the viewer's default-open panel. Measured on
+`examples/tutorial-project` with a generated 44-item manifest, one item per catalog rule, warmed, five
+runs each: `check` 46 ms/run, the auto-manifest review 27 ms/run. The per-item shape is faster. That
+is what the arithmetic predicts — each item binds about one rule, so `items × entities` is the same
+order as `rules × entities`, and both paths gate on `check.Available` before any entity work. So the
+right reason to keep them apart is the vocabulary, not the clock.
+
+**What this leaves open.** Two of issue 198's steps survive on their own merits and are tracked
+separately: an ad-hoc manifest a caller can run without authoring a file (issue 256), and grouping
+items that share a binding before sweeping (`OUT_OF_SCOPE.md`, no driver since the measurement).
+
+**Reopen if** a surface appears that needs the coverage vocabulary over a flat rule sweep — an
+auto-manifest is then the natural shape and this decision is the thing standing in its way. Do not
+reopen on performance without measuring on a design large enough for the per-sweep fixed cost to
+matter; the tutorial fixture is 19 components and cannot show that.
