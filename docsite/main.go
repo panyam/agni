@@ -141,6 +141,7 @@ var Site = &s3.Site{
 		"includeFile":     IncludeFile,
 		"includeFileText": IncludeFileText,
 		"includeCard":     IncludeCard,
+		"agniRun":         AgniRun,
 
 		// String/content helpers the templates use. Newer s3gen provides
 		// these via its default func map; the pinned version does not, so we
@@ -156,10 +157,10 @@ var Site = &s3.Site{
 func main() {
 	flag.Parse()
 
-	if *build || os.Getenv("AGNI_DOCS_ENV") != "production" {
-		Site.Rebuild(nil)
-		Site.Watch()
-	}
+	// Build once, then serve. There is no file watcher: the live-reload path did not work, and without
+	// it `-build` actually terminates — which is what a build STEP needs, and what a watcher blocking
+	// forever prevented.
+	Site.Rebuild(nil)
 
 	if !*build {
 		Site.Serve(*addr)

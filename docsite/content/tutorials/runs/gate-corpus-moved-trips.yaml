@@ -1,0 +1,11 @@
+# Rung 11: with the corpus moved, the answered floor trips where the severity gate does not.
+#
+# The gate's message goes to STDERR, so stdout is redirected away and stderr filtered to the one line
+# the page is about. The resolution notes ("reading gateway.edn ...") share that stream and are not
+# part of the lesson.
+fixture: examples/tutorial-project
+script: |
+  mv params params-old
+  agni review designs/gateway --min-answered 13 > /dev/null 2>/tmp/agni-gate-err
+  echo "exit $?"
+  grep '^error:' /tmp/agni-gate-err
