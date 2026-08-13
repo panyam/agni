@@ -44,6 +44,11 @@ type Identity struct {
 	MPN          string
 	Manufacturer string
 	DeviceClass  string
+	// Locator is where this corpus keeps the document, for SourceDoc.locator. It is
+	// operator-supplied for the same reason the rest of this struct is: Run takes a
+	// decoded Document and not a path, so it cannot know where the bytes live. Empty
+	// is fine and means the corpus records no location.
+	Locator string
 }
 
 // Run derives a PartSpec from a doc-IR: attach titles to untitled tables (nearest
@@ -70,10 +75,16 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 		Manufacturer: id.Manufacturer,
 		DeviceClass:  id.DeviceClass,
 		Docs: []*parampb.SourceDoc{{
-			Id:      "src",
-			Title:   work.Title,
-			Vendor:  id.Manufacturer,
-			Locator: work.ContentHash,
+			Id:     "src",
+			Title:  work.Title,
+			Vendor: id.Manufacturer,
+			// The revision this spec describes. Recording it is what makes a human verification
+			// expire when the vendor reissues the document: param.VerificationOfIn compares a
+			// verification's pinned hash against this one, so a seeder that leaves it empty produces
+			// a corpus in which staleness can never be concluded, only "unknown". Run already has
+			// the hash, and until this was written it went into Locator, which is a path field.
+			ContentHash: work.ContentHash,
+			Locator:     id.Locator,
 		}},
 	}
 

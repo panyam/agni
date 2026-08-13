@@ -50,7 +50,7 @@ func deriveCmd() *cobra.Command {
 				}
 			}
 			spec, manifest, err := derive.Run(d, recipes, patches, derive.Identity{
-				MPN: mpn, Manufacturer: manufacturer, DeviceClass: deviceClass,
+				MPN: mpn, Manufacturer: manufacturer, DeviceClass: deviceClass, Locator: args[0],
 			})
 			if err != nil {
 				return err
