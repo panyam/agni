@@ -9,32 +9,7 @@ rungs 4 through 8.
 
 ## Run it
 
-```
-agni check designs/gateway/gateway.edn
-```
-
-```
-findings by rule:
-  decoupling-present     1
-  esd-protection         2
-  i2c-pull-up            2
-  profile/can-esd-missing 2
-  reverse-blocking-absent 1
-  test-point-coverage    1
-
-first 9:
-  [warning] decoupling-present: PMIC_MAIN_12V0 (power rail has no decoupling capacitor)
-  [info] esd-protection: CAN1_CANH (externally-exposed signal net has no ESD protection)
-  [info] esd-protection: CAN1_CANL (externally-exposed signal net has no ESD protection)
-  [error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor)
-  [error] i2c-pull-up: I2C_SDA (I2C net has no pull-up resistor)
-  [warning] profile/can-esd-missing: CAN1_CANH (CAN signal net CAN1_CANH is exposed on a connector with no ESD protection in reach)
-  [warning] profile/can-esd-missing: CAN1_CANL (CAN signal net CAN1_CANL is exposed on a connector with no ESD protection in reach)
-  [warning] reverse-blocking-absent: PMIC_MAIN_12V0 (connector feeds a power input with no reverse-blocking element in the path)
-  [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
-
-9 finding(s) total
-```
+{{ agniRun "content/tutorials/runs/02-check-designs-gateway-gateway-edn.yaml" }}
 
 ## Reading one finding
 

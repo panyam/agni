@@ -8,3 +8,6 @@ fixture: examples/tutorial-project
 script: |
   mv params params-old
   agni review designs/gateway --coverage 2>/dev/null | sed -n '5p'
+show: |
+  mv params params-old
+  agni review designs/gateway --coverage

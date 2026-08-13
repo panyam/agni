@@ -30,19 +30,7 @@ of another tool.
 
 ## What was read
 
-```
-agni stats designs/gateway/gateway.edn
-```
-
-```
-design:              GATEWAY
-source format:       edif-2.0.0
-libraries:           2
-components:          19 (unique ref_des)
-sections:            19 (source instances)
-multi-section:       0 (one ref_des, several sections)
-nets:                15
-```
+{{ agniRun "content/tutorials/runs/01-stats-designs-gateway-gateway-edn.yaml" }}
 
 You already know roughly how many parts and nets your board has. Compare against that number first.
 A component count that is half what you expect means a library did not resolve, and every rule that
@@ -58,16 +46,7 @@ how many parts that applies to.
 
 `stats` tells you what came through. `validate` tells you whether it holds together:
 
-```
-agni validate designs/gateway/gateway.edn
-```
-
-```
-FILE                         FORMAT  STATUS  DETAIL
-designs/gateway/gateway.edn  edif    ok      19 comps, 15 nets
-
-1 passed, 0 failed, 0 skipped (no reader)
-```
+{{ agniRun "content/tutorials/runs/01-validate-designs-gateway-gateway-edn.yaml" }}
 
 It takes a directory too, which is the useful form when you have just been handed a folder of
 exports and want to know which of them the tool can actually read.

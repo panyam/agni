@@ -1,0 +1,4 @@
+# Generated block for 03-see-it.md. Edit the script, not the capture.
+fixture: examples/tutorial-project
+script: |
+  agni render designs/gateway/gateway.edn --compare

@@ -41,18 +41,7 @@ different picture, because one was drawn by a person and the other was solved fo
 
 There are five, and which one reads best depends entirely on the board. Rather than guess:
 
-```
-agni render designs/gateway/gateway.edn --compare
-```
-
-```
-layout      nodes  nets  segments  crossings  bends  edge-length  stress
-force       19     15    56        43         0      9052         0.346
-grid        19     15    56        133        0      7798         0.486
-layered     19     15    56        95         0      20826        0.582
-orthogonal  19     15    84        104        28     9200         0.457
-stress      19     15    56        73         0      7218         0.457
-```
+{{ agniRun "content/tutorials/runs/03-render-designs-gateway-gateway-edn-compare.yaml" }}
 
 For this board `force` has by far the fewest crossings, and `grid` is the worst by that measure
 while being the most compact. `orthogonal` is the only one that bends wires into right angles, which

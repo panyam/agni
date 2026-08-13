@@ -13,16 +13,7 @@ The file is `conventions.yaml`, and it carries two halves that are wired very di
 
 Run this against the tutorial board:
 
-```
-agni query designs/gateway/gateway.edn 'rail(?n) => ?n'
-```
-
-```
-n    provenance
-GND  designs/gateway/gateway.edn:GND
-
-1 result(s)
-```
+{{ agniRun "content/tutorials/runs/04-query-designs-gateway-gateway-edn-rail-n-n.yaml" }}
 
 One rail. The board has four. `PMIC_MAIN_12V0`, `PMIC_CORE_3V3`, and `PMIC_IO_1V8` are all supply
 rails and the tool does not think any of them is.
