@@ -2,15 +2,15 @@
 // @generated from file agni/v1/derive/derive.proto (package agni.v1.derive, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/derive/derive.proto.
  */
 export const file_agni_v1_derive_derive: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2Rlcml2ZS9kZXJpdmUucHJvdG8SDmFnbmkudjEuZGVyaXZlIssBCgZSZWNpcGUSDAoEbmFtZRgBIAEoCRIZChFkb2NfdGl0bGVfcGF0dGVybhgCIAEoCRIpCgZ0YWJsZXMYAyADKAsyGS5hZ25pLnYxLmRlcml2ZS5UYWJsZVJ1bGUSOgoKYXR0cmlidXRlcxgOIAMoCzImLmFnbmkudjEuZGVyaXZlLlJlY2lwZS5BdHRyaWJ1dGVzRW50cnkaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNgoJVGFibGVSdWxlEhUKDXRpdGxlX3BhdHRlcm4YASABKAkSEgoKbGltaXRfa2luZBgCIAEoCSKRAQoFUGF0Y2gSDAoEbmFtZRgBIAEoCRIYChBkb2NfY29udGVudF9oYXNoGAIgASgJEhoKEnRhYmxlX2NvbnRlbnRfaGFzaBgDIAEoCRILCgNyb3cYBCABKAUSCwoDY29sGAUgASgFEgwKBHRleHQYBiABKAkSDAoEbm90ZRgHIAEoCRIOCgZhdXRob3IYCCABKAkilgIKC1J1bk1hbmlmZXN0EhgKEGRvY19jb250ZW50X2hhc2gYASABKAkSFAoMZG9jX3Byb2R1Y2VyGAIgASgJEhYKDmRlcml2ZV92ZXJzaW9uGAMgASgJEgsKA21wbhgEIAEoCRIUCgxtYW51ZmFjdHVyZXIYBSABKAkSDwoHcmVjaXBlcxgGIAMoCRIXCg9wYXRjaGVzX2FwcGxpZWQYByADKAkSGgoScGFyYW1ldGVyc19lbWl0dGVkGAggASgFEhcKD2Vuc2VtYmxlX2FncmVlZBgJIAEoBRIaChJlbnNlbWJsZV9kaXNhZ3JlZWQYCiABKAUSIQoEZ2FwcxgLIAMoCzITLmFnbmkudjEuZGVyaXZlLkdhcCIzCgNHYXASDAoEa2luZBgBIAEoCRIOCgZyZWdpb24YAiABKAkSDgoGZGV0YWlsGAMgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZGVyaXZlYgZwcm90bzM");
+  fileDesc("ChthZ25pL3YxL2Rlcml2ZS9kZXJpdmUucHJvdG8SDmFnbmkudjEuZGVyaXZlIv0BCgZSZWNpcGUSDAoEbmFtZRgBIAEoCRIZChFkb2NfdGl0bGVfcGF0dGVybhgCIAEoCRIpCgZ0YWJsZXMYAyADKAsyGS5hZ25pLnYxLmRlcml2ZS5UYWJsZVJ1bGUSMAoKcGluX3RhYmxlcxgEIAMoCzIcLmFnbmkudjEuZGVyaXZlLlBpblRhYmxlUnVsZRI6CgphdHRyaWJ1dGVzGA4gAygLMiYuYWduaS52MS5kZXJpdmUuUmVjaXBlLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI2CglUYWJsZVJ1bGUSFQoNdGl0bGVfcGF0dGVybhgBIAEoCRISCgpsaW1pdF9raW5kGAIgASgJIlkKDFBpblRhYmxlUnVsZRIVCg10aXRsZV9wYXR0ZXJuGAEgASgJEjIKC2NvbHVtbl9heGlzGAIgASgOMh0uYWduaS52MS5kZXJpdmUuUGluQ29sdW1uQXhpcyKRAQoFUGF0Y2gSDAoEbmFtZRgBIAEoCRIYChBkb2NfY29udGVudF9oYXNoGAIgASgJEhoKEnRhYmxlX2NvbnRlbnRfaGFzaBgDIAEoCRILCgNyb3cYBCABKAUSCwoDY29sGAUgASgFEgwKBHRleHQYBiABKAkSDAoEbm90ZRgHIAEoCRIOCgZhdXRob3IYCCABKAkixgIKC1J1bk1hbmlmZXN0EhgKEGRvY19jb250ZW50X2hhc2gYASABKAkSFAoMZG9jX3Byb2R1Y2VyGAIgASgJEhYKDmRlcml2ZV92ZXJzaW9uGAMgASgJEgsKA21wbhgEIAEoCRIUCgxtYW51ZmFjdHVyZXIYBSABKAkSDwoHcmVjaXBlcxgGIAMoCRIXCg9wYXRjaGVzX2FwcGxpZWQYByADKAkSGgoScGFyYW1ldGVyc19lbWl0dGVkGAggASgFEhQKDHBpbnNfZW1pdHRlZBgMIAEoBRIYChBwYWNrYWdlc19lbWl0dGVkGA0gASgFEhcKD2Vuc2VtYmxlX2FncmVlZBgJIAEoBRIaChJlbnNlbWJsZV9kaXNhZ3JlZWQYCiABKAUSIQoEZ2FwcxgLIAMoCzITLmFnbmkudjEuZGVyaXZlLkdhcCIzCgNHYXASDAoEa2luZBgBIAEoCRIOCgZyZWdpb24YAiABKAkSDgoGZGV0YWlsGAMgASgJKmoKDVBpbkNvbHVtbkF4aXMSHwobUElOX0NPTFVNTl9BWElTX1VOU1BFQ0lGSUVEEAASGwoXUElOX0NPTFVNTl9BWElTX1BBQ0tBR0UQARIbChdQSU5fQ09MVU1OX0FYSVNfVkFSSUFOVBACQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZGVyaXZlYgZwcm90bzM");
 
 /**
  * Recipe is one doc-family's extraction rules: how to classify this family's tables
@@ -40,6 +40,17 @@ export type Recipe = Message<"agni.v1.derive.Recipe"> & {
    * @generated from field: repeated agni.v1.derive.TableRule tables = 3;
    */
   tables: TableRule[];
+
+  /**
+   * Pin FUNCTION tables, which yield agni.v1.param.Pin and Package rather than
+   * Parameter. A separate list from `tables` rather than an axis on TableRule
+   * because TableRule.limit_kind is required and validated non-zero; making it
+   * optional to accommodate pins would weaken a live invariant, and "every
+   * TableRule yields parameters" is worth keeping true.
+   *
+   * @generated from field: repeated agni.v1.derive.PinTableRule pin_tables = 4;
+   */
+  pinTables: PinTableRule[];
 
   /**
    * @generated from field: map<string, string> attributes = 14;
@@ -85,6 +96,33 @@ export type TableRule = Message<"agni.v1.derive.TableRule"> & {
  */
 export const TableRuleSchema: GenMessage<TableRule> = /*@__PURE__*/
   messageDesc(file_agni_v1_derive_derive, 1);
+
+/**
+ * PinTableRule classifies a pin function table. Unlike TableRule it carries no limit
+ * kind: a pin table's rows are terminals, not values.
+ *
+ * @generated from message agni.v1.derive.PinTableRule
+ */
+export type PinTableRule = Message<"agni.v1.derive.PinTableRule"> & {
+  /**
+   * RE2 pattern over the table's title after title attachment.
+   *
+   * @generated from field: string title_pattern = 1;
+   */
+  titlePattern: string;
+
+  /**
+   * @generated from field: agni.v1.derive.PinColumnAxis column_axis = 2;
+   */
+  columnAxis: PinColumnAxis;
+};
+
+/**
+ * Describes the message agni.v1.derive.PinTableRule.
+ * Use `create(PinTableRuleSchema)` to create a new message.
+ */
+export const PinTableRuleSchema: GenMessage<PinTableRule> = /*@__PURE__*/
+  messageDesc(file_agni_v1_derive_derive, 2);
 
 /**
  * Patch is one pinned human correction to one cell of one table of one exact
@@ -158,7 +196,7 @@ export type Patch = Message<"agni.v1.derive.Patch"> & {
  * Use `create(PatchSchema)` to create a new message.
  */
 export const PatchSchema: GenMessage<Patch> = /*@__PURE__*/
-  messageDesc(file_agni_v1_derive_derive, 2);
+  messageDesc(file_agni_v1_derive_derive, 3);
 
 /**
  * RunManifest is the lockfile of one derivation run: enough to reproduce the
@@ -223,6 +261,20 @@ export type RunManifest = Message<"agni.v1.derive.RunManifest"> & {
   parametersEmitted: number;
 
   /**
+   * Pins and packages emitted into the PartSpec (post-Validate). Counted separately
+   * from parameters because a run over a document with only a pin table emits zero
+   * parameters, and one number reading zero would otherwise look like a failed run.
+   *
+   * @generated from field: int32 pins_emitted = 12;
+   */
+  pinsEmitted: number;
+
+  /**
+   * @generated from field: int32 packages_emitted = 13;
+   */
+  packagesEmitted: number;
+
+  /**
    * Ensemble agreement stats: zero until a second extraction path exists (the
    * VLM/ensemble gate of docs/17). Declared here so the manifest shape is stable.
    *
@@ -246,7 +298,7 @@ export type RunManifest = Message<"agni.v1.derive.RunManifest"> & {
  * Use `create(RunManifestSchema)` to create a new message.
  */
 export const RunManifestSchema: GenMessage<RunManifest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_derive_derive, 3);
+  messageDesc(file_agni_v1_derive_derive, 4);
 
 /**
  * Gap is one thing the run saw and did not extract, with enough locator to act on
@@ -281,5 +333,55 @@ export type Gap = Message<"agni.v1.derive.Gap"> & {
  * Use `create(GapSchema)` to create a new message.
  */
 export const GapSchema: GenMessage<Gap> = /*@__PURE__*/
-  messageDesc(file_agni_v1_derive_derive, 4);
+  messageDesc(file_agni_v1_derive_derive, 5);
+
+/**
+ * PinColumnAxis says what the SUB-COLUMNS under a pin table's banded "PIN" header
+ * mean. It is declared by the recipe rather than inferred, and that is the whole
+ * reason this field exists.
+ *
+ * A banded pin table looks identical whether its sub-columns are package codes
+ * ("D, PW" | "RUT" | "YZT") or part variants ("ADS1113" | "ADS1114" | "ADS1115"),
+ * and the two are semantically opposite: the first is per-package numbering of one
+ * die, the second is three different parts sharing a pinout description. Inferring
+ * from the header text was tried and rejected. Measured over a 63-document corpus,
+ * the banded shape appears 44 times: six are variant columns, one is package
+ * columns, and the rest carry no sub-columns at all. A rule keyed on "looks like a
+ * short all-caps token" would therefore be fitted to a single example and would
+ * silently mint packages named after part numbers on six others.
+ *
+ * UNSPECIFIED is the safe default and is NOT an error: the pins are still extracted,
+ * they simply carry no PinNumber, and the run records a gap naming the columns it
+ * declined to interpret. Silence never reads as coverage.
+ *
+ * @generated from enum agni.v1.derive.PinColumnAxis
+ */
+export enum PinColumnAxis {
+  /**
+   * @generated from enum value: PIN_COLUMN_AXIS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Each sub-column is one package, or several when the header cell names several
+   * ("D, PW" is two packages sharing one column of numbers).
+   *
+   * @generated from enum value: PIN_COLUMN_AXIS_PACKAGE = 1;
+   */
+  PACKAGE = 1,
+
+  /**
+   * Each sub-column is a part variant. The parameter contract has no per-variant
+   * pin numbering, so pins are emitted without numbers and the run gaps the columns.
+   *
+   * @generated from enum value: PIN_COLUMN_AXIS_VARIANT = 2;
+   */
+  VARIANT = 2,
+}
+
+/**
+ * Describes the enum agni.v1.derive.PinColumnAxis.
+ */
+export const PinColumnAxisSchema: GenEnum<PinColumnAxis> = /*@__PURE__*/
+  enumDesc(file_agni_v1_derive_derive, 0);
 

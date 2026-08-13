@@ -77,7 +77,7 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 		}},
 	}
 
-	rules, err := matchRecipes(work.Title, recipes, manifest)
+	rules, pinRules, err := matchRecipes(work.Title, recipes, manifest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,6 +97,21 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 					break
 				}
 			}
+			// A pin function table carries terminals, not values, so it is offered to
+			// the pin rules only after no parameter rule claimed it.
+			pinTable := false
+			if kind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
+				for _, title := range candidates {
+					if axis, ok := classifyPin(title, pinRules); ok {
+						t.Title, pinTable = title, true
+						extractPinTable(spec, manifest, pg, t, axis)
+						break
+					}
+				}
+			}
+			if pinTable {
+				continue
+			}
 			if kind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
 				near := ""
 				if len(candidates) > 0 {
@@ -112,6 +127,8 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 		}
 	}
 	manifest.ParametersEmitted = int32(len(spec.Parameters))
+	manifest.PinsEmitted = int32(len(spec.Pins))
+	manifest.PackagesEmitted = int32(len(spec.Packages))
 	if err := param.Validate(spec); err != nil {
 		return nil, nil, fmt.Errorf("derive: emitted spec fails validation (a derive bug, not a data gap): %w", err)
 	}
@@ -205,15 +222,16 @@ type compiledRule struct {
 	kind parampb.LimitKind
 }
 
-func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.RunManifest) ([]compiledRule, error) {
+func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.RunManifest) ([]compiledRule, []compiledPinRule, error) {
 	var rules []compiledRule
+	var pinRules []compiledPinRule
 	for _, r := range recipes {
 		if r.DocTitlePattern == "" {
 			continue
 		}
 		docRe, err := regexp.Compile(r.DocTitlePattern)
 		if err != nil {
-			return nil, fmt.Errorf("derive: recipe %s: doc_title_pattern: %w", r.Name, err)
+			return nil, nil, fmt.Errorf("derive: recipe %s: doc_title_pattern: %w", r.Name, err)
 		}
 		if !docRe.MatchString(title) {
 			continue
@@ -222,21 +240,41 @@ func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.R
 		for _, tr := range r.Tables {
 			re, err := regexp.Compile(tr.TitlePattern)
 			if err != nil {
-				return nil, fmt.Errorf("derive: recipe %s: title_pattern %q: %w", r.Name, tr.TitlePattern, err)
+				return nil, nil, fmt.Errorf("derive: recipe %s: title_pattern %q: %w", r.Name, tr.TitlePattern, err)
 			}
 			kind, ok := parampb.LimitKind_value[tr.LimitKind]
 			if !ok || kind == 0 {
-				return nil, fmt.Errorf("derive: recipe %s: unknown limit_kind %q", r.Name, tr.LimitKind)
+				return nil, nil, fmt.Errorf("derive: recipe %s: unknown limit_kind %q", r.Name, tr.LimitKind)
 			}
 			rules = append(rules, compiledRule{re, parampb.LimitKind(kind)})
 		}
+		for _, pr := range r.PinTables {
+			re, err := regexp.Compile(pr.TitlePattern)
+			if err != nil {
+				return nil, nil, fmt.Errorf("derive: recipe %s: pin title_pattern %q: %w", r.Name, pr.TitlePattern, err)
+			}
+			pinRules = append(pinRules, compiledPinRule{re, pr.ColumnAxis})
+		}
 	}
-	if len(rules) == 0 {
+	if len(rules) == 0 && len(pinRules) == 0 {
 		manifest.Gaps = append(manifest.Gaps, &derivepb.Gap{
 			Kind: "no-recipe", Detail: fmt.Sprintf("no recipe matched document title %q", title),
 		})
 	}
-	return rules, nil
+	return rules, pinRules, nil
+}
+
+// classifyPin reports whether a title names a pin function table, and what the recipe
+// says its designator columns mean. The bool is the match: an axis of UNSPECIFIED is a
+// legitimate answer ("this is a pin table, do not read its columns as packages"), so it
+// cannot double as the not-matched signal the way LimitKind's zero value does.
+func classifyPin(title string, rules []compiledPinRule) (derivepb.PinColumnAxis, bool) {
+	for _, r := range rules {
+		if r.re.MatchString(title) {
+			return r.axis, true
+		}
+	}
+	return derivepb.PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED, false
 }
 
 func classify(title string, rules []compiledRule) parampb.LimitKind {

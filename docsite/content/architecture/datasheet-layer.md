@@ -395,6 +395,42 @@ incremental.
    raw-only, which the parameter contract's comparison semantics then correctly exclude from
    automatic comparison. Non-title band text ("TA = 25C unless otherwise noted") becomes a
    table-level condition on every row.
+2b. **Pin function tables.** A table a `PinTableRule` claims yields terminals rather than values,
+   so it takes a separate path. Its layout comes in two shapes and both are common: a flat header
+   with one column labelled `NO.` or `PIN`, and a banded header where a spanning `PIN` cell sits
+   above several columns of designators. In the banded shape the sub-columns carry no role word at
+   all, so they are identified by position rather than by vocabulary.
+
+   **The recipe must say what those sub-columns MEAN, because the document does not.** A banded
+   table looks identical whether its sub-columns are package codes (`D, PW` | `RUT` | `YZT`) or
+   part variants (`ADS1113` | `ADS1114` | `ADS1115`), and the two are opposite: per-package
+   numbering of one die versus three different parts sharing a pinout. Measured over a
+   63-document corpus the banded shape appears 44 times, of which six are variant columns and one
+   is package columns, so a rule inferring the axis from header text would be fitted to a single
+   example and would mint packages named after part numbers on the rest. `PinColumnAxis` is
+   therefore declared, and the safe default extracts the pins while recording a gap naming the
+   columns it declined to read.
+
+   Four things about real producer output, none of which are visible on the printed page:
+
+   - **One header cell can name several packages.** `D, PW` heads a single column of designators
+     shared by two bodies, so one cell yields a `PinNumber` for each.
+   - **Designators split on commas only, never whitespace.** Producers flatten a footnote marker
+     into the cell as a trailing token, so `8 2` is pin 8 carrying footnote 2 while `2, 3` is
+     genuinely two terminals. Splitting on whitespace invents a pin on every footnoted row.
+   - **The absence marker arrives as an ASCII hyphen**, not the em-dash printed on the page. A
+     parser matching the typographic glyph reads every absence as an unparsed cell.
+   - **Subscripts flatten with an injected space**, so `VCCA` arrives as `V CCA`. The name is the
+     channel that resolves a design pin to a spec pin, so it is rejoined when every fragment is a
+     short all-caps token. A multi-word label like `Thermal pad` keeps its spaces.
+
+   A row carrying several designators per package is **ambiguous by construction**: `GND 2, 5, 7`
+   is one terminal bonded to three legs, and `NC 6, 9` is two terminals sharing a printed name.
+   The table cannot tell them apart, so the split is keyed on the one function the document states
+   in words ("No connection. Not internally connected."), and every such row is gapped whichever
+   way it went. The type column is otherwise taken at face value: real tables leave it blank on
+   supply and ground rows, and inferring `POWER_INPUT` from a name like `VCCA` would be this stage
+   inventing a classification the document declined to make.
 3. **Patches, applied last.** A patch is one pinned human correction to one cell of one exact
    document, keyed by the document content hash plus the pre-patch table content hash, so a new
    revision or a re-detection invalidates it by construction: it stops matching, and the

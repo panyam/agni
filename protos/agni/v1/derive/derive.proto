@@ -27,6 +27,12 @@ message Recipe {
   // An empty pattern matches nothing (a recipe must opt in).
   string doc_title_pattern = 2;
   repeated TableRule tables = 3;
+  // Pin FUNCTION tables, which yield agni.v1.param.Pin and Package rather than
+  // Parameter. A separate list from `tables` rather than an axis on TableRule
+  // because TableRule.limit_kind is required and validated non-zero; making it
+  // optional to accommodate pins would weaken a live invariant, and "every
+  // TableRule yields parameters" is worth keeping true.
+  repeated PinTableRule pin_tables = 4;
   map<string, string> attributes = 14;
 }
 
@@ -40,6 +46,41 @@ message TableRule {
   // "LIMIT_KIND_ABSOLUTE_MAX". A string (not an imported enum) so derive.proto does
   // not import param.proto for one constant; the derive stage validates the name.
   string limit_kind = 2;
+}
+
+// PinColumnAxis says what the SUB-COLUMNS under a pin table's banded "PIN" header
+// mean. It is declared by the recipe rather than inferred, and that is the whole
+// reason this field exists.
+//
+// A banded pin table looks identical whether its sub-columns are package codes
+// ("D, PW" | "RUT" | "YZT") or part variants ("ADS1113" | "ADS1114" | "ADS1115"),
+// and the two are semantically opposite: the first is per-package numbering of one
+// die, the second is three different parts sharing a pinout description. Inferring
+// from the header text was tried and rejected. Measured over a 63-document corpus,
+// the banded shape appears 44 times: six are variant columns, one is package
+// columns, and the rest carry no sub-columns at all. A rule keyed on "looks like a
+// short all-caps token" would therefore be fitted to a single example and would
+// silently mint packages named after part numbers on six others.
+//
+// UNSPECIFIED is the safe default and is NOT an error: the pins are still extracted,
+// they simply carry no PinNumber, and the run records a gap naming the columns it
+// declined to interpret. Silence never reads as coverage.
+enum PinColumnAxis {
+  PIN_COLUMN_AXIS_UNSPECIFIED = 0;
+  // Each sub-column is one package, or several when the header cell names several
+  // ("D, PW" is two packages sharing one column of numbers).
+  PIN_COLUMN_AXIS_PACKAGE = 1;
+  // Each sub-column is a part variant. The parameter contract has no per-variant
+  // pin numbering, so pins are emitted without numbers and the run gaps the columns.
+  PIN_COLUMN_AXIS_VARIANT = 2;
+}
+
+// PinTableRule classifies a pin function table. Unlike TableRule it carries no limit
+// kind: a pin table's rows are terminals, not values.
+message PinTableRule {
+  // RE2 pattern over the table's title after title attachment.
+  string title_pattern = 1;
+  PinColumnAxis column_axis = 2;
 }
 
 // Patch is one pinned human correction to one cell of one table of one exact
@@ -88,6 +129,11 @@ message RunManifest {
   repeated string patches_applied = 7;
   // Parameters emitted into the PartSpec (post-Validate).
   int32 parameters_emitted = 8;
+  // Pins and packages emitted into the PartSpec (post-Validate). Counted separately
+  // from parameters because a run over a document with only a pin table emits zero
+  // parameters, and one number reading zero would otherwise look like a failed run.
+  int32 pins_emitted = 12;
+  int32 packages_emitted = 13;
   // Ensemble agreement stats: zero until a second extraction path exists (the
   // VLM/ensemble gate of docs/17). Declared here so the manifest shape is stable.
   int32 ensemble_agreed = 9;

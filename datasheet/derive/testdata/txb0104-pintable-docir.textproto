@@ -1,0 +1,172 @@
+# Raw-shaped doc-IR of the TXB0104's pin function table: ONE table, exactly as a real
+# producer emitted it, so the pin path is exercised against producer output rather than
+# against a shape invented to suit the parser. Transcribed from TI SCES650K (Rev. K,
+# APRIL 2006 - REVISED MARCH 2025), Table 4-1 "Pin Functions", page 4; cells are the
+# docling output for that page, unedited.
+#
+# It is a FIXTURE, not a corpus entry: one table of one document, carrying the cases the
+# pin path has to survive. The PDF and the full doc-IR stay outside this repo.
+#
+# The table is UNTITLED, like every real one, so its title has to be attached from the
+# section_header block above it. The awkward cases it carries, all real:
+#
+#   - ONE HEADER CELL NAMING SEVERAL PACKAGES. "D, PW" and "GXU, ZXU, NMN" each head a
+#     single column of designators shared by two or three bodies.
+#   - SEVERAL DESIGNATORS IN ONE CELL, spaced inconsistently WITHIN one row: the NC row
+#     reads "6, 9" under D/PW and "6,9" under BQA/RGY.
+#   - THE ABSENCE MARKER IS AN ASCII HYPHEN, not the em-dash printed on the page. A
+#     parser matching the typographic glyph reads every absence as an unparsed cell.
+#   - A TYPE COLUMN THAT DECLINES TO CLASSIFY. VCCA, VCCB, GND and NC all carry "-" in
+#     the I/O column, so a supply pin's function is NOT stated by the channel that
+#     states it for the data pins.
+#   - A ROW WITH NO DESIGNATOR IN ANY BODY. "Thermal pad" has a name and a description
+#     and nothing else, which the contract permits and nothing else exercises.
+#   - SUBSCRIPTS FLATTENED WITH INJECTED SPACES: "Referenced to V CCA .".
+content_hash: "sha256:fixture-txb0104-pintable"
+source_format: "pdf"
+title: "TXB0104"
+producer: "hand"
+# page_count is the PAGE THIS TABLE IS ON, not the document's length: the fixture holds
+# one page out of 58, and doc.Validate requires a page number within the declared count.
+page_count: 4
+
+pages {
+  number: 4
+  width: 612
+  height: 792
+  text_blocks {
+    id: "p4.x30"
+    text: "Table 4-1. Pin Functions"
+    bbox { x: 248.86 y: 230.95 width: 114.29 height: 11.16 }
+    kind: "section_header"
+  }
+  tables {
+    id: "p4.t1"
+    title: ""
+    bbox { x: 55.67 y: 242.04 width: 500.25 height: 263.22 }
+    rows: 16
+    cols: 8
+    cells { row: 0 col: 0 col_span: 6 text: "PIN" is_header: true }
+    cells { row: 1 col: 6 text: "I/O" is_header: true }
+    cells { row: 1 col: 7 text: "DESCRIPTION" is_header: true }
+    cells { row: 1 col: 0 text: "NAME" is_header: true }
+    cells { row: 1 col: 1 text: "D, PW" is_header: true }
+    cells { row: 1 col: 2 text: "BQA, RGY" is_header: true }
+    cells { row: 1 col: 3 text: "RUT" is_header: true }
+    cells { row: 1 col: 4 text: "GXU, ZXU, NMN" is_header: true }
+    cells { row: 1 col: 5 text: "YZT" is_header: true }
+    cells { row: 2 col: 0 text: "A1" }
+    cells { row: 2 col: 1 text: "2" }
+    cells { row: 2 col: 2 text: "2" }
+    cells { row: 2 col: 3 text: "2" }
+    cells { row: 2 col: 4 text: "A1" }
+    cells { row: 2 col: 5 text: "A3" }
+    cells { row: 2 col: 6 text: "I/O" }
+    cells { row: 2 col: 7 text: "Input/output 1. Referenced to V CCA ." }
+    cells { row: 3 col: 0 text: "A2" }
+    cells { row: 3 col: 1 text: "3" }
+    cells { row: 3 col: 2 text: "3" }
+    cells { row: 3 col: 3 text: "3" }
+    cells { row: 3 col: 4 text: "A2" }
+    cells { row: 3 col: 5 text: "B3" }
+    cells { row: 3 col: 6 text: "I/O" }
+    cells { row: 3 col: 7 text: "Input/output 2. Referenced to V CCA ." }
+    cells { row: 4 col: 0 text: "A3" }
+    cells { row: 4 col: 1 text: "4" }
+    cells { row: 4 col: 2 text: "4" }
+    cells { row: 4 col: 3 text: "4" }
+    cells { row: 4 col: 4 text: "A3" }
+    cells { row: 4 col: 5 text: "C3" }
+    cells { row: 4 col: 6 text: "I/O" }
+    cells { row: 4 col: 7 text: "Input/output 3. Referenced to V CCA ." }
+    cells { row: 5 col: 0 text: "A4" }
+    cells { row: 5 col: 1 text: "5" }
+    cells { row: 5 col: 2 text: "5" }
+    cells { row: 5 col: 3 text: "5" }
+    cells { row: 5 col: 4 text: "A4" }
+    cells { row: 5 col: 5 text: "D3" }
+    cells { row: 5 col: 6 text: "I/O" }
+    cells { row: 5 col: 7 text: "Input/output 4. Referenced to V CCA ." }
+    cells { row: 6 col: 0 text: "B1" }
+    cells { row: 6 col: 1 text: "13" }
+    cells { row: 6 col: 2 text: "13" }
+    cells { row: 6 col: 3 text: "10" }
+    cells { row: 6 col: 4 text: "C1" }
+    cells { row: 6 col: 5 text: "A1" }
+    cells { row: 6 col: 6 text: "I/O" }
+    cells { row: 6 col: 7 text: "Input/output 1. Referenced to V CCB ." }
+    cells { row: 7 col: 0 text: "B2" }
+    cells { row: 7 col: 1 text: "12" }
+    cells { row: 7 col: 2 text: "12" }
+    cells { row: 7 col: 3 text: "9" }
+    cells { row: 7 col: 4 text: "C2" }
+    cells { row: 7 col: 5 text: "B1" }
+    cells { row: 7 col: 6 text: "I/O" }
+    cells { row: 7 col: 7 text: "Input/output 2. Referenced to V CCB ." }
+    cells { row: 8 col: 0 text: "B3" }
+    cells { row: 8 col: 1 text: "11" }
+    cells { row: 8 col: 2 text: "11" }
+    cells { row: 8 col: 3 text: "8" }
+    cells { row: 8 col: 4 text: "C3" }
+    cells { row: 8 col: 5 text: "C1" }
+    cells { row: 8 col: 6 text: "I/O" }
+    cells { row: 8 col: 7 text: "Input/output 3. Referenced to V CCB ." }
+    cells { row: 9 col: 0 text: "B4" }
+    cells { row: 9 col: 1 text: "10" }
+    cells { row: 9 col: 2 text: "10" }
+    cells { row: 9 col: 3 text: "7" }
+    cells { row: 9 col: 4 text: "C4" }
+    cells { row: 9 col: 5 text: "D1" }
+    cells { row: 9 col: 6 text: "I/O" }
+    cells { row: 9 col: 7 text: "Input/output 4. Referenced to V CCB ." }
+    cells { row: 10 col: 0 text: "GND" }
+    cells { row: 10 col: 1 text: "7" }
+    cells { row: 10 col: 2 text: "7" }
+    cells { row: 10 col: 3 text: "6" }
+    cells { row: 10 col: 4 text: "B4" }
+    cells { row: 10 col: 5 text: "D2" }
+    cells { row: 10 col: 6 text: "-" }
+    cells { row: 10 col: 7 text: "Ground" }
+    cells { row: 11 col: 0 text: "NC" }
+    cells { row: 11 col: 1 text: "6, 9" }
+    cells { row: 11 col: 2 text: "6,9" }
+    cells { row: 11 col: 3 text: "-" }
+    cells { row: 11 col: 4 text: "-" }
+    cells { row: 11 col: 5 text: "-" }
+    cells { row: 11 col: 6 text: "-" }
+    cells { row: 11 col: 7 text: "No connection. Not internally connected." }
+    cells { row: 12 col: 0 text: "OE" }
+    cells { row: 12 col: 1 text: "8" }
+    cells { row: 12 col: 2 text: "8" }
+    cells { row: 12 col: 3 text: "12" }
+    cells { row: 12 col: 4 text: "B3" }
+    cells { row: 12 col: 5 text: "C2" }
+    cells { row: 12 col: 6 text: "I" }
+    cells { row: 12 col: 7 text: "Tri-state output-mode enable. Pull OE low to place all outputs in tri-state mode. Referenced to V CCA ." }
+    cells { row: 13 col: 0 text: "V CCA" }
+    cells { row: 13 col: 1 text: "1" }
+    cells { row: 13 col: 2 text: "1" }
+    cells { row: 13 col: 3 text: "1" }
+    cells { row: 13 col: 4 text: "B2" }
+    cells { row: 13 col: 5 text: "B2" }
+    cells { row: 13 col: 6 text: "-" }
+    cells { row: 13 col: 7 text: "A-port supply voltage 1.2V ≤ V CCA ≤ 3.6V and V CCA ≤ V CCB ." }
+    cells { row: 14 col: 0 text: "V CCB" }
+    cells { row: 14 col: 1 text: "14" }
+    cells { row: 14 col: 2 text: "14" }
+    cells { row: 14 col: 3 text: "11" }
+    cells { row: 14 col: 4 text: "B1" }
+    cells { row: 14 col: 5 text: "A2" }
+    cells { row: 14 col: 6 text: "-" }
+    cells { row: 14 col: 7 text: "B-port supply voltage 1.65V ≤ V CCB ≤ 5.5V." }
+    cells { row: 15 col: 0 text: "Thermal pad" }
+    cells { row: 15 col: 1 text: "-" }
+    cells { row: 15 col: 3 text: "-" }
+    cells { row: 15 col: 4 text: "-" }
+    cells { row: 15 col: 5 text: "-" }
+    cells { row: 15 col: 6 text: "-" }
+    cells { row: 15 col: 7 text: "For the BQA, RGY package, the exposed center thermal pad must either be connected to Ground or left electrically open." }
+    confidence: 1
+    content_hash: "sha256:559fec32420348f7fb663ff23fa2393e00773c6b6508fe53695d9387538ccf64"
+  }
+}
