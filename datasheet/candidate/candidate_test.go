@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	candpb "github.com/panyam/agni/gen/go/agni/v1/candidate"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
@@ -21,10 +22,10 @@ func testDoc() *docpb.Document {
 	}
 }
 
-func good() Candidate {
-	return Candidate{
-		Request:  Request{MPN: "ACME-1", Symbol: "VCC"},
-		Citation: Citation{Page: 1, RegionID: "p1.t1", Row: 1, Col: 1, Quote: "3.6"},
+func good() *candpb.Candidate {
+	return &candpb.Candidate{
+		Request:  &candpb.Request{Mpn: "ACME-1", Symbol: "VCC"},
+		Citation: &candpb.Citation{Page: 1, RegionId: "p1.t1", Row: 1, Col: 1, Quote: "3.6"},
 		Value:    &parampb.RangeValue{Max: f(3.6)}, Unit: "V",
 		LimitKind: parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING,
 		Source:    "test/v0", Confidence: 0.8,
@@ -52,20 +53,20 @@ func TestValidateRejectsAnInventedQuote(t *testing.T) {
 func TestValidateRejectsUncheckableCandidates(t *testing.T) {
 	cases := []struct {
 		name string
-		mut  func(*Candidate)
+		mut  func(*candpb.Candidate)
 		want error
 	}{
-		{"no region", func(c *Candidate) { c.Citation.RegionID = "" }, ErrNoCitation},
-		{"no quote", func(c *Candidate) { c.Citation.Quote = "  " }, ErrNoCitation},
-		{"region not in this document", func(c *Candidate) { c.Citation.RegionID = "p9.t9" }, ErrRegionUnknown},
-		{"cell that does not exist", func(c *Candidate) { c.Citation.Row = 7 }, ErrRegionUnknown},
-		{"page that does not exist", func(c *Candidate) { c.Citation.Page = 4 }, ErrRegionUnknown},
-		{"no confidence", func(c *Candidate) { c.Confidence = 0 }, ErrConfidenceRange},
-		{"certainty claimed by a machine", func(c *Candidate) { c.Confidence = 1 }, ErrConfidenceRange},
+		{"no region", func(c *candpb.Candidate) { c.Citation.RegionId = "" }, ErrNoCitation},
+		{"no quote", func(c *candpb.Candidate) { c.Citation.Quote = "  " }, ErrNoCitation},
+		{"region not in this document", func(c *candpb.Candidate) { c.Citation.RegionId = "p9.t9" }, ErrRegionUnknown},
+		{"cell that does not exist", func(c *candpb.Candidate) { c.Citation.Row = 7 }, ErrRegionUnknown},
+		{"page that does not exist", func(c *candpb.Candidate) { c.Citation.Page = 4 }, ErrRegionUnknown},
+		{"no confidence", func(c *candpb.Candidate) { c.Confidence = 0 }, ErrConfidenceRange},
+		{"certainty claimed by a machine", func(c *candpb.Candidate) { c.Confidence = 1 }, ErrConfidenceRange},
 	}
 	for _, tc := range cases {
 		c := good()
-		tc.mut(&c)
+		tc.mut(c)
 		if err := Validate(c, testDoc()); !errors.Is(err, tc.want) {
 			t.Errorf("%s: want %v, got %v", tc.name, tc.want, err)
 		}
@@ -76,7 +77,7 @@ func TestValidateRejectsUncheckableCandidates(t *testing.T) {
 // a paraphrase is not a quote.
 func TestQuoteMatchingIgnoresOnlyWhitespace(t *testing.T) {
 	c := good()
-	c.Citation.RegionID, c.Citation.Row, c.Citation.Col = "p1.x1", -1, -1
+	c.Citation.RegionId, c.Citation.Row, c.Citation.Col = "p1.x1", -1, -1
 	c.Citation.Quote = "Recommended   Operating\nConditions"
 	if err := Validate(c, testDoc()); err != nil {
 		t.Errorf("re-wrapped quote must still match: %v", err)
@@ -120,7 +121,7 @@ func TestAcceptRevalidatesAndStampsProvenance(t *testing.T) {
 // Retrieval knows which passage is about a symbol and nothing about what it says. Proposing a value
 // would be the confident wrong answer this package exists to keep out.
 func TestRetrievalSourceProposesRegionsNeverValues(t *testing.T) {
-	got, err := RetrievalSource{}.Propose(Request{MPN: "ACME-1", Symbol: "VCC"}, testDoc())
+	got, err := RetrievalSource{}.Propose(&candpb.Request{Mpn: "ACME-1", Symbol: "VCC"}, testDoc())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +141,7 @@ func TestRetrievalSourceProposesRegionsNeverValues(t *testing.T) {
 // A document that does not discuss the symbol yields nothing, which is the correct answer and not a
 // reason to lower the bar.
 func TestRetrievalSourceReturnsNothingRatherThanReaching(t *testing.T) {
-	got, err := RetrievalSource{}.Propose(Request{Symbol: "thermalimpedance"}, testDoc())
+	got, err := RetrievalSource{}.Propose(&candpb.Request{Symbol: "thermalimpedance"}, testDoc())
 	if err != nil {
 		t.Fatal(err)
 	}

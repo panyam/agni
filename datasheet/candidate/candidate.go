@@ -34,51 +34,18 @@ import (
 	"fmt"
 	"strings"
 
+	candpb "github.com/panyam/agni/gen/go/agni/v1/candidate"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Request is the fact being asked for. It is deliberately the same shape as a check's unmet
-// dependency, so the thing that reported the gap and the thing that proposes a fix speak about it in
-// the same terms rather than through a translation nobody owns.
-type Request struct {
-	MPN    string
-	Symbol string
-}
-
-// Citation locates a candidate in the document precisely enough to highlight, and quotes it.
-//
-// RegionID is a doc-IR text block or table id. Row and Col locate a table cell and are -1 otherwise.
-// Quote is the region's text VERBATIM, which is what makes the claim checkable rather than merely
-// plausible.
-type Citation struct {
-	Page     int32
-	RegionID string
-	Row, Col int32
-	Quote    string
-}
-
-// Candidate is a proposed fact, its evidence, and who proposed it. Value may be nil: a proposer that
-// found the right passage and could not read a number from it has still done most of the work, and
-// saying so is more useful than guessing a value.
-type Candidate struct {
-	Request   Request
-	Citation  Citation
-	Value     *parampb.RangeValue
-	Unit      string
-	LimitKind parampb.LimitKind
-	// Source names what proposed this, and becomes the provenance method on acceptance, so a seeded
-	// corpus records which mechanism produced each value rather than flattening them all to "machine".
-	Source string
-	// Confidence is the proposer's own estimate, in (0, 1]. It NEVER reaches 1.0 through this path:
-	// only a human verification earns that, which is the posture derive already takes.
-	Confidence float64
-}
+// The wire types ARE the types here, as in param and doc: this is a cross-runtime contract, and a
+// Go twin beside it is the drift a shared schema exists to prevent.
 
 // Source proposes candidates for a request against one document. Returning none is a legitimate and
 // common answer, and is what a proposer must do rather than lower its standards to produce something.
 type Source interface {
-	Propose(req Request, d *docpb.Document) ([]Candidate, error)
+	Propose(req *candpb.Request, d *docpb.Document) ([]*candpb.Candidate, error)
 }
 
 // Refusal reasons, distinguished so a caller can tell a proposer that is misconfigured from one that
@@ -103,19 +70,19 @@ var (
 // The quote check normalises whitespace before comparing, because a producer's line breaking is not
 // part of the claim, but it does not normalise anything else. A proposer that paraphrases fails, and
 // should.
-func Validate(c Candidate, d *docpb.Document) error {
-	if c.Citation.RegionID == "" || strings.TrimSpace(c.Citation.Quote) == "" {
-		return fmt.Errorf("%w: region %q quote %q", ErrNoCitation, c.Citation.RegionID, c.Citation.Quote)
+func Validate(c *candpb.Candidate, d *docpb.Document) error {
+	if c.GetCitation().GetRegionId() == "" || strings.TrimSpace(c.GetCitation().GetQuote()) == "" {
+		return fmt.Errorf("%w: region %q quote %q", ErrNoCitation, c.GetCitation().GetRegionId(), c.GetCitation().GetQuote())
 	}
-	if c.Confidence <= 0 || c.Confidence >= 1 {
-		return fmt.Errorf("%w: %v", ErrConfidenceRange, c.Confidence)
+	if c.GetConfidence() <= 0 || c.GetConfidence() >= 1 {
+		return fmt.Errorf("%w: %v", ErrConfidenceRange, c.GetConfidence())
 	}
-	text, ok := regionText(d, c.Citation)
+	text, ok := regionText(d, c.GetCitation())
 	if !ok {
-		return fmt.Errorf("%w: page %d region %q", ErrRegionUnknown, c.Citation.Page, c.Citation.RegionID)
+		return fmt.Errorf("%w: page %d region %q", ErrRegionUnknown, c.GetCitation().GetPage(), c.GetCitation().GetRegionId())
 	}
-	if !strings.Contains(squash(text), squash(c.Citation.Quote)) {
-		return fmt.Errorf("%w: region %q", ErrQuoteNotFound, c.Citation.RegionID)
+	if !strings.Contains(squash(text), squash(c.GetCitation().GetQuote())) {
+		return fmt.Errorf("%w: region %q", ErrQuoteNotFound, c.GetCitation().GetRegionId())
 	}
 	return nil
 }
@@ -123,21 +90,21 @@ func Validate(c Candidate, d *docpb.Document) error {
 // regionText returns the text of the cited region: a text block, one cell of a table, or the whole
 // table when no cell is named. A citation naming a cell that does not exist is unknown rather than
 // empty, so a stale row/column reference is caught rather than silently matching nothing.
-func regionText(d *docpb.Document, cit Citation) (string, bool) {
+func regionText(d *docpb.Document, cit *candpb.Citation) (string, bool) {
 	for _, pg := range d.GetPages() {
-		if pg.GetNumber() != cit.Page {
+		if pg.GetNumber() != cit.GetPage() {
 			continue
 		}
 		for _, tb := range pg.GetTextBlocks() {
-			if tb.GetId() == cit.RegionID {
+			if tb.GetId() == cit.GetRegionId() {
 				return tb.GetText(), true
 			}
 		}
 		for _, t := range pg.GetTables() {
-			if t.GetId() != cit.RegionID {
+			if t.GetId() != cit.GetRegionId() {
 				continue
 			}
-			if cit.Row < 0 && cit.Col < 0 {
+			if cit.GetRow() < 0 && cit.GetCol() < 0 {
 				var all []string
 				for _, c := range t.GetCells() {
 					all = append(all, c.GetText())
@@ -145,7 +112,7 @@ func regionText(d *docpb.Document, cit Citation) (string, bool) {
 				return strings.Join(all, " "), true
 			}
 			for _, c := range t.GetCells() {
-				if c.GetRow() == cit.Row && c.GetCol() == cit.Col {
+				if c.GetRow() == cit.GetRow() && c.GetCol() == cit.GetCol() {
 					return c.GetText(), true
 				}
 			}
@@ -167,27 +134,27 @@ func squash(s string) string { return strings.Join(strings.Fields(strings.ToLowe
 // human confirmation is a separate act on a separate artifact; conflating "a machine proposed this
 // and a person has not looked" with "a person checked this" is the failure this seam exists to
 // prevent.
-func Accept(c Candidate, d *docpb.Document, docRef string) (*parampb.Parameter, error) {
+func Accept(c *candpb.Candidate, d *docpb.Document, docRef string) (*parampb.Parameter, error) {
 	if err := Validate(c, d); err != nil {
 		return nil, err
 	}
-	region := c.Citation.RegionID
-	if c.Citation.Row >= 0 {
-		region = fmt.Sprintf("%s r%dc%d", region, c.Citation.Row, c.Citation.Col)
+	region := c.GetCitation().GetRegionId()
+	if c.GetCitation().GetRow() >= 0 {
+		region = fmt.Sprintf("%s r%dc%d", region, c.GetCitation().GetRow(), c.GetCitation().GetCol())
 	}
 	return &parampb.Parameter{
-		Symbol:    c.Request.Symbol,
-		LimitKind: c.LimitKind,
-		Value:     c.Value,
-		Unit:      c.Unit,
+		Symbol:    c.GetRequest().GetSymbol(),
+		LimitKind: c.GetLimitKind(),
+		Value:     c.GetValue(),
+		Unit:      c.GetUnit(),
 		Attributes: map[string]string{
 			// The verbatim evidence travels with the fact, so a later reviewer re-checks the claim
 			// without re-opening the document.
-			"quote": c.Citation.Quote,
+			"quote": c.GetCitation().GetQuote(),
 		},
 		Prov: &parampb.ParamProvenance{
-			DocRef: docRef, Page: c.Citation.Page, TableOrFigure: region,
-			Method: c.Source, Confidence: c.Confidence,
+			DocRef: docRef, Page: c.GetCitation().GetPage(), TableOrFigure: region,
+			Method: c.GetSource(), Confidence: c.GetConfidence(),
 		},
 	}, nil
 }

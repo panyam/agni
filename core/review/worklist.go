@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
 // The seeding work list: what a run asked for and could not get.
@@ -16,14 +17,10 @@ import (
 // actually asked for and failed to find is bounded by definition and prioritised for free: a fact
 // blocking six items is worth more than one blocking one, and only the demand side knows that.
 
-// WorkItem is one datasheet fact to go and find, and what finding it would unblock.
-type WorkItem struct {
-	check.UnmetDependency
-	// Blocked names the review items this fact stands between, most useful first. It is the
-	// prioritisation signal a per-item view structurally cannot show: an item lists the facts IT
-	// needs, and only a rollup can say which fact the most items are waiting on.
-	Blocked []string
-}
+// WorkItem is the wire type: see agni.v1.checks.WorkItem. This layer computes it directly rather
+// than through a Go twin, because the portal is its consumer and a parallel type on each side of
+// that boundary is what a shared schema exists to avoid.
+type WorkItem = checkspb.WorkItem
 
 // WorkList collapses every unmet dependency in a report into the set of facts to find.
 //
@@ -33,14 +30,14 @@ type WorkItem struct {
 //
 // A report with nothing blocked returns nothing, which is the ordinary state of a fully seeded
 // design and must not read as an error.
-func WorkList(r Report) []WorkItem {
+func WorkList(r Report) []*WorkItem {
 	return WorkListAcross([]Report{r})
 }
 
 // WorkListAcross merges the work lists of several reports, which is what a project spanning designs
 // needs: one part seeded once unblocks every design that places it, and asking a person to find the
 // same fact per design is how a work list becomes ignored.
-func WorkListAcross(rs []Report) []WorkItem {
+func WorkListAcross(rs []Report) []*WorkItem {
 	type agg struct {
 		dep     check.UnmetDependency
 		blocked []string
@@ -80,20 +77,26 @@ func WorkListAcross(rs []Report) []WorkItem {
 			}
 		}
 	}
-	out := make([]WorkItem, 0, len(order))
+	out := make([]*WorkItem, 0, len(order))
 	for _, k := range order {
 		a := byKey[k]
 		sort.Strings(a.blocked)
-		out = append(out, WorkItem{UnmetDependency: a.dep, Blocked: a.blocked})
+		out = append(out, &checkspb.WorkItem{
+			Dependency: &checkspb.UnmetDependency{
+				Mpn: a.dep.MPN, Manufacturer: a.dep.Manufacturer,
+				Symbol: a.dep.Symbol, SpecAbsent: a.dep.SpecAbsent,
+			},
+			Blocked: a.blocked,
+		})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
-		if len(out[i].Blocked) != len(out[j].Blocked) {
-			return len(out[i].Blocked) > len(out[j].Blocked)
+		if len(out[i].GetBlocked()) != len(out[j].GetBlocked()) {
+			return len(out[i].GetBlocked()) > len(out[j].GetBlocked())
 		}
-		if out[i].MPN != out[j].MPN {
-			return out[i].MPN < out[j].MPN
+		if out[i].GetDependency().GetMpn() != out[j].GetDependency().GetMpn() {
+			return out[i].GetDependency().GetMpn() < out[j].GetDependency().GetMpn()
 		}
-		return out[i].Symbol < out[j].Symbol
+		return out[i].GetDependency().GetSymbol() < out[j].GetDependency().GetSymbol()
 	})
 	return out
 }
@@ -101,7 +104,7 @@ func WorkListAcross(rs []Report) []WorkItem {
 // RenderWorkListMarkdown writes the work list as a table, or a single line when there is nothing to
 // do. The empty case is stated rather than rendered as an empty table, because "this run needs
 // nothing" is a result worth reading and a table with no rows looks like a bug.
-func RenderWorkListMarkdown(items []WorkItem) string {
+func RenderWorkListMarkdown(items []*WorkItem) string {
 	if len(items) == 0 {
 		return "No unmet datasheet facts: every check that needed one found it.\n"
 	}
@@ -110,14 +113,15 @@ func RenderWorkListMarkdown(items []WorkItem) string {
 	b.WriteString("| Part | Manufacturer | Symbol | Blocks | Items |\n")
 	b.WriteString("|---|---|---|---:|---|\n")
 	for _, w := range items {
-		part := w.MPN
-		if w.SpecAbsent {
+		part := w.GetDependency().GetMpn()
+		if w.GetDependency().GetSpecAbsent() {
 			// The next step differs, so the list says which it is rather than leaving a reader to
 			// discover on arrival that there is no document to search.
 			part += " (no spec)"
 		}
 		fmt.Fprintf(&b, "| %s | %s | %s | %d | %s |\n",
-			part, w.Manufacturer, w.Symbol, len(w.Blocked), strings.Join(w.Blocked, ", "))
+			part, w.GetDependency().GetManufacturer(), w.GetDependency().GetSymbol(),
+			len(w.GetBlocked()), strings.Join(w.GetBlocked(), ", "))
 	}
 	return b.String()
 }

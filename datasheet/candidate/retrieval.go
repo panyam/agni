@@ -1,6 +1,7 @@
 package candidate
 
 import (
+	candpb "github.com/panyam/agni/gen/go/agni/v1/candidate"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	"github.com/panyam/agni/datasheet/docindex"
 )
@@ -27,7 +28,7 @@ type RetrievalSource struct {
 
 // Propose searches for the requested symbol and offers the best-matching regions, quoted verbatim.
 // Returning nothing is a normal outcome for a document that does not discuss the symbol.
-func (s RetrievalSource) Propose(req Request, d *docpb.Document) ([]Candidate, error) {
+func (s RetrievalSource) Propose(req *candpb.Request, d *docpb.Document) ([]*candpb.Candidate, error) {
 	max := s.MaxHits
 	if max <= 0 {
 		max = 3
@@ -36,12 +37,12 @@ func (s RetrievalSource) Propose(req Request, d *docpb.Document) ([]Candidate, e
 	if conf <= 0 || conf >= 1 {
 		conf = 0.3
 	}
-	var out []Candidate
-	for _, h := range docindex.Build(d).Search(req.Symbol, max) {
-		out = append(out, Candidate{
+	var out []*candpb.Candidate
+	for _, h := range docindex.Build(d).Search(req.GetSymbol(), max) {
+		out = append(out, &candpb.Candidate{
 			Request: req,
-			Citation: Citation{
-				Page: h.Page, RegionID: h.RegionID, Row: h.Row, Col: h.Col, Quote: h.Text,
+			Citation: &candpb.Citation{
+				Page: h.Page, RegionId: h.RegionID, Row: h.Row, Col: h.Col, Quote: h.Text,
 			},
 			Source: "retrieval/v0", Confidence: conf,
 		})
