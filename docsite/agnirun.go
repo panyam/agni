@@ -44,7 +44,7 @@ var (
 // render-time generation would lose. And the docs build needs no `agni` binary and no fixture when
 // the outputs are fresh, so publishing stays fast and hermetic.
 func AgniRun(relativePath string) string {
-	out, err := runOrLoad(relativePath)
+	out, err := renderRun(relativePath)
 	if err != nil {
 		// Rendered rather than swallowed. A silently empty block is the failure this whole mechanism
 		// exists to remove, and a tutorial showing an error is a tutorial someone fixes.
@@ -53,7 +53,33 @@ func AgniRun(relativePath string) string {
 	// A BARE fence. Tagging it `console` makes Chroma apply its console lexer, which marks the whole
 	// body as error tokens and renders it crimson on near-black. The hand-written blocks it replaces
 	// are bare too, so this also keeps the page visually unchanged.
-	return "```\n" + strings.TrimRight(out, "\n") + "\n```"
+	return out
+}
+
+// renderRun composes the whole block: the command as the reader types it, then what it printed.
+//
+// One block rather than the command in the page and the output beside it, because two places is one
+// place too many — that split is what let the output drift in the first place, and leaving the command
+// behind would have preserved the bug for the half nobody was looking at.
+func renderRun(relativePath string) (string, error) {
+	spec, body, err := runOrLoad(relativePath)
+	if err != nil {
+		return "", err
+	}
+	shown := spec.Show
+	if strings.TrimSpace(shown) == "" {
+		shown = spec.Script
+	}
+	var b strings.Builder
+	b.WriteString("```\n")
+	for _, l := range strings.Split(strings.TrimRight(shown, "\n"), "\n") {
+		if strings.TrimSpace(l) == "" {
+			continue
+		}
+		b.WriteString("$ " + l + "\n")
+	}
+	b.WriteString(strings.TrimRight(body, "\n") + "\n```")
+	return b.String(), nil
 }
 
 // runSpec is what a `.yaml` beside a tutorial declares.
@@ -66,6 +92,19 @@ type runSpec struct {
 	// Script is the shell to run. A shell rather than an argv because the transcripts show `echo $?`
 	// to teach exit codes, and some pipe through `head`.
 	Script string `yaml:"script"`
+	// Show is the command as the READER should see it, defaulting to Script.
+	//
+	// It exists because the page used to hand-write the command in its own fence above the generated
+	// output, which put the command back in exactly the position the output had just been rescued
+	// from: editable in one place, run from another, free to disagree. Now both halves come from this
+	// file and the page holds only the directive.
+	//
+	// It is a separate field rather than the script itself because a script may carry plumbing a reader
+	// should not have to look at — a stderr redirect, a `sed` narrowing a table to the one line the
+	// lesson is about. Keeping them apart is what lets the page stay clean without the command becoming
+	// a fiction: they sit adjacent in one small file a reviewer reads whole, rather than in two files
+	// nobody diffs together. Omit it whenever the script has nothing to hide, which is most of the time.
+	Show string `yaml:"show"`
 }
 
 // outputSuffix is appended to the spec's path to name its captured output.
@@ -85,38 +124,38 @@ const stampPrefix = "#agni-run "
 // avoids. The consequence is that a code change does not regenerate anything on its own, so a
 // regression is caught by the periodic `make tutorial-runs` sweep rather than immediately — a
 // deliberate trade for a docs pipeline that stays out of the way.
-func runOrLoad(relativePath string) (string, error) {
+func runOrLoad(relativePath string) (runSpec, string, error) {
+	var spec runSpec
 	specPath, ok := safeJoin(relativePath)
 	if !ok {
-		return "", fmt.Errorf("path escapes the docsite directory")
+		return spec, "", fmt.Errorf("path escapes the docsite directory")
 	}
 	raw, err := os.ReadFile(specPath)
 	if err != nil {
-		return "", err
+		return spec, "", err
 	}
-	var spec runSpec
 	if err := yaml.Unmarshal(raw, &spec); err != nil {
-		return "", fmt.Errorf("%s: %w", relativePath, err)
+		return spec, "", fmt.Errorf("%s: %w", relativePath, err)
 	}
 	if strings.TrimSpace(spec.Script) == "" {
-		return "", fmt.Errorf("%s declares no script", relativePath)
+		return spec, "", fmt.Errorf("%s declares no script", relativePath)
 	}
 	want, err := inputHash(raw, spec.Fixture)
 	if err != nil {
-		return "", err
+		return spec, "", err
 	}
 	outPath := specPath + outputSuffix
 	if body, stamp, err := readOutput(outPath); err == nil && stamp == want {
-		return body, nil
+		return spec, body, nil
 	}
 	body, err := execute(spec)
 	if err != nil {
-		return "", err
+		return spec, "", err
 	}
 	if err := os.WriteFile(outPath, []byte(stampPrefix+want+"\n"+body), 0o644); err != nil {
-		return "", err
+		return spec, "", err
 	}
-	return body, nil
+	return spec, body, nil
 }
 
 // readOutput splits a captured output into its stamp and its body.

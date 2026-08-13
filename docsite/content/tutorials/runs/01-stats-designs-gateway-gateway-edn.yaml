@@ -1,0 +1,4 @@
+# Generated block for 01-read-a-design.md. Edit the script, not the capture.
+fixture: examples/tutorial-project
+script: |
+  agni stats designs/gateway/gateway.edn

@@ -13,13 +13,7 @@ part worth checking.
 
 ## Silent without it
 
-```
-agni check designs/gateway/gateway.edn --rule supply-exceeds-abs-max
-```
-
-```
-no findings (1 rule(s) run)
-```
+{{ agniRun "content/tutorials/runs/06-check-designs-gateway-gateway-edn-rule-suppl.yaml" }}
 
 The rule ran. It had no datasheet limits to compare against, so it decided nothing. Note that this
 looks identical to a board where the rule ran and everything was fine, which is exactly the ambiguity

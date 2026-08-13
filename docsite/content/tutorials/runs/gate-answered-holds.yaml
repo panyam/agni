@@ -3,3 +3,6 @@ fixture: examples/tutorial-project
 script: |
   agni review designs/gateway --min-answered 13 > /dev/null 2>&1
   echo $?
+show: |
+  agni review designs/gateway --min-answered 13
+  echo $?

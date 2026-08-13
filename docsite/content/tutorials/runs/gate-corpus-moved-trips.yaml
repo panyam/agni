@@ -9,3 +9,5 @@ script: |
   agni review designs/gateway --min-answered 13 > /dev/null 2>/tmp/agni-gate-err
   echo "exit $?"
   grep '^error:' /tmp/agni-gate-err
+show: |
+  agni review designs/gateway --min-answered 13
