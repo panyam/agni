@@ -111,6 +111,31 @@ function ChecksPanel(props: {
         <div class="checks-locate-note" role="status">{props.locateNote()}</div>
       </Show>
 
+      {/*
+        Rules that could not run, shown ABOVE the findings and whether or not any findings exist.
+        Above, because it qualifies everything below it: a list of two findings from a selection of
+        ten rules, six of which never ran, is not the same claim as two findings from ten. And
+        whether or not the list is empty, because "no findings" is exactly the case it exists to
+        correct — that is the reading a gated rule silently produces.
+      */}
+      <Show when={props.state().skipped.length > 0}>
+        <div class="checks-skipped" role="status">
+          <div class="checks-skipped-head">
+            {props.state().skipped.length} selected rule{props.state().skipped.length === 1 ? "" : "s"} could not run on this design
+          </div>
+          <ul class="checks-skipped-list">
+            <For each={props.state().skipped}>
+              {(sk) => (
+                <li>
+                  <span class="checks-skipped-rule">{sk.rule}</span>
+                  <span class="checks-skipped-reason">{sk.reason}</span>
+                </li>
+              )}
+            </For>
+          </ul>
+        </div>
+      </Show>
+
       <Show when={props.state().ruleCount > 0} fallback={<div class="findings-empty">No rules selected.</div>}>
         <Show
           when={props.state().findings.length > 0}
@@ -290,6 +315,7 @@ export function findingsPanelIsland(
     ruleCount: 0,
     pending: 0,
     running: false,
+    skipped: [],
     ruleSummaries: {},
   });
   const [locateNote, setLocateNote] = signalView<string>("");

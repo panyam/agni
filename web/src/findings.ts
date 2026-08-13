@@ -47,6 +47,14 @@ export interface FindingItem {
   locateReason: LocateReason;
 }
 
+// SkippedRuleItem is one selected rule that could not evaluate, with the reason the ENGINE gave.
+// The reason is passed through rather than reworded: the rule decides why it cannot run, and a
+// sentence composed here would be a second opinion that drifts from the gate.
+export interface SkippedRuleItem {
+  rule: string;
+  reason: string;
+}
+
 export interface FindingsState {
   findings: FindingItem[];
   // subject of the focused finding, "" when none (the whole selection is highlighted instead).
@@ -61,6 +69,14 @@ export interface FindingsState {
   pending: number;
   // running is true while a check run is in flight, so the panel disables the Run button.
   running: boolean;
+  // skipped names the selected rules that could NOT run on this design, and why.
+  //
+  // Without it the panel cannot tell a clean board from an unanswered question. A rule whose fact
+  // tier this design lacks — a board rule on a netlist, a datasheet rule with no corpus — is gated
+  // before it evaluates, so it produces no findings, and an empty list reads as "nothing wrong". This
+  // is the default-open panel, so that is the first thing most people see and the last thing they
+  // would think to doubt.
+  skipped: SkippedRuleItem[];
   // ruleSummaries maps a rule name to its catalog one-liner, shown as a group-header subtitle — the
   // per-rule description the retired report panel carried. A rule absent from the map renders none.
   ruleSummaries: Record<string, string>;

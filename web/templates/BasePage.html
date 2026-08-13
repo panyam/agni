@@ -75,6 +75,14 @@
     .error { color: #b00; padding: 3px 4px; }
     .findings-title { margin-top: 14px; }
     .findings-empty { color: #999; font-size: 12px; }
+    /* Rules that could not run. Deliberately quiet rather than alarming: it is not a defect, it is
+       the panel declining to imply coverage it does not have. */
+    .checks-skipped { margin-bottom: 8px; padding: 6px 8px; border-left: 3px solid #c9a227; background: #fdf8e6; font-size: 12px; }
+    .checks-skipped-head { color: #6b5400; margin-bottom: 4px; }
+    .checks-skipped-list { list-style: none; margin: 0; padding: 0; }
+    .checks-skipped-list li { display: flex; gap: 8px; color: #555; }
+    .checks-skipped-rule { font-family: ui-monospace, monospace; color: #333; }
+    .checks-skipped-reason { color: #777; }
     .findings-toolbar { margin-bottom: 6px; font-size: 12px; color: #555; }
     .findings-toolbar select { font: inherit; font-size: 12px; padding: 2px 4px; }
     .finding-groups { list-style: none; margin: 0; padding: 0; }

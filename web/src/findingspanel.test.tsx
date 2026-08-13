@@ -8,7 +8,7 @@ function f(over: Partial<FindingItem>): FindingItem {
 }
 
 function state(over: Partial<FindingsState>): FindingsState {
-  return { findings: [], selected: "", ruleCount: 1, pending: 0, running: false, ruleSummaries: {}, ...over };
+  return { findings: [], selected: "", ruleCount: 1, pending: 0, running: false, skipped: [], ruleSummaries: {}, ...over };
 }
 
 function mountPanel(over: Partial<FindingsState>) {
@@ -118,3 +118,30 @@ describe("checks panel locate note (WS7-042c)", () => {
     expect(el.querySelector(".checks-locate-note")).toBeNull();
   });
 })
+
+// A rule that could not run is the difference between "this board is clean" and "nobody asked". The
+// panel is the viewer's default-open surface, so an empty findings list is the first thing most
+// people see and the last thing they would think to doubt.
+it("says which selected rules could not run, and why", () => {
+  const { el } = mountPanel({
+    findings: [],
+    skipped: [{ rule: "track-width", reason: "design carries no board geometry" }],
+  });
+  const text = el.textContent ?? "";
+  expect(text).toContain("could not run");
+  expect(text).toContain("track-width");
+  expect(text).toContain("design carries no board geometry");
+  // And it still says there were no findings: the two statements are both true and neither replaces
+  // the other.
+  expect(text).toContain("No findings.");
+});
+
+// Shown even when findings exist, because it qualifies them: two findings from ten rules, six of
+// which never ran, is not the same claim as two findings from ten.
+it("reports skipped rules alongside findings", () => {
+  const { el } = mountPanel({
+    findings: [f({ rule: "i2c-pull-up" })],
+    skipped: [{ rule: "track-width", reason: "design carries no board geometry" }],
+  });
+  expect(el.textContent ?? "").toContain("could not run");
+});

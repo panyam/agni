@@ -379,6 +379,7 @@ export class ViewerPresenter {
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
       this.findingCache.clear(); // findings are per-design; a new file starts a fresh cache
+      this.skippedCache.clear(); // and so is which rules could not run: a new design has new tiers
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks now run on demand (Run button)
       this.assembleFindings(); // empty until a run — pushes the "press Run" state + zero overview counts
@@ -513,7 +514,13 @@ export class ViewerPresenter {
     if (missing.length > 0 && this.mount && this.path) {
       try {
         const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: missing, overlay: this.overlay() });
-        for (const n of missing) this.findingCache.set(n, []); // mark computed (even if it fired nothing)
+        for (const n of missing) {
+          this.findingCache.set(n, []); // mark computed (even if it fired nothing)
+          this.skippedCache.delete(n); // a rerun may have made it runnable (a board was attached)
+        }
+        // ?? [] because a hand-built response (a test stub, an older server) may omit it, and a
+        // missing field must degrade to "nothing was skipped" rather than throwing mid-run.
+        for (const sk of resp.skipped ?? []) this.skippedCache.set(sk.name, sk.reason);
         for (const f of resp.findings) {
           this.findingCache.get(f.rule)?.push({
             rule: f.rule,
@@ -564,9 +571,20 @@ export class ViewerPresenter {
       ruleCount: this.selectedRules.length,
       pending,
       running: this.checksRunning,
+      // Only the SELECTED rules, since a rule nobody ticked being unavailable is not news. Sorted so
+      // the list is stable across runs rather than following response order.
+      skipped: this.selectedRules
+        .filter((n) => this.skippedCache.has(n))
+        .map((n) => ({ rule: n, reason: this.skippedCache.get(n) ?? "" }))
+        .sort((a, b) => a.rule.localeCompare(b.rule)),
       ruleSummaries,
     });
   }
+
+  // skippedCache is rule name -> why it could not run on this design, alongside findingCache. It is a
+  // cache for the same reason: checks are on-demand and per rule, so a rule's gated-ness is learned
+  // when it is first run and has to survive until the design changes.
+  private skippedCache = new Map<string, string>();
 
   private expectations: RuleExpectationItem[] = [];
   private expectationFindings: FindingItem[] = [];
@@ -700,6 +718,7 @@ export class ViewerPresenter {
   // asking the wrong question.
   private async reloadForConvention(): Promise<void> {
     this.findingCache.clear();
+    this.skippedCache.clear();
     // Query results were computed under the previous vocabulary too, and `rail` answering differently
     // is the whole point of the feature, so leaving them on screen would show two vocabularies at once.
     this.views.query?.setState(emptyResult(false));
