@@ -439,3 +439,22 @@ func TestPortableCites(t *testing.T) {
 		t.Errorf("no cites should stay nil, got %v", got)
 	}
 }
+
+// TestQueryServiceUsesItsResolver guards a bug the type system could not: NewQueryService took a
+// *ProjectResolver and never assigned it, so s.projects was always nil and every query silently ran
+// against the built-in vocabulary.
+//
+// Nothing caught it. It compiles, because an unused parameter is legal. It passes every service test,
+// because those construct the service and assert on what they pass IN the request. And it fails
+// silently at runtime, because a nil resolver is a SUPPORTED state — it means "this deployment
+// resolves no projects" — so the code path taken is a real one, just the wrong one for a caller that
+// handed over a resolver.
+//
+// The assertion is on the field rather than through a run, because that is the actual invariant: a
+// constructor given a collaborator must keep it.
+func TestQueryServiceUsesItsResolver(t *testing.T) {
+	r := &ProjectResolver{}
+	if svc := NewQueryService(nil, nil, r); svc.projects != r {
+		t.Error("NewQueryService dropped its ProjectResolver, so every query would run against the built-in vocabulary with no error")
+	}
+}

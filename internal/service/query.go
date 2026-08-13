@@ -39,7 +39,7 @@ type QueryService struct {
 // provider, using the default naive datalog evaluator. Pass a nil provider when no datasheet corpus
 // is wired; the model's param.* relations then yield no rows (never an error).
 func NewQueryService(loader Loader, specs param.ParamProvider, projects *ProjectResolver) *QueryService {
-	return &QueryService{loader: loader, eval: query.Naive{}, specs: specs}
+	return &QueryService{loader: loader, eval: query.Naive{}, specs: specs, projects: projects}
 }
 
 // RunQuery loads the design, parses and evaluates the datalog query over its fact base, and returns
