@@ -64,6 +64,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
 - Toolchain: Go 1.26.4, `buf` 1.61, `protoc-gen-go` **v1.36.11**. Match the committed version when
   regenerating, otherwise generated files churn their version stamp.
+- **A command that reads a design goes through `readDesign` (or a service), never a bare
+  `newLoader().ReadDesign`.** That function is where a design's PROJECT config enters the read for the
+  six commands no service mediates (stats, diff, emit, render, intake, profilediag), and net roles are
+  resolved once at ingestion — so a read that skips it silently uses the built-in naming vocabulary and
+  none of the project's declared symbol libraries. All six bypassed it until agni issue 228, which is
+  why it is one function rather than six.
 
 **After ANY proto change run BOTH `make proto` (Go) AND `cd web && pnpm run gen` (TS).** Additive
 fields build green, so a skipped `pnpm run gen` goes unnoticed until the next regen churns.
