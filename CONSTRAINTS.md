@@ -120,6 +120,23 @@ VDD pin plain INPUT), so `PinDir == POWER_IN` works format-neutrally; a confiden
 untouched. The fill variant normalizes; it does not fabricate — the value it writes is the one the format
 could not express, not a guess.
 
+**Evidence-tier variant (agni issue 280).** "ONE shared pass" assumed every input a derived field
+needs is available at ingestion. That stopped being true when the datasheet tier arrived: params are
+attached at MODEL construction, after the read, so a field derivable from a vendor pin function
+cannot be filled by the ingestion pass at all. The rule softens to **one shared pass PER EVIDENCE
+TIER**, under two conditions that preserve everything it was protecting:
+
+- **The field records WHICH tier established each value.** `ir.Net.roles` is the first instance: each
+  role carries a `RoleSource` (convention / declared, with more to come), so a consumer can weigh a
+  value instead of only reading it, and "how do we know this" is answerable at the point of use.
+- **A later tier may only ADD, never remove or downgrade what an earlier one established.** This is
+  the property that makes extension safe: admitting a new kind of evidence can never cost a value an
+  earlier tier would have found, so no tier's absence can silently narrow an answer. It generalizes
+  the rule the declared-role union already followed.
+
+Everything else holds unchanged: still format-neutral, still never per-reader, still degrade-safe
+when a tier is absent. What is dropped is only the assumption that one pass can see everything.
+
 **Why:** keep the neutral IR from overfitting to whichever format we read most (EDIF
 today). The two-layer split (C1, and the ingestion doc) only pays off if the semantic layer stays
 format-neutral; this is the gate that keeps it so. Background: the IR-v0 discussion in the ingestion doc and the

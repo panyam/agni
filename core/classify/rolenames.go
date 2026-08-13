@@ -226,25 +226,63 @@ func StampNetRoles(d *ir.Design) { ActiveLexicon().StampNetRoles(d) }
 // the name reading rather than replacing it: the two answer the same question from different
 // sources, and a source that says GROUND does not thereby say "and nothing else". A design can
 // legitimately declare a net GROUND while naming it something the feedback vocabulary also matches.
-func rolesFor(v *RoleVocab, n *ir.Net) []string {
-	var out []string
-	seen := map[string]bool{}
-	add := func(role string) {
-		if role != "" && !seen[role] {
-			seen[role] = true
-			out = append(out, role)
+// RoleTokens returns just the role tokens a net carries, dropping the evidence. For the many callers
+// that ask WHICH roles rather than how each was established; a caller that needs the source reads
+// the NetRole values, or asks check.NetRoleSource.
+func RoleTokens(n *ir.Net) []string {
+	roles := n.GetRoles()
+	if len(roles) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(roles))
+	for _, r := range roles {
+		out = append(out, r.GetRole())
+	}
+	return out
+}
+
+// ConventionRoles builds the role set a naming convention would stamp, for an IR assembled by hand
+// rather than by the ingestion pass (a test fixture, an overlay composing a design in memory). It
+// names CONVENTION explicitly rather than leaving the source unspecified, so a hand-built net states
+// the same thing the pass would have stated about the same name.
+func ConventionRoles(roles ...string) []*ir.NetRole {
+	out := make([]*ir.NetRole, 0, len(roles))
+	for _, r := range roles {
+		out = append(out, &ir.NetRole{Role: r, Source: ir.RoleSource_ROLE_SOURCE_CONVENTION})
+	}
+	return out
+}
+
+func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
+	var out []*ir.NetRole
+	at := map[string]int{} // role -> index in out, so a second source can upgrade it in place
+	add := func(role string, src ir.RoleSource) {
+		if role == "" {
+			return
+		}
+		i, seen := at[role]
+		if !seen {
+			at[role] = len(out)
+			out = append(out, &ir.NetRole{Role: role, Source: src})
+			return
+		}
+		// The same role established twice keeps the STRONGER evidence. A declared ground that the name
+		// also spells "GND" is declared, not a convention: recording the weaker of two true sources
+		// would understate what is known and is the one way this dedup can lose information.
+		if src > out[i].Source {
+			out[i].Source = src
 		}
 	}
-	add(n.GetAttributes()[AttrDeclaredRole])
+	add(n.GetAttributes()[AttrDeclaredRole], ir.RoleSource_ROLE_SOURCE_DECLARED)
 	name := n.GetName()
 	if v.IsRail(name) {
-		add(NetRoleRail)
+		add(NetRoleRail, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsGround(name) {
-		add(NetRoleGround)
+		add(NetRoleGround, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	if v.IsFeedback(name) {
-		add(NetRoleFeedback)
+		add(NetRoleFeedback, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
 	return out
 }

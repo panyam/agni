@@ -1,6 +1,10 @@
 package check
 
-import "testing"
+import (
+	"testing"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+)
 
 // TestDefaultRoleVocab pins the built-in rail/ground/feedback conventions (the historical Go literals,
 // now regex) so the "defaults unchanged" contract is a test, not a claim.
@@ -84,5 +88,33 @@ func TestSetActiveRoleVocab(t *testing.T) {
 	SetActiveRoleVocab(nil)
 	if IsPowerRailName("HV_BATT") {
 		t.Error("nil should restore defaults (HV_ is not a built-in rail)")
+	}
+}
+
+// NetRoleSource answers the question NetHasRole deliberately does not: how do we know. It is the
+// hook a consumer needs to weigh a role rather than just read it.
+func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
+	declared := &ir.Net{Name: "N$17", Roles: []*ir.NetRole{
+		{Role: NetRoleGround, Source: ir.RoleSource_ROLE_SOURCE_DECLARED},
+	}}
+	src, ok := NetRoleSource(declared, NetRoleGround, func(string) bool { return false })
+	if !ok || src != ir.RoleSource_ROLE_SOURCE_DECLARED {
+		t.Errorf("declared ground: got (%v, %v), want (DECLARED, true)", src, ok)
+	}
+
+	// A role the net does not carry reports absent, not a weak source.
+	if src, ok := NetRoleSource(declared, NetRoleRail, func(string) bool { return false }); ok {
+		t.Errorf("a role the net lacks must report absent, got (%v, %v)", src, ok)
+	}
+}
+
+// The name-fallback path (an IR built without the ingestion pass) reports CONVENTION, because that
+// is precisely what the fallback is: a naming convention read at the point of use instead of at
+// ingestion. Reporting UNSPECIFIED there would hide that the answer rests on a name.
+func TestNetRoleSourceOnTheNameFallbackIsConvention(t *testing.T) {
+	unstamped := &ir.Net{Name: "GND"}
+	src, ok := NetRoleSource(unstamped, NetRoleGround, func(n string) bool { return n == "GND" })
+	if !ok || src != ir.RoleSource_ROLE_SOURCE_CONVENTION {
+		t.Errorf("name fallback: got (%v, %v), want (CONVENTION, true)", src, ok)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -84,7 +85,7 @@ func TestRailNotClassifiedGoesSilentOnceTheLexiconIsDeclared(t *testing.T) {
 	// Stamp the role the way the ingestion pass would under a project lexicon matching `_<n>V<n>`.
 	for _, n := range d.Nets {
 		if n.Name == "PMIC_CORE_3V3" {
-			n.Roles = []string{check.NetRoleRail}
+			n.Roles = classify.ConventionRoles(check.NetRoleRail)
 		}
 	}
 	if fs := railNotClassified.Eval(check.NewModel(d)); len(fs) != 0 {

@@ -41,7 +41,7 @@ func TestReadDesignResolvesProjectConfig(t *testing.T) {
 	var rails int
 	for _, n := range d.GetNets() {
 		for _, r := range n.GetRoles() {
-			if r == "rail" {
+			if r.GetRole() == "rail" {
 				rails++
 			}
 		}
