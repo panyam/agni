@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
@@ -118,7 +119,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 		for i, c := range cols {
 			cells[i] = r.Bind[c].S
 		}
-		row := &webapi.QueryRow{Cells: cells, Cites: r.Cites}
+		row := &webapi.QueryRow{Cells: cells, Cites: portableCites(r.Cites, u.Path)}
 		if navigable {
 			row.CellSheets = make([]*webapi.CellSheets, len(cols))
 			row.CellReasons = make([]checkspb.LocateReason, len(cols))
@@ -272,4 +273,33 @@ func (s *QueryService) ListRelations(_ context.Context, _ *webapi.ListRelationsR
 		resp.Examples = append(resp.Examples, &webapi.ExampleQuery{Label: e.Label, Query: e.Query, Teaches: e.Teaches})
 	}
 	return resp, nil
+}
+
+// portableCites rewrites a fact's provenance so it names the design the way the CALLER did.
+//
+// A reader stamps ir.Provenance.SourceFile with the path it was handed, and the loader hands it an
+// ABSOLUTE host path — so a cite came out as
+// "/Users/someone/work/agni/examples/tutorial-project/designs/gateway/gateway.edn:GND". That is wrong
+// in three ways at once. It is not reproducible, since the same query on the same design prints
+// different text on two machines. It leaks where somebody works into anything the output is pasted
+// into. And it disagrees with every other surface: `review` prints "Design: designs/gateway" and a
+// finding's source_file is relative, so query was the only place an absolute path escaped.
+//
+// The rewrite keys on the design's own URI path rather than on a working directory, so it holds
+// however the caller addressed the design and whatever the loader resolved it to. A cite that does not
+// contain that path is left alone: it came from somewhere else (a datasheet citation names a document
+// and a page, not a file), and truncating it on a guess would be worse than leaving it long.
+func portableCites(cites []string, designPath string) []string {
+	if designPath == "" || len(cites) == 0 {
+		return cites
+	}
+	out := make([]string, len(cites))
+	for i, c := range cites {
+		if j := strings.Index(c, designPath); j > 0 {
+			out[i] = c[j:]
+		} else {
+			out[i] = c
+		}
+	}
+	return out
 }

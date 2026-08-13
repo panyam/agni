@@ -1,0 +1,4 @@
+# Rung 4: the same query under the project's naming vocabulary.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'rail(?n) => ?n' --conventions conventions.yaml

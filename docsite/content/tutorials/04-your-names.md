@@ -91,17 +91,7 @@ what the rules you already had are able to see.
 Inferring the lexicon from a finding count that moved is indirect. You can ask the fact base itself,
 which is the same question this rung opened with:
 
-```
-agni query designs/gateway/gateway.edn 'rail(?n) => ?n' --conventions conventions.yaml
-```
-
-```
-n               provenance
-GND             designs/gateway/gateway.edn:GND
-PMIC_CORE_3V3   designs/gateway/gateway.edn:PMIC_CORE_3V3
-PMIC_IO_1V8     designs/gateway/gateway.edn:PMIC_IO_1V8
-PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
-```
+{{ agniRun "content/tutorials/runs/04-query-rails-conventions.yaml" }}
 
 Four rails, where the same query without the flag found one. Nothing was added to the design and no
 rule ran. The lexicon changed what the engine believes a rail *is*, and every relation derived from

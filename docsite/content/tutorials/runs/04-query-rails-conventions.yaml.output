@@ -1,0 +1,8 @@
+#agni-run 7aa9c74a80658fe3
+n               provenance
+GND             designs/gateway/gateway.edn:GND
+PMIC_CORE_3V3   designs/gateway/gateway.edn:PMIC_CORE_3V3
+PMIC_IO_1V8     designs/gateway/gateway.edn:PMIC_IO_1V8
+PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
+
+4 result(s)
