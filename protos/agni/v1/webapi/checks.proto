@@ -141,6 +141,29 @@ message OverlayConfig {
 message CheckDesignResponse {
   // findings are sorted by rule then subject (check.Run's order).
   repeated agni.v1.checks.Finding findings = 1;
+  // skipped names the selected rules that could NOT run on this design, and why.
+  //
+  // It exists because silence reads as coverage. A rule whose fact tier this design lacks — a board
+  // rule on a netlist, a datasheet rule with no corpus — is gated off before it evaluates, so it
+  // contributes no findings, and a findings list has no way to say the difference between "checked
+  // and clean" and "never ran". On the viewer's default-open panel that is the whole failure: tick a
+  // rule the design cannot support and the result is indistinguishable from a healthy board.
+  //
+  // The review layer answers this with a per-item outcome vocabulary (not-applicable, needs-data and
+  // the rest). This is the same honesty at the finding tier, and deliberately NOT that vocabulary: a
+  // flat rule sweep has no checklist item to score, so it reports which rules were gated and the
+  // reason check.Available gave, and nothing more.
+  repeated SkippedRule skipped = 2;
+}
+
+// SkippedRule is one selected rule that could not evaluate, and the reason.
+message SkippedRule {
+  // name is the catalog rule name, as ListRules reports it.
+  string name = 1;
+  // reason is check.Available's own explanation ("design carries no board geometry"), not a
+  // reconstruction. The rule decides why it cannot run; a second sentence written here would be a
+  // second opinion that drifts.
+  string reason = 2;
 }
 
 message GetCheckReportRequest {

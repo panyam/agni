@@ -64,6 +64,27 @@ The parity is structural, not asserted: `agni results` renders through the same 
 and `agni review` use, and the severity pivot lives in one function both a live run and a reloaded
 document call. Two writers held equal by a test drift the first time someone edits one of them.
 
+## A flat findings list says which rules could not run
+
+`CheckDesignResponse` carries `skipped`: the selected rules `check.Available` gated on this design,
+each with the reason the rule itself gave.
+
+It exists because silence reads as coverage, one tier below where the outcome vocabulary fixes it. A
+board rule on a netlist, or a datasheet rule with no corpus, is gated before it evaluates and
+contributes no findings — and a findings list has no way to distinguish "checked and clean" from
+"never ran". That lands on the viewer's default-open panel, so it is the first thing most people see
+and the last thing they would think to doubt.
+
+It is deliberately NOT the outcome vocabulary below. A flat rule sweep has no checklist item to
+score, so it reports which rules were gated and why, and nothing more. `check.Available` is asked here
+with the MODEL, where `ListRules` asks it with a nil one: "can this rule ever run" and "did it run on
+this design" are different questions, and only the second can tell a reader their result is narrower
+than their selection.
+
+`agni check --format json` does not carry it yet, because a stored results document has no field for
+it and that document must re-render byte for byte. The asymmetry is
+[agni issue 245](https://github.com/panyam/agni/issues/245), not a property worth keeping.
+
 ## The outcome vocabulary is the interesting part
 
 `pass` and `fail` are the two verdicts a flat violation list can express, and that is all any

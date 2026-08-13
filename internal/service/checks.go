@@ -169,7 +169,16 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		return nil, err
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
-	resp := &webapi.CheckDesignResponse{Findings: FindingProtos(check.Run(m, rules))}
+	// Partition before running. check.Available is the same gate review.Run consults per item, and it
+	// is asked HERE with the model — where ListRules asks it with a nil one, because that question is
+	// "can this rule ever run" rather than "did it run on this design". The two are different answers
+	// and the panel needs the second: a rule that is available in principle and gated in practice is
+	// exactly the case a findings list cannot express.
+	runnable, skipped := partitionAvailable(rules, m)
+	resp := &webapi.CheckDesignResponse{
+		Findings: FindingProtos(check.Run(m, runnable)),
+		Skipped:  skipped,
+	}
 	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, u), m)
 	return resp, nil
 }
@@ -306,4 +315,24 @@ func FindingProtos(fs []check.Finding) []*checkspb.Finding {
 		out = append(out, FindingProto(f))
 	}
 	return out
+}
+
+// partitionAvailable splits selected rules into those that can evaluate on this design and those that
+// cannot, carrying each skipped rule's own reason.
+//
+// Running only the runnable half is not an optimisation. check.Run already skips a gated rule, so the
+// findings are identical either way; the split exists so the response can REPORT the other half
+// rather than leaving the caller to infer it from an absence.
+func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*webapi.SkippedRule) {
+	runnable := make([]*check.Rule, 0, len(rules))
+	var skipped []*webapi.SkippedRule
+	for _, r := range rules {
+		ok, why := check.Available(r, m)
+		if ok {
+			runnable = append(runnable, r)
+			continue
+		}
+		skipped = append(skipped, &webapi.SkippedRule{Name: r.Name, Reason: why})
+	}
+	return runnable, skipped
 }

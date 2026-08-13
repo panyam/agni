@@ -58,3 +58,56 @@ func TestFindingProtoCarriesDatasheet(t *testing.T) {
 		t.Errorf("non-datasheet finding got a citation = %+v", plain.GetDatasheets())
 	}
 }
+
+// TestPartitionAvailableReportsWhatCouldNotRun is the silence-reads-as-coverage failure at the
+// finding tier.
+//
+// A board rule on a NETLIST cannot evaluate: check.Available gates it, it contributes no findings, and
+// a findings list has no way to distinguish "checked and clean" from "never ran". On the viewer's
+// default-open panel that reads as a healthy board, which is the bug this reports its way out of.
+func TestPartitionAvailableReportsWhatCouldNotRun(t *testing.T) {
+	// A netlist-only model: no board tier, no datasheet corpus.
+	m := check.NewModel(&ir.Design{})
+	rules := check.DefaultCatalog().Rules()
+	runnable, skipped := partitionAvailable(rules, m)
+
+	if len(skipped) == 0 {
+		t.Fatal("a netlist supports only some of the shipped catalog; the rest must be reported, not omitted")
+	}
+	if len(runnable)+len(skipped) != len(rules) {
+		t.Errorf("every selected rule belongs to exactly one half, got %d + %d of %d",
+			len(runnable), len(skipped), len(rules))
+	}
+	for _, sk := range skipped {
+		if sk.GetName() == "" {
+			t.Error("a skipped rule must be named, or the panel cannot say which question went unanswered")
+		}
+		// The reason is check.Available's own words. A rule decides why it cannot run; a sentence
+		// reconstructed here would be a second opinion that drifts from the gate itself.
+		if sk.GetReason() == "" {
+			t.Errorf("%s was skipped with no reason", sk.GetName())
+		}
+	}
+	// The halves are disjoint by name, so nothing can be reported as both gated and run.
+	byName := map[string]bool{}
+	for _, r := range runnable {
+		byName[r.Name] = true
+	}
+	for _, sk := range skipped {
+		if byName[sk.GetName()] {
+			t.Errorf("%s is in both halves", sk.GetName())
+		}
+	}
+}
+
+// TestPartitionAvailableChangesNoFindings: running only the runnable half is not an optimisation.
+// check.Run already skips a gated rule, so the findings are identical either way — the split exists
+// so the response can REPORT the other half instead of leaving a caller to infer it from an absence.
+func TestPartitionAvailableChangesNoFindings(t *testing.T) {
+	m := check.NewModel(&ir.Design{})
+	rules := check.DefaultCatalog().Rules()
+	runnable, _ := partitionAvailable(rules, m)
+	if a, b := len(check.Run(m, rules)), len(check.Run(m, runnable)); a != b {
+		t.Errorf("partitioning must not change what fires: %d findings over all rules, %d over the runnable half", a, b)
+	}
+}
