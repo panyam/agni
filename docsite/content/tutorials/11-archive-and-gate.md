@@ -99,14 +99,7 @@ finding inherits the lie.
 The gate above cannot see one whole class of regression, and it is worth meeting before you rely on
 it. Run the review with a floor under how many items it has to answer:
 
-```
-agni review designs/gateway --checklist review.yaml --min-answered 13
-echo $?
-```
-
-```
-0
-```
+{{ agniRun "content/tutorials/runs/gate-answered-holds.yaml" }}
 
 Thirteen of the fifteen items get answered, so the floor holds. Now move the parameter corpus out of
 the way, as somebody reorganising a repository eventually will, and run exactly the same two commands
@@ -114,31 +107,22 @@ you have been gating with:
 
 ```
 mv params params-old
-agni review designs/gateway --checklist review.yaml --coverage
+agni review designs/gateway --coverage
 ```
 
-```
-**13 of 15 covered**, **12 answered** — 2 pass, 10 fail, 1 n/a; 2 not-automated
-```
+{{ agniRun "content/tutorials/runs/gate-corpus-moved-coverage.yaml" }}
 
 **Covered did not move.** It is still 13 of 15. The item that used to check a part against its
 datasheet now reads `not-applicable`, because its rule is still in the catalog and merely has nothing
 to read, and `not-applicable` counts as covered. Nothing in the failure count says so either.
 
-`--min-answered` is the number that moved:
+`--min-answered` is the number that moved, and it trips:
 
 ```
-agni review designs/gateway --checklist review.yaml --min-answered 13
-echo $?
+agni review designs/gateway --min-answered 13
 ```
 
-```
-2
-```
-
-```
-error: designs/gateway answered 12 of 15 checklist items, below --min-answered 13
-```
+{{ agniRun "content/tutorials/runs/gate-corpus-moved-trips.yaml" }}
 
 That is the whole reason `review` has a gate of its own. `check --fail-on` asks how bad the answers
 were; this asks whether the questions were answered. A checklist quietly answering fewer of its own

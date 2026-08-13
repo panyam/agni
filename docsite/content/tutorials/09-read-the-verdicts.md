@@ -30,25 +30,7 @@ and the distinction is the point. `pass` is a claim, and a claim needs someone t
 
 ## Coverage before results
 
-```console verify
-$ agni review designs/gateway --coverage
-# Review coverage: Gateway ECU design review
-
-Design: `designs/gateway`
-
-**13 of 15 covered**, **13 answered** — 3 pass, 9 fail, 0 n/a; 2 not-automated
-
-Of the covered: 1 provisional (awaiting datasheet data), 0 needs-design-intent (awaiting a declaration), 0 needs-data (awaiting a datasheet seed), 0 inconclusive (the check ran and could not decide), 0 computed-n/a
-
-| Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Inconclusive | Computed-n/a | N/A | Not-automated |
-|------|---------|------|------|-------------|--------------|------------|--------------|--------------|-----|---------------|
-| Power | 5/5 | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Interfaces | 3/4 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| House style | 2/3 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| Board | 1/1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Architecture | 2/2 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| **Total** | 13/15 | 3 | 9 | 1 | 0 | 0 | 0 | 0 | 0 | 2 |
-```
+{{ agniRun "content/tutorials/runs/coverage-rollup.yaml" }}
 
 Read the two leading numbers before reading anything else. A board with zero failures and a coverage
 of 4 of 15 has not been reviewed, and the failure count alone would have told you it was perfect.

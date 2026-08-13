@@ -379,3 +379,14 @@ tag:
 tag-push:
 	@$(MAKE) tag V=$(V)
 	git push origin $(TAG_REFS)
+
+# Force-regenerate every tutorial command capture, ignoring the input stamps, and report what moved.
+# Run this PERIODICALLY and locally: it is deliberately NOT in `testall`, because the stamps cover the
+# spec and the fixture but NOT the engine build, so a code change does not invalidate a capture on its
+# own. That keeps the docs pipeline off the per-push path at the cost of catching a regression here
+# rather than immediately. Commit whatever it changes, after reading it.
+tutorial-runs:
+	@find docsite/content/tutorials/runs -name '*.output' -delete
+	@cd docsite && $(GO) run . -build >/dev/null 2>&1
+	@git status --short -- docsite/content/tutorials/runs || true
+	@echo "tutorial captures regenerated; review the diff above before committing"

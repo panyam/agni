@@ -1,0 +1,5 @@
+# The coverage rollup rung 9 teaches. Declared here rather than pasted into the page, so the
+# output has one source and cannot drift from the fixture it claims to come from.
+fixture: examples/tutorial-project
+script: |
+  agni review designs/gateway --coverage

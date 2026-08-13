@@ -2,7 +2,10 @@ module github.com/panyam/agni/docsite
 
 go 1.25
 
-require github.com/panyam/s3gen v0.1.6
+require (
+	github.com/panyam/s3gen v0.1.6
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -19,5 +22,4 @@ require (
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
 	go.abhg.dev/goldmark/anchor v0.2.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
