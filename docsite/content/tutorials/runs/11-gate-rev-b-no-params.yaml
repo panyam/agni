@@ -1,0 +1,6 @@
+# Rung 11: dropping the parameter tier does not make it pass — a CAN error sits underneath.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --fail-on error
+capture: none
+exit: true

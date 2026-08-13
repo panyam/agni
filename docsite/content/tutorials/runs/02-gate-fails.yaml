@@ -1,0 +1,6 @@
+# Rung 2: the severity gate trips on a board with error findings.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn --fail-on error
+capture: none
+exit: true

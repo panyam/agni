@@ -1,0 +1,6 @@
+# Rung 11: rev B still trips, on the datasheet finding the review calls provisional.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --params params --fail-on error
+capture: none
+exit: true

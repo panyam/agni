@@ -27,17 +27,7 @@ clean design from a run that checked nothing, which is the same distinction rung
 
 ## Read it back without the design
 
-```
-agni results reports/gateway/review.results.json --format markdown
-```
-
-```
-# Review: Gateway ECU design review
-
-Design: `designs/gateway/gateway.edn`
-
-**3 pass, 8 fail, 1 n/a, 2 not-automated, 1 provisional (of 15)**
-```
+{{ agniRun "content/tutorials/runs/11-results-reread.yaml" }}
 
 The useful property is that this works with the design gone. Copy the JSON to a machine that has
 never seen the board, has no parameter corpus, and no profiles, and it renders the same report.
@@ -47,11 +37,7 @@ moved on several versions, the document still says what was checked and what was
 
 ## Gate a merge
 
-```console verify
-$ agni check designs/gateway/gateway.edn --conventions conventions.yaml --params params --fail-on error > /dev/null
-$ echo $?
-2
-```
+{{ agniRun "content/tutorials/runs/11-gate-merge.yaml" }}
 
 Exit `2` is a tripped gate, so CI fails. Put that one line in your pipeline and a board with an error-severity finding
 cannot merge.
@@ -61,11 +47,7 @@ cannot merge.
 Here is the part that surprises people. Rev B fixed the I2C pull-ups and the naming, and its review
 went from 8 failures to 6. Run the gate on it:
 
-```console verify
-$ agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --params params --fail-on error > /dev/null
-$ echo $?
-2
-```
+{{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}
 
 Still failing. The remaining error is the datasheet finding on U2, the one the review reported as
 `provisional` because it rests on placeholder data.
@@ -79,11 +61,7 @@ answers. Leave it gating and treat the block as pressure to go transcribe the re
 which is usually the right instinct. Or drop the parameter tier out of the gate command until the
 corpus is trustworthy, and accept that those checks are not gating yet:
 
-```console verify
-$ agni check designs/gateway/gateway-rev-b.edn --conventions conventions.yaml --fail-on error > /dev/null
-$ echo $?
-2
-```
+{{ agniRun "content/tutorials/runs/11-gate-rev-b-no-params.yaml" }}
 
 Still `2`, and the reason is worth stopping on: dropping the parameter tier removed the *datasheet*
 error, and a different one was underneath it — a CAN host declaring the interface without its `STB`
