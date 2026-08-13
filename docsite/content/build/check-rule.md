@@ -36,6 +36,19 @@ Then interrogate it the way a real corpus will:
 - What about nets the read did not fully cover? Skip nets marked external.
 - Who decides the policy edge cases, like a feedback node named like a rail that is deliberately
   left unprobed? The reviewer does. Use `info` severity and say so in the rule's doc.
+- **Is there a tier of evidence better than the name?** A rail's voltage comes from its name
+  (`check.NominalVoltageFromName`), which is a convention: silent on a rail nobody named for its
+  voltage, and wrong on a name that outlived a design change. Sometimes connectivity answers the
+  same question outright, and then it should be asked first. The pin-tracking rules bound the
+  difference between two pins, and two pins on ONE net are one node, so that difference is exactly
+  zero with no name read. That tier settles a "must not exceed 0V" bound as satisfied and a "must be
+  at least 1V" bound as violated, on a design whose nets carry no voltage token at all.
+  `regulator-output-exceeds-abs-max` is the other instance, reading a rail's volts off the feeding
+  regulator's own datasheet. Reach for the convention as the fallback, not the first answer.
+- **If you do read a name, is the net actually a rail?** `net.nominal_voltage` token-scans a whole
+  name, so a signalling level encoded in a SIGNAL net's name parses as a rail nominal (agni issue
+  194: `U3_12_U7_4_3V3` yields 3.3 while classifying as neither rail nor ground). Gate on
+  `Model.IsRailNet`, the narrow role question, before reading either name.
 
 ## Author spec-first
 
@@ -74,6 +87,35 @@ vocabulary soaks, with parity asserted between the two.
   structure, and a "For software readers" section mapping the EE concepts to structural analogies
   (a test point is a metrics endpoint, and the rule reads as "critical paths must emit telemetry")
   with a diagram beside it.
+
+## A rule has one severity, so a severity axis means two rules
+
+`check.Run` stamps `Finding.Severity` from the rule's own metadata over whatever `Eval` set, and
+that is deliberate: a rule states its identity once, and the docsite catalog and `--fail-on` both
+read the declared severity as the truth about its findings. So a per-finding severity cannot be set
+from inside `Eval`, and a fact that carries its own severity axis becomes TWO rules sharing one
+walker.
+
+Two instances, both in the datasheet tier. `pin-exceeds-abs-max` and `pin-out-of-recommended` split
+one comparison by `LimitKind`. `pin-tracking-violated` and `pin-tracking-advisory` split one
+comparison by the datasheet's `Modality`, because "shall never exceed" and "should be at least 1 V
+higher for best operation" are different claims and one severity misstates one of them.
+
+The split is also what a caller wants: separate rule names are what let a team gate CI on the
+requirement and merely report the recommendation.
+
+Where a value is legal but leaves the severity unknown, send it to the louder rule and mark the
+finding `Inconclusive` rather than dropping it. `param.Validate` requires a pin relation's kind,
+bound and provenance but not its modality, so an unstated modality is a legal spec: reporting it as
+an error would invent a requirement, and dropping it would pass a breach in silence.
+
+## Comparing is safe, subtracting is not
+
+A rule that SUBTRACTS two name-derived voltages meets binary floating point head-on: `3.3 - 1.8` is
+`1.4999999999999998`, which both prints as noise in a finding and misjudges a bound of exactly 1.5.
+The older datasheet rules only ever compared a rail against a limit, so the problem first appeared
+with pin tracking. Round the result (microvolt resolution is finer than any bound a datasheet
+states) and assert the PRINTED number in a test, which is what caught it.
 
 ## Fixtures are the rule's contract
 
