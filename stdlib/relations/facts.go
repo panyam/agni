@@ -44,6 +44,12 @@ const (
 	// from net.max_voltage, which prefers an explicit max_voltage attribute over the name. (WS3-082)
 	RelNetNominalVoltage = "net.nominal_voltage" // net.nominal_voltage(net, volts): name-derived rail nominal. doc: facts/docs/net.nominal_voltage.md
 
+	// net.signal_level(net, volts) is the same name-derived number for a net that is NOT a rail: the
+	// signalling level a house convention encodes into a signal net's name. Split from
+	// net.nominal_voltage in issue 194, because one relation carrying both meanings left a rule
+	// author unable to say which set they meant.
+	RelNetSignalLevel = "net.signal_level" // net.signal_level(net, volts): name-derived level on a non-rail net. doc: facts/docs/net.signal_level.md
+
 	// param.range(mpn, symbol, kind, min, max) is the two-sided, limit-kind-discriminated datasheet
 	// relation (WS3-082). The thin param(mpn, symbol, max) carries only an upper bound and cannot tell
 	// an absolute-max row from a recommended-operating one on the same symbol; param.range adds the
@@ -226,6 +232,7 @@ func Facts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	out = append(out, netMaxVoltageFacts(m)...)
 	out = append(out, netNominalVoltageFacts(m)...)
+	out = append(out, netSignalLevelFacts(m)...)
 	out = append(out, componentMPNFacts(m)...)
 	out = append(out, paramFacts(m)...)
 	out = append(out, paramRangeFacts(m)...)
@@ -291,17 +298,57 @@ func netMaxVoltageFacts(m check.Model) []query.FactRow {
 	return out
 }
 
-// netNominalVoltageFacts emits the name-derived nominal voltage of each net (3V3 -> 3.3), the
+// netNominalVoltageFacts emits the name-derived nominal voltage of each RAIL (3V3 -> 3.3), the
 // design-side number a datasheet range check compares against. It reads only the net NAME
 // (check.NominalVoltageFromName), never the max_voltage attribute — that explicit channel is
 // net.max_voltage's job — so the two relations stay distinct evidence. A net whose name carries
 // no parseable nominal yields no row (skip, never guess).
+//
+// THE RAIL GATE IS THE POINT, and its absence was agni issue 194. NominalVoltageFromName
+// token-scans a whole name rather than matching a prefix, so a team that encodes a signalling
+// level into a SIGNAL net's name got that level projected into a relation whose own reference page
+// calls it a rail nominal: `U3_12_U7_4_3V3` yielded 3.3 while classifying as neither rail nor
+// ground. It worked by accident. The number was right and the relation carrying it was not, so a
+// rule quantifying over rails and one quantifying over signal levels could not be told apart.
+//
+// The level itself is not discarded. A non-rail net carrying a token lands in net.signal_level
+// below, so the fact survives and a consumer states which set it means.
+//
+// This gates the RELATION, not check.NominalVoltageFromName, which is a pure string function with
+// no net to ask about. A Go rule holding a net must gate for itself (Model.IsRailNet); see the
+// pin-tracking rules, which do.
 func netNominalVoltageFacts(m check.Model) []query.FactRow {
 	var out []query.FactRow
 	for _, n := range m.Nets() {
+		if !m.IsRailNet(n) {
+			continue
+		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
 			vv := v
 			out = append(out, query.FactRow{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
+		}
+	}
+	return out
+}
+
+// netSignalLevelFacts emits the voltage a NON-RAIL net's name carries, which is the other half of
+// the issue-194 split. A house convention that encodes a signalling level into a signal net's name
+// is stating something real, and gating net.nominal_voltage on the rail role would otherwise throw
+// it away.
+//
+// The two relations are exhaustive and disjoint over the nets whose names parse: rail-role nets go
+// to net.nominal_voltage, everything else here. So a consumer that genuinely wants both asks for
+// both, and one that wants rails cannot get a signal level by accident. Ground is a rail role, so
+// a ground net named with a token stays on the nominal side.
+func netSignalLevelFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, n := range m.Nets() {
+		if m.IsRailNet(n) {
+			continue
+		}
+		if v, ok := check.NominalVoltageFromName(n.Name); ok {
+			vv := v
+			out = append(out, query.FactRow{Relation: RelNetSignalLevel, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
 		}
 	}
 	return out

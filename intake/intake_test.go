@@ -55,6 +55,30 @@ func TestBuildRailNominals(t *testing.T) {
 	}
 }
 
+// A SIGNAL net whose name encodes a level must not be summarized as a rail voltage (agni issue
+// 194). Skeleton.RailNominals reads net.nominal_voltage, which used to project any net whose name
+// token-scanned to a voltage, so a house convention naming signals `<from>_<to>_<level>` inflated
+// the rail set of the sanitized summary. This is the intake-side consequence of that overload, and
+// it is the one that reached a published artifact rather than only a query.
+func TestSignalLevelIsNotSummarizedAsARail(t *testing.T) {
+	d := fixtureDesign()
+	d.Nets = append(d.Nets, &ir.Net{
+		Name: "U3_12_U7_4_1V8", Prov: &ir.Provenance{SourceFile: "t"},
+		Connections: []*ir.Connection{
+			{ComponentRef: "U1", PinRef: "12"}, {ComponentRef: "D1", PinRef: "4"}},
+	})
+
+	s := Build(check.NewModel(d))
+	for _, v := range s.RailNominals {
+		if v == 1.8 {
+			t.Fatalf("a signal net's level leaked into the rail summary: %v", s.RailNominals)
+		}
+	}
+	if len(s.RailNominals) != 1 || s.RailNominals[0] != 3.3 {
+		t.Fatalf("the real rail must survive unchanged, got %v", s.RailNominals)
+	}
+}
+
 // TestSanitizationNoNetNames is the load-bearing guarantee (WS3-091): a distinctive rail NET NAME in the
 // design must never appear in EITHER rendered form, while its nominal (3.3) must — proving the Skeleton
 // carries the voltage, not the name. Guards against a future field that would leak topology.

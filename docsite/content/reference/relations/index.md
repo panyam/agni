@@ -28,8 +28,9 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`net.ground(net)`](net.ground/) | the net is a ground rail (name-derived) |
 | [`net.max_voltage(net, volts)`](net.max_voltage/) | a net's declared rail voltage |
 | [`net.netclass(net, class)`](net.netclass/) | the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role) |
-| [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a rail's nominal voltage derived from its net name (3V3 -> 3.3) |
+| [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level |
 | [`net.pin_count(net, count)`](net.pin_count/) | the number of connections on a net |
+| [`net.signal_level(net, volts)`](net.signal_level/) | the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal |
 | [`netclass.clearance(class, mm)`](netclass.clearance/) | the clearance a net class declares its nets should route at (millimetres) |
 | [`netclass.track_width(class, mm)`](netclass.track_width/) | the track width a net class declares its nets should route at (millimetres) |
 | [`netclass.via_diameter(class, mm)`](netclass.via_diameter/) | the via diameter a net class declares (millimetres) |
