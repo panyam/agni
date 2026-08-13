@@ -16,14 +16,7 @@ The tutorial board is the second case. `gateway.edn` is an EDIF netlist.
 
 ## Draw a netlist
 
-```
-agni render designs/gateway/gateway.edn --layout layered -o gateway.svg
-```
-
-```
-layout "layered": 19 nodes, 15 nets, 56 segments, 95 crossings, edge length 20826
-wrote gateway.svg (sheet "netlist graph", 19 placements, 15 wires)
-```
+{{ agniRun "content/tutorials/runs/03-render-layered.yaml" }}
 
 The line it prints is a quality report on the drawing, not on your board. `crossings` counts wires
 that cross each other, which is the main thing that makes a generated schematic hard to follow.
@@ -56,13 +49,7 @@ them.
 When the design does carry geometry, drop `--layout` and you get the design's own drawing. The
 tutorial board ships a KiCad view of itself for exactly this:
 
-```
-agni render designs/gateway/gateway.kicad_sch --symbol-path designs/gateway/symbols -o gateway.svg
-```
-
-```
-wrote gateway.svg (sheet "Gateway ECU (tutorial board)", 19 placements, 56 wires)
-```
+{{ agniRun "content/tutorials/runs/03-render-kicad-sch.yaml" }}
 
 That is placements and wires read out of the file rather than computed, so the result is the drawing
 somebody drew. Faithful is the default. `--layout` is what you reach for when there is nothing to be
@@ -76,15 +63,7 @@ faithful to.
 `gateway.edn` and `gateway.kicad_sch` are two views of one design, which raises the obvious
 question of whether they still agree. Ask directly:
 
-```
-agni diff designs/gateway/gateway.edn designs/gateway/gateway.kicad_sch \
-  --symbol-path designs/gateway/symbols
-```
-
-```
-Components: +0  -0  ~19
-Nets:       new 0  deleted 0  renamed 0  hard 0  soft 0
-```
+{{ agniRun "content/tutorials/runs/03-diff-views.yaml" }}
 
 Zero net changes. The two readers converged on the same netlist, which is the premise the whole
 engine rests on: analysis runs over one internal representation, so the format you started from

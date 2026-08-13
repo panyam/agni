@@ -1,0 +1,4 @@
+# Generated block for 06-part-limits.md. Edit the script, not the capture.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn --params params --rule supply-exceeds-abs-max

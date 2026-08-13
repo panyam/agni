@@ -298,6 +298,23 @@ func execute(spec runSpec) (string, error) {
 		}
 		body = strings.Join(kept, "\n") + "\n"
 	}
+	// The scratch directory must not survive into a committed capture. It is machine-specific and
+	// changes every run, so leaving it in would churn the file on every regeneration and put a host
+	// path in a public repo. `agni query` prints one: its provenance column resolves the design to an
+	// absolute path, so a capture taken here would read `/var/folders/.../tutorial-project/designs/...`
+	// where the page means `designs/...`.
+	// BOTH forms of the scratch path, because a temp dir is reached through a symlink on macOS
+	// (/var/folders/... resolves to /private/var/folders/...) and a command printing the resolved form
+	// leaves the unresolved replacement useless. Getting this wrong is not subtle-but-harmless: the
+	// first attempt stripped the middle of the resolved path and produced "/privatedesigns/gateway",
+	// which is neither a real path nor an obvious mistake at a glance.
+	for _, prefix := range scratchForms(work) {
+		body = strings.ReplaceAll(body, prefix+string(os.PathSeparator), "")
+		body = strings.ReplaceAll(body, prefix, ".")
+	}
+	if strings.Contains(body, os.TempDir()) || strings.Contains(body, "/var/folders/") || strings.Contains(body, "/private") {
+		return "", fmt.Errorf("capture still contains a scratch path: it would churn on every run and put a host path in the repo. The command prints an absolute path this runner cannot rewrite")
+	}
 	if spec.Exit {
 		body = strings.TrimRight(body, "\n")
 		if body != "" {
@@ -306,6 +323,16 @@ func execute(spec runSpec) (string, error) {
 		body += fmt.Sprintf("exit %d\n", exitStatus(runErr))
 	}
 	return body, nil
+}
+
+// scratchForms returns the scratch directory as a command might print it: as handed to the process,
+// and with symlinks resolved.
+func scratchForms(work string) []string {
+	forms := []string{work}
+	if real, err := filepath.EvalSymlinks(work); err == nil && real != work {
+		forms = append(forms, real)
+	}
+	return forms
 }
 
 // exitStatus extracts a process exit code, 0 when it succeeded.

@@ -60,35 +60,13 @@ The tutorial board ships a second view of itself, `gateway.kicad_sch`, whose sym
 separate library file rather than being embedded. That is normal practice and it is the setup for
 the most common bad read there is.
 
-```
-agni stats designs/gateway/gateway.kicad_sch
-```
-
-```
-source format:       kicad-sch
-libraries:           0
-components:          19 (unique ref_des)
-sections:            19 (source instances)
-multi-section:       0 (one ref_des, several sections)
-nets:                0
-```
+{{ agniRun "content/tutorials/runs/01-stats-kicad-sch.yaml" }}
 
 Nineteen components and **zero nets**. The parts were found, their symbols were not, so no pins
 resolved, so nothing is connected to anything. Point `--symbol-path` at the library and the same
 file reads correctly:
 
-```
-agni stats designs/gateway/gateway.kicad_sch --symbol-path designs/gateway/symbols
-```
-
-```
-source format:       kicad-sch
-libraries:           1
-components:          19 (unique ref_des)
-sections:            19 (source instances)
-multi-section:       0 (one ref_des, several sections)
-nets:                15
-```
+{{ agniRun "content/tutorials/runs/01-stats-kicad-sch-symbols.yaml" }}
 
 The flag takes a directory and searches its whole subtree, so pointing it at a library root is
 enough. A KiCad project's `sym-lib-table` is picked up automatically.
@@ -121,32 +99,7 @@ That is why this rung is first.
 see the design itself. It carries counts, classes, rail voltages, and the parts list, and it
 structurally cannot carry a net name or a connection.
 
-```
-agni intake designs/gateway/gateway.edn --params params
-```
-
-```
-## Aggregates
-- Components: 19 | Sections: 19 | Nets: 15
-
-## Class summary (query-derived)
-| Class | Ref count |
-|-------|-----------|
-| capacitor | 6 |
-| ic | 5 |
-| resistor | 3 |
-| test_point | 2 |
-| clock | 1 |
-| connector | 1 |
-| diode | 1 |
-| tvs | 1 |
-| unclassified | 0 |
-
-## Rails (nominal only; net names withheld)
-- 1.8V
-- 3.3V
-- 12V
-```
+{{ agniRun "content/tutorials/runs/01-intake-params.yaml" }}
 
 Read the class summary as a second opinion on the read. `unclassified: 0` means every part was
 recognized as something. A large unclassified count is the same warning as a low component count,

@@ -68,17 +68,7 @@ The difference from the built-in is one line: a `STB` signal. This team always r
 transceiver's standby pin back to the MCU so firmware can put the bus to sleep. The built-in profile
 has no opinion about that, because it is a house practice rather than a CAN requirement.
 
-```
-agni check designs/gateway/gateway.edn --profile-path profiles
-```
-
-```
-note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
-  profile-overlay/can-esd-missing 2
-  profile-overlay/can-host-incomplete 1
-  [error] profile-overlay/can-host-incomplete: U4 (CAN host U4 declares the interface but is missing required signal STB)
-10 finding(s) total
-```
+{{ agniRun "content/tutorials/runs/05-check-profile-path.yaml" }}
 
 The board does not route STB, so the new requirement has a real finding.
 

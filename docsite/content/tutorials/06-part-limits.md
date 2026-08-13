@@ -21,13 +21,7 @@ rung 9 exists to resolve.
 
 ## With the parameter set
 
-```
-agni check designs/gateway/gateway.edn --params params --rule supply-exceeds-abs-max
-```
-
-```
-[error] supply-exceeds-abs-max: U2 (power-input pin 1 on rail "PMIC_CORE_3V3": nominal 3.3V exceeds absolute-maximum VIN 3V — datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3))
-```
+{{ agniRun "content/tutorials/runs/06-check-abs-max-params.yaml" }}
 
 U2's input sits on a 3.3 V rail and its datasheet says 3.0 V is the absolute maximum. The finding
 carries where that limit came from, which matters more than it looks: a claim about a part is only

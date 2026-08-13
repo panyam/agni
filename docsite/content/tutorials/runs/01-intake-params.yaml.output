@@ -1,0 +1,58 @@
+#agni-run caf58de98f852f29
+## Aggregates
+- Components: 19 | Sections: 19 | Nets: 15
+
+## Class summary (query-derived)
+| Class | Ref count |
+|-------|-----------|
+| capacitor | 6 |
+| ic | 5 |
+| resistor | 3 |
+| regulator | 2 |
+| test_point | 2 |
+| clock | 1 |
+| connector | 1 |
+| diode | 1 |
+| tvs | 1 |
+| unclassified | 0 |
+
+## Rails (nominal only; net names withheld)
+- 1.8V
+- 3.3V
+- 12V
+
+## Datasheet gaps (MPN on board, no seeded spec)
+- ACME-CAN-XCVR
+- ACME-CAP-100N
+- ACME-CAP-100N
+- ACME-CAP-10U
+- ACME-CAP-18P
+- ACME-CAP-18P
+- ACME-CAP-22U
+- ACME-CONN-4
+- ACME-EEPROM-4K
+- ACME-MCU-G1
+- ACME-RES-10K
+- ACME-RES-10K
+- ACME-RES-120R
+- ACME-TVS-24
+- ACME-XTAL-16M
+
+## Parts (BOM by distinct type; --parts full for the per-component AVL)
+| Count | MPN | Manufacturer | Value | Class |
+|-------|-----|--------------|-------|-------|
+| 2 | ACME-CAP-100N |  | 100nF | capacitor |
+| 2 | ACME-CAP-18P |  | 18pF | capacitor |
+| 2 | ACME-RES-10K |  | 10k | resistor |
+| 2 |  |  |  | test_point |
+| 1 | ACME-CAP-10U |  | 10uF | capacitor |
+| 1 | ACME-CAP-22U |  | 22uF | capacitor |
+| 1 | ACME-XTAL-16M |  |  | clock |
+| 1 | ACME-CONN-4 |  |  | connector |
+| 1 | ACME-BUCK-3V3 |  |  | ic |
+| 1 | ACME-CAN-XCVR |  |  | ic |
+| 1 | ACME-EEPROM-4K |  |  | ic |
+| 1 | ACME-LDO-1V8 |  |  | ic |
+| 1 | ACME-MCU-G1 |  |  | ic |
+| 1 | ACME-RES-120R |  | 120 | resistor |
+| 1 | ACME-TVS-24 |  |  | tvs |
