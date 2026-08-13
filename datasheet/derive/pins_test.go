@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	derivepb "github.com/panyam/agni/gen/go/agni/v1/derive"
+	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/datasheet/param"
 )
@@ -273,5 +274,150 @@ func TestSplitPackageCodes(t *testing.T) {
 		if strings.Join(got, "|") != strings.Join(tc.want, "|") {
 			t.Errorf("splitPackageCodes(%q) = %v, want %v", tc.in, got, tc.want)
 		}
+	}
+}
+
+// pinTableDoc builds a one-table document so a layout can be asserted without a fixture.
+func pinTableDoc(rows int32, cols int32, cells ...*docpb.Cell) *docpb.Document {
+	return &docpb.Document{
+		ContentHash: "sha256:synthetic", SourceFormat: "pdf", Title: "SYNTH", Producer: "hand", PageCount: 1,
+		Pages: []*docpb.Page{{
+			Number: 1, Width: 612, Height: 792,
+			TextBlocks: []*docpb.TextBlock{{
+				Id: "p1.x1", Text: "Pin Functions", Kind: "section_header",
+				Bbox: &docpb.BBox{X: 72, Y: 100, Width: 100, Height: 12},
+			}},
+			Tables: []*docpb.Table{{
+				Id: "p1.t1", Rows: rows, Cols: cols, Cells: cells,
+				Bbox: &docpb.BBox{X: 72, Y: 114, Width: 400, Height: 200}, Confidence: 1,
+			}},
+		}},
+	}
+}
+
+func cell(row, col int32, text string) *docpb.Cell {
+	return &docpb.Cell{Row: row, Col: col, Text: text}
+}
+
+func packageAxisRecipe() []*derivepb.Recipe {
+	return []*derivepb.Recipe{{
+		Name: "synth", DocTitlePattern: ".",
+		PinTables: []*derivepb.PinTableRule{{
+			TitlePattern: "(?i)pin functions",
+			ColumnAxis:   derivepb.PinColumnAxis_PIN_COLUMN_AXIS_PACKAGE,
+		}},
+	}}
+}
+
+// A FLAT pin table ("PIN | NAME | FUNCTION") has one numbering column that names no
+// package. Reading it as a package minted a body called "pin" and then collided every
+// designator inside it, which failed validation on a real single-package part.
+func TestFlatPinTableMintsNoPackage(t *testing.T) {
+	d := pinTableDoc(3, 3,
+		cell(0, 0, "PIN"), cell(0, 1, "NAME"), cell(0, 2, "FUNCTION"),
+		cell(1, 0, "1"), cell(1, 1, "EN"), cell(1, 2, "Enable input."),
+		cell(2, 0, "2"), cell(2, 1, "GND"), cell(2, 2, "Ground."),
+	)
+	spec, man, err := Run(d, packageAxisRecipe(), nil, Identity{MPN: "SYNTH"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, p := range spec.Packages {
+		if p.Id == "pin" {
+			t.Error(`minted a package called "pin" from the numbering column header`)
+		}
+	}
+	if len(spec.Packages) != 0 {
+		t.Errorf("a flat table names no package, got %d", len(spec.Packages))
+	}
+	if len(spec.Pins) != 2 {
+		t.Fatalf("want both pins extracted, got %d", len(spec.Pins))
+	}
+	var gapped bool
+	for _, g := range man.Gaps {
+		if g.Kind == "pin-numbering-unattributed" {
+			gapped = true
+		}
+	}
+	if !gapped {
+		t.Error("designators went unattributed with no gap; silence must never read as coverage")
+	}
+}
+
+// Real per-package headers carry footnote markers and hyphenated codes. Dropping either
+// loses packages silently, which is worse than failing.
+func TestPackageCodesSurviveFootnotesAndHyphens(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{"LCCC (1)", []string{"LCCC"}},
+		{"SOIC, SOT23-8, VSSOP, CDIP, PDIP, SO, TSSOP, CFP (1)",
+			[]string{"SOIC", "SOT23-8", "VSSOP", "CDIP", "PDIP", "SO", "TSSOP", "CFP"}},
+		{"D, PW", []string{"D", "PW"}},
+		{"HTQFP", []string{"HTQFP"}},
+	}
+	for _, tc := range cases {
+		got := splitPackageCodes(tc.in)
+		if strings.Join(got, "|") != strings.Join(tc.want, "|") {
+			t.Errorf("splitPackageCodes(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
+
+// A pin table spanning several pages arrives as several tables that restate rows. Each
+// restatement was emitted as a new pin claiming a designator the first already held,
+// which fails param.Validate. Same name AND a shared designator means same terminal.
+func TestContinuationTableMergesRestatedPins(t *testing.T) {
+	d := pinTableDoc(3, 3,
+		cell(0, 0, "PIN"), cell(1, 0, "NAME"), cell(1, 1, "HTQFP"), cell(1, 2, "DESCRIPTION"),
+		cell(2, 0, "RX_ER"), cell(2, 1, "54"), cell(2, 2, "Receive error."),
+	)
+	d.Pages[0].Tables[0].Cells[0].ColSpan = 2
+	// The continuation: same terminal restated, plus a body the first statement omitted.
+	d.Pages[0].Tables = append(d.Pages[0].Tables, &docpb.Table{
+		Id: "p1.t2", Rows: 3, Cols: 4, Confidence: 1,
+		Bbox: &docpb.BBox{X: 72, Y: 320, Width: 400, Height: 100},
+		Cells: []*docpb.Cell{
+			{Row: 0, Col: 0, Text: "PIN", ColSpan: 3},
+			cell(1, 0, "NAME"), cell(1, 1, "HTQFP"), cell(1, 2, "VQFN"), cell(1, 3, "DESCRIPTION"),
+			cell(2, 0, "RX_ER"), cell(2, 1, "54"), cell(2, 2, "40"), cell(2, 3, "Receive error."),
+		},
+	})
+	d.Pages[0].TextBlocks = append(d.Pages[0].TextBlocks, &docpb.TextBlock{
+		Id: "p1.x2", Text: "Pin Functions", Kind: "section_header",
+		Bbox: &docpb.BBox{X: 72, Y: 306, Width: 100, Height: 12},
+	})
+
+	spec, _, err := Run(d, packageAxisRecipe(), nil, Identity{MPN: "SYNTH"})
+	if err != nil {
+		t.Fatalf("Run rejected a restated pin: %v", err)
+	}
+	var rxer int
+	for _, p := range spec.Pins {
+		if p.Name == "RX_ER" {
+			rxer++
+		}
+	}
+	if rxer != 1 {
+		t.Errorf("a restated terminal must merge, got %d pins named RX_ER", rxer)
+	}
+	got := numbersOf(spec, "rx_er")
+	if got["htqfp"] != "54" || got["vqfn"] != "40" {
+		t.Errorf("merge must keep the union of both statements, got %v", got)
+	}
+}
+
+// The merge must not undo the no-connect split: nc6 and nc9 share a name and no leg.
+func TestMergeDoesNotCollapseTheNoConnectSplit(t *testing.T) {
+	spec, _ := runPinFixture(t)
+	var ncs int
+	for _, p := range spec.Pins {
+		if p.Name == "NC" {
+			ncs++
+		}
+	}
+	if ncs != 2 {
+		t.Errorf("NC must stay two terminals, got %d", ncs)
 	}
 }

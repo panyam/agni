@@ -46,6 +46,11 @@ type numberColumn struct {
 	col      int
 	raw      string
 	packages []string
+	// labelled marks a column found by its own header word ("NO.", "PIN") rather than
+	// by sitting inside a band. Such a column is THE numbering of a single-package
+	// table and names no package, so it must never be read as one: doing so mints a
+	// package called "pin" and then collides every designator inside it.
+	labelled bool
 }
 
 // pinColumns is the resolved layout of one pin table.
@@ -106,7 +111,7 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 		case pinDescHeaders[k] && cols.desc < 0:
 			cols.desc = int(c.Col)
 		case pinNumberHeaders[k] && !cols.banded:
-			cols.numbers = append(cols.numbers, numberColumn{col: int(c.Col), raw: strings.TrimSpace(c.Text)})
+			cols.numbers = append(cols.numbers, numberColumn{col: int(c.Col), raw: strings.TrimSpace(c.Text), labelled: true})
 		default:
 			unlabelled = append(unlabelled, c)
 		}
@@ -124,6 +129,9 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 	// Package is minted, which is what keeps a variant column from becoming a body.
 	if axis == derivepb.PinColumnAxis_PIN_COLUMN_AXIS_PACKAGE {
 		for i := range cols.numbers {
+			if cols.numbers[i].labelled {
+				continue
+			}
 			cols.numbers[i].packages = splitPackageCodes(cols.numbers[i].raw)
 		}
 	}
@@ -136,9 +144,14 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 // splitPackageCodes turns one header cell into the package codes it names. "D, PW" is
 // two packages sharing one column of designators; a cell naming none yields none.
 func splitPackageCodes(s string) []string {
+	// The footnote marker a vendor hangs off a header cell ("LCCC (1)", "SOIC, ...,
+	// CFP (1)") belongs to the cell, not to the last code in it. Stripping it here
+	// rather than per-code is what keeps the final package in a list from being
+	// silently dropped.
+	s = footnoteSuffix.ReplaceAllString(strings.TrimSpace(s), "")
 	var out []string
 	for _, part := range strings.Split(s, ",") {
-		p := strings.TrimSpace(part)
+		p := strings.TrimSpace(footnoteSuffix.ReplaceAllString(strings.TrimSpace(part), ""))
 		if p == "" || !isPackageCode(p) {
 			continue
 		}
@@ -147,7 +160,9 @@ func splitPackageCodes(s string) []string {
 	return out
 }
 
-var packageCodeRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{0,5}$`)
+var footnoteSuffix = regexp.MustCompile(`\s*\(\d+\)\s*$`)
+
+var packageCodeRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9-]{0,11}$`)
 
 func isPackageCode(s string) bool { return packageCodeRe.MatchString(s) }
 
@@ -316,6 +331,24 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 		})
 	}
 
+	if axis == derivepb.PinColumnAxis_PIN_COLUMN_AXIS_PACKAGE {
+		for _, nc := range cols.numbers {
+			if nc.labelled {
+				manifest.Gaps = append(manifest.Gaps, &derivepb.Gap{
+					Kind: "pin-numbering-unattributed", Region: t.Id,
+					Detail: fmt.Sprintf("column %q is this table's single numbering and names no package, so its designators are not attributed; declare the package in the recipe if this document ships in one body", nc.raw),
+				})
+				continue
+			}
+			if len(nc.packages) == 0 {
+				manifest.Gaps = append(manifest.Gaps, &derivepb.Gap{
+					Kind: "package-header-unparsed", Region: t.Id,
+					Detail: fmt.Sprintf("header cell %q yielded no package code, so its designators are dropped", nc.raw),
+				})
+			}
+		}
+	}
+
 	declared := map[string]bool{}
 	for _, p := range spec.Packages {
 		declared[p.Id] = true
@@ -437,10 +470,56 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 			if len(pin.Numbers) > 0 {
 				first = pin.Numbers[0].Number
 			}
+			// A pin table spanning several pages arrives as several tables that restate
+			// rows, so the same terminal is met twice. Two pins are the SAME terminal
+			// when they share a name AND a designator; that second half is what keeps
+			// the no-connect split intact, since nc6 and nc9 share a name and no leg.
+			if prev := sameTerminal(spec, pin); prev != nil {
+				mergeNumbers(prev, pin)
+				continue
+			}
 			id := pinIDFor(name, map[bool]string{true: first, false: ""}[split], taken)
 			taken[id] = true
 			pin.Id = id
 			spec.Pins = append(spec.Pins, pin)
+		}
+	}
+}
+
+// sameTerminal finds an already-emitted pin that is the same terminal as the candidate:
+// same name, and at least one identical (package, designator) pair. Name alone is not
+// enough, because a part may print one name on several terminals, which is exactly the
+// case the no-connect split exists for.
+func sameTerminal(spec *parampb.PartSpec, cand *parampb.Pin) *parampb.Pin {
+	if len(cand.Numbers) == 0 {
+		return nil
+	}
+	for _, p := range spec.Pins {
+		if p.Name != cand.Name {
+			continue
+		}
+		for _, a := range p.Numbers {
+			for _, b := range cand.Numbers {
+				if a.PackageRef == b.PackageRef && a.Number == b.Number {
+					return p
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// mergeNumbers folds a restated row's designators into the terminal already emitted,
+// keeping the union. A continuation table may carry a body the first statement omitted.
+func mergeNumbers(dst, src *parampb.Pin) {
+	have := map[string]bool{}
+	for _, n := range dst.Numbers {
+		have[n.PackageRef+"\x00"+n.Number] = true
+	}
+	for _, n := range src.Numbers {
+		if k := n.PackageRef + "\x00" + n.Number; !have[k] {
+			dst.Numbers = append(dst.Numbers, n)
+			have[k] = true
 		}
 	}
 }
