@@ -9,6 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -58,7 +59,7 @@ func summarize(d *ir.Design) string {
 		sort.Strings(conns)
 		classes := append([]string(nil), n.NetClasses...)
 		sort.Strings(classes)
-		roles := append([]string(nil), n.Roles...)
+		roles := append([]string(nil), classify.RoleTokens(n)...)
 		sort.Strings(roles)
 		nets = append(nets, fmt.Sprintf("%s classes=%v roles=%v {%s}", n.Name, classes, roles, strings.Join(conns, ",")))
 	}

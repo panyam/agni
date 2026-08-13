@@ -25,7 +25,7 @@ func railVocab(t *testing.T, pattern string) *classify.Lexicon {
 func rolesOf(d *ir.Design, net string) []string {
 	for _, n := range d.GetNets() {
 		if n.GetName() == net {
-			return n.GetRoles()
+			return classify.RoleTokens(n)
 		}
 	}
 	return nil

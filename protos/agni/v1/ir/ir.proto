@@ -318,6 +318,41 @@ message ComponentSection {
 }
 
 // Net is a set of electrically connected pins.
+// RoleSource is HOW a net role was established. It exists because the roles pass has always unioned
+// evidence of different strengths and discarded which one spoke, leaving a consumer unable to tell a
+// role read off a naming convention from one the source file stated outright.
+//
+// ONLY SOURCES SOMETHING POPULATES ARE MEMBERS (C9's field discipline). Human confirmation and
+// evidence derived from the netlist or a datasheet are the obvious next ones, and are deliberately
+// NOT declared here: an unpopulated member reads to a consumer as a source that never occurs rather
+// than one nothing produces yet. The datasheet layer's verification lifecycle is the shape to borrow
+// when a human-confirmed source arrives.
+enum RoleSource {
+  // Unknown. A role stamped by a pass that did not say where it came from, or a hand-authored IR.
+  // Treated as no weaker than CONVENTION by consumers, since that is what it historically was.
+  ROLE_SOURCE_UNSPECIFIED = 0;
+  // A naming convention matched: the active lexicon read the role out of the net's NAME. The weakest
+  // source, and until this enum existed the only one a consumer could assume. A name is a claim by
+  // whoever drew the schematic, not evidence about the circuit.
+  ROLE_SOURCE_CONVENTION = 1;
+  // The SOURCE FORMAT stated it. IPC-2581's LogicalNet/@netClass is a closed enum saying what a net
+  // is, so a reader that understands one translates it into this vocabulary at the edge. Stronger
+  // than a convention: the tool that wrote the file asserted it, rather than it being inferred from
+  // spelling.
+  ROLE_SOURCE_DECLARED = 2;
+}
+
+// NetRole is one role a net carries, with the evidence that established it. Two facts about the same
+// net may disagree in strength -- ground by declaration and rail by naming -- and both are kept,
+// because collapsing them is what made "how do we know" unanswerable.
+message NetRole {
+  // The role token: rail | ground | feedback. A STRING rather than an enum because the vocabulary is
+  // open at the edges (a project lexicon and the relations layer both speak these tokens as text),
+  // and closing it here would force a second migration the moment a project names a fourth role.
+  string role = 1;
+  RoleSource source = 2;
+}
+
 message Net {
   string name = 1;
   // net_classes is the TOOL-ASSIGNED constraint-group membership: the named groups a design tool
@@ -345,22 +380,34 @@ message Net {
   // content-hash-vs-stable-id lesson). Empty for a pinless net. Distinct from Provenance.native_id,
   // which is the source-native id (a KiCad uuid), not a semantic connectivity identity.
   string id = 4;
-  // roles is the normalized net-role SET (rail / ground / feedback), filled ONCE at ingestion by the
-  // format-neutral pass classify.StampNetRoles (WS3-072). A DERIVED-NORMALIZATION field (C9), the
-  // naming sibling of Component.device_classes: every format populates it via the same shared pass, so
-  // it is format-neutral by construction. A net may carry more than one role (a rail-named feedback
-  // node is {rail, feedback}); consumers decide precedence. Empty for a plain signal net, AND when the
-  // design was built without the ingestion pass (a hand-authored test IR); the core then re-derives
-  // from the net name as a fallback, so an empty set never means "no evidence", only "none stamped".
+  // roles is the normalized net-role SET (rail / ground / feedback), EACH CARRYING THE EVIDENCE THAT
+  // ESTABLISHED IT. Filled at ingestion by the format-neutral pass classify.StampNetRoles (WS3-072).
+  // A DERIVED-NORMALIZATION field (C9), the naming sibling of Component.device_classes: every format
+  // populates it via the same shared pass, so it is format-neutral by construction. A net may carry
+  // more than one role (a rail-named feedback node is {rail, feedback}); consumers decide precedence.
+  // Empty for a plain signal net, AND when the design was built without the ingestion pass (a
+  // hand-authored test IR); the core then re-derives from the net name as a fallback, so an empty set
+  // never means "no evidence", only "none stamped".
   //
-  // TWO EVIDENCE SOURCES, UNIONED (WS1-051). Usually the pass INFERS the role from the net's name,
-  // because that is all most formats carry. But a format may DECLARE it: IPC-2581's
-  // LogicalNet/@netClass is a closed enum saying what the net is, so a net named "N$17" can be
-  // authoritatively ground with nothing in the name to read. A reader that understands such a
-  // declaration translates it into this vocabulary at the edge and leaves it on
-  // classify.AttrDeclaredRole, and the pass unions it with the name reading. Still one shared pass,
-  // so C9 holds; a declaration only ever ADDS, so it can never cost a role the name would have found.
-  repeated string roles = 5;
+  // WHY THE SOURCE TRAVELS WITH THE ROLE. The pass has always unioned SEVERAL kinds of evidence and
+  // thrown away which one won (WS1-051): usually it INFERS the role from the net's name, but a format
+  // may DECLARE it, as IPC-2581's LogicalNet/@netClass does, letting a net named "N$17" be
+  // authoritatively ground with nothing in the name to read. Those are not equally trustworthy and a
+  // consumer could not tell them apart. Recording the source makes "how do we know this" answerable at
+  // the point of use, which is what lets a later tier contribute evidence a name cannot supply and a
+  // consumer decide how much to trust the answer.
+  //
+  // ADDITIVE ONLY, WHICHEVER SOURCE SPEAKS. A source may only ever ADD a role, never remove or
+  // downgrade one another source established, so admitting a new kind of evidence can never cost a
+  // role the name would have found. That property is what keeps this safe to extend, and it is the
+  // rule a new RoleSource has to obey.
+  //
+  // Field 5 held this set before it carried provenance (`repeated string`). The IR is never persisted
+  // as a proto -- it is rebuilt from source on every read, and `emit` writes IPC-2581 rather than IR --
+  // so nothing stored has to be migrated, and the number is reserved only to keep the wire history
+  // honest.
+  reserved 5;
+  repeated NetRole roles = 6;
   map<string, string> attributes = 14;
   Provenance prov = 16;
 }

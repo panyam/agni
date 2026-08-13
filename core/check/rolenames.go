@@ -28,7 +28,27 @@ func IsFeedbackName(name string) bool { return classify.ActiveRoleVocab().IsFeed
 // net-role relations (stdlib/relations) both read through it, so the trust rule has one home.
 func NetHasRole(n *ir.Net, role string, nameMatch func(string) bool) bool {
 	if roles := n.GetRoles(); len(roles) > 0 {
-		return slices.Contains(roles, role)
+		return slices.ContainsFunc(roles, func(r *ir.NetRole) bool { return r.GetRole() == role })
 	}
 	return nameMatch(n.GetName())
+}
+
+// NetRoleSource reports the evidence that established a role on a net, and whether the net carries
+// that role at all. It is the "how do we know" question NetHasRole deliberately does not answer,
+// separated because almost every caller wants the boolean and would otherwise have to ignore a
+// second return value.
+//
+// A net whose role came from the NAME fallback (no stamped set at all, e.g. a hand-authored test IR)
+// reports ROLE_SOURCE_CONVENTION, because that is exactly what the fallback is: a naming convention
+// read at the point of use rather than at ingestion.
+func NetRoleSource(n *ir.Net, role string, nameMatch func(string) bool) (ir.RoleSource, bool) {
+	for _, r := range n.GetRoles() {
+		if r.GetRole() == role {
+			return r.GetSource(), true
+		}
+	}
+	if len(n.GetRoles()) == 0 && nameMatch(n.GetName()) {
+		return ir.RoleSource_ROLE_SOURCE_CONVENTION, true
+	}
+	return ir.RoleSource_ROLE_SOURCE_UNSPECIFIED, false
 }

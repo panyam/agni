@@ -46,9 +46,9 @@ func TestModelNameProjectionsUseItsLexicon(t *testing.T) {
 // none (an IR built without the loader). This is why converting a rule from a bare name match to
 // IsGroundNet is behavior-preserving.
 func TestIsGroundNetPrefersStampedRole(t *testing.T) {
-	stamped := &ir.Net{Name: "AGND_ANALOG", Roles: []string{NetRoleGround}}
+	stamped := &ir.Net{Name: "AGND_ANALOG", Roles: classify.ConventionRoles(NetRoleGround)}
 	unstamped := &ir.Net{Name: "GND"}
-	notGround := &ir.Net{Name: "SIG", Roles: []string{NetRoleRail}}
+	notGround := &ir.Net{Name: "SIG", Roles: classify.ConventionRoles(NetRoleRail)}
 
 	m := NewModel(&ir.Design{Nets: []*ir.Net{stamped, unstamped, notGround}})
 	if !m.IsGroundNet(stamped) {
@@ -70,7 +70,7 @@ func TestIsGroundNetPrefersStampedRole(t *testing.T) {
 // power-symbol taps, nothing to stroke" locate question. A rule asking whether a net is a rail must
 // not inherit that.
 func TestIsRailNetIsNarrowerThanIsPowerRail(t *testing.T) {
-	gnd := &ir.Net{Name: "GND", Roles: []string{NetRoleGround}}
+	gnd := &ir.Net{Name: "GND", Roles: classify.ConventionRoles(NetRoleGround)}
 	m := NewModel(&ir.Design{Nets: []*ir.Net{gnd}})
 	if !m.IsPowerRail("GND") {
 		t.Fatal("IsPowerRail answers true for a ground (the locate question)")

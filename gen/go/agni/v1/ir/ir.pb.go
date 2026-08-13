@@ -96,6 +96,74 @@ func (PinDirection) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{0}
 }
 
+// Net is a set of electrically connected pins.
+// RoleSource is HOW a net role was established. It exists because the roles pass has always unioned
+// evidence of different strengths and discarded which one spoke, leaving a consumer unable to tell a
+// role read off a naming convention from one the source file stated outright.
+//
+// ONLY SOURCES SOMETHING POPULATES ARE MEMBERS (C9's field discipline). Human confirmation and
+// evidence derived from the netlist or a datasheet are the obvious next ones, and are deliberately
+// NOT declared here: an unpopulated member reads to a consumer as a source that never occurs rather
+// than one nothing produces yet. The datasheet layer's verification lifecycle is the shape to borrow
+// when a human-confirmed source arrives.
+type RoleSource int32
+
+const (
+	// Unknown. A role stamped by a pass that did not say where it came from, or a hand-authored IR.
+	// Treated as no weaker than CONVENTION by consumers, since that is what it historically was.
+	RoleSource_ROLE_SOURCE_UNSPECIFIED RoleSource = 0
+	// A naming convention matched: the active lexicon read the role out of the net's NAME. The weakest
+	// source, and until this enum existed the only one a consumer could assume. A name is a claim by
+	// whoever drew the schematic, not evidence about the circuit.
+	RoleSource_ROLE_SOURCE_CONVENTION RoleSource = 1
+	// The SOURCE FORMAT stated it. IPC-2581's LogicalNet/@netClass is a closed enum saying what a net
+	// is, so a reader that understands one translates it into this vocabulary at the edge. Stronger
+	// than a convention: the tool that wrote the file asserted it, rather than it being inferred from
+	// spelling.
+	RoleSource_ROLE_SOURCE_DECLARED RoleSource = 2
+)
+
+// Enum value maps for RoleSource.
+var (
+	RoleSource_name = map[int32]string{
+		0: "ROLE_SOURCE_UNSPECIFIED",
+		1: "ROLE_SOURCE_CONVENTION",
+		2: "ROLE_SOURCE_DECLARED",
+	}
+	RoleSource_value = map[string]int32{
+		"ROLE_SOURCE_UNSPECIFIED": 0,
+		"ROLE_SOURCE_CONVENTION":  1,
+		"ROLE_SOURCE_DECLARED":    2,
+	}
+)
+
+func (x RoleSource) Enum() *RoleSource {
+	p := new(RoleSource)
+	*p = x
+	return p
+}
+
+func (x RoleSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RoleSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_ir_ir_proto_enumTypes[1].Descriptor()
+}
+
+func (RoleSource) Type() protoreflect.EnumType {
+	return &file_agni_v1_ir_ir_proto_enumTypes[1]
+}
+
+func (x RoleSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RoleSource.Descriptor instead.
+func (RoleSource) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{1}
+}
+
 // LayerFunction is the normalized role of a fabrication layer.
 type LayerFunction int32
 
@@ -142,11 +210,11 @@ func (x LayerFunction) String() string {
 }
 
 func (LayerFunction) Descriptor() protoreflect.EnumDescriptor {
-	return file_agni_v1_ir_ir_proto_enumTypes[1].Descriptor()
+	return file_agni_v1_ir_ir_proto_enumTypes[2].Descriptor()
 }
 
 func (LayerFunction) Type() protoreflect.EnumType {
-	return &file_agni_v1_ir_ir_proto_enumTypes[1]
+	return &file_agni_v1_ir_ir_proto_enumTypes[2]
 }
 
 func (x LayerFunction) Number() protoreflect.EnumNumber {
@@ -155,7 +223,7 @@ func (x LayerFunction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use LayerFunction.Descriptor instead.
 func (LayerFunction) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{2}
 }
 
 // Span locates a node within its source file, for lossless reconstruction and surgical
@@ -1447,7 +1515,64 @@ func (x *ComponentSection) GetProv() *Provenance {
 	return nil
 }
 
-// Net is a set of electrically connected pins.
+// NetRole is one role a net carries, with the evidence that established it. Two facts about the same
+// net may disagree in strength -- ground by declaration and rail by naming -- and both are kept,
+// because collapsing them is what made "how do we know" unanswerable.
+type NetRole struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The role token: rail | ground | feedback. A STRING rather than an enum because the vocabulary is
+	// open at the edges (a project lexicon and the relations layer both speak these tokens as text),
+	// and closing it here would force a second migration the moment a project names a fourth role.
+	Role          string     `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	Source        RoleSource `protobuf:"varint,2,opt,name=source,proto3,enum=agni.v1.ir.RoleSource" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NetRole) Reset() {
+	*x = NetRole{}
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NetRole) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NetRole) ProtoMessage() {}
+
+func (x *NetRole) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NetRole.ProtoReflect.Descriptor instead.
+func (*NetRole) Descriptor() ([]byte, []int) {
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *NetRole) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *NetRole) GetSource() RoleSource {
+	if x != nil {
+		return x.Source
+	}
+	return RoleSource_ROLE_SOURCE_UNSPECIFIED
+}
+
 type Net struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1475,23 +1600,8 @@ type Net struct {
 	// durable cross-revision handle (that would be a separate stable id — the datasheet-layer
 	// content-hash-vs-stable-id lesson). Empty for a pinless net. Distinct from Provenance.native_id,
 	// which is the source-native id (a KiCad uuid), not a semantic connectivity identity.
-	Id string `protobuf:"bytes,4,opt,name=id,proto3" json:"id,omitempty"`
-	// roles is the normalized net-role SET (rail / ground / feedback), filled ONCE at ingestion by the
-	// format-neutral pass classify.StampNetRoles (WS3-072). A DERIVED-NORMALIZATION field (C9), the
-	// naming sibling of Component.device_classes: every format populates it via the same shared pass, so
-	// it is format-neutral by construction. A net may carry more than one role (a rail-named feedback
-	// node is {rail, feedback}); consumers decide precedence. Empty for a plain signal net, AND when the
-	// design was built without the ingestion pass (a hand-authored test IR); the core then re-derives
-	// from the net name as a fallback, so an empty set never means "no evidence", only "none stamped".
-	//
-	// TWO EVIDENCE SOURCES, UNIONED (WS1-051). Usually the pass INFERS the role from the net's name,
-	// because that is all most formats carry. But a format may DECLARE it: IPC-2581's
-	// LogicalNet/@netClass is a closed enum saying what the net is, so a net named "N$17" can be
-	// authoritatively ground with nothing in the name to read. A reader that understands such a
-	// declaration translates it into this vocabulary at the edge and leaves it on
-	// classify.AttrDeclaredRole, and the pass unions it with the name reading. Still one shared pass,
-	// so C9 holds; a declaration only ever ADDS, so it can never cost a role the name would have found.
-	Roles         []string          `protobuf:"bytes,5,rep,name=roles,proto3" json:"roles,omitempty"`
+	Id            string            `protobuf:"bytes,4,opt,name=id,proto3" json:"id,omitempty"`
+	Roles         []*NetRole        `protobuf:"bytes,6,rep,name=roles,proto3" json:"roles,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Prov          *Provenance       `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1500,7 +1610,7 @@ type Net struct {
 
 func (x *Net) Reset() {
 	*x = Net{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1512,7 +1622,7 @@ func (x *Net) String() string {
 func (*Net) ProtoMessage() {}
 
 func (x *Net) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1525,7 +1635,7 @@ func (x *Net) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Net.ProtoReflect.Descriptor instead.
 func (*Net) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Net) GetName() string {
@@ -1556,7 +1666,7 @@ func (x *Net) GetId() string {
 	return ""
 }
 
-func (x *Net) GetRoles() []string {
+func (x *Net) GetRoles() []*NetRole {
 	if x != nil {
 		return x.Roles
 	}
@@ -1597,7 +1707,7 @@ type Connection struct {
 
 func (x *Connection) Reset() {
 	*x = Connection{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1719,7 @@ func (x *Connection) String() string {
 func (*Connection) ProtoMessage() {}
 
 func (x *Connection) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1732,7 @@ func (x *Connection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Connection.ProtoReflect.Descriptor instead.
 func (*Connection) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Connection) GetComponentRef() string {
@@ -1667,7 +1777,7 @@ type Sheet struct {
 
 func (x *Sheet) Reset() {
 	*x = Sheet{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1679,7 +1789,7 @@ func (x *Sheet) String() string {
 func (*Sheet) ProtoMessage() {}
 
 func (x *Sheet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1692,7 +1802,7 @@ func (x *Sheet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sheet.ProtoReflect.Descriptor instead.
 func (*Sheet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Sheet) GetId() string {
@@ -1738,7 +1848,7 @@ type Footprint struct {
 
 func (x *Footprint) Reset() {
 	*x = Footprint{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1750,7 +1860,7 @@ func (x *Footprint) String() string {
 func (*Footprint) ProtoMessage() {}
 
 func (x *Footprint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1763,7 +1873,7 @@ func (x *Footprint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Footprint.ProtoReflect.Descriptor instead.
 func (*Footprint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Footprint) GetName() string {
@@ -1807,7 +1917,7 @@ type Layer struct {
 
 func (x *Layer) Reset() {
 	*x = Layer{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1819,7 +1929,7 @@ func (x *Layer) String() string {
 func (*Layer) ProtoMessage() {}
 
 func (x *Layer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1832,7 +1942,7 @@ func (x *Layer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Layer.ProtoReflect.Descriptor instead.
 func (*Layer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Layer) GetName() string {
@@ -1884,7 +1994,7 @@ type StackupLayer struct {
 
 func (x *StackupLayer) Reset() {
 	*x = StackupLayer{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1896,7 +2006,7 @@ func (x *StackupLayer) String() string {
 func (*StackupLayer) ProtoMessage() {}
 
 func (x *StackupLayer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1909,7 +2019,7 @@ func (x *StackupLayer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StackupLayer.ProtoReflect.Descriptor instead.
 func (*StackupLayer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *StackupLayer) GetLayerRef() string {
@@ -1951,7 +2061,7 @@ type Stackup struct {
 
 func (x *Stackup) Reset() {
 	*x = Stackup{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1963,7 +2073,7 @@ func (x *Stackup) String() string {
 func (*Stackup) ProtoMessage() {}
 
 func (x *Stackup) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1976,7 +2086,7 @@ func (x *Stackup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Stackup.ProtoReflect.Descriptor instead.
 func (*Stackup) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Stackup) GetLayers() []*StackupLayer {
@@ -2015,7 +2125,7 @@ type Constraint struct {
 
 func (x *Constraint) Reset() {
 	*x = Constraint{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2027,7 +2137,7 @@ func (x *Constraint) String() string {
 func (*Constraint) ProtoMessage() {}
 
 func (x *Constraint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2040,7 +2150,7 @@ func (x *Constraint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Constraint.ProtoReflect.Descriptor instead.
 func (*Constraint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Constraint) GetName() string {
@@ -2093,7 +2203,7 @@ type BomLine struct {
 
 func (x *BomLine) Reset() {
 	*x = BomLine{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2105,7 +2215,7 @@ func (x *BomLine) String() string {
 func (*BomLine) ProtoMessage() {}
 
 func (x *BomLine) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2118,7 +2228,7 @@ func (x *BomLine) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BomLine.ProtoReflect.Descriptor instead.
 func (*BomLine) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *BomLine) GetRefDes() []string {
@@ -2303,21 +2413,24 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"M\n" +
+	"\aNetRole\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12.\n" +
+	"\x06source\x18\x02 \x01(\x0e2\x16.agni.v1.ir.RoleSourceR\x06source\"\xe1\x02\n" +
 	"\x03Net\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vnet_classes\x18\x02 \x03(\tR\n" +
 	"netClasses\x128\n" +
 	"\vconnections\x18\x03 \x03(\v2\x16.agni.v1.ir.ConnectionR\vconnections\x12\x0e\n" +
-	"\x02id\x18\x04 \x01(\tR\x02id\x12\x14\n" +
-	"\x05roles\x18\x05 \x03(\tR\x05roles\x12?\n" +
+	"\x02id\x18\x04 \x01(\tR\x02id\x12)\n" +
+	"\x05roles\x18\x06 \x03(\v2\x13.agni.v1.ir.NetRoleR\x05roles\x12?\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2\x1f.agni.v1.ir.Net.AttributesEntryR\n" +
 	"attributes\x12*\n" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfd\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x05\x10\x06\"\xfd\x01\n" +
 	"\n" +
 	"Connection\x12#\n" +
 	"\rcomponent_ref\x18\x01 \x01(\tR\fcomponentRef\x12\x17\n" +
@@ -2415,7 +2528,12 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x13PIN_DIRECTION_POWER\x10\x05\x12\x1c\n" +
 	"\x18PIN_DIRECTION_NO_CONNECT\x10\x06\x12\x1a\n" +
 	"\x16PIN_DIRECTION_POWER_IN\x10\a\x12\x1b\n" +
-	"\x17PIN_DIRECTION_POWER_OUT\x10\b*\xdc\x01\n" +
+	"\x17PIN_DIRECTION_POWER_OUT\x10\b*_\n" +
+	"\n" +
+	"RoleSource\x12\x1b\n" +
+	"\x17ROLE_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16ROLE_SOURCE_CONVENTION\x10\x01\x12\x18\n" +
+	"\x14ROLE_SOURCE_DECLARED\x10\x02*\xdc\x01\n" +
 	"\rLayerFunction\x12\x1e\n" +
 	"\x1aLAYER_FUNCTION_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15LAYER_FUNCTION_SIGNAL\x10\x01\x12\x18\n" +
@@ -2437,118 +2555,122 @@ func file_agni_v1_ir_ir_proto_rawDescGZIP() []byte {
 	return file_agni_v1_ir_ir_proto_rawDescData
 }
 
-var file_agni_v1_ir_ir_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_ir_ir_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_agni_v1_ir_ir_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agni_v1_ir_ir_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_agni_v1_ir_ir_proto_goTypes = []any{
 	(PinDirection)(0),        // 0: agni.v1.ir.PinDirection
-	(LayerFunction)(0),       // 1: agni.v1.ir.LayerFunction
-	(*Span)(nil),             // 2: agni.v1.ir.Span
-	(*Provenance)(nil),       // 3: agni.v1.ir.Provenance
-	(*FidelityFragment)(nil), // 4: agni.v1.ir.FidelityFragment
-	(*Design)(nil),           // 5: agni.v1.ir.Design
-	(*InputDiagnostics)(nil), // 6: agni.v1.ir.InputDiagnostics
-	(*UnresolvedSymbol)(nil), // 7: agni.v1.ir.UnresolvedSymbol
-	(*BusNotModeled)(nil),    // 8: agni.v1.ir.BusNotModeled
-	(*DanglingEndpoint)(nil), // 9: agni.v1.ir.DanglingEndpoint
-	(*RefDesCollision)(nil),  // 10: agni.v1.ir.RefDesCollision
-	(*PartLibrary)(nil),      // 11: agni.v1.ir.PartLibrary
-	(*PartType)(nil),         // 12: agni.v1.ir.PartType
-	(*Pin)(nil),              // 13: agni.v1.ir.Pin
-	(*Component)(nil),        // 14: agni.v1.ir.Component
-	(*Quantity)(nil),         // 15: agni.v1.ir.Quantity
-	(*ComponentSection)(nil), // 16: agni.v1.ir.ComponentSection
-	(*Net)(nil),              // 17: agni.v1.ir.Net
-	(*Connection)(nil),       // 18: agni.v1.ir.Connection
-	(*Sheet)(nil),            // 19: agni.v1.ir.Sheet
-	(*Footprint)(nil),        // 20: agni.v1.ir.Footprint
-	(*Layer)(nil),            // 21: agni.v1.ir.Layer
-	(*StackupLayer)(nil),     // 22: agni.v1.ir.StackupLayer
-	(*Stackup)(nil),          // 23: agni.v1.ir.Stackup
-	(*Constraint)(nil),       // 24: agni.v1.ir.Constraint
-	(*BomLine)(nil),          // 25: agni.v1.ir.BomLine
-	nil,                      // 26: agni.v1.ir.Design.AttributesEntry
-	nil,                      // 27: agni.v1.ir.PartLibrary.AttributesEntry
-	nil,                      // 28: agni.v1.ir.PartType.AttributesEntry
-	nil,                      // 29: agni.v1.ir.Pin.AttributesEntry
-	nil,                      // 30: agni.v1.ir.Component.AttributesEntry
-	nil,                      // 31: agni.v1.ir.ComponentSection.AttributesEntry
-	nil,                      // 32: agni.v1.ir.Net.AttributesEntry
-	nil,                      // 33: agni.v1.ir.Connection.AttributesEntry
-	nil,                      // 34: agni.v1.ir.Sheet.AttributesEntry
-	nil,                      // 35: agni.v1.ir.Footprint.AttributesEntry
-	nil,                      // 36: agni.v1.ir.Layer.AttributesEntry
-	nil,                      // 37: agni.v1.ir.StackupLayer.AttributesEntry
-	nil,                      // 38: agni.v1.ir.Stackup.AttributesEntry
-	nil,                      // 39: agni.v1.ir.Constraint.ParamsEntry
-	nil,                      // 40: agni.v1.ir.Constraint.AttributesEntry
-	nil,                      // 41: agni.v1.ir.BomLine.AttributesEntry
+	(RoleSource)(0),          // 1: agni.v1.ir.RoleSource
+	(LayerFunction)(0),       // 2: agni.v1.ir.LayerFunction
+	(*Span)(nil),             // 3: agni.v1.ir.Span
+	(*Provenance)(nil),       // 4: agni.v1.ir.Provenance
+	(*FidelityFragment)(nil), // 5: agni.v1.ir.FidelityFragment
+	(*Design)(nil),           // 6: agni.v1.ir.Design
+	(*InputDiagnostics)(nil), // 7: agni.v1.ir.InputDiagnostics
+	(*UnresolvedSymbol)(nil), // 8: agni.v1.ir.UnresolvedSymbol
+	(*BusNotModeled)(nil),    // 9: agni.v1.ir.BusNotModeled
+	(*DanglingEndpoint)(nil), // 10: agni.v1.ir.DanglingEndpoint
+	(*RefDesCollision)(nil),  // 11: agni.v1.ir.RefDesCollision
+	(*PartLibrary)(nil),      // 12: agni.v1.ir.PartLibrary
+	(*PartType)(nil),         // 13: agni.v1.ir.PartType
+	(*Pin)(nil),              // 14: agni.v1.ir.Pin
+	(*Component)(nil),        // 15: agni.v1.ir.Component
+	(*Quantity)(nil),         // 16: agni.v1.ir.Quantity
+	(*ComponentSection)(nil), // 17: agni.v1.ir.ComponentSection
+	(*NetRole)(nil),          // 18: agni.v1.ir.NetRole
+	(*Net)(nil),              // 19: agni.v1.ir.Net
+	(*Connection)(nil),       // 20: agni.v1.ir.Connection
+	(*Sheet)(nil),            // 21: agni.v1.ir.Sheet
+	(*Footprint)(nil),        // 22: agni.v1.ir.Footprint
+	(*Layer)(nil),            // 23: agni.v1.ir.Layer
+	(*StackupLayer)(nil),     // 24: agni.v1.ir.StackupLayer
+	(*Stackup)(nil),          // 25: agni.v1.ir.Stackup
+	(*Constraint)(nil),       // 26: agni.v1.ir.Constraint
+	(*BomLine)(nil),          // 27: agni.v1.ir.BomLine
+	nil,                      // 28: agni.v1.ir.Design.AttributesEntry
+	nil,                      // 29: agni.v1.ir.PartLibrary.AttributesEntry
+	nil,                      // 30: agni.v1.ir.PartType.AttributesEntry
+	nil,                      // 31: agni.v1.ir.Pin.AttributesEntry
+	nil,                      // 32: agni.v1.ir.Component.AttributesEntry
+	nil,                      // 33: agni.v1.ir.ComponentSection.AttributesEntry
+	nil,                      // 34: agni.v1.ir.Net.AttributesEntry
+	nil,                      // 35: agni.v1.ir.Connection.AttributesEntry
+	nil,                      // 36: agni.v1.ir.Sheet.AttributesEntry
+	nil,                      // 37: agni.v1.ir.Footprint.AttributesEntry
+	nil,                      // 38: agni.v1.ir.Layer.AttributesEntry
+	nil,                      // 39: agni.v1.ir.StackupLayer.AttributesEntry
+	nil,                      // 40: agni.v1.ir.Stackup.AttributesEntry
+	nil,                      // 41: agni.v1.ir.Constraint.ParamsEntry
+	nil,                      // 42: agni.v1.ir.Constraint.AttributesEntry
+	nil,                      // 43: agni.v1.ir.BomLine.AttributesEntry
 }
 var file_agni_v1_ir_ir_proto_depIdxs = []int32{
-	2,  // 0: agni.v1.ir.Provenance.span:type_name -> agni.v1.ir.Span
-	3,  // 1: agni.v1.ir.FidelityFragment.prov:type_name -> agni.v1.ir.Provenance
-	11, // 2: agni.v1.ir.Design.libraries:type_name -> agni.v1.ir.PartLibrary
-	14, // 3: agni.v1.ir.Design.components:type_name -> agni.v1.ir.Component
-	17, // 4: agni.v1.ir.Design.nets:type_name -> agni.v1.ir.Net
-	19, // 5: agni.v1.ir.Design.sheets:type_name -> agni.v1.ir.Sheet
-	6,  // 6: agni.v1.ir.Design.input_diagnostics:type_name -> agni.v1.ir.InputDiagnostics
-	20, // 7: agni.v1.ir.Design.footprints:type_name -> agni.v1.ir.Footprint
-	21, // 8: agni.v1.ir.Design.layers:type_name -> agni.v1.ir.Layer
-	23, // 9: agni.v1.ir.Design.stackup:type_name -> agni.v1.ir.Stackup
-	24, // 10: agni.v1.ir.Design.constraints:type_name -> agni.v1.ir.Constraint
-	25, // 11: agni.v1.ir.Design.bom:type_name -> agni.v1.ir.BomLine
-	26, // 12: agni.v1.ir.Design.attributes:type_name -> agni.v1.ir.Design.AttributesEntry
-	4,  // 13: agni.v1.ir.Design.fidelity:type_name -> agni.v1.ir.FidelityFragment
-	3,  // 14: agni.v1.ir.Design.prov:type_name -> agni.v1.ir.Provenance
-	9,  // 15: agni.v1.ir.InputDiagnostics.dangling_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
-	10, // 16: agni.v1.ir.InputDiagnostics.ref_des_collisions:type_name -> agni.v1.ir.RefDesCollision
-	9,  // 17: agni.v1.ir.InputDiagnostics.no_junction_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
-	8,  // 18: agni.v1.ir.InputDiagnostics.unmodeled_buses:type_name -> agni.v1.ir.BusNotModeled
-	7,  // 19: agni.v1.ir.InputDiagnostics.unresolved_symbols:type_name -> agni.v1.ir.UnresolvedSymbol
-	3,  // 20: agni.v1.ir.UnresolvedSymbol.prov:type_name -> agni.v1.ir.Provenance
-	3,  // 21: agni.v1.ir.BusNotModeled.prov:type_name -> agni.v1.ir.Provenance
-	3,  // 22: agni.v1.ir.DanglingEndpoint.prov:type_name -> agni.v1.ir.Provenance
-	3,  // 23: agni.v1.ir.RefDesCollision.instances:type_name -> agni.v1.ir.Provenance
-	12, // 24: agni.v1.ir.PartLibrary.parts:type_name -> agni.v1.ir.PartType
-	27, // 25: agni.v1.ir.PartLibrary.attributes:type_name -> agni.v1.ir.PartLibrary.AttributesEntry
-	3,  // 26: agni.v1.ir.PartLibrary.prov:type_name -> agni.v1.ir.Provenance
-	13, // 27: agni.v1.ir.PartType.pins:type_name -> agni.v1.ir.Pin
-	28, // 28: agni.v1.ir.PartType.attributes:type_name -> agni.v1.ir.PartType.AttributesEntry
-	3,  // 29: agni.v1.ir.PartType.prov:type_name -> agni.v1.ir.Provenance
+	3,  // 0: agni.v1.ir.Provenance.span:type_name -> agni.v1.ir.Span
+	4,  // 1: agni.v1.ir.FidelityFragment.prov:type_name -> agni.v1.ir.Provenance
+	12, // 2: agni.v1.ir.Design.libraries:type_name -> agni.v1.ir.PartLibrary
+	15, // 3: agni.v1.ir.Design.components:type_name -> agni.v1.ir.Component
+	19, // 4: agni.v1.ir.Design.nets:type_name -> agni.v1.ir.Net
+	21, // 5: agni.v1.ir.Design.sheets:type_name -> agni.v1.ir.Sheet
+	7,  // 6: agni.v1.ir.Design.input_diagnostics:type_name -> agni.v1.ir.InputDiagnostics
+	22, // 7: agni.v1.ir.Design.footprints:type_name -> agni.v1.ir.Footprint
+	23, // 8: agni.v1.ir.Design.layers:type_name -> agni.v1.ir.Layer
+	25, // 9: agni.v1.ir.Design.stackup:type_name -> agni.v1.ir.Stackup
+	26, // 10: agni.v1.ir.Design.constraints:type_name -> agni.v1.ir.Constraint
+	27, // 11: agni.v1.ir.Design.bom:type_name -> agni.v1.ir.BomLine
+	28, // 12: agni.v1.ir.Design.attributes:type_name -> agni.v1.ir.Design.AttributesEntry
+	5,  // 13: agni.v1.ir.Design.fidelity:type_name -> agni.v1.ir.FidelityFragment
+	4,  // 14: agni.v1.ir.Design.prov:type_name -> agni.v1.ir.Provenance
+	10, // 15: agni.v1.ir.InputDiagnostics.dangling_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
+	11, // 16: agni.v1.ir.InputDiagnostics.ref_des_collisions:type_name -> agni.v1.ir.RefDesCollision
+	10, // 17: agni.v1.ir.InputDiagnostics.no_junction_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
+	9,  // 18: agni.v1.ir.InputDiagnostics.unmodeled_buses:type_name -> agni.v1.ir.BusNotModeled
+	8,  // 19: agni.v1.ir.InputDiagnostics.unresolved_symbols:type_name -> agni.v1.ir.UnresolvedSymbol
+	4,  // 20: agni.v1.ir.UnresolvedSymbol.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 21: agni.v1.ir.BusNotModeled.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 22: agni.v1.ir.DanglingEndpoint.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 23: agni.v1.ir.RefDesCollision.instances:type_name -> agni.v1.ir.Provenance
+	13, // 24: agni.v1.ir.PartLibrary.parts:type_name -> agni.v1.ir.PartType
+	29, // 25: agni.v1.ir.PartLibrary.attributes:type_name -> agni.v1.ir.PartLibrary.AttributesEntry
+	4,  // 26: agni.v1.ir.PartLibrary.prov:type_name -> agni.v1.ir.Provenance
+	14, // 27: agni.v1.ir.PartType.pins:type_name -> agni.v1.ir.Pin
+	30, // 28: agni.v1.ir.PartType.attributes:type_name -> agni.v1.ir.PartType.AttributesEntry
+	4,  // 29: agni.v1.ir.PartType.prov:type_name -> agni.v1.ir.Provenance
 	0,  // 30: agni.v1.ir.Pin.direction:type_name -> agni.v1.ir.PinDirection
-	29, // 31: agni.v1.ir.Pin.attributes:type_name -> agni.v1.ir.Pin.AttributesEntry
-	3,  // 32: agni.v1.ir.Pin.prov:type_name -> agni.v1.ir.Provenance
-	16, // 33: agni.v1.ir.Component.sections:type_name -> agni.v1.ir.ComponentSection
-	15, // 34: agni.v1.ir.Component.value:type_name -> agni.v1.ir.Quantity
-	30, // 35: agni.v1.ir.Component.attributes:type_name -> agni.v1.ir.Component.AttributesEntry
-	3,  // 36: agni.v1.ir.Component.prov:type_name -> agni.v1.ir.Provenance
-	31, // 37: agni.v1.ir.ComponentSection.attributes:type_name -> agni.v1.ir.ComponentSection.AttributesEntry
-	3,  // 38: agni.v1.ir.ComponentSection.prov:type_name -> agni.v1.ir.Provenance
-	18, // 39: agni.v1.ir.Net.connections:type_name -> agni.v1.ir.Connection
-	32, // 40: agni.v1.ir.Net.attributes:type_name -> agni.v1.ir.Net.AttributesEntry
-	3,  // 41: agni.v1.ir.Net.prov:type_name -> agni.v1.ir.Provenance
-	33, // 42: agni.v1.ir.Connection.attributes:type_name -> agni.v1.ir.Connection.AttributesEntry
-	3,  // 43: agni.v1.ir.Connection.prov:type_name -> agni.v1.ir.Provenance
-	34, // 44: agni.v1.ir.Sheet.attributes:type_name -> agni.v1.ir.Sheet.AttributesEntry
-	3,  // 45: agni.v1.ir.Sheet.prov:type_name -> agni.v1.ir.Provenance
-	35, // 46: agni.v1.ir.Footprint.attributes:type_name -> agni.v1.ir.Footprint.AttributesEntry
-	3,  // 47: agni.v1.ir.Footprint.prov:type_name -> agni.v1.ir.Provenance
-	1,  // 48: agni.v1.ir.Layer.function:type_name -> agni.v1.ir.LayerFunction
-	36, // 49: agni.v1.ir.Layer.attributes:type_name -> agni.v1.ir.Layer.AttributesEntry
-	3,  // 50: agni.v1.ir.Layer.prov:type_name -> agni.v1.ir.Provenance
-	37, // 51: agni.v1.ir.StackupLayer.attributes:type_name -> agni.v1.ir.StackupLayer.AttributesEntry
-	22, // 52: agni.v1.ir.Stackup.layers:type_name -> agni.v1.ir.StackupLayer
-	38, // 53: agni.v1.ir.Stackup.attributes:type_name -> agni.v1.ir.Stackup.AttributesEntry
-	3,  // 54: agni.v1.ir.Stackup.prov:type_name -> agni.v1.ir.Provenance
-	39, // 55: agni.v1.ir.Constraint.params:type_name -> agni.v1.ir.Constraint.ParamsEntry
-	40, // 56: agni.v1.ir.Constraint.attributes:type_name -> agni.v1.ir.Constraint.AttributesEntry
-	3,  // 57: agni.v1.ir.Constraint.prov:type_name -> agni.v1.ir.Provenance
-	41, // 58: agni.v1.ir.BomLine.attributes:type_name -> agni.v1.ir.BomLine.AttributesEntry
-	3,  // 59: agni.v1.ir.BomLine.prov:type_name -> agni.v1.ir.Provenance
-	60, // [60:60] is the sub-list for method output_type
-	60, // [60:60] is the sub-list for method input_type
-	60, // [60:60] is the sub-list for extension type_name
-	60, // [60:60] is the sub-list for extension extendee
-	0,  // [0:60] is the sub-list for field type_name
+	31, // 31: agni.v1.ir.Pin.attributes:type_name -> agni.v1.ir.Pin.AttributesEntry
+	4,  // 32: agni.v1.ir.Pin.prov:type_name -> agni.v1.ir.Provenance
+	17, // 33: agni.v1.ir.Component.sections:type_name -> agni.v1.ir.ComponentSection
+	16, // 34: agni.v1.ir.Component.value:type_name -> agni.v1.ir.Quantity
+	32, // 35: agni.v1.ir.Component.attributes:type_name -> agni.v1.ir.Component.AttributesEntry
+	4,  // 36: agni.v1.ir.Component.prov:type_name -> agni.v1.ir.Provenance
+	33, // 37: agni.v1.ir.ComponentSection.attributes:type_name -> agni.v1.ir.ComponentSection.AttributesEntry
+	4,  // 38: agni.v1.ir.ComponentSection.prov:type_name -> agni.v1.ir.Provenance
+	1,  // 39: agni.v1.ir.NetRole.source:type_name -> agni.v1.ir.RoleSource
+	20, // 40: agni.v1.ir.Net.connections:type_name -> agni.v1.ir.Connection
+	18, // 41: agni.v1.ir.Net.roles:type_name -> agni.v1.ir.NetRole
+	34, // 42: agni.v1.ir.Net.attributes:type_name -> agni.v1.ir.Net.AttributesEntry
+	4,  // 43: agni.v1.ir.Net.prov:type_name -> agni.v1.ir.Provenance
+	35, // 44: agni.v1.ir.Connection.attributes:type_name -> agni.v1.ir.Connection.AttributesEntry
+	4,  // 45: agni.v1.ir.Connection.prov:type_name -> agni.v1.ir.Provenance
+	36, // 46: agni.v1.ir.Sheet.attributes:type_name -> agni.v1.ir.Sheet.AttributesEntry
+	4,  // 47: agni.v1.ir.Sheet.prov:type_name -> agni.v1.ir.Provenance
+	37, // 48: agni.v1.ir.Footprint.attributes:type_name -> agni.v1.ir.Footprint.AttributesEntry
+	4,  // 49: agni.v1.ir.Footprint.prov:type_name -> agni.v1.ir.Provenance
+	2,  // 50: agni.v1.ir.Layer.function:type_name -> agni.v1.ir.LayerFunction
+	38, // 51: agni.v1.ir.Layer.attributes:type_name -> agni.v1.ir.Layer.AttributesEntry
+	4,  // 52: agni.v1.ir.Layer.prov:type_name -> agni.v1.ir.Provenance
+	39, // 53: agni.v1.ir.StackupLayer.attributes:type_name -> agni.v1.ir.StackupLayer.AttributesEntry
+	24, // 54: agni.v1.ir.Stackup.layers:type_name -> agni.v1.ir.StackupLayer
+	40, // 55: agni.v1.ir.Stackup.attributes:type_name -> agni.v1.ir.Stackup.AttributesEntry
+	4,  // 56: agni.v1.ir.Stackup.prov:type_name -> agni.v1.ir.Provenance
+	41, // 57: agni.v1.ir.Constraint.params:type_name -> agni.v1.ir.Constraint.ParamsEntry
+	42, // 58: agni.v1.ir.Constraint.attributes:type_name -> agni.v1.ir.Constraint.AttributesEntry
+	4,  // 59: agni.v1.ir.Constraint.prov:type_name -> agni.v1.ir.Provenance
+	43, // 60: agni.v1.ir.BomLine.attributes:type_name -> agni.v1.ir.BomLine.AttributesEntry
+	4,  // 61: agni.v1.ir.BomLine.prov:type_name -> agni.v1.ir.Provenance
+	62, // [62:62] is the sub-list for method output_type
+	62, // [62:62] is the sub-list for method input_type
+	62, // [62:62] is the sub-list for extension type_name
+	62, // [62:62] is the sub-list for extension extendee
+	0,  // [0:62] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_ir_ir_proto_init() }
@@ -2562,8 +2684,8 @@ func file_agni_v1_ir_ir_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_ir_ir_proto_rawDesc), len(file_agni_v1_ir_ir_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   40,
+			NumEnums:      3,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

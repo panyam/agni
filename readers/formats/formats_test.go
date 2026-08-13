@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -260,8 +261,8 @@ func TestIPCDeclaredNetRoleEndToEnd(t *testing.T) {
 		if !tracked {
 			continue
 		}
-		if !slices.Equal(n.Roles, w) {
-			t.Errorf("roles(%q) = %v, want %v", n.Name, n.Roles, w)
+		if !slices.Equal(classify.RoleTokens(n), w) {
+			t.Errorf("roles(%q) = %v, want %v", n.Name, classify.RoleTokens(n), w)
 		}
 		delete(want, n.Name)
 	}

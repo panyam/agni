@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -14,7 +15,7 @@ import (
 // would yield nothing.
 func TestNetRoleStampedIsAuthoritative(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
-		{Name: "MYSTERY", Roles: []string{check.NetRoleGround}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{Name: "MYSTERY", Roles: classify.ConventionRoles(check.NetRoleGround), Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
 	gf := factsByRelation(Facts(check.NewModel(d)))[RelNetGround]
 	if len(gf) != 1 || gf[0].Subject != "MYSTERY" {
