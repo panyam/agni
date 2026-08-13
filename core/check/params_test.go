@@ -5,6 +5,7 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/datasheet/param"
 )
 
@@ -99,5 +100,76 @@ func TestUnitVocabulariesAgree(t *testing.T) {
 			t.Errorf("classify normalizes design values to %q, but param.BaseUnit gives (%q, %d, %v)",
 				unit, base, exp, ok)
 		}
+	}
+}
+
+// SeedsAnySymbol answers "does ANY part seed this", which decides the verdict and cannot act on it.
+// UnseededSymbols keeps what that walk discards, at the unit a datasheet author works in: the PART.
+func TestUnseededSymbols(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{
+		{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}},
+		{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-1"}}, // same part, second placement
+		{RefDes: "U3", Attributes: map[string]string{"MPN": "ACME-2"}}, // no spec at all
+		{RefDes: "R9"},                                                // no MPN: nothing to name
+	}}
+	provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+		if mpn == "ACME-1" {
+			return &parampb.PartSpec{
+				Mpn: "ACME-1", Manufacturer: "MakerCo", DeviceClass: "ldo",
+				Parameters: []*parampb.Parameter{{Symbol: "VIN"}},
+			}
+		}
+		return nil
+	})
+	m := NewModelWithParams(d, nil, provider)
+
+	got := UnseededSymbols(m, []string{"VCC"}, nil)
+	if len(got) != 2 {
+		t.Fatalf("want one dependency per PART, not per placement; got %d: %+v", len(got), got)
+	}
+	if got[0].MPN != "ACME-1" || got[1].MPN != "ACME-2" {
+		t.Errorf("want deterministic order by mpn, got %q then %q", got[0].MPN, got[1].MPN)
+	}
+	if got[0].SpecAbsent || got[0].Manufacturer != "MakerCo" {
+		t.Errorf("ACME-1 has a spec that lacks VCC: %+v", got[0])
+	}
+	if !got[1].SpecAbsent || got[1].Manufacturer != "" {
+		t.Errorf("ACME-2 has no spec, so the next step is extracting one and the maker is unknown: %+v", got[1])
+	}
+	for _, dep := range got {
+		if dep.MPN == "" {
+			t.Error("a dependency naming no part cannot be acted on and must not be emitted")
+		}
+	}
+
+	// A symbol the part already seeds is not a gap.
+	if seeded := UnseededSymbols(m, []string{"VIN"}, nil); len(seeded) != 1 || seeded[0].MPN != "ACME-2" {
+		t.Errorf("VIN is seeded on ACME-1, so only ACME-2 should want it; got %+v", seeded)
+	}
+	// Nothing asked, nothing unmet.
+	if none := UnseededSymbols(m, nil, nil); none != nil {
+		t.Errorf("no symbols asked, got %+v", none)
+	}
+}
+
+// Without the class gate a symbol needed by three parts names every part on the design that lacks
+// it, and a work list nobody can act on is not an improvement on prose.
+func TestUnseededSymbolsRespectsClassGate(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{
+		{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}},
+		{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-2"}, DeviceClasses: []string{"crystal"}},
+	}}
+	provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+		return &parampb.PartSpec{Mpn: mpn, DeviceClass: map[string]string{"ACME-1": "ldo"}[mpn]}
+	})
+	m := NewModelWithParams(d, nil, provider)
+
+	all := UnseededSymbols(m, []string{"VCC"}, nil)
+	if len(all) != 2 {
+		t.Fatalf("ungated wants both parts, got %+v", all)
+	}
+	gated := UnseededSymbols(m, []string{"VCC"}, []string{"ldo"})
+	if len(gated) != 1 || gated[0].MPN != "ACME-1" {
+		t.Errorf("gating on ldo must name only the ldo, got %+v", gated)
 	}
 }

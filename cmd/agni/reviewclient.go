@@ -22,6 +22,7 @@ func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
 					Item:     review.Item{ID: pi.GetId(), Title: pi.GetTitle(), Note: pi.GetNote()},
 					Outcome:  review.Outcome(pi.GetOutcome()),
 					Findings: findingsFromProto(pi.GetFindings()),
+					Unmet:    unmetFromProto(pi.GetUnmet()),
 				})
 			}
 			r.Areas = append(r.Areas, ar)
@@ -91,6 +92,23 @@ func designSourcesOf(docs []*checkspb.CheckResults) []string {
 	out := make([]string, 0, len(docs))
 	for _, doc := range docs {
 		out = append(out, doc.GetDesign().GetSource())
+	}
+	return out
+}
+
+// unmetFromProto reconstructs a needs-data item's unmet dependencies. Present so a results document
+// re-rendered from the wire carries the same work list the run produced; without it the structured
+// form would exist only inside the process that computed it, which is the state this replaced.
+func unmetFromProto(ps []*checkspb.UnmetDependency) []check.UnmetDependency {
+	if len(ps) == 0 {
+		return nil
+	}
+	out := make([]check.UnmetDependency, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, check.UnmetDependency{
+			MPN: p.GetMpn(), Manufacturer: p.GetManufacturer(),
+			Symbol: p.GetSymbol(), SpecAbsent: p.GetSpecAbsent(),
+		})
 	}
 	return out
 }

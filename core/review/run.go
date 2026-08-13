@@ -71,6 +71,10 @@ type ItemResult struct {
 	Outcome  Outcome
 	Findings []check.Finding
 	Note     string // the not-applicable reason (from check.Available), when Outcome is NotApplicable
+	// Unmet names the datasheet facts this item needed and did not find, set only when Outcome is
+	// NeedsData. The Note says the same thing in a sentence; this is the form a consumer can act on
+	// without parsing one, which is the whole difference between reporting a gap and closing it.
+	Unmet []check.UnmetDependency
 }
 
 // AreaResult groups the item results of one review area.
@@ -320,7 +324,12 @@ func runItem(p RunParams, it Item) ItemResult {
 	// empty" case is deliberately not chased (the datasheet join is the one that bites, the params tier
 	// being sparse by nature).
 	if syms := datasheetSymbols(it, avail); len(syms) > 0 && !check.SeedsAnySymbol(m, syms) {
-		return ItemResult{Item: it, Outcome: NeedsData, Note: "no seeded datasheet value for " + strings.Join(syms, "/") + " on this design"}
+		return ItemResult{
+			Item:    it,
+			Outcome: NeedsData,
+			Note:    "no seeded datasheet value for " + strings.Join(syms, "/") + " on this design",
+			Unmet:   check.UnseededSymbols(m, syms, it.Binding.AppliesToClass),
+		}
 	}
 	// Same discipline for the unanchored interface (WS3-099): the secondary rules ran and found nothing,
 	// but the completeness rule never evaluated, so this is not a clean bill of health. It reads

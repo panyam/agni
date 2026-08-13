@@ -919,3 +919,47 @@ func TestInconclusiveCountsAsCoveredNotPassing(t *testing.T) {
 		t.Errorf("Inconclusive = %d, want 1", tal.Inconclusive)
 	}
 }
+
+// The needs-data verdict already knew which parts were missing which symbol; it flattened that into
+// a sentence and threw the structure away. This is what makes the outcome actionable rather than
+// merely honest.
+func TestNeedsDataCarriesUnmetDependencies(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{
+			{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		},
+		Nets: []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
+	}
+	q := &QueryBinding{Match: `net.pin_count(?n, ?c), ?c > 1000000 => ?n`, Subject: "n", Kind: check.KindNet, Message: "x", ParamSymbol: "IOUT"}
+	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{{ID: "23", Title: "UVLO", Binding: Binding{Query: q}}}}}}
+	run := func(seededSym string) ItemResult {
+		provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
+			if mpn == "ACME-1" {
+				return &parampb.PartSpec{Mpn: "ACME-1", Manufacturer: "MakerCo", Parameters: []*parampb.Parameter{{Symbol: seededSym}}}
+			}
+			return nil
+		})
+		return Run(RunParams{Model: check.NewModelWithParams(d, nil, provider),
+			Catalog: check.DefaultCatalog(), Manifest: man, Design: "d"}).Areas[0].Items[0]
+	}
+
+	blocked := run("OTHER")
+	if blocked.Outcome != NeedsData {
+		t.Fatalf("outcome = %q, want needs-data", blocked.Outcome)
+	}
+	if len(blocked.Unmet) != 1 {
+		t.Fatalf("want one dependency for the one unseeded part, got %+v", blocked.Unmet)
+	}
+	if got := blocked.Unmet[0]; got.MPN != "ACME-1" || got.Symbol != "IOUT" || got.SpecAbsent {
+		t.Errorf("dependency = %+v, want ACME-1 / IOUT with a spec present", got)
+	}
+	if blocked.Note == "" {
+		t.Error("the human sentence must survive alongside the structured form, not be replaced by it")
+	}
+
+	// Seeding the symbol removes both the verdict and the dependency.
+	if seeded := run("IOUT"); seeded.Outcome == NeedsData || len(seeded.Unmet) != 0 {
+		t.Errorf("a seeded symbol must leave no gap: outcome %q, unmet %+v", seeded.Outcome, seeded.Unmet)
+	}
+}

@@ -121,6 +121,7 @@ func renderReviewResults(w io.Writer, doc *checkspb.CheckResults, format string,
 				Item:     review.Item{ID: pi.GetId(), Title: pi.GetTitle(), Note: pi.GetNote()},
 				Outcome:  review.Outcome(pi.GetOutcome()),
 				Findings: findingsFromProto(pi.GetFindings()),
+				Unmet:    unmetFromProto(pi.GetUnmet()),
 			})
 		}
 		rep.Areas = append(rep.Areas, ar)

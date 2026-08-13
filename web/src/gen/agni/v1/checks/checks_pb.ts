@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/checks/checks.proto.
  */
 export const file_agni_v1_checks_checks: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NoZWNrcy9jaGVja3MucHJvdG8SDmFnbmkudjEuY2hlY2tzIlEKB1N1YmplY3QSDAoEa2luZBgBIAEoCRILCgNyZWYYAiABKAkSCwoDcGluGAMgASgJEg4KBm5ldF9pZBgEIAEoCRIOCgZidXNfaWQYBSABKAkidAoRRGF0YXNoZWV0Q2l0YXRpb24SCwoDZG9jGAEgASgJEg8KB2RvY19yZWYYAiABKAkSDAoEcGFnZRgDIAEoBRIPCgdzZWN0aW9uGAQgASgJEg4KBm1ldGhvZBgFIAEoCRISCgpjb25maWRlbmNlGAYgASgBIqICCgdGaW5kaW5nEgwKBHJ1bGUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSKAoHc3ViamVjdBgDIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDwoHbWVzc2FnZRgEIAEoCRIUCgxpbmNvbmNsdXNpdmUYCiABKAgSKgoKcHJvdmVuYW5jZRgFIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIOCgZzaGVldHMYBiADKAkSMwoNbG9jYXRlX3JlYXNvbhgHIAEoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbhI1CgpkYXRhc2hlZXRzGAggAygLMiEuYWduaS52MS5jaGVja3MuRGF0YXNoZWV0Q2l0YXRpb24isAIKC0NoZWNrUmVwb3J0Eg4KBnNvdXJjZRgBIAEoCRIRCglydWxlc19ydW4YAiABKAUSPQoIc2VjdGlvbnMYAyADKAsyKy5hZ25pLnYxLmNoZWNrcy5DaGVja1JlcG9ydC5TZXZlcml0eVNlY3Rpb24aaAoPU2V2ZXJpdHlTZWN0aW9uEhAKCHNldmVyaXR5GAEgASgJEg0KBWNvdW50GAIgASgFEjQKBXJ1bGVzGAMgAygLMiUuYWduaS52MS5jaGVja3MuQ2hlY2tSZXBvcnQuUnVsZUdyb3VwGlUKCVJ1bGVHcm91cBIMCgRydWxlGAEgASgJEg8KB3N1bW1hcnkYAiABKAkSKQoIZmluZGluZ3MYAyADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nIksKDlJldmlld01hbmlmZXN0EgwKBG5hbWUYASABKAkSKwoFYXJlYXMYAiADKAsyHC5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdEFyZWEiSQoMTWFuaWZlc3RBcmVhEgwKBG5hbWUYASABKAkSKwoFaXRlbXMYAiADKAsyHC5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdEl0ZW0iegoMTWFuaWZlc3RJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEgwKBG5vdGUYBCABKAkSLAoHYmluZGluZxgFIAEoCzIbLmFnbmkudjEuY2hlY2tzLkl0ZW1CaW5kaW5nIvYBCgtJdGVtQmluZGluZxIMCgRydWxlGAEgASgJEgsKA3RhZxgCIAEoCRIPCgdwcm9maWxlGAMgASgJEiwKBXF1ZXJ5GAQgASgLMh0uYWduaS52MS5jaGVja3MuTWFuaWZlc3RRdWVyeRIwCgdwcmVzZW50GAUgASgLMh8uYWduaS52MS5jaGVja3MuTWFuaWZlc3RQcmVzZW50EiwKBXNjb3BlGAYgASgLMh0uYWduaS52MS5jaGVja3MuTWFuaWZlc3RTY29wZRITCgtyZXF1aXJlbWVudBgHIAEoCRIYChBhcHBsaWVzX3RvX2NsYXNzGAggAygJInYKDU1hbmlmZXN0UXVlcnkSDQoFbWF0Y2gYASABKAkSDwoHc3ViamVjdBgCIAEoCRIMCgRraW5kGAMgASgJEg8KB21lc3NhZ2UYBCABKAkSEAoIc2V2ZXJpdHkYBSABKAkSFAoMcGFyYW1fc3ltYm9sGAYgASgJIiAKD01hbmlmZXN0UHJlc2VudBINCgVjbGFzcxgBIAEoCSIhCg1NYW5pZmVzdFNjb3BlEhAKCHByb2ZpbGVzGAEgAygJInEKClJldmlld0l0ZW0SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDwoHb3V0Y29tZRgDIAEoCRIMCgRub3RlGAQgASgJEikKCGZpbmRpbmdzGAUgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZyJFCgpSZXZpZXdBcmVhEgwKBG5hbWUYASABKAkSKQoFaXRlbXMYAiADKAsyGi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdJdGVtIsEDCgxDaGVja1Jlc3VsdHMSKQoEbWV0YRgBIAEoCzIbLmFnbmkudjEuY2hlY2tzLlJlc3VsdHNNZXRhEikKBmRlc2lnbhgCIAEoCzIZLmFnbmkudjEuY2hlY2tzLkRlc2lnblJlZhImCgNydW4YAyABKAsyGS5hZ25pLnYxLmNoZWNrcy5SdW5Db25maWcSKwoHY2F0YWxvZxgEIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJ1bGVSZWNvcmQSLAoHc2tpcHBlZBgKIAMoCzIbLmFnbmkudjEuY2hlY2tzLlNraXBwZWRSdWxlEikKCGZpbmRpbmdzGAUgAygLMhcuYWduaS52MS5jaGVja3MuRmluZGluZxIQCghtYW5pZmVzdBgGIAEoCRIpCgVhcmVhcxgHIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJldmlld0FyZWESNQoOaW1wb3J0X3N1bW1hcnkYCCABKAsyHS5hZ25pLnYxLmNoZWNrcy5JbXBvcnRTdW1tYXJ5EjkKEW1hbmlmZXN0X3NuYXBzaG90GAkgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiYwoNSW1wb3J0U3VtbWFyeRIQCghmaW5kaW5ncxgBIAEoBRIOCgZqb2luZWQYAiABKAUSMAoIdW5qb2luZWQYAyADKAsyHi5hZ25pLnYxLmNoZWNrcy5VbmpvaW5lZFJlYXNvbiJBCg5VbmpvaW5lZFJlYXNvbhIOCgZyZWFzb24YASABKAkSDQoFY291bnQYAiABKAUSEAoIZXhhbXBsZXMYAyADKAkidAoLUmVzdWx0c01ldGESDgoGc2NoZW1hGAEgASgJEhAKCHByb2R1Y2VyGAIgASgJEhgKEHByb2R1Y2VyX3ZlcnNpb24YAyABKAkSEgoKY3JlYXRlZF9hdBgEIAEoCRIVCg1jb3ZlcmFnZV9heGlzGAUgASgIIjEKCURlc2lnblJlZhIOCgZzb3VyY2UYASABKAkSFAoMY29udGVudF9oYXNoGAIgASgJImoKCVJ1bkNvbmZpZxIOCgZwYXJhbXMYASABKAgSEAoIcHJvZmlsZXMYAiABKAgSDgoGaW50ZW50GAMgASgIEhMKC2NvbnZlbnRpb25zGAQgASgJEhYKDnJhdGlmaWVkX2Zsb29yGAUgASgBIisKC1NraXBwZWRSdWxlEgwKBG5hbWUYASABKAkSDgoGcmVhc29uGAIgASgJIp4BCgpSdWxlUmVjb3JkEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIyCgR0YWdzGAQgAygLMiQuYWduaS52MS5jaGVja3MuUnVsZVJlY29yZC5UYWdzRW50cnkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEq1gEKDExvY2F0ZVJlYXNvbhIdChlMT0NBVEVfUkVBU09OX1VOU1BFQ0lGSUVEEAASIAocTE9DQVRFX1JFQVNPTl9WSVJUVUFMX1NZTUJPTBABEiQKIExPQ0FURV9SRUFTT05fUE9XRVJfUkFJTF9OT19XSVJFEAISHwobTE9DQVRFX1JFQVNPTl9OT1RfSU5fREVTSUdOEAMSHQoZTE9DQVRFX1JFQVNPTl9OT19HRU9NRVRSWRAEEh8KG0xPQ0FURV9SRUFTT05fQlVTX05PVF9EUkFXThAFQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY2hlY2tzYgZwcm90bzM", [file_agni_v1_ir_ir]);
+  fileDesc("ChthZ25pL3YxL2NoZWNrcy9jaGVja3MucHJvdG8SDmFnbmkudjEuY2hlY2tzIlEKB1N1YmplY3QSDAoEa2luZBgBIAEoCRILCgNyZWYYAiABKAkSCwoDcGluGAMgASgJEg4KBm5ldF9pZBgEIAEoCRIOCgZidXNfaWQYBSABKAkidAoRRGF0YXNoZWV0Q2l0YXRpb24SCwoDZG9jGAEgASgJEg8KB2RvY19yZWYYAiABKAkSDAoEcGFnZRgDIAEoBRIPCgdzZWN0aW9uGAQgASgJEg4KBm1ldGhvZBgFIAEoCRISCgpjb25maWRlbmNlGAYgASgBIqICCgdGaW5kaW5nEgwKBHJ1bGUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSKAoHc3ViamVjdBgDIAEoCzIXLmFnbmkudjEuY2hlY2tzLlN1YmplY3QSDwoHbWVzc2FnZRgEIAEoCRIUCgxpbmNvbmNsdXNpdmUYCiABKAgSKgoKcHJvdmVuYW5jZRgFIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIOCgZzaGVldHMYBiADKAkSMwoNbG9jYXRlX3JlYXNvbhgHIAEoDjIcLmFnbmkudjEuY2hlY2tzLkxvY2F0ZVJlYXNvbhI1CgpkYXRhc2hlZXRzGAggAygLMiEuYWduaS52MS5jaGVja3MuRGF0YXNoZWV0Q2l0YXRpb24isAIKC0NoZWNrUmVwb3J0Eg4KBnNvdXJjZRgBIAEoCRIRCglydWxlc19ydW4YAiABKAUSPQoIc2VjdGlvbnMYAyADKAsyKy5hZ25pLnYxLmNoZWNrcy5DaGVja1JlcG9ydC5TZXZlcml0eVNlY3Rpb24aaAoPU2V2ZXJpdHlTZWN0aW9uEhAKCHNldmVyaXR5GAEgASgJEg0KBWNvdW50GAIgASgFEjQKBXJ1bGVzGAMgAygLMiUuYWduaS52MS5jaGVja3MuQ2hlY2tSZXBvcnQuUnVsZUdyb3VwGlUKCVJ1bGVHcm91cBIMCgRydWxlGAEgASgJEg8KB3N1bW1hcnkYAiABKAkSKQoIZmluZGluZ3MYAyADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nIksKDlJldmlld01hbmlmZXN0EgwKBG5hbWUYASABKAkSKwoFYXJlYXMYAiADKAsyHC5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdEFyZWEiSQoMTWFuaWZlc3RBcmVhEgwKBG5hbWUYASABKAkSKwoFaXRlbXMYAiADKAsyHC5hZ25pLnYxLmNoZWNrcy5NYW5pZmVzdEl0ZW0iegoMTWFuaWZlc3RJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEgwKBG5vdGUYBCABKAkSLAoHYmluZGluZxgFIAEoCzIbLmFnbmkudjEuY2hlY2tzLkl0ZW1CaW5kaW5nIvYBCgtJdGVtQmluZGluZxIMCgRydWxlGAEgASgJEgsKA3RhZxgCIAEoCRIPCgdwcm9maWxlGAMgASgJEiwKBXF1ZXJ5GAQgASgLMh0uYWduaS52MS5jaGVja3MuTWFuaWZlc3RRdWVyeRIwCgdwcmVzZW50GAUgASgLMh8uYWduaS52MS5jaGVja3MuTWFuaWZlc3RQcmVzZW50EiwKBXNjb3BlGAYgASgLMh0uYWduaS52MS5jaGVja3MuTWFuaWZlc3RTY29wZRITCgtyZXF1aXJlbWVudBgHIAEoCRIYChBhcHBsaWVzX3RvX2NsYXNzGAggAygJInYKDU1hbmlmZXN0UXVlcnkSDQoFbWF0Y2gYASABKAkSDwoHc3ViamVjdBgCIAEoCRIMCgRraW5kGAMgASgJEg8KB21lc3NhZ2UYBCABKAkSEAoIc2V2ZXJpdHkYBSABKAkSFAoMcGFyYW1fc3ltYm9sGAYgASgJIiAKD01hbmlmZXN0UHJlc2VudBINCgVjbGFzcxgBIAEoCSIhCg1NYW5pZmVzdFNjb3BlEhAKCHByb2ZpbGVzGAEgAygJIqEBCgpSZXZpZXdJdGVtEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEg8KB291dGNvbWUYAyABKAkSDAoEbm90ZRgEIAEoCRIpCghmaW5kaW5ncxgFIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmcSLgoFdW5tZXQYBiADKAsyHy5hZ25pLnYxLmNoZWNrcy5Vbm1ldERlcGVuZGVuY3kiWQoPVW5tZXREZXBlbmRlbmN5EgsKA21wbhgBIAEoCRIUCgxtYW51ZmFjdHVyZXIYAiABKAkSDgoGc3ltYm9sGAMgASgJEhMKC3NwZWNfYWJzZW50GAQgASgIIkUKClJldmlld0FyZWESDAoEbmFtZRgBIAEoCRIpCgVpdGVtcxgCIAMoCzIaLmFnbmkudjEuY2hlY2tzLlJldmlld0l0ZW0iwQMKDENoZWNrUmVzdWx0cxIpCgRtZXRhGAEgASgLMhsuYWduaS52MS5jaGVja3MuUmVzdWx0c01ldGESKQoGZGVzaWduGAIgASgLMhkuYWduaS52MS5jaGVja3MuRGVzaWduUmVmEiYKA3J1bhgDIAEoCzIZLmFnbmkudjEuY2hlY2tzLlJ1bkNvbmZpZxIrCgdjYXRhbG9nGAQgAygLMhouYWduaS52MS5jaGVja3MuUnVsZVJlY29yZBIsCgdza2lwcGVkGAogAygLMhsuYWduaS52MS5jaGVja3MuU2tpcHBlZFJ1bGUSKQoIZmluZGluZ3MYBSADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nEhAKCG1hbmlmZXN0GAYgASgJEikKBWFyZWFzGAcgAygLMhouYWduaS52MS5jaGVja3MuUmV2aWV3QXJlYRI1Cg5pbXBvcnRfc3VtbWFyeRgIIAEoCzIdLmFnbmkudjEuY2hlY2tzLkltcG9ydFN1bW1hcnkSOQoRbWFuaWZlc3Rfc25hcHNob3QYCSABKAsyHi5hZ25pLnYxLmNoZWNrcy5SZXZpZXdNYW5pZmVzdCJjCg1JbXBvcnRTdW1tYXJ5EhAKCGZpbmRpbmdzGAEgASgFEg4KBmpvaW5lZBgCIAEoBRIwCgh1bmpvaW5lZBgDIAMoCzIeLmFnbmkudjEuY2hlY2tzLlVuam9pbmVkUmVhc29uIkEKDlVuam9pbmVkUmVhc29uEg4KBnJlYXNvbhgBIAEoCRINCgVjb3VudBgCIAEoBRIQCghleGFtcGxlcxgDIAMoCSJ0CgtSZXN1bHRzTWV0YRIOCgZzY2hlbWEYASABKAkSEAoIcHJvZHVjZXIYAiABKAkSGAoQcHJvZHVjZXJfdmVyc2lvbhgDIAEoCRISCgpjcmVhdGVkX2F0GAQgASgJEhUKDWNvdmVyYWdlX2F4aXMYBSABKAgiMQoJRGVzaWduUmVmEg4KBnNvdXJjZRgBIAEoCRIUCgxjb250ZW50X2hhc2gYAiABKAkiagoJUnVuQ29uZmlnEg4KBnBhcmFtcxgBIAEoCBIQCghwcm9maWxlcxgCIAEoCBIOCgZpbnRlbnQYAyABKAgSEwoLY29udmVudGlvbnMYBCABKAkSFgoOcmF0aWZpZWRfZmxvb3IYBSABKAEiKwoLU2tpcHBlZFJ1bGUSDAoEbmFtZRgBIAEoCRIOCgZyZWFzb24YAiABKAkingEKClJ1bGVSZWNvcmQSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEjIKBHRhZ3MYBCADKAsyJC5hZ25pLnYxLmNoZWNrcy5SdWxlUmVjb3JkLlRhZ3NFbnRyeRorCglUYWdzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASrWAQoMTG9jYXRlUmVhc29uEh0KGUxPQ0FURV9SRUFTT05fVU5TUEVDSUZJRUQQABIgChxMT0NBVEVfUkVBU09OX1ZJUlRVQUxfU1lNQk9MEAESJAogTE9DQVRFX1JFQVNPTl9QT1dFUl9SQUlMX05PX1dJUkUQAhIfChtMT0NBVEVfUkVBU09OX05PVF9JTl9ERVNJR04QAxIdChlMT0NBVEVfUkVBU09OX05PX0dFT01FVFJZEAQSHwobTE9DQVRFX1JFQVNPTl9CVVNfTk9UX0RSQVdOEAVCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jaGVja3NiBnByb3RvMw", [file_agni_v1_ir_ir]);
 
 /**
  * Subject identifies the entity a finding is about, so a consumer can group and highlight by entity
@@ -625,6 +625,14 @@ export type ReviewItem = Message<"agni.v1.checks.ReviewItem"> & {
    * @generated from field: repeated agni.v1.checks.Finding findings = 5;
    */
   findings: Finding[];
+
+  /**
+   * The datasheet facts this item needed and did not find, when outcome is needs-data.
+   * Empty for every other outcome.
+   *
+   * @generated from field: repeated agni.v1.checks.UnmetDependency unmet = 6;
+   */
+  unmet: UnmetDependency[];
 };
 
 /**
@@ -633,6 +641,66 @@ export type ReviewItem = Message<"agni.v1.checks.ReviewItem"> & {
  */
 export const ReviewItemSchema: GenMessage<ReviewItem> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_checks, 11);
+
+/**
+ * UnmetDependency names ONE datasheet fact a check reached for and did not find. It exists because
+ * the blocked-on-data outcome already knew this at the moment it gave up, and then flattened it into
+ * a sentence: the symbol is computed to decide the outcome, and which parts lack it is computed to
+ * decide whether ANY part has it. Both were discarded, so every consumer wanting to act on the
+ * outcome had to re-derive them from prose or not act at all.
+ *
+ * The unit is (part, symbol), NOT (component, symbol). A PartSpec is per-MPN, so ten placements of
+ * one part are one thing to go seed, and deduplicating by MPN is what keeps this a work list rather
+ * than a restatement of the bill of materials.
+ *
+ * WHAT IS DELIBERATELY ABSENT: no limit_kind, no pin_ref, no unit. Nothing derives them at the site
+ * this is produced, and an always-empty field would mean two different things forever ("the rule was
+ * not asking per-terminal" and "we cannot work it out yet"), which is the ambiguity RangeValue's
+ * explicit presence exists to avoid one layer down. proto3 fields are additive, so admitting one the
+ * day something populates it costs nothing; shipping it empty costs the distinction permanently.
+ *
+ * @generated from message agni.v1.checks.UnmetDependency
+ */
+export type UnmetDependency = Message<"agni.v1.checks.UnmetDependency"> & {
+  /**
+   * The design-side part identity (ir.BomLine.mpn, else the MPN attribute) that needs the fact.
+   *
+   * @generated from field: string mpn = 1;
+   */
+  mpn: string;
+
+  /**
+   * Manufacturer as the seeded spec states it. EMPTY WHEN NO SPEC EXISTS, which is precisely the
+   * case where a document has to be found in the first place, so a consumer must treat it as a hint
+   * and never as a search key.
+   *
+   * @generated from field: string manufacturer = 2;
+   */
+  manufacturer: string;
+
+  /**
+   * The parameter symbol as the check asked for it ("VCC", "VIN"), matching the rule's param_symbol.
+   *
+   * @generated from field: string symbol = 3;
+   */
+  symbol: string;
+
+  /**
+   * True when the part has NO seeded spec at all, false when a spec exists but states no such
+   * symbol. Different next steps: extract a document, versus find one fact in a document already
+   * extracted. One boolean rather than two message types because the pair is exhaustive.
+   *
+   * @generated from field: bool spec_absent = 4;
+   */
+  specAbsent: boolean;
+};
+
+/**
+ * Describes the message agni.v1.checks.UnmetDependency.
+ * Use `create(UnmetDependencySchema)` to create a new message.
+ */
+export const UnmetDependencySchema: GenMessage<UnmetDependency> = /*@__PURE__*/
+  messageDesc(file_agni_v1_checks_checks, 12);
 
 /**
  * ReviewArea groups an area's item outcomes (the wire form of review.AreaResult).
@@ -656,7 +724,7 @@ export type ReviewArea = Message<"agni.v1.checks.ReviewArea"> & {
  * Use `create(ReviewAreaSchema)` to create a new message.
  */
 export const ReviewAreaSchema: GenMessage<ReviewArea> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 12);
+  messageDesc(file_agni_v1_checks_checks, 13);
 
 /**
  * CheckResults is a self-contained check-result document: what was checked, by what, with what
@@ -767,7 +835,7 @@ export type CheckResults = Message<"agni.v1.checks.CheckResults"> & {
  * Use `create(CheckResultsSchema)` to create a new message.
  */
 export const CheckResultsSchema: GenMessage<CheckResults> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 13);
+  messageDesc(file_agni_v1_checks_checks, 14);
 
 /**
  * ImportSummary is the honest accounting of an import. A foreign checker names the entity a violation
@@ -807,7 +875,7 @@ export type ImportSummary = Message<"agni.v1.checks.ImportSummary"> & {
  * Use `create(ImportSummarySchema)` to create a new message.
  */
 export const ImportSummarySchema: GenMessage<ImportSummary> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 14);
+  messageDesc(file_agni_v1_checks_checks, 15);
 
 /**
  * UnjoinedReason is one class of finding the import could not attach, with a few verbatim examples so
@@ -838,7 +906,7 @@ export type UnjoinedReason = Message<"agni.v1.checks.UnjoinedReason"> & {
  * Use `create(UnjoinedReasonSchema)` to create a new message.
  */
 export const UnjoinedReasonSchema: GenMessage<UnjoinedReason> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 15);
+  messageDesc(file_agni_v1_checks_checks, 16);
 
 /**
  * ResultsMeta is who produced the document and when. producer matters because this contract is meant
@@ -897,7 +965,7 @@ export type ResultsMeta = Message<"agni.v1.checks.ResultsMeta"> & {
  * Use `create(ResultsMetaSchema)` to create a new message.
  */
 export const ResultsMetaSchema: GenMessage<ResultsMeta> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 16);
+  messageDesc(file_agni_v1_checks_checks, 17);
 
 /**
  * DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the
@@ -933,7 +1001,7 @@ export type DesignRef = Message<"agni.v1.checks.DesignRef"> & {
  * Use `create(DesignRefSchema)` to create a new message.
  */
 export const DesignRefSchema: GenMessage<DesignRef> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 17);
+  messageDesc(file_agni_v1_checks_checks, 18);
 
 /**
  * RunConfig records the inputs that changed what was even EVALUABLE, so a reader can tell a design
@@ -991,7 +1059,7 @@ export type RunConfig = Message<"agni.v1.checks.RunConfig"> & {
  * Use `create(RunConfigSchema)` to create a new message.
  */
 export const RunConfigSchema: GenMessage<RunConfig> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 18);
+  messageDesc(file_agni_v1_checks_checks, 19);
 
 /**
  * SkippedRule is one selected rule that could not evaluate, and the reason the rule itself gave.
@@ -1024,7 +1092,7 @@ export type SkippedRule = Message<"agni.v1.checks.SkippedRule"> & {
  * Use `create(SkippedRuleSchema)` to create a new message.
  */
 export const SkippedRuleSchema: GenMessage<SkippedRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 19);
+  messageDesc(file_agni_v1_checks_checks, 20);
 
 /**
  * RuleRecord is one rule as the run saw it: enough to render and group a report without the engine's
@@ -1067,7 +1135,7 @@ export type RuleRecord = Message<"agni.v1.checks.RuleRecord"> & {
  * Use `create(RuleRecordSchema)` to create a new message.
  */
 export const RuleRecordSchema: GenMessage<RuleRecord> = /*@__PURE__*/
-  messageDesc(file_agni_v1_checks_checks, 20);
+  messageDesc(file_agni_v1_checks_checks, 21);
 
 /**
  * LocateReason is why an entity a consumer wants to highlight may not be locatable in the canvas
