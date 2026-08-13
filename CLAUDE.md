@@ -154,6 +154,15 @@ subscripts, so `VCCA` arrives as `V CCA` (~850 such occurrences in one corpus). 
 times in unrelated places: a prose sweep, the derive pin path where it would have produced pin ids no
 symbol library could match, and in-document search. Assume the space is there.
 
+**A feature premised on a house CONVENTION needs its base rate measured on real designs first, and
+the fixtures cannot tell you.** Every fixture in this repo names things the way the built-in
+vocabulary expects, because that is what made them work, so a convention-shaped feature always looks
+well-founded against them. Measured on two real boards, the endpoint-encoding net-name convention an
+issue was written around covered 1.1% and 0.06% of nets, while the shipped tutorial project does not
+use it at all. The same measurement then found a live silent bug in the opposite direction. Count the
+shape on a real design before designing to it; it is one query and it has twice changed what was
+worth building.
+
 ## Docsite wiring
 
 **FOUR edits for a new page in an existing section, FIVE for a new SECTION.** A page needs the file,

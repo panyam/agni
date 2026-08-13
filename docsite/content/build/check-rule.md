@@ -49,6 +49,13 @@ Then interrogate it the way a real corpus will:
   name, so a signalling level encoded in a SIGNAL net's name parses as a rail nominal (agni issue
   194: `U3_12_U7_4_3V3` yields 3.3 while classifying as neither rail nor ground). Gate on
   `Model.IsRailNet`, the narrow role question, before reading either name.
+- **What does that gate cost you when the project has not configured it?** A role gate is not free:
+  it inherits the role's whole configuration surface. `IsRailNet` reads a stamp derived from the
+  naming lexicon, and the built-in vocabulary is start-anchored (`VCC`, `VDD`, `+3V3`), so a project
+  naming rails function-first matches almost none of it. Measured on a real 1700-net board, declaring
+  the project's patterns moved the rail count from 13 to 91: gating without that config silently
+  answers a narrower question. Gate anyway, and make the gap visible rather than assuming the config
+  is there — `rail-not-classified` is the tripwire that does it.
 
 ## Author spec-first
 
@@ -116,6 +123,25 @@ A rule that SUBTRACTS two name-derived voltages meets binary floating point head
 The older datasheet rules only ever compared a rail against a limit, so the problem first appeared
 with pin tracking. Round the result (microvolt resolution is finer than any bound a datasheet
 states) and assert the PRINTED number in a test, which is what caught it.
+
+## Two independent channels, when one channel is ambiguous by construction
+
+Some questions cannot be answered from one signal no matter how carefully you read it. Is a net named
+`..._3V3` a 3.3 V rail, or a signal that swings at 3.3 V? Both are named that way, legitimately, by
+the same teams. No naming grammar separates them, and a rule that fires on the name alone is noise
+dressed as a finding.
+
+The way out is a **second signal from an unrelated source**, and requiring the two to agree.
+`rail-not-classified` wants a voltage in the net's name AND a pin the PART declares as a power input:
+one channel comes off the net, the other off the part's own pin declaration, so their agreement is
+evidence in a way either alone is not. Measured on real boards that took the candidate set from 101
+to 45, and separated a board with a genuine configuration gap (45) from one without (5).
+
+Two things to keep honest about it. **Name the channels in the rule's doc**, because a reviewer
+needs to know the finding rests on a coincidence of two weak signals rather than one strong one. And
+**check what happens when a channel is structurally absent**: on a source format that cannot type
+power pins, the second channel is always missing and the rule silently never fires. That is safe, but
+it makes the rule a no-op on that format rather than a partial answer, and the doc should say so.
 
 ## Fixtures are the rule's contract
 
