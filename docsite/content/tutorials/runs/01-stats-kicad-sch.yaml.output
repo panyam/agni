@@ -1,0 +1,8 @@
+#agni-run 657ef4266d8f17b4
+design:              GATEWAY
+source format:       edif-2.0.0
+libraries:           2
+components:          19 (unique ref_des)
+sections:            19 (source instances)
+multi-section:       0 (one ref_des, several sections)
+nets:                15

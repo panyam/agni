@@ -1,0 +1,4 @@
+# Generated block for 04-your-names.md. Edit the script, not the capture.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn --conventions conventions.yaml

@@ -1,0 +1,4 @@
+# Generated block for 07-your-architecture.md. Edit the script, not the capture.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn --intent-path designs/gateway/intent.yaml --params params

@@ -37,14 +37,7 @@ nets.
 
 ## Running it
 
-```
-agni check designs/gateway/gateway.edn --intent-path designs/gateway/intent.yaml --params params
-```
-
-```
-  intent/voltage-domain-mismatch 1
-  [warning] intent/voltage-domain-mismatch: PMIC_IO_1V8 (rail "PMIC_IO_1V8" is declared in voltage domain "core" (3.3V) but its name declares 1.8V)
-```
+{{ agniRun "content/tutorials/runs/07-check-intent-params.yaml" }}
 
 The declaration says the core domain runs at 3.3 V. The rail assigned to it is a 1.8 V rail. Nothing
 structural is wrong with the board, and no rule from any other tier has anything to say. The only
@@ -58,17 +51,7 @@ a design is edited by people who did not write the original plan.
 
 Run the same thing without `--params`:
 
-```
-agni check designs/gateway/gateway.edn --intent-path designs/gateway/intent.yaml
-```
-
-```
-  intent/module-count    1
-  intent/module-missing  1
-  intent/voltage-domain-mismatch 1
-  [warning] intent/module-count: regulators (declared module "regulators" (class regulator) expects 2, found 0)
-  [warning] intent/module-missing: regulators (declared module "regulators" (class regulator) is not present on the design)
-```
+{{ agniRun "content/tutorials/runs/07-check-intent.yaml" }}
 
 Two extra findings, and both are false. The board plainly has two regulators.
 

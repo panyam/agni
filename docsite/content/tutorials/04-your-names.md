@@ -63,20 +63,7 @@ findings by rule:
 
 With it:
 
-```
-agni check designs/gateway/gateway.edn --conventions conventions.yaml
-```
-
-```
-findings by rule:
-  decoupling-present     1
-  esd-protection         2
-  gateway/signal-net-naming 2
-  i2c-pull-up            2
-  profile/can-esd-missing 2
-  reverse-blocking-absent 1
-  test-point-coverage    2
-```
+{{ agniRun "content/tutorials/runs/04-check-conventions.yaml" }}
 
 Two things changed, one from each half.
 
@@ -114,8 +101,6 @@ GND             designs/gateway/gateway.edn:GND
 PMIC_CORE_3V3   designs/gateway/gateway.edn:PMIC_CORE_3V3
 PMIC_IO_1V8     designs/gateway/gateway.edn:PMIC_IO_1V8
 PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_MAIN_12V0
-
-4 result(s)
 ```
 
 Four rails, where the same query without the flag found one. Nothing was added to the design and no

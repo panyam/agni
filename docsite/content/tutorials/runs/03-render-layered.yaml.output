@@ -1,0 +1,3 @@
+#agni-run dc0b82c80c12d0b0
+layout "layered": 19 nodes, 15 nets, 56 segments, 95 crossings, edge length 20826
+wrote gateway.svg (sheet "netlist graph", 19 placements, 15 wires)
