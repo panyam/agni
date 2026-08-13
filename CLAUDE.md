@@ -141,6 +141,33 @@ becomes several blocks and the fragments after the first get parsed as markdown.
 figure contiguous, no blank lines between the opening and closing tag. Nothing in the gate catches
 this: `nav_test.go` checks wiring, not rendering.
 
+**A tutorial's command output is GENERATED, not pasted.** A page holds
+`{{ agniRun "content/tutorials/runs/<name>.yaml" }}`; the yaml says what to run; a committed
+`<name>.yaml.output` holds the capture. The directive emits the command AND the output, so neither is
+hand-written and they cannot disagree. Regenerate periodically with `make tutorial-runs` and read the
+diff before committing — it is deliberately NOT in `testall`, because the freshness stamp covers the
+spec and the fixture but not the engine build, so a code change does not invalidate a capture on its
+own.
+
+Four things about writing one. **Never make the directive rewrite the page**: `content/` is what the
+site builder reads, and a build that wrote back into it would loop. **Use the fields, not shell
+plumbing** — `capture: stdout|stderr|both|none`, `exit: true`, `match: '<re2>'` — because a positional
+filter (`sed -n '5p'`) silently shows the wrong line the moment that output gains one; `match` selects
+by shape and matching NOTHING is an error. **Add `show:` only when the script carries plumbing a reader
+should not see**, since it defaults to the script. And **every run gets a scratch copy of the fixture**,
+so a rung that teaches `mv params params-old` cannot rename the checked-in one — which it did, once,
+by hand.
+
+Blocks that cannot be generated (an excerpt, `agni serve`) stay hand-written and are checked by
+`docsite/tutorial_test.go` instead; mark those ` ```console verify `. Do not tag a generated fence
+`console`: Chroma's console lexer renders the whole body as error tokens.
+
+**Verifying a tutorial's claims keeps finding bugs in the ENGINE, not the docs.** Three times so far: a
+rung arguing that narrowing a gate makes a board pass (it reveals the next failure instead), `agni
+query` printing an absolute host path in provenance, and two rungs whose numbers had drifted. Treat a
+mismatch as a question, never as "regenerate and move on" — regenerating blesses whatever the code
+currently does, which is right when the doc drifted and wrong when the code regressed.
+
 **Style raw SVG through `--accent-color` and `currentColor`, never a literal.** `static/css/main.css`
 defines the palette for both themes, and the docsite has a dark mode. A hardcoded hex reads fine in
 whichever theme it was authored in and badly in the other.
