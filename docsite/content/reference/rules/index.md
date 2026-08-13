@@ -72,6 +72,8 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [load-switch-trip-above-fet-rating](load-switch-trip-above-fet-rating/) | built-in | error | A controller-based load switch trips above the continuous drain rating of its external MOSFET. |
 | [pin-exceeds-abs-max](pin-exceeds-abs-max/) | built-in | error | A supply pin sits on a rail whose nominal voltage exceeds that pin's own absolute-maximum rating. |
 | [pin-out-of-recommended](pin-out-of-recommended/) | built-in | warning | A supply pin sits on a rail whose nominal voltage is outside that pin's own recommended operating range. |
+| [pin-tracking-advisory](pin-tracking-advisory/) | built-in | warning | Two pins of one part sit outside a tracking bound their datasheet recommends between them. |
+| [pin-tracking-violated](pin-tracking-violated/) | built-in | error | Two pins of one part sit outside the tracking bound their datasheet requires between them. |
 | [rail-nominal-out-of-recommended](rail-nominal-out-of-recommended/) | built-in | warning | A power-input pin sits on a rail whose nominal voltage is outside the part's recommended operating supply range. |
 | [regulator-output-exceeds-abs-max](regulator-output-exceeds-abs-max/) | built-in | error | A regulator's datasheet output voltage exceeds the absolute-maximum supply rating of a part it feeds. |
 | [supply-exceeds-abs-max](supply-exceeds-abs-max/) | built-in | error | A power-input pin sits on a rail whose nominal voltage exceeds the part's absolute-maximum supply rating. |

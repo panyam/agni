@@ -42,7 +42,11 @@ var builtinSchema = map[string][]query.Field{
 	// Conditions is NOT reused for it — every param relation carries the test conditions there as
 	// unbound metadata, and spending that slot would strip the trust context from exactly the rows a
 	// pin-rating rule compares against.
-	RelParamPinRange:  {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldQualifier, query.FieldMin, query.FieldNum}, // param.pin_range(mpn, pin, symbol, kind, min, max)
+	RelParamPinRange: {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldQualifier, query.FieldMin, query.FieldNum}, // param.pin_range(mpn, pin, symbol, kind, min, max)
+	// param.pin_relation borrows pin_range's shape for a different fact: Object and Value are the
+	// two PIN ids rather than a pin and a symbol, and Min/Num bound the difference between them
+	// rather than one terminal's own quantity.
+	RelParamPinRelation: {query.FieldSubject, query.FieldObject, query.FieldValue, query.FieldQualifier, query.FieldMin, query.FieldNum}, // param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max)
 	RelPartAudience:   {query.FieldSubject, query.FieldObject},                                                                         // part.audience(mpn, who)
 	RelComponentOnNet: {query.FieldSubject, query.FieldObject},                                                                         // component-on-net(ref, net)
 	// Pin tier (WS3-038) — pin-granular relations, queryable with no evaluator change.
@@ -137,5 +141,6 @@ var builtinCatalog = []query.RelationInfo{
 	{Name: "param.unit", Args: []string{"mpn", "symbol", "unit"}, Summary: "the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.pin", Args: []string{"mpn", "pin", "name", "function"}, Summary: "a pin the part's datasheet declares, keyed by its spec-local id, with the printed name and its function (power_input / ground / bidirectional / no_connect / ...; needs --params)", Kind: query.KindDatasheet},
 	{Name: "param.pin_range", Args: []string{"mpn", "pin", "symbol", "kind", "min", "max"}, Summary: "a datasheet limit bound to ONE pin, both bounds in the SI base unit — the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params)", Kind: query.KindDatasheet},
+	{Name: "param.pin_relation", Args: []string{"mpn", "subject_pin", "reference_pin", "modality", "min", "max"}, Summary: "a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing — swapping the two inverts the requirement (needs --params)", Kind: query.KindDatasheet},
 	{Name: "part.audience", Args: []string{"mpn", "who"}, Summary: "a team/license entitled to see a part's datasheet data (record-only, needs --params)", Kind: query.KindDatasheet},
 }
