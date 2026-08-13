@@ -79,6 +79,12 @@ const (
 	RelParamPin      = "param.pin"       // param.pin(mpn, pin, name, function): a declared pin of a part. doc: facts/docs/param.pin.md
 	RelParamPinRange = "param.pin_range" // param.pin_range(mpn, pin, symbol, kind, min, max): a limit bound to one pin. doc: facts/docs/param.pin_range.md
 
+	// param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max) is a constraint BETWEEN
+	// two pins of one part, the shape param.pin_range cannot carry: a pin_range bounds one terminal's
+	// own quantity, while this bounds the DIFFERENCE between two. Subject and reference are ordered,
+	// because the bound is on subject minus reference and swapping them inverts the requirement.
+	RelParamPinRelation = "param.pin_relation" // param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max): a pin-to-pin bound. doc: facts/docs/param.pin_relation.md
+
 	// Board-geometry relations (the board tier, WS1-006): derived per-net values, not raw geometry.
 	// They demonstrate the query surface is tier-general — a new tier is queryable by adding
 	// projectors, no consumer change. Widths/drills are millimetres.
@@ -227,6 +233,7 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, paramProvFacts(m)...)
 	out = append(out, paramPinFacts(m)...)
 	out = append(out, paramPinRangeFacts(m)...)
+	out = append(out, paramPinRelationFacts(m)...)
 	out = append(out, audienceFacts(m)...)
 	out = append(out, componentOnNetFacts(m)...)
 	out = append(out, pinFacts(m)...)
@@ -511,6 +518,77 @@ func paramPinFacts(m check.Model) []query.FactRow {
 // without --params.
 func paramPinRangeFacts(m check.Model) []query.FactRow {
 	return perJoinedSpec(m, specParamPinRangeRows)
+}
+
+// modalityToken renders a relation's modality for the Qualifier slot. UNSPECIFIED is published as
+// its own token rather than omitted, because a bound whose modal verb was never recorded is a
+// different thing from one that has none, and a query filtering on modality must be able to find it.
+func modalityToken(m parampb.Modality) string {
+	switch m {
+	case parampb.Modality_MODALITY_REQUIRED:
+		return "required"
+	case parampb.Modality_MODALITY_RECOMMENDED:
+		return "recommended"
+	default:
+		return "unspecified"
+	}
+}
+
+// specParamPinRelationRows projects the `param.pin_relation` facts of one PartSpec: one row per
+// relation, keyed by mpn, carrying the two pin ids in SUBTRACTION ORDER (Object is the subject,
+// Value the reference), the modality (Qualifier), and the bound on their difference in SI base
+// units (Min/Num).
+//
+// THE ORDER OF THE TWO IDS IS THE FACT, not a presentation choice. The bound is on subject MINUS
+// reference, so a consumer that swaps them reads the opposite requirement. That is why they occupy
+// two distinct slots rather than an unordered pair.
+//
+// TRACKING ONLY, deliberately. PinRelationKind has exactly one member, and the enum's own comment
+// says a second arrives only once a second vendor can populate it. Rather than spend the Value slot
+// on a constant, this projects the one kind and leaves the arity free; a second kind must revisit
+// this projection, which is the right place for that decision to surface.
+//
+// An unconvertible unit keeps the row with both numeric slots empty, the posture the sibling
+// projections take: the pins, modality and citation are still true, and an unmeasurable bound must
+// not become orderable.
+func specParamPinRelationRows(mpn string, spec *parampb.PartSpec) []query.FactRow {
+	var out []query.FactRow
+	for _, r := range spec.GetRelations() {
+		if r.GetKind() != parampb.PinRelationKind_PIN_RELATION_KIND_TRACKING {
+			continue
+		}
+		f := query.FactRow{
+			Relation: RelParamPinRelation, Subject: mpn,
+			Object: r.GetSubjectPinRef(), Value: r.GetReferencePinRef(),
+			Qualifier:  modalityToken(r.GetModality()),
+			Conditions: conditionsText(r.GetConditions()),
+			Cite:       check.RelationCitation(spec, r),
+		}
+		if base, exp, ok := param.BaseUnit(r.GetUnit()); ok {
+			scale := math.Pow(10, float64(exp))
+			f.BaseUnit = base
+			// BOTH bounds reduce together, for specParamRangeRows' reason: converting only one
+			// would leave a row whose min reads above its max.
+			if d := r.GetDifference(); d != nil {
+				if d.Min != nil {
+					v := d.GetMin() * scale
+					f.Min = &v
+				}
+				if d.Max != nil {
+					v := d.GetMax() * scale
+					f.Num = &v
+				}
+			}
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// paramPinRelationFacts emits the pin-to-pin constraints of each joined part, deduped by MPN and
+// empty without --params.
+func paramPinRelationFacts(m check.Model) []query.FactRow {
+	return perJoinedSpec(m, specParamPinRelationRows)
 }
 
 // perJoinedSpec walks each component's joined PartSpec once per MPN and concatenates rows from one

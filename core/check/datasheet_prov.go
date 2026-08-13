@@ -8,13 +8,21 @@ import (
 // the SourceDoc title from the parameter's doc_ref and copies the page, section, method, and
 // confidence. It is the shared core of both the string Citation() and the typed Finding.DatasheetProv.
 func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *DatasheetCitation {
+	return DatasheetCitationOfProv(spec, p.GetProv())
+}
+
+// DatasheetCitationOfProv is the same build from a bare ParamProvenance, for the rows that carry one
+// but are not parameters: a Pin's declaration and a PinRelation's bound. It exists for the reason
+// PinCitation does on the string side — provenance is provenance, and duplicating the doc_ref
+// resolution per row type is how the two drift.
+func DatasheetCitationOfProv(spec *parampb.PartSpec, prov *parampb.ParamProvenance) *DatasheetCitation {
 	return &DatasheetCitation{
-		Doc:        DocTitle(spec, p.GetProv().GetDocRef()),
-		DocRef:     p.GetProv().GetDocRef(),
-		Page:       p.GetProv().GetPage(),
-		Section:    p.GetProv().GetTableOrFigure(),
-		Method:     p.GetProv().GetMethod(),
-		Confidence: p.GetProv().GetConfidence(),
+		Doc:        DocTitle(spec, prov.GetDocRef()),
+		DocRef:     prov.GetDocRef(),
+		Page:       prov.GetPage(),
+		Section:    prov.GetTableOrFigure(),
+		Method:     prov.GetMethod(),
+		Confidence: prov.GetConfidence(),
 	}
 }
 

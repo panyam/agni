@@ -34,6 +34,14 @@ func PinCitation(spec *parampb.PartSpec, pin *parampb.Pin) string {
 	return citationText(spec, pin.GetProv())
 }
 
+// RelationCitation renders the datasheet citation for a PIN RELATION, the third carrier of
+// ParamProvenance alongside a parameter and a pin. Same reasoning as PinCitation: a relation is an
+// extracted claim, param.Validate requires provenance on it, and nothing about the citation depends
+// on which kind of row carried the provenance.
+func RelationCitation(spec *parampb.PartSpec, rel *parampb.PinRelation) string {
+	return citationText(spec, rel.GetProv())
+}
+
 // citationText formats one ParamProvenance against its spec. An unresolvable doc_ref renders as
 // "unknown source" rather than an empty pair of quotes, so a citation is never silently blank.
 func citationText(spec *parampb.PartSpec, prov *parampb.ParamProvenance) string {
