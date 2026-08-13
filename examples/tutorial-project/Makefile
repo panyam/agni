@@ -52,14 +52,14 @@ report: ## Write the review as a self-contained results document you can re-rend
 	@echo "wrote reports/$(DESIGN)/review.results.json"
 
 views: ## Faithful render of the KiCad view (the netlist has no geometry of its own)
-	@$(AGNI) render $(DIR)/gateway.kicad_sch --symbol-path $(DIR)/symbols -o gateway-schematic.svg
+	@$(AGNI) render $(DIR)/gateway.kicad_sch -o gateway-schematic.svg
 
 # --as-named is required here and nowhere else. The schematic is a declared COMPANION, so analysing it
 # normally reads the design's entry instead — which would make this target diff the netlist against
 # itself and pass unconditionally. Reading a view as a netlist is exactly the point of this check, so
 # it opts out.
 check-views: ## The netlist and the KiCad view must still describe the same design (no net delta)
-	@out=$$($(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway.kicad_sch --as-named --symbol-path $(DIR)/symbols); \
+	@out=$$($(AGNI) diff $(DIR)/gateway.edn $(DIR)/gateway.kicad_sch --as-named); \
 	  echo "$$out" | grep -q 'new 0  deleted 0  renamed 0  hard 0  soft 0' \
 	    || { echo "VIEWS DIVERGED: the netlist and the KiCad schematic no longer agree:"; \
 	         echo "$$out"; exit 1; }; \

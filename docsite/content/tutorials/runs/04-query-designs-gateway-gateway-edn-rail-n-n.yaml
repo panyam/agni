@@ -1,4 +1,10 @@
-# Generated block for 04-your-names.md. Edit the script, not the capture.
+# Rung 4: what the board looks like WITHOUT this project's naming vocabulary.
+#
+# The conventions file is moved aside for the run, because the project declares it and it therefore
+# applies automatically — which is the whole point of the rung, and which makes the "before" state
+# otherwise unreachable by naming this design. Safe because every run gets a scratch copy of the
+# fixture; the checked-in conventions.yaml is untouched.
 fixture: examples/tutorial-project
 script: |
+  mv conventions.yaml conventions-off.yaml
   agni query designs/gateway/gateway.edn 'rail(?n) => ?n'

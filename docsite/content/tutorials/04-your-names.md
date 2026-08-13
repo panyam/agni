@@ -11,7 +11,8 @@ The file is `conventions.yaml`, and it carries two halves that are wired very di
 
 ## The problem
 
-Run this against the tutorial board:
+This project already carries the file this rung is about, so to see the problem it solves you have to
+move it out of the way first. Ask the board which of its nets are power rails:
 
 {{ agniRun "content/tutorials/runs/04-query-designs-gateway-gateway-edn-rail-n-n.yaml" }}
 
