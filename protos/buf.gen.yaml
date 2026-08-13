@@ -1,11 +1,18 @@
 version: v2
 clean: true
+# BOTH PLUGINS RUN THROUGH `go tool`, pinned by the tool directives in the root go.mod, rather than
+# being looked up on PATH. protoc-gen-go stamps its own version into every file it writes, so a
+# machine with a different one on PATH regenerates a diff that is nothing but the stamp. That was
+# harmless while regeneration was manual and is not once `make proto-check` fails the build on any
+# difference: a gate that fires on a toolchain mismatch instead of on real drift trains people to
+# ignore it. Pinning here means the version is data in go.mod rather than prose in CLAUDE.md, and
+# CI needs no separate install step because it already has the module graph.
 plugins:
-  - local: protoc-gen-go
+  - local: ["go", "tool", "protoc-gen-go"]
     out: ../gen/go
     opt: paths=source_relative
   # Connect service stubs for the WS9 web API (server + client), browser-friendly over
   # HTTP/1.1. Only files that declare a service emit *connect code, so ir/geom are unaffected.
-  - local: protoc-gen-connect-go
+  - local: ["go", "tool", "protoc-gen-connect-go"]
     out: ../gen/go
     opt: paths=source_relative

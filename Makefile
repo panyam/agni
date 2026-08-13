@@ -3,13 +3,53 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
 
 all: proto build
 
 # Regenerate Go from the proto IR (run from protos/ where buf config lives).
 proto:
 	cd protos && buf generate
+
+# Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
+# additive proto changes leave stale TS building green, so the drift only surfaces on the next
+# regen. proto-check below is what makes forgetting it fail instead.
+proto-web:
+	cd web && pnpm run gen
+
+# Freshness gate: fail when the committed generated code does not match the protos it came from.
+#
+# WHY THIS IS NOT GIT-STATUS-BASED like catalog-docs-check. That target regenerates IN PLACE and
+# inspects `git status`, which forces a regenerate -> COMMIT -> gate ordering: freshly regenerated
+# but uncommitted output reads as stale. Proto edits are far more frequent than catalog edits and
+# the natural workflow is to regenerate and run the gate before committing, so inheriting that
+# ordering would make the gate a tax. Generating into a throwaway tree and diffing has no such
+# constraint, and it cannot leave the working tree dirty on failure.
+#
+# THE TEMP TREE MIRRORS THE REPO LAYOUT ON PURPOSE. Both buf templates write to RELATIVE paths that
+# climb out of their config directory (`out: ../gen/go` from protos/, `out: src/gen` from web/), and
+# `-o` resolves those relative to whatever it is given. Pointing `-o` straight at a bare temp dir
+# makes `../gen/go` escape it and land beside the temp dir instead. So `-o $$tmp/protos` and
+# `-o $$tmp/web` reproduce the two config directories' positions and the outputs land inside.
+# Both templates also set `clean: true`, which is another reason never to aim this at the real tree.
+proto-check:
+	@tmp=$$(mktemp -d); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	mkdir -p "$$tmp/protos" "$$tmp/web"; \
+	(cd protos && buf generate -o "$$tmp/protos") || exit 1; \
+	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
+	fail=0; \
+	if ! diff -r gen/go "$$tmp/gen/go" >/dev/null 2>&1; then \
+		echo "generated Go is stale — run 'make proto' and commit the result:"; \
+		diff -rq gen/go "$$tmp/gen/go" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	if ! diff -r web/src/gen "$$tmp/web/src/gen" >/dev/null 2>&1; then \
+		echo "generated TypeScript is stale — run 'make proto-web' and commit the result:"; \
+		diff -rq web/src/gen "$$tmp/web/src/gen" 2>&1 | sed 's/^/  /'; \
+		fail=1; \
+	fi; \
+	exit $$fail
 
 # Fetch and prune module dependencies (engine module only).
 tidy:
@@ -77,12 +117,14 @@ catalog-docs-check: catalog-docs
 		exit 1; \
 	fi
 
-# The full deterministic gate: vet, the browser bundle build (which enforces the
-# single-Solid-core invariant, see web/build.mjs), engine (Go) tests, example modules, web unit
-# tests, and the docsite catalog freshness check. Green = ship-ready. CI runs exactly this
+# The full deterministic gate: vet, generated-code freshness, the browser bundle build (which
+# enforces the single-Solid-core invariant, see web/build.mjs), engine (Go) tests, example modules,
+# web unit tests, and the docsite catalog freshness check. Green = ship-ready. CI runs exactly this
 # (.github/workflows/ci.yml). The bundle build comes before the engine tests: TestCheckWebAssets
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
-testall: vet ir-model-check ui test examples-test web-test catalog-docs-check docsite-test
+# proto-check sits near the front because stale generated code makes every later failure a red
+# herring: it compiles and tests green while describing a different schema.
+testall: vet ir-model-check proto-check ui test examples-test web-test catalog-docs-check docsite-test
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

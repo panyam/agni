@@ -18,6 +18,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # buf drives `make proto-check`, the generated-code freshness gate inside testall. Only buf
+      # itself is installed here: both protoc plugins are pinned as `tool` directives in go.mod and
+      # run via `go tool`, so they come from the module graph rather than a separate install whose
+      # version could drift from the one that produced the committed output.
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: 1.61.0
+          github_token: ${{ github.token }}
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10

@@ -62,8 +62,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - CLI: `agni stats|check|diff|render|query|review|serve <file>`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
-- Toolchain: Go 1.26.4, `buf` 1.61, `protoc-gen-go` **v1.36.11**. Match the committed version when
-  regenerating, otherwise generated files churn their version stamp.
+- Toolchain: Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
+  `go.mod` and invoked via `go tool`**, so their versions are data rather than something to match by
+  hand. Only `buf` itself has to be on your PATH.
 - **A command that reads a design goes through `readDesign` (or a service), never a bare
   `newLoader().ReadDesign`.** That function is where a design's PROJECT config enters the read for the
   six commands no service mediates (stats, diff, emit, render, intake, profilediag), and net roles are
@@ -71,8 +72,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   none of the project's declared symbol libraries. All six bypassed it until agni issue 228, which is
   why it is one function rather than six.
 
-**After ANY proto change run BOTH `make proto` (Go) AND `cd web && pnpm run gen` (TS).** Additive
-fields build green, so a skipped `pnpm run gen` goes unnoticed until the next regen churns.
+**After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** Additive fields
+build green, so a skipped TS regen used to go unnoticed until the next regen churned. `make
+proto-check` now fails the gate on either half being stale, and it runs inside `testall`, so this is
+enforced rather than remembered. It names which half drifted and which command fixes it.
+
+Unlike `catalog-docs-check`, **it carries no commit-first ordering trap**: it generates into a
+throwaway tree and diffs, so regenerating and running the gate before committing works fine.
 
 **An editor reporting the generated types as MISSING is usually a stale language server, not stale
 generated code.** After a branch switch or a merge, the LSP can insist `Module ... has no exported
