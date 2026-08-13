@@ -387,6 +387,36 @@ message Parameter {
   map<string, string> attributes = 14;
 
   ParamProvenance prov = 16;
+
+  // Who checked this value against the document, and against WHICH REVISION. Absent means nobody
+  // has; see Verification for why absence and staleness are different answers.
+  Verification verification = 17;
+}
+
+// Verification records that a PERSON checked a value against the document, and is deliberately
+// separate from ParamProvenance: provenance says how a value was PRODUCED, this says whether anyone
+// has since stood behind it. An extractor writes the first and can never write the second.
+//
+// IT IS KEYED TO THE DOCUMENT REVISION, which is the whole reason it is a message rather than a
+// boolean. A value checked against SCES650K Rev K is not thereby true of Rev L, and a verification
+// that survives a revision is worse than no verification: an unverified fact is honest, while a
+// stale-verified one is a confident wrong answer carrying a human's name.
+//
+// Patch already solved this shape one layer over. It is keyed by content hash, so a revision
+// invalidates it BY CONSTRUCTION -- it stops matching and the manifest reports it unapplied. Nothing
+// decays silently because the key stops resolving. This does the same for facts.
+message Verification {
+  // Who verified it, as an author identity the deployment recognises. Required: an anonymous
+  // verification cannot be questioned, and the point of the record is that someone answers for it.
+  string by = 1;
+  // The doc-IR content_hash of the document revision this was checked against. Required, and the
+  // field that makes staleness derivable rather than remembered.
+  string doc_content_hash = 2;
+  // When, as an ISO-8601 date. Free text rather than a timestamp because it is read by people and
+  // never computed on.
+  string at = 3;
+  // What the verifier wants the next reader to know ("value is per-channel, not total").
+  string note = 4;
 }
 
 // ParamProvenance locates a parameter in its source document: the parameter-domain
