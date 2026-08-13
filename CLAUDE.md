@@ -118,6 +118,18 @@ and CI runs exactly this.
 Also expect: testall leaves `examples/render-board/render-board` and `examples/validate/validate`
 built. Both are covered by per-example `.gitignore` files, so do NOT `git add` them. A reader test
 also drops `readers/kicad/testdata/*.kicad_prl`, which `.gitignore` covers and which is never part
+of a change. **Golden SVGs** fail by design on any render-affecting change. Regenerate deliberately
+with `go test ./core/render/ -run Golden -update` and inspect the diff before committing.
+
+`kicad-cli` writes a `.kicad_prl` beside ANY board it reads, not only under test, so a
+directory-wide `git add` will sweep them up. The ignore rule is deliberately SCOPED to
+`readers/kicad/testdata/` rather than a blanket `*.kicad_prl`, because the two under
+`cmd/agni/testdata/conformance/` are tracked on purpose: those fixtures carry them so a project read
+sees the full sibling set. Do not "clean them up". If you point kicad-cli at a new folder, add an
+ignore rule there, and stage by explicit path rather than by directory.
+
+### Measuring, and trusting a measurement
+
 **A NEGATIVE RESULT NEEDS A POSITIVE CONTROL.** "Zero hits across 62 documents" is a claim about the
 instrument until you show the instrument can find a known instance. Three separate absence claims in
 this repo turned out to be artifacts of the detector rather than facts about the data: a table shape
@@ -135,16 +147,6 @@ the feature ships with has validated a different program.
 subscripts, so `VCCA` arrives as `V CCA` (~850 such occurrences in one corpus). This has bitten three
 times in unrelated places: a prose sweep, the derive pin path where it would have produced pin ids no
 symbol library could match, and in-document search. Assume the space is there.
-
-of a change. **Golden SVGs** fail by design on any render-affecting change. Regenerate deliberately
-with `go test ./core/render/ -run Golden -update` and inspect the diff before committing.
-
-`kicad-cli` writes a `.kicad_prl` beside ANY board it reads, not only under test, so a
-directory-wide `git add` will sweep them up. The ignore rule is deliberately SCOPED to
-`readers/kicad/testdata/` rather than a blanket `*.kicad_prl`, because the two under
-`cmd/agni/testdata/conformance/` are tracked on purpose: those fixtures carry them so a project read
-sees the full sibling set. Do not "clean them up". If you point kicad-cli at a new folder, add an
-ignore rule there, and stage by explicit path rather than by directory.
 
 ## Docsite wiring
 
