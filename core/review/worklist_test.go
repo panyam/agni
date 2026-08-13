@@ -27,11 +27,11 @@ func TestWorkListRanksByHowMuchAFactUnblocks(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("one fact blocking two items is one job: %+v", got)
 	}
-	if got[0].MPN != "ACME-1" || len(got[0].Blocked) != 2 {
+	if got[0].GetDependency().GetMpn() != "ACME-1" || len(got[0].GetBlocked()) != 2 {
 		t.Errorf("want the most-blocking fact first, got %+v", got[0])
 	}
-	if strings.Join(got[0].Blocked, ",") != "1,2" {
-		t.Errorf("want the blocked items named and ordered, got %v", got[0].Blocked)
+	if strings.Join(got[0].GetBlocked(), ",") != "1,2" {
+		t.Errorf("want the blocked items named and ordered, got %v", got[0].GetBlocked())
 	}
 }
 
@@ -44,8 +44,8 @@ func TestWorkListMergesAcrossDesigns(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("the same fact across two designs is one job: %+v", got)
 	}
-	if len(got[0].Blocked) != 2 {
-		t.Errorf("want both designs' items credited, got %v", got[0].Blocked)
+	if len(got[0].GetBlocked()) != 2 {
+		t.Errorf("want both designs' items credited, got %v", got[0].GetBlocked())
 	}
 }
 
@@ -55,11 +55,11 @@ func TestWorkListKeepsTheStrongerClaim(t *testing.T) {
 	a := wlReport("a", blockedItem("1", check.UnmetDependency{MPN: "ACME-1", Symbol: "IOUT", Manufacturer: "MakerCo"}))
 	b := wlReport("b", blockedItem("2", check.UnmetDependency{MPN: "ACME-1", Symbol: "IOUT", SpecAbsent: true}))
 	got := WorkListAcross([]Report{a, b})
-	if len(got) != 1 || !got[0].SpecAbsent {
+	if len(got) != 1 || !got[0].GetDependency().GetSpecAbsent() {
 		t.Fatalf("want one entry marked spec-absent, got %+v", got)
 	}
-	if got[0].Manufacturer != "MakerCo" {
-		t.Errorf("a manufacturer learned from either side should survive, got %q", got[0].Manufacturer)
+	if got[0].GetDependency().GetManufacturer() != "MakerCo" {
+		t.Errorf("a manufacturer learned from either side should survive, got %q", got[0].GetDependency().GetManufacturer())
 	}
 }
 
@@ -99,11 +99,11 @@ func TestWorkListIsStable(t *testing.T) {
 	)
 	first, second := WorkList(r), WorkList(r)
 	for i := range first {
-		if first[i].MPN != second[i].MPN {
-			t.Fatalf("unstable at %d: %q vs %q", i, first[i].MPN, second[i].MPN)
+		if first[i].GetDependency().GetMpn() != second[i].GetDependency().GetMpn() {
+			t.Fatalf("unstable at %d: %q vs %q", i, first[i].GetDependency().GetMpn(), second[i].GetDependency().GetMpn())
 		}
 	}
-	if first[0].MPN != "A" {
-		t.Errorf("equal blockage ties break by part, got %q", first[0].MPN)
+	if first[0].GetDependency().GetMpn() != "A" {
+		t.Errorf("equal blockage ties break by part, got %q", first[0].GetDependency().GetMpn())
 	}
 }

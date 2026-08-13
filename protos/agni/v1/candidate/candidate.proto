@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package agni.v1.candidate;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/candidate";
+
+import "agni/v1/param/param.proto";
+
+// The candidate layer is the seam between "something proposed a fact" and "a person
+// accepted it". It is a proto rather than a Go type for the reason param.proto gives
+// for itself: it is a CROSS-RUNTIME CONTRACT, and hand-written parallel types are
+// exactly the drift a shared schema prevents.
+//
+// It crosses two boundaries by design, which is what settles the question:
+//
+//   - Engine to BROWSER. A portal shows candidates to a person, who accepts or
+//     rejects one. That is the whole interaction this layer exists for.
+//   - Engine to EXTRACTOR. Source is pluggable so a proposer can be a separate
+//     service in whatever language suits it, which is the same posture
+//     param.ParamProvider takes for the datasheet tier.
+//
+// It is a SEPARATE package from param on purpose. A proposal is not a fact: it has
+// no standing until a person accepts it, and giving it its own package keeps the
+// parameter-IR free of a lifecycle stage that must never reach a corpus by itself.
+
+// Request is the fact being asked for. Deliberately the same shape as a check's
+// unmet dependency, so the thing that reported a gap and the thing that proposes a
+// fix speak about it in the same terms rather than through a translation nobody owns.
+message Request {
+  string mpn = 1;
+  string symbol = 2;
+}
+
+// Citation locates a candidate precisely enough to HIGHLIGHT, and quotes it.
+//
+// Precision is not a nicety here. Verification has to be possible at a glance or a
+// reviewer waves through whatever they are shown, and a citation resolving only to a
+// page fails that test.
+message Citation {
+  int32 page = 1;
+  // A doc-IR text block or table id: what a viewer highlights.
+  string region_id = 2;
+  // Locate a table cell. Both -1 for a text block. A cell is the unit worth citing
+  // in a datasheet, because most facts worth finding are in one.
+  int32 row = 3;
+  int32 col = 4;
+  // The region's text VERBATIM. This is what makes a claim checkable rather than
+  // merely plausible: a proposer that invents a sentence fails a mechanical check
+  // against the document, with nobody reading the page.
+  string quote = 5;
+}
+
+// Candidate is a proposed fact, its evidence, and who proposed it.
+message Candidate {
+  Request request = 1;
+  Citation citation = 2;
+  // May be absent: a proposer that found the right passage and could not read a
+  // number from it has still done most of the work, and saying so is more useful
+  // than guessing. Retrieval-backed proposers never populate this.
+  agni.v1.param.RangeValue value = 3;
+  string unit = 4;
+  agni.v1.param.LimitKind limit_kind = 5;
+  // What proposed this, becoming the provenance method on acceptance, so a corpus
+  // records which mechanism produced each value rather than flattening them all.
+  string source = 6;
+  // The proposer's own estimate, in the OPEN interval (0, 1). It can never be 1.0
+  // through this path: only a human verification earns certainty, which is the
+  // posture derive already takes and which agni.v1.param.Verification records.
+  double confidence = 7;
+}

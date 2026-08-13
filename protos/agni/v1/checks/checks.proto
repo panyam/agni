@@ -254,6 +254,19 @@ message ReviewItem {
 // not asking per-terminal" and "we cannot work it out yet"), which is the ambiguity RangeValue's
 // explicit presence exists to avoid one layer down. proto3 fields are additive, so admitting one the
 // day something populates it costs nothing; shipping it empty costs the distinction permanently.
+// WorkItem is one datasheet fact to go and find, and what finding it would unblock. It is the
+// rollup of UnmetDependency across a run: an item lists the facts IT needs, and only a rollup can
+// say which fact the most items are waiting on, which is the prioritisation signal.
+//
+// A proto rather than a Go type because it crosses to the browser: a portal renders this as the
+// datasheet author's work list, and a hand-written twin there is the drift a shared schema prevents.
+message WorkItem {
+  UnmetDependency dependency = 1;
+  // The review items this fact stands between, ordered and deduplicated. Its LENGTH is the
+  // prioritisation signal; the names are what lets a reader see what clearing it buys.
+  repeated string blocked = 2;
+}
+
 message UnmetDependency {
   // The design-side part identity (ir.BomLine.mpn, else the MPN attribute) that needs the fact.
   string mpn = 1;
