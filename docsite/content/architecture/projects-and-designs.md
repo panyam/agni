@@ -203,6 +203,32 @@ That makes `Project` and `Design` the read-only-resource case in
 [C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md): AIP-shaped, with `Get` and `List`
 and no mutators.
 
+## Every surface has to HOLD the resolver, and a missing one is silent
+
+The composition is correct and centralised, which turns out not to be enough. A surface that never
+asks gets the defaults, and the defaults are a legitimate answer, so nothing anywhere complains.
+
+`NewQueryService` took a `*ProjectResolver` and never assigned it. Every query therefore ran against
+the built-in naming vocabulary, and on a project whose whole point is a different vocabulary that
+meant one rail where there are four. Three things kept it invisible, and each is worth recognising
+elsewhere:
+
+- it **compiles**, because an unused parameter is legal;
+- it **passes the service tests**, because those construct the service and assert on what the REQUEST
+  carries;
+- a nil resolver is a **supported state** — it means "this deployment resolves no projects" — so the
+  code took a real, tested path, just the wrong one for a caller that had handed one over.
+
+That last point is the general shape: **a collaborator whose absence is meaningful degrades instead of
+erroring.** A nil `ProjectStore`, a nil `ConfigResolver`, a nil datasheet provider all mean something
+here, which is why they cannot announce their own absence. The guard is a test at the surface that
+uses them, asserting the OUTCOME a project's config is supposed to produce — not one at the layer that
+composes it, which was correct throughout.
+
+The same shape bit the CLI's non-service commands from the other end: `readDesign` built its loader
+with no read options at all, so six commands read under the built-in vocabulary. One choke point, one
+fix, and the same class of silence.
+
 ## What resolves through it, and what does not yet
 
 A design resolves to a project, and that edge is where per-design config belongs. Today the config
