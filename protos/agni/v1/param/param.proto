@@ -434,6 +434,25 @@ message Verification {
   string at = 3;
   // What the verifier wants the next reader to know ("value is per-channel, not total").
   string note = 4;
+  // The document's identity AS PRINTED when the verification was performed, snapshotted from the
+  // SourceDoc.title of the moment ("SCES650K - JUNE 2005 - REVISED JANUARY 2023"). It is a whole
+  // as-printed document identity rather than a bare revision letter, because that is what vendors
+  // print and what SourceDoc.title is already required to carry.
+  //
+  // DISPLAY ONLY. NEVER A COMPARISON INPUT. Staleness is decided by doc_content_hash and nothing
+  // else. Vendors reissue documents silently without moving the printed revision, and move the
+  // printed revision without changing content, so two files both stamped "Rev K" may differ and two
+  // differing strings may describe identical bytes. Comparing on this field would reintroduce
+  // exactly the silent staleness the hash exists to prevent, with a more convincing cover story. It
+  // is also NOT ORDERABLE: vendors use K/L/M, 1.0/1.1, A/B, bare dates and "Rev K.1", so "how many
+  // revisions behind" has no general answer.
+  //
+  // It lives here rather than on SourceDoc because SourceDoc is REWRITTEN by a re-seed, which is
+  // what makes staleness happen at all. A revision recorded there would be overwritten by the very
+  // event that makes it interesting. Frozen beside the hash it was taken with, it survives, which is
+  // what lets a stale fact say "verified against Rev K, corpus now holds Rev L" instead of quoting
+  // two hashes at a person who has to act on it.
+  string doc_revision = 5;
 }
 
 // ParamProvenance locates a parameter in its source document: the parameter-domain

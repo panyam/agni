@@ -84,7 +84,8 @@ func datasheetFromProto(c *checkspb.DatasheetCitation) *check.DatasheetCitation 
 		// re-open the defect on the service path only: the client re-runs the ratified-floor
 		// judgement locally, and an empty verification reads as Unverified, which falls through to
 		// the confidence a stale verification pinned at 1.0.
-		Verification: c.GetVerification(),
+		Verification:     c.GetVerification(),
+		VerifiedRevision: c.GetVerifiedRevision(),
 	}
 }
 

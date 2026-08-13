@@ -16,6 +16,7 @@ import (
 func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *DatasheetCitation {
 	c := DatasheetCitationOfProv(spec, p.GetProv())
 	c.Verification = string(param.VerificationOfIn(spec, p))
+	c.VerifiedRevision = p.GetVerification().GetDocRevision()
 	return c
 }
 

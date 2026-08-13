@@ -66,10 +66,14 @@ func TestStaleVerificationIsNotRatified(t *testing.T) {
 	}
 
 	// Verified against the revision the corpus holds: a trustworthy fail.
+	// checkedRev is verified against first, then the corpus is moved to specHash: the same sequence a
+	// re-seed produces, and the only one that leaves a verification pinned to a revision nobody holds.
 	verifiedAgainst := func(specHash, checkedHash string) func(*parampb.PartSpec) {
 		return func(s *parampb.PartSpec) {
+			param.MarkVerified(s.Parameters[0], "sri",
+				&parampb.SourceDoc{Id: "ds", Title: "ACME-33 " + checkedHash, ContentHash: checkedHash},
+				"2026-08-13", "")
 			s.Docs[0].ContentHash = specHash
-			param.MarkVerified(s.Parameters[0], "sri", checkedHash, "2026-08-13", "")
 		}
 	}
 	if got := outcome(supplyModel("hand", 0.95, verifiedAgainst("sha256:relB", "sha256:relB"))); got != Fail {
