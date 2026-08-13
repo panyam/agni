@@ -118,6 +118,24 @@ and CI runs exactly this.
 Also expect: testall leaves `examples/render-board/render-board` and `examples/validate/validate`
 built. Both are covered by per-example `.gitignore` files, so do NOT `git add` them. A reader test
 also drops `readers/kicad/testdata/*.kicad_prl`, which `.gitignore` covers and which is never part
+**A NEGATIVE RESULT NEEDS A POSITIVE CONTROL.** "Zero hits across 62 documents" is a claim about the
+instrument until you show the instrument can find a known instance. Three separate absence claims in
+this repo turned out to be artifacts of the detector rather than facts about the data: a table shape
+the heuristic could not see, a regex that could not match `V CC` so an arity gate silently dropped the
+one sentence being looked for, and a corpus sweep that ran a different code path from the one shipping.
+Before reporting an absence, plant a known instance and confirm it is found. The fixtures usually
+already contain one.
+
+Two habits that make this cheap. **Instrument the gates**: count and sample what each filter REJECTED,
+not only what it matched, which is the silence-never-reads-as-coverage discipline applied to your own
+tooling. And **exercise the shipped configuration**: a sweep run with different flags from the ones
+the feature ships with has validated a different program.
+
+**Anything matching SYMBOL TEXT out of a doc-IR must tolerate an injected space.** Producers flatten
+subscripts, so `VCCA` arrives as `V CCA` (~850 such occurrences in one corpus). This has bitten three
+times in unrelated places: a prose sweep, the derive pin path where it would have produced pin ids no
+symbol library could match, and in-document search. Assume the space is there.
+
 of a change. **Golden SVGs** fail by design on any render-affecting change. Regenerate deliberately
 with `go test ./core/render/ -run Golden -update` and inspect the diff before committing.
 

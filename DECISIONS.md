@@ -538,3 +538,38 @@ items that share a binding before sweeping (`OUT_OF_SCOPE.md`, no driver since t
 auto-manifest is then the natural shape and this decision is the thing standing in its way. Do not
 reopen on performance without measuring on a design large enough for the per-sweep fixed cost to
 matter; the tutorial fixture is 19 components and cannot show that.
+
+---
+
+## A type crossing a runtime boundary is a proto; only engine-internal projections are Go types
+
+**Question.** `check.Finding` and `review.Report` are Go types with proto twins and hand-written
+converters, while `param`, `doc`, `ir` and `geom` use the generated types directly. Both patterns are
+live, so which one does a new type follow?
+
+**Answer. Whether it crosses a runtime boundary, and nothing else.** `param.proto`'s own header states
+the rule: it is a cross-runtime contract shared by the Go engine, the TypeScript surfaces and future
+extractors in whatever language suits them, and hand-written parallel types are exactly the drift a
+shared schema prevents. A type that will be rendered in a browser or produced by an external service
+is that class, whatever package it happens to live in.
+
+Two types shipped as Go and were converted for this reason. A **candidate** fact crosses twice by
+design, to a browser where a person accepts it and to an extractor that may be a separate service, so
+leaving it in Go guaranteed a hand-written TypeScript twin later. A **work item** was the subtler
+case: its neighbour `review.Report` is a Go type with a twin, so it looked consistent, but its own
+member `UnmetDependency` was already proto, which made a Go wrapper a THIRD representation of one
+thing rather than a second.
+
+**What this leaves open.** `check.Finding` and `review.Report` are the same inconsistency one level up
+and are deliberately untouched: converting them means changing the CLI and service converters, which
+is a refactor with its own risk rather than a fix. When one is next reworked, this is the rule.
+
+**A separate proto PACKAGE, not always the nearest one.** A candidate went to `agni.v1.candidate`
+rather than into `param`, because a proposal is not a fact: it has no standing until a person accepts
+it, and a lifecycle stage that must never reach a corpus by itself does not belong inside the contract
+a corpus is made of. Proximity of subject matter is not the test; whether the thing is the same KIND
+of claim is.
+
+**Reopen if** a type is genuinely never leaving the process. The cost of proto is real (regeneration
+on both runtimes, presence semantics), and paying it for something that will only ever be a Go
+intermediate is waste.
