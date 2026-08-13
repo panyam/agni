@@ -1164,9 +1164,12 @@ type Parameter struct {
 	// silently misreports a part seeded from one body and placed in another -- on the real
 	// TXB0104, number 11 is a data I/O in the TSSOP-14 and the B-side supply in the UQFN-12,
 	// so the comparison would run against the wrong terminal and look fine doing it.
-	PinRefs       []string          `protobuf:"bytes,10,rep,name=pin_refs,json=pinRefs,proto3" json:"pin_refs,omitempty"`
-	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Prov          *ParamProvenance  `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	PinRefs    []string          `protobuf:"bytes,10,rep,name=pin_refs,json=pinRefs,proto3" json:"pin_refs,omitempty"`
+	Attributes map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Prov       *ParamProvenance  `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	// Who checked this value against the document, and against WHICH REVISION. Absent means nobody
+	// has; see Verification for why absence and staleness are different answers.
+	Verification  *Verification `protobuf:"bytes,17,opt,name=verification,proto3" json:"verification,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1285,6 +1288,100 @@ func (x *Parameter) GetProv() *ParamProvenance {
 	return nil
 }
 
+func (x *Parameter) GetVerification() *Verification {
+	if x != nil {
+		return x.Verification
+	}
+	return nil
+}
+
+// Verification records that a PERSON checked a value against the document, and is deliberately
+// separate from ParamProvenance: provenance says how a value was PRODUCED, this says whether anyone
+// has since stood behind it. An extractor writes the first and can never write the second.
+//
+// IT IS KEYED TO THE DOCUMENT REVISION, which is the whole reason it is a message rather than a
+// boolean. A value checked against SCES650K Rev K is not thereby true of Rev L, and a verification
+// that survives a revision is worse than no verification: an unverified fact is honest, while a
+// stale-verified one is a confident wrong answer carrying a human's name.
+//
+// Patch already solved this shape one layer over. It is keyed by content hash, so a revision
+// invalidates it BY CONSTRUCTION -- it stops matching and the manifest reports it unapplied. Nothing
+// decays silently because the key stops resolving. This does the same for facts.
+type Verification struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Who verified it, as an author identity the deployment recognises. Required: an anonymous
+	// verification cannot be questioned, and the point of the record is that someone answers for it.
+	By string `protobuf:"bytes,1,opt,name=by,proto3" json:"by,omitempty"`
+	// The doc-IR content_hash of the document revision this was checked against. Required, and the
+	// field that makes staleness derivable rather than remembered.
+	DocContentHash string `protobuf:"bytes,2,opt,name=doc_content_hash,json=docContentHash,proto3" json:"doc_content_hash,omitempty"`
+	// When, as an ISO-8601 date. Free text rather than a timestamp because it is read by people and
+	// never computed on.
+	At string `protobuf:"bytes,3,opt,name=at,proto3" json:"at,omitempty"`
+	// What the verifier wants the next reader to know ("value is per-channel, not total").
+	Note          string `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Verification) Reset() {
+	*x = Verification{}
+	mi := &file_agni_v1_param_param_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Verification) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Verification) ProtoMessage() {}
+
+func (x *Verification) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_param_param_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Verification.ProtoReflect.Descriptor instead.
+func (*Verification) Descriptor() ([]byte, []int) {
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Verification) GetBy() string {
+	if x != nil {
+		return x.By
+	}
+	return ""
+}
+
+func (x *Verification) GetDocContentHash() string {
+	if x != nil {
+		return x.DocContentHash
+	}
+	return ""
+}
+
+func (x *Verification) GetAt() string {
+	if x != nil {
+		return x.At
+	}
+	return ""
+}
+
+func (x *Verification) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
 // ParamProvenance locates a parameter in its source document: the parameter-domain
 // analogue of ir.Provenance (which locates by file/span; here the addressable unit
 // is page + table/figure). Every Parameter carries one -- the same
@@ -1312,7 +1409,7 @@ type ParamProvenance struct {
 
 func (x *ParamProvenance) Reset() {
 	*x = ParamProvenance{}
-	mi := &file_agni_v1_param_param_proto_msgTypes[9]
+	mi := &file_agni_v1_param_param_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1324,7 +1421,7 @@ func (x *ParamProvenance) String() string {
 func (*ParamProvenance) ProtoMessage() {}
 
 func (x *ParamProvenance) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_param_param_proto_msgTypes[9]
+	mi := &file_agni_v1_param_param_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1337,7 +1434,7 @@ func (x *ParamProvenance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParamProvenance.ProtoReflect.Descriptor instead.
 func (*ParamProvenance) Descriptor() ([]byte, []int) {
-	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ParamProvenance) GetDocRef() string {
@@ -1467,7 +1564,7 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\x03raw\x18\x06 \x01(\tR\x03rawB\x05\n" +
 	"\x03_eqB\x06\n" +
 	"\x04_minB\x06\n" +
-	"\x04_max\"\xda\x04\n" +
+	"\x04_max\"\x9b\x05\n" +
 	"\tParameter\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06symbol\x18\x02 \x01(\tR\x06symbol\x12!\n" +
@@ -1487,10 +1584,16 @@ const file_agni_v1_param_param_proto_rawDesc = "" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2(.agni.v1.param.Parameter.AttributesEntryR\n" +
 	"attributes\x122\n" +
-	"\x04prov\x18\x10 \x01(\v2\x1e.agni.v1.param.ParamProvenanceR\x04prov\x1a=\n" +
+	"\x04prov\x18\x10 \x01(\v2\x1e.agni.v1.param.ParamProvenanceR\x04prov\x12?\n" +
+	"\fverification\x18\x11 \x01(\v2\x1b.agni.v1.param.VerificationR\fverification\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9e\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"l\n" +
+	"\fVerification\x12\x0e\n" +
+	"\x02by\x18\x01 \x01(\tR\x02by\x12(\n" +
+	"\x10doc_content_hash\x18\x02 \x01(\tR\x0edocContentHash\x12\x0e\n" +
+	"\x02at\x18\x03 \x01(\tR\x02at\x12\x12\n" +
+	"\x04note\x18\x04 \x01(\tR\x04note\"\x9e\x01\n" +
 	"\x0fParamProvenance\x12\x17\n" +
 	"\adoc_ref\x18\x01 \x01(\tR\x06docRef\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12&\n" +
@@ -1540,7 +1643,7 @@ func file_agni_v1_param_param_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_param_param_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_agni_v1_param_param_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agni_v1_param_param_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agni_v1_param_param_proto_goTypes = []any{
 	(PinFunction)(0),        // 0: agni.v1.param.PinFunction
 	(PinRelationKind)(0),    // 1: agni.v1.param.PinRelationKind
@@ -1556,12 +1659,13 @@ var file_agni_v1_param_param_proto_goTypes = []any{
 	(*RangeValue)(nil),      // 11: agni.v1.param.RangeValue
 	(*Condition)(nil),       // 12: agni.v1.param.Condition
 	(*Parameter)(nil),       // 13: agni.v1.param.Parameter
-	(*ParamProvenance)(nil), // 14: agni.v1.param.ParamProvenance
-	nil,                     // 15: agni.v1.param.PartSpec.AttributesEntry
-	nil,                     // 16: agni.v1.param.Package.AttributesEntry
-	nil,                     // 17: agni.v1.param.Pin.AttributesEntry
-	nil,                     // 18: agni.v1.param.PinRelation.AttributesEntry
-	nil,                     // 19: agni.v1.param.Parameter.AttributesEntry
+	(*Verification)(nil),    // 14: agni.v1.param.Verification
+	(*ParamProvenance)(nil), // 15: agni.v1.param.ParamProvenance
+	nil,                     // 16: agni.v1.param.PartSpec.AttributesEntry
+	nil,                     // 17: agni.v1.param.Package.AttributesEntry
+	nil,                     // 18: agni.v1.param.Pin.AttributesEntry
+	nil,                     // 19: agni.v1.param.PinRelation.AttributesEntry
+	nil,                     // 20: agni.v1.param.Parameter.AttributesEntry
 }
 var file_agni_v1_param_param_proto_depIdxs = []int32{
 	10, // 0: agni.v1.param.PartSpec.docs:type_name -> agni.v1.param.SourceDoc
@@ -1569,29 +1673,30 @@ var file_agni_v1_param_param_proto_depIdxs = []int32{
 	6,  // 2: agni.v1.param.PartSpec.packages:type_name -> agni.v1.param.Package
 	8,  // 3: agni.v1.param.PartSpec.pins:type_name -> agni.v1.param.Pin
 	9,  // 4: agni.v1.param.PartSpec.relations:type_name -> agni.v1.param.PinRelation
-	15, // 5: agni.v1.param.PartSpec.attributes:type_name -> agni.v1.param.PartSpec.AttributesEntry
-	16, // 6: agni.v1.param.Package.attributes:type_name -> agni.v1.param.Package.AttributesEntry
+	16, // 5: agni.v1.param.PartSpec.attributes:type_name -> agni.v1.param.PartSpec.AttributesEntry
+	17, // 6: agni.v1.param.Package.attributes:type_name -> agni.v1.param.Package.AttributesEntry
 	0,  // 7: agni.v1.param.Pin.function:type_name -> agni.v1.param.PinFunction
 	7,  // 8: agni.v1.param.Pin.numbers:type_name -> agni.v1.param.PinNumber
-	17, // 9: agni.v1.param.Pin.attributes:type_name -> agni.v1.param.Pin.AttributesEntry
-	14, // 10: agni.v1.param.Pin.prov:type_name -> agni.v1.param.ParamProvenance
+	18, // 9: agni.v1.param.Pin.attributes:type_name -> agni.v1.param.Pin.AttributesEntry
+	15, // 10: agni.v1.param.Pin.prov:type_name -> agni.v1.param.ParamProvenance
 	1,  // 11: agni.v1.param.PinRelation.kind:type_name -> agni.v1.param.PinRelationKind
 	11, // 12: agni.v1.param.PinRelation.difference:type_name -> agni.v1.param.RangeValue
 	2,  // 13: agni.v1.param.PinRelation.modality:type_name -> agni.v1.param.Modality
 	12, // 14: agni.v1.param.PinRelation.conditions:type_name -> agni.v1.param.Condition
-	18, // 15: agni.v1.param.PinRelation.attributes:type_name -> agni.v1.param.PinRelation.AttributesEntry
-	14, // 16: agni.v1.param.PinRelation.prov:type_name -> agni.v1.param.ParamProvenance
+	19, // 15: agni.v1.param.PinRelation.attributes:type_name -> agni.v1.param.PinRelation.AttributesEntry
+	15, // 16: agni.v1.param.PinRelation.prov:type_name -> agni.v1.param.ParamProvenance
 	3,  // 17: agni.v1.param.Parameter.limit_kind:type_name -> agni.v1.param.LimitKind
 	11, // 18: agni.v1.param.Parameter.value:type_name -> agni.v1.param.RangeValue
 	12, // 19: agni.v1.param.Parameter.conditions:type_name -> agni.v1.param.Condition
 	4,  // 20: agni.v1.param.Parameter.condition_coverage:type_name -> agni.v1.param.ConditionCoverage
-	19, // 21: agni.v1.param.Parameter.attributes:type_name -> agni.v1.param.Parameter.AttributesEntry
-	14, // 22: agni.v1.param.Parameter.prov:type_name -> agni.v1.param.ParamProvenance
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	20, // 21: agni.v1.param.Parameter.attributes:type_name -> agni.v1.param.Parameter.AttributesEntry
+	15, // 22: agni.v1.param.Parameter.prov:type_name -> agni.v1.param.ParamProvenance
+	14, // 23: agni.v1.param.Parameter.verification:type_name -> agni.v1.param.Verification
+	24, // [24:24] is the sub-list for method output_type
+	24, // [24:24] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_param_param_proto_init() }
@@ -1607,7 +1712,7 @@ func file_agni_v1_param_param_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_param_param_proto_rawDesc), len(file_agni_v1_param_param_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
