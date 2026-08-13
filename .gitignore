@@ -25,3 +25,10 @@ readers/kicad/testdata/*.kicad_prl
 # it opens, and the bundled demo boards get opened by example runs. Scoped to this tree for the
 # same reason as above, so the deliberately-tracked conformance ones stay visible.
 examples/common/designs/**/*.kicad_prl
+
+# Session handoff notes. Working documents for whoever picks the thread up next, deliberately
+# untracked: they carry ordering judgement and where-you-will-be-misled warnings, which go stale
+# fast and whose durable half belongs in DECISIONS.md, CLAUDE.md or an issue instead. Ignored rather
+# than merely untracked because this repo is PUBLIC and a root-level stray rides in on a directory
+# add, and a handoff is exactly the kind of note that reaches for a private path.
+HANDOFF_*.md
