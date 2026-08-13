@@ -158,9 +158,10 @@ should not see**, since it defaults to the script. And **every run gets a scratc
 so a rung that teaches `mv params params-old` cannot rename the checked-in one — which it did, once,
 by hand.
 
-Blocks that cannot be generated (an excerpt, `agni serve`) stay hand-written and are checked by
-`docsite/tutorial_test.go` instead; mark those ` ```console verify `. Do not tag a generated fence
-`console`: Chroma's console lexer renders the whole body as error tokens.
+Blocks that cannot be generated stay hand-written and unverified: an `agni serve` that never returns,
+an excerpt of a longer output, a step needing a tool the build cannot assume (rung 12 shells out to
+`kicad-cli`). Generate what can be generated rather than softening the check to cover the rest. Do not
+tag a generated fence `console`: Chroma's console lexer renders the whole body as error tokens.
 
 **Verifying a tutorial's claims keeps finding bugs in the ENGINE, not the docs.** Three times so far: a
 rung arguing that narrowing a gate makes a board pass (it reveals the next failure instead), `agni

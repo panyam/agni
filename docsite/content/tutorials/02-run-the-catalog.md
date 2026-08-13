@@ -86,19 +86,11 @@ agni check designs/gateway/gateway.edn --tag category=power
 `--fail-on` makes `check` exit non-zero when anything at or above a severity is present, which is
 all you need to put it in CI:
 
-```console verify
-$ agni check designs/gateway/gateway.edn --fail-on error > /dev/null
-$ echo $?
-2
-```
+{{ agniRun "content/tutorials/runs/02-gate-fails.yaml" }}
 
 The board has two `error` findings, so the command fails. With those gone it passes:
 
-```console verify
-$ agni check designs/gateway/gateway.edn --fail-on error --rule test-point-coverage > /dev/null
-$ echo $?
-0
-```
+{{ agniRun "content/tutorials/runs/02-gate-passes.yaml" }}
 
 Starting at `--fail-on error` is the practical choice. It gates on the things that will not work at
 all, which almost nobody argues with, and it lets you tighten to `warning` later once the backlog is

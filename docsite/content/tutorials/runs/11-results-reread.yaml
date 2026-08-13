@@ -1,0 +1,8 @@
+# Rung 11: a stored document re-renders without the design. The write is part of the lesson, so both
+# steps are shown; the rung's own `make report` does the same thing.
+fixture: examples/tutorial-project
+script: |
+  agni review designs/gateway --results-out review.results.json > /dev/null
+  agni results review.results.json --format markdown
+# The header is the point here — the per-item tables belong to rung 9.
+match: '^(# Review|Design:|\*\*|$)'

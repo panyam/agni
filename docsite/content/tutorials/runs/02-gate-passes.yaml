@@ -1,0 +1,6 @@
+# Rung 2: the same gate over a selection with no error findings.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn --fail-on error --rule test-point-coverage
+capture: none
+exit: true

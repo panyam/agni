@@ -1,0 +1,6 @@
+# Rung 11: the one line that goes in a pipeline.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn --conventions conventions.yaml --params params --fail-on error
+capture: none
+exit: true
