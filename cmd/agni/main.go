@@ -281,7 +281,7 @@ func statsCmd() *cobra.Command {
 		Use:   "stats <file>",
 		Short: "Print component/section/net counts for one design",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			d, err := readDesign(args[0])
 			if err != nil {
 				return err
@@ -295,27 +295,32 @@ func statsCmd() *cobra.Command {
 					multi++
 				}
 			}
-			fmt.Printf("design:              %s\n", d.Name)
+			// Through the command's writer, like every neighbouring command. Printing to os.Stdout
+			// directly makes the output unreachable from a test: a caller that sets cmd.SetOut gets an
+			// empty buffer while the text still appears on the process stdout, so an assertion fails
+			// with the expected string visibly printed a few lines above it.
+			w := cmd.OutOrStdout()
+			fmt.Fprintf(w, "design:              %s\n", d.Name)
 			if d.SourceFormat != "" {
-				fmt.Printf("source format:       %s\n", d.SourceFormat)
+				fmt.Fprintf(w, "source format:       %s\n", d.SourceFormat)
 			}
-			fmt.Printf("libraries:           %d\n", len(d.Libraries))
-			fmt.Printf("components:          %d (unique ref_des)\n", len(d.Components))
-			fmt.Printf("sections:            %d (source instances)\n", sectionsTotal)
-			fmt.Printf("multi-section:       %d (one ref_des, several sections)\n", multi)
-			fmt.Printf("nets:                %d\n", len(d.Nets))
+			fmt.Fprintf(w, "libraries:           %d\n", len(d.Libraries))
+			fmt.Fprintf(w, "components:          %d (unique ref_des)\n", len(d.Components))
+			fmt.Fprintf(w, "sections:            %d (source instances)\n", sectionsTotal)
+			fmt.Fprintf(w, "multi-section:       %d (one ref_des, several sections)\n", multi)
+			fmt.Fprintf(w, "nets:                %d\n", len(d.Nets))
 			// Physical tier — shown only when a reader populated it (e.g. IPC-2581, KiCad PCB).
 			if len(d.Footprints) > 0 {
-				fmt.Printf("footprints:          %d\n", len(d.Footprints))
+				fmt.Fprintf(w, "footprints:          %d\n", len(d.Footprints))
 			}
 			if len(d.Layers) > 0 {
-				fmt.Printf("layers:              %d\n", len(d.Layers))
+				fmt.Fprintf(w, "layers:              %d\n", len(d.Layers))
 			}
 			if d.Stackup != nil {
-				fmt.Printf("stackup layers:      %d\n", len(d.Stackup.Layers))
+				fmt.Fprintf(w, "stackup layers:      %d\n", len(d.Stackup.Layers))
 			}
 			if len(d.Bom) > 0 {
-				fmt.Printf("bom lines:           %d\n", len(d.Bom))
+				fmt.Fprintf(w, "bom lines:           %d\n", len(d.Bom))
 			}
 			return nil
 		},

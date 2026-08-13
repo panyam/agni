@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -69,5 +70,30 @@ func TestReadDesignResolvesSymbolPaths(t *testing.T) {
 	}
 	if n := len(d.GetLibraries()); n != 1 {
 		t.Errorf("the design declares symbols/, so its external library should resolve with no --symbol-path; got %d libraries", n)
+	}
+}
+
+// TestStatsOutputIsCapturable is the test agni issue 253 existed to make possible, and it doubles as
+// the observable half of issue 228: `stats` on a schematic reports the library its design declares,
+// with no --symbol-path.
+//
+// Before, `stats` printed with fmt.Printf, so a caller setting cmd.SetOut got an empty buffer while
+// the text still reached the process stdout. An assertion then failed with the expected string
+// visibly printed a few lines above it, which is a confusing enough failure that the earlier test for
+// this behaviour was rewritten to assert on readDesign instead.
+func TestStatsOutputIsCapturable(t *testing.T) {
+	saved := readAsNamed
+	readAsNamed = true
+	defer func() { readAsNamed = saved }()
+
+	out := runCLI(t, statsCmd(), "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
+	if out == "" {
+		t.Fatal("stats wrote nothing to the command's writer; it is printing to the process stdout again")
+	}
+	if !regexp.MustCompile(`libraries:\s+1\b`).MatchString(out) {
+		t.Errorf("the design declares symbols/, so its library should resolve with no --symbol-path:\n%s", out)
+	}
+	if !regexp.MustCompile(`components:\s+19\b`).MatchString(out) {
+		t.Errorf("expected the schematic's 19 components:\n%s", out)
 	}
 }
