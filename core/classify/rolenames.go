@@ -253,26 +253,34 @@ func ConventionRoles(roles ...string) []*ir.NetRole {
 	return out
 }
 
-func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
-	var out []*ir.NetRole
-	at := map[string]int{} // role -> index in out, so a second source can upgrade it in place
-	add := func(role string, src ir.RoleSource) {
-		if role == "" {
+// AddNetRole merges one role fact into a net's set, keeping the STRONGER evidence when that role is
+// already present. It is the single home of what a duplicate means, shared by every evidence tier:
+// the ingestion pass that reads names and format declarations, and the params tier that adds what a
+// datasheet's pin functions establish.
+//
+// The merge is why a role can be established twice without the weaker source overwriting the
+// stronger. A declared ground whose name also spells "GND" is declared, not a convention; recording
+// the weaker of two true sources would understate what is known and is the one way this can lose
+// information. It also makes every tier idempotent, so running a pass twice over one design merges
+// rather than duplicating.
+func AddNetRole(n *ir.Net, role string, src ir.RoleSource) {
+	if role == "" {
+		return
+	}
+	for _, r := range n.GetRoles() {
+		if r.GetRole() == role {
+			if src > r.GetSource() {
+				r.Source = src
+			}
 			return
-		}
-		i, seen := at[role]
-		if !seen {
-			at[role] = len(out)
-			out = append(out, &ir.NetRole{Role: role, Source: src})
-			return
-		}
-		// The same role established twice keeps the STRONGER evidence. A declared ground that the name
-		// also spells "GND" is declared, not a convention: recording the weaker of two true sources
-		// would understate what is known and is the one way this dedup can lose information.
-		if src > out[i].Source {
-			out[i].Source = src
 		}
 	}
+	n.Roles = append(n.Roles, &ir.NetRole{Role: role, Source: src})
+}
+
+func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
+	stub := &ir.Net{}
+	add := func(role string, src ir.RoleSource) { AddNetRole(stub, role, src) }
 	add(n.GetAttributes()[AttrDeclaredRole], ir.RoleSource_ROLE_SOURCE_DECLARED)
 	name := n.GetName()
 	if v.IsRail(name) {
@@ -284,5 +292,5 @@ func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
 	if v.IsFeedback(name) {
 		add(NetRoleFeedback, ir.RoleSource_ROLE_SOURCE_CONVENTION)
 	}
-	return out
+	return stub.Roles
 }

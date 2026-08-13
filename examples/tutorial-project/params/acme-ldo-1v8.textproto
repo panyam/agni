@@ -39,3 +39,33 @@ parameters {
   condition_coverage: CONDITION_COVERAGE_COMPLETE
   prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
 }
+
+# --- Pin functions (agni issue 280) ---
+# A vendor pin table types each terminal, and that typing is evidence about the CIRCUIT rather than a
+# claim about how anyone named a net: whatever feeds VIN is a supply, whatever VOUT drives is a rail,
+# and GND is the return. It is what lets this project's function-first rail names (PMIC_CORE_3V3)
+# classify without the conventions.yaml lexicon having to reach them. Mock provenance like the rows
+# above, because this placeholder was never transcribed.
+pins {
+  id: "vin"
+  name: "VIN"
+  function: PIN_FUNCTION_POWER_INPUT
+  numbers { package_ref: "pkg" number: "1" }
+  prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
+}
+pins {
+  id: "vout"
+  name: "VOUT"
+  function: PIN_FUNCTION_POWER_OUTPUT
+  numbers { package_ref: "pkg" number: "2" }
+  prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
+}
+pins {
+  id: "gnd"
+  name: "GND"
+  function: PIN_FUNCTION_GROUND
+  numbers { package_ref: "pkg" number: "3" }
+  prov { doc_ref: "acme-ldo-1v8-placeholder" method: "mock" confidence: 0.3 }
+}
+
+packages { id: "pkg" name: "generic" }

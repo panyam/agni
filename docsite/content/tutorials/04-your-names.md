@@ -12,7 +12,11 @@ The file is `conventions.yaml`, and it carries two halves that are wired very di
 ## The problem
 
 This project already carries the file this rung is about, so to see the problem it solves you have to
-move it out of the way first. Ask the board which of its nets are power rails:
+move it out of the way first. The seeded parameter corpus moves aside with it, for a reason worth
+knowing up front: a datasheet that types a pin as a supply establishes the rail on its own, so with
+the corpus in place these rails classify whether or not the naming vocabulary reaches them. That is
+the later rungs' subject. This one is about names, so both are out of the way. Ask the board which of
+its nets are power rails:
 
 {{ agniRun "content/tutorials/runs/04-query-designs-gateway-gateway-edn-rail-n-n.yaml" }}
 

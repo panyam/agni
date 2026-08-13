@@ -121,6 +121,17 @@ const (
 	// than a convention: the tool that wrote the file asserted it, rather than it being inferred from
 	// spelling.
 	RoleSource_ROLE_SOURCE_DECLARED RoleSource = 2
+	// A DATASHEET pin function established it: the net reaches a terminal a vendor types as a power
+	// input, a power output, or ground, so what the net carries follows from the silicon rather than
+	// from anything anyone named. The only source here that is evidence about the CIRCUIT instead of a
+	// claim about the design's spelling or annotation, which is why it ranks highest.
+	//
+	// Ranking it above DECLARED is a judgement rather than a derivation. A format declaration is direct
+	// (it is about THIS net) while a datasheet function is inferential (this net touches a ground pin,
+	// so it is ground), but a declaration is a CAD tool's annotation that can go stale against the
+	// design while a vendor's pin table cannot. Ordering only decides which source is RECORDED when two
+	// establish the same role, never whether the role is present, so the cost of being wrong is small.
+	RoleSource_ROLE_SOURCE_DATASHEET RoleSource = 3
 )
 
 // Enum value maps for RoleSource.
@@ -129,11 +140,13 @@ var (
 		0: "ROLE_SOURCE_UNSPECIFIED",
 		1: "ROLE_SOURCE_CONVENTION",
 		2: "ROLE_SOURCE_DECLARED",
+		3: "ROLE_SOURCE_DATASHEET",
 	}
 	RoleSource_value = map[string]int32{
 		"ROLE_SOURCE_UNSPECIFIED": 0,
 		"ROLE_SOURCE_CONVENTION":  1,
 		"ROLE_SOURCE_DECLARED":    2,
+		"ROLE_SOURCE_DATASHEET":   3,
 	}
 )
 
@@ -2528,12 +2541,13 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x13PIN_DIRECTION_POWER\x10\x05\x12\x1c\n" +
 	"\x18PIN_DIRECTION_NO_CONNECT\x10\x06\x12\x1a\n" +
 	"\x16PIN_DIRECTION_POWER_IN\x10\a\x12\x1b\n" +
-	"\x17PIN_DIRECTION_POWER_OUT\x10\b*_\n" +
+	"\x17PIN_DIRECTION_POWER_OUT\x10\b*z\n" +
 	"\n" +
 	"RoleSource\x12\x1b\n" +
 	"\x17ROLE_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ROLE_SOURCE_CONVENTION\x10\x01\x12\x18\n" +
-	"\x14ROLE_SOURCE_DECLARED\x10\x02*\xdc\x01\n" +
+	"\x14ROLE_SOURCE_DECLARED\x10\x02\x12\x19\n" +
+	"\x15ROLE_SOURCE_DATASHEET\x10\x03*\xdc\x01\n" +
 	"\rLayerFunction\x12\x1e\n" +
 	"\x1aLAYER_FUNCTION_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15LAYER_FUNCTION_SIGNAL\x10\x01\x12\x18\n" +
