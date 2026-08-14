@@ -7,12 +7,14 @@
       (cellType GENERIC)
       (view (rename &v "sym")
         (viewType SCHEMATIC)
-        (interface (port A1 (direction INPUT) (designator "A1")) (port A2 (direction INPUT) (designator "A2")) (port A3 (direction INPUT) (designator "A3")))
+        (interface (port A1 (direction INPUT) (designator "1")) (port A2 (direction INPUT) (designator "A2")) (port A3 (direction INPUT) (designator "A3")))
         (symbol
           (boundingBox (rectangle (pt 0 0) (pt 100 100)))
           (portImplementation
             (name A1
               (display (figureGroupOverride LABEL (visible (true))) (justify CENTERRIGHT) (origin (pt 10 20))))
+            (keywordDisplay designator
+              (display (figureGroupOverride LABEL (visible (true))) (justify UPPERLEFT) (origin (pt 2 46))))
             (connectLocation (figure GRAPHICS (dot (pt 0 20)))))
           (portImplementation
             (name A2
@@ -28,6 +30,6 @@
       (page (rename P1 "S1")
         (pageSize (rectangle (pt 0 0) (pt 500 500)))
         (instance (rename &i "$i")
-          (viewRef v (cellRef (name &c) (libraryRef L)))
+          (viewRef v (cellRef (name &c (display (figureGroupOverride LABEL (visible (true))) (justify LOWERLEFT) (origin (pt 70 90)))) (libraryRef L)))
           (transform (origin (pt 0 0)))
           (designator (stringDisplay "U1")))))))

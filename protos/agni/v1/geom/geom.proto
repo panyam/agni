@@ -83,14 +83,21 @@ message PinPoint {
   string port_ref = 1;      // joins to ir.Port.designator / net PortRef.port_ref
   Point loc = 2;            // connectLocation dot
   string source_id = 3;     // EDIF port internal id (&id)
-  Point label_origin = 4;   // symbol-local origin of the pin-number label (nil if hidden)
-  string justify = 5;       // pin-number label alignment, canonical "<h> <v>" (see Label.justify)
+  Point label_origin = 4;   // symbol-local origin of the pin NAME label (nil if hidden)
+  string justify = 5;       // pin name label alignment, canonical "<h> <v>" (see Label.justify)
   string name = 6;          // pin name (e.g. "OUT"), distinct from the number in port_ref
   // Glyph height of the pin's label text, in source units, same meaning as Label.height. Zero
   // when the source states none, which is the signal for a renderer to use its own default.
   // Without it both backends sized pin text from a constant while every other run scaled with
   // the sheet, so pin labels were the one kind of text that ignored the drawing.
   int64 height = 7;
+  // Where the pin NUMBER goes, when the source places it apart from the name — EDIF gives a pin
+  // two independent text positions, the name on (name X (display ...)) and the number on
+  // (keywordDisplay designator (display ...)). Nil means the source placed only one, and a
+  // renderer should fall back to offsetting the number off label_origin so the two do not
+  // overlap. Roughly half the pins in a real export carry this.
+  Point number_origin = 8;
+  string number_justify = 9; // pin number alignment, canonical "<h> <v>"; empty with number_origin
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
