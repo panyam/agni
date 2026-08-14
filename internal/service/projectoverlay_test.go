@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -240,5 +243,59 @@ func TestIgnoreProjectKeepsTheRequestsOwnConvention(t *testing.T) {
 	}
 	if contains(names, "acme") {
 		t.Errorf("composed %v, which still includes the project's", names)
+	}
+}
+
+// errStore resolves every design to one given error, so a test can pin how Overlay treats each KIND
+// of resolution failure rather than only the happy path.
+type errStore struct{ err error }
+
+func (e *errStore) Project(context.Context, string) (*webapi.Project, error)  { return nil, nil }
+func (e *errStore) Projects(context.Context) ([]*webapi.Project, error)       { return nil, nil }
+func (e *errStore) Design(context.Context, string) (*webapi.Design, error)    { return nil, nil }
+func (e *errStore) Designs(context.Context, string) ([]*webapi.Design, error) { return nil, nil }
+func (e *errStore) ResolveDesign(context.Context, artifact.URI) (*webapi.Design, *webapi.Project, error) {
+	return nil, nil, e.err
+}
+
+// TestOverlayRefusesMalformedDescriptor: a descriptor that exists and does not parse is this design's
+// OWN configuration, so composing against the built-in vocabulary instead would report a different
+// answer that looks like an answer. On one real folder that difference was 40 findings the project's
+// lexicon would not have raised and 95 it would have.
+func TestOverlayRefusesMalformedDescriptor(t *testing.T) {
+	r := &ProjectResolver{Store: &errStore{err: errors.New(`design.yaml: name "My Board" is not a valid id`)}}
+	_, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, Overlay{}, "")
+	if err == nil {
+		t.Fatal("a malformed descriptor composed cleanly; the run would silently use the built-in config")
+	}
+	if !strings.Contains(err.Error(), "not a valid id") {
+		t.Errorf("error %q does not carry the parse failure, so the operator cannot tell what to fix", err)
+	}
+}
+
+// TestOverlayToleratesNoProject: the two ways a design legitimately has no project must stay quiet.
+// This is the half of the old behaviour that was correct, and narrowing it too far would make every
+// loose file unreadable.
+func TestOverlayToleratesNoProject(t *testing.T) {
+	for name, store := range map[string]ProjectStore{
+		"no descriptor anywhere": &twoProjects{byURI: map[string]*webapi.Project{}},
+		"unknown mount":          &errStore{err: fmt.Errorf("no such mount %q: %w", "m", ErrNotFound)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := &ProjectResolver{Store: store}
+			if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{}, Overlay{}, ""); err != nil {
+				t.Errorf("a design with no project failed to compose: %v", err)
+			}
+		})
+	}
+}
+
+// TestOverlayIgnoreProjectSkipsResolution: ignore_project means "treat this as belonging to no
+// project", so it must not reach the store at all — otherwise a broken descriptor would defeat the
+// one flag whose whole purpose is to run without project config.
+func TestOverlayIgnoreProjectSkipsResolution(t *testing.T) {
+	r := &ProjectResolver{Store: &errStore{err: errors.New("descriptor is broken")}}
+	if _, err := r.Overlay(context.Background(), artifact.URI{Mount: "m", Path: "b.edn"}, &webapi.OverlayConfig{IgnoreProject: true}, Overlay{}, ""); err != nil {
+		t.Errorf("ignore_project still consulted the store: %v", err)
 	}
 }

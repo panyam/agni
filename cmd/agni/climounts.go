@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -361,12 +362,21 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 	// this catalog. Bailing out early on a miss dropped `--conventions` from facet resolution, so
 	// `--rule <config>/<rule>` selected nothing and the empty selection silently ran the whole
 	// catalog instead of the one rule asked for.
+	// A design with no descriptor resolves to nothing and runs on the base catalog. One whose
+	// descriptor exists and does not PARSE fails here instead, because the rules this run would
+	// otherwise compose are not the rules the project declared (see ProjectResolver.Overlay).
 	var p *webapi.Project
 	var d *webapi.Design
 	if ws, err := workspace(); err == nil {
 		if u, err := ws.URI(arg); err == nil {
-			if design, resolved, err := r.Store.ResolveDesign(ctx, u); err == nil {
+			design, resolved, err := r.Store.ResolveDesign(ctx, u)
+			switch {
+			case err == nil:
 				p, d = resolved, design
+			case errors.Is(err, service.ErrNotFound):
+				// Unknown mount: nothing to resolve against, same as having no descriptor.
+			default:
+				return nil, service.Overlay{}, err
 			}
 		}
 	}

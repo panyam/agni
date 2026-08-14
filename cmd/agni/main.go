@@ -185,32 +185,42 @@ func readDesign(path string) (*ir.Design, error) {
 	// cosmetic difference: net roles are resolved once at ingestion, so on the tutorial project the
 	// built-ins see one rail where the project's own vocabulary sees four (agni issue 228).
 	//
-	// A resolution failure is NOT fatal, matching every other place the CLI resolves a project: a
-	// malformed descriptor somewhere on a mount should not make an unrelated design unreadable, and
-	// the design still reads under the defaults.
-	return readerFor(newLoader(), designReadOptions(ctx, path)...).ReadDesign(localOf(src.NetlistURI))
+	// A descriptor that does not parse IS fatal, because it is this design's own configuration: the
+	// read would otherwise silently use the built-in naming vocabulary and report a different answer
+	// that looks like an answer. A design with NO descriptor still reads under the defaults, which is
+	// the ordinary loose-file case (see designReadOptions).
+	opts, err := designReadOptions(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	return readerFor(newLoader(), opts...).ReadDesign(localOf(src.NetlistURI))
 }
 
 // designReadOptions composes the per-read config a design's project supplies: its naming vocabulary,
 // and the symbol libraries it declares.
 //
-// It returns nothing rather than an error when the project cannot be resolved, on the same terms
-// cliProjectParent and withProjectRules already take. A design that belongs to no project genuinely
-// has no config, which is the ordinary case for a loose file.
-func designReadOptions(ctx context.Context, path string) []service.ReadOption {
+// A design that belongs to NO project genuinely has no config, which is the ordinary case for a loose
+// file, so that returns no options and no error. A descriptor that exists and does not PARSE is
+// returned, because it is this design's own configuration and reading under the defaults instead
+// would answer a different question without saying so.
+//
+// The two workspace lookups stay quiet on their own terms: failing to resolve the CLI's own workspace
+// or to form a URI is not a statement about the design's project, and the caller is about to fail on
+// its own path resolution anyway.
+func designReadOptions(ctx context.Context, path string) ([]service.ReadOption, error) {
 	ws, err := workspace()
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	u, err := ws.URI(path)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	ov, err := cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, service.Overlay{}, "")
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return ov.ReadOptions()
+	return ov.ReadOptions(), nil
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never
