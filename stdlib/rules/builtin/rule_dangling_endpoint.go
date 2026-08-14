@@ -20,7 +20,7 @@ var danglingEndpoint = &check.Rule{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "P",
 		check.KeyDistribution: check.DistOpen,
-		check.KeySite:         check.SiteDiagnostic, // detected by the reader from wire geometry (docs/19)
+		check.KeySite:         check.SiteDiagnostic, // detected by the reader from wire geometry (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("dangling-endpoint"),
 	Eval: func(m check.Model) []check.Finding {
@@ -35,8 +35,7 @@ var danglingEndpoint = &check.Rule{
 	},
 }
 
-// danglingEndpointSpec is the rule's declarative twin (WS3-003); parity with Eval is
-// asserted by TestSpecParity.
+// danglingEndpointSpec is the rule's declarative twin (WS3-003).
 var danglingEndpointSpec = &check.Spec{
 	Over:    "dangling_endpoints",
 	Message: "wire endpoint connects to nothing",

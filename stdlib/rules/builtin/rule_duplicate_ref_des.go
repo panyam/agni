@@ -19,7 +19,7 @@ var duplicateRefDes = &check.Rule{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "P",
 		check.KeyDistribution: check.DistOpen,
-		check.KeySite:         check.SiteDiagnostic, // the reader decides duplicate vs multi-unit (docs/19)
+		check.KeySite:         check.SiteDiagnostic, // the reader decides duplicate vs multi-unit (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("duplicate-ref-des"),
 	Eval: func(m check.Model) []check.Finding {

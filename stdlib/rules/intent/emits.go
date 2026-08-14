@@ -14,7 +14,7 @@ import "strings"
 // declaration and it flips to pass/fail), while a name the compiler cannot produce (a future rule kind
 // like intent/power-sequence) is not-automated, so pre-binding it is safe and does not falsely count as
 // covered. Keeping the predicate here gives the intent name space one owner: a new rule KIND added to
-// Compile updates Emits beside it, not a string list in the review package (which never imports intent —
+// Compile updates Emits beside it, not a string list in the review package (which never imports intent;
 // the predicate reaches it as an injected RunParams closure). TestEmitsCoversCompiler holds Emits to
 // Compile's actual output so the two cannot drift.
 func Emits(ruleName string) bool {
@@ -23,11 +23,9 @@ func Emits(ruleName string) bool {
 	case RuleModuleMissing, RuleModuleCount, RuleVoltageDomain,
 		// The rail-sizing rules (WS3-095) are fixed names with no shared prefix that the families below
 		// would cover, so they have to be listed. Omitting them costs nothing at build time and leaves
-		// every item bound to them reading not-automated forever, which is the trap this predicate exists
-		// to close.
+		// every item bound to them reading not-automated forever.
 		RuleRailCurrentCapacity, RuleRailCurrentMargin,
-		// Same for the load-switch lower bound (WS3-085): a fixed name under no family prefix, so it has
-		// to be listed or a manifest binding it reads not-automated forever.
+		// Same for the load-switch lower bound (WS3-085): a fixed name under no family prefix.
 		RuleLoadSwitchTripBelowBudget:
 		return true
 	}

@@ -8,18 +8,15 @@ import (
 )
 
 // capVoltageDerate is the margin multiplier the rated voltage must clear:
-// Vrated >= rail_V x derate. 1.25 is the common 20%-derating convention for
-// ceramics; making it a per-run parameter rides the WS3-006 parameterization rider,
-// and a computed (rather than declared) worst-case rail voltage is WS4.
+// Vrated >= rail_V x derate. 1.25 is the common 20%-derating convention for ceramics.
+// Per-run parameterization is WS3-006; a computed worst-case rail voltage is WS4.
 const capVoltageDerate = 1.25
 
-// capVoltage is the cap-voltage rule (WS10-005, the M3 demo): a capacitor joined to
-// its seeded datasheet spec must have a rated voltage clearing the worst rail it
-// touches times the derate factor. The first spec-authored datasheet rule: the body
-// is a Spec value with no Go twin, and the join/compare lives behind the
-// cap_voltage_detail SpecFunc, whose declared Reads flow into the rule's derived
-// metadata (the WS3-004 fact capture). Registered inside this initializer because
-// Spec.Rule validates Call targets at bind time.
+// capVoltage is the cap-voltage rule (WS10-005): a capacitor joined to its seeded
+// datasheet spec must have a rated voltage clearing the worst rail it touches times the
+// derate factor. The join and compare live behind the cap_voltage_detail SpecFunc, whose
+// declared Reads flow into the rule's derived metadata (the WS3-004 fact capture). The
+// FFI is registered inside this initializer; see rule_led_polarity.go for why.
 var capVoltage = func() *check.Rule {
 	check.RegisterSpecFunc("cap_voltage_detail", &check.SpecFunc{
 		Reads:      []string{"param.cap_rated_voltage", "net.max_voltage", "component.mpn", "on_net"},

@@ -11,21 +11,16 @@ import (
 // Rail-current sizing (WS3-095): does the part supplying a rail carry the current the architecture
 // says that rail draws, and does it carry it with the house margin on top.
 //
-// These are the first intent rules that join a DECLARED number against a DATASHEET number. Every
-// intent rule before them probed the netlist's structure (is the module there, is the rail biased),
-// so their evidence came from one place. Here the declaration supplies the demand, which no design
-// artifact carries, and the regulator's seeded spec supplies the capacity, which no declaration should
-// restate. Both halves have to be present for either rule to conclude anything.
+// These rules join a DECLARED number against a DATASHEET number. The declaration supplies the demand,
+// which no design artifact carries, and the regulator's seeded spec supplies the capacity, which no
+// declaration should restate. Both halves have to be present for either rule to conclude anything.
 //
-// TWO rules over one mechanism, deliberately. A review's "regulator output ratings" ask and its
-// "current capability margins" ask are separate items that must report independently, so folding them
-// into one rule at two thresholds would make one verdict stand for both (the WS3-058 lesson). The
-// split has a semantic consequence worth stating: a rail whose supply clears the peak but not the
-// margin fires under margin ONLY, so capacity's silence there means "rated for the load", not
-// "adequately sized".
+// TWO rules over one mechanism: a review's "regulator output ratings" ask and its "current capability
+// margins" ask are separate items that must report independently. A rail whose supply clears the peak
+// but not the margin fires under margin ONLY, so capacity's silence there means "rated for the load",
+// not "adequately sized".
 
 // railBudgetCapacityRule: the supply reaching a declared rail is rated below the rail's peak budget.
-// The rail is over-subscribed by the architecture's own numbers.
 func railBudgetCapacityRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleRailCurrentCapacity,
@@ -48,8 +43,7 @@ func railBudgetCapacityRule(d Declaration) *check.Rule {
 }
 
 // railBudgetMarginRule: the supply clears the peak budget but not the declared margin over it. It
-// stays silent below the peak, which is railBudgetCapacityRule's finding, so the two items never
-// double-report one defect.
+// stays silent below the peak, which is railBudgetCapacityRule's finding.
 func railBudgetMarginRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleRailCurrentMargin,
@@ -75,24 +69,15 @@ func railBudgetMarginRule(d Declaration) *check.Rule {
 // the best-rated supply reaching that rail and compare it against factor x the peak. The margin rule
 // passes the declared factor, the capacity rule passes 1.
 //
-// It iterates the DECLARATION and probes the design, never the reverse. A rail the design has and the
-// intent does not budget is not this rule's business, and deriving the budget from what is connected
-// would pass by construction whenever the designer's own arithmetic is self-consistent.
-//
-// Three cases stay SILENT, and each is silent for a stated reason rather than by omission:
+// Three cases stay SILENT:
 //
 //   - A declared rail the design does not carry. That is a missing-rail defect, which the voltage-domain
 //     and subsystem forms report; firing here as well would report one defect under two items.
 //   - A rail no seeded supply reaches. The rule has nothing to compare, so a finding would be a false
-//     fail. The honest verdict for this case is the review runner's needs-data gate, which the rules
-//     feed by declaring ParamSymbols. That gate is design-wide (nothing on the board states an output
-//     current), so a design where SOME regulator is seeded and this rail's is not still reads pass;
-//     the doc cards say so.
+//     fail. That case is the review runner's needs-data gate, which the rules feed by declaring
+//     ParamSymbols. The gate is design-wide (nothing on the board states an output current), so a design
+//     where SOME regulator is seeded and this rail's is not still reads pass; the doc cards say so.
 //   - A supply that clears the threshold. Nothing to report.
-//
-// The margin rule's lower bound falls out of taking the best supply and comparing once: a supply under
-// the peak is under the margin too, but the capacity rule already reports it, so the margin rule must
-// not. That exclusion is explicit below rather than implied by the factor.
 func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg func(b RailBudget, need float64, ref string, p *parampb.Parameter) string) []check.Finding {
 	var out []check.Finding
 	for _, b := range budgets {
@@ -105,8 +90,8 @@ func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg fu
 			continue
 		}
 		rated := p.GetValue().GetMax()
-		// The margin rule declines the range the capacity rule owns. Without this a supply rated below
-		// the peak would fire BOTH rules, and a reviewer would work two items for one defect.
+		// The margin rule declines the range the capacity rule owns. Without it a supply rated below the
+		// peak would fire BOTH rules for one defect.
 		if factor > 1 && below(rated, b.Peak) {
 			continue
 		}
@@ -131,9 +116,9 @@ func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg fu
 // Highest, not lowest, and the choice is about false fails. A rail can be within reach of more than
 // one seeded part (a second regulator one series element away, a multi-channel PMIC stating a rating
 // per channel with no way to say which channel this net is), and picking the smallest of those would
-// report a shortfall the design does not have. Every FAIL has to be a genuine defect, so where the
-// evidence is ambiguous the rule takes the reading that does not fire. The cost is a missed finding
-// on a rail genuinely fed by the smaller of two supplies, which is the safe direction to miss in.
+// report a shortfall the design does not have. Where the evidence is ambiguous the rule takes the
+// reading that does not fire; the cost is a missed finding on a rail genuinely fed by the smaller of
+// two supplies.
 //
 // Reach is check.SupplyPathReachHops, the same radius the connection-aware voltage rules use, so a
 // bead or a sense resistor between the regulator and the rail does not hide the supply. It needs no
@@ -180,8 +165,7 @@ func reaches(m check.Model, c *ir.Component, rail *ir.Net) bool {
 // datasheet, and the two round differently. 0.1 x 1.5 is 0.15000000000000002 in float64 while the
 // literal 0.15 is 0.1499999999999999944, so a 150mA part on a 100mA rail at a 1.5 factor fails a
 // margin it meets exactly. Roughly one in six combinations of a milliamp-resolution budget and a
-// common factor lands this way, so it is the ordinary case rather than a corner: the false fail would
-// be produced by arithmetic on the boundary an author deliberately sized for.
+// common factor lands this way, so it is the ordinary case rather than a corner.
 func below(have, want float64) bool {
 	return have < want*(1-1e-9)
 }

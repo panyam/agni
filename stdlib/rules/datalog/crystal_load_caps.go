@@ -10,13 +10,13 @@ import (
 // PARITY TWIN of check.crystalLoadCaps, proven finding-for-finding equal by TestCrystalDatalogParity,
 // and it is DELIBERATELY NOT registered (absent from dlRules, so it never enters DefaultCatalog).
 //
-// Two reasons it stays a twin rather than replacing the Go rule now, mirroring the Spec twin-then-flip
-// discipline (docs/19): the conformance harness runs check.Rules only, so a registered datalog rule
-// would lose that coverage; and the Go rule is freshly soaked (PR 265). The twin proves the datalog
-// surface — extended here with component.class, net.ground, and net.external — can express the rule
-// faithfully, including the external-net read-gap skip, leaving a clean flip for later.
+// Two reasons it stays a twin rather than replacing the Go rule now (twin discipline:
+// docsite/content/build/check-rule.md): the conformance harness runs check.Rules only, so a
+// registered datalog rule would lose that coverage; and the Go rule is freshly soaked (PR 265).
+// It extends the datalog surface with component.class, net.ground, and net.external (the Go rule's
+// external-net read-gap skip).
 //
-// The program mirrors the Go rule's structure over the new relations:
+// The program mirrors the Go rule's structure over those relations:
 //
 //   - a clock part is the CLOCK FAMILY minus the subtypes that take no external caps (WS10-015):
 //     component.class(?y,"clock") and not "oscillator" and not "ceramic_resonator"; a cap is
@@ -31,8 +31,6 @@ import (
 //     only in the goal, not an IDB head): two = has >=2 distinct terminal nets, three = has >=3, so
 //     "exactly two" is two AND not three. This also structurally excludes a 3+-pin active oscillator
 //     whose Vcc net is not name-recognizable as a rail (the real-corpus false-positive PR 265 fixed).
-//   - bad fires on a terminal of an exactly-two-terminal, non-powered crystal that carries no cap and
-//     is not an external read-gap net (net.external), the faithful successor to the Go external-skip.
 var crystalLoadCapsQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "crystal-load-caps",

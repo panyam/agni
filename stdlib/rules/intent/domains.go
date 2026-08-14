@@ -9,12 +9,9 @@ import (
 
 // voltageDomainRule fails when a design deviates from a declared voltage domain: a declared rail net is
 // absent (KindNet finding, no provenance), or present but its NAME declares a different nominal than
-// the domain does (KindNet finding on the rail, with provenance) — a rail on the wrong domain. A
-// present rail whose name carries no parseable voltage token (e.g. "VDD_CORE") is left alone: the
-// name-derived nominal is the only voltage evidence a netlist carries, and refusing to guess is the
-// contract (check.NominalVoltageFromName). So the rule verifies presence for every declared rail and
-// voltage for those whose name encodes one. Like the module rule, it iterates the DECLARATION and
-// probes the design, never the reverse.
+// the domain does (KindNet finding on the rail, with provenance). A present rail whose name carries no
+// parseable voltage token (e.g. "VDD_CORE") is left alone: the name-derived nominal is the only voltage
+// evidence a netlist carries, and refusing to guess is the contract (check.NominalVoltageFromName).
 func voltageDomainRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleVoltageDomain,
@@ -55,7 +52,7 @@ func voltageDomainRule(d Declaration) *check.Rule {
 
 // netByName returns the first design net with the given name, or nil when none matches. Rails are
 // unique by name in practice; the first match is the rail. It reads Model.Nets (the same slice the IR
-// carries), which is the C19 read surface — a raw *ir.Net return is the loaded entity, not a re-scan.
+// carries), so returning a raw *ir.Net stays inside the C19 read surface.
 func netByName(m check.Model, name string) *ir.Net {
 	for _, n := range m.Nets() {
 		if n.GetName() == name {

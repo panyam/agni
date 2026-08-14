@@ -14,12 +14,11 @@ const (
 )
 
 // protectionRule builds the rule for ONE protection kind, covering every declared protection of that
-// kind. One rule per kind (intent/protection-ovp, intent/protection-discharge) so distinct review items
-// bind independently. For each declared rail it probes the design topology on that EXACT net (not the
-// rail-role heuristic, which misses names like VBATT01): ovp requires a TVS/zener among the rail's
-// components; discharge requires a resistor that also touches a ground net. A declared rail with no
-// matching device fails (a KindNet finding on the rail). Iterates the DECLARATION and probes the
-// design — never derives the protected-rail set from the netlist.
+// kind, named intent/protection-<kind> (protection-ovp, protection-discharge). For each declared rail
+// it probes the design topology on that EXACT net (not the rail-role heuristic, which misses names like
+// VBATT01): ovp requires a TVS/zener among the rail's components; discharge requires a resistor that
+// also touches a ground net. A declared rail with no matching device fails (a KindNet finding on the
+// rail).
 func protectionRule(kind string, ps []Protection) *check.Rule {
 	return &check.Rule{
 		Name:     "protection-" + kind,

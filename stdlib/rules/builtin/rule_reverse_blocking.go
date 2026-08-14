@@ -10,21 +10,10 @@ import (
 )
 
 // reverseBlockingAbsent flags a connector-fed power path with no DIRECTIONAL blocking element
-// (WS3-094). It is the sibling of input-protection: same walk, different question. That rule asks
-// whether a fuse or TVS guards the path; this asks whether anything stops current flowing the WRONG
-// WAY.
-//
-// The two are not substitutes, which is why this ticket exists at all. A fuse opens on current
-// MAGNITUDE regardless of sign, and a TVS shunts transients to ground rather than blocking a path, so
-// "a fuse or a TVS is present" carries no information about reverse flow. Two CarCo review items were
-// bound to input-protection and reading pass with their actual ask never tested.
-//
-// WHAT IT WILL NOT CLAIM. A P-FET ideal diode is a transistor plus a bias network, and nothing in a
-// netlist labels that arrangement — it is the correct modern answer to reverse protection and it is
-// structurally indistinguishable from any other FET on the path. So a path crossing a transistor is
-// reported as UNCLASSIFIABLE rather than unprotected: the rule stays silent there. Firing anyway
-// would false-fail every ORing-FET design, which is worse than the gap it would close, and this
-// family of rules is exactly where a confident wrong answer costs the most.
+// (WS3-094). Same walk as input-protection, different question: that rule asks whether a fuse or TVS
+// guards the path, this asks whether anything stops current flowing the WRONG WAY. Why a fuse and a
+// TVS do not count, and why a transistor reads as unclassifiable rather than unprotected, are in
+// docs/reverse-blocking-absent.md.
 var reverseBlockingAbsent = &check.Rule{
 	Name:       "reverse-blocking-absent",
 	Severity:   "warning",
@@ -71,17 +60,16 @@ var reverseBlockingAbsent = &check.Rule{
 	},
 }
 
-// unblockedPowerPath reports whether n's power path carries nothing that blocks reverse flow.
+// classifyPowerPath decides what n's power path does about reverse flow.
 //
 // THE WALK IS THE MECHANISM, and it works because of what it refuses to cross. check.Reach crosses
-// only two-terminal PASSIVES (resistor, inductor, ferrite, fuse) — a diode is deliberately not a pass
-// element, "polarity, not a wire", and neither is a transistor. So:
+// only two-terminal PASSIVES (resistor, inductor, ferrite, fuse). A diode is not a pass element,
+// "polarity, not a wire", and neither is a transistor. So:
 //
 //   - A power input reachable through the passive walk means NOTHING directional stands between the
 //     connector and the load. That is the finding.
-//   - A directional part stops the walk, which is why this rule then has to look at what stopped it
-//     rather than concluding from silence. A backwards diode stops the walk exactly as a correct one
-//     does, and reading that as protection would be a false pass on the defect this rule exists for.
+//   - A directional part stops the walk, so the rule has to look at what stopped it rather than
+//     conclude from silence: a backwards diode stops the walk exactly as a correct one does.
 func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	r := m.Reach(n, check.PowerPathReachHops)
 	inReach := map[string]bool{}
@@ -94,18 +82,15 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	// Nothing reachable, so something stopped the walk. Classify each part bridging out of the
 	// neighborhood toward a power input.
 	//
-	// A TRANSISTOR anywhere on the neighborhood settles it first, before any other part is weighed. It
-	// is checked here rather than inside the bridging loop below because that loop reaches a part only
-	// through farNet, which returns nil for anything touching more than one net outside the reach set.
-	// A real 3-terminal MOSFET touches two, so the guard never fired for any actual FET and a diode on
-	// the same node drove the finding instead (issue 63: 14 false FAILs on a real board). Terminal count
-	// is irrelevant to the question being asked, which is only whether something here might be an ORing
-	// FET or an ideal diode.
+	// A TRANSISTOR anywhere on the neighborhood settles it, and is checked here rather than inside the
+	// bridging loop below because that loop reaches a part only through farNet, which returns nil for
+	// anything touching more than one net outside the reach set. A real 3-terminal MOSFET touches two,
+	// so the guard never fired for any actual FET and a diode on the same node drove the finding
+	// instead (agni issue 63: 14 false FAILs on a real board).
 	//
-	// A controller the datasheet IDENTIFIES as an ideal diode / ORing / power-mux part settles it the
-	// other way: that is a directional element, so the path is protected and the rule is genuinely
-	// silent. Checked first, because a design carrying both the controller and its FET must read as
-	// protected rather than as unclassifiable.
+	// A datasheet-identified ideal diode / ORing / power-mux controller is checked FIRST, because a
+	// design carrying both the controller and its FET must read as protected rather than as
+	// unclassifiable.
 	var transistor string
 	for _, rn := range r.Nets {
 		for _, c := range rn.GetConnections() {
@@ -119,9 +104,8 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 		}
 	}
 	if transistor != "" {
-		// Cannot tell an ideal diode from an ordinary switch by structure, so SAY so rather than
-		// staying quiet (agni issue 74). The old behaviour returned silence here, which a bound review
-		// item read as pass: a verdict of "protected" on a path nothing had verified.
+		// Cannot tell an ideal diode from an ordinary switch by structure, so SAY so rather than stay
+		// quiet, which a bound review item reads as a pass (agni issue 74).
 		return pathUnclassifiable, transistor
 	}
 	unblocked := false
@@ -130,12 +114,12 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 			ref := c.GetComponentRef()
 			far := farNet(m, ref, inReach)
 			// A part whose far terminal lands on GROUND is a shunt beside the path, not a series
-			// element in it, so it carries no information about reverse blocking. Without this, a
-			// freewheel diode across an inductive load (anode on ground, cathode on the switched
-			// output) failed the orientation test below and reported the output unblocked (issue 63:
-			// 20 false FAILs). Ground only, deliberately: a series blocking diode's far side is very
-			// often a NAMED RAIL (connector -> D1 -> +12V_SW -> regulator), so excluding rails too
-			// would silence the detection this rule exists for.
+			// element in it, so it says nothing about reverse blocking. Without this, a freewheel
+			// diode across an inductive load (anode on ground, cathode on the switched output) failed
+			// the orientation test below and reported the output unblocked (issue 63: 20 false
+			// FAILs). Ground only, deliberately: a series blocking diode's far side is very often a
+			// NAMED RAIL (connector -> D1 -> +12V_SW -> regulator), so excluding rails too would
+			// silence the detection this rule exists for.
 			if far == nil || m.IsGroundNet(far) || !feedsPowerInput(m, far) {
 				continue
 			}
@@ -152,9 +136,8 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	return pathProtected, ""
 }
 
-// pathVerdict is what the walk concluded about one connector-fed net. THREE outcomes, not two: the
-// whole point of agni issue 74 is that "verified protected" and "could not tell" had been the same
-// silence, and a review item bound to this rule read that silence as a pass.
+// pathVerdict is what the walk concluded about one connector-fed net. THREE outcomes, not two:
+// "verified protected" and "could not tell" are separate answers (agni issue 74).
 type pathVerdict int
 
 const (
@@ -163,10 +146,8 @@ const (
 	pathProtected pathVerdict = iota
 	// pathUnblocked: nothing directional is in the way, or a diode is fitted backwards. The defect.
 	pathUnblocked
-	// pathUnclassifiable: a transistor is on the path and nothing identifies it. An ideal diode is a
-	// transistor plus a bias network that no netlist labels, so it is structurally identical to an
-	// ordinary switch. Reported as an INCONCLUSIVE finding, never as a defect: firing would false-fail
-	// every correct ORing-FET design, and staying silent would claim protection nobody verified.
+	// pathUnclassifiable: a transistor is on the path and nothing identifies it. Reported as an
+	// INCONCLUSIVE finding, never as a defect.
 	pathUnclassifiable
 )
 
@@ -212,8 +193,8 @@ func touchesRef(n *ir.Net, refDes string) bool {
 }
 
 // pinNetWithRole returns the net name carrying ref's pin of the given role, or "" when the part
-// declares no such pin. A diode whose part type names no anode yields "", so orientation is unknown
-// and the caller treats it as backwards rather than crediting protection it cannot see.
+// declares no such pin. A diode whose part type names no anode yields "", and the caller treats
+// unknown orientation as backwards.
 func pinNetWithRole(m check.Model, ref string, role check.PinRole) string {
 	for _, p := range m.Pins() {
 		if p.Component.GetRefDes() != ref {

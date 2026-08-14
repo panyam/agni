@@ -12,11 +12,12 @@ import (
 // copperClearance flags cross-net track segments on the same layer whose copper edges
 // sit closer than the fabrication clearance floor. It is the one rule of the WS3-008
 // batch written as a Go Eval: the check is a pairwise join across entities (every
-// segment of net A against every segment of net B), which the Spec AST deliberately
-// cannot express — a cross-entity/spatial vocabulary must be evidenced by more rules
-// than this one before it earns AST nodes (docs/19, the WS3-003 earn-it guard). This
-// rule and its O(S²) walk are also the standing evidence for the WS3-004 spatial-index
-// question; BenchmarkCopperClearance tracks the cost.
+// segment of net A against every segment of net B), which the Spec AST cannot express.
+// A cross-entity/spatial vocabulary needs more rules than this one behind it before it
+// earns AST nodes (the WS3-003 earn-it guard;
+// docsite/content/architecture/rules-and-checks.md). This rule and its O(S²) walk are
+// the standing evidence for the WS3-004 spatial-index question; BenchmarkCopperClearance
+// tracks the cost.
 var copperClearance = &check.Rule{
 	Name:       "copper-clearance",
 	Severity:   "error",
