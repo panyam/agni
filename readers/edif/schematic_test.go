@@ -191,13 +191,15 @@ func TestReadSchematic_FieldVisibility(t *testing.T) {
 	if len(fields) != 3 {
 		t.Fatalf("fields = %v, want 3 (Reference + Value + Rating)", fields)
 	}
+	// Heights are GLYPH heights, textLineRatio below the source textHeight the fixture states
+	// (see glyphHeight): the EDIF value is a line pitch, so it is divided down to an em size.
 	// Value overrides ATTRIBUTE without a textHeight, so it inherits the group default 254000.
-	if v := fields["Value"]; v == nil || v.Value != "10k" || v.Height != 254000 {
-		t.Errorf("Value field = %v, want 10k height 254000 (inherited figureGroup default)", v)
+	if v := fields["Value"]; v == nil || v.Value != "10k" || v.Height != glyphHeight(254000) {
+		t.Errorf("Value field = %v, want 10k height %d (inherited figureGroup default 254000)", v, glyphHeight(254000))
 	}
 	// Rating restates its own textHeight, which wins over the group default.
-	if r := fields["Rating"]; r == nil || r.Value != "50V" || r.Height != 100000 {
-		t.Errorf("Rating field = %v, want 50V height 100000 (explicit)", r)
+	if r := fields["Rating"]; r == nil || r.Value != "50V" || r.Height != glyphHeight(100000) {
+		t.Errorf("Rating field = %v, want 50V height %d (explicit 100000)", r, glyphHeight(100000))
 	}
 }
 
@@ -539,17 +541,46 @@ func TestReadSchematic_RefDesDisplay(t *testing.T) {
 	if f.Origin.GetX() != 100 || f.Origin.GetY() != 176 {
 		t.Errorf("R1 origin = %v, want (100,176) from the designator display, not the symbol origin", f.Origin)
 	}
-	if f.Justify != "left bottom" || f.RotationDeg != 0 || f.Height != 8 {
-		t.Errorf("R1 = justify %q, rot %d, height %d; want left bottom / 0 / 8 (inherited)",
-			f.Justify, f.RotationDeg, f.Height)
+	if f.Justify != "left bottom" || f.RotationDeg != 0 || f.Height != glyphHeight(10) {
+		t.Errorf("R1 = justify %q, rot %d, height %d; want left bottom / 0 / %d (glyph height of the inherited textHeight 10)",
+			f.Justify, f.RotationDeg, f.Height, glyphHeight(10))
 	}
 	// R2 restates its own textHeight, which wins over the group default, and rotates.
-	if f := byRef["R2"]; f == nil || f.Height != 5 || f.RotationDeg != 90 || f.Justify != "right top" {
-		t.Errorf("R2 = %v, want height 5, rot 90, justify right top", f)
+	if f := byRef["R2"]; f == nil || f.Height != glyphHeight(6) || f.RotationDeg != 90 || f.Justify != "right top" {
+		t.Errorf("R2 = %v, want height %d (glyph height of the restated textHeight 6), rot 90, justify right top", f, glyphHeight(6))
 	}
 	// R3's display is marked hidden, so it must not be drawn at all.
 	if f, ok := byRef["R3"]; ok {
 		t.Errorf("R3 designator is (visible (false)) but was drawn as %v", f)
+	}
+}
+
+// TestGlyphHeight pins the textHeight -> glyph height conversion with LITERAL expectations, so a
+// change to textLineRatio fails here rather than silently rescaling every EDIF render. The inputs
+// are real line pitches an EDIF technology declares (100 mil and 70 mil at this file's 10nm unit).
+//
+// The second assertion is the property that motivates the conversion at all: EDIF's textHeight is
+// the pitch consecutive field rows are stacked at, so a glyph height EQUAL to it leaves zero
+// leading and rows touch. The converted height must leave real space between lines.
+func TestGlyphHeight(t *testing.T) {
+	for _, tc := range []struct {
+		pitch, want int64
+		why         string
+	}{
+		{254000, 193185, "100 mil line pitch"},
+		{177800, 135230, "70 mil line pitch"},
+		{0, 0, "unspecified stays unspecified, so the renderer's fallback still applies"},
+		{-5, -5, "a negative height is passed through rather than sign-flipped"},
+	} {
+		if got := glyphHeight(tc.pitch); got != tc.want {
+			t.Errorf("glyphHeight(%d) = %d, want %d (%s)", tc.pitch, got, tc.want, tc.why)
+		}
+	}
+	// Leading: a row of text must not fill its own line pitch.
+	const pitch = 177800
+	if leading := pitch - glyphHeight(pitch); leading < pitch/8 {
+		t.Errorf("glyph height %d in a %d pitch leaves only %d of leading; rows would nearly touch",
+			glyphHeight(pitch), pitch, leading)
 	}
 }
 

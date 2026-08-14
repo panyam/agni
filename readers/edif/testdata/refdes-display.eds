@@ -7,7 +7,7 @@
         (scale 1 (e 1 -8) (unit DISTANCE))
       )
       (figureGroup ATTRIBUTE
-        (textHeight 8)
+        (textHeight 10)
       )
     )
     (cell (rename &c1 "PartA")
@@ -75,7 +75,7 @@
           (designator
             (stringDisplay "R2"
               (display
-                (figureGroupOverride ATTRIBUTE (textHeight 5) (visible (true)))
+                (figureGroupOverride ATTRIBUTE (textHeight 6) (visible (true)))
                 (justify UPPERRIGHT)
                 (orientation R90)
                 (origin (pt 250 176))
