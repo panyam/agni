@@ -52,6 +52,11 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 		g.DesignRef = atom(root.Arg(1))
 	}
 
+	// Technology default text heights per figureGroup: a display that overrides a group without
+	// restating its height inherits the group default (see fieldFromDisplay, pinOf). Read before
+	// the symbol walk because a symbol's pin labels inherit from it too.
+	fgh := figureGroupHeights(root)
+
 	// Symbols: library -> cell -> view -> symbol. Keyed by cell name + library name.
 	// cellByID resolves a cell's internal &id to its display name: instances may reference
 	// a cell by either form, but the sidecar joins on the display name (docs §8).
@@ -104,14 +109,10 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 				if gnode == nil {
 					continue
 				}
-				g.Symbols = append(g.Symbols, symbolOf(gnode, cell, view, libName, vName, src))
+				g.Symbols = append(g.Symbols, symbolOf(gnode, cell, view, libName, vName, src, fgh))
 			}
 		}
 	}
-
-	// Technology default text heights per figureGroup: a placed field that overrides a group
-	// without restating its height inherits the group default (see placedFields).
-	fgh := figureGroupHeights(root)
 
 	// Sheets: each (page ...) holds placements, nets (wires), and annotations.
 	var pages []*node
@@ -206,7 +207,7 @@ func graphicContents(view *node) *node {
 // symbolOf builds a SymbolDef from a cell's geometry node (a (symbol ...) view, or a
 // GRAPHIC view's (contents ...) for builtin cells): its bounding box, drawn shapes, and
 // pin connect-locations (symbol-local coordinates).
-func symbolOf(sym, cell, view *node, libName, viewName, src string) *geom.SymbolDef {
+func symbolOf(sym, cell, view *node, libName, viewName, src string, fgh map[string]int64) *geom.SymbolDef {
 	id, disp := nameParts(cell.Arg(1))
 	name := disp
 	if name == "" {
@@ -225,7 +226,7 @@ func symbolOf(sym, cell, view *node, libName, viewName, src string) *geom.Symbol
 	}
 	// Pins and their stub figures come from each portImplementation.
 	for _, pi := range sym.Children("portImplementation") {
-		if pin := pinOf(pi); pin != nil {
+		if pin := pinOf(pi, fgh); pin != nil {
 			sd.Pins = append(sd.Pins, pin)
 		}
 		for _, f := range pi.Children("figure") {
@@ -246,7 +247,7 @@ func symbolOf(sym, cell, view *node, libName, viewName, src string) *geom.Symbol
 
 // pinOf extracts a pin's connect location (where a wire attaches) from a
 // portImplementation node.
-func pinOf(pi *node) *geom.PinPoint {
+func pinOf(pi *node, fgh map[string]int64) *geom.PinPoint {
 	nm := pi.Child("name")
 	portRef := ""
 	if nm != nil {
@@ -268,6 +269,11 @@ func pinOf(pi *node) *geom.PinPoint {
 	pp := &geom.PinPoint{PortRef: portRef, Loc: loc, SourceId: portRef}
 	// The pin-number label is the port name shown at (name X (display (origin ...))),
 	// in symbol-local coordinates. Skip it when the source marks the label hidden.
+	//
+	// The display also states the label's text height, either directly or by inheriting the
+	// figureGroup it overrides (pin labels typically override LABEL). Carrying it is what lets
+	// pin text scale with the sheet like every other run instead of being sized from a renderer
+	// constant, which had it rendering more than twice the size the authoring tool prints.
 	if nm != nil {
 		if d := nm.Child("display"); d != nil && labelVisible(d) {
 			if o := d.Child("origin"); o != nil {
@@ -276,6 +282,7 @@ func pinOf(pi *node) *geom.PinPoint {
 			if j := d.Child("justify"); j != nil {
 				pp.Justify = canonicalJustify(atom(j.Arg(1)))
 			}
+			pp.Height = displayHeight(d, fgh)
 		}
 	}
 	return pp
@@ -529,13 +536,21 @@ func fieldFromDisplay(name, value string, d *node, fgh map[string]int64) *geom.F
 	if or := d.Child("orientation"); or != nil {
 		f.RotationDeg = orientationDeg(atom(or.Arg(1)))
 	}
-	if th := findFirst(d, "textHeight"); th != nil {
-		f.Height = glyphHeight(parseInt(atom(th.Arg(1))))
-	}
-	if f.Height == 0 {
-		f.Height = fgh[displayGroup(d)]
-	}
+	f.Height = displayHeight(d, fgh)
 	return f
+}
+
+// displayHeight is the GLYPH height a (display ...) implies: its own textHeight when it states
+// one, otherwise the default of the figureGroup it overrides. Zero when neither is known, which
+// every caller reads as "the renderer picks a default". Shared by fieldFromDisplay and pinOf so
+// a field and a pin label on the same sheet are sized by the same rule.
+func displayHeight(d *node, fgh map[string]int64) int64 {
+	if th := findFirst(d, "textHeight"); th != nil {
+		if h := glyphHeight(parseInt(atom(th.Arg(1)))); h > 0 {
+			return h
+		}
+	}
+	return fgh[displayGroup(d)]
 }
 
 // refDesField builds the ref-des Reference field for an instance. A schematic designator carries

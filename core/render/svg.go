@@ -89,11 +89,17 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			}
 			if pin.LabelOrigin != nil {
 				lp := geomath.ApplyTransform(pl.Transform, pin.LabelOrigin)
-				drawText(c, pin.PortRef, tx(lp.X), ty(lp.Y), pinLabelPx, pin.Justify, rot, style.Ruler, 0)
+				// Size from the source like every other run, falling back to the fixed pixel
+				// size only when the format states no height (see pinLabelPx).
+				px := pinLabelPx
+				if pin.Height > 0 {
+					px = labelFont(float64(pin.Height) * scale)
+				}
+				drawText(c, pin.PortRef, tx(lp.X), ty(lp.Y), px, pin.Justify, rot, style.Ruler, 0)
 				// The pin name (e.g. "Y") is distinct from the number; KiCad draws it too. Offset
 				// it off the connect dot so it does not sit on top of the number, and tint it.
 				if pin.Name != "" {
-					drawText(c, pin.Name, tx(lp.X), ty(lp.Y)+pinLabelPx*1.4, pinLabelPx, pin.Justify, rot, style.PinName, 0)
+					drawText(c, pin.Name, tx(lp.X), ty(lp.Y)+px*1.4, px, pin.Justify, rot, style.PinName, 0)
 				}
 			}
 		}
@@ -158,7 +164,7 @@ const (
 	// board's fine traces stay proportional instead of clamping to a fixed pixel width and
 	// merging into a blob. ~25um is below any real trace, so real copper renders at true width.
 	minStrokeNm = 25_000.0
-	pinLabelPx    = 6.0             // pin number/name font size
+	pinLabelPx    = 6.0             // pin label font size, FALLBACK only: used when the source states no height (geom.PinPoint.height)
 )
 
 // sheetFrame is the world->pixel mapping of one sheet's SVG document: the tx/ty coordinate

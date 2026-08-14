@@ -581,13 +581,18 @@ func (x *Shape) GetFillColor() string {
 
 // PinPoint is a pin's connect location within a symbol, in symbol-local coordinates.
 type PinPoint struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PortRef       string                 `protobuf:"bytes,1,opt,name=port_ref,json=portRef,proto3" json:"port_ref,omitempty"`             // joins to ir.Port.designator / net PortRef.port_ref
-	Loc           *Point                 `protobuf:"bytes,2,opt,name=loc,proto3" json:"loc,omitempty"`                                    // connectLocation dot
-	SourceId      string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`          // EDIF port internal id (&id)
-	LabelOrigin   *Point                 `protobuf:"bytes,4,opt,name=label_origin,json=labelOrigin,proto3" json:"label_origin,omitempty"` // symbol-local origin of the pin-number label (nil if hidden)
-	Justify       string                 `protobuf:"bytes,5,opt,name=justify,proto3" json:"justify,omitempty"`                            // pin-number label alignment, canonical "<h> <v>" (see Label.justify)
-	Name          string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`                                  // pin name (e.g. "OUT"), distinct from the number in port_ref
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	PortRef     string                 `protobuf:"bytes,1,opt,name=port_ref,json=portRef,proto3" json:"port_ref,omitempty"`             // joins to ir.Port.designator / net PortRef.port_ref
+	Loc         *Point                 `protobuf:"bytes,2,opt,name=loc,proto3" json:"loc,omitempty"`                                    // connectLocation dot
+	SourceId    string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`          // EDIF port internal id (&id)
+	LabelOrigin *Point                 `protobuf:"bytes,4,opt,name=label_origin,json=labelOrigin,proto3" json:"label_origin,omitempty"` // symbol-local origin of the pin-number label (nil if hidden)
+	Justify     string                 `protobuf:"bytes,5,opt,name=justify,proto3" json:"justify,omitempty"`                            // pin-number label alignment, canonical "<h> <v>" (see Label.justify)
+	Name        string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`                                  // pin name (e.g. "OUT"), distinct from the number in port_ref
+	// Glyph height of the pin's label text, in source units, same meaning as Label.height. Zero
+	// when the source states none, which is the signal for a renderer to use its own default.
+	// Without it both backends sized pin text from a constant while every other run scaled with
+	// the sheet, so pin labels were the one kind of text that ignored the drawing.
+	Height        int64 `protobuf:"varint,7,opt,name=height,proto3" json:"height,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -662,6 +667,13 @@ func (x *PinPoint) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *PinPoint) GetHeight() int64 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
@@ -1765,14 +1777,15 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\fFILL_OUTLINE\x10\x01\x12\x13\n" +
 	"\x0fFILL_BACKGROUND\x10\x02\x12\x0e\n" +
 	"\n" +
-	"FILL_COLOR\x10\x03\"\xcf\x01\n" +
+	"FILL_COLOR\x10\x03\"\xe7\x01\n" +
 	"\bPinPoint\x12\x19\n" +
 	"\bport_ref\x18\x01 \x01(\tR\aportRef\x12%\n" +
 	"\x03loc\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x03loc\x12\x1b\n" +
 	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x126\n" +
 	"\flabel_origin\x18\x04 \x01(\v2\x13.agni.v1.geom.PointR\vlabelOrigin\x12\x18\n" +
 	"\ajustify\x18\x05 \x01(\tR\ajustify\x12\x12\n" +
-	"\x04name\x18\x06 \x01(\tR\x04name\"\xe4\x01\n" +
+	"\x04name\x18\x06 \x01(\tR\x04name\x12\x16\n" +
+	"\x06height\x18\a \x01(\x03R\x06height\"\xe4\x01\n" +
 	"\x05Asset\x12,\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x18.agni.v1.geom.Asset.KindR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12,\n" +
