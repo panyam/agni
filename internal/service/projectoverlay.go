@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -30,10 +31,20 @@ type ProjectResolver struct {
 // Overlay composes the config for one design: its project's where it has one, the fallback where it
 // does not, and the request's own on top of either.
 //
-// The resolution failing is NOT an error. A malformed descriptor somewhere on a mount should not
-// make an unrelated design unreadable, and the design still has the fallback to run against; the
-// error surfaces where it is actionable, in the project surfaces themselves. What matters here is
-// that a design which resolves to nothing gets nothing, so one project's rules cannot reach it.
+// Finding NO descriptor is not an error: a loose file genuinely belongs to no project, and it runs
+// against the fallback. A descriptor that EXISTS and does not parse is a different thing, and it is
+// returned.
+//
+// The distinction is the whole point, and it used to be flattened. "A malformed descriptor somewhere
+// on a mount should not make an unrelated design unreadable" is sound, but it was implemented by
+// discarding every resolution error, which also swallowed the descriptor governing THIS design. A
+// run then composed against the built-in vocabulary and reported findings that looked authoritative:
+// on one folder that was 40 findings the project's own lexicon would not have raised and 95 it would
+// have. ResolveDesign already tells the two apart — absent is (nil, nil, nil), malformed is an error
+// — so honoring that costs nothing and keeps the unrelated-neighbour case tolerant.
+//
+// This matches how the rest of the config tiers already fail: a malformed overlay profile or
+// conventions file fails the run with a teaching error rather than being silently skipped.
 func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, fallback Overlay, baseConvention string) (Overlay, error) {
 	var p *webapi.Project
 	var d *webapi.Design
@@ -44,8 +55,14 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 		return OverlayFor(ctx, nil, nil, nil, nil, req, fallback, baseConvention)
 	}
 	if r != nil && r.Store != nil {
-		if design, project, err := r.Store.ResolveDesign(ctx, uri); err == nil {
+		design, project, err := r.Store.ResolveDesign(ctx, uri)
+		switch {
+		case err == nil:
 			p, d = project, design
+		case errors.Is(err, ErrNotFound):
+			// Nothing to resolve against (an unknown mount). Same as having no descriptor.
+		default:
+			return Overlay{}, err
 		}
 	}
 	var resolver ConfigResolver
