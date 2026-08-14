@@ -15,6 +15,7 @@ import {
   PackageSchema,
   PinNumberSchema,
   PinRelationSchema,
+  VerificationSchema,
   LimitKind,
   ConditionCoverage,
   PinFunction,
@@ -25,6 +26,8 @@ import {
   type Pin,
   type Package,
   type PinRelation,
+  type SourceDoc,
+  type Verification,
 } from "./gen/agni/v1/param/param_pb.js";
 import {
   AnnotationSetSchema,
@@ -53,10 +56,83 @@ export function docId(path: string): string {
 export const REGION_ATTR = "region";
 
 // emptySpec is a fresh PartSpec for a datasheet with no saved extraction: one SourceDoc keyed by
-// the document's stable id (docId of its corpus path), with the path as its locator and the title
-// pre-filled from the document (editable later), no parameters.
-export function emptySpec(path: string, docTitle: string): PartSpec {
-  return create(PartSpecSchema, { docs: [{ id: docId(path), title: docTitle, locator: path }] });
+// the document's stable id (docId of its corpus path), with the path as its locator, the title
+// pre-filled from the document (editable later), and the revision the corpus currently holds.
+//
+// contentHash is the doc-IR Document.content_hash. Recording it is what lets a human verification
+// EXPIRE when the vendor reissues the document: param.VerificationOfIn compares a verification's
+// pinned hash against this one, and a spec that records no revision can only ever answer "unknown",
+// which the review layer treats as untrustworthy. Empty is tolerated (an un-extracted datasheet has
+// no doc-IR yet) and simply means staleness cannot be concluded for this document.
+export function emptySpec(path: string, docTitle: string, contentHash: string): PartSpec {
+  return create(PartSpecSchema, {
+    docs: [{ id: docId(path), title: docTitle, locator: path, contentHash }],
+  });
+}
+
+// adoptDocRevision records the revision the corpus now holds on the spec's first SourceDoc,
+// reporting whether it changed anything.
+//
+// It exists for the specs that already exist. A spec saved before the workbench recorded a hash has
+// none, and adding a verification to such a spec would produce a fact that reads "unknown" forever:
+// verified by someone, against a revision nothing can identify. That is worse than unverified,
+// because the review layer distrusts it while a reader sees a human's name on it. So the hash is
+// brought up to date on load rather than only at creation.
+//
+// It deliberately does NOT touch an existing hash that merely disagrees. A disagreement is a real
+// re-seed, and silently adopting the new one is precisely the silent decay the whole mechanism
+// exists to make visible: it would re-validate every verification pinned to the old revision.
+export function adoptDocRevision(spec: PartSpec, contentHash: string): boolean {
+  const d = spec.docs[0];
+  if (!d || !contentHash || d.contentHash) return false;
+  d.contentHash = contentHash;
+  return true;
+}
+
+// handVerification is the record that a PERSON transcribed a value off the page, against the
+// revision in front of them.
+//
+// Hand transcription IS a human confirmation, and the layer has always said so implicitly by
+// stamping confidence 1.0 on it. What it could not say is WHICH revision was confirmed, so the
+// claim never expired: reissue the datasheet and a hand-typed value stays maximally trusted while
+// describing a document nobody has. This makes the existing claim explicit and expirable.
+//
+// Note the contrast with candidate.Accept, which refuses to mark a machine proposal verified. That
+// seam exists to stop "a machine proposed this" being read as "a person checked this". Hand
+// transcription is on the checked side of it: someone read the page and typed the number.
+//
+// Returns undefined when the document records no revision, because a verification that cannot be
+// invalidated is the failure the type exists to prevent. The value is still saved, just unverified,
+// which is the honest state.
+export function handVerification(doc: SourceDoc | undefined, by: string, at: string): Verification | undefined {
+  if (!doc?.contentHash || !by) return undefined;
+  return create(VerificationSchema, {
+    by,
+    docContentHash: doc.contentHash,
+    // Snapshotted, not resolved later: a re-seed rewrites SourceDoc.title, so the name of the
+    // revision that was actually checked survives only if it is frozen here.
+    docRevision: doc.title,
+    at,
+  });
+}
+
+// today is the verification date in the ISO-8601 form Verification.at wants. Separate so a test can
+// assert the record's shape without depending on the day it runs.
+export function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// docRevisionNote says whether this document's revision is recorded, which decides whether anything
+// transcribed against it can be confirmed at all.
+//
+// It reports the CONSEQUENCE rather than the hash, because a hash is not something an author can act
+// on and the consequence is: with no revision recorded, a transcription saves unverified, since a
+// confirmation nothing can invalidate is the failure the verification record exists to prevent. The
+// short prefix is evidence that a revision is pinned, not something to read.
+export function docRevisionNote(contentHash: string): string {
+  if (!contentHash) return "No revision recorded for this document: transcriptions save unverified.";
+  const short = contentHash.startsWith("sha256:") ? contentHash.slice(7, 19) : contentHash.slice(0, 12);
+  return `Revision ${short} — transcriptions are confirmed against it and expire when it changes.`;
 }
 
 // exportSpecJson renders a PartSpec as pretty param protojson for download, the corpus format a
@@ -230,10 +306,20 @@ export interface NewParamFields {
 }
 
 // newParameter builds a param.Parameter from editor fields and the region it was transcribed from,
-// stamping provenance (page + region label as the citation, method "hand", confidence 1.0) and the
-// region-id link. This is the manual backend's output: a value with conditions and provenance,
-// never a bare scalar.
-export function newParameter(f: NewParamFields, region: Region, page: number, docRef: string): Parameter {
+// stamping provenance (page + region label as the citation, method "hand", confidence 1.0), the
+// region-id link, and the verification recording who transcribed it against which revision. This is
+// the manual backend's output: a value with conditions and provenance, never a bare scalar.
+//
+// verification is undefined when the document records no revision to pin to, and the value is then
+// saved unverified rather than being refused: transcribing is still worth doing on a document whose
+// revision the corpus has not recorded, and claiming a confirmation nothing can invalidate is not.
+export function newParameter(
+  f: NewParamFields,
+  region: Region,
+  page: number,
+  docRef: string,
+  verification?: Verification,
+): Parameter {
   const conditions = f.condition.trim()
     ? [create(ConditionSchema, { raw: f.condition.trim() })]
     : [];
@@ -253,6 +339,7 @@ export function newParameter(f: NewParamFields, region: Region, page: number, do
       method: "hand",
       confidence: 1.0,
     }),
+    verification,
   });
 }
 

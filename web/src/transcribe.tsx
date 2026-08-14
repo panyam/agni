@@ -2,7 +2,7 @@ import { createSignal, For, Show } from "solid-js";
 import { LimitKind, PinFunction, Modality, type PartSpec, type Parameter, type Pin, type PinRelation } from "./gen/agni/v1/param/param_pb.js";
 import { REGION_TYPES, type Region, type RegionType } from "./regions.js";
 import {
-  paramsForRegion, pinsForRegion, relationsForRegion, derivePinId, fmtRelation,
+  paramsForRegion, pinsForRegion, relationsForRegion, derivePinId, fmtRelation, docRevisionNote,
   type NewParamFields, type NewPinFields, type NewRelationFields,
 } from "./bank.js";
 import { ValidationProblem_Kind, type ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
@@ -48,7 +48,7 @@ export interface TranscribeHandlers {
   deletableRegion: () => boolean;
   onDeleteRegion: () => void;
   setType: (t: RegionType) => void;
-  setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string }>) => void;
+  setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string; docTitle: string }>) => void;
   addParam: (f: NewParamFields) => void;
   deleteParam: (p: Parameter) => void;
   addPin: (f: NewPinFields) => void;
@@ -294,6 +294,21 @@ export function TranscribePanel(props: TranscribeHandlers) {
     <div class="tx-panel">
       <div class="tx-meta">
         <h3>Datasheet</h3>
+        {/* The document's own identity, as the vendor prints it. It is seeded from the doc-IR title,
+            which producers fill with a PART number ("LM1117") rather than a document number and
+            revision, so it usually needs correcting from the cover page. It matters beyond tidiness:
+            a verification snapshots this string, and "verified against LM1117" reads identically
+            before and after a reissue, which is worse than saying nothing. Read through the accessor
+            so the field tracks bank edits. */}
+        <label class="tx-field" title="the vendor's document number and revision, as printed on the cover page">
+          Document
+          <input
+            placeholder="SNOS412Q - REVISED JANUARY 2023"
+            value={props.spec().docs[0]?.title ?? ""}
+            onInput={(e) => props.setMeta({ docTitle: e.currentTarget.value })}
+          />
+        </label>
+        <div class="tx-docrev">{docRevisionNote(props.spec().docs[0]?.contentHash ?? "")}</div>
         <label class="tx-field">MPN<input placeholder="LM1117" value={props.spec().mpn} onInput={(e) => props.setMeta({ mpn: e.currentTarget.value })} /></label>
         <label class="tx-field">Manufacturer<input value={props.spec().manufacturer} onInput={(e) => props.setMeta({ manufacturer: e.currentTarget.value })} /></label>
         <label class="tx-field">Device class<input placeholder="ldo" value={props.spec().deviceClass} onInput={(e) => props.setMeta({ deviceClass: e.currentTarget.value })} /></label>

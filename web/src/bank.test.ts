@@ -5,6 +5,9 @@ import type { Region } from "./regions.js";
 import {
   newParameter,
   emptySpec,
+  adoptDocRevision,
+  handVerification,
+  docRevisionNote,
   exportSpecJson,
   importSpecJson,
   loadUiState,
@@ -126,7 +129,7 @@ describe("bank", () => {
   });
 
   it("provenance.doc_ref resolves to the spec's SourceDoc id (referential integrity)", () => {
-    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q");
+    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q", "sha256:relQ");
     const p = newParameter(fields(), region, 4, spec.docs[0].id);
     expect(spec.docs[0].id).toBe("LM1117");
     expect(spec.docs[0].locator).toBe("ti/LM1117/LM1117.pdf");
@@ -142,7 +145,7 @@ describe("bank", () => {
   });
 
   it("exports and re-imports a PartSpec via protojson", () => {
-    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q");
+    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q", "sha256:relQ");
     spec.mpn = "LM1117";
     spec.parameters.push(newParameter(fields(), region, 4, spec.docs[0].id));
     const back = importSpecJson(exportSpecJson(spec));
@@ -170,7 +173,7 @@ describe("bank", () => {
   });
 
   it("paramsForRegion filters by the region link", () => {
-    const spec = emptySpec("x/y.pdf", "d");
+    const spec = emptySpec("x/y.pdf", "d", "sha256:h");
     spec.parameters.push(newParameter(fields({ name: "a", symbol: "a" }), region, 4, spec.docs[0].id));
     spec.parameters.push(newParameter(fields({ name: "b", symbol: "b" }), { ...region, id: "p1.t2" }, 4, spec.docs[0].id));
     const got = paramsForRegion(spec, "p1.t1");
@@ -203,7 +206,7 @@ describe("bank pin authoring", () => {
   });
 
   it("pinsForRegion lists only the pins transcribed against a region", () => {
-    const spec = emptySpec("d.pdf", "D");
+    const spec = emptySpec("d.pdf", "D", "sha256:h");
     spec.pins.push(newPin(pinFields(), region, 4, spec.docs[0].id));
     spec.pins.push(newPin(pinFields({ id: "gnd", name: "GND" }), { ...region, id: "p9.t2" }, 9, spec.docs[0].id));
     expect(pinsForRegion(spec, "p1.t1").map((p) => p.id)).toEqual(["vcca"]);
@@ -253,7 +256,7 @@ describe("bank pin authoring", () => {
   });
 
   it("a derived id never collides with an existing pin, so nothing collides", () => {
-    const spec = emptySpec("d.pdf", "D");
+    const spec = emptySpec("d.pdf", "D", "sha256:h");
     for (const _ of [0, 1, 2]) {
       const id = derivePinId("NC", spec.pins.map((p) => p.id));
       spec.pins.push(newPin(pinFields({ id, name: "NC" }), region, 4, spec.docs[0].id));
@@ -299,7 +302,7 @@ describe("bank relation authoring", () => {
   });
 
   it("relationsForRegion lists only the relations transcribed against a region", () => {
-    const spec = emptySpec("d.pdf", "D");
+    const spec = emptySpec("d.pdf", "D", "sha256:h");
     const other: Region = { id: "p2.t1", kind: "table", label: "Other", bbox: bbox(), page: 9 };
     spec.relations = [
       newRelation(relFields(), region, 4, "D"),
@@ -322,5 +325,89 @@ describe("bank relation authoring", () => {
     expect(of({ min: 0, max: undefined })).toBe("VCCA >= VCCB");
     expect(of({ min: -0.3, max: 0.3 })).toBe("VCCA - VCCB within -0.3 .. 0.3 V");
     expect(of({ min: undefined, max: undefined })).toBe("VCCA ? VCCB");
+  });
+});
+
+describe("verification on hand transcription", () => {
+  it("emptySpec records the revision the corpus holds, so a transcription can be anchored", () => {
+    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q", "sha256:relQ");
+    expect(spec.docs[0].contentHash).toBe("sha256:relQ");
+  });
+
+  // The whole point: confidence 1.0 already claimed a human checked this, but could not say WHICH
+  // revision, so the claim never expired.
+  it("a hand-transcribed parameter records who checked it and against which revision", () => {
+    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q - REVISED JANUARY 2023", "sha256:relQ");
+    const v = handVerification(spec.docs[0], "alice", "2026-08-14");
+    const p = newParameter(fields(), region, 4, spec.docs[0].id, v);
+
+    expect(p.verification?.by).toBe("alice");
+    expect(p.verification?.docContentHash).toBe("sha256:relQ");
+    expect(p.verification?.docRevision).toBe("SNOS412Q - REVISED JANUARY 2023");
+    expect(p.verification?.at).toBe("2026-08-14");
+    expect(p.prov?.confidence).toBe(1); // the older signal stays in step
+  });
+
+  // A confirmation nothing can invalidate is the failure the record exists to prevent, so it is not
+  // written at all. The value still saves; it is just honestly unverified.
+  it("refuses to verify against a document whose revision is not recorded", () => {
+    const spec = emptySpec("x/y.pdf", "y", "");
+    expect(handVerification(spec.docs[0], "alice", "2026-08-14")).toBeUndefined();
+    expect(handVerification(undefined, "alice", "2026-08-14")).toBeUndefined();
+
+    const p = newParameter(fields(), region, 4, "y", handVerification(spec.docs[0], "alice", "2026-08-14"));
+    expect(p.verification).toBeUndefined();
+    expect(p.value?.max).toBe(20); // the transcription itself is not lost
+  });
+
+  it("refuses an anonymous verification", () => {
+    const spec = emptySpec("x/y.pdf", "y", "sha256:h");
+    expect(handVerification(spec.docs[0], "", "2026-08-14")).toBeUndefined();
+  });
+
+  // A spec saved before the workbench recorded revisions would otherwise take a verification that
+  // reads "unknown" forever, which the review layer distrusts while a reader sees a human's name.
+  it("backfills the revision onto a spec that predates recording one", () => {
+    const spec = emptySpec("x/y.pdf", "y", "");
+    expect(adoptDocRevision(spec, "sha256:new")).toBe(true);
+    expect(spec.docs[0].contentHash).toBe("sha256:new");
+  });
+
+  // A disagreement is a real re-seed. Adopting it would silently re-validate every verification
+  // pinned to the old revision, which is the decay the mechanism exists to expose.
+  it("never overwrites a recorded revision that disagrees", () => {
+    const spec = emptySpec("x/y.pdf", "y", "sha256:relQ");
+    expect(adoptDocRevision(spec, "sha256:relR")).toBe(false);
+    expect(spec.docs[0].contentHash).toBe("sha256:relQ");
+  });
+
+  // The panel builds the record, but SavePartSpec ships the spec as protojson. A verification that
+  // did not survive that trip would be built correctly and persisted nowhere.
+  it("a verification survives the protojson round trip the save uses", () => {
+    const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q - REVISED JANUARY 2023", "sha256:relQ");
+    spec.mpn = "LM1117";
+    spec.parameters.push(
+      newParameter(fields(), region, 4, spec.docs[0].id, handVerification(spec.docs[0], "alice", "2026-08-14")),
+    );
+
+    const back = importSpecJson(exportSpecJson(spec));
+    expect(back.docs[0].contentHash).toBe("sha256:relQ");
+    expect(back.parameters[0].verification?.by).toBe("alice");
+    expect(back.parameters[0].verification?.docContentHash).toBe("sha256:relQ");
+    expect(back.parameters[0].verification?.docRevision).toBe("SNOS412Q - REVISED JANUARY 2023");
+  });
+
+  // An author cannot act on a hash, but they can act on "nothing you type here will be confirmed".
+  it("docRevisionNote reports the consequence, not the hash", () => {
+    expect(docRevisionNote("")).toMatch(/save unverified/);
+    expect(docRevisionNote("sha256:957ae45275a5dfa76c1ac0")).toContain("957ae45275a5");
+    expect(docRevisionNote("sha256:957ae45275a5dfa76c1ac0")).toMatch(/expire when it changes/);
+  });
+
+  it("the revision snapshot survives the title being corrected afterwards", () => {
+    const spec = emptySpec("ti/LM1117/LM1117.pdf", "LM1117", "sha256:relQ");
+    const p = newParameter(fields(), region, 4, spec.docs[0].id, handVerification(spec.docs[0], "alice", "2026-08-14"));
+    spec.docs[0].title = "SNOS412Q - REVISED JANUARY 2023";
+    expect(p.verification?.docRevision).toBe("LM1117");
   });
 });

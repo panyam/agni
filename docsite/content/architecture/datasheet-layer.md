@@ -130,6 +130,25 @@ Deciding staleness on the printed name would reintroduce exactly the silent deca
 prevent, with a more convincing cover story. It is not orderable either: K/L/M, but also 1.0/1.1,
 A/B, bare dates and "Rev K.1", so "how many revisions behind" has no general answer.
 
+#### Who writes one
+
+Hand transcription in the workbench. Typing a value off the page IS a human confirmation, and the
+layer had always said so implicitly by stamping `confidence: 1.0` on a hand-entered row. What it
+could not say was WHICH revision was confirmed, so the claim never expired. Recording a verification
+makes the existing claim explicit and expirable, and nothing else changes: the value, its provenance
+and its confidence are what they were.
+
+This is deliberately the opposite posture from `candidate.Accept`, which refuses to mark a machine
+proposal verified. That seam exists so "a machine proposed this" is never read as "a person checked
+this". Hand transcription is on the checked side of it.
+
+Two consequences. A transcription against a document whose revision the corpus has not recorded
+saves UNVERIFIED rather than being refused: transcribing is still worth doing, and claiming a
+confirmation nothing can invalidate is not. And `SourceDoc.title` is editable in the workbench,
+because producers fill it with a PART number ("LM1117") rather than the document number and revision
+the field is specified to carry, and a snapshot of a part number reads identically before and after a
+reissue.
+
 ### Comparison semantics
 
 Values, units, and symbols are STORED as printed, so the comparison layer meets vendor

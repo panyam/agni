@@ -35,6 +35,9 @@ import {
   exportSpecJson,
   importSpecJson,
   newParameter,
+  adoptDocRevision,
+  handVerification,
+  today,
   paramsForRegion,
   REGION_ATTR,
   newPin,
@@ -65,7 +68,7 @@ export interface RegionView {
 // BASE_SCALE is device pixels per PDF point at 100% zoom; the effective render scale is
 // BASE_SCALE * zoom, and a doc-IR BBox (points) maps to overlay pixels by multiplying by it.
 const BASE_SCALE = 1.3;
-const PLACEHOLDER_SPEC = emptySpec("", "");
+const PLACEHOLDER_SPEC = emptySpec("", "", "");
 const r1 = (n: number): number => Math.round(n * 10) / 10;
 
 // Drag is the in-flight pointer interaction over the page overlay: rubber-band a new region, move a
@@ -148,7 +151,12 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
         client.getAnnotations({ uri: artifactUri(s.mount, s.path) }),
       ]);
       const docIR = docResp.document as Document | undefined;
-      spec = part.found && part.spec ? part.spec : emptySpec(s.path, docIR?.title || s.path);
+      const docHash = docIR?.contentHash ?? "";
+      spec = part.found && part.spec ? part.spec : emptySpec(s.path, docIR?.title || s.path, docHash);
+      // A spec saved before the workbench recorded a revision has none, and a verification written
+      // onto it would be uninvalidatable. Backfill on load so the first transcription in an old
+      // spec is anchored like any other; adoptDocRevision leaves a recorded hash alone.
+      adoptDocRevision(spec, docHash);
       version = part.version;
       // The server overlay is the source of truth for MY set; the localStorage buffer is the
       // fallback (offline / never-saved). Others' drawn boxes render read-only. Reseed the buffer
@@ -432,17 +440,25 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
         commit();
       }
     },
-    setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string }>): void => {
+    setMeta: (patch: Partial<{ mpn: string; manufacturer: string; deviceClass: string; docTitle: string }>): void => {
       if (!spec) return;
       if (patch.mpn !== undefined) spec.mpn = patch.mpn;
       if (patch.manufacturer !== undefined) spec.manufacturer = patch.manufacturer;
       if (patch.deviceClass !== undefined) spec.deviceClass = patch.deviceClass;
+      // The document's own identity, which the contract wants stated as the vendor prints it
+      // (number + revision) rather than as a part name. Editing it does NOT re-date existing
+      // verifications: each snapshotted the title as it stood when it was performed, which is the
+      // whole reason the snapshot lives on the verification and not here.
+      if (patch.docTitle !== undefined && spec.docs[0]) spec.docs[0].title = patch.docTitle;
       commit();
     },
     addParam: (f: NewParamFields): void => {
       const r = selectedRegion();
       if (r && spec) {
-        spec.parameters.push(newParameter(f, r, r.page ?? pageNum(), spec.docs[0]?.id ?? ""));
+        // The verification is built from the document AS IT STANDS NOW, so the revision it pins to
+        // is the one the author is looking at rather than whatever the spec is re-read against later.
+        const v = handVerification(spec.docs[0], author, today());
+        spec.parameters.push(newParameter(f, r, r.page ?? pageNum(), spec.docs[0]?.id ?? "", v));
         commit();
       }
     },
