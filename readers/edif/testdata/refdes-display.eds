@@ -1,0 +1,116 @@
+(edif REFDESDISPLAY
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))
+      )
+      (figureGroup ATTRIBUTE
+        (textHeight 8)
+      )
+    )
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1"))
+        )
+        (symbol
+          (boundingBox (rectangle (pt 0 -60) (pt 90 0)))
+          (figure BOX (rectangle (pt 0 -60) (pt 90 0)))
+        )
+      )
+    )
+  )
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (pageSize (rectangle (pt 0 0) (pt 400 300)))
+
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 60 150)))
+          (designator
+            (stringDisplay "R1"
+              (display
+                (figureGroupOverride ATTRIBUTE (visible (true)))
+                (justify LOWERLEFT)
+                (orientation R0)
+                (origin (pt 100 176))
+              )
+            )
+          )
+          (property Value
+            (string
+              (stringDisplay "10k"
+                (display
+                  (figureGroupOverride ATTRIBUTE (visible (true)))
+                  (justify LOWERLEFT)
+                  (orientation R0)
+                  (origin (pt 100 166))
+                )
+              )
+            )
+          )
+          (property Rating
+            (string
+              (stringDisplay "1%"
+                (display
+                  (figureGroupOverride ATTRIBUTE (visible (true)))
+                  (justify LOWERLEFT)
+                  (orientation R0)
+                  (origin (pt 100 156))
+                )
+              )
+            )
+          )
+        )
+
+        (instance (rename &i2 "$i2")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 210 150)))
+          (designator
+            (stringDisplay "R2"
+              (display
+                (figureGroupOverride ATTRIBUTE (textHeight 5) (visible (true)))
+                (justify UPPERRIGHT)
+                (orientation R90)
+                (origin (pt 250 176))
+              )
+            )
+          )
+          (property Value
+            (string
+              (stringDisplay "4k7"
+                (display
+                  (figureGroupOverride ATTRIBUTE (visible (true)))
+                  (justify LOWERLEFT)
+                  (orientation R0)
+                  (origin (pt 250 166))
+                )
+              )
+            )
+          )
+        )
+
+        (instance (rename &i3 "$i3")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (origin (pt 60 60)))
+          (designator
+            (stringDisplay "R3"
+              (display
+                (figureGroupOverride ATTRIBUTE (visible (false)))
+                (justify LOWERLEFT)
+                (orientation R0)
+                (origin (pt 100 86))
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
