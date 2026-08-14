@@ -1,8 +1,12 @@
 // SvgView shows an SVG document in a host element with CSS-transform pan/zoom, so the SVG
 // reference render navigates the same way as the WebGL canvas (drag to pan, wheel to zoom
-// toward the cursor). It is a plain view adapter — no framework, no presenter coupling; the
-// presenter only calls setSvg / show / hide.
-// SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale).
+// toward the cursor). The navigation math itself comes from panzoom.ts, which every Agni viewport
+// shares. It is a plain view adapter — no framework, no presenter coupling; the presenter only
+// calls setSvg / show / hide.
+import { wheelZoomFactor, zoomAbout, panBy } from "./panzoom.js";
+
+// SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale). It is
+// structurally panzoom.PanZoom, which is what lets the shared helpers operate on it directly.
 export interface SvgViewState {
   tx: number;
   ty: number;
@@ -169,30 +173,32 @@ export class SvgView {
     });
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
-      this.tx += e.clientX - lastX;
-      this.ty += e.clientY - lastY;
+      this.commitUserView(panBy(this.getView(), e.clientX - lastX, e.clientY - lastY));
       lastX = e.clientX;
       lastY = e.clientY;
-      this.apply();
-      this.onViewChange?.(this.getView());
     });
     this.host.addEventListener(
       "wheel",
       (e) => {
         e.preventDefault();
         const rect = this.host.getBoundingClientRect();
-        const cx = e.clientX - rect.left;
-        const cy = e.clientY - rect.top;
-        const f = Math.exp(-e.deltaY * 0.001);
-        this.scale *= f;
-        // Keep the point under the cursor fixed while zooming.
-        this.tx = cx - (cx - this.tx) * f;
-        this.ty = cy - (cy - this.ty) * f;
-        this.apply();
-        this.onViewChange?.(this.getView());
+        this.commitUserView(
+          zoomAbout(this.getView(), e.clientX - rect.left, e.clientY - rect.top, wheelZoomFactor(e.deltaY)),
+        );
       },
       { passive: false },
     );
+  }
+
+  // commitUserView applies a view that came from a USER gesture, so it notifies onViewChange —
+  // unlike setView, which exists for a host mirroring one canvas onto another and must not feed
+  // back.
+  private commitUserView(v: SvgViewState): void {
+    this.tx = v.tx;
+    this.ty = v.ty;
+    this.scale = v.scale;
+    this.apply();
+    this.onViewChange?.(this.getView());
   }
 }
 

@@ -149,6 +149,28 @@ because producers fill it with a PART number ("LM1117") rather than the document
 the field is specified to carry, and a snapshot of a part number reads identically before and after a
 reissue.
 
+**The page navigates like a schematic, not like a PDF reader.** The wheel zooms toward the cursor and
+a drag pans, which is what the schematic and board viewers do (see the web-app page and
+`web/src/panzoom.ts`, the one definition all three share). That costs the PDF-reader convention where
+the wheel scrolls, and buys a user who learns one Agni viewport having learned all of them.
+
+Drawing a region used to own the plain drag and now has two entrances: hold Shift, or turn on the
+sticky Draw mode in the toolbar (`R`), which is there because transcribing is mostly drawing and
+holding a modifier for every box in a long session is real friction. Resize handles keep working in
+Draw mode, since they are small deliberate targets; a region body does not, so a new box can be drawn
+over an existing one, which datasheet tables need constantly. Moving a region takes a click to select
+it first, which is what keeps a drag across a page full of boxes a pan rather than a scatter.
+
+Paging is `PageUp`/`PageDown` and `Home`/`End`, or `Shift`+arrows for the same four commands, and `0`
+fits the page. Every binding is suppressed while a form field has focus, so typing a parameter value
+cannot page the document out from under it. The routing lives in `web/src/pagegestures.ts` as pure
+functions, because the interesting part is the priority order between gestures and that is worth
+testing without a DOM.
+
+Zoom feedback and rasterization are deliberately split. The live zoom is a CSS transform on the
+already-rendered bitmap, and pdf.js re-rasterizes once the gesture settles, so the page never blanks
+mid-wheel waiting on an async render.
+
 **The workbench has no save button.** Every edit schedules a write 700 ms later, which then ships the
 whole spec through `SavePartSpec` under optimistic locking (a losing writer is told to reload rather
 than silently merged). Two consequences worth knowing before pointing it at anything. Opening a
