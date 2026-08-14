@@ -144,10 +144,15 @@ const (
 	busStrokePx   = strokePx * 3   // bus trunk/entry stroke: a fixed-visual-width line, thicker than a wire (WS7-042)
 	pinRPx        = 2.5             // pin connect-dot radius
 	lineHeight    = 1.2            // multiplier on font size for stacking multi-line text
-	// monoAdvanceEm is the horizontal advance of one glyph in the backend's monospace font, as a
-	// fraction of the font size. It is the one place the width estimate is calibrated, shared by
-	// the caption-condense decision (naturalTextWidthPx) and the free-text column fit (freetext.go).
-	monoAdvanceEm = 0.6
+	// glyphAdvanceEm is the average horizontal advance of one glyph, as a fraction of the font
+	// size. It is the one place the width estimate is calibrated, shared by the caption-condense
+	// decision (naturalTextWidthPx) and the free-text column fit (freetext.go). 0.6 held exactly
+	// when the backend drew one monospace face; it survives SchematicFontStack as an AVERAGE,
+	// measured on real schematic runs in Arial (a 15-char net name came out at 0.63 em/glyph, an
+	// 8-char part number at 0.59). Per-glyph it is now an estimate: 'M' is ~0.83 em and 'I' ~0.28,
+	// so a short all-wide run can under-estimate. Both callers only decide whether to condense,
+	// so an estimate is the right shape; a real width table would need font metrics we do not load.
+	glyphAdvanceEm = 0.6
 	// minStrokeNm is the minimum copper trace width in BOARD space (nanometers), not output
 	// pixels: copper renders at its true width, floored to this physical minimum, so a dense
 	// board's fine traces stay proportional instead of clamping to a fixed pixel width and
@@ -514,11 +519,12 @@ func boxWidthPx(sym *geom.SymbolDef, scale float64) float64 {
 	return float64(captionWidth(sym)) * scale
 }
 
-// naturalTextWidthPx estimates a run's rendered width. The backend draws one monospace font, in
-// which a glyph advances about 0.6 em, so n runes at fontPx span ~0.6*fontPx*n. Used to decide
-// whether a box-bounded caption needs condensing (see drawText).
+// naturalTextWidthPx estimates a run's rendered width: n runes at fontPx span about
+// glyphAdvanceEm*fontPx*n. Used to decide whether a box-bounded caption needs condensing (see
+// drawText). The backend no longer draws a monospace face, so this is an average rather than an
+// exact advance; see glyphAdvanceEm for why an estimate suits both callers.
 func naturalTextWidthPx(content string, fontPx float64) float64 {
-	return monoAdvanceEm * fontPx * float64(len([]rune(content)))
+	return glyphAdvanceEm * fontPx * float64(len([]rune(content)))
 }
 
 // placementRotation is a placement's rotation in degrees, 0 for a nil transform. Text on a
