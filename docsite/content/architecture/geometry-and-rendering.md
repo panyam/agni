@@ -169,12 +169,33 @@ These were added to the contract so a reader-produced sheet renders like the sou
 
 ## Text stays readable and inside its box
 
-Readers carry a source's text orientation and sizing faithfully, and making that text legible is the render layer's job, shared by the SVG backend and the WebGL overlay so the two agree by construction. Two rules live in the render layer and are applied by both:
+Readers carry a source's text orientation and sizing faithfully, and making that text legible is the render layer's job, shared by the SVG backend and the WebGL overlay so the two agree by construction. These rules live in the render layer and are applied by both:
 
 - **Upright text.** No run is ever drawn upside down, the way every EDA viewer (Eeschema, Altium, OrCAD, and the tool that authored the EDIF) draws it. A run whose angle would read upside down (normalized magnitude over 90, for example a symbol placed at 180 degrees or a net label with its own 180-degree orientation) is turned a further 180 and its justify flipped on both axes, so it stays anchored to the same corner. Vertical text (plus or minus 90) is left alone, so the KiCad-90 parity holds. Without this, 180-degree-placed connectors on a real headers sheet rendered their ref-des and half their net-stub labels upside down.
 - **Caption fits its box (condense, do not shrink).** A symbol caption with no source text height fell back to a fixed size and spilled past its symbol. It is now condensed horizontally to the drawn body-box width (the widest boxed rect, not the pin-stub-widened bounding box) via SVG `textLength` with `lengthAdjust="spacingAndGlyphs"`, which keeps the font height instead of dropping it to a few pixels, and only when it would overflow. The packed label carries the budget to the overlay so it condenses identically.
 
+- **Every size comes from the drawing.** No text is sized from a constant. A run with no source height falls back to the sheet's own median text height (`defaultTextHeight`), shared with the WebGL path so both backends draw height-less text the same. The legibility floor and the absurd-height ceiling are **fractions of the drawing**, not pixel counts, because a bound is a claim about how much of a sheet one run may occupy. A flat 40px ceiling was not a safety net in either direction: on a sparse auto-layout, where the drawing zooms until symbol bodies are ~444px tall, it pinned every net label to 9% of the body it labels where the layout asked for 33%; on a dense faithful sheet it sat at 2.5% while a real title measured 2.2%, a hair from truncating it.
+- **A justify anchors the whole block, not its first line.** A multi-line run stacks *upward* from a bottom anchor, both ways from a centered one, and downward only from a top anchor. This is not cosmetic: a tool that bottom-anchors its notes places the NEXT note relative to that same bottom. One export spaced a 3-line note and the note below it exactly two line pitches apart, which prints as a blank line; growing the first downward landed its last line 2.10px from the second note's anchor, where a blank line at that font is 21.4px.
+
 One gotcha: `rsvg-convert` (librsvg) silently ignores `textLength` and `lengthAdjust`, so an offline PNG of the SVG backend still shows a caption overflowing. Browsers honor it, and the viewer's SVG and WebGL output is browser-consumed, so it is correct in the product. Verify condensing in a real browser, not via an rsvg PNG or a golden.
+
+### The font is a name, never a file
+
+Schematic formats do not record a font. An EDIF export naming 24,523 text heights names zero fonts, typefaces or point sizes, so "use whatever the source uses" is not available: a PDF of that design is a *different program's* rendering, and its face was that program's choice.
+
+`Style.Font` is therefore a CSS family list resolved by the viewer, and the engine loads and ships no font file. It leads with the face the authoring tools print in and falls back to a **metric-compatible** substitute, so a machine without the first lays text out at identical advance widths rather than drifting. Family names in it are **single-quoted**: `core/svg`'s `Attr` writes its value verbatim inside double quotes, so a double-quoted family name emits invalid XML on the SVG root element.
+
+### A source text height may not be an em size
+
+`Label.height` and friends mean **glyph height**, and the renderer maps it straight to `font-size`. A format that spells text size differently is converted **in the reader**, because that is a fact about the format rather than a rendering preference.
+
+EDIF is the case in point: its `textHeight` is a **line pitch**. The authoring tool stacks a component's field rows exactly `textHeight` apart (measured over 2377 instances of one export, 3161 of the same-column row gaps were exactly 1.000x that row's `textHeight`), so mapping it onto `font-size` leaves zero leading and consecutive rows touch. `readers/edif` divides by the tool's line height to recover an em. KiCad states a glyph height directly and is correctly left alone.
+
+### A pin's number is a join key, not a caption
+
+`PinPoint.port_ref` holds the **physical pin designator**, joining to `ir.Port.designator`, and `render/pack.go` feeds it to `PrimitiveKey.pin` so a finding can target one pin. A reader that puts a port *name* there both draws the wrong text and breaks that join, which is one bug with two symptoms.
+
+Formats differ in where they keep the two. KiCad states the number directly on the pin. EDIF splits them: the `portImplementation` names the PORT and the number lives on the cell interface's `(port X (designator "N"))`. A pin also carries a text height like any other run, and may state **two** independent text positions (the name on its own display, the number on a `keywordDisplay designator`), which is why `PinPoint` has both `label_origin` and `number_origin`.
 
 ## Fidelity
 

@@ -109,6 +109,10 @@ rule then evaluates cleanly over the shortened read, and the run reports fewer f
 A tier whose absence changes the answer while still looking like an answer belongs with the config
 that changes the answer.
 
+**The descriptor is what binds config, and its absence fails exactly that way.** A team folder can hold `conventions.yaml`, `profiles/`, `params/` and a checklist at every conventional name and still bind none of it, because nothing declared a project. Measured on one such folder: adding a two-line `project.yaml` moved a run from 316 findings to 369, took `rail-not-classified` from 40 to 0 (their own lexicon recognises rails the built-ins miss), and surfaced 95 further `test-point-coverage` findings. The CLI and a `Makefile` passing the flags by hand were unaffected; only the server, which discovers config rather than being handed it, ran on the built-in vocabulary. It reported an `invalid_argument` badge and served an authoritative-looking review anyway, which is the shape this page warns about above: an answer that still looks like an answer.
+
+Two operational notes follow from that. A design's `name` is an **id** (lowercase, digits, `-`, `_`, `.`), not a label; the human-readable string belongs in `title`, and a name with spaces is rejected. And a rejected descriptor is worth treating as a hard failure rather than a badge, because every downstream number is quietly computed against a different configuration.
+
 That boundary is load-bearing rather than tidy. An analysis tier in the machine-wide file would apply
 to every design a CLI opened, which is exactly the bug per-design config fixed: one team's vocabulary
 reaching another team's board, correct in isolation and aimed at the wrong design. `agni.yaml`

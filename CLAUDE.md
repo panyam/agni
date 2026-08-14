@@ -378,6 +378,14 @@ times this bit, the fix was to revert the BEHAVIOUR in place (flip the branch to
 one assignment) and leave the declarations, then restore. Read the red output before believing it: a
 compile error is not a failing assertion.
 
+**The other outcome is that it stays GREEN, which means the test asserts nothing.** A render test
+written around a gap heuristic ("the two notes must be at least N apart") passed with the fix
+removed, because another mechanism shrank the fixture enough that the gap held either way. The
+assertion could not fail, and only the red-check revealed it. When a test survives its own fix being
+neutralized, replace the heuristic with the PROPERTY: that one added a marker at the same anchor and
+asserted the two render at the same y, which then failed with the actual defect named. Run the
+red-check on every new test, not just ones you doubt.
+
 ## PR prose conventions
 
 This engine sits where electrical engineering meets software, and most reviewers are strong in one

@@ -644,3 +644,45 @@ short-circuit on it will arrive from someone who has not read this file.
 
 **Reopen if** a vendor-neutral structured revision ever becomes extractable and someone wants ordering.
 The answer would still not be to compare it; it would be to render it better.
+
+## A text-width estimate stays at 0.6 em per glyph
+
+The width estimate shared by the caption-condense decision and the free-text column fit
+(`glyphAdvanceEm`) held exactly while the backend drew one monospace face. It is now an average over
+a proportional one, and the question is whether to re-fit it.
+
+**No, and the measurement is the reason.** Across 31 realistic schematic runs (net names, ref-des,
+values, packages, pin names and numbers) the weighted average is **0.6147**, spanning 0.514 for
+`6.3V` to 0.736 for `DGND`. So 0.6 under-predicts by 2.4%, and both callers only decide *whether* to
+condense. A 2.4% shift in that threshold is not worth moving the column fit and every golden.
+
+**The trap this records.** An earlier estimate of 0.64 came from eyeballing two uppercase net names
+and overstated the error threefold, which was almost enough to justify the change. A per-run figure
+from a couple of samples is not an average; if this is reopened, it needs a measured corpus and a
+reason that needs the precision.
+
+## A format's own text-size convention is converted in the reader, not the renderer
+
+EDIF's `textHeight` is a line pitch rather than an em size, so it is divided down to a glyph height
+where the file is read. The alternative was a per-format interpretation in the render layer.
+
+**The reader owns it, because it is a fact about the format.** `geom`'s height field means glyph
+height and the renderer maps it straight to `font-size`, so translating a format's spelling into the
+contract's meaning is exactly what a reader is for. Putting it in the renderer would also have been
+actively wrong: KiCad states a glyph height directly, and a renderer-side conversion would have
+shrunk every KiCad render by 24% for no reason.
+
+## The residual gap on inherited pin-label sizes is not fitted away
+
+Pin labels that inherit their figureGroup's height still render about 1.37x the size the authoring
+tool prints, where ones stating their own height land at 0.96x.
+
+**Left alone deliberately.** That tool prints pin names in a STROKE font at a different ratio from
+the Arial it uses elsewhere (1/1.8 against 1/1.3148), and 1.8 / 1.3148 = 1.37 accounts for the gap
+exactly. Closing it would mean a per-figureGroup ratio calibrated on one exporter's font choice,
+which is fitting rather than reading, and it would be wrong for the next exporter. We render one
+face; matching a substituted stroke font's point size is not obviously the goal even when it is
+achievable.
+
+**Reopen if** a second export from a different toolchain shows the same per-group ratio, which would
+make it a property of the format rather than of one printer.
