@@ -26,10 +26,29 @@ describe("splitLabelLines", () => {
   });
   it("stacks each line one line-height below the previous (Y-down baked space)", () => {
     const step = 5 * lineHeight;
-    expect(splitLabelLines("a\nb\nc", 10, 5)).toEqual([
+    expect(splitLabelLines("a\nb\nc", 10, 5, "left top")).toEqual([
       { text: "a", y: 10 },
       { text: "b", y: 10 + step },
       { text: "c", y: 10 + 2 * step },
+    ]);
+  });
+  // A justify anchors the whole BLOCK. A bottom-anchored note grows UP from its anchor, and the
+  // tool that writes them places the NEXT note relative to that same bottom, so growing down
+  // instead lands a multi-line note on top of whatever sits below it.
+  it("grows a bottom-anchored block upward, leaving its LAST line on the anchor", () => {
+    const step = 5 * lineHeight;
+    expect(splitLabelLines("a\nb\nc", 10, 5, "left bottom")).toEqual([
+      { text: "a", y: 10 - 2 * step },
+      { text: "b", y: 10 - step },
+      { text: "c", y: 10 },
+    ]);
+  });
+  it("centers a block with no vertical justify", () => {
+    const step = 5 * lineHeight;
+    expect(splitLabelLines("a\nb\nc", 10, 5, "left")).toEqual([
+      { text: "a", y: 10 - step },
+      { text: "b", y: 10 },
+      { text: "c", y: 10 + step },
     ]);
   });
 });

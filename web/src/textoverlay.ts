@@ -68,9 +68,24 @@ export const lineHeight = 1.2;
 // (e.g. an OrCAD table-of-contents sheet list), which an SVG <text> does not break on its own, so
 // the overlay emits one <text> per line — matching render/svg.go's drawText. A single-line label
 // yields one run at bakedY0, unchanged.
-export function splitLabelLines(text: string, bakedY0: number, fontPx: number): { text: string; y: number }[] {
+export function splitLabelLines(
+  text: string,
+  bakedY0: number,
+  fontPx: number,
+  justify = "",
+): { text: string; y: number }[] {
+  const lines = text.split("\n");
   const step = fontPx * lineHeight;
-  return text.split("\n").map((line, n) => ({ text: line, y: bakedY0 + n * step }));
+  // A justify anchors the whole BLOCK, not its first line, so only a top-anchored block starts at
+  // the anchor; bottom grows up from it and centered grows both ways. Mirrors render/svg.go's
+  // blockTop — see that comment for why this is not cosmetic. The baked space is Y-DOWN (labels
+  // are stored at -y), so "up" is a NEGATIVE offset here, same sign as the SVG backend.
+  const span = (lines.length - 1) * step;
+  let top = bakedY0;
+  if (lines.length > 1 && !justify.includes("top")) {
+    top = justify.includes("bottom") ? bakedY0 - span : bakedY0 - span / 2;
+  }
+  return lines.map((line, n) => ({ text: line, y: top + n * step }));
 }
 
 // justify -> SVG text-anchor / dominant-baseline, mirroring render/svg.go's justifyText so the
@@ -159,7 +174,7 @@ export class TextOverlay {
       const fontPx = l.height * k;
       // Multi-line labels stack one <text> per line (EDIF %10% decodes to a newline); a single-line
       // label yields one run, unchanged. See splitLabelLines / render/svg.go drawText.
-      for (const line of splitLabelLines(l.text, -l.y * k, fontPx)) {
+      for (const line of splitLabelLines(l.text, -l.y * k, fontPx, l.justify)) {
         const t = document.createElementNS(SVGNS, "text");
         t.setAttribute("x", String(x));
         t.setAttribute("y", String(line.y));

@@ -1,13 +1,17 @@
 package render
 
 import (
+	"bytes"
 	"math"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/edif"
 )
 
 // TestSheetSVG_DrawsTextLayers renders a placement whose symbol carries a static
@@ -376,5 +380,71 @@ func TestLabelFontHonorsSourceHeight(t *testing.T) {
 	}
 	if got := labelFont(1, def, 0.0001); got != sheetMaxPx*minFontFrac {
 		t.Errorf("sub-visible height -> %v, want floored at %v", got, sheetMaxPx*minFontFrac)
+	}
+}
+
+// TestBlockTopFollowsJustify: a justify anchors the whole multi-line BLOCK, not its first line.
+// A tool that bottom-anchors its notes places the NEXT note relative to that same bottom, so a
+// block that grows downward from a bottom anchor runs onto whatever sits below it. One export
+// puts a 3-line note and the note under it exactly 2 line pitches apart, and stacking the first
+// downward landed its last line on the second note's anchor to the unit.
+func TestBlockTopFollowsJustify(t *testing.T) {
+	const y, step, lines = 100.0, 10.0, 3
+	span := float64(lines-1) * step // 20
+	for _, tc := range []struct {
+		justify string
+		want    float64
+		why     string
+	}{
+		{"left top", y, "top-anchored: the block starts at the anchor"},
+		{"left bottom", y - span, "bottom-anchored: the LAST line lands on the anchor"},
+		{"left", y - span/2, "no vertical justify: centered on the anchor"},
+	} {
+		if got := blockTop(y, lines, tc.justify, step); got != tc.want {
+			t.Errorf("blockTop(%q) = %v, want %v (%s)", tc.justify, got, tc.want, tc.why)
+		}
+	}
+	// A single-line run is unaffected whatever its justify, so this cannot move ordinary text.
+	for _, j := range []string{"left top", "left bottom", "left", ""} {
+		if got := blockTop(y, 1, j, step); got != y {
+			t.Errorf("blockTop(1 line, %q) = %v, want %v unchanged", j, got, y)
+		}
+	}
+}
+
+// TestSheetSVG_BottomAnchoredNotesDoNotCollide is the render-level guard for the multi-line
+// anchoring bug, built on the shape a real export uses: two notes both LOWERLEFT, the second
+// placed exactly TWO line pitches below the first's anchor so the tool prints a blank line
+// between them. Growing the 3-line note DOWNWARD from its anchor put its last line on the second
+// note's anchor to the unit, so the two collided on the page.
+func TestSheetSVG_BottomAnchoredNotesDoNotCollide(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "readers", "edif", "testdata", "stacked-notes.eds"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g, err := edif.ReadSchematic(bytes.NewReader(raw), "stacked-notes.eds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := SheetSVG(g, g.Sheets[0])
+	yA, yC := textY(textElem(out, "NOTE ONE LINE A")), textY(textElem(out, "NOTE ONE LINE C"))
+	yTwo := textY(textElem(out, "NOTE TWO"))
+	if math.IsNaN(yA) || math.IsNaN(yC) || math.IsNaN(yTwo) {
+		t.Fatalf("missing a run: A=%v C=%v TWO=%v", yA, yC, yTwo)
+	}
+	if !(yA < yC) {
+		t.Errorf("lines must still read top-to-bottom: A=%g C=%g", yA, yC)
+	}
+	// The property under test, stated exactly rather than as a gap heuristic: the block is
+	// bottom-anchored, so its LAST line lands on the anchor. ANCHOR is a single-line note sharing
+	// that same origin y, so the two must render at the same y. Growing the block downward instead
+	// puts line A there and pushes C two pitches past it, which is what collided with NOTE TWO.
+	yAnchor := textY(textElem(out, "ANCHOR"))
+	if math.Abs(yC-yAnchor) > 0.05 {
+		t.Errorf("block last line y=%g, want %g (the anchor a single-line note at the same origin renders at); "+
+			"first line is at %g, so the block grew the wrong way", yC, yAnchor, yA)
+	}
+	if yTwo <= yC {
+		t.Errorf("the note below must stay below: NOTE TWO y=%g vs first note last line %g", yTwo, yC)
 	}
 }
