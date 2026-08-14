@@ -9,6 +9,22 @@ import type { ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
 import { loadPdf, renderPage, rawDatasheetUrl, type PDFDocumentProxy, type RenderedPage } from "./pdfrender.js";
 import {
+  wheelZoomFactor,
+  zoomAboutClamped,
+  panBy,
+  fitInto,
+  clampScale,
+  type PanZoom,
+} from "./panzoom.js";
+import {
+  classifyPointerDown,
+  selectionAfterPointerDown,
+  classifyKey,
+  isFormField,
+  ZOOM_KEY_FACTOR,
+  type HitTarget,
+} from "./pagegestures.js";
+import {
   regionsForPage,
   defaultType,
   pxRectToBBox,
@@ -65,15 +81,25 @@ export interface RegionView {
   locate(page: number, regionId: string): void;
 }
 
-// BASE_SCALE is device pixels per PDF point at 100% zoom; the effective render scale is
-// BASE_SCALE * zoom, and a doc-IR BBox (points) maps to overlay pixels by multiplying by it.
+// BASE_SCALE is device pixels per PDF point at 100% zoom, so a zoom readout is view.scale /
+// BASE_SCALE. MIN/MAX bound the zoom at 25% and 600%.
 const BASE_SCALE = 1.3;
+const MIN_SCALE = BASE_SCALE * 0.25;
+const MAX_SCALE = BASE_SCALE * 6;
+// RENDER_SETTLE_MS is how long the zoom has to hold still before pdf.js re-rasterizes. Between the
+// gesture and the settle the already-rendered bitmap is stretched by a CSS transform, so zooming
+// stays at pointer speed; rasterizing per wheel event instead would blank the page on every notch,
+// because each render is async and there is nothing to show while it runs.
+const RENDER_SETTLE_MS = 140;
 const PLACEHOLDER_SPEC = emptySpec("", "", "");
 const r1 = (n: number): number => Math.round(n * 10) / 10;
 
-// Drag is the in-flight pointer interaction over the page overlay: rubber-band a new region, move a
-// selected user region, or resize one by a corner handle. px0/py0 are overlay pixels at grab time.
+// Drag is the in-flight pointer interaction over the page: pan the view, rubber-band a new region,
+// move the selected user region, or resize one by a corner handle. px0/py0 are overlay pixels at
+// grab time; pan tracks client pixels instead, because it moves the overlay rather than moving
+// within it.
 type Drag =
+  | { mode: "pan"; lastX: number; lastY: number }
   | { mode: "draw"; x0: number; y0: number }
   | { mode: "move"; region: Region; startBBox: Region["bbox"]; px0: number; py0: number }
   | { mode: "resize"; region: Region; handle: Handle; startBBox: Region["bbox"]; px0: number; py0: number };
@@ -105,7 +131,16 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
   const [note, setNote] = createSignal("");
   const [status, setStatus] = createSignal("");
   const [pageNum, setPageNum] = createSignal(1);
-  const [zoom, setZoom] = createSignal(1);
+  // view is the live pan/zoom of the page within the viewport (see panzoom.ts): scale is device
+  // pixels per PDF point, tx/ty place the page's top-left corner. renderScale is the scale pdf.js
+  // last rasterized at, which trails the live scale by RENDER_SETTLE_MS.
+  const [view, setView] = createSignal<PanZoom>({ tx: 0, ty: 0, scale: BASE_SCALE });
+  const [renderScale, setRenderScale] = createSignal(BASE_SCALE);
+  // drawMode is the sticky alternative to holding Shift: on, a drag draws regions instead of
+  // panning. Transcribing a datasheet is mostly drawing, and holding a modifier for every box in a
+  // long session is the kind of friction that makes people stop using the tool.
+  const [drawMode, setDrawMode] = createSignal(false);
+  const [panning, setPanning] = createSignal(false);
   const [pdfDoc, setPdfDoc] = createSignal<PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = createSignal(1);
   const [draftPx, setDraftPx] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -128,6 +163,12 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let drag: Drag | null = null;
   let overlayEl: HTMLDivElement | undefined;
+  let viewportEl: HTMLDivElement | undefined;
+  let renderTimer: ReturnType<typeof setTimeout> | undefined;
+  // needsFit makes the first rendered page of a NEWLY opened datasheet fit the viewport. A page
+  // change does not refit: staying at the same pan/zoom is what lets you follow one table's columns
+  // across a page break.
+  let needsFit = true;
 
   // reload bumps to re-run the outer load after an extraction (so the new doc-IR + regions appear);
   // extracting drives the "Extract (first pass)" button's spinner.
@@ -170,7 +211,10 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
       setPdfDoc(doc);
       setNumPages(doc.numPages);
       setPageNum(1);
-      setZoom(1);
+      setShown(null);
+      setRenderScale(BASE_SCALE);
+      setView({ tx: 0, ty: 0, scale: BASE_SCALE });
+      needsFit = true;
       setSelected("");
       setNote("");
       return { extracted: docResp.extracted, doc: docIR, extractAvailable: docResp.extractAvailable };
@@ -194,15 +238,64 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     }
   };
 
-  // On-demand single-page render, re-run on page or zoom change. Each render makes its own canvas,
-  // so a burst of zoom clicks never contends for one canvas.
+  // On-demand single-page render, re-run on page change or once a zoom settles. Each render makes
+  // its own canvas, so overlapping renders never contend for one canvas.
   const [pageImg] = createResource(
     () => {
       const d = pdfDoc();
-      return d ? { d, pn: pageNum(), z: zoom() } : null;
+      return d ? { d, pn: pageNum(), s: renderScale() } : null;
     },
-    async (src: { d: PDFDocumentProxy; pn: number; z: number }) => renderPage(src.d, src.pn, BASE_SCALE * src.z),
+    async (src: { d: PDFDocumentProxy; pn: number; s: number }) => renderPage(src.d, src.pn, src.s),
   );
+  // The resource goes undefined while it refetches, which would blank the page mid-zoom. `shown`
+  // holds the last completed render so the previous bitmap stays up, stretched to the live scale,
+  // until the new one lands. A render for a DIFFERENT page is not a stand-in for this one, so
+  // `visible` withholds it and the page-change fallback shows instead.
+  const [shown, setShown] = createSignal<RenderedPage | null>(null);
+  createEffect(() => {
+    const p = pageImg();
+    if (p) setShown(p);
+  });
+  const visible = (): RenderedPage | null => {
+    const s = shown();
+    return s && s.pageNumber === pageNum() ? s : null;
+  };
+  // cssScale is the transform that carries the on-screen size from whatever scale the visible
+  // bitmap was rasterized at to the live scale. It is keyed off the SHOWN render rather than the
+  // renderScale signal: the signal moves when the re-render is requested, and using it would resize
+  // the page the moment a render started rather than when it finished.
+  const shownScale = (): number => visible()?.scale ?? renderScale();
+  const cssScale = (): number => view().scale / shownScale();
+
+  // applyView commits a pan/zoom and, when the zoom moved, schedules the crisp re-rasterize.
+  const applyView = (v: PanZoom): void => {
+    const zoomed = v.scale !== view().scale;
+    setView(v);
+    if (!zoomed) return;
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => setRenderScale(view().scale), RENDER_SETTLE_MS);
+  };
+  onCleanup(() => {
+    if (renderTimer) clearTimeout(renderTimer);
+  });
+
+  const fitPage = (): void => {
+    const p = visible();
+    const host = viewportEl;
+    if (!p || !host) return;
+    applyView(
+      fitInto(p.widthPts, p.heightPts, host.clientWidth, host.clientHeight, {
+        minScale: MIN_SCALE,
+        maxScale: MAX_SCALE,
+      }),
+    );
+  };
+  createEffect(() => {
+    if (visible() && needsFit) {
+      needsFit = false;
+      fitPage();
+    }
+  });
 
   createEffect(() => {
     data();
@@ -335,53 +428,124 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     commit();
   };
 
-  // Delete / Backspace deletes the selected user region (unless a form field is focused), so the
-  // marquee is deletable from the keyboard as well as the on-box × and the panel button.
+  const goto = (n: number): void => {
+    setPageNum(clampPage(n, numPages()));
+  };
+
+  // zoomStep is the keyboard's zoom, anchored at the middle of the viewport since there is no
+  // cursor to aim at.
+  const zoomStep = (factor: number): void => {
+    const host = viewportEl;
+    if (!host) return;
+    applyView(zoomAboutClamped(view(), host.clientWidth / 2, host.clientHeight / 2, factor, MIN_SCALE, MAX_SCALE));
+  };
+
+  // Keyboard: page navigation, zoom, region delete, and the Draw-mode toggle. The bindings
+  // themselves live in pagegestures.classifyKey; this only carries them out.
   const onKey = (e: KeyboardEvent): void => {
-    if (e.key !== "Delete" && e.key !== "Backspace") return;
-    const ae = document.activeElement;
-    if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
-    if (selectedRegion()?.kind === "user") {
-      e.preventDefault();
-      deleteRegion();
+    const a = classifyKey(e, isFormField(document.activeElement));
+    if (!a) return;
+    switch (a.kind) {
+      case "page":
+        e.preventDefault();
+        goto(a.to === "first" ? 1 : a.to === "last" ? numPages() : a.to === "prev" ? pageNum() - 1 : pageNum() + 1);
+        return;
+      case "zoom":
+        e.preventDefault();
+        if (a.to === "fit") fitPage();
+        else zoomStep(a.to === "in" ? ZOOM_KEY_FACTOR : 1 / ZOOM_KEY_FACTOR);
+        return;
+      case "deleteRegion":
+        // Only a user region is deletable, and Backspace has to stay a plain Backspace otherwise.
+        if (selectedRegion()?.kind === "user") {
+          e.preventDefault();
+          deleteRegion();
+        }
+        return;
+      case "toggleDraw":
+        e.preventDefault();
+        setDrawMode((d) => !d);
+        return;
+      case "exitDraw":
+        if (drawMode()) {
+          e.preventDefault();
+          setDrawMode(false);
+        }
+        return;
     }
   };
   document.addEventListener("keydown", onKey);
   onCleanup(() => document.removeEventListener("keydown", onKey));
 
-  const scale = (): number => pageImg()?.scale ?? BASE_SCALE;
+  // scale is the RENDER scale of the visible bitmap: overlay-local pixels per PDF point. Region
+  // boxes are laid out in that space and the CSS transform carries them to the live zoom, so
+  // nothing below has to know what the zoom currently is.
+  const scale = (): number => visible()?.scale ?? renderScale();
+  // relPx is the pointer in overlay-local pixels. getBoundingClientRect reports the TRANSFORMED
+  // box, so the client offset is in screen pixels and has to be divided back out by the transform
+  // to land in the space the region boxes and the draft rectangle live in.
   const relPx = (e: PointerEvent): { x: number; y: number } => {
     const rect = overlayEl!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const k = cssScale() || 1;
+    return { x: (e.clientX - rect.left) / k, y: (e.clientY - rect.top) / k };
   };
   const bboxStatus = (b: Region["bbox"]): string => `x ${r1(b.x)}, y ${r1(b.y)} · ${r1(b.width)}×${r1(b.height)} pt`;
 
+  // hitUnder reads what the pointer landed on out of the DOM, so classifyPointerDown can stay pure.
+  const hitUnder = (el: HTMLElement): HitTarget => {
+    const regionEl = el.closest("[data-region]") as HTMLElement | null;
+    const id = regionEl?.dataset.region ?? null;
+    return {
+      deleteButton: !!el.closest("[data-del]"),
+      handle: ((el.closest("[data-handle]") as HTMLElement | null)?.dataset.handle ?? null) as Handle | null,
+      regionId: id,
+      regionKind: id ? (pageRegions().find((r) => r.id === id)?.kind ?? null) : null,
+    };
+  };
+
   const onDown = (e: PointerEvent): void => {
-    if (!pageImg()) return;
-    const { x, y } = relPx(e);
-    const el = e.target as HTMLElement;
-    if (el.closest("[data-del]")) {
-      deleteRegion(); // the on-box × deletes rather than starting a drag
+    if (!visible()) return;
+    const hit = hitUnder(e.target as HTMLElement);
+    // Shift and the sticky Draw mode are two ways to say the same thing, and only one of them
+    // reaches the router.
+    const intent = classifyPointerDown(hit, { selectedId: selected(), drawIntent: e.shiftKey || drawMode() });
+    const sel = selectionAfterPointerDown(hit, intent);
+    if (sel !== null) setSelected(sel);
+    if (intent.kind === "delete") {
+      deleteRegion();
       return;
     }
-    const handleEl = el.closest("[data-handle]") as HTMLElement | null;
-    const regionEl = el.closest("[data-region]") as HTMLElement | null;
-    const sel = selectedRegion();
-    if (handleEl && sel && sel.kind === "user") {
-      drag = { mode: "resize", region: sel, handle: handleEl.dataset.handle as Handle, startBBox: { ...sel.bbox }, px0: x, py0: y };
-    } else if (regionEl) {
-      const id = regionEl.dataset.region!;
-      setSelected(id);
-      const r = pageRegions().find((rr) => rr.id === id);
-      if (r && r.kind === "user") drag = { mode: "move", region: r, startBBox: { ...r.bbox }, px0: x, py0: y };
+    if (intent.kind === "pan") {
+      drag = { mode: "pan", lastX: e.clientX, lastY: e.clientY };
+      setPanning(true);
     } else {
-      drag = { mode: "draw", x0: x, y0: y };
-      setDraftPx({ x, y, w: 0, h: 0 });
+      const { x, y } = relPx(e);
+      if (intent.kind === "draw") {
+        drag = { mode: "draw", x0: x, y0: y };
+        setDraftPx({ x, y, w: 0, h: 0 });
+      } else {
+        // move and resize both act on the selected region, which is what classifyPointerDown
+        // matched the hit against.
+        const r = selectedRegion();
+        if (!r) return;
+        drag =
+          intent.kind === "resize"
+            ? { mode: "resize", region: r, handle: intent.handle, startBBox: { ...r.bbox }, px0: x, py0: y }
+            : { mode: "move", region: r, startBBox: { ...r.bbox }, px0: x, py0: y };
+      }
     }
-    overlayEl!.setPointerCapture(e.pointerId);
+    viewportEl!.setPointerCapture(e.pointerId);
   };
   const onMove = (e: PointerEvent): void => {
-    if (!pageImg()) return;
+    if (!visible()) return;
+    if (drag?.mode === "pan") {
+      // Pan works in client pixels: it moves the page under a still pointer, so an overlay-local
+      // delta would be measured against a box that is itself moving.
+      applyView(panBy(view(), e.clientX - drag.lastX, e.clientY - drag.lastY));
+      drag.lastX = e.clientX;
+      drag.lastY = e.clientY;
+      return;
+    }
     const s = scale();
     const { x, y } = relPx(e);
     if (!drag) {
@@ -414,7 +578,33 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
       commit();
     }
     drag = null;
+    setPanning(false);
     setDraftPx(null);
+  };
+
+  // The wheel listener is attached by hand rather than through onWheel, because preventDefault needs
+  // a non-passive listener. It also swallows the macOS pinch gesture (which arrives as ctrl+wheel),
+  // which would otherwise zoom the whole browser page.
+  const attachViewport = (el: HTMLDivElement): void => {
+    viewportEl = el;
+    el.addEventListener(
+      "wheel",
+      (e: WheelEvent) => {
+        e.preventDefault();
+        const rect = el.getBoundingClientRect();
+        applyView(
+          zoomAboutClamped(
+            view(),
+            e.clientX - rect.left,
+            e.clientY - rect.top,
+            wheelZoomFactor(e.deltaY),
+            MIN_SCALE,
+            MAX_SCALE,
+          ),
+        );
+      },
+      { passive: false },
+    );
   };
 
   const handlers = {
@@ -539,10 +729,6 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     }
   };
 
-  const goto = (n: number): void => {
-    setPageNum(clampPage(n, numPages()));
-  };
-
   return (
     <div class="ds-workbench">
       <Show when={props.state()} fallback={<div class="ds-empty">Select a datasheet to scan.</div>}>
@@ -558,11 +744,14 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
                     <span class="ds-pagetotal">/ {numPages()}</span>
                     <button onClick={() => goto(pageNum() + 1)} disabled={pageNum() >= numPages()}>›</button>
                   </span>
-                  <span class="ds-zoomer">
-                    <button onClick={() => setZoom((z) => Math.max(0.25, z / 1.25))}>−</button>
-                    <button class="ds-zoomval" onClick={() => setZoom(1)} title="reset zoom">{Math.round(zoom() * 100)}%</button>
-                    <button onClick={() => setZoom((z) => Math.min(6, z * 1.25))}>+</button>
-                  </span>
+                  <button
+                    class="ds-drawtoggle"
+                    classList={{ on: drawMode() }}
+                    onClick={() => setDrawMode((v) => !v)}
+                    title="Draw mode (R). On: drag draws a region. Off: drag pans, shift+drag draws."
+                  >
+                    ▭ Draw
+                  </button>
                   <Show
                     when={d().extracted}
                     fallback={
@@ -599,12 +788,27 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
                 </div>
                 <div class="ds-body">
                   <div class="ds-viewport-wrap">
-                    <div class="ds-viewport">
-                      <Show when={pageImg()} fallback={<div class="ds-empty">Rendering page…</div>}>
+                    <div
+                      ref={attachViewport}
+                      class="ds-viewport"
+                      classList={{ drawing: drawMode(), panning: panning() }}
+                      onPointerDown={onDown}
+                      onPointerMove={onMove}
+                      onPointerUp={onUp}
+                      onPointerLeave={() => { if (!drag) setStatus(""); }}
+                    >
+                      <Show when={visible()} fallback={<div class="ds-empty">Rendering page…</div>}>
                         {(img) => (
-                          <div class="ds-page-canvas" style={{ width: `${img().canvas.width}px`, height: `${img().canvas.height}px` }}>
+                          <div
+                            class="ds-page-canvas"
+                            style={{
+                              width: `${img().canvas.width}px`,
+                              height: `${img().canvas.height}px`,
+                              transform: `translate(${view().tx}px, ${view().ty}px) scale(${cssScale()})`,
+                            }}
+                          >
                             {img().canvas}
-                            <div ref={overlayEl} class="ds-overlay" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => { if (!drag) setStatus(""); }}>
+                            <div ref={overlayEl} class="ds-overlay">
                               <For each={pageRegions()}>
                                 {(r) => (
                                   <div
@@ -642,7 +846,14 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
                     </div>
                     <div class="ds-statusbar">
                       <span>page {pageNum()} / {numPages()}</span>
+                      <button class="ds-zoomval" onClick={fitPage} title="fit page (0)">
+                        {Math.round((view().scale / BASE_SCALE) * 100)}%
+                      </button>
                       <span class="ds-status-coords">{status()}</span>
+                      <span class="ds-status-hint">
+                        {drawMode() ? "drag draws · wheel zooms" : "drag pans · wheel zooms · shift+drag draws"}
+                        {" · PgUp/PgDn, Home/End (or shift+arrows) page"}
+                      </span>
                     </div>
                   </div>
                   <TranscribePanel {...handlers} />

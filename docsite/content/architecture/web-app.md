@@ -222,6 +222,16 @@ viewing a diff, and hovering or selecting are low-frequency semantic events that
 network hop. Per-frame interaction such as pan, zoom, and hit-testing never crosses the wire,
 because it is view-local.
 
+**Every viewport navigates the same way, from one definition.** `web/src/panzoom.ts` holds the wheel
+curve and the cursor-anchored zoom math, and the three viewports that have a camera all take it from
+there: the WebGL schematic canvas, the SVG reference render, and the datasheet workbench. The wheel
+zooms toward the cursor and a drag pans, so learning one viewport teaches all of them. Two things
+follow from having it in one file. The exponential curve makes zoom scale-free, so an overshoot and
+an equal correction land exactly where they started at any zoom level. And the choice itself is
+revisitable: the datasheet workbench trades the PDF-reader convention (wheel scrolls, ctrl+wheel
+zooms) for consistency with the schematic viewers, and reversing that is an edit to panzoom.ts's
+callers rather than a hunt through three viewers.
+
 A WebAssembly-compiled Go presenter that reuses the diff and IR logic in the browser remains the
 option for an offline or zero-server viewer. Nothing in the wire contract assumes the presenter's
 location, which is the property that keeps that swap possible.

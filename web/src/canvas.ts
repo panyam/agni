@@ -1,6 +1,7 @@
 import { BaseComponent } from "@panyam/tsappkit";
 import { toRenderable, type DecodedSheet } from "./packed.js";
 import { Camera, boundsOfVertices, type CameraView } from "./camera.js";
+import { wheelZoomFactor } from "./panzoom.js";
 import { hexToRgba, Renderer } from "./webgl.js";
 import { TextOverlay } from "./textoverlay.js";
 import {
@@ -209,7 +210,7 @@ export class CanvasComponent extends BaseComponent {
         e.preventDefault();
         if (!this.camera) return;
         const rect = canvas.getBoundingClientRect();
-        this.camera.zoomAt((e.clientX - rect.left) * this.dpr(), (e.clientY - rect.top) * this.dpr(), Math.exp(-e.deltaY * 0.001));
+        this.camera.zoomAt((e.clientX - rect.left) * this.dpr(), (e.clientY - rect.top) * this.dpr(), wheelZoomFactor(e.deltaY));
       },
       { passive: false },
     );
