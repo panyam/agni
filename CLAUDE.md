@@ -149,6 +149,22 @@ not only what it matched, which is the silence-never-reads-as-coverage disciplin
 tooling. And **exercise the shipped configuration**: a sweep run with different flags from the ones
 the feature ships with has validated a different program.
 
+**A detector that FIRES is a claim about the instrument too.** The rule above is about absence; the
+mirror case is a positive rate nobody checked for precision. A sweep for "does this document print a
+document number" reported 86% coverage, and the regex behind it accepted `TPS22918` and `TCAN1145`,
+which are PART numbers, while missing `SLVSAG5`, which is a real document number. The headline would
+have justified building an extractor on a signal that was wrong in both directions. Before quoting a
+rate, run the detector against a handful of known positives AND known negatives by hand; when it
+cannot tell the two apart, that is the finding, and it is usually more useful than the rate.
+
+**Reading the code is not running it, and the gap is where the expensive bugs live.** Three passes
+through the same read path did not reveal that no producer fills `SourceDoc.title` as its contract
+specifies; opening the app and looking at the field showed it immediately, and invalidated part of a
+PR merged an hour earlier. Code review catches a layer that is wrong. It does not catch layers that
+are each internally consistent and collectively wrong, because every file reads fine on its own. When
+a change has a user-visible surface, drive it before designing on top of it. See `build/overlay.md`
+and the web-app page for how to stand the app up.
+
 **Anything matching SYMBOL TEXT out of a doc-IR must tolerate an injected space.** Producers flatten
 subscripts, so `VCCA` arrives as `V CCA` (~850 such occurrences in one corpus). This has bitten three
 times in unrelated places: a prose sweep, the derive pin path where it would have produced pin ids no
@@ -355,6 +371,13 @@ BEFORE state. Stashing ONE tracked file (`git stash push -- path/to/file.go`, ru
 a different move and a good one: it is how you prove a new test is red for the reason you think,
 rather than red because the package does not compile.
 
+**That move fails when the stashed file also carries something the test needs to compile** — a new
+field, type, or exported helper the test references. The stash removes both the behaviour and the
+declaration, so the run comes back `[build failed]`, which proves nothing and looks like it did. Both
+times this bit, the fix was to revert the BEHAVIOUR in place (flip the branch to `if false`, drop the
+one assignment) and leave the declarations, then restore. Read the red output before believing it: a
+compile error is not a failing assertion.
+
 ## PR prose conventions
 
 This engine sits where electrical engineering meets software, and most reviewers are strong in one
@@ -377,6 +400,11 @@ and cold in the other. These sections exist so a PR is reviewable by both.
   electrical meaning, derating, rail/pin conventions, why a limit matters physically), add this
   section right after "What changes", plus a link to `docsite/content/reference/analogy.md`. A
   pseudocode walkthrough alone leaves the hardware nouns opaque.
+- **A mermaid label must contain no quote characters, escaped or otherwise.** `&quot;` inside a
+  `["..."]` node label decodes to a bare `"`, closes the string early, and GitHub renders a parse
+  error instead of the diagram (`got 'STR'`). Write labels as plain text with `<br/>` for line
+  breaks and keep the literal strings in the prose above the diagram, which reads better anyway.
+  A broken diagram is caught only by looking at the rendered PR, so look.
 - **Visual before/after.** Any PR changing rendering includes an actual image pair under
   `## Before / after`. **PNG, not SVG**, because GitHub sanitizes SVG in PR bodies. Capture from the
   showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),
