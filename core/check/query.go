@@ -126,7 +126,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 			m.pinConn[key] = true
 			if first, seen := m.pinNet[key]; !seen {
 				m.pinNet[key] = n.Name
-			} else if first != n.Name && !collided[c.ComponentRef] {
+			} else if first != n.Name && !collided[c.ComponentRef] && !placeholderRefDes(c.ComponentRef) {
 				m.recordPinNetConflict(c.ComponentRef, c.PinRef, first, n.Name, n.Prov)
 			}
 			if passClass(m.ComponentClass(c.ComponentRef)) {
@@ -189,6 +189,29 @@ func (m *irModel) componentClassesOf(c *ir.Component, pt *ir.PartType) []Compone
 		out[i] = ComponentClass(t)
 	}
 	return out
+}
+
+// placeholderRefDes reports whether a reference designator is an unannotated placeholder rather
+// than an identity: "R?", "C?", "REF**", and the partially-annotated "C?1845" a tool leaves when
+// only some digits are assigned.
+//
+// It is the second suppression input to the pin-uniqueness index, alongside a known ref-des
+// collision, and for the same reason. "A pin belongs to exactly one net" is a claim about a PIN,
+// and (R?, 1) does not name one: on one export 176 distinct un-annotated resistors shared that
+// key, so the index saw a single pin sitting on 129 nets. Reporting that as malformed input says
+// something false about the netlist — the design is fine, the key is not a key. Suppressing it is
+// not hiding a defect, it is declining to assert uniqueness over something that has no identity.
+// What the design DOES have is un-annotated parts, which is a separate and truthful finding.
+//
+// Matching on "?" ANYWHERE rather than as a suffix is deliberate: a partially-annotated designator
+// puts it mid-string. "?" is not a legal character in a reference designator in any tool that
+// writes one, so the wider match cannot catch a real ref-des.
+//
+// readers/kicad has its own placeholderRef for the same concept, applied at read time to decide
+// whether a footprint is a real part. The two are deliberately separate because readers do not
+// import core; they must agree on what a placeholder looks like, so change them together.
+func placeholderRefDes(ref string) bool {
+	return strings.Contains(ref, "?") || strings.HasSuffix(ref, "**")
 }
 
 // recordPinNetConflict merges a duplicate claim into the pin's conflict entry, creating

@@ -88,3 +88,39 @@ func TestPinRoleAndNetOnModel(t *testing.T) {
 		t.Errorf("unknown pin net = %q, want empty", n)
 	}
 }
+
+// TestPinNetConflictSkipsPlaceholderRefDes: "a pin belongs to exactly one net" is a claim about a
+// PIN, and (R?, 1) does not name one. On a real export 176 un-annotated resistors shared that key,
+// so the index saw one pin on 129 nets and the rule reported 81 findings about a netlist that is
+// fine. Suppressing them is declining to assert uniqueness over a non-identity, not hiding a defect;
+// the un-annotated parts are reported on their own terms instead.
+func TestPinNetConflictSkipsPlaceholderRefDes(t *testing.T) {
+	for _, ref := range []string{"R?", "C?", "REF**", "C?1845"} {
+		t.Run(ref, func(t *testing.T) {
+			d := &ir.Design{
+				Components: []*ir.Component{{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}},
+				Nets:       []*ir.Net{tnet("NET_A", ref+".1"), tnet("NET_B", ref+".1")},
+			}
+			if fs := pinNetConflict.Eval(check.NewModel(d)); len(fs) != 0 {
+				t.Errorf("placeholder %q reported %d conflicts, want none: %+v", ref, len(fs), fs)
+			}
+		})
+	}
+}
+
+// TestPinNetConflictStillFiresOnRealRefDes is the guard for the suppression above: a genuine pin on
+// two nets is still malformed input, and narrowing the rule must not silence it. A designator that
+// merely CONTAINS a digit run or letters is a real identity.
+func TestPinNetConflictStillFiresOnRealRefDes(t *testing.T) {
+	for _, ref := range []string{"R1845", "C1665", "U120"} {
+		t.Run(ref, func(t *testing.T) {
+			d := &ir.Design{
+				Components: []*ir.Component{{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}},
+				Nets:       []*ir.Net{tnet("NET_A", ref+".1"), tnet("NET_B", ref+".1")},
+			}
+			if fs := pinNetConflict.Eval(check.NewModel(d)); len(fs) != 1 {
+				t.Errorf("real ref-des %q reported %d conflicts, want 1: %+v", ref, len(fs), fs)
+			}
+		})
+	}
+}
