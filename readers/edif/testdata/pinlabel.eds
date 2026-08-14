@@ -1,14 +1,13 @@
-
 (edif PL
   (edifVersion 2 0 0)
   (edifLevel 0)
   (library L
-    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))))
+    (technology (numberDefinition (scale 1 (e 1 -8) (unit DISTANCE))) (figureGroup LABEL (textHeight 12)))
     (cell (rename &c "Part")
       (cellType GENERIC)
       (view (rename &v "sym")
         (viewType SCHEMATIC)
-        (interface (port A1 (direction INPUT) (designator "A1")) (port A2 (direction INPUT) (designator "A2")))
+        (interface (port A1 (direction INPUT) (designator "A1")) (port A2 (direction INPUT) (designator "A2")) (port A3 (direction INPUT) (designator "A3")))
         (symbol
           (boundingBox (rectangle (pt 0 0) (pt 100 100)))
           (portImplementation
@@ -18,7 +17,11 @@
           (portImplementation
             (name A2
               (display (figureGroupOverride LABEL (visible (false))) (justify LOWERLEFT) (origin (pt 30 40))))
-            (connectLocation (figure GRAPHICS (dot (pt 0 40)))))))))
+            (connectLocation (figure GRAPHICS (dot (pt 0 40)))))
+          (portImplementation
+            (name A3
+              (display (figureGroupOverride LABEL (textHeight 6) (visible (true))) (justify CENTERLEFT) (origin (pt 50 60))))
+            (connectLocation (figure GRAPHICS (dot (pt 0 60)))))))))
   (design D
     (cellRef Top (libraryRef L))
     (contents

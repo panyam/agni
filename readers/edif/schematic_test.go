@@ -371,6 +371,21 @@ func TestReadSchematic_PinLabels(t *testing.T) {
 	if a2 := pins["A2"]; a2 == nil || a2.LabelOrigin != nil {
 		t.Errorf("A2 label should be hidden (nil origin), got %v", a2)
 	}
+	// A pin label carries a text height like any other run, so it scales with the sheet instead
+	// of being sized from a renderer constant. A1 restates none and inherits the LABEL group's;
+	// A3 states its own, which wins. Both are converted from a line pitch (see glyphHeight).
+	if a1.Height != glyphHeight(12) {
+		t.Errorf("A1 height = %d, want %d (inherited from figureGroup LABEL's textHeight 12)",
+			a1.Height, glyphHeight(12))
+	}
+	if a3 := pins["A3"]; a3 == nil || a3.Height != glyphHeight(6) {
+		t.Errorf("A3 = %v, want height %d (its own textHeight 6, overriding the group)",
+			a3, glyphHeight(6))
+	}
+	// A hidden label has no height to carry, so the renderer's own default still applies.
+	if a2 := pins["A2"]; a2 != nil && a2.Height != 0 {
+		t.Errorf("A2 is hidden but carries height %d, want 0", a2.Height)
+	}
 }
 
 // TestReadSchematic_UpsideDown documents the input to the upside-down-text bug (a

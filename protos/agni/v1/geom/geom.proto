@@ -86,6 +86,11 @@ message PinPoint {
   Point label_origin = 4;   // symbol-local origin of the pin-number label (nil if hidden)
   string justify = 5;       // pin-number label alignment, canonical "<h> <v>" (see Label.justify)
   string name = 6;          // pin name (e.g. "OUT"), distinct from the number in port_ref
+  // Glyph height of the pin's label text, in source units, same meaning as Label.height. Zero
+  // when the source states none, which is the signal for a renderer to use its own default.
+  // Without it both backends sized pin text from a constant while every other run scaled with
+  // the sheet, so pin labels were the one kind of text that ignored the drawing.
+  int64 height = 7;
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
