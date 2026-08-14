@@ -214,12 +214,12 @@ func isAllDigits(s string) bool {
 
 // pinFunctionOf maps a table's own type column onto the closed PinFunction vocabulary.
 //
-// The fallback to name and description is deliberately NARROW: only NO_CONNECT. Real
-// tables leave the type column blank or dashed on supply and ground rows, so inferring
-// POWER_INPUT from a name like "VCCA" would be this stage inventing a classification
-// the document did not make. A no-connect is different because the document states it
-// in words ("No connection. Not internally connected."), and because the multi-number
-// split rule below depends on knowing it.
+// The fallback reads the DESCRIPTION, never the name, and that line is the whole design.
+// Inferring POWER_INPUT from a name like "VCCA" would be this stage inventing a
+// classification the document did not make; reading it from a description that opens
+// "A-port supply voltage" is repeating one the document DID make, in the column real
+// tables put it in when they leave the type column dashed. A name is our guess, a
+// description is the vendor's sentence.
 func pinFunctionOf(ioRaw, name, desc string) parampb.PinFunction {
 	switch headerKey(ioRaw) {
 	case "i/o", "io", "d_io", "a_io", "bidirectional", "input/output":
@@ -238,7 +238,60 @@ func pinFunctionOf(ioRaw, name, desc string) parampb.PinFunction {
 	if isNoConnect(name, desc) {
 		return parampb.PinFunction_PIN_FUNCTION_NO_CONNECT
 	}
+	return pinFunctionFromDescription(desc)
+}
+
+// pinFunctionFromDescription types a supply or ground pin from the vendor's own sentence,
+// for the common table that leaves its type column dashed on exactly those rows.
+//
+// DELIBERATELY DUMB, and it should stay that way. It matches how a description OPENS, in
+// the handful of phrasings that are near-universal, and answers UNSPECIFIED for everything
+// else. The temptation is to search the whole sentence for "ground" or "supply", and that
+// is the failure: "Connect to ground through a 10 kΩ resistor" describes a signal with a
+// pulldown, and typing that pin GROUND would stamp a false ground onto a net every rail
+// rule then quantifies over. An untyped pin is the status quo and costs nothing; a wrongly
+// typed one is a confident wrong answer.
+//
+// What this deliberately does NOT try to do is be complete. Everything it declines lands in
+// the run manifest as an untyped-pin gap, which is the curation worklist: a human, or an
+// assistant searching the document on their behalf, sees the pin and its prose and decides.
+// Widening this matcher to swallow the long tail would trade a visible gap for an invisible
+// guess, which is the wrong direction.
+//
+// The lexicon is local rather than shared with classify's rail naming, and that is a
+// deviation from what OUT_OF_SCOPE suggested. Those vocabularies turn out to be different
+// languages: classify matches net NAMES (VCC, +3V3, start-anchored tokens), this matches
+// English prose. Sharing would mean one of them carrying patterns that can never fire.
+func pinFunctionFromDescription(desc string) parampb.PinFunction {
+	d := headerKey(desc)
+	switch {
+	case d == "ground" || strings.HasPrefix(d, "ground reference") ||
+		strings.HasPrefix(d, "ground pin") || strings.HasPrefix(d, "device ground"):
+		return parampb.PinFunction_PIN_FUNCTION_GROUND
+	case strings.HasPrefix(d, "supply voltage") || strings.HasPrefix(d, "power supply") ||
+		strings.HasPrefix(d, "supply input") || strings.Contains(firstClause(d), "supply voltage"):
+		return parampb.PinFunction_PIN_FUNCTION_POWER_INPUT
+	}
 	return parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED
+}
+
+// firstClause is the description up to its first clause break, so a qualified opening still
+// reads as an opening. "A-port supply voltage 1.2V <= VCCA <= 3.6V" is the vendor typing the
+// pin and then bounding it; "Enable input. Tie to supply voltage for normal operation" is a
+// signal that merely mentions one, and its first clause says so.
+//
+// A sentence break is a period FOLLOWED BY A SPACE, not any period. Pin descriptions are
+// full of decimals ("1.2V"), and splitting on those would cut "A-port supply voltage 1.2V"
+// down to "a-port supply voltage 1" — which happens to still match here, and would stop
+// matching the moment a vendor led with the number.
+func firstClause(d string) string {
+	cut := len(d)
+	for _, sep := range []string{". ", ",", ";"} {
+		if i := strings.Index(d, sep); i > 0 && i < cut {
+			cut = i
+		}
+	}
+	return d[:cut]
 }
 
 func isNoConnect(name, desc string) bool {
@@ -427,6 +480,20 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 				Kind: "multi-designator-row", Region: t.Id,
 				Detail: fmt.Sprintf("row %d (%s): %d designators per package; %s", row, name, widest,
 					map[bool]string{true: "split into separate pins (no-connect)", false: "kept as one pin on several legs"}[split]),
+			})
+		}
+
+		// A pin nobody could type is the curation worklist's whole reason for existing. The
+		// classifier is deliberately narrow, so declining is the ORDINARY outcome on a table
+		// whose type column is dashed and whose prose is not one of the standard openings, and
+		// an undeclared decline is indistinguishable from a pin that carries no function at
+		// all. Gapping it carries the pin's own sentence, which is what a human (or an
+		// assistant searching the document for them) needs in order to decide.
+		if fn == parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED {
+			manifest.Gaps = append(manifest.Gaps, &derivepb.Gap{
+				Kind: "untyped-pin", Region: t.Id,
+				Detail: fmt.Sprintf("row %d (%s): no type column and no standard description opening; description: %q",
+					row, name, desc),
 			})
 		}
 
