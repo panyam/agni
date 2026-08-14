@@ -38,8 +38,9 @@ var inputProtection = &check.Rule{
 }
 
 // inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses stay
-// AST; the reach walk is one declared FFI shared with the Go Eval (the WS3-011
-// vocabulary is new, so the Go side stays canonical until it soaks — docs/19).
+// AST; the reach walk is one declared FFI shared with the Go Eval. The WS3-011
+// vocabulary is new, so the Go side stays canonical (twin discipline:
+// docsite/content/build/check-rule.md).
 var inputProtectionSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{

@@ -8,29 +8,18 @@ import (
 )
 
 // railNotClassified is the tripwire for a project that has not declared its rail naming vocabulary.
+// The rail-quantified rules and `net.nominal_voltage` all answer over nets carrying the RAIL ROLE,
+// stamped at ingestion from the naming lexicon, and the built-in lexicon is start-anchored (VCC,
+// VDD, +3V3). A project naming rails function-first (PMIC_CORE_3V3, SENSOR_5V0) matches none of it
+// and must supply its own through `--conventions`. Measured on a real 1700-net board, declaring the
+// lexicon moved the rail count from 13 to 91.
 //
-// WHY IT EXISTS. The rail-quantified rules and `net.nominal_voltage` all answer over nets carrying
-// the RAIL ROLE, which is stamped at ingestion from the naming lexicon. The built-in lexicon is
-// start-anchored (VCC, VDD, +3V3), and plenty of house conventions are not: a board naming rails
-// function-first as PMIC_CORE_3V3 or SENSOR_5V0 matches none of it. Such a project must supply its
-// own lexicon through `--conventions`, and the shipped tutorial project does exactly that.
+// It needs a STRUCTURAL signal as well as the name, because `..._3V3` may be a 3.3V rail or a signal
+// that SWINGS at 3.3V (agni issue 194 is the same ambiguity from the other side): the net must also
+// feed at least one pin the design types as a power INPUT.
 //
-// A project that has NOT done so gets a quietly smaller answer rather than an error: fewer rails,
-// so fewer rail findings, so a report that reads clean because the rules could not see the rails.
-// That is the silence-reads-as-coverage failure, and it is what this rule converts into a finding.
-// Measured on a real 1700-net board, declaring the lexicon moved the rail count from 13 to 91, so
-// the degradation is not a corner case.
-//
-// WHY IT NEEDS A STRUCTURAL SIGNAL, not just the name. A net named `..._3V3` is genuinely ambiguous:
-// it may be a 3.3V rail or a signal that SWINGS at 3.3V, and no amount of name-grammar separates
-// them (issue 194 is the same ambiguity seen from the other side). Firing on every voltage-token
-// net that is not a rail would therefore be noise. So the rule requires a second, independent
-// channel: the net must also feed at least one pin the design types as a power INPUT. On the two
-// real boards available that discriminates cleanly — 45 nets on the board with an undeclared
-// lexicon, 5 on the board whose rails the built-in vocabulary already matches.
-//
-// It is CategoryIntegrity because a firing means fix the CONFIG, not the design. Nothing here says
-// the board is wrong.
+// CategoryIntegrity because a firing means fix the CONFIG, not the design. Full rationale in
+// docs/rail-not-classified.md.
 
 // railCandidate is a net that looks like a rail by two independent channels but carries no rail role.
 type railCandidate struct {
@@ -42,7 +31,7 @@ type railCandidate struct {
 
 // eachRailCandidate walks the nets whose NAME declares a voltage and whose CONNECTIONS include a
 // power-input pin, and yields those the role stamp does not call a rail. Ground is excluded: a
-// ground net is a rail role of its own and is never what this rule is about.
+// ground net carries a role of its own.
 func eachRailCandidate(m check.Model, yield func(railCandidate)) {
 	for _, n := range m.Nets() {
 		if m.IsRailNet(n) || m.IsGroundNet(n) {

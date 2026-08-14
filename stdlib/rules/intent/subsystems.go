@@ -8,12 +8,9 @@ import (
 )
 
 // subsystemRule builds the rule for ONE declared subsystem. It fails when the subsystem's required
-// source component is absent (a KindComponent finding, no provenance — the presentResult shape) or any
-// of its required nets is missing (a KindNet finding on the missing net). One rule per subsystem —
-// named intent/subsystem-<slug> — so distinct review items (clock vs reset architecture) bind their
-// own subsystem and report independently, rather than sharing one rule the way Modules do. Like the
-// other intent rules it iterates the DECLARATION and probes the design; it never derives the expected
-// subsystem set from the netlist.
+// source component is absent (a KindComponent finding with no provenance, the presentResult shape) or
+// any of its required nets is missing (a KindNet finding on the missing net). One rule per subsystem,
+// named intent/subsystem-<slug>, unlike Modules which share one rule.
 func subsystemRule(s Subsystem) *check.Rule {
 	return &check.Rule{
 		Name:     "subsystem-" + slug(s.Name),

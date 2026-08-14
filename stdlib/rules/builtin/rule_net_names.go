@@ -10,16 +10,16 @@ import (
 )
 
 // The net-name consistency batch (WS3-016/017): naming is connectivity on schematic
-// formats — labels join by name — so a naming slip silently merges or splits nets. Three
-// rules over two channels: the per-net alias list (netgraph.AttrAliases: every label the
-// naming pass collapsed into one net) and the design's name->net-count index
+// formats, where labels join by name, so a naming slip silently merges or splits nets.
+// Three rules over two channels: the per-net alias list (netgraph.AttrAliases: every label
+// the naming pass collapsed into one net) and the design's name->net-count index
 // (Model.NetNameCount).
 //
-// The alias RANK tells the rules which scoping class a name came from (the docs/22 FQN
-// model): rank 0 is design-wide (a global label or power-symbol rail), anything else is
-// sheet-scoped (a local/hierarchical label, an inline wire label). A design-wide name and
-// a local alias on one net is NORMAL (a rail with a local nickname); rivalry within one
-// class is the hazard.
+// The alias RANK tells the rules which scoping class a name came from (the FQN model in
+// docsite/content/architecture/net-solving.md): rank 0 is design-wide (a global label or
+// power-symbol rail), anything else is sheet-scoped (a local/hierarchical label, an inline
+// wire label). A design-wide name and a local alias on one net is NORMAL (a rail with a
+// local nickname); rivalry within one class is the hazard.
 
 // netAliases parses the in-scope net's collapsed label list; nil when the net carried at
 // most one name.
@@ -130,8 +130,7 @@ var labelAliasConflict = matrixlessSpecRule(func() *check.Rule {
 var powerTapConflict = matrixlessSpecRule(func() *check.Rule {
 	check.RegisterSpecFunc("rail_name_clash", &check.SpecFunc{
 		// The distinct design-wide (rank 0) alias names on the in-scope net, joined for
-		// the message; "" unless there are at least two. Rank 0 is a global label or a
-		// power-symbol rail name — the names that unify across the whole design.
+		// the message; "" unless there are at least two.
 		Reads:      []string{"net.attributes"},
 		Primitives: []string{"pattern", "select"},
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
@@ -169,9 +168,8 @@ var powerTapConflict = matrixlessSpecRule(func() *check.Rule {
 	})
 })
 
-// matrixlessSpecRule mirrors the matrix rows' bind-time discipline for standalone
-// spec-only rules: the constructor registers the rule's FFIs before Spec.Rule validates
-// its Call targets (package vars init before init funcs — the ledPolarity lesson).
+// matrixlessSpecRule runs build so a standalone spec-only rule registers its FFIs before
+// Spec.Rule validates its Call targets. See rule_led_polarity.go for why.
 func matrixlessSpecRule(build func() *check.Rule) *check.Rule { return build() }
 
 // isSyntheticNetName reports a reader-invented per-net stub name: netgraph's N$<n>, the

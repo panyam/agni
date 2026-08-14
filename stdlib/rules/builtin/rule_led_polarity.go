@@ -6,13 +6,15 @@ import (
 )
 
 // ledPolarity flags an LED wired so it can never conduct: anode on a ground-named net,
-// cathode on a power-rail-named net. The first consumer of the derived pin.role fact
-// (WS1-009) and deliberately LED-only: for zeners and TVS diodes the reverse-biased
-// topology is correct usage — flagging it is the false positive that makes engineers
-// mute orientation rules. The general diode-orientation rule waits on net-polarity facts
-// (which way current is meant to flow), not just rail names.
-// The FFI is registered inside the rule var's own initializer (not an init func): package
-// vars initialize before init() runs, and Spec.Rule validates Call targets at bind time.
+// cathode on a power-rail-named net. It rides the derived pin.role fact (WS1-009), and is
+// deliberately LED-only: for zeners and TVS diodes the reverse-biased topology is correct
+// usage, and flagging it is the false positive that makes engineers mute orientation
+// rules. Generalizing to all diodes needs net-polarity facts (which way current is meant
+// to flow), not rail names.
+//
+// The FFI is registered inside the rule var's own initializer rather than an init func:
+// package vars initialize before init() runs, and Spec.Rule validates Call targets at bind
+// time. See docsite/content/build/check-rule.md.
 var ledPolarity = func() *check.Rule {
 	registerLedReversed()
 	return ledPolaritySpec.Rule(ledPolarityMeta)
@@ -42,10 +44,9 @@ var ledPolarityMeta = check.Rule{
 
 func registerLedReversed() {
 	check.RegisterSpecFunc("led_reversed", &check.SpecFunc{
-		// Resolves the component's anode and cathode by derived role, then tests the
-		// nets they land on against the rail-name conventions. Multi-clause and
-		// entity-shaped, so it lives behind the FFI seam; the pin.role fact it rides is
-		// unit-tested directly.
+		// Resolves the anode and cathode by derived role, then tests the nets they land
+		// on against the rail-name conventions. Multi-clause and entity-shaped, so it
+		// lives behind the FFI seam.
 		Reads:      []string{"net.names", "on_net", "pin.role"},
 		Primitives: []string{"pin-role", "traverse", "pattern"},
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {

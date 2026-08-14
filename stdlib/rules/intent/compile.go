@@ -11,15 +11,15 @@ const (
 	RuleModuleMissing = "module-missing"
 	RuleModuleCount   = "module-count"
 	RuleVoltageDomain = "voltage-domain-mismatch"
-	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095). They
-	// run one mechanism at two thresholds and are two rules so that a "regulator output ratings" item
-	// and a "current capability margins" item report independently (WS3-058).
+	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095): one
+	// mechanism at two thresholds, split into two names so the ratings item and the margins item get
+	// separate verdicts.
 	RuleRailCurrentCapacity = "rail-current-capacity"
 	RuleRailCurrentMargin   = "rail-current-margin"
 	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085): the switch's
 	// current limit against the rail's declared draw. It reads the same rail_budgets the two rules above
-	// read, and it is a third rule rather than a threshold on them because it judges a different part
-	// (the switch, not the supply) and answers a different review item.
+	// read, and it is a third rule rather than a threshold on them because it judges a different part,
+	// the switch rather than the supply.
 	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
@@ -45,17 +45,13 @@ func Compile(d Declaration) []*check.Rule {
 	}
 	if len(d.RailBudgets) > 0 {
 		rules = append(rules, railBudgetCapacityRule(d))
-		// The load-switch lower bound needs the budget and nothing else from the declaration, so it is
-		// emitted with the capacity rule rather than behind a second condition. A design with no
-		// controller-based switch resolves none and the rule reports nothing, which is a silence the
-		// mechanism cannot avoid: there is no declaration field that says "this rail is switched", and
-		// inventing one would let an author's omission read as a defect.
+		// The load-switch lower bound needs the budget and nothing else, so it rides the capacity
+		// condition rather than a second one. A design with no controller-based switch resolves none
+		// and the rule reports nothing. That silence is unavoidable: no declaration field says "this
+		// rail is switched", and inventing one would let an author's omission read as a defect.
 		rules = append(rules, loadSwitchTripBelowBudgetRule(d))
-		// The margin rule is emitted only when a factor is declared, the same shape anyModuleHasCount
-		// gives the count rule and for a sharper reason: the factor IS the rule's threshold. With no
-		// factor there is no question to ask, and compiling the rule anyway would let a bound item read
-		// PASS against a policy number nobody stated. Not compiling it leaves the item
-		// needs-design-intent, which names the missing input.
+		// Only when a factor is declared, because the factor IS the rule's threshold. See
+		// Declaration.MarginFactor for why there is no default.
 		if d.MarginFactor > 1 {
 			rules = append(rules, railBudgetMarginRule(d))
 		}
@@ -63,21 +59,19 @@ func Compile(d Declaration) []*check.Rule {
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))
 	}
-	// One rule per declared strap group (WS3-120), the subsystem shape. The collision check is
-	// necessarily cross-group, so it gets ONE rule for the whole declaration and is compiled only when
-	// at least two groups share a bus — a collision rule over fewer could only ever pass, which is the
-	// compiles-to-nothing shape Parse rejects elsewhere.
+	// One rule per declared strap group (WS3-120). The collision check is cross-group, so it gets ONE
+	// rule for the whole declaration, compiled only when at least two groups share a bus: over fewer
+	// it could only ever pass.
 	for _, g := range d.StrapGroups {
 		rules = append(rules, strapGroupRule(g))
 	}
 	if collidableGroups(d.StrapGroups) {
 		rules = append(rules, strapCollisionRule(d.StrapGroups))
 	}
-	// One rule per declared sequence (WS3-092), the subsystem shape and the same WS3-058 reason.
-	// A sequence with no adjacent good/enable pair compiles to NOTHING: its rule would have no link
-	// to judge and could only ever pass. Parse rejects that at load with a message that teaches, so
-	// this guard only catches a Declaration built in Go; the two share hasGatingPair so they cannot
-	// disagree about what is checkable.
+	// One rule per declared sequence (WS3-092). A sequence with no adjacent good/enable pair compiles
+	// to NOTHING: its rule would have no link to judge and could only ever pass. Parse already rejects
+	// that at load, so this guard only catches a Declaration built in Go; the two share hasGatingPair
+	// so they cannot disagree about what is checkable.
 	for _, s := range d.Sequences {
 		if hasGatingPair(s) {
 			rules = append(rules, sequenceRule(s))
@@ -105,8 +99,7 @@ func Compile(d Declaration) []*check.Rule {
 }
 
 // anyModuleHasCount reports whether the declaration sets an exact count on any module. The count rule
-// is emitted only then, so a declaration with modules but no counts compiles to just module-missing (no
-// count rule that would silently pass).
+// is emitted only then, so modules with no counts compile to just module-missing.
 func anyModuleHasCount(d Declaration) bool {
 	for _, mod := range d.Modules {
 		if mod.Count > 0 {

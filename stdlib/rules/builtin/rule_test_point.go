@@ -3,10 +3,9 @@ package builtin
 import "github.com/panyam/agni/core/check"
 
 // testPointCoverage is the DFT (design-for-test) presence rule: rails and ground must be
-// probe-able. Spec-only (proven vocabulary plus one declared FFI, the matrix-row
-// precedent); the channel gate is the design.nc_channel pattern applied to test points.
-// This rule is also docs/23's worked example — the rule-authoring guide builds it step by
-// step, so changes here should keep the guide's narrative honest.
+// probe-able. Spec-only plus one declared FFI, per the twin discipline in
+// docsite/content/build/check-rule.md. That page also builds this rule step by step as its worked
+// example, so changes here should keep its narrative honest.
 var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 	// check's own init (spec_funcs.go) already registers the shared FFIs (rail_name/ground_name)
 	// before this package's var initializers run, since check is imported here.

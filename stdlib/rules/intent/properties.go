@@ -9,11 +9,8 @@ import (
 )
 
 // propertyRule builds the rule for ONE property kind, covering every declared property of that kind.
-// One rule per kind (intent/property-reset-polarity, intent/property-ac-coupled) so distinct review
-// items bind independently — the same split Protections uses and for the same reason.
-//
-// It iterates the DECLARATION and probes the design, never the reverse: a net the design has but the
-// intent does not mention is not this rule's business.
+// One rule per kind, named intent/property-reset-polarity, intent/property-ac-coupled, the same split
+// protectionRule uses.
 func propertyRule(kind string, ps []NetProperty) *check.Rule {
 	return &check.Rule{
 		Name:     "property-" + kind,
@@ -45,7 +42,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 }
 
 // propertyViolation reports whether the design contradicts one declared property, and the message to
-// say so. The kinds differ in what absence means, which is the whole subtlety of this rule family:
+// say so. The kinds differ in what absence means:
 //
 //   - ac-coupled: a series capacitor is decidable, so ABSENT is a violation.
 //   - reset-polarity: bias is the only evidence a netlist carries, and a supervisor with an internal
@@ -86,8 +83,7 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 		}
 		refs, up, down := check.NetBiasResistors(m, n)
 		// The VALUE half (WS3-119). Checked before the direction half because a strap can be pulled
-		// the right way by a resistor of the wrong value, and that is the finding worth reporting:
-		// direction-correct is what makes the value mistake easy to miss at review.
+		// the right way by a resistor of the wrong value.
 		if msg, bad := strapValueViolation(m, p, refs); bad {
 			return msg, true
 		}
@@ -107,13 +103,13 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 // strapValueViolation checks a strap's pull resistor against the band the DECLARATION states, and is
 // silent unless it can do so honestly (WS3-119).
 //
-// Four ways it declines to answer, and each is a real state rather than a pass:
+// Four ways it declines to answer:
 //   - no band declared, so there is nothing to check against;
 //   - no biasing resistor identified, which the direction half already reports on;
 //   - more than one, because a divider's two resistors set a level together and neither is "the"
-//     strap pull — reporting one of them would name an arbitrary part;
+//     strap pull, so reporting one of them would name an arbitrary part;
 //   - a value that does not parse as a resistance, which is the params-tier posture: skip, never
-//     guess. A rule that fired on a number it could not read would report a defect with no evidence.
+//     guess.
 //
 // The finding quotes the SOURCE TEXT ("10k"), not the parsed 10000, so a reviewer reads the value
 // they will see on the schematic.
@@ -146,8 +142,7 @@ func strapValueViolation(m check.Model, p NetProperty, refs []string) (string, b
 	return "", false
 }
 
-// ohmsText renders a declared bound the way an engineer writes it (4700 -> "4.7k"), so the finding
-// does not make the reader convert the limit back from the number the YAML happened to carry.
+// ohmsText renders a declared bound the way an engineer writes it (4700 -> "4.7k").
 func ohmsText(ohms float64) string {
 	switch {
 	case ohms >= 1e6:
@@ -162,12 +157,12 @@ func trimNum(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 
 // propertyUndecidable reports the subjects this rule family can look at and genuinely cannot decide,
 // and the message saying so (agni issue 74). It runs BEFORE propertyViolation, so an undecidable
-// subject never reaches the contradiction test and never lands in the silence that used to read pass.
+// subject never reaches the contradiction test.
 //
 // Only reset-polarity has such a case, and it is PERMANENT rather than a data gap: a netlist states
 // polarity nowhere, the only structural evidence is a bias resistor, and a reset driven by a
 // supervisor with an internal pull carries none. No seeding, declaration or fact tier will ever
-// supply it, which is exactly why this could not be reported as needs-data.
+// supply it, which is why this is not reported as needs-data.
 //
 // ac-coupled and strap are deliberately absent. A series capacitor is decidable by looking, so absent
 // means the declaration is unmet. A strap with no bias is the DEFAULT-state case a datasheet tells
@@ -179,7 +174,7 @@ func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
 	}
 	n := netNamed(m, p.Net)
 	if n == nil {
-		return "", false // absent from the design; the presence forms report missing things
+		return "", false // absent from the design; see netNamed
 	}
 	if up, down := check.NetBias(m, n); up || down {
 		return "", false // biased one way or the other, so the contradiction test can decide
@@ -201,9 +196,8 @@ func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
 }
 
 // dividerOn reports whether the net carries BOTH a pull-up and a pull-down, which is what makes
-// check.NetBias answer neither. It re-asks the two questions separately rather than exposing a third
-// return from NetBias, because every other caller wants the two-value answer and only the message
-// needs to tell the two no-answer cases apart.
+// check.NetBias answer neither. It re-asks the two questions separately rather than adding a third
+// return to NetBias, whose other callers all want the two-value answer.
 func dividerOn(m check.Model, n *ir.Net) bool {
 	up, down := false, false
 	for _, c := range n.GetConnections() {
@@ -233,8 +227,8 @@ func connectsRef(n *ir.Net, refDes string) bool {
 }
 
 // netNamed returns the design net with this exact name, or nil when the declaration names a net the
-// design does not have. The property rules iterate the DECLARATION, so an absent net is silence: the
-// presence forms (modules, subsystems) are what report a missing thing.
+// design does not have. An absent net is silence here: the presence forms (modules, subsystems) are
+// what report a missing thing.
 func netNamed(m check.Model, name string) *ir.Net {
 	for _, n := range m.Nets() {
 		if n.GetName() == name {

@@ -8,21 +8,18 @@ import (
 	"strings"
 )
 
-// ruleDocs embeds the per-rule documentation: one markdown file (plus referenced images)
-// per built-in rule under docs/, the SINGLE source of Rule.Detail (WS3-025) — the
-// examples' walkthrough.md sidecar convention applied to rules, so prose is authored as
-// markdown, not Go strings, and diagrams live beside it. Embedding (rather than runtime
-// file reads) keeps the single-binary and WASM stories intact and the core free of file
-// I/O (C1); ListRules serves Detail as data either way, so consumers cannot tell.
-// External RuleSources carry their own Detail however they like (the naming source
-// generates it from config); this is only how the BUILT-INS load theirs. The 1:1 between
-// registered rules and doc files is harness-enforced (docs_test.go).
+// ruleDocs embeds the per-rule documentation for the built-in rules: one markdown file per rule
+// under docs/, plus the images those files reference (WS3-025). The convention is in
+// docsite/content/build/check-rule.md. Embedding rather than reading files at runtime keeps the
+// single-binary and WASM builds working and the core free of file I/O (C1). The embed patterns are
+// per-extension globs, so a doc referencing a new image type needs a pattern added below. The 1:1
+// between registered rules and doc files is harness-enforced (docs_test.go).
 //
 //go:embed docs/*.md docs/images/*.svg docs/images/*.png
 var ruleDocs embed.FS
 
-// ruleDoc returns the embedded markdown for a built-in rule. A missing file is a
-// programmer error caught at package init (every Detail is loaded then), and the harness
+// ruleDoc returns the embedded markdown for a built-in rule, and panics if the file is missing.
+// That is a programmer error caught at package init, when every Detail loads, and the harness
 // reports it with the rule name before any panic would.
 func ruleDoc(name string) string {
 	b, err := ruleDocs.ReadFile("docs/" + name + ".md")
@@ -33,14 +30,13 @@ func ruleDoc(name string) string {
 }
 
 // RuleDocImageHandler serves the rule docs' embedded explainer images (the diagrams a
-// docs/<rule>.md references, WS3-025) as a read-only static route so the web rules/expectations
+// docs/<rule>.md references, WS3-025) as a read-only static route, so the web rules/expectations
 // panels can resolve the relative image refs in Rule.Detail (WS9-030). Only image files under
-// docs/images/ are served (.svg and .png); any other path (the markdown itself, a directory, a
-// traversal attempt) is 404, so the handler never exposes anything but the diagrams. The images
-// come from the embed FS alone — no filesystem access, keeping the core free of file I/O (C1).
-// Mount it under a prefix (the handler sees the prefix-stripped, relative path, e.g.
-// "images/single-pin-net.svg"). SVG's content-type is set explicitly because Go's mime table
-// resolves .svg only from the host's mime files, which CI/WASM may lack.
+// docs/images/ are served (.svg and .png); any other path, including the markdown itself, a
+// directory, or a traversal attempt, is 404. Mount it under a prefix (the handler sees the
+// prefix-stripped, relative path, e.g. "images/single-pin-net.svg"). SVG's content-type is set
+// explicitly because Go's mime table resolves .svg only from the host's mime files, which CI/WASM
+// may lack.
 func RuleDocImageHandler() http.Handler {
 	sub, err := fs.Sub(ruleDocs, "docs")
 	if err != nil {

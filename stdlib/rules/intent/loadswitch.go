@@ -13,15 +13,13 @@ import (
 // limit set higher than the FET can survive means the FET fails before the protection acts, which is
 // what builtin's load-switch-trip-above-fet-rating reports. Below it is the load: a limit set under the
 // current the rail actually draws means the switch opens on normal operation, so the rail never comes
-// up under load and the protection is not protecting anything, it is the fault.
+// up under load.
 //
 // The upper bound is decidable from two datasheets. THE LOWER BOUND IS NOT, and that is why this half
-// is an intent rule and its twin is a builtin. Nothing in a design states what a rail draws: a netlist
-// carries connectivity and not current, the controller's datasheet cannot know what the designer hung
-// off the switch, and summing every load's rated draw would need near-complete part seeding plus an
-// assumption about which loads draw at once. The demand has to be DECLARED, so it lives in the same
-// rail_budgets the regulator-sizing rules read, and the rule that consumes it has to be compiled out of
-// the declaration.
+// is an intent rule and its twin is a builtin. Nothing in a design states what a rail draws, and summing
+// every load's rated draw would need near-complete part seeding plus an assumption about which loads
+// draw at once. The demand has to be DECLARED, so it lives in the same rail_budgets the
+// regulator-sizing rules read.
 
 // loadSwitchTripBelowBudgetRule: a controller-based load switch limits current below the peak the
 // declaration says the rail it feeds draws.
@@ -47,10 +45,10 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 	}
 }
 
-// evalLoadSwitchTrip walks the DECLARED budgets and probes the design for a load switch on each rail,
-// never the reverse. Deriving the budget from what is connected would pass by construction.
+// evalLoadSwitchTrip reports each DECLARED rail budget whose load switch limits current below the
+// declared peak.
 //
-// Four cases stay SILENT, each for a stated reason:
+// Four cases stay SILENT:
 //
 //   - A declared rail the design does not carry. That is a missing-rail defect the voltage-domain and
 //     subsystem forms report, and firing here as well would put one defect under two review items.
@@ -58,29 +56,23 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 //     all, or an INTEGRATED switch (one part, no external FET, so nothing for the resolver to find), or
 //     a switch the resolver refused as ambiguous. None of those is a sizing defect.
 //   - A switch whose controller states no overcurrent threshold, or whose shunt the design does not
-//     state in ohms. There is no trip current to compare, so a verdict would be invented. The honest
-//     reading of that case is the review runner's needs-data gate, which this rule feeds by declaring
-//     ParamSymbols.
+//     state in ohms. There is no trip current to compare, so a verdict would be invented. That case is
+//     the review runner's needs-data gate, which this rule feeds by declaring ParamSymbols.
 //   - A trip point at or above the budget. Nothing to report.
 //
-// The last of those is the one worth being precise about, because a passing item means less than it
-// looks like. Silence says the limit is above the declared draw. It does not say the limit is below
-// what the FET survives (that is the builtin rule's question) and it does not say the FET runs cool at
-// the declared current (nothing states a thermal limit to judge that against, so the dissipation is
-// reported in the finding and never judged).
+// A pass says only that the limit is above the declared draw. It does not say the limit is below what
+// the FET survives (that is the builtin rule's question) and it does not say the FET runs cool at the
+// declared current (nothing states a thermal limit to judge against, see sizingClause).
 func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Finding {
 	switches := check.ExternalFetLoadSwitches(m)
 	var out []check.Finding
 	for _, b := range budgets {
 		rail := netNamed(m, b.Rail)
 		if rail == nil {
-			// Deleting this changes no behaviour TODAY, and it is kept anyway. Reach returns an empty
-			// walk for a nil start, so an absent rail already falls out at the sw == nil skip below, which
-			// means no test can distinguish the two. What the guard buys is that the absent-rail case is
-			// decided HERE, on the stated reason (a missing rail is the voltage-domain and subsystem
-			// forms' defect to report), rather than resting on a helper's nil policy two calls away. If
-			// Reach ever answered a nil start differently, the fallthrough would build a finding whose
-			// Prov is nil, and a finding the viewer cannot locate is worse than no finding.
+			// The guard is redundant today (Reach walks nothing from a nil start, so an absent rail falls
+			// out at the sw == nil skip below) and stays anyway: a missing rail is the voltage-domain and
+			// subsystem forms' defect to report, and if Reach ever answered a nil start differently the
+			// fallthrough would build a finding with a nil Prov that the viewer cannot locate.
 			continue
 		}
 		sw := highestTripOnRail(m, switches, rail)
@@ -103,9 +95,9 @@ func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Finding {
 			Prov:    rail.GetProv(),
 			// The controller's threshold is the only datasheet value the VERDICT rests on: the trip
 			// current is that threshold divided by a resistance the DESIGN states. The pass FET's
-			// on-resistance is reported below but deliberately not cited here, for the reason its twin
-			// gives — a finding is rated by its WEAKEST citation, so listing a value the conclusion never
-			// used could drag a genuine failure down to provisional.
+			// on-resistance is reported in the message but not cited, because a finding is rated by its
+			// WEAKEST citation and a value the conclusion never used could drag a genuine failure down
+			// to provisional.
 			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)},
 		})
 	}
@@ -117,11 +109,10 @@ func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Finding {
 // for a trip point set too low is to lower the shunt, and that only helps if the FET can carry the
 // budgeted current in the first place.
 //
-// It is REPORTED, never judged, and the difference is the whole reason it is a clause and not a second
-// rule. Judging it needs a thermal limit: a package thermal resistance, an ambient, a junction rise the
-// house is willing to accept. No datasheet row the parameter layer reads states one and no declaration
-// field carries one, so a rule that failed on dissipation would be failing against a threshold nobody
-// declared, which is the silent-policy trap the margin rule's missing default exists to avoid.
+// It is REPORTED, never judged, which is why it is a clause and not a second rule. Judging it needs a
+// thermal limit: a package thermal resistance, an ambient, a junction rise the house is willing to
+// accept. No datasheet row the parameter layer reads states one and no declaration field carries one,
+// so a rule that failed on dissipation would be failing against a threshold nobody declared.
 //
 // Empty when the FET is unseeded or states no comparable RDS(on) row. A zero or an omitted figure would
 // read as a FET that dissipates nothing, so there is no fallback text.
@@ -141,12 +132,10 @@ func sizingClause(m check.Model, sw *check.ExternalFetLoadSwitch, peak float64) 
 // highestTripOnRail returns the resolved load switch on a rail whose limit is HIGHEST, or nil when no
 // resolved switch carries it.
 //
-// HIGHEST, not lowest, and the choice is about false fails, the same trade bestSupply makes for the
-// supply side. A rail can be within reach of more than one switch, and picking the smallest limit would
-// report a nuisance trip on a switch that gates a different branch. Every FAIL has to be a genuine
-// defect, so where the evidence is ambiguous the rule takes the reading that does not fire. The cost is
-// a missed finding on a rail genuinely gated by the smaller of two switches, which is the safe
-// direction to miss in.
+// HIGHEST, not lowest, the same false-fail trade bestSupply makes on the supply side. A rail can be
+// within reach of more than one switch, and picking the smallest limit would report a nuisance trip on
+// a switch that gates a different branch. The cost is a missed finding on a rail genuinely gated by the
+// smaller of two switches.
 func highestTripOnRail(m check.Model, switches []check.ExternalFetLoadSwitch, rail *ir.Net) *check.ExternalFetLoadSwitch {
 	var best *check.ExternalFetLoadSwitch
 	for i := range switches {
@@ -166,15 +155,14 @@ func highestTripOnRail(m check.Model, switches []check.ExternalFetLoadSwitch, ra
 // the supply-side rule associates at, so the two sizing rules cannot drift to different answers about
 // what "on this rail" means).
 //
-// Both sides of the switch count, and that is physics rather than laxity. A series element carries the
-// same current on its input and its output, so a limit that opens under the declared draw does so
-// whichever side of the FET an author declared the budget on.
+// Both sides of the switch count: a series element carries the same current on its input and its
+// output, so a limit that opens under the declared draw does so whichever side of the FET an author
+// declared the budget on.
 //
-// The GATE is excluded, and that exclusion is the whole reason this is a pin-role test rather than a
-// "is the FET connected here" test. A gate net touches the pass element but carries none of its
-// current, so crediting it would judge a control net against a load budget and would fire on the gate
-// of any switch a board happens to have. The role comes from the naming lexicon, never from a pin name
-// matched here (C20).
+// The GATE is excluded, which is why this is a pin-role test rather than an "is the FET connected here"
+// test. A gate net touches the pass element but carries none of its current, so crediting it would fire
+// on the gate of any switch a board happens to have. The role comes from the naming lexicon, never from
+// a pin name matched here (C20).
 func switchCarriesRail(m check.Model, sw *check.ExternalFetLoadSwitch, rail *ir.Net) bool {
 	for _, rn := range m.Reach(rail, check.SupplyPathReachHops).Nets {
 		for _, c := range rn.GetConnections() {

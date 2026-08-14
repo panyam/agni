@@ -15,22 +15,18 @@ import (
 //
 // A netlist carries no order. It carries connectivity, and the only ordering an order leaves behind in
 // connectivity is a GATING CHAIN: the earlier stage's power-good signal drives the later stage's
-// enable, so the later stage physically cannot come up first. That chain is the one form of sequencing
-// evidence a netlist can hold, and it is what these rules read.
+// enable, so the later stage physically cannot come up first.
 //
 // The other two ways a board enforces order leave no netlist trace at all. A PMIC steps its rails from
 // its own NVM configuration, and firmware drives enables in turn after reading power-good. Both are
 // real and common; neither is checkable here. The declaration is what separates them: an author can
 // only declare the gating nets a chain actually uses, so a board that sequences internally or in
 // firmware declares no sequence, compiles no rule, and its review items read needs-design-intent
-// rather than passing on evidence nobody has. That is the honest n/a for this family, and Parse
-// enforces it by rejecting a sequence with no gating handle to check (see the load validation).
+// rather than passing on evidence nobody has. Parse enforces it by rejecting a sequence with no
+// gating handle to check (see the load validation).
 
 // sequenceRule builds the rule for ONE declared sequence. One rule per sequence, named
-// intent/sequence-<slug>, following subsystemRule: several review items across different subsystems
-// bind this one mechanism, and a shared rule name would give them all one verdict, so a fix to one
-// would silently flip the others (WS3-058). Like every intent rule it iterates the DECLARATION and
-// probes the design.
+// intent/sequence-<slug>, following subsystemRule (WS3-058).
 func sequenceRule(s Sequence) *check.Rule {
 	return &check.Rule{
 		Name:     "sequence-" + slug(s.Name),
@@ -62,10 +58,9 @@ func sequenceRule(s Sequence) *check.Rule {
 //   - a declared handle net is not on the design      -> finding (the chain is not there to enforce anything)
 //   - the handles are on the design but not linked    -> finding (nothing holds the later stage off)
 //
-// So a silent rule means every declared link was FOUND, not that nothing was looked at. That is the
-// property that keeps this family off a hollow pass, and it is why an absent handle net fails here
-// rather than being skipped the way an absent RAIL is: a rail is a presence question the
-// voltage-domain and subsystem forms own, while the gating nets ARE this rule's subject.
+// So a silent rule means every declared link was FOUND, not that nothing was looked at. An absent
+// handle net fails here rather than being skipped the way an absent RAIL is: a rail is a presence
+// question the voltage-domain and subsystem forms own, while the gating nets ARE this rule's subject.
 func evalSequence(m check.Model, s Sequence) []check.Finding {
 	var out []check.Finding
 	fan := netFan(m)
@@ -78,11 +73,10 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 		if goodNet != nil && enNet != nil && linked(fan, goodNet, enNet) {
 			continue
 		}
-		// The reverse chain is the sharper diagnosis, so it is reported as itself rather than as a
-		// missing link, and it is looked for BEFORE the absent-handle case: an order declared the
-		// wrong way round usually names the wrong handles too, and telling an author "your nets do
-		// not exist" would send them looking for the wrong thing. It needs the mirror handles: the
-		// LATER stage's power-good and the EARLIER stage's enable.
+		// Looked for BEFORE the absent-handle case: an order declared the wrong way round usually
+		// names the wrong handles too, and telling an author "your nets do not exist" would send them
+		// looking for the wrong thing. It needs the mirror handles: the LATER stage's power-good and
+		// the EARLIER stage's enable.
 		if b.Good != "" && a.Enable != "" {
 			if rGood, rEn := netNamed(m, b.Good), netNamed(m, a.Enable); linked(fan, rGood, rEn) {
 				out = append(out, check.Finding{
@@ -136,16 +130,15 @@ func absentHandleFinding(s Sequence, a, b SequenceStage, goodNet, enNet *ir.Net)
 
 // gatingFanLimit bounds how many nets a component may touch and still count as a gating part.
 //
-// This is the load-bearing judgement in the whole rule, and it comes straight from what a netlist can
-// and cannot prove. A gating chain often runs through a part rather than a wire: a single-gate buffer,
-// a comparator, a load switch, a discrete FET. Those are small parts, and crediting them is what keeps
-// a genuinely sequenced board off a false fail.
+// A gating chain often runs through a part rather than a wire: a single-gate buffer, a comparator, a
+// load switch, a discrete FET. Those are small parts, and crediting them keeps a sequenced board off
+// a false fail.
 //
 // A controller is not that. When a power-good lands on an MCU and the MCU drives the enable, the order
 // lives in FIRMWARE, and firmware is not in the netlist. Crediting that path would let every board
-// whose supervisory signals converge on one processor read as correctly sequenced, which is precisely
-// the hollow pass this rule exists to avoid. The netlist-visible fan-out is what separates the two
-// without needing to know what any part is: a gate has a handful of nets, a controller has dozens.
+// whose supervisory signals converge on one processor read as correctly sequenced. The netlist-visible
+// fan-out separates the two without needing to know what any part is: a gate has a handful of nets, a
+// controller has dozens.
 const gatingFanLimit = 16
 
 // linked reports whether the design carries a path from a power-good net to an enable net that could
@@ -154,13 +147,12 @@ const gatingFanLimit = 16
 // dropping an open-drain power-good to the enable pin's threshold, and an active gate or load switch
 // between them. A series element IS a part sitting on both nets.
 //
-// A bounded series walk (check.Model.Reach) was the obvious tool here and is deliberately not used:
-// at any radius that stays honest it credits a strict SUBSET of what the one-part test credits, so it
-// would be reassuring dead weight rather than coverage.
+// A bounded series walk (check.Model.Reach) is deliberately not used: at any radius that stays honest
+// it credits a strict SUBSET of what the one-part test credits.
 //
 // Where the evidence is ambiguous this errs toward crediting the link, because every FAIL has to be a
 // genuine defect. The cost is a missed finding on a board whose chain runs through two parts in
-// series, which is the safe direction to miss in.
+// series.
 func linked(fan map[string]int, from, to *ir.Net) bool {
 	if from == nil || to == nil {
 		return false

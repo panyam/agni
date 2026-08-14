@@ -7,25 +7,21 @@ import (
 
 // The ERC connection matrix (WS3-014): which pin-type pairings on one net are illegal.
 // Every capture tool ships this as a grid (KiCad's pin-conflict matrix, Altium's
-// connection matrix); here each illegal pairing is a matrixRow — metadata plus the Spec
-// that detects it — and the rules are GENERATED from the table via Spec.Rule. These are
-// the catalog's first spec-only rules: no Go Eval exists, the interpreter is the runtime
-// (docs/19 "A rule is a value"). One file holds every row, a deliberate exception to
-// one-file-per-rule, because the table itself is the artifact: adding a pairing is
-// adding a row.
+// connection matrix). Here each illegal pairing is a matrixRow, metadata plus the Spec
+// that detects it, and the rules are GENERATED from the table via Spec.Rule. These rows
+// are spec-only: no Go Eval exists, the interpreter is the runtime
+// (docsite/content/architecture/rules-and-checks.md, "A rule is a value"; the twin
+// discipline is in docsite/content/build/check-rule.md). One file holds every row, a
+// deliberate exception to one-file-per-rule, because the table itself is the artifact:
+// adding a pairing is adding a row.
 //
 // Rows deliberately absent, and why:
 //   - input-only-with-no-driver: shipped separately as floating-input, whose guards
 //     (external skip, >= 2 pins, all-input) are more specific than a pairing.
 //   - power-pairing rows beyond the hard-driver conflict: subsumed by
 //     output-output-conflict once power-symbol pins became driver connections
-//     (WS1-014) — power_out ↔ power_out and power_out ↔ output are the same
+//     (WS1-014). power_out ↔ power_out and power_out ↔ output are the same
 //     distinct-driver count.
-//
-// unspecified-pin-with-driver was on this list (KiCad PASSIVE pins used to read as
-// "unspecified", so every driven net carrying a resistor would have fired); it shipped
-// once dirString mapped PASSIVE (WS1-009 gave the vocabulary, WS1-014 the driver
-// evidence).
 
 // matrixRow is one illegal pairing: the rule identity/prose and the Spec detecting it.
 type matrixRow struct {
@@ -37,10 +33,7 @@ type matrixRow struct {
 // from the Spec).
 func (r matrixRow) rule() *check.Rule { return r.spec.Rule(r.meta) }
 
-// rowOutputOutput is the flagship matrix error: two hard drivers on one net. It subsumes
-// the previously handwritten output-output-conflict rule — the Spec below is that rule's
-// declarative twin, parity-proven against the Go Eval before the Go side retired, so the
-// name and the findings are unchanged.
+// rowOutputOutput is the matrix's driver conflict: two hard drivers on one net.
 var rowOutputOutput = matrixRow{
 	meta: check.Rule{
 		Name:     "output-output-conflict",
@@ -59,10 +52,9 @@ var rowOutputOutput = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
-		// A pull resistor to a rail/ground marks an intentional open-drain wired-OR bus (a shared
-		// interrupt/inhibit line): the "outputs" only pull low, the pull-up sets the idle level, so
-		// it is not push-pull contention. Without this, EDIF that types open-drain pins "output"
-		// read a shared interrupt line as N drivers fighting.
+		// The has_pull guard exempts open-drain wired-OR buses (see isWiredOrBus). Without it,
+		// EDIF that types open-drain pins "output" reads a shared interrupt line as N drivers
+		// fighting.
 		Where: check.And{Xs: []check.Expr{
 			check.Cmp{L: check.Var{Name: "drivers"}, Op: ">=", R: check.Lit{V: 2}},
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "has_pull"}}},
@@ -75,9 +67,9 @@ var rowOutputOutput = matrixRow{
 // shared interrupt/inhibit/reset line) rather than output contention. Evidence: a resistor member (the
 // pull an open-drain bus needs, its idle level) AND NO power-source (POWER_OUT) driver. The resistor is
 // keyed on PRESENCE, deliberately not on where it pulls to, because a real pull runs through several
-// elements to an auto-named rail or to ground (both defeat a name-based "pull to a rail" test). The
-// power-source exclusion matters: two power sources fighting on a rail is a real conflict even with a
-// bleeder/load resistor present, so a POWER_OUT driver blocks the exemption.
+// elements to an auto-named rail or to ground (both defeat a name-based "pull to a rail" test). A
+// POWER_OUT driver blocks the exemption: two power sources fighting on a rail is a real conflict even
+// with a bleeder/load resistor present.
 func isWiredOrBus(m check.Model, n *ir.Net) bool {
 	resistor := false
 	for _, c := range n.Connections {
@@ -160,9 +152,9 @@ var rowUnspecifiedWithDriver = matrixRow{
 	},
 }
 
-// The generated matrix rules, registered in index.go under their row names. The FFI is
-// registered inside the var initializer (package vars init before init funcs, and
-// Spec.Rule validates Call targets at bind time — the ledPolarity lesson).
+// The generated matrix rules, added to the catalog in register.go's rules slice under
+// their row names. The FFIs are registered inside the var initializer; see
+// rule_led_polarity.go for why.
 var (
 	outputOutputConflict = func() *check.Rule {
 		registerDrivingComponents()

@@ -10,23 +10,20 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// ruleDocs embeds the per-rule documentation for the intent rules: one markdown file (plus its
-// referenced schematic-card image) per rule KIND under docs/, the single source of Rule.Detail — the
-// same convention as stdlib/rules/builtin/docs and stdlib/profiles/docs, so prose and diagrams are
-// authored as markdown beside the rule, not as Go strings inline. The whole docs/ directory is
-// embedded (not a *.md glob) so a doc can add an image with no build change and a zero-match glob never
-// breaks the build. The 1:1 between the intent rule KINDS and the doc files, and that every emitted
-// rule's Detail comes from its doc, is harness-enforced (docs_test.go).
+// ruleDocs embeds the per-rule documentation for the intent rules under docs/, the single source of
+// Rule.Detail. The convention is docsite/content/build/check-rule.md. Two deviations here: the whole
+// docs/ directory is embedded rather than a *.md glob, so a doc can add an image with no build change,
+// and the files are keyed by rule KIND (see intentDoc). The 1:1 between kinds and doc files, and that
+// every emitted rule's Detail comes from its doc, is harness-enforced (docs_test.go).
 //
 //go:embed docs
 var ruleDocs embed.FS
 
 // intentDoc returns the embedded markdown for an intent rule doc KEY (docKey, not the composed
 // "intent/" catalog name and not the per-instance rule name). A missing file is a programmer error
-// caught at package init, when Compile loads each rule's Detail. Keying by rule KIND (module-missing,
-// protection-ovp, subsystem, ...) rather than rule NAME is what lets the dynamically-named
-// subsystem-<slug> family and the per-kind protection rules share one doc each — the same
-// "keyed by requirement type, not rule name" shape stdlib/profiles uses.
+// caught at package init, when Compile loads each rule's Detail. Keys are rule KINDS (module-missing,
+// protection-ovp, subsystem, ...) rather than rule NAMES, which is what lets the dynamically-named
+// subsystem-<slug> family and the per-kind protection rules share one doc each.
 func intentDoc(key string) string {
 	b, err := ruleDocs.ReadFile("docs/" + key + ".md")
 	if err != nil {
@@ -40,14 +37,12 @@ func intentDoc(key string) string {
 // the family doc explains the shared source-and-nets check they all run.
 const docKeySubsystem = "subsystem"
 
-// docKeySequence is the single doc key shared by every intent/sequence-<slug> rule, for
-// docKeySubsystem's reason: sequence rule names are derived from the declared sequence name, so the
-// family shares one card explaining the power-good/enable check they all run.
+// docKeySequence is the family doc for intent/sequence-<slug>, docKeySubsystem's shape. The card
+// explains the power-good/enable check every sequence rule runs.
 const docKeySequence = "sequence"
 
-// docKeyStrapGroup is the family doc for intent/strap-group-<slug>, the same shape as the subsystem
-// and sequence families: one card per MECHANISM, not per declared group, because every group runs the
-// identical decode and the per-group rule names exist only so review items bind independently.
+// docKeyStrapGroup is the family doc for intent/strap-group-<slug>, docKeySubsystem's shape. Every
+// group runs the identical decode.
 const docKeyStrapGroup = "strap-group"
 
 // docKeys is the canonical set of intent rule-doc keys: every kind Compile can emit maps to exactly one
@@ -73,10 +68,9 @@ var docKeys = []string{
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
-// module-count, voltage-domain-mismatch, protection-<kind>), and the dynamically-named
-// subsystem-<slug> family collapses to the single "subsystem" key. It is the inverse of the wiring in
-// the rule builders (each sets Detail: intentDoc(<its key>)) and the join the harness uses to tie an
-// emitted rule back to the doc its Detail must come from.
+// module-count, voltage-domain-mismatch, protection-<kind>), and each dynamically-named family
+// collapses to its family key. It is the inverse of the rule builders' wiring (each sets Detail:
+// intentDoc(<its key>)), and the harness uses it to tie an emitted rule back to its doc.
 func docKey(ruleName string) string {
 	if strings.HasPrefix(ruleName, "subsystem-") {
 		return docKeySubsystem
@@ -114,11 +108,11 @@ var docSummaries = map[string]string{
 }
 
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog
-// generator. Intent rules are generated per-declaration, so there is no static catalog to enumerate;
-// this projects each documented kind into a single page-worthy rule carrying its Detail card, its
-// classification (intentTags), and a generic caption (docSummaries) in place of the design-specific
-// runtime Summary. The subsystem family (intent/subsystem-<slug> at runtime) is one page named
-// "subsystem". Callers must not mutate the returned rules.
+// generator. Intent rules are generated per-declaration, so there is no static catalog to enumerate.
+// Each documented kind becomes one page-worthy rule carrying its Detail card, its classification
+// (intentTags), and a generic caption (docSummaries) in place of the design-specific runtime Summary.
+// Each dynamically-named family is one page, named for its family key. Callers must not mutate the
+// returned rules.
 func DocRules() []*check.Rule {
 	out := make([]*check.Rule, 0, len(docKeys))
 	for _, k := range docKeys {
@@ -135,11 +129,10 @@ func DocRules() []*check.Rule {
 
 // RuleDocImageHandler serves the intent rule docs' embedded schematic-card images (the diagram a
 // docs/<kind>.md references) as a read-only static route, so the web rules/checks panels resolve the
-// relative image refs in an intent rule's Detail the same way builtin.RuleDocImageHandler does for the
-// built-ins. Only image files under docs/images/ are served (.svg and .png); any other path (the
-// markdown itself, a directory, a traversal attempt) is 404, so the handler never exposes anything but
-// the diagrams. The images come from the embed FS alone — no filesystem access, keeping the core free
-// of file I/O. Mount it under a prefix (the handler sees the prefix-stripped, relative path, e.g.
+// relative image refs in an intent rule's Detail. Same shape as builtin.RuleDocImageHandler. Only .svg
+// and .png are served; any other path (the markdown itself, a directory, a traversal attempt) is 404.
+// Images come from the embed FS alone, no filesystem access, which keeps the core free of file I/O.
+// Mount it under a prefix (the handler sees the prefix-stripped, relative path, e.g.
 // "images/protection-ovp.svg"). SVG's content-type is set explicitly because Go's mime table resolves
 // .svg only from the host's mime files, which CI/WASM may lack.
 func RuleDocImageHandler() http.Handler {

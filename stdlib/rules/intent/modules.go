@@ -10,9 +10,7 @@ import (
 // when ANY component is of its declared class (Model.HasClass, so a family tag matches its specific
 // classes) or carries its exact MPN (Model.ComponentMPN, which resolves only on a params-built model).
 // The finding is a design-level absence: KindComponent with the module label as Subject and no
-// provenance, because an absent module has no source site to cite (the presentResult shape). This is
-// the honest guard made concrete — the rule iterates the DECLARATION and probes the design, so a
-// missing module fails; it never enumerates modules FROM the netlist (which would always pass).
+// provenance, because an absent module has no source site to cite (the presentResult shape).
 func moduleMissingRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleModuleMissing,
@@ -58,8 +56,7 @@ func modulePresent(m check.Model, mod Module) bool {
 // number of design components matching its criterion. It is the complement of moduleMissingRule:
 // missing asks "is at least one present", count asks "are there exactly N" (too few OR too many both
 // fail). Only modules with Count > 0 are checked, so a declaration that sets no counts compiles to no
-// count rule (empty-set-is-silent). Like module-missing, the expectation set comes from the
-// DECLARATION, never enumerated from the netlist.
+// count rule (empty-set-is-silent).
 func moduleCountRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleModuleCount,

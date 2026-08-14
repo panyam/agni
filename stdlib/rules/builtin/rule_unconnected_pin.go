@@ -6,12 +6,12 @@ import (
 )
 
 // unconnectedPin flags a part-type pin that lands on no net and carries no no-connect
-// marking — the per-pin complement of unconnected-component. See Detail.
+// marking, the per-pin complement of unconnected-component. See Detail.
 //
-// This rule carries a Go Eval AND a declarative twin although the twin discipline
-// (docs/19) says proven-vocabulary rules go spec-only: it introduced NEW interpreter
-// vocabulary (the pins entity set, pin.on_net, pin-scope pin.electrical_type), so the Go
-// side is the bring-up reference until that vocabulary has more users. Drop it then.
+// It keeps a Go Eval alongside its twin because it introduced NEW interpreter vocabulary
+// (the pins entity set, pin.on_net, pin-scope pin.electrical_type), so the Go side is the
+// bring-up reference until that vocabulary has more users. Drop it then. Twin discipline:
+// docsite/content/build/check-rule.md.
 var unconnectedPin = &check.Rule{
 	Name:       "unconnected-pin",
 	Severity:   "warning",
