@@ -170,6 +170,13 @@ red if it were wrong. The fix was to give the shipped fixture the data the featu
 what turned it from unfalsifiable into demonstrable (0 rails to 3 on the tutorial netlist). Before
 believing a green run, check that some committed fixture actually carries the input.
 
+**`prototext` output varies its whitespace ON PURPOSE, so never grep it for a count.** Go's prototext
+marshaller inserts an unstable extra space to discourage byte-comparison, so `function:  X` and
+`function: X` are the same run on different days. A before/after table built with a one-space pattern
+read ZERO for every "before" and was nearly shipped; the tell was an internal contradiction (a file
+showing 0 typed pins and 2 supply pins at once), not the number itself. Match with `: +` or parse the
+proto, and distrust any count whose parts do not add up.
+
 **A long-lived ticket's PREMISE erodes silently, so re-verify it against the code before planning.**
 Three substantial issues this month had aged out before anyone picked them up: one was mostly shipped
 already, one rested on a convention the only real boards contradicted, and one had landed in pieces
