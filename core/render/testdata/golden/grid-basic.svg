@@ -12,6 +12,6 @@
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="928.9,128.9 1106.7,128.9 1151.1,40.0 1240.0,217.8 1328.9,40.0 1417.8,217.8 1462.2,128.9 1640.0,128.9"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="253.3,1142.2 537.8,1142.2 537.8,893.3 253.3,893.3 253.3,1142.2"/>
 <polyline fill="none" stroke="#222222" stroke-width="0.8" points="360.0,1142.2 360.0,1106.7 431.1,1106.7 431.1,1142.2"/>
-<text x="1195.6" y="128.9" font-size="40.0" text-anchor="middle" dominant-baseline="central" fill="#555555">GND</text>
-<text x="217.8" y="573.3" font-size="40.0" text-anchor="middle" dominant-baseline="central" fill="#555555">SIG</text>
+<text x="1195.6" y="128.9" font-size="106.7" text-anchor="middle" dominant-baseline="central" fill="#555555">GND</text>
+<text x="217.8" y="573.3" font-size="106.7" text-anchor="middle" dominant-baseline="central" fill="#555555">SIG</text>
 </svg>

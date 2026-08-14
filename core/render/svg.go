@@ -38,6 +38,9 @@ func SheetSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opti
 // page rect; this fills the drawing between them.
 func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, syms map[string]*geom.SymbolDef, fr sheetFrame, style Style) {
 	tx, ty, scale := fr.tx, fr.ty, fr.scale
+	// The sheet default for text that states no height, shared with the WebGL path so both
+	// backends draw height-less runs at the same size (see labelFont).
+	def := defaultTextHeight(g, sheet)
 
 	// Worksheet frame + title block (drawn under the schematic), when the sheet has a page.
 	drawWorksheet(c, g, sheet, tx, ty, style)
@@ -89,12 +92,10 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			}
 			if pin.LabelOrigin != nil {
 				lp := geomath.ApplyTransform(pl.Transform, pin.LabelOrigin)
-				// Size from the source like every other run, falling back to the fixed pixel
-				// size only when the format states no height (see pinLabelPx).
-				px := pinLabelPx
-				if pin.Height > 0 {
-					px = labelFont(float64(pin.Height) * scale)
-				}
+				// Sized from the source like every other run; labelFont substitutes the sheet
+				// default when the format states no height, so pin text no longer needs a
+				// constant of its own.
+				px := labelFont(pin.Height, def, scale)
 				drawText(c, pin.PortRef, tx(lp.X), ty(lp.Y), px, pin.Justify, rot, style.Ruler, 0)
 				// The pin name (e.g. "Y") is distinct from the number; KiCad draws it too. Offset
 				// it off the connect dot so it does not sit on top of the number, and tint it.
@@ -108,7 +109,7 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 				continue
 			}
 			wp := geomath.ApplyTransform(pl.Transform, a.Origin)
-			drawText(c, a.Text, tx(wp.X), ty(wp.Y), labelFont(float64(a.Height)*scale), a.Justify, rot, style.Annotation, boxWidthPx(sym, scale))
+			drawText(c, a.Text, tx(wp.X), ty(wp.Y), labelFont(a.Height, def, scale), a.Justify, rot, style.Annotation, boxWidthPx(sym, scale))
 		}
 	}
 
@@ -120,7 +121,7 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 		if l.Origin == nil {
 			continue
 		}
-		fontPx := labelFont(float64(l.Height) * scale)
+		fontPx := labelFont(l.Height, def, scale)
 		if f, ok := fit[l]; ok {
 			fontPx *= f
 		}
@@ -136,7 +137,7 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			if !f.Visible || f.Origin == nil {
 				continue
 			}
-			drawText(c, f.Value, tx(f.Origin.X), ty(f.Origin.Y), labelFont(float64(f.Height)*scale), f.Justify, rot+f.RotationDeg, style.Field, 0)
+			drawText(c, f.Value, tx(f.Origin.X), ty(f.Origin.Y), labelFont(f.Height, def, scale), f.Justify, rot+f.RotationDeg, style.Field, 0)
 		}
 	}
 }
@@ -153,18 +154,24 @@ const (
 	// glyphAdvanceEm is the average horizontal advance of one glyph, as a fraction of the font
 	// size. It is the one place the width estimate is calibrated, shared by the caption-condense
 	// decision (naturalTextWidthPx) and the free-text column fit (freetext.go). 0.6 held exactly
-	// when the backend drew one monospace face; it survives SchematicFontStack as an AVERAGE,
-	// measured on real schematic runs in Arial (a 15-char net name came out at 0.63 em/glyph, an
-	// 8-char part number at 0.59). Per-glyph it is now an estimate: 'M' is ~0.83 em and 'I' ~0.28,
-	// so a short all-wide run can under-estimate. Both callers only decide whether to condense,
-	// so an estimate is the right shape; a real width table would need font metrics we do not load.
+	// when the backend drew one monospace face; it survives SchematicFontStack as an AVERAGE.
+	//
+	// Measured in Arial across 31 realistic schematic runs (net names, ref-des, values, packages,
+	// pin names and numbers), the weighted average is 0.6147, spanning 0.514 for "6.3V" to 0.736
+	// for "DGND". So 0.6 under-predicts by 2.4%, and it is left alone deliberately: both callers
+	// only decide WHETHER to condense, and a 2.4% shift in that threshold is not worth moving the
+	// free-text column fit and every golden. Do not "fix" this to 0.6147 without a reason that
+	// needs the precision, and do not trust a figure derived from a couple of uppercase runs —
+	// an earlier estimate of 0.64 came from exactly that and overstated the error threefold.
 	glyphAdvanceEm = 0.6
+	// zoneLabelFrac sizes a zone-ruler label as a fraction of its zone row, measured from the
+	// printed frame of the tool this engine reads (a 21.9pt label in a 396pt row).
+	zoneLabelFrac = 0.055
 	// minStrokeNm is the minimum copper trace width in BOARD space (nanometers), not output
 	// pixels: copper renders at its true width, floored to this physical minimum, so a dense
 	// board's fine traces stay proportional instead of clamping to a fixed pixel width and
 	// merging into a blob. ~25um is below any real trace, so real copper renders at true width.
 	minStrokeNm = 25_000.0
-	pinLabelPx    = 6.0             // pin label font size, FALLBACK only: used when the source states no height (geom.PinPoint.height)
 )
 
 // sheetFrame is the world->pixel mapping of one sheet's SVG document: the tx/ty coordinate
@@ -380,7 +387,11 @@ func drawWorksheet(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.SheetGe
 	// derived from the page size (zoneCols: D-size = 8), and the standard frame numbers zones
 	// right-to-left, so the leftmost column is the highest number and the rightmost is 1 (WS7-038).
 	cols, rows := int(zoneCols(g, sheet)), 4
-	rulerFont := math.Max(6, math.Min((b-t)/float64(rows)*0.3, 12))
+	// Zone labels scale with the zone row like the rest of the drawing. The factor is measured
+	// against the tool's own printed frame: a 21.9pt label in a 396pt zone row is 0.055 of it. It
+	// was 0.3, which wanted 75px on a normal sheet and only landed near the right answer because
+	// a flat 12px ceiling caught it, so the ruler stopped scaling once a sheet passed 40pt rows.
+	rulerFont := math.Max(sheetMaxPx*minFontFrac, (b-t)/float64(rows)*zoneLabelFrac)
 	for i := 0; i < cols; i++ {
 		x0 := l + (r-l)*float64(i)/float64(cols)
 		x1 := l + (r-l)*float64(i+1)/float64(cols)
@@ -465,16 +476,38 @@ func points(pts []*geom.Point, tx, ty func(int64) float64) string {
 	return b.String()
 }
 
-// labelFont clamps a scaled text height to a legible pixel range.
-// labelFont sizes label text. It honors the source text height (proportional) so text a format
-// draws intentionally tiny — e.g. KiCad's footprint field at 0.254mm — stays tiny and does not
-// clutter, instead of being clamped up (WS7-020). A zero height means the source did not specify
-// one, so fall back to a legible default. The upper clamp keeps a huge field from dominating.
-func labelFont(px float64) float64 {
-	if px == 0 {
-		return 7
+// Text-size bounds, as fractions of the drawing rather than absolute pixels. A bound is a
+// statement about how much of the sheet one run may occupy, so it belongs in the same terms as
+// the sheet. The old ceiling was a flat 40px, which is 2.5% of the drawing, and a legitimately
+// large title ran straight into it: one measured at 2.2% of its sheet, so the guard against
+// bogus data was within a hair of truncating real text. These keep that guard while leaving a
+// title room to be a title.
+const (
+	minFontFrac = 0.001 // 1.6px on a 1600px drawing: below this a glyph is not text
+	maxFontFrac = 0.10  // 160px: still catches a height the size of the page
+)
+
+// The ceiling was a flat 40px, and it was not a safety net. On a sparse auto-layout the drawing
+// zooms in until symbol bodies are ~444px tall, and 40px pinned every net label to 9% of the body
+// it labels where the layout asked for 33%. On a dense faithful sheet the same 40px was within a
+// hair of truncating a real title, which measured 2.2% of its sheet. One absolute number cannot be
+// both, which is why these are fractions of the drawing: the thing a size should be judged against
+// is how much of the sheet it occupies, so that is what the bound is written in.
+
+// labelFont maps a source text height to an output font size in pixels. It honors the source
+// height (proportional) so text a format draws intentionally tiny — e.g. KiCad's footprint field
+// at 0.254mm — stays tiny and does not clutter, instead of being scaled up (WS7-020).
+//
+// A source that states no height falls back to def, the sheet's own median text height
+// (defaultTextHeight). That is the same default the WebGL path has always used, and it replaces a
+// flat 7px here: the two backends were drawing height-less text at different sizes, and 7px meant
+// something different on every sheet because it was not derived from one.
+func labelFont(h int64, def int64, scale float64) float64 {
+	if h <= 0 {
+		h = def
 	}
-	return math.Max(1.5, math.Min(px, 40))
+	px := float64(h) * scale
+	return math.Max(sheetMaxPx*minFontFrac, math.Min(px, sheetMaxPx*maxFontFrac))
 }
 
 // drawText emits one text run at pixel (x,y) with the given font size, justify, fill, and a

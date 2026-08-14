@@ -355,17 +355,26 @@ func TestSheetSVG_TitleBlockGrid(t *testing.T) {
 
 func TestLabelFontHonorsSourceHeight(t *testing.T) {
 	// Intentionally-tiny source text (KiCad's 0.254mm footprint field) must NOT be clamped up
-	// to a cluttering size; a zero (unspecified) height gets a legible default; huge is capped.
-	if got := labelFont(1.3); got > 2 {
-		t.Errorf("tiny text px=1.3 -> %v, want it kept small (not inflated)", got)
+	// to a cluttering size; an unspecified height falls back to the SHEET's own default rather
+	// than a fixed pixel size; an absurd height is capped relative to the drawing.
+	const def = 100 // the sheet's median text height, in source units
+	if got := labelFont(13, def, 0.1); got > 2 {
+		t.Errorf("tiny text (13 units at scale 0.1) -> %v, want it kept small (not inflated)", got)
 	}
-	if got := labelFont(0); got != 7 {
-		t.Errorf("unspecified height -> %v, want 7", got)
+	// Unspecified height uses def, so it tracks the sheet instead of meaning a different
+	// physical size on every drawing (the old flat 7px).
+	if got := labelFont(0, def, 0.1); got != 10 {
+		t.Errorf("unspecified height -> %v, want 10 (def=100 at scale 0.1)", got)
 	}
-	if got := labelFont(10); got != 10 {
-		t.Errorf("normal px=10 -> %v, want 10", got)
+	if got := labelFont(100, def, 0.1); got != 10 {
+		t.Errorf("normal height -> %v, want 10", got)
 	}
-	if got := labelFont(100); got != 40 {
-		t.Errorf("huge px=100 -> %v, want capped at 40", got)
+	// The ceiling is a fraction of the drawing, so it catches a bogus height without
+	// truncating a legitimately large title (which measured 2.2% of its sheet).
+	if got := labelFont(1_000_000, def, 0.1); got != sheetMaxPx*maxFontFrac {
+		t.Errorf("absurd height -> %v, want capped at %v", got, sheetMaxPx*maxFontFrac)
+	}
+	if got := labelFont(1, def, 0.0001); got != sheetMaxPx*minFontFrac {
+		t.Errorf("sub-visible height -> %v, want floored at %v", got, sheetMaxPx*minFontFrac)
 	}
 }
