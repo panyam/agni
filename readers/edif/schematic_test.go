@@ -360,9 +360,24 @@ func TestReadSchematic_PinLabels(t *testing.T) {
 	for _, p := range g.Symbols[0].Pins {
 		pins[p.PortRef] = p
 	}
-	a1 := pins["A1"]
+	a1 := pins["1"] // PortRef is the DESIGNATOR (the number), not the port name
 	if a1 == nil || a1.LabelOrigin == nil {
-		t.Fatalf("A1 pin label not captured: %v", a1)
+		t.Fatalf("A1 pin label not captured: %v", pins)
+	}
+	// EDIF splits the two: the portImplementation names the PORT, the cell interface carries the
+	// physical designator. PortRef is a join key (proto: ir.Port.designator), so it takes the
+	// number and the name goes to Name, matching what the KiCad reader already produces.
+	if a1.PortRef != "1" || a1.Name != "A1" {
+		t.Errorf("A1 = PortRef %q / Name %q, want \"1\" / \"A1\"", a1.PortRef, a1.Name)
+	}
+	// The number has its own display, so it does not stack under the name.
+	if a1.NumberOrigin.GetX() != 2 || a1.NumberOrigin.GetY() != 46 || a1.NumberJustify != "left top" {
+		t.Errorf("A1 number placement = %v / %q, want (2,46) left top", a1.NumberOrigin, a1.NumberJustify)
+	}
+	// A3 declares a designator EQUAL to its port name, so Name stays empty rather than drawing
+	// the same string twice.
+	if a3 := pins["A3"]; a3 == nil || a3.Name != "" {
+		t.Errorf("A3 = %v, want Name empty (designator equals the port name)", a3)
 	}
 	if a1.LabelOrigin.GetX() != 10 || a1.LabelOrigin.GetY() != 20 || a1.Justify != "right" {
 		t.Errorf("A1 label = origin(%d,%d) justify %q, want (10,20) right",
@@ -596,6 +611,29 @@ func TestGlyphHeight(t *testing.T) {
 	if leading := pitch - glyphHeight(pitch); leading < pitch/8 {
 		t.Errorf("glyph height %d in a %d pitch leaves only %d of leading; rows would nearly touch",
 			glyphHeight(pitch), pitch, leading)
+	}
+}
+
+// TestReadSchematic_CellNameField asserts the part name an instance references becomes a drawn
+// field when the source places and shows it. It rides on the cellRef rather than on a property:
+// (viewRef V (cellRef (name PART (display ...)))). Most instances mark it hidden, so honoring the
+// visibility flag is what keeps this to the few a schematic actually captions.
+func TestReadSchematic_CellNameField(t *testing.T) {
+	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "pinlabel.eds")), "pl.eds")
+	if err != nil {
+		t.Fatalf("ReadSchematic: %v", err)
+	}
+	var cell *geom.Field
+	for _, f := range g.Sheets[0].Placements[0].Fields {
+		if f.Name == "Cell" {
+			cell = f
+		}
+	}
+	if cell == nil {
+		t.Fatalf("no Cell field; got %v", g.Sheets[0].Placements[0].Fields)
+	}
+	if cell.Value != "Part" || cell.Origin.GetX() != 70 || cell.Origin.GetY() != 90 || cell.Justify != "left bottom" {
+		t.Errorf("Cell field = %v, want Part at (70,90) left bottom", cell)
 	}
 }
 

@@ -96,11 +96,17 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 				// default when the format states no height, so pin text no longer needs a
 				// constant of its own.
 				px := labelFont(pin.Height, def, scale)
-				drawText(c, pin.PortRef, tx(lp.X), ty(lp.Y), px, pin.Justify, rot, style.Ruler, 0)
-				// The pin name (e.g. "Y") is distinct from the number; KiCad draws it too. Offset
-				// it off the connect dot so it does not sit on top of the number, and tint it.
+				// The name draws at label_origin. The NUMBER draws at its own origin when the
+				// source places the two separately; otherwise it stacks a line off the name, which
+				// is the only way to keep them apart when there is one position for both.
+				nx, ny, nj := tx(lp.X), ty(lp.Y)+px*1.4, pin.Justify
+				if pin.NumberOrigin != nil {
+					np := geomath.ApplyTransform(pl.Transform, pin.NumberOrigin)
+					nx, ny, nj = tx(np.X), ty(np.Y), pin.NumberJustify
+				}
+				drawText(c, pin.PortRef, nx, ny, px, nj, rot, style.Ruler, 0)
 				if pin.Name != "" {
-					drawText(c, pin.Name, tx(lp.X), ty(lp.Y)+px*1.4, px, pin.Justify, rot, style.PinName, 0)
+					drawText(c, pin.Name, tx(lp.X), ty(lp.Y), px, pin.Justify, rot, style.PinName, 0)
 				}
 			}
 		}

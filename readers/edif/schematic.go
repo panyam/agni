@@ -225,8 +225,9 @@ func symbolOf(sym, cell, view *node, libName, viewName, src string, fgh map[stri
 		sd.Shapes = append(sd.Shapes, shapesOfFigure(f)...)
 	}
 	// Pins and their stub figures come from each portImplementation.
+	des := portDesignators(view)
 	for _, pi := range sym.Children("portImplementation") {
-		if pin := pinOf(pi, fgh); pin != nil {
+		if pin := pinOf(pi, fgh, des); pin != nil {
 			sd.Pins = append(sd.Pins, pin)
 		}
 		for _, f := range pi.Children("figure") {
@@ -247,7 +248,28 @@ func symbolOf(sym, cell, view *node, libName, viewName, src string, fgh map[stri
 
 // pinOf extracts a pin's connect location (where a wire attaches) from a
 // portImplementation node.
-func pinOf(pi *node, fgh map[string]int64) *geom.PinPoint {
+// portDesignators maps a view's interface ports to their physical pin designators, keyed by both
+// the port's internal id and its display name because a portImplementation may name either.
+// A bus port declared as (port (array NAME N)) carries no designator and is skipped.
+func portDesignators(view *node) map[string]string {
+	m := map[string]string{}
+	for _, p := range view.Child("interface").Children("port") {
+		des := stringDisplayText(p.Child("designator"))
+		if des == "" {
+			continue
+		}
+		n := parseName(p.Arg(1))
+		if n.ID != "" {
+			m[strings.TrimPrefix(n.ID, "&")] = des
+		}
+		if b := n.best(); b != "" {
+			m[strings.TrimPrefix(b, "&")] = des
+		}
+	}
+	return m
+}
+
+func pinOf(pi *node, fgh map[string]int64, des map[string]string) *geom.PinPoint {
 	nm := pi.Child("name")
 	portRef := ""
 	if nm != nil {
@@ -266,7 +288,24 @@ func pinOf(pi *node, fgh map[string]int64) *geom.PinPoint {
 	if loc == nil {
 		return nil
 	}
+	// PortRef is a JOIN KEY, not display text: the proto contract is ir.Port.designator, which is
+	// the physical pin number, and the KiCad reader already puts the number there. EDIF splits the
+	// two — the portImplementation names the PORT, and the number lives on the cell interface's
+	// (port X (designator "N")) — so this reader was filling the number's slot with the name. That
+	// both drew the wrong text (a name where the tool prints a number, and no number at all) and
+	// keyed PrimitiveKey.pin on a name, so a finding about pin "1" could not target its pin.
+	//
+	// 6% of ports declare no designator; those keep the port name in PortRef, which is what this
+	// reader has always done and is still the only identity available for them.
 	pp := &geom.PinPoint{PortRef: portRef, Loc: loc, SourceId: portRef}
+	if num := des[portRef]; num != "" {
+		pp.PortRef = num
+		// Only carry the name when it says something the number does not; a part whose port is
+		// literally called "1" would otherwise draw "1" twice.
+		if portRef != num {
+			pp.Name = portRef
+		}
+	}
 	// The pin-number label is the port name shown at (name X (display (origin ...))),
 	// in symbol-local coordinates. Skip it when the source marks the label hidden.
 	//
@@ -285,7 +324,28 @@ func pinOf(pi *node, fgh map[string]int64) *geom.PinPoint {
 			pp.Height = displayHeight(d, fgh)
 		}
 	}
+	// The NUMBER has its own display when the source places it apart from the name.
+	if kd := keywordDisplay(pi, "designator"); kd != nil && labelVisible(kd) {
+		if o := kd.Child("origin"); o != nil {
+			pp.NumberOrigin = ptOf(o.Arg(1))
+		}
+		if j := kd.Child("justify"); j != nil {
+			pp.NumberJustify = canonicalJustify(atom(j.Arg(1)))
+		}
+	}
 	return pp
+}
+
+// keywordDisplay returns the (display ...) of a node's (keywordDisplay KEYWORD (display ...)) child
+// for the given keyword, or nil. EDIF uses it to place the text of a named attribute — a pin's
+// "designator", a symbol's "cell" — separately from the thing it describes.
+func keywordDisplay(n *node, keyword string) *node {
+	for _, kd := range n.Children("keywordDisplay") {
+		if atom(kd.Arg(1)) == keyword {
+			return kd.Child("display")
+		}
+	}
+	return nil
 }
 
 // canonicalJustify maps an EDIF justify code ({UPPER,CENTER,LOWER}{LEFT,CENTER,RIGHT}) onto
@@ -399,6 +459,10 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID map[string]string,
 		pl := placementOf(in, src, cellByID, libByID, viewByID)
 		// Ref-des is a structured Reference field (the renderer draws placement fields).
 		if f := refDesField(in, pl.RefDes, placementOrigin(pl), fgh); f != nil {
+			pl.Fields = append(pl.Fields, f)
+		}
+		// The part name the instance references, drawn only where the source says to show it.
+		if f := cellNameField(in, pl.CellRef, fgh); f != nil {
 			pl.Fields = append(pl.Fields, f)
 		}
 		// Placed property overrides (Value, tolerance, rating) carry their own display origin
@@ -573,6 +637,37 @@ func refDesField(in *node, refDes string, fallback *geom.Point, fgh map[string]i
 		return nil
 	}
 	return &geom.Field{Name: "Reference", Value: refDes, Origin: fallback, Visible: true}
+}
+
+// cellNameField builds the drawn part-name field: the cell an instance references, captioned where
+// the tool placed it. The value is the cellRef target and the display sits on the same node:
+//
+//	(viewRef V (cellRef (name BTK36973 (display (justify LOWERLEFT) (origin (pt ...)))) ...))
+//
+// Most instances mark it hidden — a capacitor's MPN is noise beside its value — so honoring the
+// visibility flag is what keeps this to the few a schematic really captions, typically a part whose
+// MPN is the only useful label. Returns nil when the cellRef carries no display at all, which is
+// the common (cellRef NAME) form.
+func cellNameField(in *node, cellRef string, fgh map[string]int64) *geom.Field {
+	cr := in.Child("viewRef").Child("cellRef")
+	if cr == nil {
+		return nil
+	}
+	nm := cr.Arg(1)
+	if nm == nil || !nm.IsList || nm.Head() != "name" {
+		return nil
+	}
+	d := nm.Child("display")
+	if d == nil {
+		return nil
+	}
+	if cellRef == "" {
+		return nil
+	}
+	// The VALUE is the placement's resolved cell name, not the raw cellRef target: the target may
+	// be an internal &id, and placementOf has already mapped ids to display names. Only the
+	// POSITION comes off this node.
+	return fieldFromDisplay("Cell", cellRef, d, fgh)
 }
 
 // placementOrigin is a placement's transform origin, or nil when it has none.

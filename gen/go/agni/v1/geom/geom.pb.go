@@ -585,14 +585,21 @@ type PinPoint struct {
 	PortRef     string                 `protobuf:"bytes,1,opt,name=port_ref,json=portRef,proto3" json:"port_ref,omitempty"`             // joins to ir.Port.designator / net PortRef.port_ref
 	Loc         *Point                 `protobuf:"bytes,2,opt,name=loc,proto3" json:"loc,omitempty"`                                    // connectLocation dot
 	SourceId    string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`          // EDIF port internal id (&id)
-	LabelOrigin *Point                 `protobuf:"bytes,4,opt,name=label_origin,json=labelOrigin,proto3" json:"label_origin,omitempty"` // symbol-local origin of the pin-number label (nil if hidden)
-	Justify     string                 `protobuf:"bytes,5,opt,name=justify,proto3" json:"justify,omitempty"`                            // pin-number label alignment, canonical "<h> <v>" (see Label.justify)
+	LabelOrigin *Point                 `protobuf:"bytes,4,opt,name=label_origin,json=labelOrigin,proto3" json:"label_origin,omitempty"` // symbol-local origin of the pin NAME label (nil if hidden)
+	Justify     string                 `protobuf:"bytes,5,opt,name=justify,proto3" json:"justify,omitempty"`                            // pin name label alignment, canonical "<h> <v>" (see Label.justify)
 	Name        string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`                                  // pin name (e.g. "OUT"), distinct from the number in port_ref
 	// Glyph height of the pin's label text, in source units, same meaning as Label.height. Zero
 	// when the source states none, which is the signal for a renderer to use its own default.
 	// Without it both backends sized pin text from a constant while every other run scaled with
 	// the sheet, so pin labels were the one kind of text that ignored the drawing.
-	Height        int64 `protobuf:"varint,7,opt,name=height,proto3" json:"height,omitempty"`
+	Height int64 `protobuf:"varint,7,opt,name=height,proto3" json:"height,omitempty"`
+	// Where the pin NUMBER goes, when the source places it apart from the name — EDIF gives a pin
+	// two independent text positions, the name on (name X (display ...)) and the number on
+	// (keywordDisplay designator (display ...)). Nil means the source placed only one, and a
+	// renderer should fall back to offsetting the number off label_origin so the two do not
+	// overlap. Roughly half the pins in a real export carry this.
+	NumberOrigin  *Point `protobuf:"bytes,8,opt,name=number_origin,json=numberOrigin,proto3" json:"number_origin,omitempty"`
+	NumberJustify string `protobuf:"bytes,9,opt,name=number_justify,json=numberJustify,proto3" json:"number_justify,omitempty"` // pin number alignment, canonical "<h> <v>"; empty with number_origin
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -674,6 +681,20 @@ func (x *PinPoint) GetHeight() int64 {
 		return x.Height
 	}
 	return 0
+}
+
+func (x *PinPoint) GetNumberOrigin() *Point {
+	if x != nil {
+		return x.NumberOrigin
+	}
+	return nil
+}
+
+func (x *PinPoint) GetNumberJustify() string {
+	if x != nil {
+		return x.NumberJustify
+	}
+	return ""
 }
 
 // Asset marks a geom object that was loaded as a self-contained unit from an external source
@@ -1777,7 +1798,7 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\fFILL_OUTLINE\x10\x01\x12\x13\n" +
 	"\x0fFILL_BACKGROUND\x10\x02\x12\x0e\n" +
 	"\n" +
-	"FILL_COLOR\x10\x03\"\xe7\x01\n" +
+	"FILL_COLOR\x10\x03\"\xc8\x02\n" +
 	"\bPinPoint\x12\x19\n" +
 	"\bport_ref\x18\x01 \x01(\tR\aportRef\x12%\n" +
 	"\x03loc\x18\x02 \x01(\v2\x13.agni.v1.geom.PointR\x03loc\x12\x1b\n" +
@@ -1785,7 +1806,9 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\flabel_origin\x18\x04 \x01(\v2\x13.agni.v1.geom.PointR\vlabelOrigin\x12\x18\n" +
 	"\ajustify\x18\x05 \x01(\tR\ajustify\x12\x12\n" +
 	"\x04name\x18\x06 \x01(\tR\x04name\x12\x16\n" +
-	"\x06height\x18\a \x01(\x03R\x06height\"\xe4\x01\n" +
+	"\x06height\x18\a \x01(\x03R\x06height\x128\n" +
+	"\rnumber_origin\x18\b \x01(\v2\x13.agni.v1.geom.PointR\fnumberOrigin\x12%\n" +
+	"\x0enumber_justify\x18\t \x01(\tR\rnumberJustify\"\xe4\x01\n" +
 	"\x05Asset\x12,\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x18.agni.v1.geom.Asset.KindR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12,\n" +
@@ -1936,43 +1959,44 @@ var file_agni_v1_geom_geom_proto_depIdxs = []int32{
 	1,  // 5: agni.v1.geom.Shape.fill:type_name -> agni.v1.geom.Shape.Fill
 	5,  // 6: agni.v1.geom.PinPoint.loc:type_name -> agni.v1.geom.Point
 	5,  // 7: agni.v1.geom.PinPoint.label_origin:type_name -> agni.v1.geom.Point
-	2,  // 8: agni.v1.geom.Asset.kind:type_name -> agni.v1.geom.Asset.Kind
-	4,  // 9: agni.v1.geom.Asset.prov:type_name -> agni.v1.geom.Provenance
-	6,  // 10: agni.v1.geom.Image.bbox:type_name -> agni.v1.geom.BBox
-	10, // 11: agni.v1.geom.Image.asset:type_name -> agni.v1.geom.Asset
-	6,  // 12: agni.v1.geom.SymbolDef.bbox:type_name -> agni.v1.geom.BBox
-	8,  // 13: agni.v1.geom.SymbolDef.shapes:type_name -> agni.v1.geom.Shape
-	9,  // 14: agni.v1.geom.SymbolDef.pins:type_name -> agni.v1.geom.PinPoint
-	17, // 15: agni.v1.geom.SymbolDef.annotations:type_name -> agni.v1.geom.Label
-	10, // 16: agni.v1.geom.SymbolDef.asset:type_name -> agni.v1.geom.Asset
-	11, // 17: agni.v1.geom.SymbolDef.images:type_name -> agni.v1.geom.Image
-	4,  // 18: agni.v1.geom.SymbolDef.prov:type_name -> agni.v1.geom.Provenance
-	5,  // 19: agni.v1.geom.Field.origin:type_name -> agni.v1.geom.Point
-	7,  // 20: agni.v1.geom.SymbolPlacement.transform:type_name -> agni.v1.geom.Transform
-	13, // 21: agni.v1.geom.SymbolPlacement.fields:type_name -> agni.v1.geom.Field
-	4,  // 22: agni.v1.geom.SymbolPlacement.prov:type_name -> agni.v1.geom.Provenance
-	5,  // 23: agni.v1.geom.Polyline.points:type_name -> agni.v1.geom.Point
-	15, // 24: agni.v1.geom.WireGeometry.polylines:type_name -> agni.v1.geom.Polyline
-	3,  // 25: agni.v1.geom.WireGeometry.kind:type_name -> agni.v1.geom.WireGeometry.Kind
-	4,  // 26: agni.v1.geom.WireGeometry.prov:type_name -> agni.v1.geom.Provenance
-	5,  // 27: agni.v1.geom.Label.origin:type_name -> agni.v1.geom.Point
-	6,  // 28: agni.v1.geom.SheetGeometry.size:type_name -> agni.v1.geom.BBox
-	14, // 29: agni.v1.geom.SheetGeometry.placements:type_name -> agni.v1.geom.SymbolPlacement
-	16, // 30: agni.v1.geom.SheetGeometry.wires:type_name -> agni.v1.geom.WireGeometry
-	17, // 31: agni.v1.geom.SheetGeometry.labels:type_name -> agni.v1.geom.Label
-	8,  // 32: agni.v1.geom.SheetGeometry.shapes:type_name -> agni.v1.geom.Shape
-	19, // 33: agni.v1.geom.SheetGeometry.title_block:type_name -> agni.v1.geom.TitleBlock
-	11, // 34: agni.v1.geom.SheetGeometry.images:type_name -> agni.v1.geom.Image
-	4,  // 35: agni.v1.geom.SheetGeometry.prov:type_name -> agni.v1.geom.Provenance
-	20, // 36: agni.v1.geom.TitleBlock.extra_fields:type_name -> agni.v1.geom.KeyValue
-	12, // 37: agni.v1.geom.SchematicGeometry.symbols:type_name -> agni.v1.geom.SymbolDef
-	18, // 38: agni.v1.geom.SchematicGeometry.sheets:type_name -> agni.v1.geom.SheetGeometry
-	4,  // 39: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
-	40, // [40:40] is the sub-list for method output_type
-	40, // [40:40] is the sub-list for method input_type
-	40, // [40:40] is the sub-list for extension type_name
-	40, // [40:40] is the sub-list for extension extendee
-	0,  // [0:40] is the sub-list for field type_name
+	5,  // 8: agni.v1.geom.PinPoint.number_origin:type_name -> agni.v1.geom.Point
+	2,  // 9: agni.v1.geom.Asset.kind:type_name -> agni.v1.geom.Asset.Kind
+	4,  // 10: agni.v1.geom.Asset.prov:type_name -> agni.v1.geom.Provenance
+	6,  // 11: agni.v1.geom.Image.bbox:type_name -> agni.v1.geom.BBox
+	10, // 12: agni.v1.geom.Image.asset:type_name -> agni.v1.geom.Asset
+	6,  // 13: agni.v1.geom.SymbolDef.bbox:type_name -> agni.v1.geom.BBox
+	8,  // 14: agni.v1.geom.SymbolDef.shapes:type_name -> agni.v1.geom.Shape
+	9,  // 15: agni.v1.geom.SymbolDef.pins:type_name -> agni.v1.geom.PinPoint
+	17, // 16: agni.v1.geom.SymbolDef.annotations:type_name -> agni.v1.geom.Label
+	10, // 17: agni.v1.geom.SymbolDef.asset:type_name -> agni.v1.geom.Asset
+	11, // 18: agni.v1.geom.SymbolDef.images:type_name -> agni.v1.geom.Image
+	4,  // 19: agni.v1.geom.SymbolDef.prov:type_name -> agni.v1.geom.Provenance
+	5,  // 20: agni.v1.geom.Field.origin:type_name -> agni.v1.geom.Point
+	7,  // 21: agni.v1.geom.SymbolPlacement.transform:type_name -> agni.v1.geom.Transform
+	13, // 22: agni.v1.geom.SymbolPlacement.fields:type_name -> agni.v1.geom.Field
+	4,  // 23: agni.v1.geom.SymbolPlacement.prov:type_name -> agni.v1.geom.Provenance
+	5,  // 24: agni.v1.geom.Polyline.points:type_name -> agni.v1.geom.Point
+	15, // 25: agni.v1.geom.WireGeometry.polylines:type_name -> agni.v1.geom.Polyline
+	3,  // 26: agni.v1.geom.WireGeometry.kind:type_name -> agni.v1.geom.WireGeometry.Kind
+	4,  // 27: agni.v1.geom.WireGeometry.prov:type_name -> agni.v1.geom.Provenance
+	5,  // 28: agni.v1.geom.Label.origin:type_name -> agni.v1.geom.Point
+	6,  // 29: agni.v1.geom.SheetGeometry.size:type_name -> agni.v1.geom.BBox
+	14, // 30: agni.v1.geom.SheetGeometry.placements:type_name -> agni.v1.geom.SymbolPlacement
+	16, // 31: agni.v1.geom.SheetGeometry.wires:type_name -> agni.v1.geom.WireGeometry
+	17, // 32: agni.v1.geom.SheetGeometry.labels:type_name -> agni.v1.geom.Label
+	8,  // 33: agni.v1.geom.SheetGeometry.shapes:type_name -> agni.v1.geom.Shape
+	19, // 34: agni.v1.geom.SheetGeometry.title_block:type_name -> agni.v1.geom.TitleBlock
+	11, // 35: agni.v1.geom.SheetGeometry.images:type_name -> agni.v1.geom.Image
+	4,  // 36: agni.v1.geom.SheetGeometry.prov:type_name -> agni.v1.geom.Provenance
+	20, // 37: agni.v1.geom.TitleBlock.extra_fields:type_name -> agni.v1.geom.KeyValue
+	12, // 38: agni.v1.geom.SchematicGeometry.symbols:type_name -> agni.v1.geom.SymbolDef
+	18, // 39: agni.v1.geom.SchematicGeometry.sheets:type_name -> agni.v1.geom.SheetGeometry
+	4,  // 40: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
+	41, // [41:41] is the sub-list for method output_type
+	41, // [41:41] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_proto_init() }

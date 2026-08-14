@@ -102,11 +102,17 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			if h <= 0 {
 				h = def
 			}
-			add(lp.X, lp.Y, pin.PortRef, h, rot, pin.Justify, style.Ruler, 0)
-			// Offset the name off the number by one line, mirroring the SVG backend. World space
-			// is Y-up, so a line DOWN is -h; without this both ran at the same point and the
-			// overlay drew the pin name directly on top of the pin number.
-			add(lp.X, lp.Y-int64(float64(h)*1.4), pin.Name, h, rot, pin.Justify, style.PinName, 0)
+			// The number takes its own origin when the source places it apart from the name;
+			// otherwise it stacks a line off the name. World space is Y-up, so a line DOWN is -h.
+			// Mirrors the SVG backend: without a separate position the two land on one point and
+			// the overlay draws the name straight over the number.
+			nx, ny, nj := lp.X, lp.Y-int64(float64(h)*1.4), pin.Justify
+			if pin.NumberOrigin != nil {
+				np := geomath.ApplyTransform(pl.Transform, pin.NumberOrigin)
+				nx, ny, nj = np.X, np.Y, pin.NumberJustify
+			}
+			add(nx, ny, pin.PortRef, h, rot, nj, style.Ruler, 0)
+			add(lp.X, lp.Y, pin.Name, h, rot, pin.Justify, style.PinName, 0)
 		}
 	}
 	// Worksheet furniture text: zone-ruler numbers/letters and the title-block fields.
