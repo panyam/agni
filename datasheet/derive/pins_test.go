@@ -168,20 +168,67 @@ func TestRowWithNoDesignatorStillYieldsAPin(t *testing.T) {
 	}
 }
 
-// The type column declines to classify supply and ground rows on this real table, and
-// this stage must not invent a classification the document did not make. Only the
-// no-connect fallback is allowed, because the document states that one in words.
+// This stage must not invent a classification the document did not make. That rule is
+// unchanged; what sharpened is where the document is allowed to make one. The type column
+// is still authoritative when it speaks, and the DESCRIPTION now counts as the document
+// speaking too, because it is where real tables put the supply and ground rows they leave
+// dashed in the type column. A pin's NAME is still never evidence.
 func TestTypeColumnIsNotSecondGuessed(t *testing.T) {
 	spec, _ := runPinFixture(t)
 	byID := map[string]*parampb.Pin{}
 	for _, p := range spec.Pins {
 		byID[p.Id] = p
 	}
-	if p := byID["vcca"]; p == nil || p.Function != parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED {
-		t.Errorf("vcca function = %v, want UNSPECIFIED: the I/O column reads \"-\" for supplies", p.GetFunction())
-	}
 	if p := byID["a1"]; p == nil || p.Function != parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL {
 		t.Errorf("a1 function = %v, want BIDIRECTIONAL: its I/O column says so", p.GetFunction())
+	}
+	// The I/O column reads "-" here; the description opens "A-port supply voltage".
+	if p := byID["vcca"]; p == nil || p.Function != parampb.PinFunction_PIN_FUNCTION_POWER_INPUT {
+		t.Errorf("vcca function = %v, want POWER_INPUT from its description", p.GetFunction())
+	}
+}
+
+// The line the classifier is drawn on: a description, not a name. A pin named like a supply
+// whose prose does not say so stays untyped, because typing it would be this stage guessing
+// from spelling — the thing the type column's silence was protecting against.
+func TestPinNameIsNeverEvidenceOfFunction(t *testing.T) {
+	cases := []struct {
+		name, desc string
+		want       parampb.PinFunction
+	}{
+		{"VCCA", "A-port supply voltage 1.2V <= VCCA <= 3.6V", parampb.PinFunction_PIN_FUNCTION_POWER_INPUT},
+		{"GND", "Ground", parampb.PinFunction_PIN_FUNCTION_GROUND},
+		{"VDD", "", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
+		{"VBUS", "Bus monitor tap", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
+		// The failure the narrow matcher exists to avoid: a signal that MENTIONS ground.
+		{"OE", "Connect to ground through a 10 kOhm resistor", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
+		{"EN", "Enable input. Tie to supply voltage for normal operation", parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED},
+	}
+	for _, tc := range cases {
+		if got := pinFunctionOf("", tc.name, tc.desc); got != tc.want {
+			t.Errorf("%s (%q) = %v, want %v", tc.name, tc.desc, got, tc.want)
+		}
+	}
+}
+
+// A pin nobody could type is recorded as a gap, so a narrow classifier produces a curation
+// worklist rather than a silent absence. Without this the decline is indistinguishable from
+// a pin that genuinely carries no function.
+func TestUntypedPinIsGapped(t *testing.T) {
+	_, manifest := runPinFixture(t)
+	var untyped []string
+	for _, g := range manifest.GetGaps() {
+		if g.GetKind() == "untyped-pin" {
+			untyped = append(untyped, g.GetDetail())
+		}
+	}
+	if len(untyped) == 0 {
+		t.Fatal("the fixture has rows this stage cannot type; each must be gapped")
+	}
+	for _, d := range untyped {
+		if !strings.Contains(d, "description:") {
+			t.Errorf("a gap must carry the pin's own prose, so a curator can decide: %q", d)
+		}
 	}
 }
 
