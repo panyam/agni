@@ -360,10 +360,9 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID map[string]string,
 			continue
 		}
 		pl := placementOf(in, src, cellByID, libByID, viewByID)
-		// Ref-des is a structured Reference field (the renderer draws placement fields). EDIF
-		// has no per-designator display origin here, so anchor it at the placement origin.
-		if pl.RefDes != "" && pl.Transform != nil && pl.Transform.Origin != nil {
-			pl.Fields = append(pl.Fields, &geom.Field{Name: "Reference", Value: pl.RefDes, Origin: pl.Transform.Origin, Visible: true})
+		// Ref-des is a structured Reference field (the renderer draws placement fields).
+		if f := refDesField(in, pl.RefDes, placementOrigin(pl), fgh); f != nil {
+			pl.Fields = append(pl.Fields, f)
 		}
 		// Placed property overrides (Value, tolerance, rating) carry their own display origin
 		// on the instance, so a faithful .eds render shows component values, not just symbols
@@ -476,22 +475,67 @@ func placedFields(in *node, fgh map[string]int64) []*geom.Field {
 		if !labelVisible(d) {
 			continue
 		}
-		f := &geom.Field{Name: name, Value: atom(sd.Arg(1)), Origin: ptOf(o.Arg(1)), Visible: true}
-		if j := d.Child("justify"); j != nil {
-			f.Justify = canonicalJustify(atom(j.Arg(1)))
+		if f := fieldFromDisplay(name, atom(sd.Arg(1)), d, fgh); f != nil {
+			out = append(out, f)
 		}
-		if or := d.Child("orientation"); or != nil {
-			f.RotationDeg = orientationDeg(atom(or.Arg(1)))
-		}
-		if th := findFirst(d, "textHeight"); th != nil {
-			f.Height = parseInt(atom(th.Arg(1)))
-		}
-		if f.Height == 0 {
-			f.Height = fgh[displayGroup(d)]
-		}
-		out = append(out, f)
 	}
 	return out
+}
+
+// fieldFromDisplay builds one placed Field from a (display ...) node: its origin, justify,
+// orientation, and text height, inheriting the overridden figureGroup's default height when the
+// display does not restate one. Returns nil when the display has no origin (an unplaced value) or
+// the source marks it hidden, so every caller drops the same things. Shared by placedFields and
+// refDesField, which read the same display grammar off different parents.
+func fieldFromDisplay(name, value string, d *node, fgh map[string]int64) *geom.Field {
+	o := d.Child("origin")
+	if o == nil || !labelVisible(d) {
+		return nil
+	}
+	f := &geom.Field{Name: name, Value: value, Origin: ptOf(o.Arg(1)), Visible: true}
+	if j := d.Child("justify"); j != nil {
+		f.Justify = canonicalJustify(atom(j.Arg(1)))
+	}
+	if or := d.Child("orientation"); or != nil {
+		f.RotationDeg = orientationDeg(atom(or.Arg(1)))
+	}
+	if th := findFirst(d, "textHeight"); th != nil {
+		f.Height = parseInt(atom(th.Arg(1)))
+	}
+	if f.Height == 0 {
+		f.Height = fgh[displayGroup(d)]
+	}
+	return f
+}
+
+// refDesField builds the ref-des Reference field for an instance. A schematic designator carries
+// its own display — origin, justify, and text height — so the ref-des lands where the authoring
+// tool drew it, which is typically a column of fields beside the symbol rather than the symbol
+// origin. Anchoring it at the placement origin instead put it a line or two off and at the
+// renderer's fixed fallback size, so it collided with the neighbouring component's fields.
+//
+// A display is authoritative when present, including its visibility flag: an instance that hides
+// its designator keeps it hidden rather than falling back. The fallback covers an export whose
+// designator is a bare (designator REF) with no display at all, which has no position of its own.
+func refDesField(in *node, refDes string, fallback *geom.Point, fgh map[string]int64) *geom.Field {
+	if refDes == "" {
+		return nil
+	}
+	if d := in.Child("designator").Child("stringDisplay").Child("display"); d != nil {
+		return fieldFromDisplay("Reference", refDes, d, fgh)
+	}
+	if fallback == nil {
+		return nil
+	}
+	return &geom.Field{Name: "Reference", Value: refDes, Origin: fallback, Visible: true}
+}
+
+// placementOrigin is a placement's transform origin, or nil when it has none.
+func placementOrigin(pl *geom.SymbolPlacement) *geom.Point {
+	if pl == nil || pl.Transform == nil {
+		return nil
+	}
+	return pl.Transform.Origin
 }
 
 // titleBlockFromInstance recognizes the drawing-sheet border/title-block instance and pulls

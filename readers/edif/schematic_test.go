@@ -512,6 +512,47 @@ func TestReadSchematic_TitleBlock(t *testing.T) {
 	}
 }
 
+// TestReadSchematic_RefDesDisplay asserts the ref-des is placed from its designator's own
+// (display ...) rather than anchored on the symbol origin. Anchoring on the origin put the ref-des
+// a line or two off its field column, at the renderer's fixed fallback size and center-anchored,
+// so it overran the neighbouring component's fields. The display also carries the visibility flag,
+// so an instance that hides its designator must draw nothing rather than falling back to the
+// origin. sample.eds covers the fallback for a designator with no display at all.
+func TestReadSchematic_RefDesDisplay(t *testing.T) {
+	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "refdes-display.eds")), "refdes-display.eds")
+	if err != nil {
+		t.Fatalf("ReadSchematic: %v", err)
+	}
+	byRef := map[string]*geom.Field{}
+	for _, pl := range g.Sheets[0].Placements {
+		for _, f := range pl.Fields {
+			if f.Name == "Reference" {
+				byRef[f.Value] = f
+			}
+		}
+	}
+	// R1 takes origin/justify from its display and inherits the ATTRIBUTE group's textHeight.
+	f := byRef["R1"]
+	if f == nil {
+		t.Fatalf("R1 has no Reference field; got %v", byRef)
+	}
+	if f.Origin.GetX() != 100 || f.Origin.GetY() != 176 {
+		t.Errorf("R1 origin = %v, want (100,176) from the designator display, not the symbol origin", f.Origin)
+	}
+	if f.Justify != "left bottom" || f.RotationDeg != 0 || f.Height != 8 {
+		t.Errorf("R1 = justify %q, rot %d, height %d; want left bottom / 0 / 8 (inherited)",
+			f.Justify, f.RotationDeg, f.Height)
+	}
+	// R2 restates its own textHeight, which wins over the group default, and rotates.
+	if f := byRef["R2"]; f == nil || f.Height != 5 || f.RotationDeg != 90 || f.Justify != "right top" {
+		t.Errorf("R2 = %v, want height 5, rot 90, justify right top", f)
+	}
+	// R3's display is marked hidden, so it must not be drawn at all.
+	if f, ok := byRef["R3"]; ok {
+		t.Errorf("R3 designator is (visible (false)) but was drawn as %v", f)
+	}
+}
+
 // refDesList is a test helper: the ref-des of each placement, for a readable failure message.
 func refDesList(pls []*geom.SymbolPlacement) []string {
 	out := make([]string, len(pls))
