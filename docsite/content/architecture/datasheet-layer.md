@@ -568,9 +568,31 @@ numbering nobody has seen.
 
 Every run emits a `RunManifest` recording the doc content hash, the doc producer and derive
 version (the toolchain pin), part identity, recipes matched, patches applied, and the gap
-list: unclassified tables, unparsed rows, raw-kept conditions, and unapplied patches. What the
-run did not extract is enumerated rather than implied. Ensemble-agreement fields exist in the
-manifest and stay zero until a second extraction path lands.
+list: unclassified tables, unparsed rows, raw-kept conditions, unapplied patches, and pins the
+stage could not type. What the run did not extract is enumerated rather than implied.
+Ensemble-agreement fields exist in the manifest and stay zero until a second extraction path lands.
+
+**A narrow classifier plus a recorded decline beats a clever one.** The pin typing stage is the worked
+example. A table routinely leaves its type column dashed on exactly the supply and ground rows and
+puts the fact in prose, so the stage reads the description — but only how it OPENS, in a handful of
+near-universal phrasings, and refuses everything else. The temptation is to search the whole sentence
+for "ground": one real table describes a thermal pad that "must either be connected to Ground or left
+electrically open", which is a decision the BOARD makes, and a greedy matcher would stamp a false
+ground onto a net every rail rule then quantifies over. An untyped pin costs nothing; a wrongly typed
+one is a confident wrong answer.
+
+That trade is only affordable because declining is *recorded*. Every untyped pin becomes a gap
+carrying its own prose and, where the type column held a token the vocabulary did not know, that
+token. So the narrow path produces a worklist rather than a silence: a curator, or an assistant
+searching the document on their behalf, sees the candidates and decides. Widening the matcher to
+swallow the tail would trade a visible gap for an invisible guess.
+
+**The gap list is also the diagnostic instrument.** A pin table whose header spans two rows had both
+its type and description columns invisible, so every pin came out named, numbered, and untyped — a
+result indistinguishable from a datasheet that simply did not say. That is how a silent extractor bug
+survives: its output is plausible. It was found in minutes because the manifest said which pins were
+declined and why, and the gap detail is worded to separate the two causes, since an unknown token is
+a vocabulary gap that names its own fix while a missing column is a judgement for a human.
 
 ### The golden gate
 
