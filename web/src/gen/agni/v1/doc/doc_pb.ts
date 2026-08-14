@@ -37,6 +37,14 @@ export type Document = Message<"agni.v1.doc.Document"> & {
   /**
    * Document-declared title when the source carries one; empty otherwise.
    *
+   * NOT the document's IDENTITY. Producers fill this with whatever the source declares about
+   * itself, which for a vendor datasheet is the PART number ("LM1117"), not the document number
+   * and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
+   * agni.v1.param.SourceDoc.title, which is specified as the latter: the two fields share a name
+   * and answer different questions, and conflating them produced citations that could not say
+   * which revision they cited and read identically before and after a reissue (agni issue 290).
+   * Selecting a derive recipe by this value IS a correct use: a recipe understands a part.
+   *
    * @generated from field: string title = 3;
    */
   title: string;
