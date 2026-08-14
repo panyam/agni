@@ -18,7 +18,7 @@ import (
 // components and seeded datasheet PartSpecs (agni.v1.param). Same posture as the
 // board tier: rules read the joined spec through the Model, never the raw set, and a
 // model built without a seeded set (NewModel, NewModelWithBoard) yields nil for every
-// component, so datasheet-backed rules are silent by construction — skip, never
+// component, so datasheet-backed rules are silent by construction: skip, never
 // false-pass. Catalog-level gating is Available's "param" read-prefix rule.
 //
 // The join key is part identity: ir.BomLine (mpn/manufacturer, matched by ref_des)
@@ -27,11 +27,10 @@ import (
 // case-insensitive; nothing fuzzier, on purpose (param.ParamSet.Lookup).
 
 // NewModelWithParams builds the default Model with the board tier (bg may be nil) and
-// the params tier (specs may be nil) attached. specs is any param.ParamProvider — a
-// directory-loaded ParamSet, an in-memory mock, or a datasheet service — so the datasheet
-// source is pluggable without touching the model or any rule. NewModel and NewModelWithBoard
-// remain the narrower constructors; every existing caller is unchanged (a ParamSet satisfies
-// ParamProvider).
+// the params tier (specs may be nil) attached. specs is any param.ParamProvider, so a
+// directory-loaded ParamSet, an in-memory mock or a datasheet service are all pluggable
+// without touching the model or any rule. NewModel and NewModelWithBoard are the narrower
+// constructors.
 func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamProvider, opts ...ModelOption) Model {
 	m := NewModelWithBoard(d, bg, opts...).(*irModel)
 	m.specs = specs
@@ -62,20 +61,15 @@ func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamP
 // enrichRolesFromParams adds net roles the DATASHEET establishes, the second evidence tier C9's
 // evidence-tier variant admits (agni issue 280). It is the sibling of enrichClassesFromParams and
 // runs for the same reason: the mpn map and the seeded specs only exist once a params tier is
-// attached, so this cannot happen in the ingestion pass that stamps the name-derived roles.
+// attached, so this cannot happen in the ingestion pass that stamps the name-derived roles. The
+// built-in name vocabulary is start-anchored (VCC, VDD, +3V3), so a datasheet pin function is
+// evidence no name can supply: a terminal the vendor types as a power input is fed by a supply,
+// whatever anyone called the net. Measured on one real 1700-net board, that was 13 rails against 91.
 //
-// WHAT MAKES IT WORTH DOING. Until now a net was a rail because of its NAME, and the built-in
-// vocabulary is start-anchored (VCC, VDD, +3V3), so a project naming rails function-first had to
-// declare its own lexicon or the engine could not see its rails at all. Measured on a real 1700-net
-// board that was the difference between 13 rails and 91. A datasheet pin function is evidence no
-// name can supply: a terminal the vendor types as a power input is fed by a supply, whatever anyone
-// called the net.
-//
-// ADDITIVE ONLY, which is what makes admitting a tier safe. A datasheet fact can never remove or
-// downgrade a role the name or the format established, so a design read WITHOUT --params classifies
-// exactly as it did before this existed, and adding a corpus can only ever reveal more rails. It is
-// also idempotent: building two models over one design merges rather than duplicating, because the
-// merge upgrades a role in place rather than appending.
+// ADDITIVE ONLY. A datasheet fact can never remove or downgrade a role the name or the format
+// established, so a design read WITHOUT --params classifies exactly as it did before. It is also
+// idempotent: the merge upgrades a role in place rather than appending, so building two models
+// over one design does not duplicate.
 func (m *irModel) enrichRolesFromParams() {
 	fn := m.datasheetPinFunctions()
 	if len(fn) == 0 {
@@ -143,15 +137,14 @@ func (m *irModel) datasheetPinFunctions() map[string]parampb.PinFunction {
 }
 
 // enrichClassesFromParams merges each component's datasheet-declared device class into its
-// device_classes SET (WS10-013 Phase 2). The datasheet is the authoritative class evidence — a smart
-// high-side switch IS an eFuse because its spec says so — but the mpn/classSet maps only exist once a
-// params tier is attached, so this runs at model-build time (here), AFTER the ingestion classify pass
-// stamped the keyword-derived set. The merge is ADDITIVE: the datasheet class (and its family tags via
-// classify.ClassesOf) is added as a membership tag, so HasClass and component.class answer from it,
-// but the most-specific ComponentClass is left keyword-derived — a datasheet class is not promoted
-// over the ref-des/description class, to avoid perturbing the existing ComponentClass equality sites.
-// Degrade-safe (C9): a component with no seeded spec, or a spec with no device_class, keeps exactly its
-// keyword-derived set, so a design read without --params classifies identically.
+// device_classes SET (WS10-013 Phase 2). The datasheet is the authoritative class evidence (a smart
+// high-side switch IS an eFuse because its spec says so), but the mpn/classSet maps only exist once a
+// params tier is attached, so this runs at model-build time, AFTER the ingestion classify pass
+// stamped the keyword-derived set. The merge is ADDITIVE: the datasheet class and its family tags
+// (classify.ClassesOf) become membership tags that HasClass and component.class answer from, while
+// the most-specific ComponentClass stays keyword-derived, which keeps the existing ComponentClass
+// equality sites unperturbed. Degrade-safe (C9): a component with no seeded spec, or a spec with no
+// device_class, keeps exactly its keyword-derived set.
 func (m *irModel) enrichClassesFromParams() {
 	for _, c := range m.d.Components {
 		spec := m.PartSpec(c.RefDes)
@@ -177,9 +170,9 @@ func (m *irModel) ComponentMPN(refDes string) string { return m.mpn[refDes] }
 
 // PartSpec returns the seeded datasheet spec joined to a component, or nil when the
 // component has no MPN, the MPN is unseeded, or the model was built without a provider.
-// Rules treat nil as skip, never as pass. The nil-provider guard matters because specs is
-// now an interface: a model built by NewModel / NewModelWithBoard leaves it a nil interface,
-// which would panic on a method call (a nil ParamSet map would not).
+// Rules treat nil as skip, never as pass. The nil-provider guard is load-bearing: specs is an
+// interface, so NewModel / NewModelWithBoard leave it a nil interface that would panic on a
+// method call (a nil ParamSet map would not).
 func (m *irModel) PartSpec(refDes string) *parampb.PartSpec {
 	if m.specs == nil {
 		return nil
@@ -189,31 +182,30 @@ func (m *irModel) PartSpec(refDes string) *parampb.PartSpec {
 
 // supplySymbols is the per-corpus alias map for the "supply voltage" concept: the
 // vendor symbols an absolute-maximum supply rating prints under, matched after
-// normalization (upper-case, spaces stripped — producers split subscripts). This
+// normalization (upper-case, spaces stripped, since producers split subscripts). This
 // lookup lives here in the model layer so no rule text ever hardcodes a vendor
-// spelling (docs/20, comparison semantics). It grows per corpus; WS10-004 replaces it
-// with the real ontology.
+// spelling (docs/20, comparison semantics).
 var supplySymbols = map[string]bool{
 	"VIN": true, "VDD": true, "VCC": true, "VDDA": true,
 	"VBAT": true, "VSUP": true, "V+": true,
 }
 
 // fetBreakdownSymbols is the alias set for a MOSFET's drain-source breakdown voltage: the symbols
-// datasheets print it under. Same posture as supplySymbols — vendor spelling lives in the model layer,
-// never in rule text (docs/20). Deliberately excludes VGSS (the GATE-source rating), which is a
-// different limit on a different pair of terminals and is typically much lower; comparing a rail
-// against the wrong one of the two would misreport which rating a design violates.
+// datasheets print it under. Same posture as supplySymbols, vendor spelling in the model layer and
+// never in rule text (docs/20). Deliberately excludes VGSS (the GATE-source rating), a different
+// limit on a different pair of terminals and typically much lower, so comparing a rail against it
+// would misreport which rating a design violates.
 var fetBreakdownSymbols = map[string]bool{
 	"VDSS": true, "VDS": true, "BVDSS": true, "V(BR)DSS": true,
 }
 
 // FetBreakdownLimits selects the machine-comparable drain-source breakdown rows of a spec: symbol in
 // the breakdown alias set, kind ABSOLUTE_MAX, a unit reducing to volts, a max bound present, and the
-// docs/20 comparison gates. Breakdown IS an absolute maximum on a real datasheet (it is the voltage
-// past which the part stops being a switch), so unlike OutputVoltageLimits the kind is constrained.
+// docs/20 comparison gates. Breakdown IS an absolute maximum on a real datasheet (the voltage past
+// which the part stops being a switch), so unlike OutputVoltageLimits the kind is constrained.
 //
-// The third member of the connection-aware extractor family: SupplyAbsMaxLimits reads what a part can
-// WITHSTAND on its supply, OutputVoltageLimits what a part DELIVERS, and this what a switch can BLOCK.
+// Third of the connection-aware extractor family: SupplyAbsMaxLimits reads what a part can WITHSTAND
+// on its supply, OutputVoltageLimits what a part DELIVERS, and this what a switch can BLOCK.
 func FetBreakdownLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
@@ -237,9 +229,9 @@ func FetBreakdownLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 // posture as supplySymbols, vendor spelling in the model layer and never in rule text.
 //
 // Narrow on purpose. Every symbol here has to mean "the sense voltage that trips the current limit"
-// and nothing else, because the number is divided by a resistance and reported as an ampere rating. A
-// symbol that could also mean a clamp level or a comparator reference would produce a confident wrong
-// current, which is the failure this rule family costs the most on.
+// and nothing else, because the number is divided by a resistance and reported as an ampere rating,
+// so a symbol that could also mean a clamp level or a comparator reference would produce a confident
+// wrong current.
 var ocpThresholdSymbols = map[string]bool{
 	"VOCP": true, "V(OCP)": true, "VOCTH": true, "V(OC)": true,
 	"VILIM": true, "V(ILIM)": true, "VCL": true, "V(CL)": true,
@@ -248,16 +240,15 @@ var ocpThresholdSymbols = map[string]bool{
 // ocpThresholdSymbolNames is the alias set above written as the DISTINCT symbols it recognizes, one
 // canonical spelling each, for a rule to declare in Rule.ParamSymbols (WS3-085 sizing).
 //
-// One spelling per symbol rather than all eight keys, because the two consumers normalize differently.
-// OcpThresholdLimits matches on the upper-cased, space-stripped spelling, so V(OCP) and VOCP are two
-// keys there; SeedsAnySymbol matches after alnumUpper, which strips the parentheses too, so they are
-// ONE key there. Listing both would print the same symbol twice in a review's needs-data note and tell
-// an author nothing. TestOcpThresholdSymbolsCoverTheAliasSet holds the two forms to each other so the
-// seeding gate and the extractor cannot drift apart.
+// One spelling per symbol rather than all eight keys, because the two consumers normalize
+// differently: OcpThresholdLimits matches on the upper-cased, space-stripped spelling, so V(OCP) and
+// VOCP are two keys there, while SeedsAnySymbol matches after alnumUpper, which strips the
+// parentheses too, so they are ONE key there. Listing both would print the same symbol twice in a
+// review's needs-data note. TestOcpThresholdSymbolsCoverTheAliasSet holds the two forms to each other
+// so the seeding gate and the extractor cannot drift apart.
 //
-// A SLICE rather than a map, for outputCurrentSymbols' reason: it is read back out into a message, and
-// an author reading "no seeded datasheet value for V(OCP)/..." is helped by the ordinary spelling
-// coming first.
+// A SLICE rather than a map, for outputCurrentSymbols' reason: it is read back out into a message,
+// where the ordinary spelling should come first.
 var ocpThresholdSymbolNames = []string{"V(OCP)", "V(OC)", "VOCTH", "V(ILIM)", "V(CL)"}
 
 // OcpThresholdSymbols returns the overcurrent-threshold alias set for Rule.ParamSymbols, so a review
@@ -270,17 +261,13 @@ func OcpThresholdSymbols() []string {
 
 // OcpThresholdLimits selects the machine-comparable overcurrent-threshold rows of a controller's
 // spec: symbol in the alias set, a unit reducing to volts, a max bound present, and the docs/20
-// comparison gates. Rows failing any gate are skipped, never coerced.
+// comparison gates. Rows failing any gate are skipped, never coerced. Real controller sheets print
+// this row in MILLIVOLTS and param.InBaseUnit converts it, so the returned row is always in volts and
+// a rule downstream cannot see the spelling it was seeded in (agni issue 148).
 //
 // The limit KIND is deliberately not constrained: a trip threshold is a characteristic or
 // recommended-operating row, not an absolute maximum, so filtering to one kind would find nothing on a
 // real spec (the same reasoning as OutputVoltageLimits).
-//
-// Real controller sheets print this row in MILLIVOLTS, and it is the row agni issue 148 was reported
-// against: the millivolt spelling used to fail the unit gate, so the resolver found no threshold, no
-// load switch resolved, and the item scored a PASS on a check that never ran. param.InBaseUnit
-// converts it now, in the one place a scale factor lives, so the returned row is always in volts and
-// the rule downstream cannot see the spelling it was seeded in.
 func OcpThresholdLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.GetParameters() {
@@ -311,9 +298,9 @@ var drainCurrentSymbols = map[string]bool{
 // comparison gates. Continuous drain current IS an absolute maximum on a real FET datasheet, so unlike
 // OcpThresholdLimits the kind is constrained.
 //
-// The rating is stated at a case or ambient temperature that the conditions carry, and a real design
-// derates well below it. This selects the vendor's number as printed; a rule comparing against it is
-// therefore reporting the UNAMBIGUOUS half, a current limit set above the part's own rating, and says
+// The rating is stated at a case or ambient temperature the conditions carry, and a real design
+// derates well below it. This returns the vendor's number as printed, so a rule comparing against it
+// reports only the UNAMBIGUOUS half, a current limit set above the part's own rating, and says
 // nothing about whether a limit below the rating is adequately derated.
 func DrainCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
@@ -340,14 +327,9 @@ var onResistanceSymbols = map[string]bool{
 
 // OnResistanceLimits selects the machine-comparable RDS(on) rows of a spec: symbol in the alias set, a
 // unit reducing to ohms, a max bound present, and the docs/20 comparison gates. The limit kind is not
-// constrained, since RDS(on) is a characteristic row.
-//
-// The ohm SPELLINGS a corpus carries (the hand-encoded "Ohm", the transcribed "Ω", the deprecated
-// codepoint) used to live in a local table here, because normalizing two spellings of one unit was
-// safe in a way converting two units was not. That distinction stopped needing a separate mechanism
-// once param.InBaseUnit existed: it holds both the spellings and the scales, and a milliohm row now
-// converts where it used to vanish. RDS(on) is the row where that matters most, since a milliohm is
-// the ORDINARY way a sheet prints a modern FET's on-resistance.
+// constrained, since RDS(on) is a characteristic row. param.InBaseUnit holds both the ohm spellings a
+// corpus carries and the scales, so a milliohm row converts rather than vanishing (agni issue 148),
+// which matters most here: a milliohm is the ORDINARY way a sheet prints a modern FET's on-resistance.
 //
 // A real sheet states RDS(on) SEVERAL TIMES under different gate drives and junction temperatures (the
 // seeded BSS138 carries three), so a caller gets several rows and has to say which one it means. There
@@ -371,8 +353,8 @@ func OnResistanceLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 }
 
 // outputSymbols is the alias set for a regulator's OUTPUT voltage: the symbols datasheets print it
-// under. Same posture as supplySymbols — the vendor spelling lives in the model layer, never in rule
-// text (docs/20). Deliberately narrow: these are outputs a downstream part is fed BY, so a symbol
+// under. Same posture as supplySymbols, the vendor spelling lives in the model layer and never in
+// rule text (docs/20). Deliberately narrow: these are outputs a downstream part is fed BY, so a symbol
 // that could mean an input must not be in here or a connection-aware rule would compare the wrong
 // end of the part against its neighbour.
 var outputSymbols = map[string]bool{
@@ -381,10 +363,10 @@ var outputSymbols = map[string]bool{
 
 // OutputVoltageLimits selects the machine-comparable OUTPUT-voltage rows of a spec: symbol in the
 // output alias set, a unit reducing to volts, a max bound present, and the docs/20 comparison gates.
-// The limit KIND is deliberately not constrained: a regulator states its output as a recommended-operating
-// or characteristic row, not an absolute maximum, so filtering to one kind would find nothing on a
-// real spec. The MAX is what a downstream part is exposed to, which is the number a compatibility
-// check needs.
+// The limit KIND is deliberately not constrained: a regulator states its output as a
+// recommended-operating or characteristic row, not an absolute maximum, so filtering to one kind
+// would find nothing on a real spec. The MAX is what a downstream part is exposed to, which is the
+// number a compatibility check needs.
 //
 // The counterpart to SupplyAbsMaxLimits: that one reads what a part can WITHSTAND, this reads what a
 // part DELIVERS. A connection-aware rule joins one of each across the net between two parts (WS3-028).
@@ -410,16 +392,14 @@ func OutputVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 // reduce to a key here. Same posture as supplySymbols, the vendor spelling lives in the model layer
 // and never in rule text (docs/20).
 //
-// It is the current-axis counterpart of outputSymbols and is deliberately narrow in the same way:
-// these are ratings for what the part DELIVERS, so a symbol that could mean an input current (IIN,
-// IQ, ISD) must not be in here or a sizing rule would compare a rail's demand against the wrong
-// number. ILIM is likewise excluded: a current LIMIT is where the part folds back, not the current it
-// is rated to deliver continuously, and crediting it as capacity would over-rate every part that
-// states both.
-// It is a SLICE rather than a map, unlike its neighbours here, because these symbols are also read
-// back out (OutputCurrentSymbols) into a review's needs-data message, and an author reading "no seeded
-// datasheet value for IOUT/IO/..." is helped by the ordinary spelling coming first. Map iteration
-// order would not give that, and sorting would lead with ICONT.
+// The current-axis counterpart of outputSymbols, deliberately narrow in the same way: these are
+// ratings for what the part DELIVERS, so a symbol that could mean an input current (IIN, IQ, ISD)
+// must not be in here or a sizing rule would compare a rail's demand against the wrong number. ILIM
+// is likewise excluded: a current LIMIT is where the part folds back, not the current it is rated to
+// deliver continuously, and crediting it as capacity would over-rate every part that states both.
+// A SLICE rather than a map, unlike its neighbours here, because these symbols are also read back out
+// (OutputCurrentSymbols) into a review's needs-data message, where the ordinary spelling should come
+// first. Map iteration order would not give that, and sorting would lead with ICONT.
 var outputCurrentSymbols = []string{"IOUT", "IO", "IOUTMAX", "IOMAX", "ICONT", "ICONTMAX", "ILOAD", "IOUTDC"}
 
 // OutputCurrentSymbols returns the output-current alias set, for a rule to declare in
@@ -432,16 +412,12 @@ func OutputCurrentSymbols() []string {
 
 // OutputCurrentLimits selects the machine-comparable OUTPUT-CURRENT rows of a spec: symbol in the
 // output-current alias set, a unit reducing to amps, a max bound present, and the docs/20 comparison
-// gates.
+// gates. Milliamps are the ordinary spelling for a sub-amp regulator and param.InBaseUnit converts
+// them (agni issue 148).
 //
 // The limit KIND is deliberately not constrained, for OutputVoltageLimits' reason: a regulator states
 // its output current as a recommended-operating or characteristic row rather than an absolute maximum,
 // so filtering to one kind would find nothing on a real spec.
-//
-// The other row agni issue 148 was reported against. A regulator stating IOUT in MILLIAMPS used to
-// fail the unit gate, so the rail-budget rules found no supply for the rail, compared nothing, and the
-// item scored a PASS while the rail was genuinely over-subscribed. Milliamps are the ordinary spelling
-// for a sub-amp regulator, so a spec transcribed as printed hit this without doing anything unusual.
 func OutputCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
@@ -461,8 +437,8 @@ func OutputCurrentLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 // SeedsAnySymbol reports whether ANY component on the design carries a seeded datasheet parameter for
 // one of syms, comparing after the same alnumUpper normalization the alias sets use so a spec written
 // I_OUT answers for a declared IOUT. It is the review runner's WS3-097 gate generalized to a rule that
-// declares its symbols (Rule.ParamSymbols) rather than an inline query that names exactly one: false
-// means the rule had nothing to join against, so zero findings is a data gap and not a clean design.
+// declares its symbols (Rule.ParamSymbols): false means the rule had nothing to join against, so zero
+// findings is a data gap and not a clean design.
 //
 // Normalization lives here rather than at the call site for the reason the alias sets do: symbol
 // spelling is a model-layer concern, so a caller passes the symbols it wants and never the rules for
@@ -490,11 +466,9 @@ func SeedsAnySymbol(m Model, syms []string) bool {
 }
 
 // UnmetDependency names one datasheet fact a check reached for and did not find: which part, which
-// symbol, and whether the part has any seeded spec at all.
-//
-// The unit is the PART, not the placement. A PartSpec is per-MPN, so ten instances of one component
-// are one thing to go seed; deduplicating by MPN is what makes this a work list rather than a
-// restatement of the bill of materials.
+// symbol, and whether the part has any seeded spec at all. The unit is the PART, not the placement: a
+// PartSpec is per-MPN, so ten instances of one component are one thing to go seed, and deduplicating
+// by MPN is what makes this a work list rather than a restatement of the bill of materials.
 type UnmetDependency struct {
 	MPN          string
 	Manufacturer string // as the seeded spec states it; empty when SpecAbsent
@@ -509,13 +483,10 @@ type UnmetDependency struct {
 // answers "does ANY part seed this", which is the right question for the verdict and the wrong one
 // for acting on it.
 //
-// classes gates the walk to an item's applies_to_class when it declares one, for the same reason the
-// computed-n/a path does: without it a symbol needed by three parts would name every part on the
-// design that lacks it, and a work list nobody can act on is not better than prose.
-//
+// classes gates the walk to an item's applies_to_class when it declares one, as the computed-n/a path
+// does; without it a symbol needed by three parts would name every part on the design that lacks it.
 // The result is deduplicated by (mpn, symbol) and sorted, so a run written and re-read reproduces
-// byte for byte. A component with no resolvable MPN yields nothing: there is no part to name, and a
-// dependency naming nothing cannot be acted on.
+// byte for byte. A component with no resolvable MPN yields nothing, since there is no part to name.
 func UnseededSymbols(m Model, syms []string, classes []string) []UnmetDependency {
 	if len(syms) == 0 {
 		return nil
@@ -568,8 +539,8 @@ func hasAnyClass(m Model, refDes string, classes []string) bool {
 }
 
 // esdSymbols is the alias set for a part's ESD-tolerance rating: the symbols datasheets print it
-// under (the ESD-gun / handling models). Same posture as supplySymbols — the vendor spelling lives in
-// the model layer, never in rule text (docs/20).
+// under (the ESD-gun / handling models). Same posture as supplySymbols, the vendor spelling lives in
+// the model layer and never in rule text (docs/20).
 var esdSymbols = map[string]bool{
 	"VESD": true, "V(ESD)": true, "ESD": true,
 	"VESDHBM": true, "ESDHBM": true, "VESDCDM": true, "ESDCDM": true,
@@ -577,24 +548,18 @@ var esdSymbols = map[string]bool{
 }
 
 // icEsdFloorVolts is the minimum declared ESD tolerance that credits a connector-facing signal as
-// IC-protected (WS3-073). Conservative; automotive bus transceivers rate far higher (IEC ±8kV). Two
-// refinements are deliberate follow-ups: crediting only a SYSTEM-level test model (IEC 61000-4-2), not a
-// component handling model (HBM/CDM); and matching the rating to the connector-facing PIN, not the part.
+// IC-protected (WS3-073). Conservative; automotive bus transceivers rate far higher (IEC ±8kV). The
+// rating is matched to the PART, not to the connector-facing PIN, which is a deliberate follow-up.
 const icEsdFloorVolts = 2000
 
 // EsdRatingLimits selects the machine-comparable ESD-rating rows of a spec at or above the credit
 // floor: symbol in the alias set, an absolute-max limit (an ESD rating is a max survivable stress), a
 // max bound present in a unit reducing to volts, and the docs/20 comparison gates. Rows failing any
-// gate are skipped.
-//
-// This extractor already converted, alone in this file, because an ESD rating is printed in KILOVOLTS
-// as often as in volts and a rule that skipped the kV spelling would have credited almost nothing. It
-// carried its own two-case scale to do it. That special case is now the general one, so the local
-// converter is gone and this reads like its nine neighbours.
+// gate are skipped. An ESD rating is printed in KILOVOLTS as often as in volts, and param.InBaseUnit
+// converts it (agni issue 148).
 func EsdRatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
-		// ESD symbols come in many spellings (V_ESD, V(ESD), VESD, ESD_HBM); reduce to alphanumerics.
 		sym := alnumUpper(p.Symbol)
 		if !esdSymbols[sym] {
 			continue
@@ -623,10 +588,9 @@ func EsdRatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 // part for assembly ONLY, so it must not credit a harness-exposed signal.
 var esdSystemLevelModels = map[string]bool{"IEC": true, "CONTACT": true, "AIR": true, "SYSTEM": true}
 
-// esdIsSystemLevel reports whether an ESD-rating row is a system-level (IEC) rating. The test model is a
-// DECLARED attribute (esd_test_model = iec | hbm | cdm | ...), never parsed from the Name text — an
-// unstated or handling-model rating does not credit (WS3-077): crediting an HBM rating on a harness
-// input would hide a real ESD gap, since HBM is not field-strike protection.
+// esdIsSystemLevel reports whether an ESD-rating row is a system-level (IEC) rating. The test model is
+// a DECLARED attribute (esd_test_model = iec | hbm | cdm | ...), never parsed from the Name text, and
+// an unstated or handling-model rating does not credit (WS3-077).
 func esdIsSystemLevel(p *parampb.Parameter) bool {
 	return esdSystemLevelModels[alnumUpper(p.Attributes["esd_test_model"])]
 }
@@ -643,11 +607,11 @@ func alnumUpper(s string) string {
 	return b.String()
 }
 
-// SupplyInputPin reports whether a pin consumes a supply rail, format-neutrally — the entity both
-// datasheet rail rules (supply-exceeds-abs-max, rail-nominal-out-of-recommended) quantify over. Since
-// WS3-072 PR2 the answer is a plain PinDir == POWER_IN: the ingestion pass (classify.StampPowerInPins)
-// fills POWER_IN on a supply-named input pin a reader (EDIF) left under-typed, so every reader now types
-// its supply pins the same way KiCad does. The earlier name-role fallback (the WS3-036 interim) is gone.
+// SupplyInputPin reports whether a pin consumes a supply rail, format-neutrally: the entity both
+// datasheet rail rules (supply-exceeds-abs-max, rail-nominal-out-of-recommended) quantify over. A
+// plain PinDir == POWER_IN suffices because the ingestion pass (classify.StampPowerInPins) fills
+// POWER_IN on a supply-named input pin a reader (EDIF) left under-typed, so every reader types its
+// supply pins the same way KiCad does (WS3-072).
 func SupplyInputPin(m Model, refDes, designator string) bool {
 	return m.PinDir(refDes, designator) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 }
@@ -679,11 +643,11 @@ func SupplyAbsMaxLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 // supply-voltage rows of a spec: symbol in the supply alias set, kind
 // RECOMMENDED_OPERATING, a unit reducing to volts, at least one of min/max present, and
 // the docs/20 comparison gates (unrecognized units and text-only conditions are skipped,
-// never coerced). Unlike SupplyAbsMaxLimits — a one-sided ceiling that is always conservative
-// to apply across every power-in pin — the recommended range is two-sided, so its
-// consumer (rail-nominal-out-of-recommended) acts only on a part that declares a SINGLE
-// such row: a netlist does not say which power-in pin is which supply, so a multi-supply
-// part can't be range-checked without risking a false over/under finding.
+// never coerced). SupplyAbsMaxLimits is a one-sided ceiling that is always conservative to
+// apply across every power-in pin; the recommended range is two-sided, so its consumer
+// (rail-nominal-out-of-recommended) acts only on a part that declares a SINGLE such row. A
+// netlist does not say which power-in pin is which supply, so a multi-supply part can't be
+// range-checked without risking a false over/under finding.
 func RecommendedOperatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 	var out []*parampb.Parameter
 	for _, p := range spec.Parameters {
@@ -704,8 +668,7 @@ func RecommendedOperatingLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 
 // capRatedVoltageSymbols is the alias set for a capacitor's rated-voltage concept:
 // the symbols cap datasheets print it under. Same posture as supplySymbols: the
-// vendor spelling lives here in the model layer, never in rule text (docs/20), and
-// WS10-004's ontology replaces it.
+// vendor spelling lives here in the model layer, never in rule text (docs/20).
 var capRatedVoltageSymbols = map[string]bool{
 	"VDC": true, "WV": true, "VR": true, "VRATED": true,
 }
@@ -737,10 +700,9 @@ func CapRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 }
 
 // RailMaxVoltage is the "net.max_voltage" fact: the rail voltage a net declares. A
-// max_voltage attribute wins when present (the explicit channel; a computed
-// worst-case value is WS4); otherwise the name-derived nominal
-// (nominalVoltageFromName) is the only evidence a netlist carries. ok is false when
-// neither channel yields a number — consumers skip, never guess.
+// max_voltage attribute wins when present (the explicit channel); otherwise the
+// name-derived nominal (nominalVoltageFromName) is the only evidence a netlist carries.
+// ok is false when neither channel yields a number, and consumers skip rather than guess.
 func RailMaxVoltage(n *ir.Net, name string) (volts float64, ok bool) {
 	if v := n.Attributes["max_voltage"]; v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
@@ -755,23 +717,19 @@ func RailMaxVoltage(n *ir.Net, name string) (volts float64, ok bool) {
 // "EVENT5") never parses.
 var voltageToken = regexp.MustCompile(`^\+?(\d+)(?:V(\d+)?|\.(\d+)V)$`)
 
-// NominalVoltageFromName derives a rail's nominal voltage from its net name — the design-side
-// nominal a rail's NAME declares (3V3 -> 3.3), the only voltage evidence a directionless netlist
-// carries. ok is false when the name carries no parseable voltage token or two tokens disagree
-// ("12V_TO_5V"), because refusing to guess is the contract every voltage rule leans on. Exported so
-// an out-of-package rule (the design-intent voltage-domain check) reads the SAME name->volts logic
-// the net.nominal_voltage fact projects, rather than re-deriving it and drifting (the C20 left-shift
-// rule: interpret a convention once). It is a pure string function, not a Model read, so it sits at
-// package scope rather than on the Model.
+// NominalVoltageFromName derives a rail's nominal voltage from its net name (3V3 -> 3.3), the only
+// voltage evidence a directionless netlist carries. ok is false when the name carries no parseable
+// voltage token or two tokens disagree ("12V_TO_5V"), because refusing to guess is the contract every
+// voltage rule leans on. Exported so an out-of-package rule (the design-intent voltage-domain check)
+// reads the SAME name->volts logic the net.nominal_voltage fact projects rather than re-deriving it
+// and drifting (the C20 left-shift rule: interpret a convention once). It is a pure string function,
+// not a Model read, so it sits at package scope rather than on the Model.
 func NominalVoltageFromName(name string) (volts float64, ok bool) {
 	return nominalVoltageFromName(name)
 }
 
-// nominalVoltageFromName derives a rail's nominal voltage from its net name — the
-// only voltage evidence a netlist carries (the IsPowerRailName precedent). The name
-// is split into tokens and each is matched in full; ok is false when no token parses
-// or when two tokens disagree ("12V_TO_5V"), because refusing to guess is the
-// contract every params rule leans on.
+// nominalVoltageFromName splits the name into tokens and matches each in full. See
+// NominalVoltageFromName for the contract.
 func nominalVoltageFromName(name string) (volts float64, ok bool) {
 	found := false
 	for _, tok := range strings.FieldsFunc(strings.ToUpper(name), func(r rune) bool {
