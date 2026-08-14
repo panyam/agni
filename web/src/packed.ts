@@ -9,6 +9,12 @@
 import { fromBinary } from "@bufbuild/protobuf";
 import { PackedSheetSchema, type PackedSheet } from "./gen/agni/v1/geom/geom_packed_pb.js";
 
+// DEFAULT_FONT_STACK mirrors render.SchematicFontStack (core/render/style.go). The server sends
+// the family list on every sheet, so this is only the fallback for a sheet packed before the field
+// existed; it is kept byte-identical so the overlay never lays text out in a different face from
+// the SVG backend. Change it only alongside the Go constant.
+export const DEFAULT_FONT_STACK = "Arial, 'Liberation Sans', Helvetica, sans-serif";
+
 // Primitive kinds (geom_packed.proto). GL draw modes are mapped in webgl.ts.
 export const KIND_LINE_STRIP = 1;
 export const KIND_LINE_LOOP = 2;
@@ -177,7 +183,7 @@ export function toRenderable(msg: PackedSheet): DecodedSheet {
       rotationDeg: im.rotationDeg,
       mirror: im.mirror,
     })),
-    fontFamily: msg.fontFamily || "monospace",
+    fontFamily: msg.fontFamily || DEFAULT_FONT_STACK,
     groupColors: msg.groupColors,
     backgroundColor: msg.backgroundColor,
   };

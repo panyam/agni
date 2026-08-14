@@ -1,4 +1,4 @@
-import type { Label, Image } from "./packed.js";
+import { DEFAULT_FONT_STACK, type Label, type Image } from "./packed.js";
 import type { CameraView } from "./camera.js";
 
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -51,9 +51,10 @@ export function imageAttrs(
 }
 
 // naturalTextWidth estimates a run's rendered width in the same units as fontSize, mirroring
-// render/svg.go's naturalTextWidthPx: the overlay draws one monospace font, whose glyph advances
-// about 0.6 em, so n code points at fontSize span ~0.6*fontSize*n. Used to decide whether a
-// box-bounded caption needs condensing (see setContent).
+// render/svg.go's naturalTextWidthPx: n code points at fontSize span ~0.6*fontSize*n. Used to
+// decide whether a box-bounded caption needs condensing (see setContent). The overlay draws
+// DEFAULT_FONT_STACK, a proportional face, so 0.6 is an average rather than an exact advance;
+// render/svg.go's glyphAdvanceEm carries the calibration and both must move together.
 export function naturalTextWidth(text: string, fontSize: number): number {
   return 0.6 * fontSize * [...text].length;
 }
@@ -134,7 +135,7 @@ export class TextOverlay {
   // baked in Y-flipped world space; the per-frame camera transform (update) does pan/zoom
   // without re-touching these.
   setContent(images: Image[], labels: Label[], fontFamily: string): void {
-    this.svg.style.fontFamily = fontFamily || "monospace";
+    this.svg.style.fontFamily = fontFamily || DEFAULT_FONT_STACK;
     this.svg.replaceChildren();
     // Pick the per-sheet bake divisor so the biggest label lands near SAFE_FONT_UNITS (see the note
     // on SAFE_FONT_UNITS). It is >= 1, so formats whose units already clear the clamp are untouched.

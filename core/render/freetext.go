@@ -72,7 +72,7 @@ func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom
 			x:     l.Origin.X,
 			top:   l.Origin.Y,
 			bot:   l.Origin.Y - int64(lines-1)*step,
-			width: monoAdvanceEm * float64(effH) * float64(widest),
+			width: glyphAdvanceEm * float64(effH) * float64(widest),
 			lines: lines,
 			effH:  effH,
 		})
@@ -110,7 +110,7 @@ func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom
 				budget = gap
 			}
 		}
-		gutter := monoAdvanceEm * float64(a.effH)
+		gutter := glyphAdvanceEm * float64(a.effH)
 		if avail := budget - gutter; avail > 0 && a.width > avail {
 			global = math.Min(global, avail/a.width)
 		}

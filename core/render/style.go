@@ -36,7 +36,8 @@ type Style struct {
 	Via          string // via rings + through-hole pad lands
 	Silk         string // silkscreen / fab body-outline graphics (WS7)
 
-	// Font is the default font-family for all text (one face; no per-element font yet).
+	// Font is the default font-family for all text: a CSS family list, not one face
+	// (see SchematicFontStack). No per-element font yet.
 	Font string
 
 	// PinDots draws a dot at every pin connect-point (the Pin color). It is a verification aid
@@ -67,6 +68,19 @@ func (s Style) GroupColor(group uint8) string {
 	}
 }
 
+// SchematicFontStack is the default font-family for schematic text: a CSS fallback chain rather
+// than one face. Arial leads because the authoring tools this engine reads print their schematics
+// in it, and it ships with Windows and macOS, so a viewer gets the real face with no setup.
+// Liberation Sans follows because it is metric-compatible with Arial and OFL-licensed, so a Linux
+// box or CI runner with no Arial installed lays text out at identical advance widths instead of
+// drifting per machine. The engine never loads or distributes a font file; this is only a name the
+// viewer resolves locally.
+//
+// Family names are SINGLE-quoted deliberately: svg.Attr writes its value verbatim inside double
+// quotes, so a double-quoted family name would emit invalid XML on the SVG root element. CSS
+// accepts either quote, so single quotes cost nothing and survive both surfaces.
+const SchematicFontStack = "Arial, 'Liberation Sans', Helvetica, sans-serif"
+
 // DefaultStyle is the built-in palette and font, matching the schematic scheme the SVG backend
 // has always drawn. Override per render call with WithStyle.
 var DefaultStyle = Style{
@@ -90,7 +104,7 @@ var DefaultStyle = Style{
 	Via:            "#9aa0a6",
 	Silk:           "#7a7f88",
 	TitleBlockFill: "#fffef8",
-	Font:           "monospace",
+	Font:           SchematicFontStack,
 }
 
 // DarkStyle is a dark-background preset, useful for demonstrating that a WithStyle override
@@ -116,7 +130,7 @@ var DarkStyle = Style{
 	Via:            "#c0c6cc",
 	Silk:           "#aab0bb",
 	TitleBlockFill: "#1a1a1a",
-	Font:           "monospace",
+	Font:           SchematicFontStack,
 }
 
 // Themes maps a theme name to its Style, for the `agni serve --theme` knob.
