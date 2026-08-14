@@ -122,6 +122,36 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 	return g
 }
 
+// textLineRatio converts an EDIF textHeight into the GLYPH height geom.Field/Label carry.
+//
+// EDIF's textHeight is a LINE PITCH, not an em size. The authoring tool stacks a component's
+// field rows exactly textHeight apart: measured over 2377 instances of one export, 3161 of the
+// same-column row gaps were exactly 1.000x that row's textHeight, far ahead of any other value.
+// Setting font-size = textHeight therefore leaves ZERO leading, so consecutive rows touch, which
+// is what made rendered field columns look cramped against the tool's own printed output.
+//
+// The ratio is the tool's line height. Recovered from a PDF the same toolchain printed, it is
+// 1.3148: every one of nine distinct font sizes in that PDF divided its source textHeight to
+// within 0.1%, so it is calibrated against nine points rather than fitted to one. It also lands
+// where a line height should — 1.2 to 1.35 is ordinary typesetting — which is the sanity check
+// that this is a real quantity and not a fudge factor.
+//
+// Applied in the READER, not the renderer, because it is a fact about how EDIF spells text size.
+// geom's height field means glyph height (the renderer maps it straight to font-size), so
+// translating the format's spelling into the contract's meaning is exactly the reader's job.
+// KiCad states a glyph height directly and is correctly left alone.
+const textLineRatio = 1.3148
+
+// glyphHeight converts one EDIF textHeight (a line pitch) to the glyph height geom carries.
+// A zero or negative height passes through unchanged, so "unspecified" stays unspecified and
+// the renderer's own fallback still applies.
+func glyphHeight(textHeight int64) int64 {
+	if textHeight <= 0 {
+		return textHeight
+	}
+	return int64(float64(textHeight)/textLineRatio + 0.5)
+}
+
 // figureGroupHeights reads the technology's default textHeight per figureGroup, in source units.
 // EDIF records a display's height once on the figureGroup (e.g. (figureGroup ATTRIBUTE (textHeight
 // 254000))); a per-instance (figureGroupOverride GROUP) that changes only color/visibility omits
@@ -142,7 +172,7 @@ func figureGroupHeights(root *node) map[string]int64 {
 			continue // first definition wins, so a repeated group name is deterministic
 		}
 		if th := fg.Child("textHeight"); th != nil {
-			if h := parseInt(atom(th.Arg(1))); h > 0 {
+			if h := glyphHeight(parseInt(atom(th.Arg(1)))); h > 0 {
 				m[name] = h
 			}
 		}
@@ -500,7 +530,7 @@ func fieldFromDisplay(name, value string, d *node, fgh map[string]int64) *geom.F
 		f.RotationDeg = orientationDeg(atom(or.Arg(1)))
 	}
 	if th := findFirst(d, "textHeight"); th != nil {
-		f.Height = parseInt(atom(th.Arg(1)))
+		f.Height = glyphHeight(parseInt(atom(th.Arg(1))))
 	}
 	if f.Height == 0 {
 		f.Height = fgh[displayGroup(d)]
@@ -707,7 +737,7 @@ func labelOf(an *node) *geom.Label {
 			l.RotationDeg = orientationDeg(atom(or.Arg(1)))
 		}
 		if th := findFirst(d, "textHeight"); th != nil {
-			l.Height = parseInt(atom(th.Arg(1)))
+			l.Height = glyphHeight(parseInt(atom(th.Arg(1))))
 		}
 	}
 	return l
@@ -741,7 +771,7 @@ func labelFromNameDisplay(nm *node) *geom.Label {
 		l.RotationDeg = orientationDeg(atom(or.Arg(1)))
 	}
 	if th := findFirst(d, "textHeight"); th != nil {
-		l.Height = parseInt(atom(th.Arg(1)))
+		l.Height = glyphHeight(parseInt(atom(th.Arg(1))))
 	}
 	if l.Origin == nil {
 		return nil
