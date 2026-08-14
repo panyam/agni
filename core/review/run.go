@@ -8,11 +8,9 @@ import (
 )
 
 // Outcome is how one checklist item resolved on a design. The states are honest along TWO axes
-// (WS10-014): COVERAGE — does a mechanism exist (everything but NotAutomated is covered) — and
-// RATIFICATION — is the data the mechanism ran on trustworthy. A not-automated item (no shipped rule)
-// must never read as passed; a covered item that ran on unratified data is Provisional, not a clean
-// pass/fail; an item blocked on a declared input reads NeedsDesignIntent, not not-automated; and an
-// item a device-class fact determines does not apply reads ComputedNA, the same branch a human takes.
+// (WS10-014). COVERAGE asks whether a mechanism exists; everything but NotAutomated is covered.
+// RATIFICATION asks whether the data the mechanism ran on is trustworthy. An item no shipped rule
+// covers must never read as passed.
 type Outcome string
 
 const (
@@ -23,45 +21,33 @@ const (
 
 	// Provisional: the item's rule(s) fired, but every finding ran on UNRATIFIED datasheet data
 	// (method "mock" or confidence below the floor), so it is not a trustworthy fail yet. This set is
-	// the HITL ratification worklist — a human enters the real value and, because the datasheet layer
-	// is a cross-design shared resource, it ratifies every design using that MPN. Derived from
-	// Finding.DatasheetProv (WS10-012); a single ratified or netlist finding among them makes it a Fail.
+	// the HITL ratification worklist. Derived from Finding.DatasheetProv (WS10-012); a single ratified
+	// or netlist finding among them makes it a Fail.
 	Provisional Outcome = "provisional"
 	// NeedsDesignIntent: the item binds an intent-contract rule (WS3-084, an `intent/`-namespaced rule)
 	// but no design-intent declaration was supplied, so the rule is absent from the catalog. It is
-	// COVERED (a mechanism exists) and blocked on a declared per-design input, distinct from a genuine
-	// not-automated. Supplying --intent-path flips it to pass/fail.
+	// COVERED and blocked on a declared per-design input, not a genuine not-automated. Supplying
+	// --intent-path flips it to pass/fail.
 	NeedsDesignIntent Outcome = "needs-design-intent"
 	// ComputedNA: a device-class-gated item (applies_to_class) whose class matches no component on the
-	// design, so the mechanism itself determined the check does not apply — the same branch a human
-	// takes ("no crystals here → n/a"). Distinct from NotApplicable (a missing fact TIER) — here the
-	// tier is present and the answer is a computed "does not apply".
+	// design, so the mechanism itself determined the check does not apply. Distinct from NotApplicable
+	// (a missing fact TIER): here the tier is present and the answer is a computed "does not apply".
 	ComputedNA Outcome = "computed-n/a"
 	// NeedsData: the item's mechanism exists and ran, but the specific data it joins against is not
-	// present, so it could not actually evaluate (WS3-097). Today the one derivable case is a datasheet
-	// inline query (param_symbol) whose symbol is seeded on no component: --params is supplied so the
-	// param tier exists (Available does not gate), but the query matched nothing because the value is
-	// unseeded, not because the design is clean — reading pass there would mean "deleting a seed makes
-	// the review greener". It is COVERED (a mechanism exists, blocked on a supplyable value), so it
-	// counts toward Covered() like NeedsDesignIntent, and it is the honest reading that lets an overlay
-	// BIND a datasheet check before its seed lands and watch it flip to a real verdict as seeding arrives.
+	// present, so it could not actually evaluate (WS3-097). The derivable case is a datasheet symbol
+	// join whose symbol is seeded on no component: --params is supplied so the param tier exists
+	// (Available does not gate), but nothing matched because the value is unseeded, not because the
+	// design is clean. It is COVERED, so it counts toward Covered() like NeedsDesignIntent.
 	NeedsData Outcome = "needs-data"
 	// Inconclusive: the item's rule(s) ran with everything they needed, examined a specific subject,
 	// and could not decide (agni issue 74). It is the only outcome on the RESULT side of a rule; every
 	// other non-pass state above is a PRECONDITION, decided before or around the rule and design-wide.
+	// That is why it is not folded into NeedsData: some of what it covers is not a data gap at all (a
+	// netlist states reset polarity nowhere), so reporting it as needs-data would send a reviewer to
+	// supply something that does not exist.
 	//
-	// That distinction is why it is not folded into NeedsData. Half the cases it covers are not data
-	// gaps at all: a netlist states reset polarity nowhere and no seeding will ever change that, while
-	// an unclassified ORing controller resolves the moment its spec is seeded. Reporting the first as
-	// needs-data would tell a reviewer to go supply something that does not exist, which is the same
-	// class of error as a false pass, a verdict asserting something the engine does not know.
-	//
-	// It is COVERED (a mechanism exists and ran), so it counts toward Covered() like NeedsData and
-	// NeedsDesignIntent, and it is NEVER a pass. Expect the pass count to DROP when rules start
-	// emitting it: each item that moves was previously a silent pass on a question nothing answered,
-	// which is the defect this whole family exists to remove (the same intended direction as WS3-099).
-	//
-	// The per-finding Message carries the remedy, so one outcome serves both kinds.
+	// It is COVERED, so it counts toward Covered() like NeedsData and NeedsDesignIntent, and it is
+	// NEVER a pass. The per-finding Message carries the remedy, so one outcome serves both kinds.
 	Inconclusive Outcome = "inconclusive"
 )
 
@@ -74,7 +60,7 @@ type ItemResult struct {
 	Note     string // the not-applicable reason (from check.Available), when Outcome is NotApplicable
 	// Unmet names the datasheet facts this item needed and did not find, set only when Outcome is
 	// NeedsData. The Note says the same thing in a sentence; this is the form a consumer can act on
-	// without parsing one, which is the whole difference between reporting a gap and closing it.
+	// without parsing one.
 	Unmet []check.UnmetDependency
 }
 
@@ -94,8 +80,7 @@ type Report struct {
 
 // Presence is the review's evaluability verdict for an interface a profile item names: whether the
 // profile's rules will GENUINELY evaluate on this design (WS3-090). It is not a bare "on the board"
-// bool — a rule that could not evaluate must not score as a clean pass, and a host-bound interface
-// whose host is annotated nowhere is a different case from one that is simply absent.
+// bool, because a rule that could not evaluate must not score as a clean pass.
 type Presence int
 
 const (
@@ -110,11 +95,10 @@ const (
 	// IfacePresent: the convention is in use AND its completeness anchor is matched (or a host is
 	// declared); the rules genuinely evaluate -> run for pass/fail.
 	IfacePresent
-	// IfaceConventionUnmatched: the convention path's sibling of IfaceHostUnsatisfied (WS3-099). The
-	// interface IS partly named to the profile — enough signals match to clear in_use — but its anchor
-	// signal is absent, so the completeness rule has nothing to hang on and cannot evaluate. The
-	// interface is neither absent (it is visibly there) nor checkable under this profile's naming; the
-	// diagnosis a reviewer needs is "this looks like the interface but the naming does not match".
+	// IfaceConventionUnmatched: the convention path's sibling of IfaceHostUnsatisfied (WS3-099). Enough
+	// signals match to clear in_use, but the anchor signal is absent, so the completeness rule has
+	// nothing to hang on and cannot evaluate. The diagnosis is "this looks like the interface but the
+	// naming does not match".
 	//
 	// Unlike the two verdicts above this does NOT stop the item running: a profile's secondary rules
 	// (signal-dangling, missing-pullup) gate on in_use alone, so they do evaluate on the matched nets.
@@ -136,15 +120,13 @@ type PresenceFunc func(profileName string) (verdict Presence, known bool)
 type ScopeFunc func(profileName string) map[string]bool
 
 // CompScopeFunc returns the set of component RefDes belonging to a profile, so a scoped binding can keep
-// a COMPONENT-subject rule's findings for the interface's parts (a design-wide datasheet rail rule like
-// rail-nominal-out-of-recommended emits component findings the net ScopeFunc alone drops — WS3-083). nil
-// disables the component side of scoping. The CLI wires it (profiles.Components). A scoped item is
-// unfiltered only when BOTH Scope and CompScope are nil; either present enables filtering.
+// a COMPONENT-subject rule's findings for the interface's parts, which the net ScopeFunc alone drops
+// (WS3-083). nil disables the component side of scoping. The CLI wires it (profiles.Components). A
+// scoped item is unfiltered only when BOTH Scope and CompScope are nil; either present enables filtering.
 type CompScopeFunc func(profileName string) map[string]bool
 
-// RunParams carries everything Run needs. It is a struct (not a positional list) so a new capability —
-// the component scope was the third scoping input added — extends the API by adding a field, without
-// reshuffling every caller (WS3-083).
+// RunParams carries everything Run needs. It is a struct so a new capability extends the API by adding
+// a field rather than reshuffling every caller (WS3-083).
 type RunParams struct {
 	Model     check.Model
 	Catalog   *check.Catalog
@@ -155,15 +137,14 @@ type RunParams struct {
 	CompScope CompScopeFunc // nil disables component scoping
 	// RatifiedFloor is the datasheet-confidence floor below which a finding's data is "unratified"
 	// (WS10-014): a fail whose findings are all mock or below this confidence is Provisional, not Fail.
-	// Zero means use DefaultRatifiedFloor — a floor of 0 would rate everything trustworthy, never the
-	// intent. Config, not a literal (the CLI exposes --ratified-floor).
+	// Zero means use DefaultRatifiedFloor, since a floor of 0 would rate everything trustworthy. The
+	// CLI exposes it as --ratified-floor.
 	RatifiedFloor float64
 	// IntentRuleKnown reports whether an intent/-namespaced rule NAME is one the intent compiler can
 	// produce (WS3-098). It distinguishes a real-but-undeclared intent rule (needs-design-intent) from a
 	// not-yet-shipped intent rule name a manifest pre-bound (not-automated), which a bare intent/ prefix
-	// test cannot. nil treats every intent/ name as known — the pre-WS3-098 behavior — so a caller that
-	// does not wire it is unchanged. It stays a function so `review` is decoupled from the `intent`
-	// package the way it is from `profiles`; the service wires intent.Emits.
+	// test cannot. nil treats every intent/ name as known. It stays a function so `review` is decoupled
+	// from the `intent` package the way it is from `profiles`; the service wires intent.Emits.
 	IntentRuleKnown func(ruleName string) bool
 }
 
@@ -197,21 +178,18 @@ func Run(p RunParams) Report {
 
 func runItem(p RunParams, it Item) ItemResult {
 	m, cat, present := p.Model, p.Catalog, p.Present
-	// A present: binding is a class-of-component presence assertion, resolved directly (not through the
-	// catalog): pass if any component of the class is on the design, fail with one design-level finding
-	// if none is. It is never not-applicable — the component-class tier exists on any netlist — so it is
-	// handled before the interface-absence and catalog-resolution paths below.
+	// A present: binding is never not-applicable (the component-class tier exists on any netlist), so it
+	// resolves directly, ahead of the interface-absence and catalog-resolution paths below.
 	if pb := it.Binding.Present; pb != nil {
 		return presentResult(m, it, pb)
 	}
 	// Interface absence takes precedence over every other outcome: a KNOWN interface that is absent on
-	// this design is not-applicable whether or not a rule is shipped to check it. This is checked BEFORE
-	// the not-automated shortcut so it covers two cases with one gate: a full profile whose bus is
-	// absent (WS3-051), and a PRESENCE-ONLY interface declaration — a profile with signals but no
-	// requirements, so it compiles to zero rules and exists only to answer "is this module on the
-	// board?" (WS3-068). An UNKNOWN interface (no profile/declaration at all) is not absent-known, so it
-	// falls through to the not-automated case below rather than reading as n/a. Several named interfaces
-	// are not-applicable only when EVERY one is known-absent (any present, or unknown, keeps it running).
+	// this design is not-applicable whether or not a rule is shipped to check it. Checked BEFORE the
+	// not-automated shortcut so one gate covers both a full profile whose bus is absent (WS3-051) and a
+	// PRESENCE-ONLY declaration, which has no requirements and so compiles to zero rules (WS3-068). An
+	// UNKNOWN interface is not absent-known, so it falls through to the not-automated case below rather
+	// than reading as n/a. Several named interfaces are not-applicable only when EVERY one is
+	// known-absent (any present, or unknown, keeps it running).
 	ifaces := it.Binding.Scope.names()
 	if it.Binding.Profile != "" {
 		ifaces = []string{it.Binding.Profile}
@@ -235,31 +213,25 @@ func runItem(p RunParams, it Item) ItemResult {
 			}
 		}
 		// A convention-unmatched interface takes precedence over the other two non-running verdicts: it
-		// is the most specific diagnosis (the naming IS partly there), and it runs the rules rather than
-		// returning here, so its verdict is decided at the bottom.
+		// runs the rules rather than returning here, so its verdict is decided at the bottom.
 		if !runs && !unmatched {
-			// A rule that could not evaluate must not score PASS (WS3-090). A host-bound interface
-			// annotated on no component reads not-automated (the intended check is blocked on the
-			// annotation); an interface simply absent reads not-applicable.
+			// A rule that could not evaluate must not score PASS (WS3-090).
 			if hostUnsatisfied {
 				return ItemResult{Item: it, Outcome: NotAutomated, Note: "host-bound interface declared on no component"}
 			}
 			return ItemResult{Item: it, Outcome: NotApplicable, Note: "interface not present on this design"}
 		}
 	}
-	// Device-class computed-n/a (WS10-014): an item may declare the device classes it applies to
-	// (applies_to_class). When no component on the design carries any of them, the mechanism itself
-	// determines the check does not apply — the same branch a human takes ("no crystals here → n/a") —
-	// which is honest and automatable via the device-class fact (WS10-013/015), NOT a dead end. Checked
+	// Device-class computed-n/a (WS10-014), read off the device-class fact (WS10-013/015). Checked
 	// before catalog resolution so it holds even for an item whose rule is not yet shipped.
 	if classes := it.Binding.AppliesToClass; len(classes) > 0 && !anyComponentHasClass(m, classes) {
 		return ItemResult{Item: it, Outcome: ComputedNA, Note: "no " + strings.Join(classes, "/") + " part on this design"}
 	}
 	rules := resolve(cat, it)
 	if len(rules) == 0 {
-		// An intent-bound item (WS3-084) with no declaration supplied resolves to zero rules because the
-		// intent rule is absent from the catalog — but it is COVERED, blocked on a declared per-design
-		// input, not genuinely un-mechanized. Report that distinctly so --intent-path is the obvious fix.
+		// An intent-bound item (WS3-084) resolves to zero rules when no declaration was supplied, because
+		// the intent rule is then absent from the catalog. It is COVERED, not un-mechanized, so report it
+		// distinctly and name --intent-path as the fix.
 		if bindsIntent(it, p.IntentRuleKnown) {
 			return ItemResult{Item: it, Outcome: NeedsDesignIntent, Note: "needs a design-intent declaration (--intent-path)"}
 		}
@@ -283,8 +255,7 @@ func runItem(p RunParams, it Item) ItemResult {
 	// A scoped binding keeps only findings for the named interface (the UNION when several are named),
 	// so a per-interface ask reflects its bus, not the whole design's output: a net-subject finding on
 	// one of the interface's nets (WS3-058), or a component-subject finding on one of its parts
-	// (WS3-083, which lets a design-wide datasheet rail rule be scoped per interface). Filtering runs
-	// when EITHER scope func is wired; a scoped item is unfiltered only when both are nil.
+	// (WS3-083).
 	if names := it.Binding.Scope.names(); len(names) > 0 && (p.Scope != nil || p.CompScope != nil) {
 		nets := map[string]bool{}
 		comps := map[string]bool{}
@@ -302,28 +273,23 @@ func runItem(p RunParams, it Item) ItemResult {
 		}
 		fs = filterToScope(fs, nets, comps)
 	}
-	// An inconclusive finding is a result the rule could not decide, not a defect, so it must not be
-	// weighed as one: a subject the rule gave up on cannot make the item fail, and cannot make it pass
-	// either. Split them before the fail branch so a rule may legitimately emit both at once (one
-	// subject decided and wrong, another undecidable) and the real defect still wins.
+	// A subject the rule gave up on cannot make the item fail, and cannot make it pass either. Split
+	// before the fail branch so a rule may legitimately emit both at once (one subject decided and
+	// wrong, another undecidable) and the real defect still wins.
 	fs, undecided := splitInconclusive(fs)
 	if len(fs) > 0 {
-		// Data-trust axis (WS10-014): a fail every one of whose findings ran on UNRATIFIED datasheet data
-		// (mock, or confidence below the floor) is Provisional — a HITL ratification worklist item, not a
-		// trustworthy fail. A single ratified datasheet finding OR any netlist finding (no DatasheetProv,
-		// so trustworthy by construction) makes it a real Fail.
+		// Data-trust axis (WS10-014): a fail whose findings ALL ran on unratified datasheet data is
+		// Provisional. One ratified datasheet finding, or any netlist finding (no DatasheetProv, so
+		// trustworthy by construction), makes it a real Fail.
 		if allUnratified(fs, p.ratifiedFloor()) {
 			return ItemResult{Item: it, Outcome: Provisional, Findings: fs}
 		}
 		return ItemResult{Item: it, Outcome: Fail, Findings: fs}
 	}
-	// Zero findings is only a genuine pass if the check could evaluate (WS3-097). A datasheet inline
-	// query names the symbol it joins (param_symbol); when that symbol is seeded on no component, the
-	// query matched nothing because the value is absent, not because the design is clean, so the honest
-	// reading is needs-data, not pass. Only this datasheet case is gated: --params supplied means
-	// Available did not gate, so an unseeded symbol is the silent gap. The general "all joined relations
-	// empty" case is deliberately not chased (the datasheet join is the one that bites, the params tier
-	// being sparse by nature).
+	// Zero findings is only a genuine pass if the check could evaluate (WS3-097). Only the datasheet
+	// case is gated: --params supplied means check.Available did not gate, so a symbol seeded on no
+	// component is the silent gap. The general "all joined relations empty" case is deliberately not
+	// chased, the params tier being the one that is sparse by nature.
 	if syms := datasheetSymbols(it, avail); len(syms) > 0 && !check.SeedsAnySymbol(m, syms) {
 		return ItemResult{
 			Item:    it,
@@ -334,8 +300,8 @@ func runItem(p RunParams, it Item) ItemResult {
 	}
 	// Same discipline for the unanchored interface (WS3-099): the secondary rules ran and found nothing,
 	// but the completeness rule never evaluated, so this is not a clean bill of health. It reads
-	// not-automated rather than a needs-* state because no shipped mechanism covers THIS design's naming
-	// — scoring it covered would inflate the coverage axis, which is the defect this whole family fights.
+	// not-automated rather than a needs-* state because no shipped mechanism covers THIS design's
+	// naming, and scoring it covered would inflate the coverage axis.
 	if unmatched {
 		return ItemResult{Item: it, Outcome: NotAutomated, Note: "interface named but its completeness anchor signal is absent, so the convention check could not evaluate"}
 	}
@@ -349,8 +315,7 @@ func runItem(p RunParams, it Item) ItemResult {
 }
 
 // splitInconclusive partitions findings into real defects and the ones the rule could not decide.
-// Both are returned so a caller can report the undecided subjects rather than only counting them: a
-// reviewer needs to know WHICH net the check gave up on, and the finding's message says why.
+// Both are returned so a caller can report WHICH subjects the check gave up on, not only count them.
 func splitInconclusive(fs []check.Finding) (defects, undecided []check.Finding) {
 	for _, f := range fs {
 		if f.Inconclusive {
@@ -379,16 +344,9 @@ func subjectList(fs []check.Finding) string {
 // datasheetSymbols returns the datasheet symbols an item's check joins against, from BOTH places a
 // binding can declare them: an inline query's param_symbol, and the ParamSymbols of each rule the item
 // resolved to. Empty means the item's check has no declared datasheet dependency, so the WS3-097
-// needs-data gate does not apply to it.
-//
-// Covering the rule side is what closes the hole for a RULE-bound datasheet item (WS3-095). Before
-// this, only an inline query declared its symbol, so a design read WITH --params but with the
-// particular part unseeded ran a datasheet rule that could join nothing, found nothing, and scored a
-// pass. check.Available does not save it: that gates on the params TIER, which is present. Reading the
-// symbols off the resolved rules gives every rule-bound datasheet item the same gate a query binding
-// has always had, without the runner knowing anything about a specific rule.
-//
-// Duplicates are collapsed so the note reads once per symbol when several rules join on the same one.
+// needs-data gate does not apply to it. Reading the symbols off the resolved rules gives a RULE-bound
+// datasheet item the same gate a query binding has, without the runner knowing any specific rule
+// (WS3-095). Duplicates are collapsed so the note reads once per symbol.
 func datasheetSymbols(it Item, rules []*check.Rule) []string {
 	var out []string
 	seen := map[string]bool{}
@@ -426,11 +384,9 @@ func anyComponentHasClass(m check.Model, classes []string) bool {
 
 // bindsIntent reports whether an item's binding targets a design-intent rule the mechanism can
 // actually produce (WS3-084/098): the name is `intent/`-namespaced AND known reports it is a rule the
-// intent compiler emits. The name prefix alone is the wiring-free signal that a zero-rule resolution is
-// a missing DECLARATION rather than a missing mechanism, but it over-matches a pre-bound NOT-YET-SHIPPED
-// intent rule name (intent/power-sequence), which is a missing mechanism and must read not-automated,
-// not needs-design-intent. known narrows the prefix to the compiler's actual name space; a nil known
-// keeps the prefix-only behavior (every intent/ name treated as known) so an unwired caller is unchanged.
+// intent compiler emits. The prefix alone over-matches a pre-bound NOT-YET-SHIPPED intent rule name
+// (intent/power-sequence), which is a missing mechanism and must read not-automated. A nil known keeps
+// the prefix-only behavior, treating every intent/ name as known.
 func bindsIntent(it Item, known func(ruleName string) bool) bool {
 	if !strings.HasPrefix(it.Binding.Rule, "intent/") {
 		return false
@@ -440,26 +396,19 @@ func bindsIntent(it Item, known func(ruleName string) bool) bool {
 
 // isUnratified reports whether a finding ran on untrustworthy datasheet data: it carries a datasheet
 // citation whose method is "mock" or whose confidence is below the floor. A finding with NO datasheet
-// citation is a netlist/structural finding — trustworthy by construction, so NOT unratified.
+// citation is a netlist/structural finding, trustworthy by construction, so NOT unratified.
 // A finding backed by SEVERAL datasheets (a connection-aware rule, WS3-028) is unratified when ANY of
-// its citations fails the floor, because the conclusion rests on every value it joined and is only as
-// trustworthy as the weakest one. A regulator-output-vs-abs-max finding whose abs-max was hand-read
-// but whose output voltage came from a low-confidence extraction is exactly half-evidenced, and
-// calling it a hard Fail would be the false-fail this axis exists to prevent.
+// its citations fails the floor: the citations are conjunctive evidence, so the conclusion is only as
+// trustworthy as the weakest value it joined. That quantifier is the OPPOSITE of allUnratified's,
+// where one trustworthy finding among several is enough to keep the item a real Fail, because findings
+// are independent claims.
 //
-// Note the quantifier here is the OPPOSITE of allUnratified's, deliberately. Across findings, one
-// trustworthy finding among several makes the item a real Fail — they are independent claims and one
-// standing up is enough. Within a finding, the citations are conjunctive evidence, so all of them
-// have to stand up.
 // A citation also fails the floor when a human verification exists but no longer applies to the
-// revision the corpus holds (Stale), or cannot be checked against one (Unknown). This case CANNOT be
-// caught by the confidence test above, and that is the whole reason it is written out separately:
-// param.MarkVerified raises confidence to 1.0 to keep the older signal in step, and that 1.0 stays
-// after the vendor revises the document. Judging on confidence alone would therefore treat a
-// verification of a superseded revision as the most trustworthy evidence in the system, which
-// inverts what the verification record was added to express. A value nobody ever verified is not
-// affected: it has no verification record, reads as Unverified, and is judged on its confidence
-// exactly as before.
+// revision the corpus holds (Stale), or cannot be checked against one (Unknown). The confidence test
+// above CANNOT catch this: param.MarkVerified raises confidence to 1.0, and that 1.0 stays after the
+// vendor revises the document, so judging on confidence alone would rate a verification of a
+// superseded revision as the most trustworthy evidence in the system. A value nobody verified has no
+// verification record, reads as Unverified, and is judged on its confidence.
 func isUnratified(f check.Finding, floor float64) bool {
 	for _, dp := range f.DatasheetProv {
 		if dp == nil {
@@ -493,14 +442,14 @@ func allUnratified(fs []check.Finding, floor float64) bool {
 
 // presentResult resolves a present: binding by scanning the design for any component of the bound
 // class (Model.HasClass). Pass on the first match; fail with a single design-level finding when none
-// is found. The finding carries a synthetic rule id ("present/<class>") and names the class as its
-// subject, so both the markdown and JSON renderers show a readable "present/<class>: <class> (…)"
-// line; it has no provenance because absence has no source site to cite.
+// is found. That finding carries a synthetic rule id ("present/<class>") and names the class as its
+// subject, so the markdown and JSON renderers both show a readable line; it has no provenance because
+// absence has no source site to cite.
 //
 // The membership test is HasClass, not ComponentClass ==, so present: matches on a family tag or a
 // datasheet-enriched class, not only the most-specific keyword class (mirrors anyComponentHasClass).
 // A component whose keyword class is `ic` but whose datasheet spec declares `efuse` (WS10-013) thus
-// satisfies present: {class: efuse}, and present: {class: diode} matches an LED/TVS by family tag.
+// satisfies present: {class: efuse}.
 func presentResult(m check.Model, it Item, pb *PresentBinding) ItemResult {
 	for _, c := range m.Components() {
 		if m.HasClass(c.RefDes, check.ComponentClass(pb.Class)) {
@@ -517,8 +466,8 @@ func presentResult(m check.Model, it Item, pb *PresentBinding) ItemResult {
 }
 
 // filterToScope keeps a net-subject finding whose net is in nets, and a component-subject finding whose
-// subject RefDes is in comps. A pin-subject finding is dropped — an interface scope has no pin→component
-// map, and a scope has always dropped a finding kind it cannot place (WS3-058 dropped every non-net).
+// subject RefDes is in comps. A pin-subject finding is dropped, because an interface scope has no
+// pin→component map and a scope drops any finding kind it cannot place (WS3-058).
 func filterToScope(fs []check.Finding, nets, comps map[string]bool) []check.Finding {
 	kept := fs[:0]
 	for _, f := range fs {
@@ -536,12 +485,10 @@ func filterToScope(fs []check.Finding, nets, comps map[string]bool) []check.Find
 	return kept
 }
 
-// The tag keys a profile binding selects on. They are declared here as plain strings rather than
-// imported from stdlib/profiles because review is deliberately decoupled from that package — it
-// reaches it only through the injected PresenceFunc/ScopeFunc, and core has no import of stdlib at
-// all. stdlib/profiles is the AUTHORITY for both values (profiles.TagRequirement); what pins them
-// together is not a shared constant but the end-to-end CLI test, which runs a real overlay profile
-// through a real manifest and would fail on any drift.
+// The tag keys a profile binding selects on. They are plain strings rather than imports from
+// stdlib/profiles because core has no import of stdlib at all; review reaches it only through the
+// injected PresenceFunc/ScopeFunc. stdlib/profiles is the AUTHORITY for both values
+// (profiles.TagRequirement), and nothing but the end-to-end CLI test catches a drift between them.
 const (
 	profileTagName        = "profile"
 	profileTagRequirement = "requirement"
@@ -566,8 +513,7 @@ func resolve(cat *check.Catalog, it Item) []*check.Rule {
 		tags := map[string][]string{profileTagName: {b.Profile}}
 		// A requirement selector narrows the profile's compiled set to the one rule that answers this
 		// ask (WS3-115). Facets intersect distinct tag keys, so this is a conjunction: the rule must
-		// belong to the profile AND come from that requirement. Empty adds no key, which is exactly the
-		// union every manifest was written against.
+		// belong to the profile AND come from that requirement. Empty adds no key, leaving the union.
 		if b.Requirement != "" {
 			tags[profileTagRequirement] = []string{b.Requirement}
 		}
