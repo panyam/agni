@@ -11,6 +11,12 @@ import (
 	"github.com/panyam/agni/core/svg"
 )
 
+// boardTextMinPx is the legibility floor for silkscreen/fab text. Board text is authored at a
+// true physical height and a board fits a lot of it into one view, so a floor keeps the smallest
+// designators readable rather than letting them vanish. It is a board concern: schematic text
+// sizes from labelFont, which floors relative to the drawing instead.
+const boardTextMinPx = 6.0
+
 // BoardSVG renders a board (the WS1-006 geometry sidecar) to a standalone SVG document —
 // the board analogue of SheetSVG, and like it a verification/eyeball backend first (the
 // packed/WebGL tier is WS7-035). Copper draws per layer back-to-front so the front side
@@ -134,7 +140,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 			continue
 		}
 		x, y := tx(t.GetAt().X), ty(t.GetAt().Y)
-		fontPx := math.Max(float64(boardTextHeight(t))*scale, pinLabelPx)
+		fontPx := math.Max(float64(boardTextHeight(t))*scale, boardTextMinPx)
 		attrs := []svg.Attr{
 			svg.F("x", x), svg.F("y", y), svg.A("fill", style.Field), svg.F("font-size", fontPx),
 			svg.A("text-anchor", svgAnchor(t)), svg.A("dominant-baseline", "central"),

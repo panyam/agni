@@ -49,7 +49,7 @@ func TestSheetSVG_FreeTextColumnsFit(t *testing.T) {
 
 	// The natural font size both columns would draw at without the fit.
 	fr := frameSheet(g.Sheets[0], indexSymbols(g))
-	natural := labelFont(120 * fr.scale)
+	natural := labelFont(120, defaultTextHeight(g, g.Sheets[0]), fr.scale)
 
 	narrow := textElem(out, "NARROW")
 	wide := textElem(out, wideLine)
