@@ -149,6 +149,14 @@ because producers fill it with a PART number ("LM1117") rather than the document
 the field is specified to carry, and a snapshot of a part number reads identically before and after a
 reissue.
 
+**The workbench has no save button.** Every edit schedules a write 700 ms later, which then ships the
+whole spec through `SavePartSpec` under optimistic locking (a losing writer is told to reload rather
+than silently merged). Two consequences worth knowing before pointing it at anything. Opening a
+datasheet is itself an edit, because a document with no saved spec gets a fresh one seeded and
+persisted, so browsing a corpus writes a `.partspec.json` beside every document you look at. And the
+mount is written to, not just read, so a corpus you care about wants a scratch copy rather than the
+original when exploring or demonstrating.
+
 ### Comparison semantics
 
 Values, units, and symbols are STORED as printed, so the comparison layer meets vendor
@@ -530,6 +538,14 @@ incremental.
 4. **Validation and emission.** The emitted PartSpec must pass `param.Validate`. Every
    parameter carries provenance: page, attached table title, `method: "derive/v0"`,
    confidence 0.9, where only a human verification earns 1.0.
+
+   Note what that gate covers, because it constrains what may be added to it. `param.Validate` is
+   `Problems` joined, and `Problems` includes the COMPLETENESS half as well as the structural one,
+   so a derived spec must be not merely well-formed but complete. Any new completeness check
+   therefore fails every `derive` run the moment it lands, and the run reports it as "a derive bug,
+   not a data gap". That is the right default and it is also a trap: a thing a first pass genuinely
+   cannot supply must be recorded as a manifest gap, never as a completeness problem. The document
+   identity below is exactly that case.
 
 The run states the part it derived and the revision it read, and it does NOT state the document's
 printed identity. `SourceDoc.title` is specified as the vendor's document number and revision, the
