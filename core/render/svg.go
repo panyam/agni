@@ -527,13 +527,41 @@ func labelFont(h int64, def int64, scale float64) float64 {
 // downward by one line height in the text's own frame; a single-line run is unchanged.
 func drawText(c *svg.Canvas, content string, x, y, fontPx float64, justify string, rotDeg int32, fill string, maxWidthPx float64) {
 	if i := strings.IndexByte(content, '\n'); i >= 0 {
+		lines := strings.Split(content, "\n")
 		step := fontPx * lineHeight
-		for n, line := range strings.Split(content, "\n") {
-			drawTextLine(c, line, x, y+float64(n)*step, fontPx, justify, rotDeg, fill, maxWidthPx)
+		// readableText may flip the justify for an upside-down run, and the block must grow the
+		// way the FINAL justify says, so resolve it here exactly as drawTextLine will.
+		_, j := readableText(rotDeg, justify)
+		top := blockTop(y, len(lines), j, step)
+		for n, line := range lines {
+			drawTextLine(c, line, x, top+float64(n)*step, fontPx, justify, rotDeg, fill, maxWidthPx)
 		}
 		return
 	}
 	drawTextLine(c, content, x, y, fontPx, justify, rotDeg, fill, maxWidthPx)
+}
+
+// blockTop is the y of a multi-line block's FIRST line, given the anchor y its justify names.
+// A justify anchors the whole BLOCK, not its first line: a bottom-anchored block grows UPWARD
+// from the anchor and a centered one grows both ways, so only a top-anchored block starts at it.
+//
+// This is not cosmetic drift. A tool that bottom-anchors its notes places the NEXT note relative
+// to that same bottom: one export puts a 3-line note and the note under it exactly 2 line pitches
+// apart, which prints as a blank line between them. Stacking the first downward instead ran its
+// last line onto the second note's anchor, to the unit.
+func blockTop(y float64, lines int, justify string, step float64) float64 {
+	if lines < 2 {
+		return y
+	}
+	span := float64(lines-1) * step
+	switch {
+	case strings.Contains(justify, "top"):
+		return y
+	case strings.Contains(justify, "bottom"):
+		return y - span
+	default:
+		return y - span/2 // centered: half above, half below
+	}
 }
 
 // drawTextLine draws one line of text; drawText handles multi-line splitting.
