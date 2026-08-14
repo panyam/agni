@@ -124,6 +124,34 @@ func findPinColumns(t *docpb.Table, axis derivepb.PinColumnAxis) (int32, pinColu
 			cols.numbers = append(cols.numbers, numberColumn{col: int(c.Col), raw: strings.TrimSpace(c.Text)})
 		}
 	}
+
+	// A TWO-ROW HEADER puts the outer columns a row ABOVE the one naming the pin, and
+	// scanning only the name's row loses them. The common shape:
+	//
+	//	row 0:  PIN (spanning)          TYPE    DESCRIPTION
+	//	row 1:  NO.        NAME
+	//	row 2:  1          TXD          DI      Transmit data input
+	//
+	// The header row is located by finding the pin NAME, which is on the inner row, so
+	// TYPE and DESCRIPTION were invisible and every pin came out untyped with no prose.
+	// That is not a rare layout: it is what a table gets as soon as it bands its
+	// designator columns, and it silently cost the type column on documents that HAVE one.
+	//
+	// Only columns still unset are filled, so the name's own row always wins, and the
+	// scan is bounded by headerRow, which the search above caps at the table's first few
+	// rows. A stray cell cannot masquerade as a header here because these vocabularies
+	// match whole keys, not substrings.
+	for _, c := range t.Cells {
+		if c.Row >= headerRow {
+			continue
+		}
+		switch k := headerKey(c.Text); {
+		case pinIOHeaders[k] && cols.io < 0:
+			cols.io = int(c.Col)
+		case pinDescHeaders[k] && cols.desc < 0:
+			cols.desc = int(c.Col)
+		}
+	}
 	// Package codes come off the header cell, and only when the recipe says these
 	// columns ARE packages. Under any other axis the codes are recorded raw and no
 	// Package is minted, which is what keeps a variant column from becoming a body.
@@ -222,11 +250,15 @@ func isAllDigits(s string) bool {
 // description is the vendor's sentence.
 func pinFunctionOf(ioRaw, name, desc string) parampb.PinFunction {
 	switch headerKey(ioRaw) {
-	case "i/o", "io", "d_io", "a_io", "bidirectional", "input/output":
+	// The abbreviated spellings (di / do / bi/o) are as standard as the long ones and turn
+	// up across the corpus; they were simply absent. Vendor-specific tokens are NOT added
+	// here on sight: a token this stage does not know now says so in the untyped-pin gap,
+	// naming itself, so widening this list stays evidence-driven rather than speculative.
+	case "i/o", "io", "d_io", "a_io", "bi/o", "bio", "bidirectional", "input/output":
 		return parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL
-	case "i", "in", "input", "a_in", "d_in", "digital input", "analog input":
+	case "i", "in", "input", "a_in", "d_in", "di", "digital input", "analog input":
 		return parampb.PinFunction_PIN_FUNCTION_INPUT
-	case "o", "out", "output", "d_out", "a_out", "digital output":
+	case "o", "out", "output", "d_out", "a_out", "do", "digital output":
 		return parampb.PinFunction_PIN_FUNCTION_OUTPUT
 	case "p", "pwr", "power", "supply":
 		return parampb.PinFunction_PIN_FUNCTION_POWER_INPUT
@@ -490,10 +522,18 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 		// all. Gapping it carries the pin's own sentence, which is what a human (or an
 		// assistant searching the document for them) needs in order to decide.
 		if fn == parampb.PinFunction_PIN_FUNCTION_UNSPECIFIED {
+			// Say WHICH channel came up empty, because the two want opposite fixes. A row whose
+			// type column holds a token this stage does not know ("DI") is a vocabulary gap and
+			// the token is the whole answer; a row with no type column at all is a prose
+			// judgement someone has to make. Reporting "no type column" for both, as this first
+			// did, sends a reader looking for a missing column that is right there.
+			why := fmt.Sprintf("type column reads %q, which is not in the vocabulary", ioRaw)
+			if strings.TrimSpace(ioRaw) == "" {
+				why = "no type column and no standard description opening"
+			}
 			manifest.Gaps = append(manifest.Gaps, &derivepb.Gap{
 				Kind: "untyped-pin", Region: t.Id,
-				Detail: fmt.Sprintf("row %d (%s): no type column and no standard description opening; description: %q",
-					row, name, desc),
+				Detail: fmt.Sprintf("row %d (%s): %s; description: %q", row, name, why, desc),
 			})
 		}
 
