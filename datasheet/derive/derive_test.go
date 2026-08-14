@@ -68,8 +68,16 @@ func TestRunEmitsValidatedSpec(t *testing.T) {
 	if int(manifest.ParametersEmitted) != len(spec.Parameters) {
 		t.Errorf("manifest count %d != emitted %d", manifest.ParametersEmitted, len(spec.Parameters))
 	}
-	if len(spec.Docs) != 1 || spec.Docs[0].Title == "" {
+	// A derived spec cites its source document by the two things derive actually knows: the local
+	// ref its parameters point at, and the revision it read. It does NOT state a printed identity,
+	// because it cannot read one; the old assertion here required a non-empty title and was
+	// satisfied by the doc-IR's PART number, which is a citation that cannot name what it cites
+	// (agni issue 290). The refusal is carried by an unidentified-document gap instead.
+	if len(spec.Docs) != 1 || spec.Docs[0].Id == "" || spec.Docs[0].ContentHash == "" {
 		t.Errorf("derived spec must cite its source document, got %v", spec.Docs)
+	}
+	if spec.Docs[0].Title != "" {
+		t.Errorf("derive must not assert a document identity it cannot read, got title %q", spec.Docs[0].Title)
 	}
 	for _, p := range spec.Parameters {
 		if p.Prov.GetMethod() != "derive/v0" || p.Prov.GetConfidence() >= 1 {

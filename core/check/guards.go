@@ -44,13 +44,29 @@ func RelationCitation(spec *parampb.PartSpec, rel *parampb.PinRelation) string {
 
 // citationText formats one ParamProvenance against its spec. An unresolvable doc_ref renders as
 // "unknown source" rather than an empty pair of quotes, so a citation is never silently blank.
+//
+// A document with no recorded identity names the PART and says so, rather than borrowing the part
+// name and presenting it as the document's. The distinction is the point of agni issue 290: page
+// numbers move between revisions, so "page 4" is an instruction to look somewhere that may not exist
+// in the copy the reader holds, and a citation that cannot name the revision should say which
+// question it cannot answer instead of reading like a complete answer.
 func citationText(spec *parampb.PartSpec, prov *parampb.ParamProvenance) string {
-	doc := DocTitle(spec, prov.GetDocRef())
-	if doc == "" {
-		doc = "unknown source"
+	where := documentRef(spec, prov.GetDocRef())
+	return fmt.Sprintf("%s page %d, %q (%s, confidence %g)",
+		where, prov.GetPage(), prov.GetTableOrFigure(), prov.GetMethod(), prov.GetConfidence())
+}
+
+// documentRef names the document a citation points at, degrading in named steps rather than to a
+// blank: the printed identity when the corpus has it, else the part with the gap stated, else an
+// unresolvable reference.
+func documentRef(spec *parampb.PartSpec, docRef string) string {
+	if title := DocTitle(spec, docRef); title != "" {
+		return fmt.Sprintf("datasheet %q", title)
 	}
-	return fmt.Sprintf("datasheet %q page %d, %q (%s, confidence %g)",
-		doc, prov.GetPage(), prov.GetTableOrFigure(), prov.GetMethod(), prov.GetConfidence())
+	if mpn := spec.GetMpn(); mpn != "" {
+		return fmt.Sprintf("datasheet for %s (revision unrecorded)", mpn)
+	}
+	return `datasheet "unknown source"`
 }
 
 // DiffConventionPresent reports whether the design uses differential-pair naming at all: at

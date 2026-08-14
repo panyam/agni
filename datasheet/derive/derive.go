@@ -75,8 +75,17 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 		Manufacturer: id.Manufacturer,
 		DeviceClass:  id.DeviceClass,
 		Docs: []*parampb.SourceDoc{{
-			Id:     "src",
-			Title:  work.Title,
+			Id: "src",
+			// Title is deliberately NOT filled from the doc-IR. SourceDoc.title is specified as the
+			// vendor's document number and revision as printed -- the citation an engineer opens --
+			// while Document.title is "the document-declared title", which producers fill with the
+			// PART number. Copying one into the other asserted "SNOS412Q - REVISED JANUARY 2023" and
+			// stored "LM1117": a citation that cannot say which revision it cites, and identical
+			// before and after a reissue (agni issue 290).
+			//
+			// Left empty until something can establish the real identity, and the refusal is gapped
+			// below with the cover-page prose attached. Empty is a state a reader can act on; a
+			// confident wrong one is what nobody re-checks.
 			Vendor: id.Manufacturer,
 			// The revision this spec describes. Recording it is what makes a human verification
 			// expire when the vendor reissues the document: param.VerificationOfIn compares a
@@ -87,7 +96,11 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 			Locator:     id.Locator,
 		}},
 	}
+	gapUnidentifiedDocument(work, manifest)
 
+	// matchRecipes reads the doc-IR title, which is the RIGHT use of it: a recipe selects the
+	// documents it understands by the part they describe. That is a different question from which
+	// revision this is, which is why one field cannot serve both.
 	rules, pinRules, err := matchRecipes(work.Title, recipes, manifest)
 	if err != nil {
 		return nil, nil, err

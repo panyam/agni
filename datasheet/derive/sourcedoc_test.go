@@ -46,6 +46,11 @@ func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
 	if len(spec.GetParameters()) == 0 {
 		t.Fatal("fixture derived no parameters, so this test proves nothing")
 	}
+	// derive leaves the document identity unstated (issue 290): it cannot read the printed revision
+	// yet, and a part number in that field is a citation that cannot name what it cites. Curating it
+	// is what an author does, and doing it here is what gives the snapshot below something to carry.
+	spec.Docs[0].Title = "BSS138 datasheet - REVISED MAY 2019"
+
 	p := spec.GetParameters()[0]
 	if !param.MarkVerifiedIn(spec, p, "sri", "2026-08-13", "") {
 		t.Fatal("a derived value must be verifiable against the document it was derived from")
@@ -68,7 +73,7 @@ func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
 	if got := param.VerificationOfIn(spec, p); got != param.Stale {
 		t.Errorf("after a re-derive from a new revision: got %q, want %q", got, param.Stale)
 	}
-	if got := p.GetVerification().GetDocRevision(); got == "" {
-		t.Error("the revision that was checked must survive the re-seed, or the re-confirm task cannot name it")
+	if got := p.GetVerification().GetDocRevision(); got != "BSS138 datasheet - REVISED MAY 2019" {
+		t.Errorf("the revision that was checked must survive the re-seed, or the re-confirm task cannot name it; got %q", got)
 	}
 }

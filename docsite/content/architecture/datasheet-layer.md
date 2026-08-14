@@ -531,6 +531,21 @@ incremental.
    parameter carries provenance: page, attached table title, `method: "derive/v0"`,
    confidence 0.9, where only a human verification earns 1.0.
 
+The run states the part it derived and the revision it read, and it does NOT state the document's
+printed identity. `SourceDoc.title` is specified as the vendor's document number and revision, the
+citation an engineer opens, and a derivation cannot read that. It used to be filled from the doc-IR's
+own title, which producers set to the PART number, so every citation named the part and none named a
+revision, identically before and after a reissue. That refusal is now an `unidentified-document` gap
+carrying the cover page's opening prose, and a citation with no recorded identity reads
+`datasheet for LM1117 (revision unrecorded)` rather than borrowing the part name and presenting it as
+the document's.
+
+The one wrong state that IS reported by `param.Validate` is a title that repeats the MPN, because
+that is an assertion rather than an absence. The check is equality, deliberately, and not a guess at
+what a part number looks like: the whole failure being corrected here came from a plausible-looking
+value nobody challenged, and a heuristic would reject legitimate titles for vendors whose document
+numbering nobody has seen.
+
 ### Trust defaults, the honesty ladder
 
 - Rows from tables with **no conditions channel** stay `ConditionCoverage` UNSPECIFIED,

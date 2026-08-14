@@ -31,6 +31,14 @@ type Document struct {
 	// Source container format, e.g. "pdf".
 	SourceFormat string `protobuf:"bytes,2,opt,name=source_format,json=sourceFormat,proto3" json:"source_format,omitempty"`
 	// Document-declared title when the source carries one; empty otherwise.
+	//
+	// NOT the document's IDENTITY. Producers fill this with whatever the source declares about
+	// itself, which for a vendor datasheet is the PART number ("LM1117"), not the document number
+	// and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
+	// agni.v1.param.SourceDoc.title, which is specified as the latter: the two fields share a name
+	// and answer different questions, and conflating them produced citations that could not say
+	// which revision they cited and read identically before and after a reissue (agni issue 290).
+	// Selecting a derive recipe by this value IS a correct use: a recipe understands a part.
 	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
 	// Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". The
 	// run-manifest key that says which toolchain derived this artifact.

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"google.golang.org/protobuf/encoding/prototext"
 
@@ -101,6 +102,29 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 	for i, d := range spec.Docs {
 		if d.Id == "" {
 			errs = append(errs, fmt.Errorf("docs[%d] has no id", i))
+		}
+		// The title is the citation an engineer opens, so it has to name the DOCUMENT: number and
+		// revision as printed. Two states fail that, and only one of them belongs here.
+		//
+		// ABSENT is not a problem. A first-pass derivation genuinely cannot state the identity yet,
+		// and that refusal is recorded where derive-time refusals belong, in the run manifest's gap
+		// list with the cover-page prose attached. Reporting it here too would make every derived
+		// spec fail Validate, which is how derive tells a bug from a data gap. The citation itself
+		// says "revision unrecorded" at the point of use, which is where a reader needs it.
+		//
+		// EQUAL TO THE MPN is, because it is not an absence: it is an assertion, and a wrong one. It
+		// is what a producer writes when it copies a doc-IR title, it looks completely fine, and it
+		// is the same string before and after a reissue -- so a reader is told the part they already
+		// knew and nothing about which revision to open (agni issue 290). Silence is honest; a
+		// confident wrong answer is the thing nobody re-checks.
+		//
+		// Deliberately equality, not a guess at what a part number looks like. This whole issue
+		// exists because a plausible-looking value went unchallenged, and a heuristic here would
+		// reject legitimate titles for vendors whose document numbering nobody has seen.
+		if d.Title != "" && spec.Mpn != "" && strings.EqualFold(strings.TrimSpace(d.Title), strings.TrimSpace(spec.Mpn)) {
+			errs = append(errs, fmt.Errorf(
+				"docs[%d] (%s) is titled %q, which is the part, not the document; the title is the citation an engineer opens, so it wants the vendor's document number and revision as printed",
+				i, d.Id, d.Title))
 		}
 		docs[d.Id] = true
 	}
