@@ -468,3 +468,82 @@ func TestMergeDoesNotCollapseTheNoConnectSplit(t *testing.T) {
 		t.Errorf("NC must stay two terminals, got %d", ncs)
 	}
 }
+
+// twoRowHeaderTable is the shape a pin table takes the moment it bands its designator
+// columns: the outer TYPE and DESCRIPTION sit a row ABOVE the row naming the pin.
+//
+//	row 0:  PIN (spanning)          TYPE (2)   DESCRIPTION
+//	row 1:  NO.        NAME
+//	row 2:  1          TXD          DI         Transmit data input
+func twoRowHeaderTable() *docpb.Table {
+	return &docpb.Table{
+		Id: "t1", Rows: 4,
+		Cells: []*docpb.Cell{
+			{Row: 0, Col: 0, Text: "PIN", ColSpan: 2},
+			cell(0, 2, "TYPE (2)"), cell(0, 3, "DESCRIPTION"),
+			cell(1, 0, "NO."), cell(1, 1, "NAME"),
+			cell(2, 0, "1"), cell(2, 1, "TXD"), cell(2, 2, "DI"), cell(2, 3, "CAN transmit data input"),
+			cell(3, 0, "2"), cell(3, 1, "GND"), cell(3, 2, "GND"), cell(3, 3, "Ground"),
+		},
+	}
+}
+
+// The header row is located by finding the pin NAME, which on a banded table is the INNER
+// row. Scanning only that row lost TYPE and DESCRIPTION entirely, so every pin came out
+// untyped with no prose even though the document typed them.
+func TestTwoRowHeaderFindsOuterColumns(t *testing.T) {
+	_, cols, ok := findPinColumns(twoRowHeaderTable(), derivepb.PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED)
+	if !ok {
+		t.Fatal("a two-row header is a normal pin table; it must resolve")
+	}
+	if cols.io != 2 {
+		t.Errorf("type column = %d, want 2 (it is on the band row)", cols.io)
+	}
+	if cols.desc != 3 {
+		t.Errorf("description column = %d, want 3 (it is on the band row)", cols.desc)
+	}
+}
+
+// The inner row still wins where both rows label the same thing, so widening the scan
+// upward cannot displace a column the name's own row already resolved.
+func TestInnerHeaderRowWinsOverTheBandRow(t *testing.T) {
+	tbl := twoRowHeaderTable()
+	tbl.Cells = append(tbl.Cells, cell(1, 4, "DESCRIPTION")) // a second, inner description
+	_, cols, ok := findPinColumns(tbl, derivepb.PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED)
+	if !ok {
+		t.Fatal("table must resolve")
+	}
+	if cols.desc != 4 {
+		t.Errorf("description column = %d, want 4: the name's own row is authoritative", cols.desc)
+	}
+}
+
+// An untyped pin's gap must say WHICH channel came up empty, because the two want opposite
+// fixes: an unknown token is a vocabulary gap and names its own answer, while a missing
+// column is a prose judgement for a human.
+func TestUntypedGapDistinguishesUnknownTokenFromMissingColumn(t *testing.T) {
+	tbl := twoRowHeaderTable()
+	tbl.Rows = 5
+	tbl.Cells = append(tbl.Cells,
+		cell(4, 0, "3"), cell(4, 1, "VSUP"), cell(4, 2, "HVP"), cell(4, 3, "High-voltage supply"))
+
+	spec := &parampb.PartSpec{}
+	manifest := &derivepb.RunManifest{}
+	extractPinTable(spec, manifest, &docpb.Page{Number: 1}, tbl, derivepb.PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED)
+
+	var detail string
+	for _, g := range manifest.GetGaps() {
+		if g.GetKind() == "untyped-pin" {
+			detail = g.GetDetail()
+		}
+	}
+	if detail == "" {
+		t.Fatal("the HVP row types to nothing and must be gapped")
+	}
+	if !strings.Contains(detail, `"HVP"`) {
+		t.Errorf("the gap must name the token it did not know, so widening is evidence-driven: %q", detail)
+	}
+	if strings.Contains(detail, "no type column") {
+		t.Errorf("the type column is present and says HVP; reporting it missing sends a reader looking for it: %q", detail)
+	}
+}
