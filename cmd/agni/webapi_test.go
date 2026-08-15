@@ -72,6 +72,26 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		}
 	})
 
+	// Over a real filesystem, not just the in-memory port: "hollow" holds only folders and a file
+	// no reader opens, so a design browser asking for pruning never sees it.
+	t.Run("prune_empty_dirs drops a subtree with no readable design", func(t *testing.T) {
+		mustMkdir(t, filepath.Join(root, "hollow", "libs"))
+		mustWrite(t, filepath.Join(root, "hollow", "libs", "parts.lock"))
+		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), PruneEmptyDirs: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var dirs []string
+		for _, e := range resp.GetEntries() {
+			if e.GetIsDir() {
+				dirs = append(dirs, e.GetName())
+			}
+		}
+		if len(dirs) != 1 || dirs[0] != "sub" {
+			t.Fatalf("dirs = %v, want [sub] (hollow pruned, sub kept for its inner.xml)", dirs)
+		}
+	})
+
 	t.Run("unknown mount classifies as not-found", func(t *testing.T) {
 		if _, err := list("nope", ""); !errors.Is(err, service.ErrNotFound) {
 			t.Fatalf("want ErrNotFound, got %v", err)

@@ -177,9 +177,10 @@ type DirEntry struct {
 	IsDir bool `protobuf:"varint,2,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
 	// format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
 	// "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
-	// has no reader for): the tree lists such files but the UI shows them disabled, so an
-	// unsupported format is distinguishable from an empty folder. It is a hint for the UI;
-	// ambiguous extensions are resolved for real at load time.
+	// has no reader for). The listing carries such files rather than dropping them, so a client
+	// decides for itself what to show: the design tree hides them, the datasheets tree keeps the
+	// PDFs among them. It is a hint for the UI; ambiguous extensions are resolved for real at
+	// load time.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
 	// uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
 	// (for a file).
@@ -250,9 +251,16 @@ type ListDirRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
 	// mount root.
-	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	// prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
+	// any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
+	// is per-client — a datasheets browser lists PDFs, which no design reader opens, so pruning by
+	// design format would hide exactly the folders it wants. Answering it costs a bounded walk of
+	// each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
+	// a folder wrongly shown costs a click and one wrongly hidden costs a design.
+	PruneEmptyDirs bool `protobuf:"varint,2,opt,name=prune_empty_dirs,json=pruneEmptyDirs,proto3" json:"prune_empty_dirs,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListDirRequest) Reset() {
@@ -290,6 +298,13 @@ func (x *ListDirRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *ListDirRequest) GetPruneEmptyDirs() bool {
+	if x != nil {
+		return x.PruneEmptyDirs
+	}
+	return false
 }
 
 type ListDirResponse struct {
@@ -354,9 +369,10 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
 	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +
 	"\x06format\x18\x03 \x01(\tR\x06format\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uri\"\"\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\"L\n" +
 	"\x0eListDirRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\"E\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x12(\n" +
+	"\x10prune_empty_dirs\x18\x02 \x01(\bR\x0epruneEmptyDirs\"E\n" +
 	"\x0fListDirResponse\x122\n" +
 	"\aentries\x18\x01 \x03(\v2\x18.agni.v1.webapi.DirEntryR\aentries2\xb3\x01\n" +
 	"\x10WorkspaceService\x12S\n" +

@@ -46,10 +46,11 @@ type WorkspaceServiceClient interface {
 	// ListMounts returns the mounts the server is serving, in the order they were
 	// configured. It takes no parameters and never fails for a running server.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
-	// ListDir lists one directory level inside a mount: its subdirectories and the files a
-	// reader can open (filtered by extension). The client addresses a location by an artifact URI
+	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
+	// labeled with the reader that would open it. The client addresses a location by an artifact URI
 	// whose authority is a mount, never an absolute host path; the server resolves it inside that
-	// mount. Lazy, one level per call, so large trees stay responsive.
+	// mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
+	// out subdirectories with no readable design anywhere beneath them.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 }
 
@@ -100,10 +101,11 @@ type WorkspaceServiceHandler interface {
 	// ListMounts returns the mounts the server is serving, in the order they were
 	// configured. It takes no parameters and never fails for a running server.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
-	// ListDir lists one directory level inside a mount: its subdirectories and the files a
-	// reader can open (filtered by extension). The client addresses a location by an artifact URI
+	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
+	// labeled with the reader that would open it. The client addresses a location by an artifact URI
 	// whose authority is a mount, never an absolute host path; the server resolves it inside that
-	// mount. Lazy, one level per call, so large trees stay responsive.
+	// mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
+	// out subdirectories with no readable design anywhere beneath them.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 }
 
