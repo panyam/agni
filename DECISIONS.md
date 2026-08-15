@@ -686,3 +686,23 @@ achievable.
 
 **Reopen if** a second export from a different toolchain shows the same per-group ratio, which would
 make it a property of the format rather than of one printer.
+
+## A design whose descriptor does not parse is refused, not served with a warning
+
+`ProjectResolver.Overlay` returns an error when the descriptor governing a design fails to parse,
+and the surfaces refuse the run. The alternative considered was to serve the run and MARK the
+results as computed without the project's configuration.
+
+**Refusing won, and the reason is where the marking would have to live.** A banner on the page is
+not attached to the thing that gets quoted: findings are screenshotted, pasted into tickets, and
+exported to reports, and every one of those carries the numbers away from the chrome. On one folder
+the difference between composing with and without the project's config was 40 findings the project's
+own lexicon would not have raised and 95 it would have, so a marked-but-served run is a wrong answer
+with a caption that does not travel with it.
+
+It also settles a CLI/server disagreement rather than adding one. `agni check` was already fatal on
+this input by a different route, so serving it in the viewer meant the same file was an error in one
+surface and a badge in the other.
+
+**Reopen if** a deployment needs to render a half-configured folder — but the marking has to ride on
+the RESULTS, per-finding, not on the page. If it cannot, this answer stands.
