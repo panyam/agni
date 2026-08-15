@@ -65,6 +65,25 @@ func (p *DatasheetsPage) Load(r *http.Request, w http.ResponseWriter, app *goal.
 	return nil, false
 }
 
+// LandingPage is the server-rendered shell of "/", the page that routes rather than browses. It
+// exists because "/" served the design browser, which made designs the front door and every other
+// surface something you had to know the URL of. The shell carries the destinations as plain links
+// (so the page is usable with no JavaScript) plus two island holes: what this browser opened lately,
+// and the designs the server's projects declare by name. Its own bundle (static/landing.js) keeps
+// the trees, the renderer, and pdf.js out of the first page anyone loads. goapplib maps this type to
+// LandingPage.html by name.
+type LandingPage struct {
+	Title string
+}
+
+// Load populates the landing page before render. Nothing is fetched here: the recents are per-user
+// browser state the server cannot see, and the project listing arrives over the Connect API, which
+// keeps the shell identical for every visitor and cacheable.
+func (p *LandingPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
+	p.Title = "Agni"
+	return nil, false
+}
+
 // redirectLegacyFiles permanently redirects the pre-WS9-049 deep-link space to its replacement:
 // /files/<mount>/<path> becomes /designs/<mount>/<path>/view, and a folder URL (trailing slash)
 // becomes the same folder under /designs/. The sheet and view knobs ride in the query string in
@@ -122,11 +141,15 @@ func designsRouter(browse, work http.Handler) http.Handler {
 // registerPages mounts the viewer's server-rendered pages on mux. Routing is server-owned (C11)
 // but per-page state lives in the URL, so each shell is identical for every path it serves and the
 // frontend reads the URL on load to reopen the design or folder. The /designs/ space carries two
-// pages behind one pattern (see designsRouter); "/" is the catch-all landing page and serves the
-// browser, since arriving with no design named is precisely the "choose one" moment.
+// pages behind one pattern (see designsRouter).
+//
+// "/" is the landing page, and it is also the catch-all: a URL matching no other pattern lands on a
+// page offering the destinations rather than on an empty file tree. It served the design browser
+// until the datasheets workbench made designs one surface among several rather than the whole app;
+// the browser did not move, it is still at /designs/.
 func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	browse := pageHandler[*BrowsePage](app)
-	mux.Handle("/", browse)
+	mux.Handle("/", pageHandler[*LandingPage](app))
 	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app)))
 	// The retired /files/ space (WS9-049) redirects rather than 404s: links to a design were
 	// shareable long before the split, so they have to keep resolving.

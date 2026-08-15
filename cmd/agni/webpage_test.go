@@ -86,6 +86,35 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 // rendered and that the other one did not, because both pages descend from BasePage and share
 // enough markup that a one-sided check would pass if the dispatcher sent every request to the
 // same page.
+// "/" is the landing page rather than the design browser, and it is also the catch-all: a URL
+// matching no other pattern lands somewhere that offers the destinations instead of on an empty
+// tree. The browser did not move, so the same test asserts /designs/ still serves it.
+func TestRootServesLandingPage(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	for _, path := range []string{"/", "/not-a-page"} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, rec.Code)
+		}
+		body := rec.Body.String()
+		// Both destinations are plain server-rendered links, so the page routes with no JavaScript.
+		for _, want := range []string{`href="/designs/"`, `href="/datasheets/"`, `id="landing-recents"`, "/static/landing.js"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("GET %s missing %q", path, want)
+			}
+		}
+		// The browser's own markers must be absent, or "/" is still serving the tree.
+		for _, deny := range []string{`id="browse-tree"`, "/static/browse.js", "/static/app.js"} {
+			if strings.Contains(body, deny) {
+				t.Errorf("GET %s unexpectedly contains %q (landing page is serving another shell)", path, deny)
+			}
+		}
+	}
+}
+
 func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
@@ -99,7 +128,6 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 		path       string
 		want, deny []string
 	}{
-		{"/", browseMarkers, workMarkers},                       // the landing page is browse
 		{"/designs/", browseMarkers, workMarkers},               // the space root
 		{"/designs/corpus/", browseMarkers, workMarkers},        // a mount root
 		{"/designs/corpus/boards/", browseMarkers, workMarkers}, // a subfolder

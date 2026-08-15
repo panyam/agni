@@ -36,6 +36,7 @@ const appBundles = [
   { entry: "src/main.ts", outfile: "static/app.js" },
   { entry: "src/datasheets.ts", outfile: "static/datasheets.js" },
   { entry: "src/browse.ts", outfile: "static/browse.js" },
+  { entry: "src/landing.ts", outfile: "static/landing.js" },
 ];
 
 const solidBuild = (b) => ({

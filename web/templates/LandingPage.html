@@ -1,0 +1,58 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<style>
+  .ld-app { max-width: 860px; margin: 0 auto; padding: 40px 20px 60px; }
+  .ld-app h1 { font-size: 20px; margin: 0 0 4px; color: #222; }
+  .ld-tagline { color: #777; margin: 0 0 28px; }
+  /* The two destinations. Cards rather than links because this is the whole point of the page:
+     everything below is a shortcut PAST them, and a shortcut must not outweigh the thing it skips. */
+  .ld-cards { display: flex; gap: 14px; margin-bottom: 34px; flex-wrap: wrap; }
+  .ld-card { flex: 1 1 240px; display: block; border: 1px solid #ddd; border-radius: 6px; padding: 14px 16px; background: #fff; text-decoration: none; color: inherit; }
+  .ld-card:hover { border-color: #2563eb; background: #f8faff; }
+  .ld-card-title { font-weight: 600; color: #222; margin-bottom: 3px; }
+  .ld-card-sub { color: #777; font-size: 12px; }
+  .ld-section { margin-bottom: 30px; }
+  .ld-section h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 0 0 8px; border-top: 1px solid #e5e5e5; padding-top: 10px; display: flex; align-items: center; gap: 10px; }
+  .ld-section h3 { font-size: 13px; color: #444; margin: 12px 0 4px; }
+  .ld-clear { border: 0; background: none; color: #999; font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; cursor: pointer; padding: 0; }
+  .ld-clear:hover { color: #b00; text-decoration: underline; }
+  .ld-list { list-style: none; margin: 0; padding: 0; }
+  .ld-row { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+  .ld-link { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; text-decoration: none; color: inherit; }
+  .ld-link:hover .ld-label { text-decoration: underline; }
+  .ld-label { font-weight: 600; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ld-where { color: #999; font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ld-kind, .ld-when { flex: 0 0 auto; color: #999; font-size: 11px; }
+  .ld-empty { color: #999; margin: 0; }
+</style>
+{{ end }}
+
+{{ define "Body" }}
+<div class="ld-app">
+  <h1>Agni</h1>
+  <p class="ld-tagline">Read, check, and compare electronic design files.</p>
+
+  <div class="ld-cards">
+    <a class="ld-card" id="ld-designs" href="/designs/">
+      <div class="ld-card-title">Designs</div>
+      <div class="ld-card-sub">Browse the mounted folders and open a schematic or board</div>
+    </a>
+    <a class="ld-card" id="ld-datasheets" href="/datasheets/">
+      <div class="ld-card-title">Datasheets</div>
+      <div class="ld-card-sub">Transcribe part parameters from vendor documents</div>
+    </a>
+  </div>
+
+  <!-- Two islands, each free to render nothing: recents are empty on a first visit, and projects
+       are empty for a deployment with no descriptors under its mounts. -->
+  <div id="landing-recents" data-component="landing-recents"></div>
+  <div id="landing-projects" data-component="landing-projects"></div>
+</div>
+{{ end }}
+
+{{ define "AppScript" }}
+<script type="module" src="/static/landing.js"></script>
+{{ end }}
+
+{{ define "LandingPage" }}{{ template "BasePage" . }}{{ end }}

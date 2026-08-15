@@ -24,7 +24,9 @@
 {{ define "Body" }}
 <div class="br-app">
   <div class="br-sidebar">
-    <h1>Designs</h1>
+    <!-- The heading is the way back to the landing page. Without it "/" is reachable only by
+         editing the URL, which is not a route. -->
+    <h1><a class="ld-home" href="/">Agni</a> / Designs</h1>
     <!-- WS9-049: the same file-tree island the viewer uses, driven with an empty sheet state so
          no sheets nest under a file. Choosing a file previews it; the Open button leaves for the
          work page. -->

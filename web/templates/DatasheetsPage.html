@@ -124,7 +124,8 @@
 {{ define "Body" }}
 <div class="ds-app">
   <div class="ds-sidebar">
-    <h1>Datasheets</h1>
+    <!-- Same as the browse page: the heading carries the way back to the landing page. -->
+    <h1><a class="ld-home" href="/">Agni</a> / Datasheets</h1>
     <!-- WS13-006: the datasheet-tree island mounts here (reuses WorkspaceService, filtered to PDFs) -->
     <div id="ds-tree" data-component="ds-tree"></div>
     <h2>Extracted</h2>

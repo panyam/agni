@@ -11,6 +11,7 @@ import { workbenchIsland, type RegionView } from "./regionview.js";
 import { paramsPanelIsland } from "./paramspanel.js";
 import type { Parameter } from "./gen/agni/v1/param/param_pb.js";
 import { currentDs, dsToUrl, hasDatasheet, type DsLocation } from "./dsrouter.js";
+import { baseName, noteOpen } from "./recents.js";
 
 // restoring guards the URL feedback loop, like the viewer's main.ts: while replaying a URL (initial
 // load or back/forward) we load the datasheet but must not push a duplicate history entry.
@@ -51,6 +52,9 @@ class DatasheetsRoot extends BaseComponent {
       region.view.load(mount, path);
       treeView?.setState({ mount, path });
       syncUrl({ mount, path });
+      // Feeds the landing page's Recent list. This is the single "show this datasheet" action, so
+      // a tree click and a URL restore both land here and both count as an opening.
+      noteOpen({ kind: "datasheet", mount, path, label: baseName(path) });
     };
     const tree = dsTreeIsland(treeEl, this._eventBus, open);
     treeView = tree.view;
