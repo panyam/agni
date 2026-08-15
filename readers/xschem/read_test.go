@@ -216,3 +216,50 @@ func TestPinDirectionsAndExternal(t *testing.T) {
 		t.Errorf("SIG (lab_pin, a plain net label) must not be external")
 	}
 }
+
+// TestUnannotatedComponents (agni issue 311): this reader keeps a placeholder-designated component,
+// which makes it the layer that has to report one.
+//
+// The caveat belongs on the record. Nothing attests that xschem SHIPS placeholders the way gEDA's
+// refdes=R? templates do, because xschem assigns an instance name from the symbol template on
+// placement, so this fixture is hand-authored rather than drawn from the format's conventions. It
+// is here because the reader's own assumption depends on the answer: the instance name is this
+// format's provenance native id and is documented as unique within a schematic, and two components
+// sharing "R?" break that quietly. Each pin 1 then collapses onto the same ("R?", "1") key in the
+// net graph, which is the degradation internal/refdes exists to keep out of the index.
+//
+// Note this reader does NOT fold by designator, so the two "R?" placements stay two components. The
+// diagnostic is still one entry, because it groups by designator before walking sections.
+func TestUnannotatedComponents(t *testing.T) {
+	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	un := d.GetInputDiagnostics().GetUnannotatedComponents()
+	if len(un) != 1 || un[0].GetRefDes() != "R?" {
+		t.Fatalf("unannotated components = %+v, want one R? entry", un)
+	}
+	if n := len(un[0].GetInstances()); n != 2 {
+		t.Errorf("R? carries %d placements, want 2", n)
+	}
+	var refs []string
+	for _, c := range d.Components {
+		refs = append(refs, c.RefDes)
+	}
+	if !equalSet(refs, []string{"R1", "R?", "R?"}) {
+		t.Errorf("components = %v, want R1 and both R? placements kept", refs)
+	}
+}
+
+// TestUnannotatedWithoutSymbols pins the wiring on the other entry path. Plain Read supplies no
+// opener, and on that path InputDiagnostics stays nil unless the sheet has a bus, so a signal
+// attached inside the resolving branch is absent for every caller without a symbol library.
+func TestUnannotatedWithoutSymbols(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(d.GetInputDiagnostics().GetUnannotatedComponents()); n != 1 {
+		t.Errorf("unannotated designators = %d, want 1 without a symbol library too", n)
+	}
+}

@@ -23,6 +23,7 @@ import (
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
+	"github.com/panyam/agni/internal/refdes"
 	"github.com/panyam/agni/internal/symread"
 )
 
@@ -221,12 +222,28 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 	}
 	// Bus detection is name-based, independent of symbol resolution, so attach after either branch.
 	if len(buses) > 0 {
-		if d.InputDiagnostics == nil {
-			d.InputDiagnostics = &ir.InputDiagnostics{}
-		}
-		d.InputDiagnostics.UnmodeledBuses = buses
+		ensureDiag(d).UnmodeledBuses = buses
+	}
+	// xschem keeps a placeholder-designated component, so it owes the diagnostic. Unlike gEDA's
+	// refdes=R? templates, nothing here attests that xschem SHIPS placeholders: the tool assigns an
+	// instance name from the symbol template on placement, so a `?` in one is a name somebody typed.
+	// It is recorded anyway because the reader's own assumption depends on it — the instance name is
+	// this format's provenance native id and is documented as unique within a schematic (see the
+	// extract doc comment), and a shared "R?" breaks that silently. Reporting is how that surfaces.
+	if un := refdes.Unannotated(d.Components); len(un) > 0 {
+		ensureDiag(d).UnannotatedComponents = un
 	}
 	return d
+}
+
+// ensureDiag returns d's InputDiagnostics, building it on first use. Both signals recorded after
+// the symbol-resolution branch attach through it, because the no-opener path leaves the field nil
+// and assigning a fresh struct per signal silently drops whatever was recorded before it.
+func ensureDiag(d *ir.Design) *ir.InputDiagnostics {
+	if d.InputDiagnostics == nil {
+		d.InputDiagnostics = &ir.InputDiagnostics{}
+	}
+	return d.InputDiagnostics
 }
 
 // busLabelRe matches an xschem bus label's member-range suffix (`DATA[7:0]`): a bus is drawn with a
