@@ -18,6 +18,7 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // ipcFile is the subset of the IPC-2581 tree we read. Paths mirror the real nesting
@@ -135,6 +136,14 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	return f.toDesign(sourceFile), nil
 }
 
+// skipRefDes reports whether a component designator names no part this reader should carry: an
+// absent one, or a placeholder the source has not annotated yet. It is one function rather than a
+// condition written at each of the four sites (the netlist components, their connections, and the
+// two geometry passes) because those four disagreeing is the whole failure mode — the netlist and
+// the board geometry are joined by ref_des, so a component one tier keeps and the other drops is a
+// placement with no component or a component with no placement.
+func skipRefDes(ref string) bool { return ref == "" || refdes.IsPlaceholder(ref) }
+
 func (f *ipcFile) toDesign(src string) *ir.Design {
 	prov := func() *ir.Provenance { return &ir.Provenance{SourceFile: src} }
 	d := &ir.Design{
@@ -154,6 +163,16 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 	}
 
 	for _, c := range f.Comps {
+		// A component with no designator, or a placeholder one ("REF**", "C?1845"), is skipped the
+		// way the KiCad board reader skips it (readers/kicad/pcb.go): on a fabrication artifact
+		// that is usually a fiducial or a mechanical part rather than something to buy, and a
+		// placeholder is annotation state rather than an identity, so keying it merges parts that
+		// have nothing to do with each other. Both tiers of THIS reader have to agree too — the
+		// geometry side already dropped the designator-less ones, so before this guard the netlist
+		// carried components the board geometry had no placement for.
+		if skipRefDes(c.RefDes) {
+			continue
+		}
 		comp := &ir.Component{RefDes: c.RefDes, FootprintRef: c.PackageRef, Attributes: map[string]string{}, Prov: prov()}
 		putAttr(comp.Attributes, "part", c.Part)
 		putAttr(comp.Attributes, "mount_type", c.MountType)
@@ -191,6 +210,13 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		putAttr(net.Attributes, "netclass_raw", n.NetClass)
 		putAttr(net.Attributes, classify.AttrDeclaredRole, declaredRole(n.NetClass))
 		for _, pr := range n.Pins {
+			// A connection to a component the loop above skipped would claim a pin on a part that
+			// is not in the design. The KiCad board reader gets this for free (a skipped footprint
+			// takes its pads with it); here the net table is authored separately, so the same
+			// predicate has to run twice.
+			if skipRefDes(pr.ComponentRef) {
+				continue
+			}
 			net.Connections = append(net.Connections, &ir.Connection{
 				ComponentRef: pr.ComponentRef, PinRef: pr.Pin, Prov: prov(),
 			})

@@ -103,6 +103,12 @@
           <Xform rotation="270.000"/>
           <Location x="5.000000" y="2.000000"/>
         </Component>
+        <!-- An unannotated fiducial. It carries a real package, so it would draw pads and body
+             graphics if the geometry pass kept it; a board reader skips it. -->
+        <Component refDes="REF**" packageRef="R0603" layerRef="TOP" part="FIDUCIAL" mountType="SMT">
+          <Xform rotation="0.000"/>
+          <Location x="8.000000" y="4.000000"/>
+        </Component>
         <LayerFeature layerRef="TOP">
           <Set net="GND">
             <Features>
