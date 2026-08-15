@@ -210,11 +210,15 @@ func readDesign(path string) (*ir.Design, error) {
 func designReadOptions(ctx context.Context, path string) ([]service.ReadOption, error) {
 	ws, err := workspace()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
+	// A path that names nothing is left to the reader (cliWorkspace.URI), so what comes back here is
+	// a failure to MINT: a governing project descriptor that exists and does not parse. Answering "no
+	// read options" for that is how a run silently reads under the built-in vocabulary instead of the
+	// project's, which is the same swallow one layer down (agni issue 312).
 	u, err := ws.URI(path)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	ov, err := cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, service.Overlay{}, "")
 	if err != nil {
@@ -437,13 +441,24 @@ func checkCmd() *cobra.Command {
 			}
 			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "", nil, cliProjects())
 			ctx := cmd.Context()
+			// Addressed once, ahead of the format branches: every request below names the same two
+			// artifacts, and minting per call meant the same argument was turned into a URI up to four
+			// times per run.
+			designURI, err := cliArgURI(args[0])
+			if err != nil {
+				return err
+			}
+			boardURI, err := cliArgURI(boardPath)
+			if err != nil {
+				return err
+			}
 			var failFindings []*checkspb.Finding
 			// --results-out takes one path through the service for every format (WS3-103): the document
 			// holds findings in run order, and the severity pivot is rebuilt from it. Rendering from the
 			// document rather than beside it is what makes the written artifact the SAME artifact the
 			// terminal showed, instead of a second one that happens to agree today.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay, BoardUri: cliArgURI(boardPath)})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
 				if err != nil {
 					return err
 				}
@@ -452,7 +467,7 @@ func checkCmd() *cobra.Command {
 				// that declares conventions.yaml, profiles/ and params/ ran against all three and
 				// recorded `run: {}`, because none of those three flags was passed. The flag values are
 				// the DEPLOYMENT half of the union; the project's half comes from the overlay.
-				doc := resultsDoc(cliArgURI(args[0]), selected, resp.GetFindings(), skippedProtos(resp.GetSkipped()), service.RunConfigProto(
+				doc := resultsDoc(designURI, selected, resp.GetFindings(), skippedProtos(resp.GetSkipped()), service.RunConfigProto(
 					runOverlay.Provenance(service.RunProvenance{
 						Params:      paramsDir != "",
 						Profiles:    profilePath != "",
@@ -473,7 +488,7 @@ func checkCmd() *cobra.Command {
 			}
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay, BoardUri: cliArgURI(boardPath)})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
 				if err != nil {
 					return err
 				}
@@ -487,7 +502,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json — both need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: cliArgURI(args[0]), Rules: names, Overlay: overlay, BoardUri: cliArgURI(boardPath)})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
 				if err != nil {
 					return err
 				}
@@ -630,15 +645,27 @@ func reviewCmd() *cobra.Command {
 			// One create per design: a stored run is about ONE design, so the CLI's multi-design rollup is
 			// several runs rather than one call. The loop is the rollup.
 			var docs []*checkspb.CheckResults
+			boardURI, err := cliArgURI(boardPath)
+			if err != nil {
+				return err
+			}
 			for _, design := range args {
+				parent, err := cliProjectParent(cmd.Context(), design)
+				if err != nil {
+					return err
+				}
+				designURI, err := cliArgURI(design)
+				if err != nil {
+					return err
+				}
 				rv, err := svc.CreateReview(cmd.Context(), &webapi.CreateReviewRequest{
 					// The run is stored under the design's project when it has one. It is resolved here
 					// rather than inside CreateReview because the caller has already resolved this design
 					// to compose its config, and a second resolution in the service could disagree with
 					// the first — the run would then be filed under a project other than the one whose
 					// rules scored it.
-					Parent:   cliProjectParent(cmd.Context(), design),
-					Manifest: service.ManifestProto(man), DesignUri: cliArgURI(design), BoardUri: cliArgURI(boardPath), RatifiedFloor: ratifiedFloor,
+					Parent:   parent,
+					Manifest: service.ManifestProto(man), DesignUri: designURI, BoardUri: boardURI, RatifiedFloor: ratifiedFloor,
 					// --conventions rides the REQUEST as a value (WS3-102): the service composes it, so the CLI
 					// and the web reach one composition path, and its lexicon half travels with the design
 					// read instead of being installed in a process global.

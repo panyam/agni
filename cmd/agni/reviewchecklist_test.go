@@ -176,3 +176,50 @@ func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
 		t.Errorf("expected a rollup, got:\n%s", out)
 	}
 }
+
+// breakDescriptor overwrites a descriptor written by checklistProject with one that exists and does
+// not parse, which is the case the resolution has to tell apart from "no descriptor at all".
+func breakDescriptor(t *testing.T, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("name: My Board\ntitle: D\nentry: board.edn\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestReviewRefusesMalformedDesignDescriptor: a design.yaml that exists and does not parse is THIS
+// design's own configuration. Reading it as "no project" sends the operator to --checklist when the
+// actionable fix is the descriptor, and would score the run against the built-in vocabulary while
+// looking authoritative.
+func TestReviewRefusesMalformedDesignDescriptor(t *testing.T) {
+	root := t.TempDir()
+	design := checklistProject(t, root, "proj", "review.yaml")
+	breakDescriptor(t, filepath.Join(design, "design.yaml"))
+	_, _, err := runReviewCapturing(t, design)
+	if err == nil {
+		t.Fatal("a malformed design.yaml reviewed cleanly")
+	}
+	if strings.Contains(err.Error(), "belongs to no project") {
+		t.Errorf("a broken descriptor was reported as an absent one: %v", err)
+	}
+	for _, want := range []string{"design.yaml", "not a valid id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("message should carry the parse failure, missing %q: %v", want, err)
+		}
+	}
+}
+
+// TestReviewRefusesMalformedProjectDescriptor covers the same thing one descriptor up, with
+// --checklist passed so the checklist resolution is bypassed and the failure has to come from the
+// run's own project resolution rather than from the checklist lookup.
+func TestReviewRefusesMalformedProjectDescriptor(t *testing.T) {
+	root := t.TempDir()
+	design := checklistProject(t, root, "proj", "review.yaml")
+	breakDescriptor(t, filepath.Join(root, "project.yaml"))
+	_, _, err := runReviewCapturing(t, "--checklist", "testdata/intent/rails-checklist.yaml", design)
+	if err == nil {
+		t.Fatal("a malformed project.yaml reviewed cleanly")
+	}
+	if !strings.Contains(err.Error(), "project.yaml") {
+		t.Errorf("message should name the descriptor that failed: %v", err)
+	}
+}

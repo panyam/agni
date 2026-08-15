@@ -106,8 +106,16 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
 			}
 			svc := service.NewQueryService(&localLoader{loader: newLoader()}, specs, cliProjects())
+			designURI, err := cliArgURI(args[0])
+			if err != nil {
+				return err
+			}
+			boardURI, err := cliArgURI(boardPath)
+			if err != nil {
+				return err
+			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
-				Uri: cliArgURI(args[0]), Query: args[1], Overlay: overlay, BoardUri: cliArgURI(boardPath),
+				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI,
 			})
 			if err != nil {
 				return err
