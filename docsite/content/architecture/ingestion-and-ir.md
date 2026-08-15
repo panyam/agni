@@ -154,6 +154,14 @@ A ref-des is not unique per section: all four gates share `U1`. This is why `Com
 
 The stable key for cross-revision diff and for the IR-to-geometry join is always the semantic key (ref-des, net name, pin designator), never the native id. This matters for diff: matching on a native id would report the entire design as changed on every export. `Span` (byte offset and length, line and column) exists for lossless reconstruction and surgical edits. The EDIF s-expr reader does not populate byte offsets yet.
 
+**A semantic key can be absent while still being present.** Before a designer runs annotation, every unassigned part carries a placeholder designator: `R?`, `C?`, `REF**`, or a partly-assigned `C?1845`. That is annotation *state*, not a name. Every unannotated resistor on the sheet reads `R?`, so the string is a label saying "no identity yet" while occupying the field where an identity goes.
+
+`internal/refdes.IsPlaceholder` is the single definition, and it exists as its own package because the layers that must agree on it cannot import each other: readers take nothing from `core`, and `core` takes nothing from a reader. When those layers disagree about what counts as a designator they do not fail loudly, they quietly answer different questions about the same design.
+
+Consumers **decline** rather than merge. A board reader skips a placeholder-referenced footprint, because a `REF**` on a board is usually a fiducial or a mechanical artifact rather than a part. A schematic reader keeps the part — those are real circuitry someone has not named yet, and dropping them would make the design read short. The check model declines to assert pin uniqueness over one: `(R?, 1)` does not name a pin, and on one export 176 distinct resistors shared that key, so the pin index saw a single pin sitting on 129 nets. Reporting that as malformed input says something false about a netlist that is fine.
+
+The temptation is to repair the identity instead — key those parts on their native id, which really is unique. That is exactly what the paragraph above forbids: the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The absence is the truth, and the honest move is to say so, which is what `unannotated_components` below is for.
+
 ## Geometry is a keyed sidecar
 
 Render data (symbol shapes, placements, wire routing, pin coordinates) does not live in the core IR. It lives in a separate artifact that references the core IR by stable keys (`ref_des`, net name, `port_ref`, plus provenance), joined at render time. Diff, rules, and simulation never carry graphics. The renderer loads the core IR plus the geometry sidecar and joins them.
@@ -163,6 +171,25 @@ Two things follow. Heavy graphics stay off the analysis hot paths, and geometry 
 ## Fidelity per reader
 
 "Lossless" is a property of an individual reader, not a blanket platform promise. Each reader declares what it preserves. An IPC-2581 reader can be lossless. An ODB++ reader is lossless with respect to ODB++. An extractor-based reader is lossy and documents what it drops. The round-trip oracle below then applies only where a reader claims losslessness.
+
+## What a reader noticed: input diagnostics
+
+A read can succeed and still be worth complaining about. `InputDiagnostics` is where a reader records what it saw, so that a condition it noticed does not evaporate the moment the IR is built:
+
+| Field | What it records |
+|---|---|
+| `dangling_endpoints` | a wire end touching nothing |
+| `no_junction_endpoints` | a wire end dropped mid-span of another with no junction dot |
+| `ref_des_collisions` | one designator claimed by placements that are not sections of one part |
+| `unmodeled_buses` | a bus construct recognized but not expanded into member nets |
+| `unresolved_symbols` | a symbol file that failed to open, so its placements carry no pins |
+| `unannotated_components` | parts whose designator is still a placeholder |
+
+They exist for one reason: **silence must not read as coverage.** Every one of these makes the design report *less* rather than reporting an error. An unresolved symbol yields a smaller netlist, and connectivity rules then pass cleanly over the gap. An unexpanded bus leaves members merged or off-net. Un-annotated parts are fully drawn and connected, so nothing looks wrong at all. In each case a clean run is indistinguishable from a design that genuinely had none of the problem, and the reader is the only layer that ever knew the difference.
+
+Recording is therefore separate from judging. The reader states what it observed; a thin rule in the catalog turns each into a finding with severity and remedy. That split is why the diagnostics are per-reader without being per-reader *policy*: a format that cannot detect a condition contributes nothing, and the rule stays silent for a knowable reason rather than an accidental one.
+
+Two consequences worth knowing. A field is not populated by every reader, and an empty one means "this reader does not detect this", not "the design is clean" — EDIF contributes no `ref_des_collisions` on purpose, because it represents a multi-gate part as several instances sharing a designator and carries nothing to tell that legitimate grouping from a duplicate. And a reader must build the struct **once**: assigning a fresh `InputDiagnostics` per signal silently drops whatever was recorded before it, which is a bug that only appears when the second signal is added.
 
 ## Emit: tiered writers
 
