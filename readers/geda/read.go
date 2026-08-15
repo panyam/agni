@@ -20,6 +20,7 @@ import (
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
+	"github.com/panyam/agni/internal/refdes"
 	"github.com/panyam/agni/internal/symread"
 )
 
@@ -302,12 +303,27 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 	// Bus detection is independent of symbol resolution (a `U` object is recognized by syntax), so
 	// attach the diagnostics after either branch, creating the container if the dangles path did not.
 	if len(buses) > 0 {
-		if d.InputDiagnostics == nil {
-			d.InputDiagnostics = &ir.InputDiagnostics{}
-		}
-		d.InputDiagnostics.UnmodeledBuses = buses
+		ensureDiag(d).UnmodeledBuses = buses
+	}
+	// gEDA KEEPS a placeholder-designated part — the symbol libraries here ship refdes=R? / U? as
+	// their template value, and an unannotated part on a sheet is real circuitry somebody has not
+	// named yet. A reader that keeps them owes the diagnostic: they are drawn and connected, so
+	// nothing downstream can tell their names are missing (docsite architecture/ingestion-and-ir).
+	if un := refdes.Unannotated(d.Components); len(un) > 0 {
+		ensureDiag(d).UnannotatedComponents = un
 	}
 	return d
+}
+
+// ensureDiag returns d's InputDiagnostics, building it on first use. Every signal recorded after
+// the symbol-resolution branch attaches through it, because that branch leaves the field nil on one
+// of its two paths and assigning a fresh struct per signal silently drops whatever was recorded
+// before it — the bug the EDIF reader hit the moment it had a second diagnostic to record.
+func ensureDiag(d *ir.Design) *ir.InputDiagnostics {
+	if d.InputDiagnostics == nil {
+		d.InputDiagnostics = &ir.InputDiagnostics{}
+	}
+	return d.InputDiagnostics
 }
 
 // powerTap is a power/ground symbol instance, pin-resolved after the walk.

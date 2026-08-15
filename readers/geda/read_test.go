@@ -286,3 +286,51 @@ func TestSlotting(t *testing.T) {
 		}
 	}
 }
+
+// TestUnannotatedComponents (agni issue 311): gEDA keeps a placeholder-designated part, so it is
+// the layer that has to report one. `<prefix>?` is gEDA's own convention — the symbol libraries in
+// this testdata ship `refdes=R?` and `refdes=U?` as their template value — and the reader kept
+// those silently.
+//
+// The fixture covers both halves of this reader's grouping fork, because they arrive at the entry
+// differently. Two unslotted `R?` symbols become two ir.Components sharing a designator; two
+// slotted `U?` gates fold into one Component with two sections. Either way the diagnostic is one
+// entry per PLACEHOLDER carrying every placement, which is what makes "2 parts are still called R?"
+// the reviewable fact rather than a number that depends on how the source spelled it.
+func TestUnannotatedComponents(t *testing.T) {
+	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int{}
+	for _, u := range d.GetInputDiagnostics().GetUnannotatedComponents() {
+		got[u.GetRefDes()] = len(u.GetInstances())
+	}
+	want := map[string]int{"R?": 2, "U?": 2}
+	if len(got) != len(want) {
+		t.Fatalf("unannotated designators = %v, want %v", got, want)
+	}
+	for ref, n := range want {
+		if got[ref] != n {
+			t.Errorf("%q carries %d placements, want %d (have %v)", ref, got[ref], n, got)
+		}
+	}
+	// The parts are kept, not dropped: unannotated circuitry is still circuitry.
+	if r := refs(d); !equalSet(r, []string{"R?", "R?", "R1", "U?"}) {
+		t.Errorf("components = %v, want the two R? placements, R1 and the folded U?", r)
+	}
+}
+
+// TestUnannotatedWithoutSymbols pins the wiring on the OTHER entry path. Plain Read takes no symbol
+// opener, and on that path this reader leaves InputDiagnostics nil unless the sheet has a bus, so a
+// signal attached inside the resolving branch would be silently absent for every caller who does
+// not supply a library.
+func TestUnannotatedWithoutSymbols(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(d.GetInputDiagnostics().GetUnannotatedComponents()); n != 2 {
+		t.Errorf("unannotated designators = %d, want 2 without a symbol library too", n)
+	}
+}
