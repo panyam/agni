@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // kicadNativeIDKind tags a KiCad uuid in Provenance. Unlike the EDIF rename &id, a KiCad
@@ -62,7 +63,12 @@ func extractPCB(root *node, src string) *ir.Design {
 	seenFp := map[string]bool{}
 	for _, fp := range root.Children("footprint") {
 		ref := propValue(fp, "Reference")
-		if ref == "" || placeholderRef(ref) {
+		// A placeholder reference ("REF**", "C?1845") is annotation state, not an identity, so
+		// keying it merges distinct parts' pads onto one component (WS1-024). Placeholder
+		// footprints are skipped like Reference-less graphics by BOTH this reader and the
+		// board-geometry one, so the two artifacts keep agreeing on the component set. The
+		// predicate is internal/refdes's rather than this reader's; see its package comment.
+		if ref == "" || refdes.IsPlaceholder(ref) {
 			continue
 		}
 		fpid := atomOf(fp.Arg(1))
@@ -135,17 +141,6 @@ func padNetName(pad *node) string {
 		return ""
 	}
 	return atomOf(nref.Arg(len(nref.Kids) - 1))
-}
-
-// placeholderRef reports whether a reference is KiCad's unannotated-placeholder form
-// ("REF**" on footprints, "R?" on symbols). A placeholder is annotation state, not an
-// identity: several unannotated footprints named REF** are distinct physical parts, and
-// keying them merges their pads' nets onto one component (the pin-net-conflict tripwire's
-// catch on the corpus cimos board, WS1-024). Placeholder-referenced footprints are
-// skipped like Reference-less graphics, by BOTH the netlist and board-geometry readers,
-// so the two artifacts keep agreeing on the component set.
-func placeholderRef(ref string) bool {
-	return strings.HasSuffix(ref, "**") || strings.HasSuffix(ref, "?")
 }
 
 // propValue returns the value of the first (property "<key>" "<value>" ...) child of n.

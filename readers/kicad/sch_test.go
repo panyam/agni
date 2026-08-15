@@ -301,10 +301,18 @@ func TestSymbolRefPrefersInstances(t *testing.T) {
 			t.Errorf("missing component %q; have %v", want, got)
 		}
 	}
-	for _, bad := range []string{"R?", "R1"} {
-		if got[bad] {
-			t.Errorf("property-derived ref %q survived; instances should win", bad)
-		}
+	if got["R1"] {
+		t.Errorf("property-derived ref %q survived; instances should win", "R1")
+	}
+	// An instances entry that is itself a placeholder is not post-annotation truth, so it is
+	// passed over like the "R?" property form. "R?1845" is the partly-assigned shape a
+	// suffix-only predicate reads as a real designator (agni issue 311): the symbol must land
+	// on the property's "R?" and stay visibly unannotated, not acquire "R?1845" as an identity.
+	if got["R?1845"] {
+		t.Errorf("partly-assigned instance ref %q was taken as an identity; have %v", "R?1845", got)
+	}
+	if !got["R?"] {
+		t.Errorf("the unannotated symbol should fall back to its %q property; have %v", "R?", got)
 	}
 }
 

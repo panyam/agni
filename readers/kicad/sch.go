@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // ReadSchematic parses a KiCad .kicad_sch schematic into an ir.Design.
@@ -288,7 +289,7 @@ func symbolRefAt(ps *node, instPath string) string {
 					continue
 				}
 				r := atomOf(rf.Arg(1))
-				if r == "" || placeholderRef(r) {
+				if r == "" || refdes.IsPlaceholder(r) {
 					continue
 				}
 				if instPath != "" && atomOf(path.Arg(1)) == instPath {
