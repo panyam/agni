@@ -141,6 +141,38 @@ func TestWorkspaceServiceListMounts(t *testing.T) {
 	}
 }
 
+// The pruning rule over a real filesystem and real mount roots: "ds" holds a datasheet, which no
+// design reader opens, so the design tree is served the boards mount alone. A mount root that does
+// not resolve at all is kept rather than counted as empty, since a missing mount is an operator's
+// mistake to see, not something to hide.
+func TestWorkspaceServiceListMountsPrunesEmptyMounts(t *testing.T) {
+	root := t.TempDir()
+	mustMkdir(t, filepath.Join(root, "boards", "rev2"))
+	mustWrite(t, filepath.Join(root, "boards", "rev2", "board.edn"))
+	mustMkdir(t, filepath.Join(root, "ds"))
+	mustWrite(t, filepath.Join(root, "ds", "txb0104.pdf"))
+
+	svc := service.NewWorkspaceService(&osWorkspace{mounts: []mounts.Mount{
+		{Name: "boards", Root: filepath.Join(root, "boards")},
+		{Name: "ds", Root: filepath.Join(root, "ds")},
+		{Name: "gone", Root: filepath.Join(root, "no-such-dir")},
+	}})
+	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{PruneEmptyMounts: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, m := range resp.GetMounts() {
+		names = append(names, m.GetName())
+	}
+	if len(names) != 2 || names[0] != "boards" || names[1] != "gone" {
+		t.Fatalf("mounts = %v, want [boards gone]: ds serves only a datasheet, and an unreadable root is not proof of emptiness", names)
+	}
+	if resp.GetPrunedMounts() != 1 {
+		t.Errorf("prunedMounts = %d, want 1", resp.GetPrunedMounts())
+	}
+}
+
 // uriStr builds an artifact URI string for a request literal in a test. A fixture URI that will not
 // parse is a broken test rather than a condition under test, so it panics instead of returning an
 // error nobody would check.

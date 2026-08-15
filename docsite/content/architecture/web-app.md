@@ -94,7 +94,7 @@ cadences.
 
 | Service | RPC | What it does |
 |---|---|---|
-| Workspace | ListMounts | the mount names the tree roots on |
+| Workspace | ListMounts | the mount names the tree roots on; `prune_empty_mounts` drops the ones with no readable design under them and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
 | Workspace | ListDir | one directory level, entries plus per-file format label from the reader registry, formatless files hidden client-side; `prune_empty_dirs` additionally drops folders with no readable design anywhere beneath them (a bounded server-side walk, since one level of listing cannot see that far) |
 | Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |

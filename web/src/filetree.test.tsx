@@ -9,11 +9,17 @@ import type { SheetsState } from "./sheets.js";
 const fake = vi.hoisted(() => ({
   calls: [] as string[],
   pruned: [] as (boolean | undefined)[],
+  prunedMounts: 0,
+  mounts: [{ name: "m", root: "/m" }] as { name: string; root: string }[],
+  mountsPruned: [] as (boolean | undefined)[],
   dirs: {} as Record<string, unknown[]>,
 }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
-    listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
+    listMounts: async ({ pruneEmptyMounts }: { pruneEmptyMounts?: boolean } = {}) => {
+      fake.mountsPruned.push(pruneEmptyMounts);
+      return { mounts: fake.mounts, prunedMounts: fake.prunedMounts };
+    },
     listDir: async ({ uri, pruneEmptyDirs }: { uri: string; pruneEmptyDirs?: boolean }) => {
       const path = uriPath(uri);
       fake.calls.push(path);
@@ -45,6 +51,9 @@ function mountTree() {
 const buttons = (el: HTMLElement) =>
   [...el.querySelectorAll("button")].map((b) => b.textContent?.replace(/[▾▸]/g, "").trim());
 
+// note is the tree's account of what pruning hid, absent when it hid nothing.
+const note = (el: HTMLElement) => el.querySelector(".note")?.textContent?.trim();
+
 const buttonFor = (el: HTMLElement, label: string) =>
   [...el.querySelectorAll("button")].find((b) => b.textContent?.includes(label));
 
@@ -61,6 +70,9 @@ beforeEach(() => {
   document.body.replaceChildren();
   fake.calls = [];
   fake.pruned = [];
+  fake.mountsPruned = [];
+  fake.prunedMounts = 0;
+  fake.mounts = [{ name: "m", root: "/m" }];
   fake.dirs = {
     "": [dir("a", "a"), dir("z", "z"), file("top.edn", "top.edn"), file("notes.txt", "notes.txt", "")],
     a: [dir("b", "a/b"), file("mid.edn", "a/mid.edn")],
@@ -97,6 +109,26 @@ describe("filetree island", () => {
     // A file click is an intent, not a fetch.
     buttonFor(el, "top.edn")!.click();
     expect(handlers.onFileSelect).toHaveBeenCalledWith("m", "top.edn");
+  });
+
+  // A mount root gets the same treatment as a folder inside one, so a mount serving only
+  // datasheets does not root a branch with nothing under it. The count is what keeps the pruning
+  // honest: an operator who configured a mount can see it was hidden rather than lost.
+  it("prunes empty mount roots and accounts for what it hid", async () => {
+    fake.mounts = [];
+    fake.prunedMounts = 2;
+    const { el } = mountTree();
+
+    await vi.waitFor(() => expect(note(el)).toBe("No designs in any of the 2 folders being served"));
+    expect(fake.mountsPruned).toEqual([true]);
+  });
+
+  it("names the surviving mounts and still reports the hidden one", async () => {
+    fake.prunedMounts = 1;
+    const { el } = mountTree();
+
+    await vi.waitFor(() => expect(buttonFor(el, "m")).toBeTruthy());
+    await vi.waitFor(() => expect(note(el)).toBe("1 folder hidden (no designs)"));
   });
 
   it("auto-reveals the open file: expansion cascades level by level to the deep link", async () => {

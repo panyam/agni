@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiEwoRTGlzdE1vdW50c1JlcXVlc3QiOwoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50IkUKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkiNwoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJEhgKEHBydW5lX2VtcHR5X2RpcnMYAiABKAgiPAoPTGlzdERpclJlc3BvbnNlEikKB2VudHJpZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5EaXJFbnRyeTKzAQoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiLwoRTGlzdE1vdW50c1JlcXVlc3QSGgoScHJ1bmVfZW1wdHlfbW91bnRzGAEgASgIIlIKEkxpc3RNb3VudHNSZXNwb25zZRIlCgZtb3VudHMYASADKAsyFS5hZ25pLnYxLndlYmFwaS5Nb3VudBIVCg1wcnVuZWRfbW91bnRzGAIgASgFIkUKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkiNwoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJEhgKEHBydW5lX2VtcHR5X2RpcnMYAiABKAgiPAoPTGlzdERpclJlc3BvbnNlEikKB2VudHJpZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5EaXJFbnRyeTKzAQoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -54,6 +54,20 @@ export const MountSchema: GenMessage<Mount> = /*@__PURE__*/
  * @generated from message agni.v1.webapi.ListMountsRequest
  */
 export type ListMountsRequest = Message<"agni.v1.webapi.ListMountsRequest"> & {
+  /**
+   * prune_empty_mounts drops mounts with no file any reader understands anywhere beneath them: the
+   * same rule prune_empty_dirs applies inside a mount, applied to the roots. It is opt-in for the
+   * same reason and by the same measure of "empty", since a datasheets browser roots on a mount of
+   * PDFs, which no design reader opens.
+   *
+   * Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
+   * find it in the sidebar has no way to tell "this mount holds no designs" from "this mount failed
+   * to resolve", so a client that prunes should say when it is showing fewer roots than the server
+   * was given rather than render a silently shorter list.
+   *
+   * @generated from field: bool prune_empty_mounts = 1;
+   */
+  pruneEmptyMounts: boolean;
 };
 
 /**
@@ -71,6 +85,15 @@ export type ListMountsResponse = Message<"agni.v1.webapi.ListMountsResponse"> & 
    * @generated from field: repeated agni.v1.webapi.Mount mounts = 1;
    */
   mounts: Mount[];
+
+  /**
+   * pruned_mounts counts the mounts prune_empty_mounts left out, so a client can tell the user its
+   * sidebar is shorter than the server's configuration rather than leaving them to wonder where a
+   * mount went. Zero when pruning is off.
+   *
+   * @generated from field: int32 pruned_mounts = 2;
+   */
+  prunedMounts: number;
 };
 
 /**
@@ -143,7 +166,7 @@ export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
   /**
    * prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
    * any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
-   * is per-client — a datasheets browser lists PDFs, which no design reader opens, so pruning by
+   * is per-client. A datasheets browser lists PDFs, which no design reader opens, so pruning by
    * design format would hide exactly the folders it wants. Answering it costs a bounded walk of
    * each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
    * a folder wrongly shown costs a click and one wrongly hidden costs a design.
@@ -189,8 +212,9 @@ export const ListDirResponseSchema: GenMessage<ListDirResponse> = /*@__PURE__*/
  */
 export const WorkspaceService: GenService<{
   /**
-   * ListMounts returns the mounts the server is serving, in the order they were
-   * configured. It takes no parameters and never fails for a running server.
+   * ListMounts returns the mounts the server is serving, in the order they were configured, and
+   * never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
+   * design under them.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListMounts
    */
