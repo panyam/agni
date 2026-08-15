@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // Read parses an EDIF 2.0.0 netlist into an ir.Design.
@@ -175,10 +176,47 @@ func extract(root *node, src string) *ir.Design {
 	for _, nn := range nets {
 		d.Nets = append(d.Nets, netOf(nn, src, refByID, pinsByID))
 	}
-	if buses := collectArrayBuses(root, src); len(buses) > 0 {
-		d.InputDiagnostics = &ir.InputDiagnostics{UnmodeledBuses: buses}
+	// One struct for every diagnostic, built once. Assigning a fresh InputDiagnostics per signal
+	// (as the bus collection alone used to) means the next signal added silently drops the previous.
+	diag := &ir.InputDiagnostics{
+		UnmodeledBuses:        collectArrayBuses(root, src),
+		UnannotatedComponents: unannotatedComponents(d.Components),
+	}
+	if len(diag.UnmodeledBuses) > 0 || len(diag.UnannotatedComponents) > 0 {
+		d.InputDiagnostics = diag
 	}
 	return d
+}
+
+// unannotatedComponents groups the components whose designator is still a placeholder, one entry per
+// placeholder rather than per placement: "176 parts are still called R?" is the reviewable fact.
+// Order follows first appearance so the diagnostic is stable across reads of the same file.
+func unannotatedComponents(comps []*ir.Component) []*ir.UnannotatedComponent {
+	byRef := map[string]*ir.UnannotatedComponent{}
+	var order []string
+	for _, c := range comps {
+		if !refdes.IsPlaceholder(c.GetRefDes()) {
+			continue
+		}
+		u := byRef[c.GetRefDes()]
+		if u == nil {
+			u = &ir.UnannotatedComponent{RefDes: c.GetRefDes()}
+			byRef[c.GetRefDes()] = u
+			order = append(order, c.GetRefDes())
+		}
+		// One placement per SECTION, since that is what a placement is in the source; a component
+		// merged from several unannotated instances carries each.
+		for _, s := range c.GetSections() {
+			if p := s.GetProv(); p != nil {
+				u.Instances = append(u.Instances, p)
+			}
+		}
+	}
+	out := make([]*ir.UnannotatedComponent, 0, len(order))
+	for _, ref := range order {
+		out = append(out, byRef[ref])
+	}
+	return out
 }
 
 // libraryOf converts an EDIF (library ...) node into an ir.PartLibrary with its parts.

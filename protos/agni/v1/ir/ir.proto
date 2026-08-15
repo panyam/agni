@@ -144,6 +144,28 @@ message InputDiagnostics {
   // the read quieter and was then discarded. Recording it is what lets the pin-dependent rules
   // report inconclusive instead of passing over a netlist that is missing connections.
   repeated UnresolvedSymbol unresolved_symbols = 5;
+  // Components the source has not annotated yet: their designator is a placeholder (`R?`, `C?`,
+  // `REF**`) rather than an identity, so every unannotated resistor on the sheet reads `R?`.
+  //
+  // Recorded because the alternative is silence. A placeholder is not a key, so the pin-uniqueness
+  // index cannot assert anything about `(R?, 1)` and pin-net-conflict declines to (see the second
+  // suppression in its doc). Without this the parts would then be reported by nothing at all, and
+  // "no findings" would read as "annotated" — the same silence-as-coverage failure unmodeled_buses
+  // and unresolved_symbols exist to prevent.
+  //
+  // It is a real review item on its own terms rather than a read-health signal: unlike a missing
+  // symbol, nothing was lost in the read. The design genuinely has parts nobody has named, and on
+  // one export that was 369 of them across live sheets.
+  repeated UnannotatedComponent unannotated_components = 6;
+}
+
+// UnannotatedComponent is one placeholder designator and every placement wearing it. Keyed per
+// DESIGNATOR rather than per placement, matching RefDesCollision: "176 parts are still called R?"
+// is the reviewable fact, where 176 separate findings would be the same sentence 176 times.
+// instances carries each placement's provenance so a consumer can point at all of them.
+message UnannotatedComponent {
+  string ref_des = 1;
+  repeated Provenance instances = 2;
 }
 
 // UnresolvedSymbol is one symbol reference that failed to resolve, with every placement it cost

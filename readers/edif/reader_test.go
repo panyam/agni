@@ -510,3 +510,46 @@ func TestCellDesignatorFromCellLevel(t *testing.T) {
 		t.Errorf("cell-level designator: prefix = %q, want C", pfx)
 	}
 }
+
+// TestReadUnannotatedComponents: parts whose designator is still a placeholder are recorded as an
+// input diagnostic, grouped per PLACEHOLDER rather than per part, so a consumer can say "2 parts are
+// still called R?" rather than repeating one sentence per part. An assigned designator contributes
+// nothing, which is what keeps the diagnostic a signal rather than a census.
+func TestReadUnannotatedComponents(t *testing.T) {
+	d := readEDN(t, "unannotated.edn")
+	got := map[string]int{}
+	for _, u := range d.GetInputDiagnostics().GetUnannotatedComponents() {
+		got[u.GetRefDes()] = len(u.GetInstances())
+	}
+	want := map[string]int{"R?": 2, "C?": 1}
+	if len(got) != len(want) {
+		t.Fatalf("unannotated = %v, want %v (R7 is assigned and must not appear)", got, want)
+	}
+	for ref, n := range want {
+		if got[ref] != n {
+			t.Errorf("placeholder %q covers %d parts, want %d", ref, got[ref], n)
+		}
+	}
+	// Every instance is carried so a finding can point at all of them, not just the first.
+	for _, u := range d.GetInputDiagnostics().GetUnannotatedComponents() {
+		for i, p := range u.GetInstances() {
+			if p.GetSourceFile() == "" {
+				t.Errorf("%s instance %d has no provenance; a finding could not locate it", u.GetRefDes(), i)
+			}
+		}
+	}
+}
+
+// TestReadDiagnosticsAccumulate: the reader used to assign a fresh InputDiagnostics for the bus
+// signal alone, so any second signal added beside it would silently drop the first. Both now ride
+// one struct.
+func TestReadDiagnosticsAccumulate(t *testing.T) {
+	d := readEDN(t, "unannotated.edn")
+	if len(d.GetInputDiagnostics().GetUnannotatedComponents()) == 0 {
+		t.Error("unannotated components were dropped from the diagnostics")
+	}
+	b := readEDN(t, "bus.edn")
+	if len(b.GetInputDiagnostics().GetUnmodeledBuses()) == 0 {
+		t.Error("unmodeled buses were dropped from the diagnostics")
+	}
+}
