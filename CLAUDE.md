@@ -165,6 +165,14 @@ are each internally consistent and collectively wrong, because every file reads 
 a change has a user-visible surface, drive it before designing on top of it. See `build/overlay.md`
 and the web-app page for how to stand the app up.
 
+**When a run contradicts your PREDICTION, the contradiction is the finding — do not adjust the test
+to absorb it.** A test written to prove a malformed `project.yaml` fails the run came back saying the
+run had SUCCEEDED, against a confident reading that a downstream error check would catch it. The
+tempting move is to assume the fixture is wrong. Chasing the gap instead found that the descriptor
+was never reachable at all, which turned out to be the actual content of the ticket (agni issue 312)
+rather than the two call sites it named. A surprise here is cheap to investigate and has repeatedly
+been worth more than the change that surfaced it.
+
 **Anything matching SYMBOL TEXT out of a doc-IR must tolerate an injected space.** Producers flatten
 subscripts, so `VCCA` arrives as `V CCA` (~850 such occurrences in one corpus). This has bitten three
 times in unrelated places: a prose sweep, the derive pin path where it would have produced pin ids no
@@ -385,6 +393,13 @@ assertion could not fail, and only the red-check revealed it. When a test surviv
 neutralized, replace the heuristic with the PROPERTY: that one added a marker at the same anchor and
 asserted the two render at the same y, which then failed with the actual defect named. Run the
 red-check on every new test, not just ones you doubt.
+
+**A test that calls the PRODUCTION predicate to decide what counts as a failure cannot fail when
+that predicate is what broke.** Two assertions written as `if skipRefDes(x) { t.Error(...) }` read
+as real checks and went green under a deliberately broken `skipRefDes`, while their siblings written
+against literals went red. It is the same defect as the heuristic above wearing better clothes: the
+test and the code agree by construction. Assert against literals, or against a set the production
+path produced, and let only the red-check tell you which kind you wrote.
 
 ## PR prose conventions
 

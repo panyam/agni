@@ -164,6 +164,10 @@ Declining runs one step further: a placeholder is not a *claimed* designator, so
 
 The other half of that bargain is that a reader which KEEPS unannotated parts has to say so. It is the only layer that ever knew: the parts are drawn and connected, so by the time the IR reaches a rule they look like ordinary components with odd names. `internal/refdes.Unannotated` builds the diagnostic from the same predicate, so the reader that keeps them cannot group them by a rule of its own.
 
+Which half a reader is on follows from the format, not from the reader's taste, so the shipped answer is uniform: `kicad` (board), `ipc2581` skip; `edif`, `kicad` (schematic), `geda`, `xschem` keep and report. Asking which one a new reader is on is the first question, because the two halves are mutually exclusive and doing both would report a part the design does not contain.
+
+**Do not assume a reader groups by designator, because they disagree and the diagnostic must not.** `kicad` folds every symbol sharing a designator into one component; `geda` folds only when the source says `slot=`, so unslotted duplicates stay separate components with one designator between them; `xschem` does not fold at all. Two unannotated symbols are therefore one component or two depending on the format. `internal/refdes.Unannotated` groups by designator *before* it walks sections, so all three spellings produce one entry per placeholder carrying every placement, and "2 parts are still called `R?`" means the same thing everywhere. A reader deriving its own grouping would reintroduce the divergence the shared predicate exists to remove.
+
 The temptation is to repair the identity instead — key those parts on their native id, which really is unique. That is exactly what the paragraph above forbids: the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The absence is the truth, and the honest move is to say so, which is what `unannotated_components` below is for.
 
 ## Geometry is a keyed sidecar

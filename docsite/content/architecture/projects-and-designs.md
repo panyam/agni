@@ -184,6 +184,23 @@ carrying `..` never opens a file at all. The CLI uses that property rather than 
 roots its tree a bounded number of levels above the path you named and asks the same service, so the
 CLI and the server run one code path and differ only in where the client rooted the tree.
 
+**Where the CLI roots that tree is itself a config decision, and getting it wrong is invisible.** The
+CLI mints a mount per argument, rooted at the enclosing project when one resolves and at the file's
+own folder otherwise. So the answer to "is there a project above this path" decides the mount
+BOUNDARY, and a descriptor that exists but does not parse used to be answered as "no project here".
+That rooted the mount at the design's own folder, which put the broken descriptor outside the tree
+entirely, where no later layer could see it. Every downstream check then honestly reported a loose
+file with no project, and the run composed against the built-in vocabulary and reported an
+authoritative-looking answer at exit 0. The lesson generalises past this one bug: a layer that
+decides what is IN SCOPE cannot use "absent" as its error value, because everything after it is
+reasoning about a smaller world and has no way to know the world was cut down.
+
+**Absent and malformed have to stay distinct at every layer that touches config, and the CLI now
+draws it once** (`cliResolveProject`). Absent is ordinary — most files on a mounted folder belong to
+no project and run against the fallback. Malformed is refused, matching how the served surfaces
+behave and how the other config tiers already fail. An unknown mount is a third thing and stays
+quiet: nothing to resolve against is not the same as something broken.
+
 There is also no separate Go type for a project anywhere in this stack. The descriptors parse
 straight into the wire messages, the port passes those, and the service serves them. A
 runtime-neutral twin of a resource whose whole content is the message would be a field-for-field
