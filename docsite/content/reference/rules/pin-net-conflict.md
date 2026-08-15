@@ -34,7 +34,7 @@ Both known producers of this state are reader gaps
 design — flagging it louder would blame the engineer for our keying. Revisit via severity
 configuration (WS3-006) once the reader fixes land and a firing is anomalous again.
 
-### One deliberate suppression
+### Two deliberate suppressions
 
 A duplicated ref-des produces this state mechanically —
 each colliding placement brings its own copper, so their shared (ref, pin) key lands in
@@ -43,10 +43,19 @@ are skipped here so one authoring slip yields one finding, not two. (Found on th
 sheetnav conformance fixture the moment this rule first ran: the tripwire works, it just
 caught prey that already had an owner.)
 
+The second is an UNANNOTATED ref-des — `R?`, `C?`, `REF**`, or a partly-assigned
+`C?1845`. This rule asserts something about a PIN, and `(R?, 1)` does not name one: on one
+export 176 distinct un-annotated resistors shared that key, so the index saw a single pin
+sitting on 129 nets and 77% of this rule's findings on that design described a netlist that
+was fine. The design is not malformed; the key is not a key. Declining to assert uniqueness
+over a non-identity is not the same as hiding a defect, and the un-annotated parts are a
+finding in their own right rather than a silence.
+
 ### Query structure
 
 report each conflict the model collected.
 
-    select P in pin_net_conflicts where not ref_des_collided(P)
+    select P in pin_net_conflicts
+      where not ref_des_collided(P) and not ref_des_unannotated(P)
 
-Reads: pin.on_net, ref_des_collision (the suppression). Tier P.
+Reads: pin.on_net, ref_des_collision (the suppressions). Tier P.
