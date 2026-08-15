@@ -65,7 +65,18 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 	// The same geometry pass surfaces dangling wire endpoints (connections drawn but not completed).
 	nets, dangles, noJunction := schNets(root, src, syms)
 	d.Nets = nets
-	d.InputDiagnostics = &ir.InputDiagnostics{DanglingEndpoints: dangles, RefDesCollisions: collisions, NoJunctionEndpoints: noJunction, UnmodeledBuses: collectBuses(root, src, nil), UnresolvedSymbols: unresolvedSyms}
+	// Unlike the board readers, this one KEEPS a placeholder-designated symbol: those are real
+	// circuitry somebody has not named yet, and dropping them would make the design read short.
+	// Keeping them is what makes the diagnostic this reader's job — the parts are drawn and
+	// connected, so nothing else downstream can tell that their names are missing.
+	d.InputDiagnostics = &ir.InputDiagnostics{
+		DanglingEndpoints:     dangles,
+		RefDesCollisions:      collisions,
+		NoJunctionEndpoints:   noJunction,
+		UnmodeledBuses:        collectBuses(root, src, nil),
+		UnresolvedSymbols:     unresolvedSyms,
+		UnannotatedComponents: refdes.Unannotated(d.Components),
+	}
 
 	// Hierarchical sub-sheet references. Recorded so the hierarchy is visible; the sub-sheet
 	// files themselves are not recursively loaded here (needs multi-file I/O).
@@ -308,6 +319,14 @@ func symbolRefAt(ps *node, instPath string) string {
 }
 
 func refDesCollision(c *ir.Component) *ir.RefDesCollision {
+	// A placeholder is not a claimed designator, so two unannotated resistors are not two parts
+	// fighting over one name — they are two parts with no name, which unannotated-components
+	// already reports. Judging them a collision states something false (duplicate-ref-des is an
+	// error, and its remedy is to rename one of them) about a sheet that is merely unfinished,
+	// and reports the same placements twice.
+	if refdes.IsPlaceholder(c.GetRefDes()) {
+		return nil
+	}
 	count := map[int32]int{}
 	for _, s := range c.Sections {
 		count[s.Index]++

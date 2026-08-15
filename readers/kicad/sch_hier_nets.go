@@ -7,6 +7,7 @@ import (
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // instStep is the grid offset separating sheet instances in the design-wide net solve:
@@ -82,11 +83,12 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	d.Nets = netgraph.IRNets(kept, rootName)
 	stampNetSheets(d.Nets, pointNets, d.Sheets)
 	d.InputDiagnostics = &ir.InputDiagnostics{
-		DanglingEndpoints:   hierDangles(dangles, w.srcs),
-		RefDesCollisions:    collisions,
-		NoJunctionEndpoints: w.in.noJunction,
-		UnmodeledBuses:      w.buses,
-		UnresolvedSymbols:   unresolvedSyms,
+		DanglingEndpoints:     hierDangles(dangles, w.srcs),
+		RefDesCollisions:      collisions,
+		NoJunctionEndpoints:   w.in.noJunction,
+		UnmodeledBuses:        w.buses,
+		UnresolvedSymbols:     unresolvedSyms,
+		UnannotatedComponents: refdes.Unannotated(d.Components),
 	}
 	return d, w.complete, nil
 }
