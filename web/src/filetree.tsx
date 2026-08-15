@@ -131,7 +131,10 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   const loadEntries = async (): Promise<void> => {
     if (entries() !== null) return;
     try {
-      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path) });
+      // pruneEmptyDirs asks the server to leave out subdirectories with no readable design under
+      // them. It has to be answered server-side: a client sees one level per call, so it cannot
+      // tell a folder of designs from a folder of folders of nothing without walking the tree.
+      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path), pruneEmptyDirs: true });
       setEntries(resp.entries);
     } catch (e) {
       setError(String(e));

@@ -19,10 +19,11 @@ service WorkspaceService {
   // configured. It takes no parameters and never fails for a running server.
   rpc ListMounts(ListMountsRequest) returns (ListMountsResponse);
 
-  // ListDir lists one directory level inside a mount: its subdirectories and the files a
-  // reader can open (filtered by extension). The client addresses a location by an artifact URI
+  // ListDir lists one directory level inside a mount: its subdirectories and its files, each file
+  // labeled with the reader that would open it. The client addresses a location by an artifact URI
   // whose authority is a mount, never an absolute host path; the server resolves it inside that
-  // mount. Lazy, one level per call, so large trees stay responsive.
+  // mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
+  // out subdirectories with no readable design anywhere beneath them.
   rpc ListDir(ListDirRequest) returns (ListDirResponse);
 }
 
@@ -53,9 +54,10 @@ message DirEntry {
   bool is_dir = 2;
   // format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
   // "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
-  // has no reader for): the tree lists such files but the UI shows them disabled, so an
-  // unsupported format is distinguishable from an empty folder. It is a hint for the UI;
-  // ambiguous extensions are resolved for real at load time.
+  // has no reader for). The listing carries such files rather than dropping them, so a client
+  // decides for itself what to show: the design tree hides them, the datasheets tree keeps the
+  // PDFs among them. It is a hint for the UI; ambiguous extensions are resolved for real at
+  // load time.
   string format = 3;
   // uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
   // (for a file).
@@ -66,6 +68,13 @@ message ListDirRequest {
   // uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
   // mount root.
   string uri = 1;
+  // prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
+  // any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
+  // is per-client — a datasheets browser lists PDFs, which no design reader opens, so pruning by
+  // design format would hide exactly the folders it wants. Answering it costs a bounded walk of
+  // each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
+  // a folder wrongly shown costs a click and one wrongly hidden costs a design.
+  bool prune_empty_dirs = 2;
 }
 
 message ListDirResponse {

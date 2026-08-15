@@ -79,10 +79,65 @@ func (s *WorkspaceService) ListMounts(_ context.Context, _ *webapi.ListMountsReq
 	return resp, nil
 }
 
+// Bounds on the subtree walk prune_empty_dirs asks for. The walk is depth-first with an early
+// exit on the first readable design, so a normal design folder settles in a listing or two; the
+// bounds are there for the pathological case, a vendored tree or a source checkout under a mount,
+// where proving a folder empty means reading all of it. pruneMaxDirs is a per-request budget
+// shared by every subdirectory in the listing, so one huge sibling cannot make the whole call slow.
+const (
+	pruneMaxDepth = 8
+	pruneMaxDirs  = 2000
+)
+
+// hasDesignFile reports whether u's subtree holds at least one file a reader understands. It
+// reads through the Workspace port like everything else here (C13), never os, and stops at the
+// first hit.
+//
+// It answers true when it cannot finish: a bound reached, a cancelled request, a directory the
+// adapter refuses. A folder wrongly shown costs a click, a folder wrongly hidden costs a design,
+// so the uncertain answer is the visible one.
+func (s *WorkspaceService) hasDesignFile(ctx context.Context, u artifact.URI, depth int, budget *int) bool {
+	if depth > pruneMaxDepth || *budget <= 0 || ctx.Err() != nil {
+		return true
+	}
+	*budget--
+	entries, err := s.ws.ListDir(ctx, u)
+	if err != nil {
+		return true
+	}
+	// This level's files first, subdirectories after: a design one level down is the common case,
+	// and finding it costs one listing instead of a walk to the bottom of the first branch.
+	var subdirs []artifact.URI
+	for _, de := range entries {
+		if strings.HasPrefix(de.Name, ".") {
+			continue
+		}
+		child, joinErr := u.Join(de.Name)
+		if joinErr != nil {
+			continue
+		}
+		if de.IsDir {
+			subdirs = append(subdirs, child)
+			continue
+		}
+		if FormatForExt(de.Name) != "" {
+			return true
+		}
+	}
+	for _, d := range subdirs {
+		if s.hasDesignFile(ctx, d, depth+1, budget) {
+			return true
+		}
+	}
+	return false
+}
+
 // ListDir lists one level of a mount: its subdirectories and the design files a reader
-// understands, directories first and each group sorted by name. Errors are classified for the
-// transport: a containment violation keeps ErrInvalidPath; anything else from the adapter
-// (unknown mount, missing directory) is wrapped as ErrNotFound.
+// understands, directories first and each group sorted by name. With PruneEmptyDirs set, a
+// subdirectory with no readable design anywhere beneath it is left out, so the tree stops
+// offering folders it can only ever show empty. Errors are classified for the transport: a
+// containment violation keeps ErrInvalidPath; anything else from the adapter (unknown mount,
+// missing directory) is wrapped as ErrNotFound.
 func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error) {
 	u, err := artifactURI(req.GetUri())
 	if err != nil {
@@ -97,6 +152,7 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 	}
 
 	var dirs, files []*webapi.DirEntry
+	pruneBudget := pruneMaxDirs
 	for _, de := range entries {
 		if strings.HasPrefix(de.Name, ".") {
 			continue // skip dotfiles/dirs
@@ -108,11 +164,15 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 			continue
 		}
 		if de.IsDir {
+			if req.GetPruneEmptyDirs() && !s.hasDesignFile(ctx, entry, 1, &pruneBudget) {
+				continue
+			}
 			dirs = append(dirs, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), IsDir: true})
 			continue
 		}
-		// Every non-dotfile is listed so a folder is never silently empty; an unrecognized file has
-		// an empty format and the UI shows it disabled, so "no reader yet" differs from "empty".
+		// Every non-dotfile is listed, with an unrecognized one carrying an empty format, so each
+		// client decides what to show: the design tree hides them, the datasheets tree keeps the
+		// PDFs among them.
 		files = append(files, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), Format: FormatForExt(de.Name)})
 	}
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })

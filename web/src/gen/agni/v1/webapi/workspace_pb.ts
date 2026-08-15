@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiEwoRTGlzdE1vdW50c1JlcXVlc3QiOwoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50IkUKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkiHQoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJIjwKD0xpc3REaXJSZXNwb25zZRIpCgdlbnRyaWVzGAEgAygLMhguYWduaS52MS53ZWJhcGkuRGlyRW50cnkyswEKEFdvcmtzcGFjZVNlcnZpY2USUwoKTGlzdE1vdW50cxIhLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1Jlc3BvbnNlEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiEwoRTGlzdE1vdW50c1JlcXVlc3QiOwoSTGlzdE1vdW50c1Jlc3BvbnNlEiUKBm1vdW50cxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLk1vdW50IkUKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkiNwoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJEhgKEHBydW5lX2VtcHR5X2RpcnMYAiABKAgiPAoPTGlzdERpclJlc3BvbnNlEikKB2VudHJpZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5EaXJFbnRyeTKzAQoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -103,9 +103,10 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
   /**
    * format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
    * "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
-   * has no reader for): the tree lists such files but the UI shows them disabled, so an
-   * unsupported format is distinguishable from an empty folder. It is a hint for the UI;
-   * ambiguous extensions are resolved for real at load time.
+   * has no reader for). The listing carries such files rather than dropping them, so a client
+   * decides for itself what to show: the design tree hides them, the datasheets tree keeps the
+   * PDFs among them. It is a hint for the UI; ambiguous extensions are resolved for real at
+   * load time.
    *
    * @generated from field: string format = 3;
    */
@@ -138,6 +139,18 @@ export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
    * @generated from field: string uri = 1;
    */
   uri: string;
+
+  /**
+   * prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
+   * any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
+   * is per-client — a datasheets browser lists PDFs, which no design reader opens, so pruning by
+   * design format would hide exactly the folders it wants. Answering it costs a bounded walk of
+   * each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
+   * a folder wrongly shown costs a click and one wrongly hidden costs a design.
+   *
+   * @generated from field: bool prune_empty_dirs = 2;
+   */
+  pruneEmptyDirs: boolean;
 };
 
 /**
@@ -187,10 +200,11 @@ export const WorkspaceService: GenService<{
     output: typeof ListMountsResponseSchema;
   },
   /**
-   * ListDir lists one directory level inside a mount: its subdirectories and the files a
-   * reader can open (filtered by extension). The client addresses a location by an artifact URI
+   * ListDir lists one directory level inside a mount: its subdirectories and its files, each file
+   * labeled with the reader that would open it. The client addresses a location by an artifact URI
    * whose authority is a mount, never an absolute host path; the server resolves it inside that
-   * mount. Lazy, one level per call, so large trees stay responsive.
+   * mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
+   * out subdirectories with no readable design anywhere beneath them.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListDir
    */

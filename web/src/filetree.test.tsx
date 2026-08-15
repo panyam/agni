@@ -8,14 +8,16 @@ import type { SheetsState } from "./sheets.js";
 // workspace so the reveal cascade's per-level listDir round-trips run against canned data.
 const fake = vi.hoisted(() => ({
   calls: [] as string[],
+  pruned: [] as (boolean | undefined)[],
   dirs: {} as Record<string, unknown[]>,
 }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
     listMounts: async () => ({ mounts: [{ name: "m", root: "/m" }] }),
-    listDir: async ({ uri }: { uri: string }) => {
+    listDir: async ({ uri, pruneEmptyDirs }: { uri: string; pruneEmptyDirs?: boolean }) => {
       const path = uriPath(uri);
       fake.calls.push(path);
+      fake.pruned.push(pruneEmptyDirs);
       const entries = fake.dirs[path];
       if (!entries) throw new Error(`no such dir ${path}`);
       return { entries };
@@ -58,6 +60,7 @@ const openFile = (mount: string, path: string): SheetsState => ({
 beforeEach(() => {
   document.body.replaceChildren();
   fake.calls = [];
+  fake.pruned = [];
   fake.dirs = {
     "": [dir("a", "a"), dir("z", "z"), file("top.edn", "top.edn"), file("notes.txt", "notes.txt", "")],
     a: [dir("b", "a/b"), file("mid.edn", "a/mid.edn")],
@@ -79,6 +82,11 @@ describe("filetree island", () => {
     // A file with no reader is hidden entirely (2026-07-14: filtered as noise; reversal of
     // the earlier show-greyed behavior).
     expect(buttonFor(el, "notes.txt")).toBeUndefined();
+
+    // The folder half of the same rule is the server's to answer, since one level of listing
+    // cannot tell a folder of designs from a folder of folders of nothing. Every listing this
+    // tree asks for is pruned; the datasheets tree deliberately does not set the flag.
+    expect(fake.pruned).toSatisfy((p: boolean[]) => p.length > 0 && p.every(Boolean));
 
     // Collapse and re-expand: the level is cached, not refetched.
     buttonFor(el, "m")!.click();

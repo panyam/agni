@@ -85,6 +85,77 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 	})
 }
 
+// A design browser can only ever show a folder with no readable design under it as empty, so
+// PruneEmptyDirs leaves it out. "Empty" means the whole subtree, not one level: a folder of
+// folders of library files is as useless to open as a folder with nothing in it.
+func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
+	svc := NewWorkspaceService(&memWorkspace{
+		mounts: []MountInfo{{Name: "m", Root: "/x"}},
+		entries: map[string][]DirEntry{
+			"m\x00": {
+				{Name: "boards", IsDir: true}, // design lives two levels down
+				{Name: "empty", IsDir: true},  // nothing at all
+				{Name: "libs", IsDir: true},   // files, but none a reader opens
+			},
+			"m\x00boards":      {{Name: "rev2", IsDir: true}},
+			"m\x00boards/rev2": {{Name: "board.edn"}},
+			"m\x00empty":       {},
+			"m\x00libs":        {{Name: "parts.lock"}, {Name: "nested", IsDir: true}},
+			"m\x00libs/nested": {{Name: "readme.md"}, {Name: ".hidden.edn"}}, // dotfile does not count
+		},
+	})
+	names := func(prune bool) []string {
+		t.Helper()
+		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), PruneEmptyDirs: prune})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, e := range resp.GetEntries() {
+			out = append(out, e.GetName())
+		}
+		return out
+	}
+
+	t.Run("prunes dirs with no design anywhere beneath", func(t *testing.T) {
+		if got := names(true); len(got) != 1 || got[0] != "boards" {
+			t.Fatalf("entries = %v, want [boards] (empty and libs pruned)", got)
+		}
+	})
+
+	// The flag is opt-in because "empty" is per-client: the datasheets tree lists PDFs, which no
+	// design reader opens, so pruning by design format would hide the folders it wants. Off, the
+	// listing is unchanged.
+	t.Run("off by default", func(t *testing.T) {
+		if got := names(false); len(got) != 3 {
+			t.Fatalf("entries = %v, want all 3 dirs when pruning is off", got)
+		}
+	})
+}
+
+// A subtree the walk cannot settle keeps its folder: a folder wrongly shown costs a click, one
+// wrongly hidden costs a design. Here the design sits below the depth bound, so the walk runs out
+// before finding it and the folder stays.
+func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
+	entries := map[string][]DirEntry{"m\x00": {{Name: "deep", IsDir: true}}}
+	path := "deep"
+	for range pruneMaxDepth + 2 {
+		next := path + "/d"
+		entries["m\x00"+path] = []DirEntry{{Name: "d", IsDir: true}}
+		path = next
+	}
+	entries["m\x00"+path] = []DirEntry{{Name: "board.edn"}}
+
+	svc := NewWorkspaceService(&memWorkspace{mounts: []MountInfo{{Name: "m", Root: "/x"}}, entries: entries})
+	resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), PruneEmptyDirs: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetEntries(); len(got) != 1 || got[0].GetName() != "deep" {
+		t.Fatalf("entries = %+v, want deep kept: an unfinished walk shows the folder", got)
+	}
+}
+
 // TestListMounts preserves configuration order (the command line's mount order is the UI's
 // sidebar order) and maps both fields to the wire form.
 func TestListMounts(t *testing.T) {
