@@ -156,6 +156,47 @@ func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
 	}
 }
 
+// A mount is a root the same rule applies to: one serving only datasheets or only library files is
+// somewhere the design tree can never show anything, so PruneEmptyMounts leaves it out. The count
+// comes back so the sidebar can account for the absence instead of quietly being shorter.
+func TestListMountsPrunesEmptyMounts(t *testing.T) {
+	svc := NewWorkspaceService(&memWorkspace{
+		mounts: []MountInfo{{Name: "boards", Root: "/boards"}, {Name: "ds", Root: "/ds"}, {Name: "empty", Root: "/empty"}},
+		entries: map[string][]DirEntry{
+			"boards\x00":     {{Name: "rev2", IsDir: true}},
+			"boards\x00rev2": {{Name: "board.edn"}},
+			"ds\x00":         {{Name: "txb0104.pdf"}}, // a datasheet is not a design
+			"empty\x00":      {},
+		},
+	})
+
+	t.Run("prunes mounts with no design and counts them", func(t *testing.T) {
+		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{PruneEmptyMounts: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := resp.GetMounts()
+		if len(got) != 1 || got[0].GetName() != "boards" {
+			t.Fatalf("mounts = %+v, want [boards] (ds holds only a PDF, empty holds nothing)", got)
+		}
+		if resp.GetPrunedMounts() != 2 {
+			t.Errorf("prunedMounts = %d, want 2 so the sidebar can say what it hid", resp.GetPrunedMounts())
+		}
+	})
+
+	// The datasheets tree roots on these same mounts and opens the PDFs, so it must keep getting
+	// every mount, and with nothing hidden it has nothing to report.
+	t.Run("off by default", func(t *testing.T) {
+		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.GetMounts()) != 3 || resp.GetPrunedMounts() != 0 {
+			t.Fatalf("mounts = %+v, pruned = %d, want all 3 and 0", resp.GetMounts(), resp.GetPrunedMounts())
+		}
+	})
+}
+
 // TestListMounts preserves configuration order (the command line's mount order is the UI's
 // sidebar order) and maps both fields to the wire form.
 func TestListMounts(t *testing.T) {

@@ -89,9 +89,19 @@ func (x *Mount) GetUri() string {
 }
 
 type ListMountsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// prune_empty_mounts drops mounts with no file any reader understands anywhere beneath them: the
+	// same rule prune_empty_dirs applies inside a mount, applied to the roots. It is opt-in for the
+	// same reason and by the same measure of "empty", since a datasheets browser roots on a mount of
+	// PDFs, which no design reader opens.
+	//
+	// Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
+	// find it in the sidebar has no way to tell "this mount holds no designs" from "this mount failed
+	// to resolve", so a client that prunes should say when it is showing fewer roots than the server
+	// was given rather than render a silently shorter list.
+	PruneEmptyMounts bool `protobuf:"varint,1,opt,name=prune_empty_mounts,json=pruneEmptyMounts,proto3" json:"prune_empty_mounts,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ListMountsRequest) Reset() {
@@ -124,9 +134,20 @@ func (*ListMountsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *ListMountsRequest) GetPruneEmptyMounts() bool {
+	if x != nil {
+		return x.PruneEmptyMounts
+	}
+	return false
+}
+
 type ListMountsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mounts        []*Mount               `protobuf:"bytes,1,rep,name=mounts,proto3" json:"mounts,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Mounts []*Mount               `protobuf:"bytes,1,rep,name=mounts,proto3" json:"mounts,omitempty"`
+	// pruned_mounts counts the mounts prune_empty_mounts left out, so a client can tell the user its
+	// sidebar is shorter than the server's configuration rather than leaving them to wonder where a
+	// mount went. Zero when pruning is off.
+	PrunedMounts  int32 `protobuf:"varint,2,opt,name=pruned_mounts,json=prunedMounts,proto3" json:"pruned_mounts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -166,6 +187,13 @@ func (x *ListMountsResponse) GetMounts() []*Mount {
 		return x.Mounts
 	}
 	return nil
+}
+
+func (x *ListMountsResponse) GetPrunedMounts() int32 {
+	if x != nil {
+		return x.PrunedMounts
+	}
+	return 0
 }
 
 // DirEntry is one item in a directory listing: a subdirectory or a supported design file.
@@ -254,7 +282,7 @@ type ListDirRequest struct {
 	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	// prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
 	// any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
-	// is per-client — a datasheets browser lists PDFs, which no design reader opens, so pruning by
+	// is per-client. A datasheets browser lists PDFs, which no design reader opens, so pruning by
 	// design format would hide exactly the folders it wants. Answering it costs a bounded walk of
 	// each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
 	// a folder wrongly shown costs a click and one wrongly hidden costs a design.
@@ -361,10 +389,12 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"\x13\n" +
-	"\x11ListMountsRequest\"C\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"A\n" +
+	"\x11ListMountsRequest\x12,\n" +
+	"\x12prune_empty_mounts\x18\x01 \x01(\bR\x10pruneEmptyMounts\"h\n" +
 	"\x12ListMountsResponse\x12-\n" +
-	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\"_\n" +
+	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\x12#\n" +
+	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\"_\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
 	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +

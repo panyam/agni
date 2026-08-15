@@ -66,20 +66,33 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 	return &WorkspaceService{ws: ws}
 }
 
-// ListMounts returns the configured mounts in configuration order. It never errors.
-func (s *WorkspaceService) ListMounts(_ context.Context, _ *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
+// ListMounts returns the configured mounts in configuration order. It never errors. With
+// PruneEmptyMounts set, a mount with no readable design anywhere beneath it is left out and
+// counted in PrunedMounts, which is the same rule ListDir applies to subdirectories, applied to
+// the roots: a mount serving only datasheets is a root the design tree can only ever show empty.
+//
+// The walk budget is per call, shared by every mount, so a configuration of many roots cannot turn
+// one page load into many full walks. Sharing it means a later mount can inherit an exhausted
+// budget and be kept on a bound rather than on its contents, which is the direction that shows too
+// much rather than too little.
+func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
 	resp := &webapi.ListMountsResponse{}
+	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {
 		uri, err := artifact.New(m.Name, "")
 		if err != nil {
 			return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
+		}
+		if req.GetPruneEmptyMounts() && !s.hasDesignFile(ctx, uri, 0, &pruneBudget) {
+			resp.PrunedMounts++
+			continue
 		}
 		resp.Mounts = append(resp.Mounts, &webapi.Mount{Name: m.Name, Root: m.Root, Uri: uri.String()})
 	}
 	return resp, nil
 }
 
-// Bounds on the subtree walk prune_empty_dirs asks for. The walk is depth-first with an early
+// Bounds on the subtree walk the two prune flags ask for. The walk is depth-first with an early
 // exit on the first readable design, so a normal design folder settles in a listing or two; the
 // bounds are there for the pathological case, a vendored tree or a source checkout under a mount,
 // where proving a folder empty means reading all of it. pruneMaxDirs is a per-request budget

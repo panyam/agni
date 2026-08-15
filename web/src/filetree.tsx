@@ -187,18 +187,36 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   );
 }
 
+// hiddenNote words the pruned-mount count for the sidebar. A mount is something an operator
+// configured by hand, so one missing from the tree has to be accounted for: without this line
+// there is no way to tell "that folder holds no designs" from "that mount failed to resolve".
+function hiddenNote(hidden: number, shown: number): string {
+  const folders = `${hidden} ${hidden === 1 ? "folder" : "folders"}`;
+  return shown === 0 ? `No designs in any of the ${folders} being served` : `${folders} hidden (no designs)`;
+}
+
 function FileTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
+  const [pruned, setPruned] = createSignal(0);
   const [error, setError] = createSignal<string | null>(null);
+  // pruneEmptyMounts applies the same rule to the roots that pruneEmptyDirs applies inside them: a
+  // mount serving only datasheets or only library files is one this tree can never show anything
+  // in. The datasheets tree roots on the same mounts and does not set it.
   props.ctx.client
-    .listMounts({})
-    .then((r) => setMounts(r.mounts))
+    .listMounts({ pruneEmptyMounts: true })
+    .then((r) => {
+      setMounts(r.mounts);
+      setPruned(r.prunedMounts);
+    })
     .catch((e) => setError(String(e)));
 
   return (
     <ul class="tree">
       <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
       <For each={mounts()}>{(m) => <DirNode ctx={props.ctx} mount={m.name} path="" label={m.name} depth={0} />}</For>
+      <Show when={pruned() > 0}>
+        <li class="note">{hiddenNote(pruned(), mounts().length)}</li>
+      </Show>
     </ul>
   );
 }

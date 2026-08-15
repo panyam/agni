@@ -43,8 +43,9 @@ const (
 
 // WorkspaceServiceClient is a client for the agni.v1.webapi.WorkspaceService service.
 type WorkspaceServiceClient interface {
-	// ListMounts returns the mounts the server is serving, in the order they were
-	// configured. It takes no parameters and never fails for a running server.
+	// ListMounts returns the mounts the server is serving, in the order they were configured, and
+	// never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
+	// design under them.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
 	// labeled with the reader that would open it. The client addresses a location by an artifact URI
@@ -98,8 +99,9 @@ func (c *workspaceServiceClient) ListDir(ctx context.Context, req *connect.Reque
 
 // WorkspaceServiceHandler is an implementation of the agni.v1.webapi.WorkspaceService service.
 type WorkspaceServiceHandler interface {
-	// ListMounts returns the mounts the server is serving, in the order they were
-	// configured. It takes no parameters and never fails for a running server.
+	// ListMounts returns the mounts the server is serving, in the order they were configured, and
+	// never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
+	// design under them.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
 	// labeled with the reader that would open it. The client addresses a location by an artifact URI
