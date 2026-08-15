@@ -206,13 +206,14 @@ func projectRootAbove(abs string) (root, id string, err error) {
 		dir = filepath.Dir(abs)
 	}
 	for range maxProjectWalk + 1 {
-		name := filepath.Join(dir, projects.ProjectDescriptor)
-		f, openErr := os.Open(name)
+		f, openErr := os.Open(filepath.Join(dir, projects.ProjectDescriptor))
 		if openErr == nil {
 			declared, _, _, parseErr := projects.ParseProject(f)
 			f.Close()
 			if parseErr != nil {
-				return "", "", fmt.Errorf("%s: %w", name, parseErr)
+				// The DIRECTORY, not the file: ParseProject already names the descriptor, and the walk
+				// can pass several, so what this layer adds is which one.
+				return "", "", fmt.Errorf("%s: %w", dir, parseErr)
 			}
 			return dir, declared, nil
 		}
