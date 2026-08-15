@@ -16,6 +16,12 @@
 			(symbol "R_1_1"
 				(pin passive line (at 0 3.81 270) (length 1.27) (name "~") (number "1"))
 				(pin passive line (at 0 -3.81 90) (length 1.27) (name "~") (number "2"))))
+		(symbol "test:MH"
+			(pin_names (offset 0))
+			(property "Reference" "MH")
+			(symbol "MH_0_1"
+				(circle (center 0 0) (radius 1.27)
+					(fill (type none)))))
 		(symbol "power:VCC"
 			(power)
 			(pin_names (offset 0))
@@ -54,6 +60,13 @@
 				(path "/11111111-1111-1111-1111-111111111111/bbbb2222-0000-0000-0000-000000000000"
 					(reference "R202")
 					(unit 1)))))
+	(symbol (lib_id "test:MH") (at 120 60 0) (unit 1) (uuid "childmh")
+		(property "Reference" "MH?"
+			(at 120 57 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "M3"
+			(at 120 63 0)
+			(effects (font (size 1.27 1.27)))))
 	(symbol (lib_id "power:VCC") (at 110 40 0) (unit 1) (uuid "childvcc")
 		(property "Reference" "#PWR02"
 			(at 110 37 0)

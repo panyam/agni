@@ -9,6 +9,7 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/internal/geomath"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // ReadBoardGeometry parses a KiCad .kicad_pcb board into the board-geometry sidecar
@@ -92,7 +93,7 @@ func boardGraphics(root *node) []*geom.BoardGraphic {
 	var out []*geom.BoardGraphic
 	for _, fp := range root.Children("footprint") {
 		ref := propValue(fp, "Reference")
-		if ref == "" || placeholderRef(ref) {
+		if ref == "" || refdes.IsPlaceholder(ref) {
 			continue
 		}
 		origin := pcbPoint(fp.Child("at"))
@@ -229,7 +230,7 @@ func boardTexts(root *node) []*geom.BoardText {
 	var out []*geom.BoardText
 	for _, fp := range root.Children("footprint") {
 		ref := propValue(fp, "Reference")
-		if ref == "" || placeholderRef(ref) {
+		if ref == "" || refdes.IsPlaceholder(ref) {
 			continue
 		}
 		fpAt := fp.Child("at")
@@ -460,7 +461,7 @@ func circumcenter(ax, ay, bx, by, cx, cy float64) (x, y float64, ok bool) {
 // on which components exist.
 func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 	ref := propValue(fp, "Reference")
-	if ref == "" || placeholderRef(ref) {
+	if ref == "" || refdes.IsPlaceholder(ref) {
 		return nil
 	}
 	at := fp.Child("at")

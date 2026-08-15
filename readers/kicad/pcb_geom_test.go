@@ -279,25 +279,36 @@ func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
 	}
 }
 
-// TestPlaceholderFootprintsSkipped (WS1-024): an unannotated REF** footprint is skipped
-// by BOTH readers — a placeholder is annotation state, not an identity, and keying it
-// merges distinct parts' pads onto one component (the corpus cimos board's 26 REF**
-// footprints collapsed to one, tripping pin-net-conflict).
+// TestPlaceholderFootprintsSkipped (WS1-024): an unannotated footprint is skipped by BOTH
+// readers — a placeholder is annotation state, not an identity, and keying it merges
+// distinct parts' pads onto one component (the corpus cimos board's 26 REF** footprints
+// collapsed to one, tripping pin-net-conflict).
+//
+// The fixture carries both forms this reader has to recognize: the fully unassigned "REF**"
+// and the partly-assigned "C?1845" a tool leaves when only some digits are filled in. The
+// second is the one a suffix-only predicate misses, which is what agni issue 311 unified.
 func TestPlaceholderFootprintsSkipped(t *testing.T) {
 	raw := readFixture(t, "board.kicad_pcb")
 	d, err := Read(bytes.NewReader(raw), "board.kicad_pcb")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range d.Components {
-		if c.RefDes == "REF**" {
-			t.Error("netlist reader kept a REF** placeholder component")
-		}
-	}
 	g := readBoardFixture(t)
-	for _, p := range g.Placements {
-		if p.RefDes == "REF**" {
-			t.Error("board-geometry reader kept a REF** placement")
+	for _, ref := range []string{"REF**", "C?1845"} {
+		for _, c := range d.Components {
+			if c.RefDes == ref {
+				t.Errorf("netlist reader kept the placeholder component %q", ref)
+			}
+		}
+		for _, p := range g.Placements {
+			if p.RefDes == ref {
+				t.Errorf("board-geometry reader kept the placeholder placement %q", ref)
+			}
+		}
+		for _, txt := range g.Texts {
+			if txt.GetRefDes() == ref {
+				t.Errorf("board-geometry reader kept text for the placeholder %q", ref)
+			}
 		}
 	}
 	if len(g.Placements) != len(d.Components) {

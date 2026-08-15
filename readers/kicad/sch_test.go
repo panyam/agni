@@ -247,6 +247,51 @@ func TestReadSchematicRefDesCollision(t *testing.T) {
 	}
 }
 
+// TestReadSchematicUnannotatedComponents (agni issue 311): a KiCad schematic KEEPS its
+// placeholder-designated symbols, so it is the layer that has to say they are unannotated.
+// One entry per placeholder rather than per part, carrying each placement, because "2 parts are
+// still called R?" is the reviewable fact.
+//
+// The same fixture pins the collision boundary: two symbols sharing "R?" are not two parts
+// claiming one designator, so they must not ALSO be reported as a duplicate ref-des. That would
+// be an error-severity finding whose remedy (rename one) is wrong for a sheet nobody has
+// annotated yet, over the same two placements.
+func TestReadSchematicUnannotatedComponents(t *testing.T) {
+	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "unannotated.kicad_sch")), "unannotated.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	byRef := map[string][]string{}
+	for _, u := range d.GetInputDiagnostics().GetUnannotatedComponents() {
+		for _, p := range u.GetInstances() {
+			byRef[u.GetRefDes()] = append(byRef[u.GetRefDes()], p.GetNativeId())
+		}
+	}
+	if len(byRef) != 2 {
+		t.Fatalf("unannotated designators = %v, want R? and C?1845", byRef)
+	}
+	if got := byRef["R?"]; !equalStrs(got, []string{"r-un-1", "r-un-2"}) {
+		t.Errorf("R? placements = %v, want both symbols' uuids", got)
+	}
+	if got := byRef["C?1845"]; !equalStrs(got, []string{"c-un-1"}) {
+		t.Errorf("C?1845 placements = %v, want the one symbol's uuid", got)
+	}
+	// The parts are kept, not skipped: they are real circuitry that is merely unnamed, and
+	// dropping them would make the design read short.
+	kept := map[string]bool{}
+	for _, c := range d.Components {
+		kept[c.RefDes] = true
+	}
+	for _, want := range []string{"R?", "C?1845", "R1"} {
+		if !kept[want] {
+			t.Errorf("component %q was dropped; a schematic keeps unannotated parts", want)
+		}
+	}
+	if c := d.GetInputDiagnostics().GetRefDesCollisions(); len(c) != 0 {
+		t.Errorf("unannotated parts must not report as a ref-des collision, got %+v", c)
+	}
+}
+
 func equalStrs(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
@@ -301,10 +346,18 @@ func TestSymbolRefPrefersInstances(t *testing.T) {
 			t.Errorf("missing component %q; have %v", want, got)
 		}
 	}
-	for _, bad := range []string{"R?", "R1"} {
-		if got[bad] {
-			t.Errorf("property-derived ref %q survived; instances should win", bad)
-		}
+	if got["R1"] {
+		t.Errorf("property-derived ref %q survived; instances should win", "R1")
+	}
+	// An instances entry that is itself a placeholder is not post-annotation truth, so it is
+	// passed over like the "R?" property form. "R?1845" is the partly-assigned shape a
+	// suffix-only predicate reads as a real designator (agni issue 311): the symbol must land
+	// on the property's "R?" and stay visibly unannotated, not acquire "R?1845" as an identity.
+	if got["R?1845"] {
+		t.Errorf("partly-assigned instance ref %q was taken as an identity; have %v", "R?1845", got)
+	}
+	if !got["R?"] {
+		t.Errorf("the unannotated symbol should fall back to its %q property; have %v", "R?", got)
 	}
 }
 

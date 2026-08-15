@@ -160,6 +160,10 @@ The stable key for cross-revision diff and for the IR-to-geometry join is always
 
 Consumers **decline** rather than merge. A board reader skips a placeholder-referenced footprint, because a `REF**` on a board is usually a fiducial or a mechanical artifact rather than a part. A schematic reader keeps the part — those are real circuitry someone has not named yet, and dropping them would make the design read short. The check model declines to assert pin uniqueness over one: `(R?, 1)` does not name a pin, and on one export 176 distinct resistors shared that key, so the pin index saw a single pin sitting on 129 nets. Reporting that as malformed input says something false about a netlist that is fine.
 
+Declining runs one step further: a placeholder is not a *claimed* designator, so two symbols reading `R?` are not two parts fighting over one name and the schematic reader does not report them as a `ref_des_collision`. That finding is an error whose remedy is to rename one of them, which is the wrong instruction for a sheet nobody has annotated yet, and it would report the same two placements a second time under a different heading.
+
+The other half of that bargain is that a reader which KEEPS unannotated parts has to say so. It is the only layer that ever knew: the parts are drawn and connected, so by the time the IR reaches a rule they look like ordinary components with odd names. `internal/refdes.Unannotated` builds the diagnostic from the same predicate, so the reader that keeps them cannot group them by a rule of its own.
+
 The temptation is to repair the identity instead — key those parts on their native id, which really is unique. That is exactly what the paragraph above forbids: the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The absence is the truth, and the honest move is to say so, which is what `unannotated_components` below is for.
 
 ## Geometry is a keyed sidecar

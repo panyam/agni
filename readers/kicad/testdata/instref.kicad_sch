@@ -37,6 +37,18 @@
 				(path "/aaaa-cccc"
 					(reference "R7")
 					(unit 1)))))
+	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "r-partial")
+		(property "Reference" "R?"
+			(at 78 46 0)
+			(effects (font (size 1.27 1.27))))
+		(property "Value" "10k"
+			(at 82 46 0)
+			(effects (font (size 1.27 1.27))))
+		(instances
+			(project "board"
+				(path "/aaaa-dddd"
+					(reference "R?1845")
+					(unit 1)))))
 	(symbol (lib_id "test:R") (at 70 50 0) (unit 1) (uuid "r-plain")
 		(property "Reference" "R2"
 			(at 68 46 0)

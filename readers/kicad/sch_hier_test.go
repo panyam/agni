@@ -46,8 +46,16 @@ func TestReadSchematicHierarchyNets(t *testing.T) {
 		refs = append(refs, c.RefDes)
 	}
 	sort.Strings(refs)
-	if got, want := strings.Join(refs, " "), "R1 R101 R102 R201 R202"; got != want {
+	// MH? is the child sheet's unannotated mounting hole: pinless, so it joins no net, and
+	// unannotated, so both sheet placements merge under the one placeholder.
+	if got, want := strings.Join(refs, " "), "MH? R1 R101 R102 R201 R202"; got != want {
 		t.Errorf("components = %q, want %q", got, want)
+	}
+	// The hierarchical walk assembles its own InputDiagnostics, so the unannotated diagnostic
+	// has to be wired there too — an unwired one is a silent no-op that reads as a clean design.
+	un := d.GetInputDiagnostics().GetUnannotatedComponents()
+	if len(un) != 1 || un[0].GetRefDes() != "MH?" || len(un[0].GetInstances()) != 2 {
+		t.Errorf("unannotated components = %+v, want one MH? entry carrying both sheet placements", un)
 	}
 
 	nets := map[string]string{}
