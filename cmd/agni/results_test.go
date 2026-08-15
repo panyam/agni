@@ -113,8 +113,12 @@ func TestResultsDocumentRecordsTheRun(t *testing.T) {
 	}
 	// The document records the design's URI, not the path as typed: a stored document outlives the
 	// machine that made it, and a renderer shortens the URI for reading (displayName).
-	if got.Design.Source != cliArgURI(design) {
-		t.Errorf("design.source = %q, want the design URI %q", got.Design.Source, cliArgURI(design))
+	wantURI, err := cliArgURI(design)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Design.Source != wantURI {
+		t.Errorf("design.source = %q, want the design URI %q", got.Design.Source, wantURI)
 	}
 	if !strings.HasPrefix(got.Design.ContentHash, "sha256:") || len(got.Design.ContentHash) != len("sha256:")+64 {
 		t.Errorf("design.contentHash = %q, want a sha256 hex digest", got.Design.ContentHash)

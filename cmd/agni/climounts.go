@@ -131,7 +131,10 @@ func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
 // `mount://gateway/designs/gateway/gateway.edn` says which design of which project, and reads the
 // same as the URI a server with that project mounted would produce.
 func (w *cliWorkspace) mint(abs string) (artifact.URI, error) {
-	root, name := projectRootAbove(abs)
+	root, name, err := projectRootAbove(abs)
+	if err != nil {
+		return artifact.URI{}, err
+	}
 	if root == "" {
 		root = filepath.Dir(abs)
 		if fi, err := os.Stat(abs); err == nil && fi.IsDir() {
@@ -182,29 +185,37 @@ func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
 }
 
 // projectRootAbove walks up from a path looking for a project descriptor, returning the folder
-// holding it and the project's declared id. It returns ("", "") when there is none within
-// maxProjectWalk levels.
+// holding it and the project's declared id. It returns ("", "", nil) when there is none within
+// maxProjectWalk levels, and an error when one EXISTS and does not parse.
 //
 // The declared id becomes the mount NAME, which is the point: a project already has an
 // operator-chosen identity, and inventing a second one for the same thing would mean a design's URI
 // depended on whether it was reached through the CLI or through a server.
-func projectRootAbove(abs string) (root, id string) {
+//
+// The parse error is returned rather than treated as "no project here", and the distinction is not
+// cosmetic. This function decides where the mount is ROOTED, so answering "none" for a descriptor
+// that is merely broken roots the mount at the design's own folder — which puts the broken
+// descriptor OUTSIDE the mount, where nothing downstream can see it. The run then resolves as a
+// loose file and composes against the built-in vocabulary, reporting an authoritative-looking answer
+// (agni issue 312; the measurement in issue 306 was 40 findings a project's own lexicon would not
+// have raised and 95 it would have). This code used to say the design read that followed would
+// surface it, which was checkable and false.
+func projectRootAbove(abs string) (root, id string, err error) {
 	dir := abs
 	if fi, err := os.Stat(abs); err != nil || !fi.IsDir() {
 		dir = filepath.Dir(abs)
 	}
 	for range maxProjectWalk + 1 {
-		f, err := os.Open(filepath.Join(dir, projects.ProjectDescriptor))
-		if err == nil {
+		f, openErr := os.Open(filepath.Join(dir, projects.ProjectDescriptor))
+		if openErr == nil {
 			declared, _, _, parseErr := projects.ParseProject(f)
 			f.Close()
-			if parseErr == nil {
-				return dir, declared
+			if parseErr != nil {
+				// The DIRECTORY, not the file: ParseProject already names the descriptor, and the walk
+				// can pass several, so what this layer adds is which one.
+				return "", "", fmt.Errorf("%s: %w", dir, parseErr)
 			}
-			// A malformed descriptor is not this function's to report: the design read that follows
-			// will surface it with the context a user can act on. Minting a plain mount here keeps
-			// the addressing sane in the meantime.
-			return "", ""
+			return dir, declared, nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -212,7 +223,7 @@ func projectRootAbove(abs string) (root, id string) {
 		}
 		dir = parent
 	}
-	return "", ""
+	return "", "", nil
 }
 
 // cliWS is the workspace for this run, built once on first use.
@@ -235,26 +246,27 @@ func workspace() (*cliWorkspace, error) {
 
 // cliArgURI turns a command-line argument into an artifact URI string for a request literal.
 //
-// It swallows the error deliberately. Every caller is building a request whose service will parse
-// this string and classify a bad one with the context that matters (which rpc, which field); a
-// second error raised here would be the same failure reported twice, in the less useful place. An
-// unmintable argument passes through unchanged and fails at that parse.
-func cliArgURI(arg string) string {
+// A path that does not exist is not an error here, per cliWorkspace.URI: the reader produces the
+// not-found message a user already knows. What IS returned is a failure to MINT — a governing
+// project descriptor that does not parse — because minting is what puts the design's folder on a
+// mount at all. Passing the raw argument through in that case leaves the service with no mount to
+// resolve it against, so it composes as though the design belonged to no project (agni issue 312).
+func cliArgURI(arg string) (string, error) {
 	if arg == "" {
 		// An unsupplied optional flag stays unsupplied. Without this, filepath.Abs("") resolves to the
 		// working directory and an absent --board-path arrives as a URI naming a real folder, which the
 		// service then reads as "a board was supplied" and fails on a directory that is not one.
-		return ""
+		return "", nil
 	}
 	ws, err := workspace()
 	if err != nil {
-		return arg
+		return "", err
 	}
 	u, err := ws.URI(arg)
 	if err != nil {
-		return arg
+		return "", err
 	}
-	return u.String()
+	return u.String(), nil
 }
 
 // cliProjects is the CLI's project resolver: the same filesystem-backed store and config loader a
@@ -365,20 +377,9 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 	// A design with no descriptor resolves to nothing and runs on the base catalog. One whose
 	// descriptor exists and does not PARSE fails here instead, because the rules this run would
 	// otherwise compose are not the rules the project declared (see ProjectResolver.Overlay).
-	var p *webapi.Project
-	var d *webapi.Design
-	if ws, err := workspace(); err == nil {
-		if u, err := ws.URI(arg); err == nil {
-			design, resolved, err := r.Store.ResolveDesign(ctx, u)
-			switch {
-			case err == nil:
-				p, d = resolved, design
-			case errors.Is(err, service.ErrNotFound):
-				// Unknown mount: nothing to resolve against, same as having no descriptor.
-			default:
-				return nil, service.Overlay{}, err
-			}
-		}
+	d, p, err := cliResolveProject(ctx, arg)
+	if err != nil {
+		return nil, service.Overlay{}, err
 	}
 	ov, err := service.OverlayFor(ctx, r.Config, r.Store, p, d, req, service.Overlay{}, "")
 	if err != nil {
@@ -388,26 +389,59 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 	return cat, ov, err
 }
 
+// cliResolveProject answers "which design and project govern this command-line argument", for the
+// CLI helpers that need it: no design and no project when the argument belongs to neither, and an
+// error only when something that EXISTS fails to parse.
+//
+// It is one function because the distinction it draws is one decision. Absent config is ordinary
+// (most files on a mounted folder belong to no project) while malformed config is not, and a caller
+// that flattens the two runs against the built-in vocabulary and reports an answer that looks
+// authoritative. Three callers used to draw it separately, and two of them drew it wrong (issue
+// 312). A fourth would have been a coin flip.
+//
+// An argument that names no existing path is deliberately not an error: it is left to the reader,
+// which produces the not-found message a user already knows.
+//
+// The ErrNotFound case is DEFENSIVE and no test reaches it, which is worth saying rather than
+// leaving to be discovered. A store reports it for a mount it does not have, and through this CLI
+// that cannot happen: the workspace and the store are built from one mount list, and URI registers
+// the mount before this call can name it. It is kept because ProjectStore is an interface and
+// "unknown mount" means there is nothing to resolve against rather than something broken, which is
+// the one shape that must not fail a command. It is inherited from withProjectRules, not new here.
+func cliResolveProject(ctx context.Context, arg string) (*webapi.Design, *webapi.Project, error) {
+	ws, err := workspace()
+	if err != nil {
+		return nil, nil, err
+	}
+	u, err := ws.URI(arg)
+	if err != nil {
+		return nil, nil, err
+	}
+	d, p, err := cliProjects().Store.ResolveDesign(ctx, u)
+	switch {
+	case err == nil:
+		return d, p, nil
+	case errors.Is(err, service.ErrNotFound):
+		return nil, nil, nil
+	default:
+		return nil, nil, err
+	}
+}
+
 // cliProjectParent is the project resource name a design's review should be stored under, empty when
 // the design belongs to none.
 //
 // Empty is a real answer rather than a failure. Reviewing a loose file is the ordinary case on a
 // mounted folder, and such a run is stored unparented — giving it a synthetic parent would assert an
-// ownership that does not exist.
-func cliProjectParent(ctx context.Context, arg string) string {
-	ws, err := workspace()
+// ownership that does not exist. A descriptor that exists and does not parse is not that case: the
+// design does belong to a project, and filing its run under none would record the wrong provenance
+// for a run that should not have happened.
+func cliProjectParent(ctx context.Context, arg string) (string, error) {
+	_, p, err := cliResolveProject(ctx, arg)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	u, err := ws.URI(arg)
-	if err != nil {
-		return ""
-	}
-	_, p, err := cliProjects().Store.ResolveDesign(ctx, u)
-	if err != nil || p == nil {
-		return ""
-	}
-	return p.GetName()
+	return p.GetName(), nil
 }
 
 // cliProjectChecklist reports the review manifest a design's project declares, and the project it
@@ -423,21 +457,13 @@ func cliProjectParent(ctx context.Context, arg string) string {
 // Collapsing the middle case into the first would tell an operator with a real project to "pass
 // --checklist" when the actionable fix is a `checklist:` line in the project.yaml they already have.
 //
-// A resolution failure reads as "no project", on the same terms as cliProjectParent: reviewing a
-// loose file is ordinary, and failing the whole command because some unrelated descriptor on the
-// mount is malformed would be worse than asking for the flag.
-func cliProjectChecklist(ctx context.Context, arg string) (uri, project string) {
-	ws, err := workspace()
+// A design that belongs to no project is the first state, not a failure. A descriptor that exists
+// and does not PARSE is a fourth thing and is returned, because the operator would otherwise be sent
+// to --checklist over a project they already have and whose descriptor is one edit from working.
+func cliProjectChecklist(ctx context.Context, arg string) (uri, project string, err error) {
+	_, p, err := cliResolveProject(ctx, arg)
 	if err != nil {
-		return "", ""
+		return "", "", err
 	}
-	u, err := ws.URI(arg)
-	if err != nil {
-		return "", ""
-	}
-	_, p, err := cliProjects().Store.ResolveDesign(ctx, u)
-	if err != nil || p == nil {
-		return "", ""
-	}
-	return p.GetConfig().GetChecklistUri(), p.GetName()
+	return p.GetConfig().GetChecklistUri(), p.GetName(), nil
 }

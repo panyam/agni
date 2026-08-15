@@ -47,7 +47,10 @@ func resolveChecklist(ctx context.Context, designs []string) (review.Manifest, s
 	byURI := map[string][]string{}
 	var unowned, noChecklist []string
 	for _, d := range designs {
-		uri, project := cliProjectChecklist(ctx, d)
+		uri, project, err := cliProjectChecklist(ctx, d)
+		if err != nil {
+			return review.Manifest{}, "", err
+		}
 		switch {
 		case project == "":
 			unowned = append(unowned, d)
@@ -95,7 +98,11 @@ func resolveChecklist(ctx context.Context, designs []string) (review.Manifest, s
 // to the same project in practice, so the first is representative.
 func projectOf(byURI map[string][]string, uri string, ctx context.Context) string {
 	for _, d := range byURI[uri] {
-		if _, project := cliProjectChecklist(ctx, d); project != "" {
+		// The error is dropped on purpose: every design here already resolved cleanly a moment ago in
+		// resolveChecklist, which is what put it in byURI. This is a second lookup for a MESSAGE, so a
+		// failure that could only mean the descriptor changed mid-command falls back to "the project"
+		// rather than turning a report into an error.
+		if _, project, _ := cliProjectChecklist(ctx, d); project != "" {
 			return project
 		}
 	}
