@@ -91,3 +91,18 @@ cell that omits it falls back to the prefix on each instance's own ref-des. It u
 here for a different reason, because the reader would take a *port's* designator when a cell
 declared none, and every component of that cell then classified as unknown. That was agni issue 109
 and it is fixed.
+
+## What this fixture is, and how it stays honest
+
+`examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on: a
+synthetic gateway ECU in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
+library, a `.kicad_pcb`) with `review.yaml`, `conventions.yaml`, `profiles/`, `params/`, and a
+per-design `intent.yaml`. Deliberately imperfect, one flaw per thing a tutorial rung has to show.
+The KiCad views are GENERATED from the netlist by `tools/`. From inside `examples/tutorial-project/`,
+`make check-views` fails if the three stop describing the same design, and `make regen-views`
+rebuilds them after any netlist edit (both targets live in that folder's own Makefile, not the root
+one). It is not a Go module, so `make testall`'s `examples/*/go.mod` glob skips it.
+
+**When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`).
+Each example is its own Go module so the demo kit stays out of the engine `go.mod`, and narration
+lives in a sidecar `walkthrough.md` rather than in Go strings.

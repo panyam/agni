@@ -54,7 +54,9 @@
       { "name": "Adding a format reader", "url": "build/format-reader/" },
       { "name": "Authoring a check rule", "url": "build/check-rule/" },
       { "name": "Authoring an overlay", "url": "build/overlay/" },
-      { "name": "Native verification", "url": "build/native-verification/" }
+      { "name": "Native verification", "url": "build/native-verification/" },
+      { "name": "Running the gate", "url": "build/the-gate/" },
+      { "name": "Evidence", "url": "build/evidence/" }
     ]
   },
   {

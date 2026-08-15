@@ -63,6 +63,15 @@ datasheets and the extracted database inside their own boundary, so locators are
 meaningful within one deployment and the schema carries no assumption of a shared global
 document store.
 
+**A FIXTURE IS NOT A CORPUS, and the difference is size.** A fixture carries the few rows its tests
+need, cited, and lives in `datasheet/param/testdata/` so `make testall` passes on a clean clone. A
+seeded corpus is the part's actual parameter set, belongs with the source PDFs, and lives OUTSIDE
+this repo, which is what the corpus-local posture above and `--params <dir>` already assume.
+Transcribing a whole vendor table because it makes a better demonstration is how a fixture drifts
+into being an extracted parameter document; `txb0104.textproto` reached 389 lines that way and was
+cut back. If a new fixture is much larger than its neighbours, that is the signal. Anything
+user-facing (`examples/`, the tutorial project) uses SYNTHETIC parts, not transcriptions.
+
 ### Verification, and why it expires
 
 Provenance says how a value was PRODUCED. It cannot say whether anyone has since agreed with it, and

@@ -254,3 +254,39 @@ is geometry volume and rendering, not the boundary.
   carries the group colors, so WebGL and SVG stay color-identical.
 - Board layer visibility is client-side in both renderers, through CSS strata and draw-loop skips,
   never a render parameter.
+
+## Wiring a new panel
+
+**FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island
+(`web/src/<panel>.tsx`), its hole in `web/templates/ViewerPage.html` (`data-component="..."`), its
+field on `ViewSink` in `web/src/viewer.ts`, and its construction plus wiring in `web/src/main.ts`.
+
+`main.ts` is the composition root and nothing else constructs it, so a missed fourth edit is invisible
+to every other test: the presenter's view ports are OPTIONAL by design (an embedding host may leave a
+panel out, see `build/overlay.md`), which means an unwired port is a silent no-op rather than a type
+error. That has shipped a green-CI, broken-in-the-browser feature twice, once with a client never
+passed and once with a view never wired.
+
+`web/src/composition.test.ts` now boots the real `main.ts` under jsdom against the real page and fails
+on any of those omissions, so let the test tell you what you forgot. Read its header comment before
+changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
+
+**A test fixture that is a PLAIN OBJECT LITERAL standing in for a proto message is invisible to
+`pnpm run typecheck`.** Nesting `Project`'s config fields under `config` left
+`projectpresenter.test.ts` structurally wrong and the typecheck green; only the runtime assertion
+caught it. So after a proto reshape, `pnpm run typecheck` passing is NOT evidence the web side is
+done — run `make testall`. Prefer `create(SomeSchema, {...})` in a new fixture, which does get
+checked.
+
+**A JSX expression that reads only PLAIN OBJECT properties never re-runs.** Solid wraps an attribute
+or child expression in an effect over the signals it reads, so `class={p.pinRefs.includes(x) ? "on" :
+""}` — where `p` came from a list and is not itself reactive — subscribes to NOTHING and renders once.
+The data changes, the DOM does not. Read through the accessor instead (`props.spec().parameters.some(
+...)`), which tracks. This shipped an inert set of buttons with every unit test green, because the
+helpers were correct and only the subscription was missing; a component test is the only thing that
+sees it, and `transcribe.tsx` still has none (OUT_OF_SCOPE).
+
+**Never `window.confirm` / `alert` / `prompt` in a panel.** A native dialog blocks the page, which
+blocks browser automation outright: the screenshot and drive-the-app flows stop responding with no
+error. Use an inline two-step (the `deletePackage` confirm in `transcribe.tsx`), which is also better
+UX, since it can name what is about to be lost rather than asking a generic "are you sure".

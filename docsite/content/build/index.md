@@ -11,3 +11,6 @@ These guides are for people extending Agni. They assume you read Go.
   depending on the public engine without forking it.
 - **[Native verification](native-verification/)**: check a reader against the format's own EDA
   tool as an oracle.
+- **[Running the gate](the-gate/)**: what `make testall` covers, and the three ways it reads green
+  when it is not.
+- **[Evidence](evidence/)**: measuring, testing, and the habits that keep a result falsifiable.
