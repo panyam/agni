@@ -27,9 +27,16 @@
         </Component>
         <Component refDes="R2" packageRef="R0603" part="RES"/>
         <Component refDes="U1" packageRef="SOIC8" part="OPAMP"/>
+        <!-- Three components that name no part: the fully unassigned REF**, the partly-assigned
+             C?1845, and one with no designator at all. A board reader skips all three, so none of
+             them reaches the netlist tier and neither does the GND pin claimed by the first. -->
+        <Component refDes="REF**" packageRef="R0603" part="FIDUCIAL"/>
+        <Component refDes="C?1845" packageRef="R0603" part="CAP"/>
+        <Component packageRef="R0603" part="TESTPOINT"/>
         <LogicalNet name="GND" netClass="GROUND">
           <PinRef componentRef="R1" pin="2"/>
           <PinRef componentRef="U1" pin="4"/>
+          <PinRef componentRef="REF**" pin="1"/>
         </LogicalNet>
         <LogicalNet name="VCC" netClass="POWER">
           <PinRef componentRef="R1" pin="1"/>

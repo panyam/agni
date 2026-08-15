@@ -231,7 +231,7 @@ func (f *ipcGeomFile) graphics(nmPerUnit float64) []*geom.BoardGraphic {
 	}
 	var out []*geom.BoardGraphic
 	for _, c := range f.Comps {
-		if c.RefDes == "" {
+		if skipRefDes(c.RefDes) {
 			continue
 		}
 		side := normalizeSide(c.LayerRef)
@@ -343,7 +343,7 @@ func (f *ipcGeomFile) packagePins() map[string][]gPinEl {
 func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl) []*geom.ComponentPlacement {
 	var out []*geom.ComponentPlacement
 	for _, c := range f.Comps {
-		if c.RefDes == "" {
+		if skipRefDes(c.RefDes) {
 			continue
 		}
 		side := normalizeSide(c.LayerRef)

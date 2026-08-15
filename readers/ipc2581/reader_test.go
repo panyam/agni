@@ -163,3 +163,58 @@ func TestDeclaredNetRole(t *testing.T) {
 		}
 	}
 }
+
+// TestSkippedRefDes (agni issue 311): IPC-2581 is a board format, so it declines an unannotated
+// component the way the KiCad board reader does rather than recording it as a diagnostic. Only a
+// reader that KEEPS the part owes that, and a REF** on a fabrication artifact is usually a fiducial
+// or a mechanical part rather than something anybody is going to buy.
+//
+// The designator-less component is in the same test because it is the same guard: the geometry pass
+// already dropped those, so the netlist used to carry components the board had no placement for.
+// The last assertion is the one that matters — the two tiers agree on the component set.
+func TestSkippedRefDes(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	refs := map[string]bool{}
+	for _, c := range d.Components {
+		refs[c.RefDes] = true
+	}
+	for _, bad := range []string{"REF**", "C?1845", ""} {
+		if refs[bad] {
+			t.Errorf("netlist kept the component %q, which names no part", bad)
+		}
+	}
+	for _, want := range []string{"R1", "R2", "U1"} {
+		if !refs[want] {
+			t.Errorf("netlist dropped the real component %q; have %v", want, refs)
+		}
+	}
+	// A connection to a skipped component would claim a pin on a part that is not in the design.
+	// Asserted against the component set rather than against skipRefDes: a test that reaches for
+	// the production predicate to decide what counts as a failure cannot fail when that predicate
+	// is what broke.
+	for _, n := range d.Nets {
+		for _, c := range n.Connections {
+			if !refs[c.ComponentRef] {
+				t.Errorf("net %q keeps a connection to %q, which is not a component", n.Name, c.ComponentRef)
+			}
+		}
+	}
+
+	g, err := ReadBoardGeometry(bytes.NewReader(readFixture(t, "board_geom.xml")), "board_geom.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range g.Placements {
+		if p.RefDes == "REF**" || p.RefDes == "" {
+			t.Errorf("board geometry kept the placement %q, which names no part", p.RefDes)
+		}
+	}
+	for _, gr := range g.Graphics {
+		if gr.GetRefDes() == "REF**" {
+			t.Error("board geometry kept body graphics for an unannotated component")
+		}
+	}
+}
