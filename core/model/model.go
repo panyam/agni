@@ -52,6 +52,11 @@ type Model interface {
 	// from a design where the connections were never drawn. Rules that read pin or connectivity
 	// facts are gated to inconclusive while this is non-empty (check.Run).
 	UnresolvedSymbols() []*ir.UnresolvedSymbol
+	// UnannotatedComponents are the placeholder designators the source has not assigned yet ("R?",
+	// "C?"), one entry per placeholder with every placement wearing it. Unlike UnresolvedSymbols
+	// nothing was LOST in the read: the parts and their pins are all present. What is absent is an
+	// identity, so a consumer must not key on these designators (see internal/refdes).
+	UnannotatedComponents() []*ir.UnannotatedComponent
 	// traverse / pin-role: a pin's electrical direction, or the unspecified zero value when the
 	// source carries no part-type pin data (so direction-based rules do not fire).
 	PinDir(refDes, pin string) ir.PinDirection

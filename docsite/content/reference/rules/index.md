@@ -101,4 +101,5 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [pin-net-conflict](pin-net-conflict/) | built-in | info | A pin appears in more than one net's connections — malformed input. |
 | [rail-not-classified](rail-not-classified/) | built-in | warning | A net named for a voltage feeds a supply pin but is not classified as a rail, so the rail rules cannot see it. |
 | [symbol-unresolved](symbol-unresolved/) | built-in | warning | A symbol reference did not resolve, so its placements carry no pins. |
+| [unannotated-components](unannotated-components/) | built-in | warning | Parts still carry a placeholder designator instead of an assigned one. |
 
