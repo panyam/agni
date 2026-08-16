@@ -2,23 +2,14 @@
 // library's API and worker wiring. The worker is served as a static bundle (see build.mjs) and runs
 // entirely in the browser, so nothing about the datasheet leaves the deployment boundary (C16).
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
+import type { PdfSource, RenderedPage } from "./pdfsource.js";
 
 // The pdf.js worker is bundled to /static/pdf.worker.js by build.mjs. Same-origin: no CDN, no
 // network beyond the local `agni serve`.
 GlobalWorkerOptions.workerSrc = "/static/pdf.worker.js";
 
 export type { PDFDocumentProxy };
-
-// RenderedPage is one datasheet page rasterized at a chosen scale, carrying the source page size in
-// PDF points so a doc-IR BBox (page-local, top-left origin, y-down, points) maps to canvas pixels
-// by multiplying by scale.
-export interface RenderedPage {
-  pageNumber: number; // 1-based
-  canvas: HTMLCanvasElement;
-  widthPts: number;
-  heightPts: number;
-  scale: number; // effective device pixels per PDF point
-}
+export type { PdfSource, RenderedPage } from "./pdfsource.js";
 
 // loadPdf opens the document; the caller renders pages on demand (page navigation and zoom each
 // re-render a single page rather than rasterizing the whole document up front).
@@ -48,3 +39,7 @@ export function rawDatasheetUrl(mount: string, path: string): string {
   const segs = [mount, ...path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
   return "/datasheets/raw/" + segs.join("/");
 }
+
+// realPdfSource is the shipped implementation. The composition root (datasheets.ts) passes it to
+// the workbench, which knows only the port, so a test supplies a stub without loading pdf.js.
+export const realPdfSource: PdfSource = { loadPdf, renderPage, rawDatasheetUrl };

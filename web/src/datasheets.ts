@@ -8,6 +8,7 @@
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { dsTreeIsland, type DsTreeView } from "./dstree.js";
 import { workbenchIsland, type RegionView } from "./regionview.js";
+import { realPdfSource } from "./pdfrender.js";
 import { paramsPanelIsland } from "./paramspanel.js";
 import type { Parameter } from "./gen/agni/v1/param/param_pb.js";
 import { currentDs, dsToUrl, hasDatasheet, type DsLocation } from "./dsrouter.js";
@@ -45,7 +46,8 @@ class DatasheetsRoot extends BaseComponent {
     // The workbench pushes its parameter list to the params panel (forward ref: the panel is built
     // after the workbench so its onLocate can call workbench.locate).
     let pushParams: (p: Parameter[]) => void = () => {};
-    const region = workbenchIsland(viewEl, this._eventBus, (p) => pushParams(p));
+    // pdf.js enters the app HERE and nowhere else, so the workbench can be rendered by a test.
+    const region = workbenchIsland(viewEl, this._eventBus, (p) => pushParams(p), realPdfSource);
     const params = paramsPanelIsland(paramsEl, this._eventBus, (page, regionId) => region.view.locate(page, regionId));
     pushParams = params.view.setState;
 

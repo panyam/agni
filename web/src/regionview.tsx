@@ -7,7 +7,7 @@ import type { Document } from "./gen/agni/v1/doc/doc_pb.js";
 import type { PartSpec, Parameter, Pin, PinRelation } from "./gen/agni/v1/param/param_pb.js";
 import type { ValidationProblem } from "./gen/agni/v1/webapi/datasheet_pb.js";
 import { datasheetClient } from "./api.js";
-import { loadPdf, renderPage, rawDatasheetUrl, type PDFDocumentProxy, type RenderedPage } from "./pdfrender.js";
+import type { PdfSource, PDFDocumentProxy, RenderedPage } from "./pdfsource.js";
 import {
   wheelZoomFactor,
   zoomAboutClamped,
@@ -125,7 +125,12 @@ function downloadText(name: string, text: string): void {
   URL.revokeObjectURL(url);
 }
 
-function Workbench(props: { state: () => RegionViewState | null; onParamsChange: (p: Parameter[]) => void; bridge: { locate: (p: number, r: string) => void } }) {
+function Workbench(props: {
+  state: () => RegionViewState | null;
+  onParamsChange: (p: Parameter[]) => void;
+  bridge: { locate: (p: number, r: string) => void };
+  pdf: PdfSource;
+}) {
   const [selected, setSelected] = createSignal("");
   const [rev, setRev] = createSignal(0);
   const [note, setNote] = createSignal("");
@@ -186,7 +191,7 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
     async (s: { mount: string; path: string; k: number }) => {
       const client = datasheetClient();
       const [doc, docResp, part, ann] = await Promise.all([
-        loadPdf(rawDatasheetUrl(s.mount, s.path)),
+        props.pdf.loadPdf(props.pdf.rawDatasheetUrl(s.mount, s.path)),
         client.getDocument({ uri: artifactUri(s.mount, s.path) }),
         client.getPartSpec({ uri: artifactUri(s.mount, s.path) }),
         client.getAnnotations({ uri: artifactUri(s.mount, s.path) }),
@@ -245,7 +250,7 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
       const d = pdfDoc();
       return d ? { d, pn: pageNum(), s: renderScale() } : null;
     },
-    async (src: { d: PDFDocumentProxy; pn: number; s: number }) => renderPage(src.d, src.pn, src.s),
+    async (src: { d: PDFDocumentProxy; pn: number; s: number }) => props.pdf.renderPage(src.d, src.pn, src.s),
   );
   // The resource goes undefined while it refetches, which would blank the page mid-zoom. `shown`
   // holds the last completed render so the previous bitmap stays up, stretched to the live scale,
@@ -870,14 +875,21 @@ function Workbench(props: { state: () => RegionViewState | null; onParamsChange:
 // workbenchIsland mounts the datasheet workbench (page viewer + marquee edit + transcribe panel).
 // onParamsChange pushes the current parameter list to the params panel; the returned view lets the
 // tree open a datasheet and the params panel locate one. Framework reactivity stays in this leaf (C11).
+//
+// pdf is passed in rather than imported, and is not optional. A default would put an import of
+// pdfrender.js in this file, and importing that module runs pdf.js's canvas setup, which needs a
+// DOMMatrix jsdom does not have — so the default would make this component unrenderable by a test
+// even when the test supplies its own source. It is the only injected dependency: the datasheet
+// client is reached through api.js, which a test mocks at the module boundary like every other page.
 export function workbenchIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   onParamsChange: (p: Parameter[]) => void,
+  pdf: PdfSource,
 ): { island: SolidIsland; view: RegionView } {
   const [state, setState] = signalView<RegionViewState | null>(null);
   const bridge = { locate: (_p: number, _r: string) => {} };
-  const island = new SolidIsland("ds-view", el, () => <Workbench state={state} onParamsChange={onParamsChange} bridge={bridge} />, eventBus);
+  const island = new SolidIsland("ds-view", el, () => <Workbench state={state} onParamsChange={onParamsChange} bridge={bridge} pdf={pdf} />, eventBus);
   return {
     island,
     view: { load: (mount, path) => setState({ mount, path }), locate: (p, r) => bridge.locate(p, r) },
