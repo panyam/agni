@@ -30,6 +30,10 @@ class DatasheetsRoot extends BaseComponent {
   // view/tree are exposed so the boot code can drive a deep-link restore once the islands init.
   view: RegionView | null = null;
   tree: DsTreeView | null = null;
+  // open is exposed for the same reason, and it is what the restore SHOULD drive: the boot code
+  // used to reach past it to view.load + tree.setState, which is the same sequence minus whatever
+  // open gains later. It gained recording, and a deep-linked datasheet stopped being recorded.
+  open: ((mount: string, path: string) => void) | null = null;
 
   override performLocalInit(): LCMComponent[] {
     const children: LCMComponent[] = [];
@@ -52,14 +56,16 @@ class DatasheetsRoot extends BaseComponent {
       region.view.load(mount, path);
       treeView?.setState({ mount, path });
       syncUrl({ mount, path });
-      // Feeds the landing page's Recent list. This is the single "show this datasheet" action, so
-      // a tree click and a URL restore both land here and both count as an opening.
+      // Feeds the landing page's Recent list. Every way of showing a datasheet goes through here,
+      // including a deep link and back/forward, so arriving by URL counts as an opening the way it
+      // does in the viewer.
       noteOpen({ kind: "datasheet", mount, path, label: baseName(path) });
     };
     const tree = dsTreeIsland(treeEl, this._eventBus, open);
     treeView = tree.view;
     this.view = region.view;
     this.tree = tree.view;
+    this.open = open;
 
     children.push(tree.island, region.island, params.island);
     return children;
@@ -77,8 +83,9 @@ void controller.initializeFromRoot(root).then(() => {
     if (!hasDatasheet(loc)) return; // bare /datasheets, leave the empty shell
     restoring = true;
     try {
-      root.view?.load(loc.mount, loc.path);
-      root.tree?.setState({ mount: loc.mount, path: loc.path });
+      // The same action a tree click takes. syncUrl is a no-op while restoring, so replaying a URL
+      // through it pushes no duplicate history entry.
+      root.open?.(loc.mount, loc.path);
     } finally {
       restoring = false;
     }
