@@ -281,6 +281,29 @@ is geometry volume and rendering, not the boundary.
 - Board layer visibility is client-side in both renderers, through CSS strata and draw-loop skips,
   never a render parameter.
 
+## A library that cannot load is a component that cannot be tested
+
+The datasheet workbench (`regionview.tsx`, `transcribe.tsx`) went untested for a long time, and the
+reason was one import. `pdfrender.ts` sets pdf.js's worker options and pulls in its canvas module at
+LOAD time, and that module reaches for `DOMMatrix`, which jsdom does not have. Any file importing it
+therefore throws before a single test runs, whatever the test intended to assert. An 885-line
+component with no component test looked like a testing gap; it was an import graph.
+
+The fix is the split now in place, and it generalizes to any browser-only library:
+
+- `pdfsource.ts` holds the PORT (`PdfSource`, `RenderedPage`) and imports nothing at runtime. Naming
+  a pdf.js TYPE is free, because `import type` is erased.
+- `pdfrender.ts` holds the implementation and exports `realPdfSource`.
+- `regionview.tsx` names only the port, and takes it as a required parameter. **A default would
+  reintroduce the problem**, since a default value is a runtime import of the implementation.
+- `datasheets.ts`, the composition root, is the single place pdf.js enters the app.
+
+So a test supplies a stub page and renders the real workbench: `regionview.test.tsx` covers the
+non-passive wheel listener, the live-transform / settled-rasterize split, and fit-on-first-page.
+`transcribe.test.tsx` needed no seam at all, only a stub handlers object, and found a swallowed
+keystroke on its first run (a signal was set before the event value was read, so Solid wrote the
+empty derived id back into the field mid-handler).
+
 ## Wiring a new panel
 
 **FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island

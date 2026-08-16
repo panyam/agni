@@ -150,7 +150,19 @@ function PinEditor(props: { onAdd: (f: NewPinFields) => void; taken: () => strin
     <div class="tx-editor">
       <label class="tx-field">Pin name<input placeholder="VCCA" value={name()} onInput={(e) => setName(e.currentTarget.value)} /></label>
       <label class="tx-field">Id
-        <input placeholder="vcca" value={effectiveId()} onInput={(e) => { setIdTouched(true); setId(e.currentTarget.value); }} />
+        {/* Read the typed value BEFORE touching either signal. Setting idTouched first flips
+            effectiveId from the derived name to id(), which is still empty, and Solid writes that
+            empty string back into this input synchronously — so the read that followed returned ""
+            and the first character typed here was swallowed. */}
+        <input
+          placeholder="vcca"
+          value={effectiveId()}
+          onInput={(e) => {
+            const typed = e.currentTarget.value;
+            setIdTouched(true);
+            setId(typed);
+          }}
+        />
       </label>
       <label class="tx-field">Function
         <select value={fn()} onChange={(e) => setFn(Number(e.currentTarget.value) as PinFunction)}>

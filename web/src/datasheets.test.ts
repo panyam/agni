@@ -33,6 +33,13 @@ vi.mock("./regionview.js", () => ({
 vi.mock("./dstree.js", () => ({
   dsTreeIsland: () => ({ island: stubIsland(), view: { setState: () => {} } }),
 }));
+// pdf.js enters the app in this file's subject (the composition root hands realPdfSource to the
+// workbench), and importing it runs canvas setup that needs a DOMMatrix jsdom does not have. The
+// workbench itself is mocked below, so this stub is never called; it exists to keep the import from
+// loading the library.
+vi.mock("./pdfrender.js", () => ({
+  realPdfSource: { loadPdf: async () => ({}), renderPage: async () => ({}), rawDatasheetUrl: () => "" },
+}));
 vi.mock("./paramspanel.js", () => ({
   paramsPanelIsland: () => ({ island: stubIsland(), view: { setState: () => {} } }),
 }));
