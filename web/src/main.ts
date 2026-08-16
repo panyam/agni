@@ -34,6 +34,7 @@ import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
+import { baseName, noteOpen } from "./recents.js";
 
 // restoring guards the URL feedback loop: while we apply a URL to the presenter (initial load or
 // back/forward), the presenter's onLocation still fires, but we must not push a new history entry
@@ -305,6 +306,10 @@ class AppRoot extends BaseComponent {
           if (hasFile(loc)) {
             openFile = { mount: loc.mount, path: loc.path };
             compare.setEnabled(true);
+            // The landing page's Recent list is written HERE rather than at the click that opened
+            // the design, so a deep link and a back/forward restore count as openings too: what the
+            // list is for is "where was I", and arriving by URL is arriving.
+            noteOpen({ kind: "design", mount: loc.mount, path: loc.path, label: baseName(loc.path) });
           }
           syncUrl(loc);
         },

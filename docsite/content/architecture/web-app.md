@@ -72,6 +72,28 @@ into, so there is no client-side HTML skeleton to drift from the server's.
 The two server layers are deliberate. The transport-neutral services are the reusable surface,
 and the Connect handlers are glue over them.
 
+## The pages
+
+Four server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
+
+| URL | Page | Bundle | What it is |
+|---|---|---|---|
+| `/` | `LandingPage` | `landing.js` | Where am I going: the destinations, this browser's recents, and the designs the server's projects declare. Also the catch-all, so an unmatched URL offers choices instead of 404ing |
+| `/designs/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
+| `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: WebGL canvas, checks, query, diff |
+| `/datasheets/files/<mount>/<path>` | `DatasheetsPage` | `datasheets.js` | The extraction workbench, its own tree included |
+
+The `/designs/` space holds two pages behind one pattern, split by the trailing `/view`, because a
+`ServeMux` pattern's `{path...}` wildcard must be its last segment. `/files/` is the retired
+pre-WS9-049 space and permanently redirects.
+
+Recents are per-user browser state (`web/src/recents.ts`, localStorage), written where a design or
+datasheet is OPENED rather than previewed. They are not server state: there is no user identity to
+key a list to, so one visitor's recents would be everyone's, and the project and design resources are
+read-only on purpose ([C23](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md)). The landing
+page's other list is the opposite kind of thing, declared in `project.yaml` and `design.yaml` and
+shared by everyone the server serves.
+
 ## The mount model
 
 `agni serve [webdir] --mount name=path`, repeatable. The positional argument is the web asset

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import { loadRecents } from "./recents.js";
 import { join } from "node:path";
 
 // The composition root, under test at last (agni issue 136).
@@ -196,5 +197,17 @@ describe("a deep-link open reaches every service the page needs", () => {
   // wiring is spelled.
   it("renders the resolved project into the bar", () => {
     expect(document.querySelector(".projbar")?.textContent ?? "").toContain("Demo project");
+  });
+});
+
+// The landing page's Recent list is written by the viewer, not by the landing page, so the wiring
+// that feeds it is invisible from either file alone: recents.ts has its own tests and the landing
+// panels have theirs, and both stay green if main.ts never records anything. The deep-link boot
+// above is exactly an opening, so the store is an observable of it.
+describe("opening a design feeds the landing page's Recent list", () => {
+  it("records the opened design", () => {
+    const got = loadRecents();
+    expect(got.map((r) => `${r.mount}/${r.path}`), "the deep-linked design was not recorded").toContain("m/d/b.edn");
+    expect(got[0].kind).toBe("design"); // routed back to the viewer, not the workbench
   });
 });
