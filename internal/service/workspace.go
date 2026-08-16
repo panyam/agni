@@ -12,6 +12,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
+
 	"github.com/panyam/agni/internal/artifact"
 	"sort"
 	"strings"
@@ -46,12 +48,49 @@ type Workspace interface {
 	ListDir(ctx context.Context, uri artifact.URI) ([]DirEntry, error)
 }
 
-// FormatForExt returns the design format label for a file name, or "" when the tree should
-// show it disabled (no reader). It derives from the formats registry, so adding a reader
-// there labels its extension here for free. Exported so an adapter can pre-filter if it
-// wants; the service uses it.
+// FormatForExt returns the design format label for a file name, or "" when no reader understands
+// it. It derives from the formats registry, so adding a reader there labels its extension here for
+// free. Exported so an adapter can pre-filter if it wants; the service uses it.
 func FormatForExt(name string) string {
 	return formats.NameForExt(name)
+}
+
+// datasheetExt is the one extension the extraction workbench opens. It sits here rather than in
+// readers/formats because that registry means "a DESIGN reader exists for this", and registering
+// PDF there would make `agni stats part.pdf` look supported. This is the single definition: the
+// raw-PDF endpoint and both browser trees ask this package rather than testing the suffix again.
+const datasheetExt = ".pdf"
+
+// KindForName returns which client opens a file. A design wins over a datasheet if an extension is
+// somehow both, since the registry is the extensible half and a reader claiming an extension is a
+// stronger statement than this package's one constant.
+func KindForName(name string) webapi.FileKind {
+	if FormatForExt(name) != "" {
+		return webapi.FileKind_FILE_KIND_DESIGN
+	}
+	if strings.EqualFold(path.Ext(name), datasheetExt) {
+		return webapi.FileKind_FILE_KIND_DATASHEET
+	}
+	return webapi.FileKind_FILE_KIND_UNSPECIFIED
+}
+
+// opensSet indexes a request's declared kinds. UNSPECIFIED is dropped rather than honoured: a
+// client asking to open "the files nothing opens" would prune nothing, which is the same as not
+// asking, and reading it as a real kind would make every folder of lock files look openable.
+func opensSet(kinds []webapi.FileKind) map[webapi.FileKind]bool {
+	if len(kinds) == 0 {
+		return nil
+	}
+	set := make(map[webapi.FileKind]bool, len(kinds))
+	for _, k := range kinds {
+		if k != webapi.FileKind_FILE_KIND_UNSPECIFIED {
+			set[k] = true
+		}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return set
 }
 
 // WorkspaceService serves the mounted folders and their contents over an injected Workspace
@@ -66,10 +105,11 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 	return &WorkspaceService{ws: ws}
 }
 
-// ListMounts returns the configured mounts in configuration order. It never errors. With
-// PruneEmptyMounts set, a mount with no readable design anywhere beneath it is left out and
-// counted in PrunedMounts, which is the same rule ListDir applies to subdirectories, applied to
-// the roots: a mount serving only datasheets is a root the design tree can only ever show empty.
+// ListMounts returns the configured mounts in configuration order. It never errors. With Opens set,
+// a mount holding none of those kinds anywhere beneath it is left out and counted in PrunedMounts,
+// which is the same rule ListDir applies to subdirectories, applied to the roots: a mount serving
+// only datasheets is a root the DESIGN tree can only ever show empty, and the datasheets tree asks
+// the same question with the other answer.
 //
 // The walk budget is per call, shared by every mount, so a configuration of many roots cannot turn
 // one page load into many full walks. Sharing it means a later mount can inherit an exhausted
@@ -77,13 +117,14 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 // much rather than too little.
 func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMountsRequest) (*webapi.ListMountsResponse, error) {
 	resp := &webapi.ListMountsResponse{}
+	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, m := range s.ws.Mounts() {
 		uri, err := artifact.New(m.Name, "")
 		if err != nil {
 			return nil, fmt.Errorf("%w: mount %q cannot be addressed: %s", ErrInternal, m.Name, err)
 		}
-		if req.GetPruneEmptyMounts() && !s.hasDesignFile(ctx, uri, 0, &pruneBudget) {
+		if opens != nil && !s.hasOpenableFile(ctx, uri, opens, 0, &pruneBudget) {
 			resp.PrunedMounts++
 			continue
 		}
@@ -102,14 +143,14 @@ const (
 	pruneMaxDirs  = 2000
 )
 
-// hasDesignFile reports whether u's subtree holds at least one file a reader understands. It
-// reads through the Workspace port like everything else here (C13), never os, and stops at the
+// hasOpenableFile reports whether u's subtree holds at least one file of a kind the caller opens.
+// It reads through the Workspace port like everything else here (C13), never os, and stops at the
 // first hit.
 //
 // It answers true when it cannot finish: a bound reached, a cancelled request, a directory the
-// adapter refuses. A folder wrongly shown costs a click, a folder wrongly hidden costs a design,
-// so the uncertain answer is the visible one.
-func (s *WorkspaceService) hasDesignFile(ctx context.Context, u artifact.URI, depth int, budget *int) bool {
+// adapter refuses. A folder wrongly shown costs a click, a folder wrongly hidden costs a file, so
+// the uncertain answer is the visible one.
+func (s *WorkspaceService) hasOpenableFile(ctx context.Context, u artifact.URI, opens map[webapi.FileKind]bool, depth int, budget *int) bool {
 	if depth > pruneMaxDepth || *budget <= 0 || ctx.Err() != nil {
 		return true
 	}
@@ -118,8 +159,8 @@ func (s *WorkspaceService) hasDesignFile(ctx context.Context, u artifact.URI, de
 	if err != nil {
 		return true
 	}
-	// This level's files first, subdirectories after: a design one level down is the common case,
-	// and finding it costs one listing instead of a walk to the bottom of the first branch.
+	// This level's files first, subdirectories after: a match one level down is the common case, and
+	// finding it costs one listing instead of a walk to the bottom of the first branch.
 	var subdirs []artifact.URI
 	for _, de := range entries {
 		if strings.HasPrefix(de.Name, ".") {
@@ -133,22 +174,22 @@ func (s *WorkspaceService) hasDesignFile(ctx context.Context, u artifact.URI, de
 			subdirs = append(subdirs, child)
 			continue
 		}
-		if FormatForExt(de.Name) != "" {
+		if opens[KindForName(de.Name)] {
 			return true
 		}
 	}
 	for _, d := range subdirs {
-		if s.hasDesignFile(ctx, d, depth+1, budget) {
+		if s.hasOpenableFile(ctx, d, opens, depth+1, budget) {
 			return true
 		}
 	}
 	return false
 }
 
-// ListDir lists one level of a mount: its subdirectories and the design files a reader
-// understands, directories first and each group sorted by name. With PruneEmptyDirs set, a
-// subdirectory with no readable design anywhere beneath it is left out, so the tree stops
-// offering folders it can only ever show empty. Errors are classified for the transport: a
+// ListDir lists one level of a mount: its subdirectories and its files, directories first and each
+// group sorted by name, every file labeled with its format and the kind of client that opens it.
+// With Opens set, a subdirectory holding none of those kinds anywhere beneath it is left out, so a
+// tree stops offering folders it can only ever show empty. Errors are classified for the transport: a
 // containment violation keeps ErrInvalidPath; anything else from the adapter (unknown mount,
 // missing directory) is wrapped as ErrNotFound.
 func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirRequest) (*webapi.ListDirResponse, error) {
@@ -165,6 +206,7 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 	}
 
 	var dirs, files []*webapi.DirEntry
+	opens := opensSet(req.GetOpens())
 	pruneBudget := pruneMaxDirs
 	for _, de := range entries {
 		if strings.HasPrefix(de.Name, ".") {
@@ -177,16 +219,21 @@ func (s *WorkspaceService) ListDir(ctx context.Context, req *webapi.ListDirReque
 			continue
 		}
 		if de.IsDir {
-			if req.GetPruneEmptyDirs() && !s.hasDesignFile(ctx, entry, 1, &pruneBudget) {
+			if opens != nil && !s.hasOpenableFile(ctx, entry, opens, 1, &pruneBudget) {
 				continue
 			}
 			dirs = append(dirs, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), IsDir: true})
 			continue
 		}
-		// Every non-dotfile is listed, with an unrecognized one carrying an empty format, so each
-		// client decides what to show: the design tree hides them, the datasheets tree keeps the
-		// PDFs among them.
-		files = append(files, &webapi.DirEntry{Name: de.Name, Uri: entry.String(), Format: FormatForExt(de.Name)})
+		// Every non-dotfile is listed, labeled with the kind of client that opens it (UNSPECIFIED
+		// for one nothing opens), so each tree hides what it cannot open by reading the label rather
+		// than by re-deriving the rule from the extension.
+		files = append(files, &webapi.DirEntry{
+			Name:   de.Name,
+			Uri:    entry.String(),
+			Format: FormatForExt(de.Name),
+			Kind:   KindForName(de.Name),
+		})
 	}
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name < dirs[j].Name })
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })

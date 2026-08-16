@@ -3,8 +3,9 @@ import { artifactUri, uriPath } from "./uri.js";
 import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
-import { WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { FileKind, WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { workspaceClient } from "./api.js";
+import { DATASHEET_OPENS, hiddenNote } from "./treeprune.js";
 
 type WsClient = Client<typeof WorkspaceService>;
 
@@ -18,13 +19,6 @@ export interface DsTreeState {
 // DsTreeView is the handle the boot code pushes the open datasheet to.
 export interface DsTreeView {
   setState: (s: DsTreeState) => void;
-}
-
-// isDatasheet reports whether a file is a datasheet the workbench lists. WorkspaceService returns
-// every file (PDFs come back with an empty format, since agni has no PDF *design* reader), so the
-// datasheets tree filters by extension here, the way the viewer tree filters by reader format.
-function isDatasheet(name: string): boolean {
-  return name.toLowerCase().endsWith(".pdf");
 }
 
 interface Ctx {
@@ -68,7 +62,10 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   const loadEntries = async (): Promise<void> => {
     if (entries() !== null) return;
     try {
-      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path) });
+      // `opens` is this tree declaring what it can show, which is what lets the server leave out
+      // folders with no datasheet anywhere beneath them. The viewer tree declares DESIGN and gets
+      // the mirror image of this listing.
+      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path), opens: DATASHEET_OPENS });
       setEntries(resp.entries);
     } catch (e) {
       setError(String(e));
@@ -97,9 +94,10 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
       <Show when={open()}>
         <ul class="children">
           <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
-          {/* Only directories and datasheet (.pdf) files; every other listed file is hidden, the
-              way the viewer tree hides files with no reader (filetree.tsx). */}
-          <For each={(entries() ?? []).filter((e) => e.isDir || isDatasheet(e.name))}>
+          {/* Only directories and datasheets; every other listed file is hidden, the way the viewer
+              tree hides what no reader opens. The kind comes from the server, so "what is a
+              datasheet" is defined once rather than re-derived from the extension here. */}
+          <For each={(entries() ?? []).filter((e) => e.isDir || e.kind === FileKind.DATASHEET)}>
             {(e) =>
               e.isDir ? (
                 <DirNode ctx={props.ctx} mount={props.mount} path={uriPath(e.uri)} label={e.name} depth={props.depth + 1} />
@@ -116,16 +114,26 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
 
 function DatasheetTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
+  const [pruned, setPruned] = createSignal(0);
   const [error, setError] = createSignal<string | null>(null);
+  // A mount of boards is as useless to this page as a mount of PDFs is to the viewer, so it prunes
+  // the roots on the same terms and reports the count for the same reason: a configured mount that
+  // simply vanishes reads as a broken mount.
   props.ctx.client
-    .listMounts({})
-    .then((r) => setMounts(r.mounts))
+    .listMounts({ opens: DATASHEET_OPENS })
+    .then((r) => {
+      setMounts(r.mounts);
+      setPruned(r.prunedMounts);
+    })
     .catch((e) => setError(String(e)));
 
   return (
     <ul class="tree">
       <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
       <For each={mounts()}>{(m) => <DirNode ctx={props.ctx} mount={m.name} path="" label={m.name} depth={0} />}</For>
+      <Show when={pruned() > 0}>
+        <li class="note">{hiddenNote(pruned(), mounts().length, "datasheets")}</li>
+      </Show>
     </ul>
   );
 }

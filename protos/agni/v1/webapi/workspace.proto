@@ -16,15 +16,15 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 // `mount://<mount>/<path>` URI whose authority is a mount, never an absolute host path.
 service WorkspaceService {
   // ListMounts returns the mounts the server is serving, in the order they were configured, and
-  // never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
-  // design under them.
+  // never fails for a running server. Set opens to leave out the ones holding nothing the caller
+  // can open.
   rpc ListMounts(ListMountsRequest) returns (ListMountsResponse);
 
   // ListDir lists one directory level inside a mount: its subdirectories and its files, each file
   // labeled with the reader that would open it. The client addresses a location by an artifact URI
   // whose authority is a mount, never an absolute host path; the server resolves it inside that
-  // mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
-  // out subdirectories with no readable design anywhere beneath them.
+  // mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
+  // subdirectories holding nothing the caller can open, at any depth.
   rpc ListDir(ListDirRequest) returns (ListDirResponse);
 }
 
@@ -42,24 +42,44 @@ message Mount {
 }
 
 message ListMountsRequest {
-  // prune_empty_mounts drops mounts with no file any reader understands anywhere beneath them: the
-  // same rule prune_empty_dirs applies inside a mount, applied to the roots. It is opt-in for the
-  // same reason and by the same measure of "empty", since a datasheets browser roots on a mount of
-  // PDFs, which no design reader opens.
+  // opens declares what this client can open, on the same terms as ListDirRequest.opens, and
+  // setting it drops mounts with none of those kinds anywhere beneath them: the same rule applied
+  // to the roots. Leave it empty to prune nothing.
   //
   // Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
-  // find it in the sidebar has no way to tell "this mount holds no designs" from "this mount failed
-  // to resolve", so a client that prunes should say when it is showing fewer roots than the server
-  // was given rather than render a silently shorter list.
-  bool prune_empty_mounts = 1;
+  // find it in the sidebar has no way to tell "this mount holds nothing I open" from "this mount
+  // failed to resolve", so a client that prunes should say when it is showing fewer roots than the
+  // server was given rather than render a silently shorter list. pruned_mounts is what it says it
+  // with.
+  repeated FileKind opens = 2;
+
+  reserved 1; // prune_empty_mounts, replaced by opens
 }
 
 message ListMountsResponse {
   repeated Mount mounts = 1;
-  // pruned_mounts counts the mounts prune_empty_mounts left out, so a client can tell the user its
+  // pruned_mounts counts the mounts opens left out, so a client can tell the user its
   // sidebar is shorter than the server's configuration rather than leaving them to wonder where a
   // mount went. Zero when pruning is off.
   int32 pruned_mounts = 2;
+}
+
+// FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
+// the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
+// it is EDIF or KiCad.
+//
+// The set is closed and server-defined. An out-of-module reader registering through readers/formats
+// adds an extension to FILE_KIND_DESIGN; it does not add a kind, because a kind is a page in this
+// application rather than a capability of the engine.
+enum FileKind {
+  // FILE_KIND_UNSPECIFIED is a file no page opens (a library file, a lock file, a sidecar) and is
+  // also what an unset field decodes to, so a client that ignores kinds sees them all as one.
+  FILE_KIND_UNSPECIFIED = 0;
+  // FILE_KIND_DESIGN is a file some reader in the registry understands: the viewer's material.
+  FILE_KIND_DESIGN = 1;
+  // FILE_KIND_DATASHEET is a vendor document the extraction workbench opens (a PDF). No DESIGN
+  // reader opens one, which is exactly why pruning by design format hid the workbench's folders.
+  FILE_KIND_DATASHEET = 2;
 }
 
 // DirEntry is one item in a directory listing: a subdirectory or a supported design file.
@@ -78,19 +98,31 @@ message DirEntry {
   // uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
   // (for a file).
   string uri = 4;
+  // kind is which client opens this file, FILE_KIND_UNSPECIFIED for a directory and for a file no
+  // page opens. It is served rather than left to the client so that "what is a datasheet" has one
+  // definition: the browser used to decide by extension, which put a second copy of the rule in
+  // TypeScript, where nothing could notice it disagreeing with the server.
+  FileKind kind = 5;
 }
 
 message ListDirRequest {
   // uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
   // mount root.
   string uri = 1;
-  // prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
-  // any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
-  // is per-client. A datasheets browser lists PDFs, which no design reader opens, so pruning by
-  // design format would hide exactly the folders it wants. Answering it costs a bounded walk of
-  // each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
-  // a folder wrongly shown costs a click and one wrongly hidden costs a design.
-  bool prune_empty_dirs = 2;
+  // opens declares what this client can open, and setting it drops subdirectories whose subtree
+  // holds none of those kinds at any depth: the folders this client can only ever show empty.
+  //
+  // It replaces a prune_empty_dirs bool, which could only mean designs. The bool was opt-in
+  // precisely because "empty" is per-client, which is the same fact this field states directly
+  // instead of leaving the definition on the server and the exception in the comment. Leave it
+  // empty to prune nothing.
+  //
+  // Answering it costs a bounded walk of each subtree. A directory the walk cannot settle (bound
+  // reached, adapter error) is kept, since a folder wrongly shown costs a click and one wrongly
+  // hidden costs a file.
+  repeated FileKind opens = 3;
+
+  reserved 2; // prune_empty_dirs, replaced by opens
 }
 
 message ListDirResponse {

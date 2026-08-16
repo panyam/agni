@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { artifactUri, uriPath } from "./uri.js";
+import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { comparePickerIsland } from "./comparepicker.js";
 
 // The picker's tree builds its own client via workspaceClient(); swap in an in-memory workspace,
@@ -13,7 +14,14 @@ vi.mock("./api.js", () => ({
   }),
 }));
 
-const file = (name: string, path: string, format = "kicad") => ({ name, uri: artifactUri("m", path), isDir: false, format });
+const file = (name: string, path: string, format = "kicad") => ({
+  name,
+  uri: artifactUri("m", path),
+  isDir: false,
+  format,
+  // The tree filters on the server's kind label, so a fixture without one is invisible.
+  kind: format ? FileKind.DESIGN : FileKind.UNSPECIFIED,
+});
 
 function mountPicker() {
   const host = document.createElement("div");

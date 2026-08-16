@@ -44,14 +44,14 @@ const (
 // WorkspaceServiceClient is a client for the agni.v1.webapi.WorkspaceService service.
 type WorkspaceServiceClient interface {
 	// ListMounts returns the mounts the server is serving, in the order they were configured, and
-	// never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
-	// design under them.
+	// never fails for a running server. Set opens to leave out the ones holding nothing the caller
+	// can open.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
 	// labeled with the reader that would open it. The client addresses a location by an artifact URI
 	// whose authority is a mount, never an absolute host path; the server resolves it inside that
-	// mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
-	// out subdirectories with no readable design anywhere beneath them.
+	// mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
+	// subdirectories holding nothing the caller can open, at any depth.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 }
 
@@ -100,14 +100,14 @@ func (c *workspaceServiceClient) ListDir(ctx context.Context, req *connect.Reque
 // WorkspaceServiceHandler is an implementation of the agni.v1.webapi.WorkspaceService service.
 type WorkspaceServiceHandler interface {
 	// ListMounts returns the mounts the server is serving, in the order they were configured, and
-	// never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
-	// design under them.
+	// never fails for a running server. Set opens to leave out the ones holding nothing the caller
+	// can open.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
 	// labeled with the reader that would open it. The client addresses a location by an artifact URI
 	// whose authority is a mount, never an absolute host path; the server resolves it inside that
-	// mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
-	// out subdirectories with no readable design anywhere beneath them.
+	// mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
+	// subdirectories holding nothing the caller can open, at any depth.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 }
 

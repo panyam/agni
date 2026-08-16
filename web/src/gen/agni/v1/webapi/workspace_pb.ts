@@ -2,15 +2,15 @@
 // @generated from file agni/v1/webapi/workspace.proto (package agni.v1.webapi, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/workspace.proto.
  */
 export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiLwoRTGlzdE1vdW50c1JlcXVlc3QSGgoScHJ1bmVfZW1wdHlfbW91bnRzGAEgASgIIlIKEkxpc3RNb3VudHNSZXNwb25zZRIlCgZtb3VudHMYASADKAsyFS5hZ25pLnYxLndlYmFwaS5Nb3VudBIVCg1wcnVuZWRfbW91bnRzGAIgASgFIkUKCERpckVudHJ5EgwKBG5hbWUYASABKAkSDgoGaXNfZGlyGAIgASgIEg4KBmZvcm1hdBgDIAEoCRILCgN1cmkYBCABKAkiNwoOTGlzdERpclJlcXVlc3QSCwoDdXJpGAEgASgJEhgKEHBydW5lX2VtcHR5X2RpcnMYAiABKAgiPAoPTGlzdERpclJlc3BvbnNlEikKB2VudHJpZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5EaXJFbnRyeTKzAQoQV29ya3NwYWNlU2VydmljZRJTCgpMaXN0TW91bnRzEiEuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5MaXN0TW91bnRzUmVzcG9uc2USSgoHTGlzdERpchIeLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXF1ZXN0Gh8uYWduaS52MS53ZWJhcGkuTGlzdERpclJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
+  fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSJtCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZCJMCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5KlQKCEZpbGVLaW5kEhkKFUZJTEVfS0lORF9VTlNQRUNJRklFRBAAEhQKEEZJTEVfS0lORF9ERVNJR04QARIXChNGSUxFX0tJTkRfREFUQVNIRUVUEAIyswEKEFdvcmtzcGFjZVNlcnZpY2USUwoKTGlzdE1vdW50cxIhLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1Jlc3BvbnNlEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
 
 /**
  * Mount is one configured root folder. Clients reference it by name in later calls;
@@ -55,19 +55,19 @@ export const MountSchema: GenMessage<Mount> = /*@__PURE__*/
  */
 export type ListMountsRequest = Message<"agni.v1.webapi.ListMountsRequest"> & {
   /**
-   * prune_empty_mounts drops mounts with no file any reader understands anywhere beneath them: the
-   * same rule prune_empty_dirs applies inside a mount, applied to the roots. It is opt-in for the
-   * same reason and by the same measure of "empty", since a datasheets browser roots on a mount of
-   * PDFs, which no design reader opens.
+   * opens declares what this client can open, on the same terms as ListDirRequest.opens, and
+   * setting it drops mounts with none of those kinds anywhere beneath them: the same rule applied
+   * to the roots. Leave it empty to prune nothing.
    *
    * Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
-   * find it in the sidebar has no way to tell "this mount holds no designs" from "this mount failed
-   * to resolve", so a client that prunes should say when it is showing fewer roots than the server
-   * was given rather than render a silently shorter list.
+   * find it in the sidebar has no way to tell "this mount holds nothing I open" from "this mount
+   * failed to resolve", so a client that prunes should say when it is showing fewer roots than the
+   * server was given rather than render a silently shorter list. pruned_mounts is what it says it
+   * with.
    *
-   * @generated from field: bool prune_empty_mounts = 1;
+   * @generated from field: repeated agni.v1.webapi.FileKind opens = 2;
    */
-  pruneEmptyMounts: boolean;
+  opens: FileKind[];
 };
 
 /**
@@ -87,7 +87,7 @@ export type ListMountsResponse = Message<"agni.v1.webapi.ListMountsResponse"> & 
   mounts: Mount[];
 
   /**
-   * pruned_mounts counts the mounts prune_empty_mounts left out, so a client can tell the user its
+   * pruned_mounts counts the mounts opens left out, so a client can tell the user its
    * sidebar is shorter than the server's configuration rather than leaving them to wonder where a
    * mount went. Zero when pruning is off.
    *
@@ -142,6 +142,16 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
    * @generated from field: string uri = 4;
    */
   uri: string;
+
+  /**
+   * kind is which client opens this file, FILE_KIND_UNSPECIFIED for a directory and for a file no
+   * page opens. It is served rather than left to the client so that "what is a datasheet" has one
+   * definition: the browser used to decide by extension, which put a second copy of the rule in
+   * TypeScript, where nothing could notice it disagreeing with the server.
+   *
+   * @generated from field: agni.v1.webapi.FileKind kind = 5;
+   */
+  kind: FileKind;
 };
 
 /**
@@ -164,16 +174,21 @@ export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
   uri: string;
 
   /**
-   * prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
-   * any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
-   * is per-client. A datasheets browser lists PDFs, which no design reader opens, so pruning by
-   * design format would hide exactly the folders it wants. Answering it costs a bounded walk of
-   * each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
-   * a folder wrongly shown costs a click and one wrongly hidden costs a design.
+   * opens declares what this client can open, and setting it drops subdirectories whose subtree
+   * holds none of those kinds at any depth: the folders this client can only ever show empty.
    *
-   * @generated from field: bool prune_empty_dirs = 2;
+   * It replaces a prune_empty_dirs bool, which could only mean designs. The bool was opt-in
+   * precisely because "empty" is per-client, which is the same fact this field states directly
+   * instead of leaving the definition on the server and the exception in the comment. Leave it
+   * empty to prune nothing.
+   *
+   * Answering it costs a bounded walk of each subtree. A directory the walk cannot settle (bound
+   * reached, adapter error) is kept, since a folder wrongly shown costs a click and one wrongly
+   * hidden costs a file.
+   *
+   * @generated from field: repeated agni.v1.webapi.FileKind opens = 3;
    */
-  pruneEmptyDirs: boolean;
+  opens: FileKind[];
 };
 
 /**
@@ -204,6 +219,48 @@ export const ListDirResponseSchema: GenMessage<ListDirResponse> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_workspace, 5);
 
 /**
+ * FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
+ * the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
+ * it is EDIF or KiCad.
+ *
+ * The set is closed and server-defined. An out-of-module reader registering through readers/formats
+ * adds an extension to FILE_KIND_DESIGN; it does not add a kind, because a kind is a page in this
+ * application rather than a capability of the engine.
+ *
+ * @generated from enum agni.v1.webapi.FileKind
+ */
+export enum FileKind {
+  /**
+   * FILE_KIND_UNSPECIFIED is a file no page opens (a library file, a lock file, a sidecar) and is
+   * also what an unset field decodes to, so a client that ignores kinds sees them all as one.
+   *
+   * @generated from enum value: FILE_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * FILE_KIND_DESIGN is a file some reader in the registry understands: the viewer's material.
+   *
+   * @generated from enum value: FILE_KIND_DESIGN = 1;
+   */
+  DESIGN = 1,
+
+  /**
+   * FILE_KIND_DATASHEET is a vendor document the extraction workbench opens (a PDF). No DESIGN
+   * reader opens one, which is exactly why pruning by design format hid the workbench's folders.
+   *
+   * @generated from enum value: FILE_KIND_DATASHEET = 2;
+   */
+  DATASHEET = 2,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.FileKind.
+ */
+export const FileKindSchema: GenEnum<FileKind> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_workspace, 0);
+
+/**
  * WorkspaceService exposes the read-only folders ("mounts") the server was started with
  * and their directory contents. Mounts are the security boundary: a client names an artifact by a
  * `mount://<mount>/<path>` URI whose authority is a mount, never an absolute host path.
@@ -213,8 +270,8 @@ export const ListDirResponseSchema: GenMessage<ListDirResponse> = /*@__PURE__*/
 export const WorkspaceService: GenService<{
   /**
    * ListMounts returns the mounts the server is serving, in the order they were configured, and
-   * never fails for a running server. Set prune_empty_mounts to leave out the ones with no readable
-   * design under them.
+   * never fails for a running server. Set opens to leave out the ones holding nothing the caller
+   * can open.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListMounts
    */
@@ -227,8 +284,8 @@ export const WorkspaceService: GenService<{
    * ListDir lists one directory level inside a mount: its subdirectories and its files, each file
    * labeled with the reader that would open it. The client addresses a location by an artifact URI
    * whose authority is a mount, never an absolute host path; the server resolves it inside that
-   * mount. Lazy, one level per call, so large trees stay responsive. Set prune_empty_dirs to leave
-   * out subdirectories with no readable design anywhere beneath them.
+   * mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
+   * subdirectories holding nothing the caller can open, at any depth.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListDir
    */

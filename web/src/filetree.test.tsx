@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { artifactUri, uriPath } from "./uri.js";
+import { FileKind } from "./gen/agni/v1/webapi/workspace_pb.js";
 import { fileTreeIsland } from "./filetree.jsx";
 import type { SheetsState } from "./sheets.js";
 
@@ -8,22 +9,22 @@ import type { SheetsState } from "./sheets.js";
 // workspace so the reveal cascade's per-level listDir round-trips run against canned data.
 const fake = vi.hoisted(() => ({
   calls: [] as string[],
-  pruned: [] as (boolean | undefined)[],
+  opens: [] as (FileKind[] | undefined)[],
   prunedMounts: 0,
   mounts: [{ name: "m", root: "/m" }] as { name: string; root: string }[],
-  mountsPruned: [] as (boolean | undefined)[],
+  mountOpens: [] as (FileKind[] | undefined)[],
   dirs: {} as Record<string, unknown[]>,
 }));
 vi.mock("./api.js", () => ({
   workspaceClient: () => ({
-    listMounts: async ({ pruneEmptyMounts }: { pruneEmptyMounts?: boolean } = {}) => {
-      fake.mountsPruned.push(pruneEmptyMounts);
+    listMounts: async ({ opens }: { opens?: FileKind[] } = {}) => {
+      fake.mountOpens.push(opens);
       return { mounts: fake.mounts, prunedMounts: fake.prunedMounts };
     },
-    listDir: async ({ uri, pruneEmptyDirs }: { uri: string; pruneEmptyDirs?: boolean }) => {
+    listDir: async ({ uri, opens }: { uri: string; opens?: FileKind[] }) => {
       const path = uriPath(uri);
       fake.calls.push(path);
-      fake.pruned.push(pruneEmptyDirs);
+      fake.opens.push(opens);
       const entries = fake.dirs[path];
       if (!entries) throw new Error(`no such dir ${path}`);
       return { entries };
@@ -32,7 +33,15 @@ vi.mock("./api.js", () => ({
 }));
 
 const dir = (name: string, path: string) => ({ name, uri: artifactUri("m", path), isDir: true, format: "" });
-const file = (name: string, path: string, format = "edif") => ({ name, uri: artifactUri("m", path), isDir: false, format });
+const file = (name: string, path: string, format = "edif") => ({
+  name,
+  uri: artifactUri("m", path),
+  isDir: false,
+  format,
+  // The tree filters on the server's kind label, not on format, so a fixture needs one. An
+  // unreadable file gets UNSPECIFIED, which is exactly what the hiding test asserts is dropped.
+  kind: format ? FileKind.DESIGN : FileKind.UNSPECIFIED,
+});
 
 function mountTree() {
   const handlers = {
@@ -69,8 +78,8 @@ const openFile = (mount: string, path: string): SheetsState => ({
 beforeEach(() => {
   document.body.replaceChildren();
   fake.calls = [];
-  fake.pruned = [];
-  fake.mountsPruned = [];
+  fake.opens = [];
+  fake.mountOpens = [];
   fake.prunedMounts = 0;
   fake.mounts = [{ name: "m", root: "/m" }];
   fake.dirs = {
@@ -96,9 +105,10 @@ describe("filetree island", () => {
     expect(buttonFor(el, "notes.txt")).toBeUndefined();
 
     // The folder half of the same rule is the server's to answer, since one level of listing
-    // cannot tell a folder of designs from a folder of folders of nothing. Every listing this
-    // tree asks for is pruned; the datasheets tree deliberately does not set the flag.
-    expect(fake.pruned).toSatisfy((p: boolean[]) => p.length > 0 && p.every(Boolean));
+    // cannot tell a folder of designs from a folder of folders of nothing. Every listing this tree
+    // asks for declares DESIGN, which is both what gets pruned and what the row filter above keeps.
+    expect(fake.opens.length).toBeGreaterThan(0);
+    expect(fake.opens.every((o) => o?.length === 1 && o[0] === FileKind.DESIGN)).toBe(true);
 
     // Collapse and re-expand: the level is cached, not refetched.
     buttonFor(el, "m")!.click();
@@ -120,7 +130,7 @@ describe("filetree island", () => {
     const { el } = mountTree();
 
     await vi.waitFor(() => expect(note(el)).toBe("No designs in any of the 2 folders being served"));
-    expect(fake.mountsPruned).toEqual([true]);
+    expect(fake.mountOpens).toEqual([[FileKind.DESIGN]]);
   });
 
   it("names the surviving mounts and still reports the hidden one", async () => {
