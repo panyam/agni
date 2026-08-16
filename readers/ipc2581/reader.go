@@ -200,6 +200,14 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		}}
 		d.Components = append(d.Components, comp)
 	}
+	// A board states one placement per physical part, and IPC-2581 has no gate or slot construct to
+	// group several under one designator, so a repeated refDes here is unambiguously the flat-netlist
+	// case the IR contract names: two placements claiming one name. Declared even when empty, which
+	// is what tells `duplicate-ref-des` this reader looked (agni issue 309).
+	// This reader records no other input diagnostic today. If it gains one, MERGE rather than
+	// assign: a fresh struct per signal silently drops the previous, which is the bug both the EDIF
+	// and gEDA readers hit the moment they had a second one.
+	d.InputDiagnostics = refDesCollisions(f.Comps, src)
 
 	for _, n := range f.Nets {
 		net := &ir.Net{Name: n.Name, Attributes: map[string]string{}, Prov: prov()}
@@ -341,4 +349,34 @@ func mapLayerFunction(f string) ir.LayerFunction {
 	default:
 		return ir.LayerFunction_LAYER_FUNCTION_UNSPECIFIED
 	}
+}
+
+// refDesCollisions reports designators claimed by more than one placement, and declares that the
+// question was asked. It reads the PARSED components rather than d.Components so a duplicate is
+// still visible after the skip above: a skipped designator is one this reader deliberately does not
+// model, not one it failed to check.
+func refDesCollisions(comps []compEl, src string) *ir.InputDiagnostics {
+	order := []string{}
+	count := map[string]int{}
+	for _, c := range comps {
+		if skipRefDes(c.RefDes) {
+			continue
+		}
+		if count[c.RefDes] == 0 {
+			order = append(order, c.RefDes)
+		}
+		count[c.RefDes]++
+	}
+	diag := &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}
+	for _, ref := range order {
+		if count[ref] < 2 {
+			continue
+		}
+		instances := make([]*ir.Provenance, 0, count[ref])
+		for i := 0; i < count[ref]; i++ {
+			instances = append(instances, &ir.Provenance{SourceFile: src})
+		}
+		diag.RefDesCollisions = append(diag.RefDesCollisions, &ir.RefDesCollision{RefDes: ref, Instances: instances})
+	}
+	return diag
 }

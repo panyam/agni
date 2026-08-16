@@ -139,11 +139,19 @@ adopt an external engine for these, for reasons in the evaluation model below.
 The same gate covers a third axis besides the board and parameter tiers, source-format capability.
 A rule that infers a defect from the absence of a construct the format cannot express declares the
 capability it needs, and a review over a design whose format lacks it reads that item as
-not-applicable with a reason rather than as a silent pass. Two rules use this today. A
-driver-absence check needs a format that types power-output pins, and a per-pin no-connect check
-needs a format that can mark a pin intentionally unconnected, and an EDIF netlist supplies neither.
-Without the gate the rule still produces no findings on that format, which a report cannot tell from
-a clean pass, so the requirement is declared rather than inferred and the report stays honest.
+not-applicable with a reason rather than as a silent pass. A driver-absence check needs a format that
+types power-output pins, and a per-pin no-connect check needs a format that can mark a pin
+intentionally unconnected, and an EDIF netlist supplies neither. Without the gate the rule still
+produces no findings on that format, which a report cannot tell from a clean pass, so the requirement
+is declared rather than inferred and the report stays honest.
+
+A capability is usually a property of the format's grammar, decided here from the source format. One
+is not: whether the READER detected a construct is a property of the reader's implementation, so it
+is declared per read in `InputDiagnostics.supplied` and the gate consults that. `duplicate-ref-des`
+is the case, and it is why the axis exists at all — the rule IS a reader diagnostic, so on a reader
+that never computed it the rule finds nothing, which is precisely what a clean design looks like. It
+read as passing on four of five formats until the declaration existed (agni issue 309). A rule whose
+entire subject is a reader diagnostic should declare the matching capability.
 
 Sequencing the not-yet-built rules by what each waits on:
 

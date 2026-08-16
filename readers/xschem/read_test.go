@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -261,5 +262,40 @@ func TestUnannotatedWithoutSymbols(t *testing.T) {
 	}
 	if n := len(d.GetInputDiagnostics().GetUnannotatedComponents()); n != 1 {
 		t.Errorf("unannotated designators = %d, want 1 without a symbol library too", n)
+	}
+}
+
+// TestRefDesCollisions (agni issue 309): xschem documents instance names as unique within a
+// schematic, and this reader relies on it (the name is the provenance native id), so a repeat is
+// both a duplicated designator and a break of that assumption. It reported neither before, and
+// duplicate-ref-des read as a clean pass on every xschem design.
+func TestRefDesCollisions(t *testing.T) {
+	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dup_name.sch")), "dup_name.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cols := d.GetInputDiagnostics().GetRefDesCollisions()
+	if len(cols) != 1 || cols[0].GetRefDes() != "R1" {
+		t.Fatalf("collisions = %+v, want one for R1", cols)
+	}
+	if n := len(cols[0].GetInstances()); n != 2 {
+		t.Errorf("R1 instances = %d, want 2", n)
+	}
+}
+
+// A clean read still declares it looked, and a placeholder pair is not a collision: two components
+// called "R?" have no name to fight over, which unannotated-components reports instead.
+func TestRefDesCollisionsCleanAndPlaceholders(t *testing.T) {
+	for _, fixture := range []string{"divider.sch", "unannotated.sch"} {
+		d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, fixture)), fixture, testOpener(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n := len(d.GetInputDiagnostics().GetRefDesCollisions()); n != 0 {
+			t.Errorf("%s: %d collisions, want none", fixture, n)
+		}
+		if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "ref_des_collisions") {
+			t.Errorf("%s: a clean read must still declare it looked", fixture)
+		}
 	}
 }

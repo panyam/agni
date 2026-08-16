@@ -157,6 +157,26 @@ message InputDiagnostics {
   // symbol, nothing was lost in the read. The design genuinely has parts nobody has named, and on
   // one export that was 369 of them across live sheets.
   repeated UnannotatedComponent unannotated_components = 6;
+  // The diagnostics this reader COMPUTED, named by their field name here ("ref_des_collisions",
+  // "dangling_endpoints", ...), whether or not it found any.
+  //
+  // Every list above is empty in two different situations that a consumer cannot otherwise tell
+  // apart: the reader looked and found nothing, or the reader never looked. A rule reading the
+  // second as the first reports a clean pass over a question nobody asked, which is the
+  // silence-as-coverage failure the comments above keep naming — and it shipped:
+  // `duplicate-ref-des` read as passing on every EDIF, IPC-2581, gEDA and xschem design, because
+  // only the KiCad reader ever populated ref_des_collisions (agni issue 309).
+  //
+  // Not every reader can supply every diagnostic, and that is not a defect. EDIF represents a
+  // multi-gate part as instances sharing a designator with no capture-unit to tell that legitimate
+  // grouping from a duplicate, so it CANNOT supply ref_des_collisions and says so by omission
+  // here. What changes is that the omission is now stated rather than indistinguishable from a
+  // clean result: check.Available gates the rule to not-applicable instead of letting it pass.
+  //
+  // Declared per READ rather than per format, because it is a property of the reader's
+  // implementation and not of the file: a reader that learns to detect a construct starts
+  // supplying it, and an out-of-module reader (the C18 overlay seam) declares its own.
+  repeated string supplied = 7;
 }
 
 // UnannotatedComponent is one placeholder designator and every placement wearing it. Keyed per

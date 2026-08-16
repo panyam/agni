@@ -83,8 +83,12 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	d.Nets = netgraph.IRNets(kept, rootName)
 	stampNetSheets(d.Nets, pointNets, d.Sheets)
 	d.InputDiagnostics = &ir.InputDiagnostics{
-		DanglingEndpoints:     hierDangles(dangles, w.srcs),
-		RefDesCollisions:      collisions,
+		DanglingEndpoints: hierDangles(dangles, w.srcs),
+		RefDesCollisions:  collisions,
+		// Declared even when the slice is empty: that is the point of `supplied`. This reader
+		// looked, so an empty list means "no collisions" here, where on a reader that cannot look
+		// it would mean "nobody asked" (agni issue 309).
+		Supplied:              []string{"ref_des_collisions"},
 		NoJunctionEndpoints:   w.in.noJunction,
 		UnmodeledBuses:        w.buses,
 		UnresolvedSymbols:     unresolvedSyms,

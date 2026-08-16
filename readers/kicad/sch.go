@@ -70,8 +70,12 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 	// Keeping them is what makes the diagnostic this reader's job — the parts are drawn and
 	// connected, so nothing else downstream can tell that their names are missing.
 	d.InputDiagnostics = &ir.InputDiagnostics{
-		DanglingEndpoints:     dangles,
-		RefDesCollisions:      collisions,
+		DanglingEndpoints: dangles,
+		RefDesCollisions:  collisions,
+		// Declared even when the slice is empty: that is the point of `supplied`. This reader
+		// looked, so an empty list means "no collisions" here, where on a reader that cannot look
+		// it would mean "nobody asked" (agni issue 309).
+		Supplied:              []string{"ref_des_collisions"},
 		NoJunctionEndpoints:   noJunction,
 		UnmodeledBuses:        collectBuses(root, src, nil),
 		UnresolvedSymbols:     unresolvedSyms,

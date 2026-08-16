@@ -168,8 +168,13 @@ func extract(root *node, src string) *ir.Design {
 	// multi-gate part as several instances sharing a designator (folded into sections above), and
 	// carries no capture-unit to tell that legitimate grouping from a genuine duplicate. Detecting
 	// one would false-positive on every multi-gate part, so EDIF contributes none -- the same way a
-	// board/netlist source contributes no dangling endpoints. Roadmap: a pending corpus case tracks
-	// the gap; a future format with explicit unit/slot semantics can populate it.
+	// board/netlist source contributes no dangling endpoints.
+	//
+	// This reader therefore leaves "ref_des_collisions" out of InputDiagnostics.supplied, and the
+	// omission is now load-bearing rather than invisible: check.Available gates duplicate-ref-des to
+	// not-applicable here, where before it reported a clean pass over a question EDIF cannot answer
+	// (agni issue 309). A future format revision with explicit unit/slot semantics would populate
+	// both.
 
 	var nets []*node
 	collect(scope, "net", &nets)

@@ -312,6 +312,12 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 	if un := refdes.Unannotated(d.Components); len(un) > 0 {
 		ensureDiag(d).UnannotatedComponents = un
 	}
+	// Declared unconditionally, unlike the signals above: `supplied` is the statement that this
+	// reader LOOKED, so it has to be recorded on a clean read too. Before this the rule could not
+	// tell a gEDA design with no duplicates from one nobody checked (agni issue 309).
+	diag := ensureDiag(d)
+	diag.RefDesCollisions = symread.RefDesCollisions(d.Components)
+	diag.Supplied = append(diag.Supplied, "ref_des_collisions")
 	return d
 }
 

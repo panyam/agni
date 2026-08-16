@@ -233,6 +233,13 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 	if un := refdes.Unannotated(d.Components); len(un) > 0 {
 		ensureDiag(d).UnannotatedComponents = un
 	}
+	// A repeated instance name is a duplicate designator AND a break of the uniqueness this reader
+	// relies on (the name is the provenance native id, see xschemNativeIDKind). xschem has no gate
+	// or slot construct, so there is no legitimate grouping to mistake it for. Declared even when
+	// empty: that is what tells duplicate-ref-des the question was asked (agni issue 309).
+	diag := ensureDiag(d)
+	diag.RefDesCollisions = symread.RefDesCollisions(d.Components)
+	diag.Supplied = append(diag.Supplied, "ref_des_collisions")
 	return d
 }
 

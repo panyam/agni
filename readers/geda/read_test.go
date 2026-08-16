@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -332,5 +333,59 @@ func TestUnannotatedWithoutSymbols(t *testing.T) {
 	}
 	if n := len(d.GetInputDiagnostics().GetUnannotatedComponents()); n != 2 {
 		t.Errorf("unannotated designators = %d, want 2 without a symbol library too", n)
+	}
+}
+
+// TestRefDesCollisions (agni issue 309): gEDA states the gate, so it can tell a duplicated
+// designator from the legitimate multi-gate case, and it now says so. Before this the reader
+// emitted no collision at all and `duplicate-ref-des` read as a clean pass on every gEDA design.
+//
+// The fixture carries both duplicate shapes and both innocent ones, because the rule is only
+// meaningful if it separates them:
+//
+//	R1   twice, unslotted        -> duplicate (two separate parts wearing one name)
+//	U2   twice, both slot=1      -> duplicate (one gate claimed twice)
+//	U1   slot=1 + slot=2         -> LEGITIMATE, the case the whole slot mechanism exists for
+//	R2   once                    -> clean
+//	R?   twice                   -> not a claimed name; unannotated-components reports those
+func TestRefDesCollisions(t *testing.T) {
+	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dup_refdes.sch")), "dup_refdes.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := map[string]int{}
+	for _, c := range d.GetInputDiagnostics().GetRefDesCollisions() {
+		got[c.GetRefDes()] = len(c.GetInstances())
+	}
+	want := map[string]int{"R1": 2, "U2": 2}
+	if len(got) != len(want) {
+		t.Fatalf("collisions = %v, want %v (U1's two gates are one part, R? is not a name)", got, want)
+	}
+	for ref, n := range want {
+		if got[ref] != n {
+			t.Errorf("collision %s = %d instances, want %d", ref, got[ref], n)
+		}
+	}
+
+	// The declaration is the other half of the fix, and it is what a clean design carries too: it
+	// says the reader LOOKED, so an empty list means "none" rather than "nobody asked".
+	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "ref_des_collisions") {
+		t.Error("supplied does not name ref_des_collisions, so the rule gates itself off on gEDA")
+	}
+}
+
+// A design with no duplicates still declares that it was checked. This is the assertion that would
+// have caught the original bug: without it, "no collisions" and "never looked" are the same value.
+func TestRefDesCollisionsDeclaredOnCleanRead(t *testing.T) {
+	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(d.GetInputDiagnostics().GetRefDesCollisions()); n != 0 {
+		t.Fatalf("divider.sch has %d collisions, want a clean read", n)
+	}
+	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "ref_des_collisions") {
+		t.Error("a clean read must still declare it looked")
 	}
 }

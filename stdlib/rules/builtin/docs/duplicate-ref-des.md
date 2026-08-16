@@ -20,6 +20,25 @@ ingestion, can tell them apart using its format's own rule (KiCad: the same unit
 records the verdict in InputDiagnostics.RefDesCollisions; this rule only reports it (docs/19,
 "Where a rule runs").
 
+### What it means when this rule does not run
+
+A rule that only reports a reader's verdict has nothing to say when the reader never reached one, and
+"nothing to say" is what a clean design also looks like. So a reader states whether it computed the
+diagnostic (InputDiagnostics.supplied), and this rule is gated to **not-applicable** where it did
+not, rather than reporting a pass nobody earned (agni issue 309).
+
+| Format | Detects | Rule reads |
+|---|---|---|
+| KiCad | the same unit claimed twice | a real result |
+| gEDA | the same slot claimed twice, or two unslotted placements sharing a designator | a real result |
+| xschem | a repeated instance name, which the format declares unique | a real result |
+| IPC-2581 | a repeated refDes, with no gate construct to group placements | a real result |
+| EDIF | nothing: a multi-gate part is instances sharing a designator with no unit to tell them apart | not applicable, with that reason |
+
+An EDIF design is the case worth understanding. The gap is the format's, not the reader's: detecting
+a collision there would mean reporting every multi-gate part as a duplicate. Not-applicable is the
+honest answer, and it is now the answer a report shows.
+
 ![One ref-des on two distinct parts is flagged; units of one multi-unit part sharing a ref-des is fine](images/duplicate-ref-des.svg)
 
 ### Query structure

@@ -199,6 +199,17 @@ Recording is therefore separate from judging. The reader states what it observed
 
 Two consequences worth knowing. A field is not populated by every reader, and an empty one means "this reader does not detect this", not "the design is clean" — EDIF contributes no `ref_des_collisions` on purpose, because it represents a multi-gate part as several instances sharing a designator and carries nothing to tell that legitimate grouping from a duplicate. And a reader must build the struct **once**: assigning a fresh `InputDiagnostics` per signal silently drops whatever was recorded before it, which is a bug that only appears when the second signal is added.
 
+That first consequence was stated here and enforced nowhere, and it cost exactly what this page warns about: `duplicate-ref-des` read as a clean pass on every EDIF, IPC-2581, gEDA and xschem design, because only the KiCad reader populated the field (agni issue 309). So a reader now DECLARES what it computed, in `supplied`, whether or not it found any:
+
+```
+InputDiagnostics{ RefDesCollisions: nil, Supplied: []string{"ref_des_collisions"} }   // looked, found none
+InputDiagnostics{ RefDesCollisions: nil }                                             // never looked
+```
+
+A rule whose whole subject is a diagnostic gates on the declaration (`check.CapRefDesCollisions`), so the second case reports **not-applicable with a reason** instead of a pass. Declaring is unconditional on purpose: a reader that only recorded it when it found something would be back to the same ambiguity on the clean read, which is the common case.
+
+The rule for a new reader is therefore: detect what your format can express, declare what you detected, and leave out what your format cannot tell apart. EDIF leaves this one out and the report says so, which is a better answer than a green check nobody earned.
+
 ## Emit: tiered writers
 
 Not every emitter needs to be built in. The write path is tiered.
