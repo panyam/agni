@@ -34,6 +34,9 @@
     .compare-tree .node.active { background: none; color: #999; font-weight: 400; cursor: default; }
     .summary { color: #333; font-size: 12px; white-space: pre-wrap; }
     .sheet-nav-bar { flex: 0 0 auto; min-height: 0; border-bottom: 1px solid #ddd; background: #f4f4f4; display: flex; align-items: flex-end; gap: 8px; }
+    /* The viewer's breadcrumb, at the head of the same strip. Sized to its content so the tab
+       strip keeps the bar's free width, and bottom-padded to sit on the tabs' baseline. */
+    .vw-crumb { flex: 0 0 auto; padding: 0 0 5px 8px; color: #999; font-size: 12px; white-space: nowrap; }
     /* WS9-049: the visited-sheet tab strip. It takes the bar's free width (so the Compare/Panels
        chrome stays right-aligned) and scrolls horizontally rather than wrapping the bar taller. */
     .sheet-tabs-host { flex: 1 1 auto; min-width: 0; }

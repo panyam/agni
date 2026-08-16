@@ -7,6 +7,10 @@
 {{ define "Body" }}
 <div class="app">
   <div class="sheet-nav-bar">
+    <!-- The way back. A design is the deepest page in the app and the only one you can reach by a
+         shared link, so it is the page most likely to be somebody's first, and it had no route out
+         of itself. "Designs" returns to the folder browser, "Agni" to the landing page. -->
+    <nav class="vw-crumb"><a class="ld-home" href="/">Agni</a> / <a class="ld-home" href="/designs/">Designs</a></nav>
     <!-- WS9-049: the visited-sheet tab strip island mounts here. It is NOT the design's sheet
          list (that is the Sheets panel); a sheet earns a tab the first time it is shown. -->
     <div id="sheet-tabs" class="sheet-tabs-host" data-component="sheet-tabs"></div>

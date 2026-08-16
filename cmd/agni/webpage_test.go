@@ -115,6 +115,33 @@ func TestRootServesLandingPage(t *testing.T) {
 	}
 }
 
+// Every page a person can land on offers a way back to the landing page. This is a cross-page
+// omission test, and it is written that way because the omission is invisible from inside any one
+// page: the viewer shipped with no route out of itself, and a design URL is the one people share, so
+// it is the page most likely to be somebody's first (PR 318 deferred it, this closes it).
+//
+// A page is checked for the crumb's own markup rather than a bare href="/", which any stylesheet or
+// icon reference would satisfy.
+func TestEveryPageOffersAWayHome(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
+
+	for _, path := range []string{
+		"/designs/",                          // the folder browser
+		"/designs/m/boards/b.kicad_sch/view", // a design's work page
+		"/datasheets/files/m/vendor/x.pdf",   // the extraction workbench
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), `class="ld-home" href="/"`) {
+			t.Errorf("GET %s has no link back to the landing page", path)
+		}
+	}
+}
+
 func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
