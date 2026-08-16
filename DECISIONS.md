@@ -722,11 +722,11 @@ datasheets are becoming their own service, at which point that mount stops being
 at all. Shaping the design tree around a temporary neighbour buys a worse tree now and nothing later.
 
 The discoverability objection was real and is answered in the UI rather than in the listing:
-`ListMounts` returns `pruned_mounts`, and the sidebar says how many folders it hid. So the operator
+`ListMounts` returns `pruned_mounts`, and the sidebar says how many folders it hid. Both trees do this now, each naming what it opens. So the operator
 sees "1 folder hidden (no designs)" instead of a shorter list with no explanation. A mount whose root
 cannot be read at all is kept and shown, since an unreadable root is a mistake to surface, not
 evidence of emptiness.
 
 **Reopen if** a mount is ever expensive to walk enough that pruning at page load costs more than the
-empty root did. The answer then is a cache, not an exemption. Also reopen if the design page ever
-does serve a second file kind, since the rule is "no file this client can open", not "no design".
+empty root did. The answer then is a cache, not an exemption. The second half of this, that the rule is "no file this client can open" rather than "no design", was
+settled a week later: the request carries the kinds, and the datasheets tree prunes by the same walk.

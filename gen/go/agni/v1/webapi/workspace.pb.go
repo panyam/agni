@@ -21,6 +21,67 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
+// the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
+// it is EDIF or KiCad.
+//
+// The set is closed and server-defined. An out-of-module reader registering through readers/formats
+// adds an extension to FILE_KIND_DESIGN; it does not add a kind, because a kind is a page in this
+// application rather than a capability of the engine.
+type FileKind int32
+
+const (
+	// FILE_KIND_UNSPECIFIED is a file no page opens (a library file, a lock file, a sidecar) and is
+	// also what an unset field decodes to, so a client that ignores kinds sees them all as one.
+	FileKind_FILE_KIND_UNSPECIFIED FileKind = 0
+	// FILE_KIND_DESIGN is a file some reader in the registry understands: the viewer's material.
+	FileKind_FILE_KIND_DESIGN FileKind = 1
+	// FILE_KIND_DATASHEET is a vendor document the extraction workbench opens (a PDF). No DESIGN
+	// reader opens one, which is exactly why pruning by design format hid the workbench's folders.
+	FileKind_FILE_KIND_DATASHEET FileKind = 2
+)
+
+// Enum value maps for FileKind.
+var (
+	FileKind_name = map[int32]string{
+		0: "FILE_KIND_UNSPECIFIED",
+		1: "FILE_KIND_DESIGN",
+		2: "FILE_KIND_DATASHEET",
+	}
+	FileKind_value = map[string]int32{
+		"FILE_KIND_UNSPECIFIED": 0,
+		"FILE_KIND_DESIGN":      1,
+		"FILE_KIND_DATASHEET":   2,
+	}
+)
+
+func (x FileKind) Enum() *FileKind {
+	p := new(FileKind)
+	*p = x
+	return p
+}
+
+func (x FileKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FileKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_workspace_proto_enumTypes[0].Descriptor()
+}
+
+func (FileKind) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_workspace_proto_enumTypes[0]
+}
+
+func (x FileKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FileKind.Descriptor instead.
+func (FileKind) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{0}
+}
+
 // Mount is one configured root folder. Clients reference it by name in later calls;
 // root is a human-readable display path and is not a capability.
 type Mount struct {
@@ -90,18 +151,18 @@ func (x *Mount) GetUri() string {
 
 type ListMountsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// prune_empty_mounts drops mounts with no file any reader understands anywhere beneath them: the
-	// same rule prune_empty_dirs applies inside a mount, applied to the roots. It is opt-in for the
-	// same reason and by the same measure of "empty", since a datasheets browser roots on a mount of
-	// PDFs, which no design reader opens.
+	// opens declares what this client can open, on the same terms as ListDirRequest.opens, and
+	// setting it drops mounts with none of those kinds anywhere beneath them: the same rule applied
+	// to the roots. Leave it empty to prune nothing.
 	//
 	// Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
-	// find it in the sidebar has no way to tell "this mount holds no designs" from "this mount failed
-	// to resolve", so a client that prunes should say when it is showing fewer roots than the server
-	// was given rather than render a silently shorter list.
-	PruneEmptyMounts bool `protobuf:"varint,1,opt,name=prune_empty_mounts,json=pruneEmptyMounts,proto3" json:"prune_empty_mounts,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// find it in the sidebar has no way to tell "this mount holds nothing I open" from "this mount
+	// failed to resolve", so a client that prunes should say when it is showing fewer roots than the
+	// server was given rather than render a silently shorter list. pruned_mounts is what it says it
+	// with.
+	Opens         []FileKind `protobuf:"varint,2,rep,packed,name=opens,proto3,enum=agni.v1.webapi.FileKind" json:"opens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListMountsRequest) Reset() {
@@ -134,17 +195,17 @@ func (*ListMountsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ListMountsRequest) GetPruneEmptyMounts() bool {
+func (x *ListMountsRequest) GetOpens() []FileKind {
 	if x != nil {
-		return x.PruneEmptyMounts
+		return x.Opens
 	}
-	return false
+	return nil
 }
 
 type ListMountsResponse struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Mounts []*Mount               `protobuf:"bytes,1,rep,name=mounts,proto3" json:"mounts,omitempty"`
-	// pruned_mounts counts the mounts prune_empty_mounts left out, so a client can tell the user its
+	// pruned_mounts counts the mounts opens left out, so a client can tell the user its
 	// sidebar is shorter than the server's configuration rather than leaving them to wonder where a
 	// mount went. Zero when pruning is off.
 	PrunedMounts  int32 `protobuf:"varint,2,opt,name=pruned_mounts,json=prunedMounts,proto3" json:"pruned_mounts,omitempty"`
@@ -212,7 +273,12 @@ type DirEntry struct {
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
 	// uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
 	// (for a file).
-	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
+	// kind is which client opens this file, FILE_KIND_UNSPECIFIED for a directory and for a file no
+	// page opens. It is served rather than left to the client so that "what is a datasheet" has one
+	// definition: the browser used to decide by extension, which put a second copy of the rule in
+	// TypeScript, where nothing could notice it disagreeing with the server.
+	Kind          FileKind `protobuf:"varint,5,opt,name=kind,proto3,enum=agni.v1.webapi.FileKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -275,20 +341,32 @@ func (x *DirEntry) GetUri() string {
 	return ""
 }
 
+func (x *DirEntry) GetKind() FileKind {
+	if x != nil {
+		return x.Kind
+	}
+	return FileKind_FILE_KIND_UNSPECIFIED
+}
+
 type ListDirRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
 	// mount root.
 	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
-	// prune_empty_dirs drops subdirectories whose subtree holds no file any reader understands, at
-	// any depth: the folders a design browser can only ever show empty. It is opt-in because "empty"
-	// is per-client. A datasheets browser lists PDFs, which no design reader opens, so pruning by
-	// design format would hide exactly the folders it wants. Answering it costs a bounded walk of
-	// each subtree; a directory the walk cannot settle (bound reached, adapter error) is kept, since
-	// a folder wrongly shown costs a click and one wrongly hidden costs a design.
-	PruneEmptyDirs bool `protobuf:"varint,2,opt,name=prune_empty_dirs,json=pruneEmptyDirs,proto3" json:"prune_empty_dirs,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// opens declares what this client can open, and setting it drops subdirectories whose subtree
+	// holds none of those kinds at any depth: the folders this client can only ever show empty.
+	//
+	// It replaces a prune_empty_dirs bool, which could only mean designs. The bool was opt-in
+	// precisely because "empty" is per-client, which is the same fact this field states directly
+	// instead of leaving the definition on the server and the exception in the comment. Leave it
+	// empty to prune nothing.
+	//
+	// Answering it costs a bounded walk of each subtree. A directory the walk cannot settle (bound
+	// reached, adapter error) is kept, since a folder wrongly shown costs a click and one wrongly
+	// hidden costs a file.
+	Opens         []FileKind `protobuf:"varint,3,rep,packed,name=opens,proto3,enum=agni.v1.webapi.FileKind" json:"opens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListDirRequest) Reset() {
@@ -328,11 +406,11 @@ func (x *ListDirRequest) GetUri() string {
 	return ""
 }
 
-func (x *ListDirRequest) GetPruneEmptyDirs() bool {
+func (x *ListDirRequest) GetOpens() []FileKind {
 	if x != nil {
-		return x.PruneEmptyDirs
+		return x.Opens
 	}
-	return false
+	return nil
 }
 
 type ListDirResponse struct {
@@ -389,22 +467,27 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x05Mount\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04root\x18\x02 \x01(\tR\x04root\x12\x10\n" +
-	"\x03uri\x18\x03 \x01(\tR\x03uri\"A\n" +
-	"\x11ListMountsRequest\x12,\n" +
-	"\x12prune_empty_mounts\x18\x01 \x01(\bR\x10pruneEmptyMounts\"h\n" +
+	"\x03uri\x18\x03 \x01(\tR\x03uri\"I\n" +
+	"\x11ListMountsRequest\x12.\n" +
+	"\x05opens\x18\x02 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x01\x10\x02\"h\n" +
 	"\x12ListMountsResponse\x12-\n" +
 	"\x06mounts\x18\x01 \x03(\v2\x15.agni.v1.webapi.MountR\x06mounts\x12#\n" +
-	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\"_\n" +
+	"\rpruned_mounts\x18\x02 \x01(\x05R\fprunedMounts\"\x8d\x01\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x15\n" +
 	"\x06is_dir\x18\x02 \x01(\bR\x05isDir\x12\x16\n" +
 	"\x06format\x18\x03 \x01(\tR\x06format\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uri\"L\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\x12,\n" +
+	"\x04kind\x18\x05 \x01(\x0e2\x18.agni.v1.webapi.FileKindR\x04kind\"X\n" +
 	"\x0eListDirRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\x12(\n" +
-	"\x10prune_empty_dirs\x18\x02 \x01(\bR\x0epruneEmptyDirs\"E\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x12.\n" +
+	"\x05opens\x18\x03 \x03(\x0e2\x18.agni.v1.webapi.FileKindR\x05opensJ\x04\b\x02\x10\x03\"E\n" +
 	"\x0fListDirResponse\x122\n" +
-	"\aentries\x18\x01 \x03(\v2\x18.agni.v1.webapi.DirEntryR\aentries2\xb3\x01\n" +
+	"\aentries\x18\x01 \x03(\v2\x18.agni.v1.webapi.DirEntryR\aentries*T\n" +
+	"\bFileKind\x12\x19\n" +
+	"\x15FILE_KIND_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10FILE_KIND_DESIGN\x10\x01\x12\x17\n" +
+	"\x13FILE_KIND_DATASHEET\x10\x022\xb3\x01\n" +
 	"\x10WorkspaceService\x12S\n" +
 	"\n" +
 	"ListMounts\x12!.agni.v1.webapi.ListMountsRequest\x1a\".agni.v1.webapi.ListMountsResponse\x12J\n" +
@@ -422,27 +505,32 @@ func file_agni_v1_webapi_workspace_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_workspace_proto_rawDescData
 }
 
+var file_agni_v1_webapi_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_agni_v1_webapi_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_agni_v1_webapi_workspace_proto_goTypes = []any{
-	(*Mount)(nil),              // 0: agni.v1.webapi.Mount
-	(*ListMountsRequest)(nil),  // 1: agni.v1.webapi.ListMountsRequest
-	(*ListMountsResponse)(nil), // 2: agni.v1.webapi.ListMountsResponse
-	(*DirEntry)(nil),           // 3: agni.v1.webapi.DirEntry
-	(*ListDirRequest)(nil),     // 4: agni.v1.webapi.ListDirRequest
-	(*ListDirResponse)(nil),    // 5: agni.v1.webapi.ListDirResponse
+	(FileKind)(0),              // 0: agni.v1.webapi.FileKind
+	(*Mount)(nil),              // 1: agni.v1.webapi.Mount
+	(*ListMountsRequest)(nil),  // 2: agni.v1.webapi.ListMountsRequest
+	(*ListMountsResponse)(nil), // 3: agni.v1.webapi.ListMountsResponse
+	(*DirEntry)(nil),           // 4: agni.v1.webapi.DirEntry
+	(*ListDirRequest)(nil),     // 5: agni.v1.webapi.ListDirRequest
+	(*ListDirResponse)(nil),    // 6: agni.v1.webapi.ListDirResponse
 }
 var file_agni_v1_webapi_workspace_proto_depIdxs = []int32{
-	0, // 0: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
-	3, // 1: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
-	1, // 2: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
-	4, // 3: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
-	2, // 4: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
-	5, // 5: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // 0: agni.v1.webapi.ListMountsRequest.opens:type_name -> agni.v1.webapi.FileKind
+	1, // 1: agni.v1.webapi.ListMountsResponse.mounts:type_name -> agni.v1.webapi.Mount
+	0, // 2: agni.v1.webapi.DirEntry.kind:type_name -> agni.v1.webapi.FileKind
+	0, // 3: agni.v1.webapi.ListDirRequest.opens:type_name -> agni.v1.webapi.FileKind
+	4, // 4: agni.v1.webapi.ListDirResponse.entries:type_name -> agni.v1.webapi.DirEntry
+	2, // 5: agni.v1.webapi.WorkspaceService.ListMounts:input_type -> agni.v1.webapi.ListMountsRequest
+	5, // 6: agni.v1.webapi.WorkspaceService.ListDir:input_type -> agni.v1.webapi.ListDirRequest
+	3, // 7: agni.v1.webapi.WorkspaceService.ListMounts:output_type -> agni.v1.webapi.ListMountsResponse
+	6, // 8: agni.v1.webapi.WorkspaceService.ListDir:output_type -> agni.v1.webapi.ListDirResponse
+	7, // [7:9] is the sub-list for method output_type
+	5, // [5:7] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_workspace_proto_init() }
@@ -455,13 +543,14 @@ func file_agni_v1_webapi_workspace_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_workspace_proto_rawDesc), len(file_agni_v1_webapi_workspace_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_agni_v1_webapi_workspace_proto_goTypes,
 		DependencyIndexes: file_agni_v1_webapi_workspace_proto_depIdxs,
+		EnumInfos:         file_agni_v1_webapi_workspace_proto_enumTypes,
 		MessageInfos:      file_agni_v1_webapi_workspace_proto_msgTypes,
 	}.Build()
 	File_agni_v1_webapi_workspace_proto = out.File

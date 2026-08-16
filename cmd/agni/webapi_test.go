@@ -74,10 +74,10 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 
 	// Over a real filesystem, not just the in-memory port: "hollow" holds only folders and a file
 	// no reader opens, so a design browser asking for pruning never sees it.
-	t.Run("prune_empty_dirs drops a subtree with no readable design", func(t *testing.T) {
+	t.Run("opens drops a subtree with nothing the caller can open", func(t *testing.T) {
 		mustMkdir(t, filepath.Join(root, "hollow", "libs"))
 		mustWrite(t, filepath.Join(root, "hollow", "libs", "parts.lock"))
-		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), PruneEmptyDirs: true})
+		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DESIGN}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,6 +89,26 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		}
 		if len(dirs) != 1 || dirs[0] != "sub" {
 			t.Fatalf("dirs = %v, want [sub] (hollow pruned, sub kept for its inner.xml)", dirs)
+		}
+	})
+
+	// The kind label over a real filesystem: a PDF is a datasheet, a netlist is a design, a lock file
+	// is neither. The browser trees filter on this rather than re-deriving it from the extension.
+	t.Run("labels each file with the client that opens it", func(t *testing.T) {
+		mustWrite(t, filepath.Join(root, "sub", "part.pdf"))
+		resp, err := list("m", "sub")
+		if err != nil {
+			t.Fatal(err)
+		}
+		byName := map[string]webapi.FileKind{}
+		for _, e := range resp.GetEntries() {
+			byName[e.GetName()] = e.GetKind()
+		}
+		if byName["part.pdf"] != webapi.FileKind_FILE_KIND_DATASHEET {
+			t.Errorf("part.pdf kind = %v, want DATASHEET", byName["part.pdf"])
+		}
+		if byName["inner.xml"] != webapi.FileKind_FILE_KIND_DESIGN {
+			t.Errorf("inner.xml kind = %v, want DESIGN", byName["inner.xml"])
 		}
 	})
 
@@ -157,7 +177,7 @@ func TestWorkspaceServiceListMountsPrunesEmptyMounts(t *testing.T) {
 		{Name: "ds", Root: filepath.Join(root, "ds")},
 		{Name: "gone", Root: filepath.Join(root, "no-such-dir")},
 	}})
-	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{PruneEmptyMounts: true})
+	resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DESIGN}})
 	if err != nil {
 		t.Fatal(err)
 	}

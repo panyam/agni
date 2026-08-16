@@ -87,6 +87,10 @@ The `/designs/` space holds two pages behind one pattern, split by the trailing 
 `ServeMux` pattern's `{path...}` wildcard must be its last segment. `/files/` is the retired
 pre-WS9-049 space and permanently redirects.
 
+Both trees are the same shape over one listing API: each declares what it opens (`web/src/treeprune.ts`),
+hides rows of other kinds, and shows how many mounts the server pruned for it. A mount of PDFs is
+invisible to the viewer and is the whole sidebar on the workbench.
+
 Recents are per-user browser state (`web/src/recents.ts`, localStorage), written where a design or
 datasheet is OPENED rather than previewed. They are not server state: there is no user identity to
 key a list to, so one visitor's recents would be everyone's, and the project and design resources are
@@ -116,8 +120,8 @@ cadences.
 
 | Service | RPC | What it does |
 |---|---|---|
-| Workspace | ListMounts | the mount names the tree roots on; `prune_empty_mounts` drops the ones with no readable design under them and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
-| Workspace | ListDir | one directory level, entries plus per-file format label from the reader registry, formatless files hidden client-side; `prune_empty_dirs` additionally drops folders with no readable design anywhere beneath them (a bounded server-side walk, since one level of listing cannot see that far) |
+| Workspace | ListMounts | the mount names a tree roots on; `opens` drops the ones holding nothing that client can open and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
+| Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open, which drops folders with none of it anywhere beneath them (a bounded server-side walk, since one level of listing cannot see that far) and is what lets the two trees prune the same mounts to opposite answers |
 | Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |

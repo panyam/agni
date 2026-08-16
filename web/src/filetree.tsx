@@ -3,9 +3,10 @@ import { artifactUri, uriPath } from "./uri.js";
 import type { Client } from "@connectrpc/connect";
 import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
-import { WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
+import { FileKind, WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
 import { workspaceClient } from "./api.js";
+import { DESIGN_OPENS, hiddenNote } from "./treeprune.js";
 import type { SheetsState, SheetsView } from "./sheets.js";
 
 type WsClient = Client<typeof WorkspaceService>;
@@ -131,10 +132,11 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   const loadEntries = async (): Promise<void> => {
     if (entries() !== null) return;
     try {
-      // pruneEmptyDirs asks the server to leave out subdirectories with no readable design under
-      // them. It has to be answered server-side: a client sees one level per call, so it cannot
-      // tell a folder of designs from a folder of folders of nothing without walking the tree.
-      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path), pruneEmptyDirs: true });
+      // `opens` tells the server what this tree can open, which is what lets it leave out
+      // subdirectories with no design under them. It has to be answered server-side: a client sees
+      // one level per call, so it cannot tell a folder of designs from a folder of folders of
+      // nothing without walking the tree.
+      const resp = await props.ctx.client.listDir({ uri: artifactUri(props.mount, props.path), opens: DESIGN_OPENS });
       setEntries(resp.entries);
     } catch (e) {
       setError(String(e));
@@ -169,10 +171,12 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
       <Show when={open()}>
         <ul class="children">
           <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
-          {/* Files with no reader (empty format) are hidden — library files, lock files, and
-              sidecars were drowning real designs (2026-07-14 feedback; reversal of the earlier
-              show-greyed choice). The server still lists them, so this stays a view filter. */}
-          <For each={(entries() ?? []).filter((e) => e.isDir || e.format)}>
+          {/* Files this page cannot open are hidden: library files, lock files, and sidecars were
+              drowning real designs (2026-07-14 feedback; reversal of the earlier show-greyed
+              choice). The filter reads the server's kind label rather than the format string, so
+              the datasheets tree can apply the same rule with the other kind. The server still
+              lists them all, so this stays a view filter. */}
+          <For each={(entries() ?? []).filter((e) => e.isDir || e.kind === FileKind.DESIGN)}>
             {(e) =>
               e.isDir ? (
                 <DirNode ctx={props.ctx} mount={props.mount} path={uriPath(e.uri)} label={e.name} depth={props.depth + 1} />
@@ -187,23 +191,15 @@ function DirNode(props: { ctx: Ctx; mount: string; path: string; label: string; 
   );
 }
 
-// hiddenNote words the pruned-mount count for the sidebar. A mount is something an operator
-// configured by hand, so one missing from the tree has to be accounted for: without this line
-// there is no way to tell "that folder holds no designs" from "that mount failed to resolve".
-function hiddenNote(hidden: number, shown: number): string {
-  const folders = `${hidden} ${hidden === 1 ? "folder" : "folders"}`;
-  return shown === 0 ? `No designs in any of the ${folders} being served` : `${folders} hidden (no designs)`;
-}
-
 function FileTree(props: { ctx: Ctx }) {
   const [mounts, setMounts] = createSignal<Mount[]>([]);
   const [pruned, setPruned] = createSignal(0);
   const [error, setError] = createSignal<string | null>(null);
-  // pruneEmptyMounts applies the same rule to the roots that pruneEmptyDirs applies inside them: a
-  // mount serving only datasheets or only library files is one this tree can never show anything
-  // in. The datasheets tree roots on the same mounts and does not set it.
+  // The same declaration applied to the roots: a mount serving only datasheets or only library
+  // files is one this tree can never show anything in. The datasheets tree roots on the same
+  // mounts and declares the other kind, so it keeps exactly the ones this drops.
   props.ctx.client
-    .listMounts({ pruneEmptyMounts: true })
+    .listMounts({ opens: DESIGN_OPENS })
     .then((r) => {
       setMounts(r.mounts);
       setPruned(r.prunedMounts);
@@ -215,7 +211,7 @@ function FileTree(props: { ctx: Ctx }) {
       <Show when={error()}>{(msg) => <li class="error">{msg()}</li>}</Show>
       <For each={mounts()}>{(m) => <DirNode ctx={props.ctx} mount={m.name} path="" label={m.name} depth={0} />}</For>
       <Show when={pruned() > 0}>
-        <li class="note">{hiddenNote(pruned(), mounts().length)}</li>
+        <li class="note">{hiddenNote(pruned(), mounts().length, "designs")}</li>
       </Show>
     </ul>
   );

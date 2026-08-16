@@ -2,11 +2,12 @@ package main
 
 import (
 	"net/http"
-	"path"
 	"strings"
 
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
+	"github.com/panyam/agni/internal/service"
 )
 
 // rawDatasheetHandler streams a datasheet's source bytes (the PDF the browser renders under the
@@ -23,7 +24,9 @@ func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 			http.Error(w, "raw datasheet path must be <mount>/<path>", http.StatusBadRequest)
 			return
 		}
-		if strings.ToLower(path.Ext(rel)) != ".pdf" {
+		// The service owns what counts as a datasheet, so this endpoint and the browser trees cannot
+		// drift on it. It used to test the suffix here, which was the second copy of that rule.
+		if service.KindForName(rel) != webapi.FileKind_FILE_KIND_DATASHEET {
 			http.Error(w, "only .pdf datasheets are served raw", http.StatusBadRequest)
 			return
 		}

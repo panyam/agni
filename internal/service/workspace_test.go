@@ -85,28 +85,31 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 	})
 }
 
-// A design browser can only ever show a folder with no readable design under it as empty, so
-// PruneEmptyDirs leaves it out. "Empty" means the whole subtree, not one level: a folder of
-// folders of library files is as useless to open as a folder with nothing in it.
+// A browser can only ever show a folder holding nothing it opens as empty, so Opens leaves it out.
+// "Empty" is measured over the whole subtree, not one level: a folder of folders of library files is
+// as useless to open as a folder with nothing in it. And it is measured against the CALLER's kinds,
+// which is why the same fixture prunes differently for the two trees below.
 func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 	svc := NewWorkspaceService(&memWorkspace{
 		mounts: []MountInfo{{Name: "m", Root: "/x"}},
 		entries: map[string][]DirEntry{
 			"m\x00": {
 				{Name: "boards", IsDir: true}, // design lives two levels down
+				{Name: "docs", IsDir: true},   // a datasheet, which no design reader opens
 				{Name: "empty", IsDir: true},  // nothing at all
 				{Name: "libs", IsDir: true},   // files, but none a reader opens
 			},
 			"m\x00boards":      {{Name: "rev2", IsDir: true}},
 			"m\x00boards/rev2": {{Name: "board.edn"}},
+			"m\x00docs":        {{Name: "txb0104.pdf"}},
 			"m\x00empty":       {},
 			"m\x00libs":        {{Name: "parts.lock"}, {Name: "nested", IsDir: true}},
 			"m\x00libs/nested": {{Name: "readme.md"}, {Name: ".hidden.edn"}}, // dotfile does not count
 		},
 	})
-	names := func(prune bool) []string {
+	names := func(opens ...webapi.FileKind) []string {
 		t.Helper()
-		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), PruneEmptyDirs: prune})
+		resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), Opens: opens})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -118,17 +121,38 @@ func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 	}
 
 	t.Run("prunes dirs with no design anywhere beneath", func(t *testing.T) {
-		if got := names(true); len(got) != 1 || got[0] != "boards" {
+		if got := names(webapi.FileKind_FILE_KIND_DESIGN); len(got) != 1 || got[0] != "boards" {
 			t.Fatalf("entries = %v, want [boards] (empty and libs pruned)", got)
 		}
 	})
 
-	// The flag is opt-in because "empty" is per-client: the datasheets tree lists PDFs, which no
-	// design reader opens, so pruning by design format would hide the folders it wants. Off, the
-	// listing is unchanged.
-	t.Run("off by default", func(t *testing.T) {
-		if got := names(false); len(got) != 3 {
-			t.Fatalf("entries = %v, want all 3 dirs when pruning is off", got)
+	// "Empty" is per-client, which is what Opens states: the datasheets tree opens the PDF under
+	// docs/, so for THAT client docs/ is the folder with something in it and boards/ is the empty
+	// one. Same tree, same walk, opposite answer.
+	t.Run("prunes by the caller's kinds, not by design format", func(t *testing.T) {
+		if got := names(webapi.FileKind_FILE_KIND_DATASHEET); len(got) != 1 || got[0] != "docs" {
+			t.Fatalf("entries = %v, want [docs] for a datasheet client", got)
+		}
+	})
+
+	t.Run("a client that opens both keeps both", func(t *testing.T) {
+		got := names(webapi.FileKind_FILE_KIND_DESIGN, webapi.FileKind_FILE_KIND_DATASHEET)
+		if len(got) != 2 || got[0] != "boards" || got[1] != "docs" {
+			t.Fatalf("entries = %v, want [boards docs]", got)
+		}
+	})
+
+	t.Run("prunes nothing when the caller declares nothing", func(t *testing.T) {
+		if got := names(); len(got) != 4 {
+			t.Fatalf("entries = %v, want all 4 dirs when Opens is empty", got)
+		}
+	})
+
+	// UNSPECIFIED is not a kind a client can open. Honouring it would make every folder of lock
+	// files look openable, which is the opposite of what asking to prune means.
+	t.Run("an unspecified kind prunes nothing rather than everything", func(t *testing.T) {
+		if got := names(webapi.FileKind_FILE_KIND_UNSPECIFIED); len(got) != 4 {
+			t.Fatalf("entries = %v, want all 4 dirs", got)
 		}
 	})
 }
@@ -147,7 +171,7 @@ func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
 	entries["m\x00"+path] = []DirEntry{{Name: "board.edn"}}
 
 	svc := NewWorkspaceService(&memWorkspace{mounts: []MountInfo{{Name: "m", Root: "/x"}}, entries: entries})
-	resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), PruneEmptyDirs: true})
+	resp, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: uriStr("m", ""), Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DESIGN}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +195,7 @@ func TestListMountsPrunesEmptyMounts(t *testing.T) {
 	})
 
 	t.Run("prunes mounts with no design and counts them", func(t *testing.T) {
-		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{PruneEmptyMounts: true})
+		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DESIGN}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -184,9 +208,24 @@ func TestListMountsPrunesEmptyMounts(t *testing.T) {
 		}
 	})
 
-	// The datasheets tree roots on these same mounts and opens the PDFs, so it must keep getting
-	// every mount, and with nothing hidden it has nothing to report.
-	t.Run("off by default", func(t *testing.T) {
+	// The mirror: the datasheets tree asks the same question about the same mounts and gets the
+	// other answer, which is the whole point of the kinds being in the request.
+	t.Run("a datasheets client keeps the mount of PDFs and prunes the boards", func(t *testing.T) {
+		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{
+			Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DATASHEET},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := resp.GetMounts()
+		if len(got) != 1 || got[0].GetName() != "ds" {
+			t.Fatalf("mounts = %+v, want [ds]", got)
+		}
+	})
+
+	// A client that declares nothing gets everything, which is what any caller written before this
+	// field existed does.
+	t.Run("prunes nothing when the caller declares nothing", func(t *testing.T) {
 		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{})
 		if err != nil {
 			t.Fatal(err)
