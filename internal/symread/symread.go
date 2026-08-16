@@ -11,6 +11,7 @@ import (
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
+	"github.com/panyam/agni/internal/refdes"
 )
 
 // Pin is a symbol-local terminal as read from a .sym file: the connection point plus the
@@ -209,4 +210,72 @@ func sectionNativeID(comp *ir.Component, attrs map[string]string) string {
 		return comp.RefDes + ":" + slot
 	}
 	return comp.RefDes
+}
+
+// RefDesCollisions reports designators claimed by more than one distinct physical placement, for
+// the readers that build components through this package (gEDA and xschem).
+//
+// Both can answer the question their format's own rules already settle, which is what makes the
+// answer trustworthy rather than a guess. gEDA STATES THE GATE: a package's gates share a refdes and
+// carry distinct slot=, folded by the caller into one Component with a section per gate. xschem
+// DECLARES NAMES UNIQUE within a schematic, and this module relies on that (an instance name is the
+// provenance native id), so a repeat is a duplicate and a break of the reader's own assumption at
+// once. Neither is EDIF, which represents a multi-gate part as instances sharing a designator with
+// no unit to distinguish them, and therefore supplies nothing (agni issue 309).
+//
+// A designator is duplicated when the same gate is claimed twice, in either of the two shapes that
+// produces:
+//
+//   - two placements with the SAME slot=, folded into one Component whose sections then share a
+//     native id (refdes:slot);
+//   - two placements that were never folded, which stay separate Components wearing one refdes.
+//     That is every xschem repeat, and gEDA's unslotted one.
+//
+// A placeholder designator is not a claimed name (two unnamed resistors are not fighting over "R?"),
+// so it is skipped here exactly as the KiCad reader skips it; unannotated-components reports those.
+//
+// Callers declare "ref_des_collisions" in InputDiagnostics.supplied alongside the result, INCLUDING
+// when it is empty: that declaration is what separates "no duplicates" from "never looked".
+func RefDesCollisions(comps []*ir.Component) []*ir.RefDesCollision {
+	order := []string{}
+	byRef := map[string][]*ir.Component{}
+	for _, c := range comps {
+		ref := c.GetRefDes()
+		if ref == "" || refdes.IsPlaceholder(ref) {
+			continue
+		}
+		if _, seen := byRef[ref]; !seen {
+			order = append(order, ref)
+		}
+		byRef[ref] = append(byRef[ref], c)
+	}
+
+	var out []*ir.RefDesCollision
+	for _, ref := range order {
+		group := byRef[ref]
+		var instances []*ir.Provenance
+		if len(group) > 1 {
+			// Separate Components under one refdes: unslotted placements, each its own part.
+			for _, c := range group {
+				if len(c.Sections) > 0 {
+					instances = append(instances, c.Sections[0].Prov)
+				}
+			}
+		} else {
+			// One Component: a gate claimed twice shows up as two sections with one native id.
+			count := map[string]int{}
+			for _, s := range group[0].Sections {
+				count[s.GetProv().GetNativeId()]++
+			}
+			for _, s := range group[0].Sections {
+				if count[s.GetProv().GetNativeId()] > 1 {
+					instances = append(instances, s.Prov)
+				}
+			}
+		}
+		if len(instances) > 1 {
+			out = append(out, &ir.RefDesCollision{RefDes: ref, Instances: instances})
+		}
+	}
+	return out
 }

@@ -9,8 +9,8 @@ import (
 	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB relations the profile/datalog rules read
 	_ "github.com/panyam/agni/stdlib/profiles"      // registers the built-in profile rules into DefaultCatalog
+	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB relations the profile/datalog rules read
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rules into DefaultCatalog
 )
 
@@ -486,7 +486,12 @@ func TestComponentScopedBinding(t *testing.T) {
 			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "U2", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
-		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{collision("U1"), collision("U2")}},
+		// Supplied is what a real reader records alongside the result; without it duplicate-ref-des
+		// gates to not-applicable, which is the point of agni issue 309.
+		InputDiagnostics: &ir.InputDiagnostics{
+			RefDesCollisions: []*ir.RefDesCollision{collision("U1"), collision("U2")},
+			Supplied:         []string{"ref_des_collisions"},
+		},
 	}
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "scoped", Title: "iface parts", Binding: Binding{Rule: "duplicate-ref-des", Scope: ScopeBinding{Profiles: []string{"IFACE"}}}},
@@ -672,15 +677,15 @@ func TestRenderJSONFullFindings(t *testing.T) {
 
 func TestLoadValidation(t *testing.T) {
 	cases := map[string]string{
-		"missing name":       "areas: [{name: A, items: []}]",
-		"no areas":           "name: t",
-		"area no name":       "name: t\nareas: [{items: []}]",
-		"item no id":         "name: t\nareas: [{name: A, items: [{ask: x}]}]",
-		"two bindings":       "name: t\nareas: [{name: A, items: [{id: i, rule: r, profile: P}]}]",
-		"present + rule":     "name: t\nareas: [{name: A, items: [{id: i, rule: r, present: {class: test_connector}}]}]",
-		"present no class":   "name: t\nareas: [{name: A, items: [{id: i, present: {class: ''}}]}]",
-		"bad inline query":   "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'garbage(', subject: r, message: m}}]}]",
-		"query missing vars": "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'component.mpn(?r,\"X\") => ?r'}}]}]",
+		"missing name":           "areas: [{name: A, items: []}]",
+		"no areas":               "name: t",
+		"area no name":           "name: t\nareas: [{items: []}]",
+		"item no id":             "name: t\nareas: [{name: A, items: [{ask: x}]}]",
+		"two bindings":           "name: t\nareas: [{name: A, items: [{id: i, rule: r, profile: P}]}]",
+		"present + rule":         "name: t\nareas: [{name: A, items: [{id: i, rule: r, present: {class: test_connector}}]}]",
+		"present no class":       "name: t\nareas: [{name: A, items: [{id: i, present: {class: ''}}]}]",
+		"bad inline query":       "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'garbage(', subject: r, message: m}}]}]",
+		"query missing vars":     "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'component.mpn(?r,\"X\") => ?r'}}]}]",
 		"requirement no profile": "name: t\nareas: [{name: A, items: [{id: i, requirement: esd}]}]",
 		"requirement on a rule":  "name: t\nareas: [{name: A, items: [{id: i, rule: r, requirement: esd}]}]",
 	}

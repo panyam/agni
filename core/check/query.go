@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/datasheet/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
 )
 
@@ -213,6 +213,10 @@ func (m *irModel) Components() []*ir.Component { return m.d.Components }
 func (m *irModel) SourceFormat() string        { return m.d.GetSourceFormat() }
 func (m *irModel) HasParams() bool             { return m.specs != nil }
 func (m *irModel) HasBoard() bool              { return m.hasBoard }
+
+func (m *irModel) SuppliesDiagnostic(name string) bool {
+	return slices.Contains(m.d.GetInputDiagnostics().GetSupplied(), name)
+}
 
 func (m *irModel) DanglingEndpoints() []*ir.DanglingEndpoint {
 	return m.d.GetInputDiagnostics().GetDanglingEndpoints()

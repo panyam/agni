@@ -670,8 +670,28 @@ type InputDiagnostics struct {
 	// symbol, nothing was lost in the read. The design genuinely has parts nobody has named, and on
 	// one export that was 369 of them across live sheets.
 	UnannotatedComponents []*UnannotatedComponent `protobuf:"bytes,6,rep,name=unannotated_components,json=unannotatedComponents,proto3" json:"unannotated_components,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// The diagnostics this reader COMPUTED, named by their field name here ("ref_des_collisions",
+	// "dangling_endpoints", ...), whether or not it found any.
+	//
+	// Every list above is empty in two different situations that a consumer cannot otherwise tell
+	// apart: the reader looked and found nothing, or the reader never looked. A rule reading the
+	// second as the first reports a clean pass over a question nobody asked, which is the
+	// silence-as-coverage failure the comments above keep naming — and it shipped:
+	// `duplicate-ref-des` read as passing on every EDIF, IPC-2581, gEDA and xschem design, because
+	// only the KiCad reader ever populated ref_des_collisions (agni issue 309).
+	//
+	// Not every reader can supply every diagnostic, and that is not a defect. EDIF represents a
+	// multi-gate part as instances sharing a designator with no capture-unit to tell that legitimate
+	// grouping from a duplicate, so it CANNOT supply ref_des_collisions and says so by omission
+	// here. What changes is that the omission is now stated rather than indistinguishable from a
+	// clean result: check.Available gates the rule to not-applicable instead of letting it pass.
+	//
+	// Declared per READ rather than per format, because it is a property of the reader's
+	// implementation and not of the file: a reader that learns to detect a construct starts
+	// supplying it, and an out-of-module reader (the C18 overlay seam) declares its own.
+	Supplied      []string `protobuf:"bytes,7,rep,name=supplied,proto3" json:"supplied,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *InputDiagnostics) Reset() {
@@ -742,6 +762,13 @@ func (x *InputDiagnostics) GetUnresolvedSymbols() []*UnresolvedSymbol {
 func (x *InputDiagnostics) GetUnannotatedComponents() []*UnannotatedComponent {
 	if x != nil {
 		return x.UnannotatedComponents
+	}
+	return nil
+}
+
+func (x *InputDiagnostics) GetSupplied() []string {
+	if x != nil {
+		return x.Supplied
 	}
 	return nil
 }
@@ -2414,14 +2441,15 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe6\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x82\x04\n" +
 	"\x10InputDiagnostics\x12K\n" +
 	"\x12dangling_endpoints\x18\x01 \x03(\v2\x1c.agni.v1.ir.DanglingEndpointR\x11danglingEndpoints\x12I\n" +
 	"\x12ref_des_collisions\x18\x02 \x03(\v2\x1b.agni.v1.ir.RefDesCollisionR\x10refDesCollisions\x12P\n" +
 	"\x15no_junction_endpoints\x18\x03 \x03(\v2\x1c.agni.v1.ir.DanglingEndpointR\x13noJunctionEndpoints\x12B\n" +
 	"\x0funmodeled_buses\x18\x04 \x03(\v2\x19.agni.v1.ir.BusNotModeledR\x0eunmodeledBuses\x12K\n" +
 	"\x12unresolved_symbols\x18\x05 \x03(\v2\x1c.agni.v1.ir.UnresolvedSymbolR\x11unresolvedSymbols\x12W\n" +
-	"\x16unannotated_components\x18\x06 \x03(\v2 .agni.v1.ir.UnannotatedComponentR\x15unannotatedComponents\"e\n" +
+	"\x16unannotated_components\x18\x06 \x03(\v2 .agni.v1.ir.UnannotatedComponentR\x15unannotatedComponents\x12\x1a\n" +
+	"\bsupplied\x18\a \x03(\tR\bsupplied\"e\n" +
 	"\x14UnannotatedComponent\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x124\n" +
 	"\tinstances\x18\x02 \x03(\v2\x16.agni.v1.ir.ProvenanceR\tinstances\"\x83\x01\n" +

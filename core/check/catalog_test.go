@@ -176,3 +176,40 @@ func TestCatalogWithRejectsACollision(t *testing.T) {
 		t.Error("a rule name containing the namespace separator should be rejected")
 	}
 }
+
+// TestAvailableRefDesCollisionsCapability (agni issue 309): a rule whose entire subject is a reader
+// diagnostic has nothing to report when the reader never computed it, and "nothing to report" is
+// exactly what a clean design looks like. So the gate reads the reader's own declaration rather than
+// the emptiness of the list.
+//
+// The two designs below are the whole bug: identical empty collision lists, opposite meanings. Before
+// the declaration existed, both read as a pass.
+func TestAvailableRefDesCollisionsCapability(t *testing.T) {
+	rule := &Rule{Reads: []string{"ref_des_collision"}, RequiresCapability: []Capability{CapRefDesCollisions}}
+
+	looked := NewModel(&ir.Design{SourceFormat: "kicad-sch",
+		InputDiagnostics: &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}})
+	if ok, _ := Available(rule, looked); !ok {
+		t.Error("a reader that computed the diagnostic and found none: want available (it is a real clean pass)")
+	}
+
+	didNot := NewModel(&ir.Design{SourceFormat: "edif-2.0.0", InputDiagnostics: &ir.InputDiagnostics{}})
+	ok, reason := Available(rule, didNot)
+	if ok {
+		t.Error("a reader that cannot detect collisions: want not-applicable, not a silent pass")
+	}
+	if reason == "" {
+		t.Error("not-applicable with no reason tells a reviewer nothing")
+	}
+
+	// A design with no InputDiagnostics at all is the same case: nobody looked.
+	if ok, _ := Available(rule, NewModel(&ir.Design{SourceFormat: "edif-2.0.0"})); ok {
+		t.Error("no diagnostics block at all: want not-applicable")
+	}
+
+	// The catalog listing (m == nil) keeps the rule available, mirroring the other capabilities:
+	// the engine can run it, on a design that supplies the diagnostic.
+	if ok, _ := Available(rule, nil); !ok {
+		t.Error("capability rule at catalog listing (m==nil): want available")
+	}
+}

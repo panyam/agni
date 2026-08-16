@@ -15,6 +15,11 @@ var duplicateRefDes = &check.Rule{
 	Impact:     "Two parts sharing a ref-des collapse into one in the BOM and corrupt the net join key: one part is dropped from the build, or connections meant for two parts land on one. It is an annotation slip that silently falsifies both the BOM and the netlist.",
 	Primitives: []string{"select"},
 	Reads:      []string{"ref_des_collision"},
+	// The rule IS the reader's diagnostic, so a reader that does not compute it leaves this rule
+	// with nothing to report — which is exactly what a clean design looks like. Gating on the
+	// capability makes the difference visible: not-applicable, with a reason, instead of a pass
+	// nobody earned (agni issue 309).
+	RequiresCapability: []check.Capability{check.CapRefDesCollisions},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "P",

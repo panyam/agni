@@ -354,6 +354,8 @@ func capabilityMet(c Capability, m Model) bool {
 		return m.FormatTypesPowerOut()
 	case CapNoConnectChannel:
 		return m.HasNoConnectChannel()
+	case CapRefDesCollisions:
+		return m.SuppliesDiagnostic(string(CapRefDesCollisions))
 	case CapNetClass:
 		return m.HasNetClasses()
 	case CapNetClassDefs:
@@ -370,6 +372,8 @@ func capabilityReason(c Capability) string {
 		return "source format does not type power-output pins (driver absence is not conclusive here)"
 	case CapNoConnectChannel:
 		return "source format cannot express intentional no-connect"
+	case CapRefDesCollisions:
+		return "this format's reader does not detect ref-des collisions (nothing was checked)"
 	case CapNetClass:
 		return "design carries no net-class assignments (only a KiCad project file supplies them)"
 	case CapNetClassDefs:

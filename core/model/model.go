@@ -37,6 +37,12 @@ type Model interface {
 	// where the netlist SourceFormat is not a board format but a separate board export is
 	// attached. A board file with no routed copper still reports true (checked, clean).
 	HasBoard() bool
+	// SuppliesDiagnostic reports whether the reader COMPUTED a diagnostic, named by its
+	// InputDiagnostics field name ("ref_des_collisions"). It is the difference between "looked and
+	// found none" and "never looked", which every list below flattens into the same empty slice. A
+	// rule whose whole subject is one of these diagnostics gates on it (check.Available), so a
+	// format whose reader cannot detect the construct reports not-applicable rather than passing.
+	SuppliesDiagnostic(name string) bool
 	// reader-emitted input diagnostics (docs/19): wire endpoints on nothing, and ref-des collisions.
 	// Empty for sources that carry none; a thin rule reports each.
 	DanglingEndpoints() []*ir.DanglingEndpoint

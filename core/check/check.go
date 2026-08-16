@@ -219,6 +219,15 @@ const (
 	// has nothing to say either way. The queryable twin is has_netclass / the design.has_netclass fact.
 	CapNetClass Capability = "netclass"
 
+	// CapRefDesCollisions: the READER detects ref-des collisions for this design's format. Unlike
+	// the capabilities above it is a property of the reader rather than of the format's grammar,
+	// and it is declared per read (ir.InputDiagnostics.supplied) rather than inferred here, because
+	// only the reader knows whether it looked. A rule whose entire subject is a reader diagnostic
+	// finds nothing when nobody looked, and "found nothing" is what a clean pass looks like: on
+	// EDIF, IPC-2581, gEDA and xschem, duplicate-ref-des read as passing for as long as it existed
+	// (agni issue 309). The queryable twin is supplies_ref_des_collisions.
+	CapRefDesCollisions Capability = "ref_des_collisions"
+
 	// CapNetClassDefs: the design declares net-class DEFINITIONS — what a class's nets should route
 	// at (clearance, track width, via sizes), WS3-111. Deliberately SEPARATE from CapNetClass, because
 	// net_settings carries membership and definitions in independent blocks: a project can assign nets

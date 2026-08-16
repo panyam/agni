@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
@@ -215,6 +216,53 @@ func TestSkippedRefDes(t *testing.T) {
 	for _, gr := range g.Graphics {
 		if gr.GetRefDes() == "REF**" {
 			t.Error("board geometry kept body graphics for an unannotated component")
+		}
+	}
+}
+
+// TestRefDesCollisions (agni issue 309): a board states one placement per physical part and has no
+// gate construct to group several under one designator, so a repeated refDes is unambiguous. This
+// reader emitted nothing before, and `duplicate-ref-des` therefore read as a clean pass on every
+// IPC-2581 design rather than as a question nobody asked.
+func TestRefDesCollisions(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "board_dup_refdes.xml")), "board_dup_refdes.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cols := d.GetInputDiagnostics().GetRefDesCollisions()
+	if len(cols) != 1 || cols[0].GetRefDes() != "R2" {
+		t.Fatalf("collisions = %+v, want one for R2", cols)
+	}
+	if n := len(cols[0].GetInstances()); n != 2 {
+		t.Errorf("R2 instances = %d, want 2", n)
+	}
+}
+
+// The clean read is the assertion that would have caught the original bug: an empty list has to
+// come with the declaration, or it is indistinguishable from a reader that never looked.
+func TestRefDesCollisionsDeclaredOnCleanRead(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(d.GetInputDiagnostics().GetRefDesCollisions()); n != 0 {
+		t.Fatalf("board.xml has %d collisions, want a clean read", n)
+	}
+	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "ref_des_collisions") {
+		t.Error("a clean read must still declare it looked")
+	}
+}
+
+// A placeholder designator is annotation state, not a claimed name, and this reader drops those
+// components entirely. Two fiducials wearing "REF**" are not two parts fighting over one name.
+func TestRefDesCollisionsIgnorePlaceholders(t *testing.T) {
+	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range d.GetInputDiagnostics().GetRefDesCollisions() {
+		if c.GetRefDes() == "REF**" || c.GetRefDes() == "C?1845" {
+			t.Errorf("placeholder %q reported as a collision", c.GetRefDes())
 		}
 	}
 }
