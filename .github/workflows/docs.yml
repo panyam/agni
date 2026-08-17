@@ -32,12 +32,31 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: docsite/pnpm-lock.yaml
+
+      - name: Install docsite dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `make build`, not the steps by hand. This workflow used to re-implement the build and had
+      # already drifted twice: it never ran the esbuild components step (so a page with
+      # `playground:` front-matter shipped with its bundle include missing, silently, because
+      # includeFile returns "" for a file that is not there), and when search landed it did not
+      # build the index either, so the deployed site had a search box over a 404. One definition
+      # of what a build is, in the Makefile, the way ci.yml does it for testall.
       - name: Build the site
-        run: AGNI_DOCS_ENV=production go run . -build
-      - name: Copy static assets into the build
-        run: |
-          cp -r static dist/static
-          touch dist/.nojekyll
+        run: make build
+
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docsite/dist
