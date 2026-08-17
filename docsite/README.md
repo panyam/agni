@@ -69,3 +69,21 @@ does not exist in the file, so the edit fails to match.
 tracked and world-readable. A parked section sat there for months in exactly that state. Moving
 something to `_hidden/` is a publishing decision and never a confidentiality one. Anything genuinely
 sensitive has to leave the repo and its history.
+
+**Search is a post-build index over `dist/`, not over `content/`.** `make build` ends by running
+`pagefind --site dist`, which writes `dist/pagefind/`. Indexing the BUILT site is deliberate:
+`_hidden/` pages never reach `dist`, so they stay out of the index without a second exclusion list
+to keep in sync. The step lives in `build` rather than in `gh-pages` so a local build and the deploy
+produce the same tree.
+
+Three things about it are load-bearing. **`Content.html` carries `data-pagefind-body`** on the
+article: Pagefind drops `<nav>` by itself but NOT `<header>`, so without it every excerpt opened
+with the logo and the GitHub link. **The search overlay in `BasePage.html` carries
+`data-pagefind-ignore`**, because Pagefind indexes hidden text, so the overlay's own copy would
+otherwise be indexed on all 170 pages and "index" or "build" would match the whole site. And **the
+Pagefind bundle is fetched on first open, not on load**, so a visit that never searches pays nothing
+for the ~135KB of JS and CSS.
+
+`make run` does not build an index, since it serves from `content/` with no `dist`. The overlay
+detects the missing bundle and says so rather than hanging. Use `make build` to exercise search
+locally, and note it must be served under the `/agni/` prefix for the bundle path to resolve.

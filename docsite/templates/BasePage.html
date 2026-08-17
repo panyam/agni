@@ -50,6 +50,110 @@
     {{ template "Footer" . }}
     {{ end }}
 
+    <!-- Search overlay. The markup ships on every page but the Pagefind bundle (~135KB of JS
+         and CSS) is fetched on FIRST OPEN, not on load, so a visit that never searches pays
+         nothing. `make build` writes the index to dist/pagefind; a dev server started with
+         `make run` has no dist, so loadSearch() fails and says so rather than hanging. -->
+    <!-- data-pagefind-ignore is load-bearing: Pagefind indexes hidden text, and without it this
+         overlay's own copy would be indexed on all 170 pages, so "index" or "build" would match
+         the whole site. Pagefind drops <header>/<nav>/<footer> by default but this is neither. -->
+    <div class="search-overlay" id="search-overlay" data-pagefind-ignore hidden>
+        <div class="search-backdrop" data-search-close></div>
+        <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search the docs">
+            <div id="pagefind-search"></div>
+            <p class="search-unavailable" id="search-unavailable" hidden>
+                The search index is not built. Run <code>make build</code> in <code>docsite/</code>.
+            </p>
+        </div>
+    </div>
+    <script>
+        (function() {
+            var overlay = document.getElementById('search-overlay');
+            var trigger = document.getElementById('search-trigger');
+            if (!overlay || !trigger) return;
+
+            var loaded = false, loading = false;
+
+            function asset(kind, href) {
+                return new Promise(function(resolve, reject) {
+                    var el;
+                    if (kind === 'css') {
+                        el = document.createElement('link');
+                        el.rel = 'stylesheet';
+                        el.href = href;
+                    } else {
+                        el = document.createElement('script');
+                        el.src = href;
+                    }
+                    el.onload = resolve;
+                    el.onerror = reject;
+                    document.head.appendChild(el);
+                });
+            }
+
+            // Resolves once PagefindUI is mounted. Rejects if the index is missing.
+            function loadSearch() {
+                if (loaded || loading) return Promise.resolve();
+                loading = true;
+                var base = '{{.Site.PathPrefix}}/pagefind/';
+                return asset('css', base + 'pagefind-ui.css')
+                    .then(function() { return asset('js', base + 'pagefind-ui.js'); })
+                    .then(function() {
+                        new PagefindUI({
+                            element: '#pagefind-search',
+                            bundlePath: base,
+                            showSubResults: true,
+                            showImages: false,
+                            pageSize: 8
+                        });
+                        loaded = true;
+                    })
+                    .catch(function() {
+                        document.getElementById('search-unavailable').hidden = false;
+                    })
+                    .then(function() { loading = false; });
+            }
+
+            function focusInput() {
+                var input = overlay.querySelector('input');
+                if (input) input.focus();
+            }
+
+            function open() {
+                overlay.hidden = false;
+                document.body.classList.add('search-open');
+                loadSearch().then(focusInput);
+                focusInput();
+            }
+
+            function close() {
+                overlay.hidden = true;
+                document.body.classList.remove('search-open');
+                trigger.focus();
+            }
+
+            trigger.addEventListener('click', open);
+            overlay.addEventListener('click', function(e) {
+                if (e.target.hasAttribute('data-search-close')) close();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !overlay.hidden) { close(); return; }
+                if (overlay.hidden === false) return;
+
+                // Ignore the shortcut while the user is typing somewhere else.
+                var t = e.target;
+                var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+                if (typing) return;
+
+                if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+                    e.preventDefault();
+                    open();
+                }
+            });
+        })();
+    </script>
+
     <!-- Interactive playground bundles. A front-matter flag (`playground:
          viewer`) pulls in the hashed DocsPage bundle esbuild (build.mjs) emits
          into templates/gen.DocsPage.html. The bundle hydrates the inline
