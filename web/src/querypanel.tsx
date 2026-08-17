@@ -43,6 +43,35 @@ function QueryPanel(props: {
   // detailRel is the relation whose reference doc (Detail) is open in the inspect pane, or null
   // (WS14-005). Clicking a chip's info affordance opens it; the ✕ closes it. Ephemeral view state.
   const [detailRel, setDetailRel] = createSignal<RelationItem | null>(null);
+  // widths holds a per-column pixel width once the reader has dragged that column's edge. Columns
+  // nobody touched stay unset and share the table equally (see .query-table's fixed layout), which
+  // is the fix for the old auto layout: it sized every column to its widest cell, so one long
+  // provenance string or net name took most of the panel and the rest were unreadable slivers.
+  const [widths, setWidths] = createSignal<Record<number, number>>({});
+  const MIN_COL_PX = 48;
+
+  // startResize drags one column edge. It is a pointer capture rather than window listeners so the
+  // drag survives the cursor leaving the header, and it stops the click reaching the sort handler
+  // underneath — dragging an edge must not also re-sort the table.
+  const startResize = (e: PointerEvent, col: number): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    const handle = e.currentTarget as HTMLElement;
+    const th = handle.closest("th");
+    const startX = e.clientX;
+    const startW = th?.getBoundingClientRect().width ?? MIN_COL_PX;
+    handle.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent): void => {
+      setWidths({ ...widths(), [col]: Math.max(MIN_COL_PX, Math.round(startW + ev.clientX - startX)) });
+    };
+    const up = (): void => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  };
+
   // drawerOpen controls the slide-in helper drawer (examples + relations + reference). The main
   // surface is just the query textarea and the results table; the discovery chrome lives in the
   // drawer so it does not eat vertical space. A left-edge handle opens it, and clicking the textarea
@@ -277,6 +306,12 @@ function QueryPanel(props: {
         >
           <div class="query-results">
             <table class="query-table">
+              {/* A colgroup carries the widths, so a drag sets ONE number rather than restyling every
+                  cell in the column, and the fixed layout below honours it. */}
+              <colgroup>
+                <col class="query-cite-col" />
+                <For each={props.state().columns}>{(_, ci) => <col style={widths()[ci()] ? { width: `${widths()[ci()]}px` } : undefined} />}</For>
+              </colgroup>
               <thead>
                 <tr>
                   <th class="query-cite-col" />
@@ -287,10 +322,16 @@ function QueryPanel(props: {
                         title="click to sort; click again to reverse, once more to clear"
                         onClick={() => sortBy(ci())}
                       >
-                        {c}
+                        <span class="query-th-label">{c}</span>
                         <Show when={sortCol() === ci()}>
                           <span class="query-sort-ind">{sortDir() === "asc" ? " ▲" : " ▼"}</span>
                         </Show>
+                        <span
+                          class="query-col-grip"
+                          title="drag to resize this column"
+                          onPointerDown={(e) => startResize(e, ci())}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </th>
                     )}
                   </For>

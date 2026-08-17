@@ -300,13 +300,24 @@
     /* The results are the panel's own scroll region — a wide table scrolls horizontally here without
        moving the query box, and long results scroll vertically under a sticky header. */
     .query-results { flex: 1 1 auto; min-height: 0; overflow: auto; }
-    .query-table { border-collapse: collapse; font-size: 12px; width: 100%; }
+    /* fixed layout is what makes the columns equal by default and a dragged width stick. Under the
+       old auto layout the browser sized each column to its widest cell, so one long provenance
+       string or net name ate the panel and the rest were slivers. */
+    .query-table { border-collapse: collapse; font-size: 12px; width: 100%; table-layout: fixed; }
     .query-table th, .query-table td { text-align: left; padding: 3px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
     .query-table th { color: #444; font-weight: 600; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #fafafa; z-index: 1; }
     .query-table th.query-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
     .query-table th.query-sortable:hover { color: #1c1c1c; background: #f0f1f3; }
     .query-sort-ind { color: #2563eb; }
-    .query-table td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    /* A fixed layout clips rather than growing, so long unbroken values (a net id, a citation path)
+       wrap inside their column instead of overflowing it. */
+    .query-table td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    .query-table th { position: relative; }
+    .query-th-label { overflow-wrap: anywhere; }
+    /* The grip sits on the column's trailing edge, a few px wide, and only shows itself on hover so
+       the header stays a header. It must swallow the click, or resizing also re-sorts. */
+    .query-col-grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
+    .query-table th:hover .query-col-grip { background: linear-gradient(to right, transparent, #d3d6db); }
     .query-cell-locate { white-space: nowrap; }
     .query-locate { font: inherit; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
     .query-locate:hover { color: #1d4ed8; }

@@ -275,3 +275,52 @@ describe("querypanel", () => {
     expect(ta.value).toBe("a, component-on-net(?ref_des, ?net) => ?r");
   });
 });
+
+// The results table used to be an auto layout with no per-column widths, so the browser sized each
+// column to its widest cell: one long provenance path or net id took most of the panel and the rest
+// were unreadable slivers. Columns are equal by default now, and draggable.
+describe("resizable result columns", () => {
+  const grips = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>(".query-col-grip")];
+  const cols = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>("colgroup col")];
+
+  function drag(grip: HTMLElement, from: number, to: number): void {
+    grip.setPointerCapture = () => {};
+    grip.releasePointerCapture = () => {};
+    grip.dispatchEvent(new PointerEvent("pointerdown", { clientX: from, bubbles: true, cancelable: true }));
+    grip.dispatchEvent(new PointerEvent("pointermove", { clientX: to, bubbles: true }));
+    grip.dispatchEvent(new PointerEvent("pointerup", { clientX: to, bubbles: true }));
+    // A real browser fires click after a pointerdown/up on the same element, and that click bubbles
+    // to the sort handler on the header. jsdom does not synthesize it, so without this line the
+    // "does not sort while resizing" case passes whether the grip swallows the click or not.
+    grip.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }
+
+  it("gives every data column a grip and no width until one is dragged", () => {
+    const h = mountPanel();
+    h.push(resultFromResponse({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
+
+    expect(grips(h.el)).toHaveLength(2);
+    // A colgroup entry per column plus the citation gutter; unset widths mean equal shares.
+    expect(cols(h.el)).toHaveLength(3);
+    expect(cols(h.el)[1].style.width).toBe("");
+  });
+
+  it("applies a dragged width to that column alone", () => {
+    const h = mountPanel();
+    h.push(resultFromResponse({ columns: ["?r", "?n"], rows: [{ cells: ["U1", "GND"], cites: [] }] } as never));
+
+    drag(grips(h.el)[0], 100, 260);
+    expect(cols(h.el)[1].style.width).not.toBe("");
+    expect(cols(h.el)[2].style.width).toBe(""); // its neighbour is untouched
+  });
+
+  // Dragging an edge must not also re-sort: the grip sits inside the header button's click target.
+  it("does not sort while resizing", () => {
+    const h = mountPanel();
+    h.push(resultFromResponse({ columns: ["?r", "?n"], rows: [{ cells: ["B", "x"], cites: [] }, { cells: ["A", "y"], cites: [] }] } as never));
+    const before = h.el.querySelector(".query-sort-ind");
+
+    drag(grips(h.el)[0], 100, 200);
+    expect(h.el.querySelector(".query-sort-ind")).toBe(before);
+  });
+});
