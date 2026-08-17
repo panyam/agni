@@ -269,6 +269,9 @@ func (s *QueryService) ListRelations(_ context.Context, _ *webapi.ListRelationsR
 			Detail:  r.Detail,
 		})
 	}
+	for _, e := range query.EntityQueries() {
+		resp.EntityQueries = append(resp.EntityQueries, &webapi.EntityQuery{Kind: e.Kind, Query: e.Query, Teaches: e.Teaches})
+	}
 	for _, e := range query.Examples() {
 		resp.Examples = append(resp.Examples, &webapi.ExampleQuery{Label: e.Label, Query: e.Query, Teaches: e.Teaches})
 	}

@@ -19,7 +19,26 @@ type Attr struct{ key, val string }
 
 // A is a raw attribute: the value is written verbatim (colors, text-anchor, point lists,
 // and other tokens with no quote characters).
+//
+// NEVER pass data read from a design file to this. Attribute values are written unescaped, so a net
+// or component name containing a quote would close the attribute and inject markup into a document
+// the viewer mounts with innerHTML. Text CONTENT has always been escaped (see Text); attributes were
+// safe only because nothing but colors and numbers went into them, which stopped being true when
+// entity keys arrived. Use AEsc for anything a reader's file supplies.
 func A(key, val string) Attr { return Attr{key, val} }
+
+// AEsc is an attribute whose value comes from the design: net names, designators, pin numbers. The
+// value is escaped, so a name carrying a quote or an angle bracket lands as text rather than as
+// markup.
+func AEsc(key, val string) Attr { return Attr{key, escapeAttr(val)} }
+
+// escapeAttr escapes a value for an attribute in double quotes. xml.EscapeText covers the five XML
+// entities plus the control whitespace, which is what an attribute needs.
+func escapeAttr(v string) string {
+	var b strings.Builder
+	_ = xml.EscapeText(&b, []byte(v))
+	return b.String()
+}
 
 // F is a float attribute formatted to one decimal place.
 func F(key string, v float64) Attr { return Attr{key, f1(v)} }

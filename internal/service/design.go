@@ -288,7 +288,11 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	resp := &webapi.GetSheetResponse{}
 	switch req.GetFormat() {
 	case webapi.SheetFormat_SHEET_FORMAT_SVG:
-		resp.Content = &webapi.GetSheetResponse_Svg{Svg: render.SheetSVG(g, sheet, render.WithStyle(style))}
+		// The served viewer is the one consumer that PICKS, so it is the one that asks for the
+		// per-pin pick targets. `agni render` writing a file does not, and neither does a report
+		// embedding a sheet: they would carry an invisible element per pin for an interaction that
+		// never happens there (render.Style.PickTargets).
+		resp.Content = &webapi.GetSheetResponse_Svg{Svg: render.SheetSVG(g, sheet, render.WithStyle(style), render.WithPickTargets())}
 	case webapi.SheetFormat_SHEET_FORMAT_NATIVE:
 		svg, err := s.native.Render(ctx, u, render.SheetIndex(g, sheet)+1)
 		if err != nil {

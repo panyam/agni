@@ -58,9 +58,26 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 		case geom.WireGeometry_KIND_BUS, geom.WireGeometry_KIND_BUS_ENTRY:
 			stroke, width = style.Bus, busStrokePx
 		}
+		keys := wireKeys(wire)
 		for _, pl := range wire.Polylines {
-			c.El("polyline", svg.A("fill", "none"), svg.A("stroke", stroke),
-				svg.F("stroke-width", width), svg.A("points", points(pl.Points, tx, ty)))
+			pts := points(pl.Points, tx, ty)
+			c.El("polyline", append([]svg.Attr{svg.A("fill", "none"), svg.A("stroke", stroke),
+				svg.F("stroke-width", width), svg.A("points", pts)}, keys...)...)
+			if style.PickTargets {
+				// A wire is a 0.8px stroke, and a fill:none polyline hit-tests only ON that stroke,
+				// so a click has to land within half a pixel of the line. Measured in a real browser:
+				// a probe at the wire's own midpoint, rounded to whole pixels, hits the page rect.
+				// Sampling a ring around the cursor does not rescue it either, because every probe
+				// faces the same sub-pixel target.
+				//
+				// So the viewer's render carries an invisible wide companion whose only job is to be
+				// hit. It stays in the wire pass, under the symbols, so a wire crossing beneath a
+				// part still loses to the part. Opt-in for the same reason the pin targets are: a
+				// report embedding this sheet should not carry the viewer's interaction model.
+				c.El("polyline", append([]svg.Attr{svg.A("fill", "none"), svg.A("stroke", "none"),
+					svg.F("stroke-width", wirePickWidthPx), svg.A("pointer-events", "stroke"),
+					svg.A("points", pts)}, keys...)...)
+			}
 		}
 	}
 
@@ -71,8 +88,9 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 
 	// Symbol graphics, dark.
 	for _, pl := range sheet.Placements {
+		keys := symbolKeys(pl)
 		for _, s := range placedShapes(syms, pl) {
-			writeShape(c, s, tx, ty, scale, strokePx, style, style.Symbol)
+			writeShape(c, s, tx, ty, scale, strokePx, style, style.Symbol, keys...)
 		}
 	}
 
@@ -88,7 +106,14 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 		for _, pin := range sym.Pins {
 			wp := geomath.PlacePin(pl.Transform, pin)
 			if style.PinDots {
-				c.El("circle", svg.F("cx", tx(wp.X)), svg.F("cy", ty(wp.Y)), svg.F("r", pinRPx), svg.A("fill", style.Pin))
+				c.El("circle", append([]svg.Attr{svg.F("cx", tx(wp.X)), svg.F("cy", ty(wp.Y)), svg.F("r", pinRPx),
+					svg.A("fill", style.Pin)}, pinKeys(pl, pin.PortRef)...)...)
+			} else if style.PickTargets {
+				// The same circle, invisible and larger: a pin is a POINT, and a point is unclickable
+				// without an area. pointer-events keeps it hittable while fill:none keeps it unseen,
+				// so the drawing is unchanged and the pin is pickable.
+				c.El("circle", append([]svg.Attr{svg.F("cx", tx(wp.X)), svg.F("cy", ty(wp.Y)), svg.F("r", pinPickRPx),
+					svg.A("fill", "none"), svg.A("pointer-events", "all")}, pinKeys(pl, pin.PortRef)...)...)
 			}
 			if pin.LabelOrigin != nil {
 				lp := geomath.ApplyTransform(pl.Transform, pin.LabelOrigin)
@@ -156,6 +181,12 @@ const (
 	strokePx      = 0.8             // geometry stroke width
 	busStrokePx   = strokePx * 3   // bus trunk/entry stroke: a fixed-visual-width line, thicker than a wire (WS7-042)
 	pinRPx        = 2.5             // pin connect-dot radius
+	// pinPickRPx is the invisible pick target's radius (WithPickTargets): wider than the dot,
+	// because it exists to be HIT rather than seen, and a pin at a normal zoom is a few pixels.
+	pinPickRPx = 6.0
+	// wirePickWidthPx is the invisible companion stroke's width: wide enough that a click near a
+	// wire lands on it, narrow enough that two parallel wires a few pixels apart stay distinct.
+	wirePickWidthPx = 7.0
 	lineHeight    = 1.2            // multiplier on font size for stacking multi-line text
 	// glyphAdvanceEm is the average horizontal advance of one glyph, as a fraction of the font
 	// size. It is the one place the width estimate is calibrated, shared by the caption-condense
@@ -305,7 +336,46 @@ func drawImage(c *svg.Canvas, im *geom.Image, tx, ty func(int64) float64) {
 	c.El("image", attrs...)
 }
 
-func writeShape(c *svg.Canvas, s *geom.Shape, tx, ty func(int64) float64, scale, stroke float64, style Style, strokeColor string) {
+// writeShape draws one shape. keys carries the entity attributes the CALLER knows (a symbol's
+// data-ref, nothing for free sheet graphics), so every drawn element says what it belongs to and a
+// viewer can pick it without a second index. See entityKeys.
+// entityKeys are the data-* attributes a rendered element carries so a viewer can tell what it
+// belongs to: the SVG document is its own pick index, rather than the client joining a second
+// representation to interpret its own picture. A saved or embedded sheet keeps that identity too,
+// which a packed sidecar would give to nobody.
+//
+// Values come from the design, so they go through svg.AEsc: a net named with a quote would
+// otherwise close the attribute and inject markup into a document the viewer mounts with innerHTML.
+func wireKeys(w *geom.WireGeometry) []svg.Attr {
+	keys := []svg.Attr{svg.AEsc("data-kind", "wire"), svg.AEsc("data-net", w.GetNet())}
+	if id := w.GetNetId(); id != "" {
+		keys = append(keys, svg.AEsc("data-net-id", id))
+	}
+	switch w.GetKind() {
+	case geom.WireGeometry_KIND_BUS, geom.WireGeometry_KIND_BUS_ENTRY:
+		// A bus carries no net identity of its own; its NAME is the join key (WS7-042b), and the
+		// kind is what tells a picker not to treat it as a net.
+		keys[0] = svg.AEsc("data-kind", "bus")
+		keys = append(keys, svg.AEsc("data-bus", w.GetNet()))
+	}
+	return keys
+}
+
+// symbolKeys identify a placed component's own graphics.
+func symbolKeys(pl *geom.SymbolPlacement) []svg.Attr {
+	return []svg.Attr{svg.AEsc("data-kind", "component"), svg.AEsc("data-ref", pl.GetRefDes())}
+}
+
+// pinKeys identify one pin of one placement, the finest pick target. data-ref is repeated so a
+// picker that resolves to a pin also knows its component without walking the DOM.
+func pinKeys(pl *geom.SymbolPlacement, portRef string) []svg.Attr {
+	return []svg.Attr{svg.AEsc("data-kind", "pin"), svg.AEsc("data-ref", pl.GetRefDes()), svg.AEsc("data-pin", portRef)}
+}
+
+func writeShape(c *svg.Canvas, s *geom.Shape, tx, ty func(int64) float64, scale, stroke float64, style Style, strokeColor string, keys ...svg.Attr) {
+	// el stamps the caller's entity keys onto every element this shape emits, so a multi-element
+	// shape (a rect plus its fill, a polyline per segment) is pickable at any of its parts.
+	el := func(tag string, attrs ...svg.Attr) { c.El(tag, append(attrs, keys...)...) }
 	fill := shapeFill(s, style, strokeColor)
 	switch s.Kind {
 	case geom.Shape_KIND_RECT:
@@ -315,19 +385,19 @@ func writeShape(c *svg.Canvas, s *geom.Shape, tx, ty func(int64) float64, scale,
 		// Corners transform pointwise; renormalize since rotation may swap min/max.
 		x0, y0 := tx(s.Points[0].X), ty(s.Points[0].Y)
 		x1, y1 := tx(s.Points[1].X), ty(s.Points[1].Y)
-		c.El("rect", svg.A("fill", fill), svg.A("stroke", strokeColor), svg.F("stroke-width", stroke),
+		el("rect", svg.A("fill", fill), svg.A("stroke", strokeColor), svg.F("stroke-width", stroke),
 			svg.F("x", math.Min(x0, x1)), svg.F("y", math.Min(y0, y1)), svg.F("width", math.Abs(x1-x0)), svg.F("height", math.Abs(y1-y0)))
 	case geom.Shape_KIND_CIRCLE:
 		if len(s.Points) < 1 {
 			return
 		}
-		c.El("circle", svg.A("fill", fill), svg.A("stroke", strokeColor), svg.F("stroke-width", stroke),
+		el("circle", svg.A("fill", fill), svg.A("stroke", strokeColor), svg.F("stroke-width", stroke),
 			svg.F("cx", tx(s.Points[0].X)), svg.F("cy", ty(s.Points[0].Y)), svg.F("r", float64(s.Radius)*scale))
 	case geom.Shape_KIND_DOT:
 		if len(s.Points) < 1 {
 			return
 		}
-		c.El("circle", svg.F("cx", tx(s.Points[0].X)), svg.F("cy", ty(s.Points[0].Y)), svg.F("r", stroke*2), svg.A("fill", strokeColor))
+		el("circle", svg.F("cx", tx(s.Points[0].X)), svg.F("cy", ty(s.Points[0].Y)), svg.F("r", stroke*2), svg.A("fill", strokeColor))
 	case geom.Shape_KIND_POLYLINE, geom.Shape_KIND_ARC:
 		// ARC is drawn as a polyline through its (start, mid, end) points for now; a true
 		// circular-arc path is a later refinement. A filled polyline (a symbol body) is
@@ -335,11 +405,11 @@ func writeShape(c *svg.Canvas, s *geom.Shape, tx, ty func(int64) float64, scale,
 		if len(s.Points) == 0 {
 			return
 		}
-		el := "polyline"
+		tag := "polyline"
 		if s.Fill != geom.Shape_FILL_UNSPECIFIED && s.Kind == geom.Shape_KIND_POLYLINE {
-			el = "polygon"
+			tag = "polygon"
 		}
-		c.El(el, svg.A("fill", fill), svg.A("stroke", strokeColor), svg.F("stroke-width", stroke), svg.A("points", points(s.Points, tx, ty)))
+		el(tag, svg.A("fill", fill), svg.A("stroke", strokeColor), svg.F("stroke-width", stroke), svg.A("points", points(s.Points, tx, ty)))
 	}
 }
 

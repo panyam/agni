@@ -45,6 +45,15 @@ type Style struct {
 	// a hardware engineer reads them as noise (WS7-017). Real junction dots are sheet Shapes and
 	// draw regardless. Enable with WithPinDots for the eyeball check.
 	PinDots bool
+	// PickTargets emits an invisible, keyed circle at every pin so a viewer can CLICK a pin.
+	//
+	// Off by default, and the default is the point. Wire and symbol keys ride on elements the render
+	// already draws, so they cost nothing and any consumer of the SVG gains them. A pin has no drawn
+	// element of its own in a faithful render (the dot above is a verification aid Eeschema does not
+	// draw), so making pins pickable means ADDING elements — one per pin, which on a large sheet is
+	// the biggest single contributor to document size. A report embedding a sheet, or a diff artifact,
+	// should not pay for the viewer's interaction model; the viewer asks for it (WithPickTargets).
+	PickTargets bool
 }
 
 // GroupColor returns the geometry color for a packed primitive group (the groupSymbol..
@@ -146,6 +155,10 @@ func WithStyle(s Style) Option { return func(dst *Style) { *dst = s } }
 // default; see Style.PinDots). It applies after any WithStyle, so it re-enables the dots
 // even when a preset Style left them off.
 func WithPinDots() Option { return func(dst *Style) { dst.PinDots = true } }
+
+// WithPickTargets emits the invisible per-pin pick targets (see Style.PickTargets). The served
+// viewer asks for them; a render destined for a file or a report does not.
+func WithPickTargets() Option { return func(dst *Style) { dst.PickTargets = true } }
 
 // resolveStyle applies the options over a copy of DefaultStyle.
 func resolveStyle(opts []Option) Style {

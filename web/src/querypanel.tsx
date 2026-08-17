@@ -1,7 +1,8 @@
-import { For, Show, createSignal } from "solid-js";
+import { For, Show, createEffect, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import {
+  type EntityQueryItem,
   type ExampleItem,
   type QueryResult,
   type QueryView,
@@ -33,6 +34,7 @@ function QueryPanel(props: {
   relations: () => RelationItem[];
   examples: () => ExampleItem[];
   locateNote: () => string;
+  prefill: () => { text: string; n: number };
   onRun: (text: string) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
 }) {
@@ -77,6 +79,17 @@ function QueryPanel(props: {
   // drawer so it does not eat vertical space. A left-edge handle opens it, and clicking the textarea
   // (or running anything) closes it so the results are unobscured. The drawer stays mounted at all
   // times (translated off-screen when closed) so chip clicks work without opening it.
+  // A query written for the reader lands in the box AND runs, so a click on the drawing answers
+  // immediately; what it leaves behind is an editable query, which is how the click teaches the
+  // language rather than routing around it.
+  createEffect(() => {
+    const p = props.prefill();
+    if (!p.n) return;
+    setText(p.text);
+    setDrawerOpen(false);
+    props.onRun(p.text);
+  });
+
   const [drawerOpen, setDrawerOpen] = createSignal(false);
   // sortCol/sortDir are the results table's client-side sort (WS: sortable columns). sortCol is a
   // column index into state().columns (-1 = natural row order); clicking a header cycles
@@ -440,6 +453,14 @@ export function queryPanelIsland(
   const [relations, setRelations] = signalView<RelationItem[]>([]);
   const [examples, setExamples] = signalView<ExampleItem[]>([]);
   const [locateNote, setLocateNote] = signalView<string>("");
+  // prefill carries a query written FOR the reader (a click on the drawing generates one). The
+  // counter is what makes clicking the same pin twice re-fill and re-run: the text would be
+  // identical, and an effect over identical text does not fire.
+  const [prefill, setPrefill] = signalView<{ text: string; n: number }>({ text: "", n: 0 });
+  let prefills = 0;
+  // The click-to-ask presets, held here because the panel is what runs them; the host looks one up
+  // by the picked entity's kind (see entityQuery).
+  let entityQueries: EntityQueryItem[] = [];
   const onLocate = handlers.onLocate ?? (() => {});
   // A fresh query result clears any stale locate note from the previous run.
   const setStateClearing = (s: QueryResult) => {
@@ -455,11 +476,23 @@ export function queryPanelIsland(
         relations={relations}
         examples={examples}
         locateNote={locateNote}
+        prefill={prefill}
         onRun={handlers.onRun}
         onLocate={onLocate}
       />
     ),
     eventBus,
   );
-  return { island, view: { setState: setStateClearing, setRelations, setExamples, setLocateNote } };
+  return {
+    island,
+    view: {
+      setState: setStateClearing,
+      setRelations,
+      setExamples,
+      setLocateNote,
+      setQuery: (text: string) => setPrefill({ text, n: ++prefills }),
+      setEntityQueries: (presets: EntityQueryItem[]) => void (entityQueries = presets),
+      entityQuery: (kind: string) => entityQueries.find((p) => p.kind === kind)?.query ?? "",
+    },
+  };
 }

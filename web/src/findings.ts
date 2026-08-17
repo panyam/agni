@@ -258,8 +258,8 @@ export function findingSpec(f: FindingItem): HighlightSpec[] {
 // entitySpecs is the focus highlight for a bare (kind, subject) that is not a finding — a query
 // result cell (WS9-038). Same bucketing as findingSpec, so a located component/net paints exactly
 // as the equivalent finding would.
-export function entitySpecs(kind: string, subject: string): HighlightSpec[] {
-  return subjectsToSpecs([{ kind, subject, pin: "" }]);
+export function entitySpecs(kind: string, subject: string, pin = ""): HighlightSpec[] {
+  return subjectsToSpecs([{ kind, subject, pin }]);
 }
 
 // focusStack builds the two-layer highlight stack for a focused subject (WS9-040): the base

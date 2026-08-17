@@ -34,6 +34,7 @@ import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
+import { fillEntityQuery } from "./selection.js";
 import { baseName, noteOpen } from "./recents.js";
 
 // restoring guards the URL feedback loop: while we apply a URL to the presenter (initial load or
@@ -101,6 +102,9 @@ class AppRoot extends BaseComponent {
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
+    // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
+    // wiring is deferred to the end of this method because it needs the query panel, which is built
+    // below; see the assignment after the panels.
     const canvas = new CanvasComponent("canvas", canvasEl, this._eventBus);
     const renderView: RenderView = {
       showWebgl: () => {
@@ -244,6 +248,20 @@ class AppRoot extends BaseComponent {
       onRun: (text) => void presenter.runQuery(text),
       onLocate: (kind, subject, sheet, reason) => void presenter.locateEntity(kind, subject, sheet, reason),
     });
+    // A click on the drawing is a question about what was clicked: highlight it, write the query that
+    // asks what is known about it, and bring the Query panel forward if it is a background tab. The
+    // generated query is left editable on purpose — using the viewer is how a reader learns the
+    // language, rather than the language being a wall in front of the answers.
+    svgView.onPick = (sel) => {
+      void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+      // The preset comes from the server (query.EntityQueries), so the query text is checked where
+      // the relations it names are defined. Before the catalog arrives there is no preset, and a
+      // click then highlights and asks nothing rather than running a guess.
+      const preset = query.view.entityQuery(sel.kind);
+      if (preset) query.view.setQuery(fillEntityQuery(preset, sel));
+      if (dockApi) dockApi.getPanel("query")?.api.setActive();
+    };
+
     // The interface-coverage panel (WS9-041): clicking a signal locates its net, the same locate
     // path the query panel uses.
     const coverage = coveragePanelIsland(coverageEl, this._eventBus, {
@@ -281,6 +299,7 @@ class AppRoot extends BaseComponent {
       .then((r) => {
         query.view.setRelations(r.relations);
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
+        query.view.setEntityQueries(r.entityQueries); // the click-to-ask presets
       })
       .catch(() => {});
     // The presenter fans sheet state to every surface in sheetNavs. The file tree used to be one of

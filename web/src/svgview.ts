@@ -4,6 +4,11 @@
 // shares. It is a plain view adapter — no framework, no presenter coupling; the presenter only
 // calls setSvg / show / hide.
 import { wheelZoomFactor, zoomAbout, panBy } from "./panzoom.js";
+import { pickAt, type Selection } from "./selection.js";
+
+// CLICK_SLOP_PX is how far the cursor may travel between press and release and still count as a
+// click rather than a pan.
+const CLICK_SLOP_PX = 3;
 
 // SvgViewState is a snapshot of the SVG pan/zoom transform (CSS translate + scale). It is
 // structurally panzoom.PanZoom, which is what lets the shared helpers operate on it directly.
@@ -27,6 +32,11 @@ export class SvgView {
   // host can mirror this view onto another SvgView (the WS9-005 synced diff canvases)
   // without the mirroring feeding back.
   onViewChange: ((v: SvgViewState) => void) | null = null;
+
+  // onPick fires when the reader CLICKS an entity in the drawing (a press and release that did not
+  // pan). The document is its own pick index — the renderer keys every element — so resolution is a
+  // question for the browser, not a join against a second representation of the same picture.
+  onPick: ((sel: Selection) => void) | null = null;
 
   constructor(private readonly host: HTMLElement) {
     this.layer = document.createElement("div");
@@ -189,16 +199,30 @@ export class SvgView {
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
+    // downX/downY and moved separate a CLICK from a PAN: both begin with a press on the drawing, and
+    // a pan that happens to end over a wire must not select it. The threshold exists because a click
+    // always carries a little hand movement.
+    let downX = 0;
+    let downY = 0;
+    let moved = false;
     this.host.addEventListener("mousedown", (e) => {
       dragging = true;
       lastX = e.clientX;
       lastY = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      moved = false;
     });
-    window.addEventListener("mouseup", () => {
+    window.addEventListener("mouseup", (e) => {
+      const wasDragging = dragging;
       dragging = false;
+      if (!wasDragging || moved || !this.onPick) return;
+      const sel = pickAt(this.host.ownerDocument, e.clientX, e.clientY);
+      if (sel) this.onPick(sel);
     });
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
+      if (Math.abs(e.clientX - downX) > CLICK_SLOP_PX || Math.abs(e.clientY - downY) > CLICK_SLOP_PX) moved = true;
       this.commitUserView(panBy(this.getView(), e.clientX - lastX, e.clientY - lastY));
       lastX = e.clientX;
       lastY = e.clientY;
