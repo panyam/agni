@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1182.2" viewBox="0 0 1680.0 1182.2" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif">
 <rect x="0.0" y="0.0" width="1680.0" height="1182.2" fill="#fdfdfb"/>
-<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="751.1,128.9 1195.6,128.9" data-kind="wire" data-net="GND"/>
-<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1640.0,128.9 1195.6,128.9" data-kind="wire" data-net="GND"/>
-<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="40.0,128.9 217.8,573.3" data-kind="wire" data-net="SIG"/>
-<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="395.6,1017.8 217.8,573.3" data-kind="wire" data-net="SIG"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="751.1,128.9 1195.6,128.9" data-kind="net" data-net="GND"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="1640.0,128.9 1195.6,128.9" data-kind="net" data-net="GND"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="40.0,128.9 217.8,573.3" data-kind="net" data-net="SIG"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="395.6,1017.8 217.8,573.3" data-kind="net" data-net="SIG"/>
 <circle cx="751.1" cy="128.9" r="1.6" fill="#333333"/>
 <circle cx="1640.0" cy="128.9" r="1.6" fill="#333333"/>
 <circle cx="40.0" cy="128.9" r="1.6" fill="#333333"/>

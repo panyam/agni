@@ -1086,14 +1086,30 @@ func (x *Field) GetVisible() bool {
 }
 
 type SymbolPlacement struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`    // joins to ir.ComponentInstance.ref_des
-	CellRef       string                 `protobuf:"bytes,2,opt,name=cell_ref,json=cellRef,proto3" json:"cell_ref,omitempty"` // which SymbolDef to draw
-	LibraryRef    string                 `protobuf:"bytes,3,opt,name=library_ref,json=libraryRef,proto3" json:"library_ref,omitempty"`
-	Transform     *Transform             `protobuf:"bytes,4,opt,name=transform,proto3" json:"transform,omitempty"`
-	ViewRef       string                 `protobuf:"bytes,5,opt,name=view_ref,json=viewRef,proto3" json:"view_ref,omitempty"` // which view/bank of the cell (joins to SymbolDef.view_ref)
-	Fields        []*Field               `protobuf:"bytes,6,rep,name=fields,proto3" json:"fields,omitempty"`                  // the instance's text fields (Reference, Value, custom)
-	Prov          *Provenance            `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`                     // source_id = EDIF instance &id (the unique join key)
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	RefDes     string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`    // joins to ir.ComponentInstance.ref_des
+	CellRef    string                 `protobuf:"bytes,2,opt,name=cell_ref,json=cellRef,proto3" json:"cell_ref,omitempty"` // which SymbolDef to draw
+	LibraryRef string                 `protobuf:"bytes,3,opt,name=library_ref,json=libraryRef,proto3" json:"library_ref,omitempty"`
+	Transform  *Transform             `protobuf:"bytes,4,opt,name=transform,proto3" json:"transform,omitempty"`
+	ViewRef    string                 `protobuf:"bytes,5,opt,name=view_ref,json=viewRef,proto3" json:"view_ref,omitempty"` // which view/bank of the cell (joins to SymbolDef.view_ref)
+	Fields     []*Field               `protobuf:"bytes,6,rep,name=fields,proto3" json:"fields,omitempty"`                  // the instance's text fields (Reference, Value, custom)
+	// net_anchor is the net this placement NAMES rather than joins: a ground or rail symbol is drawn
+	// like a part but is not one, and its whole job is to give the net at its pin a name. Empty for an
+	// ordinary component placement.
+	//
+	// Every schematic format has this construct and each spells it differently — KiCad a `#PWR`
+	// virtual with the name in its Value, xschem a gnd/vdd label symbol with a `lab` property, gEDA a
+	// power symbol with a `net=` attribute — so each reader translates its own spelling into this one
+	// neutral field (CONSTRAINTS C1) and no consumer has to know any of them.
+	//
+	// It exists because these symbols were unaddressable. KiCad's reader blanked the ref_des (the
+	// reference is hidden, and hiding it was conflated with dropping the identity) so the glyph drew
+	// with nothing to key; xschem kept a ref_des that joins to no component, so a viewer could select
+	// it and then ask a question about a part that does not exist. On a schematic the thing that NAMES
+	// a rail is often the only thing on the sheet a reader wants to click, and it was the one thing
+	// they could not.
+	NetAnchor     string      `protobuf:"bytes,7,opt,name=net_anchor,json=netAnchor,proto3" json:"net_anchor,omitempty"`
+	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"` // source_id = EDIF instance &id (the unique join key)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1168,6 +1184,13 @@ func (x *SymbolPlacement) GetFields() []*Field {
 		return x.Fields
 	}
 	return nil
+}
+
+func (x *SymbolPlacement) GetNetAnchor() string {
+	if x != nil {
+		return x.NetAnchor
+	}
+	return ""
 }
 
 func (x *SymbolPlacement) GetProv() *Provenance {
@@ -1847,7 +1870,7 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\ajustify\x18\x04 \x01(\tR\ajustify\x12\x16\n" +
 	"\x06height\x18\x05 \x01(\x03R\x06height\x12!\n" +
 	"\frotation_deg\x18\x06 \x01(\x05R\vrotationDeg\x12\x18\n" +
-	"\avisible\x18\a \x01(\bR\avisible\"\x93\x02\n" +
+	"\avisible\x18\a \x01(\bR\avisible\"\xb2\x02\n" +
 	"\x0fSymbolPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x19\n" +
 	"\bcell_ref\x18\x02 \x01(\tR\acellRef\x12\x1f\n" +
@@ -1855,7 +1878,9 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"libraryRef\x125\n" +
 	"\ttransform\x18\x04 \x01(\v2\x17.agni.v1.geom.TransformR\ttransform\x12\x19\n" +
 	"\bview_ref\x18\x05 \x01(\tR\aviewRef\x12+\n" +
-	"\x06fields\x18\x06 \x03(\v2\x13.agni.v1.geom.FieldR\x06fields\x12,\n" +
+	"\x06fields\x18\x06 \x03(\v2\x13.agni.v1.geom.FieldR\x06fields\x12\x1d\n" +
+	"\n" +
+	"net_anchor\x18\a \x01(\tR\tnetAnchor\x12,\n" +
 	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"7\n" +
 	"\bPolyline\x12+\n" +
 	"\x06points\x18\x01 \x03(\v2\x13.agni.v1.geom.PointR\x06points\"\x9f\x02\n" +

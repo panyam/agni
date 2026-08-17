@@ -168,3 +168,33 @@ func TestReadBusGeometry(t *testing.T) {
 		t.Errorf("bus points = %+v, want (1000,1000)->(2000,1000)", pts)
 	}
 }
+
+// A gEDA power/ground symbol names the net at its pin rather than being a part (read.go keeps it out
+// of Components). The geometry used to carry its refdes, which joins to nothing, so a viewer could
+// select it and then ask about a component that does not exist; it carries the net it names instead.
+func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {
+	d, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var anchored, refd int
+	for _, sh := range d.Sheets {
+		for _, pl := range sh.Placements {
+			if pl.GetNetAnchor() != "" {
+				anchored++
+				if pl.GetRefDes() != "" {
+					t.Errorf("anchor %q also carries ref_des %q", pl.GetNetAnchor(), pl.GetRefDes())
+				}
+			}
+			if pl.GetRefDes() != "" {
+				refd++
+			}
+		}
+	}
+	if anchored == 0 {
+		t.Error("the ground symbol carries no net anchor, so it stays unclickable")
+	}
+	if refd == 0 {
+		t.Error("no ordinary component kept its ref_des; the anchor rule is too broad")
+	}
+}

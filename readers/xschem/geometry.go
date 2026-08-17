@@ -117,8 +117,17 @@ func extractGeometry(objs []object, src string, open SymbolOpener) *geom.Schemat
 			flip := atoiInt(o.word(4))
 			p := props(lastBraceC(o))
 			ls := resolveSym(symref)
+			// A label symbol (gnd/vdd/ipin/opin/lab_pin) names the net at its origin rather than
+			// being a part, and read.go keeps it out of Components for that reason. Its instance
+			// name therefore joins to nothing, so carrying it as a ref_des made the glyph selectable
+			// as a component that does not exist; the net it names goes in net_anchor instead.
+			ref, anchor := p["name"], ""
+			if labelSymbols[base] {
+				ref, anchor = "", p["lab"]
+			}
 			pl := &geom.SymbolPlacement{
-				RefDes:    p["name"],
+				RefDes:    ref,
+				NetAnchor: anchor,
 				CellRef:   base,
 				Transform: xschemTransform(x, y, rot, flip),
 				Prov:      &geom.Provenance{SourceFile: src, SourceId: p["name"]},

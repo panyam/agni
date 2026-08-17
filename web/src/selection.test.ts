@@ -12,7 +12,7 @@ describe("reading a keyed element", () => {
   it("reads each kind the renderer emits", () => {
     expect(selectionFromElement(el({ "data-kind": "pin", "data-ref": "U7", "data-pin": "12" }))).toEqual({ kind: "pin", ref: "U7", pin: "12" });
     expect(selectionFromElement(el({ "data-kind": "component", "data-ref": "R1" }))).toEqual({ kind: "component", ref: "R1" });
-    expect(selectionFromElement(el({ "data-kind": "wire", "data-net": "SDA", "data-net-id": "n1" }))).toEqual({ kind: "net", net: "SDA", netId: "n1" });
+    expect(selectionFromElement(el({ "data-kind": "net", "data-net": "SDA", "data-net-id": "n1" }))).toEqual({ kind: "net", net: "SDA", netId: "n1" });
     expect(selectionFromElement(el({ "data-kind": "bus", "data-bus": "D[7:0]" }))).toEqual({ kind: "bus", busId: "D[7:0]" });
   });
 
@@ -57,7 +57,7 @@ describe("pickAt", () => {
   // A 1px wire is a game of skill to hit exactly, so the pick samples a small ring around the
   // cursor. Here the exact point is empty and only an offset probe lands on the wire.
   it("finds an entity the cursor is merely near", () => {
-    const wire = el({ "data-kind": "wire", "data-net": "GND" });
+    const wire = el({ "data-kind": "net", "data-net": "GND" });
     const doc = {
       elementFromPoint: (x: number, y: number) => (x === 105 && y === 100 ? wire : null),
     } as unknown as Document;

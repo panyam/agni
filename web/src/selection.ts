@@ -47,7 +47,7 @@ export function selectionFromElement(el: Element | null): Selection | null {
       const busId = el.getAttribute("data-bus") ?? "";
       return busId ? { kind: "bus", busId } : null;
     }
-    case "wire": {
+    case "net": {
       const net = el.getAttribute("data-net") ?? "";
       const netId = el.getAttribute("data-net-id") ?? "";
       return net || netId ? { kind: "net", net, netId } : null;

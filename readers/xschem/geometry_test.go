@@ -203,3 +203,34 @@ func TestReadBusGeometry(t *testing.T) {
 		t.Errorf("bus points = %+v, want (1000,600)->(1000,300)", pts)
 	}
 }
+
+// An xschem label symbol (gnd/vdd/ipin/opin/lab_pin) names the net at its origin rather than being a
+// part, and read.go keeps it out of Components for exactly that reason. Its instance name therefore
+// joins to nothing, so carrying it as a ref_des let a viewer select a component that does not exist;
+// the net it names goes in net_anchor instead.
+func TestLabelSymbolCarriesItsNetAnchor(t *testing.T) {
+	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	anchors, refs := map[string]bool{}, 0
+	for _, sh := range g.Sheets {
+		for _, pl := range sh.Placements {
+			if a := pl.GetNetAnchor(); a != "" {
+				anchors[a] = true
+				if pl.GetRefDes() != "" {
+					t.Errorf("anchor %q also carries ref_des %q", a, pl.GetRefDes())
+				}
+			}
+			if pl.GetRefDes() != "" {
+				refs++
+			}
+		}
+	}
+	if len(anchors) == 0 {
+		t.Error("no label symbol carries a net anchor, so ground stays unclickable")
+	}
+	if refs == 0 {
+		t.Error("no ordinary component kept its ref_des; the anchor rule is too broad")
+	}
+}

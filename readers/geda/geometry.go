@@ -70,8 +70,33 @@ func extractGeometry(lines []string, src string, open SymbolOpener) *geom.Schema
 				continue // clutter annotation: not drawn in geometry (WS7-037)
 			}
 			resolveSym(symref)
+			// A power/ground symbol names the net at its pin rather than being a part (read.go keeps
+			// it out of Components), and it spells that name in its instance net= attribute. Carrying
+			// it as net_anchor is what makes the glyph addressable; carrying a refdes would offer a
+			// component that does not exist.
+			ref, anchor := attrs["refdes"], ""
+			if isPowerSymbol(base) {
+				// The same fallback the netlist side resolves an anchor by (resolveAnchors): the
+				// instance's net= names it, else the symbol's own, else the conventional supply for
+				// that symbol family. Sharing the ladder is what keeps the glyph's key and the net
+				// it actually joins from disagreeing — a ground symbol that keyed one name while the
+				// solver used another would be worse than one that keyed nothing.
+				anchor = netFromNetAttr(attrs["net"])
+				if anchor == "" {
+					if open != nil {
+						if data, err := open(symref); err == nil {
+							anchor = symbolNet(splitLines(data))
+						}
+					}
+				}
+				if anchor == "" {
+					anchor = conventionalSupply(base)
+				}
+				ref = ""
+			}
 			pl := &geom.SymbolPlacement{
-				RefDes:    attrs["refdes"],
+				RefDes:    ref,
+				NetAnchor: anchor,
 				CellRef:   base,
 				Transform: &geom.Transform{Origin: gedaPt(cx, cy), RotationDeg: int32(angle % 360), MirrorY: mirror == 1},
 				Prov:      &geom.Provenance{SourceFile: src, SourceId: attrs["refdes"]},
