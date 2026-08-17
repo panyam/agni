@@ -3,6 +3,7 @@ import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { CLASS_LABELS, DIFF_COLORS, ITEM_CLASS_ORDER, itemId, itemPairs, type ChangedItem } from "./diff.js";
 import { emptyDiffState, type DiffState } from "./diffpresenter.js";
+import { SheetBadges } from "./sheetbadges.jsx";
 
 // ChangesPanel is the WS9-006 changed-item list: every changed component and net, grouped by
 // change class, with the per-field / connection-delta detail and, for multi-pair diffs,
@@ -55,20 +56,12 @@ function ChangesPanel(props: { state: () => DiffState; onSelect: (id: string, pa
                             <span class="finding-subject">{it.key}</span>
                             <span class="finding-rule">
                               {it.kind}
-                              <For each={badges(it)}>
-                                {(b) => (
-                                  <span
-                                    class="sheet-badge"
-                                    title={`show sheet pair ${b.name}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      props.onSelect(itemId(it), b.i);
-                                    }}
-                                  >
-                                    {b.name}
-                                  </span>
-                                )}
-                              </For>
+                              <SheetBadges
+                                items={badges(it)}
+                                label={(b) => b.name}
+                                title={(b) => `show sheet pair ${b.name}`}
+                                onSelect={(b) => props.onSelect(itemId(it), b.i)}
+                              />
                             </span>
                             <Show when={it.detail}>
                               <span class="finding-msg">{it.detail}</span>

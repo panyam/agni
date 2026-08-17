@@ -138,6 +138,10 @@
     /* WS9-024 sheet badges: where a finding's subject lives; click shows that sheet */
     .sheet-badge { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 8px; background: #e8edf8; border: 1px solid #c4d2ef; color: #2b4a8b; font-size: 10px; font-weight: 400; cursor: pointer; }
     .sheet-badge:hover { background: #d5e0f6; }
+    /* The "+N" chip that stands for the sheets not shown. Quieter than a real sheet, because it
+       names a count rather than a place to go. */
+    .sheet-badge-more { background: #f0f2f6; border-color: #d3d8e2; color: #5a6478; }
+    .sheet-badge-more:hover { background: #e4e8ef; }
     .exp-chip:hover { background: #eef; }
     .exp-chip.selected { background: #fde6f5; border-color: #ec1bb8; }
     /* WS9-022 report panel: severity pivot sections */
@@ -333,14 +337,21 @@
     .query-sort-ind { color: #2563eb; }
     /* A fixed layout clips rather than growing, so long unbroken values (a net id, a citation path)
        wrap inside their column instead of overflowing it. */
-    .query-table td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    /* Wrap first, scroll second, bleed never. overflow-wrap breaks a long unbroken value (a net id,
+       a citation path); overflow-x catches whatever still cannot fit, so a cell scrolls within its
+       own column instead of drawing across its neighbours. Measured in Chromium: a td honours
+       overflow-x directly, no inner wrapper needed. */
+    .query-table td { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; overflow-x: auto; }
     .query-table th { position: relative; }
     .query-th-label { overflow-wrap: anywhere; }
     /* The grip sits on the column's trailing edge, a few px wide, and only shows itself on hover so
        the header stays a header. It must swallow the click, or resizing also re-sorts. */
     .query-col-grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
     .query-table th:hover .query-col-grip { background: linear-gradient(to right, transparent, #d3d6db); }
-    .query-cell-locate { white-space: nowrap; }
+    /* A locatable cell wraps like any other, so it has no rule of its own any more. It used to be
+       white-space: nowrap, which kept a subject and its one sheet badge on a line and, on a 21-sheet
+       design, turned the badge strip into a single unbreakable line that painted over the two
+       columns to its right. The table is fixed-layout, so the column never widened to fit it. */
     .query-locate { font: inherit; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
     .query-locate:hover { color: #1d4ed8; }
     .query-cite-col { width: 18px; padding-left: 2px; padding-right: 2px; }

@@ -167,6 +167,29 @@ describe("querypanel", () => {
     expect(onLocate).toHaveBeenCalledWith("net", "SDA", "s1", LocateReason.UNSPECIFIED);
   });
 
+  // The bug this strip was extracted for: the query table is fixed-layout, so a cell that will not
+  // wrap paints over the columns beside it. A net on 21 sheets carried 21 chips on one nowrap line.
+  it("caps a cell's sheet badges and counts the rest, still locating from a revealed one", () => {
+    const { el, push, onLocate } = mountPanel();
+    push(
+      resultFromResponse(
+        {
+          columns: ["n"],
+          columnKinds: ["net"],
+          rows: [{ cells: ["DGND"], cites: [], cellSheets: [{ sheetIds: Array.from({ length: 21 }, (_, i) => `s${i}`) }] }],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+    const labels = () => [...el.querySelectorAll(".query-row .sheet-badge")].map((b) => b.textContent);
+    expect(labels()).toEqual(["S0", "S1", "S2", "+18"]);
+
+    el.querySelector<HTMLElement>(".query-row .sheet-badge-more")!.click();
+    expect(labels()).toHaveLength(22);
+    [...el.querySelectorAll<HTMLElement>(".query-row .sheet-badge")].find((b) => b.textContent === "S20")!.click();
+    expect(onLocate).toHaveBeenCalledWith("net", "DGND", "s20", LocateReason.UNSPECIFIED);
+  });
+
   it("shows the locate note pushed by the presenter, and clears it", () => {
     const { el, push, panel } = mountPanel();
     pushLocatable(push);

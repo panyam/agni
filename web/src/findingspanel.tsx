@@ -1,6 +1,7 @@
 import { For, Show, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
+import { SheetBadges } from "./sheetbadges.jsx";
 import {
   type FindingsState,
   type FindingsView,
@@ -240,20 +241,12 @@ function Row(props: {
             {f().pin ? `.${f().pin}` : ""}
           </button>
           <Show when={!multi()}>
-            <For each={f().sheets}>
-              {(b) => (
-                <span
-                  class="sheet-badge"
-                  title={`show sheet ${b.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    props.onSelect(f().subject, b.id, headNetId());
-                  }}
-                >
-                  {b.name}
-                </span>
-              )}
-            </For>
+            <SheetBadges
+              items={f().sheets}
+              label={(b) => b.name}
+              title={(b) => `show sheet ${b.name}`}
+              onSelect={(b) => props.onSelect(f().subject, b.id, headNetId())}
+            />
           </Show>
         </td>
         <td class="check-rule" title={props.summaries()[f().rule] ?? ""}>
@@ -275,20 +268,12 @@ function Row(props: {
                   {inst.subject}
                   {inst.pin ? `.${inst.pin}` : ""}
                 </button>
-                <For each={inst.sheets}>
-                  {(b) => (
-                    <span
-                      class="sheet-badge"
-                      title={`show sheet ${b.name}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        props.onSelect(inst.subject, b.id, inst.netId || inst.busId);
-                      }}
-                    >
-                      {b.name}
-                    </span>
-                  )}
-                </For>
+                <SheetBadges
+                  items={inst.sheets}
+                  label={(b) => b.name}
+                  title={(b) => `show sheet ${b.name}`}
+                  onSelect={(b) => props.onSelect(inst.subject, b.id, inst.netId || inst.busId)}
+                />
                 <Show when={inst.sheets.length === 0 && inst.netId !== ""}>
                   <span class="check-inst-id" title={`net id ${inst.netId}`}>{inst.netId.slice(0, 6)}</span>
                 </Show>

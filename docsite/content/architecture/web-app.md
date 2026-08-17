@@ -363,6 +363,26 @@ other served preset uses.
 A pin cell is the notable gap: a pin needs its row's ref as well as its own cell, so the server types
 a pin column scalar and the only way to select a pin today is to click one on the drawing.
 
+### Table cells wrap, then scroll, and never bleed
+
+The results table is fixed-layout, which is what keeps the columns equal by default and makes a
+dragged width stick. Fixed layout does not clip: a cell whose content will not wrap draws straight
+over the columns to its right, and the column never widens to fit it. That happened on a 21-sheet
+design, where the sheet-badge strip on a ground net was one nowrap line and painted over the two
+columns beside it. Measured in a standalone repro of the same rules: the last badge's right edge sat
+1927px past its own cell.
+
+So a cell has three behaviours in order. `overflow-wrap: anywhere` breaks a long unbroken value, which
+handles nearly everything (a 66-character net name in a 120px column wraps to four lines and stays
+inside). `overflow-x: auto` catches whatever still cannot wrap, so the cell scrolls within its own
+column. Nothing is allowed to paint across a neighbour. A `td` honours `overflow-x` directly, checked
+in Chromium, so no inner wrapper is needed.
+
+The badge strip itself is `SheetBadges` in `web/src/sheetbadges.tsx`, shared by the query, findings and
+diff-changes panels, and it shows the first three with a `+N` chip for the rest. Past a handful,
+"which sheet" is a menu to open rather than a label to read. The cap is what makes the common row one
+line tall; it is not what keeps the table honest, since a reader can expand the strip.
+
 ## Wiring a new panel
 
 **FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island
