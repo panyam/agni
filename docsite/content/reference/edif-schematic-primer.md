@@ -40,8 +40,8 @@ absolute sheet coordinates.
 ## 2. `.eds` is a superset of `.edn`
 
 The schematic export contains **everything the netlist has, plus graphics**. The two files
-describe one design. The instance internal ids (`&04428I78`) are the same in both, which is what
-lets the geometry sidecar key back to the netlist IR.
+describe one design. The instance internal ids (`&04428I78`) are the same in both, so the geometry
+sidecar can key back to the netlist IR.
 
 | Content | `.edn` netlist | `.eds` schematic |
 |---|---|---|
@@ -345,7 +345,7 @@ offPage       = "(offPageConnector" ID ")"
 5. **Pins need the transform.** A wire endpoint only matches a pin after you apply the placement
    orientation plus origin to the symbol-local `connectLocation`.
 6. **Volume is per-design, not per-view.** ~121k figures and ~149k points across 82 sheets. Per
-   sheet it is a few thousand primitives, which is what the renderer loads at a time. See
+   sheet it is a few thousand primitives, and the renderer loads one sheet at a time. See
    [Geometry and rendering](../../architecture/geometry-and-rendering/) for why the proto models
    bulk geometry as packed/columnar arrays rather than object-per-point.
 7. **Y is up.** Symbol shapes commonly use negative Y below a top-origin.

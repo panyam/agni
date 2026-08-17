@@ -5,7 +5,7 @@ description: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). R
 
 ### What it is
 
-`net.nominal_voltage(net, volts)` yields the nominal voltage a rail's NAME declares — `+3V3` → 3.3,
+`net.nominal_voltage(net, volts)` yields the nominal voltage a rail's NAME declares, so `+3V3` → 3.3,
 `5V` → 5, `1V8` → 1.8. It reads only the net name (the same token grammar `net.max_voltage` falls
 back to), so a net whose name carries no parseable voltage token, or whose tokens disagree
 (`12V_TO_5V`), yields no row: the relation refuses to guess. Every row cites the net's IR source.
@@ -25,7 +25,7 @@ ground. The number was right and the relation carrying it was not.
 ### For hardware engineers
 
 This is the design's own statement of what a rail is supposed to be, taken from how the schematic
-names it. It is not a measured or computed worst-case voltage — it is the label. That is enough to
+names it. It is the label rather than a measured or computed worst-case voltage. That is enough to
 compare a rail against a datasheet's recommended operating window: if a part wants 3.0–3.6 V on `VDD`
 and the net feeding it is named `+5V`, the nominal alone tells you the rail is out of range. A rail
 named without a voltage token (`VBAT`, `VBOOST`) simply has no nominal here.
@@ -61,7 +61,7 @@ net.nominal_voltage(?net, ?v) => ?net, ?v
 ```
 
 Join to a datasheet recommended window (needs `--params`) to compare a rail against the part it
-feeds — see `param.range`:
+feeds. See `param.range`:
 
 ```
 component-on-net(?ref, ?net), net.nominal_voltage(?net, ?v),

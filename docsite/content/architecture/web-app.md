@@ -163,7 +163,7 @@ A few contract details bite if missed.
 - **A highlight must mirror its sheet.** An overlay is only meaningful over the base render it was
   framed for, so the sheet, layout, and symbols in a HighlightSheet call must match the GetSheet
   it overlays.
-- **The board is a sheet.** A `.kicad_pcb` renders as a synthetic "board" sheet, which is why
+- **The board is a sheet.** A `.kicad_pcb` renders as a synthetic "board" sheet, so
   navigation, deep links, and both highlight paths needed no board-specific client plumbing.
 - **Diff is all-or-nothing.** If either side fails to load, the call fails. There is no partial
   diff.
@@ -273,7 +273,7 @@ callers rather than a hunt through three viewers.
 
 A WebAssembly-compiled Go presenter that reuses the diff and IR logic in the browser remains the
 option for an offline or zero-server viewer. Nothing in the wire contract assumes the presenter's
-location, which is the property that keeps that swap possible.
+location, so the swap stays possible.
 
 Keeping the WebAssembly boundary cheap is why the contract is shaped this way. Go compiled to
 WebAssembly has higher per-call boundary overhead than a C or Rust equivalent, so when the
@@ -330,13 +330,13 @@ the priority order, and the intent. That is what lets a canvas click, a search r
 row produce one value.
 
 - **Priority, not topmost.** A symbol is drawn over its own pins, so topmost-wins would make a pin
-  unclickable. Resolution is pin, component, bus, net — most specific first.
+  unclickable. Resolution goes pin, component, bus, net, most specific first.
 - **A click is not a pan.** The press/release pair counts as a click only if the cursor moved less
   than a few pixels, or a pan that ends over a wire selects it.
 - **Two pick aids, both opt-in** (`render.WithPickTargets`, which only the served viewer asks for).
   A pin has no drawn element in a faithful render, so it gets an invisible circle. A wire is a 0.8px
-  stroke and `fill="none"` hit-tests only ON the stroke — measured in a browser, a probe at a wire's
-  own midpoint rounded to whole pixels hits the page rect — so it gets an invisible wide companion
+  stroke and `fill="none"` hit-tests only ON the stroke. Measured in a browser, a probe at a wire's
+  own midpoint rounded to whole pixels hits the page rect, so it gets an invisible wide companion
   with `pointer-events="stroke"`. Both are absent from a render destined for a file or a report,
   which should not carry the viewer's interaction model.
 - **Entity keys are design data, so they are escaped** (`svg.AEsc`). Attribute values are written
@@ -365,20 +365,20 @@ changing the wiring; `docsite/content/architecture/web-app.md` has the rationale
 `pnpm run typecheck`.** Nesting `Project`'s config fields under `config` left
 `projectpresenter.test.ts` structurally wrong and the typecheck green; only the runtime assertion
 caught it. So after a proto reshape, `pnpm run typecheck` passing is NOT evidence the web side is
-done — run `make testall`. Prefer `create(SomeSchema, {...})` in a new fixture, which does get
+done. Run `make testall`. Prefer `create(SomeSchema, {...})` in a new fixture, which does get
 checked.
 
 **A `oneof` on the wire is a FIELD NAME, not the `{case, value}` pair the client decodes it into.**
 A boot test that stubs `fetch` writes the SERVER's JSON, so `GetSheet` returns `{"svg": "<svg…>"}`.
-Writing `{content: {case: "svg", value: "<svg…>"}}` — the shape the TypeScript client hands you after
-decoding — yields an empty document and a blank stage, and the test then fails for a reason unrelated
+Writing `{content: {case: "svg", value: "<svg…>"}}`, the shape the TypeScript client hands you after
+decoding, yields an empty document and a blank stage, and the test then fails for a reason unrelated
 to the wiring it was written for. `composition.test.ts` carried that wrong shape harmlessly for
 months, because it asserts only that a call was MADE; `browse.test.ts` asserts what came back, so it
 noticed on its first run.
 
 **A JSX expression that reads only PLAIN OBJECT properties never re-runs.** Solid wraps an attribute
 or child expression in an effect over the signals it reads, so `class={p.pinRefs.includes(x) ? "on" :
-""}` — where `p` came from a list and is not itself reactive — subscribes to NOTHING and renders once.
+""}`, where `p` came from a list and is not itself reactive, subscribes to NOTHING and renders once.
 The data changes, the DOM does not. Read through the accessor instead (`props.spec().parameters.some(
 ...)`), which tracks. This shipped an inert set of buttons with every unit test green, because the
 helpers were correct and only the subscription was missing; a component test is the only thing that

@@ -13,8 +13,8 @@ rail whose declared voltage times the derate factor (`1.25`) exceeds that rating
 This is the stakeholder-named cap-voltage rule: the classic
 review checklist item ("is every cap rated for its rail, with margin?") turned into a check
 whose limit is the vendor's number with provenance, not a rule-of-thumb constant in code.
-The finding cites the datasheet page/table so the margin is verifiable, which is the
-datasheet layer's whole posture (docs/20).
+The finding cites the datasheet page/table so the margin is verifiable, on the datasheet layer's
+whole posture (docs/20).
 
 ### Evidence honesty
 
@@ -26,8 +26,8 @@ nominal. The worst (highest) known rail among the cap's nets governs.
 ### Query structure
 
 Spec-authored (docs/19 "a rule is a value"); the join and float
-compare live in the cap_voltage_detail SpecFunc, which returns the violation sentence or ""
-— so the rule body stays AST and the derived Reads carry the param join as named relations.
+compare live in the cap_voltage_detail SpecFunc, which returns the violation sentence or "",
+so the rule body stays AST and the derived Reads carry the param join as named relations.
 
     select C in components where class(C) == capacitor
       and cap_voltage_detail(C) != ""    // Vrated < worst_rail_V x 1.25, seeded and comparable

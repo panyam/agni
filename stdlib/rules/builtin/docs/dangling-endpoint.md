@@ -11,7 +11,7 @@ hair short, so the wire connects nothing.
 A .kicad_sch (and xschem/gEDA) stores connectivity as geometry: two
 things connect only when their points coincide. A wire dropped a grid step away from a pin looks
 connected on screen but is not. This is the geometric sibling of single-pin-net: single-pin-net
-catches a net wired to one pin, this catches a wire wired to zero — a link that never became a net
+catches a net wired to one pin, this catches a wire wired to zero, a link that never became a net
 at all, so no net-level rule can see it.
 
 ### Impact
@@ -23,8 +23,8 @@ because the wire produced no net. Every ERC ships a dangling-end check for exact
 
 ### Scope
 
-Endpoint-on-nothing only. The disguised sibling — a wire end landing mid-span on
-another wire's body with no junction dot — is wire-no-junction (WS1-012).
+Endpoint-on-nothing only. The disguised sibling, a wire end landing mid-span on
+another wire's body with no junction dot, is wire-no-junction (WS1-012).
 
 ### Query structure
 

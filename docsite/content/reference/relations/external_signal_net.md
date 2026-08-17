@@ -1,6 +1,6 @@
 ---
 title: "external_signal_net"
-description: "a connector-facing signal net (not a rail, ground, no-connect, or power path) — the scope the ESD rules share"
+description: "a connector-facing signal net (not a rail, ground, no-connect, or power path), the scope the ESD rules share"
 ---
 
 ### What it is
@@ -60,7 +60,7 @@ Every net an ESD review is about:
 external_signal_net(?n) => ?n
 ```
 
-The unprotected ones, which is the shape the `esd` profile requirement compiles to. Nothing clamping
+The unprotected ones, matching the shape the `esd` profile requirement compiles to. Nothing clamping
 within two series crossings:
 
 ```

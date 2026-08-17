@@ -3,7 +3,7 @@ title: "Rules catalog"
 description: "Every check rule the catalog ships, grouped by category, with its source."
 ---
 
-The EE rule catalog. Each rule links to its full reference: what it means, why it matters, the guards it applies, and a fires-versus-fine diagram. The Source column flags where a rule comes from — a built-in, a design-intent check (`intent/`), a datalog-authored rule (`dl/`), or an interface profile (`profile/`). This page is generated from the shipped catalog, so it always matches the engine.
+The EE rule catalog. Each rule links to its full reference: what it means, why it matters, the guards it applies, and a fires-versus-fine diagram. The Source column flags where a rule comes from: a built-in, a design-intent check (`intent/`), a datalog-authored rule (`dl/`), or an interface profile (`profile/`). This page is generated from the shipped catalog, so it always matches the engine.
 
 ## connectivity
 
@@ -17,7 +17,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [floating-input](floating-input/) | built-in | warning | An input pin sits on a net with no driver and no pull, so its level is undefined. |
 | [i2c-pull-up](i2c-pull-up/) | built-in | error | An I2C net (SDA/SCL) has no pull-up resistor. |
 | [label-alias-conflict](label-alias-conflict/) | built-in | warning | One net carries two different sheet-scoped labels in the same scope. |
-| [led-polarity](led-polarity/) | built-in | error | An LED's anode sits on ground and its cathode on a power rail — mounted backwards. |
+| [led-polarity](led-polarity/) | built-in | error | An LED's anode sits on ground and its cathode on a power rail, mounted backwards. |
 | [nc-pin-connected](nc-pin-connected/) | built-in | error | A pin marked no-connect is wired into a net with other members. |
 | [output-output-conflict](output-output-conflict/) | built-in | error | Two or more driving pins (outputs / power sources) share a net and fight each other. |
 | [profile/esd](profile-esd/) | profile | warning | An interface signal leaves the board through a connector with no ESD clamp. |
@@ -98,7 +98,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/strap-group](intent-strap-group/) | intent | warning | a group of strap nets does not encode the value the design intent declares |
 | [intent/subsystem](intent-subsystem/) | intent | warning | An architectural subsystem the design intent declares is missing a required part or net. |
 | [intent/voltage-domain-mismatch](intent-voltage-domain-mismatch/) | intent | warning | A declared voltage domain's rail is absent or named for a different nominal voltage. |
-| [pin-net-conflict](pin-net-conflict/) | built-in | info | A pin appears in more than one net's connections — malformed input. |
+| [pin-net-conflict](pin-net-conflict/) | built-in | info | A pin appears in more than one net's connections, which is malformed input. |
 | [rail-not-classified](rail-not-classified/) | built-in | warning | A net named for a voltage feeds a supply pin but is not classified as a rail, so the rail rules cannot see it. |
 | [symbol-unresolved](symbol-unresolved/) | built-in | warning | A symbol reference did not resolve, so its placements carry no pins. |
 | [unannotated-components](unannotated-components/) | built-in | warning | Parts still carry a placeholder designator instead of an assigned one. |

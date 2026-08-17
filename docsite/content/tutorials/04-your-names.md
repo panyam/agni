@@ -94,7 +94,7 @@ what the rules you already had are able to see.
 ## Reading the lexicon directly
 
 Inferring the lexicon from a finding count that moved is indirect. You can ask the fact base itself,
-which is the same question this rung opened with:
+putting the same question this rung opened with:
 
 {{ agniRun "content/tutorials/runs/04-query-rails-conventions.yaml" }}
 

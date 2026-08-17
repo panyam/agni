@@ -162,7 +162,7 @@ agni check gateway-review/designs/gateway
 agni review gateway-review/designs/gateway
 ```
 
-The design is **copied** into the project, which now owns its copy — edits to the original do not
+The design is **copied** into the project, which now owns its copy, so edits to the original do not
 reach it. And the generated `review.yaml` is a starting point seeded from the shipped catalog, not a
 finished checklist; [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning
 it into your team's.

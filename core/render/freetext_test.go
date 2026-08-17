@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/readers/edif"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/edif"
 )
 
 // textFontSize reads the font-size attribute of a <text ...> element, or NaN.
@@ -140,7 +140,7 @@ func TestFreeTextFitSingleLineUntouched(t *testing.T) {
 // documentation-page feature (an OrCAD table-of-contents style sheet, no component placements). A
 // schematic sheet's multi-line text is stand-alone annotation notes, not document columns, so
 // squeezing them against a neighbor or the frame margin shrinks legible text to an unreadable blob
-// (verified over a real automotive design: the fit engaged on 18 schematic notes, some to
+// (verified over a real industrial design: the fit engaged on 18 schematic notes, some to
 // 0.3x). The fit must skip any sheet that carries component placements.
 func TestFreeTextFitSkipsSchematicSheet(t *testing.T) {
 	wideLine := "WIDE" + strings.Repeat("X", 76) // overflows the gap to the frame edge

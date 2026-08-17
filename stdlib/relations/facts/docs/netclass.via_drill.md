@@ -26,8 +26,8 @@ cascade first. This relation exists for introspection and for authoring, not for
 
 ### Go projector
 
-`netClassDefFacts` in `stdlib/relations/facts.go` walks `Model.NetClassDefs()` — the `ir.Constraint`
-nodes of kind `netclass` — and parses the `via_drill` param. Populated in the I/O layer by
+`netClassDefFacts` in `stdlib/relations/facts.go` walks `Model.NetClassDefs()`, the `ir.Constraint`
+nodes of kind `netclass`, and parses the `via_drill` param. Populated in the I/O layer by
 `kicad.AnnotateNetClassDefs` from the sibling `.kicad_pro` `net_settings.classes[]` (WS3-111).
 
 ### Absence is not a pass

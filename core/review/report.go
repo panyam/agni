@@ -161,7 +161,7 @@ func RenderCoverageMarkdown(r Report) string {
 
 // maxDetailFindings caps how many findings a failing item's Detail cell lists inline. A broad rule
 // (esd, unconnected-pin) can fire on hundreds of nets; dumping them all makes one unreadable markdown
-// cell (a real automotive EVT esd item failed on 250+ nets, a 100KB line). The cap is a MARKDOWN-RENDERING
+// cell (a real esd item failed on 250+ nets, a 100KB line). The cap is a MARKDOWN-RENDERING
 // choice only: ItemResult.Findings still carries the full list, which the future JSON/web report
 // surfaces in full — no data is lost here.
 const maxDetailFindings = 3

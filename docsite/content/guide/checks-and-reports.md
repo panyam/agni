@@ -110,8 +110,8 @@ are the same idea for a bus: declare its signals, get a rule per requirement.
 
 Here is one, in full, so you know what to expect before you go looking. Every rule in the
 [rule catalog](../../reference/rules/) carries the same shape: what it checks, why it matters in the
-circuit, and — the part worth reading before you trust a green result — what its silence does and does
-not mean.
+circuit, and what its silence does and does not mean. That last part is the one worth reading
+before you trust a green result.
 
 <details>
 <summary><strong><code>cap-voltage</code></strong> — a capacitor's rating against the rail it sits on</summary>

@@ -15,7 +15,7 @@ A net is bus-like when any one of three holds:
 - more than 16 pins connect to it (rail-scale fan-out).
 
 Distinct from `bus(label, kind)`, which reports a reader-detected *unmodeled bus label*
-(WS1-034) — a syntactic construct the reader saw but did not expand. `net.bus_like` is about a
+(WS1-034), a syntactic construct the reader saw but did not expand. `net.bus_like` is about a
 solved net's electrical role, not a source-file token.
 
 ### For hardware engineers
@@ -40,7 +40,7 @@ is its stop set. The relation is a projection over `Nets()` with a boolean filte
 
 `netBusLikeFacts` in `check/facts.go` walks `Model.Nets()` and emits a row for each net where
 `isBusLike(n)` holds. `isBusLike` (in `check/reach.go`) is the single definition shared with the
-`Reach` walk's stop check — the relation and the walk cannot drift because they call the same
+`Reach` walk's stop check, so the relation and the walk cannot drift, because they call the same
 function. One row per bus-like net; empty for a purely point-to-point design.
 
 ### Datalog

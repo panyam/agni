@@ -56,7 +56,7 @@ The reader emits two kinds of derived output that are easy to confuse. Input dia
 problems, statements that something is wrong: duplicate reference designator, dangling endpoint,
 conflicting net name. They are reportable as findings. Input facts are annotations, statements
 that something is so: a net is driven by a power flag, a net crosses sheets, a net has a class.
-They are not findings, they are data a later check reads. This is already load-bearing. The
+They are data a later check reads rather than findings. This is already load-bearing. The
 power-input rule consumes the reader's power-driven and external net facts to avoid false
 positives, so the front end hands an attributed netlist to the analyzer.
 
@@ -148,8 +148,8 @@ is declared rather than inferred and the report stays honest.
 A capability is usually a property of the format's grammar, decided here from the source format. One
 is not: whether the READER detected a construct is a property of the reader's implementation, so it
 is declared per read in `InputDiagnostics.supplied` and the gate consults that. `duplicate-ref-des`
-is the case, and it is why the axis exists at all — the rule IS a reader diagnostic, so on a reader
-that never computed it the rule finds nothing, which is precisely what a clean design looks like. It
+is the case, and it is why the axis exists at all. The rule IS a reader diagnostic, so on a reader
+that never computed it the rule finds nothing, and a clean design looks exactly the same. It
 read as passing on four of five formats until the declaration existed (agni issue 309). A rule whose
 entire subject is a reader diagnostic should declare the matching capability.
 
@@ -337,7 +337,7 @@ counts every escape hatch as evidence for new kernel features will overstate the
 
 The interpreter's own documentation says a naive join is sufficient because one design's fact base is
 small. That assumption does not survive a real board. Measured against synthetic designs bracketing
-the size of a production automotive ECU netlist (roughly 4,000 components and 1,600 nets):
+the size of a production industrial ECU netlist (roughly 4,000 components and 1,600 nets):
 
 | query shape | 100 components | 4,000 components | scaling |
 |---|---|---|---|
@@ -374,7 +374,7 @@ intent is nearly always injective: a divider's two resistors must be two distinc
 pull-up's rail must not be the signal net it pulls up. The language has no way to say that, so every
 author writes a disequality by hand, and the shipped rules already carry two of them.
 
-Forgetting one is not a syntax error and not a crash. It is a silently wrong answer. Drop the
+Forgetting one produces no syntax error and no crash, just a silently wrong answer. Drop the
 disequality from the interface-presence rule and a single matching signal satisfies "two distinct
 signals are present", so an interface reports itself in use on half the evidence, and every
 completeness check downstream inherits that. This is the cheapest of the three problems to address

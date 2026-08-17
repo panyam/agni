@@ -286,7 +286,7 @@ func copyImages(src, dst string, names map[string]bool) error {
 func rulesIndex(rows []catalogRow) string {
 	var b strings.Builder
 	b.WriteString(frontMatter("Rules catalog", "Every check rule the catalog ships, grouped by category, with its source."))
-	b.WriteString("The EE rule catalog. Each rule links to its full reference: what it means, why it matters, the guards it applies, and a fires-versus-fine diagram. The Source column flags where a rule comes from — a built-in, a design-intent check (`intent/`), a datalog-authored rule (`dl/`), or an interface profile (`profile/`). This page is generated from the shipped catalog, so it always matches the engine.\n\n")
+	b.WriteString("The EE rule catalog. Each rule links to its full reference: what it means, why it matters, the guards it applies, and a fires-versus-fine diagram. The Source column flags where a rule comes from: a built-in, a design-intent check (`intent/`), a datalog-authored rule (`dl/`), or an interface profile (`profile/`). This page is generated from the shipped catalog, so it always matches the engine.\n\n")
 
 	byCat := map[string][]catalogRow{}
 	for _, r := range rows {

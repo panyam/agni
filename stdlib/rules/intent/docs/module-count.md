@@ -5,7 +5,7 @@
 When the design intent declares an exact count for a module (2 CAN transceivers, 4 radios), this
 rule fails if the number of design components matching that module's criterion differs. It is the
 complement of `module-missing`: missing asks "is at least one present", count asks "are there
-exactly N" — too few OR too many both fail.
+exactly N", where too few OR too many both fail.
 
 ### Why engineers want it
 

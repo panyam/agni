@@ -10,7 +10,7 @@ name, a license id) parsed from the PartSpec's `audience` attribute (comma-separ
 Like `param`, this is the datasheet tier: it is EMPTY without `--params`, and over `--speclib` it ranges
 the whole seeded corpus (every part), where over a design it ranges only the parts joined to it.
 
-It is RECORD-ONLY today (WS10-010). Nothing enforces it — a request for an un-entitled part is not
+It is RECORD-ONLY today (WS10-010). Nothing enforces it, and a request for an un-entitled part is not
 withheld yet. That gate (a ParamProvider that returns nil for an un-entitled caller, so rules stay
 silent-by-construction) is WS10-011; this relation exists so the entitlement is captured on the data
 and queryable in the meantime.
@@ -20,14 +20,14 @@ and queryable in the meantime.
 Datasheet data is vendor-licensed: a shared spec library may hold parts your team is not licensed to see. This
 relation records who each part's data is for, so you can ask the spec library "which parts is my team entitled
 to?" or "who else can see this part?" before that entitlement is enforced anywhere. An unset audience
-means the part was not annotated, NOT that no one may see it — until enforcement lands, unset is
+means the part was not annotated, NOT that no one may see it. Until enforcement lands, unset is
 visible to all.
 
 ### For software engineers
 
 Think of it as a per-record ACL label with no reference monitor wired up yet: the `audience` field is
 attached to the data, this relation projects it, and a future gate reads the same field to actually
-allow/deny. It is a deliberate split — capture the policy metadata now (cheap, no proto change: it
+allow/deny. It is a deliberate split: capture the policy metadata now (cheap, no proto change, since it
 rides the PartSpec `attributes` map), enforce it when there is more than one tenant to enforce against.
 Keyed by `mpn`, so it joins the other datasheet relations (`param`, `component.mpn`) on the same
 identity.

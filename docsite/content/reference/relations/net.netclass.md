@@ -25,8 +25,8 @@ maintain in the project rather than something the engine guesses from a name.
 
 Query it to confirm the engine sees the classes you assigned, and to scope a review question the way
 you would scope a design rule: "which parts sit on an HV net", "is any high-speed pair missing its
-termination". The class is assignment, not measurement — a net in `HighSpeed` is one someone declared
-high-speed, not one the engine verified is routed that way.
+termination". The class is assignment, not measurement: a net in `HighSpeed` is one someone declared high-speed,
+not one the engine verified is routed that way.
 
 A net can be in several classes at once, and the engine reports all of them. If you assigned `VBUS`
 to both `Power` and `HighCurrent`, it shows up under both, and a query scoped to either one finds it.
@@ -40,7 +40,7 @@ everything else keyed by net name (`component-on-net`, `pin.net`, `net.max_volta
 a scope filter on any existing question.
 
 **`?net` is NOT unique in this projection.** Membership is a set, so a net in two classes emits two
-rows and a join on `?net` fans out — the same 1:many shape `component.class` has. Count rows and you
+rows and a join on `?net` fans out, the same 1:many shape `component.class` has. Count rows and you
 are counting memberships, not nets; `net.netclass(?n, ?c) => ?n` on a design where half the nets carry
 two classes returns more results than the design has classed nets.
 
@@ -48,7 +48,7 @@ WS1-050 settled this against the formats rather than against our first reader. K
 `map<netname, set<netclass>>` and resolves a net's membership by unioning its explicit assignment with
 EVERY matching pattern, then cascades the per-class VALUES by priority to build one effective class.
 Altium likewise lets a net join several classes, though its clearance matrix treats that as an
-ambiguity to flag rather than a feature. Same data model, opposite house reading, which is why the set
+ambiguity to flag rather than a feature. Same data model, opposite house reading, so the set
 is carried as fact here and whether a second class is a *problem* is left to a rule.
 
 Order is sorted, and that is a determinism guarantee only. It is NOT the tool's precedence order: in
@@ -67,8 +67,8 @@ project declares.
 each net's `NetClasses`. The field is populated in the I/O layer, not by any analysis:
 `readers/formats/registry.go` reads `net_settings.netclass_{assignments,patterns}` out of the sibling
 `.kicad_pro` and calls `kicad.AnnotateNetClasses` (WS1-037). One row per (net, class) pair; zero rows
-when the design has no classes, which is the common case and the reason for the companion marker
-below.
+when the design has no classes, the common case, and the reason the companion marker below
+exists.
 
 Do not populate `ir.Net.net_classes` from IPC-2581. Its `LogicalNet/@netClass` is spelled the same but
 means something else: a singular CLOSED enum (`CLK`/`FIXED`/`GROUND`/`SIGNAL`/`POWER`/`UNUSED`)
@@ -81,13 +81,13 @@ where a class-scoped query would silently select the wrong nets.
 **Only a KiCad project read populates net class.** An EDIF netlist, an IPC-2581 board, a bare
 `.kicad_sch` opened without its project, and a KiCad project that simply declares no classes all leave
 this relation empty. A rule SCOPED by net class then selects nothing, finds nothing, and reports clean
-— which a review cannot tell from a genuine pass. That is the false-pass family (WS3-090 / 096 / 097 /
+and a review cannot tell that from a genuine pass. That is the false-pass family (WS3-090 / 096 / 097 /
 098 / 099) reached by a new route: not an empty datasheet join and not a requirement that compiles to
 nothing, but a **scoping** relation that is empty because the source carries no such data.
 
 The route this relation takes is the capability gate. A netclass-scoped rule declares
-`check.CapNetClass`, and `check.Available` reports it not-applicable — with the reason "design carries
-no net-class assignments (only a KiCad project file supplies them)" — wherever the design assigns no
+`check.CapNetClass`, and `check.Available` reports it not-applicable, with the reason "design carries
+no net-class assignments (only a KiCad project file supplies them)", wherever the design assigns no
 classes. The gate is content-derived, not format-derived, because for a scoped rule "this project
 declares no classes" and "this format has no classes" are the same answer: there is nothing in scope
 either way. `has_netclass` is the queryable twin of that capability, so an ad-hoc query can ask whether
@@ -101,8 +101,8 @@ Every classed net and its class:
 net.netclass(?net, ?class) => ?net, ?class
 ```
 
-Scope an existing question by the project's own class, the way a vendor rule deck does — the parts
-sitting on a high-speed net:
+Scope an existing question by the project's own class, the way a vendor rule deck does, over the
+parts sitting on a high-speed net:
 
 ```
 net.netclass(?net, "HighSpeed"), component-on-net(?ref, ?net) => ?ref, ?net

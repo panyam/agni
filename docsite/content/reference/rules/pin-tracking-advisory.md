@@ -14,7 +14,7 @@ best operation".
 The vendor is telling you how the part works best, not where it breaks. A level shifter whose enable
 "should be at least 1 V higher than the reference for best translator operation" will still function
 below that, with degraded translation margin. That is worth a reviewer's attention and is not worth
-failing a build over, which is exactly why it is a separate rule from `pin-tracking-violated` rather
+failing a build over, so it stands as a separate rule from `pin-tracking-violated` rather
 than the same rule at the same severity.
 
 Keeping the two apart is what lets a team gate CI on datasheet **requirements** while still seeing

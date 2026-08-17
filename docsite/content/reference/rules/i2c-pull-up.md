@@ -29,7 +29,7 @@ identity is the shared component.class fact: the ref-des prefix convention (R, R
 part-type data when the source carries it.
 
 The SDA/SCL name match is at a **token boundary**, not a substring (WS3-037): `SDA`, `SCL`,
-`I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK` do NOT — `SCL`
+`I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK` do NOT, because `SCL`
 abutting another letter is a different signal. Generalizing this presence check to an
 arbitrary profile-declared signal set (CS, reset, boot straps) is the remaining WS3-037 work.
 

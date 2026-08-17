@@ -387,11 +387,11 @@ func TestCoverageRollup(t *testing.T) {
 }
 
 // A failing item with more than maxDetailFindings findings renders a capped summary: the first few
-// findings plus "(+N more)", not the full dump. On the real automotive EVT the esd item fails on 250+ nets,
+// findings plus "(+N more)", not the full dump. On the real schematic the esd item fails on 250+ nets,
 // which made one unreadable 100KB table cell.
 func TestReportCapsFindings(t *testing.T) {
 	var fs []check.Finding
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		fs = append(fs, check.Finding{Rule: "esd-protection", Kind: check.KindNet,
 			Subject: "NET_" + string(rune('A'+i)), Message: "no ESD device"})
 	}

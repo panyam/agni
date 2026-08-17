@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // The params tier of the Model (WS10-003): the validation join between design
@@ -548,7 +548,7 @@ var esdSymbols = map[string]bool{
 }
 
 // icEsdFloorVolts is the minimum declared ESD tolerance that credits a connector-facing signal as
-// IC-protected (WS3-073). Conservative; automotive bus transceivers rate far higher (IEC ±8kV). The
+// IC-protected (WS3-073). Conservative; bus transceivers rate far higher (IEC ±8kV). The
 // rating is matched to the PART, not to the connector-facing PIN, which is a deliberate follow-up.
 const icEsdFloorVolts = 2000
 

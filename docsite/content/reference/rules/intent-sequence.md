@@ -87,6 +87,6 @@ and names must slugify uniquely within a declaration.
 
 For a missing link, either the chain was never wired and the enable needs to come from the previous
 stage's power-good, or the board really does sequence some other way and the sequence should not be
-declared. For a reversed chain, the two ends are swapped in the schematic, which is the defect this
+declared. For a reversed chain, the two ends are swapped in the schematic, and that defect is what this
 rule is most worth having for: it looks correct on the page and it is wrong in exactly the way that
 damages parts.

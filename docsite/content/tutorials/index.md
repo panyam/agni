@@ -3,7 +3,7 @@ title: "Tutorials"
 description: "One board, carried from first read to a house checklist gating CI."
 ---
 
-The [guide](../guide/) documents each feature on its own, which is what you want when you know the
+The [guide](../guide/) documents each feature on its own, so reach for it when you already know the
 name of the thing you need. These pages are the other shape: one board, carried from first read all
 the way to a house checklist running in CI, adding one capability at a time.
 
@@ -11,7 +11,7 @@ Work through them in order the first time. After that they stand alone.
 
 ## The board
 
-Every rung runs against `examples/tutorial-project` in the engine repo. It is a synthetic automotive
+Every rung runs against `examples/tutorial-project` in the engine repo. It is a synthetic industrial
 gateway ECU plus the project files a team wraps around one. Every part, MPN, and datasheet value in
 it is invented, so you can copy the whole folder and change it freely.
 

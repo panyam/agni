@@ -384,7 +384,7 @@ promoted to the source of truth.
 Reference designators (`C1`, `R3005`) are the OUTPUT of a stateful authoring process — annotation +
 layout back-annotation performed inside the native project, with the tool's netlister assigning numbers
 as it emits the netlist — so a schematic export can carry placeholder (`C?`) or per-sheet-duplicate
-designators for parts the netlist numbers uniquely (observed: a real automotive EDIF `.eds` export ≈ 50% un-back-annotated
+designators for parts the netlist numbers uniquely (observed: a real EDIF `.eds` export ≈ 50% un-back-annotated
 vs a flat, fully-numbered `.edn`, WS1-046). The identity simply is not in the file, and no reader can
 recover it — like regenerating a database's auto-increment keys from a keyless dump. Treating the
 netlist as truth and the schematic/board as a companion to highlight (WS1-047) makes the join

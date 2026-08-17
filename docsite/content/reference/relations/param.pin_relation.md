@@ -1,6 +1,6 @@
 ---
 title: "param.pin_relation"
-description: "a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing — swapping the two inverts the requirement (needs --params)"
+description: "a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing, so swapping the two inverts the requirement (needs --params)"
 ---
 
 ### What it is
@@ -44,7 +44,7 @@ This borrows `param.pin_range`'s field layout for a different fact. There, Objec
 and a symbol; here they are two pin ids, and `Min`/`Num` bound the difference between them rather
 than one terminal's own quantity.
 
-The pin ids join to `param.pin`, which is what turns them into the names a datasheet prints. Resolving
+The pin ids join to `param.pin`, and that join turns them into the names a datasheet prints. Resolving
 a *design* terminal onto one of these ids is `param.ResolvePin`'s job and deliberately not a datalog
 join, because it can refuse (an ambiguous name, a name and number that disagree) and a join cannot.
 
@@ -70,7 +70,7 @@ param.pin(?mpn, ?s, ?sname, ?sfn), param.pin(?mpn, ?r, ?rname, ?rfn)
   => ?mpn, ?sname, ?rname, ?mod, ?min, ?max
 ```
 
-The requirements alone, which is what a CI gate cares about:
+The requirements alone, all a CI gate cares about:
 
 ```
 param.pin_relation(?mpn, ?s, ?r, "required", ?min, ?max) => ?mpn, ?s, ?r, ?min, ?max

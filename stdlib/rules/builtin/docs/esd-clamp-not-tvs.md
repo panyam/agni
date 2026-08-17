@@ -28,7 +28,7 @@ ESD-specific checklist item may accept it or require a TVS; a load-dump item may
 ### Scope note
 
 This rule and `esd-protection` partition the same external-signal nets (connector member, no power
-pins, no rail facts, no ground / power-rail name, and not on a power path — see `esd-protection` for
+pins, no rail facts, no ground / power-rail name, and not on a power path; see `esd-protection` for
 the shared definition). A net with **no** protection in reach is `esd-protection`; a net whose only
 protection in reach is a **Zener clamp** (no TVS, no IC ESD rating) is this rule. The two are mutually
 exclusive on any one net, so moving a net here removes it from the `esd-protection` count without

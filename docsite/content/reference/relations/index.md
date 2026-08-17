@@ -14,14 +14,14 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`component.attr(ref_des, key, value)`](component.attr/) | a component-level attribute (e.g. interface, MPN) |
 | [`component.class(ref_des, class)`](component.class/) | a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode) |
 | [`component.mpn(ref_des, mpn)`](component.mpn/) | the design-side part identity (manufacturer part number) |
-| [`external_signal_net(net)`](external_signal_net/) | a connector-facing signal net (not a rail, ground, no-connect, or power path) — the scope the ESD rules share |
+| [`external_signal_net(net)`](external_signal_net/) | a connector-facing signal net (not a rail, ground, no-connect, or power path), the scope the ESD rules share |
 | [`feedback(net)`](feedback/) | the net is a regulator feedback / sense node (must not be probed) |
 | [`has_nc_channel(present)`](has_nc_channel/) | one row when the design can express intentional no-connect |
 | [`has_netclass(present)`](has_netclass/) | one row when the design assigns net classes at all (absent it, a netclass-scoped rule selects nothing and reads clean) |
 | [`has_netclass_defs(present)`](has_netclass_defs/) | one row when the design declares net-class definitions at all (absent it, a declared-vs-actual rule has no limit to compare against and reads clean) |
 | [`net.ac_coupled(net)`](net.ac_coupled/) | a SERIES capacitor carries the net (a decoupling cap to ground/rail does not count) |
 | [`net.bias(net, level)`](net.bias/) | a bias resistor holds the net at a rail (high) or ground (low); absent when unbiased or held by a divider |
-| [`net.bus_like(net)`](net.bus_like/) | a shared-distribution net (ground plane, global rail, or rail-scale fan-out) — the series-reach walk's stop predicate |
+| [`net.bus_like(net)`](net.bus_like/) | a shared-distribution net (ground plane, global rail, or rail-scale fan-out), the series-reach walk's stop predicate |
 | [`net.declared_track_width(net, mm)`](net.declared_track_width/) | the track width a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows) |
 | [`net.declared_via_drill(net, mm)`](net.declared_via_drill/) | the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows) |
 | [`net.external(net)`](net.external/) | the net may extend onto an unread sheet (read-gap marker) |
@@ -61,9 +61,9 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`component.esd_rated(ref_des)`](component.esd_rated/) | the part carries a datasheet ESD rating at or above the credit floor (needs --params) |
 | [`param(mpn, symbol, max)`](param/) | a datasheet parameter's max value for a part, in its SI base unit (needs --params) |
 | [`param.pin(mpn, pin, name, function)`](param.pin/) | a pin the part's datasheet declares, keyed by its spec-local id, with the printed name and its function (power_input / ground / bidirectional / no_connect / ...; needs --params) |
-| [`param.pin_range(mpn, pin, symbol, kind, min, max)`](param.pin_range/) | a datasheet limit bound to ONE pin, both bounds in the SI base unit — the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params) |
-| [`param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max)`](param.pin_relation/) | a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing — swapping the two inverts the requirement (needs --params) |
-| [`param.prov(mpn, symbol, doc, page, section)`](param.prov/) | the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params) |
+| [`param.pin_range(mpn, pin, symbol, kind, min, max)`](param.pin_range/) | a datasheet limit bound to ONE pin, both bounds in the SI base unit, the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params) |
+| [`param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max)`](param.pin_relation/) | a datasheet constraint BETWEEN two pins of one part: bounds on (subject - reference) in the SI base unit, with the vendor's modality (required/recommended). The pin order is load-bearing, so swapping the two inverts the requirement (needs --params) |
+| [`param.prov(mpn, symbol, doc, page, section)`](param.prov/) | the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from (needs --params) |
 | [`param.range(mpn, symbol, kind, min, max)`](param.range/) | a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params) |
 | [`param.unit(mpn, symbol, unit)`](param.unit/) | the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params) |
 | [`part.audience(mpn, who)`](part.audience/) | a team/license entitled to see a part's datasheet data (record-only, needs --params) |

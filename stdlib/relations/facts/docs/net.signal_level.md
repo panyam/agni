@@ -29,7 +29,7 @@ supposed to sit at 3.3 V". A level mismatch across a link is an interfacing ques
 receiver tolerate the driver's level), while a rail nominal out of range is a supply question.
 
 Treat it as the design's own label, not a measurement. It is exactly as trustworthy as the naming
-convention that produced it, which is why the level and the rail nominal are kept apart rather than
+convention that produced it, so the level and the rail nominal are kept apart rather than
 merged into one number a rule cannot interpret.
 
 ### For software engineers
@@ -56,7 +56,7 @@ Every signal net whose name declares a level:
 net.signal_level(?net, ?v) => ?net, ?v
 ```
 
-Levels that disagree across the design, which is the cheap way to spot a mixed-voltage interface
+Levels that disagree across the design, the cheap way to spot a mixed-voltage interface
 somebody has to think about:
 
 ```

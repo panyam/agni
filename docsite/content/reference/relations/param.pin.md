@@ -13,7 +13,7 @@ row carries the pin's printed `name` (`VCCA`, `GND`, `NC`) and its `function` to
 
 The key is the id and not the name, and that is deliberate. A part routinely prints one name on
 several terminals, so a name-keyed relation would merge two pins that may carry different limits,
-which is the collapse the pin contract exists to undo. The name is published as a value, so a query
+collapsing exactly what the pin contract exists to keep apart. The name is published as a value, so a query
 can still match on it and a finding can print it.
 
 `unspecified` is an ordinary answer here, unlike `unspecified` on `param.range`'s kind. A pin
@@ -66,7 +66,7 @@ Both queries need `--params`. List every supply terminal of every seeded part:
 param.pin(?mpn, ?pin, ?name, "power_input") => ?mpn, ?pin, ?name
 ```
 
-Find parts that print one name on more than one terminal, which is the case that makes a name
+Find parts that print one name on more than one terminal, the case that makes a name
 unusable as a key:
 
 ```

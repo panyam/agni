@@ -1,6 +1,6 @@
 ---
 title: "param.prov"
-description: "the citation of a datasheet parameter — the SourceDoc title, page, and table/figure it was read from (needs --params)"
+description: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from (needs --params)"
 ---
 
 ### What it is
@@ -14,7 +14,7 @@ did this number come from", so a value and its provenance are both queryable fro
 spec.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
-`--params <dir>` pointing at a seeded `PartSpec` corpus — skip-not-false-pass by construction.
+`--params <dir>` pointing at a seeded `PartSpec` corpus, so it is skip-not-false-pass by construction.
 
 ### For hardware engineers
 
@@ -31,8 +31,8 @@ split off so a query can ask for the citation without the value (or join both). 
 identity is still `component.mpn(ref_des, mpn)`, so the join is unchanged. The tuple has room for the
 readable `doc` title, the `page`, and the `section`; the extraction `method` and `confidence` are not
 columns (the fact tuple has no slot for them). A datalog-authored RULE that wants the FULL citation
-on its findings — including confidence, which flags a value that should be verified before it is
-trusted — declares `param_symbol` on its query binding; `RuleFromQuery` then resolves the complete
+on its findings, including confidence, which flags a value that should be verified before it is
+trusted, declares `param_symbol` on its query binding; `RuleFromQuery` then resolves the complete
 citation from the subject component's spec via `check.DatasheetProvFor` and attaches it to
 `Finding.DatasheetProv`, which the review report renders.
 
@@ -53,7 +53,7 @@ section:
 param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?mpn, ?sym, ?doc, ?page, ?section
 ```
 
-Join a value to its citation — the max ceiling and the page it came from, together:
+Join a value to its citation, the max ceiling and the page it came from, together:
 
 ```
 param(?mpn, ?sym, ?max), param.prov(?mpn, ?sym, ?doc, ?page, ?section) => ?mpn, ?sym, ?max, ?doc, ?page

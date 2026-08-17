@@ -35,7 +35,7 @@ carry a bypass cap.
 ### For software engineers
 
 A filtered projection over `Nets()`, 1:1 with coupled nets. Empty on a board with no series caps,
-which is the common case for a low-speed design and is a genuine answer rather than a gap.
+the common case for a low-speed design, and a genuine answer rather than a gap.
 
 ### Go projector
 
@@ -51,7 +51,7 @@ Every AC-coupled net:
 net.ac_coupled(?n) => ?n
 ```
 
-The parts on them, which is the quick read of what a link actually connects:
+The parts on them, for a quick read of what a link actually connects:
 
 ```
 net.ac_coupled(?n), component-on-net(?r, ?n) => ?n, ?r

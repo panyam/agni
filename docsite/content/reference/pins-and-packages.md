@@ -14,7 +14,7 @@ things in different bodies. A pin name survives the change and a number does not
 
 ## What is actually in there
 
-An integrated circuit is not one object. It is a stack of five, and the words for them get used
+An integrated circuit is a stack of five objects rather than one, and the words for them get used
 interchangeably in conversation, which is where the confusion starts.
 
 | Layer | What it is |
@@ -115,7 +115,7 @@ In the UQFN it is `VCCB`, the main supply input. A tool that joined a design to 
 number, on a part seeded from one body and placed in another, would compare a power rail against a
 data line's limits. It would not error while doing it, because both are real terminals with real
 limits. It would report that everything looks fine. That failure is worse than no answer at all,
-which is why the name is the primary key and the number is only ever a tie-breaker.
+so the name serves as the primary key and the number is only ever a tie-breaker.
 
 **A number is not always a number.** Ball-grid packages designate by row and column, so `A2` and
 `B2` are pin "numbers" in the DSBGA. Anything storing a designator as an integer has already lost.

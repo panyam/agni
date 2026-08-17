@@ -42,7 +42,7 @@ undeclared lexicon, 5 on the board whose rails the built-in vocabulary already m
 ### Evidence honesty
 
 - A net carrying the rail role is not reported. Once the lexicon is declared, this rule goes silent
-  on the nets it was reporting, which is the intended end state.
+  on the nets it was reporting, and that is the intended end state.
 - **Ground is excluded.** A ground net carries a role of its own and is never what this is about.
 - A net whose name carries no parseable voltage token is not reported, however rail-like it looks.
   The rule reports a classification gap it can evidence, not every rail it suspects.

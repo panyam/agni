@@ -23,7 +23,7 @@ every finding and outcome.
 Each of those exists for a reason. Two results documents are only comparable once you know which
 build made each. The content hash is the revision identity, so a stale document cannot be silently
 read against a design that has since changed. And the list of rules that ran is what separates a
-clean design from a run that checked nothing, which is the same distinction rung 9 was about.
+clean design from a run that checked nothing, drawing the same distinction rung 9 was about.
 
 ## Read it back without the design
 
@@ -54,7 +54,7 @@ Still failing. The remaining error is the datasheet finding on U2, the one the r
 
 `--fail-on` operates on **finding severity**, which is a statement about consequence. `provisional`
 is a statement about evidence quality. They are different axes, and a finding can be severe and
-poorly evidenced at the same time, which is exactly what this one is.
+poorly evidenced at the same time, and this one is both.
 
 So a provisional finding still gates. Whether it should is your call, and there are two honest
 answers. Leave it gating and treat the block as pressure to go transcribe the real datasheet value,
@@ -64,7 +64,7 @@ corpus is trustworthy, and accept that those checks are not gating yet:
 {{ agniRun "content/tutorials/runs/11-gate-rev-b-no-params.yaml" }}
 
 Still `2`, and the reason is worth stopping on: dropping the parameter tier removed the *datasheet*
-error, and a different one was underneath it — a CAN host declaring the interface without its `STB`
+error, and a different one was underneath it: a CAN host declaring the interface without its `STB`
 signal. Narrowing what a gate can see does not make a board pass, it only changes which failure you
 are looking at. If you want to know what remains, run without `--fail-on` and read the list.
 
@@ -118,7 +118,7 @@ existing board produces a wall of failures on day one, and the reliable outcome 
 turns the gate off.
 
 Run the full `review` in CI alongside the gate and publish the results document as a build artifact.
-The gate answers whether this can merge. The document answers what was checked, which is the thing
+The gate answers whether this can merge. The document answers what was checked, and that is what
 you will want in six months when somebody asks whether a particular question was ever considered.
 
 ## That is the ladder

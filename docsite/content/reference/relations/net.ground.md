@@ -28,7 +28,7 @@ ground nets. An empty result means the read found no ground at all, which on a r
 points at a naming convention the lexicon does not yet cover rather than a board with no ground.
 
 **A net is ground by NAME or by DECLARATION, whichever the source supports.** Most formats carry only
-the name, which is why the naming lexicon exists. IPC-2581 states it outright on
+the name, and the naming lexicon exists to read it. IPC-2581 states it outright on
 `LogicalNet/@netClass`, so a net called `N$17` can be authoritatively ground with nothing in the name
 to go on (WS1-051). The two sources are unioned at ingestion, not ranked, so a declaration never
 costs you a role the name would have found.

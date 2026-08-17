@@ -10,7 +10,7 @@ source: no power-output pin and no power flag asserting the rail is fed elsewher
 This is KiCad's ERCE_POWERPIN_NOT_DRIVEN, and the reason power flags
 exist. A rail is often drawn as a named net (+3V3) with the regulator on another sheet; capture
 tools cannot see the source without either a power-output pin on the net or an explicit flag. A
-power-input with neither is almost always a real omission — the rail was named but never connected.
+power-input with neither is almost always a real omission, where the rail was named but never connected.
 
 ### Impact
 
@@ -25,7 +25,7 @@ Needs the power-in / power-out split (a reader that collapses both to a generic
 power pin cannot distinguish source from sink, so the rule does not fire). A power flag on the net,
 recorded by the reader, counts as driven.
 
-Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS — EDIF's port
+Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
 grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
 (the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"
 would false-fire on every switched or derived rail. WS3-072 PR2 stamps the power-INPUT side so the

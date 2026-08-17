@@ -6,7 +6,7 @@ description: "An input pin sits on a net with no driver and no pull, so its leve
 ### What it means
 
 A net that carries one or more input pins and nothing else that could set its
-level — no driver, no pull resistor, no rail. The input is left floating.
+level: no driver, no pull resistor, no rail. The input is left floating.
 
 ### Why engineers want it
 
@@ -34,7 +34,7 @@ since the reader could not classify it. This trades recall for near-zero false p
 A resistor on the net is the classic pull (the net
 is set); a cap or ferrite means a path this netlist-local rule cannot follow. Claiming
 "floating" past a passive is guesswork, so ANY passive-class member (resistor, capacitor,
-inductor, ferrite, fuse, test point) silences the rule for that net — which also absorbs
+inductor, ferrite, fuse, test point) silences the rule for that net, which also absorbs
 libraries that type passive pins INPUT (the Mentor EDIF corpus does for capacitors, which
 made cap-plus-input nets read as all-input the moment pin keys joined correctly, WS1-025).
 
@@ -47,7 +47,7 @@ excluded from the "is there a logic input" count. The exclusion is PER-PIN, not 
 a real IC input that merely carries a clamp diode still fires (the input is genuinely
 floating), only a net whose input pins are all diode terminals goes quiet. (Without this, a
 pair of steering-diode cathodes tied together read as an all-input net and false-fired; on
-one real automotive netlist that was 36 findings, every one a diode network.)
+one real industrial netlist that was 36 findings, every one a diode network.)
 
 ### Query structure
 

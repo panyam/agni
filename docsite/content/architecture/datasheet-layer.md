@@ -66,7 +66,7 @@ document store.
 **A FIXTURE IS NOT A CORPUS, and the difference is size.** A fixture carries the few rows its tests
 need, cited, and lives in `datasheet/param/testdata/` so `make testall` passes on a clean clone. A
 seeded corpus is the part's actual parameter set, belongs with the source PDFs, and lives OUTSIDE
-this repo, which is what the corpus-local posture above and `--params <dir>` already assume.
+this repo, as the corpus-local posture above and `--params <dir>` already assume.
 Transcribing a whole vendor table because it makes a better demonstration is how a fixture drifts
 into being an extracted parameter document; `txb0104.textproto` reached 389 lines that way and was
 cut back. If a new fixture is much larger than its neighbours, that is the signal. Anything
@@ -96,7 +96,7 @@ currently holds, `Verification.doc_content_hash` records the one that was checke
 | `unknown` | A verification exists but no current revision is recorded, so drift cannot be ruled out. |
 
 `unknown` is deliberately not folded into `verified`. A caller that cannot check must not be told the
-answer is fine, which is the same discipline the outcome vocabulary applies to a check that could not
+answer is fine, on the same discipline the outcome vocabulary applies to a check that could not
 run.
 
 This is the mechanism `derive.Patch` already uses one layer over. A patch is keyed by content hash,
@@ -123,7 +123,7 @@ It is on `Verification` rather than on `SourceDoc` for a reason that is easy to 
 re-seed REWRITES `SourceDoc`, both the hash and the title. That rewrite is the event that makes a
 verification stale, so a revision recorded there would be destroyed by the one thing that makes it
 worth having. Frozen beside the hash it was taken with, it survives. `SourceDoc.title` still names
-the revision the corpus holds NOW, and a citation carries both, which is why a report can name each
+the revision the corpus holds NOW, and a citation carries both, so a report can name each
 side.
 
 `param.MarkVerified` takes the `SourceDoc` itself rather than a hash and a title separately, so the
@@ -159,16 +159,16 @@ the field is specified to carry, and a snapshot of a part number reads identical
 reissue.
 
 **The page navigates like a schematic, not like a PDF reader.** The wheel zooms toward the cursor and
-a drag pans, which is what the schematic and board viewers do (see the web-app page and
+a drag pans, matching the schematic and board viewers (see the web-app page and
 `web/src/panzoom.ts`, the one definition all three share). That costs the PDF-reader convention where
 the wheel scrolls, and buys a user who learns one Agni viewport having learned all of them.
 
 Drawing a region used to own the plain drag and now has two entrances: hold Shift, or turn on the
-sticky Draw mode in the toolbar (`R`), which is there because transcribing is mostly drawing and
+sticky Draw mode in the toolbar (`R`). That mode exists because transcribing is mostly drawing, and
 holding a modifier for every box in a long session is real friction. Resize handles keep working in
 Draw mode, since they are small deliberate targets; a region body does not, so a new box can be drawn
 over an existing one, which datasheet tables need constantly. Moving a region takes a click to select
-it first, which is what keeps a drag across a page full of boxes a pan rather than a scatter.
+it first, so a drag across a page full of boxes pans rather than scatters.
 
 Paging is `PageUp`/`PageDown` and `Home`/`End`, or `Shift`+arrows for the same four commands, and `0`
 fits the page. Every binding is suppressed while a form field has focus, so typing a parameter value
@@ -226,7 +226,7 @@ silent rather than improvise.
   Storage is unchanged, and that is the point: the spec keeps the printed row, the extractor
   returns a converted copy. This mirrors `ir.Quantity`'s split on the design side, where `value`
   is normalized at ingestion and `input` keeps the source text so the normalization stays
-  non-lossy. `RangeValue` has no `input` field, which is why the parameter layer converts at
+  non-lossy. `RangeValue` has no `input` field, so the parameter layer converts at
   read time rather than at seed time.
 
 - **`core/classify`'s prefix table is deliberately NOT reused for this.** It parses a
@@ -250,7 +250,7 @@ carries `pin_refs`.
 
 **Inside the spec the binding key is a spec-local `Pin.id`, which is neither the name nor a
 number.** Both of those are ambiguous in ways the spec itself can resolve, and an opaque local id
-is unique by construction, which is what lets `param.Validate` reject a parameter bound to a pin
+is unique by construction, so `param.Validate` can reject a parameter bound to a pin
 the spec never declared. A dangling binding is worth catching at load precisely because
 downstream it does not look like an error: the parameter simply stops applying to anything, and
 the rule that wanted it reports nothing.
@@ -356,7 +356,7 @@ A field earns its place only when a second producer would populate it, and for p
   all workflow, and stay out. The line is that a fact carries what a reader needs in order to decide
   whether to trust it, and nothing about how the checking was organised.
 - **No package GEOMETRY.** `Package` carries an id, the name as printed, and the orderable-MPN
-  suffix, which is what pin numbering needs and nothing more.
+  suffix. Pin numbering needs exactly that and nothing more.
   Land patterns, body dimensions, and package-compatibility checks join through the design IR's
   footprint tier when they arrive; duplicating that here would create a second source of truth.
 - **Only one kind of pin relation.** `PinRelationKind` has a single member, `TRACKING`, because
@@ -385,7 +385,7 @@ different producers, different consumers, and a different lifecycle.
 Three fixtures are transcribed by hand from the cited datasheet revision, values and units as
 printed. They are FIXTURES rather than corpus entries: each carries the few rows its properties
 need, not the part's parameter set. A seeded corpus lives with its source documents, outside this
-repo, which is what `SourceDoc.locator`'s corpus-local posture already assumes.
+repo, as `SourceDoc.locator`'s corpus-local posture already assumes.
 
 - **`datasheet/param/testdata/lm1117.textproto`** (TI LM1117 LDO, SNOS412Q rev Jan 2023) shows the
   three limit kinds on one part: abs-max VIN 20 V, recommended-operating VIN 15 V, and dropout
@@ -401,12 +401,12 @@ repo, which is what `SourceDoc.locator`'s corpus-local posture already assumes.
 - **`datasheet/param/testdata/txb0104.textproto`** (TI TXB0104 level translator, SCES650K rev Mar
   2025) is the pin-binding example, and one real part covers both cases the binding has to
   survive. `VCCA` and `VCCB` are two supply terminals with genuinely different ranges (recommended
-  1.2 to 3.6 V against 1.65 to 5.5 V), which is the collapse pin binding undoes. The same die
+  1.2 to 3.6 V against 1.65 to 5.5 V), and pin binding undoes exactly that collapse. The same die
   ships in a TSSOP-14, a UQFN-12 and a DSBGA-12, and the renumbering is not a relabelling: number
-  11 is the `B3` data I/O in one body and the `VCCB` supply in another, which is the argument for
-  the name-first precedence in one line. It also carries a row bound to a group of terminals (one
+  11 is the `B3` data I/O in one body and the `VCCB` supply in another, which argues the
+  name-first precedence in one line. It also carries a row bound to a group of terminals (one
   continuous-current limit stated for both supplies and ground at once), a name printed on two pins
-  (`NC`), pins present in one package and absent from another, and ball designators, which is why a
+  (`NC`), pins present in one package and absent from another, and ball designators, so a
   pin number is a string rather than an integer.
 
 `datasheet/param/param_test.go` and `datasheet/param/pins_test.go` assert that all three fixtures
@@ -479,7 +479,7 @@ Running `tools/pdf2doc` (docling 2.x) over the two datasheets surfaced three fin
   including a 32x8 electrical-characteristics table, and cell text is faithful.
 - **Table titles come back empty.** Datasheet tables are headed rather than captioned, and
   the producer does not attach nearby headings. Title attachment is therefore recipe-layer work
-  (the nearest heading text block above the table bbox), which is why `Table.title` resolution
+  (the nearest heading text block above the table bbox), so `Table.title` resolution
   and the recipe tests run against the hand-authored fixture, the post-recipe shape, rather
   than raw producer output.
 - **Symbol text needs normalization.** Subscripts arrive space-split ("V GSS"). That is a
@@ -492,7 +492,7 @@ Running `tools/pdf2doc` (docling 2.x) over the two datasheets surfaced three fin
   design against.
 - **No semantic classification** (this-table-is-abs-max). That is the recipe layer's output,
   recorded in the parameter-IR. doc-IR stays a faithful decomposition with no interpretation,
-  which is what makes it reusable across recipe versions.
+  so it stays reusable across recipe versions.
 - **No cross-document corpus structure** (part to documents). That is the store's join.
 
 ## How a PartSpec is derived from a document
@@ -621,7 +621,7 @@ Ensemble-agreement fields exist in the manifest and stay zero until a second ext
 
 **A narrow classifier plus a recorded decline beats a clever one.** The pin typing stage is the worked
 example. A table routinely leaves its type column dashed on exactly the supply and ground rows and
-puts the fact in prose, so the stage reads the description — but only how it OPENS, in a handful of
+puts the fact in prose, so the stage reads the description, but only how it OPENS, in a handful of
 near-universal phrasings, and refuses everything else. The temptation is to search the whole sentence
 for "ground": one real table describes a thermal pad that "must either be connected to Ground or left
 electrically open", which is a decision the BOARD makes, and a greedy matcher would stamp a false
@@ -635,7 +635,7 @@ searching the document on their behalf, sees the candidates and decides. Widenin
 swallow the tail would trade a visible gap for an invisible guess.
 
 **The gap list is also the diagnostic instrument.** A pin table whose header spans two rows had both
-its type and description columns invisible, so every pin came out named, numbered, and untyped — a
+its type and description columns invisible, so every pin came out named, numbered, and untyped, a
 result indistinguishable from a datasheet that simply did not say. That is how a silent extractor bug
 survives: its output is plausible. It was found in minutes because the manifest said which pins were
 declined and why, and the gap detail is worded to separate the two causes, since an unknown token is
@@ -862,7 +862,7 @@ parameter checks skip, the same skip-not-false-pass behavior used for unseeded p
 That join is by part identity only. The finer per-pin join described under
 [pin binding](#pin-binding) is a property of the contract today and no rule consumes it yet: the
 shipped rules still reach a terminal through a vendor-symbol alias table meeting a pin-type
-inference, which is why they cannot tell two supply pins of one part apart. Pin-level query
+inference, so they cannot tell two supply pins of one part apart. Pin-level query
 relations and a pin-rating rule are separate work, and both are expected to keep the alias path as
 the fallback for a part with no pin data.
 

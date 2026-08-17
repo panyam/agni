@@ -26,7 +26,7 @@ failures. Rarely visible at first power-on, expensive to find later.
 ### Scope note
 
 This is the netlist presence check: "a capacitor somewhere on the rail". It does
-not check value, count-per-pin, or placement distance — proximity is a board-tier notion and the
+not check value, count-per-pin, or placement distance, since proximity is a board-tier notion and the
 value/impedance version is a datasheet-joined rule (Tier X). Ground-named nets (GND/VSS/...) are
 skipped: their pins are power_in too, but decoupling is a supply-rail concept and the same
 capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a

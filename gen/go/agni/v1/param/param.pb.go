@@ -1155,7 +1155,7 @@ type Parameter struct {
 	Conditions        []*Condition      `protobuf:"bytes,7,rep,name=conditions,proto3" json:"conditions,omitempty"`
 	ConditionCoverage ConditionCoverage `protobuf:"varint,8,opt,name=condition_coverage,json=conditionCoverage,proto3,enum=agni.v1.param.ConditionCoverage" json:"condition_coverage,omitempty"`
 	// The variant/grade this row covers when the document specs several ("LM1117-3.3",
-	// an automotive grade). Empty when the row covers every variant the document
+	// an industrial grade). Empty when the row covers every variant the document
 	// covers.
 	AppliesTo string `protobuf:"bytes,9,opt,name=applies_to,json=appliesTo,proto3" json:"applies_to,omitempty"`
 	// The pins this row applies to, as Pin.id values. EMPTY MEANS THE PART AS A WHOLE

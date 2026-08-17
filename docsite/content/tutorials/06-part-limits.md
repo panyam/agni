@@ -16,8 +16,8 @@ part worth checking.
 {{ agniRun "content/tutorials/runs/06-check-designs-gateway-gateway-edn-rule-suppl.yaml" }}
 
 The rule ran. It had no datasheet limits to compare against, so it decided nothing. Note that this
-looks identical to a board where the rule ran and everything was fine, which is exactly the ambiguity
-rung 9 exists to resolve.
+looks identical to a board where the rule ran and everything was fine, reproducing exactly the
+ambiguity rung 9 exists to resolve.
 
 ## With the parameter set
 

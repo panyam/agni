@@ -11,12 +11,12 @@ Two failures share one mechanism.
 
 **Reverse polarity**: a connector is wired backwards, or a technician plugs in a supply the wrong way
 round. Current flows into the board through what should be its return path. On a vehicle this is a
-qualification requirement, not a nicety — ISO 16750-2 makes reverse voltage a test the module has to
+qualification requirement, not a nicety. ISO 16750-2 makes reverse voltage a test the module has to
 survive.
 
 **Reverse current (backfeed)**: two sources share a rail, or a rail is switched off while something
 downstream still holds charge. Current flows back up a path that was only ever designed to carry it
-forward, powering a domain that is supposed to be dead. That is why an automotive board carries an
+forward, powering a domain that is supposed to be dead. That is why an industrial board carries an
 ORing FET or an ideal-diode controller.
 
 Both need a **directional** element: something that conducts one way and not the other. A series
@@ -27,7 +27,7 @@ diode, an ORing FET, an ideal-diode controller.
 This is the whole reason the rule exists separately from `input-protection`.
 
 A **fuse** opens on current *magnitude*. It does not care about sign, so it will not stop reverse
-current until the reverse current is large enough to blow it — by which point the damage is upstream
+current until the reverse current is large enough to blow it, by which point the damage is upstream
 of the fuse.
 
 A **TVS** shunts transients to ground. It clamps a voltage spike; it does not block a path.
@@ -66,11 +66,11 @@ the load. Fitted the other way it blocks the supply rather than the fault, which
 and not the one this rule reports.
 
 Only a plain diode counts. A TVS, a Zener and an LED all carry the diode family tag, and none is a
-series blocking element — the first two shunt to ground, and an LED in a power path is an indicator.
+series blocking element: the first two shunt to ground, and an LED in a power path is an indicator.
 
 ### When it stays silent (a genuine pass)
 
-- No connector on the net — the rule is about what enters the board.
+- No connector on the net, since the rule is about what enters the board.
 - No power input reachable from it.
 - A transistor on the path that a seeded datasheet identifies as an ideal-diode / ORing controller
   (above). An UNIDENTIFIED transistor is not silence: it is an inconclusive finding.
@@ -82,5 +82,5 @@ series blocking element — the first two shunt to ground, and an LED in a power
 
 Add the directional element, or record why the path does not need one. A path fed from a source that
 physically cannot be reversed (a fixed internal rail rather than a user-facing connector) is a
-legitimate exception — but it is worth writing down, because the next reviewer will ask the same
+legitimate exception, but it is worth writing down, because the next reviewer will ask the same
 question.

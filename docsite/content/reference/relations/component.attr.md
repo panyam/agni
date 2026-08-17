@@ -23,8 +23,8 @@ part claims about itself, or to find every part carrying a given annotation.
 This is the component's attribute map projected as triples, the way you would iterate a struct's
 tag map. Rows are 1:many with a component (one per attribute), and the value is opaque text. It
 is the annotation channel host-binding and naming overlays read: binding by a declared
-`interface` attribute is an explicit key lookup, which is why it is preferred over inferring
-identity from net-name conventions. An absent row means the component did not declare that key,
+`interface` attribute is an explicit key lookup, so it beats inferring identity from net-name
+conventions. An absent row means the component did not declare that key,
 not that the key is false.
 
 ### Go projector

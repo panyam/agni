@@ -23,7 +23,7 @@ ESD transients reach the regulator input unclamped.
 Since WS3-011 the rule walks: from each connector net it follows series
 pass elements (R/L/ferrite/fuse, the reach primitive, 3 hops) to find a power-input pin,
 and the path is protected if a FUSE was crossed to get there or a TVS hangs on any walked
-net up to it. Before the walk, a series element split the net and the rule saw nothing —
+net up to it. Before the walk, a series element split the net and the rule saw nothing, so
 a fuse-protected board passed by accident, and an unprotected connector-bead-regulator
 path passed too (the false negative this upgrade closes). Fuse OR TVS satisfies the rule;
 a per-design "which protections are required" policy is rule configuration (WS3-006).
@@ -47,13 +47,13 @@ pins that are wired together. The concepts this rule leans on:
 
 - **Series ("pass") element**: a two-terminal part wired INLINE, like middleware in a
   request pipeline. Because a net is "everything directly touching", an inline part SPLITS
-  one logical connection into two nets — which is why a per-net rule is like a function
+  one logical connection into two nets, leaving a per-net rule like a function
   that can only see its own local scope.
 - **Fuse**: a sacrificial circuit breaker, wired inline. "Is there a fuse between the wall
   plug and the machine" is a PATH question, like "does any middleware in the chain do auth".
 - **TVS diode**: a surge protector hanging OFF the path to ground like a pressure-relief
   valve; it is protection on a path net, not a crossing.
-- **Ferrite bead**: an inline noise filter, electrically transparent here — the classic
+- **Ferrite bead**: an inline noise filter, electrically transparent here, and the classic
   innocent reason a power path is split into two nets.
 - **Rail** (VCC, GND): a shared supply net like a global singleton; the walk never crosses
   into one.
