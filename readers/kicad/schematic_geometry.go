@@ -757,15 +757,27 @@ func hideFlag(n *node) bool {
 // the full lib_id and view_ref is the unit, so it joins to the per-unit SymbolDef. #-prefixed
 // references (power/flag virtuals) are kept: they are drawn, they just do not join the IR.
 func placementOf(ps *node, src string) *geom.SymbolPlacement {
-	// A #-prefixed reference (#PWR, #FLG) is a virtual power/flag symbol. KiCad hides these
-	// references (it shows the net name, e.g. VDD, via the Value field), so drop the ref-des
-	// for display; the symbol graphic and its value label still render.
+	// A #-prefixed reference (#PWR, #FLG) is a virtual power/flag symbol: drawn like a part, but not
+	// one, so it must not carry a ref_des that a consumer would try to join to a component.
+	//
+	// What it DOES carry is a name for the net at its pin — the same fact sch_nets.go turns into a
+	// rank-0 anchor — so that goes in net_anchor and the glyph becomes addressable. Blanking the ref
+	// alone (what this did) left the symbol drawn and anonymous, which made the thing that NAMES a
+	// rail the one thing on the sheet a reader could not click.
+	//
+	// A PWR_FLAG is the exception: it asserts a net is driven and names nothing, exactly as the
+	// netlist side treats it, so it gets no anchor.
 	ref := symbolRef(ps)
+	anchor := ""
 	if strings.HasPrefix(ref, "#") {
+		if v := propValue(ps, "Value"); v != "PWR_FLAG" {
+			anchor = v
+		}
 		ref = ""
 	}
 	pl := &geom.SymbolPlacement{
 		RefDes:    ref,
+		NetAnchor: anchor,
 		ViewRef:   unitStr(ps),
 		Transform: kicadTransform(ps),
 		Fields:    fieldsOf(ps),

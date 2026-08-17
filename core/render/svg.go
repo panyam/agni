@@ -108,10 +108,15 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			if style.PinDots {
 				c.El("circle", append([]svg.Attr{svg.F("cx", tx(wp.X)), svg.F("cy", ty(wp.Y)), svg.F("r", pinRPx),
 					svg.A("fill", style.Pin)}, pinKeys(pl, pin.PortRef)...)...)
-			} else if style.PickTargets {
+			} else if style.PickTargets && pl.GetNetAnchor() == "" {
 				// The same circle, invisible and larger: a pin is a POINT, and a point is unclickable
 				// without an area. pointer-events keeps it hittable while fill:none keeps it unseen,
 				// so the drawing is unchanged and the pin is pickable.
+				//
+				// A net anchor gets none. Its pin belongs to a symbol that is not a component, so the
+				// target would carry an empty ref and resolve to nothing — the picker discards it
+				// today, which is the right outcome by accident. Not emitting it makes that the
+				// intent, and what a reader means by clicking a ground glyph is its net anyway.
 				c.El("circle", append([]svg.Attr{svg.F("cx", tx(wp.X)), svg.F("cy", ty(wp.Y)), svg.F("r", pinPickRPx),
 					svg.A("fill", "none"), svg.A("pointer-events", "all")}, pinKeys(pl, pin.PortRef)...)...)
 			}
@@ -347,7 +352,7 @@ func drawImage(c *svg.Canvas, im *geom.Image, tx, ty func(int64) float64) {
 // Values come from the design, so they go through svg.AEsc: a net named with a quote would
 // otherwise close the attribute and inject markup into a document the viewer mounts with innerHTML.
 func wireKeys(w *geom.WireGeometry) []svg.Attr {
-	keys := []svg.Attr{svg.AEsc("data-kind", "wire"), svg.AEsc("data-net", w.GetNet())}
+	keys := []svg.Attr{svg.AEsc("data-kind", "net"), svg.AEsc("data-net", w.GetNet())}
 	if id := w.GetNetId(); id != "" {
 		keys = append(keys, svg.AEsc("data-net-id", id))
 	}
@@ -361,8 +366,17 @@ func wireKeys(w *geom.WireGeometry) []svg.Attr {
 	return keys
 }
 
-// symbolKeys identify a placed component's own graphics.
+// symbolKeys identify a placed symbol's graphics — as the NET it names when it is an anchor (a
+// ground or rail glyph), and as a component otherwise.
+//
+// An anchor is drawn like a part and is not one, so keying it by ref_des would offer a reader a
+// component no consumer can join. What a reader means by clicking a ground symbol is its net, which
+// is also what the netlist side does with it (a rank-0 name anchor), so the two agree by
+// construction rather than by coincidence.
 func symbolKeys(pl *geom.SymbolPlacement) []svg.Attr {
+	if net := pl.GetNetAnchor(); net != "" {
+		return []svg.Attr{svg.AEsc("data-kind", "net"), svg.AEsc("data-net", net)}
+	}
 	return []svg.Attr{svg.AEsc("data-kind", "component"), svg.AEsc("data-ref", pl.GetRefDes())}
 }
 

@@ -461,3 +461,31 @@ func TestReadBusGeometry(t *testing.T) {
 		t.Errorf("bus_entry points = %+v, want (150,-120)->(152.54,-122.54) in Mnm", pts)
 	}
 }
+
+// A #-prefixed symbol (#PWR, #FLG) is drawn but is not a component, and the geometry used to blank
+// its reference and stop there — leaving the glyph anonymous, so the thing that NAMES a rail was the
+// one thing on a sheet nothing could address. Its Value is the net name (the same fact sch_nets.go
+// turns into a rank-0 anchor), so it carries that as net_anchor instead.
+func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {
+	open := func(rel string) ([]byte, error) { return readFixture(t, rel), nil }
+	g, err := ReadSchematicHierarchy("hier_root.kicad_sch", readFixture(t, "hier_root.kicad_sch"), open)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	anchors := map[string]bool{}
+	for _, sh := range g.Sheets {
+		for _, pl := range sh.Placements {
+			if a := pl.GetNetAnchor(); a != "" {
+				anchors[a] = true
+				// An anchor is not a component: a ref_des here would join to nothing.
+				if pl.GetRefDes() != "" {
+					t.Errorf("anchor %q also carries ref_des %q", a, pl.GetRefDes())
+				}
+			}
+		}
+	}
+	if !anchors["VCC"] {
+		t.Errorf("the VCC power symbol carries no net anchor; have %v", anchors)
+	}
+}

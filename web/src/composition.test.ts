@@ -271,7 +271,7 @@ describe("clicking the drawing asks a question about what was clicked", () => {
   it("turns a click on a keyed element into a query in the panel", async () => {
     // The SVG the server would send, keyed the way core/render/svg.go keys it.
     const wire = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    wire.setAttribute("data-kind", "wire");
+    wire.setAttribute("data-kind", "net");
     wire.setAttribute("data-net", "PMIC_CORE_3V3");
     document.body.appendChild(wire);
     // jsdom implements no layout, so elementFromPoint does not exist at all. Standing it in is what

@@ -180,6 +180,22 @@ message SymbolPlacement {
   Transform transform = 4;
   string view_ref = 5;     // which view/bank of the cell (joins to SymbolDef.view_ref)
   repeated Field fields = 6;  // the instance's text fields (Reference, Value, custom)
+  // net_anchor is the net this placement NAMES rather than joins: a ground or rail symbol is drawn
+  // like a part but is not one, and its whole job is to give the net at its pin a name. Empty for an
+  // ordinary component placement.
+  //
+  // Every schematic format has this construct and each spells it differently — KiCad a `#PWR`
+  // virtual with the name in its Value, xschem a gnd/vdd label symbol with a `lab` property, gEDA a
+  // power symbol with a `net=` attribute — so each reader translates its own spelling into this one
+  // neutral field (CONSTRAINTS C1) and no consumer has to know any of them.
+  //
+  // It exists because these symbols were unaddressable. KiCad's reader blanked the ref_des (the
+  // reference is hidden, and hiding it was conflated with dropping the identity) so the glyph drew
+  // with nothing to key; xschem kept a ref_des that joins to no component, so a viewer could select
+  // it and then ask a question about a part that does not exist. On a schematic the thing that NAMES
+  // a rail is often the only thing on the sheet a reader wants to click, and it was the one thing
+  // they could not.
+  string net_anchor = 7;
   Provenance prov = 16;    // source_id = EDIF instance &id (the unique join key)
 }
 

@@ -480,7 +480,7 @@ func TestSheetSVGCarriesEntityKeys(t *testing.T) {
 	g, sheet := keyFixture()
 	out := SheetSVG(g, sheet)
 
-	for _, want := range []string{`data-kind="wire"`, `data-net="`, `data-kind="component"`, `data-ref="`} {
+	for _, want := range []string{`data-kind="net"`, `data-net="`, `data-kind="component"`, `data-ref="`} {
 		if !strings.Contains(out, want) {
 			t.Errorf("render carries no %s", want)
 		}
@@ -558,4 +558,32 @@ func first(s string, n int) string {
 		return s
 	}
 	return s[:n]
+}
+
+// A ground or rail glyph is drawn like a part and is not one: it NAMES the net at its pin. Keying it
+// as a component would offer a reader a part no consumer can join, so it is keyed as its net — which
+// makes the thing that names a rail clickable, and it was previously the one thing on a sheet that
+// was not.
+func TestSheetSVGKeysNetAnchorsAsNets(t *testing.T) {
+	g, sheet := keyFixture()
+	sheet.Placements = append(sheet.Placements, &geom.SymbolPlacement{
+		NetAnchor: "DGND", CellRef: "R", LibraryRef: "L", ViewRef: "sym",
+		Transform: &geom.Transform{Origin: &geom.Point{X: 300, Y: 300}},
+	})
+	out := SheetSVG(g, sheet)
+
+	if !strings.Contains(out, `data-net="DGND"`) {
+		t.Fatalf("the anchor's net is not keyed:\n%s", first(out, 600))
+	}
+	// An anchor's pin gets no pick target: it belongs to a symbol that is not a component, so the
+	// target would carry an empty ref and resolve to nothing, and what a reader means by clicking a
+	// ground glyph is its net.
+	picky := SheetSVG(g, sheet, WithPickTargets())
+	if strings.Contains(picky, `data-kind="pin" data-ref=""`) {
+		t.Error("an anchor emitted a pin target with no identity")
+	}
+	// And not as a component: an anchor has no ref_des to join.
+	if strings.Contains(out, `data-kind="component" data-ref=""`) {
+		t.Error("an anchor was keyed as a component with an empty ref")
+	}
 }
