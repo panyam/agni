@@ -55,7 +55,7 @@ Then interrogate it the way a real corpus will:
   naming rails function-first matches almost none of it. Measured on a real 1700-net board, declaring
   the project's patterns moved the rail count from 13 to 91: gating without that config silently
   answers a narrower question. Gate anyway, and make the gap visible rather than assuming the config
-  is there — `rail-not-classified` is the tripwire that does it.
+  is there. `rail-not-classified` is the tripwire that does it.
 
 ## Author spec-first
 
@@ -122,7 +122,7 @@ A rule that SUBTRACTS two name-derived voltages meets binary floating point head
 `1.4999999999999998`, which both prints as noise in a finding and misjudges a bound of exactly 1.5.
 The older datasheet rules only ever compared a rail against a limit, so the problem first appeared
 with pin tracking. Round the result (microvolt resolution is finer than any bound a datasheet
-states) and assert the PRINTED number in a test, which is what caught it.
+states) and assert the PRINTED number in a test, which is how this one got caught.
 
 ## Two independent channels, when one channel is ambiguous by construction
 
@@ -168,7 +168,7 @@ board's incidental firings in its sidecar.
    per-file, per-rule. The corpus alone is not enough. The real exports carry the scale and the
    tool dialects that expose whole classes of false positive (the 1836-finding lesson). Hand-trace
    what fires. The example's five real-board findings decomposed into three genuine gaps and two
-   policy-edge feedback nodes, which is what set the severity.
+   policy-edge feedback nodes, and that decomposition set the severity.
 4. A reference implementation, when one exists. Agreement with `kicad-cli sch erc` or
    `kicad-cli pcb drc` is the strongest evidence a rule's semantics are right. It pinned the
    connection-point rules and the naming priorities. Design-for-test has no open reference, so

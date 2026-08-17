@@ -2,8 +2,8 @@
 
 ### What it means
 
-Parts whose reference designator is still a placeholder — `R?`, `C?`, `REF**`, or a partly-assigned
-`C?1845` — rather than an assigned name. Annotation is the step where a tool walks the sheets and
+Parts whose reference designator is still a placeholder (`R?`, `C?`, `REF**`, or a partly-assigned
+`C?1845`) rather than an assigned name. Annotation is the step where a tool walks the sheets and
 turns every `R?` into `R1`, `R2`, `R3`. Until it runs, or for parts added after it last ran, the
 placeholder is what the file carries.
 
@@ -28,7 +28,7 @@ any rule keying on the designator saw one impossible part rather than 176 real o
 `pin-net-conflict` declines to judge them for exactly this reason (see its second suppression):
 `(R?, 1)` does not name a pin, so "a pin belongs to exactly one net" has nothing to say about it.
 That is the right call, but it means those parts would be covered by nothing at all if this rule did
-not exist — and no findings would read as "annotated" rather than "not looked at".
+not exist, and no findings would read as "annotated" rather than "not looked at".
 
 ### What to do about it
 

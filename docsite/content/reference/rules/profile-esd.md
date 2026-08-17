@@ -40,8 +40,8 @@ nothing.
 
 ### Why a Zener counts here
 
-A Zener clamp is not adequate ESD protection. It is slower than a TVS and not characterized for surge
-energy, and using one where a TVS belongs is a real finding.
+A Zener clamp is slower than a TVS and not characterized for surge energy, so it is not adequate ESD
+protection, and using one where a TVS belongs is a real finding.
 
 This requirement still treats a Zener-clamped net as satisfied, and that is deliberate rather than an
 oversight. The catalog rule `esd-clamp-not-tvs` reports exactly that case, so the two checks partition

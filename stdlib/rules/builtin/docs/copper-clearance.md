@@ -4,7 +4,7 @@
 
 Two track segments on the same copper layer, belonging to different
 nets, whose copper edges (centerline distance minus half of each width) come closer than
-0.127mm (5mil) — the loosest mainstream fab's minimum spacing (the corpus JLCPCB rules).
+0.127mm (5mil), the loosest mainstream fab's minimum spacing (the corpus JLCPCB rules).
 
 ![two different-net traces too close are flagged; adequate spacing is fine](images/copper-clearance.svg)
 
@@ -36,4 +36,4 @@ the pairwise spatial join the Phase-1 AST does not express:
         and edge_distance(S1, S2) < 0.127mm
 
 Reads: board.copper. Tier P. Primitives: select, geometry-distance (candidate primitive,
-not yet in the AST — this rule is its evidence).
+not yet in the AST, and this rule is its evidence).

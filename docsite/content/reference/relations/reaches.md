@@ -14,8 +14,7 @@ these two nets?" without hard-coding a topology.
 its own question needs. Read the next section before using it: `hops` is an exact count, not a
 budget.
 
-Unlike the fact relations, `reaches` is not a stored projection. It is computed on demand from the
-design graph, so it is a datalog *predicate* (kind `predicate` in the catalog), the recursive
+Unlike the fact relations, `reaches` is computed on demand from the design graph rather than stored, so it is a datalog *predicate* (kind `predicate` in the catalog), the recursive
 counterpart to `net.bus_like`: `net.bus_like` names the nets the walk refuses to enter, and
 `reaches` is the walk itself.
 
@@ -85,14 +84,14 @@ The components that sit on those reachable nets (what a protection walk would fi
 reaches("VBUS_IN", ?net), component-on-net(?r, ?net) => ?r
 ```
 
-The same question at a protection radius, which is how a rule scoped like `esd-protection` asks it —
-a TVS within two series crossings of the net:
+The same question at a protection radius, the way a rule scoped like `esd-protection` asks it,
+over a TVS within two series crossings of the net:
 
 ```
 reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "tvs") => ?n, ?t
 ```
 
-How far away each reachable net is, which is the query to run when a radius is not behaving as
+How far away each reachable net is, the query to run when a radius is not behaving as
 expected:
 
 ```

@@ -16,7 +16,7 @@ rungs 4 through 8.
 Take `[error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor)`. It has four parts.
 
 The **severity** is `error`. The **rule** is `i2c-pull-up`. The **subject** is the net `I2C_SCL`,
-which is the specific thing on your board the rule is talking about. The **reason** in parentheses
+naming the specific thing on your board the rule is talking about. The **reason** in parentheses
 says what is wrong in plain language.
 
 Severity is a policy signal, not a confidence signal. An `error` is something that will almost

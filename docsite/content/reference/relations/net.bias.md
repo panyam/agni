@@ -7,8 +7,8 @@ description: "a bias resistor holds the net at a rail (high) or ground (low); ab
 
 `net.bias(net, level)` yields one row per net a bias resistor holds at a rail: `high` when the
 resistor reaches a supply, `low` when it reaches ground. A net with no bias resistor produces no row,
-and so does a net held by a divider — so `not net.bias(?n, ?_)` reads as "unbiased", which is a
-genuinely different state from "biased the other way".
+and so does a net held by a divider, so `not net.bias(?n, ?_)` reads as "unbiased", a genuinely
+different state from "biased the other way".
 
 ### For hardware engineers
 
@@ -26,7 +26,7 @@ rest at the wrong level.
 ### Two clauses, and the second is the one that gets forgotten
 
 The bias resistor commonly sits directly between the net and its rail. It does not have to. It can
-reach the rail through further passives — a filter, a second resistor — and a check that only looked
+reach the rail through further passives, a filter or a second resistor, and a check that only looked
 for the direct arrangement would silently report those nets as unbiased.
 
 Both forms count here. `profiles.pullupRule` learned this the hard way (WS3-108): its walk-based form
@@ -43,7 +43,7 @@ the honest answer instead of a coin flip.
 
 `netBiasFacts` in `stdlib/relations/facts.go` calls `check.NetBias`, which lives in
 `core/check/guards.go` beside the other Model-level predicates. The Go rules and any datalog query
-therefore read ONE definition — this relation is a projection of it, not a second implementation.
+therefore read ONE definition, and this relation projects it rather than reimplementing it.
 
 ### Datalog
 
@@ -53,7 +53,7 @@ Every biased net and which way:
 net.bias(?n, ?level) => ?n, ?level
 ```
 
-Lines that rest low — the ones an active-low reset must not be among:
+Lines that rest low, the ones an active-low reset must not be among:
 
 ```
 net.bias(?n, "low") => ?n

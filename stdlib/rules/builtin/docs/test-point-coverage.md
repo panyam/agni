@@ -10,7 +10,7 @@ that places test points elsewhere.
 A test point is a dedicated probe pad: its only job is to
 expose a net so a scope probe (bring-up debugging) or a bed-of-nails / flying-probe
 machine (factory test) can measure it on the assembled board. DFT review checklists ask
-for the important nets — rails and ground first — to be probe-able; an unreachable rail
+for the important nets, rails and ground first, to be probe-able; an unreachable rail
 is debugged by touching component pads the size of sand grains, and factory test simply
 cannot verify it.
 
@@ -29,7 +29,7 @@ Gated on the DESIGN using test points at all (the design.nc_channel
 pattern): a board with zero TPs has no probe convention to violate, so small demo boards
 stay silent; a board with some TPs has declared the convention, making an uncovered rail
 an omission. "Rail" is the union of the rail FACTS (global, power_driven) and the rail /
-ground NAME heuristics — name is the only rail evidence a directionless EDIF netlist
+ground NAME heuristics, because name is the only rail evidence a directionless EDIF netlist
 carries. Cross-sheet (external) nets are skipped. Connector pins can also provide probe
 access in real DFT flows; counting them is a possible widening if the corpus shows the
 TP-only reading too strict. A regulator FEEDBACK / sense node reads as a rail by name (VCC..._FB)
@@ -52,7 +52,7 @@ Reads: component.class, net.attributes, net.names, on_net. Tier R.
 ### For software readers
 
 A test point is a metrics endpoint: a tiny component whose only purpose is observability.
-This rule is "every critical path must emit telemetry" — a power rail without a test
+This rule is "every critical path must emit telemetry", where a power rail without a test
 point is a service with no health check, fine until the day you desperately need to see
 inside it. The channel gate is the interesting part: the rule only fires on boards that
 instrument SOMETHING, the way a lint rule for missing metrics only makes sense in a

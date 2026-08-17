@@ -78,7 +78,7 @@ Silence is always "I could not tell", never "this is fine".
 - **The FET is unseeded** or states no continuous drain rating. Pulsed drain current is deliberately
   not accepted in its place.
 - **The shunt's value is not stated in ohms in the design.** A component whose value the reader never
-  normalized, or normalized without a unit, is not evidence that it is a milliohm shunt. This is the
+  normalized, or normalized without a unit, is no evidence that it is a milliohm shunt. This is the
   live limit on formats: KiCad, IPC-2581 and gEDA normalize the value attribute at ingestion; EDIF and
   xschem do not, so an EDIF design's shunt commonly carries no readable number and the rule reports
   nothing there.

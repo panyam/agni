@@ -11,7 +11,7 @@ names: power-symbol rails or global labels (rank 0 in the docs/22 scoping model)
 ### Why engineers want it
 
 Design-wide names unify by name across every sheet. Two of them
-on one net means every tap of EITHER name anywhere in the design lands on this net — so a
+on one net means every tap of EITHER name anywhere in the design lands on this net, so a
 wire joining a +3V3 symbol to a +3.3V symbol does not just alias two spellings, it merges
 two design-wide rails. That is either a real short drawn with symbols or a naming split
 that scatters one rail's story across two names.

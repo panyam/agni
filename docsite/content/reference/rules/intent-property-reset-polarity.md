@@ -20,7 +20,7 @@ INCONCLUSIVE finding, and a review item bound to it reads `inconclusive`, never 
 names what could not be resolved and what to check by hand.
 
 This used to be silence, and a passing item then meant only "no contradiction found" rather than
-"polarity confirmed" — a distinction that had to be carried in prose here, in the declaration comment
+"polarity confirmed", a distinction that had to be carried in prose here, in the declaration comment
 and in a test name, and that anyone reading a green report would never see. It is now in the report
 itself.
 
@@ -34,11 +34,11 @@ Its sibling `property-ac-coupled` is decidable by looking and carries no inconcl
 ### For hardware engineers
 
 An **active-low** reset (usually drawn `RESET_N`, `nRST`, `RST#`) holds the part in reset while the
-line is LOW and lets it run when the line is HIGH. So the resting state must be high, which is what a
-pull-up to the rail provides.
+line is LOW and lets it run when the line is HIGH. So the resting state must be high, and a
+pull-up to the rail provides it.
 
 Put a pull-down on that line instead and the part is held in reset from the moment power comes up.
-The board looks dead, and the cause is one resistor to the wrong net — a bring-up failure that reads
+The board looks dead, and the cause is one resistor to the wrong net, a bring-up failure that reads
 as a broken part or bad firmware for as long as it takes someone to meter the reset pin.
 
 Active-high is the mirror image: it should rest low, so a pull-up holds it permanently asserted.
@@ -48,7 +48,7 @@ Active-high is the mirror image: it should rest low, so a pull-up holds it perma
 A resistor on the declared net whose other end reaches a power rail (pull-up) or a ground net
 (pull-down).
 
-A net with **both** — a divider — reports neither. A divider sets an intermediate level, so it does
+A net with **both**, a divider, reports neither. A divider sets an intermediate level, so it does
 not hold the line at either rail, and calling it a contradiction would be wrong.
 
 ### Declaring it
@@ -65,5 +65,5 @@ omitted or misspelled level is rejected at load rather than becoming a rule that
 ### Fixing a finding
 
 The bias resistor goes to the wrong net, or the declared polarity is wrong. Check the part's datasheet
-before moving the resistor — if the declaration is what is wrong, moving the resistor would create the
+before moving the resistor, because if the declaration is what is wrong, moving the resistor would create the
 bug the rule was reporting.

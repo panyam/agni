@@ -23,7 +23,7 @@ Before reporting an absence, plant a known instance and confirm it is found. The
 already contain one.
 
 Two habits that make this cheap. **Instrument the gates**: count and sample what each filter REJECTED,
-not only what it matched, which is the silence-never-reads-as-coverage discipline applied to your own
+not only what it matched, applying the silence-never-reads-as-coverage discipline to your own
 tooling. And **exercise the shipped configuration**: a sweep run with different flags from the ones
 the feature ships with has validated a different program.
 
@@ -43,7 +43,7 @@ are each internally consistent and collectively wrong, because every file reads 
 a change has a user-visible surface, drive it before designing on top of it. See `build/overlay.md`
 and the web-app page for how to stand the app up.
 
-**When a run contradicts your PREDICTION, the contradiction is the finding — do not adjust the test
+**When a run contradicts your PREDICTION, the contradiction is the finding. Do not adjust the test
 to absorb it.** A test written to prove a malformed `project.yaml` fails the run came back saying the
 run had SUCCEEDED, against a confident reading that a downstream error check would catch it. The
 tempting move is to assume the fixture is wrong. Chasing the gap instead found that the descriptor
@@ -92,8 +92,8 @@ the test is meant to catch and confirm the test fails. Stashing ONE tracked file
 (`git stash push -- path/to/file.go`, run the test, pop) is the cheap way to do it. Two outcomes are
 worth knowing before you see them.
 
-**That move fails when the stashed file also carries something the test needs to compile** — a new
-field, type, or exported helper the test references. The stash removes both the behaviour and the
+**That move fails when the stashed file also carries something the test needs to compile**, such as
+a new field, type, or exported helper the test references. The stash removes both the behaviour and the
 declaration, so the run comes back `[build failed]`, which proves nothing and looks like it did. Both
 times this bit, the fix was to revert the BEHAVIOUR in place (flip the branch to `if false`, drop the
 one assignment) and leave the declarations, then restore. Read the red output before believing it: a

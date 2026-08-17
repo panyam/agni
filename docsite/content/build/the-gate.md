@@ -6,7 +6,7 @@ title: Running the gate
 
 `make testall` is the full gate: vet, engine tests, example modules, the web bundle build, and the
 web typecheck plus vitest. Green means ship-ready, and CI runs exactly this command. It also lies to
-you in three specific ways, which is what most of this page is about.
+you in three specific ways, and most of this page covers them.
 
 ## The three traps
 
@@ -54,6 +54,6 @@ throwaway tree and diffs, so regenerating and running the gate before committing
 **An editor reporting the generated types as MISSING is usually a stale language server, not stale
 generated code.** After a branch switch or a merge, the LSP can insist `Module ... has no exported
 member 'Foo'` and `Property 'bar' does not exist` for symbols that are present in the file. It reads
-exactly like the real hazard above, which is why it is worth naming: the two are told apart by
+exactly like the real hazard above, so it earns a name of its own: the two are told apart by
 checking the FILE and a fresh `cd web && npx tsc --noEmit`, never the editor. A green `make testall`
 alongside editor errors is the cache, not a bug; genuine staleness fails the gate.

@@ -29,10 +29,10 @@ OR an IC on the net carries a datasheet ESD rating at or above the credit floor 
 WS3-073, the common industrial posture). The IC path needs a seeded PartSpec (`--params`), so on a
 design read with no datasheets it is silent and the rule behaves as before. The IC path credits ONLY a
 SYSTEM-level rating (IEC 61000-4-2), NOT a handling model (HBM/CDM): the rating's test model is a
-declared `esd_test_model` attribute (WS3-077), and an unstated or handling rating never credits —
-crediting an HBM handling rating on a harness input would hide a real ESD gap, since handling ratings
+declared `esd_test_model` attribute (WS3-077), and an unstated or handling rating never credits.
+Crediting an HBM handling rating on a harness input would hide a real ESD gap, since handling ratings
 are for assembly, not field strikes. One refinement remains a follow-up: matching the rating to the
-connector-facing PIN, not the whole part (deferred with WS3-077 — the PartSpec carries no structured
+connector-facing PIN, not the whole part (deferred with WS3-077, since the PartSpec carries no structured
 pin applicability, and the residue it would address is largely correct findings anyway).
 
 ![an IC with no ESD rating is still flagged; an IC carrying a datasheet ESD rating credits the net as fine]({{.Site.PathPrefix}}/static/images/catalog/rules/esd-protection-ic-rated.svg)

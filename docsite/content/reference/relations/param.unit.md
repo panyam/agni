@@ -11,7 +11,7 @@ part in the design, carrying the unit the vendor PRINTED that parameter in: `"mV
 so that a comparison can trust them. This relation is where the vendor's own spelling survives.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
-`--params <dir>` pointing at a seeded `PartSpec` corpus — skip-not-false-pass by construction.
+`--params <dir>` pointing at a seeded `PartSpec` corpus, so it is skip-not-false-pass by construction.
 
 ### For hardware engineers
 
@@ -57,7 +57,7 @@ param.unit(?mpn, ?sym, ?unit), param(?mpn, ?sym, ?max), absent(?max) => ?mpn, ?s
 ```
 
 `not param.range(...)` does NOT find them, and the distinction is the useful one: the row exists, so
-negation (which asks whether a ROW exists) sees it. Only its number is missing, which is what
+negation (which asks whether a ROW exists) sees it. Only its number is missing, and that is what
 `absent` asks about.
 
 ### Go projector

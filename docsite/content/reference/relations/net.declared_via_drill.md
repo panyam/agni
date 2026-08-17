@@ -17,7 +17,7 @@ no number the engine invented.
 A net can sit in several classes at once, and the classes can disagree. KiCad does not pick one class
 and use it wholesale. It fills each constraint from the highest-priority class that states that
 particular constraint, and the Default class fills whatever is left over. So a net can take its
-clearance from one class and its via drill from another, which is exactly what the tool does when it routes.
+clearance from one class and its via drill from another, exactly as the tool does when it routes.
 
 This relation is that same resolution, so the number here is the number your layout tool would
 enforce. Ask it when you want to know what a net was supposed to be, not what it is.

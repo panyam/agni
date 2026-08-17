@@ -94,8 +94,8 @@ checked on every board this project reviews, and nothing would say so. The run w
 because there would be fewer findings.
 
 So the file above repeats the built-in's signals and requirements rather than listing only the
-delta. That is not redundancy. It is the whole declaration, because a whole declaration is what
-supersession replaces.
+delta. That repetition is the whole declaration rather than redundancy, because a whole declaration
+is what supersession replaces.
 
 The printed note is your check on this. When you add a profile, read the list of superseded rules
 and confirm your file covers each of them or that you meant to drop it.

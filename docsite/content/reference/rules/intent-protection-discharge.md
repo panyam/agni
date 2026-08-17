@@ -7,7 +7,7 @@ description: "A rail the design intent declares needs a discharge path has no bl
 
 The design intent declares that a named rail must have a discharge path: a bleeder resistor that bridges
 the rail to ground so stored charge drains when the supply is removed. This rule fails when the declared
-rail carries no such resistor — it probes that exact net for a component that is a resistor AND also
+rail carries no such resistor. It probes that exact net for a component that is a resistor AND also
 touches a ground net, and a declared rail with none is flagged.
 
 ### Why engineers want it

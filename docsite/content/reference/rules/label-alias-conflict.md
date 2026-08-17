@@ -11,7 +11,7 @@ distinct sheet-scoped label names within a single sheet scope.
 ### Why engineers want it
 
 Labels connect by name, so a wire carrying labels A and B pulls
-everything named A and everything named B into ONE net — usually a leftover label after a
+everything named A and everything named B into ONE net, usually a leftover label after a
 rename, or two nets drawn into accidental contact. KiCad's own ERC warns on it. The naming
 pass picks one winner and the second name silently vanishes from the netlist.
 

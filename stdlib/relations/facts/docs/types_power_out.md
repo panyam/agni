@@ -12,7 +12,7 @@ carry no power-output type) produces no row.
 ### For hardware engineers
 
 Some formats let you mark a pin as a power SOURCE (a regulator's output, a power flag), so the tool can
-tell a rail that has a source from one that does not. EDIF and IPC do not — a regulator's output pin
+tell a rail that has a source from one that does not. EDIF and IPC do not, so a regulator's output pin
 reads as a plain input there, indistinguishable from the loads it feeds. This flag says which world you
 are in. It matters because "this power rail has no source" is only a real finding when the format could
 have named a source; on EDIF that same net looks sourceless for every switched or derived rail, which

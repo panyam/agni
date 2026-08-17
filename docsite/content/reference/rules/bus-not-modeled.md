@@ -30,7 +30,7 @@ a rule misfires or a diff lies. Info severity because the cause is the reader, n
 Resolution is checked by member NAME. A flat sheet's member labels are bare
 (`DATA0`), so they match the bus's expanded members and the bus reads as resolved. A hierarchy read
 qualifies a sheet-local member net per instance (`/amp1/DATA0`), which does NOT match the bare
-`DATA0` — correctly flagging a bus whose members do not cross a sheet boundary (a hierarchical bus
+`DATA0`, correctly flagging a bus whose members do not cross a sheet boundary (a hierarchical bus
 port), the case where connectivity really is lost. Verified against `kicad-cli sch export netlist`:
 a flat bussed sheet produces exactly the member nets, so the rule stays silent on it.
 

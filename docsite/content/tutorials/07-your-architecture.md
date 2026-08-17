@@ -44,8 +44,8 @@ structural is wrong with the board, and no rule from any other tier has anything
 reason this is catchable is that somebody wrote down what was intended and the two disagree.
 
 That is the whole value of the tier. It does not find defects in the usual sense. It finds
-divergence between the board and the description of the board, which is what happens over months as
-a design is edited by people who did not write the original plan.
+divergence between the board and the description of the board, and that divergence creeps in over
+months as a design is edited by people who did not write the original plan.
 
 ## A tier can depend on another tier
 

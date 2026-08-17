@@ -19,7 +19,7 @@ short hands the full rail to the load. `load-switch-trip-above-fet-rating` repor
 reports the lower edge, which fails the other way: a limit under the load current means the switch
 never passes the design's own current.
 
-The two edges need different evidence, which is why they are different rules in different places. The
+The two edges need different evidence, so they are different rules in different places. The
 upper edge is two datasheet numbers, so it is decidable from the design plus the seeded parts. The
 lower edge needs the load current, and nothing in a design states that. A netlist carries connectivity,
 not current. The controller's datasheet cannot know what was hung off the switch. Adding up every
@@ -66,7 +66,7 @@ touches (the structural signature of Kelvin sensing), below an ohm.
 Every step refuses ambiguity rather than guessing. Two candidate controllers on a gate net, two
 candidate shunts, a gate net shared by two pass elements, a shunt whose value the design does not state
 in ohms: each of those yields no switch at all. An over-current verdict computed from the wrong
-resistor looks exactly as authoritative as a correct one, which is why a wrong answer costs more here
+resistor looks exactly as authoritative as a correct one, so a wrong answer costs more here
 than no answer.
 
 A gate resistor between the controller and the FET defeats the walk. That is a known limit rather than

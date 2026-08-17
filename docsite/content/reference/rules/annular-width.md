@@ -5,7 +5,7 @@ description: "A via's annular ring is thinner than the loosest common fabricatio
 
 ### What it means
 
-A via whose copper ring — (pad diameter minus drill) / 2 — is below
+A via whose copper ring, (pad diameter minus drill) / 2, is below
 0.075mm, the loosest mainstream floor (the corpus JLCPCB rules).
 
 ![a via with a thin copper ring is flagged; an adequate ring is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/annular-width.svg)

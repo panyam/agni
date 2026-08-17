@@ -5,8 +5,8 @@ description: "Run Agni on a design: checks, diff, query, naming, datasheets."
 
 These guides are for people who use Agni on a design. You do not need to read any Go.
 
-Each page here documents one feature on its own, which is what you want when you know the name of
-the thing you need. If you are starting from nothing, the [tutorials](../tutorials/) take one board
+Each page here documents one feature on its own, so reach for them when you already know the name
+of the thing you need. If you are starting from nothing, the [tutorials](../tutorials/) take one board
 from first read through to a house checklist gating CI, adding one capability at a time.
 
 - **[Getting started](getting-started/)**: install, run your first check, read the report.

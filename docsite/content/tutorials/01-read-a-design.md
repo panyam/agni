@@ -6,7 +6,7 @@ playground: viewer
 
 Every finding in every later rung rests on one thing: that the tool read your board correctly. A
 schematic that half-loaded still produces a report, and that report looks exactly like a real one.
-So the first thing to do with a new design is not to check it. It is to confirm what was read.
+So the first thing to do with a new design is confirm what was read, not check it.
 
 Run these from `examples/tutorial-project`.
 
@@ -48,7 +48,7 @@ how many parts that applies to.
 
 {{ agniRun "content/tutorials/runs/01-validate-designs-gateway-gateway-edn.yaml" }}
 
-It takes a directory too, which is the useful form when you have just been handed a folder of
+It takes a directory too, and that form earns its keep when you have just been handed a folder of
 exports and want to know which of them the tool can actually read.
 
 A file with an extension nothing claims is reported as *skipped*, not failed, so a silently skipped
@@ -105,8 +105,8 @@ Read the class summary as a second opinion on the read. `unclassified: 0` means 
 recognized as something. A large unclassified count is the same warning as a low component count,
 arriving from a different direction.
 
-The rails section prints nominal voltages and withholds the net names, which is the pattern the
-whole command follows: the shape of the design crosses the boundary, the design does not.
+The rails section prints nominal voltages and withholds the net names, following the pattern of
+the whole command: the shape of the design crosses the boundary, the design does not.
 
 `--params` is what populates the MPN column and the datasheet-gap list. Without a parameter set
 those columns stay empty by design, since part numbers come from the seeded corpus rather than being

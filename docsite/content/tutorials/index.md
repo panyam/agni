@@ -3,7 +3,7 @@ title: "Tutorials"
 description: "One board, carried from first read to a house checklist gating CI."
 ---
 
-The [guide](../guide/) documents each feature on its own, which is what you want when you know the
+The [guide](../guide/) documents each feature on its own, so reach for it when you already know the
 name of the thing you need. These pages are the other shape: one board, carried from first read all
 the way to a house checklist running in CI, adding one capability at a time.
 
