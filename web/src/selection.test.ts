@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { bestOf, labelFor, pickAt, queryFor, selectionFromElement, type Selection } from "./selection.js";
+import { bestOf, fillEntityQuery, labelFor, pickAt, selectionFromElement, type Selection } from "./selection.js";
 
 function el(attrs: Record<string, string>): Element {
   const e = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
@@ -71,23 +71,28 @@ describe("pickAt", () => {
   });
 });
 
-describe("the query a click writes", () => {
-  // The generated query is the DSL lesson: it lands in the box, runs, and is editable. So it has to
-  // be a query that RUNS — every relation named here exists in the catalog.
-  it("asks what a pin is attached to", () => {
-    const q = queryFor({ kind: "pin", ref: "U7", pin: "12" });
-    expect(q).toContain(`pin.net("U7", "12", ?net)`);
-    expect(q).toContain("=>");
+describe("filling a served preset", () => {
+  // The templates live on the server, beside the relations they name, so what is tested here is the
+  // substitution: the client's half of the job.
+  it("substitutes a pin's ref and designator", () => {
+    const q = fillEntityQuery(`pin.net("{ref}", "{pin}", ?net) => ?net`, { kind: "pin", ref: "U7", pin: "12" });
+    expect(q).toBe(`pin.net("U7", "12", ?net) => ?net`);
   });
 
-  it("asks a component for its nets and their fan-out", () => {
-    expect(queryFor({ kind: "component", ref: "R1" })).toContain(`component-on-net("R1", ?net)`);
+  it("substitutes every occurrence, not just the first", () => {
+    const q = fillEntityQuery(`component-on-net(?r, "{net}"), pin.net(?r, ?p, "{net}") => ?r, ?p`, { kind: "net", net: "SDA" });
+    expect(q).toBe(`component-on-net(?r, "SDA"), pin.net(?r, ?p, "SDA") => ?r, ?p`);
   });
 
-  it("asks a net for what sits on it", () => {
-    const q = queryFor({ kind: "net", net: "SDA" });
-    expect(q).toContain(`component-on-net(?ref, "SDA")`);
-    expect(q).toContain(`pin.net(?ref, ?pin, "SDA")`);
+  // The grammar has no escape sequence, so a quote in a designator cannot be represented. Splicing
+  // one in would end the string literal early and produce a query that means something else.
+  it("strips a quote rather than splicing it into a string literal", () => {
+    const q = fillEntityQuery(`component-on-net("{ref}", ?n) => ?n`, { kind: "component", ref: `R"1` });
+    expect(q).toBe(`component-on-net("R1", ?n) => ?n`);
+  });
+
+  it("leaves a placeholder the selection cannot fill as an empty literal", () => {
+    expect(fillEntityQuery(`bus("{bus}", ?m) => ?m`, { kind: "net", net: "N" })).toBe(`bus("", ?m) => ?m`);
   });
 });
 

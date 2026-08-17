@@ -128,6 +128,24 @@ message ExampleQuery {
   string teaches = 3;
 }
 
+// EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
+// datalog that asks what is known about a pin, a component, a net or a bus.
+//
+// It is served rather than held in the browser because every preset names relations defined on this
+// side. A client-held template would be the one caller nothing checks — renaming a relation would go
+// red in the example tests while every click in the viewer started producing a query that errors.
+// Here it inherits the same parse and evaluate guards the examples have.
+message EntityQuery {
+  // kind is the picked entity's kind: "pin", "component", "net" or "bus".
+  string kind = 1;
+  // query carries {ref}, {pin}, {net}, {bus} placeholders INSIDE their string literals ("{ref}"), so
+  // the template parses as written and the client substitutes without having to add quoting.
+  string query = 2;
+  // teaches is the one concept this preset introduces, so a click that answers a question also
+  // shows the reader a piece of the language.
+  string teaches = 3;
+}
+
 message ListRelationsResponse {
   // relations are pre-sorted by kind then name, so the client renders the grouped picker without
   // re-sorting.
@@ -135,4 +153,6 @@ message ListRelationsResponse {
   // examples are runnable teaching queries in concept-ladder order (WS14-002), rendered as
   // click-to-run chips beside the relation picker.
   repeated ExampleQuery examples = 2;
+  // entity_queries are the click-to-ask presets, one per pickable entity kind (WS: canvas picking).
+  repeated EntityQuery entity_queries = 3;
 }

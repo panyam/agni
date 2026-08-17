@@ -51,7 +51,7 @@ function harness() {
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
   const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
-  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn() };
+  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn(), setEntityQueries: vi.fn(), entityQuery: () => "" };
   // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
   const navA = { setState: vi.fn() };
   const navB = { setState: vi.fn() };

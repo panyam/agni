@@ -305,6 +305,32 @@ func TestExamplesEvaluate(t *testing.T) {
 	}
 }
 
+// The click-to-ask presets get the same guard as the examples, and need it more: nobody reads a
+// preset before it runs. A reader clicks a pin and whatever the server handed the browser is what
+// executes, so a relation renamed out from under a preset has to fail here rather than in someone's
+// viewer. Substituting a real entity from the fixture is what makes this an EVALUATION rather than
+// a second parse check.
+func TestEntityQueriesEvaluate(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetEntityQueries()) == 0 {
+		t.Fatal("no entity presets served, so a click in the viewer would do nothing")
+	}
+	// Values from queryDesign(): a component, one of its pins, and a net they sit on.
+	fill := strings.NewReplacer("{ref}", "R1", "{pin}", "1", "{net}", "N1", "{bus}", "N1")
+	for _, e := range resp.GetEntityQueries() {
+		q := fill.Replace(e.GetQuery())
+		if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+			Uri: "mount://m/x.edn", Query: q,
+		}); err != nil {
+			t.Errorf("preset for %q failed to evaluate: %v\n  query: %s", e.GetKind(), err, q)
+		}
+	}
+}
+
 // guard: the malformed-query message reaches the caller (the panel shows it inline).
 func TestRunQueryParseErrorMessagePreserved(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)

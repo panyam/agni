@@ -86,7 +86,13 @@ const REPLIES: Record<string, unknown> = {
   GetComponentParams: { components: [] },
   GetExpectations: { expectations: [] },
   ListReviews: { reviews: [] },
-  ListRelations: { relations: [], examples: [] },
+  ListRelations: {
+    relations: [],
+    examples: [],
+    // Without these a click highlights and asks nothing, so their absence here would make the click
+    // test below fail for the right reason.
+    entityQueries: [{ kind: "net", query: 'component-on-net(?ref, "{net}") => ?ref', teaches: "join" }],
+  },
 };
 
 const called: string[] = [];

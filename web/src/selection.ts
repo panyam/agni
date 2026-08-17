@@ -99,27 +99,26 @@ export function pickAt(doc: Document, clientX: number, clientY: number): Selecti
   return bestOf(seen);
 }
 
-// queryFor writes the datalog a selection asks. This is the answer to "what is known about this
-// thing", expressed in the language the query panel already speaks, which means a click TEACHES the
-// language: the query it ran is sitting in the box, editable.
+// fillEntityQuery substitutes a selection into a preset the SERVER wrote (query.EntityQueries).
 //
-// Each is deliberately a starting point rather than an exhaustive dump. A reader edits it, and the
-// edit is the moment they learn the join.
-export function queryFor(sel: Selection): string {
-  switch (sel.kind) {
-    case "pin":
-      // A pin's net first, then what that net is: the "is this wired correctly" question starts by
-      // naming what the pin is attached to.
-      return `pin.net("${sel.ref}", "${sel.pin}", ?net), pin.role("${sel.ref}", "${sel.pin}", ?role), net.pin_count(?net, ?fanout) => ?net, ?role, ?fanout`;
-    case "component":
-      return `component-on-net("${sel.ref}", ?net), net.pin_count(?net, ?fanout) => ?net, ?fanout`;
-    case "net": {
-      const net = sel.net ?? "";
-      return `component-on-net(?ref, "${net}"), pin.net(?ref, ?pin, "${net}") => ?ref, ?pin`;
-    }
-    case "bus":
-      return `bus("${sel.busId}", ?member) => ?member`;
-  }
+// The templates deliberately do not live here. Every one names relations defined in Go, so a client
+// that held its own copy would be the one caller nothing checks: rename a relation and the server's
+// example tests go red while every click in the viewer starts producing a query that errors. Beside
+// the relations, a preset gets a parse check and an evaluate-against-a-real-design check.
+//
+// So this file keeps the part that IS the client's: turning what was clicked into values.
+//
+// Quotes are stripped rather than escaped because the query grammar has no escape sequence — a
+// string literal is '"' { char } '"' — so a designator carrying a quote cannot be represented at
+// all, and splicing one in would end the literal early and produce a query that means something
+// else. Stripping yields a query that finds nothing, which is the honest failure.
+export function fillEntityQuery(template: string, sel: Selection): string {
+  const lit = (v: string | undefined): string => (v ?? "").replace(/"/g, "");
+  return template
+    .replace(/\{ref\}/g, lit(sel.ref))
+    .replace(/\{pin\}/g, lit(sel.pin))
+    .replace(/\{net\}/g, lit(sel.net))
+    .replace(/\{bus\}/g, lit(sel.busId));
 }
 
 // labelFor is the one-line human name for a selection, for a status line or a panel heading.

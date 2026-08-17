@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoPUnVuUXVlcnlSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEi4KB292ZXJsYXkYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgDIAEoCRILCgN1cmkYBCABKAkijQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24iHwoKQ2VsbFNoZWV0cxIRCglzaGVldF9pZHMYASADKAkiYQoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIngKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkyuwEKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoPUnVuUXVlcnlSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEi4KB292ZXJsYXkYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgDIAEoCRILCgN1cmkYBCABKAkijQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24iHwoKQ2VsbFNoZWV0cxIRCglzaGVldF9pZHMYASADKAkiYQoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIjsKC0VudGl0eVF1ZXJ5EgwKBGtpbmQYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSKtAQoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeRIzCg5lbnRpdHlfcXVlcmllcxgDIAMoCzIbLmFnbmkudjEud2ViYXBpLkVudGl0eVF1ZXJ5MrsBCgxRdWVyeVNlcnZpY2USTQoIUnVuUXVlcnkSHy5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -269,6 +269,49 @@ export const ExampleQuerySchema: GenMessage<ExampleQuery> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 6);
 
 /**
+ * EntityQuery is the preset a viewer runs when the reader CLICKS an entity in the drawing: the
+ * datalog that asks what is known about a pin, a component, a net or a bus.
+ *
+ * It is served rather than held in the browser because every preset names relations defined on this
+ * side. A client-held template would be the one caller nothing checks — renaming a relation would go
+ * red in the example tests while every click in the viewer started producing a query that errors.
+ * Here it inherits the same parse and evaluate guards the examples have.
+ *
+ * @generated from message agni.v1.webapi.EntityQuery
+ */
+export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
+  /**
+   * kind is the picked entity's kind: "pin", "component", "net" or "bus".
+   *
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * query carries {ref}, {pin}, {net}, {bus} placeholders INSIDE their string literals ("{ref}"), so
+   * the template parses as written and the client substitutes without having to add quoting.
+   *
+   * @generated from field: string query = 2;
+   */
+  query: string;
+
+  /**
+   * teaches is the one concept this preset introduces, so a click that answers a question also
+   * shows the reader a piece of the language.
+   *
+   * @generated from field: string teaches = 3;
+   */
+  teaches: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.EntityQuery.
+ * Use `create(EntityQuerySchema)` to create a new message.
+ */
+export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 7);
+
+/**
  * @generated from message agni.v1.webapi.ListRelationsResponse
  */
 export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsResponse"> & {
@@ -287,6 +330,13 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
    * @generated from field: repeated agni.v1.webapi.ExampleQuery examples = 2;
    */
   examples: ExampleQuery[];
+
+  /**
+   * entity_queries are the click-to-ask presets, one per pickable entity kind (WS: canvas picking).
+   *
+   * @generated from field: repeated agni.v1.webapi.EntityQuery entity_queries = 3;
+   */
+  entityQueries: EntityQuery[];
 };
 
 /**
@@ -294,7 +344,7 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 7);
+  messageDesc(file_agni_v1_webapi_query, 8);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004

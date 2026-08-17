@@ -2,6 +2,7 @@ import { For, Show, createEffect, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import {
+  type EntityQueryItem,
   type ExampleItem,
   type QueryResult,
   type QueryView,
@@ -457,6 +458,9 @@ export function queryPanelIsland(
   // identical, and an effect over identical text does not fire.
   const [prefill, setPrefill] = signalView<{ text: string; n: number }>({ text: "", n: 0 });
   let prefills = 0;
+  // The click-to-ask presets, held here because the panel is what runs them; the host looks one up
+  // by the picked entity's kind (see entityQuery).
+  let entityQueries: EntityQueryItem[] = [];
   const onLocate = handlers.onLocate ?? (() => {});
   // A fresh query result clears any stale locate note from the previous run.
   const setStateClearing = (s: QueryResult) => {
@@ -487,6 +491,8 @@ export function queryPanelIsland(
       setExamples,
       setLocateNote,
       setQuery: (text: string) => setPrefill({ text, n: ++prefills }),
+      setEntityQueries: (presets: EntityQueryItem[]) => void (entityQueries = presets),
+      entityQuery: (kind: string) => entityQueries.find((p) => p.kind === kind)?.query ?? "",
     },
   };
 }

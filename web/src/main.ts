@@ -34,7 +34,7 @@ import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
-import { queryFor } from "./selection.js";
+import { fillEntityQuery } from "./selection.js";
 import { baseName, noteOpen } from "./recents.js";
 
 // restoring guards the URL feedback loop: while we apply a URL to the presenter (initial load or
@@ -254,7 +254,11 @@ class AppRoot extends BaseComponent {
     // language, rather than the language being a wall in front of the answers.
     svgView.onPick = (sel) => {
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
-      query.view.setQuery(queryFor(sel));
+      // The preset comes from the server (query.EntityQueries), so the query text is checked where
+      // the relations it names are defined. Before the catalog arrives there is no preset, and a
+      // click then highlights and asks nothing rather than running a guess.
+      const preset = query.view.entityQuery(sel.kind);
+      if (preset) query.view.setQuery(fillEntityQuery(preset, sel));
       if (dockApi) dockApi.getPanel("query")?.api.setActive();
     };
 
@@ -295,6 +299,7 @@ class AppRoot extends BaseComponent {
       .then((r) => {
         query.view.setRelations(r.relations);
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
+        query.view.setEntityQueries(r.entityQueries); // the click-to-ask presets
       })
       .catch(() => {});
     // The presenter fans sheet state to every surface in sheetNavs. The file tree used to be one of
