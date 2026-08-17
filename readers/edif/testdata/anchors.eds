@@ -1,0 +1,84 @@
+
+(edif TEST
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c1 "PartA")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "1") (direction INPUT) (designator "1")))
+        (symbol
+          (boundingBox (rectangle (pt 0 -100) (pt 200 0)))
+          (figure BOX (rectangle (pt 0 -100) (pt 200 0)))
+          (figure ARC (openShape (curve (arc (pt 0 0) (pt 10 -5) (pt 20 0)))))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 200 -50))))
+            (figure PIN (path (pointList (pt 150 -50) (pt 200 -50)))))))))
+  (cell (rename &c2 "GND")
+    (cellType GENERIC)
+    (view (rename &v2 "sym")
+      (viewType SCHEMATIC)
+      (interface
+        (port (rename &1 "1") (direction INOUT) (designator "1")))
+      (symbol
+        (boundingBox (rectangle (pt 0 -50) (pt 60 0)))
+        (figure BOX (rectangle (pt 0 -50) (pt 60 0))))))
+  (cell (rename &c3 "PWR")
+    (cellType GENERIC)
+    (view (rename &v3 "sym")
+      (viewType SCHEMATIC)
+      (interface
+        (port (rename &1 "1") (direction INOUT) (designator "1")))
+      (symbol
+        (boundingBox (rectangle (pt 0 -50) (pt 60 0)))
+        (figure BOX (rectangle (pt 0 -50) (pt 60 0))))))
+  (cell (rename &c4 "NC")
+    (cellType GENERIC)
+    (view (rename &v4 "sym")
+      (viewType SCHEMATIC)
+      (interface
+        (port (rename &1 "1") (direction INOUT) (designator "1")))
+      (symbol
+        (boundingBox (rectangle (pt 0 -20) (pt 20 0)))
+        (figure BOX (rectangle (pt 0 -20) (pt 20 0))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (contents
+      (page (rename P1 "Sheet 1")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (commentGraphics
+          (annotate (stringDisplay "HELLO"
+            (display (justify LOWERLEFT) (orientation R90) (origin (pt 5 6)))))
+          (figure NOTE (rectangle (pt 1 2) (pt 3 4))))
+        (instance (rename &i1 "$i1")
+          (viewRef v1 (cellRef PartA (libraryRef Lib1)))
+          (transform (scaleX 1 2) (scaleY 1 2) (orientation MYR90) (origin (pt 300 400)))
+          (designator (stringDisplay "R1"))
+          (property Value (string (stringDisplay "10k" (display (justify CENTERLEFT) (origin (pt 320 420))))))
+          (property Tol (string "1%"))
+          (property Note (string (stringDisplay "GND" (display (justify CENTERLEFT) (origin (pt 330 430)))))))
+        (instance (rename &i2 "$i2")
+          (viewRef v2 (cellRef GND (libraryRef Lib1)))
+          (transform (origin (pt 300 340))))
+        (instance (rename &i3 "$i3")
+          (viewRef v3 (cellRef PWR (libraryRef Lib1)))
+          (transform (origin (pt 500 340)))
+          (property (rename &gsn "Global Signal Name") (string (stringDisplay "VBUS" (display (justify CENTERLEFT) (origin (pt 500 360)))))))
+        (instance (rename &i4 "$i4")
+          (viewRef v4 (cellRef NC (libraryRef Lib1)))
+          (transform (origin (pt 700 340))))
+        (net VBUS
+          (joined (portRef &1 (instanceRef &i1)))
+          (net (rename &n2 "VBUS")
+            (figure NET (path (pointList (pt 500 400) (pt 500 350))))))
+        (net GND
+          (joined (portRef &1 (instanceRef &i1)))
+          (net (rename &n1 "N1")
+            (joined (portRef &1 (instanceRef &i1)))
+            (figure NET (path (pointList (pt 300 400) (pt 300 350))))))))))

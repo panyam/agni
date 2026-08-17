@@ -476,6 +476,7 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID map[string]string,
 			sh.Wires = append(sh.Wires, w)
 		}
 	}
+	stampNetAnchors(sh)
 	// Labels and free graphics in the page's commentGraphics. Figures here are stand-alone
 	// sheet drawings (not owned by a placed symbol), so they go in the sheet's shape list.
 	for _, cg := range p.Children("commentGraphics") {
@@ -796,6 +797,58 @@ func isTitleBlockPlaceholder(v string) bool {
 		return false
 	}
 	return strings.Trim(v, "-") == ""
+}
+
+// stampNetAnchors gives the sheet's designator-less symbols the net they name.
+//
+// Half of a real .eds page is these: ground and rail glyphs, sheet ports, off-page connectors.
+// Measured on one export, 3329 of 6102 placements carry no designator, because they are not parts —
+// and until they carried something they were drawn and unaddressable, which made the symbol that
+// NAMES a rail the one thing on a sheet a reader could not click.
+//
+// The rule is a match, and the match is its own validation: a designator-less symbol is anchored to
+// a name it carries — its CELL name, or one of its field values — only when that name is a net on
+// this same sheet. Nothing here knows what a ground symbol is called.
+//
+// That matters because the spellings are not consistent even within one export. Measured across five
+// real schematics: `GND` and `DGND` glyphs carry no fields at all and are named by their cell (5772
+// placements, every one matching a net on its sheet), while `PWR` and `PWR_2` carry the name in a
+// "Global Signal Name" field (1666). A table of cell names would have caught the first group and
+// missed the second, and would need extending for every export tool.
+//
+// It classifies for free, too. A no-connect (1653 on that export) asserts a pin is deliberately open
+// and names nothing: neither its cell nor its fields match a net, so it gets no anchor without this
+// function knowing what a no-connect is.
+//
+// Two things it deliberately does NOT do. A placement WITH a designator is left alone: it is a real
+// part and its ref_des is the join, so a part whose value happened to match a net name cannot be
+// turned into a net. And sheet ports (`in_flat`/`out_flat`, 4752 of them) carry no name anywhere —
+// they are named by the wire they touch — so they stay anonymous rather than being guessed at.
+func stampNetAnchors(sh *geom.SheetGeometry) {
+	nets := map[string]bool{}
+	for _, w := range sh.Wires {
+		if n := w.GetNet(); n != "" {
+			nets[n] = true
+		}
+	}
+	if len(nets) == 0 {
+		return
+	}
+	for _, pl := range sh.Placements {
+		if pl.GetRefDes() != "" || pl.GetNetAnchor() != "" {
+			continue
+		}
+		if nets[pl.GetCellRef()] {
+			pl.NetAnchor = pl.GetCellRef()
+			continue
+		}
+		for _, f := range pl.GetFields() {
+			if nets[f.GetValue()] {
+				pl.NetAnchor = f.GetValue()
+				break
+			}
+		}
+	}
 }
 
 // wireOf collects the routed wire polylines for one net on a sheet. Nets nest (an outer

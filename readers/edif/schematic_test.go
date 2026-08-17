@@ -645,3 +645,47 @@ func refDesList(pls []*geom.SymbolPlacement) []string {
 	}
 	return out
 }
+
+// Half of a real .eds page is symbols with no designator: ground and rail glyphs, ports, off-page
+// connectors. They are drawn, and until they carried a net they were unaddressable — which made the
+// symbol that NAMES a rail the one thing on a sheet a reader could not click.
+//
+// The rule is a match that validates itself: a designator-less symbol takes a name it carries, its
+// cell or a field value, only when that name is a net on the same sheet. This fixture carries the
+// four shapes it has to tell apart.
+func TestSchematicNetAnchors(t *testing.T) {
+	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "anchors.eds")), "anchors.eds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	byCell := map[string]*geom.SymbolPlacement{}
+	for _, sh := range g.Sheets {
+		for _, pl := range sh.Placements {
+			byCell[pl.GetCellRef()] = pl
+		}
+	}
+
+	// Named by its CELL: a GND glyph carries no fields at all (5772 such placements on one real
+	// export), so the cell name is the only name it has.
+	if got := byCell["GND"].GetNetAnchor(); got != "GND" {
+		t.Errorf("GND glyph anchor = %q, want GND", got)
+	}
+	// Named by a FIELD: a rail glyph's cell says PWR and the net name rides in a property (1666 of
+	// them). A cell-name table would have caught the first case and missed this one.
+	if got := byCell["PWR"].GetNetAnchor(); got != "VBUS" {
+		t.Errorf("PWR glyph anchor = %q, want VBUS", got)
+	}
+	// Names nothing: a no-connect asserts a pin is deliberately open. No net matches it, so it gets
+	// no anchor — without the reader knowing what a no-connect is.
+	if got := byCell["NC"].GetNetAnchor(); got != "" {
+		t.Errorf("NC glyph anchor = %q, want none", got)
+	}
+	// A real part is left alone even when one of its properties happens to spell a net name — the
+	// fixture gives PartA a "GND" property for exactly this reason. Its designator is the join, and
+	// turning it into a net because a field collided would lose a component.
+	part := byCell["PartA"]
+	if part.GetNetAnchor() != "" || part.GetRefDes() == "" {
+		t.Errorf("part anchor = %q ref = %q; a designator'd placement must keep its ref and take no anchor",
+			part.GetNetAnchor(), part.GetRefDes())
+	}
+}
