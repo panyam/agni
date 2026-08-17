@@ -448,3 +448,114 @@ func TestSheetSVG_BottomAnchoredNotesDoNotCollide(t *testing.T) {
 		t.Errorf("the note below must stay below: NOTE TWO y=%g vs first note last line %g", yTwo, yC)
 	}
 }
+
+// A rendered sheet is its own pick index: every element says what it belongs to, so a viewer
+// resolves a click by reading the DOM rather than joining a second representation (the packed tier)
+// to interpret its own picture. It also means a saved or embedded sheet keeps entity identity.
+// keyFixture is one placement with one pin and one named wire: the three things a rendered element
+// can belong to.
+func keyFixture() (*geom.SchematicGeometry, *geom.SheetGeometry) {
+	g := &geom.SchematicGeometry{
+		Symbols: []*geom.SymbolDef{{
+			CellRef: "R", LibraryRef: "L", ViewRef: "sym",
+			Bbox:   &geom.BBox{Min: &geom.Point{}, Max: &geom.Point{X: 200, Y: 100}},
+			Shapes: []*geom.Shape{{Kind: geom.Shape_KIND_RECT, Points: []*geom.Point{{}, {X: 200, Y: 100}}}},
+			Pins:   []*geom.PinPoint{{PortRef: "1", Loc: &geom.Point{X: 0, Y: 50}}},
+		}},
+		Sheets: []*geom.SheetGeometry{{
+			Placements: []*geom.SymbolPlacement{{
+				RefDes: "R7", CellRef: "R", LibraryRef: "L", ViewRef: "sym",
+				Transform: &geom.Transform{Origin: &geom.Point{X: 100, Y: 100}},
+			}},
+			Wires: []*geom.WireGeometry{{
+				Net: "SDA", NetId: "n-sda",
+				Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 150}, {X: 400, Y: 150}}}},
+			}},
+		}},
+	}
+	return g, g.Sheets[0]
+}
+
+func TestSheetSVGCarriesEntityKeys(t *testing.T) {
+	g, sheet := keyFixture()
+	out := SheetSVG(g, sheet)
+
+	for _, want := range []string{`data-kind="wire"`, `data-net="`, `data-kind="component"`, `data-ref="`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("render carries no %s", want)
+		}
+	}
+	// Pins cost an added element, so they are opt-in and absent by default (see Style.PickTargets).
+	if strings.Contains(out, `data-kind="pin"`) {
+		t.Error("pin pick targets must be opt-in: a report embedding a sheet should not pay for them")
+	}
+}
+
+func TestSheetSVGPickTargetsAddPins(t *testing.T) {
+	g, sheet := keyFixture()
+	out := SheetSVG(g, sheet, WithPickTargets())
+
+	if !strings.Contains(out, `data-kind="pin"`) || !strings.Contains(out, `data-pin="`) {
+		t.Fatalf("WithPickTargets emitted no pin targets:\n%s", first(out, 800))
+	}
+	// Invisible and hittable: the drawing must not change, and a point with no area cannot be
+	// clicked.
+	if !strings.Contains(out, `pointer-events="all"`) {
+		t.Error("a pick target with no pointer-events is unhittable")
+	}
+	// A pin target names its component too, so resolving to a pin never needs a DOM walk.
+	if !strings.Contains(out, `data-ref=`) {
+		t.Error("a pin target should carry its component's ref as well")
+	}
+}
+
+// A wire is a 0.8px stroke and a fill:none polyline hit-tests only ON its stroke, so a click has to
+// land within half a pixel of the line. Measured in a browser: a probe at the wire's own midpoint,
+// rounded to whole pixels, hits the page rect instead. The viewer's render therefore carries an
+// invisible wide companion whose only job is to be hit — and a report's render does not.
+func TestPickTargetsAddWireHitCompanions(t *testing.T) {
+	g, sheet := keyFixture()
+
+	plain := SheetSVG(g, sheet)
+	if strings.Contains(plain, `pointer-events="stroke"`) {
+		t.Error("a render with no pick targets should carry no hit companions")
+	}
+
+	picky := SheetSVG(g, sheet, WithPickTargets())
+	if !strings.Contains(picky, `pointer-events="stroke"`) {
+		t.Fatal("no wire hit companion emitted")
+	}
+	// The companion carries the same identity as the wire it shadows, or a click on it resolves to
+	// nothing.
+	if strings.Count(picky, `data-net="SDA"`) < 2 {
+		t.Error("the hit companion does not carry the wire's net")
+	}
+	// Invisible: it must not change the drawing.
+	if !strings.Contains(picky, `stroke="none"`) {
+		t.Error("the hit companion is painted; it must be invisible")
+	}
+}
+
+// A design supplies these values, so a name carrying a quote must not be able to close the
+// attribute and inject markup into the document the viewer mounts with innerHTML.
+func TestSheetSVGEscapesEntityKeys(t *testing.T) {
+	g, sheet := keyFixture()
+	for _, w := range sheet.Wires {
+		w.Net = `N" onload="alert(1)`
+	}
+	out := SheetSVG(g, sheet)
+
+	if strings.Contains(out, `onload="alert(1)"`) {
+		t.Fatal("a hostile net name escaped its attribute")
+	}
+	if !strings.Contains(out, "&#34;") {
+		t.Error("the quote in the net name was not escaped")
+	}
+}
+
+func first(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}

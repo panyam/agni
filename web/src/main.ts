@@ -34,6 +34,7 @@ import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
+import { queryFor } from "./selection.js";
 import { baseName, noteOpen } from "./recents.js";
 
 // restoring guards the URL feedback loop: while we apply a URL to the presenter (initial load or
@@ -101,6 +102,9 @@ class AppRoot extends BaseComponent {
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
+    // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
+    // wiring is deferred to the end of this method because it needs the query panel, which is built
+    // below; see the assignment after the panels.
     const canvas = new CanvasComponent("canvas", canvasEl, this._eventBus);
     const renderView: RenderView = {
       showWebgl: () => {
@@ -244,6 +248,16 @@ class AppRoot extends BaseComponent {
       onRun: (text) => void presenter.runQuery(text),
       onLocate: (kind, subject, sheet, reason) => void presenter.locateEntity(kind, subject, sheet, reason),
     });
+    // A click on the drawing is a question about what was clicked: highlight it, write the query that
+    // asks what is known about it, and bring the Query panel forward if it is a background tab. The
+    // generated query is left editable on purpose — using the viewer is how a reader learns the
+    // language, rather than the language being a wall in front of the answers.
+    svgView.onPick = (sel) => {
+      void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+      query.view.setQuery(queryFor(sel));
+      if (dockApi) dockApi.getPanel("query")?.api.setActive();
+    };
+
     // The interface-coverage panel (WS9-041): clicking a signal locates its net, the same locate
     // path the query panel uses.
     const coverage = coveragePanelIsland(coverageEl, this._eventBus, {

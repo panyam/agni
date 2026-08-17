@@ -262,11 +262,15 @@ export class ViewerPresenter {
     subject: string,
     sheet?: string,
     reason: LocateReason = LocateReason.UNSPECIFIED,
+    pin = "",
   ): Promise<void> {
     if (!subject) return;
     if (sheet && sheet !== this.currentSheet) await this.showSheet(sheet);
     if (this.mode === "native") await this.setMode("webgl");
-    const focus = withFocusShape(entitySpecs(kind, subject), this.highlightStyle);
+    // pin is carried because a picked PIN is a different target from its component: the spec builder
+    // keys a pin highlight by (ref, pin), and an empty pin would silently widen the focus to the
+    // whole part. Callers that locate a net or a component pass nothing and are unaffected.
+    const focus = withFocusShape(entitySpecs(kind, subject, pin), this.highlightStyle);
     await this.setHighlights(focusStack(this.findings, kind, subject, focus));
     // Explain an entity the faithful view doesn't draw (WS9-039). The server sets a reason only for
     // an entity absent from the geometry, so a drawn rail (e.g. VBUS) reports none; the note shows

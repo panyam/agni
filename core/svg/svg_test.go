@@ -1,6 +1,9 @@
 package svg
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestCanvas_ElementsAndDoc(t *testing.T) {
 	c := Open(160, 120, A("font-family", "monospace"))
@@ -44,4 +47,29 @@ func contains(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// A design file supplies net and component names, and they now reach ATTRIBUTES (the data-* entity
+// keys picking reads) rather than only text content. Attribute values are written verbatim, so a
+// name carrying a quote would close the attribute and inject markup into a document the viewer
+// mounts with innerHTML. AEsc is the constructor that must be used for them.
+func TestAEscContainsDesignSuppliedNames(t *testing.T) {
+	hostile := `N" onload="alert(1)`
+	c := Open(10, 10)
+	c.El("polyline", AEsc("data-net", hostile))
+	out := c.String()
+
+	if strings.Contains(out, `onload="alert(1)"`) {
+		t.Fatalf("a design-supplied name escaped its attribute:\n%s", out)
+	}
+	if !strings.Contains(out, "&#34;") {
+		t.Errorf("the quote was not escaped at all:\n%s", out)
+	}
+	// The raw constructor is the one that must not be used for this, and the test states why by
+	// showing what it does.
+	raw := Open(10, 10)
+	raw.El("polyline", A("data-net", hostile))
+	if !strings.Contains(raw.String(), `onload=`) {
+		t.Error("A() is expected to write verbatim; if it now escapes, AEsc and this warning are stale")
+	}
 }

@@ -317,6 +317,34 @@ non-passive wheel listener, the live-transform / settled-rasterize split, and fi
 keystroke on its first run (a signal was set before the event value was read, so Solid wrote the
 empty derived id back into the field mid-handler).
 
+## Picking: the drawing is the entry point
+
+Clicking an entity is how a reader asks about it, and the rule is that **each renderer owns its own
+selection data**. The SVG backend keys every element it draws (`data-kind`, `data-ref`, `data-pin`,
+`data-net`, `data-net-id`, `data-bus`); the WebGL backend has `PrimitiveKey`, whose proto comment has
+always said it exists for picking. Neither reads the other's representation, so either can be retired
+without stranding the other, and a keyed SVG stays self-describing wherever it is embedded.
+
+What IS shared is the contract, not the index: a `Selection` (the same shape as a finding's subject),
+the priority order, and the intent. That is what lets a canvas click, a search result and a finding
+row produce one value.
+
+- **Priority, not topmost.** A symbol is drawn over its own pins, so topmost-wins would make a pin
+  unclickable. Resolution is pin, component, bus, net — most specific first.
+- **A click is not a pan.** The press/release pair counts as a click only if the cursor moved less
+  than a few pixels, or a pan that ends over a wire selects it.
+- **Two pick aids, both opt-in** (`render.WithPickTargets`, which only the served viewer asks for).
+  A pin has no drawn element in a faithful render, so it gets an invisible circle. A wire is a 0.8px
+  stroke and `fill="none"` hit-tests only ON the stroke — measured in a browser, a probe at a wire's
+  own midpoint rounded to whole pixels hits the page rect — so it gets an invisible wide companion
+  with `pointer-events="stroke"`. Both are absent from a render destined for a file or a report,
+  which should not carry the viewer's interaction model.
+- **Entity keys are design data, so they are escaped** (`svg.AEsc`). Attribute values are written
+  verbatim otherwise, and the viewer mounts this document with `innerHTML`.
+
+A click generates a query and runs it, rather than opening a bespoke panel. The query is left in the
+box, editable, so using the viewer teaches the language instead of routing around it.
+
 ## Wiring a new panel
 
 **FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island

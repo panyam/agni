@@ -256,3 +256,38 @@ describe("run checks, then locate a finding", () => {
     await vi.waitFor(() => expect(called.filter((m) => m === "HighlightSheet").length).toBeGreaterThan(before), 5000);
   });
 });
+
+// Clicking the drawing is the entry point everything else waits on, and it crosses four files:
+// the renderer keys the element, SvgView resolves the click, selection.ts writes the query, and
+// main.ts hands it to the panel and brings that panel forward. Each of those has its own test; this
+// is the one that fails if they are not connected to each other.
+describe("clicking the drawing asks a question about what was clicked", () => {
+  it("turns a click on a keyed element into a query in the panel", async () => {
+    // The SVG the server would send, keyed the way core/render/svg.go keys it.
+    const wire = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    wire.setAttribute("data-kind", "wire");
+    wire.setAttribute("data-net", "PMIC_CORE_3V3");
+    document.body.appendChild(wire);
+    // jsdom implements no layout, so elementFromPoint does not exist at all. Standing it in is what
+    // lets this test drive the real click path; the coordinates are arbitrary and only the identity
+    // of what comes back matters.
+    const realElementFromPoint = document.elementFromPoint;
+    document.elementFromPoint = ((x: number, y: number) => (x === 400 && y === 300 ? wire : null)) as typeof document.elementFromPoint;
+
+    try {
+      const host = document.getElementById("svg-view");
+      expect(host, "the page declares no #svg-view host").toBeTruthy();
+      host!.dispatchEvent(new MouseEvent("mousedown", { clientX: 400, clientY: 300, bubbles: true }));
+      window.dispatchEvent(new MouseEvent("mouseup", { clientX: 400, clientY: 300, bubbles: true }));
+
+      // The query panel's textarea holds the generated query, and it names the net that was clicked.
+      await vi.waitFor(() => {
+        const box = document.querySelector<HTMLTextAreaElement>('[data-component="query"] textarea');
+        expect(box?.value ?? "").toContain("PMIC_CORE_3V3");
+      }, 3000);
+    } finally {
+      document.elementFromPoint = realElementFromPoint;
+      wire.remove();
+    }
+  });
+});
