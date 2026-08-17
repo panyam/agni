@@ -156,7 +156,14 @@
     .checks-run:disabled { color: #aaa; cursor: not-allowed; }
     .checks-groupby select { font: inherit; font-size: 12px; padding: 2px 4px; }
     .checks-table { border-collapse: collapse; font-size: 12px; width: 100%; }
-    .checks-table th, .checks-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+    /* A cell wraps rather than growing its column. Findings carry values with no break opportunities
+       — a long net name, a hierarchical path, a citation — and under the default auto layout one of
+       those widens its column until the neighbours are squeezed and the text bleeds across them.
+       Wrapping keeps the row taller instead of the table wider, which is the trade a reader wants:
+       the columns stay where they were and nothing is hidden. Deliberately not `table-layout: fixed`
+       like the query table, because these columns are not peers — the message deserves the room the
+       severity dot does not. */
+    .checks-table th, .checks-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; overflow-wrap: anywhere; }
     .checks-table th { color: #444; font-weight: 600; border-bottom: 1px solid #ddd; }
     .check-sort button { font: inherit; font-weight: 600; color: #444; border: 0; background: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
     .check-sort.active button { color: #2563eb; }
