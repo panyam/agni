@@ -87,6 +87,19 @@ The `/designs/` space holds two pages behind one pattern, split by the trailing 
 `ServeMux` pattern's `{path...}` wildcard must be its last segment. `/files/` is the retired
 pre-WS9-049 space and permanently redirects.
 
+**SIX edits for a new page**, and three of them fail quietly. The template (`web/templates/X.html`,
+which must define BOTH its `Body` block and a `{{ define "X" }}{{ template "BasePage" . }}{{ end }}`,
+or the render errors with `"X" is undefined`), its entry point (`web/src/x.ts`), the bundle in
+`web/build.mjs`, that bundle's line in `web/.gitignore` (or the build artifact rides into a commit),
+the route in `cmd/agni/webpage.go`'s `registerPages`, and a boot test. The script tag goes in an
+`AppScript` block, not loose in `Body`.
+
+**Every page has a composition root, so every page gets a boot test** (C11's Verify names them). It
+boots the real entry point against the real template under jsdom and fails on a hole nothing mounts
+or a client nothing passes. That is not a viewer-specific concern: the browse page went untested for
+months and the workbench shipped a deep link that recorded nothing, both in the window when
+`composition.test.ts` was the only one.
+
 Both trees are the same shape over one listing API: each declares what it opens (`web/src/treeprune.ts`),
 hides rows of other kinds, and shows how many mounts the server pruned for it. A mount of PDFs is
 invisible to the viewer and is the whole sidebar on the workbench.
@@ -326,6 +339,14 @@ changing the wiring; `docsite/content/architecture/web-app.md` has the rationale
 caught it. So after a proto reshape, `pnpm run typecheck` passing is NOT evidence the web side is
 done — run `make testall`. Prefer `create(SomeSchema, {...})` in a new fixture, which does get
 checked.
+
+**A `oneof` on the wire is a FIELD NAME, not the `{case, value}` pair the client decodes it into.**
+A boot test that stubs `fetch` writes the SERVER's JSON, so `GetSheet` returns `{"svg": "<svg…>"}`.
+Writing `{content: {case: "svg", value: "<svg…>"}}` — the shape the TypeScript client hands you after
+decoding — yields an empty document and a blank stage, and the test then fails for a reason unrelated
+to the wiring it was written for. `composition.test.ts` carried that wrong shape harmlessly for
+months, because it asserts only that a call was MADE; `browse.test.ts` asserts what came back, so it
+noticed on its first run.
 
 **A JSX expression that reads only PLAIN OBJECT properties never re-runs.** Solid wraps an attribute
 or child expression in an effect over the signals it reads, so `class={p.pinRefs.includes(x) ? "on" :

@@ -100,6 +100,7 @@ Each of these has a fixed edit-list where missing one edit is silent, and a test
 |---|---|---|---|
 | A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
 | A web viewer panel | 4 | `docsite/content/architecture/web-app.md` | `web/src/composition.test.ts` |
+| A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A format reader | — | `docsite/content/build/format-reader.md` | — |
 | A check rule | — | `docsite/content/build/check-rule.md` | — |
 

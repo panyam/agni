@@ -13,14 +13,11 @@ import "dockview-core/dist/styles/dockview.css";
 export interface DockPanelDef {
   id: string;
   title: string;
-  // onDemand panels are opened by a feature flow (starting a comparison opens diff/changes),
-  // never by the default layout or the saved-layout reconcile.
-  onDemand?: boolean;
-  // defaultOpen panels form the lean boot layout (WS9-042): only these open on a fresh page,
-  // so adding a feature panel does not re-crowd the viewer. Secondaries (no flag) stay closed
-  // by default and are opened from the Panels menu. The flag also gates the reconcile: a
-  // newly-registered secondary appears in the menu WITHOUT auto-opening for existing users.
-  // onDemand always wins — an onDemand panel is never a default-layout panel.
+  // defaultOpen marks a panel the boot layout places (defaultLayout). Every panel carries it
+  // today: the layout tabs the crowding away instead of hiding panels in a menu, so there is no
+  // longer a "secondary" tier. The flag stays because it also gates the reconcile — a panel added
+  // in a later release opens for existing users only if it is part of the default arrangement, and
+  // a future menu-only panel omits it.
   defaultOpen?: boolean;
 }
 
@@ -38,36 +35,35 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // Details is core: it is the click-to-inspect target, so a fresh page needs it visible or
   // selecting a component paints nowhere.
   { id: "details", title: "Details", defaultOpen: true },
-  // Rules is a static reference catalog — secondary, opened from the menu when wanted.
-  { id: "rules", title: "Rules" },
+  // Rules is a static reference catalog: a tab in the east stack beside the findings it explains.
+  { id: "rules", title: "Rules", defaultOpen: true },
   // Checks is the merged findings+report panel (WS9): a server-sourced, client-grouped/sorted table
   // with the on-demand Run button. The separate Report panel was folded in (severity is one grouping).
   { id: "checks", title: "Checks", defaultOpen: true },
-  // The datalog query panel (WS9-036): ad-hoc search over the fact base. Secondary — opened
-  // from the menu; existing saved layouts keep whatever the user arranged.
-  { id: "query", title: "Query" },
-  // The interface-coverage panel (WS9-041): per-interface signal matrix. Secondary — opened from
-  // the menu, or via the reconcile for existing saved layouts.
-  { id: "coverage", title: "Coverage" },
-  // The datasheet-params panel (WS9-035): per-component parameter tree for datasheet-backed parts.
-  // Secondary — opened from the menu; only populated when serve was started with --params.
-  { id: "parts", title: "Parts" },
+  // The datalog query panel (WS9-036): ad-hoc search over the fact base. It holds the centre
+  // column's bottom strip, because asking a question about the drawing belongs under the drawing.
+  { id: "query", title: "Query", defaultOpen: true },
+  // The interface-coverage panel (WS9-041): per-interface signal matrix, tabbed with the checks.
+  { id: "coverage", title: "Coverage", defaultOpen: true },
+  // The datasheet-params panel (WS9-035): per-component parameter tree, tabbed with Details since
+  // both answer "what is this thing I selected". Populated only when serve was started with --params.
+  { id: "parts", title: "Parts", defaultOpen: true },
   // The review panel (WS9-052): the project's checklist verdict for the open design, over the stored
-  // runs (WS9-053). Secondary — opened from the menu, or via the reconcile for existing saved
-  // layouts; only useful when serve was started with --review-store.
-  { id: "review", title: "Review" },
-  // Diff (WS9-005) and its changed-item list (WS9-006) are registered so their holes are
-  // adoptable and the menu can reopen them, but they are not part of the default layout —
-  // starting a comparison opens both (openDiffPanel).
-  { id: "diff", title: "Diff", onDemand: true },
-  { id: "changes", title: "Changes", onDemand: true },
+  // runs (WS9-053). Tabbed with the checks; useful when serve was started with --review-store.
+  { id: "review", title: "Review", defaultOpen: true },
+  // Diff (WS9-005) and its changed-item list (WS9-006) ride as tabs beside the canvas. Both render
+  // an empty state naming the Compare button, so the tab teaches the feature rather than opening
+  // onto a blank pane; starting a comparison just activates them (openDiffPanel).
+  { id: "diff", title: "Diff", defaultOpen: true },
+  { id: "changes", title: "Changes", defaultOpen: true },
 ];
 
-// LAYOUT_KEY changed with the WS9-049 work page. The saved-layout mechanism reconciles panels that
-// were ADDED since a save, never ones that were removed or demoted, so an existing save would have
-// restored the old tree-on-the-left arrangement and hidden the whole change. A new key retires
-// every pre-split save at once, which is cheaper and more predictable than migrating them.
-export const LAYOUT_KEY = "agni-work-page-dockview-layout";
+// LAYOUT_KEY is bumped whenever the DEFAULT ARRANGEMENT changes, and that is not optional: a saved
+// layout wins over the default, and the reconcile only ADDS panels, so anyone who has opened the
+// viewer before would keep their old arrangement and never see the change. It has been bumped twice
+// for this reason — once for the WS9-049 work page, and once for the tabbed layout — because a
+// default nobody with history can see is a default nobody has tested.
+export const LAYOUT_KEY = "agni-work-page-dockview-layout-v2";
 
 type LayoutStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -164,28 +160,115 @@ export function adoptPanel(park: HTMLElement, name: string): IContentRenderer {
   };
 }
 
-// defaultLayout is the lean boot layout (WS9-042, narrowed by WS9-049): only the default-open
-// (core) panels open — Sheets on the left (260px), canvas in the center, and a 300px right column
-// stacking details and checks. Sheets holds the left rail alone: the work page opens exactly one
-// design, so the design's own sheet hierarchy is the navigation that belongs there. The secondaries
-// (rules, query, coverage, parts) stay closed and are opened from the Panels menu. Their holes
-// still mount (parked, hidden), so opening one is instant.
+// RAIL_FRACTION / QUERY_FRACTION size the boot layout: two 15% side rails around a centre column
+// whose bottom fifth is the query surface. Fractions rather than pixels because the rails hold
+// tab strips whose labels have to stay readable on a laptop and not become a canyon on a desktop.
+const RAIL_FRACTION = 0.15;
+const QUERY_FRACTION = 0.2;
+const RAIL_FALLBACK_PX = 260;
+const QUERY_FALLBACK_PX = 180;
+// EAST_MIN_PX keeps the east stacks' two-tab strips readable on a small window: dockview clips a
+// strip that does not fit rather than scrolling it, so below roughly 1270px wide, 15% starts eating
+// the word "Coverage". Two tabs need ~190px; four needed ~380, which is what made one stack of four
+// untenable at this width in the first place.
+const EAST_MIN_PX = 190;
+
+// defaultLayout is the boot arrangement, and it opens EVERY panel: four visible surfaces, the rest
+// tabbed behind them.
+//
+// It replaces a "lean" layout that opened four panels and left five in a menu. The lean version was
+// answering the wrong question. Crowding is what it avoided, but a panel nobody can find is worse
+// than a crowded screen, and a first-time reader was landing on a schematic with no visible way to
+// ask anything about it. Tabs solve the same crowding problem while leaving everything on the board:
+// at most four surfaces are visible at once, and every other panel is one labelled click away rather
+// than behind a dropdown you have to know exists.
+//
+//   west 15%   centre 80% h                    east 15%
+//   ┌────────┬────────────────────────────────┬─────────────┐
+//   │ Sheets │ [Canvas] Diff  Changes         │[Checks]Rules│
+//   │        │                                │             │
+//   ├────────┤                                ├─────────────┤
+//   │[Details│                                │[Review] Cov.│
+//   │ Parts  ├────────────────────────────────┤             │
+//   │        │ Query                    20% h │             │
+//   └────────┴────────────────────────────────┴─────────────┘
+//
+// Ordering is load-bearing. Each position is relative to the reference panel's GROUP, so the side
+// rails are built before the centre is split: adding query below canvas afterwards divides the
+// centre column alone, where doing it first would have put a full-width strip under all three.
 export function defaultLayout(api: DockviewApi): void {
   api.addPanel({ id: "canvas", component: "canvas", title: "Canvas" });
+
+  // West rail: the design's own navigation over what one selection is made of.
   api.addPanel({ id: "overview", component: "overview", title: "Sheets", position: { direction: "left", referencePanel: "canvas" } });
-  api.addPanel({ id: "details", component: "details", title: "Details", position: { direction: "right", referencePanel: "canvas" } });
-  api.addPanel({ id: "checks", component: "checks", title: "Checks", position: { direction: "below", referencePanel: "details" } });
-  // Column widths only stick once dockview has laid the grid out, hence the deferred set
-  // (same pattern as the reference implementation).
-  setTimeout(() => {
-    api.getPanel("overview")?.api.setSize({ width: 260 });
-    api.getPanel("details")?.api.setSize({ width: 300 });
-  }, 0);
+  api.addPanel({ id: "details", component: "details", title: "Details", position: { direction: "below", referencePanel: "overview" } });
+  api.addPanel({ id: "parts", component: "parts", title: "Parts", position: { direction: "within", referencePanel: "details" } });
+
+  // East rail, split north/south the way the west rail is. Four tabs in one stack does not fit a 15%
+  // column: dockview clips a tab strip rather than scrolling it or offering an overflow menu, so the
+  // fourth tab was not cramped, it was unreachable except through the Panels menu (measured: those
+  // four labels need ~380px, which is 30% of a 1280px laptop). Two stacks of two fit, and the pairs
+  // are the honest split anyway — what the engine found, then what a person asked for.
+  api.addPanel({ id: "checks", component: "checks", title: "Checks", position: { direction: "right", referencePanel: "canvas" } });
+  api.addPanel({ id: "rules", component: "rules", title: "Rules", position: { direction: "within", referencePanel: "checks" } });
+  api.addPanel({ id: "review", component: "review", title: "Review", position: { direction: "below", referencePanel: "checks" } });
+  api.addPanel({ id: "coverage", component: "coverage", title: "Coverage", position: { direction: "within", referencePanel: "review" } });
+
+  // The centre column's bottom fifth, after both rails exist so it splits the centre alone.
+  api.addPanel({ id: "query", component: "query", title: "Query", position: { direction: "below", referencePanel: "canvas" } });
+
+  // Diff and Changes ride as tabs beside the canvas rather than opening on demand. Both render an
+  // empty state naming the Compare button, so a reader who clicks one learns the feature exists
+  // instead of meeting a blank pane.
+  api.addPanel({ id: "diff", component: "diff", title: "Diff", position: { direction: "within", referencePanel: "canvas" } });
+  api.addPanel({ id: "changes", component: "changes", title: "Changes", position: { direction: "within", referencePanel: "canvas" } });
+
+  // Sizes and active tabs only stick once dockview has laid the grid out, so this waits for the grid
+  // to HAVE a size rather than guessing a delay. dockview measures itself from a ResizeObserver on
+  // its container, which has not fired yet at the end of the current task: sizing on setTimeout(0)
+  // divides up a 0x0 grid and is dropped, which is why the previous layout's pixel widths never
+  // applied and why a 250ms sleep "fixed" it. Waiting on the measurement is the honest version.
+  whenSized(api, () => {
+    const rail = api.width ? Math.round(api.width * RAIL_FRACTION) : RAIL_FALLBACK_PX;
+    resizeGroup(api, "overview", { width: rail });
+    resizeGroup(api, "checks", { width: Math.max(rail, EAST_MIN_PX) });
+    resizeGroup(api, "query", { height: api.height ? Math.round(api.height * QUERY_FRACTION) : QUERY_FALLBACK_PX });
+    // Each stack opens on its first tab: the drawing, the findings, and what one selection is.
+    api.getPanel("details")?.api.setActive();
+    api.getPanel("checks")?.api.setActive();
+    api.getPanel("review")?.api.setActive();
+    api.getPanel("canvas")?.api.setActive();
+  });
 }
 
-// openDiffPanel opens (or focuses) the diff view plus its changed-item list. The diff wants
-// the big center surface, so it tabs into the canvas panel's group when that exists, else
-// falls back to the right edge; the changes list opens beside it on the right.
+// whenSized runs apply once the dock has a non-zero size, or after a bounded wait if it never does
+// (a hidden container, a headless host with no animation frames). Bounded because a layout that
+// never sizes must still get its active tabs set.
+function whenSized(api: DockviewApi, apply: () => void, framesLeft = 30): void {
+  if ((api.width > 0 && api.height > 0) || framesLeft <= 0) {
+    apply();
+    return;
+  }
+  const next = (): void => whenSized(api, apply, framesLeft - 1);
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(next);
+  else setTimeout(next, 16);
+}
+
+// resizeGroup sizes the GROUP a panel sits in, which is the only thing dockview will resize.
+//
+// `panel.api.setSize()` looks like it does this and does nothing at all: it fires onDidSizeChange,
+// and the listener for that event is installed by the GRIDVIEW panel (the group), not by the
+// dockview panel inside it. So the call type-checks, runs, and is dropped. Every width the boot
+// layout asked for was silently ignored from WS9-021 until this was traced (the rails were three
+// equal columns however many pixels the code requested), which is a good reminder that a layout
+// assertion in a unit test proves the CALL was made and never that the pixels moved.
+function resizeGroup(api: DockviewApi, panelId: string, size: { width?: number; height?: number }): void {
+  api.getPanel(panelId)?.api.group?.api.setSize(size);
+}
+
+// openDiffPanel focuses the diff view and its changed-item list, adding either back first if the
+// user closed it. The default layout already places both beside the canvas, so on an untouched
+// layout this is a tab switch; the add path is what covers a layout where they were closed.
 export function openDiffPanel(api: DockviewApi): void {
   const existing = api.getPanel("diff");
   if (!existing) {
@@ -210,13 +293,13 @@ export function openDiffPanel(api: DockviewApi): void {
   api.getPanel("diff")?.api.setActive();
 }
 
-// closeDiffPanel removes the diff view and its changes list (holes park, islands stay
-// mounted).
+// closeDiffPanel ends a comparison by returning attention to the drawing, and deliberately LEAVES
+// the diff and changes tabs in place. They used to be removed, which was right while they were
+// opened on demand and wrong now that the default layout places them: a tab strip that loses two
+// tabs when you close a comparison reads as the app breaking rather than as a mode ending. Both
+// panels render "No comparison open" on their own, so what stays behind explains itself.
 export function closeDiffPanel(api: DockviewApi): void {
-  for (const id of ["diff", "changes"]) {
-    const panel = api.getPanel(id);
-    if (panel) api.removePanel(panel);
-  }
+  api.getPanel("canvas")?.api.setActive();
 }
 
 // openPanel re-adds a closed panel from the menu, on the right edge; the user drags it where they

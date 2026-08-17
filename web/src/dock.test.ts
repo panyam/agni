@@ -83,14 +83,12 @@ describe("panel registry", () => {
     expect(VIEWER_PANELS.find((p) => p.id === "overview")?.defaultOpen).toBe(true);
   });
 
-  // Review is secondary (WS9-052): it is only useful on a server started with --review-store, and
-  // the reconcile is what makes it appear in the menu for existing saved layouts without forcing it
-  // open on anyone.
-  it("registers Review as a secondary panel rather than a default-open one", () => {
-    const review = VIEWER_PANELS.find((p) => p.id === "review");
-    expect(review?.title).toBe("Review");
-    expect(review?.defaultOpen).toBeUndefined();
-    expect(review?.onDemand).toBeUndefined();
+  // The secondary tier is gone: the layout tabs the crowding away rather than hiding panels behind
+  // a menu, so every registered panel is placed at boot. A future menu-only panel omits the flag,
+  // and this assertion is what makes that a deliberate act rather than an oversight.
+  it("places every registered panel at boot, with no menu-only tier", () => {
+    const menuOnly = VIEWER_PANELS.filter((p) => !p.defaultOpen).map((p) => p.id);
+    expect(menuOnly).toEqual([]);
   });
 });
 
@@ -160,7 +158,7 @@ describe("reconcilePanels", () => {
       } as never,
     };
   }
-  const openIds = VIEWER_PANELS.filter((p) => !p.onDemand).map((p) => p.id);
+  const openIds = VIEWER_PANELS.map((p) => p.id);
 
   it("opens panels added to the registry since the layout was saved", () => {
     const savedWithoutChecks = VIEWER_PANELS.map((p) => p.id).filter((id) => id !== "checks");
@@ -189,12 +187,13 @@ describe("reconcilePanels", () => {
     expect(added).toEqual(["details"]);
   });
 
-  it("leaves a newly-registered SECONDARY panel closed — menu-only, no auto-open (WS9-042)", () => {
-    // 'query' is secondary; simulate it added since the save (absent from savedPanels) and
-    // currently closed. reconcile must not open it — contrast the 'checks' (core) case above.
-    const savedWithoutQuery = VIEWER_PANELS.map((p) => p.id).filter((id) => id !== "query");
+  // The tier this used to cover (a newly-registered SECONDARY, menu-only) no longer has an instance
+  // to test with: every panel is placed at boot. What survives is the rule that matters more — a
+  // panel the user closed stays closed, told apart from a new one by the saved registry.
+  it("leaves a panel the user closed alone when it was in the saved registry", () => {
+    const savedWithQuery = VIEWER_PANELS.map((p) => p.id);
     const { api, added } = fakeApi(openIds.filter((id) => id !== "query"));
-    reconcilePanels(api, savedWithoutQuery);
+    reconcilePanels(api, savedWithQuery);
     expect(added).toEqual([]);
   });
 });
@@ -202,29 +201,69 @@ describe("reconcilePanels", () => {
 // dockStub is a minimal DockviewApi tracking which panel ids are open, enough to drive
 // defaultLayout, openPanel, and the menu toggle. getPanel returns a handle whose id lets
 // removePanel find it; the nested `api` no-ops absorb the deferred sizing calls.
+interface Placement {
+  id: string;
+  direction?: string;
+  reference?: string;
+}
+
 function dockStub(open: string[] = []) {
   const ids = [...open];
+  const placed: Placement[] = [];
   const api = {
-    addPanel: (o: { id: string }) => void (ids.includes(o.id) || ids.push(o.id)),
-    getPanel: (id: string) => (ids.includes(id) ? { id, api: { setSize() {}, setActive() {} } } : undefined),
+    addPanel: (o: { id: string; position?: { direction?: string; referencePanel?: string } }) => {
+      placed.push({ id: o.id, direction: o.position?.direction, reference: o.position?.referencePanel });
+      if (!ids.includes(o.id)) ids.push(o.id);
+    },
+    getPanel: (id: string) =>
+      ids.includes(id) ? { id, api: { setActive() {}, group: { api: { setSize() {} } } } } : undefined,
     removePanel: (p: { id: string }) => {
       const i = ids.indexOf(p.id);
       if (i >= 0) ids.splice(i, 1);
     },
   };
-  return { api: api as never, ids };
+  return { api: api as never, ids, placed };
 }
 
 describe("defaultLayout", () => {
-  it("opens exactly the default-open panels, none of the secondaries or on-demand (WS9-042)", () => {
+  // The arrangement is the whole point of this function and nothing asserted it before: the previous
+  // test checked WHICH panels opened and not WHERE, so any reshuffle was invisible.
+  //
+  // Ordering carries meaning here. Each position is relative to the reference panel's GROUP, so
+  // query splitting the centre depends on both rails already existing; place it earlier and it
+  // becomes a full-width strip under all three columns.
+  it("builds the two rails, then splits the centre for query", () => {
+    const { api, placed } = dockStub();
+    defaultLayout(api);
+    const at = (id: string) => placed.find((p) => p.id === id);
+
+    expect(at("canvas")?.direction).toBeUndefined(); // the centre is the anchor
+
+    expect(at("overview")).toMatchObject({ direction: "left", reference: "canvas" });
+    expect(at("details")).toMatchObject({ direction: "below", reference: "overview" });
+    expect(at("parts")).toMatchObject({ direction: "within", reference: "details" });
+
+    // The east rail is two stacks of two, not one stack of four: a 15% column clips a four-tab
+    // strip, and dockview gives no overflow affordance, so the fourth tab becomes unreachable.
+    expect(at("checks")).toMatchObject({ direction: "right", reference: "canvas" });
+    expect(at("rules")).toMatchObject({ direction: "within", reference: "checks" });
+    expect(at("review")).toMatchObject({ direction: "below", reference: "checks" });
+    expect(at("coverage")).toMatchObject({ direction: "within", reference: "review" });
+
+    for (const tab of ["diff", "changes"]) {
+      expect(at(tab), `${tab} should tab with the canvas`).toMatchObject({ direction: "within", reference: "canvas" });
+    }
+
+    const order = placed.map((p) => p.id);
+    expect(at("query")).toMatchObject({ direction: "below", reference: "canvas" });
+    expect(order.indexOf("query")).toBeGreaterThan(order.indexOf("checks"));
+    expect(order.indexOf("query")).toBeGreaterThan(order.indexOf("overview"));
+  });
+
+  it("opens every registered panel", () => {
     const { api, ids } = dockStub();
     defaultLayout(api);
-    const expected = VIEWER_PANELS.filter((p) => p.defaultOpen).map((p) => p.id).sort();
-    expect(ids.slice().sort()).toEqual(expected);
-    // Sanity: the lean set drops the reference/secondary panels.
-    for (const secondary of ["rules", "report", "expectations", "query", "diff", "changes"]) {
-      expect(ids).not.toContain(secondary);
-    }
+    expect(ids.slice().sort()).toEqual(VIEWER_PANELS.map((p) => p.id).sort());
   });
 });
 
