@@ -107,6 +107,15 @@ neutralized, replace the heuristic with the PROPERTY: that one added a marker at
 asserted the two render at the same y, which then failed with the actual defect named. Run the
 red-check on every new test, not just ones you doubt.
 
+**An assertion over a CUMULATIVE log is already true before the action it is meant to test.** A
+composition test that clicks a finding and asserts `expect(called).toContain("HighlightSheet")` passes
+with the click handler unwired, because the page's deep-link restore highlights during boot and the
+rpc is in the log before the click happens. It asserts that the page booted. Count the calls across
+the action instead (`const before = called.filter(is).length` … `expect(after).toBeGreaterThan(before)`),
+or clear the log first. Every "did X happen" assertion over a running system has this shape, and the
+red-check is what tells the two apart: unwire the handler, and a real assertion goes red while this
+one does not.
+
 **A test that calls the PRODUCTION predicate to decide what counts as a failure cannot fail when
 that predicate is what broke.** Two assertions written as `if skipRefDes(x) { t.Error(...) }` read
 as real checks and went green under a deliberately broken `skipRefDes`, while their siblings written
