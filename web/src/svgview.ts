@@ -20,6 +20,8 @@ export class SvgView {
   private tx = 0;
   private ty = 0;
   private scale = 1;
+  // touched records that the reader has moved the camera, so the resize observer stops refitting.
+  private touched = false;
 
   // onViewChange fires after a USER pan/zoom (drag or wheel), never from setView/fit, so a
   // host can mirror this view onto another SvgView (the WS9-005 synced diff canvases)
@@ -46,6 +48,7 @@ export class SvgView {
     this.layer.appendChild(this.overlay);
     host.appendChild(this.layer);
     this.bindInput();
+    this.observeResize();
   }
 
   // setSvg injects a standalone SVG document and fits it to the host. The highlight overlay
@@ -54,6 +57,9 @@ export class SvgView {
   setSvg(markup: string): void {
     this.base.innerHTML = markup;
     this.overlay.innerHTML = "";
+    // A new document arrives unframed, so the reader's camera on the PREVIOUS one does not carry
+    // over and the resize refit is live again.
+    this.touched = false;
     this.fit();
   }
 
@@ -159,6 +165,26 @@ export class SvgView {
     this.apply();
   }
 
+  // observeResize refits the drawing when its pane changes size, but only while the reader has not
+  // taken over the camera. The SVG view had no observer at all (the WebGL canvas has always had
+  // one), so a document framed for one pane size stayed framed for it: dragging a splitter, opening
+  // a panel, or a boot layout that sizes the columns after the first render all left the drawing
+  // hanging off the edge of a pane it no longer fitted.
+  //
+  // The `touched` guard is what keeps the refit from being its own annoyance. Re-framing a view
+  // somebody has zoomed into, because they nudged a splitter, throws away the thing they were
+  // looking at. So a fresh document refits with its pane and a navigated one holds still.
+  private observeResize(): void {
+    if (typeof ResizeObserver === "undefined") return; // jsdom, and any non-browser host
+    new ResizeObserver(() => {
+      // A parked (closed) dock panel measures 0x0; refitting to that would zero the scale and the
+      // drawing would never come back when the panel reopens. Same guard the canvas keeps.
+      if (!this.host.clientWidth || !this.host.clientHeight) return;
+      if (this.touched) return;
+      this.fit();
+    }).observe(this.host);
+  }
+
   private bindInput(): void {
     let dragging = false;
     let lastX = 0;
@@ -198,6 +224,7 @@ export class SvgView {
     this.ty = v.ty;
     this.scale = v.scale;
     this.apply();
+    this.touched = true;
     this.onViewChange?.(this.getView());
   }
 }

@@ -45,3 +45,77 @@ describe("setOverlays (WS9-007)", () => {
     expect(host.querySelectorAll("svg").length).toBe(0);
   });
 });
+
+// A pane that changes size after the drawing was framed used to leave the drawing framed for the
+// old one: the WebGL canvas has always observed its element, this view never did. A boot layout
+// that sizes the columns after the first render made that visible on every load, but dragging a
+// splitter or opening a panel did the same thing.
+describe("refit on resize", () => {
+  function harness(): { host: HTMLElement; view: SvgView; resize: (w: number, h: number) => void } {
+    let fire = (): void => {};
+    class RO {
+      constructor(private readonly cb: () => void) {
+        fire = this.cb;
+      }
+      observe(): void {}
+      disconnect(): void {}
+    }
+    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = RO;
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const size = (w: number, h: number): void => {
+      Object.defineProperty(host, "clientWidth", { configurable: true, value: w });
+      Object.defineProperty(host, "clientHeight", { configurable: true, value: h });
+    };
+    size(400, 400);
+    const view = new SvgView(host);
+    return { host, view, resize: (w, h) => (size(w, h), fire()) };
+  }
+
+  const scaleOf = (host: HTMLElement): number =>
+    Number(/scale\(([\d.]+)\)/.exec((host.firstElementChild as HTMLElement).style.transform)?.[1] ?? NaN);
+
+  it("refits a freshly framed drawing when the pane grows", () => {
+    const { host, view, resize } = harness();
+    view.setSvg('<svg width="200" height="200"></svg>');
+    expect(scaleOf(host)).toBeCloseTo(2); // 400/200
+
+    resize(800, 800);
+    expect(scaleOf(host)).toBeCloseTo(4);
+  });
+
+  it("leaves a drawing the reader has navigated where they put it", () => {
+    const { host, view, resize } = harness();
+    view.setSvg('<svg width="200" height="200"></svg>');
+
+    // A drag is the user taking the camera; after it, a resize must not re-frame their view.
+    host.dispatchEvent(new MouseEvent("mousedown", { clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 40, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    const afterDrag = scaleOf(host);
+
+    resize(800, 800);
+    expect(scaleOf(host)).toBeCloseTo(afterDrag);
+  });
+
+  it("ignores a parked panel measuring 0x0 rather than zeroing the scale", () => {
+    const { host, view, resize } = harness();
+    view.setSvg('<svg width="200" height="200"></svg>');
+    resize(0, 0);
+    expect(scaleOf(host)).toBeCloseTo(2);
+  });
+
+  // A new document arrives unframed, so the reader's camera on the previous one must not survive it.
+  it("resumes refitting after a new document is set", () => {
+    const { host, view, resize } = harness();
+    view.setSvg('<svg width="200" height="200"></svg>');
+    host.dispatchEvent(new MouseEvent("mousedown", { clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 40, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    view.setSvg('<svg width="200" height="200"></svg>');
+    resize(800, 800);
+    expect(scaleOf(host)).toBeCloseTo(4);
+  });
+});
