@@ -58,8 +58,8 @@ reach a verdict because the pins were not there, and rather than pass, fail, or 
 says so and names the cause.
 
 Compare that to what the same board did in rung 1 through `agni check`, where the bad read produced
-94 confident, wrong findings. The difference is not the tool getting cleverer. It is the review layer
-having a word for "I looked and I cannot tell", and the plain catalog not having one.
+94 confident, wrong findings. The difference comes from the review layer having a word for "I looked
+and I cannot tell" and the plain catalog not having one, rather than from the tool getting cleverer.
 
 ## Serve it right
 
@@ -87,8 +87,8 @@ present, namespaced exactly as it is at the command line, because it is the same
 The **sheet badge** carries the finding count, so a multi-sheet design shows you where the problems
 are before you open anything.
 
-**Findings** is the table above. Selecting a row highlights its subject on the canvas, which is the
-thing a terminal cannot do: going from "net `CAN1_CANH` has no ESD protection" to seeing where that
+**Findings** is the table above. Selecting a row highlights its subject on the canvas, doing the one
+thing a terminal cannot: going from "net `CAN1_CANH` has no ESD protection" to seeing where that
 net actually runs.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does

@@ -6,12 +6,12 @@ More than one net in the design states the same non-empty name.
 
 ### Why engineers want it
 
-On schematic formats connectivity IS naming — same-named labels
-join — so this cannot happen there by construction (the solver merges them; see
+On schematic formats connectivity IS naming, since same-named labels
+join, so this cannot happen there by construction (the solver merges them; see
 label-alias-conflict for the collapsed-alias hazards). It happens on formats with EXPLICIT
 net lists (an EDIF netlist can state two (net VCC ...) entries) and wherever a tool export
 or a reader gap splits one logical net into two records. Either way, every consumer that
-keys on net names — diff identity, board joins, reviews — is now quietly wrong.
+keys on net names, whether diff identity, board joins or reviews, is now quietly wrong.
 
 ### Impact
 
@@ -24,7 +24,7 @@ schematic-vs-board join attaches findings to the wrong copper.
 
 Fires once per claiming net (each is a place to fix). Synthesized stub
 names (N$, unconnected-(...)) are per-net reader inventions and never collide; empty names
-carry no claim. A firing on a fresh format's corpus is ALSO a read-health signal — check
+carry no claim. A firing on a fresh format's corpus is ALSO a read-health signal, so check
 the reader before the design (the pin-net-conflict lesson).
 
 ### Query structure

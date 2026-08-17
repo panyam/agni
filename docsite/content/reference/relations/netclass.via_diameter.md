@@ -26,8 +26,8 @@ which one wins is the cascade this relation has deliberately not done for you.
 
 ### Go projector
 
-`netClassDefFacts` in `stdlib/relations/facts.go` walks `Model.NetClassDefs()` — the
-`ir.Constraint` nodes of kind `netclass` — and parses the `via_diameter` param. Populated in the I/O layer
+`netClassDefFacts` in `stdlib/relations/facts.go` walks `Model.NetClassDefs()`, the
+`ir.Constraint` nodes of kind `netclass`, and parses the `via_diameter` param. Populated in the I/O layer
 by `kicad.AnnotateNetClassDefs` from the sibling `.kicad_pro` `net_settings.classes[]` (WS3-111).
 
 ### Absence is not a pass

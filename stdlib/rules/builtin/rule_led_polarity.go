@@ -32,7 +32,7 @@ var ledPolaritySpec = &check.Spec{
 var ledPolarityMeta = check.Rule{
 	Name:     "led-polarity",
 	Severity: "error",
-	Summary:  "An LED's anode sits on ground and its cathode on a power rail — mounted backwards.",
+	Summary:  "An LED's anode sits on ground and its cathode on a power rail, mounted backwards.",
 	Impact:   "A reversed LED simply never lights. It passes every connectivity check (both pins are wired), survives assembly, and shows up as a dead indicator at bring-up — a part-level rework for a capture-time slip.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,

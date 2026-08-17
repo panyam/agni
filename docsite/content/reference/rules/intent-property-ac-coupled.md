@@ -36,7 +36,7 @@ rail. That is the structural difference between the two uses of the same compone
 This property is **decidable** from the netlist: a series capacitor is either present or it is not. So
 a pass means the declaration is met, not merely "no contradiction found".
 
-That is worth stating because its sibling `property-reset-polarity` is different — read that card
+That is worth stating because its sibling `property-reset-polarity` is different, so read that card
 before assuming the two behave alike.
 
 ### Declaring it
@@ -46,7 +46,7 @@ net_properties:
   - {net: PCIE_TX0_P, property: ac-coupled}
 ```
 
-No `value`; the kind is the whole assertion. A net you do not declare is not checked — the rule
+No `value`; the kind is the whole assertion. A net you do not declare is not checked, because the rule
 iterates the declaration, never the design, so it has no opinion about nets your intent is silent on.
 
 ### Fixing a finding

@@ -79,8 +79,8 @@ the pass is a guess.
 
 `inconclusive` is separate from every other non-pass outcome, and it is the subtlest. The check ran,
 had its inputs, and still could not reach a verdict, usually because the design is ambiguous in a
-way the rule cannot resolve. It is not a gap in your data or your checklist. It is a real answer of
-"I looked and I cannot tell", which is sometimes the honest one, and it belongs in front of a human
+way the rule cannot resolve. It is a real answer of "I looked and I cannot tell" rather than a gap
+in your data or your checklist, sometimes the honest answer, and it belongs in front of a human
 rather than being rounded to a pass.
 
 ## What is not on this list

@@ -23,7 +23,7 @@ pin) either clears the warning or upgrades it to the real error.
 
 ### Scope note
 
-"Unspecified" means the symbol DECLARES the pin and types it as nothing — a
+"Unspecified" means the symbol DECLARES the pin and types it as nothing. A
 KiCad passive pin is typed and never fires this (the resistor-on-every-driven-net false
 positive that kept this row out of the catalog until PASSIVE entered the direction
 vocabulary), and a pin the read never saw a symbol for (a board footprint's pads, a

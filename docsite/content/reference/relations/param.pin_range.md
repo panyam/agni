@@ -1,6 +1,6 @@
 ---
 title: "param.pin_range"
-description: "a datasheet limit bound to ONE pin, both bounds in the SI base unit — the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params)"
+description: "a datasheet limit bound to ONE pin, both bounds in the SI base unit, the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params)"
 ---
 
 ### What it is

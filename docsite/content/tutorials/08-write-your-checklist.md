@@ -76,7 +76,7 @@ it.
 Read the `H2` query again. It matches test points on nets that are **not** rails.
 
 A query binding reports whatever it matches as findings, and findings mean the item failed. So the
-query has to match the violation. Write the healthy case instead, which is the natural way to phrase
+query has to match the violation. Write the healthy case instead, phrasing it the natural way as
 "every test point sits on a rail", and you get an item that fails on a good board and passes on a
 bad one.
 
@@ -141,8 +141,8 @@ and the run reads both:
 | B1 | no track is below the fab's minimum width | fail | track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor) |
 ```
 
-To see what the item does with no copper, read the netlist on its own with `--as-named`, which is the
-flag that says "exactly the file I named, not the design it belongs to":
+To see what the item does with no copper, read the netlist on its own with `--as-named`, the flag
+that says "exactly the file I named, not the design it belongs to":
 
 ```
 agni review --as-named designs/gateway/gateway.edn --checklist review.yaml

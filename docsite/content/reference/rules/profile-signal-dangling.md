@@ -5,8 +5,8 @@ description: "An interface signal net has fewer than two connections (a dangling
 
 ### What it means
 
-A profile signal net that exists by name but carries fewer than two connections — present in the
-netlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not
+A profile signal net that exists by name but carries fewer than two connections. It is present in
+the netlist, so a presence check passes, but wired to only one pin, so the far end of the bus is not
 actually reached.
 
 ### Why engineers want it
@@ -22,6 +22,6 @@ named, but not wired through.
 
 ### For software readers
 
-The net exists, so a null check passes — but it has one endpoint where it needs two, like a
+The net exists, so a null check passes, but it has one endpoint where it needs two, like a
 reference that is non-null but points at an object with a required field unset. Presence is not
 connectivity.

@@ -19,7 +19,7 @@ real files, and adding more analysis as the understanding grows.
 The whole thing is built for a software engineer's eyes. Hardware has its own vocabulary, and
 most of it maps onto something a programmer already knows. A netlist is a graph. A bill of
 materials is a lockfile. A datasheet is a type definition with runtime limits. These mappings
-are not decoration. They are how the docs explain hardware, and they are why someone from
+carry real weight here. The docs explain hardware through them, and they are how someone from
 software can pick up a real design and reason about it. The [software analogy](../reference/analogy/)
 collects them in one place, and the [concepts](../guide/concepts/) page in the user guide is
 the read-first version.

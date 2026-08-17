@@ -28,10 +28,10 @@ Those unbiased pins are not unknown to you. They sit at the part's internal defa
 does not record that, so the engine cannot read it.
 
 **Declare `default` and the group decodes.** It states the level an unbiased pin in this group takes,
-which is the one fact the netlist is missing.
+the one fact the netlist is missing.
 
 **Without it, the group reads `inconclusive`**, naming the pins it could not read. It is not decoded
-with the missing bits assumed zero, because that would invent an address — and an invented address can
+with the missing bits assumed zero, because that would invent an address, and an invented address can
 invent a collision, turning a silent gap into a confident accusation about two parts that are fine.
 
 ### Declaring it

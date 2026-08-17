@@ -15,8 +15,8 @@ surfaces at bring-up as a missing connection between two otherwise-healthy nets.
 
 ### Impact
 
-Net A and net B behave normally in isolation — every net-level rule sees two
-well-formed nets — so nothing else can catch it. The drawing is the only witness, and the
+Net A and net B behave normally in isolation, and every net-level rule sees two
+well-formed nets, so nothing else can catch it. The drawing is the only witness, and the
 drawing lies.
 
 ![undotted T-tap flagged as two nets vs a dotted T that is one net](images/wire-no-junction.svg)
@@ -40,7 +40,7 @@ Reads: wire.endpoint, wire.junction. Tier P.
 
 ### For software readers
 
-KiCad stores no connection list; connectivity is GEOMETRIC — things connect where their
+KiCad stores no connection list; connectivity is GEOMETRIC, so things connect where their
 coordinates coincide, the way whitespace-significant syntax gives meaning to layout. Two
 touching wires join only at endpoints or where the author placed a junction dot (the
 explicit "yes, these join" marker). A wire ENDING on the MIDDLE of another wire, with no

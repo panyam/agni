@@ -19,7 +19,7 @@ browser-only calls is what lets the same code run in every one of those places.
 
 ## Package layout
 
-The top-level tree separates the engine from the content it evaluates, which is the split that
+The top-level tree separates the engine from the content it evaluates, and that split
 makes the open-core boundary real: the engine ships as a library and the rule content is one of
 several sources that register into it.
 

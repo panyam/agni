@@ -11,7 +11,7 @@ LED never conducts.
 LED polarity is the classic capture slip: the symbol is
 symmetric-looking, the footprint is not, and the netlist connects fine either way. Every
 review checklist has "check LED orientation" precisely because no electrical check
-catches it — both pins are properly wired, just to the wrong ends.
+catches it: both pins are properly wired, just to the wrong ends.
 
 ### Impact
 
@@ -24,7 +24,7 @@ hand-flippable.
 
 No format carries polarity as data (KiCad LED pins
 are electrically passive; "A"/"K" are pin names), so the anode/cathode roles come from the
-name convention gated by device class — pin.role, the same projection posture as
+name convention gated by device class, via pin.role, the same projection posture as
 component.class. An LED whose pins carry no recognizable names yields RoleUnknown and the
 rule stays silent (never guess).
 

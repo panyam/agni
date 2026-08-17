@@ -8,7 +8,7 @@ net's connections and is not marked NO_CONNECT.
 ### Why engineers want it
 
 unconnected-component catches the part wired to nothing; this
-catches the pin wired to nothing on a part that is otherwise connected — the far more common
+catches the pin wired to nothing on a part that is otherwise connected, the far more common
 slip. Every ERC ships it.
 
 ### Impact
@@ -26,14 +26,14 @@ from a real source:
   name anywhere in the design). Where none exists, an unwired pin carries no NC flag
   because the format cannot express one, not because the designer missed it: a bare EDIF
   netlist export lists every library pin of every part, and firing there produced 1836
-  findings on one real board (unused gates, spare TVS channels, unwired connector pads —
+  findings on one real board (unused gates, spare TVS channels, unwired connector pads,
   all normal). No channel, no rule.
 - **A direction-unknown (UNSPECIFIED) pin is skipped**, the same trade floating-input makes.
 - **A source with no part-pin data yields no pins** and is silent by construction.
 
 On KiCad, placed bare pins land on synthesized per-pin stub nets (the miss surfaces as
 single-pin-net instead); what can still fire there is a typed pin of an unplaced unit of a
-multi-unit part, in designs that use no-connect markers elsewhere — a real unused-unit
+multi-unit part, in designs that use no-connect markers elsewhere, which is a real unused-unit
 signal. The hunting ground is sources with typed pins, an NC vocabulary, and no stub
 synthesis (EDIF schematic exports, xschem/gEDA with symbol libraries).
 

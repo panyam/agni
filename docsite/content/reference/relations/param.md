@@ -48,7 +48,7 @@ for the same reason a genuinely-clean design does. Reading that as pass is the S
 a `LEFT JOIN` with a NULL right side as a validated row. A datasheet-backed review item therefore
 checks whether the symbol is seeded at all and reports `needs-data` (closer to HTTP 424 Failed
 Dependency than 404: the check exists, its input is missing) rather than pass. `needs-data` still
-counts as covered, because the mechanism is wired and only the value is absent, which is what lets
+counts as covered, because the mechanism is wired and only the value is absent, and that lets
 an overlay bind a datasheet check before its seed lands and watch it flip to a real verdict once
 the value arrives (WS3-097). Whether the corpus holds one seeded part or a thousand is only how
 many rows the table has: the relation is the union of every seeded spec, keyed by MPN, so more
@@ -60,7 +60,7 @@ seeds mean fewer `needs-data` items, never a different answer.
 `Model.ComponentMPN` and its spec via `Model.PartSpec`, dedupes by MPN, and emits one row per
 `spec.Parameters` entry. `Value` is rendered by `rangeText`, `Conditions` by `conditionsText`,
 and `Cite` by `citation` (document title, page, table or figure, extraction method, confidence);
-`Num` is set to the parameter's `Value.Max` when present, which is the `max` datalog argument.
+`Num` is set to the parameter's `Value.Max` when present, and surfaces as the `max` datalog argument.
 One row per parameter of each joined part. Empty without `--params`, because the MPN-to-spec map
 is built only when a param set is loaded, so a design with no matching specs yields nothing.
 

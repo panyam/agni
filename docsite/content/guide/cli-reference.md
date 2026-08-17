@@ -7,7 +7,7 @@ The commands and flags a user reaches for. `agni <command> --help` always prints
 authoritative, up-to-date detail. This page is the map. The reader for a file is chosen by
 its extension, so you pass the design file directly and never name a format.
 
-Where a `<file>` is expected you may also name a **design folder** — one holding a `design.yaml`
+Where a `<file>` is expected you may also name a **design folder**, one holding a `design.yaml`
 that declares which file is the design's entry. Agni then reads that entry and picks up the
 companion views the descriptor lists, so a netlist's connectivity rules and a board's copper rules
 run from one argument. See [Projects and designs](../../architecture/projects-and-designs/).

@@ -15,7 +15,7 @@ var pinNetConflict = (&check.Spec{
 }).Rule(check.Rule{
 	Name:     "pin-net-conflict",
 	Severity: "info",
-	Summary:  "A pin appears in more than one net's connections — malformed input.",
+	Summary:  "A pin appears in more than one net's connections, which is malformed input.",
 	Impact:   "Every consumer that asks which net a pin is on (rules, diff keying, highlights) gets an arbitrary answer for this pin. The netlist is not internally consistent, and anything derived from it inherits the ambiguity silently.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryIntegrity,

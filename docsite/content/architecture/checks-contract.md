@@ -37,8 +37,8 @@ to any one caller.
 - **`meta`**: what produced it, at what build, when. A results document is only comparable to
   another once you know which tool and which build made each.
 - **`design`**: the source it was about and a content hash of that source. The hash is the revision
-  identity, which is what makes a findings diff between two revisions meaningful and what stops a
-  stale document from being silently read against a design that has since changed.
+  identity. It makes a findings diff between two revisions meaningful, and it stops a stale document
+  from being silently read against a design that has since changed.
 - **`run`**: which overlay tiers were attached. Without this a reader cannot tell a design with no
   datasheet violations from a run that had no datasheet corpus. It is derived from the RESOLVED
   overlay, never from the caller's flags, because those are two different questions once a design
@@ -71,7 +71,7 @@ each with the reason the rule itself gave.
 
 It exists because silence reads as coverage, one tier below where the outcome vocabulary fixes it. A
 board rule on a netlist, or a datasheet rule with no corpus, is gated before it evaluates and
-contributes no findings — and a findings list has no way to distinguish "checked and clean" from
+contributes no findings, and a findings list has no way to distinguish "checked and clean" from
 "never ran". That lands on the viewer's default-open panel, so it is the first thing most people see
 and the last thing they would think to doubt.
 
@@ -105,7 +105,7 @@ a new honest verdict should be a review-layer change, not a schema migration.
 conclusion from a real report.
 
 `Covered()` is `Total - NotAutomated`: how many items a MECHANISM exists for. It moves when a rule
-leaves the catalog, which is what a moved profiles directory or a renamed conventions file does.
+leaves the catalog, as a moved profiles directory or a renamed conventions file makes it do.
 
 `Answered()` is `Pass + Fail + Provisional + ComputedNA`: how many items the run actually DECIDED. It
 moves for a second reason, and that reason is invisible to the first count. A rule can be present,
@@ -121,12 +121,12 @@ with params/     **13 of 15 covered**, **13 answered** — 3 pass,  9 fail, 0 n/
 without          **13 of 15 covered**, **12 answered** — 2 pass, 10 fail, 1 n/a; 2 not-automated
 ```
 
-`ComputedNA` sits on the answered side and `NotApplicable` does not, which is the one assignment worth
-arguing about. They are opposite events wearing the same word. `computed-n/a` is the DESIGN settling
-the question — no crystal on this board, so the crystal rule does not apply — which is the branch a
-human reviewer takes and is a real determination. `not-applicable` is the rule's inputs being absent,
-which is the question going unasked. `NeedsData`, `NeedsDesignIntent` and `Inconclusive` are on the
-unanswered side for the same reason.
+The assignment worth arguing about puts `ComputedNA` on the answered side and leaves `NotApplicable`
+off it. They are opposite events wearing the same word. `computed-n/a` is the DESIGN settling the
+question (no crystal on this board, so the crystal rule does not apply), the branch a human reviewer
+takes and a real determination. `not-applicable` is the rule's inputs being absent, so the question
+goes unasked. `NeedsData`, `NeedsDesignIntent` and `Inconclusive` are on the unanswered side for the
+same reason.
 
 Both numbers are rendered, and `agni review` gates on the second (`--min-answered`). Gating on
 `Covered()` would have shipped a flag that cannot see the case it was built for.
@@ -159,7 +159,7 @@ shape the outcome vocabulary exists to remove, one layer up.
 
 `meta.schema` is checked on read, and an unrecognized version is an error rather than a best-effort
 parse. Half-reading a future document would yield a findings list shorter than the run that produced
-it, with nothing to say so — the same silence-reads-as-coverage failure the outcome vocabulary
+it, with nothing to say so, the same silence-reads-as-coverage failure the outcome vocabulary
 exists to prevent. Unknown *fields* within a known schema are tolerated, because additive fields do
 not change what an older reader understands.
 
@@ -179,15 +179,15 @@ Three things about it are deliberate.
 **It is not a `formats` reader.** Every capability on that registry answers a question about a design
 file: give me its netlist, its geometry, its board. A results file describes a design it does not
 contain and cannot answer any of them. Registering it would make the capability set mean two
-different things, so the import is a separate path — the Loader's job is producing a model, and this
+different things, so the import is a separate path. The Loader's job is producing a model, and this
 produces evidence *about* one.
 
 **The imported document is visibly weaker, and says so.** A vendor report is a flat violation list.
 It has no not-applicable, no needs-data, no coverage axis, and no per-item traceability, because
 those came out of the review work and no incumbent has them. So `meta.coverage_axis` is false, and
-every report that shows an imported document labels it. The difference is invisible in the data —
-an import and a clean native run both look like "few findings" — which is exactly why it has to be
-declared rather than inferred.
+every report that shows an imported document labels it. The difference is invisible in the data,
+since an import and a clean native run both look like "few findings", so it has to be declared
+rather than inferred.
 
 **The residue is reported, not dropped.** A foreign checker names entities in free text ("Pad 1
 [VCC] of R1 on B.Cu"), so attaching a violation to our model is a parse, and a parse has a residue: a
@@ -195,8 +195,8 @@ schematic wire's description carries only its orientation and length. Unattached
 and counted by class in `import_summary`, because a consumer seeing 40 imported findings has to be
 able to tell "the tool found 40 things" from "the tool found 60 and we understood 40". A parsed
 ref-des that names no component in the loaded design leaves the finding unattached rather than
-inventing a subject — a wrong join attaches a real violation to an innocent part, which is worse than
-no join.
+inventing a subject. A wrong join attaches a real violation to an innocent part, and that is worse
+than no join.
 
 ### The oracle becomes a harness
 
@@ -207,7 +207,7 @@ a gate.
 
 The split is keyed on the **entity** each tool flagged, not on rule names. Two tools have two rule
 vocabularies, and a table asserting "our `track-width` means their `track_width`" would be an
-unverified mapping that rots — the same objection that killed identifying an interface host by an MPN
+unverified mapping that rots, the same objection that killed identifying an interface host by an MPN
 prefix list. What can be said without asserting anything is: here is the set of entities we flagged,
 here is theirs, here is the overlap. Rule co-occurrence is then reported as an *observation*, so an
 equivalence can be discovered from evidence instead of declared up front.
@@ -237,9 +237,9 @@ compiled rule, and the Go runtime object. A rule with a hand-written Go `Eval` a
 is **outside this contract by design**, not a gap in it.
 
 A `RuleDef` compiles to one rule *or more*. A spec and a query each yield one; an interface profile
-yields one per requirement. That asymmetry is the profile mechanism working — one declaration standing
-in for a family of near-identical checks — so the signature admits it rather than making every caller
-pretend otherwise.
+yields one per requirement. That asymmetry is the profile mechanism working, with one declaration
+standing in for a family of near-identical checks, so the signature admits it rather than making
+every caller pretend otherwise.
 
 Each of those rules records which requirement produced it, in a `requirement` tag alongside the
 `profile` tag naming the interface. The pair is what lets a consumer address one ask of an interface
@@ -250,8 +250,8 @@ The reason to record it as a tag rather than read it off the rule name is that a
 able to GROW. Under union semantics alone, adding a requirement re-scores every item already bound to
 that profile: they all start reporting a defect none of them describes, so an interface's checks
 become effectively frozen once more than one item shares it. Selecting narrows the item to its own
-requirement without giving up the profile's presence gate, which is what a bare rule binding would
-cost — an absent interface still reads not-applicable rather than a hollow pass. A requirement the
+requirement without giving up the profile's presence gate. A bare rule binding gives that gate up,
+and an absent interface then reads as a hollow pass instead of not-applicable. A requirement the
 profile does not declare resolves to no rule and reads not-automated, on the same discipline as
 everything else here.
 
@@ -259,7 +259,7 @@ everything else here.
 
 A spec needing behavior the vocabulary cannot express calls a registered function **by name**. The
 name is data; the Go function behind it is not. So a rule definition serializes to a closed vocabulary
-plus named references into a registry — the same posture the vendor-rule survey takes on arbitrary
+plus named references into a registry, the same posture the vendor-rule survey takes on arbitrary
 scripted checks. The escape hatch exists, it is bounded, and covering general code verbatim is a
 non-goal, because a scripted check is exactly as reviewable as the code inside it.
 
@@ -273,7 +273,7 @@ from a design with nothing wrong with it. A deck stops at the first bad
 definition rather than loading partially, for the same reason: a catalog missing one rule looks
 exactly like a catalog that ran it and found nothing.
 
-Where the check can teach, it does — an unknown relation names the closest one in the catalog.
+Where the check can teach, it does. An unknown relation names the closest one in the catalog.
 
 ## Reading a foreign rule deck: `.kicad_dru` on paper
 
@@ -295,8 +295,8 @@ Measured against the licensed 31-rule JLCPCB deck in the private rule corpus:
 
 Of the 31 rules, **17 are single-item** and **14 are pairwise** (they reference a second item `B`:
 6 `clearance`, 4 `hole_to_hole`, 3 `hole_clearance`, 1 `silk_clearance`). The pairwise half does not
-map at all, and that is not an oversight: a `Spec` binds exactly one entity, which is precisely why
-`copper-clearance` is the one board rule with a hand-written Go `Eval`. A pairwise spatial join has
+map at all, and that is not an oversight. A `Spec` binds exactly one entity, so `copper-clearance`
+ended up the one board rule with a hand-written Go `Eval`. A pairwise spatial join has
 not yet earned AST nodes.
 
 Of the 17 single-item rules, the constraint kinds with a shipped fact are `track_width` (2, via
@@ -306,13 +306,13 @@ Of the 17 single-item rules, the constraint kinds with a shipped fact are `track
 for `edge_clearance`, and blind/buried/micro-via predicates for the one `assertion`.
 
 **The conclusion is the useful part: the definition schema does not need to change.** The shape of a
-`.kicad_dru` rule — a named rule, a condition, a parametric comparison — is already `RuleMeta` plus
-`SpecBody.where` plus a `SpecCmp`. What is missing is the **fact vocabulary** (pad, layer, text, and
+`.kicad_dru` rule, which names a rule, states a condition, and makes a parametric comparison, is
+already `RuleMeta` plus `SpecBody.where` plus a `SpecCmp`. What is missing is the **fact vocabulary** (pad, layer, text, and
 board-edge facts) and **a two-entity scope**. Both are additions to the spec language rather than to
 this contract, and both have to clear the same bar every fact does: model the concept, not one
 vendor's spelling of it, and promote only when more than one source needs it.
 
 The corollary is a warning. A deck whose constraint kinds have no shipped counterpart must not
 evaluate clean. Loading 31 rules and silently running 6 of them would report a fab-capability pass
-that was never checked, which is the same false-pass failure the review outcomes exist to prevent —
-which is why load-time rejection is total rather than best-effort.
+that was never checked, the same false-pass failure the review outcomes exist to prevent. So
+load-time rejection is total rather than best-effort.

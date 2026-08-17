@@ -101,7 +101,7 @@ them, exactly like a linker unifying external symbols by name.
 
 **Circuit.** KiCad stores no netlist. Connectivity is the drawing. A wire endpoint on a pin's
 connect point binds. A label names the node. Same-named power symbols merge across the sheet.
-Getting these binding rules right is a language-semantics problem, which is why they are pinned
+Getting these binding rules right is a language-semantics problem, so they are pinned
 against the reference implementation (`kicad-cli`), the way a compiler pins against a conformance
 suite. The full binding rules are in [Net solving and hierarchy](../../architecture/net-solving/).
 
@@ -154,8 +154,8 @@ KiCad's own convention so they match board-file names.
 ## The lockfile: MPN and `BomLine`
 
 **Software.** Your code says `import leftpad`. The lockfile says `leftpad@1.3.0, sha512-...`.
-The MPN is that exact pinned artifact. "BSS138" is not "some N-FET". It is one orderable product
-with one datasheet. `BomLine` (or the MPN attribute on a component) is the lockfile entry binding
+The MPN is that exact pinned artifact. "BSS138" names one orderable product with one datasheet,
+not "some N-FET". `BomLine` (or the MPN attribute on a component) is the lockfile entry binding
 your variable to it.
 
 **Circuit.** The BOM says R1 will be built as Yageo RC0603FR-0710KL. Two designs can place
@@ -247,7 +247,7 @@ two-patch pair (clear plus insert) corrects it permanently.
 **Software.** The geometry sidecar is a source map. It maps the same program to where things are
 drawn, kept out of the semantic schema and joined by keys. The renderer consumes it and the
 analyzers never do. Provenance is blame and debug symbols. Every IR node, finding, and extracted
-parameter can answer which file and line (or page and table) it came from, which is what makes a
+parameter can answer which file and line (or page and table) it came from, and that answer makes a
 finding verifiable rather than asserted.
 
 **Circuit.** Click a finding, land on the exact wire in the schematic. Click a datasheet-backed

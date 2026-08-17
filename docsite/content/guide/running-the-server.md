@@ -128,7 +128,7 @@ docker run -p 8080:8080 \
 
 It is deliberately a different volume from your board folders. Design mounts are read-only, and
 keeping runs somewhere else is what preserves that: nothing the server saves ever lands beside your
-schematics. A named volume also survives `docker rm`, which is the point of storing runs at all.
+schematics. A named volume also survives `docker rm`, without which storing runs would be pointless.
 
 Each run is one file, written in the same format `agni review --results-out` produces, so the volume
 stays readable with ordinary tools and a run can be copied out and rendered anywhere. A run records

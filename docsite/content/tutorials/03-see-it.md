@@ -19,7 +19,7 @@ The tutorial board is the second case. `gateway.edn` is an EDIF netlist.
 {{ agniRun "content/tutorials/runs/03-render-layered.yaml" }}
 
 The line it prints is a quality report on the drawing, not on your board. `crossings` counts wires
-that cross each other, which is the main thing that makes a generated schematic hard to follow.
+that cross each other, and crossings are what mainly make a generated schematic hard to follow.
 
 This is a drawing of your netlist, not a reproduction of your schematic. Parts sit where the layout
 algorithm put them. It is for following connectivity, not for review of the drawing itself.
@@ -65,9 +65,9 @@ question of whether they still agree. Ask directly:
 
 {{ agniRun "content/tutorials/runs/03-diff-views.yaml" }}
 
-Zero net changes. The two readers converged on the same netlist, which is the premise the whole
-engine rests on: analysis runs over one internal representation, so the format you started from
-stops mattering once the file is read.
+Zero net changes. The two readers converged on the same netlist, and the whole engine rests on that
+premise: analysis runs over one internal representation, so the format you started from stops
+mattering once the file is read.
 
 The nineteen changed components are library-qualified part-type names, which differ because each
 format names its libraries its own way. That is a difference in the files, not in the board.

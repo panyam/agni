@@ -57,7 +57,7 @@ Every net an ESD review is about:
 external_signal_net(?n) => ?n
 ```
 
-The unprotected ones, which is the shape the `esd` profile requirement compiles to. Nothing clamping
+The unprotected ones, matching the shape the `esd` profile requirement compiles to. Nothing clamping
 within two series crossings:
 
 ```

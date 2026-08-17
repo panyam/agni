@@ -8,7 +8,7 @@ description: "a datasheet parameter's two-sided limit with its kind, both bounds
 `param.range(mpn, symbol, kind, min, max)` yields one row per parameter of a datasheet spec that
 joined to a part in the design, keyed by manufacturer part number (`mpn`) and the parameter's
 datasheet symbol (e.g. `VDD`, `VIN`). Unlike the thin `param(mpn, symbol, max)`, each row carries
-BOTH bounds — the lower `min` and the upper `max` — and the `kind` token that says which limit table
+BOTH bounds, the lower `min` and the upper `max`, and the `kind` token that says which limit table
 the row came from: `absolute_max`, `recommended_operating`, or `characteristic` (`unspecified` when
 the source did not label it). A bound the datasheet did not state is ABSENT: the argument still binds,
 to a value marked absent, so a max-only row still appears in a listing and the relation never shortens
@@ -23,7 +23,7 @@ unit has no known scale appears here with both bounds absent (agni issue 165). E
 citation back to the datasheet page and table.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
-`--params <dir>` pointing at a seeded `PartSpec` corpus — skip-not-false-pass by construction: with
+`--params <dir>` pointing at a seeded `PartSpec` corpus, so it is skip-not-false-pass by construction: with
 no corpus loaded the relation yields zero rows and every rule that reads it reports not-applicable
 rather than a false pass.
 
@@ -32,7 +32,7 @@ rather than a false pass.
 ### For hardware engineers
 
 A row is one line off a part's limits table, with the table it came from named. The distinction
-`param` cannot make is the whole point here: a part often prints `VDD` twice — an absolute-maximum
+`param` cannot make is the whole point here: a part often prints `VDD` twice, once as an absolute-maximum
 (exceed it and you may destroy the part) and a recommended-operating window (run outside it and the
 guaranteed specs no longer hold). `param(mpn, "VDD", max)` collapses both into indistinguishable
 rows; `param.range` keeps them apart by `kind` and gives you both ends of the recommended window, so
@@ -69,7 +69,7 @@ and bounds:
 param.range(?mpn, ?sym, "recommended_operating", ?min, ?max) => ?mpn, ?sym, ?min, ?max
 ```
 
-Cross to the design and flag a rail sitting above a part's recommended maximum — the two-sided,
+Cross to the design and flag a rail sitting above a part's recommended maximum, the two-sided,
 kind-discriminated join the thin `param` relation could not express:
 
 ```

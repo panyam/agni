@@ -34,7 +34,7 @@ relation) would silently pass.
 **The class string is NORMALIZED** through `classify.NormalizeDeviceClass` (WS3-044), which folds a
 vendor spelling onto the canonical key for every class the WS10-015 vocabulary knows, so `XTAL` and
 `Crystal` both project as `crystal`. A class the vocabulary does not recognize passes through
-unchanged, **including its case** — so `LDO` stays `LDO` and would not match a query for `ldo`. When
+unchanged, **including its case**, so `LDO` stays `LDO` and would not match a query for `ldo`. When
 an exact-match query returns nothing, that is the first thing to check.
 
 It previously projected verbatim, which made this relation disagree with the other consumer of the

@@ -127,7 +127,7 @@ The **in-use gate** wants at least two distinct signals of the profile to appear
 match is not evidence, because a real design has many `_CS` nets belonging to many things.
 
 The **anchor** is the signal you mark `anchor: true`, the one that is always present when the
-interface is. Completeness is reported against it, which is why a finding reads `CAN interface
+interface is. Completeness is reported against it, so a finding reads `CAN interface
 (anchored at net CAN_CANH) is missing required signal RXD` rather than naming a net that is not
 there. At most one signal may be the anchor, and a profile that declares none generates no
 completeness rule at all.
@@ -201,7 +201,7 @@ they never change the exit code, and they stay out of `--format json`.
 ## What a profile cannot do
 
 A suffix-named profile only fires on designs that follow that naming. Rename the nets and the
-interface goes invisible, silently, which is why `host` binding exists: a component that
+interface goes invisible, silently. `host` binding exists to stop that: a component that
 declares `interface=CAN` anchors the check no matter what the nets are called. When the
 naming is merely different rather than absent, a naming map is the cheaper fix.
 

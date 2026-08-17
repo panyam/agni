@@ -109,25 +109,25 @@ rule then evaluates cleanly over the shortened read, and the run reports fewer f
 A tier whose absence changes the answer while still looking like an answer belongs with the config
 that changes the answer.
 
-**The descriptor is what binds config, and its absence fails exactly that way.** A team folder can hold `conventions.yaml`, `profiles/`, `params/` and a checklist at every conventional name and still bind none of it, because nothing declared a project. Measured on one such folder: adding a two-line `project.yaml` moved a run from 316 findings to 369, took `rail-not-classified` from 40 to 0 (their own lexicon recognises rails the built-ins miss), and surfaced 95 further `test-point-coverage` findings. The CLI and a `Makefile` passing the flags by hand were unaffected; only the server, which discovers config rather than being handed it, ran on the built-in vocabulary. It reported an `invalid_argument` badge and served an authoritative-looking review anyway, which is the shape this page warns about above: an answer that still looks like an answer.
+**The descriptor is what binds config, and its absence fails exactly that way.** A team folder can hold `conventions.yaml`, `profiles/`, `params/` and a checklist at every conventional name and still bind none of it, because nothing declared a project. Measured on one such folder: adding a two-line `project.yaml` moved a run from 316 findings to 369, took `rail-not-classified` from 40 to 0 (their own lexicon recognises rails the built-ins miss), and surfaced 95 further `test-point-coverage` findings. The CLI and a `Makefile` passing the flags by hand were unaffected; only the server, which discovers config rather than being handed it, ran on the built-in vocabulary. It reported an `invalid_argument` badge and served an authoritative-looking review anyway, failing in the shape this page warns about above, where an answer still looks like an answer.
 
 Two operational notes follow from that. A design's `name` is an **id** (lowercase, digits, `-`, `_`, `.`), not a label; the human-readable string belongs in `title`, and a name with spaces is rejected. And a rejected descriptor is worth treating as a hard failure rather than a badge, because every downstream number is quietly computed against a different configuration.
 
 That boundary is load-bearing rather than tidy. An analysis tier in the machine-wide file would apply
-to every design a CLI opened, which is exactly the bug per-design config fixed: one team's vocabulary
+to every design a CLI opened, reproducing exactly the bug per-design config fixed: one team's vocabulary
 reaching another team's board, correct in isolation and aimed at the wrong design. `agni.yaml`
 rejects unknown keys so that reaching for `conventions:` there is an error rather than a silent
 global.
 
-One `AnalysisConfig` carries the analysis tier everywhere it appears — on a `Project`, on a `Design`,
-and on a request — so adding a tier is one schema change every surface gets. Which fields each
+One `AnalysisConfig` carries the analysis tier everywhere it appears (on a `Project`, on a `Design`,
+and on a request), so adding a tier is one schema change every surface gets. Which fields each
 populates is what keeps the scopes apart: a `Design` sets only its intent, because a board has its own
 architecture where conventions and profiles describe the team. The message's own header in
 `protos/agni/v1/webapi/config.proto` carries the rest.
 
 Whether a given host can RESOLVE the ref-shaped tiers is a property of the deployment, not of the
 schema. A host wired with no resolver still composes a value-shaped config with no file access, and
-REFUSES one naming a directory rather than dropping the tier — see the C22 amendment in
+REFUSES one naming a directory rather than dropping the tier. See the C22 amendment in
 `CONSTRAINTS.md`.
 
 ## Sharing config between projects
@@ -146,7 +146,7 @@ own id rules, it is a project with nothing under `designs/`.
 
 The chain composes **root-first**, so a project overrides what it inherits, matching every other layer
 here (a request overrides a project, a project overrides the deployment default). The ref-shaped tiers
-ACCUMULATE — inheriting a profile set and declaring your own runs both — while the naming convention
+ACCUMULATE, so inheriting a profile set and declaring your own runs both, while the naming convention
 REPLACES, because two naming vocabularies cannot both be in effect and the nearest declaration wins.
 
 **Inheritance is declared, never ambient, and that is the whole safety property.** A deployment-wide
@@ -169,7 +169,7 @@ directory to walk up from.
 That layering is load-bearing enough to be worth stating as a rule: **everything that is true only
 of storing projects in directories lives behind the port.** Tree walking, the descriptor file names,
 design-folder-relative paths, and the upward walk are all facts about one storage shape. They live
-in `internal/projects`, and nothing above the port imports it — including the CLI, which reaches
+in `internal/projects`, and nothing above the port imports it, including the CLI, which reaches
 projects through the same `ProjectService` a browser does.
 
 Artifacts are named by a single URI, `mount://<mount>/<path>`, so a design's entry and its companions
@@ -196,8 +196,8 @@ decides what is IN SCOPE cannot use "absent" as its error value, because everyth
 reasoning about a smaller world and has no way to know the world was cut down.
 
 **Absent and malformed have to stay distinct at every layer that touches config, and the CLI now
-draws it once** (`cliResolveProject`). Absent is ordinary — most files on a mounted folder belong to
-no project and run against the fallback. Malformed is refused, matching how the served surfaces
+draws it once** (`cliResolveProject`). Absent is ordinary, since most files on a mounted folder belong
+to no project and run against the fallback. Malformed is refused, matching how the served surfaces
 behave and how the other config tiers already fail. An unknown mount is a third thing and stays
 quiet: nothing to resolve against is not the same as something broken.
 
@@ -237,14 +237,14 @@ elsewhere:
 - it **compiles**, because an unused parameter is legal;
 - it **passes the service tests**, because those construct the service and assert on what the REQUEST
   carries;
-- a nil resolver is a **supported state** — it means "this deployment resolves no projects" — so the
+- a nil resolver is a **supported state**, meaning "this deployment resolves no projects", so the
   code took a real, tested path, just the wrong one for a caller that had handed one over.
 
 That last point is the general shape: **a collaborator whose absence is meaningful degrades instead of
 erroring.** A nil `ProjectStore`, a nil `ConfigResolver`, a nil datasheet provider all mean something
-here, which is why they cannot announce their own absence. The guard is a test at the surface that
-uses them, asserting the OUTCOME a project's config is supposed to produce — not one at the layer that
-composes it, which was correct throughout.
+here, so none of them can announce its own absence. The guard is a test at the surface that
+uses them, asserting the OUTCOME a project's config is supposed to produce, rather than one at the
+layer that composes it, which was correct throughout.
 
 The same shape bit the CLI's non-service commands from the other end: `readDesign` built its loader
 with no read options at all, so six commands read under the built-in vocabulary. One choke point, one
@@ -261,5 +261,5 @@ there must be a way to view a project's design under the plain built-in catalog,
 finding the engine's opinion or my project's" is a question a reviewer will ask.
 
 A design that resolves to no project is a normal state, not a failure. It gets the plain viewer and
-the built-in catalog, which is the whole safety property: a design with no project has no project
+the built-in catalog. That carries the whole safety property: a design with no project has no project
 config to apply, so it cannot be checked against another project's rules.
