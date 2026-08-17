@@ -47,7 +47,7 @@ excluded from the "is there a logic input" count. The exclusion is PER-PIN, not 
 a real IC input that merely carries a clamp diode still fires (the input is genuinely
 floating), only a net whose input pins are all diode terminals goes quiet. (Without this, a
 pair of steering-diode cathodes tied together read as an all-input net and false-fired; on
-one real netlist that was 36 findings, every one a diode network.)
+one real industrial netlist that was 36 findings, every one a diode network.)
 
 ### Query structure
 
