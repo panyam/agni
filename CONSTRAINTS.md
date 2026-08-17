@@ -180,9 +180,12 @@ points move together: island, template hole, `ViewSink` field, `main.ts` wiring.
 
 **Verify:** no client-side router; `solid-js` appears only in island/adapter package
 dependencies; each interactive surface is an island mounted into a server-rendered hole;
-`cd web && pnpm exec vitest run src/composition.test.ts` boots the real entry point against the real
-`ViewerPage.html` and fails on a hole that nothing mounts, a `ViewSink` port nothing wires, or a
-client the presenter never receives.
+`cd web && pnpm exec vitest run src/composition.test.ts src/browse.test.ts src/datasheets.test.ts`
+boots each page's real entry point against its real template and fails on a hole that nothing mounts,
+a `ViewSink` port nothing wires, or a client the presenter never receives. **Every page has a
+composition root, so every page needs one of these**: the viewer's test was the only one for a while,
+and in that time the browse page's root went untested and the workbench's shipped a deep link that
+recorded nothing (agni issues 136 and 318).
 
 ## C12: Render style is injectable data, not scattered literals
 **Rule:** Colors and the default font are view **policy expressed as data**: a single

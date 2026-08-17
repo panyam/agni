@@ -68,8 +68,20 @@ const REPLIES: Record<string, unknown> = {
     design: { name: "projects/demo/designs/board", entryUri: "mount://m/d/b.edn" },
     project: { name: "projects/demo", title: "Demo project", conventionsUri: "mount://m/conventions.yaml" },
   },
-  ListRules: { rules: [] },
-  CheckDesign: { findings: [] },
+  ListRules: {
+    rules: [{ name: "duplicate-ref-des", severity: "error", summary: "a designator claimed twice", available: true }],
+  },
+  CheckDesign: {
+    findings: [
+      {
+        rule: "duplicate-ref-des",
+        severity: "error",
+        subject: { kind: "component", ref: "R1" },
+        message: "ref-des claimed by 2 placements",
+        sheets: ["s1"],
+      },
+    ],
+  },
   GetLayoutReport: {},
   GetComponentParams: { components: [] },
   GetExpectations: { expectations: [] },
@@ -209,5 +221,38 @@ describe("opening a design feeds the landing page's Recent list", () => {
     const got = loadRecents();
     expect(got.map((r) => `${r.mount}/${r.path}`), "the deep-linked design was not recorded").toContain("m/d/b.edn");
     expect(got[0].kind).toBe("design"); // routed back to the viewer, not the workbench
+  });
+});
+
+// Run checks, click a finding, watch it locate. This is agni issue 136's "open design → Review →
+// run → click a finding → highlight" flow, minus the pixels: every step here is a real click on the
+// real page driving the real composition root, and the observable is the rpc the presenter makes.
+//
+// What it cannot assert is whether anything lit up on the canvas, which needs WebGL and a browser.
+// That half stays on the successor issue, and the split is the point: the wiring is testable here
+// and the rendering is not, so testing the wiring here costs nothing and covers the failure mode
+// that has actually shipped (a panel wired to a client it never received).
+describe("run checks, then locate a finding", () => {
+  it("runs the check the panel offers", async () => {
+    const run = document.querySelector(".checks-run") as HTMLButtonElement | null;
+    expect(run, "the checks panel rendered no Run button").not.toBeNull();
+    run!.click();
+    await vi.waitFor(() => expect(called).toContain("CheckDesign"), 5000);
+  });
+
+  it("highlights the subject when its finding is clicked", async () => {
+    const locate = await vi.waitFor(() => {
+      const b = document.querySelector(".check-locate") as HTMLButtonElement | null;
+      expect(b, "no finding row rendered to click").not.toBeNull();
+      return b!;
+    }, 5000);
+    expect(locate.textContent).toContain("R1");
+
+    // Counted rather than tested for membership: the deep-link restore already highlights, so
+    // "HighlightSheet appears in called" is true before the click and the assertion would pass with
+    // the handler unwired. It did, on the first run of this test.
+    const before = called.filter((m) => m === "HighlightSheet").length;
+    locate.click();
+    await vi.waitFor(() => expect(called.filter((m) => m === "HighlightSheet").length).toBeGreaterThan(before), 5000);
   });
 });
