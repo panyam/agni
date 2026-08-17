@@ -3,12 +3,12 @@ package check
 import (
 	"testing"
 
-	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/datasheet/param"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // efuseSpec is a seeded spec whose datasheet declares device_class "efuse" (the class no ref-des
-// prefix or description keyword on a real automotive EVT export can establish — WS10-013). It carries a
+// prefix or description keyword on a real export can establish — WS10-013). It carries a
 // source doc so the projected fact cites it, and no parameters (the class is a PartSpec-level field).
 func efuseSpec(mpn string) *parampb.PartSpec {
 	return &parampb.PartSpec{

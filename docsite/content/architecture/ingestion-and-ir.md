@@ -236,7 +236,7 @@ Reading a proprietary binary directly, by reverse-engineering it, sits low on th
 - EULAs typically prohibit reverse engineering. Breaching one risks contract claims.
 - Anti-circumvention law applies if any encryption or protection is involved (encrypted SPICE, protected files), a separate and worse category.
 - Trade-secret and copyright exposure. Clean-room interop has some footing but is jurisdiction-dependent and expensive.
-- Procurement review. Aerospace, defense, and automotive buyers run legal review, and a legally questionable ingestion method gets rejected there regardless of actual litigation risk.
+- Procurement review. Aerospace, defense, and industrial buyers run legal review, and a legally questionable ingestion method gets rejected there regardless of actual litigation risk.
 
 So the ingest ordering prefers sanctioned paths, in this order:
 

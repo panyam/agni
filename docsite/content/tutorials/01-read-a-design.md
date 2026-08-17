@@ -17,7 +17,7 @@ This is the design every rung runs against. Drag to pan, scroll to zoom.
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-schematic.svg"
              caption="Gateway ECU (tutorial board): 12V in, 3V3 and 1V8 rails, an MCU, a CAN transceiver, an I2C EEPROM, and a crystal"></agni-viewer>
 
-A small automotive gateway. Power comes in from a connector at 12 V, a buck regulator drops it to
+A small industrial gateway. Power comes in from a connector at 12 V, a buck regulator drops it to
 3.3 V and an LDO drops that to 1.8 V. An MCU sits on both rails and talks to a CAN transceiver, an
 I2C EEPROM, and a crystal.
 

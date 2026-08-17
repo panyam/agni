@@ -19,7 +19,7 @@ survive.
 
 **Reverse current (backfeed)**: two sources share a rail, or a rail is switched off while something
 downstream still holds charge. Current flows back up a path that was only ever designed to carry it
-forward, powering a domain that is supposed to be dead. That is why an automotive board carries an
+forward, powering a domain that is supposed to be dead. That is why an industrial board carries an
 ORing FET or an ideal-diode controller.
 
 Both need a **directional** element: something that conducts one way and not the other. A series

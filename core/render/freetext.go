@@ -19,7 +19,7 @@ import (
 // The fit applies ONLY to a documentation page (no component placements). A schematic sheet carries
 // stand-alone multi-line annotation notes that are not document columns, and squeezing one against
 // its neighbor or the frame margin shrinks legible text to an unreadable blob; the placement gate
-// keeps the fit off every schematic sheet (WS7-041 — verified over the 82-sheet automotive
+// keeps the fit off every schematic sheet (WS7-041 — verified over the 82-sheet industrial
 // design: the fit engaged on 18 schematic notes, some down to 0.3x, and only the TOC benefits).
 //
 // The result maps each multi-line free-text label to that shared factor; it is nil when nothing

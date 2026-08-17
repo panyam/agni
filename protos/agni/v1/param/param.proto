@@ -365,7 +365,7 @@ message Parameter {
   ConditionCoverage condition_coverage = 8;
 
   // The variant/grade this row covers when the document specs several ("LM1117-3.3",
-  // an automotive grade). Empty when the row covers every variant the document
+  // an industrial grade). Empty when the row covers every variant the document
   // covers.
   string applies_to = 9;
 

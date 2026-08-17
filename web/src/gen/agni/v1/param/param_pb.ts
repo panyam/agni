@@ -580,7 +580,7 @@ export type Parameter = Message<"agni.v1.param.Parameter"> & {
 
   /**
    * The variant/grade this row covers when the document specs several ("LM1117-3.3",
-   * an automotive grade). Empty when the row covers every variant the document
+   * an industrial grade). Empty when the row covers every variant the document
    * covers.
    *
    * @generated from field: string applies_to = 9;

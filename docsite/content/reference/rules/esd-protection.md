@@ -26,7 +26,7 @@ after winter, latent damage that surfaces weeks later.
 
 A signal is treated as protected two ways: a discrete TVS clamps it (within a 2-hop series reach),
 OR an IC on the net carries a datasheet ESD rating at or above the credit floor (IC-integrated ESD,
-WS3-073, the common automotive posture). The IC path needs a seeded PartSpec (`--params`), so on a
+WS3-073, the common industrial posture). The IC path needs a seeded PartSpec (`--params`), so on a
 design read with no datasheets it is silent and the rule behaves as before. The IC path credits ONLY a
 SYSTEM-level rating (IEC 61000-4-2), NOT a handling model (HBM/CDM): the rating's test model is a
 declared `esd_test_model` attribute (WS3-077), and an unstated or handling rating never credits —

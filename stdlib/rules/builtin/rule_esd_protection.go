@@ -26,7 +26,7 @@ var esdProtection = &check.Rule{
 	Eval: func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			// A discrete TVS clamps it, OR an IC on the signal carries a datasheet ESD rating
-			// (IC-integrated ESD, the common automotive posture); either protects it (WS3-073).
+			// (IC-integrated ESD, the common industrial posture); either protects it (WS3-073).
 			// A Zener clamp is NOT counted here — it is characterized separately by
 			// esd-clamp-not-tvs (WS3-078), so this rule flags only a truly unprotected net.
 			return check.ExternalSignalNet(m, n) && !check.TVSReachable(m, n) && !check.ICESDRated(m, n) && !check.ZenerReachable(m, n)

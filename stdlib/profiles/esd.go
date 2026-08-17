@@ -42,7 +42,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 
 	// Three ways a net counts as protected, which is what two rules sharing a head spells in datalog.
 	// A discrete TVS is the real answer; an IC on the net carrying a datasheet ESD rating is the
-	// common automotive posture (WS3-073); a Zener is NOT adequate ESD protection but is deliberately
+	// common posture (WS3-073); a Zener is NOT adequate ESD protection but is deliberately
 	// exempt here, because esd-clamp-not-tvs (WS3-078) characterizes that case separately and the two
 	// rules partition these nets between them. Crediting it here is what keeps this requirement from
 	// double-reporting a net the catalog already speaks about.
