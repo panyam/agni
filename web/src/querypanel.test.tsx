@@ -324,3 +324,63 @@ describe("resizable result columns", () => {
     expect(h.el.querySelector(".query-sort-ind")).toBe(before);
   });
 });
+
+// The walk: an answer becomes the next question. A click on the drawing already writes a query about
+// what was clicked, but the answers it produced were inert — the reader could highlight a part from
+// a result row and nothing more. Selecting a cell names it and offers the served preset for its
+// kind, so pin → net → parts → other nets is a loop the reader can go round without typing.
+describe("walking from a result row", () => {
+  const PRESETS = [
+    { kind: "component", query: 'component-on-net("{ref}", ?net) => ?net', teaches: "projection" },
+    { kind: "net", query: 'component-on-net(?ref, "{net}") => ?ref', teaches: "join" },
+  ];
+  const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  const netCell = (el: HTMLElement) =>
+    [...el.querySelectorAll(".query-cell-locate")].find((td) => td.textContent?.includes("SDA"))!
+      .querySelector<HTMLButtonElement>(".query-locate")!;
+
+  it("names the picked cell and offers the question about it", () => {
+    const { el, push, panel } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    pushLocatable(push);
+    expect(el.querySelector(".query-selection")).toBeNull(); // nothing picked yet
+
+    el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // the R1 component cell
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("R1");
+    expect(el.querySelector(".query-ask")!.textContent).toContain("What is R1 connected to?");
+  });
+
+  it("takes the hop: the question fills the box with the filled preset and runs it", () => {
+    const { el, push, panel, onRun } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    pushLocatable(push);
+    netCell(el).click();
+
+    el.querySelector<HTMLButtonElement>(".query-ask")!.click();
+    const asked = 'component-on-net(?ref, "SDA") => ?ref';
+    expect(onRun).toHaveBeenCalledWith(asked);
+    // The query stays in the box, editable: the hop is meant to teach the sentence that made it.
+    expect(box(el).value).toBe(asked);
+  });
+
+  // A cell click still locates — the walk is added to that behaviour, not swapped for it, so the
+  // reader can scan a result set highlighting each row without every click replacing the table.
+  it("still locates the cell it selects", () => {
+    const { el, push, panel, onLocate } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    pushLocatable(push);
+    netCell(el).click();
+    expect(onLocate).toHaveBeenCalledWith("net", "SDA", undefined, LocateReason.UNSPECIFIED);
+  });
+
+  // The canvas is the other picker; it pushes its selection through the view, and the bar names it
+  // the same way. A pin has no preset here, so the bar names the pick and asks nothing rather than
+  // offering a button that would run a guess.
+  it("names a selection pushed by the canvas, and offers no question without a preset", () => {
+    const { el, panel } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    panel.view.setSelection({ kind: "pin", ref: "U7", pin: "12" });
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("U7.12");
+    expect(el.querySelector(".query-ask")).toBeNull();
+  });
+});

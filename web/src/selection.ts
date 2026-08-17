@@ -134,3 +134,42 @@ export function labelFor(sel: Selection): string {
       return sel.busId ?? "";
   }
 }
+
+// selectionFromCell reads a query result cell, the second way a reader names an entity. The panel
+// knows a cell's kind because the server typed the column (webapi RunQueryResponse.column_kinds,
+// derived from the relation catalog's arg labels), and those kind strings are check.KindComponent /
+// check.KindNet, the same vocabulary a picked element carries.
+//
+// A scalar cell, or an entity kind with no selection shape yet, yields null: the cell still locates,
+// it just names nothing to ask about. A pin column is the notable absence — the server types it
+// scalar today, and a pin needs its row's ref as well as its own cell, so walking from one is its
+// own piece of work.
+export function selectionFromCell(kind: string, subject: string): Selection | null {
+  if (!subject) return null;
+  switch (kind) {
+    case "component":
+      return { kind: "component", ref: subject };
+    case "net":
+      return { kind: "net", net: subject };
+    default:
+      return null;
+  }
+}
+
+// askLabel is the plain-language question the preset for this selection answers, for the button that
+// takes the next hop. The copy lives on the client for the same reason the relation-group labels and
+// the locate-reason messages do: the SERVER owns the query (it names relations defined there), the
+// client owns how it is worded on screen.
+export function askLabel(sel: Selection): string {
+  const name = labelFor(sel);
+  switch (sel.kind) {
+    case "pin":
+      return `What is ${name} wired to?`;
+    case "component":
+      return `What is ${name} connected to?`;
+    case "net":
+      return `What is on ${name}?`;
+    case "bus":
+      return `What is in ${name}?`;
+  }
+}

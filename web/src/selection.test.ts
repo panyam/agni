@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { bestOf, fillEntityQuery, labelFor, pickAt, selectionFromElement, type Selection } from "./selection.js";
+import { askLabel, bestOf, fillEntityQuery, labelFor, pickAt, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
 
 function el(attrs: Record<string, string>): Element {
   const e = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
@@ -101,5 +101,31 @@ describe("labelFor", () => {
     expect(labelFor({ kind: "pin", ref: "U7", pin: "12" })).toBe("U7.12");
     expect(labelFor({ kind: "component", ref: "R1" })).toBe("R1");
     expect(labelFor({ kind: "net", net: "SDA" })).toBe("SDA");
+  });
+});
+
+// A result cell is the second way a reader names an entity, and it has to produce the same value a
+// click on the drawing does — otherwise the walk needs its own copy of everything downstream.
+describe("reading a result cell", () => {
+  it("reads the kinds the server types a column with", () => {
+    expect(selectionFromCell("component", "R1")).toEqual({ kind: "component", ref: "R1" });
+    expect(selectionFromCell("net", "SDA")).toEqual({ kind: "net", net: "SDA" });
+  });
+
+  // A scalar column ("") is not clickable at all, and a pin column is typed scalar today: a pin needs
+  // its row's ref as well as its own cell, so it cannot be read from one cell.
+  it("is null for a cell that names no entity", () => {
+    expect(selectionFromCell("", "3.3")).toBeNull();
+    expect(selectionFromCell("pin", "12")).toBeNull();
+    expect(selectionFromCell("net", "")).toBeNull();
+  });
+});
+
+describe("wording the next question", () => {
+  it("asks about each kind in its own terms", () => {
+    expect(askLabel({ kind: "pin", ref: "U7", pin: "12" })).toBe("What is U7.12 wired to?");
+    expect(askLabel({ kind: "component", ref: "R1" })).toBe("What is R1 connected to?");
+    expect(askLabel({ kind: "net", net: "SDA" })).toBe("What is on SDA?");
+    expect(askLabel({ kind: "bus", busId: "D[7:0]" })).toBe("What is in D[7:0]?");
   });
 });

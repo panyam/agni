@@ -13,6 +13,7 @@ import {
   relationTemplate,
 } from "./query.js";
 import { renderMarkdown } from "./markdown.js";
+import { type Selection, askLabel, fillEntityQuery, labelFor, selectionFromCell } from "./selection.js";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
 // server's /relation-docs/ route BEFORE markdown rendering. Making them root-absolute means the
@@ -33,8 +34,11 @@ function QueryPanel(props: {
   state: () => QueryResult;
   relations: () => RelationItem[];
   examples: () => ExampleItem[];
+  entityQueries: () => EntityQueryItem[];
   locateNote: () => string;
   prefill: () => { text: string; n: number };
+  selection: () => Selection | null;
+  setSelection: (sel: Selection | null) => void;
   onRun: (text: string) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
 }) {
@@ -125,6 +129,29 @@ function QueryPanel(props: {
     resetForRun();
     props.onRun(e.query);
   };
+  // presetFor is the served click-to-ask query for a selection's kind, or undefined before the
+  // catalog has arrived (or for a kind the server writes no preset for).
+  const presetFor = (kind: string): EntityQueryItem | undefined => props.entityQueries().find((p) => p.kind === kind);
+  // askAbout takes the next hop: fill the box with the preset for what is selected, and run it. It is
+  // runExample with the values spliced in, and it leaves the same editable query behind, because a
+  // hop is meant to teach the sentence that made it as well as answer the question.
+  const askAbout = (sel: Selection) => {
+    const preset = presetFor(sel.kind);
+    if (!preset || props.state().loading) return;
+    const q = fillEntityQuery(preset.query, sel);
+    setText(q);
+    resetForRun();
+    props.onRun(q);
+  };
+  // pickCell is a click on a result cell (or on one of its sheet badges). It locates the entity, as
+  // it always has, AND selects it — so the answer to one question becomes the subject of the next,
+  // which is what makes the table a place to walk from rather than a dead end. A cell whose kind has
+  // no selection shape (a scalar never reaches here; a future entity kind might) locates and
+  // deselects rather than leaving the bar naming the previous pick.
+  const pickCell = (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => {
+    props.setSelection(selectionFromCell(kind, subject));
+    props.onLocate(kind, subject, sheet, reason);
+  };
   // cmpCells is a numeric-aware string compare: two numeric cells sort by value (so 9 < 10), any
   // other pair sorts lexicographically. sortRows applies it, carrying each row's original index.
   const cmpCells = (a: string, b: string): number => {
@@ -197,6 +224,34 @@ function QueryPanel(props: {
           <span class="query-hint">⌘/Ctrl+Enter</span>
         </div>
       </div>
+
+      {/* The selection bar names what the reader last picked — on the drawing or in the results — and
+          offers the one question there is a served preset for. It is the visible half of the walk:
+          without it, a click on a result cell highlights something and says nothing about where the
+          reader can go from there. */}
+      <Show when={props.selection()}>
+        {(sel) => (
+          <div class="query-selection">
+            <span class="query-selection-what">
+              <span class="query-selection-kind">{sel().kind}</span>
+              <span class="query-selection-name">{labelFor(sel())}</span>
+            </span>
+            <Show when={presetFor(sel().kind)}>
+              {(preset) => (
+                <button
+                  type="button"
+                  class="query-ask"
+                  disabled={props.state().loading}
+                  title={`${fillEntityQuery(preset().query, sel())}\n\n${preset().teaches}`}
+                  onClick={() => askAbout(sel())}
+                >
+                  {askLabel(sel())}
+                </button>
+              )}
+            </Show>
+          </div>
+        )}
+      </Show>
 
       {/* Left-edge handle opens the helper drawer; it hides while the drawer is open. */}
       <button
@@ -388,7 +443,7 @@ function QueryPanel(props: {
                                   type="button"
                                   class="query-locate"
                                   title={`locate ${kind} ${cell}`}
-                                  onClick={() => props.onLocate(kind, cell, undefined, reason)}
+                                  onClick={() => pickCell(kind, cell, undefined, reason)}
                                 >
                                   {cell}
                                 </button>
@@ -399,7 +454,7 @@ function QueryPanel(props: {
                                       title={`show sheet ${b.name}`}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        props.onLocate(kind, cell, b.id, reason);
+                                        pickCell(kind, cell, b.id, reason);
                                       }}
                                     >
                                       {b.name}
@@ -458,9 +513,13 @@ export function queryPanelIsland(
   // identical, and an effect over identical text does not fire.
   const [prefill, setPrefill] = signalView<{ text: string; n: number }>({ text: "", n: 0 });
   let prefills = 0;
-  // The click-to-ask presets, held here because the panel is what runs them; the host looks one up
-  // by the picked entity's kind (see entityQuery).
-  let entityQueries: EntityQueryItem[] = [];
+  // The click-to-ask presets, held as a signal because the panel now RENDERS one (the ask button's
+  // wording and its hover show the query and what it teaches) as well as running it; the host still
+  // looks one up by the picked entity's kind (see entityQuery).
+  const [entityQueries, setEntityQueries] = signalView<EntityQueryItem[]>([]);
+  // selection is what the reader last picked. The canvas pushes one through the view; a click on a
+  // result cell sets it from inside the panel, which is why the setter goes down as a prop.
+  const [selection, setSelection] = signalView<Selection | null>(null);
   const onLocate = handlers.onLocate ?? (() => {});
   // A fresh query result clears any stale locate note from the previous run.
   const setStateClearing = (s: QueryResult) => {
@@ -475,8 +534,11 @@ export function queryPanelIsland(
         state={state}
         relations={relations}
         examples={examples}
+        entityQueries={entityQueries}
         locateNote={locateNote}
         prefill={prefill}
+        selection={selection}
+        setSelection={setSelection}
         onRun={handlers.onRun}
         onLocate={onLocate}
       />
@@ -491,8 +553,9 @@ export function queryPanelIsland(
       setExamples,
       setLocateNote,
       setQuery: (text: string) => setPrefill({ text, n: ++prefills }),
-      setEntityQueries: (presets: EntityQueryItem[]) => void (entityQueries = presets),
-      entityQuery: (kind: string) => entityQueries.find((p) => p.kind === kind)?.query ?? "",
+      setEntityQueries,
+      setSelection,
+      entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind)?.query ?? "",
     },
   };
 }
