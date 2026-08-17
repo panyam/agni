@@ -730,3 +730,46 @@ evidence of emptiness.
 **Reopen if** a mount is ever expensive to walk enough that pruning at page load costs more than the
 empty root did. The answer then is a cache, not an exemption. The second half of this, that the rule is "no file this client can open" rather than "no design", was
 settled a week later: the request carries the kinds, and the datasheets tree prunes by the same walk.
+
+---
+
+## Docs search is a static index over the built site, not a hosted service
+
+**Question.** The docsite had no search. Should it use Algolia DocSearch (free for open-source
+docs, and this repo qualifies), a hand-rolled client-side index, or a static index generator?
+
+**Answer. A static index (Pagefind), built over `dist/` as the last step of `make build`.** The
+docsite is 170 pages and about 136k words, which is the size where the answer is not obvious, so it
+was measured rather than argued.
+
+A hand-rolled Lunr-style index is the option to rule out first: a genuine full-text index over this
+corpus runs to megabytes of JSON that must download in full before the first query resolves.
+Trimming it to titles and headings gets it small again, but the value of these pages is in the
+gotchas buried mid-page, so a title-only index answers the wrong question. Pagefind's index is 1.6MB
+on disk, sharded into 11 chunks plus one fragment per page, and a query fetches the WASM, one or two
+shards, and one fragment per result shown.
+
+Algolia would give better relevance and real typo tolerance. It was declined because it puts a third
+party and a network round-trip in the path of a core navigation feature, and it needs a crawler
+config kept in sync with the nav. Neither cost buys anything the static index does not already do
+well enough on a corpus this size.
+
+**The identifier question, which is the one worth not re-litigating.** The obvious objection is that
+this docsite is full of `readDesign`, `--symbol-path` and `nav_test.go`, and that a word-based index
+will not find them. Measured: it does. camelCase is indexed as ONE token, so `readDesign`,
+`readdesign`, `READDESIGN` and `readDesigns` all return the same single correct page. Hyphens,
+underscores and dots DO split, so `--symbol-path` degrades to `symbol` AND `path` unless quoted;
+quoting restores it because the parts stay adjacent. An alias layer was prototyped and works (five
+mechanisms all index, including `display:none` text), and was NOT shipped: it is per-page
+maintenance for a problem that only affects hyphenated flags, quoting already fixes those, and
+Pagefind indexing hidden text makes an alias block indistinguishable from keyword stuffing on a
+public site.
+
+**What this leaves open.** A term with no exact match anywhere degrades to a loose match instead of
+returning nothing, so `agniRun` (a build-time directive that never reaches the rendered HTML)
+matches all 170 pages. `termSimilarity` only reorders and cannot filter this; result score does not
+separate a valid rare term from a garbage one either. A "no exact match" guard would have to be
+built on the client.
+
+**Reopen if** the corpus grows enough that a 1.6MB index stops sharding usefully, or if typo
+tolerance turns out to matter more than the hosted-dependency cost.

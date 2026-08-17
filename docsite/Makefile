@@ -1,4 +1,4 @@
-.PHONY: run build components node-deps gh-pages clean
+.PHONY: run build components node-deps search-index gh-pages clean
 
 # Dev server with live reload on http://localhost:8085/agni/. Builds the
 # playground bundles first so a page that opts into one (front-matter
@@ -6,9 +6,11 @@
 run: components
 	AGNI_DOCS_ENV=dev AGNI_DOCS_PORT=:8085 go run .
 
-# Install the node deps the playground build needs (esbuild). Idempotent.
+# Install the node deps the playground build and the search index need (esbuild,
+# pagefind). Idempotent. Both are checked, because a clone that predates pagefind
+# has node_modules/esbuild already and would otherwise skip the install.
 node-deps:
-	@[ -d node_modules/esbuild ] || pnpm install
+	@[ -d node_modules/esbuild ] && [ -d node_modules/pagefind ] || pnpm install
 
 # Build the interactive docs components (esbuild) into static/js/gen and emit
 # the templates/gen.*.html includes BasePage.html pulls in.
@@ -23,6 +25,18 @@ build: components
 	AGNI_DOCS_ENV=production go run . -build
 	rm -rf dist/static
 	cp -r static dist/static
+	$(MAKE) search-index
+
+# Build the client-side search index over the BUILT site, into dist/pagefind.
+# Indexing dist rather than content/ is deliberate: _hidden/ pages never reach dist, so they
+# are excluded from the index without a second exclusion list to keep in sync. Pagefind drops
+# <nav>, <header> and <footer> on its own, so the index holds page prose and not the sidebar
+# repeated 170 times.
+#
+# This runs as the last step of `build` and NOT in `gh-pages`, so a local `make build` and the
+# deploy produce the same tree. gh-pages just pushes dist.
+search-index: node-deps
+	pnpm exec pagefind --site dist
 
 clean:
 	rm -rf dist static/js/gen

@@ -1477,3 +1477,129 @@ pre code {
     opacity: 0.85;
     pointer-events: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Search (Pagefind)
+
+   The trigger lives in the header, which is a coloured bar with white text, so it
+   matches .theme-toggle / .btn-github rather than the page palette. The overlay
+   below it is page-coloured, and the Pagefind UI is themed by mapping ITS custom
+   properties onto ours, so dark mode falls out of the existing :root.dark block
+   instead of needing a second set of rules.
+   --------------------------------------------------------------------------- */
+
+.search-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-trigger:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.search-trigger .search-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.search-trigger-key {
+    padding: 0.05rem 0.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
+/* On narrow screens the trigger collapses to just the magnifier. */
+@media (max-width: 720px) {
+    .search-trigger-label,
+    .search-trigger-key {
+        display: none;
+    }
+}
+
+.search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 6vh 1rem 1rem;
+}
+
+.search-overlay[hidden] {
+    display: none;
+}
+
+.search-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.search-panel {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 1rem;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.search-unavailable {
+    margin-top: 0.75rem;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+/* Lock the page behind the overlay so scrolling does not leak through. */
+body.search-open {
+    overflow: hidden;
+}
+
+/* Pagefind's own theming hooks, mapped onto the site palette. */
+.search-panel .pagefind-ui {
+    --pagefind-ui-primary: var(--accent-color);
+    --pagefind-ui-text: var(--text-color);
+    --pagefind-ui-background: var(--bg-color);
+    --pagefind-ui-border: var(--border-color);
+    --pagefind-ui-tag: var(--bg-light);
+    --pagefind-ui-border-width: 1px;
+    --pagefind-ui-border-radius: 8px;
+    --pagefind-ui-font: inherit;
+}
+
+/* Pagefind's stock highlight is a hard yellow that fights the warm palette and is
+   unreadable on the dark background. Tint the accent instead and keep the text colour. */
+.search-panel .pagefind-ui mark {
+    background: color-mix(in srgb, var(--accent-color) 28%, transparent);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 0.1em;
+}
+
+/* The stock focus ring is browser blue. */
+.search-panel .pagefind-ui__search-input:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 1px;
+    border-color: var(--accent-color);
+}
