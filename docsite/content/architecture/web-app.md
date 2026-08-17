@@ -345,6 +345,24 @@ row produce one value.
 A click generates a query and runs it, rather than opening a bespoke panel. The query is left in the
 box, editable, so using the viewer teaches the language instead of routing around it.
 
+### Walking: an answer becomes the next question
+
+A result cell is the second way a reader names an entity. The server types each answer column with an
+entity kind (`RunQueryResponse.column_kinds`, derived from the relation catalog's arg labels), so a
+component or net cell reads back as the same `Selection` a canvas click produces
+(`selectionFromCell`). Clicking one locates it, as it always did, and now also selects it: the query
+panel names what is selected and offers the served preset for that kind as a plain-language question.
+Taking it fills the box and runs, which lands the reader on a fresh set of cells to walk from.
+
+Two things are deliberate here. A cell click does not itself re-run the query, because scanning a
+result set and highlighting each row in turn is what the locate affordance was for, and a click that
+replaced the table would take that away. And the question's wording lives on the client (`askLabel`,
+beside the locate-reason copy) while the query it runs comes from the server, the same split every
+other served preset uses.
+
+A pin cell is the notable gap: a pin needs its row's ref as well as its own cell, so the server types
+a pin column scalar and the only way to select a pin today is to click one on the drawing.
+
 ## Wiring a new panel
 
 **FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island

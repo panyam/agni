@@ -269,7 +269,12 @@
        results table is its own scroll region, so a wide/tall result never drags the query box with
        it. The helper chrome (examples/relations) lives in a slide-in drawer, not in the flow. */
     #query-panel { height: 100%; }
-    .query { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+    /* The left gutter is the drawer handle's lane. The handle is absolutely positioned and floats at
+       the panel's vertical middle, so whatever content happens to be at that height sits under it —
+       with the panel short (its dock default), that was the Run button and the first characters of
+       the query. Padding the panel clears the lane; an absolutely positioned child resolves against
+       the padding box, so the handle and the drawer itself stay flush against the edge. */
+    .query { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding-left: 22px; }
     .query-input { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; }
     .query-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
     .query-actions { display: flex; align-items: center; gap: 8px; }
@@ -301,6 +306,16 @@
     .query-reldetail-close { border: 0; background: transparent; cursor: pointer; color: #889; font-size: 13px; padding: 0 2px; }
     .query-reldetail-body { padding: 6px 10px; font-size: 12px; overflow-x: auto; }
     .query-reldetail-body img { max-width: 100%; height: auto; }
+    /* The selection bar sits under the query box: what was picked on the left, the next question as a
+       button on the right. It shares the example chip's palette because it is the same kind of thing,
+       a query written for the reader. */
+    .query-selection { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+    .query-selection-what { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+    .query-selection-kind { color: #889; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .query-selection-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #334; overflow-wrap: anywhere; }
+    .query-ask { font: inherit; font-size: 11px; padding: 2px 9px; border: 1px solid #cdd8ea; background: #eef3fb; border-radius: 10px; cursor: pointer; color: #24457e; white-space: nowrap; }
+    .query-ask:hover:not(:disabled) { background: #e2ebfa; }
+    .query-ask:disabled { color: #aaa; cursor: not-allowed; }
     .query-error { color: #b00; font-size: 12px; white-space: pre-wrap; background: #fdf0f0; border: 1px solid #e0b4b4; border-radius: 4px; padding: 6px 8px; }
     .query-locate-note { color: #7a5b00; font-size: 12px; background: #fdf7e3; border: 1px solid #e6d9a8; border-radius: 4px; padding: 6px 8px; }
     .query-empty { color: #999; font-size: 12px; padding: 4px 0; }

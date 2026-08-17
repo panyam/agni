@@ -4,6 +4,7 @@
 import { type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 import type { SheetBadge } from "./findings.js";
+import type { Selection } from "./selection.js";
 
 export { LocateReason };
 
@@ -67,6 +68,10 @@ export interface QueryView {
   setQuery: (text: string) => void;
   // setEntityQueries hands over the click-to-ask presets from the server, keyed by entity kind.
   setEntityQueries: (presets: EntityQueryItem[]) => void;
+  // setSelection names the entity the reader last picked on the drawing, so the panel can say what
+  // is selected and offer the question to ask about it next. Clicking a result cell selects too,
+  // but the panel does that itself — this is the entry point for the OTHER picker, the canvas.
+  setSelection: (sel: Selection | null) => void;
   // entityQuery returns the preset for one entity kind, or "" before the catalog has arrived — in
   // which case a click still highlights and simply asks nothing, rather than running a guess.
   entityQuery: (kind: string) => string;

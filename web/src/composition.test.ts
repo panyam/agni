@@ -291,6 +291,11 @@ describe("clicking the drawing asks a question about what was clicked", () => {
         const box = document.querySelector<HTMLTextAreaElement>('[data-component="query"] textarea');
         expect(box?.value ?? "").toContain("PMIC_CORE_3V3");
       }, 3000);
+      // And the panel names what was picked, which is where the next hop is offered from. main.ts
+      // pushing the selection is a separate call from the one that writes the query, so it is a
+      // separate thing to leave unwired.
+      const named = document.querySelector('[data-component="query"] .query-selection-name');
+      expect(named?.textContent ?? "").toBe("PMIC_CORE_3V3");
     } finally {
       document.elementFromPoint = realElementFromPoint;
       wire.remove();

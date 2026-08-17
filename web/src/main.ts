@@ -254,6 +254,9 @@ class AppRoot extends BaseComponent {
     // language, rather than the language being a wall in front of the answers.
     svgView.onPick = (sel) => {
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+      // Naming the pick in the panel is what lets the reader keep going: the same bar carries the
+      // next question, and a click on a result cell replaces the name with whatever it landed on.
+      query.view.setSelection(sel);
       // The preset comes from the server (query.EntityQueries), so the query text is checked where
       // the relations it names are defined. Before the catalog arrives there is no preset, and a
       // click then highlights and asks nothing rather than running a guess.
