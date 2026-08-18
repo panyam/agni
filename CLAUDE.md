@@ -82,6 +82,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
 
+**`make browser-test` is a separate suite and is NOT in the gate.** It drives a real Chromium against
+a real server for the handful of assertions that need layout, because jsdom has none. Read
+`docsite/content/build/the-gate.md` for what belongs in it, and `build/evidence.md` for the two ways
+a layout assertion passes while proving nothing.
+
 **`make testall` is the full gate, and CI runs exactly it.** Read
 `docsite/content/build/the-gate.md` before trusting a run: it has three traps that make a red gate
 read green (a pipe swallowing the exit code, a commit-first ordering rule, and a per-clone

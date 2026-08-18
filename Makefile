@@ -3,7 +3,7 @@ GO ?= go
 # default; point EDN at your own design to run against real data.
 EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install stats check vet ir-model-check test web-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install stats check vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
 
 all: proto build
 
@@ -100,6 +100,20 @@ test:
 # Web unit tests: TypeScript typecheck + the vitest suite. No browser, no server.
 web-test:
 	cd web && pnpm run typecheck && pnpm test
+
+# Browser tests (agni issue 323): the handful of assertions that need real layout, run against a
+# real Chromium driving a real server. NOT part of testall, deliberately.
+#
+# jsdom has no layout engine, so the unit suite can prove what a panel renders and nothing about
+# what a reader can see; a CSS bug once shipped through a fully green run. This closes that, and
+# pays for it in speed and in needing a browser on the machine. Keeping it out of the gate means a
+# machine without one never turns CI red for a reason unrelated to the change under test.
+#
+# Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
+# The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
+# with a dev server you already have running.
+browser-test: ui
+	cd web && pnpm run test:browser
 
 # Regenerate the docsite rule + relation catalog (issue 14) from the shipped engine catalog and
 # the embedded per-rule/per-relation Detail markdown. The stdlib docs stay the source of truth;
