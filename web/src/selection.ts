@@ -163,6 +163,25 @@ export function selectionFromCell(kind: string, subject: string): Selection | nu
   }
 }
 
+// sameSelection reports whether two picks name the same thing, which is how a surface marks the one
+// it is currently showing. It is an identity test rather than a deep equality: the canvas pushes a
+// net with both its name and its id, while a result cell can only carry the name, and those two are
+// the same net. Comparing ids when BOTH carry one keeps the precise case precise (two nets can share
+// a display name across sheets) without making the imprecise case a mismatch.
+export function sameSelection(a: Selection | null, b: Selection | null): boolean {
+  if (!a || !b || a.kind !== b.kind) return false;
+  switch (a.kind) {
+    case "pin":
+      return a.ref === b.ref && a.pin === b.pin;
+    case "component":
+      return a.ref === b.ref;
+    case "net":
+      return a.netId && b.netId ? a.netId === b.netId : a.net === b.net;
+    case "bus":
+      return a.busId === b.busId;
+  }
+}
+
 // askLabel is the plain-language question the preset for this selection answers, for the button that
 // takes the next hop. The copy lives on the client for the same reason the relation-group labels and
 // the locate-reason messages do: the SERVER owns the query (it names relations defined there), the

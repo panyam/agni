@@ -503,3 +503,111 @@ describe("querypanel search", () => {
     expect(el.querySelector(".query-selection-name")!.textContent).toBe("CAN_H");
   });
 });
+
+// Forty rows in, a click sends the canvas somewhere and the table used to say nothing about which
+// answer it came from. The mark is DERIVED from what is on screen rather than remembered from the
+// click, which is what these pin.
+describe("querypanel you-are-here", () => {
+  const pushMultiSheet = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromResponse(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [
+            { cells: ["R1", "SDA"], cites: [], cellSheets: [{ sheetIds: ["s1"] }, { sheetIds: ["s1", "s2"] }] },
+            { cells: ["U1", "SCL"], cites: [], cellSheets: [{ sheetIds: ["s2"] }, { sheetIds: ["s2"] }] },
+          ],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+  const marked = (el: HTMLElement) => [...el.querySelectorAll(".query-locate.on")].map((b) => b.textContent);
+  const markedBadges = (el: HTMLElement) => [...el.querySelectorAll(".sheet-badge.on")].map((b) => b.textContent);
+
+  it("marks nothing until something is selected", () => {
+    const { el, push } = mountPanel();
+    pushMultiSheet(push);
+    expect(marked(el)).toEqual([]);
+    expect(markedBadges(el)).toEqual([]);
+  });
+
+  it("marks the cell whose entity is on screen when a cell is clicked", () => {
+    const { el, push } = mountPanel();
+    pushMultiSheet(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "SDA")!.click();
+    expect(marked(el)).toEqual(["SDA"]);
+  });
+
+  // The mark follows the VIEWER, not this table. A pick on the drawing has to move it, or a reader
+  // who clicked the canvas would read a stale mark as where they are.
+  it("marks a cell the canvas selected, which no click here ever touched", () => {
+    const { el, push, panel } = mountPanel();
+    pushMultiSheet(push);
+    panel.view.setSelection({ kind: "component", ref: "U1" });
+    expect(marked(el)).toEqual(["U1"]);
+  });
+
+  it("marks the badge for the sheet on screen, and only on the selected cell", () => {
+    const { el, push, panel } = mountPanel();
+    pushMultiSheet(push);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    panel.view.setCurrentSheet("s2");
+    // SDA is on s1 and s2; the reader is on s2. SCL is also on s2 but is not what is selected.
+    expect(markedBadges(el)).toEqual(["S2"]);
+  });
+
+  it("moves the badge mark when the reader navigates by any other route", () => {
+    const { el, push, panel } = mountPanel();
+    pushMultiSheet(push);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    panel.view.setCurrentSheet("s1");
+    expect(markedBadges(el)).toEqual(["S1"]);
+    panel.view.setCurrentSheet("s2"); // e.g. the sheet tabs, not this panel
+    expect(markedBadges(el)).toEqual(["S2"]);
+  });
+
+  // The strip caps at three chips, and a marked chip past the cap would be marked and invisible.
+  // The reader would see an unmarked strip and conclude they were somewhere else, which is worse
+  // than no mark at all, so the cut grows to include it.
+  it("reveals the current sheet's badge even when the cap would have hidden it", () => {
+    const { el, push, panel } = mountPanel();
+    push(
+      resultFromResponse(
+        {
+          columns: ["n"],
+          columnKinds: ["net"],
+          rows: [{ cells: ["DGND"], cites: [], cellSheets: [{ sheetIds: Array.from({ length: 21 }, (_, i) => `s${i}`) }] }],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id.toUpperCase() })),
+      ),
+    );
+    const labels = () => [...el.querySelectorAll(".query-row .sheet-badge")].map((b) => b.textContent);
+    expect(labels()).toEqual(["S0", "S1", "S2", "+18"]);
+
+    panel.view.setSelection({ kind: "net", net: "DGND" });
+    panel.view.setCurrentSheet("s9");
+    expect(markedBadges(el)).toEqual(["S9"]);
+    expect(labels()).toEqual(["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "+11"]);
+  });
+
+  // Truthful rather than convenient: an entity answering in several rows is being shown in all of
+  // them, and marking only one would be a guess about which row the reader meant.
+  it("marks every row that names the entity on screen", () => {
+    const { el, push, panel } = mountPanel();
+    push(
+      resultFromResponse(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [
+            { cells: ["R1", "SDA"], cites: [], cellSheets: [{}, {}] },
+            { cells: ["U1", "SDA"], cites: [], cellSheets: [{}, {}] },
+          ],
+        } as never,
+      ),
+    );
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(marked(el)).toEqual(["SDA", "SDA"]);
+  });
+});

@@ -363,6 +363,18 @@ other served preset uses.
 A pin cell is the notable gap: a pin needs its row's ref as well as its own cell, so the server types
 a pin column scalar and the only way to select a pin today is to click one on the drawing.
 
+**The table marks where the reader is standing**, because a click sends the canvas somewhere and a
+forty-row result otherwise says nothing about which answer it came from. A cell is marked when
+`sameSelection` matches it against the current selection, and a sheet badge when its sheet is also
+the one on screen (`QueryView.setCurrentSheet`, pushed from `showSheet` on EVERY navigation).
+
+Both marks are DERIVED rather than remembered. A remembered mark is wrong the moment the reader
+picks something on the drawing or opens a finding, and wrong silently, which is the worst way for a
+you-are-here marker to fail. Two consequences follow and both are deliberate. An entity answering in
+several rows marks all of them, which is true, since they all name the thing being shown. And a
+marked badge past the strip's three-chip cap forces the cut to grow, because a mark nobody can see
+is worse than no mark: the reader would read the unmarked strip as being somewhere else.
+
 ### Searching: the same lesson from the other end
 
 A click says where to look and gets back what is there. A search says what a thing is called and gets

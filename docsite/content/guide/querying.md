@@ -147,6 +147,27 @@ name, and it writes the same query into the box, runs it, and hands you back the
 clickable, whatever sort of thing it turns out to be, so a search lands you on the drawing and leaves
 a sentence you can edit into a better question.
 
+### Reading a result cell in the viewer
+
+A cell that names a component, a net or a bus is a link: clicking it highlights that thing on the
+drawing. The small chips beside it are the **sheets it appears on**, one per sheet, and clicking one
+opens that sheet. They are not a grouping of related names, and they have nothing to do with the
+cell being a net in particular. Any locatable cell gets them.
+
+```
+AVDD_3V3   [ 04_POWER ] [ 07_SENSOR ] [ 11_MCU ] [ +2 ]
+```
+
+That row says the net `AVDD_3V3` is drawn on at least five sheets, three of them named. A
+single-sheet design shows no chips at all, because there is nowhere to navigate. The strip caps at
+three and counts the rest, since past a handful the interesting fact is how many sheets a thing
+spans rather than which; clicking the `+N` expands it.
+
+Whichever entity is on the drawing right now is marked in the table, and so is the chip for the
+sheet you are looking at. That is what tells you where you are after a click sends the canvas
+somewhere, and it follows the viewer rather than your last click here: pick something on the drawing
+instead and the mark moves to that.
+
 ### Find parts stressed above their datasheet rating
 
 This joins what the part is (`component.mpn`), what its datasheet says (`param`), where it sits

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { askLabel, bestOf, fillEntityQuery, labelFor, pickAt, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
+import { askLabel, bestOf, fillEntityQuery, labelFor, pickAt, sameSelection, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
 
 function el(attrs: Record<string, string>): Element {
   const e = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
@@ -134,5 +134,33 @@ describe("wording the next question", () => {
     expect(askLabel({ kind: "component", ref: "R1" })).toBe("What is R1 connected to?");
     expect(askLabel({ kind: "net", net: "SDA" })).toBe("What is on SDA?");
     expect(askLabel({ kind: "bus", busId: "D[7:0]" })).toBe("What is in D[7:0]?");
+  });
+});
+
+// sameSelection is how a surface marks the pick it is currently showing, so what it has to get
+// right is the two ROUTES to one entity agreeing: the canvas knows a net by name and id, a result
+// cell only by name.
+describe("sameSelection", () => {
+  it("matches a canvas net against the same net named by a result cell", () => {
+    expect(sameSelection({ kind: "net", net: "SDA", netId: "n7" }, { kind: "net", net: "SDA" })).toBe(true);
+  });
+
+  it("uses the id when both carry one, since two nets can share a display name", () => {
+    expect(sameSelection({ kind: "net", net: "GND", netId: "n1" }, { kind: "net", net: "GND", netId: "n2" })).toBe(false);
+    expect(sameSelection({ kind: "net", net: "GND", netId: "n1" }, { kind: "net", net: "GND", netId: "n1" })).toBe(true);
+  });
+
+  it("compares each kind on its own identity", () => {
+    expect(sameSelection({ kind: "component", ref: "R1" }, { kind: "component", ref: "R1" })).toBe(true);
+    expect(sameSelection({ kind: "component", ref: "R1" }, { kind: "component", ref: "R2" })).toBe(false);
+    expect(sameSelection({ kind: "bus", busId: "D[7:0]" }, { kind: "bus", busId: "D[7:0]" })).toBe(true);
+    expect(sameSelection({ kind: "pin", ref: "U1", pin: "5" }, { kind: "pin", ref: "U1", pin: "5" })).toBe(true);
+    expect(sameSelection({ kind: "pin", ref: "U1", pin: "5" }, { kind: "pin", ref: "U1", pin: "6" })).toBe(false);
+  });
+
+  it("never matches across kinds or against nothing", () => {
+    expect(sameSelection({ kind: "net", net: "R1" }, { kind: "component", ref: "R1" })).toBe(false);
+    expect(sameSelection(null, { kind: "component", ref: "R1" })).toBe(false);
+    expect(sameSelection({ kind: "component", ref: "R1" }, null)).toBe(false);
   });
 });

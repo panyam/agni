@@ -1128,6 +1128,10 @@ export class ViewerPresenter {
   // it does, fall back to the always-available SVG render rather than leaving an error on screen.
   async showSheet(sheetId: string): Promise<void> {
     this.currentSheet = sheetId;
+    // The query panel marks the badge pointing at the sheet on screen, so it has to hear about
+    // EVERY navigation and not only the ones a result cell started. Navigating by the sheet tabs
+    // would otherwise leave the mark on the sheet the reader has left.
+    this.views.query?.setCurrentSheet(sheetId);
     this.saveShownView(); // remember the outgoing view before this render replaces it
     this.setBusy(true, "rendering…");
     try {
