@@ -26,7 +26,11 @@ type railCandidate struct {
 	net       *ir.Net
 	volts     float64
 	supplyPin string // one ref_des:pin feeding evidence, for the message
-	supplies  int
+	// The same pin as a pair rather than a formatted string, so it can travel as a context entity
+	// (agni issue 349). supplyPin stays because the message reads better with the words in it.
+	supplyRef   string
+	supplyPinNo string
+	supplies    int
 }
 
 // eachRailCandidate walks the nets whose NAME declares a voltage and whose CONNECTIONS include a
@@ -48,6 +52,7 @@ func eachRailCandidate(m check.Model, yield func(railCandidate)) {
 			}
 			if c.supplies == 0 {
 				c.supplyPin = conn.GetComponentRef() + " pin " + conn.GetPinRef()
+				c.supplyRef, c.supplyPinNo = conn.GetComponentRef(), conn.GetPinRef()
 			}
 			c.supplies++
 		}
@@ -87,6 +92,12 @@ var railNotClassified = &check.Rule{
 				Message: fmt.Sprintf(
 					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in a --conventions lexicon",
 					rc.net.GetName(), rc.volts, rc.supplies, rc.supplyPin),
+				// The supply pin the message offers as evidence. The subject is the net, so the pin
+				// that makes it look like a rail was named in prose and reachable nowhere
+				// (agni issue 349).
+				Context: []check.ContextSubject{
+					{Kind: check.KindPin, Subject: rc.supplyRef, Pin: rc.supplyPinNo, Role: "supply-pin"},
+				},
 			})
 		})
 		return out

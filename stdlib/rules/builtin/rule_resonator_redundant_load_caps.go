@@ -97,6 +97,13 @@ var resonatorRedundantLoadCaps = &check.Rule{
 						Subject: ref,
 						Message: "ceramic resonator terminal net " + name + " has an external load capacitor " + capRef + " (this part integrates its load caps)",
 						Prov:    r.prov,
+						// The terminal and the cap, in the order the sentence names them. The subject
+						// stays the resonator, because that is the part whose datasheet makes the caps
+						// redundant, but the cap is what a reader deletes (agni issue 349).
+						Context: []check.ContextSubject{
+							{Kind: check.KindNet, Subject: name, NetID: n.Id, Role: "terminal"},
+							{Kind: check.KindComponent, Subject: capRef, Role: "capacitor"},
+						},
 					})
 				}
 			}

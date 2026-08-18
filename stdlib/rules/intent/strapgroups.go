@@ -69,6 +69,16 @@ func groupValue(m check.Model, g StrapGroup) (value int, bits []strapBit, ok boo
 	return value, bits, ok
 }
 
+// netContext turns a list of net names into context entities sharing one role, for a message that
+// names several at once. Order is preserved: it is the order the message prints them in.
+func netContext(names []string, role string) []check.ContextSubject {
+	out := make([]check.ContextSubject, 0, len(names))
+	for _, n := range names {
+		out = append(out, check.ContextSubject{Kind: check.KindNet, Subject: n, Role: role})
+	}
+	return out
+}
+
 // undecidedNets lists the bits nothing evidenced, for a message that tells a reviewer which pins to
 // look at rather than only that the group could not be read.
 func undecidedNets(bits []strapBit) []string {
@@ -105,6 +115,13 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 					Kind: check.KindNet, Subject: g.Nets[0], Inconclusive: true,
 					Message: fmt.Sprintf("strap group %q on %s cannot be read: %s carry no bias and the group declares no default level, so the encoded value is unknown (declaring the part's internal pull as `default` would resolve it)",
 						g.Name, g.Device, strings.Join(undecidedNets(bits), ", ")),
+					// The part, then the nets that could not be read, in the order the message names
+					// them. The subject is only the FIRST strap net, so the others were named in prose
+					// and reachable nowhere (agni issue 349). The group NAME is a declaration from the
+					// intent file rather than a design entity, so it is not context.
+					Context: append(
+						[]check.ContextSubject{{Kind: check.KindComponent, Subject: g.Device, Role: "device"}},
+						netContext(undecidedNets(bits), "undecided")...),
 				}}
 			}
 			if got == g.Value {
@@ -114,6 +131,9 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 				Kind: check.KindNet, Subject: g.Nets[0],
 				Message: fmt.Sprintf("strap group %q on %s encodes %d, but the design intent declares %d (%s)",
 					g.Name, g.Device, got, g.Value, describeBits(bits)),
+				// The part the group straps. The subject is one of the group's nets, so the device the
+				// whole finding is about was named in prose only.
+				Context: []check.ContextSubject{{Kind: check.KindComponent, Subject: g.Device, Role: "device"}},
 			}}
 		},
 	}
@@ -184,14 +204,24 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 						continue
 					}
 					names := make([]string, 0, len(clash))
+					// Built in the same pass as the message, so the chips and the sentence cannot list
+					// the devices in different orders. `decoded` is local to this function, which is why
+					// this is inline rather than a helper.
+					devices := make([]check.ContextSubject, 0, len(clash))
 					for _, d := range clash {
 						names = append(names, fmt.Sprintf("%s (%s)", d.g.Device, d.g.Name))
+						devices = append(devices, check.ContextSubject{Kind: check.KindComponent, Subject: d.g.Device, Role: "device"})
 					}
 					out = append(out, check.Finding{
 						Kind:    check.KindNet,
 						Subject: clash[0].g.Nets[0],
 						Message: fmt.Sprintf("%s both strap to address %d on bus %s; two devices answering one address make that bus unreliable",
 							strings.Join(names, " and "), v, bus),
+						// Both colliding devices, in message order. This is the case that made context a
+						// LIST with non-unique roles rather than one entity per part: two entities play
+						// exactly the same role here (agni issue 349). The bus is a declared label from
+						// the intent file, not a design entity, so it is not context.
+						Context: devices,
 					})
 				}
 			}

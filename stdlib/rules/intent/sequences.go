@@ -85,6 +85,13 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 					Prov:    rEn.GetProv(),
 					Message: fmt.Sprintf("sequence %q declares %s before %s, but the design gates it the other way round: %q (the power-good of %s) drives %q (the enable of %s)",
 						s.Name, a.Rail, b.Rail, b.Good, b.Rail, a.Enable, a.Rail),
+					// The power-good net doing the driving. Only this one: the branch has RESOLVED it
+					// (rGood is non-nil or linked would not have matched), whereas the rail names come
+					// straight from the intent declaration and are not known to exist on the design.
+					// A chip that highlights nothing is worse than no chip (agni issue 349).
+					Context: []check.ContextSubject{
+						{Kind: check.KindNet, Subject: b.Good, NetID: rGood.GetId(), Role: "power-good"},
+					},
 				})
 				continue
 			}
@@ -99,6 +106,11 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 			Prov:    enNet.GetProv(),
 			Message: fmt.Sprintf("sequence %q declares %s before %s, but nothing connects %q (the power-good of %s) to %q (the enable of %s), so %s is free to come up first",
 				s.Name, a.Rail, b.Rail, a.Good, a.Rail, b.Enable, b.Rail, b.Rail),
+			// The power-good net that should have been connected. goodNet is non-nil on this path, so
+			// unlike the rail names it is known to exist on the design.
+			Context: []check.ContextSubject{
+				{Kind: check.KindNet, Subject: a.Good, NetID: goodNet.GetId(), Role: "power-good"},
+			},
 		})
 	}
 	return out

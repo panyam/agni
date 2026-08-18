@@ -70,6 +70,14 @@ var supplyExceedsAbsMax = &check.Rule{
 						pin.Designator, net, nominal, binding.Symbol, binding.Value.GetMax(), check.Citation(spec, binding)),
 					Prov:          c.Prov,
 					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, binding)},
+					// The pin and the rail, in the order the message names them. The PIN matters as
+					// much as the net here: the subject is the whole part, and a part can have several
+					// supply pins, so highlighting the part alone cannot say which one is over its
+					// limit (agni issue 349). No NetID: this rule has the rail by name only.
+					Context: []check.ContextSubject{
+						{Kind: check.KindPin, Subject: c.RefDes, Pin: pin.Designator, Role: "pin"},
+						{Kind: check.KindNet, Subject: net, Role: "rail"},
+					},
 				})
 			}
 		}

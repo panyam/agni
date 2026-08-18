@@ -74,6 +74,13 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 				Kind:    check.KindComponent,
 				Subject: sw.Fet,
 				Message: msg,
+				// The controller whose threshold sets the trip current, and the sense resistor that
+				// sets it with them. The subject is the FET, because it is the part that overheats,
+				// but the fix is usually one of these two (agni issue 349).
+				Context: []check.ContextSubject{
+					{Kind: check.KindComponent, Subject: sw.Controller, Role: "controller"},
+					{Kind: check.KindComponent, Subject: sw.Sense, Role: "sense"},
+				},
 				Prov:    componentProv(m, sw.Fet),
 				// The endangered part first (the FET carries the rating being exceeded), then the
 				// controller's threshold the trip current came from. Both are values the conclusion

@@ -86,6 +86,12 @@ var railNominalOutOfRecommended = &check.Rule{
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV %s for %s — %s",
 						pin.Designator, net, nominal, rel, binding.Symbol, check.Citation(spec, binding)),
 					Prov: c.Prov,
+					// The pin and the rail, as in supply-exceeds-abs-max: a part with several supply
+					// pins is not located by its ref des alone.
+					Context: []check.ContextSubject{
+						{Kind: check.KindPin, Subject: c.RefDes, Pin: pin.Designator, Role: "pin"},
+						{Kind: check.KindNet, Subject: net, Role: "rail"},
+					},
 				})
 			}
 		}
