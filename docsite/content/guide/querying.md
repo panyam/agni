@@ -140,7 +140,8 @@ agni query board.kicad_sch 'entity(?net, "net"), not component-on-net(?any, ?net
 ```
 
 Pins are not in `entity`, because a pin is named by two things rather than one. Enumerate those with
-`pin(?ref, ?pin)`.
+`pin(?ref, ?pin)`, which is also what to reach for when you want to find a pin: the viewer's find-by-
+name box searches `entity`, so it will not turn one up.
 
 In the web viewer this has a front door. The query panel has a **Find by name** mode: type part of a
 name, and it writes the same query into the box, runs it, and hands you back the query. Each hit is

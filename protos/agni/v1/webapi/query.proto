@@ -95,6 +95,19 @@ message QueryRow {
   // one, so a client reads `cell_kinds[i] || column_kinds[i]` and column_kinds keeps meaning what it
   // has always meant.
   repeated string cell_kinds = 5;
+  // cell_refs aligns positionally with cells and carries the OTHER HALF of a cell's identity, set
+  // only where one cell cannot name the entity by itself (agni issue 259 follow-up).
+  //
+  // A pin is the case. Its identity is two fields, the component and the designator, so the cell
+  // holding "5" names nothing until you know it means U7's pin 5. That is why a pin column typed as
+  // a scalar for so long: not because a pin is unlocatable, but because a table cell is one string
+  // and a pin is two.
+  //
+  // This is a sibling of cell_kinds rather than the same mechanism. A pin column's KIND is fixed
+  // (every row is a pin, so column_kinds says "pin"); what varies per row is the ref, which may come
+  // from a sibling column, from a constant in the query, or from a variable the projection dropped.
+  // Empty for every column that is not a pin column.
+  repeated string cell_refs = 6;
 }
 
 // CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no

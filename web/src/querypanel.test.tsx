@@ -727,3 +727,57 @@ describe("querypanel findings beside the selection", () => {
     expect(footer(el)).toBeNull();
   });
 });
+
+// A pin is two fields, so a result cell cannot name one alone: the row carries the component. This
+// is the last of the three ways a reader names an entity to learn about pins.
+describe("querypanel pin cells", () => {
+  const pushPins = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromResponse(
+        {
+          columns: ["ref", "pin", "net"],
+          columnKinds: ["component", "pin", "net"],
+          rows: [
+            { cells: ["U1", "5", "SDA"], cites: [], cellRefs: ["", "U1", ""], cellSheets: [{ sheetIds: ["s1"] }, { sheetIds: ["s1"] }, {}] },
+            // A pin whose component did not resolve: the server blanks nothing here, and the panel
+            // has to refuse it anyway.
+            { cells: ["", "9", "SCL"], cites: [], cellRefs: ["", ""], cellSheets: [{}, {}, {}] },
+          ],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id })),
+      ),
+    );
+  const links = (el: HTMLElement) => [...el.querySelectorAll(".query-locate")].map((b) => b.textContent);
+
+  it("locates a pin as its component plus the designator", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushPins(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "5")!.click();
+    // The entity is the component and the cell is the designator on it, which inverts what the
+    // arguments mean compared with every other kind.
+    expect(onLocate).toHaveBeenCalledWith("pin", "U1", undefined, LocateReason.UNSPECIFIED, "5");
+  });
+
+  it("selects the pin, so the walk continues from it", () => {
+    const { el, push } = mountPanel();
+    pushPins(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "5")!.click();
+    expect(el.querySelector(".query-selection-kind")!.textContent).toBe("pin");
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("U1.5");
+  });
+
+  it("navigates from a pin's sheet badge with both halves intact", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushPins(push);
+    const pinCell = [...el.querySelectorAll(".query-cell-locate")].find((td) => td.textContent?.startsWith("5"))!;
+    pinCell.querySelector<HTMLElement>(".sheet-badge")!.click();
+    expect(onLocate).toHaveBeenCalledWith("pin", "U1", "s1", LocateReason.UNSPECIFIED, "5");
+  });
+
+  it("leaves a pin with no component as plain text rather than a link to nowhere", () => {
+    const { el, push } = mountPanel();
+    pushPins(push);
+    expect(links(el)).toContain("5");
+    expect(links(el)).not.toContain("9");
+  });
+});

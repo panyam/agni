@@ -263,6 +263,147 @@ func TestRunQueryKindArgWithoutNameStaysScalar(t *testing.T) {
 	}
 }
 
+// pinDesign declares a part with pins and places two instances of it, which is what it takes for
+// pin.net to have any facts: pins live on a PartType, not on a Component, so a design that lists
+// components without a library has no pins at all.
+func pinDesign() *ir.Design {
+	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
+		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
+		{Name: "SDA", Designator: "5", Direction: ir.PinDirection_PIN_DIRECTION_INOUT},
+	}}
+	comp := func(ref string) *ir.Component {
+		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "x.edn"},
+			Sections: []*ir.ComponentSection{{PartRef: "MCU", LibraryRef: "lib"}}}
+	}
+	// #PWR01 is a virtual power-port symbol, never placed and never drawable. Its pins are the case
+	// that separates "explain a pin through its component" from "call it NO_GEOMETRY and move on".
+	return &ir.Design{
+		Libraries:  []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{mcu}}},
+		Components: []*ir.Component{comp("U1"), comp("U2"), comp("#PWR01")},
+		Nets: []*ir.Net{{
+			Name: "SDA",
+			Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "SDA"},
+			Connections: []*ir.Connection{
+				{ComponentRef: "U1", PinRef: "5"},
+				{ComponentRef: "U2", PinRef: "5"},
+				{ComponentRef: "#PWR01", PinRef: "5"},
+			},
+		}},
+	}
+}
+
+// A pin is two fields, so a table cell cannot name one on its own. The server types the pin column
+// and carries the row's ref beside it, which is what makes a pin result clickable at all.
+func TestRunQueryPinColumnCarriesItsRef(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `pin.net(?ref, ?pin, ?net)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := resp.GetColumnKinds()
+	if len(kinds) != 3 || kinds[0] != "component" || kinds[1] != "pin" || kinds[2] != "net" {
+		t.Fatalf("column_kinds = %v, want [component pin net]", kinds)
+	}
+	if len(resp.GetRows()) == 0 {
+		t.Fatal("no rows; the fixture should place U1 pin 5 on SDA")
+	}
+	for _, row := range resp.GetRows() {
+		refs := row.GetCellRefs()
+		if len(refs) != len(row.GetCells()) {
+			t.Fatalf("row %v: cell_refs = %v, want one per cell", row.GetCells(), refs)
+		}
+		// The pin cell carries its component; nothing else does, since every other cell names its
+		// entity by itself.
+		if refs[1] != row.GetCells()[0] {
+			t.Errorf("row %v: pin cell_refs = %q, want the row's ref %q", row.GetCells(), refs[1], row.GetCells()[0])
+		}
+		if refs[0] != "" || refs[2] != "" {
+			t.Errorf("row %v: cell_refs = %v, want them empty outside the pin column", row.GetCells(), refs)
+		}
+	}
+}
+
+// A CONSTANT ref is the common shape of a pin question ("what is U1 pin 5 on"), and the pin column
+// still has to know which component it belongs to even though no column carries it.
+func TestRunQueryPinRefFromAConstant(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `pin.net("U1", ?pin, ?net)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kinds := resp.GetColumnKinds(); len(kinds) != 2 || kinds[0] != "pin" {
+		t.Fatalf("column_kinds = %v, want the pin column typed", kinds)
+	}
+	for _, row := range resp.GetRows() {
+		if got := row.GetCellRefs()[0]; got != "U1" {
+			t.Errorf("row %v: pin cell_refs = %q, want the constant U1", row.GetCells(), got)
+		}
+	}
+}
+
+// The trap this rule has to avoid. param.pin's `pin` is a datasheet pin of a part TYPE, keyed by
+// mpn, and there is nothing on a canvas to highlight for it. The pairing with ref_des is the whole
+// test, so a relation that pairs `pin` with `mpn` must stay scalar.
+func TestRunQueryDatasheetPinIsNotADesignPin(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `param.pin(?mpn, ?pin, ?name, ?function)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, k := range resp.GetColumnKinds() {
+		if k != "" {
+			t.Errorf("param.pin column_kinds[%d] = %q, want \"\": no column here is a design entity", i, k)
+		}
+	}
+}
+
+// A pin's sheets are its COMPONENT's, and so is the reason it may not highlight. Asking either
+// question about the designator would be asking about a thing called "5".
+func TestRunQueryPinResolvesThroughItsComponent(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}}},
+	}}
+	svc := NewQueryService(fakeLoader{design: pinDesign(), geom: g}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `pin.net(?ref, ?pin, ?net)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// U1 is placed and U2 is not, which is what makes this a test of "its OWN component" rather
+	// than "some component": a pin resolving through the wrong ref would answer s1 for both.
+	sheets := map[string][]string{}
+	reasons := map[string]checkspb.LocateReason{}
+	for _, row := range resp.GetRows() {
+		ref := row.GetCells()[0]
+		sheets[ref] = row.GetCellSheets()[1].GetSheetIds()
+		reasons[ref] = row.GetCellReasons()[1]
+	}
+	if got := sheets["U1"]; !slices.Equal(got, []string{"s1"}) {
+		t.Errorf("U1's pin sheets = %v, want its component's [s1]", got)
+	}
+	if got := reasons["U1"]; got != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
+		t.Errorf("U1's pin reason = %v, want UNSPECIFIED since U1 is placed", got)
+	}
+	if got := sheets["U2"]; len(got) != 0 {
+		t.Errorf("U2's pin sheets = %v, want none since U2 is not placed", got)
+	}
+	if got := reasons["U2"]; got != checkspb.LocateReason_LOCATE_REASON_NO_GEOMETRY {
+		t.Errorf("U2's pin reason = %v, want NO_GEOMETRY, the reason its COMPONENT is undrawn", got)
+	}
+	// The pin of a virtual `#` symbol is explained by what its component IS, not by the absence of
+	// geometry. Both are undrawn and only one of them is a gap in the render.
+	if got := reasons["#PWR01"]; got != checkspb.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL {
+		t.Errorf("a virtual symbol's pin reason = %v, want VIRTUAL_SYMBOL", got)
+	}
+}
+
 // A component cell's sheet membership comes from the schematic geometry placements (WS9-038), the
 // same source the finding sheet badges use — so a component cell can navigate to its sheet.
 func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
