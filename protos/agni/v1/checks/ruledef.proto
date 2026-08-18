@@ -210,6 +210,22 @@ message QueryRule {
   // datalog-authored datasheet finding carries the same doc/page/section/confidence a built-in one
   // does. Empty means the rule is not datasheet-backed.
   string param_symbol = 7;
+  // context_vars are further projected variables to carry as the finding's context entities: the
+  // entities the message NAMES but is not ABOUT (agni issue 349). Empty for a rule whose message
+  // names only its subject.
+  //
+  // subject_var already proves this authoring surface can say which projected variable plays which
+  // part. This generalizes it from one variable to a list, which is all the field is.
+  repeated ContextVar context_vars = 8;
+}
+
+// ContextVar binds one projected datalog variable to a context entity on every finding the rule
+// emits. `var` is the projected variable (no leading "?"), `kind` its subject kind, and `role` the
+// part it plays in the message.
+message ContextVar {
+  string var = 1;
+  string kind = 2; // "net" | "component" | "pin" | "bus"
+  string role = 3;
 }
 
 // DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to

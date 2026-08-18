@@ -19,7 +19,7 @@ import { reportFromWire } from "./report.js";
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, DEFAULT_HIGHLIGHT_COLOR } from "./highlights.js";
 
 function f(over: Partial<FindingItem>): FindingItem {
-  return { rule: "r", category: "connectivity", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, sheets: [], locateReason: 0, ...over };
+  return { rule: "r", category: "connectivity", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, context: [], sheets: [], locateReason: 0, ...over };
 }
 
 const findings: FindingItem[] = [

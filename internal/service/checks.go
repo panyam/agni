@@ -272,7 +272,28 @@ func FindingProto(f check.Finding) *checkspb.Finding {
 		Message:      f.Message,
 		Provenance:   f.Prov,
 		Datasheets:   datasheetCitationProtos(f.DatasheetProv),
+		Context:      contextSubjectProtos(f.Context),
 	}
+}
+
+// contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER, because
+// the order is the rule author's and matches the order the message names them (agni issue 349).
+//
+// A bus context entity gets its bus_id set from its ref for the same reason a bus SUBJECT does: a bus
+// carries no net, so its name is the only geometry join key it has.
+func contextSubjectProtos(cs []check.ContextSubject) []*checkspb.ContextSubject {
+	if len(cs) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.ContextSubject, 0, len(cs))
+	for _, c := range cs {
+		subject := &checkspb.Subject{Kind: c.Kind, Ref: c.Subject, Pin: c.Pin, NetId: c.NetID}
+		if c.Kind == check.KindBus {
+			subject.BusId = c.Subject
+		}
+		out = append(out, &checkspb.ContextSubject{Subject: subject, Role: c.Role})
+	}
+	return out
 }
 
 // datasheetCitationProto maps a check.DatasheetCitation to its wire form, nil for a finding not
@@ -298,11 +319,11 @@ func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitat
 		return nil
 	}
 	return &checkspb.DatasheetCitation{
-		Doc:          c.Doc,
-		DocRef:       c.DocRef,
-		Page:         c.Page,
-		Section:      c.Section,
-		Method:       c.Method,
+		Doc:              c.Doc,
+		DocRef:           c.DocRef,
+		Page:             c.Page,
+		Section:          c.Section,
+		Method:           c.Method,
 		Confidence:       c.Confidence,
 		Verification:     c.Verification,
 		VerifiedRevision: c.VerifiedRevision,

@@ -14,7 +14,7 @@ import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import type { ViewerLocation } from "./router.js";
-import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, subjectsToSpecs, findingSpec, entitySpecs, focusStack } from "./findings.js";
+import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, subjectsToSpecs, findingSpec, entitySpecs, focusStack, contextFromWire } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
@@ -539,6 +539,7 @@ export class ViewerPresenter {
             busId: f.subject?.busId ?? "",
             message: f.message,
             inconclusive: f.inconclusive ?? false,
+            context: contextFromWire(f.context),
             sheets: this.sheetBadges(f.sheets ?? []),
             locateReason: f.locateReason ?? 0,
           });
@@ -998,6 +999,7 @@ export class ViewerPresenter {
             busId: f.subject?.busId ?? "",
             message: f.message,
             inconclusive: f.inconclusive ?? false,
+            context: contextFromWire(f.context),
             sheets: this.sheetBadges(f.sheets ?? []),
             locateReason: f.locateReason ?? 0,
           }));

@@ -102,6 +102,13 @@ var crystalLoadCaps = &check.Rule{
 						Subject: ref,
 						Message: "crystal terminal net " + n.Name + " has no load capacitor",
 						Prov:    x.prov,
+						// The terminal the sentence is about. The subject is the crystal, because that
+						// is the part a reader changes, but a crystal has two terminals and both sit
+						// inside the highlighted symbol, so without this the drawing cannot say which
+						// one is at fault (agni issue 349). Kept in step with the datalog twin.
+						Context: []check.ContextSubject{{
+							Kind: check.KindNet, Subject: n.Name, NetID: n.Id, Role: "terminal",
+						}},
 					})
 				}
 			}

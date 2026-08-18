@@ -41,6 +41,10 @@ var powerPinMistypedQ = query.FindingQuery{
 	SubjectVar: "ref",
 	PinVar:     "pin",
 	Message:    "pin {pin} is named like a power/ground pin but is typed as a plain signal, alone on net {net} — a mistyped supply pin power-input-not-driven cannot catch",
+	// The net, and only the net. {pin} is already the subject here (Kind is KindPin, so the subject is
+	// the ref/pin pair), and repeating the subject as its own context would give the panel a chip that
+	// navigates to the thing the reader is already looking at (agni issue 349).
+	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "net"}},
 }
 
 var powerPinMistyped = query.RuleFromQuery(powerPinMistypedQ)

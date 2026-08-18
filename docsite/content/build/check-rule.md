@@ -57,6 +57,56 @@ Then interrogate it the way a real corpus will:
   answers a narrower question. Gate anyway, and make the gap visible rather than assuming the config
   is there. `rail-not-classified` is the tripwire that does it.
 
+## If the sentence names two entities, carry both
+
+A `Finding` has one `Subject`, and the subject is what a reader has to CHANGE. That is not always the
+entity the sentence is about, and when it is not, the reader gets sent somewhere the message never
+mentioned.
+
+`crystal-load-caps` is the case this rule exists for. Its message reads "crystal terminal net XOUT1
+has no load capacitor" and its subject is the crystal, which is correct, because the crystal is the
+part someone edits. But the sentence is about a NET, so clicking the finding highlighted a part; and a
+crystal has two terminals, both inside the highlighted symbol, so the drawing could not even say which
+one was at fault. The reader was told a net was wrong and shown a part.
+
+So: **when a message names a design entity other than its subject, carry it in `Finding.Context`**,
+each entry with a `Role` naming the part it plays. The panel renders them as clickable chips beside
+the message.
+
+In a Go rule:
+
+    out = append(out, check.Finding{
+        Kind:    check.KindComponent,
+        Subject: ref,                       // what a reader changes
+        Message: "crystal terminal net " + n.Name + " has no load capacitor",
+        Context: []check.ContextSubject{{
+            Kind: check.KindNet, Subject: n.Name, NetID: n.Id, Role: "terminal",
+        }},
+    })
+
+In a datalog rule, the entity is already bound in the answer row; name the variable and its role:
+
+    SubjectVar:  "y",
+    Message:     "crystal terminal net {net} has no load capacitor",
+    ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "terminal"}},
+
+Four things to get right:
+
+- **Never repeat the subject as its own context.** The chip would navigate to where the reader
+  already is. On a `KindPin` rule the subject is the ref/pin pair, so `{pin}` is the subject and only
+  the net is context.
+- **Order is yours and it is significant.** Entries come out in the order you declare them, and the
+  panel renders chips in that order, so declare them in the order your message names them.
+- **A role is a short lower-case noun**, not a description: `terminal`, `rail`, `source`, `sense`. It
+  is an open vocabulary, deliberately, because the useful word is rule-specific. Roles need not be
+  unique within a finding, because two entities can play the same part ("A and B both strap to
+  address N").
+- **Entities only, never values.** Thresholds, voltages and units belong in the message. A chip is
+  something a reader can click and land on in the drawing.
+
+Set `NetID` on a net context entity where you have it, so a net that shares its name with another
+highlights the right instance rather than all of them.
+
 ## Author spec-first
 
 Proven vocabulary goes in the Spec AST. Anything multi-clause goes behind a registered SpecFunc

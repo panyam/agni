@@ -189,6 +189,12 @@
     .check-subject .check-locate:hover { color: #1d4ed8; text-decoration: underline; }
     .check-rule { color: #888; font-size: 11px; }
     .check-msg { color: #555; font-size: 11px; }
+    /* Context entities (agni issue 349): the things a finding's message names but is not about.
+       Deliberately quieter than .check-locate, which is the subject. They are a way BACK to an entity
+       the sentence mentions, not a second answer to "what failed". */
+    .check-context { font: inherit; font-size: 10px; margin-left: 6px; padding: 0 5px; border: 1px solid #d7dbe0; border-radius: 9px; background: #f6f7f9; color: #2563eb; cursor: pointer; }
+    .check-context:hover { border-color: #2563eb; text-decoration: underline; }
+    .check-context-role { color: #8b93a0; margin-right: 4px; }
     .check-row.selected td { background: #fde6f5; }
     .check-inst td { background: #fafbfc; }
     .check-inst-label { color: #999; font-size: 10px; margin-right: 6px; }

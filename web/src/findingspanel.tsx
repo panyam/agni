@@ -45,6 +45,10 @@ function ChecksPanel(props: {
   state: () => FindingsState;
   locateNote: () => string;
   onSelect: (subject: string, sheet?: string, netId?: string) => void;
+  // onLocateContext is the locate intent for a CONTEXT entity: the entities a finding's message names
+  // but is not about (agni issue 349). It is separate from onSelect because a context entity is not a
+  // finding, so the finding-by-subject lookup behind onSelect would not find it.
+  onLocateContext: (kind: string, subject: string, pin: string) => void;
   onRun: () => void;
 }) {
   const [axis, setAxis] = createSignal<GroupAxis>("none");
@@ -183,7 +187,7 @@ function ChecksPanel(props: {
                       </tr>
                     </Show>
                     <Show when={sec.value === null || !collapsed().has(sec.value!)}>
-                      <For each={sec.rows}>{(row) => <Row row={row} state={props.state} onSelect={props.onSelect} expanded={expanded} toggleRow={toggleRow} summaries={() => props.state().ruleSummaries} />}</For>
+                      <For each={sec.rows}>{(row) => <Row row={row} state={props.state} onSelect={props.onSelect} onLocateContext={props.onLocateContext} expanded={expanded} toggleRow={toggleRow} summaries={() => props.state().ruleSummaries} />}</For>
                     </Show>
                   </>
                 )}
@@ -205,6 +209,7 @@ function Row(props: {
   row: CollapsedFinding;
   state: () => FindingsState;
   onSelect: (subject: string, sheet?: string, netId?: string) => void;
+  onLocateContext: (kind: string, subject: string, pin: string) => void;
   expanded: () => Set<string>;
   toggleRow: (k: string) => void;
   summaries: () => Record<string, string>;
@@ -254,6 +259,25 @@ function Row(props: {
         </td>
         <td class="check-msg" title={f().message}>
           {f().message}
+          {/* The entities the sentence above names but the finding is not ABOUT (agni issue 349).
+              They sit AFTER the message rather than in the subject cell on purpose: the subject cell
+              answers "what failed", and these answer "what else the sentence mentions". Putting them
+              in the subject column would read as a second subject, which is the confusion the field
+              exists to remove. */}
+          <For each={f().context}>
+            {(c) => (
+              <button
+                type="button"
+                class="check-context"
+                title={`locate ${c.kind} ${c.subject} (${c.role})`}
+                onClick={() => props.onLocateContext(c.kind, c.subject, c.pin)}
+              >
+                <span class="check-context-role">{c.role}</span>
+                {c.subject}
+                {c.pin ? `.${c.pin}` : ""}
+              </button>
+            )}
+          </For>
         </td>
       </tr>
       <Show when={multi() && open()}>
@@ -292,7 +316,11 @@ function Row(props: {
 export function findingsPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
-  handlers: { onSelect: (subject: string, sheet?: string, netId?: string) => void; onRun: () => void },
+  handlers: {
+    onSelect: (subject: string, sheet?: string, netId?: string) => void;
+    onLocateContext: (kind: string, subject: string, pin: string) => void;
+    onRun: () => void;
+  },
 ): { island: SolidIsland; view: FindingsView } {
   const [state, setState] = signalView<FindingsState>({
     findings: [],
@@ -312,7 +340,15 @@ export function findingsPanelIsland(
   const island = new SolidIsland(
     "findings",
     el,
-    () => <ChecksPanel state={state} locateNote={locateNote} onSelect={handlers.onSelect} onRun={handlers.onRun} />,
+    () => (
+      <ChecksPanel
+        state={state}
+        locateNote={locateNote}
+        onSelect={handlers.onSelect}
+        onLocateContext={handlers.onLocateContext}
+        onRun={handlers.onRun}
+      />
+    ),
     eventBus,
   );
   return { island, view: { setState: setStateClearing, setFindingLocateNote: setLocateNote } };

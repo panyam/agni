@@ -4,7 +4,7 @@ import { findingsPanelIsland } from "./findingspanel.jsx";
 import type { FindingItem, FindingsState } from "./findings.js";
 
 function f(over: Partial<FindingItem>): FindingItem {
-  return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, sheets: [], locateReason: 0, ...over };
+  return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, context: [], sheets: [], locateReason: 0, ...over };
 }
 
 function state(over: Partial<FindingsState>): FindingsState {
@@ -13,13 +13,14 @@ function state(over: Partial<FindingsState>): FindingsState {
 
 function mountPanel(over: Partial<FindingsState>) {
   const onSelect = vi.fn();
+  const onLocateContext = vi.fn();
   const onRun = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = findingsPanelIsland(el, null, { onSelect, onRun });
+  const panel = findingsPanelIsland(el, null, { onSelect, onLocateContext, onRun });
   panel.island.activate();
   panel.view.setState(state(over));
-  return { el, panel, onSelect, onRun };
+  return { el, panel, onSelect, onLocateContext, onRun };
 }
 
 beforeEach(() => document.body.replaceChildren());
@@ -161,4 +162,63 @@ it("reports skipped rules alongside findings", () => {
     skipped: [{ rule: "track-width", reason: "design carries no board geometry" }],
   });
   expect(el.textContent ?? "").toContain("could not run");
+});
+
+// The entities a finding's message NAMES but is not ABOUT (agni issue 349).
+//
+// crystal-load-caps is the case this was filed for: the finding reads "crystal terminal net XOUT1 has
+// no load capacitor" and its subject is the crystal Y1, so clicking it sent the reader to a part the
+// sentence never mentioned. The net was bound in the rule's query and thrown away when the finding was
+// built, so no client-side cleverness could recover it: the panel had nothing to render.
+describe("context chips", () => {
+  const withContext = (over: Partial<FindingItem> = {}) =>
+    f({
+      rule: "crystal-load-caps",
+      kind: "component",
+      subject: "Y1",
+      message: "crystal terminal net XOUT1 has no load capacitor",
+      context: [{ kind: "net", subject: "XOUT1", pin: "", role: "terminal" }],
+      ...over,
+    });
+
+  it("renders a chip for each context entity, labelled with its role", () => {
+    const m = mountPanel({ findings: [withContext()] });
+    const chips = [...m.el.querySelectorAll(".check-context")];
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent).toContain("XOUT1");
+    expect(chips[0].textContent).toContain("terminal");
+  });
+
+  it("locates the context entity, not the finding's subject", () => {
+    // The whole bug. Clicking must reach XOUT1, and it must go through the ENTITY locate path: a
+    // context entity is not a finding, so a lookup by finding subject would find nothing.
+    const m = mountPanel({ findings: [withContext()] });
+    (m.el.querySelector(".check-context") as HTMLButtonElement).click();
+    expect(m.onLocateContext).toHaveBeenCalledWith("net", "XOUT1", "");
+    expect(m.onSelect).not.toHaveBeenCalled();
+  });
+
+  it("renders chips in the rule author's order, matching the sentence", () => {
+    const m = mountPanel({
+      findings: [
+        withContext({
+          message: "U1 supplies net VRAIL at 5V, above U2's absolute maximum",
+          context: [
+            { kind: "component", subject: "U1", pin: "", role: "source" },
+            { kind: "net", subject: "VRAIL", pin: "", role: "rail" },
+          ],
+        }),
+      ],
+    });
+    const chips = [...m.el.querySelectorAll(".check-context")].map((c) => c.textContent ?? "");
+    expect(chips[0]).toContain("U1");
+    expect(chips[1]).toContain("VRAIL");
+  });
+
+  it("renders nothing for a finding whose message names only its subject", () => {
+    // The common case and always will be. An empty context must render no chip rather than an empty
+    // one, or every row in the panel grows a stub.
+    const m = mountPanel({ findings: [f({ subject: "N1", context: [] })] });
+    expect(m.el.querySelectorAll(".check-context")).toHaveLength(0);
+  });
 });

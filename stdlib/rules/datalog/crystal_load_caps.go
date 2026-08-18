@@ -55,6 +55,14 @@ var crystalLoadCapsQ = query.FindingQuery{
 	Kind:       check.KindComponent,
 	SubjectVar: "y",
 	Message:    "crystal terminal net {net} has no load capacitor",
+	// The offending terminal net, which the query already binds and the message already names.
+	//
+	// This is the rule agni issue 349 was filed about. The subject is the CRYSTAL, because the crystal
+	// is the part a reader has to change, but the sentence is about a NET, so clicking the finding
+	// sent the reader to a part the sentence never mentioned. A crystal has two terminals and both sit
+	// inside the highlighted symbol, so the drawing could not even say which one was at fault: the
+	// reader was told a net was wrong and shown a part.
+	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "terminal"}},
 }
 
 var crystalLoadCapsDL = query.RuleFromQuery(crystalLoadCapsQ)

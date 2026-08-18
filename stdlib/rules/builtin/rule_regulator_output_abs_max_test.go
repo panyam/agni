@@ -165,3 +165,40 @@ func TestRegulatorOutputOneSidedSeed(t *testing.T) {
 		})
 	}
 }
+
+// TestRegulatorOutputCarriesBothEntitiesAsContext is the two-entity case of agni issue 349, and the
+// one that shows why context is a LIST with roles rather than a single extra subject.
+//
+// The message names three entities: the endangered part (the subject), the regulator supplying it,
+// and the net between them. A reader who wants to look at the regulator, or at the rail, had to read
+// the ref des out of the sentence and find it by hand.
+//
+// The ORDER assertion matters as much as the presence: entries come in the order the message names
+// them, so a panel's chips read like the sentence above them.
+func TestRegulatorOutputCarriesBothEntitiesAsContext(t *testing.T) {
+	m := regModel(t, railDesign(""), 5.0, 3.6)
+	fs := regulatorOutputExceedsAbsMax.Eval(m)
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d", len(fs))
+	}
+	ctx := fs[0].Context
+	if len(ctx) != 2 {
+		t.Fatalf("want 2 context entities (the source and the rail), got %d: %+v", len(ctx), ctx)
+	}
+	if ctx[0].Subject != "U1" || ctx[0].Role != "source" || ctx[0].Kind != check.KindComponent {
+		t.Errorf("first context = %+v, want U1 as the component playing source", ctx[0])
+	}
+	if ctx[1].Subject != "VRAIL" || ctx[1].Role != "rail" || ctx[1].Kind != check.KindNet {
+		t.Errorf("second context = %+v, want VRAIL as the net playing rail", ctx[1])
+	}
+	// The subject is the endangered part and must not also appear as its own context, or the panel
+	// offers a chip that navigates to where the reader already is.
+	for _, c := range ctx {
+		if c.Subject == fs[0].Subject {
+			t.Errorf("context repeats the subject %q", fs[0].Subject)
+		}
+		if !strings.Contains(fs[0].Message, c.Subject) {
+			t.Errorf("context %q is not named in the message %q", c.Subject, fs[0].Message)
+		}
+	}
+}

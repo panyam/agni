@@ -21,6 +21,47 @@ export interface SheetBadge {
 // only for a pin subject, and category is the finding's rule's category tag (denormalized for the
 // by-category group-by). sheets are the badges for where the subject lives (one per sheet a
 // spanning net touches; empty for single-sheet designs or when the server had no geometry).
+// FindingContext is one entity a finding's message names but is not about, with the part it plays.
+//
+// It satisfies HighlightSubject structurally, so a context entity highlights through the exact same
+// bucketing a finding's subject does without being a finding.
+//
+// role is the rule author's word for the part this entity plays ("terminal", "rail", "source"). It is
+// an open vocabulary, not a closed set, and it is NOT unique within a finding: "A and B both strap to
+// address N" has two entities playing the same part.
+export interface FindingContext {
+  kind: string; // "net" | "component" | "pin" | "bus"
+  subject: string;
+  pin: string;
+  netId?: string;
+  busId?: string;
+  role: string;
+}
+
+// WireContext is the shape checks.Finding.context arrives in. Declared structurally rather than
+// imported from the generated types, so the three call sites (the checks panel, the report, the
+// review) share one mapper without this module depending on the wire package.
+export interface WireContext {
+  subject?: { kind?: string; ref?: string; pin?: string; netId?: string; busId?: string };
+  role?: string;
+}
+
+// contextFromWire maps a finding's context entities to the client shape, PRESERVING ORDER, because
+// the order is the rule author's and matches the order the message names them (agni issue 349).
+//
+// `?? []` because a hand-built response or an older server may omit the field, and a missing one must
+// mean "this message names only its subject" rather than throwing mid-run.
+export function contextFromWire(cs: WireContext[] | undefined): FindingContext[] {
+  return (cs ?? []).map((c) => ({
+    kind: c.subject?.kind ?? "",
+    subject: c.subject?.ref ?? "",
+    pin: c.subject?.pin ?? "",
+    netId: c.subject?.netId ?? "",
+    busId: c.subject?.busId ?? "",
+    role: c.role ?? "",
+  }));
+}
+
 export interface FindingItem {
   rule: string;
   category: string;
@@ -49,6 +90,18 @@ export interface FindingItem {
   // consumer must never count it as a failure. The message carries what could not be resolved and
   // what would resolve it.
   inconclusive: boolean;
+  // context are the entities this finding's message NAMES but is not ABOUT (agni issue 349), each
+  // with the part it plays. Empty for a message that names only its subject, which is most of them.
+  //
+  // The panel renders these as their own clickable chips, so the net in the sentence is reachable.
+  // They are deliberately NOT counted as findings about themselves: grouping by subject partitions
+  // the findings, which is what makes "the union of what I clicked equals the full pass" a fact
+  // rather than a hope (agni issue 259). Context makes a finding REACHABLE from another entity
+  // without making it ABOUT that entity.
+  //
+  // ORDER IS THE RULE AUTHOR'S and matches the order the message names them, so chips read left to
+  // right like the sentence above them. Never sort these.
+  context: FindingContext[];
   sheets: SheetBadge[];
   // locateReason (checks.Finding.locate_reason) explains why clicking this finding may highlight
   // nothing, computed server-side from the geometry (WS7-042c): BUS_NOT_DRAWN for a bus with no drawn

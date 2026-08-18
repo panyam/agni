@@ -474,10 +474,26 @@ all and gives the engine's own reasons on hover. A clean entity under a half-gat
 weaker statement than a clean entity under a full one, and nothing on the entity itself can say so.
 
 **And the count says what it is not.** An entity view enumerates attention; a review pass enumerates
-the design. A design-global rule has no subject and can never appear beside an entity, and a rule
-about two terminals names one of them, so the other end shows nothing (fixing that needs a structured
-context field on `Finding`, not a cleverer filter). The caveat is rendered beside every count rather
-than parked in a hover, since a caveat nobody sees is a caveat nobody has.
+the design. A design-global rule has no subject and can never appear beside an entity. The caveat is
+rendered beside every count rather than parked in a hover, since a caveat nobody sees is a caveat
+nobody has.
+
+**A rule about two entities used to name one of them and lose the other.** `Finding` carries exactly
+one `Subject`, so a rule whose sentence involves two entities could highlight only one, and it was
+not always the one the sentence named. `crystal-load-caps` reads "crystal terminal net XOUT1 has no
+load capacitor" with the crystal as its subject, so clicking it sent the reader to a part while the
+message talked about a net. No client-side filter reached that: the net was bound in the rule's query
+and destroyed when the `Finding` was built, so the panel had nothing to render.
+
+`Finding.context` now carries those entities as structured data, each with a `role` naming the part it
+plays (agni issue 349). The panel renders them as their own clickable chips beside the message, so the
+net in the sentence is reachable. They sit after the message rather than in the subject column,
+because the subject column answers "what failed" and these answer "what else the sentence mentions".
+
+A context entity is deliberately NOT counted as a finding about itself. Grouping by subject partitions
+the findings, which is what makes "the union of what I clicked equals the full pass" a fact rather
+than a hope, so counting one finding under two entities would break the property the per-entity view
+rests on. Context makes a finding REACHABLE from another entity without making it ABOUT that entity.
 
 ### Table cells wrap, then scroll, and never bleed
 

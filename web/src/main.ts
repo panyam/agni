@@ -32,6 +32,7 @@ import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
 import { currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
+import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { fillEntityQuery } from "./selection.js";
@@ -256,6 +257,10 @@ class AppRoot extends BaseComponent {
     // pressing Run evaluates the current rule selection (WS9).
     const findings = findingsPanelIsland(findingsEl, this._eventBus, {
       onSelect: (subject, sheet, netId) => void presenter.selectFinding(subject, sheet, netId),
+      // A context entity is not a finding, so it locates through the same path a query result cell
+      // does (locateEntity) rather than through selectFinding, whose lookup is by finding subject
+      // and would find nothing (agni issue 349).
+      onLocateContext: (kind, subject, pin) => void presenter.locateEntity(kind, subject, undefined, LocateReason.UNSPECIFIED, pin),
       onRun: () => void presenter.runChecks(),
     });
     // The rules panel is the catalog of what the engine can assert; ticking rules sets the active

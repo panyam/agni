@@ -229,5 +229,30 @@ func FindingQueryProto(fq FindingQuery) *checkspb.QueryRule {
 		PinVar:      fq.PinVar,
 		Message:     fq.Message,
 		ParamSymbol: fq.ParamSymbol,
+		ContextVars: contextVarProtos(fq.ContextVars),
 	}
+}
+
+// contextVarProtos encodes a rule's context-variable bindings, preserving the author's order.
+func contextVarProtos(cvs []ContextVar) []*checkspb.ContextVar {
+	if len(cvs) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.ContextVar, 0, len(cvs))
+	for _, cv := range cvs {
+		out = append(out, &checkspb.ContextVar{Var: cv.Var, Kind: cv.Kind, Role: cv.Role})
+	}
+	return out
+}
+
+// ContextVarsFromProto decodes a rule's context-variable bindings, preserving order.
+func ContextVarsFromProto(ps []*checkspb.ContextVar) []ContextVar {
+	if len(ps) == 0 {
+		return nil
+	}
+	out := make([]ContextVar, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, ContextVar{Var: p.GetVar(), Kind: p.GetKind(), Role: p.GetRole()})
+	}
+	return out
 }
