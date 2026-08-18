@@ -360,8 +360,32 @@ replaced the table would take that away. And the question's wording lives on the
 beside the locate-reason copy) while the query it runs comes from the server, the same split every
 other served preset uses.
 
-A pin cell is the notable gap: a pin needs its row's ref as well as its own cell, so the server types
-a pin column scalar and the only way to select a pin today is to click one on the drawing.
+**A pin cell takes its other half from its row.** A pin's identity is two fields, so the cell holding
+`5` names nothing until you know it means U7's pin 5, which is why a pin column typed as a scalar for
+so long. `QueryRow.cell_refs` carries the component per row, and `selectionFromCell(kind, cell, ref)`
+reads both.
+
+It is a sibling of `cell_kinds` rather than the same mechanism, and the distinction is worth keeping
+straight. A pin column's KIND is fixed, since every row of it is a pin; what varies per row is the
+REF. The ref may come from a sibling column (`pin.net(?ref, ?pin, ?net)`), from a constant
+(`pin.net("U1", ?pin, ?net)`), or from a variable the projection dropped, so it resolves against the
+row's bindings rather than against the visible columns.
+
+The rule for what counts as a pin column is the pairing again: a `pin` position is a DESIGN pin only
+when the same atom also carries a `ref_des`. `param.pin(mpn, pin, name, function)` and
+`param.pin_range` pair `pin` with an `mpn` instead, and theirs is a pin of a part TYPE off a
+datasheet, with nothing on any canvas to highlight.
+
+Downstream, a pin resolves through its component: its sheets are the component's placements, and so
+is its locate reason, so a pin of a virtual `#PWR` symbol reports VIRTUAL_SYMBOL rather than a
+missing render. Asking either question about the designator would be asking about a thing called
+`5`. A pin whose component does not resolve stays plain text, since half a pin is not a less precise
+pin.
+
+Searching for a pin by name is still not possible. `entity(name, kind)` deliberately does not
+enumerate pins, because a pin cannot be one `name` without inventing a composite string nothing else
+in the fact base joins against, and `pin(?ref, ?pin)` already enumerates them for anyone writing the
+query by hand.
 
 **The table marks where the reader is standing**, because a click sends the canvas somewhere and a
 forty-row result otherwise says nothing about which answer it came from. A cell is marked when

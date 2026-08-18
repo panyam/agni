@@ -119,12 +119,29 @@ describe("reading a result cell", () => {
     expect(selectionFromCell("bus", "DATA[7:0]")).toEqual({ kind: "bus", busId: "DATA[7:0]" });
   });
 
-  // A scalar column ("") is not clickable at all, and a pin column is typed scalar today: a pin needs
-  // its row's ref as well as its own cell, so it cannot be read from one cell.
+  // A pin needs both halves, so the cell alone is not enough: the row supplies the component.
+  it("reads a pin from its cell and its row's ref", () => {
+    expect(selectionFromCell("pin", "12", "U7")).toEqual({ kind: "pin", ref: "U7", pin: "12" });
+  });
+
+  // Half a pin is not a less precise pin, it is not a pin. A cell holding "12" with no component
+  // names nothing, and returning {ref: "", pin: "12"} would send the canvas hunting for it.
+  it("is null for a pin with no component", () => {
+    expect(selectionFromCell("pin", "12")).toBeNull();
+    expect(selectionFromCell("pin", "12", "")).toBeNull();
+    expect(selectionFromCell("pin", "", "U7")).toBeNull();
+  });
+
   it("is null for a cell that names no entity", () => {
     expect(selectionFromCell("", "3.3")).toBeNull();
-    expect(selectionFromCell("pin", "12")).toBeNull();
     expect(selectionFromCell("net", "")).toBeNull();
+  });
+
+  // The ref is a pin's business only. A component cell that happened to sit in a row with a ref
+  // must not start meaning something else.
+  it("ignores the ref for every other kind", () => {
+    expect(selectionFromCell("component", "R1", "U9")).toEqual({ kind: "component", ref: "R1" });
+    expect(selectionFromCell("net", "SDA", "U9")).toEqual({ kind: "net", net: "SDA" });
   });
 });
 

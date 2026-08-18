@@ -49,6 +49,13 @@ async function growQueryPanel(page: Page): Promise<void> {
   await page.waitForTimeout(200);
 }
 
+// runQuery types a query into the box and runs it, for the questions find-by-name cannot ask.
+async function runQuery(page: Page, text: string): Promise<void> {
+  await page.fill("textarea.query-text", text);
+  await page.click("button.query-run");
+  await page.waitForSelector(".query-row", { timeout: 30_000 });
+}
+
 // search runs the panel's find-by-name mode and waits for rows.
 async function search(page: Page, term: string): Promise<void> {
   await page.click(".query-mode:nth-of-type(2)");
@@ -183,6 +190,35 @@ describe("query results table", () => {
       const box = await page.locator(caveat).boundingBox();
       expect(box?.width ?? 0).toBeGreaterThan(0);
       expect((await paintedAt(page, caveat)).ownedByProbe).toBe(true);
+    });
+  }, 90_000);
+});
+
+// A pin is the one entity whose identity does not fit in a table cell, so it is worth one browser
+// assertion that the whole path holds: server types the column, carries the ref, client renders a
+// link, and clicking it selects a pin rather than a thing called "5".
+//
+// jsdom covers each half of that. What it cannot see is the link being drawn at all.
+describe("pin cells", () => {
+  it("draws a pin result as a link and walks from it", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "kicad", "bus_resolved.kicad_sch");
+      await growQueryPanel(page);
+      await runQuery(page, "pin.net(?ref, ?pin, ?net)");
+
+      // The pin column is the second cell (after the provenance toggle), and it has to be a link.
+      const pinLink = page.locator(".query-row:first-child td:nth-child(3) .query-locate");
+      expect(await pinLink.count()).toBe(1);
+      expect((await paintedAt(page, ".query-row:first-child td:nth-child(3) .query-locate")).ownedByProbe).toBe(true);
+
+      await pinLink.click();
+      await page.waitForSelector(".query-selection-kind", { timeout: 30_000 });
+      // Lowercased because innerText reports RENDERED text and this label is uppercased by CSS, so
+      // it reads back "PIN". textContent would say "pin"; neither is wrong, they answer different
+      // questions, and here the DOM's answer is the one being asserted.
+      expect((await page.locator(".query-selection-kind").innerText()).toLowerCase()).toBe("pin");
+      // Both halves, joined: a pin that lost its component would read as a bare designator here.
+      expect(await page.locator(".query-selection-name").innerText()).toMatch(/^.+\..+$/);
     });
   }, 90_000);
 });

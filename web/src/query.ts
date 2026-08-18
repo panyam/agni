@@ -21,6 +21,9 @@ export interface QueryRowItem {
   // everywhere except a POLYMORPHIC column, where the answer set holds more than one sort of thing
   // and the column cannot say which. Read it through cellKind, never directly.
   cellKinds: string[];
+  // cellRefs aligns with cells and carries the other half of a cell's identity, which today means a
+  // pin cell's component. "" everywhere else.
+  cellRefs: string[];
 }
 
 // QueryResult is the panel's whole state. `ran` distinguishes "not run yet" (blank panel) from
@@ -201,6 +204,7 @@ export function resultFromResponse(
       cellSheets: r.cells.map((_, i) => resolveSheets(r.cellSheets?.[i]?.sheetIds ?? [])),
       cellReasons: r.cells.map((_, i) => r.cellReasons?.[i] ?? LocateReason.UNSPECIFIED),
       cellKinds: r.cells.map((_, i) => r.cellKinds?.[i] ?? ""),
+      cellRefs: r.cells.map((_, i) => r.cellRefs?.[i] ?? ""),
     })),
     error: "",
     loading: false,

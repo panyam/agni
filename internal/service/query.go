@@ -84,7 +84,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	cols := q.Columns()
-	kinds, kindVars := columnKinds(q)
+	kinds, kindVars, refTerms := columnKinds(q)
 	resp := &webapi.RunQueryResponse{Columns: make([]string, len(cols)), ColumnKinds: kinds}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
@@ -137,10 +137,26 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 					}
 					row.CellKinds[i] = kind
 				}
+				// A pin cell needs its component before it names anything, so carry the ref this row
+				// bound and use it for everything the ref answers: which sheets the pin is on (its
+				// component's), and whether it is drawn.
+				ref := cells[i]
+				if kind == check.KindPin {
+					ref = termValue(refTerms[i], r.Bind)
+					if row.CellRefs == nil {
+						row.CellRefs = make([]string, len(cols))
+					}
+					row.CellRefs[i] = ref
+					// A pin whose component did not resolve names nothing a client can act on, so it
+					// stays a scalar rather than becoming a link to nowhere.
+					if ref == "" {
+						kind = ""
+					}
+				}
 				cs := &webapi.CellSheets{}
 				if kind != "" {
-					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: cells[i]})
-					row.CellReasons[i] = cellReason(model, kind, cells[i], drawnComps, drawnNets, len(cs.SheetIds) > 0)
+					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: ref, Pin: cells[i]})
+					row.CellReasons[i] = cellReason(model, kind, ref, drawnComps, drawnNets, len(cs.SheetIds) > 0)
 				}
 				row.CellSheets[i] = cs
 			}
@@ -190,6 +206,12 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 	if kind == check.KindNet {
 		drawn = drawnNets[subject]
 	}
+	// A pin is drawn if its COMPONENT is, and it is explained by its component's facts: a pin of a
+	// virtual `#PWR` symbol is a virtual pin, and a pin of a ref the design does not list is not in
+	// the design. Asking about the pin designator instead would answer about a thing called "5".
+	if kind == check.KindPin {
+		kind = check.KindComponent
+	}
 	if drawn {
 		return checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
 	}
@@ -218,7 +240,7 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 // exists, so one answer set holds a component, a net and a bus (agni issue 338). kindVars[i] names
 // the variable whose per-row binding types column i; it is "" for every ordinary column, and where
 // it is set, kinds[i] is "".
-func columnKinds(q query.Query) (kinds []string, kindVars []query.Var) {
+func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
 	labels := catalogArgLabels()
 	terms := q.Select
 	if len(terms) == 0 {
@@ -228,12 +250,13 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var) {
 	}
 	kinds = make([]string, len(terms))
 	kindVars = make([]query.Var, len(terms))
+	refs = make([]query.Term, len(terms))
 	for i, t := range terms {
 		if t.Agg == nil && t.Var != "" {
-			kinds[i], kindVars[i] = varKind(t.Var, q.Goal, labels)
+			kinds[i], kindVars[i], refs[i] = varKind(t.Var, q.Goal, labels)
 		}
 	}
-	return kinds, kindVars
+	return kinds, kindVars, refs
 }
 
 // varKind returns the entity kind a variable resolves to, or the variable whose per-row binding
@@ -248,7 +271,7 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var) {
 // all, which is worth the extra branch because "find a net by name" is the common search and it
 // should type as a plain net column. entityKind is the second guard: a per-row value outside the
 // vocabulary types the cell as a scalar rather than handing the client a kind it cannot act on.
-func varKind(col query.Var, body query.Body, labels map[string][]string) (string, query.Var) {
+func varKind(col query.Var, body query.Body, labels map[string][]string) (string, query.Var, query.Term) {
 	for _, lit := range body.Literals {
 		a := lit.Pos
 		if a == nil {
@@ -261,16 +284,51 @@ func varKind(col query.Var, body query.Body, labels map[string][]string) (string
 			}
 			if ls[j] == "name" {
 				if k, v, ok := kindArg(a, ls); ok {
-					return k, v
+					return k, v, query.Term{}
+				}
+				continue
+			}
+			// A `pin` position names a DESIGN pin only when the same atom also carries the component
+			// it belongs to. pin.net(ref_des, pin, net) does; param.pin(mpn, pin, name, function)
+			// does not, and its `pin` is a datasheet pin of a part TYPE, which is not a thing on the
+			// canvas to highlight. The pairing is the whole test, the same discipline the name/kind
+			// rule uses.
+			if ls[j] == "pin" {
+				if ref, ok := argAt(a, ls, "ref_des"); ok {
+					return check.KindPin, "", ref
 				}
 				continue
 			}
 			if k := labelKind(ls[j]); k != "" {
-				return k, ""
+				return k, "", query.Term{}
 			}
 		}
 	}
-	return "", ""
+	return "", "", query.Term{}
+}
+
+// argAt returns the atom's argument at the position the catalog labels `label`, and whether the
+// relation declares one at all.
+func argAt(a *query.Atom, labels []string, label string) (query.Term, bool) {
+	for j, l := range labels {
+		if l == label && j < len(a.Args) {
+			return a.Args[j], true
+		}
+	}
+	return query.Term{}, false
+}
+
+// termValue resolves a term against one answer row: a constant yields itself, a variable yields
+// what it bound to. A variable the projection dropped still resolves, because the binding is in the
+// row whether or not the column survived the projection.
+func termValue(t query.Term, bind map[query.Var]query.Value) string {
+	if t.Const != nil {
+		return t.Const.S
+	}
+	if t.Var != "" {
+		return bind[t.Var].S
+	}
+	return ""
 }
 
 // kindArg finds the atom's `kind` argument and reports how it types the atom's `name` argument: a
@@ -295,10 +353,13 @@ func kindArg(a *query.Atom, labels []string) (string, query.Var, bool) {
 	return "", "", false
 }
 
-// entityKind passes through the kinds a cell click can act on and rejects everything else. The
-// vocabulary is check's, the same one a finding's subject and a picked element on the canvas carry.
-// Pins are absent because entity() does not enumerate them and one cell could not name one anyway:
-// a pin's identity is its designator AND its component's ref.
+// entityKind passes through the kinds a POLYMORPHIC column can take and rejects everything else.
+// The vocabulary is check's, the same one a finding's subject and a picked element on the canvas
+// carry.
+//
+// Pins stay out. A pin cell IS clickable now, via a pin column and its cell_refs (see varKind), but
+// that is a different route: entity() does not enumerate pins, so no row of a polymorphic column can
+// ever be one, and a `kind` cell reading "pin" would be a value from outside the fact base.
 func entityKind(s string) string {
 	switch s {
 	case check.KindComponent, check.KindNet, check.KindBus:

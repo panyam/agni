@@ -141,15 +141,17 @@ export function labelFor(sel: Selection): string {
 // check.KindNet, the same vocabulary a picked element carries.
 //
 // A scalar cell, or an entity kind with no selection shape yet, yields null: the cell still locates,
-// it just names nothing to ask about. A pin column is the notable absence — the server types it
-// scalar today, and a pin needs its row's ref as well as its own cell, so walking from one is its
-// own piece of work.
+// it just names nothing to ask about.
+//
+// `ref` is the other half of a pin's identity, from the row's cell_refs. A pin cell holds "5", which
+// names nothing until you know it means U7's pin 5, and that is the whole reason a pin column used
+// to type as a scalar. Ignored for every other kind, where the cell names the entity by itself.
 //
 // A bus is here because a search can now return one (agni issue 338): entity() enumerates buses,
 // and a bus with no drawn wire is exactly the sort of thing a reviewer goes looking for by name.
 // Its subject IS its label, the same key a drawn bus element carries in data-bus, so the two entry
 // points converge on one value the way component and net already do.
-export function selectionFromCell(kind: string, subject: string): Selection | null {
+export function selectionFromCell(kind: string, subject: string, ref = ""): Selection | null {
   if (!subject) return null;
   switch (kind) {
     case "component":
@@ -158,6 +160,9 @@ export function selectionFromCell(kind: string, subject: string): Selection | nu
       return { kind: "net", net: subject };
     case "bus":
       return { kind: "bus", busId: subject };
+    case "pin":
+      // Both halves or nothing. A pin with no component is not a less precise pin, it is not a pin.
+      return ref ? { kind: "pin", ref, pin: subject } : null;
     default:
       return null;
   }

@@ -145,7 +145,20 @@ type QueryRow struct {
 	// Empty for every ordinary query, and "" for every non-polymorphic cell within a row that has
 	// one, so a client reads `cell_kinds[i] || column_kinds[i]` and column_kinds keeps meaning what it
 	// has always meant.
-	CellKinds     []string `protobuf:"bytes,5,rep,name=cell_kinds,json=cellKinds,proto3" json:"cell_kinds,omitempty"`
+	CellKinds []string `protobuf:"bytes,5,rep,name=cell_kinds,json=cellKinds,proto3" json:"cell_kinds,omitempty"`
+	// cell_refs aligns positionally with cells and carries the OTHER HALF of a cell's identity, set
+	// only where one cell cannot name the entity by itself (agni issue 259 follow-up).
+	//
+	// A pin is the case. Its identity is two fields, the component and the designator, so the cell
+	// holding "5" names nothing until you know it means U7's pin 5. That is why a pin column typed as
+	// a scalar for so long: not because a pin is unlocatable, but because a table cell is one string
+	// and a pin is two.
+	//
+	// This is a sibling of cell_kinds rather than the same mechanism. A pin column's KIND is fixed
+	// (every row is a pin, so column_kinds says "pin"); what varies per row is the ref, which may come
+	// from a sibling column, from a constant in the query, or from a variable the projection dropped.
+	// Empty for every column that is not a pin column.
+	CellRefs      []string `protobuf:"bytes,6,rep,name=cell_refs,json=cellRefs,proto3" json:"cell_refs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -211,6 +224,13 @@ func (x *QueryRow) GetCellReasons() []checks.LocateReason {
 func (x *QueryRow) GetCellKinds() []string {
 	if x != nil {
 		return x.CellKinds
+	}
+	return nil
+}
+
+func (x *QueryRow) GetCellRefs() []string {
+	if x != nil {
+		return x.CellRefs
 	}
 	return nil
 }
@@ -724,7 +744,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
 	"\tboard_uri\x18\x03 \x01(\tR\bboardUri\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uri\"\xd3\x01\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\"\xf0\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x14\n" +
 	"\x05cites\x18\x02 \x03(\tR\x05cites\x12;\n" +
@@ -732,7 +752,8 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"cellSheets\x12?\n" +
 	"\fcell_reasons\x18\x04 \x03(\x0e2\x1c.agni.v1.checks.LocateReasonR\vcellReasons\x12\x1d\n" +
 	"\n" +
-	"cell_kinds\x18\x05 \x03(\tR\tcellKinds\")\n" +
+	"cell_kinds\x18\x05 \x03(\tR\tcellKinds\x12\x1b\n" +
+	"\tcell_refs\x18\x06 \x03(\tR\bcellRefs\")\n" +
 	"\n" +
 	"CellSheets\x12\x1b\n" +
 	"\tsheet_ids\x18\x01 \x03(\tR\bsheetIds\"}\n" +

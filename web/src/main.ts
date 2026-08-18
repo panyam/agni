@@ -246,7 +246,7 @@ class AppRoot extends BaseComponent {
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
       onRun: (text) => void presenter.runQuery(text),
-      onLocate: (kind, subject, sheet, reason) => void presenter.locateEntity(kind, subject, sheet, reason),
+      onLocate: (kind, subject, sheet, reason, pin) => void presenter.locateEntity(kind, subject, sheet, reason, pin ?? ""),
       // Opening the check results for the selected entity is the EXISTING finding focus reached from
       // the other end (agni issue 259). Nothing re-evaluates: selectFinding focuses a subject within
       // the results already computed. The identity argument mirrors selectionFromFinding, since the

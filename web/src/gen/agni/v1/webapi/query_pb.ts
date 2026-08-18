@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoPUnVuUXVlcnlSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEi4KB292ZXJsYXkYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgDIAEoCRILCgN1cmkYBCABKAkioQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24SEgoKY2VsbF9raW5kcxgFIAMoCSIfCgpDZWxsU2hlZXRzEhEKCXNoZWV0X2lkcxgBIAMoCSJhChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCSIWChRMaXN0UmVsYXRpb25zUmVxdWVzdCJZCgxSZWxhdGlvbkluZm8SDAoEbmFtZRgBIAEoCRIMCgRhcmdzGAIgAygJEg8KB3N1bW1hcnkYAyABKAkSDAoEa2luZBgEIAEoCRIOCgZkZXRhaWwYBSABKAkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiOwoLRW50aXR5UXVlcnkSDAoEa2luZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIi0KC1NlYXJjaFF1ZXJ5Eg0KBXF1ZXJ5GAEgASgJEg8KB3RlYWNoZXMYAiABKAki4AEKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeTK7AQoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoPUnVuUXVlcnlSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEi4KB292ZXJsYXkYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgDIAEoCRILCgN1cmkYBCABKAkitAEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24SEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkiHwoKQ2VsbFNoZWV0cxIRCglzaGVldF9pZHMYASADKAkiYQoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIjsKC0VudGl0eVF1ZXJ5EgwKBGtpbmQYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSItCgtTZWFyY2hRdWVyeRINCgVxdWVyeRgBIAEoCRIPCgd0ZWFjaGVzGAIgASgJIuABChVMaXN0UmVsYXRpb25zUmVzcG9uc2USLwoJcmVsYXRpb25zGAEgAygLMhwuYWduaS52MS53ZWJhcGkuUmVsYXRpb25JbmZvEi4KCGV4YW1wbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuRXhhbXBsZVF1ZXJ5EjMKDmVudGl0eV9xdWVyaWVzGAMgAygLMhsuYWduaS52MS53ZWJhcGkuRW50aXR5UXVlcnkSMQoMc2VhcmNoX3F1ZXJ5GAQgASgLMhsuYWduaS52MS53ZWJhcGkuU2VhcmNoUXVlcnkyuwEKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -132,6 +132,24 @@ export type QueryRow = Message<"agni.v1.webapi.QueryRow"> & {
    * @generated from field: repeated string cell_kinds = 5;
    */
   cellKinds: string[];
+
+  /**
+   * cell_refs aligns positionally with cells and carries the OTHER HALF of a cell's identity, set
+   * only where one cell cannot name the entity by itself (agni issue 259 follow-up).
+   *
+   * A pin is the case. Its identity is two fields, the component and the designator, so the cell
+   * holding "5" names nothing until you know it means U7's pin 5. That is why a pin column typed as
+   * a scalar for so long: not because a pin is unlocatable, but because a table cell is one string
+   * and a pin is two.
+   *
+   * This is a sibling of cell_kinds rather than the same mechanism. A pin column's KIND is fixed
+   * (every row is a pin, so column_kinds says "pin"); what varies per row is the ref, which may come
+   * from a sibling column, from a constant in the query, or from a variable the projection dropped.
+   * Empty for every column that is not a pin column.
+   *
+   * @generated from field: repeated string cell_refs = 6;
+   */
+  cellRefs: string[];
 };
 
 /**

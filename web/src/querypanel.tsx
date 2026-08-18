@@ -130,7 +130,7 @@ function QueryPanel(props: {
   findings: () => FindingsState;
   onRun: (text: string) => void;
   onInspect: (sel: Selection) => void;
-  onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
+  onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
 }) {
   const [text, setText] = createSignal("");
   // expanded holds the row indices whose provenance is open — ephemeral view state, so it lives
@@ -258,8 +258,17 @@ function QueryPanel(props: {
   // which is what makes the table a place to walk from rather than a dead end. A cell whose kind has
   // no selection shape (a scalar never reaches here; a future entity kind might) locates and
   // deselects rather than leaving the bar naming the previous pick.
-  const pickCell = (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => {
-    props.setSelection(selectionFromCell(kind, subject));
+  //
+  // `ref` is the row's other half for a pin cell, "" for every other kind. A pin inverts what the
+  // arguments mean downstream: the entity is the COMPONENT and the cell is the designator on it, so
+  // the locate call is (pin, U7, ..., "5") where a component cell would send (component, U7).
+  const pickCell = (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, ref = "") => {
+    const sel = selectionFromCell(kind, subject, ref);
+    props.setSelection(sel);
+    if (kind === "pin") {
+      if (ref) props.onLocate(kind, ref, sheet, reason, subject);
+      return;
+    }
     props.onLocate(kind, subject, sheet, reason);
   };
   // isCurrent reports whether a cell names the entity on screen right now, so the table can mark
@@ -651,7 +660,13 @@ function QueryPanel(props: {
                         </td>
                         <For each={row.cells}>
                           {(cell, ci) => {
-                            const kind = cellKind(props.state(), row, ci());
+                            // A pin cell whose component did not resolve names nothing, so it
+                            // renders as plain text rather than as a link to nowhere. The server
+                            // already blanks the kind in that case; this keeps the client honest if
+                            // it ever does not.
+                            const rowRef = row.cellRefs[ci()] ?? "";
+                            const rawKind = cellKind(props.state(), row, ci());
+                            const kind = rawKind === "pin" && rowRef === "" ? "" : rawKind;
                             const reason = row.cellReasons[ci()] ?? LocateReason.UNSPECIFIED;
                             // Only an entity cell is locatable; a scalar (a voltage, an mpn
                             // string) stays plain text. Which cells those are can vary ROW BY ROW
@@ -668,8 +683,8 @@ function QueryPanel(props: {
                                 <button
                                   type="button"
                                   class={`query-locate${isCurrent(kind, cell) ? " on" : ""}`}
-                                  title={`locate ${kind} ${cell}`}
-                                  onClick={() => pickCell(kind, cell, undefined, reason)}
+                                  title={kind === "pin" ? `locate pin ${rowRef}.${cell}` : `locate ${kind} ${cell}`}
+                                  onClick={() => pickCell(kind, cell, undefined, reason, row.cellRefs[ci()] ?? "")}
                                 >
                                   {cell}
                                 </button>
@@ -677,7 +692,7 @@ function QueryPanel(props: {
                                   items={row.cellSheets[ci()] ?? []}
                                   label={(b) => b.name}
                                   title={(b) => `show sheet ${b.name}`}
-                                  onSelect={(b) => pickCell(kind, cell, b.id, reason)}
+                                  onSelect={(b) => pickCell(kind, cell, b.id, reason, row.cellRefs[ci()] ?? "")}
                                   active={(b) => isCurrentSheet(kind, cell, b.id)}
                                 />
                               </td>
@@ -733,7 +748,7 @@ export function queryPanelIsland(
   eventBus: EventBus | null,
   handlers: {
     onRun: (text: string) => void;
-    onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
+    onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
     // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
     // host may mount the query panel with no checks panel to open (C13).
     onInspect?: (sel: Selection) => void;
