@@ -39,6 +39,40 @@ message Subject {
   string bus_id = 5;
 }
 
+// ContextSubject is an entity a finding's message NAMES but is not ABOUT.
+//
+// A Finding carries exactly one subject, so a rule whose sentence involves two entities could
+// highlight only one of them, and it was not always the one the sentence named. crystal-load-caps
+// reads "crystal terminal net XOUT1 has no load capacitor" and its subject is the crystal Y1, so
+// clicking it sent the reader to a part while the message talked about a net. Worse, a crystal has
+// two terminals and both sit inside the highlighted symbol, so the drawing could not say which one
+// was at fault (agni issue 349).
+//
+// The net was bound in the query and destroyed when the Finding was built. Nothing downstream could
+// recover it without parsing prose, which is the thing a typed subject exists to avoid.
+//
+// WHAT ROLE MEANS. A short lower-case noun naming the part this entity plays in the rule's sentence
+// ("terminal", "rail", "source", "sense"), not a description and not a kind: the kind is already on
+// the Subject. Roles are the rule author's vocabulary and are NOT a closed set, because the useful
+// name is rule-specific and a shared enum would collapse distinctions the message depends on.
+//
+// A role is not required to be unique within a finding. Two entities can play the same part, which
+// is exactly the i2c-address-collision shape ("A and B both strap to address N"), so a consumer must
+// treat context as a LIST rather than a map.
+//
+// ORDER IS SIGNIFICANT and is the author's: entries arrive in the order the message names them, so a
+// panel rendering chips left to right reads in the same order as the sentence above it. A consumer
+// must not sort them.
+//
+// Empty context means the finding's message names no entity other than its subject. That is the
+// common case and always will be.
+message ContextSubject {
+  Subject subject = 1;
+  // role names the part this entity plays in the message. See the message comment: open vocabulary,
+  // not unique within a finding, ordered by the author.
+  string role = 2;
+}
+
 // LocateReason is why an entity a consumer wants to highlight may not be locatable in the canvas
 // (WS9-039). It is computed server-side from the loaded geometry, because a client-side resolve
 // check silently fails in SVG render mode. It lives on the checks contract rather than the web API
@@ -113,6 +147,15 @@ message Finding {
   // because for a message field singular and repeated are wire-compatible, so old data parses as a
   // one-element list.
   repeated DatasheetCitation datasheets = 8;
+  // context are the entities this finding's message names but is not ABOUT (agni issue 349). Empty
+  // for the common case of a message that names only its subject. See ContextSubject for what a role
+  // means, why roles are not unique, and why order is the author's.
+  //
+  // This does NOT make a finding count as a finding about its context entities. Grouping by subject
+  // partitions the findings, which is what makes "the union of what I clicked equals the full pass"
+  // a fact rather than a hope (agni issue 259), and counting a finding under two entities would break
+  // that. Context makes the finding REACHABLE from the other entity; it does not make it ABOUT it.
+  repeated ContextSubject context = 11;
 }
 
 // CheckReport is the severity-organized pivot over one check run: THE report shape, rendered by the

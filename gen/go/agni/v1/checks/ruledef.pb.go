@@ -1228,7 +1228,14 @@ type QueryRule struct {
 	// The compiler resolves that parameter's citation from the subject's seeded spec, so a
 	// datalog-authored datasheet finding carries the same doc/page/section/confidence a built-in one
 	// does. Empty means the rule is not datasheet-backed.
-	ParamSymbol   string `protobuf:"bytes,7,opt,name=param_symbol,json=paramSymbol,proto3" json:"param_symbol,omitempty"`
+	ParamSymbol string `protobuf:"bytes,7,opt,name=param_symbol,json=paramSymbol,proto3" json:"param_symbol,omitempty"`
+	// context_vars are further projected variables to carry as the finding's context entities: the
+	// entities the message NAMES but is not ABOUT (agni issue 349). Empty for a rule whose message
+	// names only its subject.
+	//
+	// subject_var already proves this authoring surface can say which projected variable plays which
+	// part. This generalizes it from one variable to a list, which is all the field is.
+	ContextVars   []*ContextVar `protobuf:"bytes,8,rep,name=context_vars,json=contextVars,proto3" json:"context_vars,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1312,6 +1319,76 @@ func (x *QueryRule) GetParamSymbol() string {
 	return ""
 }
 
+func (x *QueryRule) GetContextVars() []*ContextVar {
+	if x != nil {
+		return x.ContextVars
+	}
+	return nil
+}
+
+// ContextVar binds one projected datalog variable to a context entity on every finding the rule
+// emits. `var` is the projected variable (no leading "?"), `kind` its subject kind, and `role` the
+// part it plays in the message.
+type ContextVar struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Var           string                 `protobuf:"bytes,1,opt,name=var,proto3" json:"var,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"` // "net" | "component" | "pin" | "bus"
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContextVar) Reset() {
+	*x = ContextVar{}
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContextVar) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContextVar) ProtoMessage() {}
+
+func (x *ContextVar) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContextVar.ProtoReflect.Descriptor instead.
+func (*ContextVar) Descriptor() ([]byte, []int) {
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ContextVar) GetVar() string {
+	if x != nil {
+		return x.Var
+	}
+	return ""
+}
+
+func (x *ContextVar) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ContextVar) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
 // DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
 // solve, with select naming the answer columns.
 type DatalogQuery struct {
@@ -1325,7 +1402,7 @@ type DatalogQuery struct {
 
 func (x *DatalogQuery) Reset() {
 	*x = DatalogQuery{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[16]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1337,7 +1414,7 @@ func (x *DatalogQuery) String() string {
 func (*DatalogQuery) ProtoMessage() {}
 
 func (x *DatalogQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[16]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1350,7 +1427,7 @@ func (x *DatalogQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogQuery.ProtoReflect.Descriptor instead.
 func (*DatalogQuery) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DatalogQuery) GetRules() []*DatalogRule {
@@ -1387,7 +1464,7 @@ type DatalogRule struct {
 
 func (x *DatalogRule) Reset() {
 	*x = DatalogRule{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[17]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1399,7 +1476,7 @@ func (x *DatalogRule) String() string {
 func (*DatalogRule) ProtoMessage() {}
 
 func (x *DatalogRule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[17]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1412,7 +1489,7 @@ func (x *DatalogRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogRule.ProtoReflect.Descriptor instead.
 func (*DatalogRule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DatalogRule) GetHead() *DatalogAtom {
@@ -1446,7 +1523,7 @@ type DatalogBody struct {
 
 func (x *DatalogBody) Reset() {
 	*x = DatalogBody{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[18]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1458,7 +1535,7 @@ func (x *DatalogBody) String() string {
 func (*DatalogBody) ProtoMessage() {}
 
 func (x *DatalogBody) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[18]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1471,7 +1548,7 @@ func (x *DatalogBody) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogBody.ProtoReflect.Descriptor instead.
 func (*DatalogBody) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *DatalogBody) GetLiterals() []*DatalogLiteral {
@@ -1497,7 +1574,7 @@ type DatalogLiteral struct {
 
 func (x *DatalogLiteral) Reset() {
 	*x = DatalogLiteral{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[19]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1509,7 +1586,7 @@ func (x *DatalogLiteral) String() string {
 func (*DatalogLiteral) ProtoMessage() {}
 
 func (x *DatalogLiteral) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[19]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1522,7 +1599,7 @@ func (x *DatalogLiteral) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogLiteral.ProtoReflect.Descriptor instead.
 func (*DatalogLiteral) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *DatalogLiteral) GetLiteral() isDatalogLiteral_Literal {
@@ -1593,7 +1670,7 @@ type DatalogAtom struct {
 
 func (x *DatalogAtom) Reset() {
 	*x = DatalogAtom{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[20]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1605,7 +1682,7 @@ func (x *DatalogAtom) String() string {
 func (*DatalogAtom) ProtoMessage() {}
 
 func (x *DatalogAtom) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[20]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1618,7 +1695,7 @@ func (x *DatalogAtom) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogAtom.ProtoReflect.Descriptor instead.
 func (*DatalogAtom) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *DatalogAtom) GetRelation() string {
@@ -1648,7 +1725,7 @@ type DatalogCompare struct {
 
 func (x *DatalogCompare) Reset() {
 	*x = DatalogCompare{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[21]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1660,7 +1737,7 @@ func (x *DatalogCompare) String() string {
 func (*DatalogCompare) ProtoMessage() {}
 
 func (x *DatalogCompare) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[21]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1673,7 +1750,7 @@ func (x *DatalogCompare) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogCompare.ProtoReflect.Descriptor instead.
 func (*DatalogCompare) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DatalogCompare) GetLeft() *DatalogTerm {
@@ -1713,7 +1790,7 @@ type DatalogTerm struct {
 
 func (x *DatalogTerm) Reset() {
 	*x = DatalogTerm{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[22]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +1802,7 @@ func (x *DatalogTerm) String() string {
 func (*DatalogTerm) ProtoMessage() {}
 
 func (x *DatalogTerm) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[22]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +1815,7 @@ func (x *DatalogTerm) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogTerm.ProtoReflect.Descriptor instead.
 func (*DatalogTerm) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DatalogTerm) GetTerm() isDatalogTerm_Term {
@@ -1823,7 +1900,7 @@ type DatalogValue struct {
 
 func (x *DatalogValue) Reset() {
 	*x = DatalogValue{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[23]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1835,7 +1912,7 @@ func (x *DatalogValue) String() string {
 func (*DatalogValue) ProtoMessage() {}
 
 func (x *DatalogValue) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[23]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1848,7 +1925,7 @@ func (x *DatalogValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogValue.ProtoReflect.Descriptor instead.
 func (*DatalogValue) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DatalogValue) GetS() string {
@@ -1890,7 +1967,7 @@ type DatalogAggregate struct {
 
 func (x *DatalogAggregate) Reset() {
 	*x = DatalogAggregate{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[24]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1902,7 +1979,7 @@ func (x *DatalogAggregate) String() string {
 func (*DatalogAggregate) ProtoMessage() {}
 
 func (x *DatalogAggregate) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[24]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1915,7 +1992,7 @@ func (x *DatalogAggregate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DatalogAggregate.ProtoReflect.Descriptor instead.
 func (*DatalogAggregate) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{24}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *DatalogAggregate) GetFunc() string {
@@ -1954,7 +2031,7 @@ type ProfileDef struct {
 
 func (x *ProfileDef) Reset() {
 	*x = ProfileDef{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[25]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1966,7 +2043,7 @@ func (x *ProfileDef) String() string {
 func (*ProfileDef) ProtoMessage() {}
 
 func (x *ProfileDef) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[25]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1979,7 +2056,7 @@ func (x *ProfileDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileDef.ProtoReflect.Descriptor instead.
 func (*ProfileDef) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{25}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ProfileDef) GetName() string {
@@ -2039,7 +2116,7 @@ type ProfileSignal struct {
 
 func (x *ProfileSignal) Reset() {
 	*x = ProfileSignal{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[26]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2051,7 +2128,7 @@ func (x *ProfileSignal) String() string {
 func (*ProfileSignal) ProtoMessage() {}
 
 func (x *ProfileSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[26]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2064,7 +2141,7 @@ func (x *ProfileSignal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileSignal.ProtoReflect.Descriptor instead.
 func (*ProfileSignal) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{26}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ProfileSignal) GetName() string {
@@ -2129,7 +2206,7 @@ type ProfileRequirement struct {
 
 func (x *ProfileRequirement) Reset() {
 	*x = ProfileRequirement{}
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2141,7 +2218,7 @@ func (x *ProfileRequirement) String() string {
 func (*ProfileRequirement) ProtoMessage() {}
 
 func (x *ProfileRequirement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[27]
+	mi := &file_agni_v1_checks_ruledef_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2154,7 +2231,7 @@ func (x *ProfileRequirement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileRequirement.ProtoReflect.Descriptor instead.
 func (*ProfileRequirement) Descriptor() ([]byte, []int) {
-	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{27}
+	return file_agni_v1_checks_ruledef_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ProfileRequirement) GetType() string {
@@ -2250,7 +2327,7 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\apattern\x18\x02 \x01(\tR\apattern\"R\n" +
 	"\fSpecExistsIn\x12\x12\n" +
 	"\x04over\x18\x01 \x01(\tR\x04over\x12.\n" +
-	"\x05where\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecExprR\x05where\"\xf8\x01\n" +
+	"\x05where\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecExprR\x05where\"\xb7\x02\n" +
 	"\tQueryRule\x12,\n" +
 	"\x04meta\x18\x01 \x01(\v2\x18.agni.v1.checks.RuleMetaR\x04meta\x122\n" +
 	"\x05query\x18\x02 \x01(\v2\x1c.agni.v1.checks.DatalogQueryR\x05query\x12\x12\n" +
@@ -2259,7 +2336,13 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"subjectVar\x12\x17\n" +
 	"\apin_var\x18\x05 \x01(\tR\x06pinVar\x12\x18\n" +
 	"\amessage\x18\x06 \x01(\tR\amessage\x12!\n" +
-	"\fparam_symbol\x18\a \x01(\tR\vparamSymbol\"\xa7\x01\n" +
+	"\fparam_symbol\x18\a \x01(\tR\vparamSymbol\x12=\n" +
+	"\fcontext_vars\x18\b \x03(\v2\x1a.agni.v1.checks.ContextVarR\vcontextVars\"F\n" +
+	"\n" +
+	"ContextVar\x12\x10\n" +
+	"\x03var\x18\x01 \x01(\tR\x03var\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\"\xa7\x01\n" +
 	"\fDatalogQuery\x121\n" +
 	"\x05rules\x18\x01 \x03(\v2\x1b.agni.v1.checks.DatalogRuleR\x05rules\x12/\n" +
 	"\x04goal\x18\x02 \x01(\v2\x1b.agni.v1.checks.DatalogBodyR\x04goal\x123\n" +
@@ -2330,7 +2413,7 @@ func file_agni_v1_checks_ruledef_proto_rawDescGZIP() []byte {
 	return file_agni_v1_checks_ruledef_proto_rawDescData
 }
 
-var file_agni_v1_checks_ruledef_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_agni_v1_checks_ruledef_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_agni_v1_checks_ruledef_proto_goTypes = []any{
 	(*RuleDeck)(nil),           // 0: agni.v1.checks.RuleDeck
 	(*RuleDef)(nil),            // 1: agni.v1.checks.RuleDef
@@ -2348,31 +2431,32 @@ var file_agni_v1_checks_ruledef_proto_goTypes = []any{
 	(*SpecMatch)(nil),          // 13: agni.v1.checks.SpecMatch
 	(*SpecExistsIn)(nil),       // 14: agni.v1.checks.SpecExistsIn
 	(*QueryRule)(nil),          // 15: agni.v1.checks.QueryRule
-	(*DatalogQuery)(nil),       // 16: agni.v1.checks.DatalogQuery
-	(*DatalogRule)(nil),        // 17: agni.v1.checks.DatalogRule
-	(*DatalogBody)(nil),        // 18: agni.v1.checks.DatalogBody
-	(*DatalogLiteral)(nil),     // 19: agni.v1.checks.DatalogLiteral
-	(*DatalogAtom)(nil),        // 20: agni.v1.checks.DatalogAtom
-	(*DatalogCompare)(nil),     // 21: agni.v1.checks.DatalogCompare
-	(*DatalogTerm)(nil),        // 22: agni.v1.checks.DatalogTerm
-	(*DatalogValue)(nil),       // 23: agni.v1.checks.DatalogValue
-	(*DatalogAggregate)(nil),   // 24: agni.v1.checks.DatalogAggregate
-	(*ProfileDef)(nil),         // 25: agni.v1.checks.ProfileDef
-	(*ProfileSignal)(nil),      // 26: agni.v1.checks.ProfileSignal
-	(*ProfileRequirement)(nil), // 27: agni.v1.checks.ProfileRequirement
-	nil,                        // 28: agni.v1.checks.RuleMeta.TagsEntry
-	nil,                        // 29: agni.v1.checks.SpecBody.LetEntry
-	nil,                        // 30: agni.v1.checks.ProfileRequirement.ParamsEntry
+	(*ContextVar)(nil),         // 16: agni.v1.checks.ContextVar
+	(*DatalogQuery)(nil),       // 17: agni.v1.checks.DatalogQuery
+	(*DatalogRule)(nil),        // 18: agni.v1.checks.DatalogRule
+	(*DatalogBody)(nil),        // 19: agni.v1.checks.DatalogBody
+	(*DatalogLiteral)(nil),     // 20: agni.v1.checks.DatalogLiteral
+	(*DatalogAtom)(nil),        // 21: agni.v1.checks.DatalogAtom
+	(*DatalogCompare)(nil),     // 22: agni.v1.checks.DatalogCompare
+	(*DatalogTerm)(nil),        // 23: agni.v1.checks.DatalogTerm
+	(*DatalogValue)(nil),       // 24: agni.v1.checks.DatalogValue
+	(*DatalogAggregate)(nil),   // 25: agni.v1.checks.DatalogAggregate
+	(*ProfileDef)(nil),         // 26: agni.v1.checks.ProfileDef
+	(*ProfileSignal)(nil),      // 27: agni.v1.checks.ProfileSignal
+	(*ProfileRequirement)(nil), // 28: agni.v1.checks.ProfileRequirement
+	nil,                        // 29: agni.v1.checks.RuleMeta.TagsEntry
+	nil,                        // 30: agni.v1.checks.SpecBody.LetEntry
+	nil,                        // 31: agni.v1.checks.ProfileRequirement.ParamsEntry
 }
 var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.checks.RuleDeck.rules:type_name -> agni.v1.checks.RuleDef
 	3,  // 1: agni.v1.checks.RuleDef.spec:type_name -> agni.v1.checks.SpecRule
 	15, // 2: agni.v1.checks.RuleDef.query:type_name -> agni.v1.checks.QueryRule
-	25, // 3: agni.v1.checks.RuleDef.profile:type_name -> agni.v1.checks.ProfileDef
-	28, // 4: agni.v1.checks.RuleMeta.tags:type_name -> agni.v1.checks.RuleMeta.TagsEntry
+	26, // 3: agni.v1.checks.RuleDef.profile:type_name -> agni.v1.checks.ProfileDef
+	29, // 4: agni.v1.checks.RuleMeta.tags:type_name -> agni.v1.checks.RuleMeta.TagsEntry
 	2,  // 5: agni.v1.checks.SpecRule.meta:type_name -> agni.v1.checks.RuleMeta
 	4,  // 6: agni.v1.checks.SpecRule.body:type_name -> agni.v1.checks.SpecBody
-	29, // 7: agni.v1.checks.SpecBody.let:type_name -> agni.v1.checks.SpecBody.LetEntry
+	30, // 7: agni.v1.checks.SpecBody.let:type_name -> agni.v1.checks.SpecBody.LetEntry
 	9,  // 8: agni.v1.checks.SpecBody.where:type_name -> agni.v1.checks.SpecExpr
 	6,  // 9: agni.v1.checks.SpecTerm.lit:type_name -> agni.v1.checks.SpecLit
 	7,  // 10: agni.v1.checks.SpecTerm.call:type_name -> agni.v1.checks.SpecCall
@@ -2394,30 +2478,31 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	5,  // 26: agni.v1.checks.SpecMatch.t:type_name -> agni.v1.checks.SpecTerm
 	9,  // 27: agni.v1.checks.SpecExistsIn.where:type_name -> agni.v1.checks.SpecExpr
 	2,  // 28: agni.v1.checks.QueryRule.meta:type_name -> agni.v1.checks.RuleMeta
-	16, // 29: agni.v1.checks.QueryRule.query:type_name -> agni.v1.checks.DatalogQuery
-	17, // 30: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
-	18, // 31: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
-	22, // 32: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
-	20, // 33: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
-	18, // 34: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
-	19, // 35: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
-	20, // 36: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
-	20, // 37: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
-	21, // 38: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
-	22, // 39: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
-	22, // 40: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
-	22, // 41: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
-	23, // 42: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
-	24, // 43: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
-	26, // 44: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
-	27, // 45: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
-	30, // 46: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 47: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	48, // [48:48] is the sub-list for method output_type
-	48, // [48:48] is the sub-list for method input_type
-	48, // [48:48] is the sub-list for extension type_name
-	48, // [48:48] is the sub-list for extension extendee
-	0,  // [0:48] is the sub-list for field type_name
+	17, // 29: agni.v1.checks.QueryRule.query:type_name -> agni.v1.checks.DatalogQuery
+	16, // 30: agni.v1.checks.QueryRule.context_vars:type_name -> agni.v1.checks.ContextVar
+	18, // 31: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
+	19, // 32: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
+	23, // 33: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
+	21, // 34: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
+	19, // 35: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
+	20, // 36: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
+	21, // 37: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
+	21, // 38: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
+	22, // 39: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
+	23, // 40: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
+	23, // 41: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
+	23, // 42: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
+	24, // 43: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
+	25, // 44: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
+	27, // 45: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
+	28, // 46: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
+	31, // 47: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 48: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	49, // [49:49] is the sub-list for method output_type
+	49, // [49:49] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }
@@ -2452,24 +2537,24 @@ func file_agni_v1_checks_ruledef_proto_init() {
 		(*SpecExpr_ExistsIn)(nil),
 		(*SpecExpr_IsTrue)(nil),
 	}
-	file_agni_v1_checks_ruledef_proto_msgTypes[19].OneofWrappers = []any{
+	file_agni_v1_checks_ruledef_proto_msgTypes[20].OneofWrappers = []any{
 		(*DatalogLiteral_Pos)(nil),
 		(*DatalogLiteral_Neg)(nil),
 		(*DatalogLiteral_Compare)(nil),
 	}
-	file_agni_v1_checks_ruledef_proto_msgTypes[22].OneofWrappers = []any{
+	file_agni_v1_checks_ruledef_proto_msgTypes[23].OneofWrappers = []any{
 		(*DatalogTerm_Var)(nil),
 		(*DatalogTerm_Constant)(nil),
 		(*DatalogTerm_Agg)(nil),
 	}
-	file_agni_v1_checks_ruledef_proto_msgTypes[23].OneofWrappers = []any{}
+	file_agni_v1_checks_ruledef_proto_msgTypes[24].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_checks_ruledef_proto_rawDesc), len(file_agni_v1_checks_ruledef_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   31,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
