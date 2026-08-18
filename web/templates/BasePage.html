@@ -142,6 +142,10 @@
        names a count rather than a place to go. */
     .sheet-badge-more { background: #f0f2f6; border-color: #d3d8e2; color: #5a6478; }
     .sheet-badge-more:hover { background: #e4e8ef; }
+    /* The badge pointing at the sheet on screen. Filled rather than tinted, because it has to be
+       findable at a glance in a strip of otherwise identical chips. */
+    .sheet-badge.on { background: #2b4a8b; border-color: #2b4a8b; color: #fff; font-weight: 600; }
+    .sheet-badge.on:hover { background: #223c73; }
     .exp-chip:hover { background: #eef; }
     .exp-chip.selected { background: #fde6f5; border-color: #ec1bb8; }
     /* WS9-022 report panel: severity pivot sections */
@@ -363,6 +367,9 @@
        columns to its right. The table is fixed-layout, so the column never widened to fit it. */
     .query-locate { font: inherit; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
     .query-locate:hover { color: #1d4ed8; }
+    /* The cell naming the entity on screen. A background band rather than a bolder link, so the
+       reader finds their place by scanning the column rather than by reading it. */
+    .query-locate.on { background: #dbe6fb; color: #14306e; font-weight: 600; border-radius: 3px; padding: 0 3px; margin: 0 -3px; text-decoration-thickness: 2px; }
     .query-cite-col { width: 18px; padding-left: 2px; padding-right: 2px; }
     .query-cite-toggle { border: 0; background: none; color: #999; font: inherit; font-size: 11px; padding: 0; cursor: pointer; }
     .query-cite-toggle:hover, .query-cite-toggle.open { color: #2563eb; }

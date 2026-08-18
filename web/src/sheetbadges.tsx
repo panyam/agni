@@ -20,24 +20,40 @@ const DEFAULT_LIMIT = 3;
 // SheetBadges is generic over the badge so each panel keeps its own payload: the query and findings
 // panels navigate by sheet id, the diff panel by the index of a sheet PAIR. Label, hover and click
 // are supplied, which is the whole difference between the three call sites.
+// `active` marks the badge whose sheet is the one on screen, so a reader who jumped to a sheet can
+// still see where they jumped FROM. It is a predicate rather than an index because the caller
+// derives it from the viewer's actual state, not from what was last clicked here: navigating by any
+// other route (the sheet tabs, a click on the drawing) then moves the mark instead of stranding it.
+// A caller that passes none marks nothing, which is what the findings and diff strips do today.
 export function SheetBadges<T>(props: {
   items: T[];
   label: (b: T) => string;
   title: (b: T) => string;
   onSelect: (b: T) => void;
+  active?: (b: T) => boolean;
   limit?: number;
 }) {
   const [expanded, setExpanded] = createSignal(false);
   const limit = (): number => props.limit ?? DEFAULT_LIMIT;
-  const shown = (): T[] => (expanded() ? props.items : props.items.slice(0, limit()));
-  const hidden = (): number => Math.max(0, props.items.length - limit());
+  // An active badge past the cap would be marked and invisible, which is worse than no mark at all:
+  // the reader would see an unmarked strip and conclude they are somewhere else. So the cut grows to
+  // include it. On a ground net across 21 sheets that means the strip is occasionally one chip
+  // longer than the cap, only while the reader is standing on that sheet.
+  const cut = (): number => {
+    const base = limit();
+    if (!props.active) return base;
+    const i = props.items.findIndex((b) => props.active!(b));
+    return i < base ? base : i + 1;
+  };
+  const shown = (): T[] => (expanded() ? props.items : props.items.slice(0, cut()));
+  const hidden = (): number => Math.max(0, props.items.length - cut());
 
   return (
     <>
       <For each={shown()}>
         {(b) => (
           <span
-            class="sheet-badge"
+            class={`sheet-badge${props.active?.(b) ? " on" : ""}`}
             title={props.title(b)}
             onClick={(e) => {
               e.stopPropagation();
@@ -54,7 +70,7 @@ export function SheetBadges<T>(props: {
           title={
             expanded()
               ? "show fewer sheets"
-              : `${hidden()} more: ${props.items.slice(limit()).map(props.label).join(", ")}`
+              : `${hidden()} more: ${props.items.slice(cut()).map(props.label).join(", ")}`
           }
           onClick={(e) => {
             e.stopPropagation();

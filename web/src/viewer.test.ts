@@ -51,7 +51,7 @@ function harness() {
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
   const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
-  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn(), setEntityQueries: vi.fn(), setSearch: vi.fn(), setSelection: vi.fn(), entityQuery: () => "" };
+  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn(), setEntityQueries: vi.fn(), setSearch: vi.fn(), setSelection: vi.fn(), setCurrentSheet: vi.fn(), entityQuery: () => "" };
   // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
   const navA = { setState: vi.fn() };
   const navB = { setState: vi.fn() };
@@ -394,6 +394,31 @@ describe("ViewerPresenter", () => {
     expect(last.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(last.selected).toBe("");
     expect(last.ruleCount).toBe(2);
+  });
+
+  // The query panel marks the badge pointing at the sheet on screen. That mark is only honest if the
+  // presenter reports EVERY navigation, not just the ones a result cell started, so this pins the
+  // wire rather than the mark: navigating by any other route has to move it too.
+  it("tells the query panel which sheet is on screen, on every navigation", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D",
+      layout: "faithful",
+      sourceFormat: "",
+      componentCount: 0,
+      netCount: 0,
+      sheets: [
+        { id: "s1", name: "Root" },
+        { id: "s2", name: "Power" },
+      ],
+      nativeAvailable: false,
+      availableLayouts: ["faithful"],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch"); // opens on s1
+    expect(h.query.setCurrentSheet).toHaveBeenLastCalledWith("s1");
+
+    await h.presenter.showSheet("s2"); // the sheet tabs, not the query panel
+    expect(h.query.setCurrentSheet).toHaveBeenLastCalledWith("s2");
   });
 
   it("maps finding sheets to named badges and navigates to the subject's sheet before highlighting (WS9-024)", async () => {

@@ -16,7 +16,7 @@ import {
   relationTemplate,
 } from "./query.js";
 import { renderMarkdown } from "./markdown.js";
-import { type Selection, askLabel, fillEntityQuery, labelFor, selectionFromCell } from "./selection.js";
+import { type Selection, askLabel, fillEntityQuery, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
@@ -44,6 +44,7 @@ function QueryPanel(props: {
   prefill: () => { text: string; n: number };
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
+  currentSheet: () => string;
   onRun: (text: string) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
 }) {
@@ -177,6 +178,21 @@ function QueryPanel(props: {
     props.setSelection(selectionFromCell(kind, subject));
     props.onLocate(kind, subject, sheet, reason);
   };
+  // isCurrent reports whether a cell names the entity on screen right now, so the table can mark
+  // where the reader is standing. Forty rows in, a click sends the canvas somewhere and the table
+  // says nothing about which answer it came from.
+  //
+  // It is DERIVED from the selection rather than remembered from the click. A remembered mark is
+  // wrong the moment the reader picks something on the drawing or opens a finding, and it would be
+  // wrong silently, which is the worst way for a you-are-here marker to fail. The cost is that an
+  // entity appearing in several rows marks all of them, which is true: they all name the thing being
+  // shown.
+  const isCurrent = (kind: string, cell: string): boolean =>
+    sameSelection(selectionFromCell(kind, cell), props.selection());
+  // A badge is current when its sheet is the one rendered AND its cell is the entity being shown.
+  // Without the second half every row's badge for this sheet would light up, which says nothing.
+  const isCurrentSheet = (kind: string, cell: string, sheet: string): boolean =>
+    isCurrent(kind, cell) && sheet !== "" && sheet === props.currentSheet();
   // cmpCells is a numeric-aware string compare: two numeric cells sort by value (so 9 < 10), any
   // other pair sorts lexicographically. sortRows applies it, carrying each row's original index.
   const cmpCells = (a: string, b: string): number => {
@@ -525,7 +541,7 @@ function QueryPanel(props: {
                               <td class="query-cell-locate">
                                 <button
                                   type="button"
-                                  class="query-locate"
+                                  class={`query-locate${isCurrent(kind, cell) ? " on" : ""}`}
                                   title={`locate ${kind} ${cell}`}
                                   onClick={() => pickCell(kind, cell, undefined, reason)}
                                 >
@@ -536,6 +552,7 @@ function QueryPanel(props: {
                                   label={(b) => b.name}
                                   title={(b) => `show sheet ${b.name}`}
                                   onSelect={(b) => pickCell(kind, cell, b.id, reason)}
+                                  active={(b) => isCurrentSheet(kind, cell, b.id)}
                                 />
                               </td>
                             );
@@ -599,6 +616,9 @@ export function queryPanelIsland(
   // selection is what the reader last picked. The canvas pushes one through the view; a click on a
   // result cell sets it from inside the panel, which is why the setter goes down as a prop.
   const [selection, setSelection] = signalView<Selection | null>(null);
+  // The sheet on screen, pushed by the presenter on every navigation. The panel needs it to mark
+  // which of a cell's badges is the one being shown.
+  const [currentSheet, setCurrentSheet] = signalView<string>("");
   const onLocate = handlers.onLocate ?? (() => {});
   // A fresh query result clears any stale locate note from the previous run.
   const setStateClearing = (s: QueryResult) => {
@@ -619,6 +639,7 @@ export function queryPanelIsland(
         prefill={prefill}
         selection={selection}
         setSelection={setSelection}
+        currentSheet={currentSheet}
         onRun={handlers.onRun}
         onLocate={onLocate}
       />
@@ -636,6 +657,7 @@ export function queryPanelIsland(
       setEntityQueries,
       setSearch,
       setSelection,
+      setCurrentSheet,
       entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind)?.query ?? "",
     },
   };

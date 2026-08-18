@@ -79,6 +79,9 @@ export interface QueryView {
   // is selected and offer the question to ask about it next. Clicking a result cell selects too,
   // but the panel does that itself — this is the entry point for the OTHER picker, the canvas.
   setSelection: (sel: Selection | null) => void;
+  // setCurrentSheet names the sheet on screen. The panel marks the badge that points at it, so a
+  // reader who navigated away can still see which answer they navigated FROM.
+  setCurrentSheet: (sheetId: string) => void;
   // entityQuery returns the preset for one entity kind, or "" before the catalog has arrived — in
   // which case a click still highlights and simply asks nothing, rather than running a guess.
   entityQuery: (kind: string) => string;
