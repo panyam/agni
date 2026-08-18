@@ -1,0 +1,39 @@
+(edif CRYSTAL
+  (edifVersion 2 0 0)
+  (design CRYSTAL (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell XTAL (view V (viewType NETLIST)
+      (interface
+        (port A (direction INOUT) (designator "1"))
+        (port B (direction INOUT) (designator "2")))))
+    (cell MCU (view V (viewType NETLIST)
+      (interface
+        (port XI  (direction INPUT)  (designator "1"))
+        (port XO  (direction OUTPUT) (designator "2"))
+        (port VDD (direction INPUT)  (designator "3")))))
+    (cell CAP (view V (viewType NETLIST)
+      (interface
+        (port P (direction INOUT) (designator "1"))
+        (port N (direction INOUT) (designator "2")))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance IY1 (viewRef V (cellRef XTAL)) (designator "Y1"))
+          (instance IU1 (viewRef V (cellRef MCU))  (designator "U1"))
+          (instance IC1 (viewRef V (cellRef CAP))  (designator "C1"))
+          (instance IC2 (viewRef V (cellRef CAP))  (designator "C2"))
+          ; XIN carries a load capacitor, so it is silent. XOUT does not, and that is the finding:
+          ; the message is about the NET while the subject is the crystal Y1.
+          (net XIN (joined
+            (portRef 1 (instanceRef IY1))
+            (portRef 1 (instanceRef IU1))
+            (portRef 1 (instanceRef IC1))))
+          (net XOUT (joined
+            (portRef 2 (instanceRef IY1))
+            (portRef 2 (instanceRef IU1))))
+          (net GND (joined
+            (portRef 2 (instanceRef IC1))
+            (portRef 2 (instanceRef IC2))))
+          (net VDD_3V3 (joined
+            (portRef 3 (instanceRef IU1))
+            (portRef 1 (instanceRef IC2)))))))))
