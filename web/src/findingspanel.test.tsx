@@ -222,3 +222,50 @@ describe("context chips", () => {
     expect(m.el.querySelectorAll(".check-context")).toHaveLength(0);
   });
 });
+
+// Selecting a finding must not rebuild the table (agni issue 367).
+//
+// <For> keys by object reference and collapseSorted mints fresh objects per call, so a sections()
+// that re-ran on every state push tore down and recreated every row. That resets the scroll
+// container, which threw a reader clicking something halfway down a long list back to the top.
+//
+// Asserted on NODE IDENTITY rather than on scrollTop, because jsdom has no layout and every element
+// reports a zero-sized box, so scrollTop is always 0 there and the assertion would pass either way.
+// Node identity is the cause; the scroll is the symptom.
+describe("selecting a finding keeps the rows it already rendered", () => {
+  const many = Array.from({ length: 6 }, (_, i) => f({ subject: `N${i}`, rule: "single-pin-net" }));
+
+  it("does not recreate the row elements when only the selection changes", () => {
+    const m = mountPanel({ findings: many });
+    const before = [...m.el.querySelectorAll(".check-row")];
+    expect(before.length).toBe(6);
+
+    m.panel.view.setState(state({ findings: many, selected: "N4" }));
+
+    const after = [...m.el.querySelectorAll(".check-row")];
+    expect(after.length).toBe(6);
+    for (let i = 0; i < before.length; i++) {
+      expect(after[i], `row ${i} was recreated, which resets the panel's scroll`).toBe(before[i]);
+    }
+  });
+
+  it("still marks the newly selected row", () => {
+    // The control: keeping the DOM must not cost the selection styling, which is what a reader uses
+    // to see which finding they are on.
+    const m = mountPanel({ findings: many });
+    m.panel.view.setState(state({ findings: many, selected: "N4" }));
+    const sel = m.el.querySelector(".check-row.selected");
+    expect(sel?.textContent).toContain("N4");
+  });
+
+  it("does rebuild when the findings themselves change", () => {
+    // The other control. A memo that never invalidated would satisfy the first test perfectly and
+    // leave the panel showing stale findings after a re-run.
+    const m = mountPanel({ findings: many });
+    const before = [...m.el.querySelectorAll(".check-row")];
+    m.panel.view.setState(state({ findings: [f({ subject: "DIFFERENT" })] }));
+    const after = [...m.el.querySelectorAll(".check-row")];
+    expect(after.length).toBe(1);
+    expect(after[0]).not.toBe(before[0]);
+  });
+});
