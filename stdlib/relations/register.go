@@ -69,6 +69,7 @@ var builtinSchema = map[string][]query.Field{
 	RelEsdRated:              {query.FieldSubject},                                      // component.esd_rated(ref) — WS3-076, datasheet tier
 	RelComponentDeviceClass:  {query.FieldSubject, query.FieldValue},                    // component.device_class(ref, class) — WS10-013, datasheet tier
 	RelBus:                   {query.FieldSubject, query.FieldValue},                    // bus(label, kind) — reader-detected unmodeled bus (WS1-034)
+	RelEntity:                {query.FieldSubject, query.FieldValue},                    // entity(name, kind) — the enumeration relation, what a name search ranges over
 	RelUnresolvedSymbol:      {query.FieldSubject, query.FieldValue},                    // unresolved_symbol(ref_des, symref) — a placement that lost its pins (WS1-052)
 	RelRefDesCollision:       {query.FieldSubject},                                      // ref_des_collision(ref_des) — WS3-081
 	RelPinNetConflict:        {query.FieldSubject, query.FieldObject, query.FieldValue}, // pin_net_conflict(ref_des, pin, net) — WS3-081
@@ -99,6 +100,7 @@ var builtinSchema = map[string][]query.Field{
 var builtinCatalog = []query.RelationInfo{
 	{Name: "component.mpn", Args: []string{"ref_des", "mpn"}, Summary: "the design-side part identity (manufacturer part number)", Kind: query.KindNetlist},
 	{Name: "component-on-net", Args: []string{"ref_des", "net"}, Summary: "a component sits on a net", Kind: query.KindNetlist},
+	{Name: "entity", Args: []string{"name", "kind"}, Summary: "a thing exists in the design under this name, with kind one of component/net/bus. The relation to start a name search from, since every other one ranges over an association and so misses whatever it does not reach (a part with no connections, a net with nothing on it)", Kind: query.KindNetlist},
 	{Name: "net.max_voltage", Args: []string{"net", "volts"}, Summary: "a net's declared rail voltage", Kind: query.KindNetlist},
 	{Name: "net.nominal_voltage", Args: []string{"net", "volts"}, Summary: "a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level", Kind: query.KindNetlist},
 	{Name: "net.signal_level", Args: []string{"net", "volts"}, Summary: "the signalling level a NON-RAIL net's name declares, the other half of net.nominal_voltage. A house convention that encodes a level into a signal net's name lands here rather than being read as a rail nominal", Kind: query.KindNetlist},

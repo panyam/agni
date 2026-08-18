@@ -144,6 +144,21 @@ const (
 	// so ad-hoc bus search is expressible in datalog; label is the bus name (empty for an anonymous
 	// wire), kind the source construct (bus, bus_entry, geda_bus, edif_array, xschem_bus_label, ...).
 	RelBus = "bus" // doc: facts/docs/bus.md
+
+	// entity(name, kind) is the ENUMERATION relation: it names what exists, without joining it to
+	// anything. Every other relation ranges over an association (a component ON a net, a pin's role,
+	// a rail's voltage), so before this one there was no way to write "what is in this design" or
+	// "what is called something like this". A search had to borrow another relation's range, which
+	// quietly excluded whatever that relation did not reach: a part with no connections, a net with
+	// no components on it.
+	//
+	// kind is check.KindComponent / KindNet / KindBus, the same vocabulary a finding subject and a
+	// picked entity carry, so a search hit converts to a selection with no translation step.
+	//
+	// Pins are deliberately absent. A pin's identity is two fields (ref_des and designator), so it
+	// cannot be one `name` without inventing a composite string that nothing else in the fact base
+	// would join against; pin(ref_des, pin) already enumerates them.
+	RelEntity = "entity" // entity(name, kind): a component, net or bus exists under this name. doc: facts/docs/entity.md
 	// RelUnresolvedSymbol is keyed by ref_des, NOT by the symbol reference, so it joins straight to
 	// the components that lost pins (WS1-052). One row per affected placement, so a query can ask
 	// what KIND of parts a missing library cost — the blast radius, not just the file name.
@@ -242,6 +257,7 @@ func Facts(m check.Model) []query.FactRow {
 	out = append(out, paramPinRangeFacts(m)...)
 	out = append(out, paramPinRelationFacts(m)...)
 	out = append(out, audienceFacts(m)...)
+	out = append(out, entityFacts(m)...)
 	out = append(out, componentOnNetFacts(m)...)
 	out = append(out, pinFacts(m)...)
 	out = append(out, netPinCountFacts(m)...)
@@ -846,6 +862,39 @@ func SpecLibFacts(specs []*parampb.PartSpec) []query.FactRow {
 		out = append(out, audienceRows(spec.GetMpn(), spec)...)
 	}
 	sortFacts(out)
+	return out
+}
+
+// entityFacts emits one row per named thing in the design: every component by ref_des, every net by
+// name, every unmodeled bus by label. It is the only relation whose range is existence rather than a
+// relationship, which is what makes it the one a search can start from.
+//
+// An unnamed net or an anonymous bus wire emits nothing. A row whose name is empty could never be
+// matched by a name search, and would answer "" to a query asking what things are called, so its
+// absence is the honest report. Ref_des is never empty on a placed component.
+//
+// The cite is the entity's own IR site, so a search result is traceable to the file that declared it
+// the way every other fact is.
+func entityFacts(m check.Model) []query.FactRow {
+	var out []query.FactRow
+	for _, c := range m.Components() {
+		if c.RefDes == "" {
+			continue
+		}
+		out = append(out, query.FactRow{Relation: RelEntity, Subject: c.RefDes, Value: check.KindComponent, Cite: irCite(c.Prov)})
+	}
+	for _, n := range m.Nets() {
+		if n.Name == "" {
+			continue
+		}
+		out = append(out, query.FactRow{Relation: RelEntity, Subject: n.Name, Value: check.KindNet, Cite: irCite(n.Prov)})
+	}
+	for _, b := range m.UnmodeledBuses() {
+		if b.GetLabel() == "" {
+			continue
+		}
+		out = append(out, query.FactRow{Relation: RelEntity, Subject: b.GetLabel(), Value: check.KindBus, Cite: irCite(b.GetProv())})
+	}
 	return out
 }
 

@@ -1042,3 +1042,57 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 		t.Fatalf("filtering vcca by absolute_max = %d rows (want the 4.6 V one), got %+v", len(rows), rows)
 	}
 }
+
+// TestEntityFacts: the enumeration relation names what EXISTS, which is what makes it the one a
+// search can start from. The load-bearing case is the isolated one: a part on no net and a net with
+// nothing on it are both invisible to component-on-net, so a search that borrows that relation's
+// range silently cannot find them. Both are exactly what a reviewer wants to find.
+func TestEntityFacts(t *testing.T) {
+	d := supplyDesign("+3V3", false, "")
+	d.Components = append(d.Components, &ir.Component{
+		RefDes:     "TP1", // placed, wired to nothing
+		Sections:   []*ir.ComponentSection{{PartRef: "LDO", LibraryRef: "lib"}},
+		Attributes: map[string]string{},
+		Prov:       &ir.Provenance{SourceFile: "t"},
+	})
+	d.Nets = append(d.Nets, &ir.Net{Name: "SPARE", Prov: &ir.Provenance{SourceFile: "t"}}) // no connections
+	byRel := factsByRelation(Facts(check.NewModel(d)))
+
+	got := map[string]string{}
+	for _, f := range byRel[RelEntity] {
+		if prev, dup := got[f.Subject]; dup {
+			t.Errorf("entity(%q) emitted twice (%s, %s), want one row per name", f.Subject, prev, f.Value)
+		}
+		got[f.Subject] = f.Value
+	}
+	want := map[string]string{"U1": check.KindComponent, "TP1": check.KindComponent, "+3V3": check.KindNet, "SPARE": check.KindNet}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("entity rows = %v, want %v", got, want)
+	}
+
+	// The point of the relation: neither isolated entity appears in the connection relation, so a
+	// name search over component-on-net cannot reach them.
+	for _, f := range byRel[RelComponentOnNet] {
+		if f.Subject == "TP1" || f.Object == "SPARE" {
+			t.Fatalf("fixture is not isolating: component-on-net carries %s/%s", f.Subject, f.Object)
+		}
+	}
+
+	for _, f := range byRel[RelEntity] {
+		if f.Cite == "" {
+			t.Errorf("entity(%q) has no citation; a search result must stay traceable", f.Subject)
+		}
+	}
+}
+
+// TestEntityFactsSkipsUnnamed: a nameless net answers "" to a question about what things are called,
+// and no name search could ever match it, so it is omitted rather than emitted as an empty row.
+func TestEntityFactsSkipsUnnamed(t *testing.T) {
+	d := supplyDesign("+3V3", false, "")
+	d.Nets = append(d.Nets, &ir.Net{Prov: &ir.Provenance{SourceFile: "t"}})
+	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelEntity] {
+		if f.Subject == "" {
+			t.Fatalf("entity emitted an empty name: %+v", f)
+		}
+	}
+}

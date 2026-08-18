@@ -108,6 +108,40 @@ after the filter", which no per-net question can see across a series element.
 
 ## Going further
 
+### Find something by name
+
+`entity(name, kind)` is the relation that names what exists. Every other relation ranges over a
+relationship, so a search built on one inherits its blind spots: looking through `component-on-net`
+cannot find a part that sits on no net, because such a part has no row there.
+
+```
+agni query board.kicad_sch 'entity(?name, ?kind), contains(?name, "CAN") => ?name, ?kind'
+```
+
+`kind` is `component`, `net` or `bus`, so you can scope the search, and the string predicates
+(`contains`, `prefix`, `suffix`, `glob`, `match`) decide how the name is matched.
+
+```
+agni query board.kicad_sch 'entity(?name, "component"), prefix(?name, "U") => ?name'
+agni query board.kicad_sch 'entity(?name, "net"), glob(?name, "*_CLK") => ?name'
+```
+
+The cases only this relation reaches are the ones worth finding during a review. A part connected to
+nothing:
+
+```
+agni query board.kicad_sch 'entity(?ref, "component"), not component-on-net(?ref, ?any) => ?ref'
+```
+
+A net with nothing on it:
+
+```
+agni query board.kicad_sch 'entity(?net, "net"), not component-on-net(?any, ?net) => ?net'
+```
+
+Pins are not in `entity`, because a pin is named by two things rather than one. Enumerate those with
+`pin(?ref, ?pin)`.
+
 ### Find parts stressed above their datasheet rating
 
 This joins what the part is (`component.mpn`), what its datasheet says (`param`), where it sits
