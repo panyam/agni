@@ -36,6 +36,11 @@ var examples = []ExampleQuery{
 		Teaches: "predicate: a string test over a bound value",
 	},
 	{
+		Label:   "Anything named like this",
+		Query:   `entity(?name, ?kind), contains(?name, "USB") => ?name, ?kind`,
+		Teaches: "enumeration: entity ranges over what EXISTS, so a name search also finds what nothing is joined to",
+	},
+	{
 		Label:   "Reachable through series pass elements",
 		Query:   "reaches(?from, ?net) => ?from, ?net",
 		Teaches: "recursion: transitive reach through R/L/ferrite/fuse",
