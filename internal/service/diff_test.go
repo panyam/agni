@@ -31,7 +31,7 @@ func (p pairLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadOpti
 	return d, nil
 }
 
-func (p pairLoader) Geometry(_ context.Context, uri artifact.URI, _ string, _ bool) (*geom.SchematicGeometry, error) {
+func (p pairLoader) Geometry(_ context.Context, uri artifact.URI, _ string, _ bool, _ ...ReadOption) (*geom.SchematicGeometry, error) {
 	g, ok := p.geo[uri.Path]
 	if !ok {
 		return nil, fmt.Errorf("no geometry %q: %w", uri.Path, ErrNotFound)
@@ -80,7 +80,7 @@ func TestDiffDesigns(t *testing.T) {
 			{Name: "FRESH", Connections: conns("R4.1", "R4.2")},
 		},
 	}
-	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer}})
+	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer}}, nil)
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
 		AUri: "mount://m/a.edn", BUri: "mount://m/b.edn",
 	})
@@ -186,7 +186,7 @@ func TestDiffDesignsSheetMaps(t *testing.T) {
 	svc := NewDiffService(pairLoader{
 		designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer},
 		geo:     map[string]*geom.SchematicGeometry{"a.edn": geoA, "b.edn": geoB},
-	})
+	}, nil)
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -241,7 +241,7 @@ func TestDiffDesignsSharedPlacements(t *testing.T) {
 		{Id: "b-root", Placements: []*geom.SymbolPlacement{place("R1", 10, 21), place("C1", 300, 400), place("R4", 70, 80)}},
 	}}
 	designs := map[string]*ir.Design{"a.edn": {Components: []*ir.Component{{RefDes: "R2"}}}, "b.edn": {Components: []*ir.Component{{RefDes: "R4"}}}}
-	svc := NewDiffService(pairLoader{designs: designs, geo: map[string]*geom.SchematicGeometry{"a.edn": geoA, "b.edn": geoB}})
+	svc := NewDiffService(pairLoader{designs: designs, geo: map[string]*geom.SchematicGeometry{"a.edn": geoA, "b.edn": geoB}}, nil)
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +267,7 @@ func TestDiffDesignsSharedPlacements(t *testing.T) {
 	}
 
 	// One side without geometry: no sample, not an error.
-	svc = NewDiffService(pairLoader{designs: designs, geo: map[string]*geom.SchematicGeometry{"a.edn": geoA}})
+	svc = NewDiffService(pairLoader{designs: designs, geo: map[string]*geom.SchematicGeometry{"a.edn": geoA}}, nil)
 	resp, err = svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -283,7 +283,7 @@ func TestDiffDesignsSharedPlacements(t *testing.T) {
 func TestDiffDesignsNoGeometry(t *testing.T) {
 	old := &ir.Design{Components: []*ir.Component{{RefDes: "R2"}}}
 	newer := &ir.Design{}
-	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer}})
+	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer}}, nil)
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -299,7 +299,7 @@ func TestDiffDesignsNoGeometry(t *testing.T) {
 // TestDiffDesignsLoadErrors: either side failing to load fails the whole call with the
 // loader's mapped code — there is no partial diff.
 func TestDiffDesignsLoadErrors(t *testing.T) {
-	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": {}}})
+	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": {}}}, nil)
 	_, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
 		AUri: "mount://m/a.edn", BUri: "mount://m/missing.edn",
 	})
@@ -361,7 +361,7 @@ func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	svc := NewDiffService(pairLoader{
 		designs: map[string]*ir.Design{"a": dA, "b": dB},
 		geo:     map[string]*geom.SchematicGeometry{"a": gA, "b": gB},
-	})
+	}, nil)
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a", BUri: "mount://m/b"})
 	if err != nil {
 		t.Fatal(err)
