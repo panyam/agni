@@ -330,6 +330,7 @@ export class ViewerPresenter {
       faithfulSymbols: this.faithfulSymbols,
       board: this.currentSheet === "board",
       boardLayers: this.boardLayers,
+      hasHighlights: this.highlights.length > 0,
     });
   }
 
@@ -1038,7 +1039,31 @@ export class ViewerPresenter {
   async setHighlights(specs: HighlightSpec[]): Promise<void> {
     this.highlights = specs;
     this.canvas.setHighlights(specs);
+    // Pushed HERE rather than at each call site, because every path that changes the highlight has to
+    // reach the clear control's enabled state and there are seven of them.
+    this.pushControls();
     await this.refreshSvgOverlay();
+  }
+
+  // clearHighlights turns the highlight field off entirely.
+  //
+  // The viewer could not do this at all. setHighlights([]) was reachable from exactly one place in the
+  // client, on opening a DIFFERENT design, so once checks had run the field stayed on until the reader
+  // navigated away (agni issue 348).
+  //
+  // Toggling the focused row off is NOT this. That path deliberately restores the base layer, which is
+  // right for a toggle and is why the gap went unnoticed: the obvious gesture did something reasonable
+  // and the reader assumed it was the off switch.
+  //
+  // It drops the FOCUS too, not just the layers. A cleared drawing with a still-selected row in the
+  // panel is a surface disagreeing with itself, and the next style change would repaint the focus the
+  // reader thought they had dismissed.
+  async clearHighlights(): Promise<void> {
+    this.selectedSubject = "";
+    this.selectedNetId = "";
+    this.views.findings.setFindingLocateNote("");
+    this.pushFindings();
+    await this.setHighlights([]);
   }
 
   // refreshSvgOverlay fetches the highlight overlay for the current sheet and stacks it above

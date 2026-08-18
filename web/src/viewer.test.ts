@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "./uri.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { stubQueryView } from "./testviews.js";
-import { HighlightShape } from "./highlights.js";
+import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";
 import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
@@ -121,6 +121,13 @@ function lastLocation(h: ReturnType<typeof harness>) {
 // lastFindings returns the FindingsState from the most recent onFindings push.
 function lastFindings(h: ReturnType<typeof harness>) {
   const calls = h.onFindings.mock.calls;
+  return calls[calls.length - 1][0];
+}
+
+// lastSpecs returns the HighlightSpec[] from the most recent canvas.setHighlights call, which is the
+// presenter's real output for a highlight: both renderers are driven from it.
+function lastSpecs(h: ReturnType<typeof harness>) {
+  const calls = h.canvas.setHighlights.mock.calls;
   return calls[calls.length - 1][0];
 }
 
@@ -764,7 +771,12 @@ describe("ViewerPresenter", () => {
     // Focus stacks (WS9-017): the OTHER finding (TXP) keeps its outline, the focused net STUB
     // drops out of the base and paints as a translucent PATH highlighter on top (WS9-040), so
     // its marker is not muddied by an opaque underlay.
-    const stack = [{ nets: ["TXP"] }, { nets: ["STUB"], shape: HighlightShape.PATH }];
+    // The base is stamped as context so the focus reads as figure (agni issue 348); the focus layer
+    // names no color and inherits the default, which is what lets a user style still win.
+    const stack = [
+      { nets: ["TXP"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { nets: ["STUB"], shape: HighlightShape.PATH },
+    ];
     expect(h.canvas.setHighlights).toHaveBeenLastCalledWith(stack);
     expect(h.highlightSheet).toHaveBeenCalledWith(
       expect.objectContaining({ format: SheetFormat.SVG, specs: stack }),
@@ -786,7 +798,12 @@ describe("ViewerPresenter", () => {
     await openAndCheck(h, "m", "board.edn");
     h.canvas.setHighlights.mockClear();
     await h.presenter.selectFinding("C1");
-    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([{ components: ["C1"] }, { components: ["C1"], shape: HighlightShape.BOUNDING_RECT }]);
+    // A focused COMPONENT stays in the base (only a focused net is dropped), so C1 appears twice: once
+    // as muted context and once as the focus rect on top.
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
+      { components: ["C1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { components: ["C1"], shape: HighlightShape.BOUNDING_RECT },
+    ]);
   });
 
   it("focusing a finding in Native mode hops to WebGL (no overlay for the golden document)", async () => {
@@ -799,7 +816,10 @@ describe("ViewerPresenter", () => {
     h.highlightSheet.mockClear();
     await h.presenter.selectFinding("R1");
     expect(lastControls(h).mode).toBe("webgl");
-    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([{ components: ["R1"] }, { components: ["R1"], shape: HighlightShape.BOUNDING_RECT }]);
+    expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
+      { components: ["R1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { components: ["R1"], shape: HighlightShape.BOUNDING_RECT },
+    ]);
     expect(h.highlightSheet).not.toHaveBeenCalled(); // WebGL resolves locally, no overlay fetch
   });
 
@@ -902,5 +922,56 @@ describe("board layer visibility (WS7-034)", () => {
     expect(lastControls(h).board).toBe(false);
     await h.presenter.showSheet("board");
     expect(h.render.setBoardLayers).toHaveBeenLastCalledWith("front");
+  });
+});
+
+// Clearing the highlight field, which the viewer simply could not do (agni issue 348).
+//
+// setHighlights([]) was reachable from exactly one place in the whole client, on opening a DIFFERENT
+// design, so once checks had run the field stayed on until the reader navigated away. Toggling the
+// focused row off is not a way to clear: it deliberately restores the base layer, which is correct
+// for a toggle and is why the gap went unnoticed.
+describe("clearHighlights (agni issue 348)", () => {
+  // Two component findings, so the field has something in it and a focus has a base to sit on.
+  function seeded() {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [
+        { rule: "single-pin-net", severity: "info", subject: { kind: "component", ref: "R1", pin: "" }, message: "a", sheets: [] },
+        { rule: "single-pin-net", severity: "info", subject: { kind: "component", ref: "R2", pin: "" }, message: "b", sheets: [] },
+      ],
+    });
+    return h;
+  }
+
+  it("empties the highlight layers and deselects the focused finding", async () => {
+    const h = seeded();
+    await openAndCheck(h, "m", "d.edn");
+    await h.presenter.selectFinding("R1");
+    expect(lastSpecs(h).length).toBeGreaterThan(0);
+
+    await h.presenter.clearHighlights();
+    expect(lastSpecs(h)).toEqual([]);
+    // The panel has to agree, or the row stays lit while the drawing is bare.
+    expect(lastFindings(h).selected).toBe("");
+  });
+
+  it("reports through the control bar whether anything is lit, so the control can disable", async () => {
+    const h = seeded();
+    await openAndCheck(h, "m", "d.edn");
+    expect(lastControls(h).hasHighlights).toBe(true);
+
+    await h.presenter.clearHighlights();
+    expect(lastControls(h).hasHighlights).toBe(false);
+  });
+
+  it("leaves the toggle-off path alone: re-clicking a focused finding still restores the field", async () => {
+    // The regression guard for the fix. Clearing and toggling are different intents and must stay
+    // different: a toggle returns the reader to the overview, and only the clear turns it off.
+    const h = seeded();
+    await openAndCheck(h, "m", "d.edn");
+    await h.presenter.selectFinding("R1");
+    await h.presenter.selectFinding("R1"); // same subject, no sheet: the toggle-off path
+    expect(lastSpecs(h).length).toBeGreaterThan(0);
   });
 });

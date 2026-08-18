@@ -16,6 +16,9 @@ export interface ControlsState {
   // layer-visibility selector; boardLayers is its value ("all" | "front" | "back").
   board: boolean;
   boardLayers: string;
+  // hasHighlights is whether anything is currently lit, so the clear control can disable itself
+  // rather than offering an action with no effect (agni issue 348).
+  hasHighlights: boolean;
 }
 
 // ControlsView is the command-down surface the presenter pushes ControlsState to. The controls

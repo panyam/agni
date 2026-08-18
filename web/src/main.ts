@@ -47,6 +47,16 @@ let restoring = false;
 // the address bar. It sets the tab title always, but only pushes history when the URL actually
 // changed and we are not mid-restore, so normal navigation builds a back-stack while a
 // refresh/back-forward replay does not.
+// isTextEntry reports whether an event landed in somewhere the reader is typing, so a page-level key
+// binding can decline it. The query box and the review notes both take free text, and Escape inside
+// them belongs to the field.
+function isTextEntry(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || !el.tagName) return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable === true;
+}
+
 function syncUrl(loc: ViewerLocation): void {
   document.title = hasFile(loc) ? `${loc.path || loc.mount} — Agni` : "Agni viewer";
   if (restoring) return;
@@ -224,6 +234,22 @@ class AppRoot extends BaseComponent {
       onLayout: (layout) => void presenter.setLayout(layout),
       onSymbols: (faithful) => void presenter.setSymbols(faithful),
       onBoardLayers: (side) => presenter.setBoardLayers(side),
+      onClearHighlights: () => void presenter.clearHighlights(),
+    });
+    // Escape clears the highlight, the gesture a reader reaches for first.
+    //
+    // It lives here rather than in pagegestures, which routes the datasheet workbench's keys and is
+    // reached only from regionview. It never sees this canvas, which is why pressing Escape on a
+    // schematic did nothing at all (agni issue 348).
+    //
+    // Guarded twice, and both guards are about not stealing the key from something with a better
+    // claim. An open picker owns Escape, because dismissing it is the more local intent. A reader
+    // typing in the query box means to clear their text, not the drawing.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (comparePick.picker.isOpen()) return;
+      if (isTextEntry(e.target)) return;
+      void presenter.clearHighlights();
     });
     // The merged checks panel lists rule findings for the loaded design (grouped/sorted client-side)
     // and hosts the on-demand Run button; clicking a finding highlights its subject (net/ref_des),
