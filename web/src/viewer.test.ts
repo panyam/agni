@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { artifactUri } from "./uri.js";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
+import { stubQueryView } from "./testviews.js";
 import { HighlightShape } from "./highlights.js";
 import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
@@ -51,7 +52,10 @@ function harness() {
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
   const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
-  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn(), setEntityQueries: vi.fn(), setSearch: vi.fn(), setSelection: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), entityQuery: () => "" };
+  // Spies for the ports these tests assert on; every other port defaults to a no-op in
+  // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
+  // in a test that never mentions it. The spies are held separately so they keep their Mock type.
+  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn() };
   // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
   const navA = { setState: vi.fn() };
   const navB = { setState: vi.fn() };
@@ -83,7 +87,7 @@ function harness() {
     report: onReport,
     location: onLocation,
     overview: { setState: onOverview },
-    query,
+    query: stubQueryView(query),
   });
   return { presenter, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }

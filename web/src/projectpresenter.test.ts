@@ -33,7 +33,6 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
       showWebgl: vi.fn(), showSvg: vi.fn(), setSvgOverlay: vi.fn(), setBusy: vi.fn(),
       getView: vi.fn(), setView: vi.fn(), setBoardLayers: vi.fn(),
     } as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     {
       sheetNavs: [],
       summary: vi.fn(),
@@ -45,8 +44,7 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
       projectBar: { setState: onProject },
       conventionBar: { setState: onConvention },
       review: { setState: onReview },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any,
+    },
     undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { listReviews } as any,

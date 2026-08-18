@@ -5,6 +5,7 @@ import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import type { ReviewState } from "./review.js";
 import type { ConventionState } from "./conventions.js";
+import { stubQueryView } from "./testviews.js";
 
 // A run document as the server returns it: a Review resource wrapping a CheckResults.
 function doc(name: string, createdAt: string, outcomes: string[]) {
@@ -109,7 +110,6 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   const onSummary = vi.fn();
   const presenter = new ViewerPresenter(
     client, checks, canvas, render,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     {
       sheetNavs: [],
       summary: onSummary,
@@ -118,11 +118,10 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
       expectationCaption: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
-      query: { setState: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn() },
+      query: stubQueryView(),
       review: wireReview ? { setState: onReview } : undefined,
       conventionBar: wireConventionBar ? { setState: onConvention } : undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any,
+    },
     wireClients ? query : undefined,
     wireClients ? reviews : undefined,
     wireClients ? workspace : undefined,
