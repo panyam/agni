@@ -1703,12 +1703,29 @@ func (x *KeyValue) GetValue() string {
 
 // SchematicGeometry is the whole sidecar artifact for one design (tier 1, logical).
 type SchematicGeometry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DesignRef     string                 `protobuf:"bytes,1,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"` // joins to ir.Design.name
-	UnitNm        int64                  `protobuf:"varint,2,opt,name=unit_nm,json=unitNm,proto3" json:"unit_nm,omitempty"`         // nanometers per source unit (10 for this EDIF)
-	Symbols       []*SymbolDef           `protobuf:"bytes,3,rep,name=symbols,proto3" json:"symbols,omitempty"`                      // the symbol library, keyed by cell_ref
-	Sheets        []*SheetGeometry       `protobuf:"bytes,4,rep,name=sheets,proto3" json:"sheets,omitempty"`
-	Prov          *Provenance            `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	DesignRef string                 `protobuf:"bytes,1,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"` // joins to ir.Design.name
+	UnitNm    int64                  `protobuf:"varint,2,opt,name=unit_nm,json=unitNm,proto3" json:"unit_nm,omitempty"`         // nanometers per source unit (10 for this EDIF)
+	Symbols   []*SymbolDef           `protobuf:"bytes,3,rep,name=symbols,proto3" json:"symbols,omitempty"`                      // the symbol library, keyed by cell_ref
+	Sheets    []*SheetGeometry       `protobuf:"bytes,4,rep,name=sheets,proto3" json:"sheets,omitempty"`
+	// undrawn are the placements this geometry knows about and cannot draw, because nothing in
+	// `symbols` resolves for them (agni issue 354).
+	//
+	// A render that loses a symbol does not look broken. The placement contributes no shapes, so it
+	// vanishes along with the entity keys that make it pickable, while the annotation pass still draws
+	// its reference designator. The sheet then shows every ref des, every wire and the title block, and
+	// every component on it is silently unclickable. A reader sees `C1` printed, clicks it, gets
+	// nothing, and reasonably concludes the tool knows nothing about C1.
+	//
+	// It rides the GEOMETRY rather than a response field so every consumer reads one answer: `agni
+	// render` prints it, the viewer banners it, and an embedder gets it without recomputing a join that
+	// could disagree with the renderer's. It is filled where geometry is produced, using the same
+	// resolution geomath.SymbolFor performs, so "did not draw" cannot drift from what did not draw.
+	//
+	// Empty means every placement resolved, which is the normal case. A geometry with no placements at
+	// all is also empty here: absence of drawing is not the same as failure to draw.
+	Undrawn       []*UndrawnPlacement `protobuf:"bytes,5,rep,name=undrawn,proto3" json:"undrawn,omitempty"`
+	Prov          *Provenance         `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1771,11 +1788,97 @@ func (x *SchematicGeometry) GetSheets() []*SheetGeometry {
 	return nil
 }
 
+func (x *SchematicGeometry) GetUndrawn() []*UndrawnPlacement {
+	if x != nil {
+		return x.Undrawn
+	}
+	return nil
+}
+
 func (x *SchematicGeometry) GetProv() *Provenance {
 	if x != nil {
 		return x.Prov
 	}
 	return nil
+}
+
+// UndrawnPlacement is one placement no symbol resolved for, with enough identity to act on it.
+//
+// ref_des is what the reader SEES on the sheet, so a message can name the part they are looking at.
+// cell_ref and library_ref are what the placement asked for and nothing supplied, which is what a
+// reader pastes into a --symbol-path search or checks against their library table. sheet_id says
+// where to look.
+//
+// Keyed per PLACEMENT rather than per missing library, unlike ir.UnresolvedSymbol. That message
+// answers "which reference failed to resolve" for the netlist read, where one missing file affecting
+// forty parts is one fact. This answers "what is missing from this drawing", where the forty
+// unclickable parts are the thing the reader is looking at.
+type UndrawnPlacement struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	CellRef       string                 `protobuf:"bytes,2,opt,name=cell_ref,json=cellRef,proto3" json:"cell_ref,omitempty"`
+	LibraryRef    string                 `protobuf:"bytes,3,opt,name=library_ref,json=libraryRef,proto3" json:"library_ref,omitempty"`
+	SheetId       string                 `protobuf:"bytes,4,opt,name=sheet_id,json=sheetId,proto3" json:"sheet_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UndrawnPlacement) Reset() {
+	*x = UndrawnPlacement{}
+	mi := &file_agni_v1_geom_geom_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UndrawnPlacement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UndrawnPlacement) ProtoMessage() {}
+
+func (x *UndrawnPlacement) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UndrawnPlacement.ProtoReflect.Descriptor instead.
+func (*UndrawnPlacement) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UndrawnPlacement) GetRefDes() string {
+	if x != nil {
+		return x.RefDes
+	}
+	return ""
+}
+
+func (x *UndrawnPlacement) GetCellRef() string {
+	if x != nil {
+		return x.CellRef
+	}
+	return ""
+}
+
+func (x *UndrawnPlacement) GetLibraryRef() string {
+	if x != nil {
+		return x.LibraryRef
+	}
+	return ""
+}
+
+func (x *UndrawnPlacement) GetSheetId() string {
+	if x != nil {
+		return x.SheetId
+	}
+	return ""
 }
 
 var File_agni_v1_geom_geom_proto protoreflect.FileDescriptor
@@ -1928,14 +2031,21 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\fextra_fields\x18\x06 \x03(\v2\x16.agni.v1.geom.KeyValueR\vextraFields\"2\n" +
 	"\bKeyValue\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\xe1\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\x9b\x02\n" +
 	"\x11SchematicGeometry\x12\x1d\n" +
 	"\n" +
 	"design_ref\x18\x01 \x01(\tR\tdesignRef\x12\x17\n" +
 	"\aunit_nm\x18\x02 \x01(\x03R\x06unitNm\x121\n" +
 	"\asymbols\x18\x03 \x03(\v2\x17.agni.v1.geom.SymbolDefR\asymbols\x123\n" +
-	"\x06sheets\x18\x04 \x03(\v2\x1b.agni.v1.geom.SheetGeometryR\x06sheets\x12,\n" +
-	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04provB,Z*github.com/panyam/agni/gen/go/agni/v1/geomb\x06proto3"
+	"\x06sheets\x18\x04 \x03(\v2\x1b.agni.v1.geom.SheetGeometryR\x06sheets\x128\n" +
+	"\aundrawn\x18\x05 \x03(\v2\x1e.agni.v1.geom.UndrawnPlacementR\aundrawn\x12,\n" +
+	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\x82\x01\n" +
+	"\x10UndrawnPlacement\x12\x17\n" +
+	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x19\n" +
+	"\bcell_ref\x18\x02 \x01(\tR\acellRef\x12\x1f\n" +
+	"\vlibrary_ref\x18\x03 \x01(\tR\n" +
+	"libraryRef\x12\x19\n" +
+	"\bsheet_id\x18\x04 \x01(\tR\asheetIdB,Z*github.com/panyam/agni/gen/go/agni/v1/geomb\x06proto3"
 
 var (
 	file_agni_v1_geom_geom_proto_rawDescOnce sync.Once
@@ -1950,7 +2060,7 @@ func file_agni_v1_geom_geom_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_agni_v1_geom_geom_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_agni_v1_geom_geom_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_agni_v1_geom_geom_proto_goTypes = []any{
 	(Shape_Kind)(0),           // 0: agni.v1.geom.Shape.Kind
 	(Shape_Fill)(0),           // 1: agni.v1.geom.Shape.Fill
@@ -1974,6 +2084,7 @@ var file_agni_v1_geom_geom_proto_goTypes = []any{
 	(*TitleBlock)(nil),        // 19: agni.v1.geom.TitleBlock
 	(*KeyValue)(nil),          // 20: agni.v1.geom.KeyValue
 	(*SchematicGeometry)(nil), // 21: agni.v1.geom.SchematicGeometry
+	(*UndrawnPlacement)(nil),  // 22: agni.v1.geom.UndrawnPlacement
 }
 var file_agni_v1_geom_geom_proto_depIdxs = []int32{
 	5,  // 0: agni.v1.geom.BBox.min:type_name -> agni.v1.geom.Point
@@ -2016,12 +2127,13 @@ var file_agni_v1_geom_geom_proto_depIdxs = []int32{
 	20, // 37: agni.v1.geom.TitleBlock.extra_fields:type_name -> agni.v1.geom.KeyValue
 	12, // 38: agni.v1.geom.SchematicGeometry.symbols:type_name -> agni.v1.geom.SymbolDef
 	18, // 39: agni.v1.geom.SchematicGeometry.sheets:type_name -> agni.v1.geom.SheetGeometry
-	4,  // 40: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
-	41, // [41:41] is the sub-list for method output_type
-	41, // [41:41] is the sub-list for method input_type
-	41, // [41:41] is the sub-list for extension type_name
-	41, // [41:41] is the sub-list for extension extendee
-	0,  // [0:41] is the sub-list for field type_name
+	22, // 40: agni.v1.geom.SchematicGeometry.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	4,  // 41: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
+	42, // [42:42] is the sub-list for method output_type
+	42, // [42:42] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_proto_init() }
@@ -2035,7 +2147,7 @@ func file_agni_v1_geom_geom_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_proto_rawDesc), len(file_agni_v1_geom_geom_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   18,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

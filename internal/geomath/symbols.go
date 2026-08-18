@@ -55,3 +55,35 @@ func (m SymbolIndex) SymbolFor(pl *geom.SymbolPlacement) *geom.SymbolDef {
 	}
 	return m[symKey(pl.GetCellRef(), "", "")]
 }
+
+// MarkUndrawn fills a geometry's `undrawn` list: every placement no symbol resolves for, in sheet
+// then placement order so the answer is stable across runs.
+//
+// Called where geometry is PRODUCED rather than where it is consumed, so the list is computed once,
+// with the same resolution the renderer performs, and every consumer reads one answer. A consumer
+// deriving it independently is how the count and the drawing drift apart.
+//
+// It overwrites rather than appends, so re-running it on the same geometry is a no-op rather than a
+// doubling. A geometry with no placements yields an empty list, since a sheet that draws nothing has
+// not failed to draw anything.
+func MarkUndrawn(g *geom.SchematicGeometry) {
+	if g == nil {
+		return
+	}
+	ix := IndexSymbols(g)
+	var out []*geom.UndrawnPlacement
+	for _, sh := range g.GetSheets() {
+		for _, pl := range sh.GetPlacements() {
+			if ix.SymbolFor(pl) != nil {
+				continue
+			}
+			out = append(out, &geom.UndrawnPlacement{
+				RefDes:     pl.GetRefDes(),
+				CellRef:    pl.GetCellRef(),
+				LibraryRef: pl.GetLibraryRef(),
+				SheetId:    sh.GetId(),
+			})
+		}
+	}
+	g.Undrawn = out
+}

@@ -301,5 +301,40 @@ message SchematicGeometry {
   int64 unit_nm = 2;                // nanometers per source unit (10 for this EDIF)
   repeated SymbolDef symbols = 3;   // the symbol library, keyed by cell_ref
   repeated SheetGeometry sheets = 4;
+  // undrawn are the placements this geometry knows about and cannot draw, because nothing in
+  // `symbols` resolves for them (agni issue 354).
+  //
+  // A render that loses a symbol does not look broken. The placement contributes no shapes, so it
+  // vanishes along with the entity keys that make it pickable, while the annotation pass still draws
+  // its reference designator. The sheet then shows every ref des, every wire and the title block, and
+  // every component on it is silently unclickable. A reader sees `C1` printed, clicks it, gets
+  // nothing, and reasonably concludes the tool knows nothing about C1.
+  //
+  // It rides the GEOMETRY rather than a response field so every consumer reads one answer: `agni
+  // render` prints it, the viewer banners it, and an embedder gets it without recomputing a join that
+  // could disagree with the renderer's. It is filled where geometry is produced, using the same
+  // resolution geomath.SymbolFor performs, so "did not draw" cannot drift from what did not draw.
+  //
+  // Empty means every placement resolved, which is the normal case. A geometry with no placements at
+  // all is also empty here: absence of drawing is not the same as failure to draw.
+  repeated UndrawnPlacement undrawn = 5;
   Provenance prov = 16;
+}
+
+// UndrawnPlacement is one placement no symbol resolved for, with enough identity to act on it.
+//
+// ref_des is what the reader SEES on the sheet, so a message can name the part they are looking at.
+// cell_ref and library_ref are what the placement asked for and nothing supplied, which is what a
+// reader pastes into a --symbol-path search or checks against their library table. sheet_id says
+// where to look.
+//
+// Keyed per PLACEMENT rather than per missing library, unlike ir.UnresolvedSymbol. That message
+// answers "which reference failed to resolve" for the netlist read, where one missing file affecting
+// forty parts is one fact. This answers "what is missing from this drawing", where the forty
+// unclickable parts are the thing the reader is looking at.
+message UndrawnPlacement {
+  string ref_des = 1;
+  string cell_ref = 2;
+  string library_ref = 3;
+  string sheet_id = 4;
 }
