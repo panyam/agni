@@ -57,6 +57,21 @@ describe("diffChangesPanelIsland", () => {
     expect(onSelect).toHaveBeenCalledWith("component:R4");
   });
 
+  // The same strip the findings and query panels use, so a diff over a many-sheet design keeps its
+  // rows one line tall rather than carrying one chip per pair.
+  it("caps the pair badges and counts the rest", () => {
+    const { el, view, onSelect } = mountPanel();
+    const pairs = Array.from({ length: 21 }, (_, i) => ({ name: `P${i}`, aId: `a${i}`, bId: `b${i}` }));
+    view.setState(state({ pairs, items: [item({ key: "R9", bSheets: pairs.map((p) => p.bId) })] }));
+    const labels = () => [...el.querySelectorAll(".sheet-badge")].map((b) => b.textContent);
+    expect(labels()).toEqual(["P0", "P1", "P2", "+18"]);
+
+    (el.querySelector(".sheet-badge-more") as HTMLElement).click();
+    expect(labels()).toHaveLength(22);
+    [...el.querySelectorAll<HTMLElement>(".sheet-badge")].find((b) => b.textContent === "P20")!.click();
+    expect(onSelect).toHaveBeenCalledWith("component:R9", 20);
+  });
+
   it("shows pair badges only for multi-pair diffs and emits the pair index from a badge click", () => {
     const { el, view, onSelect } = mountPanel();
     const pairs = [

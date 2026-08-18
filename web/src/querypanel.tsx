@@ -14,6 +14,7 @@ import {
 } from "./query.js";
 import { renderMarkdown } from "./markdown.js";
 import { type Selection, askLabel, fillEntityQuery, labelFor, selectionFromCell } from "./selection.js";
+import { SheetBadges } from "./sheetbadges.jsx";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
 // server's /relation-docs/ route BEFORE markdown rendering. Making them root-absolute means the
@@ -447,20 +448,12 @@ function QueryPanel(props: {
                                 >
                                   {cell}
                                 </button>
-                                <For each={row.cellSheets[ci()] ?? []}>
-                                  {(b) => (
-                                    <span
-                                      class="sheet-badge"
-                                      title={`show sheet ${b.name}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        pickCell(kind, cell, b.id, reason);
-                                      }}
-                                    >
-                                      {b.name}
-                                    </span>
-                                  )}
-                                </For>
+                                <SheetBadges
+                                  items={row.cellSheets[ci()] ?? []}
+                                  label={(b) => b.name}
+                                  title={(b) => `show sheet ${b.name}`}
+                                  onSelect={(b) => pickCell(kind, cell, b.id, reason)}
+                                />
                               </td>
                             );
                           }}

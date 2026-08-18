@@ -41,6 +41,23 @@ describe("checks panel sheet badges (WS9-024)", () => {
     expect(onSelect).toHaveBeenCalledWith("SDA", "s2", "");
   });
 
+  // A net on 21 sheets used to render 21 chips, which made the row five lines tall here and made
+  // the query table bleed across its columns. The strip now shows the first few and counts the rest.
+  it("shows the first three sheets and a count of the rest, expanding on demand", () => {
+    const many = Array.from({ length: 21 }, (_, i) => ({ id: `s${i}`, name: `S${i}` }));
+    const { el, onSelect } = mountPanel({ findings: [f({ subject: "DGND", sheets: many })] });
+    const labels = () => [...el.querySelectorAll(".sheet-badge")].map((b) => b.textContent);
+    expect(labels()).toEqual(["S0", "S1", "S2", "+18"]);
+
+    el.querySelector<HTMLElement>(".sheet-badge-more")!.click();
+    expect(labels()).toHaveLength(22); // all 21, plus the collapse chip
+    expect(labels()[21]).toBe("\u2212");
+
+    // A revealed badge still navigates to its own sheet.
+    [...el.querySelectorAll<HTMLElement>(".sheet-badge")].find((b) => b.textContent === "S20")!.click();
+    expect(onSelect).toHaveBeenCalledWith("DGND", "s20", "");
+  });
+
   it("a subject click emits onSelect with the subject only (the presenter picks the sheet)", () => {
     const { el, onSelect } = mountPanel({ findings: [spanning] });
     el.querySelector<HTMLButtonElement>("button.check-locate")!.click();
