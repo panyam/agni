@@ -24,7 +24,7 @@ const sharedPlacementCap = 50
 // states its dependencies; the server's osLoader (and any Loader) satisfies it.
 type DesignLoader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
-	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
+	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 }
 
 // DiffService computes the semantic diff between two designs over an injected loader (C13): it
@@ -34,11 +34,32 @@ type DesignLoader interface {
 // transport.
 type DiffService struct {
 	loader DesignLoader
+	// projects resolves each side to its project and loads that project's config; nil when this
+	// deployment resolves no projects.
+	//
+	// A diff needs it on the NETLIST reads, not just the geometry ones. Both sides were read with no
+	// options at all, so a project whose symbol library did not resolve was compared from two reads
+	// that each lose every connection through the affected parts, and a revision that changed such a
+	// connection showed no change. `agni diff` reads through readDesign and IS configured, so the two
+	// surfaces answered the same question differently (agni issue 347, the service-side survivor of
+	// agni issue 228).
+	projects *ProjectResolver
 }
 
-// NewDiffService returns a DiffService backed by the given loader.
-func NewDiffService(loader DesignLoader) *DiffService {
-	return &DiffService{loader: loader}
+// NewDiffService returns a DiffService backed by the given loader. A nil projects resolver means
+// this deployment resolves no projects.
+func NewDiffService(loader DesignLoader, projects *ProjectResolver) *DiffService {
+	return &DiffService{loader: loader, projects: projects}
+}
+
+// readOptions composes one side's per-read config from its project. Each side resolves its own,
+// because a diff may span two projects.
+func (s *DiffService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
+	ov, err := s.projects.Overlay(ctx, uri, nil, Overlay{}, "")
+	if err != nil {
+		return nil, err
+	}
+	return ov.ReadOptions(), nil
 }
 
 // DiffDesigns loads both designs' netlist IR and returns the classified report plus the
@@ -54,17 +75,27 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if err != nil {
 		return nil, err
 	}
-	a, err := s.loader.Design(ctx, aURI)
+	// Each side resolves its OWN config, because a diff may span two projects and the comparison is
+	// only meaningful when each revision is read the way its own project declares.
+	aOpts, err := s.readOptions(ctx, aURI)
+	if err != nil {
+		return nil, err
+	}
+	bOpts, err := s.readOptions(ctx, bURI)
+	if err != nil {
+		return nil, err
+	}
+	a, err := s.loader.Design(ctx, aURI, aOpts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
-	b, err := s.loader.Design(ctx, bURI)
+	b, err := s.loader.Design(ctx, bURI, bOpts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
 	resp := DiffResponseProto(diff.Designs(a, b))
-	gA := BuildGeometry(ctx, s.loader, aURI)
-	gB := BuildGeometry(ctx, s.loader, bURI)
+	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)
+	gB := BuildGeometry(ctx, s.loader, bURI, bOpts...)
 	// Plain netlist models on purpose (NOT BuildModel): diff runs no rules — the model is used only
 	// for per-sheet net annotation (annotateDiffSheets reads Nets()), so the board/params tiers would
 	// be dead weight. This is the intentional exception to the WS9-048 full-model rule, not drift.

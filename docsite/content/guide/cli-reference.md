@@ -271,5 +271,8 @@ actually read. The rest sit closer to the engine and are covered in the develope
 The reader is picked by file extension (case-insensitive): EDIF netlists (`.edn`/`.edf`/
 `.edif`) and geometry (`.eds`), KiCad (`.kicad_sch`/`.kicad_pcb`/`.kicad_pro`), IPC-2581
 (`.xml`/`.cvg`), and `.sch` (xschem / gEDA / legacy KiCad, sniffed by header). A schematic
-that references external symbols needs `--symbol-path` (or, for a KiCad project, its
-`sym-lib-table`) for full pin-level resolution.
+that references external symbols resolves them by one of three routes, in the order they are
+searched: its own `sym-lib-table` for a KiCad project, the `symbols` library its design descriptor
+declares (defaulting to `symbols` beside the descriptor), and any `--symbol-path` directory. A design
+that belongs to a project needs no flag, and the flag stays the escape hatch for a library the
+project does not know about.

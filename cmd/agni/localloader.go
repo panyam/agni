@@ -91,20 +91,20 @@ func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardG
 	return l.loader.BoardGeometry(localOf(src.BoardURI))
 }
 
-func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool) (*geom.SchematicGeometry, error) {
+func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ResolveGeometry(localOf(src.GeometryURI), layout, nil, symbolsFor(faithful))
+	return readerFor(l.loader, opts...).ResolveGeometry(localOf(src.GeometryURI), layout, nil, symbolsFor(faithful))
 }
 
-func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful bool) (*graph.ConversionReport, error) {
+func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ConversionReport(localOf(src.GeometryURI), symbolsFor(faithful), nil)
+	return readerFor(l.loader, opts...).ConversionReport(localOf(src.GeometryURI), symbolsFor(faithful), nil)
 }
 
 // Expectations reads the sidecar beside the ENTRY rather than beside the named file: an expectation

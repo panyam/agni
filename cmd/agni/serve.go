@@ -127,7 +127,7 @@ func serveCmd() *cobra.Command {
 			projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
 			prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projectStore)))
 			mux.Handle(prPath, prHandler)
-			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style)))
+			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style, projectResolver)))
 			mux.Handle(dsPath, dsHandler)
 			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 			// installed process-wide, which is the one legitimate use of a process-global (startup, before
@@ -167,7 +167,7 @@ func serveCmd() *cobra.Command {
 			}
 			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc))
 			mux.Handle(ckPath, ckHandler)
-			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader)))
+			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
 			mux.Handle(diffPath, diffHandler)
 			dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
 			mux.Handle(dtPath, dtHandler)

@@ -13,6 +13,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
+	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/service"
 )
 
@@ -25,15 +26,29 @@ func newDesignSvc(mounts []mounts.Mount) *service.DesignService {
 // newDesignSvcNative is newDesignSvc with a native-tool allowlist, for the native-gate tests.
 func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service.DesignService {
 	return service.NewDesignService(
-		&osLoader{mounts: mounts},
+		// loader: newLoader() matches serve.go. Leaving it nil was survivable only because the edif
+		// fixtures resolve no external symbol library, so the nil reader was never dereferenced; a
+		// kicad schematic with a sym-lib reference panics on it.
+		&osLoader{mounts: mounts, loader: newLoader()},
 		&osNative{mounts: mounts, enabled: enabled, cache: native.NewCache()},
 		render.Style{},
+		testProjectResolver(mounts),
 	)
+}
+
+// testProjectResolver composes the project ports exactly as serve.go does, so a fixture carrying a
+// descriptor is read under its own config here too. Building it from the mounts (rather than passing
+// nil) is what makes these tests the served composition rather than a simplified one.
+func testProjectResolver(ms []mounts.Mount) *service.ProjectResolver {
+	return &service.ProjectResolver{
+		Store:  projects.NewFSStore(projectTrees(ms)...),
+		Config: &osProjectConfig{mounts: ms},
+	}
 }
 
 // newCheckSvc builds a CheckService over the same os-backed loader, with the built-in catalog.
 func newCheckSvc(mounts []mounts.Mount) *service.CheckService {
-	return service.NewCheckService(&osLoader{mounts: mounts}, check.DefaultCatalog(), nil, "", nil, nil)
+	return service.NewCheckService(&osLoader{mounts: mounts, loader: newLoader()}, check.DefaultCatalog(), nil, "", nil, nil)
 }
 
 // designFixtureSvc mounts the shared edif testdata (basic.edn netlist, sample.eds geometry)
@@ -518,4 +533,53 @@ func TestDesignServiceGetSheet(t *testing.T) {
 			t.Fatalf("want ErrNotFound, got %v", err)
 		}
 	})
+}
+
+// tutorialMounts mounts examples/tutorial-project, the shipped fixture that declares a project and a
+// design and needs no flags to do it: design.yaml names the entry and its companions, and a design's
+// symbol library defaults to `symbols` beside the descriptor.
+func tutorialMounts(t *testing.T) []mounts.Mount {
+	t.Helper()
+	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "tutorial-project"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []mounts.Mount{{Name: "t", Root: root}}
+}
+
+// TestServedSheetResolvesProjectSymbolLibrary is agni issue 347 at the surface a reader actually
+// meets: the served document.
+//
+// The CLI twin (TestRenderResolvesProjectSymbolLibrary) covers `agni render`. This covers `agni
+// serve`, which reaches geometry through DesignService rather than through the render command, and
+// was the deployment the issue was reported against. Both had to be fixed separately because they
+// resolve config by different routes, and a test on either alone would have read as covering both.
+//
+// The served document is also the only one that carries per-pin pick targets, since the viewer is
+// the one consumer that picks. So this asserts pins as well, which the CLI render deliberately does
+// not emit.
+func TestServedSheetResolvesProjectSymbolLibrary(t *testing.T) {
+	svc := newDesignSvc(tutorialMounts(t))
+	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
+		Uri:     uriStr("t", "designs/gateway/gateway.kicad_sch"),
+		Format:  webapi.SheetFormat_SHEET_FORMAT_SVG,
+		Symbols: webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL,
+	})
+	if err != nil {
+		t.Fatalf("GetSheet: %v", err)
+	}
+	svg := resp.GetSvg()
+	if n := strings.Count(svg, `data-kind="component"`); n == 0 {
+		t.Errorf("a served faithful sheet must carry component pick targets from the project's "+
+			"declared symbol library; got none in %d bytes", len(svg))
+	}
+	if n := strings.Count(svg, `data-kind="pin"`); n == 0 {
+		t.Error("a served faithful sheet must carry per-pin pick targets; got none")
+	}
+	// The control: ref-des labels come from the annotation pass and draw whether or not a symbol
+	// resolved, which is what made the degraded render look complete. If they ever stop drawing, the
+	// assertions above are measuring something other than what they claim.
+	if !strings.Contains(svg, "C1") {
+		t.Error("expected the sheet's reference designators to draw; the fixture or the annotation pass changed")
+	}
 }

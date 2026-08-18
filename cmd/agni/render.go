@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,6 +28,24 @@ const (
 	symbolsGlyph    = formats.SymbolsGlyph
 	symbolsFaithful = formats.SymbolsFaithful
 )
+
+// renderLoader is the reader for a render, carrying the design's PROJECT config.
+//
+// `agni render` built its loader with no options at all, so a project's declared symbol library
+// never reached the drawing however that project was configured, and --symbol-path was the only
+// route to one. An unresolved symbol keeps its placement's reference designator and loses its pins,
+// so the sheet draws every ref des and no body, and every component on it is unpickable.
+//
+// This is the same bypass agni issue 228 closed for the six netlist commands, surviving here because
+// readDesign is a netlist function and nothing was the equivalent choke point for geometry
+// (agni issue 347).
+func renderLoader(file string) (*formats.Loader, error) {
+	opts, err := designReadOptions(context.Background(), file)
+	if err != nil {
+		return nil, err
+	}
+	return readerFor(newLoader(), opts...), nil
+}
 
 // renderCmd renders a design to a schematic view. Two orthogonal axes: --layout is the source
 // of node positions (faithful ingested geometry, or an auto-layout computed from the netlist
@@ -58,7 +77,11 @@ func renderCmd() *cobra.Command {
 				}
 				// When the design also has faithful geometry, score layouts against it.
 				var truth map[string]*geom.Point
-				if fg, err := newLoader().FaithfulGeometry(file); err == nil {
+				rl, err := renderLoader(file)
+				if err != nil {
+					return err
+				}
+				if fg, err := rl.FaithfulGeometry(file); err == nil {
 					truth = graph.PositionsByRef(fg)
 				}
 				return compareLayouts(os.Stdout, d, truth)
@@ -96,7 +119,11 @@ func renderCmd() *cobra.Command {
 					return writeBoard(out, b)
 				}
 			}
-			g, err := newLoader().ResolveGeometry(file, layout, reg, symbols)
+			rl, err := renderLoader(file)
+			if err != nil {
+				return err
+			}
+			g, err := rl.ResolveGeometry(file, layout, reg, symbols)
 			if err != nil {
 				return err
 			}
@@ -234,7 +261,11 @@ func parseHighlightShape(v string) (geom.HighlightShape, error) {
 // writeReport builds the conversion report for the file's netlist under the chosen symbol source
 // and writes it as text (a grouped summary + the unmapped/unresolved call-outs) or JSON.
 func writeReport(w io.Writer, file, symbols string, reg *graph.Registry, format string) error {
-	rep, err := newLoader().ConversionReport(file, symbols, reg)
+	rl, err := renderLoader(file)
+	if err != nil {
+		return err
+	}
+	rep, err := rl.ConversionReport(file, symbols, reg)
 	if err != nil {
 		return err
 	}

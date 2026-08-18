@@ -64,7 +64,7 @@ func (m *memLoader) Design(_ context.Context, uri artifact.URI, opts ...service.
 	return l.ReadDesign(p)
 }
 
-func (m *memLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
+func (m *memLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool, _ ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {
@@ -77,7 +77,7 @@ func (m *memLoader) Geometry(_ context.Context, uri artifact.URI, layout string,
 	return l.ResolveGeometry(p, layout, nil, symbols)
 }
 
-func (m *memLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool) (*graph.ConversionReport, error) {
+func (m *memLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool, _ ...service.ReadOption) (*graph.ConversionReport, error) {
 	mount, p := uri.Mount, uri.Path
 	l, err := m.loader(mount)
 	if err != nil {

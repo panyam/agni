@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -95,5 +97,39 @@ func TestStatsOutputIsCapturable(t *testing.T) {
 	}
 	if !regexp.MustCompile(`components:\s+19\b`).MatchString(out) {
 		t.Errorf("expected the schematic's 19 components:\n%s", out)
+	}
+}
+
+// TestRenderResolvesProjectSymbolLibrary is the geometry twin of TestReadDesignResolvesProjectConfig.
+//
+// agni issue 228 gave the netlist commands a choke point (readDesign) where a design's project config
+// enters the read. `agni render` never went through it, because readDesign returns a netlist and a
+// render wants geometry, so the render kept building its loader with no options at all. A project's
+// declared symbol library therefore reached every analysis of the design and none of its drawings,
+// and --symbol-path was the only route to one (agni issue 347).
+//
+// Asserted on the drawn ENTITY KEYS rather than on the shape count, because the keys are what the
+// failure destroys. An unresolved symbol keeps its placement's reference designator and loses its
+// pins, so the sheet still draws all 19 ref-des labels from the annotation pass and draws no bodies.
+// Counting elements would call that "a smaller drawing"; counting keys calls it what it is, which is
+// a sheet where nothing can be clicked.
+func TestRenderResolvesProjectSymbolLibrary(t *testing.T) {
+	const design = "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch"
+	out := filepath.Join(t.TempDir(), "sheet.svg")
+	runCLI(t, renderCmd(), design, "--format", "svg", "--symbols", "faithful", "-o", out)
+	b, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("render wrote no file: %v", err)
+	}
+	svg := string(b)
+	if n := strings.Count(svg, `data-kind="component"`); n == 0 {
+		t.Errorf("the project declares a symbol library beside its descriptor, so a faithful render "+
+			"must draw component bodies carrying entity keys; got none in %d bytes of SVG", len(svg))
+	}
+	// The positive control for the assertion above. Every reference designator draws from the
+	// annotation pass whether or not its symbol resolved, so a render that lost every body still
+	// LOOKS complete. If this stops holding, the test above is no longer measuring what it claims.
+	if !strings.Contains(svg, "C1") {
+		t.Error("expected the sheet's reference designators to draw; the fixture or the annotation pass changed")
 	}
 }

@@ -79,13 +79,13 @@ type fakeLoader struct {
 func (f fakeLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
 	return f.design, f.err
 }
-func (f fakeLoader) Geometry(context.Context, artifact.URI, string, bool) (*geom.SchematicGeometry, error) {
+func (f fakeLoader) Geometry(context.Context, artifact.URI, string, bool, ...ReadOption) (*geom.SchematicGeometry, error) {
 	if f.geomErr != nil {
 		return nil, f.geomErr
 	}
 	return f.geom, f.err
 }
-func (f fakeLoader) Report(context.Context, artifact.URI, bool) (*graph.ConversionReport, error) {
+func (f fakeLoader) Report(context.Context, artifact.URI, bool, ...ReadOption) (*graph.ConversionReport, error) {
 	return f.report, f.err
 }
 func (f fakeLoader) Expectations(context.Context, artifact.URI) (*expect.Expectations, error) {
@@ -404,7 +404,7 @@ func TestHighlightSheet(t *testing.T) {
 			}},
 		}},
 	}
-	svc := NewDesignService(fakeLoader{geom: g}, noNative{}, render.Style{})
+	svc := NewDesignService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
 	specs := []*geom.HighlightSpec{{Components: []string{"R1"}, Nets: []string{"NET1"}, Color: "#ff0000"}}
 
 	// PACKED (the default): primitives 0 (NET1 wire), 1 (R1 rect), 2 (R1 pin).
@@ -523,7 +523,7 @@ func TestGetDesignListsBoardSheet(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph", Name: "netlist graph"}}}},
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.kicad_pcb"})
 	if err != nil {
 		t.Fatal(err)
@@ -545,7 +545,7 @@ func TestGetSheetBoard(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
 	if err != nil {
 		t.Fatal(err)
@@ -570,7 +570,7 @@ func TestHighlightSheetBoard(t *testing.T) {
 		fakeLoader: fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}},
 		board:      testBoard(),
 	}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
 		Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}},
@@ -588,7 +588,7 @@ func TestHighlightSheetBoard(t *testing.T) {
 // lists no board sheet, and asking for one is ErrNotFound.
 func TestBoardSheetAbsent(t *testing.T) {
 	ld := fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}
-	svc := NewDesignService(ld, noNative{}, render.DefaultStyle)
+	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
 	if err != nil {
 		t.Fatal(err)
@@ -611,7 +611,7 @@ func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 		Wires: []*geom.WireGeometry{{Net: "SIGA", Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 0}, {X: 100, Y: 0}}}}}},
 	}}}
 	d := &ir.Design{Nets: []*ir.Net{{Id: "n1", Name: "SIGA"}}}
-	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{})
+	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
 		Uri: "mount://m/x.edn", Sheet: "P1",
