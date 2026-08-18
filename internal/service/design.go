@@ -216,6 +216,10 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 		Layout:           layout,
 		NativeAvailable:  s.native.Available(u),
 		AvailableLayouts: availableLayouts(u.Path),
+		// Carried straight off the geometry, which computed it with the same resolution the renderer
+		// uses. A render that lost its symbols still draws every ref des and wire, so without this the
+		// viewer has no way to tell a complete sheet from a bodyless one (agni issue 354).
+		Undrawn: g.GetUndrawn(),
 	}
 	for _, sh := range g.GetSheets() {
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: sh.GetId(), Name: sh.GetName(), ParentId: sh.GetParentId()})

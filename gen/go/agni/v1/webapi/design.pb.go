@@ -256,6 +256,14 @@ type GetDesignResponse struct {
 	// component_count / net_count come from the netlist IR; 0 for a geometry-only file.
 	ComponentCount int32 `protobuf:"varint,3,opt,name=component_count,json=componentCount,proto3" json:"component_count,omitempty"`
 	NetCount       int32 `protobuf:"varint,4,opt,name=net_count,json=netCount,proto3" json:"net_count,omitempty"`
+	// undrawn are the placements this design's drawing cannot draw, because no symbol resolved for them
+	// (agni issue 354). Empty is the normal case.
+	//
+	// It is on the DESIGN response rather than per sheet because it is a property of the read: a symbol
+	// library either resolved or did not, and a reader needs to know before deciding whether the
+	// drawing in front of them is worth trusting. It describes the layout this response resolved, so a
+	// client changing layout re-reads it with the rest of the design.
+	Undrawn []*geom.UndrawnPlacement `protobuf:"bytes,9,rep,name=undrawn,proto3" json:"undrawn,omitempty"`
 	// layout is the render mode actually used: "faithful" or the auto-layout name.
 	Layout string `protobuf:"bytes,5,opt,name=layout,proto3" json:"layout,omitempty"`
 	// sheets are the drawable pages, in document order.
@@ -328,6 +336,13 @@ func (x *GetDesignResponse) GetNetCount() int32 {
 		return x.NetCount
 	}
 	return 0
+}
+
+func (x *GetDesignResponse) GetUndrawn() []*geom.UndrawnPlacement {
+	if x != nil {
+		return x.Undrawn
+	}
+	return nil
 }
 
 func (x *GetDesignResponse) GetLayout() string {
@@ -922,19 +937,20 @@ var File_agni_v1_webapi_design_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x1eagni/v1/geom/geom_packed.proto\"K\n" +
+	"\x1bagni/v1/webapi/design.proto\x12\x0eagni.v1.webapi\x1a\x17agni/v1/geom/geom.proto\x1a\x1eagni/v1/geom/geom_packed.proto\"K\n" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
 	"\tparent_id\x18\x03 \x01(\tR\bparentId\"<\n" +
 	"\x10GetDesignRequest\x12\x16\n" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xb4\x02\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xee\x02\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
 	"\x0fcomponent_count\x18\x03 \x01(\x05R\x0ecomponentCount\x12\x1b\n" +
-	"\tnet_count\x18\x04 \x01(\x05R\bnetCount\x12\x16\n" +
+	"\tnet_count\x18\x04 \x01(\x05R\bnetCount\x128\n" +
+	"\aundrawn\x18\t \x03(\v2\x1e.agni.v1.geom.UndrawnPlacementR\aundrawn\x12\x16\n" +
 	"\x06layout\x18\x05 \x01(\tR\x06layout\x120\n" +
 	"\x06sheets\x18\x06 \x03(\v2\x18.agni.v1.webapi.SheetRefR\x06sheets\x12)\n" +
 	"\x10native_available\x18\a \x01(\bR\x0fnativeAvailable\x12+\n" +
@@ -1018,35 +1034,37 @@ var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(*GetLayoutReportResponse)(nil), // 10: agni.v1.webapi.GetLayoutReportResponse
 	(*ConversionReport)(nil),        // 11: agni.v1.webapi.ConversionReport
 	(*ComponentReport)(nil),         // 12: agni.v1.webapi.ComponentReport
-	(*geom.PackedSheet)(nil),        // 13: agni.v1.geom.PackedSheet
-	(*geom.HighlightSpec)(nil),      // 14: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),    // 15: agni.v1.geom.PackedHighlight
+	(*geom.UndrawnPlacement)(nil),   // 13: agni.v1.geom.UndrawnPlacement
+	(*geom.PackedSheet)(nil),        // 14: agni.v1.geom.PackedSheet
+	(*geom.HighlightSpec)(nil),      // 15: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),    // 16: agni.v1.geom.PackedHighlight
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	2,  // 0: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
-	0,  // 1: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	1,  // 2: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	13, // 3: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
-	1,  // 4: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	0,  // 5: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	14, // 6: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	15, // 7: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
-	1,  // 8: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	11, // 9: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
-	12, // 10: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	3,  // 11: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	5,  // 12: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	7,  // 13: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	9,  // 14: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	4,  // 15: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	6,  // 16: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	8,  // 17: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	10, // 18: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	15, // [15:19] is the sub-list for method output_type
-	11, // [11:15] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	13, // 0: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	2,  // 1: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
+	0,  // 2: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
+	1,  // 3: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	14, // 4: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
+	1,  // 5: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	0,  // 6: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
+	15, // 7: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	16, // 8: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	1,  // 9: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
+	11, // 10: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
+	12, // 11: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
+	3,  // 12: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	5,  // 13: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	7,  // 14: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	9,  // 15: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	4,  // 16: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	6,  // 17: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	8,  // 18: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	10, // 19: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	16, // [16:20] is the sub-list for method output_type
+	12, // [12:16] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }

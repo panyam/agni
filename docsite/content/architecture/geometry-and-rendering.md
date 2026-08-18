@@ -249,4 +249,21 @@ Two layout properties keep the output legible, both applied in assembly (no per-
 
 A conversion report (behind `agni render --report` and the `GetReport` web API) explains how each component mapped: its device class and whether it drew a glyph, the generic box (unmapped class), a provided symbol, or an unresolved fallback, with call-outs for the box list and the unresolved list (which points at the symbol libraries a run searched: the design's project descriptor and `--symbol-path`, the latter needed for xschem and gEDA whose symbol artwork lives in external `.sym` files).
 
+**A render that came up short says so.** A placement whose symbol did not resolve contributes no
+shapes, so it drops out of the document along with the entity keys that make it pickable, while the
+annotation pass still draws its reference designator. The sheet then shows every ref des, every wire
+and the title block, and every component on it is silently unclickable: a reader sees `C1` printed,
+clicks it, gets nothing, and reasonably concludes agni knows nothing about `C1`.
+
+`SchematicGeometry.undrawn` carries those placements, filled where geometry is produced (both the
+faithful read and the auto-layout) through `geomath.SymbolFor`, the same resolution the renderer
+performs. That sharing is load-bearing rather than tidy: `core/validate` used to run a stricter join
+of its own and counted a placement resolvable by the renderer's cell-only fallback as unresolved, so a
+shortfall report built on it would have named placements that draw perfectly well. A banner that is
+usually wrong teaches a reader to distrust the one time it is right (agni issue 354).
+
+`agni render` prints the shortfall to stderr, grouped by the missing symbol reference because one
+missing library commonly costs every part drawn from it. The viewer shows it as a notice over the
+canvas. Both are silent when nothing is undrawn.
+
 The report reads the design through the same configured read the drawing does. That is load-bearing rather than tidy: this is the surface that would REPORT an unresolved symbol, so a report built from a read that could not see the project's declared library would diagnose a problem it had caused itself (agni issue 347).

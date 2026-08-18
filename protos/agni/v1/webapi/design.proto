@@ -4,6 +4,7 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
+import "agni/v1/geom/geom.proto";
 import "agni/v1/geom/geom_packed.proto";
 
 // This file: DesignService, loading and rendering one design. Rule checks are the separate
@@ -86,6 +87,14 @@ message GetDesignResponse {
   // component_count / net_count come from the netlist IR; 0 for a geometry-only file.
   int32 component_count = 3;
   int32 net_count = 4;
+  // undrawn are the placements this design's drawing cannot draw, because no symbol resolved for them
+  // (agni issue 354). Empty is the normal case.
+  //
+  // It is on the DESIGN response rather than per sheet because it is a property of the read: a symbol
+  // library either resolved or did not, and a reader needs to know before deciding whether the
+  // drawing in front of them is worth trusting. It describes the layout this response resolved, so a
+  // client changing layout re-reads it with the rest of the design.
+  repeated agni.v1.geom.UndrawnPlacement undrawn = 9;
   // layout is the render mode actually used: "faithful" or the auto-layout name.
   string layout = 5;
   // sheets are the drawable pages, in document order.
