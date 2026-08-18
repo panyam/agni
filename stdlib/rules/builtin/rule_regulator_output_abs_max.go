@@ -92,6 +92,15 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 							ref, load.Symbol, load.Value.GetMax(),
 							check.Citation(loadSpec, load), check.Citation(srcSpec, srcParam)),
 						Prov: conn.GetProv(),
+						// The two entities the sentence names and the subject is not: the regulator
+						// doing the supplying, and the net it supplies over. Declared in the order the
+						// message names them, so the panel's chips read like the sentence (agni issue
+						// 349). The subject stays the ENDANGERED part, because that is what a reader
+						// has to change.
+						Context: []check.ContextSubject{
+							{Kind: check.KindComponent, Subject: src.RefDes, Role: "source"},
+							{Kind: check.KindNet, Subject: n.GetName(), NetID: n.GetId(), Role: "rail"},
+						},
 						// BOTH citations, load first: the subject is the endangered part, so its
 						// document is the one a reviewer opens. The review's data-trust gate reads
 						// every entry and rates the finding by its weakest, which is the whole

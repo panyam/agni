@@ -111,3 +111,58 @@ func TestTwinNotRegistered(t *testing.T) {
 		}
 	}
 }
+
+// TestCrystalContextNamesTheTerminal is the rule agni issue 349 was filed about.
+//
+// The finding reads "crystal terminal net XOUT1 has no load capacitor" and its subject is Y1. That is
+// the right subject, because the crystal is the part a reader changes, but the sentence is about a
+// NET and clicking the finding sent the reader to a part the sentence never mentioned. A crystal has
+// two terminals and both sit inside the highlighted symbol, so the drawing could not say which one
+// was at fault either.
+//
+// Asserted on BOTH twins, because a context entity on one and not the other is exactly the drift the
+// parity test exists to catch, and the parity key (subject|message) cannot see this field.
+func TestCrystalContextNamesTheTerminal(t *testing.T) {
+	m := check.NewModel(crystalParityDesign())
+	goRule := goRuleByName("crystal-load-caps")
+	if goRule == nil {
+		t.Fatal(`built-in rule "crystal-load-caps" not found`)
+	}
+	// Subtests over a SLICE, not a range over a map: a map randomises which twin reports, and the
+	// t.Fatalf below would abort the whole test on the first failure so the other twin never ran.
+	for _, tw := range []struct {
+		name string
+		fs   []check.Finding
+	}{
+		{"go", goRule.Eval(m)},
+		{"dl", crystalLoadCapsDL.Eval(m)},
+	} {
+		name, fs := tw.name, tw.fs
+		t.Run(name, func(t *testing.T) {
+			if len(fs) != 1 {
+				t.Fatalf("%s: want exactly 1 finding, got %d", name, len(fs))
+			}
+			ctx := fs[0].Context
+			if len(ctx) != 1 {
+				t.Fatalf("%s: want 1 context entity (the terminal net), got %d: %+v", name, len(ctx), ctx)
+			}
+			if ctx[0].Subject != "XOUT1" {
+				t.Errorf("%s: context entity = %q, want XOUT1 — the net the message names", name, ctx[0].Subject)
+			}
+			if ctx[0].Kind != check.KindNet {
+				t.Errorf("%s: context kind = %q, want %q", name, ctx[0].Kind, check.KindNet)
+			}
+			if ctx[0].Role != "terminal" {
+				t.Errorf("%s: context role = %q, want %q", name, ctx[0].Role, "terminal")
+			}
+			// The whole point: the entity a reader is sent to must be the one the sentence names.
+			if !strings.Contains(fs[0].Message, ctx[0].Subject) {
+				t.Errorf("%s: context %q is not named in the message %q", name, ctx[0].Subject, fs[0].Message)
+			}
+			// And it must NOT be the subject, or the chip navigates to where the reader already is.
+			if ctx[0].Subject == fs[0].Subject {
+				t.Errorf("%s: context repeats the subject %q", name, fs[0].Subject)
+			}
+		})
+	}
+}
