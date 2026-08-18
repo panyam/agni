@@ -111,3 +111,70 @@ func TestPartitionAvailableChangesNoFindings(t *testing.T) {
 		t.Errorf("partitioning must not change what fires: %d findings over all rules, %d over the runnable half", a, b)
 	}
 }
+
+// TestFindingProtoCarriesContext: a finding whose message names an entity other than its subject
+// carries that entity to the client as structured data (agni issue 349), so the panel can render it
+// as its own clickable chip instead of the reader parsing it out of the sentence.
+//
+// The order assertion is the load-bearing one. Order is the rule author's and matches the order the
+// message names them, so a panel rendering chips left to right reads in the same order as the
+// sentence above it. A conversion that sorted or bucketed would silently break that, and nothing
+// else in the pipeline would notice.
+func TestFindingProtoCarriesContext(t *testing.T) {
+	f := FindingProto(check.Finding{
+		Rule: "load-switch-trip-current", Kind: check.KindComponent, Subject: "Q1",
+		Context: []check.ContextSubject{
+			{Kind: check.KindComponent, Subject: "U3", Role: "controller"},
+			{Kind: check.KindComponent, Subject: "R7", Role: "sense"},
+		},
+	})
+	got := f.GetContext()
+	if len(got) != 2 {
+		t.Fatalf("context entries = %d, want 2", len(got))
+	}
+	if got[0].GetSubject().GetRef() != "U3" || got[0].GetRole() != "controller" {
+		t.Errorf("first context = (%q, %q), want (U3, controller)", got[0].GetSubject().GetRef(), got[0].GetRole())
+	}
+	if got[1].GetSubject().GetRef() != "R7" || got[1].GetRole() != "sense" {
+		t.Errorf("second context = (%q, %q), want (R7, sense) in the author's order", got[1].GetSubject().GetRef(), got[1].GetRole())
+	}
+	if got[0].GetSubject().GetKind() != check.KindComponent {
+		t.Errorf("context kind = %q, want %q", got[0].GetSubject().GetKind(), check.KindComponent)
+	}
+
+	// The common case, and always will be: a message naming only its subject carries no context.
+	plain := FindingProto(check.Finding{Rule: "single-pin-net", Kind: check.KindNet, Subject: "SIG"})
+	if len(plain.GetContext()) != 0 {
+		t.Errorf("a finding naming only its subject must carry no context, got %d", len(plain.GetContext()))
+	}
+}
+
+// TestFindingProtoContextRolesNeedNotBeUnique: two entities can play the SAME part, which is exactly
+// the i2c-address-collision shape ("A and B both strap to address N"). A consumer must therefore
+// treat context as a list rather than a map, and this pins that so a later "tidy" keying by role
+// cannot silently drop one.
+func TestFindingProtoContextRolesNeedNotBeUnique(t *testing.T) {
+	f := FindingProto(check.Finding{
+		Rule: "i2c-address-collision", Kind: check.KindNet, Subject: "SDA",
+		Context: []check.ContextSubject{
+			{Kind: check.KindComponent, Subject: "U1", Role: "device"},
+			{Kind: check.KindComponent, Subject: "U2", Role: "device"},
+		},
+	})
+	if n := len(f.GetContext()); n != 2 {
+		t.Fatalf("two entities in the same role must both survive, got %d", n)
+	}
+}
+
+// TestFindingProtoContextBusJoinKey: a bus context entity needs its name on bus_id for the same
+// reason a bus SUBJECT does — a bus carries no net, so its name is the only geometry join key it has.
+// Without this a bus named as context renders as a chip that highlights nothing.
+func TestFindingProtoContextBusJoinKey(t *testing.T) {
+	f := FindingProto(check.Finding{
+		Rule: "strap-group-collision", Kind: check.KindNet, Subject: "STRAP0",
+		Context: []check.ContextSubject{{Kind: check.KindBus, Subject: "ADDR[3:0]", Role: "bus"}},
+	})
+	if id := f.GetContext()[0].GetSubject().GetBusId(); id != "ADDR[3:0]" {
+		t.Errorf("bus context bus_id = %q, want the bus name", id)
+	}
+}

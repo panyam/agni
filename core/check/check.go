@@ -58,6 +58,22 @@ type Finding struct {
 	// nets that share a Subject name are distinguishable and each locates to ITS wires. Empty for a
 	// component/pin subject or a pinless net; consumers then join by Subject (the name).
 	NetID string
+	// Context are the entities this finding's message NAMES but is not ABOUT (agni issue 349).
+	//
+	// A Finding carries one Subject, so a rule whose sentence involves two entities could highlight
+	// only one of them, and it was not always the one the sentence named. crystal-load-caps reads
+	// "crystal terminal net XOUT1 has no load capacitor" with the CRYSTAL as its subject, so clicking
+	// it sent the reader to a part while the message talked about a net; and since a crystal has two
+	// terminals and both sit inside the highlighted symbol, the drawing could not say which one was at
+	// fault. The net was known and was thrown away when the Finding was built.
+	//
+	// A rule sets it where its message names a real design entity other than the subject. It is not a
+	// place for values, thresholds, or units: those belong in the message, and a consumer renders these
+	// as clickable entities.
+	//
+	// Empty is the common case and always will be. See ContextSubject for what a Role means and why
+	// order matters.
+	Context []ContextSubject
 	// DatasheetProv is the datasheet side of a datasheet-backed finding's provenance, so a consumer
 	// (review report, web checks panel) can show which document, page, and section a limit came from
 	// without parsing it out of Message. Empty for a finding not backed by a seeded datasheet value.
@@ -74,6 +90,28 @@ type Finding struct {
 	// trustworthy finding among several makes the item a real Fail — different question, different
 	// answer, and both deliberate.
 	DatasheetProv []*DatasheetCitation
+}
+
+// ContextSubject is one entity a finding's message names but is not about, with the part it plays.
+//
+// It repeats the subject's identity fields rather than reusing Finding, because a context entity has
+// no severity, no message and no provenance of its own: it is a REFERENCE to something already in
+// the design, not a second finding.
+//
+// Role is a short lower-case noun naming the part this entity plays in the rule's sentence
+// ("terminal", "rail", "source"). It is the author's vocabulary rather than a closed set, because the
+// useful name is rule-specific and an enum would collapse distinctions the message depends on.
+//
+// A Role is NOT unique within a finding. Two entities can play the same part, which is the
+// i2c-address-collision shape ("A and B both strap to address N"), so a consumer must treat Context
+// as a list rather than a map. Order is the author's and matches the order the message names them, so
+// a panel rendering chips reads in the same order as the sentence above it.
+type ContextSubject struct {
+	Kind    string // KindNet | KindComponent | KindPin | KindBus
+	Subject string // net name (KindNet) or ref_des (KindComponent | KindPin)
+	Pin     string // pin designator, set only when Kind == KindPin
+	NetID   string // per-instance net identity, for a net that shares its name with another
+	Role    string
 }
 
 // DatasheetCitation is the structured datasheet provenance of a finding: which document, page, and

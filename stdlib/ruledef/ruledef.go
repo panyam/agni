@@ -84,6 +84,7 @@ func Compile(def *checkspb.RuleDef) ([]*check.Rule, error) {
 			PinVar:      b.Query.GetPinVar(),
 			Message:     b.Query.GetMessage(),
 			ParamSymbol: b.Query.GetParamSymbol(),
+			ContextVars: query.ContextVarsFromProto(b.Query.GetContextVars()),
 		})}, nil
 
 	case *checkspb.RuleDef_Profile:

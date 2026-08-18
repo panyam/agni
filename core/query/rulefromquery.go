@@ -31,6 +31,30 @@ type FindingQuery struct {
 	// seeded spec and attaches it to Finding.DatasheetProv, so a datalog-authored datasheet finding
 	// carries the same doc/page/section/confidence a built-in datasheet rule does. Empty = no citation.
 	ParamSymbol string
+	// ContextVars are further projected variables to carry as each finding's CONTEXT entities: the
+	// entities the message names but is not about (agni issue 349). Empty for a rule whose message
+	// names only its subject, which is most of them.
+	//
+	// SubjectVar already proves this surface can say which projected variable plays which part. This
+	// is that same idea for a list, and it is why the fix is a field rather than a convention: the
+	// binding exists in the row and was simply dropped when the Finding was built.
+	//
+	// A SLICE rather than a map keyed by role, for two reasons. Order is significant (it matches the
+	// order the message names them, so a panel's chips read like the sentence), and two entities may
+	// share a role: "A and B both strap to address N" has two entities playing "device".
+	ContextVars []ContextVar
+}
+
+// ContextVar binds one projected datalog variable to a context entity on every finding a rule emits.
+//
+// Kind is the entity's subject kind, which is NOT inferable from the variable: a datalog variable is
+// just a string binding, and the same projected column could be a net name or a ref des depending on
+// the relation it came from. Getting it wrong produces a chip that highlights nothing, so it is
+// required rather than defaulted.
+type ContextVar struct {
+	Var  string // projected variable name, no leading "?"
+	Kind string // check.KindNet | check.KindComponent | check.KindPin | check.KindBus
+	Role string // the part it plays in the message ("terminal", "rail", "source")
 }
 
 var placeholderRe = regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
@@ -63,6 +87,17 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 			}
 			if fq.PinVar != "" {
 				f.Pin = row.Bind[Var(fq.PinVar)].S
+			}
+			// In the author's declared order, which is the order the message names them. A context var
+			// that did not bind in this row contributes nothing rather than an empty chip: the row could
+			// not have been projected without it, so an unbound one means the rule was mis-declared and a
+			// blank chip would hide that behind something that looks deliberate.
+			for _, cv := range fq.ContextVars {
+				ref := row.Bind[Var(cv.Var)].S
+				if ref == "" {
+					continue
+				}
+				f.Context = append(f.Context, check.ContextSubject{Kind: cv.Kind, Subject: ref, Role: cv.Role})
 			}
 			if fq.ParamSymbol != "" && fq.Kind == check.KindComponent {
 				if dp := check.DatasheetProvFor(m, subj, fq.ParamSymbol); dp != nil {

@@ -1,12 +1,13 @@
 package query
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // pinDesign: U1 (part MCU) has a power pin "1" (VDD) alone on net STUB (one connection) and a
@@ -240,5 +241,84 @@ func TestRuleFromQuery(t *testing.T) {
 	}
 	if f.Prov == nil || f.Prov.SourceFile != "t" {
 		t.Fatalf("provenance not resolved from the model: %+v", f.Prov)
+	}
+}
+
+// TestRuleFromQueryCarriesContext is the authoring half of agni issue 349.
+//
+// The whole reason the bug was a FIELD rather than a convention: the entity the message names is
+// already bound in the answer row and was simply thrown away when the Finding was built. Nothing
+// downstream could recover it without parsing prose. Declaring the variable is all it takes.
+//
+// This is the exact power-pin-mistyped shape: a component subject with a message naming both a pin
+// and a net.
+func TestRuleFromQueryCarriesContext(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "pin {pin} sits alone on net {net}",
+		ContextVars: []ContextVar{
+			{Var: "net", Kind: check.KindNet, Role: "net"},
+		},
+	})
+	fs := rule.Eval(check.NewModel(pinDesign()))
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
+	}
+	if n := len(fs[0].Context); n != 1 {
+		t.Fatalf("want 1 context entity, got %d: %+v", n, fs[0].Context)
+	}
+	c := fs[0].Context[0]
+	if c.Role != "net" || c.Kind != check.KindNet {
+		t.Errorf("context = (kind %q, role %q), want (net, net)", c.Kind, c.Role)
+	}
+	// The entity the SENTENCE names, resolved from the same row that produced the message. If these
+	// ever disagree, the chip sends the reader somewhere the message did not mention, which is the
+	// original bug wearing a different hat.
+	if !strings.Contains(fs[0].Message, c.Subject) {
+		t.Errorf("context entity %q is not named in the message %q", c.Subject, fs[0].Message)
+	}
+}
+
+// TestRuleFromQueryContextKeepsAuthorOrder: entries come out in the order the rule DECLARED them,
+// which is the order the message names them, so a panel's chips read like the sentence above them.
+// A map-based implementation would pass every other assertion here and fail this one at random.
+func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "ordered", Severity: "info"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "{pin} then {net}",
+		ContextVars: []ContextVar{
+			{Var: "pin", Kind: check.KindPin, Role: "pin"},
+			{Var: "net", Kind: check.KindNet, Role: "net"},
+		},
+	})
+	fs := rule.Eval(check.NewModel(pinDesign()))
+	if len(fs) != 1 || len(fs[0].Context) != 2 {
+		t.Fatalf("want 1 finding with 2 context entities, got %+v", fs)
+	}
+	if fs[0].Context[0].Role != "pin" || fs[0].Context[1].Role != "net" {
+		t.Errorf("context order = [%s %s], want [pin net] (the declared order)",
+			fs[0].Context[0].Role, fs[0].Context[1].Role)
+	}
+}
+
+// TestRuleFromQueryNoContextVarsIsClean: declaring none carries none. The common case, and it must
+// stay nil rather than an empty slice so a wire encoder omits the field entirely.
+func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "plain", Severity: "info"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "no context here",
+	})
+	fs := rule.Eval(check.NewModel(pinDesign()))
+	if len(fs) != 1 || fs[0].Context != nil {
+		t.Errorf("a rule declaring no context vars must carry none, got %+v", fs[0].Context)
 	}
 }
