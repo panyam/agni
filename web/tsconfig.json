@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -18,6 +22,12 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "static"]
+  "include": [
+    "src/**/*",
+    "browser/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "static"
+  ]
 }

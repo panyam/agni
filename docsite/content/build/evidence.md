@@ -127,6 +127,24 @@ or clear the log first. Every "did X happen" assertion over a running system has
 red-check is what tells the two apart: unwire the handler, and a real assertion goes red while this
 one does not.
 
+**A layout assertion probes where the damage IS, not where the element is.** Two versions of the
+same browser test went green with the containment CSS deleted outright. The first never created the
+condition: the public fixtures top out at three sheets, so with short names nothing overflowed
+whatever the rules said, and the test asserted an invariant that could not be violated. Squeezing the
+column to its 48px minimum by dragging its own grip fixed that. The second still passed, because it
+probed the neighbouring cell's CENTRE: measured, the escaping chip reached 66px past its own cell
+while the neighbour was 301px wide, so the probe sat 84px clear of the bleed and reported everything
+fine. Bleed arrives at the BOUNDARY and fades, so probe just inside the edge nearest the offender.
+Both faults were invisible until the CSS was deliberately broken, and neither would have been caught
+by reading the test.
+
+**`innerText` does not tell you whether something is visible.** An assertion that a caveat was
+painted, written as `expect(await locator.innerText()).toBe("...")`, passed with `display: none` on
+the element: the spec says `innerText` falls back to `textContent` for a node that is not being
+rendered, so a hidden element reads back its full string. Assert a non-zero `boundingBox()` and probe
+the point, or check the computed style. The comment above that assertion claimed it tested visibility,
+which is the part worth noticing: the reasoning was written down and was still wrong.
+
 **A test that calls the PRODUCTION predicate to decide what counts as a failure cannot fail when
 that predicate is what broke.** Two assertions written as `if skipRefDes(x) { t.Error(...) }` read
 as real checks and went green under a deliberately broken `skipRefDes`, while their siblings written

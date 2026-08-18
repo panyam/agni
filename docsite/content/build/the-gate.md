@@ -26,6 +26,26 @@ you in three specific ways, and most of this page covers them.
   the SHAPE (a failure inside a dep you did not touch, right after a checkout switch or fresh clone),
   not on the message.
 
+## What the gate does NOT run
+
+`make browser-test` is a separate suite of layout assertions driven through a real Chromium against
+a real server (agni issue 323). It is deliberately outside `testall`.
+
+jsdom has no layout engine, so every element reports a zero-sized box, `elementFromPoint` answers
+nothing useful, and no CSS rule has any effect. The unit suite can therefore prove what a panel
+RENDERS and nothing about what a reader can SEE, which is how a badge strip that painted over the two
+columns beside it shipped through a fully green run. The browser suite closes that gap and pays for
+it in speed and in needing a browser on the machine, so keeping it out of the gate means a machine
+without one never turns CI red for a reason unrelated to the change under test.
+
+It needs a browser once per machine (`cd web && pnpm exec playwright-core install chromium`) and
+starts its own server on a port the kernel picks, so it does not fight a dev server you already have.
+
+**Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, where it runs on
+every gate rather than when somebody remembers. The rule for what goes in the browser suite is that
+pixels are the claim. And read the layout traps in `build/evidence.md` before writing one: two
+versions of the first test in that file went green with the CSS under test deleted.
+
 ## What a run leaves behind
 
 Also expect: testall leaves `examples/render-board/render-board` and `examples/validate/validate`
