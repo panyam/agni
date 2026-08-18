@@ -50,6 +50,10 @@ export class SvgView {
     // top-left stack aligns them. The overlay ignores pointer events — input stays on the host.
     this.base = document.createElement("div");
     this.overlay = document.createElement("div");
+    // Named so the highlight layer is addressable from outside: a browser test asserting what the
+    // reader actually sees needs to find it, and so does anyone opening devtools on a highlight that
+    // looks wrong. The base document is reachable through its own content; this one was not.
+    this.overlay.className = "highlight-overlay";
     this.overlay.style.position = "absolute";
     this.overlay.style.left = "0";
     this.overlay.style.top = "0";

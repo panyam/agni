@@ -222,3 +222,66 @@ describe("pin cells", () => {
     });
   }, 90_000);
 });
+
+// agni issue 348: the focused finding was painted in the same color as the field it sits in.
+//
+// Both layers went out with no color, so both resolved to DEFAULT_HIGHLIGHT_COLOR and the entire
+// distinction between "the thing I clicked" and "the other eleven on this sheet" was carried by
+// alpha and shape within one hue. The unit tests can prove the presenter EMITS two different specs
+// and the Go tests can prove the renderer HONORS them, and neither can prove that two colors reach
+// the page: that needs a real client stamping a real spec, a real server rendering it, and a real
+// browser painting the result.
+//
+// Asserted on distinct stroke colors in the overlay the reader is looking at, not on the spec. The
+// spec assertion lives in src/findings.test.ts and would pass with the whole SVG path broken.
+describe("highlight layers", () => {
+  it("paints the focused finding in a different color from the rest of the field", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
+
+      // SVG mode: the overlay is a served document in the DOM, so its paint is inspectable. WebGL
+      // resolves specs into buffers with nothing to read back short of pixels.
+      await page.click(".render-mode .mode-btn:nth-of-type(2)");
+      // Scoped to #svg-view: the diff panel builds two more SvgViews, and their overlays are empty
+      // and hidden, so an unscoped selector waits forever on the wrong one.
+      await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
+
+      await page.click(".checks-run");
+      // This design raises 12 findings across two rules, so there is a field for a focus to sit in.
+      // With one finding the base would be empty and the test would pass on a single layer.
+      await page.waitForSelector(".check-locate", { timeout: 30_000 });
+      const rows = await page.locator(".check-locate").count();
+      expect(rows, "a single finding leaves no field, so this could not detect a shared color").toBeGreaterThan(1);
+
+      // A DRAWN subject, chosen deliberately. Four of this design's findings are dangling-endpoint,
+      // whose subject is a coordinate pair rather than an entity, so their focus layer matches
+      // nothing and paints nothing. Clicking one of those makes this test go green for the wrong
+      // reason: one layer on the page, one color, no way to tell a shared hue from a missing layer.
+      const focus = page.locator(".check-locate", { hasText: "DATA0" }).first();
+      await expect.poll(() => focus.count(), { timeout: 30_000 }).toBeGreaterThan(0);
+      await focus.click();
+
+      const strokes = await page.evaluate(async () => {
+        // The overlay is fetched per focus, so give the round-trip a moment to land.
+        for (let i = 0; i < 60; i++) {
+          const found = new Set<string>();
+          for (const el of document.querySelectorAll("#svg-view .highlight-overlay svg *")) {
+            const s = el.getAttribute("stroke") ?? el.getAttribute("fill");
+            if (s && s !== "none") found.add(s.toLowerCase());
+          }
+          if (found.size > 1) return [...found];
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        return [
+          ...new Set(
+            [...document.querySelectorAll("#svg-view .highlight-overlay svg *")]
+              .map((el) => (el.getAttribute("stroke") ?? el.getAttribute("fill") ?? "").toLowerCase())
+              .filter((s) => s && s !== "none"),
+          ),
+        ];
+      });
+
+      expect(strokes.length, `the overlay painted one color for both layers: ${strokes.join(", ")}`).toBeGreaterThan(1);
+    });
+  }, 120_000);
+});
