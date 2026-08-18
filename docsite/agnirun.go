@@ -200,33 +200,69 @@ func readOutput(path string) (body, stamp string, err error) {
 	return rest, strings.TrimPrefix(first, stampPrefix), nil
 }
 
-// inputHash covers the spec and every file in its fixture, so any edit to either regenerates.
+// inputHash covers the spec and every TRACKED file in its fixture, so any COMMITTED edit to either
+// regenerates and nothing a working tree happens to contain can move it.
+//
+// Tracked rather than "every file on disk", because the stamp is written into a file that is itself
+// committed, and a hash of the working tree makes that committed value right for one machine. The
+// tutorial's own Makefile has a `report` target writing examples/tutorial-project/reports/, which its
+// .gitignore covers, so every reader who followed the tutorial hashed two files nobody else had.
+// Their gate runs rewrote a committed output they had not touched, and `git checkout --` on it became
+// part of the routine (agni issue 357).
+//
+// Regenerating the output would have moved the staleness rather than fixed it: the new stamp would
+// have been right for a tree that had run the tutorial and wrong for every clean checkout.
 func inputHash(spec []byte, fixture string) (string, error) {
 	h := sha256.New()
 	h.Write(spec)
-	if fixture != "" {
-		root := filepath.Join("..", fixture)
-		err := filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() {
-				return err
-			}
-			// Generated outputs inside the fixture would make the hash depend on itself.
-			if strings.HasSuffix(p, outputSuffix) {
-				return nil
-			}
-			b, err := os.ReadFile(p)
-			if err != nil {
-				return err
-			}
-			h.Write([]byte(p))
-			h.Write(b)
-			return nil
-		})
+	if fixture == "" {
+		return hex.EncodeToString(h.Sum(nil))[:16], nil
+	}
+	files, err := trackedFiles(fixture)
+	if err != nil {
+		return "", err
+	}
+	for _, rel := range files {
+		// Generated outputs inside the fixture would make the hash depend on itself.
+		if strings.HasSuffix(rel, outputSuffix) {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join("..", rel))
 		if err != nil {
 			return "", fmt.Errorf("hashing fixture %s: %w", fixture, err)
 		}
+		h.Write([]byte(rel))
+		h.Write(b)
 	}
 	return hex.EncodeToString(h.Sum(nil))[:16], nil
+}
+
+// trackedFiles lists a fixture's git-tracked files, repo-root-relative and in git's own sorted order
+// so the hash is deterministic.
+//
+// It REFUSES rather than falling back to walking the directory. A fallback would restore the exact
+// bug this exists to fix, and restore it invisibly: the stamp would start depending on the working
+// tree again with nothing on screen to say so. A fixture with no tracked files is the same mistake
+// wearing a different hat, so an empty listing is an error too, not a hash of no content.
+func trackedFiles(fixture string) ([]string, error) {
+	cmd := exec.Command("git", "ls-files", "-z", "--", fixture)
+	cmd.Dir = ".." // specs name their fixture relative to the repo root, as the rest of this file does
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("listing tracked files for fixture %s: %w "+
+			"(the run-output stamp is a hash of COMMITTED content, so it needs git)", fixture, err)
+	}
+	var files []string
+	for _, p := range strings.Split(string(out), "\x00") {
+		if p != "" {
+			files = append(files, p)
+		}
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("fixture %s has no git-tracked files; a stamp over uncommitted content "+
+			"would look stable and mean nothing", fixture)
+	}
+	return files, nil
 }
 
 // execute runs the spec's script in a scratch copy of its fixture and applies the spec's capture
