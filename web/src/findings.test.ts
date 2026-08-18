@@ -16,6 +16,7 @@ import {
   tallySeverities,
 } from "./findings.js";
 import { reportFromWire } from "./report.js";
+import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, DEFAULT_HIGHLIGHT_COLOR } from "./highlights.js";
 
 function f(over: Partial<FindingItem>): FindingItem {
   return { rule: "r", category: "connectivity", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, sheets: [], locateReason: 0, ...over };
@@ -197,8 +198,56 @@ describe("per-instance net id (WS9)", () => {
   it("focusStack drops only the focused instance from the base, keeping same-named siblings lit", () => {
     const all = [f({ kind: "net", subject: "PWR_A", netId: "aaa" }), f({ kind: "net", subject: "PWR_A", netId: "bbb" })];
     const stack = focusStack(all, "net", "PWR_A", [{ netIds: ["aaa"] }], "aaa");
-    // Base is the sibling (bbb) only; the focus layer for aaa sits on top.
-    expect(stack).toEqual([{ netIds: ["bbb"] }, { netIds: ["aaa"] }]);
+    // Base is the sibling (bbb) only, now stamped as context; the focus layer for aaa sits on top
+    // carrying no color, so it resolves to the default (agni issue 348).
+    expect(stack).toEqual([
+      { netIds: ["bbb"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
+      { netIds: ["aaa"] },
+    ]);
+  });
+});
+
+// The focus layer and the base layer used to be the same color (agni issue 348).
+//
+// subjectsToSpecs returns a bare `{}`, so every field took its fallback and every finding was
+// re-stroked in opaque DEFAULT_HIGHLIGHT_COLOR. The focus layer went through withFocusShape stamped
+// with a user style that is undefined unless the reader opened the Highlight menu, so it took the
+// SAME fallback. The two differed only in alpha and shape, within one hue.
+//
+// These assert the separation at the spec level, which is where it is decidable. Whether a reader can
+// actually TELL them apart is a pixel claim and lives in the browser suite; jsdom has no compositor
+// and would pass on two colors a human could not distinguish.
+describe("focusStack separates the field from the figure (agni issue 348)", () => {
+  const findings = [f({ kind: "component", subject: "R1" }), f({ kind: "component", subject: "R2" })];
+
+  it("stamps the base layer as context and leaves the focus layer at the default", () => {
+    const [base, focus] = focusStack(findings, "component", "R1", [{ components: ["R1"] }]);
+    expect(base.color).toBe(BASE_HIGHLIGHT_COLOR);
+    expect(base.alpha).toBe(BASE_HIGHLIGHT_ALPHA);
+    // The focus names no color on purpose: it inherits the default, so a user style set through the
+    // Highlight menu still wins here rather than being overwritten by a hardcoded focus color.
+    expect(focus.color).toBeUndefined();
+  });
+
+  it("gives the two layers different hues, not one hue at two alphas", () => {
+    const [base] = focusStack(findings, "component", "R1", [{ components: ["R1"] }]);
+    // toBeDefined FIRST: `undefined !== DEFAULT` is true, so the not.toBe alone would pass on the
+    // very bug this describes (a base spec that names no color and falls back to the default).
+    expect(base.color).toBeDefined();
+    expect(base.color).not.toBe(DEFAULT_HIGHLIGHT_COLOR);
+  });
+
+  it("leaves the base at full strength when nothing is focused", () => {
+    // An empty focus means the subject was not found. The field is then the whole message rather
+    // than context for something in front of it, so muting it would dim the only layer there is.
+    const stack = focusStack(findings, "component", "NOPE", []);
+    expect(stack).toEqual([{ components: ["R1", "R2"] }]);
+  });
+
+  it("preserves a user style on the focus layer", () => {
+    const styled = [{ components: ["R1"], color: "#00ff00", alpha: 0.9 }];
+    const [, focus] = focusStack(findings, "component", "R1", styled);
+    expect(focus).toEqual({ components: ["R1"], color: "#00ff00", alpha: 0.9 });
   });
 });
 

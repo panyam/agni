@@ -20,6 +20,7 @@ function Controls(props: {
   onLayout: (l: string) => void;
   onSymbols: (faithful: boolean) => void;
   onBoardLayers: (side: string) => void;
+  onClearHighlights: () => void;
 }) {
   // The faithful-symbols toggle is only meaningful for an auto-layout of a design that ships
   // symbols; the faithful layout already draws them, and native has its own pages.
@@ -78,6 +79,18 @@ function Controls(props: {
           <For each={["all", "front", "back"]}>{(s) => <option value={s}>{s} layers</option>}</For>
         </select>
       </Show>
+      {/* Always rendered rather than shown only when something is lit: a control that appears on a
+          state change is one the reader has to discover twice, and this one exists because the
+          gesture had nowhere to live (agni issue 348). Disabled carries "nothing to clear". */}
+      <button
+        type="button"
+        class="mode-btn clear-highlights"
+        disabled={!props.state().hasHighlights}
+        title="clear the highlight (Escape)"
+        onClick={() => props.onClearHighlights()}
+      >
+        Clear highlight
+      </button>
     </div>
   );
 }
@@ -92,6 +105,7 @@ export function controlBarIsland(
     onLayout: (l: string) => void;
     onSymbols: (faithful: boolean) => void;
     onBoardLayers: (side: string) => void;
+    onClearHighlights: () => void;
   },
 ): { island: SolidIsland; view: ControlsView } {
   const [state, setState] = signalView<ControlsState>({
@@ -103,6 +117,7 @@ export function controlBarIsland(
     faithfulSymbols: false,
     board: false,
     boardLayers: "all",
+    hasHighlights: false,
   });
   const island = new SolidIsland(
     "controls",
@@ -114,6 +129,7 @@ export function controlBarIsland(
         onLayout={handlers.onLayout}
         onSymbols={handlers.onSymbols}
         onBoardLayers={handlers.onBoardLayers}
+        onClearHighlights={handlers.onClearHighlights}
       />
     ),
     eventBus,

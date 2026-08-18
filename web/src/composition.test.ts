@@ -302,3 +302,42 @@ describe("clicking the drawing asks a question about what was clicked", () => {
     }
   });
 });
+
+// Escape is a PAGE-level binding, so nothing below main.ts can assert it. The presenter's
+// clearHighlights has its own unit test; what has no other home is whether this page ever hears the
+// key at all, which is exactly how it failed: the only Escape handler in the client belongs to the
+// datasheet workbench (pagegestures, reached from regionview) and never sees this canvas, so the
+// gesture a reader reaches for first did nothing (agni issue 348).
+//
+// The observable is the findings panel's selected row rather than an rpc, because clearing does NOT
+// make one: setHighlights([]) short-circuits the overlay fetch instead of requesting an empty one.
+describe("Escape clears the highlight (agni issue 348)", () => {
+  // Every describe in this file shares ONE booted page, so a finding may already be focused from the
+  // locate test above and a blind click would TOGGLE IT OFF. Asserting the state we need rather than
+  // assuming it is what keeps this independent of what ran before.
+  async function ensureSelected(): Promise<void> {
+    const locate = await vi.waitFor(() => {
+      const b = document.querySelector(".check-locate") as HTMLButtonElement | null;
+      expect(b, "no finding row rendered to click").not.toBeNull();
+      return b!;
+    }, 2000);
+    if (!document.querySelector(".check-row.selected")) locate.click();
+    await vi.waitFor(() => expect(document.querySelector(".check-row.selected"), "no row ended up selected").not.toBeNull(), 2000);
+  }
+
+  it("deselects the focused finding when the key reaches the page", async () => {
+    await ensureSelected();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await vi.waitFor(() => expect(document.querySelector(".check-row.selected"), "Escape did not reach the page").toBeNull(), 2000);
+  }, 10000);
+
+  it("declines the key while the reader is typing, so a text field keeps its own Escape", async () => {
+    await ensureSelected();
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    // Still selected: the key belonged to the field, not to the drawing.
+    expect(document.querySelector(".check-row.selected")).not.toBeNull();
+    input.remove();
+  }, 10000);
+});

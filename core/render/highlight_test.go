@@ -417,3 +417,32 @@ func equalU32(a, b []uint32) bool {
 	}
 	return true
 }
+
+// TestHighlightSVGPaintsLayersInTheirOwnColors is the server half of agni issue 348.
+//
+// The viewer stacks two layers: the field of findings underneath and the focused subject on top. It
+// used to send both with no color, so both took DefaultHighlightColor and the reader had one hue at
+// two alphas to tell "what I clicked" from "everything else". The client now stamps the base layer
+// with its own color, and the whole fix rests on the server honoring that rather than flattening it.
+//
+// The SVG overlay is the path where that could silently not happen: the WebGL renderer resolves specs
+// on the client, but SVG mode round-trips them here and paints from what arrives.
+func TestHighlightSVGPaintsLayersInTheirOwnColors(t *testing.T) {
+	g := highlightFixture()
+	const baseColor = "#6b7f99" // the client's BASE_HIGHLIGHT_COLOR
+	overlay := HighlightSVG(g, g.Sheets[0], []*geom.HighlightSpec{
+		{Components: []string{"R1"}, Color: baseColor, Alpha: 0.55}, // the field, as context
+		{Nets: []string{"NET1"}},                                    // the focus, taking the default
+	})
+	if !strings.Contains(overlay, baseColor) {
+		t.Errorf("the base layer's own color never reached the overlay; a spec color was dropped:\n%s", overlay)
+	}
+	if !strings.Contains(overlay, DefaultHighlightColor) {
+		t.Errorf("the focus layer names no color and must fall back to %s:\n%s", DefaultHighlightColor, overlay)
+	}
+	// The point of the change, stated as the property rather than as two separate presence checks:
+	// whatever the two colors are, they must not be the same one.
+	if baseColor == DefaultHighlightColor {
+		t.Fatal("the base and focus colors are identical, so the layers cannot be told apart")
+	}
+}

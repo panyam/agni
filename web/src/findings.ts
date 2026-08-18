@@ -2,7 +2,7 @@
 // findings list and which one is focused; it pushes FindingsState and the panel renders it,
 // emitting an onSelect(subject) intent back up. Group-by is the panel's own view state.
 
-import type { HighlightSpec } from "./highlights.js";
+import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, type HighlightSpec } from "./highlights.js";
 import { type Selection, sameSelection } from "./selection.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
@@ -285,7 +285,20 @@ export function focusStack(findings: HighlightSubject[], kind: string, subject: 
   const isFocused = (f: HighlightSubject) =>
     f.kind === "net" && (netId !== "" ? f.netId === netId : f.subject === subject);
   const base = kind === "net" ? findings.filter((f) => !isFocused(f)) : findings;
-  return [...subjectsToSpecs(base), ...focus];
+  const baseSpecs = subjectsToSpecs(base);
+  // An empty focus means the subject was not found, so there is no figure and the field is the whole
+  // message. Muting it would dim the only layer on the sheet.
+  if (focus.length === 0) return baseSpecs;
+  // Otherwise the base becomes CONTEXT and is stamped as such. Both layers used to resolve to the
+  // same opaque magenta, differing only in alpha and shape, so "the thing I clicked" and "the other
+  // forty" were one hue apart from each other (agni issue 348).
+  //
+  // The focus layer is deliberately left alone rather than given a color of its own: it inherits the
+  // default, so a style the reader set through the Highlight menu still wins.
+  return [
+    ...baseSpecs.map((s) => ({ ...s, color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA })),
+    ...focus,
+  ];
 }
 
 
