@@ -280,6 +280,15 @@
        the padding box, so the handle and the drawer itself stay flush against the edge. */
     .query { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding-left: 22px; }
     .query-input { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; }
+    /* The query-mode tabs (agni issue 338). The inactive input is display:none rather than
+       unmounted so the textarea keeps its text and its scroll position across a trip through
+       search mode; the reader who searched and came back finds the query they were writing. */
+    .query-input.hidden { display: none; }
+    .query-modes { flex: 0 0 auto; display: flex; gap: 4px; margin-bottom: 4px; }
+    .query-mode { font: inherit; font-size: 11px; padding: 2px 10px; border: 1px solid #ccc; background: #f6f6f6; color: #666; border-radius: 4px 4px 0 0; border-bottom-color: transparent; cursor: pointer; }
+    .query-mode:hover:not(.on) { background: #ececec; }
+    .query-mode.on { background: #fff; color: #222; font-weight: 600; }
+    .query-term { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
     .query-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
     .query-actions { display: flex; align-items: center; gap: 8px; }
     .query-run { font: inherit; font-size: 12px; padding: 3px 12px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }

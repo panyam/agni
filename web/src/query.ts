@@ -17,6 +17,10 @@ export interface QueryRowItem {
   cites: string[];
   cellSheets: SheetBadge[][];
   cellReasons: LocateReason[];
+  // cellKinds aligns with cells and overrides columnKinds for this row (agni issue 338). It is ""
+  // everywhere except a POLYMORPHIC column, where the answer set holds more than one sort of thing
+  // and the column cannot say which. Read it through cellKind, never directly.
+  cellKinds: string[];
 }
 
 // QueryResult is the panel's whole state. `ran` distinguishes "not run yet" (blank panel) from
@@ -68,6 +72,9 @@ export interface QueryView {
   setQuery: (text: string) => void;
   // setEntityQueries hands over the click-to-ask presets from the server, keyed by entity kind.
   setEntityQueries: (presets: EntityQueryItem[]) => void;
+  // setSearch hands over the find-by-name template. Until it arrives the panel offers no search
+  // mode at all, rather than a mode that would run a query it had to guess at.
+  setSearch: (search: SearchItem | null) => void;
   // setSelection names the entity the reader last picked on the drawing, so the panel can say what
   // is selected and offer the question to ask about it next. Clicking a result cell selects too,
   // but the panel does that itself — this is the entry point for the OTHER picker, the canvas.
@@ -99,6 +106,43 @@ export const RELATION_KINDS: readonly { key: string; label: string }[] = [
 // relation (none today) inserts name().
 export function relationTemplate(r: RelationItem): string {
   return `${r.name}(${r.args.map((a) => "?" + a).join(", ")})`;
+}
+
+// cellKind is the kind of one result cell: the row's own if it has one, else the column's. Two
+// sources rather than one because kind is usually a column property and sometimes not. A variable
+// binds at the same relation position in every row, EXCEPT under a relation whose answer says what
+// each row is about (entity(?name, ?kind), agni issue 338). Every reader of a cell's kind goes
+// through here so the two never drift apart: an ordinary query carries no cellKinds at all, and the
+// fallback is what makes that cost nothing.
+export function cellKind(result: QueryResult, row: QueryRowItem, i: number): string {
+  return row.cellKinds[i] || result.columnKinds[i] || "";
+}
+
+// SearchItem is the served find-by-name template (agni issue 338): the datalog a search fills, and
+// the concept it leaves behind. Served rather than written here because it names `entity` and
+// `match`, both defined in Go.
+export interface SearchItem {
+  query: string;
+  teaches: string;
+}
+
+// searchPattern turns what a reader TYPED into a regex that matches it literally, mirroring Go's
+// regexp.QuoteMeta. A design is full of names the regex engine would otherwise read as syntax
+// (VDD+, USB_D-, DATA[7:0], VREF(A)), and a reader typing one of those means the characters.
+//
+// The one character with no escape is the double quote: the query grammar's string literal is
+// '"' { char } '"' with no escape sequence, so a quote cannot be represented at all and splicing
+// one in would end the literal early. It is dropped, yielding a search that finds nothing, which is
+// the honest failure. fillEntityQuery drops it for the same reason.
+export function searchPattern(term: string): string {
+  return term.replace(/"/g, "").replace(/[\\.+*?()|[\]{}^$]/g, "\\$&");
+}
+
+// fillSearchQuery substitutes a reader's term into the served template. An empty term is the
+// caller's problem: the panel refuses to run one rather than enumerating a whole design into a
+// table that renders every row.
+export function fillSearchQuery(template: string, term: string): string {
+  return template.replace(/\{term\}/g, searchPattern(term));
 }
 
 // groupRelations buckets the catalog by kind in RELATION_KINDS order, each bucket sorted by name.
@@ -148,6 +192,7 @@ export function resultFromResponse(
       cites: r.cites,
       cellSheets: r.cells.map((_, i) => resolveSheets(r.cellSheets?.[i]?.sheetIds ?? [])),
       cellReasons: r.cells.map((_, i) => r.cellReasons?.[i] ?? LocateReason.UNSPECIFIED),
+      cellKinds: r.cells.map((_, i) => r.cellKinds?.[i] ?? ""),
     })),
     error: "",
     loading: false,

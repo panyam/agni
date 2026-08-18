@@ -43,6 +43,17 @@ are each internally consistent and collectively wrong, because every file reads 
 a change has a user-visible surface, drive it before designing on top of it. See `build/overlay.md`
 and the web-app page for how to stand the app up.
 
+**A claim about LAYOUT needs a paint-level check, not a rectangle comparison.**
+`getBoundingClientRect` reports where a box was laid out and knows nothing about whether an ancestor
+clips it, so a child of a scrolling cell reports coordinates far outside that cell while being
+perfectly contained on screen. Reading those numbers as "it still overflows" is wrong in the safe
+direction, which is the worst kind. Ask the document instead: `elementFromPoint` at a spot inside the
+NEIGHBOURING element returns whichever element actually paints there, and that answers the question a
+rectangle cannot. Two corollaries. jsdom implements no layout at all, so a CSS behaviour has no test
+in this repo's suites and has to be driven in a real browser. And an A/B where you flip the rules on a
+live page has to re-measure in each layout, since restoring the old rules reflows the row and moves
+the very element you were probing.
+
 **When a run contradicts your PREDICTION, the contradiction is the finding. Do not adjust the test
 to absorb it.** A test written to prove a malformed `project.yaml` fails the run came back saying the
 run had SUCCEEDED, against a confident reading that a downstream error check would catch it. The

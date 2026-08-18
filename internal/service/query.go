@@ -84,7 +84,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	cols := q.Columns()
-	kinds := columnKinds(q)
+	kinds, kindVars := columnKinds(q)
 	resp := &webapi.RunQueryResponse{Columns: make([]string, len(cols)), ColumnKinds: kinds}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
@@ -96,8 +96,8 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// query names no entity and loads no geometry.
 	var ix sheetIndex
 	navigable := false
-	for _, k := range kinds {
-		if k != "" {
+	for i := range kinds {
+		if kinds[i] != "" || kindVars[i] != "" {
 			navigable = true
 			break
 		}
@@ -124,10 +124,23 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 			row.CellSheets = make([]*webapi.CellSheets, len(cols))
 			row.CellReasons = make([]checkspb.LocateReason, len(cols))
 			for i := range cols {
+				// A polymorphic column takes its kind from THIS row's binding of the kind variable
+				// (agni issue 338), and says so on the wire so the client types the cell the same
+				// way. Everything downstream then works off one kind rather than branching on
+				// where it came from: the sheet lookup, the locate reason, the client's click
+				// handler.
+				kind := kinds[i]
+				if v := kindVars[i]; v != "" {
+					kind = entityKind(r.Bind[v].S)
+					if row.CellKinds == nil {
+						row.CellKinds = make([]string, len(cols))
+					}
+					row.CellKinds[i] = kind
+				}
 				cs := &webapi.CellSheets{}
-				if kinds[i] != "" {
-					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kinds[i], Ref: cells[i]})
-					row.CellReasons[i] = cellReason(model, kinds[i], cells[i], drawnComps, drawnNets)
+				if kind != "" {
+					cs.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: cells[i]})
+					row.CellReasons[i] = cellReason(model, kind, cells[i], drawnComps, drawnNets, len(cs.SheetIds) > 0)
 				}
 				row.CellSheets[i] = cs
 			}
@@ -161,7 +174,18 @@ func drawnEntities(g *geom.SchematicGeometry) (comps, nets map[string]bool) {
 // (virtual `#` symbol, power rail, unknown ref/net); an undrawn entity with no such fact is
 // NO_GEOMETRY (drawn nowhere for no more specific reason). A drawn entity never gets a reason, so a
 // rail that happens to carry a wire (e.g. VBUS) reports UNSPECIFIED.
-func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[string]bool) checkspb.LocateReason {
+//
+// onSheet answers "did this cell resolve to any sheet at all", which is the only drawn-test a BUS
+// has: a bus is neither a placement nor a named wire, so neither drawn set can speak for it. That
+// is the same rule AnnotateSheets applies to a bus finding, kept identical so a bus explains itself
+// the same way whether the reader reached it through a check or through a search.
+func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[string]bool, onSheet bool) checkspb.LocateReason {
+	if kind == check.KindBus {
+		if onSheet {
+			return checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED
+		}
+		return checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
+	}
 	drawn := drawnComps[subject]
 	if kind == check.KindNet {
 		drawn = drawnNets[subject]
@@ -182,36 +206,49 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 }
 
 // columnKinds derives each answer column's entity kind for the panel's click-to-locate (WS9-038):
-// "component" (a ref_des), "net", or "" (a scalar or unresolved column). Kind is a column property,
-// not a per-cell one, because a variable binds at the same relation position in every row. It reads
-// the arg-labels the relation catalog already declares (component-on-net(ref_des, net), ...), so it
-// adds no new vocabulary. An explicit Select is walked term-by-term so an aggregate or constant
-// column stays scalar even when it reduces an entity variable (count(?ref) is a number, not a part);
-// the default select (goal variables) has no aggregates, so its columns map straight through.
-func columnKinds(q query.Query) []string {
+// "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). It reads the
+// arg-labels the relation catalog already declares (component-on-net(ref_des, net), ...), so it adds
+// no new vocabulary. An explicit Select is walked term-by-term so an aggregate or constant column
+// stays scalar even when it reduces an entity variable (count(?ref) is a number, not a part); the
+// default select (goal variables) has no aggregates, so its columns map straight through.
+//
+// It returns a second slice because kind is USUALLY a column property and not always one. A
+// variable binds at the same relation position in every row, so its kind is fixed, except where
+// the relation's own answer says what the row is about. `entity(?name, ?kind)` enumerates what
+// exists, so one answer set holds a component, a net and a bus (agni issue 338). kindVars[i] names
+// the variable whose per-row binding types column i; it is "" for every ordinary column, and where
+// it is set, kinds[i] is "".
+func columnKinds(q query.Query) (kinds []string, kindVars []query.Var) {
 	labels := catalogArgLabels()
-	if len(q.Select) == 0 {
-		cols := q.Columns()
-		kinds := make([]string, len(cols))
-		for i, col := range cols {
-			kinds[i] = varKind(col, q.Goal, labels)
+	terms := q.Select
+	if len(terms) == 0 {
+		for _, col := range q.Columns() {
+			terms = append(terms, query.Term{Var: col})
 		}
-		return kinds
 	}
-	kinds := make([]string, len(q.Select))
-	for i, t := range q.Select {
+	kinds = make([]string, len(terms))
+	kindVars = make([]query.Var, len(terms))
+	for i, t := range terms {
 		if t.Agg == nil && t.Var != "" {
-			kinds[i] = varKind(t.Var, q.Goal, labels)
+			kinds[i], kindVars[i] = varKind(t.Var, q.Goal, labels)
 		}
 	}
-	return kinds
+	return kinds, kindVars
 }
 
-// varKind returns the entity kind a variable resolves to: the label-kind of the first positive body
-// atom that binds it to an entity position. "First entity-yielding binding wins" so a variable used
-// as a net in one atom and a scalar in another is a net; a variable bound only in scalar positions,
-// or only by a user rule / IDB relation absent from the catalog, stays "".
-func varKind(col query.Var, body query.Body, labels map[string][]string) string {
+// varKind returns the entity kind a variable resolves to, or the variable whose per-row binding
+// carries it. It walks the positive body atoms and takes the first entity-yielding binding, so a
+// variable used as a net in one atom and a scalar in another is a net; a variable bound only in
+// scalar positions, or only by a user rule / IDB relation absent from the catalog, is a scalar.
+//
+// A `name` position in a relation that also declares a `kind` one is the polymorphic case, and the
+// PAIRING is what keeps the rule narrow: `bus(label, kind)` and `param.range(mpn, symbol, kind,
+// min, max)` both carry a `kind` that is not an entity kind, and neither pairs it with a `name`.
+// Where the kind argument is a constant (`entity(?n, "net")`) the column resolves statically after
+// all, which is worth the extra branch because "find a net by name" is the common search and it
+// should type as a plain net column. entityKind is the second guard: a per-row value outside the
+// vocabulary types the cell as a scalar rather than handing the client a kind it cannot act on.
+func varKind(col query.Var, body query.Body, labels map[string][]string) (string, query.Var) {
 	for _, lit := range body.Literals {
 		a := lit.Pos
 		if a == nil {
@@ -222,10 +259,50 @@ func varKind(col query.Var, body query.Body, labels map[string][]string) string 
 			if j >= len(ls) || term.Var != col {
 				continue
 			}
+			if ls[j] == "name" {
+				if k, v, ok := kindArg(a, ls); ok {
+					return k, v
+				}
+				continue
+			}
 			if k := labelKind(ls[j]); k != "" {
-				return k
+				return k, ""
 			}
 		}
+	}
+	return "", ""
+}
+
+// kindArg finds the atom's `kind` argument and reports how it types the atom's `name` argument: a
+// constant types it statically, a variable types it per row. ok is false when the relation declares
+// no kind position (so the name is just a string, as in param.pin's pin name) or when a constant
+// names something outside the entity vocabulary.
+func kindArg(a *query.Atom, labels []string) (string, query.Var, bool) {
+	for j, label := range labels {
+		if label != "kind" || j >= len(a.Args) {
+			continue
+		}
+		switch t := a.Args[j]; {
+		case t.Var != "":
+			return "", t.Var, true
+		case t.Const != nil:
+			if k := entityKind(t.Const.S); k != "" {
+				return k, "", true
+			}
+		}
+		return "", "", false
+	}
+	return "", "", false
+}
+
+// entityKind passes through the kinds a cell click can act on and rejects everything else. The
+// vocabulary is check's, the same one a finding's subject and a picked element on the canvas carry.
+// Pins are absent because entity() does not enumerate them and one cell could not name one anyway:
+// a pin's identity is its designator AND its component's ref.
+func entityKind(s string) string {
+	switch s {
+	case check.KindComponent, check.KindNet, check.KindBus:
+		return s
 	}
 	return ""
 }
@@ -275,6 +352,8 @@ func (s *QueryService) ListRelations(_ context.Context, _ *webapi.ListRelationsR
 	for _, e := range query.Examples() {
 		resp.Examples = append(resp.Examples, &webapi.ExampleQuery{Label: e.Label, Query: e.Query, Teaches: e.Teaches})
 	}
+	sq := query.Search()
+	resp.SearchQuery = &webapi.SearchQuery{Query: sq.Query, Teaches: sq.Teaches}
 	return resp, nil
 }
 

@@ -407,3 +407,99 @@ describe("walking from a result row", () => {
     expect(el.querySelector(".query-ask")).toBeNull();
   });
 });
+
+// agni issue 338: a search result is polymorphic, so the panel cannot type a cell from its column.
+// These drive the two halves of that: the table reading a per-row kind, and the mode that produces
+// such a result in the first place.
+describe("querypanel search", () => {
+  const SEARCH = {
+    query: 'entity(?name, ?kind), match(?name, "(?i){term}")',
+    teaches: "entity(?name, ?kind) enumerates what a design names",
+  };
+  // one row per kind, each typed by the row rather than by the column, which is what a search over
+  // entity(?name, ?kind) comes back as.
+  const pushSearchResult = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromResponse(
+        {
+          columns: ["name", "kind"],
+          columnKinds: ["", ""],
+          rows: [
+            { cells: ["U1", "component"], cites: [], cellKinds: ["component", ""], cellSheets: [{ sheetIds: ["s1"] }, {}] },
+            { cells: ["CAN_H", "net"], cites: [], cellKinds: ["net", ""], cellSheets: [{ sheetIds: ["s2"] }, {}] },
+            { cells: ["DATA[1:0]", "bus"], cites: [], cellKinds: ["bus", ""], cellSheets: [{}, {}] },
+          ],
+        } as never,
+        (ids) => ids.map((id) => ({ id, name: id })),
+      ),
+    );
+  const search = (el: HTMLElement) => el.querySelector<HTMLInputElement>("input.query-term");
+  const modes = (el: HTMLElement) => [...el.querySelectorAll(".query-mode")].map((b) => b.textContent);
+  const typeTerm = (el: HTMLElement, t: string) => {
+    const input = search(el)!;
+    input.value = t;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  it("offers no search mode until the server has sent a template to fill", () => {
+    const { el, panel } = mountPanel();
+    expect(modes(el)).toEqual([]);
+    panel.view.setSearch(SEARCH);
+    expect(modes(el)).toEqual(["Query", "Find by name"]);
+  });
+
+  it("fills the box with the datalog that answers the name, runs it, and hands back the query", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setSearch(SEARCH);
+    el.querySelectorAll<HTMLButtonElement>(".query-mode")[1].click();
+    typeTerm(el, "  CAN  ");
+    el.querySelector<HTMLButtonElement>(".query-run")!.click();
+
+    const want = 'entity(?name, ?kind), match(?name, "(?i)CAN")';
+    expect(onRun).toHaveBeenCalledWith(want);
+    // Back in query mode with the sentence that answered visible and editable, which is the whole
+    // reason search is a mode on this panel rather than a widget of its own.
+    expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe(want);
+    expect(search(el)).toBeNull();
+  });
+
+  it("refuses an empty term rather than enumerating the whole design into the table", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setSearch(SEARCH);
+    el.querySelectorAll<HTMLButtonElement>(".query-mode")[1].click();
+    typeTerm(el, "   ");
+    expect(el.querySelector<HTMLButtonElement>(".query-run")!.disabled).toBe(true);
+    search(el)!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(onRun).not.toHaveBeenCalled();
+  });
+
+  it("types each result cell by ITS OWN row, so every hit is clickable whatever kind it is", () => {
+    const { el, push, onLocate } = mountPanel();
+    pushSearchResult(push);
+    const hits = [...el.querySelectorAll<HTMLElement>(".query-cell-locate .query-locate")].map((b) => b.textContent);
+    expect(hits).toEqual(["U1", "CAN_H", "DATA[1:0]"]);
+
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "DATA[1:0]")!.click();
+    expect(onLocate).toHaveBeenCalledWith("bus", "DATA[1:0]", undefined, LocateReason.UNSPECIFIED);
+  });
+
+  // The kind column is a plain string in every row. Rendering it as a link would invite a click
+  // that locates a thing called "net".
+  it("leaves the kind column as plain text", () => {
+    const { el, push } = mountPanel();
+    pushSearchResult(push);
+    const linked = [...el.querySelectorAll<HTMLElement>(".query-locate")].map((b) => b.textContent);
+    expect(linked).not.toContain("component");
+    expect(linked).not.toContain("bus");
+  });
+
+  // A hit joins the walk: selecting it is what puts the next question in front of the reader, and
+  // that is the point of making a search result clickable at all.
+  it("selects the hit it locates, so the answer becomes the next question's subject", () => {
+    const { el, push } = mountPanel();
+    pushSearchResult(push);
+    [...el.querySelectorAll<HTMLElement>(".query-locate")].find((b) => b.textContent === "CAN_H")!.click();
+    expect(el.querySelector(".query-selection-kind")!.textContent).toBe("net");
+    expect(el.querySelector(".query-selection-name")!.textContent).toBe("CAN_H");
+  });
+});

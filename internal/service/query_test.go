@@ -93,6 +93,176 @@ func TestRunQueryColumnKinds(t *testing.T) {
 	}
 }
 
+// searchDesign holds one of each kind of named thing (a component, a net, an unmodeled bus), so
+// entity(?name, ?kind) yields an answer set whose rows are NOT all the same kind. That is the whole
+// difficulty a search result poses, and no other fixture here has it.
+func searchDesign() *ir.Design {
+	return &ir.Design{
+		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "U1"}}},
+		Nets: []*ir.Net{{
+			Name:        "SDA",
+			Prov:        &ir.Provenance{SourceFile: "x.edn", NativeId: "SDA"},
+			Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}},
+		}},
+		InputDiagnostics: &ir.InputDiagnostics{UnmodeledBuses: []*ir.BusNotModeled{
+			{Label: "DATA[1:0]", Kind: "bus", Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "DATA[1:0]"}},
+		}},
+	}
+}
+
+// A search result is polymorphic: one answer set holds a component, a net and a bus, so the kind of
+// the `name` cell is whatever THAT ROW says (agni issue 338). The name column therefore types as a
+// scalar (column_kinds is the wrong place to say it) and each row carries its own cell_kinds.
+// Without this the one answer a reader most wants to click is the one they cannot.
+func TestRunQueryPolymorphicCellKinds(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `entity(?name, ?kind)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetColumnKinds(); len(got) != 2 || got[0] != "" || got[1] != "" {
+		t.Errorf("column_kinds = %v, want two empties: a polymorphic column has no column kind", got)
+	}
+	got := map[string]string{}
+	for _, row := range resp.GetRows() {
+		cells, kinds := row.GetCells(), row.GetCellKinds()
+		if len(kinds) != len(cells) {
+			t.Fatalf("row %v: cell_kinds = %v, want one per cell", cells, kinds)
+		}
+		got[cells[0]] = kinds[0]
+		// Only the polymorphic column is typed per row; the kind column is a plain string.
+		if kinds[1] != "" {
+			t.Errorf("row %v: cell_kinds[1] = %q, want \"\" (the kind column is not itself an entity)", cells, kinds[1])
+		}
+	}
+	want := map[string]string{"U1": "component", "SDA": "net", "DATA[1:0]": "bus"}
+	for name, kind := range want {
+		if got[name] != kind {
+			t.Errorf("cell_kinds for %q = %q, want %q (rows: %v)", name, got[name], kind, got)
+		}
+	}
+}
+
+// A per-row kind is a value out of the FACT BASE, not out of the query, so it is checked against
+// the vocabulary a client can act on rather than forwarded. Nothing in the shipped catalog can emit
+// another value today, which is exactly why this is a unit test: the guard exists for the relation
+// somebody adds later, and an end-to-end test of it would have to fake a fact base that cannot
+// occur. Handing the viewer a kind it has no highlighter for makes every click do nothing.
+func TestEntityKindRejectsUnknownKinds(t *testing.T) {
+	for _, k := range []string{"component", "net", "bus"} {
+		if entityKind(k) != k {
+			t.Errorf("entityKind(%q) = %q, want it passed through", k, entityKind(k))
+		}
+	}
+	// "pin" is rejected with the rest: entity() does not enumerate pins, and one cell could not
+	// name one anyway, since a pin's identity is its designator AND its component's ref.
+	for _, k := range []string{"pin", "sandwich", "", "Net", "netlist"} {
+		if got := entityKind(k); got != "" {
+			t.Errorf("entityKind(%q) = %q, want \"\"", k, got)
+		}
+	}
+}
+
+// A CONSTANT kind argument types the column statically after all, because every row then answers
+// the same way. This is the common search ("find a net whose name contains CAN"), and it should
+// come back as a plain net column rather than paying for the per-row machinery.
+func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `entity(?name, "net")`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetColumnKinds(); len(got) != 1 || got[0] != "net" {
+		t.Fatalf("column_kinds = %v, want [net]", got)
+	}
+	for _, row := range resp.GetRows() {
+		if len(row.GetCellKinds()) != 0 {
+			t.Errorf("row %v carries cell_kinds %v, want none: the column already says it", row.GetCells(), row.GetCellKinds())
+		}
+	}
+}
+
+// An ordinary query pays nothing for the polymorphic path: no row carries cell_kinds, so the wire
+// stays exactly as wide as it was and column_kinds keeps meaning what it has always meant.
+func TestRunQueryOrdinaryQueryCarriesNoCellKinds(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `component-on-net(?r,?n) => ?r, ?n`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range resp.GetRows() {
+		if len(row.GetCellKinds()) != 0 {
+			t.Errorf("row %v carries cell_kinds %v on a fixed-kind query", row.GetCells(), row.GetCellKinds())
+		}
+	}
+}
+
+// A search hit is only half-clickable without its sheet badge and its locate reason, and both of
+// those hang off the same kind. A bus is the one that would quietly break: it is neither a
+// placement nor a named wire, so the drawn-component and drawn-net sets cannot speak for it, and
+// the honest test is whether it resolved to a sheet at all (the rule AnnotateSheets already uses).
+func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}}, Wires: []*geom.WireGeometry{{Net: "SDA"}}},
+	}}
+	svc := NewQueryService(fakeLoader{design: searchDesign(), geom: g}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `entity(?name, ?kind)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sheets := map[string][]string{}
+	reasons := map[string]checkspb.LocateReason{}
+	for _, row := range resp.GetRows() {
+		sheets[row.GetCells()[0]] = row.GetCellSheets()[0].GetSheetIds()
+		reasons[row.GetCells()[0]] = row.GetCellReasons()[0]
+	}
+	for _, name := range []string{"U1", "SDA"} {
+		if !slices.Equal(sheets[name], []string{"s1"}) {
+			t.Errorf("%s sheets = %v, want [s1]: a per-row kind must reach the sheet lookup", name, sheets[name])
+		}
+		if reasons[name] != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
+			t.Errorf("%s reason = %v, want UNSPECIFIED: it is drawn", name, reasons[name])
+		}
+	}
+	// The bus is on no drawn sheet, so it says why rather than clicking to nothing.
+	if got := reasons["DATA[1:0]"]; got != checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN {
+		t.Errorf("undrawn bus reason = %v, want BUS_NOT_DRAWN", got)
+	}
+}
+
+// A relation carrying a `kind` that is not an ENTITY kind must not be dragged into the polymorphic
+// path. bus(label, kind) and param.range(mpn, symbol, kind, ...) both have one, and the pairing
+// with a `name` argument is the whole of what keeps them out.
+func TestRunQueryKindArgWithoutNameStaysScalar(t *testing.T) {
+	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
+		Uri: "mount://m/x.edn", Query: `bus(?label, ?kind)`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, k := range resp.GetColumnKinds() {
+		if k != "" {
+			t.Errorf("bus column_kinds[%d] = %q, want \"\"", i, k)
+		}
+	}
+	for _, row := range resp.GetRows() {
+		for i, k := range row.GetCellKinds() {
+			if k != "" {
+				t.Errorf("bus row %v: cell_kinds[%d] = %q, want \"\", since its kind is a bus flavour and not an entity kind", row.GetCells(), i, k)
+			}
+		}
+	}
+}
+
 // A component cell's sheet membership comes from the schematic geometry placements (WS9-038), the
 // same source the finding sheet badges use — so a component cell can navigate to its sheet.
 func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {

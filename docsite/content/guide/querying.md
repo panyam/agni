@@ -142,6 +142,11 @@ agni query board.kicad_sch 'entity(?net, "net"), not component-on-net(?any, ?net
 Pins are not in `entity`, because a pin is named by two things rather than one. Enumerate those with
 `pin(?ref, ?pin)`.
 
+In the web viewer this has a front door. The query panel has a **Find by name** mode: type part of a
+name, and it writes the same query into the box, runs it, and hands you back the query. Each hit is
+clickable, whatever sort of thing it turns out to be, so a search lands you on the drawing and leaves
+a sentence you can edit into a better question.
+
 ### Find parts stressed above their datasheet rating
 
 This joins what the part is (`component.mpn`), what its datasheet says (`param`), where it sits

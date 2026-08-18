@@ -48,6 +48,14 @@ build green, so a skipped TS regen used to go unnoticed until the next regen chu
 proto-check` now fails the gate on either half being stale, and it runs inside `testall`, so this is
 enforced rather than remembered. It names which half drifted and which command fixes it.
 
+**Never hand-edit a generated file, and that includes reformatting it.** A commit that regrouped the
+imports in `gen/go/agni/v1/param/param.pb.go` turned main red, because `proto-check` compares the
+generated tree byte for byte, and **every open PR inherited the failure**, since CI checks out the
+merge with main. The same commit sanitized a generated rule page differently from the `stdlib/`
+source it is generated from, which the next `catalog-docs` run would have silently undone. Edit the
+SOURCE and regenerate. A sweep over the tree (a prose pass, a formatter, an import tidy) has to
+exclude `gen/` and the generated docsite directories, or it writes changes that cannot survive.
+
 Unlike `catalog-docs-check`, **it carries no commit-first ordering trap**: it generates into a
 throwaway tree and diffs, so regenerating and running the gate before committing works fine.
 
