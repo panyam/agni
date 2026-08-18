@@ -54,6 +54,7 @@ interface WireFinding {
   subject?: { kind: string; ref: string; pin: string; netId?: string; busId?: string };
   sheets?: string[];
   locateReason?: number;
+  inconclusive?: boolean;
 }
 interface WireRuleGroup {
   rule: string;
@@ -102,6 +103,7 @@ export function reportFromWire(
           netId: f.subject?.netId ?? "",
           busId: f.subject?.busId ?? "",
           message: f.message,
+          inconclusive: f.inconclusive ?? false,
           sheets: sheetBadges(f.sheets ?? []),
           locateReason: f.locateReason ?? 0,
         })),

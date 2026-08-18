@@ -58,6 +58,7 @@ function FindingsCount(props: {
   state: CheckedState;
   title: string;
   scope: string;
+  gated: number;
   onOpen?: () => void;
 }) {
   const noun = (n: number): string => (n === 1 ? "1 finding" : `${n} findings`);
@@ -93,6 +94,12 @@ function FindingsCount(props: {
           </Show>
         </span>
       </Show>
+      {/* Never a pass and never a fail, so it is worded as a question rather than counted with the
+          defects. A rule that examined this subject and could not decide is the one item a reader
+          can often clear themselves, by supplying whatever it named. */}
+      <Show when={counted() && props.tally.inconclusive > 0}>
+        <span class="query-findings-open-q">{props.tally.inconclusive} unresolved</span>
+      </Show>
     </>
   );
   return (
@@ -104,7 +111,15 @@ function FindingsCount(props: {
       </Show>
       {/* Visible rather than only in the hover, because this is the claim the panel must not let a
           reader over-read, and a caveat nobody sees is a caveat nobody has. */}
-      <span class="query-findings-caveat">selected rules, this subject only</span>
+      <span class="query-findings-caveat">
+        selected rules, this subject only
+        {/* A rule gated before it evaluated reports nothing ANYWHERE, so a clean entity under a
+            half-gated ruleset means much less than it looks. Design-wide, hence stated here rather
+            than counted above. */}
+        <Show when={props.gated > 0}>
+          <span class="query-findings-gated"> · {props.gated} rule(s) could not run</span>
+        </Show>
+      </span>
     </span>
   );
 }
@@ -310,16 +325,30 @@ function QueryPanel(props: {
   // caveats are not decoration: an entity view is a projection of attention, and a review pass is an
   // enumeration guarantee, so a zero here means much less than a zero there.
   const countTitle = (): string => {
-    const state = checkedState(props.findings());
+    const st = props.findings();
+    const state = checkedState(st);
     const head =
       state === "not-run"
         ? "No rule has run yet, so this is not a count of anything."
         : state === "partial"
-          ? `${props.findings().pending} selected rule(s) have not run, so this count is a floor.`
+          ? `${st.pending} selected rule(s) have not run, so this count is a floor.`
           : state === "no-rules"
             ? "No rules are selected."
             : "";
-    return `${head ? head + "\n\n" : ""}Findings from the SELECTED rules that name this subject. Not a coverage statement: a design-global rule has no subject and can never appear here, and a rule that checks two terminals names one of them, so the other end shows nothing.`;
+    // The skipped list is DESIGN-WIDE and is the largest thing a count beside one entity leaves
+    // out: a rule gated before it evaluated produces no findings anywhere, so a clean entity under
+    // a half-gated ruleset means much less than it looks. The reasons are the engine's own words,
+    // passed through rather than reworded, for the same reason the checks panel passes them
+    // through: the rule decides why it cannot run.
+    const gated = st.skipped.length
+      ? `\n\n${st.skipped.length} selected rule(s) could not run on this design at all, so they report nothing anywhere:\n` +
+        st.skipped.map((s) => `  ${s.rule}: ${s.reason}`).join("\n")
+      : "";
+    return (
+      `${head ? head + "\n\n" : ""}Findings from the SELECTED rules that name this subject. Not a coverage statement: ` +
+      `a design-global rule has no subject and can never appear here, and a rule that checks two terminals names one of them, ` +
+      `so the other end shows nothing.${gated}`
+    );
   };
   // cmpCells is a numeric-aware string compare: two numeric cells sort by value (so 9 < 10), any
   // other pair sorts lexicographically. sortRows applies it, carrying each row's original index.
@@ -466,6 +495,7 @@ function QueryPanel(props: {
                 state={checkedState(props.findings())}
                 title={countTitle()}
                 scope=""
+                gated={props.findings().skipped.length}
                 onOpen={() => props.onInspect(sel())}
               />
             </span>
@@ -727,6 +757,7 @@ function QueryPanel(props: {
                   state={checkedState(props.findings())}
                   title={countTitle()}
                   scope={`these ${resultSubjects().length} ${resultSubjects().length === 1 ? "entity" : "entities"}`}
+                  gated={props.findings().skipped.length}
                 />
               </Show>
             </div>

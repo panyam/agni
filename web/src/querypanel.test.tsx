@@ -781,3 +781,62 @@ describe("querypanel pin cells", () => {
     expect(links(el)).not.toContain("9");
   });
 });
+
+// A rule that examined this subject and could not decide is not a defect and not a pass (agni issue
+// 74), and a rule gated before it evaluated reports nothing anywhere. Both make a count beside an
+// entity mean less than it looks, and both were invisible before.
+describe("querypanel unresolved and gated", () => {
+  const finding = (over: Record<string, unknown>) => ({
+    rule: "r", category: "c", profile: "", severity: "warning", kind: "net",
+    subject: "SDA", pin: "", netId: "", busId: "", message: "m", inconclusive: false,
+    sheets: [], locateReason: 0, ...over,
+  });
+  const push = (panel: ReturnType<typeof mountPanel>["panel"], over: Record<string, unknown> = {}) =>
+    panel.view.setFindings({
+      findings: [
+        finding({ rule: "a", severity: "error" }),
+        finding({ rule: "b", severity: "error", inconclusive: true }),
+      ],
+      selected: "", ruleCount: 3, pending: 0, running: false, skipped: [], ruleSummaries: {},
+      ...over,
+    } as never);
+  const bar = (el: HTMLElement) => el.querySelector(".query-selection .query-findings")!;
+
+  it("counts an unresolved result apart from the defects", () => {
+    const { el, panel } = mountPanel();
+    push(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-label")!.textContent).toBe("1 finding");
+    expect(bar(el).querySelector(".query-findings-open-q")!.textContent).toBe("1 unresolved");
+    // An inconclusive ERROR must not raise the error pip: its severity is not what makes it
+    // unresolved, and the pip is what a reviewer reads first.
+    expect([...bar(el).querySelectorAll(".query-pip")].map((p) => p.textContent)).toEqual(["1"]);
+  });
+
+  it("says nothing about unresolved results when there are none", () => {
+    const { el, panel } = mountPanel();
+    push(panel, { findings: [finding({ rule: "a", severity: "error" })] });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-open-q")).toBeNull();
+  });
+
+  // The largest thing a per-entity count leaves out. A gated rule fires nowhere, so a clean entity
+  // under a half-gated ruleset is a much weaker statement than a clean entity under a full one.
+  it("says how many selected rules could not run at all", () => {
+    const { el, panel } = mountPanel();
+    push(panel, { skipped: [{ rule: "board-clearance", reason: "no board attached" }, { rule: "cap-voltage", reason: "no datasheet corpus" }] });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-gated")!.textContent).toContain("2 rule(s) could not run");
+    // The engine's own words for WHY, passed through rather than reworded.
+    const title = bar(el).getAttribute("title")!;
+    expect(title).toContain("board-clearance: no board attached");
+    expect(title).toContain("cap-voltage: no datasheet corpus");
+  });
+
+  it("stays quiet when every selected rule ran", () => {
+    const { el, panel } = mountPanel();
+    push(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(bar(el).querySelector(".query-findings-gated")).toBeNull();
+  });
+});

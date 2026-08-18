@@ -41,6 +41,14 @@ export interface FindingItem {
   // buses stay distinct instances. Empty for every other subject kind.
   busId: string;
   message: string;
+  // inconclusive marks a RESULT the rule could not decide rather than a defect it found (agni issue
+  // 74). The rule ran, it had what it needed, it examined this subject, and it could not conclude.
+  //
+  // It is not a severity and not a skip. A skip is a PRECONDITION, decided around the rule and
+  // always design-wide; this is per-subject and on the other side of the rule, which is why a
+  // consumer must never count it as a failure. The message carries what could not be resolved and
+  // what would resolve it.
+  inconclusive: boolean;
   sheets: SheetBadge[];
   // locateReason (checks.Finding.locate_reason) explains why clicking this finding may highlight
   // nothing, computed server-side from the geometry (WS7-042c): BUS_NOT_DRAWN for a bus with no drawn
@@ -335,18 +343,29 @@ export function findingsFor(findings: FindingItem[], selections: (Selection | nu
 
 // SeverityTally counts a projection by severity, because "3 findings" and "3 errors" are different
 // news and a bare count reads as the milder one.
+//
+// `inconclusive` is counted apart from all of them and excluded from `total`. An inconclusive result
+// is never a pass and never a fail, so folding it into the defect count states something the rule
+// explicitly declined to state, and dropping it silently loses the one item a reader could act on by
+// supplying what was missing.
 export interface SeverityTally {
   error: number;
   warning: number;
   info: number;
   total: number;
+  inconclusive: number;
 }
 
-// tallySeverities counts a finding list. An unrecognized severity still counts toward the total,
-// so the total is never less than the list length and a new severity cannot silently vanish.
+// tallySeverities counts a finding list. An unrecognized severity still counts toward the total, so
+// the total is never less than the number of defects and a new severity cannot silently vanish.
 export function tallySeverities(findings: FindingItem[]): SeverityTally {
-  const t: SeverityTally = { error: 0, warning: 0, info: 0, total: findings.length };
+  const t: SeverityTally = { error: 0, warning: 0, info: 0, total: 0, inconclusive: 0 };
   for (const f of findings) {
+    if (f.inconclusive) {
+      t.inconclusive++;
+      continue;
+    }
+    t.total++;
     if (f.severity === "error") t.error++;
     else if (f.severity === "warning") t.warning++;
     else if (f.severity === "info") t.info++;

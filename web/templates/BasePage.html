@@ -340,6 +340,12 @@
     /* The caveat rides beside every count rather than hiding in the hover, because over-reading a
        zero is the failure this whole affordance risks. */
     .query-findings-caveat { color: #9ca3af; font-size: 10px; font-style: italic; }
+    /* Rules that could not run at all. Warmer than the caveat because it is a fact about THIS run
+       rather than a standing limitation, and a reader who sees it may want to go fix it. */
+    .query-findings-gated { color: #b45309; font-style: normal; }
+    /* An unresolved result is neither a defect nor a pass, so it is worded rather than counted with
+       the severity pips, and coloured to match nothing in that scale. */
+    .query-findings-open-q { color: #6d28d9; font-weight: 600; }
     .query-selection-what { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
     .query-selection-kind { color: #889; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
     .query-selection-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #334; overflow-wrap: anywhere; }

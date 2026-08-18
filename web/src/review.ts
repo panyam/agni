@@ -186,6 +186,7 @@ export function reviewFromWire(rv: Review): ReviewRunView {
           netId: f.subject?.netId ?? "",
           busId: f.subject?.busId ?? "",
           message: f.message,
+          inconclusive: f.inconclusive ?? false,
           sheets: [],
           locateReason: f.locateReason ?? LocateReason.UNSPECIFIED,
         })),

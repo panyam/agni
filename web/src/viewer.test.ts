@@ -27,7 +27,7 @@ function harness() {
       ? { content: { case: "svg", value: "<svg data-mode='svg'/>" } }
       : { content: { case: "packed", value: { sheetId: "s1" } } },
   );
-  const checkDesign = vi.fn(async (_req: { uri: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[] }[] }));
+  const checkDesign = vi.fn(async (_req: { uri: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[]; inconclusive?: boolean }[] }));
   // listRules returns a small two-rule catalog by default (one connectivity, one naming), both
   // available, so opening a file default-selects both. Tests that need a specific catalog override.
   const listRules = vi.fn(async (_req: { uri: string }) => ({
@@ -439,6 +439,25 @@ describe("ViewerPresenter", () => {
     const toChecks = lastFindings(h);
     expect(toQuery).toEqual(toChecks);
     expect(toQuery.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
+  });
+
+  // agni issue 74: the wire marks a finding the rule could not DECIDE, and the proto says a viewer
+  // should present it distinctly from a defect. The client dropped the field for its whole life, so
+  // every surface counted "could not decide" as "found a problem". This pins the carry.
+  it("carries a finding's inconclusive flag off the wire", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      // The rule names must be ones the harness SELECTS, since the presenter files findings into a
+      // per-rule cache keyed by the selected set and silently drops anything else.
+      findings: [
+        { rule: "single-pin-net", severity: "error", subject: { kind: "net", ref: "N1", pin: "" }, message: "defect", sheets: [] },
+        { rule: "diff-pair-naming", severity: "error", subject: { kind: "net", ref: "N2", pin: "" }, message: "undecided", sheets: [], inconclusive: true },
+      ],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    const byRule = new Map(lastFindings(h).findings.map((f: { rule: string; inconclusive: boolean }) => [f.rule, f.inconclusive]));
+    expect(byRule.get("single-pin-net")).toBe(false);
+    expect(byRule.get("diff-pair-naming")).toBe(true);
   });
 
   it("maps finding sheets to named badges and navigates to the subject's sheet before highlighting (WS9-024)", async () => {

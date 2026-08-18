@@ -455,6 +455,24 @@ wrong here": no rules are selected, nobody has run them, the ruleset is half-eva
 clean. `checkedState` names which, and the panel prints the name rather than a bare number, because
 the reassuring reading is the one a reviewer acts on. A half-run ruleset reports its count as a floor.
 
+**An unresolved result is not a defect and not a pass.** `Finding.inconclusive` marks a result the
+rule could not DECIDE: it ran, it had what it needed, it examined this subject, and it could not
+conclude (agni issue 74). The client dropped that field for its whole life, so every surface counted
+"could not decide" as "found a problem". It now rides on `FindingItem`, and `tallySeverities` counts
+it apart and excludes it from the defect total, including from its own severity bucket, since an
+inconclusive error is not an error.
+
+It is also the per-SUBJECT axis, which is worth holding against the skip vocabulary. The needs-*
+outcomes are PRECONDITIONS, decided around the rule and always design-wide; this sits on the other
+side of the rule and is about one subject. So an entity view already answers "what could not be
+decided here" without inventing anything, and the remedy lives in the message the way it does for a
+defect.
+
+**A gated rule reports nothing anywhere**, which is the largest thing a per-entity count leaves out.
+`FindingsState.skipped` is design-wide, so the count states how many selected rules could not run at
+all and gives the engine's own reasons on hover. A clean entity under a half-gated ruleset is a much
+weaker statement than a clean entity under a full one, and nothing on the entity itself can say so.
+
 **And the count says what it is not.** An entity view enumerates attention; a review pass enumerates
 the design. A design-global rule has no subject and can never appear beside an entity, and a rule
 about two terminals names one of them, so the other end shows nothing (fixing that needs a structured
