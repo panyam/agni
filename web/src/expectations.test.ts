@@ -3,7 +3,7 @@ import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationIt
 import type { FindingItem } from "./findings.js";
 
 function finding(rule: string, subject: string, kind = "net"): FindingItem {
-  return { rule, category: "", profile: "", severity: "error", kind, subject, pin: "", netId: "", busId: "", message: "", inconclusive: false, sheets: [], locateReason: 0 };
+  return { rule, category: "", profile: "", severity: "error", kind, subject, pin: "", netId: "", busId: "", message: "", inconclusive: false, context: [], sheets: [], locateReason: 0 };
 }
 
 describe("reconcile", () => {

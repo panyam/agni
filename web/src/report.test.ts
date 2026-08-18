@@ -61,6 +61,9 @@ describe("reportFromWire", () => {
       busId: "",
       message: "R1 used twice",
       inconclusive: false,
+      // A stored report written before the context field existed carries none, and must map to an
+      // empty list rather than undefined so the panel renders no chips instead of throwing.
+      context: [],
       sheets: [],
       locateReason: 0,
     });

@@ -4,7 +4,7 @@
 // already uses.
 import type { CheckResults } from "./gen/agni/v1/checks/checks_pb.js";
 import type { Review } from "./gen/agni/v1/webapi/review_pb.js";
-import type { FindingItem } from "./findings.js";
+import { contextFromWire, type FindingItem } from "./findings.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 // OUTCOMES is the review vocabulary, in the order a report reads: the two decided verdicts, then the
@@ -187,6 +187,7 @@ export function reviewFromWire(rv: Review): ReviewRunView {
           busId: f.subject?.busId ?? "",
           message: f.message,
           inconclusive: f.inconclusive ?? false,
+          context: contextFromWire(f.context),
           sheets: [],
           locateReason: f.locateReason ?? LocateReason.UNSPECIFIED,
         })),

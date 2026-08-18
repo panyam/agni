@@ -121,8 +121,10 @@ run, so the bar says "not checked yet" rather than "no findings" before you pres
 half-finished run as a floor ("2 so far"). And a count beside one entity is narrower than a report in
 two ways it names on screen: it covers only the rules you have selected, and only findings that name
 that entity. A rule about the whole design has no single subject and will never appear there, and a
-rule comparing two pins names one of them, so the other pin looks quiet. An entity view tells you
-where to look. It is not a statement that anything is fine.
+rule comparing two pins is filed under one of them, so the other pin looks quiet in the count even
+though the finding names it. The finding itself does say so: a message that names an entity other
+than its subject carries that entity as a chip you can click, so you can get from the sentence to the
+other end. An entity view tells you where to look. It is not a statement that anything is fine.
 
 ## Understand a rule
 

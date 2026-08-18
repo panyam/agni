@@ -8,7 +8,7 @@ function sheet(id: string, name: string): SheetRef {
 }
 
 function finding(sheets: { id: string; name: string }[]): FindingItem {
-  return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, sheets, locateReason: 0 };
+  return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, context: [], sheets, locateReason: 0 };
 }
 
 describe("sheetTiles (WS9-025)", () => {

@@ -39,7 +39,7 @@ function run(overrides: Partial<ReviewRunView> = {}): ReviewRunView {
             findings: [
               {
                 rule: "reverse-blocking-absent", category: "", profile: "", severity: "error",
-                kind: "net", subject: "VIN", pin: "", netId: "n1", busId: "", inconclusive: false,
+                kind: "net", subject: "VIN", pin: "", netId: "n1", busId: "", inconclusive: false, context: [],
                 message: "no blocking element", sheets: [], locateReason: 0,
               },
             ],

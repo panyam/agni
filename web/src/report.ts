@@ -4,7 +4,7 @@
 // worst-severity first with counts, findings grouped by rule with catalog summaries, so this
 // module never re-derives a group-by the CLI's report formats would then drift from.
 
-import type { FindingItem, SheetBadge } from "./findings.js";
+import { contextFromWire, type FindingItem, type SheetBadge, type WireContext } from "./findings.js";
 
 // ReportRuleGroup is one rule's findings inside a severity section. summary is the rule's
 // catalog one-liner ("" when the rule is unknown to the catalog).
@@ -55,6 +55,9 @@ interface WireFinding {
   sheets?: string[];
   locateReason?: number;
   inconclusive?: boolean;
+  // The entities the message names but is not about (agni issue 349). Optional, so a stored report
+  // written before the field existed still parses.
+  context?: WireContext[];
 }
 interface WireRuleGroup {
   rule: string;
@@ -104,6 +107,7 @@ export function reportFromWire(
           busId: f.subject?.busId ?? "",
           message: f.message,
           inconclusive: f.inconclusive ?? false,
+          context: contextFromWire(f.context),
           sheets: sheetBadges(f.sheets ?? []),
           locateReason: f.locateReason ?? 0,
         })),
