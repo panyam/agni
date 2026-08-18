@@ -179,7 +179,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		Findings: FindingProtos(check.Run(m, runnable)),
 		Skipped:  skipped,
 	}
-	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, u), m)
+	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, u, ov.ReadOptions()...), m)
 	return resp, nil
 }
 

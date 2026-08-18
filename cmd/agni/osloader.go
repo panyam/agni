@@ -36,11 +36,15 @@ func (l *osLoader) Design(_ context.Context, uri artifact.URI, opts ...service.R
 	return readerFor(l.loader, opts...).ReadDesign(abs)
 }
 
-func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error) {
+func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
+	// Through readerFor for the same reason Design is: a project's declared symbol library is config
+	// that changes what the geometry read CONTAINS, and it reaches this call as a read option rather
+	// than through the loader the process was built with (agni issue 347).
+	reader := readerFor(l.loader, opts...)
 	// Companion (WS1-047): a netlist opened alongside a sibling <stem>.eds draws on that schematic
 	// instead of the auto-layout graph, so the viewer shows the design's OWN drawing. The netlist
 	// stays analysis truth (checks/query read it via Design); only the picture comes from the .eds,
@@ -48,9 +52,9 @@ func (l *osLoader) Geometry(_ context.Context, uri artifact.URI, layout string, 
 	// GetDesign / GetSheet / HighlightSheet stay consistent. The sibling sits in the SAME mount dir
 	// as the already-contained abs, so no extra containment check is needed (mirrors Expectations).
 	if comp := companionEds(abs); comp != "" {
-		return l.loader.FaithfulGeometry(comp)
+		return reader.FaithfulGeometry(comp)
 	}
-	return l.loader.ResolveGeometry(abs, layout, nil, symbolsFor(faithfulSymbols))
+	return reader.ResolveGeometry(abs, layout, nil, symbolsFor(faithfulSymbols))
 }
 
 // companionEds returns a sibling <stem>.eds schematic for a NETLIST design, or "" when the design
@@ -70,12 +74,12 @@ func companionEds(abs string) string {
 	return ""
 }
 
-func (l *osLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool) (*graph.ConversionReport, error) {
+func (l *osLoader) Report(_ context.Context, uri artifact.URI, faithfulSymbols bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
 		return nil, err
 	}
-	return l.loader.ConversionReport(abs, symbolsFor(faithfulSymbols), nil)
+	return readerFor(l.loader, opts...).ConversionReport(abs, symbolsFor(faithfulSymbols), nil)
 }
 
 // Expectations loads the design's `<path>.expect.yaml` sidecar. No sidecar is the normal case, so a

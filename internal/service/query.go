@@ -108,7 +108,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// emitted (the design renders via an auto-layout that draws every entity).
 	var drawnComps, drawnNets map[string]bool
 	if navigable {
-		g := BuildGeometry(ctx, s.loader, u)
+		g := BuildGeometry(ctx, s.loader, u, ov.ReadOptions()...)
 		ix = indexSheets(g, model)
 		if g != nil {
 			drawnComps, drawnNets = drawnEntities(g)

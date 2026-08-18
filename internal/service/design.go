@@ -47,9 +47,19 @@ type Loader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	// Geometry resolves drawable geometry for the layout and symbol source (the design's own
 	// symbols when faithfulSymbols, else synthetic glyphs).
-	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
+	//
+	// It takes ReadOptions for the same reason Design does, and the omission was a real bug (agni
+	// issue 347). A symbol library is config that changes what the read CONTAINS: an unresolved
+	// symbol contributes no shapes, so the placement is dropped from the document along with the
+	// entity keys that make it pickable, while its ref-des annotation still draws. The sheet then
+	// looks complete and every component and pin on it is silently unclickable. A signature with no
+	// options channel made that unfixable from the call site and the assertion unwritable.
+	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 	// Report classifies how an auto-layout draws each component (the conversion report).
-	Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool) (*graph.ConversionReport, error)
+	// Report explains how each component was drawn. It takes ReadOptions for the same reason
+	// Geometry does, and more sharply: this is the surface that would REPORT an unresolved symbol,
+	// so a read that could not see the project's library would diagnose a problem it caused itself.
+	Report(ctx context.Context, uri artifact.URI, faithfulSymbols bool, opts ...ReadOption) (*graph.ConversionReport, error)
 	// Expectations loads a design's `<path>.expect.yaml` sidecar (WS6-006). A design with no sidecar
 	// returns a nil map and a nil error (absence is normal), so the caller renders an empty panel
 	// rather than an error.
@@ -113,11 +123,35 @@ type DesignService struct {
 	// style is the render palette/font applied to both the SVG and packed (WebGL) output. The zero
 	// value renders with render.DefaultStyle.
 	style render.Style
+	// projects resolves a design to its project and loads that project's config; nil when this
+	// deployment resolves no projects, and then every design reads under the engine defaults.
+	//
+	// A RENDER tier needs this for the same reason the rule-running tiers do. A project's declared
+	// symbol library decides whether a placement resolves to a body, and an unresolved symbol keeps
+	// its reference designator while losing its pins, so the read is missing connections rather than
+	// just artwork (agni issue 347).
+	projects *ProjectResolver
 }
 
-// NewDesignService returns a DesignService backed by the given ports and render style.
-func NewDesignService(loader Loader, native NativeRenderer, style render.Style) *DesignService {
-	return &DesignService{loader: loader, native: native, style: style}
+// NewDesignService returns a DesignService backed by the given ports and render style. A nil
+// projects resolver means this deployment resolves no projects.
+func NewDesignService(loader Loader, native NativeRenderer, style render.Style, projects *ProjectResolver) *DesignService {
+	return &DesignService{loader: loader, native: native, style: style, projects: projects}
+}
+
+// readOptions composes the per-read config this design's project supplies: its naming vocabulary and
+// the symbol libraries it declares. A design belonging to no project yields no options, which is the
+// ordinary loose-file case; a descriptor that exists and does not parse is returned, because reading
+// under the defaults instead would answer a different question without saying so.
+//
+// It passes no request overlay: the four design surfaces carry no OverlayConfig on the wire, so the
+// project's own config is the whole of what applies.
+func (s *DesignService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
+	ov, err := s.projects.Overlay(ctx, uri, nil, Overlay{}, "")
+	if err != nil {
+		return nil, err
+	}
+	return ov.ReadOptions(), nil
 }
 
 // classifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
@@ -170,7 +204,11 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 		return nil, err
 	}
 	layout := layoutForFile(u.Path, req.GetLayout())
-	g, err := s.loader.Geometry(ctx, u, layout, false)
+	opts, err := s.readOptions(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	g, err := s.loader.Geometry(ctx, u, layout, false, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -189,7 +227,7 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	}
 	if layout == faithfulLayout {
 		resp.Name = g.GetDesignRef()
-	} else if d, err := s.loader.Design(ctx, u); err == nil {
+	} else if d, err := s.loader.Design(ctx, u, opts...); err == nil {
 		resp.Name = d.GetName()
 		resp.SourceFormat = d.GetSourceFormat()
 		resp.ComponentCount = int32(len(d.GetComponents()))
@@ -207,7 +245,11 @@ func (s *DesignService) GetLayoutReport(ctx context.Context, req *webapi.GetLayo
 		return nil, err
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	rep, err := s.loader.Report(ctx, u, faithful)
+	opts, err := s.readOptions(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	rep, err := s.loader.Report(ctx, u, faithful, opts...)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
 			return nil, err
@@ -268,7 +310,11 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 		requested = faithfulLayout
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, requested), faithful)
+	opts, err := s.readOptions(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, requested), faithful, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -340,7 +386,11 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		}, nil
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, req.GetLayout()), faithful)
+	opts, err := s.readOptions(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, req.GetLayout()), faithful, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -356,7 +406,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	// On a NAME-ONLY canvas (a faithful .eds / WS1-047 companion schematic: wires named by net but
 	// carrying no per-instance net_id), a net spec that targets a net by id alone cannot match, so
 	// resolve those ids to their net NAMES via the netlist and add them for a name-join.
-	specs := s.nameJoinSpecs(ctx, u, g, req.GetSpecs())
+	specs := s.nameJoinSpecs(ctx, u, g, req.GetSpecs(), opts...)
 
 	resp := &webapi.HighlightSheetResponse{}
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_SVG {
@@ -377,11 +427,14 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 // each spec's net_id to its net NAME (from the netlist at path) and adds it, so the match lands by
 // name. It is a NO-OP on an id-capable canvas (nameOnlyCanvas is false) and when no spec carries a
 // bare net_id, so the primary-canvas per-instance precision and the goldens are untouched.
-func (s *DesignService) nameJoinSpecs(ctx context.Context, uri artifact.URI, g *geom.SchematicGeometry, specs []*geom.HighlightSpec) []*geom.HighlightSpec {
+func (s *DesignService) nameJoinSpecs(ctx context.Context, uri artifact.URI, g *geom.SchematicGeometry, specs []*geom.HighlightSpec, opts ...ReadOption) []*geom.HighlightSpec {
 	if !nameOnlyCanvas(g) || !anyNetIDSpec(specs) {
 		return specs
 	}
-	d, err := s.loader.Design(ctx, uri)
+	// The caller's already-resolved options rather than a second resolution: this read must see the
+	// same config as the geometry it is joining against, or an id would resolve to a name the drawing
+	// does not carry.
+	d, err := s.loader.Design(ctx, uri, opts...)
 	if err != nil {
 		return specs // cannot resolve the netlist: leave specs as-is, no worse than before
 	}

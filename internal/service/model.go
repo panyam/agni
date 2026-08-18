@@ -22,7 +22,7 @@ type ModelLoader interface {
 // GeometryLoader is the file surface BuildGeometry needs. The fat service.Loader and DiffService's
 // DesignLoader both satisfy it.
 type GeometryLoader interface {
-	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool) (*geom.SchematicGeometry, error)
+	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
 }
 
 // BuildGeometry loads a design's default-layout, glyph-symbol schematic geometry for LOCATING results
@@ -33,8 +33,13 @@ type GeometryLoader interface {
 // or an unresolvable layout yields nil (NOT an error), so the caller degrades to "no sheet badges"
 // rather than failing. That nil-not-error semantics is exactly why geometry is NOT a BuildModel tier:
 // the Model's board/params tiers are load-bearing (a bad one fails the run), geometry is optional.
-func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI) *geom.SchematicGeometry {
-	g, err := loader.Geometry(ctx, uri, layoutForFile(uri.Path, ""), false)
+// It takes the same ReadOptions the caller built its Model with, because the two reads must see one
+// config: a design whose project declares a symbol library resolves it for the fact base, and a
+// geometry read that skipped the options would locate those facts on a sheet drawn from a SHORTER
+// read (agni issue 347). Findings would then be annotated against sheets missing the very components
+// they name.
+func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) *geom.SchematicGeometry {
+	g, err := loader.Geometry(ctx, uri, layoutForFile(uri.Path, ""), false, opts...)
 	if err != nil {
 		return nil
 	}
