@@ -363,6 +363,34 @@ other served preset uses.
 A pin cell is the notable gap: a pin needs its row's ref as well as its own cell, so the server types
 a pin column scalar and the only way to select a pin today is to click one on the drawing.
 
+### Searching: the same lesson from the other end
+
+A click says where to look and gets back what is there. A search says what a thing is called and gets
+back where it is. Both write datalog into the box and run it, which is why search is a MODE on the
+query panel rather than a widget of its own: what the reader keeps is an editable query either way.
+
+The panel's "Find by name" mode takes a term, fills the served template
+(`ListRelationsResponse.search_query`, from `query.Search()`), runs it, and hands the panel back to
+query mode so the reader ends up looking at the sentence that answered them. The template ranges over
+`entity(?name, ?kind)` because every other relation ranges over an ASSOCIATION, so a search built on
+one silently cannot find a part with no connections or a net with nothing on it. It matches with
+`match` and `(?i)` rather than `contains`, so case does not have to be guessed at and a reader who
+wants `^U` can write it. The client regex-escapes the typed term (`searchPattern`, mirroring Go's
+`regexp.QuoteMeta`), because `VDD+` and `DATA[7:0]` are ordinary names here.
+
+**A search result is the one answer set whose rows are not all the same shape**, and that is what
+made this more than a text box. Kind is normally a COLUMN property, since a variable binds at the
+same relation position in every row. Under `entity(?name, ?kind)` one answer set holds a component, a
+net and a bus, so `column_kinds` has nothing true to say about the name column and types it scalar,
+which is to say unclickable. `QueryRow.cell_kinds` is the per-row override: empty for every ordinary
+query, and read through `cellKind(result, row, i)` so the fallback to `column_kinds` lives in one
+place. It types the sheet-badge lookup and the locate reason as well as the click, since a hit
+nobody can navigate from is only a third of an answer.
+
+A bus is the case that would have broken quietly. It is neither a placement nor a named wire, so
+neither drawn-entity set can speak for it, and the honest test is whether it resolved to a sheet at
+all, the same rule `AnnotateSheets` applies to a bus finding.
+
 ### Table cells wrap, then scroll, and never bleed
 
 The results table is fixed-layout, which is what keeps the columns equal by default and makes a

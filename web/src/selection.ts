@@ -144,6 +144,11 @@ export function labelFor(sel: Selection): string {
 // it just names nothing to ask about. A pin column is the notable absence — the server types it
 // scalar today, and a pin needs its row's ref as well as its own cell, so walking from one is its
 // own piece of work.
+//
+// A bus is here because a search can now return one (agni issue 338): entity() enumerates buses,
+// and a bus with no drawn wire is exactly the sort of thing a reviewer goes looking for by name.
+// Its subject IS its label, the same key a drawn bus element carries in data-bus, so the two entry
+// points converge on one value the way component and net already do.
 export function selectionFromCell(kind: string, subject: string): Selection | null {
   if (!subject) return null;
   switch (kind) {
@@ -151,6 +156,8 @@ export function selectionFromCell(kind: string, subject: string): Selection | nu
       return { kind: "component", ref: subject };
     case "net":
       return { kind: "net", net: subject };
+    case "bus":
+      return { kind: "bus", busId: subject };
     default:
       return null;
   }

@@ -82,6 +82,19 @@ message QueryRow {
   // entity IS drawn (it will highlight). Populated only when faithful geometry is loaded; the panel
   // additionally shows it only on a faithful layout, since an auto-layout draws every entity.
   repeated agni.v1.checks.LocateReason cell_reasons = 4;
+  // cell_kinds aligns positionally with cells and OVERRIDES column_kinds for this row (agni issue
+  // 338), set only where a column's kind cannot be a column property at all.
+  //
+  // Kind is normally fixed per column, because a variable binds at the same relation position in
+  // every row. `entity(?name, ?kind)` breaks that: it enumerates what exists, so one answer set
+  // holds a component, a net and a bus, and the kind of the `name` cell is whatever that row's
+  // `kind` cell says. Without this the name column types as a scalar and a search result is the one
+  // answer a reader cannot click.
+  //
+  // Empty for every ordinary query, and "" for every non-polymorphic cell within a row that has
+  // one, so a client reads `cell_kinds[i] || column_kinds[i]` and column_kinds keeps meaning what it
+  // has always meant.
+  repeated string cell_kinds = 5;
 }
 
 // CellSheets is one cell's sheet membership (WS9-038), a message wrapper because proto has no
@@ -146,6 +159,19 @@ message EntityQuery {
   string teaches = 3;
 }
 
+// SearchQuery is the template the panel's search mode fills: find a design's entities by name
+// (agni issue 338). {term} sits INSIDE its string literal, as the entity presets' placeholders do,
+// so the template parses as written.
+//
+// It is served for the same reason the entity presets are. It names `entity` and `match`, both
+// defined on this side, and a client-held copy would be the one caller nothing checks.
+message SearchQuery {
+  string query = 1;
+  // teaches is the concept a search leaves behind, since what the reader gets back is an editable
+  // datalog query rather than a search box's opinion.
+  string teaches = 2;
+}
+
 message ListRelationsResponse {
   // relations are pre-sorted by kind then name, so the client renders the grouped picker without
   // re-sorting.
@@ -155,4 +181,6 @@ message ListRelationsResponse {
   repeated ExampleQuery examples = 2;
   // entity_queries are the click-to-ask presets, one per pickable entity kind (WS: canvas picking).
   repeated EntityQuery entity_queries = 3;
+  // search_query is the find-by-name template the panel's search mode fills (agni issue 338).
+  SearchQuery search_query = 4;
 }

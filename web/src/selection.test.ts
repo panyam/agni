@@ -112,6 +112,13 @@ describe("reading a result cell", () => {
     expect(selectionFromCell("net", "SDA")).toEqual({ kind: "net", net: "SDA" });
   });
 
+  // A search can return a bus (entity() enumerates them), and a bus with nothing drawn is exactly
+  // the sort of thing a reviewer hunts by name. Its subject is its label, the same key a drawn bus
+  // element carries, so the walk continues from a search hit the way it does from a click.
+  it("walks from a bus cell, using the label as the identity", () => {
+    expect(selectionFromCell("bus", "DATA[7:0]")).toEqual({ kind: "bus", busId: "DATA[7:0]" });
+  });
+
   // A scalar column ("") is not clickable at all, and a pin column is typed scalar today: a pin needs
   // its row's ref as well as its own cell, so it cannot be read from one cell.
   it("is null for a cell that names no entity", () => {

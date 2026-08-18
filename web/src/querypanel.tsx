@@ -7,8 +7,11 @@ import {
   type QueryResult,
   type QueryView,
   type RelationItem,
+  type SearchItem,
   LocateReason,
+  cellKind,
   emptyResult,
+  fillSearchQuery,
   groupRelations,
   relationTemplate,
 } from "./query.js";
@@ -36,6 +39,7 @@ function QueryPanel(props: {
   relations: () => RelationItem[];
   examples: () => ExampleItem[];
   entityQueries: () => EntityQueryItem[];
+  search: () => SearchItem | null;
   locateNote: () => string;
   prefill: () => { text: string; n: number };
   selection: () => Selection | null;
@@ -96,6 +100,12 @@ function QueryPanel(props: {
   });
 
   const [drawerOpen, setDrawerOpen] = createSignal(false);
+  // mode is which of the two ways in the reader is using: write a query, or type a name. They are
+  // two ends of one lesson. A query says where to look and gets back what is there; a search says
+  // what a thing is called and gets back where it is. Both leave editable datalog in the box, which
+  // is why search is a mode on this panel rather than a search widget somewhere else.
+  const [mode, setMode] = createSignal<"query" | "search">("query");
+  const [term, setTerm] = createSignal("");
   // sortCol/sortDir are the results table's client-side sort (WS: sortable columns). sortCol is a
   // column index into state().columns (-1 = natural row order); clicking a header cycles
   // asc → desc → off. Sorting is view-only: rows carry their ORIGINAL index so the provenance
@@ -129,6 +139,20 @@ function QueryPanel(props: {
     if (props.state().loading) return;
     resetForRun();
     props.onRun(e.query);
+  };
+  // doSearch fills the box with the datalog that answers the reader's name, runs it, and hands the
+  // panel BACK to query mode. Flipping back is the point rather than a shortcut: the reader ends up
+  // looking at the sentence that answered them, one edit away from asking a better question. It is
+  // the same bargain a click on the drawing makes, and search is the other end of it.
+  const doSearch = () => {
+    const tmpl = props.search();
+    const t = term().trim();
+    if (!tmpl || t === "" || props.state().loading) return;
+    const q = fillSearchQuery(tmpl.query, t);
+    setText(q);
+    setMode("query");
+    resetForRun();
+    props.onRun(q);
   };
   // presetFor is the served click-to-ask query for a selection's kind, or undefined before the
   // catalog has arrived (or for a kind the server writes no preset for).
@@ -204,7 +228,64 @@ function QueryPanel(props: {
 
   return (
     <div class="query">
-      <div class="query-input">
+      {/* Two ways in, offered only once the server has sent a search template: without one, a
+          search mode could do nothing but guess at a query. */}
+      <Show when={props.search()}>
+        <div class="query-modes" role="tablist" aria-label="Query or search">
+          <button
+            type="button"
+            role="tab"
+            class={`query-mode${mode() === "query" ? " on" : ""}`}
+            aria-selected={mode() === "query"}
+            onClick={() => setMode("query")}
+          >
+            Query
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class={`query-mode${mode() === "search" ? " on" : ""}`}
+            aria-selected={mode() === "search"}
+            onClick={() => setMode("search")}
+          >
+            Find by name
+          </button>
+        </div>
+      </Show>
+
+      <Show when={mode() === "search" && props.search()}>
+        {(tmpl) => (
+          <div class="query-input query-search">
+            <input
+              type="text"
+              class="query-term"
+              spellcheck={false}
+              placeholder="part of a name: CAN, U1, 3V3"
+              aria-label="Find by name"
+              value={term()}
+              onInput={(e) => setTerm(e.currentTarget.value)}
+              onPointerDown={() => setDrawerOpen(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") doSearch();
+              }}
+            />
+            <div class="query-actions">
+              <button
+                type="button"
+                class="query-run"
+                disabled={props.state().loading || term().trim() === ""}
+                title={tmpl().teaches}
+                onClick={doSearch}
+              >
+                {props.state().loading ? "Searching…" : "Find"}
+              </button>
+              <span class="query-hint">names anything the design declares, connected or not</span>
+            </div>
+          </div>
+        )}
+      </Show>
+
+      <div class="query-input" classList={{ hidden: mode() === "search" }}>
         <textarea
           ref={taRef}
           class="query-text"
@@ -428,10 +509,12 @@ function QueryPanel(props: {
                         </td>
                         <For each={row.cells}>
                           {(cell, ci) => {
-                            const kind = props.state().columnKinds[ci()] ?? "";
+                            const kind = cellKind(props.state(), row, ci());
                             const reason = row.cellReasons[ci()] ?? LocateReason.UNSPECIFIED;
-                            // Only a component/net cell is locatable; a scalar (a voltage, an mpn
-                            // string) stays plain text. A located cell shows its subject as a link
+                            // Only an entity cell is locatable; a scalar (a voltage, an mpn
+                            // string) stays plain text. Which cells those are can vary ROW BY ROW
+                            // under a polymorphic column, so the kind comes from cellKind rather
+                            // than straight off the column (agni issue 338). A located cell shows its subject as a link
                             // and its sheet badge(s) inline (the findings-panel idiom): the subject
                             // highlights the entity, a badge navigates to that sheet. The reason
                             // (WS9-039) rides along so the presenter can explain a click that paints
@@ -510,6 +593,9 @@ export function queryPanelIsland(
   // wording and its hover show the query and what it teaches) as well as running it; the host still
   // looks one up by the picked entity's kind (see entityQuery).
   const [entityQueries, setEntityQueries] = signalView<EntityQueryItem[]>([]);
+  // The find-by-name template, null until the catalog arrives. The panel offers no search mode
+  // while it is null (agni issue 338).
+  const [search, setSearch] = signalView<SearchItem | null>(null);
   // selection is what the reader last picked. The canvas pushes one through the view; a click on a
   // result cell sets it from inside the panel, which is why the setter goes down as a prop.
   const [selection, setSelection] = signalView<Selection | null>(null);
@@ -528,6 +614,7 @@ export function queryPanelIsland(
         relations={relations}
         examples={examples}
         entityQueries={entityQueries}
+        search={search}
         locateNote={locateNote}
         prefill={prefill}
         selection={selection}
@@ -547,6 +634,7 @@ export function queryPanelIsland(
       setLocateNote,
       setQuery: (text: string) => setPrefill({ text, n: ++prefills }),
       setEntityQueries,
+      setSearch,
       setSelection,
       entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind)?.query ?? "",
     },

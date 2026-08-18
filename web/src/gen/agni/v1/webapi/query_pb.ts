@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoPUnVuUXVlcnlSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEi4KB292ZXJsYXkYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgDIAEoCRILCgN1cmkYBCABKAkijQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24iHwoKQ2VsbFNoZWV0cxIRCglzaGVldF9pZHMYASADKAkiYQoQUnVuUXVlcnlSZXNwb25zZRIPCgdjb2x1bW5zGAEgAygJEiYKBHJvd3MYAiADKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVJvdxIUCgxjb2x1bW5fa2luZHMYAyADKAkiFgoUTGlzdFJlbGF0aW9uc1JlcXVlc3QiWQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJIj0KDEV4YW1wbGVRdWVyeRINCgVsYWJlbBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIjsKC0VudGl0eVF1ZXJ5EgwKBGtpbmQYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSKtAQoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEi8KCXJlbGF0aW9ucxgBIAMoCzIcLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uSW5mbxIuCghleGFtcGxlcxgCIAMoCzIcLmFnbmkudjEud2ViYXBpLkV4YW1wbGVRdWVyeRIzCg5lbnRpdHlfcXVlcmllcxgDIAMoCzIbLmFnbmkudjEud2ViYXBpLkVudGl0eVF1ZXJ5MrsBCgxRdWVyeVNlcnZpY2USTQoIUnVuUXVlcnkSHy5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoPUnVuUXVlcnlSZXF1ZXN0Eg0KBXF1ZXJ5GAEgASgJEi4KB292ZXJsYXkYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEhEKCWJvYXJkX3VyaRgDIAEoCRILCgN1cmkYBCABKAkioQEKCFF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJEg0KBWNpdGVzGAIgAygJEi8KC2NlbGxfc2hlZXRzGAMgAygLMhouYWduaS52MS53ZWJhcGkuQ2VsbFNoZWV0cxIyCgxjZWxsX3JlYXNvbnMYBCADKA4yHC5hZ25pLnYxLmNoZWNrcy5Mb2NhdGVSZWFzb24SEgoKY2VsbF9raW5kcxgFIAMoCSIfCgpDZWxsU2hlZXRzEhEKCXNoZWV0X2lkcxgBIAMoCSJhChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCSIWChRMaXN0UmVsYXRpb25zUmVxdWVzdCJZCgxSZWxhdGlvbkluZm8SDAoEbmFtZRgBIAEoCRIMCgRhcmdzGAIgAygJEg8KB3N1bW1hcnkYAyABKAkSDAoEa2luZBgEIAEoCRIOCgZkZXRhaWwYBSABKAkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiOwoLRW50aXR5UXVlcnkSDAoEa2luZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJIi0KC1NlYXJjaFF1ZXJ5Eg0KBXF1ZXJ5GAEgASgJEg8KB3RlYWNoZXMYAiABKAki4AEKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeTK7AQoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -114,6 +114,24 @@ export type QueryRow = Message<"agni.v1.webapi.QueryRow"> & {
    * @generated from field: repeated agni.v1.checks.LocateReason cell_reasons = 4;
    */
   cellReasons: LocateReason[];
+
+  /**
+   * cell_kinds aligns positionally with cells and OVERRIDES column_kinds for this row (agni issue
+   * 338), set only where a column's kind cannot be a column property at all.
+   *
+   * Kind is normally fixed per column, because a variable binds at the same relation position in
+   * every row. `entity(?name, ?kind)` breaks that: it enumerates what exists, so one answer set
+   * holds a component, a net and a bus, and the kind of the `name` cell is whatever that row's
+   * `kind` cell says. Without this the name column types as a scalar and a search result is the one
+   * answer a reader cannot click.
+   *
+   * Empty for every ordinary query, and "" for every non-polymorphic cell within a row that has
+   * one, so a client reads `cell_kinds[i] || column_kinds[i]` and column_kinds keeps meaning what it
+   * has always meant.
+   *
+   * @generated from field: repeated string cell_kinds = 5;
+   */
+  cellKinds: string[];
 };
 
 /**
@@ -312,6 +330,38 @@ export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 7);
 
 /**
+ * SearchQuery is the template the panel's search mode fills: find a design's entities by name
+ * (agni issue 338). {term} sits INSIDE its string literal, as the entity presets' placeholders do,
+ * so the template parses as written.
+ *
+ * It is served for the same reason the entity presets are. It names `entity` and `match`, both
+ * defined on this side, and a client-held copy would be the one caller nothing checks.
+ *
+ * @generated from message agni.v1.webapi.SearchQuery
+ */
+export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
+  /**
+   * @generated from field: string query = 1;
+   */
+  query: string;
+
+  /**
+   * teaches is the concept a search leaves behind, since what the reader gets back is an editable
+   * datalog query rather than a search box's opinion.
+   *
+   * @generated from field: string teaches = 2;
+   */
+  teaches: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.SearchQuery.
+ * Use `create(SearchQuerySchema)` to create a new message.
+ */
+export const SearchQuerySchema: GenMessage<SearchQuery> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 8);
+
+/**
  * @generated from message agni.v1.webapi.ListRelationsResponse
  */
 export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsResponse"> & {
@@ -337,6 +387,13 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
    * @generated from field: repeated agni.v1.webapi.EntityQuery entity_queries = 3;
    */
   entityQueries: EntityQuery[];
+
+  /**
+   * search_query is the find-by-name template the panel's search mode fills (agni issue 338).
+   *
+   * @generated from field: agni.v1.webapi.SearchQuery search_query = 4;
+   */
+  searchQuery?: SearchQuery | undefined;
 };
 
 /**
@@ -344,7 +401,7 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 8);
+  messageDesc(file_agni_v1_webapi_query, 9);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004

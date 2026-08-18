@@ -303,6 +303,10 @@ class AppRoot extends BaseComponent {
         query.view.setRelations(r.relations);
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
         query.view.setEntityQueries(r.entityQueries); // the click-to-ask presets
+        // The find-by-name template (agni issue 338). A server that sends none leaves the panel
+        // with no search mode, which is the right outcome: the query names relations defined on
+        // that side, so a client guessing at one would be guessing at their names too.
+        query.view.setSearch(r.searchQuery ? { query: r.searchQuery.query, teaches: r.searchQuery.teaches } : null);
       })
       .catch(() => {});
     // The presenter fans sheet state to every surface in sheetNavs. The file tree used to be one of
