@@ -18,7 +18,7 @@ import {
 import { reportFromWire } from "./report.js";
 
 function f(over: Partial<FindingItem>): FindingItem {
-  return { rule: "r", category: "connectivity", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", sheets: [], locateReason: 0, ...over };
+  return { rule: "r", category: "connectivity", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, sheets: [], locateReason: 0, ...over };
 }
 
 const findings: FindingItem[] = [
@@ -293,13 +293,31 @@ describe("findingsFor", () => {
 describe("tallySeverities", () => {
   it("counts by severity, since 3 findings and 3 errors are different news", () => {
     const t = tallySeverities([f({ severity: "error" }), f({ severity: "error" }), f({ severity: "warning" }), f({ severity: "info" })]);
-    expect(t).toEqual({ error: 2, warning: 1, info: 1, total: 4 });
+    expect(t).toEqual({ error: 2, warning: 1, info: 1, total: 4, inconclusive: 0 });
   });
 
   // A severity nobody here recognises still exists, and a total that undercounted it would make the
   // pips and the number disagree.
   it("counts an unknown severity toward the total", () => {
-    expect(tallySeverities([f({ severity: "catastrophe" })])).toEqual({ error: 0, warning: 0, info: 0, total: 1 });
+    expect(tallySeverities([f({ severity: "catastrophe" })])).toEqual({ error: 0, warning: 0, info: 0, total: 1, inconclusive: 0 });
+  });
+
+  // An inconclusive result is never a pass and never a fail (agni issue 74). Counting it as a defect
+  // states what the rule explicitly declined to state; dropping it loses the one item a reader could
+  // act on by supplying what was missing.
+  it("counts an inconclusive result apart from the defects, and out of the total", () => {
+    const t = tallySeverities([
+      f({ severity: "error" }),
+      f({ severity: "error", inconclusive: true }),
+      f({ severity: "info", inconclusive: true }),
+    ]);
+    expect(t).toEqual({ error: 1, warning: 0, info: 0, total: 1, inconclusive: 2 });
+  });
+
+  // Its SEVERITY is not what makes it inconclusive, so an inconclusive error must not raise the
+  // error pip. That is the reading a reviewer would act on first.
+  it("keeps an inconclusive result out of its own severity bucket", () => {
+    expect(tallySeverities([f({ severity: "error", inconclusive: true })]).error).toBe(0);
   });
 });
 

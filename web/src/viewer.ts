@@ -537,6 +537,7 @@ export class ViewerPresenter {
             netId: f.subject?.netId ?? "",
             busId: f.subject?.busId ?? "",
             message: f.message,
+            inconclusive: f.inconclusive ?? false,
             sheets: this.sheetBadges(f.sheets ?? []),
             locateReason: f.locateReason ?? 0,
           });
@@ -995,6 +996,7 @@ export class ViewerPresenter {
             netId: f.subject?.netId ?? "",
             busId: f.subject?.busId ?? "",
             message: f.message,
+            inconclusive: f.inconclusive ?? false,
             sheets: this.sheetBadges(f.sheets ?? []),
             locateReason: f.locateReason ?? 0,
           }));

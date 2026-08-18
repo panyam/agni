@@ -60,6 +60,7 @@ describe("reportFromWire", () => {
       netId: "",
       busId: "",
       message: "R1 used twice",
+      inconclusive: false,
       sheets: [],
       locateReason: 0,
     });

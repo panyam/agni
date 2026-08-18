@@ -110,6 +110,12 @@ one number.
 Nothing re-runs when you click. These are the findings from the run you already have, filtered, which
 is what keeps them consistent with the report beside them.
 
+Two things sit beside the count rather than in it. **"N unresolved"** means a rule examined this
+thing and could not decide, which is never a pass and never a failure; the message says what it could
+not resolve, and often you can clear it by supplying that. **"N rule(s) could not run"** means rules
+you selected were gated before they evaluated, on this whole design, so they report nothing anywhere.
+Hover for which and why.
+
 **Read the wording, not just the number.** A count is only meaningful once the rules have actually
 run, so the bar says "not checked yet" rather than "no findings" before you press Run, and reports a
 half-finished run as a floor ("2 so far"). And a count beside one entity is narrower than a report in

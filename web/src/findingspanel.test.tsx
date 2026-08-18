@@ -4,7 +4,7 @@ import { findingsPanelIsland } from "./findingspanel.jsx";
 import type { FindingItem, FindingsState } from "./findings.js";
 
 function f(over: Partial<FindingItem>): FindingItem {
-  return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", sheets: [], locateReason: 0, ...over };
+  return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, sheets: [], locateReason: 0, ...over };
 }
 
 function state(over: Partial<FindingsState>): FindingsState {
