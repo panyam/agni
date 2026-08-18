@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -117,5 +118,93 @@ func TestMatchingNothingIsAnError(t *testing.T) {
 func TestUnknownCaptureIsRejected(t *testing.T) {
 	if _, err := execute(runSpec{Script: "echo x", Capture: "stdrr"}); err == nil {
 		t.Error("an unknown capture must be rejected")
+	}
+}
+
+// The stamp has to be a function of COMMITTED content, or no committed value can be right for
+// everyone (agni issue 357).
+//
+// inputHash walked the fixture on disk and hashed whatever it found. The tutorial's own Makefile has
+// a `report` target that writes examples/tutorial-project/reports/, which its .gitignore covers, so
+// anyone who had followed the tutorial hashed two extra files. Their every gate run rewrote the
+// committed output with a different stamp, and a `git checkout --` on a file nobody edited became a
+// step in the routine. Regenerating and committing would only have moved the staleness to whoever
+// had NOT run the tutorial.
+func TestInputHashIgnoresUntrackedFiles(t *testing.T) {
+	const fixture = "examples/tutorial-project"
+	before, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatalf("inputHash: %v", err)
+	}
+
+	// A generated file of exactly the shape the tutorial's own `make report` leaves behind.
+	stray := filepath.Join("..", fixture, "reports", "gateway", "stray.json")
+	if err := os.MkdirAll(filepath.Dir(stray), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stray, []byte(`{"generated":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(stray) })
+
+	after, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatalf("inputHash after the stray file: %v", err)
+	}
+	if after != before {
+		t.Errorf("an untracked file changed the stamp (%s -> %s); a committed output can then never be "+
+			"current for a checkout that lacks it", before, after)
+	}
+}
+
+// The positive control for the test above. A hash that ignored the fixture entirely, or returned a
+// constant, would satisfy "untracked files do not move it" perfectly while measuring nothing.
+func TestInputHashChangesWithTrackedContent(t *testing.T) {
+	const fixture = "examples/tutorial-project"
+	tracked := filepath.Join("..", fixture, "project.yaml")
+	original, err := os.ReadFile(tracked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.WriteFile(tracked, original, 0o644) })
+
+	before, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tracked, append(original, []byte("\n# edited\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	after, err := inputHash([]byte("spec"), fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after == before {
+		t.Error("editing a TRACKED fixture file must move the stamp, or the output would never regenerate")
+	}
+}
+
+// A fixture git cannot list is an error rather than a silent fall back to walking the directory.
+// Falling back would restore the exact bug this file is about, and it would do it invisibly: the
+// stamp would start depending on the working tree again with nothing to say so.
+func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
+	if _, err := inputHash([]byte("spec"), "no/such/fixture"); err == nil {
+		t.Error("a fixture that does not exist must be an error")
+	}
+
+	// The case that actually distinguishes the two implementations: a fixture that EXISTS on disk and
+	// is tracked by nothing. Walking it produces a confident hash over files no other checkout has;
+	// listing it produces nothing, and answering with a hash of no content would be a stamp that looks
+	// stable and means nothing. A fixture nobody committed is a mistake, so say so.
+	dir := filepath.Join("..", "docsite", "testdata-untracked-fixture")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	if err := os.WriteFile(filepath.Join(dir, "design.edn"), []byte("(edif X)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := inputHash([]byte("spec"), "docsite/testdata-untracked-fixture"); err == nil {
+		t.Error("a fixture with no tracked files must be an error, not a hash of whatever is on disk")
 	}
 }
