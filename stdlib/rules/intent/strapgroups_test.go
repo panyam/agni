@@ -211,3 +211,84 @@ func TestCollidableGroups(t *testing.T) {
 		}
 	}
 }
+
+// The intent half of the agni issue 361 sweep: these rules are filed under a NET (the group's first
+// strap) while their sentences are about a DEVICE, so before this the part the finding is about had
+// no way back into the drawing.
+func TestStrapGroupFindingsNameTheirDevice(t *testing.T) {
+	t.Run("a mis-encoded group names the device it straps", func(t *testing.T) {
+		d := strapBitsDesign(map[string]string{"PHYAD2": "+3V3", "PHYAD1": "GND", "PHYAD0": "+3V3"})
+		g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 2}
+		fs := groupFindings(t, d, g)
+		if len(fs) != 1 {
+			t.Fatalf("want 1 finding, got %+v", fs)
+		}
+		if len(fs[0].Context) != 1 {
+			t.Fatalf("want 1 context entity (the device), got %+v", fs[0].Context)
+		}
+		c := fs[0].Context[0]
+		if c.Kind != check.KindComponent || c.Subject != "U12" || c.Role != "device" {
+			t.Errorf("context = %+v, want U12 as the component playing device", c)
+		}
+		// The group NAME is a declaration from the intent file, not something on the design, so it
+		// must NOT become a chip: it would highlight nothing.
+		for _, x := range fs[0].Context {
+			if x.Subject == "PHYAD" {
+				t.Error("the group name is a declaration, not a design entity; it must not be context")
+			}
+		}
+	})
+
+	t.Run("an unreadable group names the device and the nets it could not read", func(t *testing.T) {
+		d := strapBitsDesign(map[string]string{"PHYAD2": "", "PHYAD1": "GND", "PHYAD0": "+3V3"})
+		g := StrapGroup{Name: "PHYAD", Device: "U12", Nets: []string{"PHYAD2", "PHYAD1", "PHYAD0"}, Value: 1}
+		fs := groupFindings(t, d, g)
+		if len(fs) != 1 || !fs[0].Inconclusive {
+			t.Fatalf("want 1 inconclusive finding, got %+v", fs)
+		}
+		roles := map[string]int{}
+		for _, c := range fs[0].Context {
+			roles[c.Role]++
+		}
+		if roles["device"] != 1 {
+			t.Errorf("want exactly one device context, got %+v", fs[0].Context)
+		}
+		// The subject is the group's FIRST net, so the unreadable one is reachable only through this.
+		if roles["undecided"] == 0 {
+			t.Errorf("the nets the rule could not read must be reachable: %+v", fs[0].Context)
+		}
+	})
+
+	t.Run("an address collision names both devices in the same role", func(t *testing.T) {
+		// The case that made context a LIST with non-unique roles. Two entities play exactly the same
+		// part here, so a map keyed by role would silently drop one of them.
+		d := strapBitsDesign(map[string]string{
+			"A2": "GND", "A1": "GND", "A0": "+3V3",
+			"B2": "GND", "B1": "GND", "B0": "+3V3",
+		})
+		groups := []StrapGroup{
+			{Name: "PHYAD U12", Device: "U12", Nets: []string{"A2", "A1", "A0"}, Value: 1, Bus: "MDIO"},
+			{Name: "PHYAD U13", Device: "U13", Nets: []string{"B2", "B1", "B0"}, Value: 1, Bus: "MDIO"},
+		}
+		fs := strapCollisionRule(groups).Eval(check.NewModel(d))
+		if len(fs) != 1 {
+			t.Fatalf("want 1 collision finding, got %+v", fs)
+		}
+		var devices []string
+		for _, c := range fs[0].Context {
+			if c.Role != "device" {
+				t.Errorf("unexpected role %q in a collision finding", c.Role)
+			}
+			devices = append(devices, c.Subject)
+		}
+		if len(devices) != 2 || devices[0] != "U12" || devices[1] != "U13" {
+			t.Errorf("context devices = %v, want [U12 U13] in message order", devices)
+		}
+		// MDIO is a declared bus label from the intent file, not a design entity.
+		for _, c := range fs[0].Context {
+			if c.Subject == "MDIO" {
+				t.Error("the bus is a declaration label, not a design entity; it must not be context")
+			}
+		}
+	})
+}

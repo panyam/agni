@@ -71,6 +71,11 @@ var fetVdssBelowRail = &check.Rule{
 						check.Citation(spec, vdss)),
 					Prov:          c.Prov,
 					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, vdss)},
+					// The rail the message names. The subject is the FET, because that is the part to
+					// change, so without this the reader cannot get to the net from the finding.
+					Context: []check.ContextSubject{
+						{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId(), Role: "rail"},
+					},
 				}
 				// A rail voltage read off a DRIVING PART's datasheet is a second vendor value the
 				// conclusion rests on, so it earns a citation and the data-trust gate weighs it.

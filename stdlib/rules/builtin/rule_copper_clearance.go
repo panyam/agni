@@ -84,6 +84,9 @@ var copperClearance = &check.Rule{
 				Subject: k.a,
 				Message: fmt.Sprintf("copper of %q and %q closer than 0.127mm at %d place(s); worst gap %.3fmm near (%.2f, %.2f)mm",
 					k.a, k.b, w.count, float64(w.gap)/1e6, float64(w.at.X)/1e6, float64(w.at.Y)/1e6),
+				// The other net in the pair. A clearance violation is symmetric and filed under one of
+				// the two, so the other end had no way back into the drawing (agni issue 349).
+				Context: []check.ContextSubject{{Kind: check.KindNet, Subject: k.b, Role: "neighbour"}},
 			})
 		}
 		sort.Slice(out, func(i, j int) bool { // map order is random; findings are not

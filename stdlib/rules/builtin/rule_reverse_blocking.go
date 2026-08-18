@@ -53,6 +53,12 @@ var reverseBlockingAbsent = &check.Rule{
 							"ORing FET providing reverse protection, or may be an ordinary switch providing none. "+
 							"A netlist cannot tell them apart. Seed %s's datasheet with a device_class of "+
 							"ideal_diode_controller (or confirm by hand that reverse flow is blocked).", ref, ref),
+					// The transistor the reader has to go and identify. The subject is the net, and
+					// this finding's whole remedy is about that part, so naming it only in prose made
+					// the next step a manual search (agni issue 349).
+					Context: []check.ContextSubject{
+						{Kind: check.KindComponent, Subject: ref, Role: "transistor"},
+					},
 				})
 			}
 		}

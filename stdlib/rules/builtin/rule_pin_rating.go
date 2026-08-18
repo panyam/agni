@@ -139,6 +139,13 @@ var pinExceedsAbsMax = &check.Rule{
 					check.Citation(pl.spec, pl.row)),
 				Prov:          pl.component.Prov,
 				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
+				// The pin and the rail. This rule is per-PIN and its subject is the whole part, so
+				// without the pin a reader cannot tell which terminal of a many-pin part is over its
+				// own limit (agni issue 349).
+				Context: []check.ContextSubject{
+					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
+					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
+				},
 			})
 		})
 		return out
@@ -185,6 +192,11 @@ var pinOutOfRecommended = &check.Rule{
 					check.Citation(pl.spec, pl.row)),
 				Prov:          pl.component.Prov,
 				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
+				// As above: the recommended-range twin of the same finding.
+				Context: []check.ContextSubject{
+					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
+					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
+				},
 			})
 		})
 		return out
