@@ -99,6 +99,25 @@ agni check showcase.fires.kicad_pro --format json
 This is why you never have to take a finding on faith. It points at the net, pin, or
 datasheet row you can go open yourself.
 
+### Start from the thing instead of the finding
+
+In the viewer you can also go the other way. Click a part, a net or a bus, on the drawing or in a
+query result, and the selection bar tells you how many findings already name it, split by severity.
+Clicking that count opens them in the checks panel. A query's results footer does the same for every
+entity the query returned at once, so "what is flagged on the twelve things I just searched for" is
+one number.
+
+Nothing re-runs when you click. These are the findings from the run you already have, filtered, which
+is what keeps them consistent with the report beside them.
+
+**Read the wording, not just the number.** A count is only meaningful once the rules have actually
+run, so the bar says "not checked yet" rather than "no findings" before you press Run, and reports a
+half-finished run as a floor ("2 so far"). And a count beside one entity is narrower than a report in
+two ways it names on screen: it covers only the rules you have selected, and only findings that name
+that entity. A rule about the whole design has no single subject and will never appear there, and a
+rule comparing two pins names one of them, so the other pin looks quiet. An entity view tells you
+where to look. It is not a statement that anything is fine.
+
 ## Understand a rule
 
 Each rule ships with a short explainer describing what it looks for and why the condition

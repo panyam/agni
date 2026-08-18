@@ -3,7 +3,7 @@
 // rules.ts / findings.ts and lets the presenter and tests build state without touching Solid.
 import { type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
-import type { SheetBadge } from "./findings.js";
+import type { FindingsState, SheetBadge } from "./findings.js";
 import type { Selection } from "./selection.js";
 
 export { LocateReason };
@@ -79,6 +79,11 @@ export interface QueryView {
   // is selected and offer the question to ask about it next. Clicking a result cell selects too,
   // but the panel does that itself — this is the entry point for the OTHER picker, the canvas.
   setSelection: (sel: Selection | null) => void;
+  // setFindings hands over the CURRENT check results, whole (agni issue 259). The panel projects
+  // them onto whatever is selected; it does not re-run anything, and could not, since it holds no
+  // client. The full state rather than a count, because the count alone is unreadable: `pending`
+  // and `running` are what separate "nothing is wrong with this net" from "nobody has checked".
+  setFindings: (state: FindingsState) => void;
   // setCurrentSheet names the sheet on screen. The panel marks the badge that points at it, so a
   // reader who navigated away can still see which answer they navigated FROM.
   setCurrentSheet: (sheetId: string) => void;

@@ -14,7 +14,7 @@ import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import type { ViewerLocation } from "./router.js";
-import { type FindingItem, type FindingsView, type SheetBadge, subjectsToSpecs, findingSpec, entitySpecs, focusStack } from "./findings.js";
+import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, subjectsToSpecs, findingSpec, entitySpecs, focusStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
@@ -569,7 +569,7 @@ export class ViewerPresenter {
     const pending = this.selectedRules.filter((n) => !this.findingCache.has(n)).length;
     const ruleSummaries: Record<string, string> = {};
     for (const r of this.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
-    this.views.findings.setState({
+    const state: FindingsState = {
       findings: this.findings,
       selected: this.selectedSubject,
       ruleCount: this.selectedRules.length,
@@ -582,7 +582,14 @@ export class ViewerPresenter {
         .map((n) => ({ rule: n, reason: this.skippedCache.get(n) ?? "" }))
         .sort((a, b) => a.rule.localeCompare(b.rule)),
       ruleSummaries,
-    });
+    };
+    this.views.findings.setState(state);
+    // The query panel projects the SAME state onto whatever is selected (agni issue 259), which is
+    // what keeps an entity view a projection of one pass rather than a second evaluation path. It
+    // gets the state whole rather than a count, because only pending/running separate "nothing is
+    // wrong with this net" from "nobody has checked it", and a count computed here would have to be
+    // recomputed here on every selection change, in a place that does not know the selection.
+    this.views.query?.setFindings(state);
   }
 
   // skippedCache is rule name -> why it could not run on this design, alongside findingCache. It is a

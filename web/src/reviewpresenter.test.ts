@@ -118,7 +118,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
       expectationCaption: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
-      query: { setState: vi.fn(), setCurrentSheet: vi.fn() },
+      query: { setState: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn() },
       review: wireReview ? { setState: onReview } : undefined,
       conventionBar: wireConventionBar ? { setState: onConvention } : undefined,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

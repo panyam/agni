@@ -327,6 +327,19 @@
        button on the right. It shares the example chip's palette because it is the same kind of thing,
        a query written for the reader. */
     .query-selection { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+    /* What is already checked about the selection (agni issue 259). Quiet by default: it is context
+       for the pick, not the headline, and the pips carry the alarm when there is one. */
+    .query-findings { display: inline-flex; align-items: baseline; gap: 6px; margin-left: 8px; font-size: 11px; color: #6b7280; }
+    .query-findings-open { font: inherit; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; }
+    .query-findings-open:hover { color: #1d4ed8; text-decoration: underline; }
+    .query-findings-pips { display: inline-flex; gap: 3px; }
+    .query-pip { display: inline-block; min-width: 14px; text-align: center; padding: 0 4px; border-radius: 7px; font-size: 10px; font-weight: 600; color: #fff; }
+    .query-pip.error { background: #b91c1c; }
+    .query-pip.warning { background: #b45309; }
+    .query-pip.info { background: #6b7280; }
+    /* The caveat rides beside every count rather than hiding in the hover, because over-reading a
+       zero is the failure this whole affordance risks. */
+    .query-findings-caveat { color: #9ca3af; font-size: 10px; font-style: italic; }
     .query-selection-what { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
     .query-selection-kind { color: #889; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
     .query-selection-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #334; overflow-wrap: anywhere; }

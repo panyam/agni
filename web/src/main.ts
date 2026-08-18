@@ -247,6 +247,16 @@ class AppRoot extends BaseComponent {
     const query = queryPanelIsland(queryEl, this._eventBus, {
       onRun: (text) => void presenter.runQuery(text),
       onLocate: (kind, subject, sheet, reason) => void presenter.locateEntity(kind, subject, sheet, reason),
+      // Opening the check results for the selected entity is the EXISTING finding focus reached from
+      // the other end (agni issue 259). Nothing re-evaluates: selectFinding focuses a subject within
+      // the results already computed. The identity argument mirrors selectionFromFinding, since the
+      // two have to agree on which instance of a repeated net name is meant.
+      onInspect: (sel) =>
+        void presenter.selectFinding(
+          sel.kind === "bus" ? (sel.busId ?? "") : sel.kind === "net" ? (sel.net ?? "") : (sel.ref ?? ""),
+          undefined,
+          sel.kind === "bus" ? (sel.busId ?? "") : (sel.netId ?? ""),
+        ),
     });
     // A click on the drawing is a question about what was clicked: highlight it, write the query that
     // asks what is known about it, and bring the Query panel forward if it is a background tab. The

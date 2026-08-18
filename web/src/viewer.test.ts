@@ -51,7 +51,7 @@ function harness() {
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
   const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
-  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn(), setEntityQueries: vi.fn(), setSearch: vi.fn(), setSelection: vi.fn(), setCurrentSheet: vi.fn(), entityQuery: () => "" };
+  const query = { setState: vi.fn(), setRelations: vi.fn(), setExamples: vi.fn(), setLocateNote: vi.fn(), setQuery: vi.fn(), setEntityQueries: vi.fn(), setSearch: vi.fn(), setSelection: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), entityQuery: () => "" };
   // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
   const navA = { setState: vi.fn() };
   const navB = { setState: vi.fn() };
@@ -419,6 +419,22 @@ describe("ViewerPresenter", () => {
 
     await h.presenter.showSheet("s2"); // the sheet tabs, not the query panel
     expect(h.query.setCurrentSheet).toHaveBeenLastCalledWith("s2");
+  });
+
+  // The entity view is a PROJECTION of the pass, so the query panel has to receive the same state
+  // the checks panel does, from the same push. A separate call would be a second source of truth
+  // and would drift on exactly the fields that make a zero readable.
+  it("hands the query panel the same findings state the checks panel gets", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub", sheets: [] }],
+    });
+    await openAndCheck(h, "m", "board.edn");
+    const queryCalls = h.query.setFindings.mock.calls;
+    const toQuery = queryCalls[queryCalls.length - 1][0];
+    const toChecks = lastFindings(h);
+    expect(toQuery).toEqual(toChecks);
+    expect(toQuery.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
   });
 
   it("maps finding sheets to named badges and navigates to the subject's sheet before highlighting (WS9-024)", async () => {

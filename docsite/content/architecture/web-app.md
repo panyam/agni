@@ -403,6 +403,40 @@ A bus is the case that would have broken quietly. It is neither a placement nor 
 neither drawn-entity set can speak for it, and the honest test is whether it resolved to a sheet at
 all, the same rule `AnnotateSheets` applies to a bus finding.
 
+### Inspecting: what is already known about the selection
+
+A selection now also answers "what has been checked about this" (agni issue 259). The query panel's
+selection bar carries a findings count for the picked entity, and the results footer carries one for
+every entity the query returned.
+
+**It is a projection of one evaluation and never a scoped re-run.** Every `Finding` carries exactly
+one `Subject`, so grouping by subject partitions the findings, and the client already holds the whole
+list. `findingsFor(findings, selections)` in `findings.ts` is the filter. The presenter fans ONE
+`FindingsState` to both the checks panel and the query panel from a single `pushFindings`, so the two
+cannot disagree.
+
+The alternative fails in three ways at once, which is why the issue rules it out up front. A scoped
+run resolves config independently and can contradict the report beside it, the seam C25 exists to
+protect. It redoes net solving and reach walks once per click. And it makes "the union of what I
+clicked equals the full pass" a hope rather than a property.
+
+`findingsFor` takes a SET rather than one subject, because a set is the primitive and one click is
+its degenerate case. The results footer is the set case in the UI: every locatable cell, deduped by
+`sameSelection`, which is also how a finding matching several of the given subjects is still counted
+once. `selectionFromFinding` is the third producer of a `Selection`, after a keyed element and a
+result cell, so the canvas, the query table and the checks panel share one identity rule.
+
+**A count needs its state or it lies.** A zero has four meanings and only one of them is "nothing is
+wrong here": no rules are selected, nobody has run them, the ruleset is half-evaluated, or it ran
+clean. `checkedState` names which, and the panel prints the name rather than a bare number, because
+the reassuring reading is the one a reviewer acts on. A half-run ruleset reports its count as a floor.
+
+**And the count says what it is not.** An entity view enumerates attention; a review pass enumerates
+the design. A design-global rule has no subject and can never appear beside an entity, and a rule
+about two terminals names one of them, so the other end shows nothing (fixing that needs a structured
+context field on `Finding`, not a cleverer filter). The caveat is rendered beside every count rather
+than parked in a hover, since a caveat nobody sees is a caveat nobody has.
+
 ### Table cells wrap, then scroll, and never bleed
 
 The results table is fixed-layout, which is what keeps the columns equal by default and makes a
