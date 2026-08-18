@@ -763,33 +763,12 @@ func justifyText(justify string) (anchor, baseline string) {
 	return anchor, baseline
 }
 
-func indexSymbols(g *geom.SchematicGeometry) map[string]*geom.SymbolDef {
-	m := make(map[string]*geom.SymbolDef, len(g.Symbols))
-	for _, s := range g.Symbols {
-		m[symKey(s.CellRef, s.LibraryRef, s.ViewRef)] = s
-		// Fallbacks (first symbol seen wins) for placements whose view or library ref does
-		// not match exactly: cell+library ignoring the view, then cell alone.
-		if _, ok := m[symKey(s.CellRef, s.LibraryRef, "")]; !ok {
-			m[symKey(s.CellRef, s.LibraryRef, "")] = s
-		}
-		if _, ok := m[symKey(s.CellRef, "", "")]; !ok {
-			m[symKey(s.CellRef, "", "")] = s
-		}
-	}
-	return m
-}
+// indexSymbols and symbolFor delegate to geomath, which owns the join. More than one tier has to
+// answer "does this placement draw?" and they must not answer it differently: the reader asks in
+// order to report what it could not draw, and validate asks in order to judge a read's health
+// (agni issue 354).
+func indexSymbols(g *geom.SchematicGeometry) geomath.SymbolIndex { return geomath.IndexSymbols(g) }
 
-func symKey(cell, lib, view string) string { return cell + "\x00" + lib + "\x00" + view }
-
-// symbolFor resolves a placement to its SymbolDef: an exact (cell, library, view) match
-// selects the right bank of a multi-section cell; the view- and library-agnostic
-// fallbacks keep single-view cells and any ref mismatch resolving.
-func symbolFor(syms map[string]*geom.SymbolDef, pl *geom.SymbolPlacement) *geom.SymbolDef {
-	if s := syms[symKey(pl.CellRef, pl.LibraryRef, pl.ViewRef)]; s != nil {
-		return s
-	}
-	if s := syms[symKey(pl.CellRef, pl.LibraryRef, "")]; s != nil {
-		return s
-	}
-	return syms[symKey(pl.CellRef, "", "")]
+func symbolFor(syms geomath.SymbolIndex, pl *geom.SymbolPlacement) *geom.SymbolDef {
+	return syms.SymbolFor(pl)
 }

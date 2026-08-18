@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/internal/geomath"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -72,17 +73,17 @@ func Geometry(g *geom.SchematicGeometry) []string {
 	return problems
 }
 
-// Resolved counts the placements whose (cell_ref, library_ref) joins to a symbol
-// definition in the geometry's library — the join the renderers draw by.
+// Resolved counts the placements that will actually DRAW, through the same join the renderers use.
+//
+// It used to build its own (cell_ref, library_ref) index, which was stricter than the renderer's:
+// the renderer falls back to a cell-only key, so a placement naming no library drew while this
+// counted it unresolved. One join, in geomath, so "does it draw" has a single answer (agni issue 354).
 func Resolved(g *geom.SchematicGeometry) int {
-	byKey := map[string]bool{}
-	for _, s := range g.Symbols {
-		byKey[s.CellRef+"|"+s.LibraryRef] = true
-	}
+	ix := geomath.IndexSymbols(g)
 	n := 0
-	for _, sh := range g.Sheets {
-		for _, pl := range sh.Placements {
-			if byKey[pl.CellRef+"|"+pl.LibraryRef] {
+	for _, sh := range g.GetSheets() {
+		for _, pl := range sh.GetPlacements() {
+			if ix.SymbolFor(pl) != nil {
 				n++
 			}
 		}
