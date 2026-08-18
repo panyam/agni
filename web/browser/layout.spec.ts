@@ -285,3 +285,51 @@ describe("highlight layers", () => {
     });
   }, 120_000);
 });
+
+// agni issue 354: the notice that says the drawing in front of you is incomplete.
+//
+// It is here rather than in jsdom for the reason issue 337 was: a full-width strip over the canvas
+// has neighbours, and jsdom reports every box as zero-sized so it cannot see one painting over
+// another. The first version of this strip sat at top:8px and covered the render-mode buttons and the
+// element readout completely. The unit tests were green throughout.
+describe("the incomplete-drawing notice", () => {
+  it("appears for a design whose symbols did not resolve, without covering the controls", async () => {
+    await withPage(browser, async (page) => {
+      // Two of this fixture's three placements name a library nothing supplies; the third resolves,
+      // so the sheet still draws something and the notice is about a PARTIAL loss rather than a
+      // total one.
+      await openViewer(page, "kicad", "undrawn.kicad_sch");
+      const note = page.locator(".undrawn-note.on");
+      await note.waitFor({ timeout: 30_000 });
+      expect(await note.textContent()).toContain("missinglib:MCU");
+
+      // Boxes, not appearance: the strip must not cover the render-mode buttons or the readout. Both
+      // sit in the first ~43px of the canvas, which is why the strip clears them rather than starting
+      // at the top edge.
+      const overlaps = await page.evaluate(() => {
+        const box = (sel: string) => {
+          const el = document.querySelector(sel);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { l: r.left, t: r.top, r: r.right, b: r.bottom };
+        };
+        const hit = (a: ReturnType<typeof box>, x: ReturnType<typeof box>) =>
+          !!a && !!x && !(a.r <= x.l || x.r <= a.l || a.b <= x.t || x.b <= a.t);
+        const n = box(".undrawn-note");
+        return { controls: hit(n, box(".controls")), readout: hit(n, box("#readout")) };
+      });
+      expect(overlaps.controls, "the notice paints over the render-mode buttons").toBe(false);
+      expect(overlaps.readout, "the notice paints over the element readout").toBe(false);
+    });
+  }, 120_000);
+
+  it("stays hidden for a design that draws completely", async () => {
+    // The control that keeps the notice worth reading. Without it a strip that was always visible
+    // would satisfy every assertion above.
+    await withPage(browser, async (page) => {
+      await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
+      await page.waitForTimeout(1500);
+      expect(await page.locator(".undrawn-note.on").count()).toBe(0);
+    });
+  }, 120_000);
+});
