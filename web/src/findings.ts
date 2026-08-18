@@ -3,6 +3,7 @@
 // emitting an onSelect(subject) intent back up. Group-by is the panel's own view state.
 
 import type { HighlightSpec } from "./highlights.js";
+import { type Selection, sameSelection } from "./selection.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 // SheetBadge locates a finding's subject on one sheet (WS9-024): the sheet id drives navigation
@@ -277,4 +278,93 @@ export function focusStack(findings: HighlightSubject[], kind: string, subject: 
     f.kind === "net" && (netId !== "" ? f.netId === netId : f.subject === subject);
   const base = kind === "net" ? findings.filter((f) => !isFocused(f)) : findings;
   return [...subjectsToSpecs(base), ...focus];
+}
+
+
+// What a selection is CHECKED for: the findings already computed about it (agni issue 259).
+//
+// This is a projection of one evaluation, never a scoped re-run, and the difference is not
+// academic. A scoped run resolves config independently and can disagree with the report beside it
+// (the seam C25 exists to protect); it redoes net solving and reach walks per click; and it makes
+// "the union of what I clicked equals the full pass" a hope rather than a fact. Every Finding
+// carries exactly one Subject, so grouping by subject PARTITIONS the findings, and filtering the
+// list the panel already holds is the whole implementation.
+
+// selectionFromFinding reads a finding as the thing it is about. It is the THIRD producer of a
+// Selection, after a keyed element on the drawing and a result cell, which is what lets one
+// identity rule (sameSelection) serve all three: the canvas, the query table and the checks panel
+// then agree on when two things are the same net, including the case where two nets share a
+// display name and only netId tells them apart.
+export function selectionFromFinding(f: FindingItem): Selection | null {
+  switch (f.kind) {
+    case "pin":
+      return f.subject && f.pin ? { kind: "pin", ref: f.subject, pin: f.pin } : null;
+    case "component":
+      return f.subject ? { kind: "component", ref: f.subject } : null;
+    case "net":
+      return f.subject || f.netId ? { kind: "net", net: f.subject, netId: f.netId } : null;
+    case "bus":
+      return f.busId ? { kind: "bus", busId: f.busId } : null;
+    default:
+      return null;
+  }
+}
+
+// findingsFor projects the findings owning any of the given subjects, in the order the pass
+// produced them.
+//
+// It takes a SET because a set is the primitive and a single click is its degenerate case. One
+// entity is what a click yields; a query's whole answer, a sheet, a netclass, or the entities a
+// semantic diff changed are all the same question asked of more subjects, and none of them should
+// need a second code path.
+//
+// A finding is returned ONCE however many of the subjects it matches, so a query answering R1 on
+// five nets does not report R1's one finding five times.
+//
+// It answers OWNERSHIP, not mention. A pair finding (a pin-to-pin relation) names one terminal in
+// its subject and the other in its prose, so clicking the second one finds nothing here. Fixing
+// that needs a structured context field on Finding rather than a cleverer filter.
+export function findingsFor(findings: FindingItem[], selections: (Selection | null)[]): FindingItem[] {
+  const wanted = selections.filter((s): s is Selection => s !== null);
+  if (wanted.length === 0) return [];
+  return findings.filter((f) => {
+    const sel = selectionFromFinding(f);
+    return sel !== null && wanted.some((w) => sameSelection(sel, w));
+  });
+}
+
+// SeverityTally counts a projection by severity, because "3 findings" and "3 errors" are different
+// news and a bare count reads as the milder one.
+export interface SeverityTally {
+  error: number;
+  warning: number;
+  info: number;
+  total: number;
+}
+
+// tallySeverities counts a finding list. An unrecognized severity still counts toward the total,
+// so the total is never less than the list length and a new severity cannot silently vanish.
+export function tallySeverities(findings: FindingItem[]): SeverityTally {
+  const t: SeverityTally = { error: 0, warning: 0, info: 0, total: findings.length };
+  for (const f of findings) {
+    if (f.severity === "error") t.error++;
+    else if (f.severity === "warning") t.warning++;
+    else if (f.severity === "info") t.info++;
+  }
+  return t;
+}
+
+// CheckedState is how much of the current ruleset has actually run, which decides whether a count
+// beside an entity can be read at all. Without it a zero reads as "this entity is clean" when the
+// truth is "nobody has pressed Run", and that is the reading a reviewer acts on.
+export type CheckedState = "no-rules" | "running" | "not-run" | "partial" | "complete";
+
+// checkedState classifies a pushed FindingsState. `partial` is the case worth having a name for: a
+// ruleset half-evaluated produces real findings and an understated count at the same time, so a
+// panel that only knew ran/not-ran would show the number without the asterisk.
+export function checkedState(s: { ruleCount: number; pending: number; running: boolean }): CheckedState {
+  if (s.running) return "running";
+  if (s.ruleCount === 0) return "no-rules";
+  if (s.pending >= s.ruleCount) return "not-run";
+  return s.pending > 0 ? "partial" : "complete";
 }

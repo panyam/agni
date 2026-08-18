@@ -611,3 +611,119 @@ describe("querypanel you-are-here", () => {
     expect(marked(el)).toEqual(["SDA", "SDA"]);
   });
 });
+
+// What is already CHECKED about the selection, and about the whole answer set (agni issue 259).
+// Both are the same projection over one evaluation, which is why these drive them through the same
+// pushed state rather than through two fixtures.
+describe("querypanel findings beside the selection", () => {
+  const finding = (over: Record<string, unknown>) => ({
+    rule: "r", category: "connectivity", profile: "", severity: "warning", kind: "net",
+    subject: "SDA", pin: "", netId: "", busId: "", message: "m", sheets: [], locateReason: 0, ...over,
+  });
+  const pushChecks = (panel: ReturnType<typeof mountPanel>["panel"], over: Record<string, unknown> = {}) =>
+    panel.view.setFindings({
+      findings: [
+        finding({ rule: "a", severity: "error", kind: "net", subject: "SDA" }),
+        finding({ rule: "b", severity: "warning", kind: "net", subject: "SDA" }),
+        finding({ rule: "c", severity: "info", kind: "component", subject: "R1" }),
+      ],
+      selected: "", ruleCount: 3, pending: 0, running: false, skipped: [], ruleSummaries: {},
+      ...over,
+    } as never);
+  const bar = (el: HTMLElement) => el.querySelector(".query-selection .query-findings")!;
+  const footer = (el: HTMLElement) => el.querySelector(".query-count .query-findings");
+  const pips = (root: Element) => [...root.querySelectorAll(".query-pip")].map((p) => `${p.className.split(" ")[1]}:${p.textContent}`);
+  const label = (root: Element) => root.querySelector(".query-findings-label")!.textContent;
+
+  const pushResults = (push: (s: QueryResult) => void) =>
+    push(
+      resultFromResponse(
+        {
+          columns: ["r", "n"],
+          columnKinds: ["component", "net"],
+          rows: [
+            { cells: ["R1", "SDA"], cites: [], cellSheets: [{}, {}] },
+            { cells: ["R1", "SCL"], cites: [], cellSheets: [{}, {}] },
+          ],
+        } as never,
+      ),
+    );
+
+  it("counts what is known about the selected entity, by severity", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("2 findings");
+    expect(pips(bar(el))).toEqual(["error:1", "warning:1"]);
+  });
+
+  // The whole reason a zero needs a state beside it: nobody has pressed Run, and "no findings" here
+  // would be a claim about the design rather than about the session.
+  it("says the checks have not run rather than reporting a clean entity", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel, { findings: [], pending: 3 });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("not checked yet");
+    expect(bar(el).textContent).not.toContain("no findings");
+  });
+
+  it("marks a half-run ruleset as a floor, not a total", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel, { pending: 1 });
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(label(bar(el))).toBe("2 findings so far");
+  });
+
+  it("reports a genuinely clean entity once the ruleset has run", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "component", ref: "U9" });
+    expect(label(bar(el))).toBe("no findings");
+  });
+
+  // Required by the issue: the panel has to say what it is NOT, since an entity view enumerates
+  // attention while a review pass enumerates the design.
+  it("carries the caveat as visible text, not only as a hover", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    expect(el.querySelector(".query-findings-caveat")!.textContent).toBe("selected rules, this subject only");
+    expect(bar(el).getAttribute("title")).toContain("Not a coverage statement");
+  });
+
+  it("opens the check results for the entity, without re-running anything", () => {
+    const onInspect = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onLocate: vi.fn(), onInspect });
+    panel.island.activate();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "net", net: "SDA" });
+    el.querySelector<HTMLButtonElement>(".query-findings-open")!.click();
+    expect(onInspect).toHaveBeenCalledWith({ kind: "net", net: "SDA" });
+  });
+
+  it("offers nothing to open when there is nothing to see", () => {
+    const { el, panel } = mountPanel();
+    pushChecks(panel);
+    panel.view.setSelection({ kind: "component", ref: "U9" });
+    expect(el.querySelector(".query-findings-open")).toBeNull();
+  });
+
+  // The set case, which is the primitive the single click falls out of. R1 answers on two rows and
+  // must be counted once.
+  it("counts findings across every entity the query returned, deduped", () => {
+    const { el, push, panel } = mountPanel();
+    pushResults(push);
+    pushChecks(panel);
+    expect(label(footer(el)!)).toBe("3 findings across these 3 entities");
+    expect(pips(footer(el)!)).toEqual(["error:1", "warning:1", "info:1"]);
+  });
+
+  it("shows no set count for a result with nothing locatable in it", () => {
+    const { el, push, panel } = mountPanel();
+    push(resultFromResponse({ columns: ["v"], columnKinds: [""], rows: [{ cells: ["3.3"], cites: [] }] } as never));
+    pushChecks(panel);
+    expect(footer(el)).toBeNull();
+  });
+});

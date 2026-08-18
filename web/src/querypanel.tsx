@@ -15,6 +15,14 @@ import {
   groupRelations,
   relationTemplate,
 } from "./query.js";
+import {
+  type CheckedState,
+  type FindingsState,
+  type SeverityTally,
+  checkedState,
+  findingsFor,
+  tallySeverities,
+} from "./findings.js";
 import { renderMarkdown } from "./markdown.js";
 import { type Selection, askLabel, fillEntityQuery, labelFor, sameSelection, selectionFromCell } from "./selection.js";
 import { SheetBadges } from "./sheetbadges.jsx";
@@ -25,6 +33,80 @@ import { SheetBadges } from "./sheetbadges.jsx";
 // them alone, so relation cards resolve to their own handler without touching rule-doc rendering.
 function resolveRelationImages(md: string): string {
   return md.replace(/\]\(images\//g, "](/relation-docs/images/");
+}
+
+// emptyFindings is the state before the presenter has pushed anything: no rules selected, so the
+// count says "no rules selected" rather than "no findings", which would be a claim.
+function emptyFindings(): FindingsState {
+  return { findings: [], selected: "", ruleCount: 0, pending: 0, running: false, skipped: [], ruleSummaries: {} };
+}
+
+// FindingsCount says what is already CHECKED about a selection (agni issue 259), for one entity or
+// for a whole answer set.
+//
+// The number is the easy half. The hard half is that a zero has four different meanings and only one
+// of them is "nothing is wrong": nobody has pressed Run, no rules are selected, half the ruleset is
+// still pending, or it ran clean. A bare 0 reads as the last one in every case, and a reviewer acts
+// on it, so the state is named in the text rather than left to be inferred from a spinner elsewhere
+// on the page.
+//
+// `scope` names what was counted when that is not obvious from position ("these 5 entities"). The
+// selection bar passes "" because the entity is already named immediately to its left, and "1
+// finding on this" beside "NET /sub/DATA0" is a word longer than the reader needs.
+function FindingsCount(props: {
+  tally: SeverityTally;
+  state: CheckedState;
+  title: string;
+  scope: string;
+  onOpen?: () => void;
+}) {
+  const noun = (n: number): string => (n === 1 ? "1 finding" : `${n} findings`);
+  const where = (): string => (props.scope ? ` across ${props.scope}` : "");
+  const label = (): string => {
+    switch (props.state) {
+      case "no-rules":
+        return "no rules selected";
+      case "running":
+        return "checking…";
+      case "not-run":
+        return "not checked yet";
+      case "partial":
+        return props.tally.total === 0 ? `nothing yet${where()}` : `${noun(props.tally.total)} so far${where()}`;
+      default:
+        return props.tally.total === 0 ? `no findings${where()}` : `${noun(props.tally.total)}${where()}`;
+    }
+  };
+  const counted = (): boolean => props.state === "partial" || props.state === "complete";
+  const body = () => (
+    <>
+      <span class="query-findings-label">{label()}</span>
+      <Show when={counted() && props.tally.total > 0}>
+        <span class="query-findings-pips">
+          <Show when={props.tally.error > 0}>
+            <span class="query-pip error">{props.tally.error}</span>
+          </Show>
+          <Show when={props.tally.warning > 0}>
+            <span class="query-pip warning">{props.tally.warning}</span>
+          </Show>
+          <Show when={props.tally.info > 0}>
+            <span class="query-pip info">{props.tally.info}</span>
+          </Show>
+        </span>
+      </Show>
+    </>
+  );
+  return (
+    <span class="query-findings" title={props.title}>
+      <Show when={props.onOpen && counted() && props.tally.total > 0} fallback={body()}>
+        <button type="button" class="query-findings-open" onClick={() => props.onOpen?.()}>
+          {body()}
+        </button>
+      </Show>
+      {/* Visible rather than only in the hover, because this is the claim the panel must not let a
+          reader over-read, and a caveat nobody sees is a caveat nobody has. */}
+      <span class="query-findings-caveat">selected rules, this subject only</span>
+    </span>
+  );
 }
 
 // QueryPanel is the ad-hoc datalog search surface (WS9-036 / WS3-029): type a query, run it, and
@@ -45,7 +127,9 @@ function QueryPanel(props: {
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
+  findings: () => FindingsState;
   onRun: (text: string) => void;
+  onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
 }) {
   const [text, setText] = createSignal("");
@@ -193,6 +277,41 @@ function QueryPanel(props: {
   // Without the second half every row's badge for this sheet would light up, which says nothing.
   const isCurrentSheet = (kind: string, cell: string, sheet: string): boolean =>
     isCurrent(kind, cell) && sheet !== "" && sheet === props.currentSheet();
+  // What is CHECKED about the selection, and about the whole answer set (agni issue 259). Both are
+  // the same projection over the findings the panel was handed: a click is one subject, a result
+  // table is many, and a set is the primitive so neither needs its own path.
+  //
+  // resultSubjects reads every locatable cell in the table, deduped by identity, which is the set
+  // the reader is looking at. It goes through selectionFromCell (and so through cellKind), so a
+  // polymorphic search result contributes each row's own kind rather than a column's.
+  const resultSubjects = (): Selection[] => {
+    const out: Selection[] = [];
+    const st = props.state();
+    for (const row of st.rows) {
+      for (let i = 0; i < row.cells.length; i++) {
+        const sel = selectionFromCell(cellKind(st, row, i), row.cells[i]);
+        if (sel && !out.some((o) => sameSelection(o, sel))) out.push(sel);
+      }
+    }
+    return out;
+  };
+  const selectionTally = () => tallySeverities(findingsFor(props.findings().findings, [props.selection()]));
+  const resultTally = () => tallySeverities(findingsFor(props.findings().findings, resultSubjects()));
+  // WHY the count reads the way it does, which the reader has to be told rather than infer. The
+  // caveats are not decoration: an entity view is a projection of attention, and a review pass is an
+  // enumeration guarantee, so a zero here means much less than a zero there.
+  const countTitle = (): string => {
+    const state = checkedState(props.findings());
+    const head =
+      state === "not-run"
+        ? "No rule has run yet, so this is not a count of anything."
+        : state === "partial"
+          ? `${props.findings().pending} selected rule(s) have not run, so this count is a floor.`
+          : state === "no-rules"
+            ? "No rules are selected."
+            : "";
+    return `${head ? head + "\n\n" : ""}Findings from the SELECTED rules that name this subject. Not a coverage statement: a design-global rule has no subject and can never appear here, and a rule that checks two terminals names one of them, so the other end shows nothing.`;
+  };
   // cmpCells is a numeric-aware string compare: two numeric cells sort by value (so 9 < 10), any
   // other pair sorts lexicographically. sortRows applies it, carrying each row's original index.
   const cmpCells = (a: string, b: string): number => {
@@ -333,6 +452,13 @@ function QueryPanel(props: {
             <span class="query-selection-what">
               <span class="query-selection-kind">{sel().kind}</span>
               <span class="query-selection-name">{labelFor(sel())}</span>
+              <FindingsCount
+                tally={selectionTally()}
+                state={checkedState(props.findings())}
+                title={countTitle()}
+                scope=""
+                onOpen={() => props.onInspect(sel())}
+              />
             </span>
             <Show when={presetFor(sel().kind)}>
               {(preset) => (
@@ -575,7 +701,20 @@ function QueryPanel(props: {
                 </For>
               </tbody>
             </table>
-            <div class="query-count">{props.state().rows.length} result(s)</div>
+            <div class="query-count">
+              {props.state().rows.length} result(s)
+              {/* The set case, and the reason findingsFor takes a set rather than one subject: the
+                  answers on screen ARE a selection, and asking what is flagged across them is the
+                  same question a click asks of one thing. */}
+              <Show when={resultSubjects().length > 0}>
+                <FindingsCount
+                  tally={resultTally()}
+                  state={checkedState(props.findings())}
+                  title={countTitle()}
+                  scope={`these ${resultSubjects().length} ${resultSubjects().length === 1 ? "entity" : "entities"}`}
+                />
+              </Show>
+            </div>
           </div>
         </Show>
       </Show>
@@ -595,6 +734,9 @@ export function queryPanelIsland(
   handlers: {
     onRun: (text: string) => void;
     onLocate?: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason) => void;
+    // onInspect opens the check results for one entity. Optional like onLocate, since an embedding
+    // host may mount the query panel with no checks panel to open (C13).
+    onInspect?: (sel: Selection) => void;
   },
 ): { island: SolidIsland; view: QueryView } {
   const [state, setState] = signalView<QueryResult>(emptyResult());
@@ -619,7 +761,11 @@ export function queryPanelIsland(
   // The sheet on screen, pushed by the presenter on every navigation. The panel needs it to mark
   // which of a cell's badges is the one being shown.
   const [currentSheet, setCurrentSheet] = signalView<string>("");
+  // The check results, whole. The panel projects them onto the selection and onto the answer set;
+  // it never asks for a scoped re-run (agni issue 259).
+  const [findings, setFindings] = signalView<FindingsState>(emptyFindings());
   const onLocate = handlers.onLocate ?? (() => {});
+  const onInspect = handlers.onInspect ?? (() => {});
   // A fresh query result clears any stale locate note from the previous run.
   const setStateClearing = (s: QueryResult) => {
     setLocateNote("");
@@ -640,8 +786,10 @@ export function queryPanelIsland(
         selection={selection}
         setSelection={setSelection}
         currentSheet={currentSheet}
+        findings={findings}
         onRun={handlers.onRun}
         onLocate={onLocate}
+        onInspect={onInspect}
       />
     ),
     eventBus,
@@ -658,6 +806,7 @@ export function queryPanelIsland(
       setSearch,
       setSelection,
       setCurrentSheet,
+      setFindings,
       entityQuery: (kind: string) => entityQueries().find((p) => p.kind === kind)?.query ?? "",
     },
   };

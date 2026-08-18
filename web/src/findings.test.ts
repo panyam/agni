@@ -10,6 +10,10 @@ import {
   sortFindings,
   severityRank,
   severitySections,
+  checkedState,
+  findingsFor,
+  selectionFromFinding,
+  tallySeverities,
 } from "./findings.js";
 import { reportFromWire } from "./report.js";
 
@@ -225,5 +229,92 @@ describe("severitySections parity with the server report (WS3-022)", () => {
     };
     const report = reportFromWire(wire, () => "").sections.map((s) => [s.severity, s.count]);
     expect(client).toEqual(report);
+  });
+});
+
+// What a selection is CHECKED for (agni issue 259). The whole point is that this is a FILTER over
+// the findings already computed, so what the tests pin is the matching rule and the honesty of a
+// zero, not any evaluation.
+describe("selectionFromFinding", () => {
+  it("reads each subject kind as the thing the finding is about", () => {
+    expect(selectionFromFinding(f({ kind: "component", subject: "R1" }))).toEqual({ kind: "component", ref: "R1" });
+    expect(selectionFromFinding(f({ kind: "net", subject: "SDA", netId: "n7" }))).toEqual({ kind: "net", net: "SDA", netId: "n7" });
+    expect(selectionFromFinding(f({ kind: "pin", subject: "U1", pin: "5" }))).toEqual({ kind: "pin", ref: "U1", pin: "5" });
+    expect(selectionFromFinding(f({ kind: "bus", subject: "D[7:0]", busId: "b1" }))).toEqual({ kind: "bus", busId: "b1" });
+  });
+
+  it("is null for a finding with no locatable subject", () => {
+    expect(selectionFromFinding(f({ kind: "net", subject: "", netId: "" }))).toBeNull();
+    expect(selectionFromFinding(f({ kind: "design", subject: "" }))).toBeNull();
+  });
+});
+
+describe("findingsFor", () => {
+  const onR1 = f({ rule: "a", kind: "component", subject: "R1" });
+  const onSDA = f({ rule: "b", kind: "net", subject: "SDA", netId: "n1" });
+  const onOtherSDA = f({ rule: "c", kind: "net", subject: "SDA", netId: "n2" });
+  const onU1p5 = f({ rule: "d", kind: "pin", subject: "U1", pin: "5" });
+  const all = [onR1, onSDA, onOtherSDA, onU1p5];
+
+  it("projects the findings owning one subject", () => {
+    expect(findingsFor(all, [{ kind: "component", ref: "R1" }])).toEqual([onR1]);
+  });
+
+  it("separates two nets that share a display name", () => {
+    expect(findingsFor(all, [{ kind: "net", net: "SDA", netId: "n2" }])).toEqual([onOtherSDA]);
+  });
+
+  it("matches a net named without an id against both instances, since the caller could not say", () => {
+    expect(findingsFor(all, [{ kind: "net", net: "SDA" }])).toEqual([onSDA, onOtherSDA]);
+  });
+
+  it("takes a SET, because one entity is the degenerate case of a selection", () => {
+    expect(findingsFor(all, [{ kind: "component", ref: "R1" }, { kind: "pin", ref: "U1", pin: "5" }])).toEqual([onR1, onU1p5]);
+  });
+
+  // A query answering R1 on five nets contributes R1 five times to the subject list; its one
+  // finding must still be counted once.
+  it("returns a finding once however many subjects it matches", () => {
+    const dupes = [{ kind: "net", net: "SDA" } as const, { kind: "net", net: "SDA", netId: "n1" } as const];
+    expect(findingsFor(all, dupes)).toEqual([onSDA, onOtherSDA]);
+  });
+
+  it("is empty for no subjects and ignores nulls, so an unselectable cell contributes nothing", () => {
+    expect(findingsFor(all, [])).toEqual([]);
+    expect(findingsFor(all, [null, null])).toEqual([]);
+    expect(findingsFor(all, [null, { kind: "component", ref: "R1" }])).toEqual([onR1]);
+  });
+
+  it("keeps the order the pass produced, so the projection is not a re-sort in disguise", () => {
+    expect(findingsFor(all, [{ kind: "pin", ref: "U1", pin: "5" }, { kind: "component", ref: "R1" }])).toEqual([onR1, onU1p5]);
+  });
+});
+
+describe("tallySeverities", () => {
+  it("counts by severity, since 3 findings and 3 errors are different news", () => {
+    const t = tallySeverities([f({ severity: "error" }), f({ severity: "error" }), f({ severity: "warning" }), f({ severity: "info" })]);
+    expect(t).toEqual({ error: 2, warning: 1, info: 1, total: 4 });
+  });
+
+  // A severity nobody here recognises still exists, and a total that undercounted it would make the
+  // pips and the number disagree.
+  it("counts an unknown severity toward the total", () => {
+    expect(tallySeverities([f({ severity: "catastrophe" })])).toEqual({ error: 0, warning: 0, info: 0, total: 1 });
+  });
+});
+
+// A zero has four meanings and only one is "nothing is wrong". This is the function that keeps a
+// panel from showing the reassuring one when it has not earned it.
+describe("checkedState", () => {
+  it("names the state a count can be read in", () => {
+    expect(checkedState({ ruleCount: 0, pending: 0, running: false })).toBe("no-rules");
+    expect(checkedState({ ruleCount: 4, pending: 4, running: true })).toBe("running");
+    expect(checkedState({ ruleCount: 4, pending: 4, running: false })).toBe("not-run");
+    expect(checkedState({ ruleCount: 4, pending: 1, running: false })).toBe("partial");
+    expect(checkedState({ ruleCount: 4, pending: 0, running: false })).toBe("complete");
+  });
+
+  it("reports running before anything else, since a count mid-flight is a moving target", () => {
+    expect(checkedState({ ruleCount: 4, pending: 0, running: true })).toBe("running");
   });
 });
