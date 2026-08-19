@@ -2022,9 +2022,17 @@ type ProfileDef struct {
 	// host_attr_key / host_attr_val bind the interface to a component that DECLARES it via an attribute
 	// (interface=SPI_NOR). A declared host gives a precise anchor and can flag a wholly-absent bus, which
 	// the naming-convention path cannot. Empty key means no host binding.
-	HostAttrKey   string                `protobuf:"bytes,3,opt,name=host_attr_key,json=hostAttrKey,proto3" json:"host_attr_key,omitempty"`
-	HostAttrVal   string                `protobuf:"bytes,4,opt,name=host_attr_val,json=hostAttrVal,proto3" json:"host_attr_val,omitempty"`
-	Requirements  []*ProfileRequirement `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
+	HostAttrKey  string                `protobuf:"bytes,3,opt,name=host_attr_key,json=hostAttrKey,proto3" json:"host_attr_key,omitempty"`
+	HostAttrVal  string                `protobuf:"bytes,4,opt,name=host_attr_val,json=hostAttrVal,proto3" json:"host_attr_val,omitempty"`
+	Requirements []*ProfileRequirement `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
+	// host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
+	// against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
+	// binds a host matching either. Empty means no class binding.
+	//
+	// It is field 6 because the message shipped without it while Profile.HostClass already existed, so
+	// a class-only host binding was dropped crossing this contract and the profile read as having no
+	// host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
+	HostClass     string `protobuf:"bytes,6,opt,name=host_class,json=hostClass,proto3" json:"host_class,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2092,6 +2100,13 @@ func (x *ProfileDef) GetRequirements() []*ProfileRequirement {
 		return x.Requirements
 	}
 	return nil
+}
+
+func (x *ProfileDef) GetHostClass() string {
+	if x != nil {
+		return x.HostClass
+	}
+	return ""
 }
 
 // ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
@@ -2378,14 +2393,16 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x04_num\"8\n" +
 	"\x10DatalogAggregate\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x10\n" +
-	"\x03var\x18\x02 \x01(\tR\x03var\"\xe9\x01\n" +
+	"\x03var\x18\x02 \x01(\tR\x03var\"\x88\x02\n" +
 	"\n" +
 	"ProfileDef\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\asignals\x18\x02 \x03(\v2\x1d.agni.v1.checks.ProfileSignalR\asignals\x12\"\n" +
 	"\rhost_attr_key\x18\x03 \x01(\tR\vhostAttrKey\x12\"\n" +
 	"\rhost_attr_val\x18\x04 \x01(\tR\vhostAttrVal\x12F\n" +
-	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\"\xae\x01\n" +
+	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\x12\x1d\n" +
+	"\n" +
+	"host_class\x18\x06 \x01(\tR\thostClass\"\xae\x01\n" +
 	"\rProfileSignal\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06prefix\x18\x02 \x01(\tR\x06prefix\x12\x16\n" +
