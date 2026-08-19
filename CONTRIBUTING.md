@@ -117,7 +117,12 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   trigger fires. A question that was asked and ANSWERED is neither — it can never be closed, so it
   goes in `DECISIONS.md` instead of quietly filling the ledger with entries nobody can act on.
 
-Three shell traps that have burned real work. **Backticks inside a double-quoted `git commit -m` run
+Four shell traps that have burned real work. **A `cd` persists across calls, and the repo root is
+where a stray file lands.** A scratch file written to a relative path goes wherever the last `cd`
+left you, so a heredoc that was meant for a temp directory can drop a `.md` or a `.png` into the
+tree, and a directory `add` then rides it into a public repo. Write scratch files to an absolute
+path, and read `git status` before staging. (The screenshot case under PR prose conventions below is
+this same trap, narrowed to one file type.) **Backticks inside a double-quoted `git commit -m` run
 as COMMAND SUBSTITUTION**, so a message quoting `` `reserved` `` committed the sentence with the word
 missing and no error. Anything with backticks, `$`, or `!` goes through `git commit -F <file>` or a
 quoted heredoc (`<<'MSG'`), never `-m "..."`. **zsh does NOT word-split an unquoted `$var`**, so
@@ -156,7 +161,10 @@ and cold in the other. These sections exist so a PR is reviewable by both.
   `["..."]` node label decodes to a bare `"`, closes the string early, and GitHub renders a parse
   error instead of the diagram (`got 'STR'`). Write labels as plain text with `<br/>` for line
   breaks and keep the literal strings in the prose above the diagram, which reads better anyway.
-  A broken diagram is caught only by looking at the rendered PR, so look.
+  Parse-check before you post rather than after: extract each ` ```mermaid ` block to a file and run
+  `mmdc -i block.mmd -o /dev/null`, which exits non-zero on the syntax GitHub would reject. That
+  catches the whole class without a round trip. Looking at the rendered PR is still the only way to
+  catch a diagram that parses and reads badly.
 - **Visual before/after.** Any PR changing rendering includes an actual image pair under
   `## Before / after`. **PNG, not SVG**, because GitHub sanitizes SVG in PR bodies. Capture from the
   showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),

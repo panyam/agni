@@ -98,3 +98,11 @@ reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
 ### Schematic
 
 ![The walk crosses two-pin series parts (R, ferrite, fuse) and stops at a DC-blocking cap or a bus-like net](images/reaches.svg)
+
+### Where this is going
+
+The hop-radius trap above, the per-caller radius constants, and the baked-in edge class are all
+symptoms of the same thing: a path question has no way to state itself, so each caller hand-codes a
+walk. Issue 374 designs a topology-pattern surface where the radius is a quantifier, the edge class
+is a character class, and a match carries the path it found. If that lands, `reaches` becomes one
+canned pattern and this page becomes the migration note.

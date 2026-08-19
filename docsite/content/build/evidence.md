@@ -118,6 +118,13 @@ neutralized, replace the heuristic with the PROPERTY: that one added a marker at
 asserted the two render at the same y, which then failed with the actual defect named. Run the
 red-check on every new test, not just ones you doubt.
 
+**Count WHICH tests flip, not merely that the suite went red.** The set is the evidence and the total
+is not. Neutering `reviewGate.trip()` failed 6 of 8 gate tests, and the two that stayed green were the
+opt-in guard and the flag-parse guard, neither of which has any business depending on `trip`. "The
+suite went red" would have been equally true if the wrong six had failed. Naming which ones should
+survive before you run it turns the red-check from a smoke test into a real prediction, and it costs
+one sentence of thought.
+
 **An assertion over a CUMULATIVE log is already true before the action it is meant to test.** A
 composition test that clicks a finding and asserts `expect(called).toContain("HighlightSheet")` passes
 with the click handler unwired, because the page's deep-link restore highlights during boot and the
