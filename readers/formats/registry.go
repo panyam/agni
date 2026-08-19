@@ -14,6 +14,7 @@ import (
 	"github.com/panyam/agni/readers/geda"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/readers/kicad"
+	"github.com/panyam/agni/readers/telesis"
 	"github.com/panyam/agni/readers/xschem"
 )
 
@@ -94,6 +95,10 @@ func init() {
 		Design:   readSchDesign,
 		Geometry: readSchGeometry,
 	})
+	// The flat Telesis netlist the Mentor/Siemens flow emits. Netlist only: the format carries
+	// connectivity and properties and no geometry at all, so Geometry and Board stay nil and the
+	// design renders through auto-layout like any other netlist-only source.
+	Register(&Format{Ext: ".tel", Name: "telesis", Design: readTelesis})
 	Register(&Format{Ext: ".xml", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
 	Register(&Format{Ext: ".cvg", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
 }
@@ -246,4 +251,15 @@ func readIPC2581Board(l *Loader, path string) (*geom.BoardGeometry, error) {
 		return nil, fmt.Errorf("%q: not an IPC-2581 file (no IPC-2581 root element)", path)
 	}
 	return ipc2581.ReadBoardGeometry(br, path)
+}
+
+// readTelesis reads a flat Telesis netlist. The extension is unambiguous, so unlike .sch and .xml
+// there is nothing to sniff.
+func readTelesis(l *Loader, path string) (*ir.Design, error) {
+	f, err := l.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return telesis.Read(f, path)
 }

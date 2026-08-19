@@ -1,0 +1,33 @@
+$PACKAGES
+
+'RES-10K' ! 'RC0603FR-0710KL' ;  R1
+
+'IC-I2C' ! 'PCA9548APW' ;  U1
+
+'CONN-2' ! '0022232021' ;  J1
+
+$A_PROPERTIES
+
+'Resistance' '10k' ;  R1
+
+$NETS
+
+'I2C_SCL' ; U1.1 J1.1
+
+'VCC_3V3' ; U1.2 R1.1
+
+'DANGLING_STUB' ; R1.2
+
+$PINS
+
+$A_PROPERTIES
+
+'Pin Type' 'BI' ;  U1.1
+
+'Pin Type' 'POWER' ;  U1.2
+
+'Pin Type' 'TERMINAL' ;  R1.1 R1.2
+
+'Pin Type' 'IN' ;  J1.1
+
+$END

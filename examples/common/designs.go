@@ -25,6 +25,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/readers/kicad"
+	"github.com/panyam/agni/readers/telesis"
 )
 
 // readByExt picks a reader by the name's extension and decodes r into the neutral IR. It is
@@ -34,6 +35,8 @@ func readByExt(r io.Reader, name string) (*ir.Design, error) {
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".edn":
 		return edif.Read(r, name)
+	case ".tel":
+		return telesis.Read(r, name)
 	case ".kicad_pcb":
 		return kicad.Read(r, name)
 	case ".kicad_sch":
