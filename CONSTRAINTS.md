@@ -368,10 +368,11 @@ calls) are stepping stones; the left-shift tickets (WS3-071 `device_classes` at 
 `net.role` at ingestion) move them to the edge. A `Verify` (a grep that rule `Eval`s do not call the
 name/class heuristics directly) becomes checkable once those land.
 
-## C21: The netlist is the analysis source of truth; schematic/board files are geometry companions
-**Rule:** Component and connectivity ANALYSIS (the BOM, nets, rules, findings) is sourced from the
-NETLIST the design team produces (for OrCAD/Allegro that is the `.edn` netlist view; for KiCad the
-schematic/PCB, which carry the netlist inline). A schematic-view or board file supplied ALONGSIDE it
+## C21: The netlist is the source of truth for connectivity and component IDENTITY; schematic/board files are geometry companions
+**Rule:** Component IDENTITY and CONNECTIVITY (which components exist, their ref-des, the nets, and
+the rules and findings computed over them) is sourced from the NETLIST the design team produces (for
+OrCAD/Allegro that is the `.edn` netlist view; for KiCad the schematic/PCB, which carry the netlist
+inline). A schematic-view or board file supplied ALONGSIDE it
 (an OrCAD `.eds`, a `.kicad_pcb`, an IPC-2581 board) is a GEOMETRY companion — a canvas for rendering
 and for locating/highlighting findings — and MUST NOT be treated as a second, independent COMPONENT
 source to be reconciled or merged against the netlist. Findings computed on the netlist join to a
@@ -380,6 +381,14 @@ companion's geometry by NET NAME (primary, drift-resistant) and ref-des (seconda
 `.eds` (when no real netlist exists) is a degraded, explicitly-labeled fallback with tool-synthesized
 ref-des — net-level findings authoritative, component-identity cross-reference not — and is never
 promoted to the source of truth.
+
+Part ATTRIBUTES are a separate question and this rule does not answer it. MPN, manufacturer,
+quantity as ordered, do-not-populate status and approved alternates may be sourced from a declared
+BOM (`ir.BomLine`, keyed by ref-des), because the netlist frequently does not carry them and is not
+authoritative for them where it does. That is an ATTRIBUTE JOIN onto components the netlist already
+established: it may enrich a component, and it may be RECONCILED against the netlist and report the
+disagreement as a finding, but it MUST NOT add, remove, or rename one. The component set stays the
+netlist's.
 **Why:** an exported schematic is a lossy, point-in-time SNAPSHOT, not the design's system of record.
 Reference designators (`C1`, `R3005`) are the OUTPUT of a stateful authoring process — annotation +
 layout back-annotation performed inside the native project, with the tool's netlister assigning numbers
@@ -391,8 +400,20 @@ netlist as truth and the schematic/board as a companion to highlight (WS1-047) m
 drift-resistant (net names are stable across annotation), keeps analysis off an assumption we cannot
 verify (that two exports are from the same instant), and matches the real workflow: the team gets the
 netlist by one click on the project, we render their drawing beside it.
+
+The identity/attribute split is where this rule was previously over-broad. The argument above is
+about IDENTITY, and it is strong: a ref-des is the output of a stateful annotation process, so a
+file that did not run that process cannot carry it. None of that reasoning transfers to what a part
+IS. A netlist does not know do-not-populate status, an approved alternate, or the quantity actually
+ordered, and those live in a bill of materials maintained alongside the design. Reading the rule as
+"the netlist is authoritative for part attributes too" would put analysis on the least authoritative
+copy of a part number in the building, which is the opposite of what the rule is defending. Note
+that the `.eds` measurement cited above was recorded outside this repository, so a reader here
+cannot reproduce it. The annotation argument stands without it.
 **Verify:** analysis/rule code sources components + nets from the loaded netlist model, not from a
-geometry reader; a geometry companion contributes only render + locate. (Checkable once the
+geometry reader; a geometry companion contributes only render + locate. A BOM source contributes
+only attributes onto an existing ref-des, so the component COUNT of a design is unchanged by
+declaring one. (Checkable once the
 companion-file association lands, WS1-047: geometry-only readers feed no component/net into the rule
 model.)
 
