@@ -126,6 +126,12 @@ func TestCorpus(t *testing.T) {
 				t.Logf("%d pins carry a Pin Type this reader does not map; the vocabulary needs widening", unknown)
 			}
 
+			// Not a failure: a section this reader does not consume does not make what it DID
+			// read wrong. But it is the first thing anyone running this against a new exporter
+			// needs to know, and on the exports this reader was built against it stays empty.
+			if u := d.GetAttributes()[UnparsedSectionsAttr]; u != "" {
+				t.Logf("sections carrying content this reader did not consume: %s", u)
+			}
 			t.Logf("structure: %d components, %d nets, %d part types, %d pins, %d%% typed",
 				len(d.Components), len(d.Nets), countParts(d), total, typed*100/total)
 		})

@@ -401,3 +401,48 @@ func TestQuotedFieldContainingSeparators(t *testing.T) {
 		t.Error("part name with embedded separators was truncated")
 	}
 }
+
+// TestUnparsedSectionIsRecorded is the answer to "did the reader skip it, or was there nothing
+// there". Those are different facts and without this they look identical.
+//
+// $PINS is present and EMPTY in every real export examined, so nothing is known about its body and
+// the reader skips it. An export that populates it would otherwise parse cleanly and lose whatever
+// it held, with no error and no signal, which is the silence-reads-as-coverage failure the
+// diagnostics channel exists to prevent.
+func TestUnparsedSectionIsRecorded(t *testing.T) {
+	// $PINS with content, which no real export has, and an unknown section from a writer this
+	// reader has never met.
+	const src = "$PACKAGES\n\n'P1' ! 'MPN1' ;  U1\n\n$NETS\n\n'N1' ; U1.1 U1.2\n\n" +
+		"$PINS\n\n'SomePinFact' 'Value' ;  U1.1\n\n$FUTURE\n\n'X' 'Y' ;  U1\n\n$END\n"
+	d, err := Read(strings.NewReader(src), "probe.tel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := d.GetAttributes()[UnparsedSectionsAttr]
+	for _, want := range []string{"$PINS", "$FUTURE"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("%s = %q, want it to name %s", UnparsedSectionsAttr, got, want)
+		}
+	}
+	// The read is still good, just not complete: a section the reader does not understand does not
+	// make the connectivity it DID read wrong.
+	if len(d.Components) != 1 || len(d.Nets) != 1 {
+		t.Errorf("components=%d nets=%d; an unparsed section must not cost the rest of the read",
+			len(d.Components), len(d.Nets))
+	}
+}
+
+// TestEmptySectionIsNotRecordedAsUnparsed is the other half. An EMPTY $PINS, which is what every
+// real export carries, is fully handled, so flagging it would cry wolf on every real file and train
+// a reader to ignore the signal.
+func TestEmptySectionIsNotRecordedAsUnparsed(t *testing.T) {
+	d := readFixture(t, "basic.tel")
+	got := d.GetAttributes()[UnparsedSectionsAttr]
+	if strings.Contains(got, "$PINS") {
+		t.Errorf("%s = %q; the fixture's $PINS is empty and was fully handled", UnparsedSectionsAttr, got)
+	}
+	// The fixture's $UNKNOWN_SECTION does have content, so that one must be named.
+	if !strings.Contains(got, "$UNKNOWN_SECTION") {
+		t.Errorf("%s = %q, want it to name $UNKNOWN_SECTION, which carries content", UnparsedSectionsAttr, got)
+	}
+}

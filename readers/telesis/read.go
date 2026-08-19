@@ -77,6 +77,10 @@ const PinTypeProperty = "Pin Type"
 // PinLabelProperty carries the pin's printed label.
 const PinLabelProperty = "PinLabel"
 
+// UnparsedSectionsAttr names the design attribute listing sections that carried content this reader
+// did not consume, comma-separated and in file order. Absent when everything was consumed.
+const UnparsedSectionsAttr = "telesis.unparsed_sections"
+
 // pinTargetRe matches a pin-scoped target: REFDES.PIN. The DOT is what distinguishes it, since a
 // ref-des never contains one, so the pin half is left deliberately permissive: numeric (U1.14), the
 // BGA row-column case (U7.L1), and the pure-letter case a connector shell can carry (J1.A) are all
@@ -225,6 +229,11 @@ type builder struct {
 
 	nets     []*ir.Net
 	netNames map[string]bool
+
+	// unparsed records sections that carried content this reader did not consume, in file order.
+	// See design() for why silence was not an option here.
+	unparsed     []string
+	unparsedSeen map[string]bool
 }
 
 func newBuilder(source string) *builder {
@@ -238,6 +247,7 @@ func newBuilder(source string) *builder {
 		compAttrs:    map[string]map[string]string{},
 		pinAttrs:     map[string]map[string]map[string]string{},
 		netNames:     map[string]bool{},
+		unparsedSeen: map[string]bool{},
 	}
 }
 
@@ -351,7 +361,28 @@ func (b *builder) addEntry(section string, e entry) {
 		b.addNet(e)
 	case secProperties:
 		b.addProperty(e)
+	default:
+		b.noteUnparsed(section)
 	}
+}
+
+// noteUnparsed records a section that carried content this reader did not consume.
+//
+// $PINS is the case in hand. It is present and EMPTY in every real export examined, so nothing is
+// known about its body grammar, and the reader skips it. But "we skipped it" and "there was nothing
+// there" are different facts, and without this they are indistinguishable: an export that populates
+// the section would parse cleanly and lose whatever it held, with no error and no signal. The same
+// applies to a section from a writer this reader has never met.
+//
+// Recorded on the design rather than raised as an error, because a section this reader does not
+// understand does not make the connectivity it DID read wrong. The read is still good; it is just
+// not complete, and that is exactly the distinction worth surfacing.
+func (b *builder) noteUnparsed(section string) {
+	if section == "" || b.unparsedSeen[section] {
+		return
+	}
+	b.unparsedSeen[section] = true
+	b.unparsed = append(b.unparsed, section)
 }
 
 // addPackage records a part type and the components declared under it.
@@ -473,6 +504,9 @@ func (b *builder) design() *ir.Design {
 	}
 
 	d.Nets = b.nets
+	if len(b.unparsed) > 0 {
+		d.Attributes = map[string]string{UnparsedSectionsAttr: strings.Join(b.unparsed, ",")}
+	}
 	d.InputDiagnostics = b.diagnostics()
 	return d
 }
