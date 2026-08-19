@@ -388,7 +388,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
+				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
 			}
 			if profilePath != "" {
 				ps, err := profiles.LoadDir(profilePath)
@@ -630,7 +630,7 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
+				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
 			}
 			var specs param.ParamProvider
 			if paramsDir != "" {

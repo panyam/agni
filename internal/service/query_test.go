@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check/naming"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/readers/formats"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -666,13 +667,13 @@ func (l fsQueryLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadO
 // houseConvention is the fixture project's vocabulary: its rails are named function-first
 // ("PMIC_VDD_LPM_1V8"), which the built-in rail vocabulary — start-anchored on VCC/VDD/+3V3 — matches
 // none of.
-func houseConvention(t *testing.T) *webapi.NamingConvention {
+func houseConvention(t *testing.T) *configpb.NamingConvention {
 	t.Helper()
 	cfg, err := naming.Load(filepath.Join("..", "..", "cmd", "agni", "testdata", "review", "conventions.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ConventionProto(cfg)
+	return cfg
 }
 
 func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
@@ -733,7 +734,7 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil, nil)
 	conv := houseConvention(t)
 	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
-	conv.Rules = append(conv.Rules, &webapi.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
+	conv.Rules = append(conv.Rules, &configpb.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
 		Uri: "mount://m/review/conv-demo.edn", Query: "rail(?n) => ?n",
 		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}},

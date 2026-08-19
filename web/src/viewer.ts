@@ -8,7 +8,7 @@ import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
 import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
-import { type NamingConvention } from "./gen/agni/v1/webapi/config_pb.js";
+import { type NamingConvention } from "./gen/agni/v1/config/naming_pb.js";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";

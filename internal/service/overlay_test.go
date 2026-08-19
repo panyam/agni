@@ -10,14 +10,15 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // conventionProto builds a wire convention with one naming rule, under the given catalog namespace.
-func conventionProto(name, ruleName string) *webapi.NamingConvention {
-	return &webapi.NamingConvention{
+func conventionProto(name, ruleName string) *configpb.NamingConvention {
+	return &configpb.NamingConvention{
 		Name: name,
-		Rules: []*webapi.NamingRule{{
+		Rules: []*configpb.NamingRule{{
 			Name:     ruleName,
 			Severity: "warning",
 			Allow:    []string{"^OK_"},
@@ -29,9 +30,9 @@ func conventionProto(name, ruleName string) *webapi.NamingConvention {
 // the built-ins, which is what serveRuleServices produces.
 func startupCatalog(t *testing.T, name, ruleName string) *check.Catalog {
 	t.Helper()
-	src, err := naming.Source(naming.Config{
+	src, err := naming.Source(&configpb.NamingConvention{
 		Name:  name,
-		Rules: []naming.RuleConfig{{Name: ruleName, Severity: "warning", Allow: []string{"^HOUSE_"}}},
+		Rules: []*configpb.NamingRule{{Name: ruleName, Severity: "warning", Allow: []string{"^HOUSE_"}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -156,9 +157,9 @@ func TestOverrideOnlyDropsTheNamedBaseConvention(t *testing.T) {
 // say) must tell the caller where the other source came from. `duplicate rule source "house"` with
 // no other context is a bad five minutes.
 func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
-	src, err := naming.Source(naming.Config{
+	src, err := naming.Source(&configpb.NamingConvention{
 		Name:  "house",
-		Rules: []naming.RuleConfig{{Name: "r", Severity: "warning", Allow: []string{"^X"}}},
+		Rules: []*configpb.NamingRule{{Name: "r", Severity: "warning", Allow: []string{"^X"}}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +188,7 @@ func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
 // at a malformed one.
 type fsConventionLoader struct{ dir string }
 
-func (l fsConventionLoader) Convention(_ context.Context, uri artifact.URI) (naming.Config, error) {
+func (l fsConventionLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
 	return naming.Load(filepath.Join(l.dir, uri.Path))
 }
 
@@ -206,8 +207,9 @@ func TestGetNamingConvention(t *testing.T) {
 	writeConvention(t, dir, "house.yaml", `
 name: house
 lexicon:
-  rail:
-    patterns: ["_[0-9]V[0-9]$"]
+  net:
+    rail:
+      patterns: ["_[0-9]V[0-9]$"]
 rules:
   - name: signal-net-naming
     severity: warning
@@ -228,7 +230,7 @@ rules:
 	// The LEXICON half has to survive too. It is the half that reaches the design read, and a
 	// resolver that dropped it would hand back a convention that compiles rules and leaves every
 	// other rule blind to the project's rail names.
-	if pats := conv.GetLexicon().GetRail().GetPatterns(); len(pats) != 1 || pats[0] != "_[0-9]V[0-9]$" {
+	if pats := conv.GetLexicon().GetNet().GetRail().GetPatterns(); len(pats) != 1 || pats[0] != "_[0-9]V[0-9]$" {
 		t.Errorf("lexicon rail patterns = %v, want the config's", pats)
 	}
 	// And it must be usable as-is: this is the exact round trip the browser performs.

@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/expect"
 )
@@ -51,7 +52,7 @@ type CheckService struct {
 // the request (C22), so CheckDesign needs no filesystem; this backs the separate resolver rpc that a
 // client with a ref and no filesystem calls first.
 type ConventionLoader interface {
-	Convention(ctx context.Context, uri artifact.URI) (naming.Config, error)
+	Convention(ctx context.Context, uri artifact.URI) (*configpb.NamingConvention, error)
 }
 
 // NewCheckService returns a CheckService backed by the given loader, rule catalog, and (optional)
@@ -88,12 +89,12 @@ func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetN
 	if _, err := naming.BuildLexicon(cfg); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	if len(cfg.Rules) > 0 {
+	if len(cfg.GetRules()) > 0 {
 		if _, err := naming.Source(cfg); err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 		}
 	}
-	return &webapi.GetNamingConventionResponse{Convention: ConventionProto(cfg)}, nil
+	return &webapi.GetNamingConventionResponse{Convention: cfg}, nil
 }
 
 // ListRules returns the catalog the service runs, mapping each rule to its wire form: identity,

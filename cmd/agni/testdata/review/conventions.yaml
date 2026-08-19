@@ -4,13 +4,16 @@
 #   rules:   adds catalog rules, namespaced house/<rule name>
 name: house
 lexicon:
-  rail:
-    # Rails here are named function-first ("PMIC_VDD_LPM_1V8"), so the built-in vocabulary — which is
-    # start-anchored on VCC/VDD/+3V3 and friends — matches none of them.
-    patterns: ["_[0-9]V[0-9]$"]
-  supply_pin:
-    # And supply PINS are named PWRIN_*, a different name space from net names (WS3-072).
-    patterns: ["^PWRIN"]
+  net:
+    rail:
+      # Rails here are named function-first ("PMIC_VDD_LPM_1V8"), so the built-in vocabulary — which is
+      # start-anchored on VCC/VDD/+3V3 and friends — matches none of them.
+      patterns: ["_[0-9]V[0-9]$"]
+  pin:
+    # Supply PINS are named PWRIN_*, a different name space from net names (WS3-072), which is what
+    # the net/pin grouping makes structural rather than a warning in a comment.
+    supply:
+      patterns: ["^PWRIN"]
 rules:
   - name: signal-net-naming
     severity: warning

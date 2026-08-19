@@ -10,6 +10,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/artifact"
@@ -135,10 +136,10 @@ func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manif
 // review manifest it is a required input once named, so an absent or malformed file is an error: a
 // caller that asked for its own vocabulary and silently got the server's would read the resulting
 // findings as being about their naming when they are about somebody else's.
-func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (naming.Config, error) {
+func (l *osLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
 	abs, err := mounts.Resolve(l.mounts, uri)
 	if err != nil {
-		return naming.Config{}, err
+		return nil, err
 	}
 	return naming.Load(abs)
 }

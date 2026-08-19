@@ -19,6 +19,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/datasheet/param"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
@@ -139,7 +140,7 @@ func serveCmd() *cobra.Command {
 			// it travels with the read; the catalog half used to ADD, so a request got its own rules
 			// stacked on the server's and could not turn the server's off. The two halves of one config
 			// composing differently is the shape that let WS3-102's bug hide, so they were made to agree.
-			var conventionCfg naming.Config
+			var conventionCfg *configpb.NamingConvention
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
@@ -258,13 +259,13 @@ type serveLoader interface {
 // conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
 // is a process-global install the caller does once at startup, and doing it inside a function tests
 // call would leak one test's vocabulary into the next.
-func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
 		return nil, nil, err
 	}
 	var extra []check.RuleSource
-	if len(conventions.Rules) > 0 {
+	if len(conventions.GetRules()) > 0 {
 		src, err := naming.Source(conventions)
 		if err != nil {
 			return nil, nil, err
@@ -279,8 +280,8 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		noteSupersededRules(notes, catalog)
 	}
 	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-	return service.NewCheckService(loader, catalog, specs, conventions.Name, loader, projects),
-		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name, projects), nil
+	return service.NewCheckService(loader, catalog, specs, conventions.GetName(), loader, projects),
+		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.GetName(), projects), nil
 }
 
 // serveURLs turns a listen address into URLs a human can click, which the bind address by itself is
