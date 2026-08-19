@@ -14,13 +14,26 @@ const (
 	LocateNotInDesign = "not_in_design"  // the ref/net is absent from the loaded netlist
 )
 
+// LocateModel is the slice of Model that LocateReason reads: whether a ref is a real component,
+// whether a name is a real net, and whether that net is a power rail.
+//
+// Named separately so a caller holding less than a whole Model can still ask. The findings
+// annotation in internal/service is one: it declared a deliberately narrow dependency (the nets
+// alone) and could not explain an unlocatable subject without widening to the full Model, which is
+// how the explanation ended up wired to the query path only (agni issue 366). Model satisfies it.
+type LocateModel interface {
+	HasComponent(refDes string) bool
+	HasNetName(name string) bool
+	IsPowerRail(name string) bool
+}
+
 // LocateReason classifies why the entity named by (kind, subject) may not highlight, from the
 // design Model's indexed reads (never a raw-proto scan): a `#`-ref virtual power/flag symbol, a
 // power/ground rail (no drawn wire on a faithful schematic), or a ref/net not in the design. It
 // returns LocatableNormal ("") for an entity that should highlight. kind is check.KindComponent or
 // check.KindNet; any other kind is LocatableNormal. Over-classifying a rail is safe because the
 // caller only shows the reason when a highlight actually resolves nothing.
-func LocateReason(m Model, kind, subject string) string {
+func LocateReason(m LocateModel, kind, subject string) string {
 	switch kind {
 	case KindComponent:
 		if IsVirtualRef(subject) {

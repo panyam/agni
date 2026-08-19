@@ -16,6 +16,20 @@ type NetSource interface {
 	Nets() []*ir.Net
 }
 
+// LocateSource is NetSource plus the three questions needed to EXPLAIN a subject that will not
+// highlight: is this ref a real component, is this name a real net, and is that net a power rail.
+//
+// Required rather than probed for with a type assertion. A caller that cannot answer them would
+// otherwise silently get the old silence back, and silence is exactly the bug: LOCATE_REASON_
+// UNSPECIFIED means "the entity IS drawn — expected to highlight", so leaving it on an undrawn
+// subject tells the viewer to say nothing. A compile error is the honest way to find out.
+//
+// check.Model satisfies it, which is what both production callers already pass.
+type LocateSource interface {
+	NetSource
+	check.LocateModel
+}
+
 // sheetIndex maps a finding subject to the sheets it appears on (WS9-024): a component or pin
 // subject through the ref_des of the sheet's placements, a net subject through the net names of
 // its wires. Built once per check call from the geometry the viewer renders (the file's default
@@ -110,6 +124,23 @@ func (ix sheetIndex) sheetsFor(s *checkspb.Subject) []string {
 	return ix.comps[s.GetRef()]
 }
 
+// locateReasonProto maps a check locate code to its wire enum. The two vocabularies are declared
+// separately (core states netlist facts, the proto states what a viewer shows), and this is the one
+// place they meet, so the query path and the findings path cannot translate the same code
+// differently.
+func locateReasonProto(code string) checkspb.LocateReason {
+	switch code {
+	case check.LocateVirtual:
+		return checkspb.LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL
+	case check.LocatePowerRail:
+		return checkspb.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE
+	case check.LocateNotInDesign:
+		return checkspb.LocateReason_LOCATE_REASON_NOT_IN_DESIGN
+	default:
+		return checkspb.LocateReason_LOCATE_REASON_NO_GEOMETRY
+	}
+}
+
 // AnnotateSheets fills each finding's sheets in place. It is a post-pass over FindingProto's
 // output rather than a FindingProto parameter, so the one canonical conversion (shared with the
 // CLI's `check --format json`, which calls this with nil geometry for the net channel alone)
@@ -119,7 +150,7 @@ func (ix sheetIndex) sheetsFor(s *checkspb.Subject) []string {
 // geometry misses. Both nil is a no-op (findings keep empty sheets — the pre-WS9-024 behavior the
 // viewer already handles); a net-only channel (design set, geometry nil) still annotates net
 // subjects.
-func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m NetSource) {
+func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource) {
 	if g == nil && len(m.Nets()) == 0 {
 		return
 	}
@@ -130,8 +161,22 @@ func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m N
 		// port with no wire on the shown sheet) has nothing to highlight; flag WHY so the viewer can
 		// say so instead of silently doing nothing (WS7-042c). A drawn bus keeps its sheets and the
 		// default UNSPECIFIED reason, so it highlights as before.
-		if f.GetSubject().GetKind() == check.KindBus && len(f.Sheets) == 0 {
-			f.LocateReason = checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
+		if len(f.Sheets) > 0 {
+			continue // it is drawn somewhere; UNSPECIFIED is the truth and the viewer highlights
 		}
+		// Nothing to locate. Say WHY, for every kind rather than only for buses.
+		//
+		// A bus keeps its own reason because a bus is not in the netlist at all, so the general
+		// classifier would call it NOT_IN_DESIGN, which is true of every bus and useless.
+		if f.GetSubject().GetKind() == check.KindBus {
+			f.LocateReason = checkspb.LocateReason_LOCATE_REASON_BUS_NOT_DRAWN
+			continue
+		}
+		// With no source there is nothing to ask, so the subject stays UNSPECIFIED rather than being
+		// guessed at (the nil-source path this function has always supported).
+		if m == nil {
+			continue
+		}
+		f.LocateReason = locateReasonProto(check.LocateReason(m, f.GetSubject().GetKind(), f.GetSubject().GetRef()))
 	}
 }

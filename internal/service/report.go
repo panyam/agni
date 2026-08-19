@@ -74,7 +74,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 // `check --format report` and the GetCheckReport RPC share one annotation path rather than two
 // copies of the walk. Both g and d nil is a no-op (findings keep empty sheets), same as
 // AnnotateSheets; a net-only channel (design set, geometry nil) still annotates net subjects.
-func AnnotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m NetSource) {
+func AnnotateReport(rep *checkspb.CheckReport, g *geom.SchematicGeometry, m LocateSource) {
 	var all []*checkspb.Finding
 	for _, sec := range rep.GetSections() {
 		for _, rg := range sec.GetRules() {

@@ -1,4 +1,4 @@
-import { For, Show, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { SheetBadges } from "./sheetbadges.jsx";
@@ -82,15 +82,28 @@ function ChecksPanel(props: {
 
   // sections is the render model: either one unlabeled section (flat) or one per group value, each
   // carrying its collapsed+sorted rows and the total finding count (before collapse) for the badge.
-  const sections = (): { value: string | null; rows: CollapsedFinding[]; count: number }[] => {
-    const findings = props.state().findings;
-    if (axis() === "none") return [{ value: null, rows: collapseSorted(findings), count: findings.length }];
-    return groupFindings(findings, axis() as FindingGroupAxis).map(([value, items]) => ({
+  // MEMOIZED, and the memo boundary is the whole point rather than a speed tweak.
+  //
+  // <For> keys by object reference, and collapseSorted/groupFindings mint fresh objects on every
+  // call. As a plain function this re-ran on ANY state push, so selecting a finding (which only
+  // changes `selected`) produced all-new rows, <For> matched nothing, and the entire table was torn
+  // down and rebuilt. Rebuilding the rows resets the scroll container, so clicking a finding halfway
+  // down a long list threw the reader back to the top (agni issue 367).
+  //
+  // findings() isolates the one input that should rebuild rows. A Solid memo compares by reference,
+  // so a state push that leaves the findings array identical stops here and the DOM survives. The
+  // selected row still restyles, because Row reads props.state().selected itself and that is a
+  // fine-grained read rather than a reason to re-create anything.
+  const findings = createMemo(() => props.state().findings);
+  const sections = createMemo((): { value: string | null; rows: CollapsedFinding[]; count: number }[] => {
+    const fs = findings();
+    if (axis() === "none") return [{ value: null, rows: collapseSorted(fs), count: fs.length }];
+    return groupFindings(fs, axis() as FindingGroupAxis).map(([value, items]) => ({
       value,
       rows: collapseSorted(items),
       count: items.length,
     }));
-  };
+  });
 
   const runLabel = () => {
     const s = props.state();
