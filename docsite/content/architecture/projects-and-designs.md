@@ -59,6 +59,15 @@ design: a schematic export to draw it, a board to locate findings on and to chec
 This is [C21](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md) written down per design
 instead of assumed.
 
+What the entry is authoritative for is **which components exist and how they are connected**. That
+is the claim C21 makes and the one the annotation argument supports. It is not a claim about what a
+part *is*. A netlist does not carry do-not-populate status, an approved alternate, or the quantity
+ordered, and where it carries a part number at all it is rarely the copy the team maintains. Those
+attributes come from a bill of materials, joined onto components the entry already established by
+reference designator. A BOM can therefore enrich a component and can be reconciled against the
+netlist so a disagreement is reported, and it never adds or removes one. The component set is the
+entry's.
+
 Companions are declared **file by file**, never inferred from "everything beside the entry". A later
 revision of the netlist sits in the same folder and is a legitimate analysis source in its own
 right; an inferred rule would turn a diff of two revisions into a diff of one against itself.
