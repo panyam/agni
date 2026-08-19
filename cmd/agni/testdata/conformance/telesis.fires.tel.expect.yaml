@@ -1,0 +1,24 @@
+# The Telesis reader through the CLI path. The fixture is synthetic (C10): a translator, a pull-up
+# resistor that is not on the bus, and a connector.
+#
+# power-input-not-driven is the one worth reading. It quantifies over PIN DIRECTION, and this format
+# states direction in exactly one place: the pin-scoped $A_PROPERTIES block's `Pin Type`. A reader
+# that skipped that block would leave every pin UNSPECIFIED, this rule would find nothing, and the
+# run would come back quieter with no error to explain it. Its presence here is what proves the
+# property transpose reaches the rules rather than just the IR.
+fires:
+  single-pin-net:
+    subjects: [DANGLING_STUB]
+    why: "R1.2 is the only endpoint on DANGLING_STUB. Also covers the reader keeping a net the exporter would generate rather than dropping it."
+  i2c-pull-up:
+    subjects: [I2C_SCL]
+    why: "I2C_SCL carries no resistor. R1 exists but sits on VCC_3V3, so a reader that mixed up which net a component's pin lands on would silence this."
+  power-input-not-driven:
+    subjects: [VCC_3V3]
+    why: "U1.2 is declared POWER in the pin-scoped property block, so it reads as a power input, and nothing on VCC_3V3 sources it. This is the direction-dependent rule that only fires if $A_PROPERTIES was read."
+  decoupling-present:
+    subjects: [VCC_3V3]
+    why: "VCC_3V3 is a rail with no capacitor on it."
+  esd-protection:
+    subjects: [I2C_SCL]
+    why: "J1 is a connector, so I2C_SCL is externally exposed and carries no clamp."

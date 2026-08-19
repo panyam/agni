@@ -1,0 +1,67 @@
+$PACKAGES
+
+'RES-10K' ! 'RC0603FR-0710KL' ;  R1 R2 R3,
+R4 R5
+
+'CAP-100N' ! 'GRM188R71H104KA93D' ;  C1
+
+'IC-I2C-MUX' ! 'PCA9548APW' ;  U1
+
+'BGA-PART' ! 'XC7A35T-1FTG256C' ;  U7
+
+'CONN-2' ! '0022232021' ;  J1
+
+! 'MPN-ONLY-1N4148' ;  D1 D2
+
+'RES-4K7' ! 'RC0603FR-074K7L' ! '4.7k' ! '1%' ;  R6 R7
+
+'NotAPackage' 'HasNoBang' ;  R1 R2
+
+$A_PROPERTIES
+
+'Resistance' '10k' ;  R1 R2 R3,
+R4 R5
+
+'Capacitance' '100nF' ;  C1
+
+'Description' 'I2C bus multiplexer' ;  U1
+
+$UNKNOWN_SECTION
+
+'Whatever' 'ShouldBeSkipped' ;  R1
+
+$NETS
+
+'VCC_3V3' ; U1.1 R1.1 C1.1
+
+'GND' ; U1.14 C1.2 J1.2
+
+'D_ANODE' ; D1.1 D2.1 R6.1 R7.1
+
+'I2C_SDA' ; U1.5 R1.2 R2.1 R3.1,
+R4.1 R5.1,
+U7.L1 J1.A
+
+'$1N0001' ; J1.1
+
+$PINS
+
+$A_PROPERTIES
+
+'Pin Type' 'IN' ;  U1.1 U1.5
+
+'Pin Type' 'OUT' ;  U1.14
+
+'Pin Type' 'TERMINAL' ;  R1.1 R1.2 C1.1 C1.2
+
+'Pin Type' 'Terminal' ;  R2.1
+
+'Pin Type' 'BI' ;  R4.2
+
+'Pin Type' 'GROUND' ;  J1.2
+
+'Pin Type' 'WEIRD_FUTURE_VALUE' ;  U7.L1
+
+'PinLabel' 'VCCA' ;  U1.1
+
+$END
