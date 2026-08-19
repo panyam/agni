@@ -312,10 +312,12 @@ func conventionsStub(projectID string) string {
 name: ` + projectID + `
 #
 # lexicon:
-#   rail:
-#     patterns: ["_[0-9]V[0-9]$"]
-#   supply_pin:
-#     patterns: ["^PWRIN"]
+#   net:
+#     rail:
+#       patterns: ["_[0-9]V[0-9]$"]
+#   pin:
+#     supply:
+#       patterns: ["^PWRIN"]
 #
 # rules:
 #   - name: signal-net-naming

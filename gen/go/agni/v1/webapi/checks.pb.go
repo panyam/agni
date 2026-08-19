@@ -8,6 +8,7 @@ package webapi
 
 import (
 	checks "github.com/panyam/agni/gen/go/agni/v1/checks"
+	config "github.com/panyam/agni/gen/go/agni/v1/config"
 	param "github.com/panyam/agni/gen/go/agni/v1/param"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -472,8 +473,8 @@ func (x *GetNamingConventionRequest) GetUri() string {
 }
 
 type GetNamingConventionResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Convention    *NamingConvention      `protobuf:"bytes,1,opt,name=convention,proto3" json:"convention,omitempty"`
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Convention    *config.NamingConvention `protobuf:"bytes,1,opt,name=convention,proto3" json:"convention,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -508,7 +509,7 @@ func (*GetNamingConventionResponse) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_checks_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *GetNamingConventionResponse) GetConvention() *NamingConvention {
+func (x *GetNamingConventionResponse) GetConvention() *config.NamingConvention {
 	if x != nil {
 		return x.Convention
 	}
@@ -1282,7 +1283,7 @@ var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\x92\x01\n" +
+	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\x92\x01\n" +
 	"\x12CheckDesignRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
@@ -1308,7 +1309,7 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"_\n" +
 	"\x1bGetNamingConventionResponse\x12@\n" +
 	"\n" +
-	"convention\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\n" +
+	"convention\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\n" +
 	"convention\"*\n" +
 	"\x16GetExpectationsRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"m\n" +
@@ -1412,7 +1413,7 @@ var file_agni_v1_webapi_checks_proto_goTypes = []any{
 	(*AnalysisConfig)(nil),               // 22: agni.v1.webapi.AnalysisConfig
 	(*checks.Finding)(nil),               // 23: agni.v1.checks.Finding
 	(*checks.CheckReport)(nil),           // 24: agni.v1.checks.CheckReport
-	(*NamingConvention)(nil),             // 25: agni.v1.webapi.NamingConvention
+	(*config.NamingConvention)(nil),      // 25: agni.v1.config.NamingConvention
 	(*param.PartSpec)(nil),               // 26: agni.v1.param.PartSpec
 }
 var file_agni_v1_webapi_checks_proto_depIdxs = []int32{
@@ -1422,7 +1423,7 @@ var file_agni_v1_webapi_checks_proto_depIdxs = []int32{
 	3,  // 3: agni.v1.webapi.CheckDesignResponse.skipped:type_name -> agni.v1.webapi.SkippedRule
 	1,  // 4: agni.v1.webapi.GetCheckReportRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
 	24, // 5: agni.v1.webapi.GetCheckReportResponse.report:type_name -> agni.v1.checks.CheckReport
-	25, // 6: agni.v1.webapi.GetNamingConventionResponse.convention:type_name -> agni.v1.webapi.NamingConvention
+	25, // 6: agni.v1.webapi.GetNamingConventionResponse.convention:type_name -> agni.v1.config.NamingConvention
 	9,  // 7: agni.v1.webapi.GetExpectationsResponse.expectations:type_name -> agni.v1.webapi.RuleExpectation
 	1,  // 8: agni.v1.webapi.ListRulesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
 	21, // 9: agni.v1.webapi.RuleInfo.tags:type_name -> agni.v1.webapi.RuleInfo.TagsEntry

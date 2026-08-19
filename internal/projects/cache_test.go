@@ -21,7 +21,7 @@ func diskTree(t *testing.T) (*FSStore, string) {
 	t.Helper()
 	root := t.TempDir()
 	writeFile(t, root, "proj/project.yaml", "name: gw\ntitle: Gateway\n")
-	writeFile(t, root, "proj/conventions.yaml", "name: gw\nlexicon:\n  rail:\n    patterns: [\"^OLD\"]\n")
+	writeFile(t, root, "proj/conventions.yaml", "name: gw\nlexicon:\n  net:\n    rail:\n      patterns: [\"^OLD\"]\n")
 	writeFile(t, root, "proj/designs/board/design.yaml", "name: board\nentry: board.edn\n")
 	writeFile(t, root, "proj/designs/board/board.edn", "x")
 	return NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)}), root
@@ -83,16 +83,16 @@ func TestEditedConventionsIsSeenImmediately(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.GetConfig().GetConventions().GetLexicon().GetRail().GetPatterns(); len(got) != 1 || got[0] != "^OLD" {
+	if got := p.GetConfig().GetConventions().GetLexicon().GetNet().GetRail().GetPatterns(); len(got) != 1 || got[0] != "^OLD" {
 		t.Fatalf("rail patterns = %v", got)
 	}
 
-	writeFile(t, root, "proj/conventions.yaml", "name: gw\nlexicon:\n  rail:\n    patterns: [\"^NEW\"]\n")
+	writeFile(t, root, "proj/conventions.yaml", "name: gw\nlexicon:\n  net:\n    rail:\n      patterns: [\"^NEW\"]\n")
 	p, err = s.Project(ctx, "projects/gw")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.GetConfig().GetConventions().GetLexicon().GetRail().GetPatterns(); len(got) != 1 || got[0] != "^NEW" {
+	if got := p.GetConfig().GetConventions().GetLexicon().GetNet().GetRail().GetPatterns(); len(got) != 1 || got[0] != "^NEW" {
 		t.Errorf("rail patterns after edit = %v, want the edited vocabulary", got)
 	}
 }

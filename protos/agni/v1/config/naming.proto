@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package agni.v1.config;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/config";
+
+// This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
+//
+// It lives in agni.v1.config rather than agni.v1.webapi so the ENGINE can import it. A naming
+// convention is engine config, not a request shape: core/check/naming compiles it into the lexicon a
+// design is read with. While the only definition was a webapi message, the engine could not depend on
+// it without pulling the web request tier into every consumer (C17), so it carried a hand-written Go
+// twin instead and internal/service converted between them.
+//
+// That twin is why this package exists. The two schemas drifted: the Go side grew gate, source and
+// drain terminal vocabularies (WS3-117) that the wire form had no field for, so a project declaring
+// them had them silently dropped on every path that crossed the converter, which is every path except
+// serve's startup install. BuildRoleVocab then fell back to the built-in names and the run reported
+// against a vocabulary the operator did not ask for. One schema removes the class of bug rather than
+// that one instance of it.
+message NamingConvention {
+  string name = 1; // the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
+  NamingLexicon lexicon = 2;
+  repeated NamingRule rules = 3;
+}
+
+// NamingLexicon overrides the engine's built-in role vocabularies.
+//
+// The vocabularies are GROUPED BY NAME SPACE, because that is the distinction that governs whether a
+// pattern is correct. A supply PIN is named VDD or VIN while a rail NET is named 3V3 or +5V, so a
+// pattern belonging in one is wrong in the other. A flat list of siblings stated that in prose and
+// enforced nothing, and the three vocabularies that went missing were three of the four pin ones.
+// Grouped, adding a pin vocabulary is a field on PinNameVocab rather than a seventh sibling somebody
+// has to remember to thread through by hand.
+message NamingLexicon {
+  NetNameVocab net = 1;
+  PinNameVocab pin = 2;
+  // Component-class name (e.g. "tvs") -> the patterns that mark a part as that class. Its own name
+  // space again: this matches a PART, not a net or a pin.
+  map<string, VocabPatterns> class = 3;
+}
+
+// NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
+// afterwards as a normalized net.role fact (C20).
+message NetNameVocab {
+  VocabPatterns rail = 1;
+  VocabPatterns ground = 2;
+  VocabPatterns feedback = 3;
+}
+
+// PinNameVocab is the vocabulary for a component's PIN names.
+//
+// The three transistor terminals are applied only to parts the class lexicon reads as a transistor,
+// so a house spelling here cannot leak onto an MCU's pins. They are deliberately short and would
+// collide badly if applied to any part: an unanchored "S" matches SDA, SCLK and SENSE.
+message PinNameVocab {
+  VocabPatterns supply = 1; // a component's power-supply INPUT pin names (WS3-072)
+  VocabPatterns gate = 2;   // transistor TERMINAL pin names (WS3-117)
+  VocabPatterns source = 3;
+  VocabPatterns drain = 4;
+}
+
+// VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
+// leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
+// whole set. A project normally teaches the engine additional names rather than discarding what it
+// already knows.
+message VocabPatterns {
+  repeated string patterns = 1;
+  bool replace = 2;
+}
+
+// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
+// any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
+// they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
+// the reader's scoping rather than the author's spelling.
+message NamingRule {
+  string name = 1;
+  string severity = 2; // error | warning | info; empty means warning
+  string why = 3;      // one line of intent, shown in the rule prose
+  repeated string allow = 4;
+  repeated string exempt = 5;
+  bool match_full = 6;
+}

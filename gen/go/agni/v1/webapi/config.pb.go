@@ -7,6 +7,7 @@
 package webapi
 
 import (
+	config "github.com/panyam/agni/gen/go/agni/v1/config"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -51,7 +52,7 @@ type AnalysisConfig struct {
 	// can honour one that arrived on a request. Profiles and parameters are directories of many files,
 	// so they arrive as refs the injected port loads — the same reason a design is a ref rather than an
 	// inlined megabyte.
-	Conventions *NamingConvention `protobuf:"bytes,1,opt,name=conventions,proto3" json:"conventions,omitempty"`
+	Conventions *config.NamingConvention `protobuf:"bytes,1,opt,name=conventions,proto3" json:"conventions,omitempty"`
 	// conventions_uri names the file `conventions` was read from, absent when none was declared.
 	//
 	// It is redundant for COMPOSING a run, which is why the value above exists, and not redundant for a
@@ -137,7 +138,7 @@ func (*AnalysisConfig) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *AnalysisConfig) GetConventions() *NamingConvention {
+func (x *AnalysisConfig) GetConventions() *config.NamingConvention {
 	if x != nil {
 		return x.Conventions
 	}
@@ -193,305 +194,13 @@ func (x *AnalysisConfig) GetSymbolPathUris() []string {
 	return nil
 }
 
-// NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It
-// carries two halves that do different jobs and land in different places.
-//
-// `rules` become catalog rules, namespaced <name>/<rule name>. `lexicon` extends the vocabularies that
-// decide which net names are power rails, grounds, and feedback nodes, and which pin names are
-// supplies. The lexicon is applied to the design READ, not to the catalog, because those roles are
-// resolved once at ingestion — which is also why it can be per-request at all: the vocabulary travels
-// with the read as a value (WS3-106) rather than being installed in a process global a concurrent
-// request would see.
-type NamingConvention struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
-	Lexicon       *NamingLexicon         `protobuf:"bytes,2,opt,name=lexicon,proto3" json:"lexicon,omitempty"`
-	Rules         []*NamingRule          `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NamingConvention) Reset() {
-	*x = NamingConvention{}
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NamingConvention) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NamingConvention) ProtoMessage() {}
-
-func (x *NamingConvention) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NamingConvention.ProtoReflect.Descriptor instead.
-func (*NamingConvention) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *NamingConvention) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *NamingConvention) GetLexicon() *NamingLexicon {
-	if x != nil {
-		return x.Lexicon
-	}
-	return nil
-}
-
-func (x *NamingConvention) GetRules() []*NamingRule {
-	if x != nil {
-		return x.Rules
-	}
-	return nil
-}
-
-// NamingLexicon overrides the engine's built-in role vocabularies. Each dimension is a DISTINCT name
-// space: a supply PIN is named VDD or VIN, while a rail NET is named 3V3 or +5V, so a pattern that
-// belongs in one is wrong in the other.
-type NamingLexicon struct {
-	state         protoimpl.MessageState    `protogen:"open.v1"`
-	Rail          *VocabPatterns            `protobuf:"bytes,1,opt,name=rail,proto3" json:"rail,omitempty"`
-	Ground        *VocabPatterns            `protobuf:"bytes,2,opt,name=ground,proto3" json:"ground,omitempty"`
-	Feedback      *VocabPatterns            `protobuf:"bytes,3,opt,name=feedback,proto3" json:"feedback,omitempty"`
-	SupplyPin     *VocabPatterns            `protobuf:"bytes,4,opt,name=supply_pin,json=supplyPin,proto3" json:"supply_pin,omitempty"`
-	Class         map[string]*VocabPatterns `protobuf:"bytes,5,rep,name=class,proto3" json:"class,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // component-class name (e.g. "tvs") -> the patterns that mark it
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NamingLexicon) Reset() {
-	*x = NamingLexicon{}
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NamingLexicon) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NamingLexicon) ProtoMessage() {}
-
-func (x *NamingLexicon) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NamingLexicon.ProtoReflect.Descriptor instead.
-func (*NamingLexicon) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *NamingLexicon) GetRail() *VocabPatterns {
-	if x != nil {
-		return x.Rail
-	}
-	return nil
-}
-
-func (x *NamingLexicon) GetGround() *VocabPatterns {
-	if x != nil {
-		return x.Ground
-	}
-	return nil
-}
-
-func (x *NamingLexicon) GetFeedback() *VocabPatterns {
-	if x != nil {
-		return x.Feedback
-	}
-	return nil
-}
-
-func (x *NamingLexicon) GetSupplyPin() *VocabPatterns {
-	if x != nil {
-		return x.SupplyPin
-	}
-	return nil
-}
-
-func (x *NamingLexicon) GetClass() map[string]*VocabPatterns {
-	if x != nil {
-		return x.Class
-	}
-	return nil
-}
-
-// VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
-// leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
-// whole set — so a project normally teaches the engine additional names rather than discarding what it
-// already knows.
-type VocabPatterns struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Patterns      []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
-	Replace       bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VocabPatterns) Reset() {
-	*x = VocabPatterns{}
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VocabPatterns) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VocabPatterns) ProtoMessage() {}
-
-func (x *VocabPatterns) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VocabPatterns.ProtoReflect.Descriptor instead.
-func (*VocabPatterns) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *VocabPatterns) GetPatterns() []string {
-	if x != nil {
-		return x.Patterns
-	}
-	return nil
-}
-
-func (x *VocabPatterns) GetReplace() bool {
-	if x != nil {
-		return x.Replace
-	}
-	return false
-}
-
-// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
-// any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
-// they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
-// the reader's scoping rather than the author's spelling.
-type NamingRule struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Severity      string                 `protobuf:"bytes,2,opt,name=severity,proto3" json:"severity,omitempty"` // error | warning | info; empty means warning
-	Why           string                 `protobuf:"bytes,3,opt,name=why,proto3" json:"why,omitempty"`           // one line of intent, shown in the rule prose
-	Allow         []string               `protobuf:"bytes,4,rep,name=allow,proto3" json:"allow,omitempty"`
-	Exempt        []string               `protobuf:"bytes,5,rep,name=exempt,proto3" json:"exempt,omitempty"`
-	MatchFull     bool                   `protobuf:"varint,6,opt,name=match_full,json=matchFull,proto3" json:"match_full,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NamingRule) Reset() {
-	*x = NamingRule{}
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NamingRule) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NamingRule) ProtoMessage() {}
-
-func (x *NamingRule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_config_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NamingRule.ProtoReflect.Descriptor instead.
-func (*NamingRule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *NamingRule) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *NamingRule) GetSeverity() string {
-	if x != nil {
-		return x.Severity
-	}
-	return ""
-}
-
-func (x *NamingRule) GetWhy() string {
-	if x != nil {
-		return x.Why
-	}
-	return ""
-}
-
-func (x *NamingRule) GetAllow() []string {
-	if x != nil {
-		return x.Allow
-	}
-	return nil
-}
-
-func (x *NamingRule) GetExempt() []string {
-	if x != nil {
-		return x.Exempt
-	}
-	return nil
-}
-
-func (x *NamingRule) GetMatchFull() bool {
-	if x != nil {
-		return x.MatchFull
-	}
-	return false
-}
-
 var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\"\xc7\x02\n" +
+	"\x1bagni/v1/webapi/config.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/config/naming.proto\"\xc7\x02\n" +
 	"\x0eAnalysisConfig\x12B\n" +
-	"\vconventions\x18\x01 \x01(\v2 .agni.v1.webapi.NamingConventionR\vconventions\x12'\n" +
+	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\x12'\n" +
 	"\x0fconventions_uri\x18\x02 \x01(\tR\x0econventionsUri\x12!\n" +
 	"\fprofile_uris\x18\x03 \x03(\tR\vprofileUris\x12\x1d\n" +
 	"\n" +
@@ -500,34 +209,7 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\n" +
 	"intent_uri\x18\x06 \x01(\tR\tintentUri\x12\x18\n" +
 	"\aextends\x18\a \x01(\tR\aextends\x12(\n" +
-	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUris\"\x91\x01\n" +
-	"\x10NamingConvention\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
-	"\alexicon\x18\x02 \x01(\v2\x1d.agni.v1.webapi.NamingLexiconR\alexicon\x120\n" +
-	"\x05rules\x18\x03 \x03(\v2\x1a.agni.v1.webapi.NamingRuleR\x05rules\"\x8b\x03\n" +
-	"\rNamingLexicon\x121\n" +
-	"\x04rail\x18\x01 \x01(\v2\x1d.agni.v1.webapi.VocabPatternsR\x04rail\x125\n" +
-	"\x06ground\x18\x02 \x01(\v2\x1d.agni.v1.webapi.VocabPatternsR\x06ground\x129\n" +
-	"\bfeedback\x18\x03 \x01(\v2\x1d.agni.v1.webapi.VocabPatternsR\bfeedback\x12<\n" +
-	"\n" +
-	"supply_pin\x18\x04 \x01(\v2\x1d.agni.v1.webapi.VocabPatternsR\tsupplyPin\x12>\n" +
-	"\x05class\x18\x05 \x03(\v2(.agni.v1.webapi.NamingLexicon.ClassEntryR\x05class\x1aW\n" +
-	"\n" +
-	"ClassEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
-	"\x05value\x18\x02 \x01(\v2\x1d.agni.v1.webapi.VocabPatternsR\x05value:\x028\x01\"E\n" +
-	"\rVocabPatterns\x12\x1a\n" +
-	"\bpatterns\x18\x01 \x03(\tR\bpatterns\x12\x18\n" +
-	"\areplace\x18\x02 \x01(\bR\areplace\"\x9b\x01\n" +
-	"\n" +
-	"NamingRule\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
-	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x10\n" +
-	"\x03why\x18\x03 \x01(\tR\x03why\x12\x14\n" +
-	"\x05allow\x18\x04 \x03(\tR\x05allow\x12\x16\n" +
-	"\x06exempt\x18\x05 \x03(\tR\x06exempt\x12\x1d\n" +
-	"\n" +
-	"match_full\x18\x06 \x01(\bR\tmatchFullB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x10symbol_path_uris\x18\b \x03(\tR\x0esymbolPathUrisB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_config_proto_rawDescOnce sync.Once
@@ -541,30 +223,18 @@ func file_agni_v1_webapi_config_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_config_proto_rawDescData
 }
 
-var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_agni_v1_webapi_config_proto_goTypes = []any{
-	(*AnalysisConfig)(nil),   // 0: agni.v1.webapi.AnalysisConfig
-	(*NamingConvention)(nil), // 1: agni.v1.webapi.NamingConvention
-	(*NamingLexicon)(nil),    // 2: agni.v1.webapi.NamingLexicon
-	(*VocabPatterns)(nil),    // 3: agni.v1.webapi.VocabPatterns
-	(*NamingRule)(nil),       // 4: agni.v1.webapi.NamingRule
-	nil,                      // 5: agni.v1.webapi.NamingLexicon.ClassEntry
+	(*AnalysisConfig)(nil),          // 0: agni.v1.webapi.AnalysisConfig
+	(*config.NamingConvention)(nil), // 1: agni.v1.config.NamingConvention
 }
 var file_agni_v1_webapi_config_proto_depIdxs = []int32{
-	1, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.webapi.NamingConvention
-	2, // 1: agni.v1.webapi.NamingConvention.lexicon:type_name -> agni.v1.webapi.NamingLexicon
-	4, // 2: agni.v1.webapi.NamingConvention.rules:type_name -> agni.v1.webapi.NamingRule
-	3, // 3: agni.v1.webapi.NamingLexicon.rail:type_name -> agni.v1.webapi.VocabPatterns
-	3, // 4: agni.v1.webapi.NamingLexicon.ground:type_name -> agni.v1.webapi.VocabPatterns
-	3, // 5: agni.v1.webapi.NamingLexicon.feedback:type_name -> agni.v1.webapi.VocabPatterns
-	3, // 6: agni.v1.webapi.NamingLexicon.supply_pin:type_name -> agni.v1.webapi.VocabPatterns
-	5, // 7: agni.v1.webapi.NamingLexicon.class:type_name -> agni.v1.webapi.NamingLexicon.ClassEntry
-	3, // 8: agni.v1.webapi.NamingLexicon.ClassEntry.value:type_name -> agni.v1.webapi.VocabPatterns
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	1, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_config_proto_init() }
@@ -578,7 +248,7 @@ func file_agni_v1_webapi_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_config_proto_rawDesc), len(file_agni_v1_webapi_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

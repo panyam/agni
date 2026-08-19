@@ -5,6 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
+import "agni/v1/config/naming.proto";
 import "agni/v1/webapi/config.proto";
 import "agni/v1/param/param.proto";
 
@@ -189,7 +190,7 @@ message GetNamingConventionRequest {
 }
 
 message GetNamingConventionResponse {
-  NamingConvention convention = 1;
+  agni.v1.config.NamingConvention convention = 1;
 }
 
 message GetExpectationsRequest {

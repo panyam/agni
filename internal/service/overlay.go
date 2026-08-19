@@ -71,16 +71,15 @@ func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, 
 	if conv == nil {
 		return o, nil
 	}
-	c := ConventionFromProto(conv)
-	lex, err := naming.BuildLexicon(c)
+	lex, err := naming.BuildLexicon(conv)
 	if err != nil {
 		return Overlay{}, err
 	}
 	o.Lexicon = lex
 	// Convention RULES are optional: a config may carry only a lexicon, which is exactly the shape a
 	// project uses to teach the engine its rail names without adding any naming rule of its own.
-	if len(c.Rules) > 0 {
-		src, err := naming.Source(c)
+	if len(conv.GetRules()) > 0 {
+		src, err := naming.Source(conv)
 		if err != nil {
 			return Overlay{}, err
 		}
@@ -151,72 +150,6 @@ func (o Overlay) ReadOptions() []ReadOption {
 		opts = append(opts, WithSymbolPaths(o.SymbolPaths))
 	}
 	return opts
-}
-
-// ConventionFromProto converts the wire form to the engine's config value. It lives here, not in
-// core/check/naming, because the core must not depend on the wire types; this package already sits
-// between the two.
-func ConventionFromProto(p *webapi.NamingConvention) naming.Config {
-	c := naming.Config{Name: p.GetName()}
-	if lx := p.GetLexicon(); lx != nil {
-		c.Lexicon = &naming.Lexicon{
-			Rail:      vocabFromProto(lx.GetRail()),
-			Ground:    vocabFromProto(lx.GetGround()),
-			Feedback:  vocabFromProto(lx.GetFeedback()),
-			SupplyPin: vocabFromProto(lx.GetSupplyPin()),
-		}
-		if cls := lx.GetClass(); len(cls) > 0 {
-			c.Lexicon.Class = map[string]naming.VocabConfig{}
-			for name, v := range cls {
-				c.Lexicon.Class[name] = vocabFromProto(v)
-			}
-		}
-	}
-	for _, r := range p.GetRules() {
-		c.Rules = append(c.Rules, naming.RuleConfig{
-			Name: r.GetName(), Severity: r.GetSeverity(), Why: r.GetWhy(),
-			Allow: r.GetAllow(), Exempt: r.GetExempt(), MatchFull: r.GetMatchFull(),
-		})
-	}
-	return c
-}
-
-// ConventionProto converts an engine config value to the wire form, for a caller that loaded one from
-// its own source (the CLI reads a YAML file the user named) and now has to send it.
-func ConventionProto(c naming.Config) *webapi.NamingConvention {
-	p := &webapi.NamingConvention{Name: c.Name}
-	if c.Lexicon != nil {
-		p.Lexicon = &webapi.NamingLexicon{
-			Rail:      vocabProto(c.Lexicon.Rail),
-			Ground:    vocabProto(c.Lexicon.Ground),
-			Feedback:  vocabProto(c.Lexicon.Feedback),
-			SupplyPin: vocabProto(c.Lexicon.SupplyPin),
-		}
-		if len(c.Lexicon.Class) > 0 {
-			p.Lexicon.Class = map[string]*webapi.VocabPatterns{}
-			for name, v := range c.Lexicon.Class {
-				p.Lexicon.Class[name] = vocabProto(v)
-			}
-		}
-	}
-	for _, r := range c.Rules {
-		p.Rules = append(p.Rules, &webapi.NamingRule{
-			Name: r.Name, Severity: r.Severity, Why: r.Why,
-			Allow: r.Allow, Exempt: r.Exempt, MatchFull: r.MatchFull,
-		})
-	}
-	return p
-}
-
-func vocabFromProto(v *webapi.VocabPatterns) naming.VocabConfig {
-	return naming.VocabConfig{Patterns: v.GetPatterns(), Replace: v.GetReplace()}
-}
-
-func vocabProto(v naming.VocabConfig) *webapi.VocabPatterns {
-	if len(v.Patterns) == 0 && !v.Replace {
-		return nil
-	}
-	return &webapi.VocabPatterns{Patterns: v.Patterns, Replace: v.Replace}
 }
 
 // ConfigResolver turns the ref-shaped tiers of an AnalysisConfig into the engine inputs a run needs.
@@ -425,7 +358,7 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out.SymbolPaths = append(append([]string{}, out.SymbolPaths...), reqResolved.SymbolPaths...)
 	out.Profiles = out.Profiles || reqResolved.Profiles
 	out.Intent = out.Intent || reqResolved.Intent
-	out.conventionName = ConventionFromProto(req.GetConfig().GetConventions()).Name
+	out.conventionName = req.GetConfig().GetConventions().GetName()
 	// Carry the base convention's NAME through, because that is what makes replacement work:
 	// Overlay.Catalog drops the sources tagged with it before splicing these on. Inheriting whatever
 	// the fallback happened to hold would leave the server's convention running alongside the
