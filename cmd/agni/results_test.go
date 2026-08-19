@@ -50,7 +50,7 @@ func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 	design := isolatedDesign(t, "testdata/conformance/fires.edn")
 	doc := filepath.Join(t.TempDir(), "run.results.json")
 
-	formats := []string{"text", "json", "markdown", "report"}
+	formats := []string{"text", "json", "csv", "markdown", "report"}
 	live := map[string]string{}
 	for _, f := range formats {
 		live[f] = runCLI(t, checkCmd(), "--format", f, design)

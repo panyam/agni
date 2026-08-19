@@ -358,9 +358,9 @@ func checkCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch format {
-			case "text", "json", "markdown", "report":
+			case "text", "json", "csv", "markdown", "report":
 			default:
-				return fmt.Errorf("unknown --format %q (want: text, json, markdown, report)", format)
+				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report)", format)
 			}
 			switch failOn {
 			case "", "error", "warning", "info":
@@ -501,16 +501,21 @@ func checkCmd() *cobra.Command {
 					return err
 				}
 				failFindings = reportFindings(rresp.GetReport())
-			default: // text, json — both need the raw findings
+			default: // text, json, csv — all three need the raw findings
 				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
 				if err != nil {
 					return err
 				}
-				if format == "json" {
+				switch format {
+				case "json":
 					if err := writeCheckDesignJSON(cmd.OutOrStdout(), resp); err != nil {
 						return err
 					}
-				} else {
+				case "csv":
+					if err := writeCheckCSV(cmd.OutOrStdout(), resp.GetFindings()); err != nil {
+						return err
+					}
+				default:
 					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected))
 				}
 				failFindings = resp.GetFindings()
@@ -524,7 +529,7 @@ func checkCmd() *cobra.Command {
 	}
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
-	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | markdown | report")
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
@@ -875,16 +880,29 @@ func diffCmd() *cobra.Command {
 			}
 			rep := diff.Designs(a, b)
 			w := cmd.OutOrStdout()
-			if format == "json" {
+			switch format {
+			case "json":
 				return writeDiffJSON(w, rep)
+			case "csv":
+				return writeDiffCSV(w, rep)
 			}
 			fmt.Fprintf(w, "diff %s -> %s\n\n", args[0], args[1])
 			fmt.Fprint(w, rep.Render(diffListLimit))
 			return nil
 		},
+		// Validated ahead of the read, so a misspelled format fails before two designs are parsed.
+		// This command used to accept any value and silently render text, so `--format jsn` produced
+		// a human summary that a script would then fail to parse for reasons nothing explained.
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			switch format {
+			case "text", "json", "csv":
+				return nil
+			}
+			return fmt.Errorf("unknown --format %q (want: text, json, csv)", format)
+		},
 	}
 	c.Flags().StringVar(&format, "format", "text",
-		"output format: text (human summary) or json (the DiffDesignsResponse wire shape the web API serves)")
+		"output format: text (human summary), json (the DiffDesignsResponse wire shape the web API serves), or csv (one row per change)")
 	return c
 }
 

@@ -28,7 +28,7 @@ Run the rule catalog and report findings. The workhorse. See
 |---|---|
 | `--rule <name>` | run only this rule (repeatable) |
 | `--tag <key>=<value>` | run only rules with this tag, e.g. `--tag category=power` (repeatable) |
-| `--format <fmt>` | `text` (default), `markdown`, `json`, or `report` |
+| `--format <fmt>` | `text` (default), `markdown`, `json`, `csv`, or `report`. `csv` emits one row per finding with a stable header, for a spreadsheet-driven review |
 | `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info`. This is the **severity** axis. For the coverage axis, see `review --fail-on-outcome` and `--min-answered` below |
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
@@ -203,7 +203,7 @@ Structural diff between two revisions, over the IR. See
 
 | flag | what it does |
 |---|---|
-| `--format <fmt>` | `text` (default human summary) or `json` |
+| `--format <fmt>` | `text` (default human summary), `json`, or `csv` (one row per change, with a `change_class` column naming which kind it is) |
 
 ### `render <file>`
 
