@@ -773,3 +773,46 @@ built on the client.
 
 **Reopen if** the corpus grows enough that a 1.6MB index stops sharding usefully, or if typo
 tolerance turns out to matter more than the hosted-dependency cost.
+
+## A finding's context entities are not findings about themselves
+
+`Finding.context` names the entities a message mentions but is not about, so a crystal-load-caps
+finding filed under the crystal can still reach the terminal net it names. The open question
+`#259` left behind was whether the projection of findings onto a selection should then count that
+finding under the context entity too.
+
+It should not. Grouping by subject PARTITIONS the findings, and that partition is what makes "the
+union of what I clicked equals the full pass" a fact rather than a hope. Counting one finding under
+two entities breaks the property the per-entity view rests on, and it would do so silently: the
+per-entity counts would simply stop summing to the run.
+
+Context makes a finding REACHABLE from another entity without making it ABOUT that entity. Those are
+different relations and the panel renders them differently, as a clickable chip beside the message
+rather than as a row in the entity's own list.
+
+Reopening this needs a concrete case where a reader looked for a finding under a context entity and
+was right to expect it there. "It would be convenient" is not that case, because the convenience is
+already served by the chip.
+
+## A tripwire for supply nets the naming vocabulary cannot see was measured and dropped
+
+Proposed as a sibling to `rail-not-classified`, which only fires when a net's NAME declares a voltage.
+The gap looked real: a net feeding a power-input pin, carrying no rail role, whose name declares
+nothing, is invisible to every name-gated rail rule and to that tripwire.
+
+Measured on a real multi-thousand-component board before building it, and the numbers argued against
+it. 91 supply nets were unrecognised against 18 recognised, which looks like a strong case until you
+declare the project's conventions lexicon: rail recognition moves to 62 and `rail-not-classified`
+drops from 45 findings to **zero**. The existing tripwire was already saying the right thing, 45
+times, and the remedy was configuration rather than a new rule.
+
+What remained afterwards was ~36 auto-named nets (`$…` from the exporter) where no lexicon can help,
+and it is not clear what a reader would DO about them: you cannot name a net the exporter generated
+without changing the source schematic.
+
+The measurement also found something better. All 14 of that board's `decoupling-present` findings were
+false positives on switching nodes, gate drives and sense lines, which is a defect in a shipped rule
+rather than a gap in coverage. That became its own ticket.
+
+Reopen if a design shows a large unrecognised-supply population AFTER its conventions are declared,
+which would mean the lexicon is not the answer there.

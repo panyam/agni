@@ -54,6 +54,18 @@ also drops `readers/kicad/testdata/*.kicad_prl`, which `.gitignore` covers and w
 of a change. **Golden SVGs** fail by design on any render-affecting change. Regenerate deliberately
 with `go test ./core/render/ -run Golden -update` and inspect the diff before committing.
 
+**A tutorial run's committed output should no longer go stale on you.** It carries an `#agni-run`
+stamp that is a hash of its inputs, and that hash used to cover every file in the fixture DIRECTORY.
+The tutorial's own `make report` target writes into `examples/tutorial-project/`, gitignored, so
+anyone who had followed the tutorial hashed two files nobody else had and every gate run rewrote a
+committed output they had not touched. `git checkout --` on it became part of the routine.
+
+It now hashes the fixture's git-TRACKED files, so a committed stamp is valid in every checkout (agni
+issue 357). The general rule, if you add another generated artifact of this kind: a value written INTO
+a committed file has to be a function of committed content, or no single value can be correct for two
+people at once. Regenerating and committing is the fix that looks right and only moves the staleness
+to whoever has not run the thing yet.
+
 `kicad-cli` writes a `.kicad_prl` beside ANY board it reads, not only under test, so a
 directory-wide `git add` will sweep them up. The ignore rule is deliberately SCOPED to
 `readers/kicad/testdata/` rather than a blanket `*.kicad_prl`, because the two under

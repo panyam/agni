@@ -158,3 +158,18 @@ as real checks and went green under a deliberately broken `skipRefDes`, while th
 against literals went red. It is the same defect as the heuristic above wearing better clothes: the
 test and the code agree by construction. Assert against literals, or against a set the production
 path produced, and let only the red-check tell you which kind you wrote.
+
+**`scrollTop` is always 0 under jsdom, so a scroll assertion passes with the bug present.** jsdom has
+no layout engine, so nothing scrolls and nothing has a size. A panel that threw the reader back to the
+top on every click would have satisfied `expect(el.scrollTop).toBe(prev)` perfectly. Assert the CAUSE
+instead: the scroll reset because the rows were recreated, and node identity across the action
+(`expect(after[i]).toBe(before[i])`) is visible in jsdom and goes red on the real defect. The general
+form is that a symptom needing a browser often has a cause that does not, and the cause is the better
+assertion anyway because it names why.
+
+**A test that SKIPS asserts nothing, and reads like a pass.** A browser case written with
+`if (findings.length !== 1) t.Skip(...)` for the fixture it needed reported PASS in the suite output
+and had never executed its assertions. Skips are for a genuinely absent capability (no browser on the
+machine), never for a fixture that did not produce the state you wanted: that is a setup bug, and
+skipping hides it behind the same green tick as a real pass. Find the input that reaches the branch,
+or the test does not exist.
