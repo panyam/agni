@@ -54,7 +54,7 @@ findings by rule:
   input-protection       1
   test-point-coverage    2
 
-  [error]   i2c-pull-up: SCL (I2C net has no pull-up resistor)
+  [error]   i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
   [warning] input-protection: VBUS (connector feeds a power input with no fuse or TVS in the path)
   [info]    esd-protection: USB_D+ (externally-exposed signal net has no ESD protection)
   ...

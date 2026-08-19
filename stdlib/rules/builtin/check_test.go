@@ -42,6 +42,10 @@ func ruleFixture() *ir.Design {
 			tnet("GND", "R1.2", "R2.2"),           // ok
 			tnet("SDA", "U1.5"),                   // I2C, no pull-up -> flag
 			tnet("SCL", "U1.6", "R3.1"),           // I2C, R3 pull-up -> ok
+			// R3's OTHER end. A pull-up is a resistor to a rail, and before agni issue 375 this
+			// fixture drew only the bus-side leg, which is precisely the assumption the rule was
+			// making. Without this net the "R3 pull-up" comment describes a resistor to nowhere.
+			tnet("+3V3", "R3.2", "U1.1"),
 		},
 	}
 }

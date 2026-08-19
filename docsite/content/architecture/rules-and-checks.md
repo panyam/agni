@@ -415,7 +415,7 @@ rule i2c-pull-up (error):
   for net N where N.name matches "SDA|SCL":
     require exists pin P in N.connections
       where P.component.part_type in {"R", "Resistor"}
-    else report N "I2C net has no pull-up resistor"
+    else report N "I2C net has no pull-up resistor to a rail"
 
 rule gnd-test-point (error):
   for net N where N.name == "GND":

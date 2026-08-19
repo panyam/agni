@@ -15,7 +15,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [duplicate-net-name](duplicate-net-name/) | built-in | warning | Two electrically distinct nets carry the same name. |
 | [duplicate-ref-des](duplicate-ref-des/) | built-in | error | A reference designator is claimed by more than one distinct physical part. |
 | [floating-input](floating-input/) | built-in | warning | An input pin sits on a net with no driver and no pull, so its level is undefined. |
-| [i2c-pull-up](i2c-pull-up/) | built-in | error | An I2C net (SDA/SCL) has no pull-up resistor. |
+| [i2c-pull-up](i2c-pull-up/) | built-in | error | An I2C net (SDA/SCL) reaches no rail through a pull-up resistor. |
 | [label-alias-conflict](label-alias-conflict/) | built-in | warning | One net carries two different sheet-scoped labels in the same scope. |
 | [led-polarity](led-polarity/) | built-in | error | An LED's anode sits on ground and its cathode on a power rail, mounted backwards. |
 | [nc-pin-connected](nc-pin-connected/) | built-in | error | A pin marked no-connect is wired into a net with other members. |

@@ -8,13 +8,18 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// i2cPullUp flags an I2C net (SDA/SCL) with no pull-up resistor. See Detail.
+// i2cPullUp flags an I2C net (SDA/SCL) whose bus reaches no rail through a resistor. See Detail.
+//
+// It used to ask whether ANY resistor touched the net, which a series termination or isolation
+// resistor satisfies, so a bus with no pull-up at all passed an error-severity check (agni issue
+// 375). The question is about the resistor's OTHER end, which is why it is a walk rather than a
+// membership test.
 var i2cPullUp = &check.Rule{
 	Name:       "i2c-pull-up",
 	Severity:   "error",
-	Summary:    "An I2C net (SDA/SCL) has no pull-up resistor.",
+	Summary:    "An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.",
 	Impact:     "I2C pins are open-drain: they can only pull the line low. With no pull-up the line never returns high, so the bus is stuck and nothing on it communicates. It is a total-function failure and a recurring field bug.",
-	Primitives: []string{"select", "pattern", "traverse", "exists"},
+	Primitives: []string{"select", "pattern", "traverse", "exists", "reach"},
 	Reads:      []string{"net.names", "on_net", "component.class"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
@@ -24,11 +29,9 @@ var i2cPullUp = &check.Rule{
 	Detail: ruleDoc("i2c-pull-up"),
 	Eval: func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			return isI2C(n.Name) && !check.Exists(n.Connections, func(c *ir.Connection) bool {
-				return m.HasClass(c.ComponentRef, check.ClassResistor)
-			})
+			return isI2C(n.Name) && !check.PullUpReachesRail(m, n)
 		})
-		return check.Report(bad, check.NetFinding("I2C net has no pull-up resistor"))
+		return check.Report(bad, check.NetFinding("I2C net has no pull-up resistor to a rail"))
 	},
 }
 
@@ -46,11 +49,16 @@ func isI2C(name string) bool {
 }
 
 // i2cPullUpSpec is the rule's declarative twin (WS3-003).
+//
+// The walk is an FFI rather than a composition of collections. The spec language reaches a net's
+// connections but not a connection's component's OTHER nets, so the second hop has nowhere to come
+// from and the twin could only ever have restated the membership test the Go side stopped making.
+// Issue 374 designs the surface that would make this expressible without an escape hatch.
 var i2cPullUpSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
 		check.Match{T: check.Fact{Name: "net.names"}, Pattern: "(?i)(^|[^A-Z])(SDA|SCL)([^A-Z]|$)"},
-		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "resistor"}}}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "pullup_reaches_rail"}}},
 	}},
-	Message: "I2C net has no pull-up resistor",
+	Message: "I2C net has no pull-up resistor to a rail",
 }

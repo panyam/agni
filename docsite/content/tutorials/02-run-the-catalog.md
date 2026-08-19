@@ -13,7 +13,7 @@ rungs 4 through 8.
 
 ## Reading one finding
 
-Take `[error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor)`. It has four parts.
+Take `[error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)`. It has four parts.
 
 The **severity** is `error`. The **rule** is `i2c-pull-up`. The **subject** is the net `I2C_SCL`,
 naming the specific thing on your board the rule is talking about. The **reason** in parentheses
@@ -47,7 +47,7 @@ agni check designs/gateway/gateway.edn --format json
     "ref": "I2C_SCL",
     "netId": "601209543ef5"
   },
-  "message": "I2C net has no pull-up resistor",
+  "message": "I2C net has no pull-up resistor to a rail",
   "inconclusive": false,
   "provenance": {
     "sourceFile": "designs/gateway/gateway.edn",

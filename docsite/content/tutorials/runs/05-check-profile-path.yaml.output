@@ -1,4 +1,4 @@
-#agni-run 33c1528334b67ca2
+#agni-run 3adb7a3c0ccd89bf
 findings by rule:
   decoupling-present     1
   esd-protection         2
@@ -22,8 +22,8 @@ first 18:
   [error] gateway-profiles/can-host-incomplete: U4 (CAN host U4 declares the interface but is missing required signal STB)
   [warning] gateway/signal-net-naming: XTAL_IN (net name matches no allowed naming pattern)
   [warning] gateway/signal-net-naming: XTAL_OUT (net name matches no allowed naming pattern)
-  [error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor)
-  [error] i2c-pull-up: I2C_SDA (I2C net has no pull-up resistor)
+  [error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)
+  [error] i2c-pull-up: I2C_SDA (I2C net has no pull-up resistor to a rail)
   [warning] intent/voltage-domain-mismatch: PMIC_IO_1V8 (rail "PMIC_IO_1V8" is declared in voltage domain "core" (3.3V) but its name declares 1.8V)
   [warning] profile-overlay/can-esd-missing: CAN1_CANH (CAN signal net CAN1_CANH is exposed on a connector with no ESD protection in reach)
   [warning] profile-overlay/can-esd-missing: CAN1_CANL (CAN signal net CAN1_CANL is exposed on a connector with no ESD protection in reach)

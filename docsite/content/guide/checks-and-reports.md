@@ -22,7 +22,7 @@ findings by rule:
   i2c-pull-up            1
 
 first 1:
-  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor)
+  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
 
 1 finding(s) total
 ```
@@ -61,8 +61,8 @@ The default text output is a per-rule summary. Three other forms via `--format`:
 
   ## error
 
-  ### i2c-pull-up — An I2C net (SDA/SCL) has no pull-up resistor.
-  - `SCL` — I2C net has no pull-up resistor (showcase.fires.kicad_sch)
+  ### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.
+  - `SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
   ```
 
 - **`json`**: one object per finding, for tooling (see provenance below).
