@@ -69,8 +69,8 @@ Add `--symbol-path` back and re-run:
 
 | subject | rule | message |
 |---|---|---|
-| I2C_SCL | `i2c-pull-up` | I2C net has no pull-up resistor |
-| I2C_SDA | `i2c-pull-up` | I2C net has no pull-up resistor |
+| I2C_SCL | `i2c-pull-up` | I2C net has no pull-up resistor to a rail |
+| I2C_SDA | `i2c-pull-up` | I2C net has no pull-up resistor to a rail |
 | CAN1_CANH | `profile-overlay/can-signal-missing` | CAN interface is missing required signal STB |
 | PMIC_MAIN_12V0 | `decoupling-present` | power rail has no decoupling capacitor |
 | XTAL_IN | `gateway/signal-net-naming` | net name matches no allowed naming pattern |

@@ -204,6 +204,10 @@ func TestI2CPullUpSeesNonRDigitResistors(t *testing.T) {
 		},
 		Nets: []*ir.Net{
 			tnet("SDA", "U1.5", "RN1.1"),
+			// RN1's rail-side leg. The point of this test is that RN1 is recognised as a
+			// resistor despite the non-R-digit ref-des, so it has to be a real pull-up (two ends,
+			// one on a rail) or it is testing the old membership assumption instead.
+			tnet("VCC", "RN1.2"),
 		},
 	}
 	for _, f := range check.RunDesign(d) {

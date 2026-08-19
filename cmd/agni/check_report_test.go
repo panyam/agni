@@ -29,7 +29,7 @@ func TestCheckMarkdown(t *testing.T) {
 		"## error",
 		"## warning",
 		"## info",
-		"### i2c-pull-up — An I2C net (SDA/SCL) has no pull-up resistor.",
+		"### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.",
 		"### unconnected-component — A component appears on no net (none of its pins land on any signal).",
 		"### single-pin-net — A net connects to fewer than two pins (a floating stub), and is not an intentional no-connect.",
 		"- `SDA` — I2C net has no pull-up resistor",

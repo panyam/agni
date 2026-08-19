@@ -390,3 +390,113 @@ func ZenerReachable(m Model, n *ir.Net) bool {
 	}
 	return false
 }
+
+// PullUpReachHops bounds the walk from an I2C bus to the rail its pull-up returns it to.
+//
+// The number is ELECTRICAL, not a search budget, like the other hop constants in reach.go. A pull-up
+// sitting directly on the bus is one crossing. A bus segment separated from its pull-up by a series
+// isolation or termination resistor is two, which is an ordinary topology and the reason this rule
+// cannot ask at one. Two series elements between a bus and its rail is three and already unusual.
+// Past that the accumulated series resistance is comparable to the pull-up itself, so the node no
+// longer returns high in the time the bus needs and there is nothing left worth crediting: a pull-up
+// four resistors away does not pull this bus up. Widening it would start passing buses that are
+// electrically unheld, which is the silent direction.
+const PullUpReachHops = 3
+
+// PullUpReachesRail reports whether a rail is reachable from n by crossing RESISTORS only, within
+// PullUpReachHops, without passing through ground.
+//
+// WHY THIS DOES NOT USE Reach. The shared series walk drops any bus-like net outright
+// (`if IsBusLike(m, o) { continue }`), and IsBusLike counts a net with more than maxWalkFan
+// connections. A supply rail on a real board is exactly that, so Reach cannot arrive at the thing a
+// pull-up terminates on. The exclusion is right for the protection rules, which walk THROUGH series
+// paths and must not leak into a rail; it is wrong for a question whose whole answer is "did we land
+// on a rail". Rather than widen a shared predicate for one caller, this walk keeps the rail as a
+// legal DESTINATION and still refuses to continue through one.
+//
+// Resistors only. A ferrite or a fuse is a legitimate series element elsewhere, but a pull-up is a
+// resistor to a rail by definition, and crediting a bead would start passing buses on the strength
+// of a filter.
+//
+// Ground is never crossed. A resistor to ground is a pull-DOWN, and counting it would pass exactly
+// the bus this rule exists to catch. Ground is also a plane, so traversing it would make everything
+// reachable from everything.
+func PullUpReachesRail(m Model, n *ir.Net) bool {
+	if n == nil {
+		return false
+	}
+	resistorNets := resistorNetIndex(m)
+
+	type step struct {
+		net   *ir.Net
+		depth int
+		used  map[string]bool
+	}
+	seen := map[string]bool{n.Name: true}
+	queue := []step{{net: n, depth: 0, used: map[string]bool{}}}
+
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if cur.depth >= PullUpReachHops {
+			continue
+		}
+		for _, c := range cur.net.Connections {
+			ref := c.ComponentRef
+			// A resistor may appear once per PATH, not once per walk: two bus segments can
+			// legitimately reach the same rail through different resistors.
+			if cur.used[ref] || !m.HasClass(ref, ClassResistor) {
+				continue
+			}
+			for _, other := range resistorNets[ref] {
+				if other.Name == cur.net.Name || m.IsGroundNet(other) {
+					continue
+				}
+				if m.IsRailNet(other) {
+					return true
+				}
+				if seen[other.Name] {
+					continue
+				}
+				seen[other.Name] = true
+				used := map[string]bool{ref: true}
+				for k := range cur.used {
+					used[k] = true
+				}
+				queue = append(queue, step{net: other, depth: cur.depth + 1, used: used})
+			}
+		}
+	}
+	return false
+}
+
+// resistorNetIndex maps a resistor's ref-des to the distinct nets it touches.
+//
+// Built per call rather than read off the model: the model's equivalent index is unexported and
+// covers every pass class, and a rule-local build is one pass over the nets. The cost is bounded by
+// the number of I2C nets on the design, which is single digits to low tens on a real board.
+func resistorNetIndex(m Model) map[string][]*ir.Net {
+	idx := map[string][]*ir.Net{}
+	for _, n := range m.Nets() {
+		for _, c := range n.Connections {
+			ref := c.ComponentRef
+			if !m.HasClass(ref, ClassResistor) {
+				continue
+			}
+			if slicesContainsNet(idx[ref], n.Name) {
+				continue
+			}
+			idx[ref] = append(idx[ref], n)
+		}
+	}
+	return idx
+}
+
+func slicesContainsNet(ns []*ir.Net, name string) bool {
+	for _, n := range ns {
+		if n.Name == name {
+			return true
+		}
+	}
+	return false
+}
