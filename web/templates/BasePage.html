@@ -66,6 +66,15 @@
     #readout { position: absolute; left: 8px; top: 8px; padding: 4px 8px; background: rgba(255, 255, 255, 0.85); border: 1px solid #ccc; border-radius: 4px; pointer-events: none; }
     .expect-caption { position: absolute; left: 8px; bottom: 8px; z-index: 10; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; pointer-events: none; display: none; }
     .expect-caption.on { display: block; }
+    /* The incomplete-drawing notice (agni issue 354). Top of the canvas rather than the bottom, and
+       amber rather than red: the drawing is not wrong, it is short, and the reader has to see that
+       before they start clicking things that will not respond.
+       top is 48px, not 8px, because the readout and the control bar already occupy the first ~43px of
+       the canvas and a full-width strip at 8px paints straight over both. Measured, not guessed: the
+       controls run to 43px below the canvas top and the readout to 34px. The browser suite asserts
+       the clearance, because jsdom has no layout and cannot see a strip covering anything. */
+    .undrawn-note { position: absolute; left: 8px; right: 8px; top: 48px; z-index: 10; padding: 6px 10px; border-radius: 4px; font-size: 12px; background: rgba(227, 154, 27, 0.14); color: #7a4f04; border: 1px solid #e39a1b; pointer-events: none; display: none; }
+    .undrawn-note.on { display: block; }
     .expect-caption.pass { background: rgba(34, 197, 94, 0.15); color: #166534; border: 1px solid #22c55e; }
     .expect-caption.fail { background: rgba(239, 68, 68, 0.15); color: #991b1b; border: 1px solid #ef4444; }
     .tree, .children { list-style: none; margin: 0; padding: 0; }

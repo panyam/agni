@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/geomath"
 	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/readers/kicad"
 )
@@ -191,7 +192,15 @@ func (l *Loader) FaithfulGeometry(path string) (*geom.SchematicGeometry, error) 
 	if f == nil || f.Geometry == nil {
 		return nil, faithfulUnavailable(ext)
 	}
-	return f.Geometry(l, path)
+	g, err := f.Geometry(l, path)
+	if err != nil {
+		return nil, err
+	}
+	// What this read could not draw, recorded here because this is where the geometry is produced and
+	// where the symbol libraries were (or were not) found. Computing it downstream would mean a second
+	// join that can disagree with the renderer's (agni issue 354).
+	geomath.MarkUndrawn(g)
+	return g, nil
 }
 
 // ResolveGeometry produces the geometry to render for the chosen layout. LayoutFaithful

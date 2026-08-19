@@ -66,7 +66,7 @@ func renderCmd() *cobra.Command {
 			"computes positions from the netlist IR, which works for every format agni reads.\n" +
 			"--format selects the output: svg (default) or pack (a PackedSheet for the WebGL viewer).",
 		Args: cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			file := args[0]
 			// --compare benchmarks every auto-layout on this design and prints their quality
 			// scores side by side, so choosing a layout is a comparison, not a guess. No render.
@@ -130,6 +130,11 @@ func renderCmd() *cobra.Command {
 			if len(g.Sheets) == 0 {
 				return fmt.Errorf("no sheets in %s", file)
 			}
+			// Say what this render could not draw, BEFORE writing it. A render that lost its symbols
+			// still produces a complete-looking sheet: every ref des, every wire and the title block
+			// draw, and only the component bodies are missing, so nothing on the page says the drawing
+			// is short (agni issue 354).
+			noteUndrawn(cmd.ErrOrStderr(), g)
 			if stats {
 				return writeGeometryStats(os.Stdout, g)
 			}
@@ -256,6 +261,44 @@ func parseHighlightShape(v string) (geom.HighlightShape, error) {
 	default:
 		return 0, fmt.Errorf("unknown shape %q (want outline|rect|circle|path)", v)
 	}
+}
+
+// noteUndrawn reports the placements a render could not draw, to stderr so a redirected SVG or a
+// `--format json` document on stdout stays clean.
+//
+// It names the missing LIBRARIES rather than listing every placement, because one missing file
+// commonly costs every part drawn from it and forty identical lines bury that single cause. The ref
+// des count is the blast radius, which is the number a reader needs to judge whether the drawing is
+// worth reading at all.
+//
+// Silent when nothing is undrawn. A note on every complete render is a note nobody reads.
+func noteUndrawn(w io.Writer, g *geom.SchematicGeometry) {
+	u := g.GetUndrawn()
+	if len(u) == 0 {
+		return
+	}
+	byLib := map[string]int{}
+	var order []string
+	for _, p := range u {
+		want := p.GetCellRef()
+		if lib := p.GetLibraryRef(); lib != "" {
+			want = lib + ":" + want
+		}
+		if _, seen := byLib[want]; !seen {
+			order = append(order, want)
+		}
+		byLib[want]++
+	}
+	sort.Strings(order)
+	total := 0
+	for _, sh := range g.GetSheets() {
+		total += len(sh.GetPlacements())
+	}
+	fmt.Fprintf(w, "warning: %d of %d placements have no symbol and were not drawn; their reference designators still appear\n", len(u), total)
+	for _, want := range order {
+		fmt.Fprintf(w, "  %s (%d placement(s))\n", want, byLib[want])
+	}
+	fmt.Fprintf(w, "  resolve with --symbol-path <dir>, a sym-lib-table, or the design descriptor's `symbols` key\n")
 }
 
 // writeReport builds the conversion report for the file's netlist under the chosen symbol source

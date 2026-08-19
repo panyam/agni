@@ -7,6 +7,7 @@ import (
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // Placement is what a layout strategy produces: a position for each component node, keyed by
@@ -104,7 +105,12 @@ func LayoutWith(d *ir.Design, name string, opts ...Option) (*geom.SchematicGeome
 	if err != nil {
 		return nil, err
 	}
-	return assemble(d, s.Place(d), resolveConfig(opts).source), nil
+	g := assemble(d, s.Place(d), resolveConfig(opts).source)
+	// An auto-layout can come up short too: SymbolsFaithful draws the design's own symbols, and a
+	// library that did not resolve leaves the same bodyless placement the faithful path does
+	// (agni issue 354).
+	geomath.MarkUndrawn(g)
+	return g, nil
 }
 
 // assemble turns node positions into a full netlist-graph geometry: one box symbol per

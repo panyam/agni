@@ -653,3 +653,32 @@ func uriStr(mount, p string) string {
 	}
 	return u.String()
 }
+
+// TestGetDesignReportsUndrawnPlacements: a viewer cannot tell a complete sheet from a bodyless one by
+// looking at it, because a render that lost its symbols still draws every reference designator, every
+// wire and the title block. The shortfall has to arrive as data (agni issue 354).
+func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
+	g := twoSheetGeom()
+	g.Undrawn = []*geom.UndrawnPlacement{{RefDes: "U1", CellRef: "MCU", LibraryRef: "Acme", SheetId: "P1"}}
+	svc := NewDesignService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetUndrawn()) != 1 {
+		t.Fatalf("undrawn = %d, want 1", len(resp.GetUndrawn()))
+	}
+	if u := resp.GetUndrawn()[0]; u.GetRefDes() != "U1" || u.GetCellRef() != "MCU" {
+		t.Errorf("undrawn = %+v, want the placement and the symbol it wanted", u)
+	}
+
+	// The common case, and the one that keeps a banner worth reading.
+	clean := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	got, err := clean.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.GetUndrawn()) != 0 {
+		t.Errorf("a complete geometry must report nothing undrawn, got %+v", got.GetUndrawn())
+	}
+}

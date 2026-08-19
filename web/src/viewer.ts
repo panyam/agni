@@ -17,6 +17,7 @@ import type { ViewerLocation } from "./router.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, subjectsToSpecs, findingSpec, entitySpecs, focusStack, contextFromWire } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
+import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
@@ -102,6 +103,10 @@ export interface ViewSink {
   // set-equality counts and the fires:{} silent assertion, as a canvas strip. null hides it (no
   // sidecar). The anchored assertions render as the status-colored highlight overlay, not here.
   expectationCaption: (caption: ExpectationCaption | null) => void;
+  // undrawnNote receives "this drawing is incomplete" for the open design, or null when it is
+  // complete (agni issue 354). A render that lost its symbols still draws every ref des and wire, so
+  // this is the only thing on screen that can say the sheet is short.
+  undrawnNote: (note: UndrawnNote | null) => void;
   // rules receives the rule catalog + active selection.
   rules: RulesView;
   // report receives the auto-layout conversion report, or null to hide the panel (the
@@ -370,6 +375,9 @@ export class ViewerPresenter {
       if (!keepLayout && newFile) this.faithfulSymbols = this.availableLayouts.includes("faithful");
       this.summary = summaryLine(path, d.name, d.layout, d.sourceFormat, d.componentCount, d.netCount);
       this.views.summary(this.summary);
+      // Pushed with the summary because it is a property of THIS read: the layout the server resolved
+      // either found its symbols or did not, and a reader needs that before trusting the drawing.
+      this.views.undrawnNote(undrawnNote(d.undrawn));
       // If the newly opened file can't render natively but we're in native mode, fall back to
       // SVG (the always-works renderer) so switching files doesn't error.
       if (!d.nativeAvailable && this.mode === "native") this.mode = "svg";

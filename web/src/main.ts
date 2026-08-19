@@ -35,6 +35,7 @@ import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
+import { undrawnStrip } from "./undrawn.js";
 import { fillEntityQuery } from "./selection.js";
 import { baseName, noteOpen } from "./recents.js";
 
@@ -111,6 +112,7 @@ class AppRoot extends BaseComponent {
     // WS9-045: the conformance expectation verdict strip (a plain-DOM sink, like the busy overlay;
     // hidden on any design without a sidecar).
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
+    const setUndrawnNote = undrawnStrip(document.getElementById("undrawn-note"));
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
@@ -365,6 +367,7 @@ class AppRoot extends BaseComponent {
         controls: controls.view,
         findings: findings.view,
         expectationCaption: setExpectCaption,
+        undrawnNote: setUndrawnNote,
         rules: rules.view,
         report: setReport,
         // Every location report also feeds the Compare chrome: the open design is side A of any

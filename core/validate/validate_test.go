@@ -75,3 +75,24 @@ func TestGeometryStructure(t *testing.T) {
 		}
 	}
 }
+
+// Resolved must agree with what the RENDERER draws, because a shortfall report built on it names
+// placements a reader is told did not draw (agni issue 354).
+//
+// It used to join on (cell_ref, library_ref) alone while the renderer falls back to cell-only, so a
+// placement naming no library counted as unresolved here and drew perfectly well there. A banner
+// built on the old count would have reported a shortfall on a complete drawing.
+func TestResolvedAgreesWithTheRendererFallbacks(t *testing.T) {
+	g := &geom.SchematicGeometry{
+		Symbols: []*geom.SymbolDef{{CellRef: "R", LibraryRef: "Device", ViewRef: "v1"}},
+		Sheets: []*geom.SheetGeometry{{Id: "s1", Placements: []*geom.SymbolPlacement{
+			{RefDes: "R1", CellRef: "R", LibraryRef: "Device", ViewRef: "v1"}, // exact
+			{RefDes: "R2", CellRef: "R", LibraryRef: "Device", ViewRef: "x"},  // view fallback
+			{RefDes: "R3", CellRef: "R"},                                      // cell-only fallback
+			{RefDes: "R4", CellRef: "NOSUCH"},                                 // genuinely unresolved
+		}}},
+	}
+	if got := Resolved(g); got != 3 {
+		t.Errorf("Resolved = %d, want 3; every placement the renderer draws must count as resolved", got)
+	}
+}

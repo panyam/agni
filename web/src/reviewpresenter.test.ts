@@ -116,6 +116,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
       controls: { setState: vi.fn() },
       findings: { setState: vi.fn(), setFindingLocateNote: vi.fn() },
       expectationCaption: vi.fn(),
+      undrawnNote: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
       query: stubQueryView(),

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,5 +132,58 @@ func TestRenderResolvesProjectSymbolLibrary(t *testing.T) {
 	// LOOKS complete. If this stops holding, the test above is no longer measuring what it claims.
 	if !strings.Contains(svg, "C1") {
 		t.Error("expected the sheet's reference designators to draw; the fixture or the annotation pass changed")
+	}
+}
+
+// TestRenderNotesWhatItCouldNotDraw is agni issue 354 at the CLI.
+//
+// A render that lost its symbols does not look broken. Every reference designator, every wire and the
+// title block still draw, so the sheet reads as complete and only the component bodies are missing.
+// Nothing on the page says so, and the honest reading of a sheet showing C1 that will not respond to a
+// click is "the tool knows nothing about C1", which is false.
+//
+// Asserted on stderr rather than the SVG: the note is deliberately not IN the drawing, so that a
+// redirected document stays clean.
+func TestRenderNotesWhatItCouldNotDraw(t *testing.T) {
+	// The same schematic, away from the symbol library its project declares. This is what a checkout
+	// without the library, or a design opened outside its project, looks like.
+	dir := t.TempDir()
+	src, err := os.ReadFile("../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	orphan := filepath.Join(dir, "gateway.kicad_sch")
+	if err := os.WriteFile(orphan, src, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var errOut bytes.Buffer
+	cmd := renderCmd()
+	cmd.SetErr(&errOut)
+	runCLI(t, cmd, orphan, "--format", "svg", "--symbols", "faithful", "-o", filepath.Join(dir, "out.svg"))
+	got := errOut.String()
+	if !strings.Contains(got, "not drawn") {
+		t.Errorf("a render that drew no bodies must say so on stderr, got:\n%s", got)
+	}
+	// The blast radius, which is what tells a reader whether the drawing is worth reading at all.
+	if !strings.Contains(got, "19 of 19") {
+		t.Errorf("the note must count what was lost against the total, got:\n%s", got)
+	}
+	// What to do about it. A warning naming no remedy is a warning a reader cannot act on.
+	if !strings.Contains(got, "--symbol-path") {
+		t.Errorf("the note must name how to resolve it, got:\n%s", got)
+	}
+}
+
+// The positive control, and the one that keeps the warning worth reading. The SAME schematic in its
+// project resolves every symbol, and a note on a complete render would appear on every render.
+func TestRenderIsSilentWhenEverythingDraws(t *testing.T) {
+	var errOut bytes.Buffer
+	cmd := renderCmd()
+	cmd.SetErr(&errOut)
+	runCLI(t, cmd, "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch",
+		"--format", "svg", "--symbols", "faithful", "-o", filepath.Join(t.TempDir(), "out.svg"))
+	if strings.Contains(errOut.String(), "not drawn") {
+		t.Errorf("a complete render must say nothing about undrawn placements, got:\n%s", errOut.String())
 	}
 }

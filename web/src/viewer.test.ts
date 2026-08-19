@@ -12,7 +12,20 @@ import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 function harness() {
   // getDesign echoes the requested layout (empty -> faithful) so the presenter's adopted
   // layout reflects the request, as the real server's effective-layout does.
-  const getDesign = vi.fn(async (req: { layout?: string }) => ({
+  // undrawn is OPTIONAL here exactly as it is on the wire: a response that omits it means a complete
+  // drawing, and every existing override in this file predates the field (agni issue 354).
+  type DesignReply = {
+    name: string;
+    layout: string;
+    sourceFormat: string;
+    componentCount: number;
+    netCount: number;
+    sheets: { id: string; name: string }[];
+    nativeAvailable: boolean;
+    availableLayouts: string[];
+    undrawn?: { refDes: string; cellRef: string; libraryRef: string; sheetId: string }[];
+  };
+  const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
     name: "D",
     layout: req.layout || "faithful",
     sourceFormat: "",
@@ -73,6 +86,7 @@ function harness() {
   const onSummary = vi.fn();
   const onFindings = vi.fn();
   const onExpectCaption = vi.fn();
+  const onUndrawnNote = vi.fn();
   const onRules = vi.fn();
   const onReport = vi.fn();
   const onLocation = vi.fn();
@@ -83,13 +97,14 @@ function harness() {
     controls: { setState: onControls },
     findings: { setState: onFindings, setFindingLocateNote: () => {} },
     expectationCaption: onExpectCaption,
+    undrawnNote: onUndrawnNote,
     rules: { setState: onRules },
     report: onReport,
     location: onLocation,
     overview: { setState: onOverview },
     query: stubQueryView(query),
   });
-  return { presenter, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  return { presenter, onUndrawnNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks — the two-step the app does when the
@@ -973,5 +988,33 @@ describe("clearHighlights (agni issue 348)", () => {
     await h.presenter.selectFinding("R1");
     await h.presenter.selectFinding("R1"); // same subject, no sheet: the toggle-off path
     expect(lastSpecs(h).length).toBeGreaterThan(0);
+  });
+});
+
+// The presenter half of agni issue 354: the shortfall has to reach the view on open, because nothing
+// about the rendered sheet reveals it. Every ref des and wire still draws.
+describe("the incomplete-drawing notice", () => {
+  it("pushes a note when the design reports undrawn placements", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValue({
+      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "Root" }], nativeAvailable: false, availableLayouts: ["faithful"],
+      undrawn: [
+        { refDes: "C1", cellRef: "CAP", libraryRef: "Acme", sheetId: "s1" },
+        { refDes: "C2", cellRef: "CAP", libraryRef: "Acme", sheetId: "s1" },
+      ],
+    });
+    await h.presenter.openFile("m", "board.kicad_sch");
+    const calls = h.onUndrawnNote.mock.calls;
+    const note = calls[calls.length - 1][0];
+    expect(note?.count).toBe(2);
+    expect(note?.libraries).toEqual([{ name: "Acme:CAP", count: 2 }]);
+  });
+
+  it("pushes null for a complete drawing, so the notice stays off", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.eds");
+    const calls = h.onUndrawnNote.mock.calls;
+    expect(calls[calls.length - 1][0]).toBeNull();
   });
 });
