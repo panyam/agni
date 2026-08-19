@@ -98,12 +98,14 @@ func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) 
 			Findings: doc.GetFindings(),
 			Skipped:  skippedFromDoc(doc.GetSkipped()),
 		})
+	case "csv":
+		return writeCheckCSV(w, doc.GetFindings())
 	case "markdown":
 		return writeCheckMarkdown(w, results.Report(doc))
 	case "report":
 		return writeCheckReportJSON(w, results.Report(doc))
 	}
-	return fmt.Errorf("unknown --format %q for a check document (want: text, json, markdown, report)", format)
+	return fmt.Errorf("unknown --format %q for a check document (want: text, json, csv, markdown, report)", format)
 }
 
 // renderReviewResults rebuilds the review view-model from the document and renders it with the same
