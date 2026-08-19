@@ -108,6 +108,108 @@ func eachPinLimit(m check.Model, kind parampb.LimitKind, yield func(pinLimit)) {
 	}
 }
 
+// PROOF ON PASS (stage 1). The two rules below now decide through check.CompareToBound and produce
+// a check.Verdict per resolved pin, with Eval projecting the failures back out so the `check` path
+// reports exactly what it always has. Two things come out of that.
+//
+// A pass acquires evidence. "3.3 V is within the absolute maximum of 3.6 V" plus the citation is a
+// statement a reviewer can check, where before a pass was a bare `return` that discarded every fact
+// it rested on at the moment it had them all in hand.
+//
+// And "no maximum stated" stops reading as a pass. `pl.row.Value.Max == nil || pl.volts <= max` sent
+// both down one silent path, so a row that constrained nothing was indistinguishable from a design
+// sitting comfortably under a real limit. That is the false-pass shape the rule-level gates
+// (Reads, RequiresCapability, ParamSymbols) each exist to prevent, reappearing per datasheet ROW
+// where none of them can see it. It is now check.NoLimit.
+//
+// STILL SILENT, and worth naming rather than leaving to be discovered: a resolved pin with NO row of
+// the requested kind never reaches these callbacks at all, because eachPinLimit's inner loop filters
+// it out. That is a coverage gap about the TERMINAL rather than a wrong answer about a row, and
+// closing it means yielding pin-shaped as well as row-shaped events. Left out of stage 1 deliberately.
+
+// pinVerdict builds the Verdict common to both rules. The verdict is PIN-scoped because the question
+// it answers is "why is this terminal fine", while the Finding it may carry stays COMPONENT-scoped,
+// which is what the viewer highlights and what every existing test asserts.
+func pinVerdict(rule string, pl pinLimit, outcome check.Outcome, w *check.Witness) check.Verdict {
+	if w != nil {
+		w.Datasheet = []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)}
+	}
+	return check.Verdict{
+		Rule:    rule,
+		Outcome: outcome,
+		Kind:    check.KindPin,
+		Subject: pl.component.RefDes,
+		Pin:     pl.designator,
+		Witness: w,
+	}
+}
+
+// pinAbsMaxVerdicts decides every pin-bound supply terminal against its own absolute-maximum row.
+func pinAbsMaxVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	eachPinLimit(m, parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, func(pl pinLimit) {
+		outcome, w := check.CompareToBound(
+			pl.volts, "V", check.Bound{Max: pl.row.Value.Max}, "nominal", "absolute maximum")
+		v := pinVerdict("pin-exceeds-abs-max", pl, outcome, w)
+		if outcome == check.Fail {
+			v.Finding = &check.Finding{
+				Kind:    check.KindComponent,
+				Subject: pl.component.RefDes,
+				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV exceeds that pin's absolute-maximum %s %gV — %s",
+					pl.designator, pl.pinName, pl.net, pl.volts, pl.row.Symbol, pl.row.Value.GetMax(),
+					check.Citation(pl.spec, pl.row)),
+				Prov:          pl.component.Prov,
+				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
+				// The pin and the rail. This rule is per-PIN and its subject is the whole part, so
+				// without the pin a reader cannot tell which terminal of a many-pin part is over its
+				// own limit (agni issue 349).
+				Context: []check.ContextSubject{
+					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
+					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
+				},
+			}
+		}
+		out = append(out, v)
+	})
+	return out
+}
+
+// pinRecommendedVerdicts decides every pin-bound supply terminal against its own recommended range.
+func pinRecommendedVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	eachPinLimit(m, parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, func(pl pinLimit) {
+		b := check.Bound{Min: pl.row.Value.Min, Max: pl.row.Value.Max}
+		outcome, w := check.CompareToBound(pl.volts, "V", b, "nominal", "recommended range")
+		v := pinVerdict("pin-out-of-recommended", pl, outcome, w)
+		if outcome == check.Fail {
+			// Which side was crossed, for the message only. The OUTCOME came from the comparison
+			// above, so the two cannot disagree about whether this is a violation.
+			rel := fmt.Sprintf("exceeds recommended maximum %gV", pl.row.Value.GetMax())
+			if b.Min != nil && pl.volts < *b.Min {
+				rel = fmt.Sprintf("is below recommended minimum %gV", pl.row.Value.GetMin())
+			}
+			v.Finding = &check.Finding{
+				Kind:    check.KindComponent,
+				Subject: pl.component.RefDes,
+				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV %s for that pin (%s) — %s",
+					pl.designator, pl.pinName, pl.net, pl.volts, rel, pl.row.Symbol,
+					check.Citation(pl.spec, pl.row)),
+				Prov:          pl.component.Prov,
+				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
+				// The pin and the rail. This rule is per-PIN and its subject is the whole part, so
+				// without the pin a reader cannot tell which terminal of a many-pin part is over its
+				// own limit (agni issue 349).
+				Context: []check.ContextSubject{
+					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
+					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
+				},
+			}
+		}
+		out = append(out, v)
+	})
+	return out
+}
+
 // pinExceedsAbsMax flags a supply pin sitting on a rail above THAT TERMINAL's absolute-maximum
 // rating. The per-pin counterpart of supply-exceeds-abs-max, and the rule that removes its false
 // positive on a part whose supplies differ.
@@ -126,29 +228,7 @@ var pinExceedsAbsMax = &check.Rule{
 	},
 	Detail: ruleDoc("pin-exceeds-abs-max"),
 	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
-		eachPinLimit(m, parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, func(pl pinLimit) {
-			if pl.row.Value.Max == nil || pl.volts <= pl.row.Value.GetMax() {
-				return
-			}
-			out = append(out, check.Finding{
-				Kind:    check.KindComponent,
-				Subject: pl.component.RefDes,
-				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV exceeds that pin's absolute-maximum %s %gV — %s",
-					pl.designator, pl.pinName, pl.net, pl.volts, pl.row.Symbol, pl.row.Value.GetMax(),
-					check.Citation(pl.spec, pl.row)),
-				Prov:          pl.component.Prov,
-				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
-				// The pin and the rail. This rule is per-PIN and its subject is the whole part, so
-				// without the pin a reader cannot tell which terminal of a many-pin part is over its
-				// own limit (agni issue 349).
-				Context: []check.ContextSubject{
-					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
-					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
-				},
-			})
-		})
-		return out
+		return check.VerdictsToFindings(pinAbsMaxVerdicts(m))
 	},
 }
 
@@ -171,34 +251,6 @@ var pinOutOfRecommended = &check.Rule{
 	},
 	Detail: ruleDoc("pin-out-of-recommended"),
 	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
-		eachPinLimit(m, parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, func(pl pinLimit) {
-			hasLo, hasHi := pl.row.Value.Min != nil, pl.row.Value.Max != nil
-			lo, hi := pl.row.Value.GetMin(), pl.row.Value.GetMax()
-			var rel string
-			switch {
-			case hasHi && pl.volts > hi:
-				rel = fmt.Sprintf("exceeds recommended maximum %gV", hi)
-			case hasLo && pl.volts < lo:
-				rel = fmt.Sprintf("is below recommended minimum %gV", lo)
-			default:
-				return
-			}
-			out = append(out, check.Finding{
-				Kind:    check.KindComponent,
-				Subject: pl.component.RefDes,
-				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV %s for that pin (%s) — %s",
-					pl.designator, pl.pinName, pl.net, pl.volts, rel, pl.row.Symbol,
-					check.Citation(pl.spec, pl.row)),
-				Prov:          pl.component.Prov,
-				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
-				// As above: the recommended-range twin of the same finding.
-				Context: []check.ContextSubject{
-					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
-					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
-				},
-			})
-		})
-		return out
+		return check.VerdictsToFindings(pinRecommendedVerdicts(m))
 	},
 }
