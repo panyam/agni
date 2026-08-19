@@ -9,9 +9,15 @@
 // It has to sit ABOVE all three sources rather than inside any one of them: core/query imports
 // core/check, and stdlib/profiles imports both, so a package that converts all three cannot live in
 // core/check without a cycle. Each source owns the wire form of its OWN body — check.SpecProto,
-// query.QueryProto, profiles.ProfileProto — so a node added to a closed vocabulary and not given a
-// wire form is a compile error next to the vocabulary. What lives here is only the join: which body a
-// definition carries, and how to compile it back into rules.
+// query.QueryProto, profiles.ProfileProto. What lives here is only the join: which body a definition
+// carries, and how to compile it back into rules.
+//
+// That ownership catches a new NODE TYPE, which has to be handled where a type switch covers the
+// vocabulary, and it does NOT catch a new FIELD on a body that is already mapped. A field added to a
+// struct the converter copies by hand is simply not copied, and nothing fails to compile.
+// Profile.HostClass was added that way and silently dropped here until the round-trip guard in
+// stdlib/profiles caught it, so each body's wire form owes a deep-equality round-trip test as well as
+// a converter.
 //
 // What is deliberately NOT serializable is check.Rule itself. A Rule carries an Eval closure, and a Go
 // func has no wire form. The serializable artifact is the SOURCE, and compiling is exactly the step

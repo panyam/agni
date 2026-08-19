@@ -655,3 +655,33 @@ the `--include` glob, or zsh expands it and grep never sees the flag.
 interface profile and a compiled intent declaration are both just rules in a catalog — so the flags
 travel on `service.ProjectConfig` rather than being derived from `Overlay.Sources`. Rationale in
 [the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
+
+## C26: One schema per contract; a hand-written twin carries a round-trip guard
+**Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
+and YAML is authoring SYNTAX rather than a second schema (parse it by converting to JSON and binding
+with `protojson`, which also gives strict unknown-field rejection for free). Where a hand-written Go
+twin genuinely must exist — a domain type that carries behaviour, an AST, a struct whose zero values
+mean something a message cannot express — the twin and its converter carry a **deep-equality
+round-trip test**: build a fixture with EVERY field set to a distinguishable non-zero value, go
+domain -> proto -> domain, and require `reflect.DeepEqual`. A tier with no wire form at all (design
+intent today) has no twin and owes neither.
+**Why:** two hand-maintained schemas for one contract drift, and they drift SILENTLY, because a field
+the converter never learned is absent from both sides of any assertion made on the proto. This has
+now shipped twice. `naming.Lexicon` grew gate/source/drain terminal vocabularies with no wire fields,
+so a project declaring them had them dropped on every path except `serve`'s startup install and
+`BuildRoleVocab` substituted the built-in names. `Profile.HostClass` (WS3-044) was added with no wire
+field, so an overlay profile binding its host by datasheet device class lost the binding crossing
+`stdlib/ruledef`, `HasHost` went false, and the host requirement compiled to nothing. Both failures
+are indistinguishable from a legitimately quiet run, which is the silent-pass shape this whole layer
+exists to prevent. `core/review`'s manifest conversion has had the guard since it was written and has
+never drifted, which is the evidence that the cheap half works. Owning the converter is NOT enough on
+its own: `stdlib/ruledef` claimed a body's wire form is owned beside its vocabulary so an omission is
+a compile error, and that holds for a new NODE TYPE covered by a type switch, not for a new FIELD on
+an already-mapped struct.
+**Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
+`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. Today:
+`TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip` (`stdlib/profiles`).
+`core/check.SpecProto` and `core/query.QueryProto` have no such test and are the known gap.
+**Note:** the fixture is the load-bearing part. A field left at its zero value round-trips cleanly
+through a conversion that drops it, because zero in equals zero out, so a guard built on a sparse
+fixture reports success while covering nothing.

@@ -19,6 +19,7 @@ func ProfileProto(p Profile) *checkspb.ProfileDef {
 		Name:        p.Name,
 		HostAttrKey: p.HostAttrKey,
 		HostAttrVal: p.HostAttrVal,
+		HostClass:   p.HostClass,
 	}
 	for _, s := range p.Signals {
 		out.Signals = append(out.Signals, &checkspb.ProfileSignal{
@@ -44,6 +45,7 @@ func ProfileFromProto(p *checkspb.ProfileDef) Profile {
 		Name:        p.GetName(),
 		HostAttrKey: p.GetHostAttrKey(),
 		HostAttrVal: p.GetHostAttrVal(),
+		HostClass:   p.GetHostClass(),
 	}
 	for _, s := range p.GetSignals() {
 		out.Signals = append(out.Signals, Signal{

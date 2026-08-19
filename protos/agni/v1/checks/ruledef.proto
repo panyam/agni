@@ -328,6 +328,14 @@ message ProfileDef {
   string host_attr_key = 3;
   string host_attr_val = 4;
   repeated ProfileRequirement requirements = 5;
+  // host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
+  // against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
+  // binds a host matching either. Empty means no class binding.
+  //
+  // It is field 6 because the message shipped without it while Profile.HostClass already existed, so
+  // a class-only host binding was dropped crossing this contract and the profile read as having no
+  // host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
+  string host_class = 6;
 }
 
 // ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
