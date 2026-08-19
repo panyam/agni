@@ -120,7 +120,7 @@ for anything visual).
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1–C25). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1–C26). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a
