@@ -514,41 +514,44 @@ func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 // on the hop limit, which is a fact a reader has to see to judge the answer: a bus whose pull-up sits
 // four hops away is a different situation from one with no pull-up at all, and the bare finding
 // cannot tell them apart.
-func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness) {
+func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	if n == nil {
-		return Fail, nil
+		return Fail, nil, nil
 	}
 	path := PullUpPathToRail(m, n)
 	if path == nil {
+		// Nothing to point at: the search found no resistor and no rail, and the net it searched
+		// FROM is the subject. So the proof is a value (the bound it searched to) and the context
+		// is empty, which is the honest shape rather than a missing one.
 		return Fail, &Witness{
 			Statement: fmt.Sprintf("no rail is reachable from %s through a resistor within %d hops",
 				n.Name, PullUpReachHops),
-			Terms: []WitnessTerm{
-				{Label: "net", Value: n.Name},
-				{Label: "hop limit", Value: fmt.Sprintf("%d", PullUpReachHops)},
-			},
-		}
+			Terms: []WitnessTerm{{Label: "hop limit", Value: fmt.Sprintf("%d", PullUpReachHops)}},
+		}, nil
 	}
-	// The path as ordered terms: the net, then each resistor and what it landed on, with the final
-	// net labelled as the rail. Labels repeat on a multi-hop path, which is why Terms is a list and
-	// not a map (the same reason ContextSubject.Role is not unique within a finding).
-	terms := []WitnessTerm{{Label: "net", Value: n.Name}}
+	// The path as ordered CONTEXT rather than terms: every hop is a design entity a reader can be
+	// sent to, so each carries the Kind a highlight joins on. The subject net is excluded because it
+	// is already the verdict's subject. Roles repeat on a multi-hop path, which is why this is a list
+	// and not a map (the same reason ContextSubject.Role is not unique within a finding).
+	//
+	// The witness carries NO terms here. Everything this proof rests on is an entity, so a value
+	// slot would either be empty or duplicate what Context already says with the type stripped off.
+	ctx := make([]ContextSubject, 0, len(path)*2)
 	res := make([]string, 0, len(path))
 	for i, h := range path {
-		label := "net"
+		role := "segment"
 		if i == len(path)-1 {
-			label = "rail"
+			role = "rail"
 		}
-		terms = append(terms,
-			WitnessTerm{Label: "pull-up", Value: h.Resistor},
-			WitnessTerm{Label: label, Value: h.Net})
+		ctx = append(ctx,
+			ContextSubject{Kind: KindComponent, Subject: h.Resistor, Role: "pull-up"},
+			ContextSubject{Kind: KindNet, Subject: h.Net, Role: role})
 		res = append(res, h.Resistor)
 	}
 	return Pass, &Witness{
 		Statement: fmt.Sprintf("%s reaches rail %s through %s",
 			n.Name, path[len(path)-1].Net, strings.Join(res, " then ")),
-		Terms: terms,
-	}
+	}, ctx
 }
 
 // resistorNetIndex maps a resistor's ref-des to the distinct nets it touches.

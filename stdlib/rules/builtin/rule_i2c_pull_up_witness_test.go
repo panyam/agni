@@ -64,11 +64,14 @@ func TestPullUpWitnessTracksTheTopology(t *testing.T) {
 	}
 }
 
-// THE SHAPE QUESTION THIS RULE EXISTS TO ANSWER. Witness.Terms was built as an ordered open list
-// rather than a measured/limit pair, on the argument that the next witness family would be a path.
-// This is that family: a multi-hop path must come out as the ordered hops, with the final net
-// labelled as the rail, and no term type had to be added to carry it.
-func TestPullUpWitnessCarriesTheOrderedPath(t *testing.T) {
+// THE SHAPE QUESTION THIS RULE EXISTS TO ANSWER. A multi-hop path must come out as ORDERED,
+// TYPED entities, because the point of carrying a path is that a reader can be sent to each hop.
+//
+// It lives in Context and not Witness.Terms, and the distinction is load-bearing rather than
+// bookkeeping: a Term is a Label and a bare string, so "pull-up=R1" leaves a consumer guessing
+// whether R1 is a component, a net or a pin, and it cannot build a highlight from a guess. Every
+// entry here carries the Kind that HighlightSpec joins on.
+func TestPullUpPathIsOrderedTypedContext(t *testing.T) {
 	v := verdictForNet(t, pullUpVerdicts(t, []string{"U1", "U2", "R1", "R2"},
 		tnet("SCL", "U1.1", "R1.1"),
 		tnet("SCL_ISO", "R1.2", "U2.1", "R2.1"),
@@ -77,20 +80,31 @@ func TestPullUpWitnessCarriesTheOrderedPath(t *testing.T) {
 	if v.Outcome != check.Pass {
 		t.Fatalf("the bus is held high one hop out, want pass, got %s", v.Outcome)
 	}
-	want := []check.WitnessTerm{
-		{Label: "net", Value: "SCL"},
-		{Label: "pull-up", Value: "R1"},
-		{Label: "net", Value: "SCL_ISO"},
-		{Label: "pull-up", Value: "R2"},
-		{Label: "rail", Value: "+3V3"},
+	want := []check.ContextSubject{
+		{Kind: check.KindComponent, Subject: "R1", Role: "pull-up"},
+		{Kind: check.KindNet, Subject: "SCL_ISO", Role: "segment"},
+		{Kind: check.KindComponent, Subject: "R2", Role: "pull-up"},
+		{Kind: check.KindNet, Subject: "+3V3", Role: "rail"},
 	}
-	if len(v.Witness.Terms) != len(want) {
-		t.Fatalf("want %d ordered terms, got %d: %+v", len(want), len(v.Witness.Terms), v.Witness.Terms)
+	if len(v.Context) != len(want) {
+		t.Fatalf("want %d ordered hops, got %d: %+v", len(want), len(v.Context), v.Context)
 	}
 	for i, w := range want {
-		if v.Witness.Terms[i] != w {
-			t.Errorf("term %d: want %+v, got %+v", i, w, v.Witness.Terms[i])
+		if v.Context[i] != w {
+			t.Errorf("hop %d: want %+v, got %+v", i, w, v.Context[i])
 		}
+	}
+	// The subject is not repeated in its own context, so a consumer can draw subject-as-figure over
+	// context-as-ground without the figure appearing in both layers.
+	for _, c := range v.Context {
+		if c.Kind == check.KindNet && c.Subject == v.Subject {
+			t.Errorf("the subject net %s must not also appear as its own context", v.Subject)
+		}
+	}
+	// Everything this proof rests on is an entity, so there is no value left for a term to carry.
+	// An entity duplicated into Terms would be the same fact with its type stripped off.
+	if len(v.Witness.Terms) != 0 {
+		t.Errorf("a path witness rests on entities, not values; want no terms, got %+v", v.Witness.Terms)
 	}
 }
 

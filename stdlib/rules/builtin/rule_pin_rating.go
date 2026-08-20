@@ -185,6 +185,14 @@ func pinVerdict(rule string, ev pinEvent, outcome check.Outcome, w *check.Witnes
 	if w != nil && row != nil {
 		w.Datasheet = []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)}
 	}
+	// The rail only. This verdict's SUBJECT is the terminal, so listing the pin as context too would
+	// name it twice and make a consumer draw the figure over its own ground. The Finding below does
+	// list it, and legitimately: a finding's subject is the whole component, so without the pin a
+	// reader cannot tell which terminal of a many-pin part is over its limit (agni issue 349).
+	var ctx []check.ContextSubject
+	if ev.net != "" {
+		ctx = []check.ContextSubject{{Kind: check.KindNet, Subject: ev.net, Role: "rail"}}
+	}
 	return check.Verdict{
 		Rule:    rule,
 		Outcome: outcome,
@@ -192,6 +200,7 @@ func pinVerdict(rule string, ev pinEvent, outcome check.Outcome, w *check.Witnes
 		Subject: ev.component.RefDes,
 		Pin:     ev.designator,
 		Witness: w,
+		Context: ctx,
 	}
 }
 

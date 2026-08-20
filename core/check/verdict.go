@@ -44,6 +44,23 @@ type Verdict struct {
 	// requires is that the reason EXISTS, not that it comes from a list this package knows.
 	Reason string
 
+	// Context are the design entities this verdict's proof NAMES but is not ABOUT, typed so a
+	// consumer can highlight them: the resistor and rail a pull-up passes through, the rail a pin
+	// sits on. Ordered, and Role is the author's word for the part each plays.
+	//
+	// THIS IS THE HIGHLIGHTABLE HALF, and the division from Witness.Terms is exactly that. A Term is
+	// a Label and a bare string, so "pull-up=R1" cannot be resolved to anything: nothing says whether
+	// R1 is a component, a net or a pin. A ContextSubject carries Kind, which is what HighlightSpec
+	// joins on. The test is whether clicking it should light something up.
+	//
+	// Excludes the subject, which is already named by Kind/Subject/Pin above, so a consumer draws
+	// subject-as-figure and Context-as-ground. That is the split focusStack already implements.
+	//
+	// Finding.Context is the projection of this for a failing verdict, and differs legitimately: a
+	// Finding about a COMPONENT lists the pin in its context, where a pin-subject verdict does not,
+	// because for the verdict the pin is the subject.
+	Context []ContextSubject
+
 	// Finding is the existing violation form, set only when Outcome is Fail. It is carried rather
 	// than replaced so the `check` path keeps its exact current output while the two rules below
 	// grow a second projection (see VerdictsToFindings).
@@ -94,8 +111,13 @@ const (
 type Witness struct {
 	// Statement is the human rendering, always set. It is the whole witness for a text consumer.
 	Statement string
-	// Terms are the facts Statement rests on, kept separately so a UI can lay them out and a test
-	// can assert on a value without parsing prose.
+	// Terms are the VALUES Statement rests on, kept separately so a UI can lay them out and a test
+	// can assert on one without parsing prose: a measured voltage, a stated limit, a hop bound.
+	//
+	// Values only, never entities. An entity belongs in Verdict.Context, which carries the Kind a
+	// highlight needs; a Term's Value is a bare string that no consumer can resolve. A witness whose
+	// proof is entirely a path therefore has NO terms, and that is correct rather than a gap: the
+	// facts it rests on are all things you can point at.
 	Terms []WitnessTerm
 	// Datasheet is the provenance of any seeded value the verdict used, the same citation form a
 	// Finding carries. Empty for a witness resting on nothing seeded.
