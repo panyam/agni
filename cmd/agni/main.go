@@ -344,6 +344,7 @@ func statsCmd() *cobra.Command {
 func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
+	var verdicts bool
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -506,6 +507,27 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				// --verdicts selects the CONSIDERED SET instead of the violations: what every
+				// converted rule concluded about each subject it looked at, passes included. It is a
+				// different table answering a different question, which is why it is a flag over the
+				// same run rather than extra rows in the findings output. --fail-on still reads the
+				// findings below, since a pass is not a gate condition.
+				if verdicts {
+					switch format {
+					case "csv":
+						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts()); err != nil {
+							return err
+						}
+					case "json":
+						if err := writeVerdictJSON(cmd.OutOrStdout(), resp.GetVerdicts()); err != nil {
+							return err
+						}
+					default:
+						writeVerdictText(cmd.OutOrStdout(), resp.GetVerdicts())
+					}
+					failFindings = resp.GetFindings()
+					break
+				}
 				switch format {
 				case "json":
 					if err := writeCheckDesignJSON(cmd.OutOrStdout(), resp); err != nil {
@@ -530,6 +552,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report")
+	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
@@ -568,7 +591,25 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
 // and datasheet citation). The response is already sheet-annotated server-side (WS9-048), so the CLI
 // marshals it verbatim — the conformance runner parses the same `.findings[]` whether it shells out or
 // calls the API.
+// The considered set is stripped before marshalling, so no DATA changes here: the default output
+// carries the same findings it always did. It is a different answer (every subject looked at, passes
+// included) and folding it in would change what every existing consumer receives, the same reason the
+// verdict csv is a separate table rather than extra rows in the findings one. `--verdicts --format
+// json` is where to ask for it.
+//
+// Not byte-identical, though. EmitUnpopulated means the new field still appears as `"verdicts": []`,
+// which is inherent to adding a field to the response message rather than something stripping can
+// undo. A consumer that rejects unknown keys sees one; a consumer reading `findings` is unaffected.
+//
+// It also keeps `results` honest: that command replays a written CheckResults document, which has no
+// verdicts field, so emitting them here would make the two formats of one run disagree and the
+// round-trip test says so.
 func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
+	if len(resp.GetVerdicts()) > 0 {
+		// A fresh message rather than a struct copy: a generated proto carries a MessageState with a
+		// mutex in it, so copying one by value is what go vet's copylocks check exists to catch.
+		resp = &webapi.CheckDesignResponse{Findings: resp.GetFindings(), Skipped: resp.GetSkipped()}
+	}
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
 	if err != nil {
 		return err

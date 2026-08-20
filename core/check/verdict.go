@@ -78,6 +78,22 @@ const (
 	Pass Outcome = "pass"
 	// Fail: the comparison was made and the design is on the wrong side of it.
 	Fail Outcome = "fail"
+	// Inconclusive: the rule had everything it needed, REACHED its decision, and could not decide.
+	//
+	// Distinct from NotConsidered, where there was no decision to reach, and from NoLimit, where a
+	// specific input was absent. Here the inputs are present and the DISCRIMINATION is impossible: a
+	// transistor in a power path is either an ideal-diode controller providing reverse protection or
+	// an ordinary switch providing none, and a netlist cannot tell them apart.
+	//
+	// It is the outcome form of Finding.Inconclusive, which already ships, and carries that field's
+	// contract: a consumer must NOT count it as a failure. That is why it cannot simply be Fail, and
+	// why mapping it to NotConsidered would be worse still, since NotConsidered reaches no output and
+	// the mapping would silently delete a finding the check path reports today.
+	//
+	// NO RULE PRODUCES THIS YET. It is here before the wire form rather than after, because
+	// reverse-blocking-absent is the rule that needs it and adding an enum member now is free where
+	// adding one to a shipped schema is not.
+	Inconclusive Outcome = "inconclusive"
 	// NotConsidered: the rule applied to this subject and never reached a comparison, with Reason
 	// naming the step that stopped it.
 	//
@@ -212,6 +228,50 @@ func CompareToBound(measured float64, unit string, b Bound, quantity, limitName 
 	return Pass, w
 }
 
+// VerdictID is a verdict's stable name, `<rule>:<kind>:<ref>`, DERIVED from the verdict rather than
+// assigned to it. Nothing persists a verdict, so a CLI run and a server run have to compute the same
+// name for the same verdict without talking to each other, which is the argument mount:// already won
+// one level up restated one level down.
+//
+// WHAT IT IS BUILT FROM, and what it deliberately is not. Rule, Kind and the kind's own reference,
+// and nothing else. Not run order, not the message text, and NOT the outcome. Leaving the outcome out
+// is the valuable part: the same URL then addresses the same check on the same pin across revisions,
+// so a link filed last month still resolves after the answer flips, and can say that it flipped.
+// Include it and every flip breaks every link, exactly when the link matters most.
+//
+// The REF's grammar belongs to the kind rather than being a positional tuple of every kind's fields.
+// checks.Subject is already a widening union (ref, pin, net_id, bus_id, and counting), and a
+// positional key over those changes format every time a kind is added, invalidating every id ever
+// issued. Here a seventh kind adds a grammar and leaves existing ids untouched.
+//
+// Readable, not hashed, because under recompute-on-demand an id is a QUESTION YOU CAN POSE and not
+// merely a label you receive: someone worried about a terminal can construct
+// `pin-exceeds-abs-max:pin:U12.7` without running check first to discover the name of the thing they
+// wanted to ask about. A hash makes that impossible.
+//
+// Parsing needs no escaping despite the colons. Rule names are kebab-case and Kind is a closed
+// vocabulary, so neither can contain one: split on the FIRST TWO colons and take the remainder
+// verbatim. That handles `symbol:Library:Symbol`, whose colon the KindSymbol comment documents as a
+// real spelling.
+//
+// KNOWN LIMIT: two nets sharing a name share an id, because using NetID instead would make the id
+// unconstructible (nobody can type a net id). That matches how Subject already behaves on the wire,
+// where a consumer joins by name, and duplicate net names are themselves a reported defect.
+func VerdictID(v Verdict) string {
+	return v.Rule + ":" + v.Kind + ":" + verdictRef(v)
+}
+
+// verdictRef is the kind-owned half of the id. A pin joins its ref-des and designator with a dot,
+// which is already this codebase's pin-key spelling (a KiCad pad key is built as RefDes+"."+Number).
+// Split it on the LAST dot: a ref-des is passed through from the source unmodified and could in
+// principle contain one, and a pin designator is far less likely to.
+func verdictRef(v Verdict) string {
+	if v.Kind == KindPin && v.Pin != "" {
+		return v.Subject + "." + v.Pin
+	}
+	return v.Subject
+}
+
 // VerdictsToFindings projects a verdict list down to the findings the `check` path already reports,
 // so a rule can produce verdicts as its single source of truth and still return exactly what
 // Eval has always returned. Only Fail carries a finding, which is the definition of the current
@@ -224,7 +284,11 @@ func VerdictsToFindings(vs []Verdict) []Finding {
 	// break that reads as "the twin disagrees" when the two agree about every finding.
 	out := []Finding{}
 	for _, v := range vs {
-		if v.Outcome == Fail && v.Finding != nil {
+		// Fail AND Inconclusive, because both reach the check path today. An inconclusive result is
+		// not a defect and must not be counted as one, which the Finding carries in its own
+		// Inconclusive flag; what it must not be is silent, since a bound review item reading silence
+		// as a pass is the failure reverse-blocking-absent's doc describes.
+		if (v.Outcome == Fail || v.Outcome == Inconclusive) && v.Finding != nil {
 			out = append(out, *v.Finding)
 		}
 	}

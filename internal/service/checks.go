@@ -176,8 +176,13 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	// and the panel needs the second: a rule that is available in principle and gated in practice is
 	// exactly the case a findings list cannot express.
 	runnable, skipped := partitionAvailable(rules, m)
+	// Verdicts come from the SAME runnable set as the findings, so the considered set describes the
+	// run that actually happened rather than the catalog that might have. A rule gated to
+	// not-applicable is reported by `skipped` and contributes no verdicts, which is the honest
+	// answer: it did not consider anything, because it did not run.
 	resp := &webapi.CheckDesignResponse{
 		Findings: FindingProtos(check.Run(m, runnable)),
+		Verdicts: VerdictProtos(check.RunVerdicts(m, runnable)),
 		Skipped:  skipped,
 	}
 	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, u, ov.ReadOptions()...), m)
@@ -359,4 +364,179 @@ func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*w
 		skipped = append(skipped, &webapi.SkippedRule{Name: r.Name, Reason: why})
 	}
 	return runnable, skipped
+}
+
+// VerdictProto and VerdictFromProto are the conversion pair for the considered set, and they carry a
+// C26 round-trip guard (TestVerdictProtoRoundTrip) because check.Verdict is a hand-written Go twin of
+// a wire message. The guard is the whole point: a field the converter never learned is absent from
+// both sides of any assertion made on the proto, which is how naming.Lexicon and Profile.HostClass
+// each shipped a silently dropped field.
+//
+// Verdict.Finding is DELIBERATELY not on the wire and so not in the round trip. A failing verdict's
+// finding travels in CheckDesignResponse.findings as it always has; putting it here too would send
+// one defect twice and let the copies disagree. TestVerdictFieldCensus is what keeps that a decision
+// rather than an omission: it fails when a field is added to check.Verdict, so the next person has to
+// say whether it belongs on the wire instead of discovering later that it never arrived.
+func VerdictProto(v check.Verdict) *checkspb.Verdict {
+	subject := &checkspb.Subject{Kind: v.Kind, Ref: v.Subject, Pin: v.Pin, NetId: v.NetID}
+	if v.Kind == check.KindBus {
+		subject.BusId = v.Subject
+	}
+	return &checkspb.Verdict{
+		Id:      check.VerdictID(v),
+		Rule:    v.Rule,
+		Outcome: outcomeProto(v.Outcome),
+		Subject: subject,
+		Witness: witnessProto(v.Witness),
+		Reason:  v.Reason,
+		Context: contextSubjectProtos(v.Context),
+	}
+}
+
+// VerdictFromProto is the inverse. Id is not read back: it is derived from the other fields, so
+// trusting an inbound one would let a producer rename a verdict by asserting a different name.
+func VerdictFromProto(p *checkspb.Verdict) check.Verdict {
+	if p == nil {
+		return check.Verdict{}
+	}
+	s := p.GetSubject()
+	return check.Verdict{
+		Rule:    p.GetRule(),
+		Outcome: outcomeFromProto(p.GetOutcome()),
+		Kind:    s.GetKind(),
+		Subject: s.GetRef(),
+		Pin:     s.GetPin(),
+		NetID:   s.GetNetId(),
+		Reason:  p.GetReason(),
+		Witness: witnessFromProto(p.GetWitness()),
+		Context: contextSubjectsFromProto(p.GetContext()),
+	}
+}
+
+// VerdictProtos maps a verdict list, the counterpart of FindingProtos.
+func VerdictProtos(vs []check.Verdict) []*checkspb.Verdict {
+	if len(vs) == 0 {
+		return nil
+	}
+	out := make([]*checkspb.Verdict, 0, len(vs))
+	for _, v := range vs {
+		out = append(out, VerdictProto(v))
+	}
+	return out
+}
+
+// outcomeProto maps the Go outcome vocabulary to the enum. An unrecognised outcome maps to
+// UNSPECIFIED rather than silently to PASS, because a new outcome reaching a consumer as "fine" is
+// the exact false-pass shape verdicts exist to remove.
+func outcomeProto(o check.Outcome) checkspb.Outcome {
+	switch o {
+	case check.Pass:
+		return checkspb.Outcome_OUTCOME_PASS
+	case check.Fail:
+		return checkspb.Outcome_OUTCOME_FAIL
+	case check.NoLimit:
+		return checkspb.Outcome_OUTCOME_NO_LIMIT
+	case check.NotConsidered:
+		return checkspb.Outcome_OUTCOME_NOT_CONSIDERED
+	case check.Inconclusive:
+		return checkspb.Outcome_OUTCOME_INCONCLUSIVE
+	default:
+		return checkspb.Outcome_OUTCOME_UNSPECIFIED
+	}
+}
+
+func outcomeFromProto(o checkspb.Outcome) check.Outcome {
+	switch o {
+	case checkspb.Outcome_OUTCOME_PASS:
+		return check.Pass
+	case checkspb.Outcome_OUTCOME_FAIL:
+		return check.Fail
+	case checkspb.Outcome_OUTCOME_NO_LIMIT:
+		return check.NoLimit
+	case checkspb.Outcome_OUTCOME_NOT_CONSIDERED:
+		return check.NotConsidered
+	case checkspb.Outcome_OUTCOME_INCONCLUSIVE:
+		return check.Inconclusive
+	default:
+		return ""
+	}
+}
+
+func witnessProto(w *check.Witness) *checkspb.Witness {
+	if w == nil {
+		return nil
+	}
+	var terms []*checkspb.WitnessTerm
+	if len(w.Terms) > 0 {
+		terms = make([]*checkspb.WitnessTerm, 0, len(w.Terms))
+		for _, t := range w.Terms {
+			terms = append(terms, &checkspb.WitnessTerm{Label: t.Label, Value: t.Value})
+		}
+	}
+	return &checkspb.Witness{
+		Statement: w.Statement,
+		Terms:     terms,
+		Datasheet: datasheetCitationProtos(w.Datasheet),
+	}
+}
+
+func witnessFromProto(p *checkspb.Witness) *check.Witness {
+	if p == nil {
+		return nil
+	}
+	var terms []check.WitnessTerm
+	if len(p.GetTerms()) > 0 {
+		terms = make([]check.WitnessTerm, 0, len(p.GetTerms()))
+		for _, t := range p.GetTerms() {
+			terms = append(terms, check.WitnessTerm{Label: t.GetLabel(), Value: t.GetValue()})
+		}
+	}
+	return &check.Witness{
+		Statement: p.GetStatement(),
+		Terms:     terms,
+		Datasheet: datasheetCitationsFromProto(p.GetDatasheet()),
+	}
+}
+
+// contextSubjectsFromProto is the inverse of contextSubjectProtos, PRESERVING ORDER for the same
+// reason: the order is the rule author's and matches the order the proof names them.
+func contextSubjectsFromProto(ps []*checkspb.ContextSubject) []check.ContextSubject {
+	if len(ps) == 0 {
+		return nil
+	}
+	out := make([]check.ContextSubject, 0, len(ps))
+	for _, p := range ps {
+		s := p.GetSubject()
+		out = append(out, check.ContextSubject{
+			Kind: s.GetKind(), Subject: s.GetRef(), Pin: s.GetPin(),
+			NetID: s.GetNetId(), Role: p.GetRole(),
+		})
+	}
+	return out
+}
+
+// datasheetCitationsFromProto is the inverse of datasheetCitationProtos. It exists because a Verdict
+// round-trips under C26 where a Finding never did: FindingProto has no inverse, and its field
+// coverage rests on nothing but review of the one call site.
+func datasheetCitationsFromProto(ps []*checkspb.DatasheetCitation) []*check.DatasheetCitation {
+	if len(ps) == 0 {
+		return nil
+	}
+	out := make([]*check.DatasheetCitation, 0, len(ps))
+	for _, p := range ps {
+		if p == nil {
+			continue
+		}
+		out = append(out, &check.DatasheetCitation{
+			Doc:              p.GetDoc(),
+			DocRef:           p.GetDocRef(),
+			Page:             p.GetPage(),
+			Section:          p.GetSection(),
+			Method:           p.GetMethod(),
+			Confidence:       p.GetConfidence(),
+			Verification:     p.GetVerification(),
+			VerifiedRevision: p.GetVerifiedRevision(),
+		})
+	}
+	return out
 }
