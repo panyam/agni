@@ -411,9 +411,6 @@ func RunVerdicts(m Model, rules []*Rule) []Verdict {
 	return out
 }
 
-// RunDesignVerdicts is RunVerdicts over the built-in catalog, the counterpart of RunDesign.
-func RunDesignVerdicts(d *ir.Design) []Verdict { return RunVerdicts(NewModel(d), builtinRules) }
-
 // Report maps a selection to findings (the report step every rule ends with). Subject and
 // Prov come from the selected entity via mk.
 func Report[T any](xs []T, mk func(T) Finding) []Finding {

@@ -75,7 +75,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 // RunVerdicts is the seam that makes a verdict reachable at all: before it, every verdict died
 // inside the function that built it and no caller outside these three rules could obtain one.
 func TestRunVerdictsCollectsAcrossRules(t *testing.T) {
-	vs := check.RunDesignVerdicts(ruleFixture())
+	vs := check.RunVerdicts(check.NewModel(ruleFixture()), rules)
 	if len(vs) == 0 {
 		t.Fatal("no verdicts collected; the considered set is unreachable again")
 	}
