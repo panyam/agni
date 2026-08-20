@@ -421,9 +421,34 @@ const PullUpReachHops = 3
 // Ground is never crossed. A resistor to ground is a pull-DOWN, and counting it would pass exactly
 // the bus this rule exists to catch. Ground is also a plane, so traversing it would make everything
 // reachable from everything.
+//
+// It is the boolean projection of PullUpPathToRail, which is where the walk actually lives.
 func PullUpReachesRail(m Model, n *ir.Net) bool {
+	return PullUpPathToRail(m, n) != nil
+}
+
+// PullUpHop is one leg of the walk from an I2C net to a rail: the resistor crossed and the net it
+// landed on. A hop names the resistor rather than the pin because the rule's question is which
+// component bridges the two nets, and a reader locating the pull-up wants the part.
+type PullUpHop struct {
+	Resistor string // ref-des of the resistor crossed
+	Net      string // the net reached by crossing it
+}
+
+// PullUpPathToRail returns the hops from n to the first rail reachable under PullUpReachesRail's
+// rules, and nil when none is. The last hop's Net is the rail.
+//
+// It exists because the boolean above threw away a path the walk already held. At the moment
+// PullUpReachesRail returned true it knew which resistor bridged which nets to which rail, and
+// discarded all of it, so a bus that PASSES this rule could not say how. That is the same
+// proof-on-pass gap the datasheet rules had, in a connectivity rule, and it is what a reviewer
+// asking "show me the pull-up" needs.
+//
+// The walk is unchanged: same order, same hop limit, same seen/used semantics, so the boolean
+// projection above answers exactly what it always did. Only the path is now carried alongside.
+func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 	if n == nil {
-		return false
+		return nil
 	}
 	resistorNets := resistorNetIndex(m)
 
@@ -431,9 +456,17 @@ func PullUpReachesRail(m Model, n *ir.Net) bool {
 		net   *ir.Net
 		depth int
 		used  map[string]bool
+		path  []PullUpHop
 	}
 	seen := map[string]bool{n.Name: true}
 	queue := []step{{net: n, depth: 0, used: map[string]bool{}}}
+	// extend copies rather than appends in place: two queued steps can share a prefix, and appending
+	// to a shared backing array would let one branch overwrite another's path.
+	extend := func(path []PullUpHop, h PullUpHop) []PullUpHop {
+		out := make([]PullUpHop, len(path), len(path)+1)
+		copy(out, path)
+		return append(out, h)
+	}
 
 	for len(queue) > 0 {
 		cur := queue[0]
@@ -452,8 +485,9 @@ func PullUpReachesRail(m Model, n *ir.Net) bool {
 				if other.Name == cur.net.Name || m.IsGroundNet(other) {
 					continue
 				}
+				hop := PullUpHop{Resistor: ref, Net: other.Name}
 				if m.IsRailNet(other) {
-					return true
+					return extend(cur.path, hop)
 				}
 				if seen[other.Name] {
 					continue
@@ -463,11 +497,58 @@ func PullUpReachesRail(m Model, n *ir.Net) bool {
 				for k := range cur.used {
 					used[k] = true
 				}
-				queue = append(queue, step{net: other, depth: cur.depth + 1, used: used})
+				queue = append(queue, step{
+					net: other, depth: cur.depth + 1, used: used, path: extend(cur.path, hop),
+				})
 			}
 		}
 	}
-	return false
+	return nil
+}
+
+// PullUpVerdict decides one I2C net and returns the outcome with its witness from a single call,
+// the discipline CompareToBound applies to a limit. There is no way to reach a Pass without the path
+// that justifies it, so a pass with no evidence cannot be written by forgetting a second step.
+//
+// A FAIL carries a witness too, and that is deliberate. "No rail is reachable within 3 hops" rests
+// on the hop limit, which is a fact a reader has to see to judge the answer: a bus whose pull-up sits
+// four hops away is a different situation from one with no pull-up at all, and the bare finding
+// cannot tell them apart.
+func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness) {
+	if n == nil {
+		return Fail, nil
+	}
+	path := PullUpPathToRail(m, n)
+	if path == nil {
+		return Fail, &Witness{
+			Statement: fmt.Sprintf("no rail is reachable from %s through a resistor within %d hops",
+				n.Name, PullUpReachHops),
+			Terms: []WitnessTerm{
+				{Label: "net", Value: n.Name},
+				{Label: "hop limit", Value: fmt.Sprintf("%d", PullUpReachHops)},
+			},
+		}
+	}
+	// The path as ordered terms: the net, then each resistor and what it landed on, with the final
+	// net labelled as the rail. Labels repeat on a multi-hop path, which is why Terms is a list and
+	// not a map (the same reason ContextSubject.Role is not unique within a finding).
+	terms := []WitnessTerm{{Label: "net", Value: n.Name}}
+	res := make([]string, 0, len(path))
+	for i, h := range path {
+		label := "net"
+		if i == len(path)-1 {
+			label = "rail"
+		}
+		terms = append(terms,
+			WitnessTerm{Label: "pull-up", Value: h.Resistor},
+			WitnessTerm{Label: label, Value: h.Net})
+		res = append(res, h.Resistor)
+	}
+	return Pass, &Witness{
+		Statement: fmt.Sprintf("%s reaches rail %s through %s",
+			n.Name, path[len(path)-1].Net, strings.Join(res, " then ")),
+		Terms: terms,
+	}
 }
 
 // resistorNetIndex maps a resistor's ref-des to the distinct nets it touches.

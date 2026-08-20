@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -25,11 +26,23 @@ type Verdict struct {
 	Kind    string // KindNet | KindComponent | KindPin
 	Subject string // net name (KindNet) or ref_des (KindComponent | KindPin)
 	Pin     string // pin designator, set only when Kind == KindPin
+	// NetID is the per-instance net identity (ir.Net.id) for a net subject, so two nets sharing a
+	// name are distinguishable, matching Finding.NetID. Empty for any other kind.
+	NetID string
 
 	// Witness is what the outcome rests on. It is REQUIRED on Pass and Fail and is what makes a
-	// pass evidence rather than silence. Nil is legitimate only on NoLimit, where the point of the
-	// verdict is that there was nothing to rest on.
+	// pass evidence rather than silence. Nil is legitimate only on NoLimit and NotConsidered, where
+	// the point of the verdict is that there was nothing to rest on.
 	Witness *Witness
+
+	// Reason says why a NotConsidered verdict could not be decided, in the rule author's words
+	// ("pin could not be resolved to a datasheet terminal"). Empty for every other outcome.
+	//
+	// An open string rather than an enum, for the reason Rule.Tags and ContextSubject.Role are open:
+	// the useful vocabulary is rule-specific, and a closed set defined in this package would either
+	// collapse distinctions the rule depends on or grow a member per rule family. What the engine
+	// requires is that the reason EXISTS, not that it comes from a list this package knows.
+	Reason string
 
 	// Finding is the existing violation form, set only when Outcome is Fail. It is carried rather
 	// than replaced so the `check` path keeps its exact current output while the two rules below
@@ -48,6 +61,19 @@ const (
 	Pass Outcome = "pass"
 	// Fail: the comparison was made and the design is on the wrong side of it.
 	Fail Outcome = "fail"
+	// NotConsidered: the rule applied to this subject and never reached a comparison, with Reason
+	// naming the step that stopped it.
+	//
+	// This is what makes a considered set honest, and it is why the verdict list IS the considered
+	// set rather than something computed beside it. An enumerator that drops a subject silently
+	// reports the same nothing as a rule that never looked, so a report built from the survivors
+	// claims coverage it does not have. Under an addressable model it is worse: a dropped subject
+	// answers 404, which reads as "no such pin" when the truth is "this pin exists and the rule
+	// could not judge it".
+	//
+	// Distinct from NoLimit, which is a subject that DID reach the comparison and found the row
+	// stating no bound. Here there was no comparison to reach.
+	NotConsidered Outcome = "not-considered"
 	// NoLimit: there was no bound to compare against, so nothing was checked.
 	//
 	// THIS IS THE ONE THAT DID NOT EXIST. Before this type, a datasheet row stating no maximum and
@@ -91,6 +117,27 @@ type Bound struct {
 
 // Stated reports whether the bound constrains anything at all.
 func (b Bound) Stated() bool { return b.Min != nil || b.Max != nil }
+
+// Margin reports how much room a measured value has before it crosses the bound, in the bound's own
+// unit. Negative means the bound is already violated and the magnitude says by how much. An unstated
+// bound returns +Inf, since nothing constrains the value.
+//
+// It exists to pick the BINDING row when one terminal carries several of the same kind. A datasheet
+// can state more than one limit of a kind for one pin (different conditions), and the constraint
+// that governs is the one the design is closest to violating, never the first one enumerated.
+// Selecting by smallest margin does that in a single comparison for every bound shape: a violated
+// row has a negative margin so it beats any passing row, and an unstated bound has no margin at all
+// so it loses to any real limit.
+func (b Bound) Margin(measured float64) float64 {
+	m := math.Inf(1)
+	if b.Max != nil {
+		m = math.Min(m, *b.Max-measured)
+	}
+	if b.Min != nil {
+		m = math.Min(m, measured-*b.Min)
+	}
+	return m
+}
 
 // CompareToBound is the single comparison a limit rule makes, returning the outcome AND the witness
 // from one call.
@@ -148,7 +195,12 @@ func CompareToBound(measured float64, unit string, b Bound, quantity, limitName 
 // Eval has always returned. Only Fail carries a finding, which is the definition of the current
 // contract: a pass and an unchecked row are both silence to `check`.
 func VerdictsToFindings(vs []Verdict) []Finding {
-	var out []Finding
+	// NON-NIL on empty, matching Report, which is the constructor every hand-written Eval already
+	// returns through. TestSpecParity compares a rule's Eval against its declarative twin with
+	// reflect.DeepEqual, and a nil slice is not DeepEqual to an empty one, so a rule converted to
+	// verdicts would diverge from its twin on any design with nothing wrong. That is the parity
+	// break that reads as "the twin disagrees" when the two agree about every finding.
+	out := []Finding{}
 	for _, v := range vs {
 		if v.Outcome == Fail && v.Finding != nil {
 			out = append(out, *v.Finding)
