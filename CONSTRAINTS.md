@@ -679,9 +679,18 @@ its own: `stdlib/ruledef` claimed a body's wire form is owned beside its vocabul
 a compile error, and that holds for a new NODE TYPE covered by a type switch, not for a new FIELD on
 an already-mapped struct.
 **Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
-`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. Today:
-`TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip` (`stdlib/profiles`).
-`core/check.SpecProto` and `core/query.QueryProto` have no such test and are the known gap.
+`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All four pairs are
+covered: `TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip`
+(`stdlib/profiles`), `TestSpecProtoRoundTrip` (`core/check`), `TestQueryProtoRoundTrip`
+(`core/query`). A new body owes one before it ships, not after it drifts.
+
+The remaining asymmetry is `query.FindingQueryProto`, which has no `FindingQueryFromProto`: its decode
+is inlined in `ruledef.Compile`, so there is no pair to round-trip and its field coverage rests on
+that one call site. Give it an inverse if it grows.
+**Verify (node vocabularies):** a body whose AST is a CLOSED vocabulary already fails loudly on a new
+NODE, because `check.termProto`/`exprProto` panic on a type with no case. That protection does not
+extend to a new FIELD, which is what the round-trip guard is for. Do not read the panic as covering
+both.
 **Note:** the fixture is the load-bearing part. A field left at its zero value round-trips cleanly
 through a conversion that drops it, because zero in equals zero out, so a guard built on a sparse
 fixture reports success while covering nothing.
