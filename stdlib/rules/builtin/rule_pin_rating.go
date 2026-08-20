@@ -296,7 +296,8 @@ var pinExceedsAbsMax = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 		"evidence":            "datasheet",
 	},
-	Detail: ruleDoc("pin-exceeds-abs-max"),
+	Detail:       ruleDoc("pin-exceeds-abs-max"),
+	EvalVerdicts: pinAbsMaxVerdicts,
 	Eval: func(m check.Model) []check.Finding {
 		return check.VerdictsToFindings(pinAbsMaxVerdicts(m))
 	},
@@ -319,7 +320,8 @@ var pinOutOfRecommended = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 		"evidence":            "datasheet",
 	},
-	Detail: ruleDoc("pin-out-of-recommended"),
+	Detail:       ruleDoc("pin-out-of-recommended"),
+	EvalVerdicts: pinRecommendedVerdicts,
 	Eval: func(m check.Model) []check.Finding {
 		return check.VerdictsToFindings(pinRecommendedVerdicts(m))
 	},

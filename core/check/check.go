@@ -229,6 +229,20 @@ type Rule struct {
 	ParamSymbols []string
 	Tags         map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
 	Eval         func(Model) []Finding
+	// EvalVerdicts is the proof-carrying form of Eval: one Verdict per subject the rule was applied
+	// to, including the ones it could not judge. Where it is set it is the rule's SINGLE source of
+	// truth and Eval is its projection (VerdictsToFindings), which TestVerdictParity holds them to.
+	//
+	// OPTIONAL, and nil on a rule that has not been converted. That is the honest reading rather than
+	// a gap: a rule with no EvalVerdicts is not claiming an empty considered set, it is declining to
+	// state one, and a consumer must tell those apart. Reporting "this rule considered nothing" for a
+	// rule that simply predates the conversion is the same silence-reads-as-data mistake one level up
+	// from the one verdicts exist to remove.
+	//
+	// Eval stays REQUIRED even where this is set. The findings contract is what `check` and every
+	// existing consumer read, and deriving it here rather than at each call site would make a
+	// conversion a change to the check path instead of an addition beside it.
+	EvalVerdicts func(Model) []Verdict
 }
 
 // Capability names a source-format ability a rule needs to evaluate soundly (WS3-096). A rule that
@@ -362,6 +376,43 @@ func readsConnectivity(r *Rule) bool {
 // by importing stdlib/rules/builtin; without that import the set is empty and RunDesign returns
 // no findings.
 func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), builtinRules) }
+
+// RunVerdicts collects the considered set across every rule that states one, stamping Rule from the
+// rule's own name so a verdict carries its identity the way Run stamps a finding's.
+//
+// Rules WITHOUT an EvalVerdicts contribute nothing, and the caller cannot tell that apart from a
+// rule that considered no subjects. That is a real limit of this seam while the catalog is part
+// converted, and it is why the return is a verdict list rather than anything shaped like a coverage
+// report: a coverage claim over a part-converted catalog would be wrong in the direction that
+// matters, reporting more assurance than the run has.
+//
+// Ordering matches Run: rule name, then subject, so a verdict table and a findings table read down
+// the same axis.
+func RunVerdicts(m Model, rules []*Rule) []Verdict {
+	var out []Verdict
+	for _, r := range rules {
+		if r.EvalVerdicts == nil {
+			continue
+		}
+		for _, v := range r.EvalVerdicts(m) {
+			v.Rule = r.Name
+			out = append(out, v)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Rule != out[j].Rule {
+			return out[i].Rule < out[j].Rule
+		}
+		if out[i].Subject != out[j].Subject {
+			return out[i].Subject < out[j].Subject
+		}
+		return out[i].Pin < out[j].Pin
+	})
+	return out
+}
+
+// RunDesignVerdicts is RunVerdicts over the built-in catalog, the counterpart of RunDesign.
+func RunDesignVerdicts(d *ir.Design) []Verdict { return RunVerdicts(NewModel(d), builtinRules) }
 
 // Report maps a selection to findings (the report step every rule ends with). Subject and
 // Prov come from the selected entity via mk.

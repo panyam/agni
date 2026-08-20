@@ -25,7 +25,8 @@ var i2cPullUp = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistPublicReference,
 	},
-	Detail: ruleDoc("i2c-pull-up"),
+	Detail:       ruleDoc("i2c-pull-up"),
+	EvalVerdicts: i2cPullUpVerdicts,
 	Eval: func(m check.Model) []check.Finding {
 		return check.VerdictsToFindings(i2cPullUpVerdicts(m))
 	},
