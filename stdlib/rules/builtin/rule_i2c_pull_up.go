@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // i2cPullUp flags an I2C net (SDA/SCL) whose bus reaches no rail through a resistor. See Detail.
@@ -28,11 +27,41 @@ var i2cPullUp = &check.Rule{
 	},
 	Detail: ruleDoc("i2c-pull-up"),
 	Eval: func(m check.Model) []check.Finding {
-		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			return isI2C(n.Name) && !check.PullUpReachesRail(m, n)
-		})
-		return check.Report(bad, check.NetFinding("I2C net has no pull-up resistor to a rail"))
+		return check.VerdictsToFindings(i2cPullUpVerdicts(m))
 	},
+}
+
+// i2cPullUpVerdicts decides every I2C net and returns one verdict each, which IS this rule's
+// considered set: an I2C net is either reached or not, so unlike the datasheet rules there is no
+// step that can drop a subject and nothing here is NotConsidered.
+//
+// PROOF ON PASS, on a connectivity rule. The datasheet rules prove a pass with VALUES; this one
+// proves it with a PATH, and the two share one Witness because Terms was built as an ordered open
+// list rather than a measured/limit pair. A pass now says "SCL reaches rail +3V3 through R7" where
+// before it said nothing, which is what a reviewer asking "show me the pull-up" needs. The hops are
+// also the entities a viewer highlights, so the same list drives the drawing.
+func i2cPullUpVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		if !isI2C(n.Name) {
+			continue // not a subject of this rule
+		}
+		outcome, w := check.PullUpVerdict(m, n)
+		v := check.Verdict{
+			Rule:    "i2c-pull-up",
+			Outcome: outcome,
+			Kind:    check.KindNet,
+			Subject: n.Name,
+			NetID:   n.GetId(),
+			Witness: w,
+		}
+		if outcome == check.Fail {
+			f := check.NetFinding("I2C net has no pull-up resistor to a rail")(n)
+			v.Finding = &f
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // i2cNamePattern matches an SDA/SCL bus name at a TOKEN boundary, not as a substring: SDA/SCL must be

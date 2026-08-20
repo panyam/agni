@@ -22,6 +22,12 @@ ORing FET or an ideal-diode controller.
 Both need a **directional** element: something that conducts one way and not the other. A series
 diode, an ORing FET, an ideal-diode controller.
 
+![A connector-to-power-input path through a series diode is fine; a path with nothing directional on it is flagged; a path crossing an unidentified transistor is inconclusive](images/reverse-blocking-absent.svg)
+
+The three panels are the rule's three answers. The middle one is the defect. The right-hand one is
+the case worth understanding, and the next two sections are about why it is not reported as either
+of the other two.
+
 ### Why a fuse or a TVS does not count
 
 This is the whole reason the rule exists separately from `input-protection`.
@@ -33,7 +39,7 @@ of the fuse.
 A **TVS** shunts transients to ground. It clamps a voltage spike; it does not block a path.
 
 So "a fuse or a TVS is present" carries no information about whether reverse flow is blocked. Two
-CarCo review items were bound to `input-protection` for exactly this reason and were reading pass with
+review items on a real design were bound to `input-protection` for exactly this reason and were reading pass with
 their real ask never tested.
 
 ### What it will not claim, and why that is deliberate

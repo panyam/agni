@@ -18,7 +18,7 @@ import (
 const (
 	// overBroadShare is the fraction of a design's nets one signal may claim before the matcher is
 	// reported. It is a SHARE rather than a count because designs differ by orders of magnitude and a
-	// role legitimately matches one net per interface INSTANCE — a CarCo ECU carries 16 LIN channels,
+	// role legitimately matches one net per interface INSTANCE — an automotive ECU carries 16 LIN channels,
 	// so 16 nets matching _TX is correct, not broken. A quarter of every net on the board cannot be
 	// one role of one interface even at that instance count.
 	overBroadShare = 0.25

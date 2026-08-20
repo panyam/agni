@@ -49,27 +49,42 @@ func pinBoundSpec(m check.Model, refDes string) *parampb.PartSpec {
 	return nil
 }
 
-// pinLimit is one resolved comparison: a design pin, the spec pin it resolved to, and the limit row
-// bound to that pin.
-type pinLimit struct {
+// pinEvent is one supply terminal the rule was applied to, and it is the unit of the CONSIDERED
+// SET: every terminal in scope produces exactly one, whether or not it could be judged.
+//
+// PIN-SHAPED rather than row-shaped, which is the change. The row-shaped enumerator this replaces
+// could only speak about terminals the datasheet had a usable row for, so a resolved pin the
+// datasheet ignored was absent from the output for the same reason a clean pin was. It also emitted
+// one event per ROW, so a terminal carrying two rows of one kind produced two verdicts about one
+// pin. That is harmless while a verdict is only projected down to findings and is a duplicate
+// identity the moment verdicts are addressable.
+type pinEvent struct {
 	component  *ir.Component
 	designator string
 	pinName    string
-	net        string
-	volts      float64
-	spec       *parampb.PartSpec
-	row        *parampb.Parameter
+
+	// drop is why this terminal cannot be judged, in the author's words, and empty when it can.
+	// Set means every field below is unset and the rule emits NotConsidered rather than silence.
+	drop string
+
+	net   string
+	volts float64
+	spec  *parampb.PartSpec
+	rows  []*parampb.Parameter // comparable rows of the requested kind bound to this terminal
 }
 
-// eachPinLimit walks every power-input pin of every pin-bound part, resolves it onto a spec pin,
-// and yields the rows of the requested limit kind bound to that terminal. Every step that cannot be
-// made safely drops the pin: no resolution, no voltage evidence, no bound row of that kind. Nothing
-// here reports, so a drop is a skip and never a pass.
-func eachPinLimit(m check.Model, kind parampb.LimitKind, yield func(pinLimit)) {
+// eachSupplyPin walks every supply-input terminal of every pin-bound part and yields one event per
+// terminal.
+//
+// The two `continue`s before the event is built are NOT drops and yield nothing. A part with no pin
+// bindings belongs to the alias rules, and a pin that is not a supply input is not a subject of
+// these rules at all. A drop is a terminal the rule DOES claim and cannot answer for, which is a
+// different statement and the only one worth reporting.
+func eachSupplyPin(m check.Model, kind parampb.LimitKind, kindName string, yield func(pinEvent)) {
 	for _, c := range m.Components() {
 		spec := pinBoundSpec(m, c.RefDes)
 		if spec == nil {
-			continue
+			continue // not pin-bound: the alias rules own this part
 		}
 		// The design's MPN may carry the package suffix; when it does not, PackageForMPN returns nil
 		// and ResolvePin falls back to requiring cross-package agreement rather than assuming a body.
@@ -79,33 +94,190 @@ func eachPinLimit(m check.Model, kind parampb.LimitKind, yield func(pinLimit)) {
 		}
 		for _, pin := range m.Pins() {
 			if pin.Component.RefDes != c.RefDes || !check.SupplyInputPin(m, c.RefDes, pin.Designator) {
-				continue
+				continue // not a supply terminal: not a subject of this rule
 			}
+			ev := pinEvent{component: c, designator: pin.Designator}
 			specPin, err := param.ResolvePin(spec, m.PinName(c.RefDes, pin.Designator), pin.Designator, pkg)
 			if err != nil {
+				ev.drop = "pin could not be resolved to a datasheet terminal"
+				yield(ev)
 				continue
 			}
+			ev.pinName = specPin.GetName()
 			net := m.PinNetName(c.RefDes, pin.Designator)
 			if net == "" {
+				ev.drop = "pin is not connected to a net"
+				yield(ev)
 				continue
 			}
 			volts, ok := check.NominalVoltageFromName(net)
 			if !ok {
+				ev.drop = fmt.Sprintf("rail %q does not name a nominal voltage", net)
+				yield(ev)
 				continue
 			}
+			ev.net, ev.volts, ev.spec = net, volts, spec
 			for _, row := range param.PinParameters(spec, specPin.GetId()) {
 				q, ok := param.InBaseUnit(row)
 				if !ok || q.LimitKind != kind || q.Unit != "V" ||
 					param.UnderSpecified(q) || !param.MachineComparable(q) {
 					continue
 				}
-				yield(pinLimit{
-					component: c, designator: pin.Designator, pinName: specPin.GetName(),
-					net: net, volts: volts, spec: spec, row: q,
-				})
+				ev.rows = append(ev.rows, q)
 			}
+			if len(ev.rows) == 0 {
+				ev.drop = "the datasheet binds no comparable " + kindName + " row to this terminal"
+			}
+			yield(ev)
 		}
 	}
+}
+
+// bindingRow reduces a terminal's rows to the one that governs: the row the design has least margin
+// against. It is only called with a non-empty list, since an empty one is a drop.
+//
+// Most-restrictive-wins is what the alias rule supply-exceeds-abs-max already does across a part's
+// supply pins, and the per-pin path lost it when it gained per-terminal resolution. Reporting the
+// first row enumerated would be true and misleading at once: a terminal that clears a 6.5 V row
+// while sitting against a 5.0 V one is not fine, and nothing in the output would say which was read.
+//
+// check.Bound.Margin makes the choice one comparison for every bound shape. A violated row has a
+// negative margin so it beats any passing row, and a row stating no bound has none so it loses to
+// any real limit, which leaves NoLimit for the terminal whose rows ALL state nothing.
+func bindingRow(rows []*parampb.Parameter, volts float64, boundOf func(*parampb.Parameter) check.Bound) (*parampb.Parameter, check.Bound) {
+	best, bestBound := rows[0], boundOf(rows[0])
+	bestMargin := bestBound.Margin(volts)
+	for _, r := range rows[1:] {
+		b := boundOf(r)
+		if mg := b.Margin(volts); mg < bestMargin {
+			best, bestBound, bestMargin = r, b, mg
+		}
+	}
+	return best, bestBound
+}
+
+// PROOF ON PASS. The two rules below decide through check.CompareToBound and produce one
+// check.Verdict per supply TERMINAL, with Eval projecting the failures back out so the `check` path
+// reports exactly what it always has. Three things come out of that.
+//
+// A pass acquires evidence. "3.3 V is within the absolute maximum of 3.6 V" plus the citation is a
+// statement a reviewer can check, where before a pass was a bare `return` that discarded every fact
+// it rested on at the moment it had them all in hand.
+//
+// "No maximum stated" stops reading as a pass. `row.Value.Max == nil || volts <= max` sent both down
+// one silent path, so a row that constrained nothing was indistinguishable from a design sitting
+// comfortably under a real limit. That is the false-pass shape the rule-level gates (Reads,
+// RequiresCapability, ParamSymbols) each exist to prevent, reappearing per datasheet ROW where none
+// of them can see it. It is now check.NoLimit.
+//
+// And a terminal the rule could not judge now SAYS SO. Every step that cannot be taken safely used
+// to drop the pin silently, which reports the same nothing as a rule that never looked at it, so a
+// report built from the survivors claimed coverage it did not have. Those are now NotConsidered
+// verdicts carrying the step that stopped them, which is what makes the verdict list a considered
+// set rather than a list of answers with the questions missing.
+
+// pinVerdict builds the Verdict common to both rules. The verdict is PIN-scoped because the question
+// it answers is "why is this terminal fine", while the Finding it may carry stays COMPONENT-scoped,
+// which is what the viewer highlights and what every existing test asserts.
+//
+// row is the binding row the outcome was decided against, and nil for a verdict that reached no row.
+func pinVerdict(rule string, ev pinEvent, outcome check.Outcome, w *check.Witness, row *parampb.Parameter) check.Verdict {
+	if w != nil && row != nil {
+		w.Datasheet = []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)}
+	}
+	return check.Verdict{
+		Rule:    rule,
+		Outcome: outcome,
+		Kind:    check.KindPin,
+		Subject: ev.component.RefDes,
+		Pin:     ev.designator,
+		Witness: w,
+	}
+}
+
+// pinLimitVerdicts is the body both per-pin rules share: enumerate the terminals, reduce each one's
+// rows to the row that binds, judge it, and let the caller phrase the failing case. The caller
+// supplies only what actually differs, which is the bound's shape and the sentence.
+func pinLimitVerdicts(
+	m check.Model,
+	rule string,
+	kind parampb.LimitKind,
+	kindName string, // names the kind in a drop reason: "absolute-maximum"
+	limitName string, // names the bound in a witness: "absolute maximum"
+	boundOf func(*parampb.Parameter) check.Bound,
+	findingFor func(pinEvent, *parampb.Parameter, check.Bound) *check.Finding,
+) []check.Verdict {
+	var out []check.Verdict
+	eachSupplyPin(m, kind, kindName, func(ev pinEvent) {
+		if ev.drop != "" {
+			v := pinVerdict(rule, ev, check.NotConsidered, nil, nil)
+			v.Reason = ev.drop
+			out = append(out, v)
+			return
+		}
+		row, b := bindingRow(ev.rows, ev.volts, boundOf)
+		outcome, w := check.CompareToBound(ev.volts, "V", b, "nominal", limitName)
+		v := pinVerdict(rule, ev, outcome, w, row)
+		if outcome == check.Fail {
+			v.Finding = findingFor(ev, row, b)
+		}
+		out = append(out, v)
+	})
+	return out
+}
+
+// pinContext is the pin and the rail. These rules are per-PIN and their subject is the whole part,
+// so without the pin a reader cannot tell which terminal of a many-pin part is over its own limit
+// (agni issue 349).
+func pinContext(ev pinEvent) []check.ContextSubject {
+	return []check.ContextSubject{
+		{Kind: check.KindPin, Subject: ev.component.RefDes, Pin: ev.designator, Role: "pin"},
+		{Kind: check.KindNet, Subject: ev.net, Role: "rail"},
+	}
+}
+
+// pinAbsMaxVerdicts decides every pin-bound supply terminal against its own absolute-maximum row.
+func pinAbsMaxVerdicts(m check.Model) []check.Verdict {
+	return pinLimitVerdicts(m, "pin-exceeds-abs-max",
+		parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, "absolute-maximum", "absolute maximum",
+		func(r *parampb.Parameter) check.Bound { return check.Bound{Max: r.Value.Max} },
+		func(ev pinEvent, row *parampb.Parameter, _ check.Bound) *check.Finding {
+			return &check.Finding{
+				Kind:    check.KindComponent,
+				Subject: ev.component.RefDes,
+				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV exceeds that pin's absolute-maximum %s %gV — %s",
+					ev.designator, ev.pinName, ev.net, ev.volts, row.Symbol, row.Value.GetMax(),
+					check.Citation(ev.spec, row)),
+				Prov:          ev.component.Prov,
+				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)},
+				Context:       pinContext(ev),
+			}
+		})
+}
+
+// pinRecommendedVerdicts decides every pin-bound supply terminal against its own recommended range.
+func pinRecommendedVerdicts(m check.Model) []check.Verdict {
+	return pinLimitVerdicts(m, "pin-out-of-recommended",
+		parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, "recommended-operating", "recommended range",
+		func(r *parampb.Parameter) check.Bound { return check.Bound{Min: r.Value.Min, Max: r.Value.Max} },
+		func(ev pinEvent, row *parampb.Parameter, b check.Bound) *check.Finding {
+			// Which side was crossed, for the message only. The OUTCOME came from the comparison in
+			// pinLimitVerdicts, so the two cannot disagree about whether this is a violation.
+			rel := fmt.Sprintf("exceeds recommended maximum %gV", row.Value.GetMax())
+			if b.Min != nil && ev.volts < *b.Min {
+				rel = fmt.Sprintf("is below recommended minimum %gV", row.Value.GetMin())
+			}
+			return &check.Finding{
+				Kind:    check.KindComponent,
+				Subject: ev.component.RefDes,
+				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV %s for that pin (%s) — %s",
+					ev.designator, ev.pinName, ev.net, ev.volts, rel, row.Symbol,
+					check.Citation(ev.spec, row)),
+				Prov:          ev.component.Prov,
+				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ev.spec, row)},
+				Context:       pinContext(ev),
+			}
+		})
 }
 
 // pinExceedsAbsMax flags a supply pin sitting on a rail above THAT TERMINAL's absolute-maximum
@@ -126,29 +298,7 @@ var pinExceedsAbsMax = &check.Rule{
 	},
 	Detail: ruleDoc("pin-exceeds-abs-max"),
 	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
-		eachPinLimit(m, parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX, func(pl pinLimit) {
-			if pl.row.Value.Max == nil || pl.volts <= pl.row.Value.GetMax() {
-				return
-			}
-			out = append(out, check.Finding{
-				Kind:    check.KindComponent,
-				Subject: pl.component.RefDes,
-				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV exceeds that pin's absolute-maximum %s %gV — %s",
-					pl.designator, pl.pinName, pl.net, pl.volts, pl.row.Symbol, pl.row.Value.GetMax(),
-					check.Citation(pl.spec, pl.row)),
-				Prov:          pl.component.Prov,
-				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
-				// The pin and the rail. This rule is per-PIN and its subject is the whole part, so
-				// without the pin a reader cannot tell which terminal of a many-pin part is over its
-				// own limit (agni issue 349).
-				Context: []check.ContextSubject{
-					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
-					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
-				},
-			})
-		})
-		return out
+		return check.VerdictsToFindings(pinAbsMaxVerdicts(m))
 	},
 }
 
@@ -171,34 +321,6 @@ var pinOutOfRecommended = &check.Rule{
 	},
 	Detail: ruleDoc("pin-out-of-recommended"),
 	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
-		eachPinLimit(m, parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING, func(pl pinLimit) {
-			hasLo, hasHi := pl.row.Value.Min != nil, pl.row.Value.Max != nil
-			lo, hi := pl.row.Value.GetMin(), pl.row.Value.GetMax()
-			var rel string
-			switch {
-			case hasHi && pl.volts > hi:
-				rel = fmt.Sprintf("exceeds recommended maximum %gV", hi)
-			case hasLo && pl.volts < lo:
-				rel = fmt.Sprintf("is below recommended minimum %gV", lo)
-			default:
-				return
-			}
-			out = append(out, check.Finding{
-				Kind:    check.KindComponent,
-				Subject: pl.component.RefDes,
-				Message: fmt.Sprintf("pin %s (%s) on rail %q: nominal %gV %s for that pin (%s) — %s",
-					pl.designator, pl.pinName, pl.net, pl.volts, rel, pl.row.Symbol,
-					check.Citation(pl.spec, pl.row)),
-				Prov:          pl.component.Prov,
-				DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(pl.spec, pl.row)},
-				// As above: the recommended-range twin of the same finding.
-				Context: []check.ContextSubject{
-					{Kind: check.KindPin, Subject: pl.component.RefDes, Pin: pl.designator, Role: "pin"},
-					{Kind: check.KindNet, Subject: pl.net, Role: "rail"},
-				},
-			})
-		})
-		return out
+		return check.VerdictsToFindings(pinRecommendedVerdicts(m))
 	},
 }
