@@ -35,6 +35,36 @@ never seen the board, has no parameter corpus, and no profiles, and it renders t
 That is what makes it archival. A year from now, when the design file has moved and the tool has
 moved on several versions, the document still says what was checked and what was found.
 
+## A report a person can read
+
+The results document is for machines and for your future self. For a reviewer who wants to read the
+run today, render it as HTML:
+
+{{ agniRun "content/tutorials/runs/11-report-html.yaml" }}
+
+That writes a self-contained page: failures first, then each rule with what it examined, why the
+rule exists, and what to do about a failure. It needs no server and no assets, so it attaches to a
+review ticket or a release folder as one file.
+
+Give it `--url-base` and each subject becomes a link into a running viewer, which opens the board
+with that verdict's proof drawn:
+
+```
+agni serve --addr :8080 --mount work=. web
+agni check --verdicts --format html --url-base http://localhost:8080 \
+  --mount work=. mount://work/designs/gateway/gateway.edn > review.html
+```
+
+The `--mount` is not decoration. A link is a promise the reader can follow, so the CLI emits one only
+when you have named the design the same way the server does. Point it at a bare file path and the
+report renders with plain text subjects instead of links, which is the honest answer rather than a
+URL that resolves on nobody's machine.
+
+Two things this is not. It is not the archival artifact: the results document replays without the
+design and this does not. And a rule that reports violations without stating what it examined is
+labelled "findings only" here, with its rows captioned so nobody reads silence from it as a clean
+bill. That caption is the difference between a report and a reassurance.
+
 ## Gate a merge
 
 {{ agniRun "content/tutorials/runs/11-gate-merge.yaml" }}

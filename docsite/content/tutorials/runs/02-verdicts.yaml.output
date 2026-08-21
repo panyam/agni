@@ -1,0 +1,6 @@
+#agni-run b668ef3592498121
+pass            PMIC_CORE_3V3   capacitor C1 sits on the rail
+pass            PMIC_IO_1V8     capacitor C3 sits on the rail
+fail            PMIC_MAIN_12V0  no capacitor sits on the rail, which feeds at least one power-input pin
+
+3 verdicts, 2 pass, 1 fail

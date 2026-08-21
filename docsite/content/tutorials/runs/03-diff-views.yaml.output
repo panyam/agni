@@ -1,4 +1,4 @@
-#agni-run 7de7e957af490d5d
+#agni-run aaa8b78b608affb6
 diff designs/gateway/gateway.edn -> designs/gateway/gateway.kicad_sch
 
 Components: +0  -0  ~0
