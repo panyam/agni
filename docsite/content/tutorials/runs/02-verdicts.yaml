@@ -1,0 +1,6 @@
+# Rung 2: what a rule concluded about every rail it looked at, not only the one that failed.
+# decoupling-present is the worked example because its pass names the capacitor, which is the
+# thing a reader can go and confirm on the schematic.
+fixture: examples/tutorial-project
+script: |
+  agni check --verdicts --rule decoupling-present designs/gateway/gateway.edn

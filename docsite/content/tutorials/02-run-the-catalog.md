@@ -96,7 +96,7 @@ Starting at `--fail-on error` is the practical choice. It gates on the things th
 all, which almost nobody argues with, and it lets you tighten to `warning` later once the backlog is
 clear.
 
-## What a clean run looks like
+## What a clean run looks like, and why the count is not enough
 
 A run that finds nothing prints how many rules it ran:
 
@@ -104,11 +104,31 @@ A run that finds nothing prints how many rules it ran:
 no findings (29 rule(s) run)
 ```
 
-The count is the important half. It tells you the check actually exercised 29 rules rather than
-staying quiet because it had nothing to work with. If you load only a schematic and no board file,
-the copper rules do not appear in that count at all, because there is no copper for them to look at.
-That distinction between "checked and fine" and "never checked" runs through the whole tool, and
-rung 9 is entirely about it.
+That count is worth something. It tells you the check exercised 29 rules rather than staying quiet
+because it had nothing to work with. If you load only a schematic and no board file, the copper rules
+do not appear in the count at all, because there is no copper for them to look at.
+
+But it still cannot tell you what those 29 rules LOOKED AT. Twenty-nine rules reporting nothing and
+twenty-nine rules that each examined the wrong thing print the same line. Add `--verdicts` and the
+run reports one outcome per subject instead, passes included:
+
+{{ agniRun "content/tutorials/runs/02-verdicts.yaml" }}
+
+Now the pass is checkable. It names C1 and C3, so you can open the schematic and confirm that those
+capacitors really are on those rails. Delete C1 next revision and this output changes, where the
+findings-only view would print the same nothing before and after.
+
+Across the whole catalog that is a much larger answer than the findings list:
+
+{{ agniRun "content/tutorials/runs/02-verdicts-summary.yaml" }}
+
+`not-considered` is the third outcome and the one with no counterpart in a findings list: the rule
+was willing to judge that subject and something was missing, so it says which input it lacked rather
+than passing on incomplete evidence. On this board most of them are asking for the datasheet values
+you seed in [rung 6](../06-part-limits/).
+
+That distinction between "checked and fine", "never checked" and "could not tell" runs through the
+whole tool, and [rung 9](../09-read-the-verdicts/) is entirely about reading it.
 
 ## Next
 
