@@ -564,8 +564,59 @@ func (ev *evalEnv) why(e Expr) string {
 		// Read an absent match as an absence, not as a failed test: "no connection is a no-connect"
 		// rather than "some connection is a no-connect does not hold".
 		return "no " + x.Over + " where " + renderExpr(x.Where)
+	case Cmp:
+		return ev.whyCmp(x)
+	case Match:
+		return ev.whyLeaf(x.T, "does not match /"+x.Pattern+"/")
+	case In:
+		return ev.whyLeaf(x.T, "is not one of ["+strings.Join(x.Set, ", ")+"]")
 	}
 	return renderExpr(e) + " does not hold"
+}
+
+// whyCmp states a false comparison as the subject's ACTUAL value rather than as the test applied to
+// it. renderExpr can only print the rule's own syntax ("claims >= 2"), because it takes an Expr and
+// never the evalEnv, so the number that decided the pass is dropped at exactly the point a reader
+// needs it. The failing branch already interpolates values into Message; this is the passing branch
+// doing the same. A statement carrying no value reads identically on every passing subject a rule
+// sees, which build/evidence.md calls decoration rather than evidence.
+//
+// An ordering also names the threshold it did not reach, so a reader can see what would have made
+// the rule fire.
+func (ev *evalEnv) whyCmp(x Cmp) string {
+	// "!=" came out false, so the two sides are EQUAL. The value IS the whole reason and there is
+	// no unmet threshold to report; appending one would contradict the value just stated.
+	if x.Op == "!=" {
+		return ev.valueOf(x.L)
+	}
+	return ev.valueOf(x.L) + ", not " + renderComparand(x.Op, x.R)
+}
+
+// whyLeaf states a false membership or pattern test the same way: the value first, then the test it
+// failed.
+func (ev *evalEnv) whyLeaf(subject Term, suffix string) string {
+	return ev.valueOf(subject) + ", so it " + suffix
+}
+
+// valueOf renders "<term> is <value>" for the value the subject actually supplied. The left operand
+// is the one that gets read, because that is the subject's side of a comparison; the right side is
+// the rule's own threshold.
+func (ev *evalEnv) valueOf(t Term) string {
+	v := ev.term(t)
+	if s, ok := v.(string); ok && s == "" {
+		return renderTerm(t) + " is empty" // reads as the absence it is; `is ""` reads as an artefact
+	}
+	return renderTerm(t) + " is " + renderTerm(Lit{V: v})
+}
+
+// renderComparand phrases the threshold half of a comparison that came out false. Equality drops the
+// operator, since "not 5" already says it; an ordering keeps it, since "not >= 2" and "not 2" mean
+// different things to a reader deciding whether the value is close to firing.
+func renderComparand(op string, r Term) string {
+	if op == "==" {
+		return renderTerm(r)
+	}
+	return op + " " + renderTerm(r)
 }
 
 // Rule binds the spec into a *Rule: meta supplies the identity, severity, prose, and tags;

@@ -229,6 +229,23 @@ is `cap-voltage`, and its comment says why: its SpecFunc returns the same empty 
 for a capacitor with no seeded datasheet, so inside scope it still cannot tell "within rating" from
 "nothing to compare".
 
+**A pass states the VALUE that refuted `Where`, not the expression that tested it.** The interpreter
+renders the first false conjunct, and for a comparison, a pattern or a membership test it reads the
+subject's actual value: `claims is 1, not >= 2` rather than `claims >= 2 does not hold`. The
+threshold survives, so a reader can see what would have made the rule fire, and `drivers is 0` is
+visibly a different situation from `drivers is 1`. A `!=` that came out false is the one case with no
+threshold to name, because the two sides are equal and the value alone is the whole reason, so
+`labels != ""` passing reads `labels is empty`.
+
+This costs an author nothing, but it does make a `Let` binding name READER-FACING. `claims` and
+`labels` reach the report spelled exactly as written, the same way `{claims}` already does inside
+`Message`. Name a binding for the fact it holds.
+
+**A predicate that measured nothing still cannot say anything.** `IsTrue{Call{...}}` decides on a
+bare bool, so `led-polarity` passes with `led_reversed does not hold` and no value to offer. That is
+the same shape as the `cap-voltage` gap above, and closing it needs a SpecFunc that can hand back
+what it saw rather than only what it concluded.
+
 ## Say what you looked at, not only what failed
 
 `Eval` returns one `check.Verdict` per subject the rule was applied to, passes included. It MAPS the
