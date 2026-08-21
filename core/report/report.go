@@ -89,6 +89,35 @@ type Row struct {
 	URL      string   // empty when the caller supplied no base
 }
 
+// SubjectLabel is a row's subject tuple as one string, joined the way both renderers spell it. A
+// relation-shaped rule names two or three entities and a reader needs all of them: "copper of GND and
+// VBUS" is the fact, and naming one half asks them to guess the other.
+//
+// It lives on Row rather than in a renderer because it had been written twice, once as an HTML
+// template function and once in the CLI, and the two were free to disagree about a spelling nobody
+// would notice was drifting. That is the shape agni issue 380 describes.
+func (r Row) SubjectLabel() string {
+	parts := make([]string, 0, len(r.Subjects))
+	for _, e := range r.Subjects {
+		parts = append(parts, check.EntityRef(e))
+	}
+	return strings.Join(parts, " + ")
+}
+
+// Detail is the sentence a row leads with: the violation where there is one, else the proof, else the
+// reason it could not be judged. Exactly one of the three is set on any row, and the precedence
+// matters where two are: a failing verdict carries both a Message and a Witness, and the Message is
+// the one addressed to a reader deciding what to do.
+func (r Row) Detail() string {
+	switch {
+	case r.Message != "":
+		return r.Message
+	case r.Witness != "":
+		return r.Witness
+	}
+	return r.Reason
+}
+
 // Term is one labelled fact behind a row's witness.
 type Term struct{ Label, Value string }
 

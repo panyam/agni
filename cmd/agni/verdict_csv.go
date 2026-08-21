@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
@@ -96,49 +95,6 @@ func outcomeCell(o checkspb.Outcome) string {
 	default:
 		return "unspecified"
 	}
-}
-
-// writeVerdictText is the human terminal form: one line per verdict, outcome first so a column of
-// them scans, then the subject and the proof. A verdict with no witness prints its reason instead,
-// which is the NOT_CONSIDERED case and the one a reader most needs spelled out.
-func writeVerdictText(w io.Writer, vs []*checkspb.Verdict) {
-	if len(vs) == 0 {
-		fmt.Fprintln(w, "No rule reported a considered set. Only some rules state one; see --verdicts.")
-		return
-	}
-	byOutcome := map[string]int{}
-	width := 0
-	for _, v := range vs {
-		byOutcome[outcomeCell(v.GetOutcome())]++
-		if n := len(subjectLabel(v)); n > width {
-			width = n
-		}
-	}
-	for _, v := range vs {
-		proof := v.GetWitness().GetStatement()
-		if proof == "" {
-			proof = v.GetReason()
-		}
-		fmt.Fprintf(w, "%-14s  %-*s  %s\n", outcomeCell(v.GetOutcome()), width, subjectLabel(v), proof)
-	}
-	fmt.Fprintf(w, "\n%d verdicts", len(vs))
-	for _, o := range []string{"pass", "fail", "inconclusive", "no-limit", "not-considered"} {
-		if n := byOutcome[o]; n > 0 {
-			fmt.Fprintf(w, ", %d %s", n, o)
-		}
-	}
-	fmt.Fprintln(w)
-}
-
-// subjectLabel is the terminal spelling of a verdict's subject: a pin reads as U12.7, everything else
-// as its ref. It matches the pin form VerdictID uses so a line and its id are recognisably the same
-// entity.
-func subjectLabel(v *checkspb.Verdict) string {
-	parts := make([]string, 0, len(v.GetSubjects()))
-	for _, s := range v.GetSubjects() {
-		parts = append(parts, subjectRefCell(s))
-	}
-	return strings.Join(parts, " + ")
 }
 
 // subjectsCell renders a verdict's tuple for the csv as kind:ref pairs, pipe-separated, matching the

@@ -22,18 +22,27 @@ import (
 // one that was never converted, and guessing would make the report claim coverage the run never had.
 func writeVerdictHTML(w io.Writer, resp *webapi.CheckDesignResponse, rules []*check.Rule,
 	source, contentHash, urlBase, mountPath string) error {
-	verdicts := make([]check.Verdict, 0, len(resp.GetVerdicts()))
-	for _, v := range resp.GetVerdicts() {
-		verdicts = append(verdicts, service.VerdictFromProto(v))
-	}
-	rep := rpt.Build(verdicts, findingsFromProtos(resp.GetFindings()), rules, rpt.Report{
+	return rpt.HTML(w, buildVerdictReport(resp, rules, rpt.Report{
 		Design:      source,
 		Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
 		ContentHash: contentHash,
 		URLBase:     urlBase,
 		MountPath:   mountPath,
-	})
-	return rpt.HTML(w, rep)
+	}))
+}
+
+// buildVerdictReport aggregates one run into the shared report model, which BOTH renderers take. It
+// is one function rather than one per format so the html page and the terminal cannot disagree about
+// what the run contained or what order to meet it in, which is the drift agni issue 380 describes.
+//
+// It takes the COMPOSED catalog rather than the built-in one, so an overlay's own rules carry their
+// prose exactly as a built-in does.
+func buildVerdictReport(resp *webapi.CheckDesignResponse, rules []*check.Rule, meta rpt.Report) rpt.Report {
+	verdicts := make([]check.Verdict, 0, len(resp.GetVerdicts()))
+	for _, v := range resp.GetVerdicts() {
+		verdicts = append(verdicts, service.VerdictFromProto(v))
+	}
+	return rpt.Build(verdicts, findingsFromProtos(resp.GetFindings()), rules, meta)
 }
 
 // findingsFromProtos carries the few fields a report row needs back across the wire. It is local to
