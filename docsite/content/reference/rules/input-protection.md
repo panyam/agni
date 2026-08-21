@@ -3,6 +3,10 @@ title: "input-protection"
 description: "A connector feeds a power-input pin directly with no fuse or TVS in the path."
 ---
 
+### Remedy
+
+Put a fuse and a clamp in the path between the connector and the rail: a fuse for the sustained fault, a TVS for the transient.
+
 ### What it means
 
 A net where a board connector directly meets a power-input pin must also

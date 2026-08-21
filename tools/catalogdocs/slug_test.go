@@ -86,3 +86,27 @@ func TestPageSlugsUnique(t *testing.T) {
 		}
 	}
 }
+
+// TestRemedySectionLeadsThePage pins the two decisions in remedySection that a reader of the
+// generated markdown cannot infer: the remedy is a "### " section rather than a blockquote (the
+// docsite styles headings and has no blockquote rule at all), and it comes FIRST, above the doc
+// body, because a reader arrives here from a finding that just fired.
+//
+// The empty case is not vacuous here: a rule that states no remedy must add NOTHING, or every page
+// for an unconverted rule would carry a stray empty heading.
+func TestRemedySectionLeadsThePage(t *testing.T) {
+	page := frontMatter("i2c-pull-up", "a summary") + remedySection("Fit a pull-up.") + "### What it means\n\nbody\n"
+
+	if !strings.Contains(page, "### Remedy\n\nFit a pull-up.") {
+		t.Errorf("remedy is not rendered as its own section:\n%s", page)
+	}
+	if strings.Contains(page, "> ") {
+		t.Errorf("remedy rendered as a blockquote, which the docsite does not style:\n%s", page)
+	}
+	if strings.Index(page, "### Remedy") > strings.Index(page, "### What it means") {
+		t.Errorf("remedy section does not lead the body:\n%s", page)
+	}
+	if got := remedySection("   "); got != "" {
+		t.Errorf("a rule stating no remedy contributed %q, want nothing at all", got)
+	}
+}

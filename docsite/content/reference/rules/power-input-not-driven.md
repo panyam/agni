@@ -3,6 +3,10 @@ title: "power-input-not-driven"
 description: "A power-input pin sits on a net with no power source (no power-output and no power flag)."
 ---
 
+### Remedy
+
+Connect the supply pin to the rail that feeds it, and check that the rail itself reaches its regulator. An undriven VDD is usually a missed wire rather than a missing supply.
+
 ### What it means
 
 A net that has a power-input pin (a VCC/VDD/rail-consuming pin) but no power

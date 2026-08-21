@@ -3,6 +3,10 @@ title: "reverse-blocking-absent"
 description: "A connector feeds a power input with no directional element blocking reverse flow."
 ---
 
+### Remedy
+
+Add a directional element between the connector and the load: a series FET where the voltage drop matters, a diode where it does not, or a bridge where the input polarity is genuinely unknown.
+
 ### What it checks
 
 A connector feeds a power-input pin, and nothing on the path between them blocks current flowing the

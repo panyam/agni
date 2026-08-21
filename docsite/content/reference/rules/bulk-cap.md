@@ -3,6 +3,10 @@ title: "bulk-cap"
 description: "A named power rail carries no capacitor at all (no bulk reservoir)."
 ---
 
+### Remedy
+
+Add a bulk reservoir capacitor where the rail enters, sized from the load step the rail has to absorb and from the regulator's own stability requirement.
+
 ### What it means
 
 Every named power rail (a net an author gave a power symbol or asserted

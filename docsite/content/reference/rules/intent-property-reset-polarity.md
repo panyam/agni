@@ -3,6 +3,10 @@ title: "intent/property-reset-polarity"
 description: "A net the design intent declares as a reset is biased to its ASSERTED level, holding the part in reset."
 ---
 
+### Remedy
+
+Bias the reset net to its DE-asserted level. As drawn, the part is held in reset from power-up, which reads at bring-up as a device that never starts.
+
 ### What it checks
 
 A net the design intent declares as an active-low (or active-high) reset must not be **biased to its

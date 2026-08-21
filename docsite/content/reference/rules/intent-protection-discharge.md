@@ -3,6 +3,10 @@ title: "intent/protection-discharge"
 description: "A rail the design intent declares needs a discharge path has no bleeder resistor."
 ---
 
+### Remedy
+
+Fit a bleeder resistor across the rail, sized so the rail discharges within the time the design assumes when it powers down.
+
 ### What it means
 
 The design intent declares that a named rail must have a discharge path: a bleeder resistor that bridges

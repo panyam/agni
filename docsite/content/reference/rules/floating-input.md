@@ -3,6 +3,10 @@ title: "floating-input"
 description: "An input pin sits on a net with no driver and no pull, so its level is undefined."
 ---
 
+### Remedy
+
+Tie the input to its inactive level through a pull-up or pull-down, or drive it from the logic that was meant to. A CMOS input is never safe to leave floating, including on a pin the firmware does not use.
+
 ### What it means
 
 A net that carries one or more input pins and nothing else that could set its

@@ -3,6 +3,10 @@ title: "diff-pair-naming"
 description: "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net."
 ---
 
+### Remedy
+
+Add the missing complementary net, or rename the net if it was never half of a pair. Left as it is, the layout tool routes the two as ordinary signals and the link is not a differential pair at all.
+
 ### What it means
 
 A net named as the positive half of a differential pair (a "_P", "_DP", or

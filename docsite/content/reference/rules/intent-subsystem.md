@@ -3,6 +3,10 @@ title: "intent/subsystem"
 description: "An architectural subsystem the design intent declares is missing a required part or net."
 ---
 
+### Remedy
+
+Add the missing part or net to the subsystem, or amend the declaration if the architecture changed and the intent document did not.
+
 ### What it means
 
 The design intent declares named architectural subsystems (a clock tree, a reset scheme, the power

@@ -3,6 +3,10 @@ title: "decoupling-present"
 description: "A power rail feeds power-input pins but has no decoupling capacitor on it."
 ---
 
+### Remedy
+
+Add a decoupling capacitor from the rail to ground at each supply pin, and place it at the pin in layout. A capacitor drawn on the rail but placed across the board does not decouple it.
+
 ### What it means
 
 Every supply rail that feeds a power-input pin (a chip's VCC/VDD) should carry

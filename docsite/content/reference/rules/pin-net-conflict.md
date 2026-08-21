@@ -3,6 +3,10 @@ title: "pin-net-conflict"
 description: "A pin appears in more than one net's connections, which is malformed input."
 ---
 
+### Remedy
+
+Fix the source netlist so the pin appears in exactly one net, then re-export. The ambiguity is in the input, so nothing downstream can resolve it.
+
 ### What it means
 
 One (component, pin) appears in the connection lists of two or more

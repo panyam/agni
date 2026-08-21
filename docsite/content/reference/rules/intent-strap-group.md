@@ -3,6 +3,10 @@ title: "intent/strap-group"
 description: "a group of strap nets does not encode the value the design intent declares"
 ---
 
+### Remedy
+
+Re-bias the straps in the group until they encode the declared value, working the value out from the datasheet's strap table rather than from the resistors one at a time.
+
 ### What it checks
 
 Several strap nets read together as one binary number, MSB-first, compared against the value the

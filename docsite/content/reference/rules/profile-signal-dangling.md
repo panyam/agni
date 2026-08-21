@@ -3,6 +3,10 @@ title: "profile/signal-dangling"
 description: "An interface signal net has fewer than two connections (a dangling stub)."
 ---
 
+### Remedy
+
+Connect the far end of the signal. The net exists, so presence checks pass, but only one end of it is actually wired.
+
 ### What it means
 
 A profile signal net that exists by name but carries fewer than two connections. It is present in

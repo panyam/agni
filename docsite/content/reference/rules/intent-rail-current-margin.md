@@ -3,6 +3,10 @@ title: "intent/rail-current-margin"
 description: "A rail's supply meets its declared peak current budget but not the declared margin factor over it."
 ---
 
+### Remedy
+
+Fit a supply carrying the declared margin over the rail's peak, or lower the margin factor if the declaration is stricter than this design needs.
+
 ### What it checks
 
 A rail's supply must be rated for its declared peak budget multiplied by the declared margin factor.

@@ -3,6 +3,10 @@ title: "fet-vdss-below-switched-rail"
 description: "A MOSFET sits on a rail at or above its datasheet drain-source breakdown voltage."
 ---
 
+### Remedy
+
+Fit a FET whose drain-source rating clears the rail with margin for switching overshoot, checking it against the rail's transient peak rather than its nominal.
+
 ### What it checks
 
 A MOSFET sitting on a power rail whose voltage is at or above the part's datasheet **drain-source

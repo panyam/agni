@@ -170,6 +170,12 @@ Three things keep it honest:
   and `symbol-unresolved` are remedied by giving the tool more (`--conventions`, `--symbol-path`),
   and their remedies say explicitly that nothing is yet known to be wrong with the board.
 
+**Write it in the field, never in the rule's `docs/<name>.md`.** `tools/catalogdocs` projects `Remedy`
+onto the rule's docsite reference page as its leading `### Remedy` section, so a doc that also wrote
+one would print the fix twice. This is the opposite of the convention for Impact, whose field and
+whose `### Impact` doc section are both allowed to exist and say the same thing differently, which is
+also why the generator projects Remedy onto the page and not Impact.
+
 A rule generated per-declaration (the `intent` and `profile` families) keys its remedy by KIND rather
 than writing it at the builder, because the fix for a missing OV clamp is the same sentence on every
 rail that declares one. See `docRemedies` in `stdlib/rules/intent/docs.go` and `requirementCaption`

@@ -3,6 +3,10 @@ title: "intent/rail-current-capacity"
 description: "The part supplying a rail is rated below the peak current the design intent declares for that rail."
 ---
 
+### Remedy
+
+Fit a supply rated above the rail's declared peak current, or reduce the load the rail carries. As drawn, the rail is specified beyond what its source can deliver.
+
 ### What it checks
 
 A rail whose current budget the design intent declares must be supplied by a part rated to deliver at

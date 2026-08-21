@@ -3,6 +3,10 @@ title: "nc-pin-connected"
 description: "A pin marked no-connect is wired into a net with other members."
 ---
 
+### Remedy
+
+Disconnect the pin and mark it no-connect. Where the connection is deliberate (a factory test pad, a vendor-documented exception), cite the datasheet section that allows it in a schematic note.
+
 ### What it means
 
 A pin whose electrical type is NO_CONNECT (the symbol author's "leave this

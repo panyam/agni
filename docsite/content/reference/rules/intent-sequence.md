@@ -3,6 +3,10 @@ title: "intent/sequence"
 description: "A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round."
 ---
 
+### Remedy
+
+Wire the power-good or enable chain so each rail's release depends on the one before it, in the declared order. Check the direction as well as the presence, since a chain wired backwards satisfies neither.
+
 ### What it checks
 
 The design intent declares a power-up ORDER: these rails, in this order, held in order by a

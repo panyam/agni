@@ -3,6 +3,10 @@ title: "esd-protection"
 description: "An externally-exposed signal net (on a connector) has no TVS device."
 ---
 
+### Remedy
+
+Fit an ESD TVS from the exposed signal to ground on the connector side of everything it protects. A clamp placed behind the transceiver protects nothing.
+
 ### What it means
 
 A signal net a connector exposes to the outside world should carry a TVS

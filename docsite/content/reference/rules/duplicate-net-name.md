@@ -3,6 +3,10 @@ title: "duplicate-net-name"
 description: "Two electrically distinct nets carry the same name."
 ---
 
+### Remedy
+
+Rename one of the nets. If the two were meant to be one net, connect them instead, and check whether a connect-by-name path has already merged them somewhere else in the design.
+
 ### What it means
 
 More than one net in the design states the same non-empty name.

@@ -3,6 +3,10 @@ title: "duplicate-ref-des"
 description: "A reference designator is claimed by more than one distinct physical part."
 ---
 
+### Remedy
+
+Re-annotate the schematic so each physical part holds its own designator, then re-check the BOM, since whichever part was silently merged is the one to look at first.
+
 ### What it means
 
 One reference designator (U1, R5) assigned to two genuinely distinct physical

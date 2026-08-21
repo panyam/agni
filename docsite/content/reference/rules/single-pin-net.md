@@ -3,6 +3,10 @@ title: "single-pin-net"
 description: "A net connects to fewer than two pins (a floating stub), and is not an intentional no-connect."
 ---
 
+### Remedy
+
+Wire the stub to whatever it was meant to reach, or mark the pin no-connect if it is genuinely unused, so the intent is recorded rather than left to be guessed at.
+
 ### What it means
 
 A net that connects to fewer than two pins. A signal wired to exactly one

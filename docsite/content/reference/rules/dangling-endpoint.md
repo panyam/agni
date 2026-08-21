@@ -3,6 +3,10 @@ title: "dangling-endpoint"
 description: "A wire endpoint terminates on nothing (no pin, junction, label, or other wire)."
 ---
 
+### Remedy
+
+Extend the wire to the pin, junction, or label it was meant to reach, or delete it. A wire that ends in space is never what the author intended.
+
 ### What it means
 
 A schematic wire whose end lands on empty space: no pin, no junction dot, no
