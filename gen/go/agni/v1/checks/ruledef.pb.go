@@ -373,11 +373,16 @@ func (x *SpecRule) GetBody() *SpecBody {
 // "{name}" interpolates a let binding or a fact and "{name:q}" quotes it. An absent where selects
 // every entity.
 type SpecBody struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Over          string                 `protobuf:"bytes,1,opt,name=over,proto3" json:"over,omitempty"`
-	Let           map[string]*SpecTerm   `protobuf:"bytes,2,rep,name=let,proto3" json:"let,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Where         *SpecExpr              `protobuf:"bytes,3,opt,name=where,proto3" json:"where,omitempty"`
-	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Over    string                 `protobuf:"bytes,1,opt,name=over,proto3" json:"over,omitempty"`
+	Let     map[string]*SpecTerm   `protobuf:"bytes,2,rep,name=let,proto3" json:"let,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Where   *SpecExpr              `protobuf:"bytes,3,opt,name=where,proto3" json:"where,omitempty"`
+	Message string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	// scope is which elements of over the rule JUDGES; absent judges all of them. It is separate from
+	// where because falling out of each means something different: out of scope produces no verdict at
+	// all, while failing where produces a PASS. With one predicate a subject the rule was never about
+	// is indistinguishable from one it checked and cleared.
+	Scope         *SpecExpr `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -438,6 +443,13 @@ func (x *SpecBody) GetMessage() string {
 		return x.Message
 	}
 	return ""
+}
+
+func (x *SpecBody) GetScope() *SpecExpr {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
 }
 
 // SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer
@@ -2302,12 +2314,13 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"f\n" +
 	"\bSpecRule\x12,\n" +
 	"\x04meta\x18\x01 \x01(\v2\x18.agni.v1.checks.RuleMetaR\x04meta\x12,\n" +
-	"\x04body\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecBodyR\x04body\"\xef\x01\n" +
+	"\x04body\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecBodyR\x04body\"\x9f\x02\n" +
 	"\bSpecBody\x12\x12\n" +
 	"\x04over\x18\x01 \x01(\tR\x04over\x123\n" +
 	"\x03let\x18\x02 \x03(\v2!.agni.v1.checks.SpecBody.LetEntryR\x03let\x12.\n" +
 	"\x05where\x18\x03 \x01(\v2\x18.agni.v1.checks.SpecExprR\x05where\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\x1aP\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12.\n" +
+	"\x05scope\x18\x05 \x01(\v2\x18.agni.v1.checks.SpecExprR\x05scope\x1aP\n" +
 	"\bLetEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
 	"\x05value\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecTermR\x05value:\x028\x01\"\xd3\x01\n" +
@@ -2486,51 +2499,52 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	4,  // 6: agni.v1.checks.SpecRule.body:type_name -> agni.v1.checks.SpecBody
 	30, // 7: agni.v1.checks.SpecBody.let:type_name -> agni.v1.checks.SpecBody.LetEntry
 	9,  // 8: agni.v1.checks.SpecBody.where:type_name -> agni.v1.checks.SpecExpr
-	6,  // 9: agni.v1.checks.SpecTerm.lit:type_name -> agni.v1.checks.SpecLit
-	7,  // 10: agni.v1.checks.SpecTerm.call:type_name -> agni.v1.checks.SpecCall
-	8,  // 11: agni.v1.checks.SpecTerm.count_of:type_name -> agni.v1.checks.SpecCountOf
-	5,  // 12: agni.v1.checks.SpecCall.args:type_name -> agni.v1.checks.SpecTerm
-	9,  // 13: agni.v1.checks.SpecCountOf.where:type_name -> agni.v1.checks.SpecExpr
-	10, // 14: agni.v1.checks.SpecExpr.and:type_name -> agni.v1.checks.SpecExprList
-	10, // 15: agni.v1.checks.SpecExpr.or:type_name -> agni.v1.checks.SpecExprList
-	9,  // 16: agni.v1.checks.SpecExpr.not:type_name -> agni.v1.checks.SpecExpr
-	11, // 17: agni.v1.checks.SpecExpr.cmp:type_name -> agni.v1.checks.SpecCmp
-	12, // 18: agni.v1.checks.SpecExpr.in:type_name -> agni.v1.checks.SpecIn
-	13, // 19: agni.v1.checks.SpecExpr.match:type_name -> agni.v1.checks.SpecMatch
-	14, // 20: agni.v1.checks.SpecExpr.exists_in:type_name -> agni.v1.checks.SpecExistsIn
-	5,  // 21: agni.v1.checks.SpecExpr.is_true:type_name -> agni.v1.checks.SpecTerm
-	9,  // 22: agni.v1.checks.SpecExprList.xs:type_name -> agni.v1.checks.SpecExpr
-	5,  // 23: agni.v1.checks.SpecCmp.l:type_name -> agni.v1.checks.SpecTerm
-	5,  // 24: agni.v1.checks.SpecCmp.r:type_name -> agni.v1.checks.SpecTerm
-	5,  // 25: agni.v1.checks.SpecIn.t:type_name -> agni.v1.checks.SpecTerm
-	5,  // 26: agni.v1.checks.SpecMatch.t:type_name -> agni.v1.checks.SpecTerm
-	9,  // 27: agni.v1.checks.SpecExistsIn.where:type_name -> agni.v1.checks.SpecExpr
-	2,  // 28: agni.v1.checks.QueryRule.meta:type_name -> agni.v1.checks.RuleMeta
-	17, // 29: agni.v1.checks.QueryRule.query:type_name -> agni.v1.checks.DatalogQuery
-	16, // 30: agni.v1.checks.QueryRule.context_vars:type_name -> agni.v1.checks.ContextVar
-	18, // 31: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
-	19, // 32: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
-	23, // 33: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
-	21, // 34: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
-	19, // 35: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
-	20, // 36: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
-	21, // 37: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
-	21, // 38: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
-	22, // 39: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
-	23, // 40: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
-	23, // 41: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
-	23, // 42: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
-	24, // 43: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
-	25, // 44: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
-	27, // 45: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
-	28, // 46: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
-	31, // 47: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 48: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	49, // [49:49] is the sub-list for method output_type
-	49, // [49:49] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	9,  // 9: agni.v1.checks.SpecBody.scope:type_name -> agni.v1.checks.SpecExpr
+	6,  // 10: agni.v1.checks.SpecTerm.lit:type_name -> agni.v1.checks.SpecLit
+	7,  // 11: agni.v1.checks.SpecTerm.call:type_name -> agni.v1.checks.SpecCall
+	8,  // 12: agni.v1.checks.SpecTerm.count_of:type_name -> agni.v1.checks.SpecCountOf
+	5,  // 13: agni.v1.checks.SpecCall.args:type_name -> agni.v1.checks.SpecTerm
+	9,  // 14: agni.v1.checks.SpecCountOf.where:type_name -> agni.v1.checks.SpecExpr
+	10, // 15: agni.v1.checks.SpecExpr.and:type_name -> agni.v1.checks.SpecExprList
+	10, // 16: agni.v1.checks.SpecExpr.or:type_name -> agni.v1.checks.SpecExprList
+	9,  // 17: agni.v1.checks.SpecExpr.not:type_name -> agni.v1.checks.SpecExpr
+	11, // 18: agni.v1.checks.SpecExpr.cmp:type_name -> agni.v1.checks.SpecCmp
+	12, // 19: agni.v1.checks.SpecExpr.in:type_name -> agni.v1.checks.SpecIn
+	13, // 20: agni.v1.checks.SpecExpr.match:type_name -> agni.v1.checks.SpecMatch
+	14, // 21: agni.v1.checks.SpecExpr.exists_in:type_name -> agni.v1.checks.SpecExistsIn
+	5,  // 22: agni.v1.checks.SpecExpr.is_true:type_name -> agni.v1.checks.SpecTerm
+	9,  // 23: agni.v1.checks.SpecExprList.xs:type_name -> agni.v1.checks.SpecExpr
+	5,  // 24: agni.v1.checks.SpecCmp.l:type_name -> agni.v1.checks.SpecTerm
+	5,  // 25: agni.v1.checks.SpecCmp.r:type_name -> agni.v1.checks.SpecTerm
+	5,  // 26: agni.v1.checks.SpecIn.t:type_name -> agni.v1.checks.SpecTerm
+	5,  // 27: agni.v1.checks.SpecMatch.t:type_name -> agni.v1.checks.SpecTerm
+	9,  // 28: agni.v1.checks.SpecExistsIn.where:type_name -> agni.v1.checks.SpecExpr
+	2,  // 29: agni.v1.checks.QueryRule.meta:type_name -> agni.v1.checks.RuleMeta
+	17, // 30: agni.v1.checks.QueryRule.query:type_name -> agni.v1.checks.DatalogQuery
+	16, // 31: agni.v1.checks.QueryRule.context_vars:type_name -> agni.v1.checks.ContextVar
+	18, // 32: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
+	19, // 33: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
+	23, // 34: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
+	21, // 35: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
+	19, // 36: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
+	20, // 37: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
+	21, // 38: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
+	21, // 39: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
+	22, // 40: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
+	23, // 41: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
+	23, // 42: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
+	23, // 43: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
+	24, // 44: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
+	25, // 45: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
+	27, // 46: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
+	28, // 47: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
+	31, // 48: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 49: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }

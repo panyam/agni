@@ -17,6 +17,10 @@ func fullSpec() Spec {
 	return Spec{
 		Over:    "nets",
 		Message: "every node, once",
+		// Scope must be a DISTINGUISHABLE non-zero value, not a copy of Where: a fixture whose two
+		// expression fields are equal round-trips cleanly through a converter that assigns one to the
+		// other, which is the drift this guard exists to catch (C26's note on sparse fixtures).
+		Scope: IsTrue{T: Fact{Name: "net.attr.global"}},
 		Let: map[string]Term{
 			// CountOf: both fields, and a nested Expr to prove the recursion carries.
 			"caps": CountOf{
@@ -107,5 +111,46 @@ func TestSpecLitIntNormalizes(t *testing.T) {
 	}
 	if lit.V != 3 {
 		t.Errorf("int64 literal decoded to %v, want 3", lit.V)
+	}
+}
+
+// TestScopeContributesDerivedReads pins an invariant that is easy to break and silent when broken:
+// moving a clause from Where to Scope must not change what the rule DECLARES it reads.
+//
+// DerivedReads feeds check.Available, which gates a rule to not-applicable when a tier it reads is
+// absent. A fact consulted only in Scope and missing from Reads would leave a rule claiming not to
+// need a tier it does need, so it would run against a design that cannot answer it. Scope is a
+// relabelling of clauses, not a change to a rule's dependencies.
+func TestScopeContributesDerivedReads(t *testing.T) {
+	scoped := Spec{
+		Over:    "nets",
+		Scope:   IsTrue{T: Fact{Name: "net.attr.external"}},
+		Where:   Cmp{L: Fact{Name: "net.pin_count"}, Op: "<", R: Lit{V: 2}},
+		Message: "x",
+	}
+	// net.attr.external declares its dependency as "net.attributes": DerivedReads speaks the reads
+	// vocabulary, not the fact names.
+	var hasScopeFact bool
+	for _, r := range scoped.DerivedReads() {
+		if r == "net.attributes" {
+			hasScopeFact = true
+		}
+	}
+	if !hasScopeFact {
+		t.Errorf("a fact read only in Scope is missing from DerivedReads: %v", scoped.DerivedReads())
+	}
+
+	// The whole point, stated directly: the same clauses split either way declare the same reads.
+	merged := Spec{
+		Over: "nets",
+		Where: And{Xs: []Expr{
+			IsTrue{T: Fact{Name: "net.attr.external"}},
+			Cmp{L: Fact{Name: "net.pin_count"}, Op: "<", R: Lit{V: 2}},
+		}},
+		Message: "x",
+	}
+	if !reflect.DeepEqual(scoped.DerivedReads(), merged.DerivedReads()) {
+		t.Errorf("splitting Where into Scope changed the declared reads\n scoped: %v\n merged: %v",
+			scoped.DerivedReads(), merged.DerivedReads())
 	}
 }

@@ -184,6 +184,51 @@ rail that declares one. See `docRemedies` in `stdlib/rules/intent/docs.go` and `
 in `stdlib/profiles/docs.go`: the runtime rule and the docsite exemplar read one source, so there is
 no second copy to drift.
 
+## Scope and Where, for a spec rule
+
+A spec has two predicates and they are not interchangeable. Both filter; the difference is where the
+elements they discard end up.
+
+- **`Scope`** is which elements of `Over` the rule JUDGES. Falling out of it produces no verdict at
+  all: the rule has no opinion about you.
+- **`Where`** is the violation condition, inside scope. Falling out of it produces a **Pass**: the rule
+  looked at you and cleared you.
+
+Old-style rules put both in one `And`, which was harmless while a spec only reported violations. It
+stops being harmless the moment the interpreter states a considered set, because then a subject the
+rule was never about is reported as fine.
+
+`test-point-coverage` is the worked example. It declares `Over: "nets"` and had five conjuncts, of
+which only the last is the rule:
+
+    has_test_points(design)                     <- scope: does this board use test points at all
+    not net.attr.external                       <- scope: the read did not cover this net
+    global or power_driven or rail or ground    <- scope: is this even a rail
+    not feedback_name(net)                      <- scope: a sense node must not be probed
+    not exists(connection with class test_point) <- THE VIOLATION
+
+On the tutorial gateway design that is 15 nets narrowed to 4 rails, so without the split the rule
+would assert that 11 signal nets carry a test point. The first clause is worse still: it is
+design-wide, so a board using no test points anywhere would report every net as passing, which is a
+rule that declined to run claiming universal success.
+
+**Splitting cannot change what fails.** The old predicate is exactly `Scope AND Where`, so the
+findings are identical either way; only the meaning of the subjects that do not fail changes.
+`TestScopeAndWhereProjectToTheSameFindings` pins it, and the conformance fixtures check it end to end.
+
+**A clause belongs in `Scope` when a pass over it would be meaningless.** "This capacitor is not an
+LED" is not a useful thing for `led-polarity` to say; "this LED is the right way round" is.
+
+**`Scope` contributes to `DerivedReads`.** Moving a clause must not change what a rule declares it
+reads, or `Available` would let it run against a tier it needs. `TestScopeContributesDerivedReads`
+holds that.
+
+**A spec that states no `Scope` claims every element of `Over` is its subject.** That is a real claim,
+so leave it out only when it is true. The one rule that opts out of stating a considered set entirely
+is `cap-voltage`, and its comment says why: its SpecFunc returns the same empty string for a pass and
+for a capacitor with no seeded datasheet, so inside scope it still cannot tell "within rating" from
+"nothing to compare".
+
 ## Say what you looked at, not only what failed
 
 `Eval` returns one `check.Verdict` per subject the rule was applied to, passes included. It MAPS the

@@ -25,13 +25,12 @@ var capVoltage = func() *check.Rule {
 			return capVoltageDetail(m, ents["component"].(*ir.Component))
 		},
 	})
-	return (&check.Spec{
+	r := (&check.Spec{
 		Over: "components",
 		Let:  map[string]check.Term{"detail": check.Call{Fn: "cap_voltage_detail"}},
-		Where: check.And{Xs: []check.Expr{
-			check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}},
-			check.Cmp{L: check.Var{Name: "detail"}, Op: "!=", R: check.Lit{V: ""}},
-		}},
+		// Scope is the capacitors: the rule is not about any other part.
+		Scope:   check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}},
+		Where:   check.Cmp{L: check.Var{Name: "detail"}, Op: "!=", R: check.Lit{V: ""}},
 		Message: "{detail}",
 	}).Rule(check.Rule{
 		Name:     "cap-voltage",
@@ -47,6 +46,18 @@ var capVoltage = func() *check.Rule {
 		},
 		Detail: ruleDoc("cap-voltage"),
 	})
+	// THE ONE SPEC RULE THAT MUST NOT CLAIM A CONSIDERED SET, and the reason is in capVoltageDetail:
+	// it returns "" for a pass AND for every skip, including a capacitor with no seeded datasheet at
+	// all. Scope narrows the subjects to capacitors correctly, but inside that scope a false Where
+	// still means either "rated voltage clears the rail" or "there was nothing to compare".
+	//
+	// Reporting the second as a Pass would assert the part is within its rating when nothing was ever
+	// checked, which is a worse answer than the silence it replaced. The fix is a way for a SpecFunc
+	// to return "no data" distinctly from "no violation", which is the NoLimit outcome the datasheet
+	// rules already produce by hand. Until the spec language can express that, this rule reports
+	// violations only.
+	r.StatesConsideredSet = false
+	return r
 }()
 
 // capVoltageDetail is the cap_voltage_detail SpecFunc body: the join, the worst-rail

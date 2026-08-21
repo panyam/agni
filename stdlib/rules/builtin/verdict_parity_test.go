@@ -73,7 +73,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 		if r.Name != "i2c-pull-up" {
 			continue
 		}
-		if got := r.Eval(m); len(got) == 0 {
+		if got := r.Findings(m); len(got) == 0 {
 			t.Errorf("%s: the fixture carries this rule's subjects, so an empty considered set means "+
 				"the conversion reports nothing rather than reporting a pass", r.Name)
 		}

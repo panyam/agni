@@ -43,7 +43,7 @@ func BenchmarkCopperClearance(b *testing.B) {
 			m := check.NewModelWithBoard(&ir.Design{}, benchBoard(n, 40))
 			b.ResetTimer()
 			for b.Loop() {
-				copperClearance.Eval(m)
+				copperClearance.Findings(m)
 			}
 		})
 	}

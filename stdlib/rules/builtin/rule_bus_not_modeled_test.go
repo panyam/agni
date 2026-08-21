@@ -23,16 +23,16 @@ func TestBusNotModeledResolution(t *testing.T) {
 	}
 
 	// Resolved: both members are nets -> silent.
-	if fs := busNotModeled.Eval(check.NewModel(design([]*ir.BusNotModeled{bus("DATA[1:0]", "DATA0", "DATA1")}, "DATA0", "DATA1"))); len(fs) != 0 {
+	if fs := busNotModeled.Findings(check.NewModel(design([]*ir.BusNotModeled{bus("DATA[1:0]", "DATA0", "DATA1")}, "DATA0", "DATA1"))); len(fs) != 0 {
 		t.Errorf("resolved bus should be silent, got %d findings", len(fs))
 	}
 	// One member missing -> fires, named after the bus.
-	fs := busNotModeled.Eval(check.NewModel(design([]*ir.BusNotModeled{bus("DATA[1:0]", "DATA0", "DATA1")}, "DATA0")))
+	fs := busNotModeled.Findings(check.NewModel(design([]*ir.BusNotModeled{bus("DATA[1:0]", "DATA0", "DATA1")}, "DATA0")))
 	if len(fs) != 1 || fs[0].Subject != "DATA[1:0]" {
 		t.Errorf("bus with a missing member should fire on DATA[1:0], got %v", fs)
 	}
 	// No known member set -> cannot confirm resolution -> fires.
-	if fs := busNotModeled.Eval(check.NewModel(design([]*ir.BusNotModeled{{Kind: "geda_bus", Label: "B"}}))); len(fs) != 1 {
+	if fs := busNotModeled.Findings(check.NewModel(design([]*ir.BusNotModeled{{Kind: "geda_bus", Label: "B"}}))); len(fs) != 1 {
 		t.Errorf("bus with no member info should fire, got %d findings", len(fs))
 	}
 }
