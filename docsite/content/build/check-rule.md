@@ -139,7 +139,7 @@ vocabulary soaks, with parity asserted between the two.
   public `check.RegisterBuiltins` seam an overlay uses, so `core/check` owns no rules of its own.
 - `stdlib/rules/builtin/docs/<name>.md`: the single source of the rule's `Detail`, embedded at build time. The
   harness fails CI without it. Write it in full as proper `###` sections under the rule's `##`
-  title, not bold run-ins: What it means, Why engineers want it, Impact, Remedy, an ASCII sketch of
+  title, not bold run-ins: What it means, Why engineers want it, Impact, an ASCII sketch of
   fires-versus-fine, a Scope note recording every guard decision from the step above, the query
   structure, and a "For software readers" section mapping the EE concepts to structural analogies
   (a test point is a metrics endpoint, and the rule reads as "critical paths must emit telemetry")
