@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -20,19 +19,55 @@ var bulkCap = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistPublicReference,
 	},
-	Detail: ruleDoc("bulk-cap"),
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
-			if !named || n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
-				return false
+	Detail:              ruleDoc("bulk-cap"),
+	Eval:                bulkCapVerdicts,
+	StatesConsideredSet: true,
+}
+
+// bulkCapVerdicts decides every NAMED power rail, and that set is the considered set. The naming
+// test is what makes a rail a rail here: a net the design declares global or drives with a power
+// flag is a distribution rail somebody chose to name, where an ordinary signal net is not, and only
+// the first has a bulk reservoir to be missing. A signal net therefore yields no verdict, and
+// neither does a ground, which is the return path rather than the reservoir.
+//
+// This rule and decoupling-present ask the same shape of question about overlapping sets, and the
+// verdicts make the difference legible for the first time: decoupling-present is about rails that
+// reach a supply PIN, this one about rails the design NAMES. A rail can be a subject of one and not
+// the other, and before the considered set neither would have said so.
+//
+// The pass NAMES the capacitor, so the evidence points somewhere a reviewer can go and look.
+func bulkCapVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
+		if !named || m.IsGroundNet(n) {
+			continue // not a named distribution rail, or the return path rather than the reservoir
+		}
+
+		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		bulk := firstOnNet(m, n, check.ClassCapacitor)
+		switch {
+		case n.Attributes[netgraph.AttrExternal] == "true":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the rail continues onto a sheet this read did not open, so its reservoir may be drawn outside it"
+		case bulk != "":
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: "capacitor " + bulk + " sits on the rail",
+				Terms:     []check.WitnessTerm{{Label: "capacitor", Value: bulk}},
 			}
-			return !check.Exists(n.Connections, func(c *ir.Connection) bool {
-				return m.HasClass(c.ComponentRef, check.ClassCapacitor)
-			})
-		})
-		return check.Report(bad, check.NetFinding("power rail has no bulk capacitor"))
-	}),
+			v.Context = compContext(bulk, "capacitor on the rail")
+		default:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: "the rail carries no capacitor at all",
+			}
+			f := check.NetFinding("power rail has no bulk capacitor")(n)
+			v.Finding = &f
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // bulkCapSpec is the rule's declarative twin (WS3-003).
