@@ -16,7 +16,7 @@ import (
 func verdictForNet(t *testing.T, vs []check.Verdict, net string) check.Verdict {
 	t.Helper()
 	for _, v := range vs {
-		if v.Subject == net {
+		if check.EntityRef(v.Subjects[0]) == net {
 			return v
 		}
 	}
@@ -81,10 +81,10 @@ func TestPullUpPathIsOrderedTypedContext(t *testing.T) {
 		t.Fatalf("the bus is held high one hop out, want pass, got %s", v.Outcome)
 	}
 	want := []check.ContextSubject{
-		{Kind: check.KindComponent, Subject: "R1", Role: "pull-up"},
-		{Kind: check.KindNet, Subject: "SCL_ISO", Role: "segment"},
-		{Kind: check.KindComponent, Subject: "R2", Role: "pull-up"},
-		{Kind: check.KindNet, Subject: "+3V3", Role: "rail"},
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: "R1"}, Role: "pull-up"},
+		{Entity: check.Entity{Kind: check.KindNet, Ref: "SCL_ISO"}, Role: "segment"},
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: "R2"}, Role: "pull-up"},
+		{Entity: check.Entity{Kind: check.KindNet, Ref: "+3V3"}, Role: "rail"},
 	}
 	if len(v.Context) != len(want) {
 		t.Fatalf("want %d ordered hops, got %d: %+v", len(want), len(v.Context), v.Context)
@@ -97,8 +97,8 @@ func TestPullUpPathIsOrderedTypedContext(t *testing.T) {
 	// The subject is not repeated in its own context, so a consumer can draw subject-as-figure over
 	// context-as-ground without the figure appearing in both layers.
 	for _, c := range v.Context {
-		if c.Kind == check.KindNet && c.Subject == v.Subject {
-			t.Errorf("the subject net %s must not also appear as its own context", v.Subject)
+		if c.Kind == check.KindNet && c.Ref == check.EntityRef(v.Subjects[0]) {
+			t.Errorf("the subject net %s must not also appear as its own context", check.EntityRef(v.Subjects[0]))
 		}
 	}
 	// Everything this proof rests on is an entity, so there is no value left for a term to carry.
@@ -144,9 +144,9 @@ func TestEveryI2CNetAnswersOnce(t *testing.T) {
 
 	seen := map[string]int{}
 	for _, v := range vs {
-		seen[v.Subject]++
+		seen[check.EntityRef(v.Subjects[0])]++
 		if v.Witness == nil {
-			t.Errorf("%s: every verdict rests on something, pass or fail", v.Subject)
+			t.Errorf("%s: every verdict rests on something, pass or fail", check.EntityRef(v.Subjects[0]))
 		}
 	}
 	if seen["SCL"] != 1 || seen["SDA"] != 1 {

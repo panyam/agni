@@ -43,26 +43,12 @@ var exampleRule = &check.Rule{
 		for _, c := range m.Components() {
 			// TODO: your condition. This placeholder flags an unnamed component.
 			if c.RefDes == "" {
-				out = append(out, check.Verdict{
-					Outcome: check.Fail,
-					Kind:    check.KindComponent,
-					Subject: "(unnamed)",
-					Finding: &check.Finding{
-						Kind:    check.KindComponent,
-						Subject: "(unnamed)",
-						Message: "component has no ref-des",
-					},
-				})
+				out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: "(unnamed)"}}, Outcome: check.Fail, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: "(unnamed)"}, Message: "component has no ref-des"}})
 				continue
 			}
-			out = append(out, check.Verdict{
-				Outcome: check.Pass,
-				Kind:    check.KindComponent,
-				Subject: c.RefDes,
-				// Say what the pass RESTS ON. A statement that would read the same on a design where
+			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Pass, // Say what the pass RESTS ON. A statement that would read the same on a design where
 				// the rule concluded the opposite proves nothing.
-				Witness: &check.Witness{Statement: fmt.Sprintf("component carries the ref-des %q", c.RefDes)},
-			})
+				Witness: &check.Witness{Statement: fmt.Sprintf("component carries the ref-des %q", c.RefDes)}})
 		}
 		return out
 	},

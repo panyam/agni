@@ -72,10 +72,10 @@ func TestUnconnectedPin(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	got := map[string]bool{}
 	for _, f := range unconnectedPin.Findings(m) {
-		if f.Kind != check.KindPin {
-			t.Errorf("finding kind = %q, want %q", f.Kind, check.KindPin)
+		if f.Subject.Kind != check.KindPin {
+			t.Errorf("finding kind = %q, want %q", f.Subject.Kind, check.KindPin)
 		}
-		got[f.Subject+"."+f.Pin] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	want := map[string]bool{"U1.2": true, "U2.2": true}
 	if len(got) != len(want) {
@@ -92,7 +92,7 @@ func TestUnconnectedPin(t *testing.T) {
 func TestNCPinConnected(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	fs := ncPinConnected.Findings(m)
-	if len(fs) != 1 || fs[0].Subject != "BADNC" || fs[0].Kind != check.KindNet {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "BADNC" || fs[0].Subject.Kind != check.KindNet {
 		t.Fatalf("findings = %+v, want one KindNet finding on BADNC", fs)
 	}
 }
@@ -118,7 +118,7 @@ func TestOutputConflictCountsComponents(t *testing.T) {
 		},
 	}
 	fs := outputOutputConflict.Findings(check.NewModel(d))
-	if len(fs) != 1 || fs[0].Subject != "FIGHT" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "FIGHT" {
 		t.Fatalf("findings = %+v, want exactly FIGHT", fs)
 	}
 }
@@ -150,7 +150,7 @@ func TestOutputConflictWiredOr(t *testing.T) {
 	}
 	got := map[string]bool{}
 	for _, f := range outputOutputConflict.Findings(check.NewModel(d)) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if got["INT_B"] {
 		t.Errorf("a wired-OR bus with a pull resistor must not fire output-output-conflict")
@@ -199,7 +199,7 @@ func TestUnspecifiedPinWithDriver(t *testing.T) {
 	}
 	got := map[string]bool{}
 	for _, f := range unspecifiedPinWithDriver.Findings(check.NewModel(d)) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	want := map[string]bool{"DRIVEN_UNTYPED": true, "RAIL": true}
 	if !reflect.DeepEqual(got, want) {
@@ -232,7 +232,7 @@ func TestFloatingInputPassiveExemption(t *testing.T) {
 	}
 	m := check.NewModel(d)
 	fs := floatingInput.Findings(m)
-	if len(fs) != 1 || fs[0].Subject != "FLOATS" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "FLOATS" {
 		t.Fatalf("findings = %+v, want exactly FLOATS", fs)
 	}
 }
@@ -261,7 +261,7 @@ func TestFloatingInputDiodeExemption(t *testing.T) {
 	}
 	got := map[string]bool{}
 	for _, f := range floatingInput.Findings(check.NewModel(d)) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if got["DIODENET"] {
 		t.Errorf("a pure diode network must not fire floating-input")
@@ -296,7 +296,7 @@ func TestTestPointCoverage(t *testing.T) {
 	}
 	got := map[string]bool{}
 	for _, f := range testPointCoverage.Findings(check.NewModel(withTP)) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if len(got) != 1 || !got["3V3"] {
 		t.Errorf("fired on %v, want exactly 3V3", got)

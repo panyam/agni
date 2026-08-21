@@ -743,9 +743,22 @@ type Verdict struct {
 	Id      string  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Rule    string  `protobuf:"bytes,2,opt,name=rule,proto3" json:"rule,omitempty"`
 	Outcome Outcome `protobuf:"varint,3,opt,name=outcome,proto3,enum=agni.v1.checks.Outcome" json:"outcome,omitempty"`
-	// subject is the entity this verdict is about, the same type and the same highlight join key a
-	// Finding uses.
-	Subject *Subject `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	// subjects is the TUPLE of entities this verdict is about, in the rule's own order, and it is what
+	// `id` above is derived from. Never empty.
+	//
+	// REPEATED BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single entity. A
+	// clearance violation is a distance between two nets; a regulator over-driving a part it feeds is
+	// only pinned down by the regulator, the rail and the load, since one source feeding one load over
+	// two rails is two different answers; a strap group is a device and the N nets encoding its value.
+	// Keying those by one entity gives one id to several answers.
+	//
+	// ORDER IS THE RULE'S AND IS SIGNIFICANT: a tracking bound reads subject-pin minus reference-pin,
+	// so swapping the two inverts the sign. A symmetric relation is canonicalised by the rule before it
+	// gets here, never by a consumer.
+	//
+	// A Finding's subject stays SINGULAR and is one of these. The two answer different questions: this
+	// tuple is the verdict's identity, and a finding's subject is the one entity a reader has to change.
+	Subjects []*Subject `protobuf:"bytes,4,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	// witness is what the outcome rests on. REQUIRED on PASS, FAIL and INCONCLUSIVE, and what makes a
 	// pass evidence. Unset is legitimate only on NO_LIMIT and NOT_CONSIDERED, where the point of the
 	// verdict is that there was nothing to rest on.
@@ -819,9 +832,9 @@ func (x *Verdict) GetOutcome() Outcome {
 	return Outcome_OUTCOME_UNSPECIFIED
 }
 
-func (x *Verdict) GetSubject() *Subject {
+func (x *Verdict) GetSubjects() []*Subject {
 	if x != nil {
-		return x.Subject
+		return x.Subjects
 	}
 	return nil
 }
@@ -2519,12 +2532,12 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\aWitness\x12\x1c\n" +
 	"\tstatement\x18\x01 \x01(\tR\tstatement\x121\n" +
 	"\x05terms\x18\x02 \x03(\v2\x1b.agni.v1.checks.WitnessTermR\x05terms\x12?\n" +
-	"\tdatasheet\x18\x03 \x03(\v2!.agni.v1.checks.DatasheetCitationR\tdatasheet\"\x98\x02\n" +
+	"\tdatasheet\x18\x03 \x03(\v2!.agni.v1.checks.DatasheetCitationR\tdatasheet\"\x9a\x02\n" +
 	"\aVerdict\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04rule\x18\x02 \x01(\tR\x04rule\x121\n" +
-	"\aoutcome\x18\x03 \x01(\x0e2\x17.agni.v1.checks.OutcomeR\aoutcome\x121\n" +
-	"\asubject\x18\x04 \x01(\v2\x17.agni.v1.checks.SubjectR\asubject\x121\n" +
+	"\aoutcome\x18\x03 \x01(\x0e2\x17.agni.v1.checks.OutcomeR\aoutcome\x123\n" +
+	"\bsubjects\x18\x04 \x03(\v2\x17.agni.v1.checks.SubjectR\bsubjects\x121\n" +
 	"\awitness\x18\x05 \x01(\v2\x17.agni.v1.checks.WitnessR\awitness\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x128\n" +
 	"\acontext\x18\a \x03(\v2\x1e.agni.v1.checks.ContextSubjectR\acontext\"\xfe\x02\n" +
@@ -2717,7 +2730,7 @@ var file_agni_v1_checks_checks_proto_depIdxs = []int32{
 	6,  // 6: agni.v1.checks.Witness.terms:type_name -> agni.v1.checks.WitnessTerm
 	4,  // 7: agni.v1.checks.Witness.datasheet:type_name -> agni.v1.checks.DatasheetCitation
 	1,  // 8: agni.v1.checks.Verdict.outcome:type_name -> agni.v1.checks.Outcome
-	2,  // 9: agni.v1.checks.Verdict.subject:type_name -> agni.v1.checks.Subject
+	2,  // 9: agni.v1.checks.Verdict.subjects:type_name -> agni.v1.checks.Subject
 	7,  // 10: agni.v1.checks.Verdict.witness:type_name -> agni.v1.checks.Witness
 	3,  // 11: agni.v1.checks.Verdict.context:type_name -> agni.v1.checks.ContextSubject
 	29, // 12: agni.v1.checks.CheckReport.sections:type_name -> agni.v1.checks.CheckReport.SeveritySection

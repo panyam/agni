@@ -45,12 +45,7 @@ func singlePinNetVerdicts(m check.Model) []check.Verdict {
 	for _, n := range m.Nets() {
 		count := len(n.Connections)
 		terms := []check.WitnessTerm{{Label: "connections", Value: strconv.Itoa(count)}}
-		v := check.Verdict{
-			Outcome: check.Pass,
-			Kind:    check.KindNet,
-			Subject: n.Name,
-			NetID:   n.GetId(),
-		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}, Outcome: check.Pass}
 		switch {
 		case count >= 2:
 			v.Witness = &check.Witness{
@@ -68,13 +63,7 @@ func singlePinNetVerdicts(m check.Model) []check.Verdict {
 				Statement: fmt.Sprintf("net has %d connection(s) and nothing marks it no-connect", count),
 				Terms:     terms,
 			}
-			f := check.Finding{
-				Kind:    check.KindNet,
-				Subject: n.Name,
-				NetID:   n.GetId(),
-				Message: fmt.Sprintf("net has %d connection(s); expected >= 2", count),
-				Prov:    n.Prov,
-			}
+			f := check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}, Message: fmt.Sprintf("net has %d connection(s); expected >= 2", count), Prov: n.Prov}
 			v.Finding = &f
 		}
 		out = append(out, v)

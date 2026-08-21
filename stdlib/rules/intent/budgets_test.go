@@ -88,8 +88,8 @@ func TestRailCapacityFiresWhenUnderRated(t *testing.T) {
 		t.Fatalf("want 1 finding (0.5A supply on a 0.8A rail), got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Subject != "3V3" || f.Kind != check.KindNet {
-		t.Errorf("subject = (%s, %q), want the rail net 3V3", f.Kind, f.Subject)
+	if check.EntityRef(f.Subject) != "3V3" || f.Subject.Kind != check.KindNet {
+		t.Errorf("subject = (%s, %q), want the rail net 3V3", f.Subject.Kind, f.Subject)
 	}
 	for _, want := range []string{"0.8", "U1", "0.5", "IOUT"} {
 		if !strings.Contains(f.Message, want) {

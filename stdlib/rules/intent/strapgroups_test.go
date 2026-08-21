@@ -227,13 +227,13 @@ func TestStrapGroupFindingsNameTheirDevice(t *testing.T) {
 			t.Fatalf("want 1 context entity (the device), got %+v", fs[0].Context)
 		}
 		c := fs[0].Context[0]
-		if c.Kind != check.KindComponent || c.Subject != "U12" || c.Role != "device" {
+		if c.Kind != check.KindComponent || c.Ref != "U12" || c.Role != "device" {
 			t.Errorf("context = %+v, want U12 as the component playing device", c)
 		}
 		// The group NAME is a declaration from the intent file, not something on the design, so it
 		// must NOT become a chip: it would highlight nothing.
 		for _, x := range fs[0].Context {
-			if x.Subject == "PHYAD" {
+			if x.Ref == "PHYAD" {
 				t.Error("the group name is a declaration, not a design entity; it must not be context")
 			}
 		}
@@ -279,14 +279,14 @@ func TestStrapGroupFindingsNameTheirDevice(t *testing.T) {
 			if c.Role != "device" {
 				t.Errorf("unexpected role %q in a collision finding", c.Role)
 			}
-			devices = append(devices, c.Subject)
+			devices = append(devices, c.Ref)
 		}
 		if len(devices) != 2 || devices[0] != "U12" || devices[1] != "U13" {
 			t.Errorf("context devices = %v, want [U12 U13] in message order", devices)
 		}
 		// MDIO is a declared bus label from the intent file, not a design entity.
 		for _, c := range fs[0].Context {
-			if c.Subject == "MDIO" {
+			if c.Ref == "MDIO" {
 				t.Error("the bus is a declaration label, not a design entity; it must not be context")
 			}
 		}

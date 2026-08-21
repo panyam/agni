@@ -110,9 +110,9 @@ func TestFindingsLinesEmpty(t *testing.T) {
 
 func TestFindingsLines(t *testing.T) {
 	fs := []check.Finding{
-		{Severity: "info", Rule: "single-pin-net", Subject: "STUB", Message: "net has 1 connection(s); expected >= 2"},
-		{Severity: "warning", Rule: "unconnected-component", Subject: "C1", Message: "component has no net connections"},
-		{Severity: "error", Rule: "i2c-pull-up", Subject: "SCL", Message: "I2C net has no pull-up resistor"},
+		{Severity: "info", Rule: "single-pin-net", Subject: check.NetNameEntity("STUB"), Message: "net has 1 connection(s); expected >= 2"},
+		{Severity: "warning", Rule: "unconnected-component", Subject: check.NetNameEntity("C1"), Message: "component has no net connections"},
+		{Severity: "error", Rule: "i2c-pull-up", Subject: check.NetNameEntity("SCL"), Message: "I2C net has no pull-up resistor"},
 	}
 	got := FindingsLines(fs)
 	for _, want := range []string{
@@ -143,7 +143,7 @@ func TestBundledFixtureFindings(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("check.Run = %d findings, want 1:\n%+v", len(fs), fs)
 	}
-	if got := fs[0]; got.Rule != "single-pin-net" || got.Severity != "info" || got.Subject != "GND" {
+	if got := fs[0]; got.Rule != "single-pin-net" || got.Severity != "info" || check.EntityRef(got.Subject) != "GND" {
 		t.Errorf("finding = %+v, want rule=single-pin-net severity=info subject=GND", got)
 	}
 }

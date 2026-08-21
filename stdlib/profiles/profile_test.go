@@ -72,13 +72,13 @@ func TestSPINORFires(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("want 3 distinct rules firing, got %d: %+v", len(got), got)
 	}
-	if f := got["spi_nor-signal-missing"]; f.Subject != "SPI_CS" || !strings.Contains(f.Message, "IO2") {
+	if f := got["spi_nor-signal-missing"]; check.EntityRef(f.Subject) != "SPI_CS" || !strings.Contains(f.Message, "IO2") {
 		t.Errorf("signal-missing: want anchor SPI_CS + IO2, got %+v", f)
 	}
-	if f := got["spi_nor-missing-pullup"]; f.Subject != "SPI_CS" {
+	if f := got["spi_nor-missing-pullup"]; check.EntityRef(f.Subject) != "SPI_CS" {
 		t.Errorf("missing-pullup: want SPI_CS, got %+v", f)
 	}
-	if f := got["spi_nor-signal-dangling"]; f.Subject != "SPI_SCLK" {
+	if f := got["spi_nor-signal-dangling"]; check.EntityRef(f.Subject) != "SPI_SCLK" {
 		t.Errorf("signal-dangling: want SPI_SCLK, got %+v", f)
 	}
 }
@@ -180,7 +180,7 @@ func TestHostIncomplete(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("want exactly 1 finding (host-incomplete IO2, convention suppressed), got %d: %+v", len(fs), fs)
 	}
-	if f := fs[0]; f.Rule != "spi_nor-host-incomplete" || f.Subject != "U2" || !strings.Contains(f.Message, "IO2") {
+	if f := fs[0]; f.Rule != "spi_nor-host-incomplete" || check.EntityRef(f.Subject) != "U2" || !strings.Contains(f.Message, "IO2") {
 		t.Fatalf("want host-incomplete on U2/IO2, got %+v", f)
 	}
 }
@@ -194,7 +194,7 @@ func TestHostWhollyAbsent(t *testing.T) {
 	}
 	got := 0
 	for _, f := range check.Run(check.NewModel(d), Compile(SPINOR)) {
-		if f.Rule == "spi_nor-host-incomplete" && f.Subject == "U2" {
+		if f.Rule == "spi_nor-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
 	}

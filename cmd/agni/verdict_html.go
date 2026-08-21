@@ -42,14 +42,7 @@ func writeVerdictHTML(w io.Writer, resp *webapi.CheckDesignResponse, rules []*ch
 func findingsFromProtos(fs []*checkspb.Finding) []check.Finding {
 	out := make([]check.Finding, 0, len(fs))
 	for _, f := range fs {
-		out = append(out, check.Finding{
-			Rule:     f.GetRule(),
-			Severity: f.GetSeverity(),
-			Kind:     f.GetSubject().GetKind(),
-			Subject:  f.GetSubject().GetRef(),
-			Pin:      f.GetSubject().GetPin(),
-			Message:  f.GetMessage(),
-		})
+		out = append(out, check.Finding{Subject: check.Entity{Kind: f.GetSubject().GetKind(), Ref: f.GetSubject().GetRef(), Pin: f.GetSubject().GetPin()}, Rule: f.GetRule(), Severity: f.GetSeverity(), Message: f.GetMessage()})
 	}
 	return out
 }

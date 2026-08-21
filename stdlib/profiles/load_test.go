@@ -166,7 +166,7 @@ requirements:
 		net("CAN_00_L", "U3.1"),       // foreign, also single-pin: must NOT be reported
 	}}
 	fs := check.Run(check.NewModel(d), Compile(p))
-	if len(fs) != 1 || fs[0].Subject != "ETH_SW1_P1_A_L" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "ETH_SW1_P1_A_L" {
 		t.Fatalf("want only the ETH _L net reported dangling, got %+v", fs)
 	}
 }

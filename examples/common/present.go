@@ -121,7 +121,7 @@ func FindingsLines(fs []check.Finding) string {
 	}
 	b.WriteString("\n")
 	for _, f := range fs {
-		fmt.Fprintf(&b, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, f.Subject, f.Message)
+		fmt.Fprintf(&b, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	fmt.Fprintf(&b, "\n%d finding(s) total", len(fs))
 	return b.String()

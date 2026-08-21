@@ -197,7 +197,7 @@ describe("per-instance net id (WS9)", () => {
 
   it("focusStack drops only the focused instance from the base, keeping same-named siblings lit", () => {
     const all = [f({ kind: "net", subject: "PWR_A", netId: "aaa" }), f({ kind: "net", subject: "PWR_A", netId: "bbb" })];
-    const stack = focusStack(all, "net", "PWR_A", [{ netIds: ["aaa"] }], "aaa");
+    const stack = focusStack(all, [{ kind: "net", subject: "PWR_A", pin: "", netId: "aaa" }], [{ netIds: ["aaa"] }]);
     // Base is the sibling (bbb) only, now stamped as context; the focus layer for aaa sits on top
     // carrying no color, so it resolves to the default (agni issue 348).
     expect(stack).toEqual([
@@ -221,7 +221,7 @@ describe("focusStack separates the field from the figure (agni issue 348)", () =
   const findings = [f({ kind: "component", subject: "R1" }), f({ kind: "component", subject: "R2" })];
 
   it("stamps the base layer as context and leaves the focus layer at the default", () => {
-    const [base, focus] = focusStack(findings, "component", "R1", [{ components: ["R1"] }]);
+    const [base, focus] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], [{ components: ["R1"] }]);
     expect(base.color).toBe(BASE_HIGHLIGHT_COLOR);
     expect(base.alpha).toBe(BASE_HIGHLIGHT_ALPHA);
     // The focus names no color on purpose: it inherits the default, so a user style set through the
@@ -230,7 +230,7 @@ describe("focusStack separates the field from the figure (agni issue 348)", () =
   });
 
   it("gives the two layers different hues, not one hue at two alphas", () => {
-    const [base] = focusStack(findings, "component", "R1", [{ components: ["R1"] }]);
+    const [base] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], [{ components: ["R1"] }]);
     // toBeDefined FIRST: `undefined !== DEFAULT` is true, so the not.toBe alone would pass on the
     // very bug this describes (a base spec that names no color and falls back to the default).
     expect(base.color).toBeDefined();
@@ -240,13 +240,13 @@ describe("focusStack separates the field from the figure (agni issue 348)", () =
   it("leaves the base at full strength when nothing is focused", () => {
     // An empty focus means the subject was not found. The field is then the whole message rather
     // than context for something in front of it, so muting it would dim the only layer there is.
-    const stack = focusStack(findings, "component", "NOPE", []);
+    const stack = focusStack(findings, [{ kind: "component", subject: "NOPE", pin: "" }], []);
     expect(stack).toEqual([{ components: ["R1", "R2"] }]);
   });
 
   it("preserves a user style on the focus layer", () => {
     const styled = [{ components: ["R1"], color: "#00ff00", alpha: 0.9 }];
-    const [, focus] = focusStack(findings, "component", "R1", styled);
+    const [, focus] = focusStack(findings, [{ kind: "component", subject: "R1", pin: "" }], styled);
     expect(focus).toEqual({ components: ["R1"], color: "#00ff00", alpha: 0.9 });
   });
 });

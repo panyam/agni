@@ -44,7 +44,7 @@ func TestVerdictCSVShowsAPassWithItsProof(t *testing.T) {
 			continue
 		}
 		anyPass = true
-		if strings.HasPrefix(r, "i2c-pull-up:net:SDA,") {
+		if strings.HasPrefix(r, "i2c-pull-up:(net:SDA),") {
 			pass = r
 		}
 	}
@@ -55,7 +55,7 @@ func TestVerdictCSVShowsAPassWithItsProof(t *testing.T) {
 		t.Fatalf("no passing row for i2c-pull-up on SDA, the subject this test proves out\n%s", out)
 	}
 	// The proof, and the entities a viewer would highlight from it.
-	for _, want := range []string{"i2c-pull-up:net:SDA", "SDA reaches rail +3V3 through R1", "pull-up=R1|rail=+3V3"} {
+	for _, want := range []string{"i2c-pull-up:(net:SDA)", "SDA reaches rail +3V3 through R1", "pull-up=R1|rail=+3V3"} {
 		if !strings.Contains(pass, want) {
 			t.Errorf("passing row must carry %q, got: %s", want, pass)
 		}
@@ -94,7 +94,7 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	if !strings.Contains(js, `"verdicts": []`) {
 		t.Errorf("expected an empty verdicts key, got:\n%s", js)
 	}
-	if strings.Contains(js, "i2c-pull-up:net:") {
+	if strings.Contains(js, "i2c-pull-up:(net:") {
 		t.Error("verdict data must not ride along in the default json")
 	}
 }
@@ -103,7 +103,7 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 // addressable from a report or a link.
 func TestVerdictCSVCarriesTheDerivedID(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "csv", "testdata/conformance/showcase.fires.kicad_sch")
-	for _, want := range []string{"i2c-pull-up:net:SDA", "i2c-pull-up:net:SCL"} {
+	for _, want := range []string{"i2c-pull-up:(net:SDA)", "i2c-pull-up:(net:SCL)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing verdict id %q in:\n%s", want, out)
 		}

@@ -22,7 +22,7 @@ func fireSubjects(t *testing.T, r *check.Rule, nets ...*ir.Net) map[string]strin
 	t.Helper()
 	got := map[string]string{}
 	for _, f := range r.Findings(check.NewModel(&ir.Design{Nets: nets})) {
-		got[f.Subject] = f.Message
+		got[check.EntityRef(f.Subject)] = f.Message
 	}
 	return got
 }
@@ -40,7 +40,7 @@ func TestDuplicateNetName(t *testing.T) {
 		t.Fatalf("fired %d times (%+v), want once per claiming VCC net", len(fs), fs)
 	}
 	for _, f := range fs {
-		if f.Subject != "VCC" || !strings.Contains(f.Message, "2 electrically distinct") {
+		if check.EntityRef(f.Subject) != "VCC" || !strings.Contains(f.Message, "2 electrically distinct") {
 			t.Errorf("finding %q: %q", f.Subject, f.Message)
 		}
 	}

@@ -9,12 +9,12 @@ import (
 )
 
 func verdict(rule, subject string, o check.Outcome) check.Verdict {
-	v := check.Verdict{Rule: rule, Outcome: o, Kind: check.KindNet, Subject: subject}
+	v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: subject}}, Rule: rule, Outcome: o}
 	switch o {
 	case check.Pass:
 		v.Witness = &check.Witness{Statement: subject + " is fine"}
 	case check.Fail:
-		v.Finding = &check.Finding{Rule: rule, Kind: check.KindNet, Subject: subject, Message: subject + " is wrong"}
+		v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: subject}, Rule: rule, Message: subject + " is wrong"}
 	}
 	return v
 }
@@ -35,14 +35,14 @@ func TestFailuresLead(t *testing.T) {
 			verdict("converted", "A_PASSES", check.Pass),
 			verdict("converted", "Z_FAILS", check.Fail),
 		},
-		[]check.Finding{{Rule: "converted", Kind: check.KindNet, Subject: "Z_FAILS", Message: "x"}},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "Z_FAILS"}, Rule: "converted", Message: "x"}},
 		rules(), Report{},
 	)
-	if got := r.Rules[0].Rows[0].Subject; got != "Z_FAILS" {
+	if got := check.EntityRef(r.Rules[0].Rows[0].Subjects[0]); got != "Z_FAILS" {
 		t.Errorf("the failing row must lead its rule, got %q first", got)
 	}
 	// Alphabetically A_PASSES would win; outcome beats name, deliberately.
-	if r.Rules[0].Rows[1].Subject != "A_PASSES" {
+	if check.EntityRef(r.Rules[0].Rows[1].Subjects[0]) != "A_PASSES" {
 		t.Errorf("rows = %+v", r.Rules[0].Rows)
 	}
 }
@@ -52,7 +52,7 @@ func TestFailuresLead(t *testing.T) {
 func TestConvertedRuleDoesNotDoubleCountItsFailures(t *testing.T) {
 	r := Build(
 		[]check.Verdict{verdict("converted", "N", check.Fail)},
-		[]check.Finding{{Rule: "converted", Kind: check.KindNet, Subject: "N", Message: "x"}},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Rule: "converted", Message: "x"}},
 		rules(), Report{},
 	)
 	if n := len(r.Rules[0].Rows); n != 1 {
@@ -70,7 +70,7 @@ func TestConvertedRuleDoesNotDoubleCountItsFailures(t *testing.T) {
 func TestFindingsOnlyRuleIsLabelledAndNotCountedAsCoverage(t *testing.T) {
 	r := Build(
 		nil,
-		[]check.Finding{{Rule: "legacy", Kind: check.KindNet, Subject: "N", Message: "x"}},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Rule: "legacy", Message: "x"}},
 		rules(), Report{},
 	)
 	if r.Totals.Considered != 0 {

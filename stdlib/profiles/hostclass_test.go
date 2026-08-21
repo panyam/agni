@@ -72,7 +72,7 @@ func TestHostClassIdentifiesHostInAllReaders(t *testing.T) {
 	}
 	var got []string
 	for _, f := range r.Findings(m) {
-		got = append(got, f.Subject)
+		got = append(got, check.EntityRef(f.Subject))
 	}
 	if len(got) != 1 || got[0] != "U1" {
 		t.Errorf("host-incomplete findings = %v, want one on U1 (IO0 is absent)", got)

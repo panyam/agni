@@ -285,7 +285,7 @@ export class ViewerPresenter {
     // keys a pin highlight by (ref, pin), and an empty pin would silently widen the focus to the
     // whole part. Callers that locate a net or a component pass nothing and are unaffected.
     const focus = withFocusShape(entitySpecs(kind, subject, pin), this.highlightStyle);
-    await this.setHighlights(focusStack(this.findings, kind, subject, focus));
+    await this.setHighlights(focusStack(this.findings, [{ kind, subject, pin: "" }], focus));
     // Explain an entity the faithful view doesn't draw (WS9-039). The server sets a reason only for
     // an entity absent from the geometry, so a drawn rail (e.g. VBUS) reports none; the note shows
     // only on a faithful layout, since an auto-layout draws every entity and always resolves.
@@ -308,7 +308,9 @@ export class ViewerPresenter {
     const v = this.findVerdict(id);
     if (!v) return false;
     if (this.mode === "native") await this.setMode("webgl");
-    const focus = withFocusShape(entitySpecs(v.kind, v.subject, v.pin), this.highlightStyle);
+    // Every entity in the tuple is the figure. A clearance verdict lights both nets, which is the
+    // whole answer; lighting the first would show half of a distance.
+    const focus = withFocusShape(subjectsToSpecs(v.subjects), this.highlightStyle);
     await this.setHighlights(verdictProofStack(v, focus));
     this.focusedVerdict = v.id;
     // Pushed so the panel learns which verdict is focused. setHighlights above cleared the field and
@@ -626,11 +628,13 @@ export class ViewerPresenter {
             id: v.id,
             rule: v.rule,
             outcome: outcomeWord(v.outcome),
-            kind: v.subject?.kind ?? "",
-            subject: v.subject?.ref ?? "",
-            pin: v.subject?.pin ?? "",
-            netId: v.subject?.netId ?? "",
-            busId: v.subject?.busId ?? "",
+            subjects: (v.subjects ?? []).map((sub) => ({
+              kind: sub.kind ?? "",
+              subject: sub.ref ?? "",
+              pin: sub.pin ?? "",
+              netId: sub.netId ?? "",
+              busId: sub.busId ?? "",
+            })),
             statement: v.witness?.statement ?? "",
             terms: (v.witness?.terms ?? []).map((t) => ({ label: t.label, value: t.value })),
             context: contextFromWire(v.context),
@@ -1256,7 +1260,7 @@ export class ViewerPresenter {
   private async reapplyFocus(subject: string, netId = ""): Promise<void> {
     const focused = this.findFinding(subject, netId);
     const focusLayers = focused ? withFocusShape(findingSpec(focused), this.highlightStyle) : [];
-    await this.setHighlights(focusStack(this.findings, focused?.kind ?? "", focused?.subject ?? "", focusLayers, focused?.netId ?? ""));
+    await this.setHighlights(focusStack(this.findings, focused ? [{ kind: focused.kind, subject: focused.subject, pin: focused.pin ?? "", netId: focused.netId ?? "" }] : [], focusLayers));
   }
 
   // setHighlightStyle applies a user highlight style (WS9-044) to the focus marker: subsequent

@@ -23,7 +23,7 @@ func firedSubjects(d *ir.Design, rule string) map[string]bool {
 	out := map[string]bool{}
 	for _, f := range check.RunDesign(d) {
 		if f.Rule == rule {
-			out[f.Subject] = true
+			out[check.EntityRef(f.Subject)] = true
 		}
 	}
 	return out
@@ -226,7 +226,7 @@ func TestEsdTestModelGate(t *testing.T) {
 	hbm.Parameters[0].Attributes["esd_test_model"] = "hbm"
 	fired := map[string]bool{}
 	for _, fnd := range esdProtection.Findings(check.NewModelWithParams(d, nil, param.ParamSet{"DEMO-HBM": hbm})) {
-		fired[fnd.Subject] = true
+		fired[check.EntityRef(fnd.Subject)] = true
 	}
 	if !fired["SIG"] {
 		t.Error("an HBM (handling) ESD rating must NOT credit a harness-exposed signal; SIG should still fire")
@@ -249,7 +249,7 @@ func TestEsdIcRating(t *testing.T) {
 	fired := func(set param.ParamSet) map[string]bool {
 		got := map[string]bool{}
 		for _, f := range esdProtection.Findings(check.NewModelWithParams(d, nil, set)) {
-			got[f.Subject] = true
+			got[check.EntityRef(f.Subject)] = true
 		}
 		return got
 	}

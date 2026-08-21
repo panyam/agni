@@ -101,13 +101,7 @@ func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg fu
 		if !below(rated, need) {
 			continue
 		}
-		out = append(out, check.Finding{
-			Kind:          check.KindNet,
-			Subject:       b.Rail,
-			Message:       msg(b, need, ref, p) + " — " + check.Citation(spec, p),
-			Prov:          n.GetProv(),
-			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, p)},
-		})
+		out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: b.Rail}, Message: msg(b, need, ref, p) + " — " + check.Citation(spec, p), Prov: n.GetProv(), DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, p)}})
 	}
 	return out
 }

@@ -22,7 +22,7 @@ import (
 func verdictOf(t *testing.T, vs []check.Verdict, subject, pin string) check.Verdict {
 	t.Helper()
 	for _, v := range vs {
-		if v.Subject == subject && v.Pin == pin {
+		if v.Subjects[0].Ref == subject && v.Subjects[0].Pin == pin {
 			return v
 		}
 	}
@@ -33,11 +33,7 @@ func verdictOf(t *testing.T, vs []check.Verdict, subject, pin string) check.Verd
 func outcomes(vs []check.Verdict) map[string]check.Outcome {
 	out := map[string]check.Outcome{}
 	for _, v := range vs {
-		key := v.Subject
-		if v.Pin != "" {
-			key += "." + v.Pin
-		}
-		out[key] = v.Outcome
+		out[check.EntityRef(v.Subjects[0])] = v.Outcome
 	}
 	return out
 }

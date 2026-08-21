@@ -4,13 +4,10 @@ import { emptyLocation, locationToUrl, parseUrl } from "./router.js";
 
 function verdict(over: Partial<VerdictItem> = {}): VerdictItem {
   return {
-    id: "i2c-pull-up:net:SDA",
+    id: "i2c-pull-up:(net:SDA)",
     rule: "i2c-pull-up",
     outcome: "pass",
-    kind: "net",
-    subject: "SDA",
-    pin: "",
-    netId: "82ddd812ce0e",
+    subjects: [{ kind: "net", subject: "SDA", pin: "", netId: "82ddd812ce0e" }],
     statement: "SDA reaches rail +3V3 through R1",
     terms: [],
     context: [
@@ -56,7 +53,7 @@ describe("verdictProofStack", () => {
   // A fail has nothing to point at: the search found no resistor and no rail. The subject must still
   // light up, or clicking a failing row would appear to do nothing.
   it("still draws the subject when the proof names no entities", () => {
-    const v = verdict({ outcome: "fail", subject: "SCL", context: [] });
+    const v = verdict({ outcome: "fail", subjects: [{ kind: "net", subject: "SCL", pin: "" }], context: [] });
     const specs = verdictProofStack(v, [{ nets: ["SCL"] }]);
     expect(specs.length).toBeGreaterThan(0);
     expect(specs[specs.length - 1].nets).toEqual(["SCL"]);
@@ -83,20 +80,20 @@ describe("outcomeWord", () => {
 
 describe("verdict in the URL", () => {
   it("round-trips through the address bar", () => {
-    const loc = { ...emptyLocation(), mount: "m", path: "d/board.edn", verdict: "i2c-pull-up:net:SDA" };
+    const loc = { ...emptyLocation(), mount: "m", path: "d/board.edn", verdict: "i2c-pull-up:(net:SDA)" };
     const url = locationToUrl(loc);
     expect(url).toContain("verdict=");
     const back = parseUrl(url.split("?")[0], url.split("?")[1] ?? "");
-    expect(back.verdict).toBe("i2c-pull-up:net:SDA");
+    expect(back.verdict).toBe("i2c-pull-up:(net:SDA)");
   });
 
   // The id's colons must survive encoding, since every id has two of them and a link that arrives
   // truncated at the first colon resolves to nothing.
   it("survives a colon-bearing id", () => {
-    const loc = { ...emptyLocation(), mount: "m", path: "d/b.edn", verdict: "symbol-unresolved:symbol:Library:Symbol" };
+    const loc = { ...emptyLocation(), mount: "m", path: "d/b.edn", verdict: "symbol-unresolved:(symbol:Library:Symbol)" };
     const url = locationToUrl(loc);
     const back = parseUrl(url.split("?")[0], url.split("?")[1] ?? "");
-    expect(back.verdict).toBe("symbol-unresolved:symbol:Library:Symbol");
+    expect(back.verdict).toBe("symbol-unresolved:(symbol:Library:Symbol)");
   });
 
   it("carries no verdict when none is focused", () => {

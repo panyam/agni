@@ -92,7 +92,7 @@ func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 		t.Fatalf("want 1 finding (5V regulator into a 3.6V abs-max part), got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Subject != "U2" {
+	if check.EntityRef(f.Subject) != "U2" {
 		t.Errorf("subject = %q, want U2 (the endangered part)", f.Subject)
 	}
 	for _, want := range []string{"U1", "VRAIL", "5", "U2", "3.6"} {
@@ -185,20 +185,20 @@ func TestRegulatorOutputCarriesBothEntitiesAsContext(t *testing.T) {
 	if len(ctx) != 2 {
 		t.Fatalf("want 2 context entities (the source and the rail), got %d: %+v", len(ctx), ctx)
 	}
-	if ctx[0].Subject != "U1" || ctx[0].Role != "source" || ctx[0].Kind != check.KindComponent {
+	if ctx[0].Ref != "U1" || ctx[0].Role != "source" || ctx[0].Kind != check.KindComponent {
 		t.Errorf("first context = %+v, want U1 as the component playing source", ctx[0])
 	}
-	if ctx[1].Subject != "VRAIL" || ctx[1].Role != "rail" || ctx[1].Kind != check.KindNet {
+	if ctx[1].Ref != "VRAIL" || ctx[1].Role != "rail" || ctx[1].Kind != check.KindNet {
 		t.Errorf("second context = %+v, want VRAIL as the net playing rail", ctx[1])
 	}
 	// The subject is the endangered part and must not also appear as its own context, or the panel
 	// offers a chip that navigates to where the reader already is.
 	for _, c := range ctx {
-		if c.Subject == fs[0].Subject {
+		if c.Ref == fs[0].Subject.Ref {
 			t.Errorf("context repeats the subject %q", fs[0].Subject)
 		}
-		if !strings.Contains(fs[0].Message, c.Subject) {
-			t.Errorf("context %q is not named in the message %q", c.Subject, fs[0].Message)
+		if !strings.Contains(fs[0].Message, c.Ref) {
+			t.Errorf("context %q is not named in the message %q", c.Ref, fs[0].Message)
 		}
 	}
 }

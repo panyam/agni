@@ -44,7 +44,7 @@ func bulkCapVerdicts(m check.Model) []check.Verdict {
 			continue // not a named distribution rail, or the return path rather than the reservoir
 		}
 
-		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		bulk := firstOnNet(m, n, check.ClassCapacitor)
 		switch {
 		case n.Attributes[netgraph.AttrExternal] == "true":

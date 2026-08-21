@@ -58,7 +58,7 @@ func absMaxModel(t *testing.T, vccbMax *float64, netA, netB string) check.Model 
 func verdictFor(t *testing.T, vs []check.Verdict, pin string) check.Verdict {
 	t.Helper()
 	for _, v := range vs {
-		if v.Pin == pin {
+		if v.Subjects[0].Pin == pin {
 			return v
 		}
 	}

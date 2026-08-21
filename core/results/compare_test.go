@@ -16,19 +16,19 @@ func doc(producer string, axis bool, fs ...*checkspb.Finding) *checkspb.CheckRes
 }
 
 func onComp(rule, ref string) *checkspb.Finding {
-	return &checkspb.Finding{Rule: rule, Subject: &checkspb.Subject{Kind: "component", Ref: ref}}
+	return &checkspb.Finding{Subject: &checkspb.Subject{Kind: "component", Ref: ref}, Rule: rule}
 }
 
 func onPin(rule, ref, pin string) *checkspb.Finding {
-	return &checkspb.Finding{Rule: rule, Subject: &checkspb.Subject{Kind: "component", Ref: ref, Pin: pin}}
+	return &checkspb.Finding{Subject: &checkspb.Subject{Kind: "component", Ref: ref, Pin: pin}, Rule: rule}
 }
 
 func onNet(rule, name string) *checkspb.Finding {
-	return &checkspb.Finding{Rule: rule, Subject: &checkspb.Subject{Kind: "net", Ref: name}}
+	return &checkspb.Finding{Subject: &checkspb.Subject{Kind: "net", Ref: name}, Rule: rule}
 }
 
 func unattached(rule string) *checkspb.Finding {
-	return &checkspb.Finding{Rule: rule, Subject: &checkspb.Subject{}}
+	return &checkspb.Finding{Subject: &checkspb.Subject{}, Rule: rule}
 }
 
 // TestCompareSplitsByEntity pins the three-way split. It keys on the entity each tool flagged rather
@@ -111,5 +111,34 @@ func TestComparisonReportLabelsAMissingCoverageAxis(t *testing.T) {
 	}
 	if !strings.Contains(out, "not a claim that the rules ask the same question") {
 		t.Errorf("the co-occurrence table must disclaim equivalence:\n%s", out)
+	}
+}
+
+// The cross-tool join must see EVERY entity a finding names, not only the one it is filed under.
+//
+// A clearance violation is a distance between two nets and belongs to neither: agni files it under
+// one, and another tool may file the same violation under the other. Joining on the subject alone
+// reported that agreement as a disagreement, which is the opposite of what this comparison is for.
+func TestEntityJoinSeesContextNotOnlyTheSubject(t *testing.T) {
+	filedUnderA := &checkspb.Finding{
+		Rule:    "copper-clearance",
+		Subject: &checkspb.Subject{Kind: "net", Ref: "GND"},
+		Context: []*checkspb.ContextSubject{{Subject: &checkspb.Subject{Kind: "net", Ref: "VBUS"}, Role: "neighbour"}},
+	}
+	filedUnderB := &checkspb.Finding{
+		Rule:    "drc/clearance",
+		Subject: &checkspb.Subject{Kind: "net", Ref: "VBUS"},
+	}
+	idx, skipped := entityRules(&checkspb.CheckResults{Findings: []*checkspb.Finding{filedUnderA, filedUnderB}})
+	if skipped != 0 {
+		t.Errorf("both findings name an entity; skipped %d", skipped)
+	}
+	got := idx["net:VBUS"]
+	if len(got) != 2 {
+		t.Fatalf("net:VBUS = %v, want both rules: the two tools flagged the same net and agree", got)
+	}
+	// And the subject side still joins, so the wider key did not replace the narrow one.
+	if len(idx["net:GND"]) != 1 {
+		t.Errorf("net:GND = %v, want the rule filed under it", idx["net:GND"])
 	}
 }

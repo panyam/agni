@@ -80,20 +80,14 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 		// the EARLIER stage's enable.
 		if b.Good != "" && a.Enable != "" {
 			if rGood, rEn := netNamed(m, b.Good), netNamed(m, a.Enable); linked(fan, rGood, rEn) {
-				out = append(out, check.Finding{
-					Kind:    check.KindNet,
-					Subject: a.Enable,
-					Prov:    rEn.GetProv(),
-					Message: fmt.Sprintf("sequence %q declares %s before %s, but the design gates it the other way round: %q (the power-good of %s) drives %q (the enable of %s)",
-						s.Name, a.Rail, b.Rail, b.Good, b.Rail, a.Enable, a.Rail),
-					// The power-good net doing the driving. Only this one: the branch has RESOLVED it
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: a.Enable}, Prov: rEn.GetProv(), Message: fmt.Sprintf("sequence %q declares %s before %s, but the design gates it the other way round: %q (the power-good of %s) drives %q (the enable of %s)",
+					s.Name, a.Rail, b.Rail, b.Good, b.Rail, a.Enable, a.Rail), // The power-good net doing the driving. Only this one: the branch has RESOLVED it
 					// (rGood is non-nil or linked would not have matched), whereas the rail names come
 					// straight from the intent declaration and are not known to exist on the design.
 					// A chip that highlights nothing is worse than no chip (agni issue 349).
 					Context: []check.ContextSubject{
-						{Kind: check.KindNet, Subject: b.Good, NetID: rGood.GetId(), Role: "power-good"},
-					},
-				})
+						{Entity: check.Entity{Kind: check.KindNet, Ref: b.Good, NetID: rGood.GetId()}, Role: "power-good"},
+					}})
 				continue
 			}
 		}
@@ -102,15 +96,14 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 			continue
 		}
 		out = append(out, check.Finding{
-			Kind:    check.KindNet,
-			Subject: b.Enable,
+			Subject: check.Entity{Kind: check.KindNet, Ref: b.Enable},
 			Prov:    enNet.GetProv(),
 			Message: fmt.Sprintf("sequence %q declares %s before %s, but nothing connects %q (the power-good of %s) to %q (the enable of %s), so %s is free to come up first",
 				s.Name, a.Rail, b.Rail, a.Good, a.Rail, b.Enable, b.Rail, b.Rail),
 			// The power-good net that should have been connected. goodNet is non-nil on this path, so
 			// unlike the rail names it is known to exist on the design.
 			Context: []check.ContextSubject{
-				{Kind: check.KindNet, Subject: a.Good, NetID: goodNet.GetId(), Role: "power-good"},
+				{Entity: check.Entity{Kind: check.KindNet, Ref: a.Good, NetID: goodNet.GetId()}, Role: "power-good"},
 			},
 		})
 	}
@@ -133,12 +126,8 @@ func absentHandleFinding(s Sequence, a, b SequenceStage, goodNet, enNet *ir.Net)
 	if len(missing) > 1 {
 		verb = "are"
 	}
-	return check.Finding{
-		Kind:    check.KindNet,
-		Subject: subject,
-		Message: fmt.Sprintf("sequence %q declares %s before %s through a power-good/enable chain, but %s %s not on the design, so no structure holds %s off until %s is good",
-			s.Name, a.Rail, b.Rail, strings.Join(missing, " and "), verb, b.Rail, a.Rail),
-	}
+	return check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: subject}, Message: fmt.Sprintf("sequence %q declares %s before %s through a power-good/enable chain, but %s %s not on the design, so no structure holds %s off until %s is good",
+		s.Name, a.Rail, b.Rail, strings.Join(missing, " and "), verb, b.Rail, a.Rail)}
 }
 
 // gatingFanLimit bounds how many nets a component may touch and still count as a gating part.

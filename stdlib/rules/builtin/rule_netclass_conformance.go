@@ -109,7 +109,7 @@ func declaredVsActual(
 
 	var out []check.Verdict
 	for _, bn := range m.BoardNets() {
-		v := check.Verdict{Kind: check.KindNet, Subject: bn.Net}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: bn.Net}}}
 		act, ok := actual(bn)
 		if !ok {
 			// Not a pass and not a limit question: there is no copper of this kind to measure, so
@@ -132,12 +132,7 @@ func declaredVsActual(
 			w.Terms = append(w.Terms, check.WitnessTerm{Label: "declared by class", Value: from})
 		}
 		if outcome == check.Fail {
-			v.Finding = &check.Finding{
-				Severity: "warning",
-				Kind:     check.KindNet,
-				Subject:  bn.Net,
-				Message:  fmt.Sprintf(msg, mmText(act), mmText(declared), from),
-			}
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: bn.Net}, Severity: "warning", Message: fmt.Sprintf(msg, mmText(act), mmText(declared), from)}
 		}
 		out = append(out, v)
 	}

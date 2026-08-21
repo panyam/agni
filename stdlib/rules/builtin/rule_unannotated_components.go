@@ -59,21 +59,10 @@ func unannotatedComponentsVerdicts(m check.Model) []check.Verdict {
 			prov = u.GetInstances()[0]
 		}
 		n := len(u.GetInstances())
-		out = append(out, check.Verdict{
-			Kind:    check.KindComponent,
-			Subject: u.GetRefDes(),
-			Outcome: check.Fail,
-			Witness: &check.Witness{
-				Statement: fmt.Sprintf("%d placement(s) share the placeholder designator %q, which is annotation state rather than a name", n, u.GetRefDes()),
-				Terms:     []check.WitnessTerm{{Label: "placements", Value: fmt.Sprint(n)}},
-			},
-			Finding: &check.Finding{
-				Kind:    check.KindComponent,
-				Subject: u.GetRefDes(),
-				Message: unannotatedMessage(u),
-				Prov:    prov,
-			},
-		})
+		out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: u.GetRefDes()}}, Outcome: check.Fail, Witness: &check.Witness{
+			Statement: fmt.Sprintf("%d placement(s) share the placeholder designator %q, which is annotation state rather than a name", n, u.GetRefDes()),
+			Terms:     []check.WitnessTerm{{Label: "placements", Value: fmt.Sprint(n)}},
+		}, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: u.GetRefDes()}, Message: unannotatedMessage(u), Prov: prov}})
 	}
 
 	seen := map[string]bool{}
@@ -83,7 +72,7 @@ func unannotatedComponentsVerdicts(m check.Model) []check.Verdict {
 			continue // the placeholders are already reported above, grouped
 		}
 		seen[ref] = true
-		v := check.Verdict{Kind: check.KindComponent, Subject: ref}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: ref}}}
 		if ref == "" {
 			// Not a placeholder and not a name either. `IsPlaceholder` describes designators a tool
 			// WROTE as unassigned ("R?", "REF**"), and an absent designator is a different gap the

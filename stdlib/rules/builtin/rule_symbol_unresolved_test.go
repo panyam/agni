@@ -27,10 +27,10 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("findings = %d, want 1 per unresolved reference", len(fs))
 	}
-	if fs[0].Kind != check.KindSymbol {
-		t.Errorf("kind = %q, want %q (the subject is a missing file, not a placed part)", fs[0].Kind, check.KindSymbol)
+	if fs[0].Subject.Kind != check.KindSymbol {
+		t.Errorf("kind = %q, want %q (the subject is a missing file, not a placed part)", fs[0].Subject.Kind, check.KindSymbol)
 	}
-	if fs[0].Subject != "res.sym" {
+	if check.EntityRef(fs[0].Subject) != "res.sym" {
 		t.Errorf("subject = %q, want the symbol reference", fs[0].Subject)
 	}
 	for _, ref := range []string{"R1", "R2"} {

@@ -48,12 +48,7 @@ var symbolUnresolved = &check.Rule{
 	// looked. That is a reader-and-IR change rather than a rule conversion.
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.UnresolvedSymbols(), func(u *ir.UnresolvedSymbol) check.Finding {
-			return check.Finding{
-				Kind:    check.KindSymbol,
-				Subject: u.GetSymref(),
-				Message: unresolvedMessage(u),
-				Prov:    u.GetProv(),
-			}
+			return check.Finding{Subject: check.Entity{Kind: check.KindSymbol, Ref: u.GetSymref()}, Message: unresolvedMessage(u), Prov: u.GetProv()}
 		})
 	}),
 }

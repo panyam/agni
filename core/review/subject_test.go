@@ -9,12 +9,12 @@ import (
 func projReport() Report {
 	return Report{Areas: []AreaResult{{Area: Area{Name: "A"}, Items: []ItemResult{
 		{Item: Item{ID: "1", Title: "esd"}, Outcome: Fail, Findings: []check.Finding{
-			{Rule: "esd", Kind: check.KindNet, Subject: "VBUS", Message: "no tvs"},
-			{Rule: "esd", Kind: check.KindNet, Subject: "CAN_H", Message: "no tvs"},
+			{Subject: check.Entity{Kind: check.KindNet, Ref: "VBUS"}, Rule: "esd", Message: "no tvs"},
+			{Subject: check.Entity{Kind: check.KindNet, Ref: "CAN_H"}, Rule: "esd", Message: "no tvs"},
 		}},
 		{Item: Item{ID: "2", Title: "pin roles"}, Outcome: Fail, Findings: []check.Finding{
-			{Rule: "role", Kind: check.KindPin, Subject: "U1", Pin: "3", Message: "mistyped"},
-			{Rule: "role", Kind: check.KindPin, Subject: "U1", Pin: "7", Message: "mistyped"},
+			{Subject: check.Entity{Kind: check.KindPin, Ref: "U1", Pin: "3"}, Rule: "role", Message: "mistyped"},
+			{Subject: check.Entity{Kind: check.KindPin, Ref: "U1", Pin: "7"}, Rule: "role", Message: "mistyped"},
 		}},
 		{Item: Item{ID: "3", Title: "uvlo"}, Outcome: NeedsData,
 			Note:  "no seeded datasheet value for IOUT on this design",
@@ -51,7 +51,7 @@ func TestForSubjectScopesToThatEntity(t *testing.T) {
 	if len(v.Items) != 1 || len(v.Items[0].Findings) != 1 {
 		t.Fatalf("want the one esd finding on VBUS, got %+v", v.Items)
 	}
-	if got := v.Items[0].Findings[0].Subject; got != "VBUS" {
+	if got := check.EntityRef(v.Items[0].Findings[0].Subject); got != "VBUS" {
 		t.Errorf("leaked a sibling subject: %q", got)
 	}
 	if v.Items[0].Outcome != Fail {

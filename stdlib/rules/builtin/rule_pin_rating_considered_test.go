@@ -47,7 +47,7 @@ func TestOneTerminalProducesOneVerdict(t *testing.T) {
 
 	seen := map[string]int{}
 	for _, v := range vs {
-		seen[v.Kind+":"+v.Subject+"."+v.Pin]++
+		seen[v.Subjects[0].Kind+":"+check.EntityRef(v.Subjects[0])+"."+v.Subjects[0].Pin]++
 	}
 	for key, n := range seen {
 		if n > 1 {
@@ -110,13 +110,13 @@ func TestUnjudgeableTerminalIsReportedNotDropped(t *testing.T) {
 	}
 	for _, v := range vs {
 		if v.Outcome != check.NotConsidered {
-			t.Errorf("pin %s: want %s, got %s", v.Pin, check.NotConsidered, v.Outcome)
+			t.Errorf("pin %s: want %s, got %s", v.Subjects[0].Pin, check.NotConsidered, v.Outcome)
 		}
 		if v.Reason == "" {
-			t.Errorf("pin %s: NotConsidered without a reason is the same silence in a new shape", v.Pin)
+			t.Errorf("pin %s: NotConsidered without a reason is the same silence in a new shape", v.Subjects[0].Pin)
 		}
 		if v.Witness != nil {
-			t.Errorf("pin %s: nothing was compared, so there is nothing to witness", v.Pin)
+			t.Errorf("pin %s: nothing was compared, so there is nothing to witness", v.Subjects[0].Pin)
 		}
 	}
 	// The reason has to name what was missing, or it cannot be acted on.

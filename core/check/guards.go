@@ -604,8 +604,8 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 			role = "rail"
 		}
 		ctx = append(ctx,
-			ContextSubject{Kind: KindComponent, Subject: h.Resistor, Role: "pull-up"},
-			ContextSubject{Kind: KindNet, Subject: h.Net, Role: role})
+			ContextSubject{Entity: Entity{Kind: KindComponent, Ref: h.Resistor}, Role: "pull-up"},
+			ContextSubject{Entity: Entity{Kind: KindNet, Ref: h.Net}, Role: role})
 		res = append(res, h.Resistor)
 	}
 	return Pass, &Witness{

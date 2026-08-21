@@ -48,24 +48,10 @@ var noExperimentalRefDes = &check.Rule{
 		var out []check.Verdict
 		for _, c := range m.Components() {
 			if strings.HasPrefix(c.RefDes, "X") {
-				out = append(out, check.Verdict{
-					Outcome: check.Fail,
-					Kind:    check.KindComponent,
-					Subject: c.RefDes,
-					Finding: &check.Finding{
-						Kind:    check.KindComponent,
-						Subject: c.RefDes,
-						Message: "experimental (X-prefixed) part in a production design",
-					},
-				})
+				out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Fail, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: "experimental (X-prefixed) part in a production design"}})
 				continue
 			}
-			out = append(out, check.Verdict{
-				Outcome: check.Pass,
-				Kind:    check.KindComponent,
-				Subject: c.RefDes,
-				Witness: &check.Witness{Statement: fmt.Sprintf("ref-des %q does not carry the experimental X prefix", c.RefDes)},
-			})
+			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Pass, Witness: &check.Witness{Statement: fmt.Sprintf("ref-des %q does not carry the experimental X prefix", c.RefDes)}})
 		}
 		return out
 	},

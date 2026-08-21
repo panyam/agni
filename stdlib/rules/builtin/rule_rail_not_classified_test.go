@@ -47,7 +47,7 @@ func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (PMIC_CORE_3V3), got %d: %+v", len(fs), fs)
 	}
-	if fs[0].Subject != "PMIC_CORE_3V3" {
+	if check.EntityRef(fs[0].Subject) != "PMIC_CORE_3V3" {
 		t.Errorf("finding must name the unclassified rail, got %q", fs[0].Subject)
 	}
 	for _, want := range []string{"3.3", "supply pin", "--conventions"} {
@@ -62,7 +62,7 @@ func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 // feeds an ordinary input rather than a supply pin, and must stay silent.
 func TestRailNotClassifiedIgnoresASignalAtALevel(t *testing.T) {
 	for _, f := range railNotClassified.Findings(check.NewModel(houseNamedDesign())) {
-		if f.Subject == "UART_TX_1V8" {
+		if check.EntityRef(f.Subject) == "UART_TX_1V8" {
 			t.Errorf("a signal swinging at a level is not an unclassified rail: %s", f.Message)
 		}
 	}
@@ -71,7 +71,7 @@ func TestRailNotClassifiedIgnoresASignalAtALevel(t *testing.T) {
 // A rail the built-in vocabulary already matches carries the role, so there is no gap to report.
 func TestRailNotClassifiedSilentOnAnAlreadyClassifiedRail(t *testing.T) {
 	for _, f := range railNotClassified.Findings(check.NewModel(houseNamedDesign())) {
-		if f.Subject == "+5V" {
+		if check.EntityRef(f.Subject) == "+5V" {
 			t.Errorf("a correctly classified rail must not be reported: %s", f.Message)
 		}
 	}
@@ -106,7 +106,7 @@ func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
 	noVolts := houseNamedDesign()
 	noVolts.Nets[0].Name = "PMIC_CORE"
 	for _, f := range railNotClassified.Findings(check.NewModel(noVolts)) {
-		if f.Subject == "PMIC_CORE" {
+		if check.EntityRef(f.Subject) == "PMIC_CORE" {
 			t.Errorf("a name with no voltage token cannot be evidenced: %s", f.Message)
 		}
 	}
@@ -115,7 +115,7 @@ func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
 	gnd := houseNamedDesign()
 	gnd.Nets[0].Name = "GND_0V0"
 	for _, f := range railNotClassified.Findings(check.NewModel(gnd)) {
-		if strings.HasPrefix(f.Subject, "GND") {
+		if strings.HasPrefix(check.EntityRef(f.Subject), "GND") {
 			t.Errorf("ground must be excluded: %s", f.Message)
 		}
 	}

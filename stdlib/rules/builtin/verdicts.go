@@ -40,5 +40,5 @@ func firstPassive(m check.Model, n *ir.Net) string {
 // author's word for what the part is doing in the proof, which is what a viewer renders beside the
 // chip it lights up.
 func compContext(ref, role string) []check.ContextSubject {
-	return []check.ContextSubject{{Kind: check.KindComponent, Subject: ref, Role: role}}
+	return []check.ContextSubject{{Entity: check.Entity{Kind: check.KindComponent, Ref: ref}, Role: role}}
 }

@@ -83,8 +83,8 @@ func TestSupplyExceedsAbsMax(t *testing.T) {
 		t.Fatalf("5V rail into 4.6V abs-max part: want 1 finding, got %d: %v", len(fires), fires)
 	}
 	f := fires[0]
-	if f.Kind != check.KindComponent || f.Subject != "U1" {
-		t.Errorf("finding subject = %s/%s, want component/U1", f.Kind, f.Subject)
+	if f.Subject.Kind != check.KindComponent || check.EntityRef(f.Subject) != "U1" {
+		t.Errorf("finding subject = %s/%s, want component/U1", f.Subject.Kind, f.Subject)
 	}
 	for _, want := range []string{"+5V", "4.6", "ACME-33 Rev B", "page 4", "Absolute Maximum Ratings", "confidence 1"} {
 		if !strings.Contains(f.Message, want) {

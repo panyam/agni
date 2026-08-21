@@ -27,7 +27,7 @@ func alwaysFires(reads ...string) *Rule {
 	return &Rule{
 		Name: "test-rule", Severity: "error", Reads: reads,
 		Eval: FailuresOnly(func(Model) []Finding {
-			return []Finding{{Kind: KindNet, Subject: "SIG", Message: "a defect"}}
+			return []Finding{{Subject: Entity{Kind: KindNet, Ref: "SIG"}, Message: "a defect"}}
 		}),
 	}
 }
@@ -55,8 +55,8 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 		if !strings.Contains(fs[0].Message, "symbol-unresolved") {
 			t.Errorf("reads %v: message %q does not point at the rule that explains the cause", reads, fs[0].Message)
 		}
-		if fs[0].Subject != "res.sym" {
-			t.Errorf("reads %v: subject = %q, want the unresolved reference", reads, fs[0].Subject)
+		if EntityRef(fs[0].Subject) != "res.sym" {
+			t.Errorf("reads %v: subject = %q, want the unresolved reference", reads, EntityRef(fs[0].Subject))
 		}
 	}
 }
@@ -90,7 +90,7 @@ func TestUnresolvedGateIsDesignWide(t *testing.T) {
 	aboutU1 := &Rule{
 		Name: "about-u1", Severity: "error", Reads: []string{"on_net"},
 		Eval: FailuresOnly(func(Model) []Finding {
-			return []Finding{{Kind: KindComponent, Subject: "U1", Message: "a defect on U1"}}
+			return []Finding{{Subject: Entity{Kind: KindComponent, Ref: "U1"}, Message: "a defect on U1"}}
 		}),
 	}
 	fs := Run(NewModel(designWithUnresolved()), []*Rule{aboutU1})

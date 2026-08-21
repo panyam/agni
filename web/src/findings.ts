@@ -157,7 +157,7 @@ export interface FindingsState {
 // It satisfies HighlightSubject structurally, exactly as FindingItem and FindingContext do, so the
 // same bucketing lights it up without a second code path.
 export interface VerdictItem {
-  // id is the derived name, "<rule>:<kind>:<ref>", and the click target a CLI row or a filed link
+  // id is the derived name, "<rule>:(<kind>:<ref>,...)", and the click target a CLI row or a filed link
   // addresses. Stable across a change in the ANSWER, so a link filed while a check passed still
   // resolves once it starts failing.
   id: string;
@@ -165,11 +165,10 @@ export interface VerdictItem {
   // outcome is the lower-case vocabulary word ("pass" | "fail" | "no-limit" | "not-considered" |
   // "inconclusive"), decoded from the wire enum by outcomeWord.
   outcome: string;
-  kind: string;
-  subject: string;
-  pin: string;
-  netId?: string;
-  busId?: string;
+  // subjects is the TUPLE this verdict is about, in the rule's order. One entity for most rules; a
+  // rule whose question is a relation carries two or three, and all of them are the subject. Drawing
+  // one of them as the figure and dropping the rest would show half of a clearance violation.
+  subjects: HighlightSubject[];
   // statement is the one-line proof, present on pass, fail and inconclusive. Empty where the verdict
   // rests on nothing, which is the no-limit and not-considered case.
   statement: string;
@@ -181,6 +180,13 @@ export interface VerdictItem {
   context: FindingContext[];
   // reason is why a not-considered verdict could not be decided, in the rule author's words.
   reason: string;
+}
+
+// verdictSubjectLabel is a verdict's tuple as one cell: each entity as ref, or ref.pin for a pin,
+// joined with a plus. A relation-shaped verdict names two or three entities and a row that showed
+// only the first would ask the reader to guess the rest, which is the whole reason the tuple exists.
+export function verdictSubjectLabel(v: VerdictItem): string {
+  return v.subjects.map((e) => (e.pin ? `${e.subject}.${e.pin}` : e.subject)).join(" + ");
 }
 
 // outcomeWord decodes the wire enum to the vocabulary word. An unrecognised value becomes
@@ -211,7 +217,7 @@ export function outcomeWord(o: number | undefined): string {
 // up", so the ground is the proof's own entities and nothing else. Both reach the same builder
 // because FindingContext satisfies HighlightSubject, so no second drawing path exists to drift.
 export function verdictProofStack(v: VerdictItem, focus: HighlightSpec[]): HighlightSpec[] {
-  return focusStack(v.context, v.kind, v.subject, focus, v.netId ?? "");
+  return focusStack(v.context, v.subjects, focus);
 }
 
 export interface FindingsView {
@@ -366,10 +372,13 @@ export function subjectsToSpecs(findings: HighlightSubject[]): HighlightSpec[] {
         seenPin.add(key);
         pins.push({ refDes: f.subject, pin: f.pin });
       }
-    } else {
-      // "component" and any unknown kind resolve as a component ref_des.
+    } else if (f.kind === "component" || f.kind === "") {
       components.add(f.subject);
     }
+    // Any OTHER kind contributes nothing. It used to fall through to the component bucket, which
+    // looked up a symbol reference or an endpoint's "x,y" as a ref-des and highlighted whatever
+    // happened to share that string. Silence is the honest answer for a kind this renderer has no
+    // geometry join for.
   }
   if (nets.size === 0 && netIds.size === 0 && busIds.size === 0 && components.size === 0 && pins.length === 0) return [];
   const spec: HighlightSpec = {};
@@ -401,13 +410,18 @@ export function entitySpecs(kind: string, subject: string, pin = ""): HighlightS
 // the bare wire. A focused component or pin stays in the base: its base outline plus the focus
 // bounding box read as additive area emphasis, so nothing is removed for those kinds. An empty
 // focus (subject not found) leaves the base untouched.
-export function focusStack(findings: HighlightSubject[], kind: string, subject: string, focus: HighlightSpec[], netId = ""): HighlightSpec[] {
-  // Drop the focused net from the base so the opaque underlay does not bleed through its
-  // translucent PATH marker. Drop by netId when the focus carries one (only that instance leaves
+//
+// `figures` is a LIST because a verdict's subject is a tuple: a clearance violation is about two
+// nets and both are the figure. A findings caller passes the one subject it has.
+export function focusStack(findings: HighlightSubject[], figures: HighlightSubject[], focus: HighlightSpec[]): HighlightSpec[] {
+  // Drop each focused net from the base so the opaque underlay does not bleed through its
+  // translucent PATH marker. Drop by netId when the figure carries one (only that instance leaves
   // the base; same-named siblings keep their outline), else by name.
+  const focusedNets = figures.filter((f) => f.kind === "net");
   const isFocused = (f: HighlightSubject) =>
-    f.kind === "net" && (netId !== "" ? f.netId === netId : f.subject === subject);
-  const base = kind === "net" ? findings.filter((f) => !isFocused(f)) : findings;
+    f.kind === "net" &&
+    focusedNets.some((g) => ((g.netId ?? "") !== "" ? f.netId === g.netId : f.subject === g.subject));
+  const base = focusedNets.length > 0 ? findings.filter((f) => !isFocused(f)) : findings;
   const baseSpecs = subjectsToSpecs(base);
   // An empty focus means the subject was not found, so there is no figure and the field is the whole
   // message. Muting it would dim the only layer on the sheet.

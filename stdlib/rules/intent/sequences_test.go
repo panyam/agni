@@ -97,7 +97,7 @@ func TestSequenceChainAbsentFires(t *testing.T) {
 	if fs[0].Rule != "sequence-soc-power-tree" {
 		t.Errorf("finding should carry the per-sequence rule name, got %q", fs[0].Rule)
 	}
-	if fs[0].Subject != "IO_EN" {
+	if check.EntityRef(fs[0].Subject) != "IO_EN" {
 		t.Errorf("subject should be the enable net nothing drives, got %q", fs[0].Subject)
 	}
 	if !strings.Contains(fs[0].Message, "CORE_PG") || !strings.Contains(fs[0].Message, "IO_EN") {
@@ -151,7 +151,7 @@ func TestSequenceReversedChainFires(t *testing.T) {
 	if !strings.Contains(fs[0].Message, "the other way round") {
 		t.Errorf("a reversed chain needs its own diagnosis, got %q", fs[0].Message)
 	}
-	if fs[0].Subject != "CORE_EN" {
+	if check.EntityRef(fs[0].Subject) != "CORE_EN" {
 		t.Errorf("subject should be the wrongly-gated enable, got %q", fs[0].Subject)
 	}
 }

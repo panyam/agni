@@ -201,7 +201,7 @@ func TestSpecRule(t *testing.T) {
 		t.Errorf("derived primitives = %v", r.Primitives)
 	}
 	fs := r.Findings(check.NewModel(&ir.Design{Nets: []*ir.Net{tnet("EMPTY"), tnet("OK", "R1.1")}}))
-	if len(fs) != 1 || fs[0].Subject != "EMPTY" || fs[0].Message != `net "EMPTY" has no connections` {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "EMPTY" || fs[0].Message != `net "EMPTY" has no connections` {
 		t.Errorf("eval = %+v", fs)
 	}
 
@@ -260,7 +260,7 @@ func TestSpecScopeRestore(t *testing.T) {
 	m := check.NewModel(specParityFixture())
 	var subjects []string
 	for _, f := range s.Eval(m) {
-		subjects = append(subjects, f.Subject)
+		subjects = append(subjects, check.EntityRef(f.Subject))
 	}
 	if !reflect.DeepEqual(subjects, []string{"CONFLICT"}) {
 		t.Errorf("subjects = %v, want [CONFLICT]", subjects)

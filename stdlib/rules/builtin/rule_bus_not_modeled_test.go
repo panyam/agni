@@ -29,7 +29,7 @@ func TestBusNotModeledResolution(t *testing.T) {
 	}
 	// One member missing -> fires, named after the bus.
 	fs := busNotModeled.Findings(check.NewModel(design([]*ir.BusNotModeled{bus("DATA[1:0]", "DATA0", "DATA1")}, "DATA0")))
-	if len(fs) != 1 || fs[0].Subject != "DATA[1:0]" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "DATA[1:0]" {
 		t.Errorf("bus with a missing member should fire on DATA[1:0], got %v", fs)
 	}
 	// No known member set -> cannot confirm resolution -> fires.
@@ -57,8 +57,8 @@ func TestBusNotModeledStatesTheResolvedBus(t *testing.T) {
 	if len(vs) != 1 || vs[0].Outcome != check.Pass {
 		t.Fatalf("a bus whose members are all nets should PASS, got %+v", vs)
 	}
-	if vs[0].Kind != check.KindBus || vs[0].Subject != "DATA[1:0]" {
-		t.Errorf("verdict should be about the bus, got kind %q subject %q", vs[0].Kind, vs[0].Subject)
+	if vs[0].Subjects[0].Kind != check.KindBus || check.EntityRef(vs[0].Subjects[0]) != "DATA[1:0]" {
+		t.Errorf("verdict should be about the bus, got kind %q subject %q", vs[0].Subjects[0].Kind, check.EntityRef(vs[0].Subjects[0]))
 	}
 	if !strings.Contains(vs[0].Witness.Statement, "2 member") {
 		t.Errorf("the pass must rest on the member count, not assert resolution: %q", vs[0].Witness.Statement)

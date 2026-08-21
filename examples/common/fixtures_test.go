@@ -74,7 +74,7 @@ func TestI2CSensorFindings(t *testing.T) {
 	type key struct{ rule, sev, subj string }
 	seen := map[key]bool{}
 	for _, f := range fs {
-		seen[key{f.Rule, f.Severity, f.Subject}] = true
+		seen[key{f.Rule, f.Severity, check.EntityRef(f.Subject)}] = true
 	}
 	for _, want := range []key{
 		{"i2c-pull-up", "error", "SCL"},
@@ -86,7 +86,7 @@ func TestI2CSensorFindings(t *testing.T) {
 		}
 	}
 	for _, f := range fs {
-		if f.Subject == "SDA" || f.Subject == "NC_SPARE" {
+		if check.EntityRef(f.Subject) == "SDA" || check.EntityRef(f.Subject) == "NC_SPARE" {
 			t.Errorf("%s should be suppressed (SDA has a pull-up; NC_SPARE is a no-connect), got %+v", f.Subject, f)
 		}
 	}

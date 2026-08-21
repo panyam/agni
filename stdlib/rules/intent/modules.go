@@ -27,11 +27,7 @@ func moduleMissingRule(d Declaration) *check.Rule {
 				if modulePresent(m, mod) {
 					continue
 				}
-				out = append(out, check.Finding{
-					Kind:    check.KindComponent,
-					Subject: mod.Name,
-					Message: fmt.Sprintf("declared module %q (%s) is not present on the design", mod.Name, moduleCriterion(mod)),
-				})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: mod.Name}, Message: fmt.Sprintf("declared module %q (%s) is not present on the design", mod.Name, moduleCriterion(mod))})
 			}
 			return out
 		}),
@@ -78,11 +74,7 @@ func moduleCountRule(d Declaration) *check.Rule {
 				if got == mod.Count {
 					continue
 				}
-				out = append(out, check.Finding{
-					Kind:    check.KindComponent,
-					Subject: mod.Name,
-					Message: fmt.Sprintf("declared module %q (%s) expects %d, found %d", mod.Name, moduleCriterion(mod), mod.Count, got),
-				})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: mod.Name}, Message: fmt.Sprintf("declared module %q (%s) expects %d, found %d", mod.Name, moduleCriterion(mod), mod.Count, got)})
 			}
 			return out
 		}),

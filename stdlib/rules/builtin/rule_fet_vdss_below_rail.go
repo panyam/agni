@@ -5,6 +5,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // fetVdssBelowRail flags a MOSFET connected to a power rail whose voltage is at or above the part's
@@ -38,63 +39,96 @@ var fetVdssBelowRail = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("fet-vdss-below-switched-rail"),
-	// A RELATION-SHAPED SUBJECT, which the verdict key has no grammar for (agni issue 391).
-	//
-	// Its subject is a PAIR: the FET and one of the rails it touches. A high-side switch sits
-	// on its input rail and its output rail, so a part above breakdown on both is two findings about
-	// one ref-des, which is the ordinary topology rather than an edge case.
-	//
-	// A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names ONE entity, so keying these
-	// verdicts by the subject alone would issue one id for several different answers. `checkspb.Subject`
-	// has the same shape on the wire (kind, ref, pin, net_id, bus_id), and TestVerdictFieldCensus exists
-	// to make adding to it a decision rather than a drift, so a ref that names two entities is a
-	// wire-vocabulary change rather than something to slip in under a rule conversion. Reducing to one
-	// verdict per subject instead would mean dropping findings this rule reports today.
-	//
-	// So it reports violations only, and RunVerdicts leaves it out rather than presenting its failure
-	// list as coverage. It is one of five rules in the catalog with this shape: copper-clearance (a pair
-	// of nets), regulator-output-exceeds-abs-max (a part and the part that feeds it),
-	// fet-vdss-below-switched-rail (a part and one of the rails it touches), and the two pin-tracking
-	// rules (a pair of pins on one part).
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-		var out []check.Finding
-		for _, c := range m.Components() {
-			spec := m.PartSpec(c.RefDes)
-			if spec == nil {
-				continue
-			}
-			limits := check.FetBreakdownLimits(spec)
-			if len(limits) == 0 {
-				continue
-			}
-			// The LOWEST breakdown row binds: a part is endangered at its weakest rating.
-			vdss := limits[0]
-			for _, p := range limits[1:] {
-				if p.Value.GetMax() < vdss.Value.GetMax() {
+	// The FET and the rail, in the order the message names them. VDSS is a rating on a part, but this
+	// rule's question is about a part ON a rail, and a high-side switch sits on its input rail and its
+	// output rail at once, so a part above breakdown on both is two answers rather than one.
+	SubjectShape:        []string{check.KindComponent, check.KindNet},
+	Eval:                fetVdssVerdicts,
+	StatesConsideredSet: true,
+}
+
+// fetVdssVerdicts decides every (FET, rail) pair in the design, one verdict each.
+//
+// THE PAIR IS THE SUBJECT and the reason is the precision limit in this rule's header. VDSS bounds
+// the DRAIN-SOURCE voltage, and the pin-role vocabulary has no drain or source, so the rule cannot
+// tell which of the FET's nets sits across those terminals. It therefore asks the question once per
+// rail the part touches. Those are separate answers about separate rails, and keying them by the FET
+// alone gave the ordinary high-side topology one id for two of them.
+//
+// THREE SILENCES BECOME ANSWERS. A part with no seeded datasheet, a part whose datasheet states no
+// breakdown row, and a rail whose voltage nothing establishes all left through the same `continue` a
+// safely-rated pair took. Only the third is NoLimit; the first two are NotConsidered, because a
+// missing document is a gap in the corpus rather than a bound nobody stated.
+//
+// Rails are the scope rather than every net the part touches: a gate-drive net is not a rail, so the
+// common false pairing is excluded structurally instead of by luck. A ground is not a subject either.
+func fetVdssVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, c := range m.Components() {
+		spec := m.PartSpec(c.RefDes)
+		// The LOWEST breakdown row binds: a part is endangered at its weakest rating. Guarded on the
+		// spec rather than left to the helper, which reads spec.Parameters directly.
+		var vdss *parampb.Parameter
+		if spec != nil {
+			for _, p := range check.FetBreakdownLimits(spec) {
+				if vdss == nil || p.Value.GetMax() < vdss.Value.GetMax() {
 					vdss = p
 				}
 			}
-			for _, n := range m.Nets() {
-				if !onNet(n, c.RefDes) || !m.IsPowerRail(n.Name) || m.IsGroundNet(n) {
-					continue
-				}
+		}
+		for _, n := range m.Nets() {
+			if !onNet(n, c.RefDes) || !m.IsPowerRail(n.Name) || m.IsGroundNet(n) {
+				continue // not a rail this part sits on, so not a subject of this rule
+			}
+			v := check.Verdict{Subjects: []check.Entity{check.ComponentEntity(c.RefDes), check.NetEntity(n)}}
+			switch {
+			case spec == nil:
+				v.Outcome = check.NotConsidered
+				v.Reason = "the part carries no seeded datasheet, so it states no breakdown voltage to compare the rail against"
+			case vdss == nil:
+				v.Outcome = check.NotConsidered
+				v.Reason = "the datasheet states no comparable drain-source breakdown row for this part"
+			default:
 				volts, src, ok := railVolts(m, n)
-				if !ok || volts < vdss.Value.GetMax() {
-					continue
+				if !ok {
+					v.Outcome = check.NoLimit
+					v.Reason = "neither a driving part's datasheet nor the net's name establishes what this rail runs at"
+					break
 				}
+				// Deliberately NOT check.CompareToBound: this rule fails at or ABOVE the rating, where
+				// that helper fails strictly above. A FET run exactly at its breakdown voltage has no
+				// margin at all, which is the case the rule exists for.
+				w := &check.Witness{
+					Terms: []check.WitnessTerm{
+						{Label: "rail", Value: fmt.Sprintf("%gV (%s)", volts, src.how)},
+						{Label: vdss.Symbol, Value: fmt.Sprintf("%gV", vdss.Value.GetMax())},
+					},
+					Datasheet: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, vdss)},
+				}
+				if src.cite != nil {
+					w.Datasheet = append(w.Datasheet, src.cite)
+				}
+				if volts < vdss.Value.GetMax() {
+					v.Outcome = check.Pass
+					w.Statement = fmt.Sprintf("rail %q runs at %gV (%s), below the part's breakdown %s of %gV",
+						n.Name, volts, src.how, vdss.Symbol, vdss.Value.GetMax())
+					v.Witness = w
+					break
+				}
+				v.Outcome = check.Fail
+				w.Statement = fmt.Sprintf("rail %q runs at %gV (%s), at or above the part's breakdown %s of %gV",
+					n.Name, volts, src.how, vdss.Symbol, vdss.Value.GetMax())
+				v.Witness = w
 				f := check.Finding{
-					Kind:    check.KindComponent,
-					Subject: c.RefDes,
+					Subject: check.ComponentEntity(c.RefDes),
 					Message: fmt.Sprintf("%s sits on rail %q at %gV (%s), at or above its breakdown %s %gV — %s",
 						c.RefDes, n.Name, volts, src.how, vdss.Symbol, vdss.Value.GetMax(),
 						check.Citation(spec, vdss)),
 					Prov:          c.Prov,
 					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, vdss)},
-					// The rail the message names. The subject is the FET, because that is the part to
-					// change, so without this the reader cannot get to the net from the finding.
-					Context: []check.ContextSubject{
-						{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId(), Role: "rail"},
-					},
+					// The rail the message names. The FINDING's subject is the FET, because that is the
+					// part to change, so without this the reader cannot get to the net from the finding.
+					Context: []check.ContextSubject{check.Ctx(check.NetEntity(n), "rail")},
 				}
 				// A rail voltage read off a DRIVING PART's datasheet is a second vendor value the
 				// conclusion rests on, so it earns a citation and the data-trust gate weighs it.
@@ -104,11 +138,12 @@ var fetVdssBelowRail = &check.Rule{
 				if src.cite != nil {
 					f.DatasheetProv = append(f.DatasheetProv, src.cite)
 				}
-				out = append(out, f)
+				v.Finding = &f
 			}
+			out = append(out, v)
 		}
-		return out
-	}),
+	}
+	return out
 }
 
 // railEvidence records where a rail's voltage came from: the human-readable provenance for the

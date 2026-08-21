@@ -67,7 +67,7 @@ func TestFetVdssBelowRailFromNetName(t *testing.T) {
 		t.Fatalf("want 1 finding (50V FET on a 60V rail), got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Subject != "Q1" {
+	if check.EntityRef(f.Subject) != "Q1" {
 		t.Errorf("subject = %q, want Q1", f.Subject)
 	}
 	if !strings.Contains(f.Message, "from the net name") {

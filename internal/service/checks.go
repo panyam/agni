@@ -267,20 +267,7 @@ func expectationProtos(m map[string]expect.Entry, pending bool) []*webapi.RuleEx
 // own drawn bus (WS7-042b). A bus with no drawn geometry (a bus_alias, an EDIF array) simply
 // resolves to nothing — its "bus not drawn" note is WS7-042c.
 func FindingProto(f check.Finding) *checkspb.Finding {
-	subject := &checkspb.Subject{Kind: f.Kind, Ref: f.Subject, Pin: f.Pin, NetId: f.NetID}
-	if f.Kind == check.KindBus {
-		subject.BusId = f.Subject
-	}
-	return &checkspb.Finding{
-		Rule:         f.Rule,
-		Severity:     f.Severity,
-		Inconclusive: f.Inconclusive,
-		Subject:      subject,
-		Message:      f.Message,
-		Provenance:   f.Prov,
-		Datasheets:   datasheetCitationProtos(f.DatasheetProv),
-		Context:      contextSubjectProtos(f.Context),
-	}
+	return &checkspb.Finding{Subject: subjectProto(f.Subject), Rule: f.Rule, Severity: f.Severity, Inconclusive: f.Inconclusive, Message: f.Message, Provenance: f.Prov, Datasheets: datasheetCitationProtos(f.DatasheetProv), Context: contextSubjectProtos(f.Context)}
 }
 
 // contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER, because
@@ -294,13 +281,29 @@ func contextSubjectProtos(cs []check.ContextSubject) []*checkspb.ContextSubject 
 	}
 	out := make([]*checkspb.ContextSubject, 0, len(cs))
 	for _, c := range cs {
-		subject := &checkspb.Subject{Kind: c.Kind, Ref: c.Subject, Pin: c.Pin, NetId: c.NetID}
-		if c.Kind == check.KindBus {
-			subject.BusId = c.Subject
-		}
-		out = append(out, &checkspb.ContextSubject{Subject: subject, Role: c.Role})
+		out = append(out, &checkspb.ContextSubject{Subject: subjectProto(c.Entity), Role: c.Role})
 	}
 	return out
+}
+
+// subjectProto is the ONE place a check.Entity becomes a wire Subject, shared by findings, verdict
+// tuples and context entries. One conversion rather than three copies is what keeps the bus rule
+// below from being remembered in two places and forgotten in the third.
+//
+// A bus entity gets its bus_id set from its ref: a bus carries no net, so its name is the only
+// geometry join key it has (WS7-042b), and a bus with no drawn geometry resolves to nothing.
+func subjectProto(e check.Entity) *checkspb.Subject {
+	out := &checkspb.Subject{Kind: e.Kind, Ref: e.Ref, Pin: e.Pin, NetId: e.NetID}
+	if e.Kind == check.KindBus {
+		out.BusId = e.Ref
+	}
+	return out
+}
+
+// subjectFromProto is the inverse of subjectProto. bus_id is not read back: it is derived from the
+// ref, so an inbound one that disagreed would let a producer rename a bus by asserting a second name.
+func subjectFromProto(s *checkspb.Subject) check.Entity {
+	return check.Entity{Kind: s.GetKind(), Ref: s.GetRef(), Pin: s.GetPin(), NetID: s.GetNetId()}
 }
 
 // datasheetCitationProto maps a check.DatasheetCitation to its wire form, nil for a finding not
@@ -379,19 +382,11 @@ func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*w
 // rather than an omission: it fails when a field is added to check.Verdict, so the next person has to
 // say whether it belongs on the wire instead of discovering later that it never arrived.
 func VerdictProto(v check.Verdict) *checkspb.Verdict {
-	subject := &checkspb.Subject{Kind: v.Kind, Ref: v.Subject, Pin: v.Pin, NetId: v.NetID}
-	if v.Kind == check.KindBus {
-		subject.BusId = v.Subject
+	subjects := make([]*checkspb.Subject, 0, len(v.Subjects))
+	for _, e := range v.Subjects {
+		subjects = append(subjects, subjectProto(e))
 	}
-	return &checkspb.Verdict{
-		Id:      check.VerdictID(v),
-		Rule:    v.Rule,
-		Outcome: outcomeProto(v.Outcome),
-		Subject: subject,
-		Witness: witnessProto(v.Witness),
-		Reason:  v.Reason,
-		Context: contextSubjectProtos(v.Context),
-	}
+	return &checkspb.Verdict{Subjects: subjects, Id: check.VerdictID(v), Rule: v.Rule, Outcome: outcomeProto(v.Outcome), Witness: witnessProto(v.Witness), Reason: v.Reason, Context: contextSubjectProtos(v.Context)}
 }
 
 // VerdictFromProto is the inverse. Id is not read back: it is derived from the other fields, so
@@ -400,18 +395,11 @@ func VerdictFromProto(p *checkspb.Verdict) check.Verdict {
 	if p == nil {
 		return check.Verdict{}
 	}
-	s := p.GetSubject()
-	return check.Verdict{
-		Rule:    p.GetRule(),
-		Outcome: outcomeFromProto(p.GetOutcome()),
-		Kind:    s.GetKind(),
-		Subject: s.GetRef(),
-		Pin:     s.GetPin(),
-		NetID:   s.GetNetId(),
-		Reason:  p.GetReason(),
-		Witness: witnessFromProto(p.GetWitness()),
-		Context: contextSubjectsFromProto(p.GetContext()),
+	subjects := make([]check.Entity, 0, len(p.GetSubjects()))
+	for _, s := range p.GetSubjects() {
+		subjects = append(subjects, subjectFromProto(s))
 	}
+	return check.Verdict{Subjects: subjects, Rule: p.GetRule(), Outcome: outcomeFromProto(p.GetOutcome()), Reason: p.GetReason(), Witness: witnessFromProto(p.GetWitness()), Context: contextSubjectsFromProto(p.GetContext())}
 }
 
 // VerdictProtos maps a verdict list, the counterpart of FindingProtos.
@@ -508,10 +496,7 @@ func contextSubjectsFromProto(ps []*checkspb.ContextSubject) []check.ContextSubj
 	out := make([]check.ContextSubject, 0, len(ps))
 	for _, p := range ps {
 		s := p.GetSubject()
-		out = append(out, check.ContextSubject{
-			Kind: s.GetKind(), Subject: s.GetRef(), Pin: s.GetPin(),
-			NetID: s.GetNetId(), Role: p.GetRole(),
-		})
+		out = append(out, check.ContextSubject{Entity: check.Entity{Kind: s.GetKind(), Ref: s.GetRef(), Pin: s.GetPin(), NetID: s.GetNetId()}, Role: p.GetRole()})
 	}
 	return out
 }

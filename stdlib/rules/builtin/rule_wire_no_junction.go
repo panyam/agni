@@ -38,12 +38,7 @@ var wireNoJunction = &check.Rule{
 	// looked. That is a reader-and-IR change rather than a rule conversion.
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.NoJunctionEndpoints(), func(e *ir.DanglingEndpoint) check.Finding {
-			return check.Finding{
-				Kind:    check.KindEndpoint,
-				Subject: fmt.Sprintf("%d,%d", e.X, e.Y),
-				Message: "wire endpoint touches another wire mid-span with no junction dot",
-				Prov:    e.Prov,
-			}
+			return check.Finding{Subject: check.Entity{Kind: check.KindEndpoint, Ref: fmt.Sprintf("%d,%d", e.X, e.Y)}, Message: "wire endpoint touches another wire mid-span with no junction dot", Prov: e.Prov}
 		})
 	}),
 }

@@ -133,11 +133,11 @@ func TestLoadSwitchTripAboveFetRatingFires(t *testing.T) {
 		t.Fatalf("want 1 finding (5A trip on a 3A FET), got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Subject != "Q1" {
+	if check.EntityRef(f.Subject) != "Q1" {
 		t.Errorf("subject = %q, want Q1 (the part whose rating is exceeded)", f.Subject)
 	}
-	if f.Kind != check.KindComponent {
-		t.Errorf("kind = %q, want component", f.Kind)
+	if f.Subject.Kind != check.KindComponent {
+		t.Errorf("kind = %q, want component", f.Subject.Kind)
 	}
 	// The three inputs must all be visible: the computed trip current, the shunt it came from, and
 	// the rating it was judged against. A message naming only the verdict leaves a reviewer unable to

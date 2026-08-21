@@ -113,13 +113,8 @@ func crystalLoadCapsVerdicts(m check.Model) []check.Verdict {
 		// count excludes active oscillators structurally, independent of whether the supply net reads
 		// as a rail, which is the belt to the rail check's suspenders.
 		if len(p.terms) != 2 {
-			out = append(out, check.Verdict{
-				Kind:    check.KindComponent,
-				Subject: ref,
-				Outcome: check.NotConsidered,
-				Reason: fmt.Sprintf("the part has %d non-ground terminal(s) rather than the two a passive crystal has, "+
-					"so the rule cannot tell it from an active oscillator that needs no load caps", len(p.terms)),
-			})
+			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: ref}}, Outcome: check.NotConsidered, Reason: fmt.Sprintf("the part has %d non-ground terminal(s) rather than the two a passive crystal has, "+
+				"so the rule cannot tell it from an active oscillator that needs no load caps", len(p.terms))})
 			continue
 		}
 		names := make([]string, 0, len(p.terms))
@@ -129,8 +124,8 @@ func crystalLoadCapsVerdicts(m check.Model) []check.Verdict {
 		sort.Strings(names)
 		for _, name := range names {
 			t := p.terms[name]
-			v := check.Verdict{Kind: check.KindPin, Subject: ref, Pin: t.pin}
-			v.Context = []check.ContextSubject{{Kind: check.KindNet, Subject: name, NetID: t.net.Id, Role: "terminal"}}
+			v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: ref, Pin: t.pin}}}
+			v.Context = []check.ContextSubject{{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"}}
 			loadCap := firstOnNet(m, t.net, check.ClassCapacitor)
 			switch {
 			case t.net.Attributes[netgraph.AttrExternal] == "true":
@@ -144,24 +139,21 @@ func crystalLoadCapsVerdicts(m check.Model) []check.Verdict {
 					Statement: "capacitor " + loadCap + " sits on terminal net " + name,
 					Terms:     []check.WitnessTerm{{Label: "load capacitor", Value: loadCap}},
 				}
-				v.Context = append(v.Context, check.ContextSubject{Kind: check.KindComponent, Subject: loadCap, Role: "load capacitor"})
+				v.Context = append(v.Context, check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: loadCap}, Role: "load capacitor"})
 			default:
 				v.Outcome = check.Fail
 				v.Witness = &check.Witness{
 					Statement: "no capacitor sits on terminal net " + name,
 				}
 				v.Finding = &check.Finding{
-					Kind:    check.KindComponent,
-					Subject: ref,
+					Subject: check.Entity{Kind: check.KindComponent, Ref: ref},
 					Message: "crystal terminal net " + name + " has no load capacitor",
 					Prov:    p.comp.Prov,
 					// The terminal the sentence is about. The subject is the crystal, because that
 					// is the part a reader changes, but a crystal has two terminals and both sit
 					// inside the highlighted symbol, so without this the drawing cannot say which
 					// one is at fault (agni issue 349). Kept in step with the datalog twin.
-					Context: []check.ContextSubject{{
-						Kind: check.KindNet, Subject: name, NetID: t.net.Id, Role: "terminal",
-					}},
+					Context: []check.ContextSubject{{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"}},
 				}
 			}
 			out = append(out, v)

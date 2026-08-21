@@ -49,7 +49,7 @@ func TestSpecPassWitnessCarriesTheValue(t *testing.T) {
 			s := &Spec{Over: "nets", Let: tc.let, Where: tc.where, Message: "stub"}
 			got := ""
 			for _, v := range s.Verdicts(NewModel(scopeDesign())) {
-				if v.Subject == "OK" {
+				if EntityRef(v.Subjects[0]) == "OK" {
 					if v.Outcome != Pass {
 						t.Fatalf("want pass for OK, got %s", v.Outcome)
 					}

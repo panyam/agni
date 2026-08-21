@@ -45,7 +45,7 @@ func TestConformance(t *testing.T) {
 			}
 			got := map[string][]string{}
 			for _, f := range check.Run(m, check.BuiltinRules()) {
-				got[f.Rule] = append(got[f.Rule], f.Subject)
+				got[f.Rule] = append(got[f.Rule], f.Subject.Ref)
 			}
 			for rule, e := range exp.Fires {
 				if !equalSubjects(got[rule], e.Subjects) {

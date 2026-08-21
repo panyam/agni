@@ -9,12 +9,7 @@ import (
 )
 
 func finding(rule, severity, ref string) *checkspb.Finding {
-	return &checkspb.Finding{
-		Rule:     rule,
-		Severity: severity,
-		Subject:  &checkspb.Subject{Kind: "net", Ref: ref},
-		Message:  rule + " on " + ref,
-	}
+	return &checkspb.Finding{Subject: &checkspb.Subject{Kind: "net", Ref: ref}, Rule: rule, Severity: severity, Message: rule + " on " + ref}
 }
 
 // TestPivotOrdersWorstFirstAndKeepsAnUnknownSeverityOnTop pins the ordering an unknown severity gets.

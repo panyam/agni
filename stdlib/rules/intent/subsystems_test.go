@@ -67,7 +67,7 @@ func TestSubsystemNetsOnlyOrSourceOnly(t *testing.T) {
 	decl := declOf(t, "name: I\nsubsystems:\n  - {name: power tree, nets: [5V0, 3V3, 1V8]}")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}, {Name: "3V3"}}} // 1V8 missing
 	fs := check.Run(check.NewModel(d), Compile(decl))
-	if len(fs) != 1 || fs[0].Subject != "1V8" || fs[0].Rule != "subsystem-power-tree" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "1V8" || fs[0].Rule != "subsystem-power-tree" {
 		t.Fatalf("nets-only subsystem should fire once for the missing rail, got %+v", fs)
 	}
 }

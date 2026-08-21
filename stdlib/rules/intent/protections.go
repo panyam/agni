@@ -38,11 +38,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 				if protected(m, p) {
 					continue
 				}
-				out = append(out, check.Finding{
-					Kind:    check.KindNet,
-					Subject: p.Rail,
-					Message: fmt.Sprintf("rail %q declares %s protection, but no %s device is on it", p.Rail, kind, protectionDevice(kind)),
-				})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: p.Rail}, Message: fmt.Sprintf("rail %q declares %s protection, but no %s device is on it", p.Rail, kind, protectionDevice(kind))})
 			}
 			return out
 		}),

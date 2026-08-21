@@ -11,7 +11,8 @@ import {
   collapseInstances,
   findingKey,
   groupFindings,
-  sortFindings, type VerdictItem } from "./findings.js";
+  sortFindings,
+  verdictSubjectLabel, type VerdictItem } from "./findings.js";
 
 // GroupAxis extends the finding group axes with "none" — a flat sorted table with no group headers.
 type GroupAxis = FindingGroupAxis | "none";
@@ -386,7 +387,7 @@ function VerdictTable(props: {
             >
               <td class="verdict-outcome">{v.outcome}</td>
               <td class="verdict-rule">{v.rule}</td>
-              <td class="verdict-subject">{v.pin ? `${v.subject}.${v.pin}` : v.subject}</td>
+              <td class="verdict-subject">{verdictSubjectLabel(v)}</td>
               <td class="verdict-proof">{v.statement || v.reason}</td>
             </tr>
           )}

@@ -208,9 +208,25 @@ reaching a rail through a resistor) therefore carries no terms at all, which is 
 gap. `context` excludes the subject, which `subject` already names, so a consumer draws
 subject-as-figure over context-as-ground.
 
+### A verdict's subject is a TUPLE
+
+`verdict.subjects` is the entities the rule quantified over, in the rule's own order. Most rules name
+one. A rule whose question is a RELATION names every entity in it, because a relation belongs to none
+of them alone: a clearance violation is a distance between two nets, a regulator over-driving a part it
+feeds is only pinned down by the regulator, the rail and the load, and a strap group is a device and
+the N nets encoding its value. Naming fewer would give several answers one id.
+
+Order is the rule's and is significant, since a tracking bound reads subject-pin minus reference-pin.
+A symmetric relation is canonicalised by the rule before it reaches the wire, never by a consumer.
+
+A `Finding.subject` stays SINGULAR and is one of these. The two answer different questions: the tuple
+is the verdict's identity, and a finding's subject is the one entity a reader has to change. Everything
+else the finding names is in its `context`, which is where a consumer that wants equal standing across
+all of them looks.
+
 ### `Verdict.id` is derived, never assigned
 
-`"<rule>:<kind>:<ref>"`, computed from the verdict rather than handed to it, so a CLI run and a
+`"<rule>:(<kind>:<ref>,...)"`, computed from the verdict rather than handed to it, so a CLI run and a
 server run name the same verdict without talking to each other. It is the `mount://` parity argument
 one level down.
 
@@ -221,9 +237,11 @@ grammar belongs to the kind rather than being a positional tuple of every kind's
 `Subject` is already a widening union and a positional key would change format every time a kind is
 added.
 
-Rule names are kebab-case and kind is a closed vocabulary, so neither contains a colon: split on the
-FIRST TWO colons and take the remainder verbatim. That handles `symbol:Library:Symbol`, whose colon
-`KindSymbol` documents as a real spelling.
+The id is GENERATED and never parsed: one function builds it and nothing splits it back, because the
+structure travels in `subjects` where a consumer reads it typed. That is what lets a ref keep its own
+colons (`symbol:Library:Symbol`) and its own commas (an endpoint's `0,0`). The four characters the
+tuple syntax uses are percent-escaped inside a ref, which is not academic: an endpoint's ref has a
+comma in the delimiter position, and without the escape `("A,net:B")` and `("A", "B")` are one string.
 
 Known limit: two nets sharing a name share an id, because using the net id instead would make the id
 unconstructible. That matches how `Subject` already behaves on the wire.
@@ -239,12 +257,9 @@ Only rules that STATE a considered set contribute. A rule absent from `verdicts`
 not reporting that it considered nothing, and a consumer must not read those the same way. That is
 the distinction `skipped` draws one layer up.
 
-Nine rules decline, each for a reason recorded beside its `Eval`, and the reasons group into three
-(agni issue 391). Five have a subject that is a RELATION between two entities, which `Verdict.id` and
-`Subject` have no grammar for. Three read a reader diagnostic that holds only the offenders, so there
-is no set to map over. One cannot separate a pass from a missing datasheet inside its own body. The
-first group is the one that would change this contract: a ref naming two entities means a new field on
-`Subject`, which `TestVerdictFieldCensus` exists to keep a decision rather than a drift.
+Four rules decline, each for a reason recorded beside its `Eval` (agni issue 391). Three read a reader
+diagnostic that holds only the offenders, so there is no set to map over; one cannot separate a pass
+from a missing datasheet inside its own body.
 
 ## Versioning
 

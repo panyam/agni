@@ -47,8 +47,8 @@ func TestRailNominalFiresOverAndUnder(t *testing.T) {
 		t.Fatalf("5V on a 3.0..3.6V part: want 1 finding, got %v", over)
 	}
 	f := over[0]
-	if f.Kind != check.KindComponent || f.Subject != "U1" {
-		t.Errorf("subject = %s/%s, want component/U1", f.Kind, f.Subject)
+	if f.Subject.Kind != check.KindComponent || check.EntityRef(f.Subject) != "U1" {
+		t.Errorf("subject = %s/%s, want component/U1", f.Subject.Kind, f.Subject)
 	}
 	for _, want := range []string{"+5V", "exceeds recommended maximum 3.6V", "VDD",
 		"ACME-LDO Rev B", "page 6", "Recommended Operating Conditions", "confidence 1"} {

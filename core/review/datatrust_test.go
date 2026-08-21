@@ -228,7 +228,7 @@ func TestMultiCitationRatifiedOnlyIfEveryCitationIs(t *testing.T) {
 		{"mock alongside a hand-read value still taints", []*check.DatasheetCitation{hand, mock}, true},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			f := check.Finding{Rule: "r", Subject: "U1", DatasheetProv: c.cites}
+			f := check.Finding{Subject: check.Entity{Ref: "U1"}, Rule: "r", DatasheetProv: c.cites}
 			if got := isUnratified(f, 0.8); got != c.want {
 				t.Errorf("isUnratified = %v, want %v", got, c.want)
 			}

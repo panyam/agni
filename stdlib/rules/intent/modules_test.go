@@ -35,7 +35,7 @@ modules:
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (the absent CAN transceiver), got %d: %+v", len(fs), fs)
 	}
-	if fs[0].Rule != RuleModuleMissing || fs[0].Kind != check.KindComponent || fs[0].Subject != "CAN transceiver" {
+	if fs[0].Rule != RuleModuleMissing || fs[0].Subject.Kind != check.KindComponent || check.EntityRef(fs[0].Subject) != "CAN transceiver" {
 		t.Errorf("finding shape wrong: %+v", fs[0])
 	}
 	if !strings.Contains(fs[0].Message, "can_transceiver") {
@@ -73,7 +73,7 @@ func TestModuleCountFiresOnTooFew(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (the count mismatch), got %d: %+v", len(fs), fs)
 	}
-	if fs[0].Rule != RuleModuleCount || fs[0].Subject != "CAN" {
+	if fs[0].Rule != RuleModuleCount || check.EntityRef(fs[0].Subject) != "CAN" {
 		t.Errorf("finding shape wrong: %+v", fs[0])
 	}
 	if !strings.Contains(fs[0].Message, "expects 2, found 1") {

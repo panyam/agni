@@ -72,7 +72,7 @@ func floatingInputVerdicts(m check.Model) []check.Verdict {
 			continue // not this rule's subject: nothing to float, or single-pin-net's finding
 		}
 
-		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		passive := firstPassive(m, n)
 		switch {
 		case n.Attributes[netgraph.AttrExternal] == "true":

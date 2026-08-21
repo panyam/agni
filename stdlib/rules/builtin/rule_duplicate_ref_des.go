@@ -58,21 +58,10 @@ func duplicateRefDesVerdicts(m check.Model) []check.Verdict {
 		if len(c.Instances) > 0 {
 			prov = c.Instances[0]
 		}
-		out = append(out, check.Verdict{
-			Kind:    check.KindComponent,
-			Subject: c.RefDes,
-			Outcome: check.Fail,
-			Witness: &check.Witness{
-				Statement: fmt.Sprintf("%d placements claim the designator %q", len(c.Instances), c.RefDes),
-				Terms:     []check.WitnessTerm{{Label: "placements", Value: fmt.Sprint(len(c.Instances))}},
-			},
-			Finding: &check.Finding{
-				Kind:    check.KindComponent,
-				Subject: c.RefDes,
-				Message: fmt.Sprintf("ref-des claimed by %d placements; expected one physical part", len(c.Instances)),
-				Prov:    prov,
-			},
-		})
+		out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Fail, Witness: &check.Witness{
+			Statement: fmt.Sprintf("%d placements claim the designator %q", len(c.Instances), c.RefDes),
+			Terms:     []check.WitnessTerm{{Label: "placements", Value: fmt.Sprint(len(c.Instances))}},
+		}, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: fmt.Sprintf("ref-des claimed by %d placements; expected one physical part", len(c.Instances)), Prov: prov}})
 	}
 
 	looked := m.SuppliesDiagnostic(string(check.CapRefDesCollisions))
@@ -80,7 +69,7 @@ func duplicateRefDesVerdicts(m check.Model) []check.Verdict {
 		if collided[ref] {
 			continue
 		}
-		v := check.Verdict{Kind: check.KindComponent, Subject: ref}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: ref}}}
 		if !looked {
 			v.Outcome = check.NotConsidered
 			v.Reason = "this format's reader does not detect ref-des collisions, so nothing was compared"

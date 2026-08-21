@@ -83,7 +83,7 @@ func TestNetclassTrackWidthCascade(t *testing.T) {
 	if len(f) != 1 {
 		t.Fatalf("under-width net = %+v, want exactly 1 finding", f)
 	}
-	if f[0].Subject != "VBUS" || !strings.Contains(f[0].Message, "Power") {
+	if check.EntityRef(f[0].Subject) != "VBUS" || !strings.Contains(f[0].Message, "Power") {
 		t.Errorf("finding = %+v, want subject VBUS and the class Power named as the limit's source", f[0])
 	}
 }
@@ -146,13 +146,13 @@ func TestNetclassViaDrill(t *testing.T) {
 		ncNet{net: "SIG", drillMM: 0.1},  // nothing declares a drill -> skipped, not passed
 	))
 	f := netclassViaDrill.Findings(m)
-	if len(f) != 1 || f[0].Subject != "VBUS" {
+	if len(f) != 1 || check.EntityRef(f[0].Subject) != "VBUS" {
 		t.Fatalf("findings = %+v, want exactly one on VBUS (SIG has no declared drill to compare)", f)
 	}
 	// SIG is skipped rather than passed, and the verdict is where that distinction now lives. A
 	// pass here would state that SIG's 0.1mm drill clears a limit, when no class states one.
 	for _, v := range netclassViaDrill.Eval(m) {
-		if v.Subject != "SIG" {
+		if check.EntityRef(v.Subjects[0]) != "SIG" {
 			continue
 		}
 		if v.Outcome != check.NoLimit {
