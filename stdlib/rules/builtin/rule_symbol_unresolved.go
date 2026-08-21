@@ -31,6 +31,21 @@ var symbolUnresolved = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // the reader knows the open failed; the IR cannot infer it
 	},
 	Detail: ruleDoc("symbol-unresolved"),
+	// THE READER SUPPLIES ONLY WHAT FAILED, so this rule cannot state a considered set (agni issue 391).
+	//
+	// `unresolved_symbols` holds the references that failed to open, and nothing enumerates the
+	// references that opened, so there is nothing to map over: the verdicts would be the failure list
+	// again, which is exactly the coverage claim StatesConsideredSet exists to withhold.
+	//
+	// A component section does carry a part_ref, but its spelling is the reader's own. KiCad's is the
+	// `lib_id` the diagnostic keys on, while xschem's and gEDA's are a symbol NAME beside a `.sym`
+	// path, so reassembling the reference set here would be right on one format and wrong on three.
+	//
+	// bus-not-modeled is the diagnostic rule that CAN state one, and the difference is instructive.
+	// `unmodeled_buses` holds every bus construct the reader saw and the rule partitions it, so a bus
+	// whose members are already nets is a pass the reader made visible. Doing the same here means a
+	// reader recording what it looked at, alongside the `supplied` flag that already records THAT it
+	// looked. That is a reader-and-IR change rather than a rule conversion.
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.UnresolvedSymbols(), func(u *ir.UnresolvedSymbol) check.Finding {
 			return check.Finding{

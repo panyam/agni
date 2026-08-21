@@ -24,6 +24,18 @@ var danglingEndpoint = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // detected by the reader from wire geometry (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("dangling-endpoint"),
+	// THE READER SUPPLIES ONLY WHAT FAILED, so this rule cannot state a considered set (agni issue 391).
+	//
+	// `dangling_endpoints` holds the wire ends that terminate on nothing, and nothing counts the wire
+	// ends that terminate on something. The Model has no set of everything the reader examined, so
+	// there is nothing to map over: the verdicts would be the failure list again, which is exactly the
+	// coverage claim StatesConsideredSet exists to withhold.
+	//
+	// bus-not-modeled is the diagnostic rule that CAN state one, and the difference is instructive.
+	// `unmodeled_buses` holds every bus construct the reader saw and the rule partitions it, so a bus
+	// whose members are already nets is a pass the reader made visible. Doing the same here means a
+	// reader recording what it looked at, alongside the `supplied` flag that already records THAT it
+	// looked. That is a reader-and-IR change rather than a rule conversion.
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.DanglingEndpoints(), func(e *ir.DanglingEndpoint) check.Finding {
 			return check.Finding{
