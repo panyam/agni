@@ -24,6 +24,18 @@ var wireNoJunction = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // reader detects it from wire geometry (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("wire-no-junction"),
+	// THE READER SUPPLIES ONLY WHAT FAILED, so this rule cannot state a considered set (agni issue 391).
+	//
+	// `no_junction_endpoints` holds the wire ends that land mid-span on another wire with no dot, and
+	// nothing counts the crossings that carry one. The Model has no set of everything the reader
+	// examined, so there is nothing to map over: the verdicts would be the failure list again, which is
+	// exactly the coverage claim StatesConsideredSet exists to withhold.
+	//
+	// bus-not-modeled is the diagnostic rule that CAN state one, and the difference is instructive.
+	// `unmodeled_buses` holds every bus construct the reader saw and the rule partitions it, so a bus
+	// whose members are already nets is a pass the reader made visible. Doing the same here means a
+	// reader recording what it looked at, alongside the `supplied` flag that already records THAT it
+	// looked. That is a reader-and-IR change rather than a rule conversion.
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.NoJunctionEndpoints(), func(e *ir.DanglingEndpoint) check.Finding {
 			return check.Finding{

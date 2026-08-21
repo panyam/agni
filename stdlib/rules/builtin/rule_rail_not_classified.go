@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -21,7 +22,8 @@ import (
 // CategoryIntegrity because a firing means fix the CONFIG, not the design. Full rationale in
 // docs/rail-not-classified.md.
 
-// railCandidate is a net that looks like a rail by two independent channels but carries no rail role.
+// railCandidate is a net whose NAME declares a voltage: the first of the rule's two channels, before
+// the second one is consulted.
 type railCandidate struct {
 	net       *ir.Net
 	volts     float64
@@ -31,21 +33,29 @@ type railCandidate struct {
 	supplyRef   string
 	supplyPinNo string
 	supplies    int
+	railRole    bool // the role stamp already calls this net a rail
 }
 
-// eachRailCandidate walks the nets whose NAME declares a voltage and whose CONNECTIONS include a
-// power-input pin, and yields those the role stamp does not call a rail. Ground is excluded: a
-// ground net carries a role of its own.
+// eachRailCandidate walks the nets whose NAME declares a voltage and yields one per net, with the
+// second channel's count attached rather than applied as a filter. Ground is excluded: a ground net
+// carries a role of its own, so it is not a subject of a rail-classification question.
+//
+// THE COUNT TRAVELS INSTEAD OF GATING, which is the difference the considered set needs. A net naming
+// a voltage that types NO power-input pin is not a net the rule cleared; it is a net whose second
+// channel is missing, and the caller reports that rather than dropping it. On a source format that
+// cannot type power pins at all the second channel is absent everywhere, so this rule was a silent
+// no-op on those formats and nothing said so — the exact case the two-channel section of
+// docsite/content/build/check-rule.md warns has to be checked.
 func eachRailCandidate(m check.Model, yield func(railCandidate)) {
 	for _, n := range m.Nets() {
-		if m.IsRailNet(n) || m.IsGroundNet(n) {
+		if m.IsGroundNet(n) {
 			continue
 		}
 		volts, ok := check.NominalVoltageFromName(n.GetName())
 		if !ok {
-			continue
+			continue // the first channel is absent: the name says nothing about a voltage
 		}
-		c := railCandidate{net: n, volts: volts}
+		c := railCandidate{net: n, volts: volts, railRole: m.IsRailNet(n)}
 		for _, conn := range n.GetConnections() {
 			if !check.SupplyInputPin(m, conn.GetComponentRef(), conn.GetPinRef()) {
 				continue
@@ -55,9 +65,6 @@ func eachRailCandidate(m check.Model, yield func(railCandidate)) {
 				c.supplyRef, c.supplyPinNo = conn.GetComponentRef(), conn.GetPinRef()
 			}
 			c.supplies++
-		}
-		if c.supplies == 0 {
-			continue
 		}
 		yield(c)
 	}
@@ -81,11 +88,61 @@ var railNotClassified = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 		check.KeySite:         check.SiteDiagnostic,
 	},
-	Detail: ruleDoc("rail-not-classified"),
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-		var out []check.Finding
-		eachRailCandidate(m, func(rc railCandidate) {
-			out = append(out, check.Finding{
+	Detail:              ruleDoc("rail-not-classified"),
+	Eval:                railNotClassifiedVerdicts,
+	StatesConsideredSet: true,
+}
+
+// railNotClassifiedVerdicts decides every net whose name declares a voltage, and the three answers it
+// can give are the reason this rule is worth converting at all.
+//
+// A net the role stamp already calls a rail PASSES, and the pass is the useful half here: this rule
+// exists to report that the analysis is running with less than it should, so "the rail rules can see
+// this net" is exactly what a reader wants counted. Before, a project that declared its lexicon
+// correctly got silence, which is what a project with no lexicon at all also got once its rails were
+// invisible for a different reason.
+//
+// A net that names a voltage but types NO power-input pin is NotConsidered. The rule needs two
+// channels to agree — a voltage in the name AND a pin the part declares a power input — because
+// `..._3V3` is a legitimate name for a signal that swings at 3.3 V as well as for a rail. Where the
+// second channel is missing the rule has not judged the net, and on a source format that cannot type
+// power pins it is missing on every net, which turns the rule into a no-op that nothing announced.
+// That is the case the two-channel section of the authoring doc says to check for, and this is the
+// check.
+func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	eachRailCandidate(m, func(rc railCandidate) {
+		v := check.Verdict{Kind: check.KindNet, Subject: rc.net.GetName(), NetID: rc.net.GetId()}
+		switch {
+		case rc.supplies == 0:
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the name declares %gV but the design types no power-input pin on the net, "+
+				"so the second channel this rule needs is absent and the name alone could equally be a signal that swings at %gV",
+				rc.volts, rc.volts)
+		case rc.railRole:
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("the net carries the rail role, so the rail rules and net.nominal_voltage answer over it (%gV, %d supply pin(s))",
+					rc.volts, rc.supplies),
+				Terms: []check.WitnessTerm{
+					{Label: "nominal", Value: fmt.Sprintf("%gV", rc.volts)},
+					{Label: "supply pins", Value: strconv.Itoa(rc.supplies)},
+				},
+			}
+			v.Context = []check.ContextSubject{
+				{Kind: check.KindPin, Subject: rc.supplyRef, Pin: rc.supplyPinNo, Role: "supply-pin"},
+			}
+		default:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("both channels agree the net is a %gV rail (%d supply pin(s)) and the role stamp does not call it one",
+					rc.volts, rc.supplies),
+				Terms: []check.WitnessTerm{
+					{Label: "nominal", Value: fmt.Sprintf("%gV", rc.volts)},
+					{Label: "supply pins", Value: strconv.Itoa(rc.supplies)},
+				},
+			}
+			v.Finding = &check.Finding{
 				Kind:    check.KindNet,
 				Subject: rc.net.GetName(),
 				NetID:   rc.net.GetId(),
@@ -99,8 +156,10 @@ var railNotClassified = &check.Rule{
 				Context: []check.ContextSubject{
 					{Kind: check.KindPin, Subject: rc.supplyRef, Pin: rc.supplyPinNo, Role: "supply-pin"},
 				},
-			})
-		})
-		return out
-	}),
+			}
+			v.Context = v.Finding.Context
+		}
+		out = append(out, v)
+	})
+	return out
 }

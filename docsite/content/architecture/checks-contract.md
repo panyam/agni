@@ -176,7 +176,7 @@ The check-layer outcomes:
 | Outcome | Means |
 |---|---|
 | `PASS` / `FAIL` | the comparison was made, and which side the design is on |
-| `NO_LIMIT` | there was a row, and it stated no bound, so nothing was checked |
+| `NO_LIMIT` | the comparison was reached and nothing stated a bound, so nothing was checked |
 | `NOT_CONSIDERED` | the rule never reached a comparison; `reason` names the step that stopped it |
 | `INCONCLUSIVE` | the rule reached its decision and could not decide |
 
@@ -184,6 +184,12 @@ The check-layer outcomes:
 this document keeps returning to. A datasheet row stating no maximum used to be indistinguishable
 from a design sitting comfortably under a real limit, and an enumerator that dropped a subject
 reported the same nothing as a rule that never looked at it.
+
+`NO_LIMIT` is not a datasheet-only outcome, even though the datasheet rules are where it started. The
+question it answers is "was there a bound at all", and a project's own net-class definitions raise it
+in the same shape: `netclass-track-width` reaches its comparison over a net whose classes declare no
+width and has nothing to compare against, which is not a pass and is not a subject it failed to reach.
+Anywhere a rule compares a measurement against a limit somebody else stated, the limit can be absent.
 
 `INCONCLUSIVE` is the outcome form of `Finding.inconclusive`, which already shipped, and carries that
 field's contract: **a consumer must not count it as a failure.**
@@ -232,6 +238,13 @@ separate table, not extra rows.
 Only rules that STATE a considered set contribute. A rule absent from `verdicts` is declining to say,
 not reporting that it considered nothing, and a consumer must not read those the same way. That is
 the distinction `skipped` draws one layer up.
+
+Nine rules decline, each for a reason recorded beside its `Eval`, and the reasons group into three
+(agni issue 391). Five have a subject that is a RELATION between two entities, which `Verdict.id` and
+`Subject` have no grammar for. Three read a reader diagnostic that holds only the offenders, so there
+is no set to map over. One cannot separate a pass from a missing datasheet inside its own body. The
+first group is the one that would change this contract: a ref naming two entities means a new field on
+`Subject`, which `TestVerdictFieldCensus` exists to keep a decision rather than a drift.
 
 ## Versioning
 

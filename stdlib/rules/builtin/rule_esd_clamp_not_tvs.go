@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // esdClampNotTVS flags an externally-exposed signal net whose only transient protection in reach is
@@ -25,15 +24,58 @@ var esdClampNotTVS = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistPublicReference,
 	},
-	Detail: ruleDoc("esd-clamp-not-tvs"),
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			// The same external-signal scope as esd-protection, but the net HAS a Zener clamp in
-			// reach and no TVS / IC-ESD rating: the two rules are mutually exclusive on a net.
-			return check.ExternalSignalNet(m, n) && check.ZenerReachable(m, n) && !check.TVSReachable(m, n) && !check.ICESDRated(m, n)
-		})
-		return check.Report(bad, check.NetFinding("externally-exposed signal net is clamped by a Zener, not a fast ESD TVS"))
-	}),
+	Detail:              ruleDoc("esd-clamp-not-tvs"),
+	Eval:                esdClampNotTVSVerdicts,
+	StatesConsideredSet: true,
+}
+
+// esdClampNotTVSVerdicts decides the same externally-exposed signal nets esd-protection does, and the
+// two are exact mirrors of each other. Where this rule declines, that one answers, and the other way
+// round: a bare net is esd-protection's finding and this rule's NotConsidered, and a Zener-clamped net
+// is this rule's finding and that one's NotConsidered. Stating the decline is what makes the WS3-078
+// split legible from outside. Both rules going quiet on the other's turf is how "clamped by the wrong
+// device class" and "clamped correctly" became the same silence in the first place.
+//
+// The question this rule asks is narrow — is the transient protection a Zener where the review wants
+// a TVS — so its passes are narrow too, and each names the device it credits.
+func esdClampNotTVSVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		if !check.ExternalSignalNet(m, n) {
+			continue // not a connector-facing signal net, so not a subject of an ESD rule
+		}
+		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		tvs := check.ReachableOfClass(m, n, check.ClassTVS)
+		rated, ratedWitness := check.ICESDCredit(m, n)
+		zener := check.ReachableOfClass(m, n, check.ClassZener)
+		switch {
+		case tvs != "":
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: "the net's clamp is TVS " + tvs + ", which is the fast ESD device class this rule asks for",
+				Terms:     []check.WitnessTerm{{Label: "clamp", Value: tvs}},
+			}
+			v.Context = compContext(tvs, "TVS in reach")
+		case rated != "":
+			v.Outcome = check.Pass
+			v.Witness = ratedWitness
+			v.Context = compContext(rated, "ESD-rated part")
+		case zener != "":
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: "Zener " + zener + " is the only clamp in the net's series reach, and no part on it declares a datasheet ESD rating",
+				Terms:     []check.WitnessTerm{{Label: "clamp", Value: zener}},
+			}
+			f := check.NetFinding("externally-exposed signal net is clamped by a Zener, not a fast ESD TVS")(n)
+			v.Finding = &f
+			v.Context = compContext(zener, "Zener clamp in reach")
+		default:
+			v.Outcome = check.NotConsidered
+			v.Reason = "the net carries no clamp at all, so there is no device class to characterise; esd-protection reports it"
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // esdClampNotTVSSpec is the declarative twin: the esd-protection guard stack with the Zener clause

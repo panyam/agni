@@ -20,21 +20,63 @@ var decouplingPresent = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistPublicReference,
 	},
-	Detail: ruleDoc("decoupling-present"),
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
-				return false
-			}
-			hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-				return !check.IsVirtualRef(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
-			})
-			return hasPowerIn && !check.Exists(n.Connections, func(c *ir.Connection) bool {
-				return m.HasClass(c.ComponentRef, check.ClassCapacitor)
-			})
+	Detail:              ruleDoc("decoupling-present"),
+	Eval:                decouplingPresentVerdicts,
+	StatesConsideredSet: true,
+}
+
+// decouplingPresentVerdicts decides every net that actually feeds a supply pin, and that set is the
+// considered set. Two kinds of net yield no verdict at all, because neither is a subject of a
+// decoupling rule rather than being one the rule cleared:
+//
+//   - A net with no power-input pin on it decouples nothing. The rule is about rails that feed a
+//     chip, and a signal net is not a rail with no capacitor; it is not a rail.
+//   - A GROUND net is the reference the decoupling is measured against, not the thing decoupled.
+//     Reporting it as a pass would state that ground is adequately decoupled, which is not a claim
+//     this rule makes or could support.
+//
+// The EXTERNAL net is different and becomes NotConsidered: it is a rail, it does feed supply pins,
+// and its capacitor may simply be drawn on a sheet this read did not open. That is the rule failing
+// to see rather than the design failing to decouple, and the two used to be the same silence.
+//
+// The pass NAMES the capacitor, in the witness and in Context. "A capacitor exists" is not something
+// a reviewer can act on; "C14 is the capacitor on this rail" is, because they can go and look at
+// where it sits. It also makes the witness track the fact: delete C14 and the statement names a
+// different part or the verdict flips.
+func decouplingPresentVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {
+			return !check.IsVirtualRef(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 		})
-		return check.Report(bad, check.NetFinding("power rail has no decoupling capacitor"))
-	}),
+		if !hasPowerIn || m.IsGroundNet(n) {
+			continue // not a rail feeding a supply pin, or the reference the decoupling returns to
+		}
+
+		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		decap := firstOnNet(m, n, check.ClassCapacitor)
+		switch {
+		case n.Attributes[netgraph.AttrExternal] == "true":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the rail continues onto a sheet this read did not open, so its decoupling may be drawn outside it"
+		case decap != "":
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: "capacitor " + decap + " sits on the rail",
+				Terms:     []check.WitnessTerm{{Label: "decoupling capacitor", Value: decap}},
+			}
+			v.Context = compContext(decap, "capacitor on the rail")
+		default:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: "no capacitor sits on the rail, which feeds at least one power-input pin",
+			}
+			f := check.NetFinding("power rail has no decoupling capacitor")(n)
+			v.Finding = &f
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // decouplingPresentSpec is the rule's declarative twin (WS3-003).

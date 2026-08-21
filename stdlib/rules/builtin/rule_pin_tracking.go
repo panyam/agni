@@ -331,6 +331,24 @@ var pinTrackingViolated = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-violated"),
+	// A RELATION-SHAPED SUBJECT, which the verdict key has no grammar for (agni issue 391).
+	//
+	// Its subject is a PAIR of pins on one part, which is what a tracking relation binds. A part
+	// stating two tracking relations is two findings about one ref-des, and a spec pin can be the
+	// subject of more than one of them, so neither the ref-des nor the (ref-des, pin) key separates them.
+	//
+	// A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names ONE entity, so keying these
+	// verdicts by the subject alone would issue one id for several different answers. `checkspb.Subject`
+	// has the same shape on the wire (kind, ref, pin, net_id, bus_id), and TestVerdictFieldCensus exists
+	// to make adding to it a decision rather than a drift, so a ref that names two entities is a
+	// wire-vocabulary change rather than something to slip in under a rule conversion. Reducing to one
+	// verdict per subject instead would mean dropping findings this rule reports today.
+	//
+	// So it reports violations only, and RunVerdicts leaves it out rather than presenting its failure
+	// list as coverage. It is one of five rules in the catalog with this shape: copper-clearance (a pair
+	// of nets), regulator-output-exceeds-abs-max (a part and the part that feeds it),
+	// fet-vdss-below-switched-rail (a part and one of the rails it touches), and the two pin-tracking
+	// rules (a pair of pins on one part).
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		// UNSPECIFIED lands here rather than on the advisory rule so an unstated modality cannot
 		// pass in silence; trackingFindings reports it inconclusive rather than as an error.
@@ -356,6 +374,24 @@ var pinTrackingAdvisory = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-advisory"),
+	// A RELATION-SHAPED SUBJECT, which the verdict key has no grammar for (agni issue 391).
+	//
+	// Its subject is a PAIR of pins on one part, which is what a tracking relation binds. A part
+	// stating two tracking relations is two findings about one ref-des, and a spec pin can be the
+	// subject of more than one of them, so neither the ref-des nor the (ref-des, pin) key separates them.
+	//
+	// A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names ONE entity, so keying these
+	// verdicts by the subject alone would issue one id for several different answers. `checkspb.Subject`
+	// has the same shape on the wire (kind, ref, pin, net_id, bus_id), and TestVerdictFieldCensus exists
+	// to make adding to it a decision rather than a drift, so a ref that names two entities is a
+	// wire-vocabulary change rather than something to slip in under a rule conversion. Reducing to one
+	// verdict per subject instead would mean dropping findings this rule reports today.
+	//
+	// So it reports violations only, and RunVerdicts leaves it out rather than presenting its failure
+	// list as coverage. It is one of five rules in the catalog with this shape: copper-clearance (a pair
+	// of nets), regulator-output-exceeds-abs-max (a part and the part that feeds it),
+	// fet-vdss-below-switched-rail (a part and one of the rails it touches), and the two pin-tracking
+	// rules (a pair of pins on one part).
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return trackingFindings(m, func(md parampb.Modality) bool {
 			return md == parampb.Modality_MODALITY_RECOMMENDED

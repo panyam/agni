@@ -103,6 +103,10 @@ func TestNetclassTrackWidthDefaultAppliesToUnclassedNet(t *testing.T) {
 // TestNetclassRulesSilentWithoutDefinitions: no definitions means no limit, so both rules stay
 // silent rather than inventing one. The capability gate is what reports this honestly to a review;
 // this asserts the rule's own internal guard, which protects a direct caller of Eval.
+//
+// The VBUS copper here is absurdly thin (1µm), so a rule that invented a limit would certainly fire.
+// That is the positive control: "no findings" from a rule that could not fire either way would prove
+// nothing.
 func TestNetclassRulesSilentWithoutDefinitions(t *testing.T) {
 	m := ncModel(t, []*ir.Net{{Name: "VBUS", NetClasses: []string{"Power"}}}, nil,
 		ncCopper(ncNet{net: "VBUS", widthMM: 0.001, drillMM: 0.001}))
@@ -111,6 +115,19 @@ func TestNetclassRulesSilentWithoutDefinitions(t *testing.T) {
 	}
 	if f := netclassViaDrill.Findings(m); len(f) != 0 {
 		t.Errorf("via-drill rule fired with no definitions: %+v", f)
+	}
+	// And silence is not the whole answer. A project that declared no limit has to be
+	// distinguishable from one whose copper clears the limit it declared, which is what the rules
+	// could not say before they stated a considered set (agni issue 391).
+	for _, r := range []*check.Rule{netclassTrackWidth, netclassViaDrill} {
+		vs := r.Eval(m)
+		if len(vs) != 1 {
+			t.Fatalf("%s: want one verdict about VBUS, got %d", r.Name, len(vs))
+		}
+		if vs[0].Outcome != check.NoLimit {
+			t.Errorf("%s: VBUS verdict is %q; a net no class constrains reached the comparison and "+
+				"found no bound, which is NoLimit and must not read as a pass", r.Name, vs[0].Outcome)
+		}
 	}
 }
 
@@ -131,6 +148,16 @@ func TestNetclassViaDrill(t *testing.T) {
 	f := netclassViaDrill.Findings(m)
 	if len(f) != 1 || f[0].Subject != "VBUS" {
 		t.Fatalf("findings = %+v, want exactly one on VBUS (SIG has no declared drill to compare)", f)
+	}
+	// SIG is skipped rather than passed, and the verdict is where that distinction now lives. A
+	// pass here would state that SIG's 0.1mm drill clears a limit, when no class states one.
+	for _, v := range netclassViaDrill.Eval(m) {
+		if v.Subject != "SIG" {
+			continue
+		}
+		if v.Outcome != check.NoLimit {
+			t.Errorf("SIG verdict is %q; nothing declares a drill for it, so nothing was compared", v.Outcome)
+		}
 	}
 }
 

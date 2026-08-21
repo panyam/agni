@@ -38,6 +38,23 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("regulator-output-exceeds-abs-max"),
+	// A RELATION-SHAPED SUBJECT, which the verdict key has no grammar for (agni issue 391).
+	//
+	// Its subject is a PAIR: a part and the source that endangers it. One load fed by two
+	// seeded regulators, or reached over two supplied nets, is two findings about one ref-des.
+	//
+	// A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names ONE entity, so keying these
+	// verdicts by the subject alone would issue one id for several different answers. `checkspb.Subject`
+	// has the same shape on the wire (kind, ref, pin, net_id, bus_id), and TestVerdictFieldCensus exists
+	// to make adding to it a decision rather than a drift, so a ref that names two entities is a
+	// wire-vocabulary change rather than something to slip in under a rule conversion. Reducing to one
+	// verdict per subject instead would mean dropping findings this rule reports today.
+	//
+	// So it reports violations only, and RunVerdicts leaves it out rather than presenting its failure
+	// list as coverage. It is one of five rules in the catalog with this shape: copper-clearance (a pair
+	// of nets), regulator-output-exceeds-abs-max (a part and the part that feeds it),
+	// fet-vdss-below-switched-rail (a part and one of the rails it touches), and the two pin-tracking
+	// rules (a pair of pins on one part).
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, src := range m.Components() {

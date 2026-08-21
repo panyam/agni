@@ -236,10 +236,25 @@ design onto outcomes rather than filtering it down to failures, and the findings
 projection of that map, taken by `Run` through `Rule.Findings`. There is one body, so a rule cannot
 report findings that disagree with its verdicts.
 
-**A rule that has not been converted wraps its old body in `check.FailuresOnly`.** That yields Fail
-verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site:
-`grep -c FailuresOnly` is the work remaining in agni issue 391. Converting a rule means deleting the
-wrapper, writing the map, and setting `StatesConsideredSet`.
+**A rule that cannot state a considered set wraps its body in `check.FailuresOnly`.** That yields Fail
+verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site.
+Converting a rule means deleting the wrapper, writing the map, and setting `StatesConsideredSet`.
+
+Nine rules still wrap, and each says why beside its `Eval`. They fall into three groups, and the
+groups are worth knowing before you write a tenth rule that lands in one of them (agni issue 391):
+
+- **The subject is a RELATION between two entities.** `copper-clearance` (a pair of nets),
+  `regulator-output-exceeds-abs-max` (a part and the part feeding it), `fet-vdss-below-switched-rail`
+  (a part and one of the rails it touches), and both `pin-tracking` rules (a pair of pins on one
+  part). A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names one entity, so keying
+  these by the subject alone issues one id for several answers. `checkspb.Subject` has the same shape
+  on the wire, so the fix is a wire-vocabulary change rather than a rule conversion.
+- **The reader supplies only what failed.** `dangling-endpoint`, `wire-no-junction` and
+  `symbol-unresolved` read a diagnostic list holding the offenders and nothing else, so there is no
+  set to map over and the verdicts would be the failure list again. `bus-not-modeled` is the
+  diagnostic rule that CAN state a set, and the difference is instructive: `unmodeled_buses` holds
+  every bus the reader saw, so the rule partitions it and a resolved bus is a countable pass.
+- **The body cannot separate a pass from a gap.** `cap-voltage`, described above.
 
 **`StatesConsideredSet` is a declaration, not an inference.** A failures-only rule returns a list of
 Fail verdicts that is structurally identical to a considered set whose every subject failed, so only
@@ -266,9 +281,23 @@ yields no event at all.
 
 **One subject, one verdict.** A verdict is keyed by `(rule, kind, ref)`, so a rule that emits two
 about one subject produces a duplicate identity. That is invisible while verdicts only project down
-to findings and breaks the moment they are addressable. Where several inputs bear on one subject,
-reduce them: the per-pin datasheet rules pick the row the design has least margin against, matching
-what the part-level rule already did across a part's pins.
+to findings and breaks the moment they are addressable, which they now are: `internal/service`
+puts the id on the wire. Where several inputs bear on one subject, reduce them: the per-pin datasheet
+rules pick the row the design has least margin against, matching what the part-level rule already did
+across a part's pins.
+
+Where the several inputs are not reducible without losing findings, the rule is one of the
+relation-shaped five above and stays failures-only. Do not reach for a subject that is nearly unique
+and hope: two seeded regulators feeding one load, or a high-side FET above breakdown on both its
+rails, are ordinary topologies rather than edge cases.
+
+**A verdict's subject and its finding's subject may differ in GRAIN, and often should.** A verdict
+about a supply terminal carries a finding about the whole part, because "why is this pin fine" is
+asked of a pin while the sentence a reviewer reads names what they will change. `pin-exceeds-abs-max`
+established it, and the alias supply rules, `crystal-load-caps` and
+`resonator-redundant-load-caps` follow it. The consequence to plan for: a part with three VDD pins on
+one rail produces three verdicts and the one finding it always produced, so the extra terminals fail
+on the same evidence and carry no `Finding`.
 
 ### Two traps when converting a rule that has a spec twin
 

@@ -108,14 +108,44 @@ func ExpectedDiffNegative(name string) (string, bool) {
 // connector-facing signal without a discrete TVS (WS3-073). Silent without a seeded param set
 // (m.PartSpec is nil), so esd behaves exactly as before on a design read with no datasheets.
 func ICESDRated(m Model, n *ir.Net) bool {
+	ref, _ := ICESDCredit(m, n)
+	return ref != ""
+}
+
+// ICESDCredit is ICESDRated with the EVIDENCE kept rather than collapsed to a bool: the part whose
+// datasheet credits the net, and the witness stating the rating and citing where it was read.
+//
+// The two are one function because a rule that decided "protected" and then separately assembled the
+// justification would fail nothing when the second step was skipped, and an unjustified pass is what
+// the verdict work exists to remove. Returns "" and nil when nothing in reach carries a rating, which
+// is every design read without --params.
+func ICESDCredit(m Model, n *ir.Net) (string, *Witness) {
 	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		for _, c := range rn.Connections {
-			if spec := m.PartSpec(c.ComponentRef); spec != nil && len(EsdRatingLimits(spec)) > 0 {
-				return true
+			spec := m.PartSpec(c.ComponentRef)
+			if spec == nil {
+				continue
 			}
+			limits := EsdRatingLimits(spec)
+			if len(limits) == 0 {
+				continue
+			}
+			p := limits[0]
+			w := &Witness{
+				Statement: fmt.Sprintf("%s declares a system-level ESD rating of %s in its datasheet",
+					c.ComponentRef, fmtQty(p.GetValue().GetMax(), "V")),
+				Terms: []WitnessTerm{
+					{Label: "rated part", Value: c.ComponentRef},
+					{Label: "ESD rating", Value: fmtQty(p.GetValue().GetMax(), "V")},
+				},
+			}
+			if cit := DatasheetCitationOf(spec, p); cit != nil {
+				w.Datasheet = []*DatasheetCitation{cit}
+			}
+			return c.ComponentRef, w
 		}
 	}
-	return false
+	return "", nil
 }
 
 // IntentionallyUnconnected reports whether a net's lack of connections is deliberate: its name
@@ -172,15 +202,21 @@ func ScopeOf(name string) (scope, leaf string) {
 // TVSReachable reports a TVS on the net or on any net in its 2-hop series reach
 // (WS3-011): ESD structures commonly put a series resistor between the connector and
 // the clamped node, which splits the net and hid the clamp from the pre-reach rule.
-func TVSReachable(m Model, n *ir.Net) bool {
+func TVSReachable(m Model, n *ir.Net) bool { return ReachableOfClass(m, n, ClassTVS) != "" }
+
+// ReachableOfClass names the first part of a class on n or within the protection reach, in walk
+// order, or "" when there is none. It is the shape TVSReachable and ZenerReachable had twice, kept
+// once and returning the REF rather than a bool, because a witness has to name the clamp it rests on:
+// "a TVS protects this net" is not something a reviewer can go and look at, and "D3 protects it" is.
+func ReachableOfClass(m Model, n *ir.Net, class ComponentClass) string {
 	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
-		if Exists(rn.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, ClassTVS)
-		}) {
-			return true
+		for _, c := range rn.Connections {
+			if m.HasClass(c.ComponentRef, class) {
+				return c.ComponentRef
+			}
 		}
 	}
-	return false
+	return ""
 }
 
 // ExternalSignalNet reports the scope the ESD rules share: a connector-facing SIGNAL net that is not
@@ -333,18 +369,47 @@ func connects(n *ir.Net, refDes string) bool {
 	})
 }
 
-// UnprotectedPowerReach walks the connector net's series neighborhood (WS3-011) and
-// reports whether SOME reached net carries a real power-input pin with neither a fuse
-// crossed on the way there nor a TVS on any net along that path. The per-target path
-// check matters: a board can have a protected 5V path and an unprotected 3V3 path off
-// one connector, and protection on one must not excuse the other.
+// UnprotectedPowerReach reports whether SOME power input the connector net reaches is unprotected.
+// It is the bool the spec FFI and the declarative twin need; PowerPathProtection below is the same
+// walk with the evidence kept.
 func UnprotectedPowerReach(m Model, n *ir.Net) bool {
+	return PowerPathProtection(m, n).Unprotected != ""
+}
+
+// PowerPathReport is what the power-entry walk found from one connector net.
+//
+// Loads is the part that a bool could never carry, and leaving it out is how a rule ends up claiming
+// a check it did not make. UnprotectedPowerReach is false for a protected 5V entry AND for a USB data
+// pair that reaches no supply pin at all, because in both cases it found nothing to complain about.
+// The first is a pass. The second is not a subject of a power-entry rule, and reporting it as
+// protected would put a signal connector on the list of things somebody checked for a fuse.
+type PowerPathReport struct {
+	// Loads counts the reached nets carrying a real power-input pin: how many power entries this
+	// connector net actually feeds. Zero means the walk found no power path.
+	Loads int
+	// Unprotected names the first reached load with neither a fuse crossed on the way nor a
+	// protector on any net along that path, "" when every load is protected.
+	Unprotected string
+	// Protector names the first fuse or TVS credited on a protected path, "" when there is none to
+	// credit. It is the pass's evidence: which part a reviewer should go and look at.
+	Protector string
+}
+
+// PowerPathProtection walks the connector net's series neighborhood (WS3-011) and reports, per
+// reached power input, whether a fuse was crossed on the way there or a protector sits on a net
+// along that path. The per-target path check matters: a board can have a protected 5V path and an
+// unprotected 3V3 path off one connector, and protection on one must not excuse the other.
+func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 	r := m.Reach(n, PowerPathReachHops)
-	protectorOn := func(net *ir.Net) bool {
-		return Exists(net.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, ClassFuse) || m.HasClass(c.ComponentRef, ClassTVS)
-		})
+	protectorOn := func(net *ir.Net) string {
+		for _, c := range net.Connections {
+			if m.HasClass(c.ComponentRef, ClassFuse) || m.HasClass(c.ComponentRef, ClassTVS) {
+				return c.ComponentRef
+			}
+		}
+		return ""
 	}
+	var out PowerPathReport
 	for _, target := range r.Nets {
 		hasPowerIn := Exists(target.Connections, func(c *ir.Connection) bool {
 			return !IsVirtualRef(c.ComponentRef) && ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
@@ -352,44 +417,39 @@ func UnprotectedPowerReach(m Model, n *ir.Net) bool {
 		if !hasPowerIn {
 			continue
 		}
-		protected := false
+		out.Loads++
+		protector := ""
 		for _, ref := range r.ThroughOnPath(target) {
 			if m.HasClass(ref, ClassFuse) {
-				protected = true // a fuse sits on this path as a series element
+				protector = ref // a fuse sits on this path as a series element
 				break
 			}
 		}
-		if !protected {
+		if protector == "" {
 			// A protector as a MEMBER of a path net also counts — the pre-reach rule's
 			// (conservative) reading, kept so no previously-quiet board starts firing.
 			for _, pn := range r.PathTo(target) {
-				if protectorOn(pn) {
-					protected = true
+				if p := protectorOn(pn); p != "" {
+					protector = p
 					break
 				}
 			}
 		}
-		if !protected {
-			return true
+		switch {
+		case protector == "" && out.Unprotected == "":
+			out.Unprotected = target.Name
+		case protector != "" && out.Protector == "":
+			out.Protector = protector
 		}
 	}
-	return false
+	return out
 }
 
 // ZenerReachable reports a Zener clamp on the net or on any net in its 2-hop series reach — the
 // same reach the TVS check walks (WS3-011), so a series-split clamp is not hidden. A Zener is
 // distinct from a TVS (a slower clamp), so esd-protection does not count it as ESD protection;
 // esd-clamp-not-tvs (WS3-078) reports its presence separately for the review to weigh.
-func ZenerReachable(m Model, n *ir.Net) bool {
-	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
-		if Exists(rn.Connections, func(c *ir.Connection) bool {
-			return m.HasClass(c.ComponentRef, ClassZener)
-		}) {
-			return true
-		}
-	}
-	return false
-}
+func ZenerReachable(m Model, n *ir.Net) bool { return ReachableOfClass(m, n, ClassZener) != "" }
 
 // PullUpReachHops bounds the walk from an I2C bus to the rail its pull-up returns it to.
 //
