@@ -155,6 +155,14 @@ message CheckDesignResponse {
   // flat rule sweep has no checklist item to score, so it reports which rules were gated and the
   // reason check.Available gave, and nothing more.
   repeated SkippedRule skipped = 2;
+  // verdicts is the CONSIDERED SET: what each rule concluded about every subject it was applied to,
+  // including the passes and the subjects it could not judge. `findings` above stays exactly what it
+  // was, the violations, so a consumer that wants defects is unaffected.
+  //
+  // Only rules that STATE a considered set contribute. A rule absent from here is declining to state
+  // one rather than reporting that it considered nothing, and a consumer must not read the two the
+  // same way. That is the same distinction `skipped` draws one level up.
+  repeated agni.v1.checks.Verdict verdicts = 3;
 }
 
 // SkippedRule is one selected rule that could not evaluate, and the reason.
