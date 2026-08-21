@@ -79,16 +79,18 @@ In a Go rule:
         Kind:    check.KindComponent,
         Subject: ref,                       // what a reader changes
         Message: "crystal terminal net " + n.Name + " has no load capacitor",
-        Context: []check.ContextSubject{{
-            Kind: check.KindNet, Subject: n.Name, NetID: n.Id, Role: "terminal",
-        }},
+        Context: []check.ContextSubject{
+            {Kind: check.KindNet, Subject: n.Name, NetID: n.Id, Role: "terminal"},
+        },
     })
 
 In a datalog rule, the entity is already bound in the answer row; name the variable and its role:
 
     SubjectVar:  "y",
     Message:     "crystal terminal net {net} has no load capacitor",
-    ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "terminal"}},
+    ContextVars: []query.ContextVar{
+        {Var: "net", Kind: check.KindNet, Role: "terminal"},
+    },
 
 Four things to get right:
 
