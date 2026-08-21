@@ -119,6 +119,12 @@ export interface SkippedRuleItem {
 
 export interface FindingsState {
   findings: FindingItem[];
+  // verdicts is the CONSIDERED SET for the same run: what each converted rule concluded about every
+  // subject it looked at, passes included. Empty where no selected rule states one, which the panel
+  // must not render as "this design was not checked" — it means no SELECTED rule reports coverage.
+  verdicts: VerdictItem[];
+  // focusedVerdict is the id of the verdict currently drawn as a proof, "" when none.
+  focusedVerdict: string;
   // subject of the focused finding, "" when none (the whole selection is highlighted instead).
   selected: string;
   // number of rules currently selected, so the panel tells "no rules selected" (nothing ran) from
@@ -142,6 +148,70 @@ export interface FindingsState {
   // ruleSummaries maps a rule name to its catalog one-liner, shown as a group-header subtitle — the
   // per-rule description the retired report panel carried. A rule absent from the map renders none.
   ruleSummaries: Record<string, string>;
+}
+
+// VerdictItem is the view-side shape of one verdict (the wire checks.Verdict, minus proto
+// machinery). It is what a rule concluded about ONE subject, including the subjects it could not
+// judge, so unlike a FindingItem it exists for a PASS.
+//
+// It satisfies HighlightSubject structurally, exactly as FindingItem and FindingContext do, so the
+// same bucketing lights it up without a second code path.
+export interface VerdictItem {
+  // id is the derived name, "<rule>:<kind>:<ref>", and the click target a CLI row or a filed link
+  // addresses. Stable across a change in the ANSWER, so a link filed while a check passed still
+  // resolves once it starts failing.
+  id: string;
+  rule: string;
+  // outcome is the lower-case vocabulary word ("pass" | "fail" | "no-limit" | "not-considered" |
+  // "inconclusive"), decoded from the wire enum by outcomeWord.
+  outcome: string;
+  kind: string;
+  subject: string;
+  pin: string;
+  netId?: string;
+  busId?: string;
+  // statement is the one-line proof, present on pass, fail and inconclusive. Empty where the verdict
+  // rests on nothing, which is the no-limit and not-considered case.
+  statement: string;
+  // terms are the labelled VALUES the statement rests on. Not entities: nothing here is clickable,
+  // which is why they are kept apart from context.
+  terms: { label: string; value: string }[];
+  // context are the entities the proof names, typed and ordered, and they ARE clickable. The hops of
+  // a pull-up path arrive here, which is what lets the drawing show a proof rather than a subject.
+  context: FindingContext[];
+  // reason is why a not-considered verdict could not be decided, in the rule author's words.
+  reason: string;
+}
+
+// outcomeWord decodes the wire enum to the vocabulary word. An unrecognised value becomes
+// "unspecified" rather than "" so a row never renders a blank outcome, which would read as "nothing
+// to report" about a subject the rule did in fact look at.
+export function outcomeWord(o: number | undefined): string {
+  switch (o) {
+    case 1:
+      return "pass";
+    case 2:
+      return "fail";
+    case 3:
+      return "no-limit";
+    case 4:
+      return "not-considered";
+    case 5:
+      return "inconclusive";
+    default:
+      return "unspecified";
+  }
+}
+
+// verdictProofStack builds the highlight layers for one verdict: its CONTEXT as the ground and its
+// SUBJECT as the figure on top.
+//
+// It is focusStack with a different base. The findings path passes the whole findings list as
+// ground, which answers "where does this sit among the problems"; a proof answers "what holds this
+// up", so the ground is the proof's own entities and nothing else. Both reach the same builder
+// because FindingContext satisfies HighlightSubject, so no second drawing path exists to drift.
+export function verdictProofStack(v: VerdictItem, focus: HighlightSpec[]): HighlightSpec[] {
+  return focusStack(v.context, v.kind, v.subject, focus, v.netId ?? "");
 }
 
 export interface FindingsView {

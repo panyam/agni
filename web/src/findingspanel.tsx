@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { SheetBadges } from "./sheetbadges.jsx";
@@ -11,8 +11,7 @@ import {
   collapseInstances,
   findingKey,
   groupFindings,
-  sortFindings,
-} from "./findings.js";
+  sortFindings, type VerdictItem } from "./findings.js";
 
 // GroupAxis extends the finding group axes with "none" — a flat sorted table with no group headers.
 type GroupAxis = FindingGroupAxis | "none";
@@ -50,7 +49,22 @@ function ChecksPanel(props: {
   // finding, so the finding-by-subject lookup behind onSelect would not find it.
   onLocateContext: (kind: string, subject: string, pin: string) => void;
   onRun: () => void;
+  // onSelectVerdict focuses one verdict by its derived id and draws its proof. Separate from
+  // onSelect, which looks a FINDING up by subject: a passing verdict has no finding to find.
+  onSelectVerdict: (id: string) => void;
 }) {
+  // mode is panel-local view state, like the group-by axis: which of the two tables is shown. They
+  // are separate tables rather than one with extra rows, because a findings row is a violation and a
+  // consumer counting rows would start counting passes as defects.
+  const [mode, setMode] = createSignal<"violations" | "considered">("violations");
+  // A focused verdict switches the panel to the table that CONTAINS it. Arriving on a link that
+  // names a verdict otherwise draws the proof on the canvas while the row explaining it stays hidden
+  // behind a toggle the reader has no reason to know about, which is the CLI-to-viewer hop delivering
+  // a highlight and withholding the sentence. Clicking a row is unaffected: that path is already in
+  // this mode, so the effect is a no-op there.
+  createEffect(() => {
+    if (props.state().focusedVerdict) setMode("considered");
+  });
   const [axis, setAxis] = createSignal<GroupAxis>("none");
   const [sortKey, setSortKey] = createSignal<FindingSortKey>("severity");
   const [sortDir, setSortDir] = createSignal<1 | -1>(1);
@@ -123,7 +137,23 @@ function ChecksPanel(props: {
             <For each={GROUP_OPTIONS}>{(o) => <option value={o.key}>{o.label}</option>}</For>
           </select>
         </label>
+        <Show when={props.state().verdicts.length > 0}>
+          <label class="checks-mode">
+            <select value={mode()} onChange={(e) => setMode(e.currentTarget.value as "violations" | "considered")}>
+              <option value="violations">Violations</option>
+              <option value="considered">What was checked</option>
+            </select>
+          </label>
+        </Show>
       </div>
+
+      <Show when={mode() === "considered"}>
+        <VerdictTable
+          verdicts={() => props.state().verdicts}
+          focused={() => props.state().focusedVerdict}
+          onSelectVerdict={props.onSelectVerdict}
+        />
+      </Show>
 
       <Show when={props.locateNote() !== ""}>
         <div class="checks-locate-note" role="status">{props.locateNote()}</div>
@@ -326,6 +356,46 @@ function Row(props: {
 // findingsPanelIsland mounts the merged checks panel and returns its command-down view. onSelect is
 // the locate intent (a finding/instance clicked); onRun is the run intent (the Run button). The
 // island id ("findings") and hole are unchanged, so the dock adopts the same server-rendered hole.
+// VerdictTable is the considered set: one row per subject a rule was applied to, passes included.
+//
+// The outcome leads each row, because scanning a column of them is the question this table answers
+// ("what did you look at and what did you conclude"). The proof follows, which is the statement for a
+// decided verdict and the reason for one the rule could not decide, since a row with neither would be
+// the silence the table exists to remove.
+function VerdictTable(props: {
+  verdicts: () => VerdictItem[];
+  focused: () => string;
+  onSelectVerdict: (id: string) => void;
+}) {
+  return (
+    <table class="checks-table verdicts-table">
+      <thead>
+        <tr>
+          <th>Outcome</th>
+          <th>Rule</th>
+          <th>Subject</th>
+          <th>Proof</th>
+        </tr>
+      </thead>
+      <tbody>
+        <For each={props.verdicts()}>
+          {(v) => (
+            <tr
+              class={`verdict-row outcome-${v.outcome}${props.focused() === v.id ? " selected" : ""}`}
+              onClick={() => props.onSelectVerdict(v.id)}
+            >
+              <td class="verdict-outcome">{v.outcome}</td>
+              <td class="verdict-rule">{v.rule}</td>
+              <td class="verdict-subject">{v.pin ? `${v.subject}.${v.pin}` : v.subject}</td>
+              <td class="verdict-proof">{v.statement || v.reason}</td>
+            </tr>
+          )}
+        </For>
+      </tbody>
+    </table>
+  );
+}
+
 export function findingsPanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
@@ -333,10 +403,13 @@ export function findingsPanelIsland(
     onSelect: (subject: string, sheet?: string, netId?: string) => void;
     onLocateContext: (kind: string, subject: string, pin: string) => void;
     onRun: () => void;
+    onSelectVerdict: (id: string) => void;
   },
 ): { island: SolidIsland; view: FindingsView } {
   const [state, setState] = signalView<FindingsState>({
     findings: [],
+    verdicts: [],
+    focusedVerdict: "",
     selected: "",
     ruleCount: 0,
     pending: 0,
@@ -360,6 +433,7 @@ export function findingsPanelIsland(
         onSelect={handlers.onSelect}
         onLocateContext={handlers.onLocateContext}
         onRun={handlers.onRun}
+        onSelectVerdict={handlers.onSelectVerdict}
       />
     ),
     eventBus,

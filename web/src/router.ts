@@ -20,6 +20,14 @@ export interface ViewerLocation {
   mode: RenderMode | "";
   layout: string;
   symbols: boolean;
+  // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
+  //
+  // SELECTION STATE, in the same category as `sheet`: which verdict the open viewer is looking at.
+  // It is deliberately not the resource form. `GET /checks/<id>` returning a verdict the SERVER
+  // resolved is a different feature, and one that needs a fixed-arity design identity the URL space
+  // does not have yet: `/designs/<mount>/<path...>/` has a variable-length path, so a two-segment
+  // verb suffix cannot be told from a folder without leaning on the trailing slash.
+  verdict: string;
 }
 
 const DESIGNS_PREFIX = "/designs/";
@@ -33,7 +41,7 @@ const VIEW_SEGMENT = "view";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "" };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -72,6 +80,7 @@ export function locationToUrl(loc: ViewerLocation): string {
   if (loc.mode) params.set("mode", loc.mode);
   if (loc.layout) params.set("layout", loc.layout);
   if (loc.symbols) params.set("sym", "1");
+  if (loc.verdict) params.set("verdict", loc.verdict);
   const q = params.toString();
   return DESIGNS_PREFIX + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
 }
@@ -109,6 +118,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.mode = isRenderMode(mode) ? mode : "";
   loc.layout = params.get("layout") ?? "";
   loc.symbols = params.get("sym") === "1";
+  loc.verdict = params.get("verdict") ?? "";
   return loc;
 }
 
