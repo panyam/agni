@@ -159,3 +159,47 @@ func TestFetVdssIgnoresGround(t *testing.T) {
 		t.Errorf("ground must not be compared: %s", fs[0].Message)
 	}
 }
+
+// A rule's considered set must not include subjects the rule is not ABOUT, and this is the rule that
+// got it wrong first. Scoped on nothing, it claimed every part touching a rail: on the tutorial board
+// that was 17 verdicts about capacitors, diodes and a connector, on a design carrying no transistor.
+//
+// Reporting a capacitor as a part it could not judge for drain-source breakdown is a coverage claim in
+// the WRONG DIRECTION. A pass would say the rule checked something it did not; a not-considered says
+// the rule tried to and failed, and it never tried. Both are false, and the second is the one that is
+// easy to ship because it reads as caution.
+func TestFetVdssClaimsOnlySwitchingParts(t *testing.T) {
+	rail := func(conns ...*ir.Connection) *ir.Design {
+		return &ir.Design{
+			Components: []*ir.Component{
+				{RefDes: "C1", Prov: &ir.Provenance{SourceFile: "t"}},
+				{RefDes: "Q1", Prov: &ir.Provenance{SourceFile: "t"}},
+			},
+			Nets: []*ir.Net{{Name: "+12V", Prov: &ir.Provenance{SourceFile: "t"}, Connections: conns}},
+		}
+	}
+	d := rail(&ir.Connection{ComponentRef: "C1", PinRef: "1"}, &ir.Connection{ComponentRef: "Q1", PinRef: "1"})
+	vs := fetVdssBelowRail.Eval(check.NewModel(d))
+
+	for _, v := range vs {
+		if v.Subjects[0].Ref == "C1" {
+			t.Errorf("C1 is a capacitor and no datasheet calls it a switch; it is not a subject of a "+
+				"drain-source breakdown rule, yet the rule reports %q about it", v.Outcome)
+		}
+	}
+	// And not over-narrowed: a part the design DOES class as a transistor stays a subject even with no
+	// datasheet, because "there is a FET on this rail and nothing states what it can stand" is exactly
+	// the coverage gap worth reporting.
+	var sawQ1 bool
+	for _, v := range vs {
+		if v.Subjects[0].Ref == "Q1" {
+			sawQ1 = true
+			if v.Outcome != check.NotConsidered {
+				t.Errorf("Q1 has no seeded datasheet, so the rule cannot judge it; got %q", v.Outcome)
+			}
+		}
+	}
+	if !sawQ1 {
+		t.Error("an unseeded transistor on a rail must still be a subject, or the scope fix went too far")
+	}
+}

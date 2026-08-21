@@ -55,10 +55,22 @@ var fetVdssBelowRail = &check.Rule{
 // rail the part touches. Those are separate answers about separate rails, and keying them by the FET
 // alone gave the ordinary high-side topology one id for two of them.
 //
-// THREE SILENCES BECOME ANSWERS. A part with no seeded datasheet, a part whose datasheet states no
-// breakdown row, and a rail whose voltage nothing establishes all left through the same `continue` a
-// safely-rated pair took. Only the third is NoLimit; the first two are NotConsidered, because a
-// missing document is a gap in the corpus rather than a bound nobody stated.
+// SCOPE IS THE UNION OF TWO SIGNALS, and getting this wrong is the mistake this rule made first. A
+// part is a subject when the design CLASSIFIES it as a transistor, or when its datasheet states a
+// breakdown row. Either alone is insufficient in a way that shows up immediately:
+//
+//   - Class alone would drop a seeded FET the classifier could not subtype, losing a finding.
+//   - A seeded row alone reads as "no subjects" on any design read without --params, and the first
+//     version of this conversion scoped on neither, which claimed every capacitor, diode and
+//     connector that touches a rail as a subject it could not judge. On the tutorial board that was
+//     17 verdicts about parts on a design with no transistor in it, which is a coverage claim in the
+//     opposite direction: it says the rule looked at C1 for drain-source breakdown, and it never did.
+//
+// THREE SILENCES BECOME ANSWERS, now that the subjects are the right ones. A transistor with no
+// seeded datasheet, one whose datasheet states no breakdown row, and a rail whose voltage nothing
+// establishes all left through the same `continue` a safely-rated pair took. Only the third is
+// NoLimit; the first two are NotConsidered, because a missing document is a gap in the corpus rather
+// than a bound nobody stated.
 //
 // Rails are the scope rather than every net the part touches: a gate-drive net is not a rail, so the
 // common false pairing is excluded structurally instead of by luck. A ground is not a subject either.
@@ -75,6 +87,9 @@ func fetVdssVerdicts(m check.Model) []check.Verdict {
 					vdss = p
 				}
 			}
+		}
+		if !m.HasClass(c.RefDes, check.ClassTransistor) && vdss == nil {
+			continue // neither the design nor a datasheet calls this a switching part
 		}
 		for _, n := range m.Nets() {
 			if !onNet(n, c.RefDes) || !m.IsPowerRail(n.Name) || m.IsGroundNet(n) {
