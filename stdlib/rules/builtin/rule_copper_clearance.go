@@ -32,6 +32,19 @@ var copperClearance = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("copper-clearance"),
+	// THE ONE BOARD RULE THAT CANNOT STATE A CONSIDERED SET YET, and the obstacle is identity rather
+	// than evidence (agni issue 391). Its subject is a PAIR of nets, since a clearance violation is a
+	// distance between two of them and belongs to neither alone. A verdict is keyed by
+	// (rule, kind, ref), the kind vocabulary has no pair, and a net running between two others is the
+	// filed subject of two findings — so keying the verdicts by net would issue one id for two
+	// different answers, which is exactly the duplicate-identity break the authoring doc's
+	// "one subject, one verdict" section warns about.
+	//
+	// Everything else is ready: the walk already computes the worst gap per pair and both ends of it.
+	// What is missing is a kind whose ref names two nets, which is a wire-vocabulary decision
+	// (checks.Subject grows a grammar) and belongs with the report work rather than ahead of it.
+	// Until then this rule reports violations only, and RunVerdicts leaves it out rather than
+	// presenting its failure list as coverage.
 	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		type flatSeg struct {
 			net string
