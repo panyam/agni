@@ -857,3 +857,55 @@ wrong, because the context is the contract. The aggregation therefore lives in a
 (`core/report`) with the layout as a template over it, which makes exposing templates later a small
 step rather than a redesign. Reopen this when there is a second consumer wanting a different shape,
 not before.
+
+---
+
+## A verdict's subject is a tuple; a finding's subject is one entity
+
+`Verdict.Subjects` is a list and `Finding.Subject` is not, and the asymmetry is deliberate rather than
+a stage of a migration.
+
+**Why a verdict needs a tuple.** Some rules ask about a RELATION, and a relation belongs to none of its
+entities alone. A clearance violation is a distance between two nets. A regulator over-driving a part
+it feeds is only pinned down by the regulator, the rail and the load together, because one source
+feeding one load over two supplied rails is two different answers. A strap group is a device and the N
+nets encoding its value. Naming fewer than all of them gives several answers one id, which was
+invisible while verdicts only projected down to findings and is wrong now that `core/report` links
+every row by `VerdictID`.
+
+The arity is not two, which is why the fix is a tuple rather than a pair. It was measured before it was
+built: one FET with its drain on `+60V` and its source on `+55V` produces two findings under one
+ref-des, and `stdlib/rules/intent/strapgroups.go` already carried a comment admitting it named
+`Nets[0]` as a stand-in with the rest "named in prose and reachable nowhere".
+
+**Why a finding must not have one.** The two fields answer different questions and only one of them is
+allowed to be incomplete. A verdict's tuple is IDENTITY: incompleteness is the bug. A finding's subject
+is an ACTION TARGET, the one entity a reader has to change, and an answer with three entities in it is
+not one they can act on — they would have to pick, and the rule's author knows which better than they
+do. Everything else the sentence names is already in `Context`, typed and ordered.
+
+Going N-ary on findings was considered and costs four things to buy one. It reshapes 44 hand-authored
+`.expect.yaml` sidecars, the one place a person writes findings by hand. It makes every by-kind axis
+ill-defined (`groupFindings(axis: "kind")`, `sortFindings`, the report's row sort) for a tuple mixing a
+component and a net. It forces `findingKey`'s collapse identity to canonicalise an order that is
+DIRECTIONAL for `pin-tracking`, where subject-minus-reference is the claim. And it removes the
+contract's one opinion, that an author must choose what to point at. What it buys is equal standing for
+every entity in a consumer that wants it, and `Context` already provides that: the cross-tool
+comparison in `core/results` joins on subject plus context for exactly that reason, which is a
+three-line change rather than a schema one.
+
+`TestFindingSubjectComesFromTheVerdictsTuple` holds the two together: the entity a reader is told to
+change must be one of the entities the rule looked at. Kind may differ, since a pin-scoped verdict
+legitimately carries a part-scoped finding.
+
+**The id is generated and never parsed.** `<rule>:(<kind>:<ref>,...)`, with the four characters the
+tuple syntax uses percent-escaped inside a ref. Nothing split it apart before either; the old
+"split on the first two colons" rule existed because there was no structured alternative, and now
+`subjects` carries the structure typed. That is what lets a ref keep its own colons
+(`symbol:Library:Symbol`) and its own commas (an endpoint's ref is literally `0,0`). The escape is not
+decoration: a separator is always followed by `<kind>:`, so an ordinary comma is safe, but a ref
+containing the whole sequence is not — unescaped, `("A,net:B")` and `("A", "B")` are one string.
+
+**Order belongs to the rule, never to the framework.** A framework that sorted every tuple would invert
+`pin-tracking`'s claim. A symmetric relation canonicalises inside the rule instead: `copper-clearance`
+orders its pair by name before building the verdict.
