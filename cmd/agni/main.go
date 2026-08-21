@@ -22,6 +22,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/diff"
+	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -538,7 +539,7 @@ func checkCmd() *cobra.Command {
 							return err
 						}
 					default:
-						writeVerdictText(cmd.OutOrStdout(), resp.GetVerdicts())
+						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, catalog.Rules(), rpt.Report{}))
 					}
 					failFindings = resp.GetFindings()
 					break
