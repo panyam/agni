@@ -114,7 +114,7 @@
             {{if .URL}}<a href="{{.URL}}">{{subjectOf .}}</a>{{else}}{{subjectOf .}}{{end}}
           </td>
           <td>
-            {{if .Message}}{{.Message}}{{else if .Witness}}{{.Witness}}{{else if .Reason}}{{.Reason}}{{end}}
+            {{.Detail}}
             {{if .Terms}}<div class="terms">
               {{range $i, $t := .Terms}}{{if $i}} · {{end}}{{$t.Label}}: {{$t.Value}}{{end}}
             </div>{{end}}

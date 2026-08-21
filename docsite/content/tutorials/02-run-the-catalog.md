@@ -113,10 +113,7 @@ can never tell you which one you are holding.
 Read the three numbers separately. **173 considered** is how many subjects were actually judged.
 **22 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran: most of the catalog has no subject in scope on any given board, and a rule with nothing to say is
-not a gap. **7 not considered** is the interesting one, and it has no counterpart in a findings list:
-the rule was willing to judge and an input was missing, so it names what it lacked instead of passing
-on incomplete evidence. On this board most of them are asking for the datasheet values you seed in
-[rung 6](../06-part-limits/).
+not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
 
 The second line is the honest edge of the claim. Those 3 rules found something and never said what
 they examined, so silence from them means nothing at all, and the coverage number above does not
@@ -134,6 +131,18 @@ Across the whole catalog that is a much larger table than the findings list, whi
 is the default and the rows are a flag:
 
 {{ agniRun "content/tutorials/runs/02-verdicts-summary.yaml" }}
+
+`not-considered` is the third outcome and the one with no counterpart in a findings list: the rule
+was willing to judge that subject and something stopped it, so it says what stopped it rather than
+passing on incomplete evidence.
+
+On this board only one of them wants a datasheet value of the kind you seed in
+[rung 6](../06-part-limits/). The rest are the more interesting sort. Four are `floating-input`
+declining a net that carries a passive part, because a resistor on a net might be the pull that fixes
+it, might be a series element with the driver on the far side, or might be a footprint nobody stuffed,
+and a netlist cannot tell those apart. Two are `esd-clamp-not-tvs` handing a bare net to
+`esd-protection`, which is the rule that reports it. Neither is a gap you fill by seeding anything.
+They are the check telling you where its reach ends.
 
 That distinction between "checked and fine", "never checked" and "could not tell" runs through the
 whole tool, and [rung 9](../09-read-the-verdicts/) is entirely about reading it.
