@@ -181,6 +181,23 @@ actually asserted over and failing at zero turns a silently empty sweep into a r
 applies to a fixture: assert the fixture really contains the shape under test, or the assertion had
 nothing to catch.
 
+**A third way a test lies, and the compiler cannot help.** When two types carry the same field
+names, changing which one a function returns silently changes what a test MEANS while it still
+compiles. `check.Verdict` and `check.Finding` both have `Subject`, `Kind`, `Pin` and `NetID`, so when
+`Rule.Eval` moved from returning findings to returning verdicts, every
+
+    for _, f := range rule.Eval(m) { got[f.Subject] = true }
+
+kept building and quietly started counting passes as failures. Two tests were already wrong this way
+and each passed only by accident: the rules they covered were still wrapped in `check.FailuresOnly`,
+which emits nothing but failures, so the count happened to be right. They would have started lying
+the moment those rules converted.
+
+Nothing in a signature change flags this. What finds it is asking, for every call site the compiler
+did NOT complain about, whether the meaning survived. Use `Rule.Findings(m)` where a test means
+violations, and read a test that iterates a result and counts as suspect until you have checked which
+result it iterates.
+
 ## Comparing output that is deliberately unstable
 
 `protojson` VARIES ITS WHITESPACE ON PURPOSE, inserting one or two spaces after a colon so callers

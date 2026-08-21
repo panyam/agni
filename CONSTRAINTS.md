@@ -230,7 +230,9 @@ holds one file per service.
 
 ## C14: Rule classification is open tags, not typed fields
 **Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
-`Reads` (its fact dependencies), and `Eval`, plus the prose (`Summary`/`Impact`/`Remedy`/`Detail`). Every
+`Reads` (its fact dependencies), `Eval` (which MAPS every subject to a verdict), and
+`StatesConsideredSet` (whether those verdicts are the full considered set or only the failures),
+plus the prose (`Summary`/`Impact`/`Remedy`/`Detail`). Every
 classificatory axis — category, tier, distribution, and any provider-defined one — lives in an open
 `Tags map[string]string`, never as a typed struct field. Availability derives from `Reads` (a rule
 that reads a fact whose provider layer is absent is unavailable), not a stored track/label field.

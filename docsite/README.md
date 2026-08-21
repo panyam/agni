@@ -87,3 +87,24 @@ for the ~135KB of JS and CSS.
 `make run` does not build an index, since it serves from `content/` with no `dist`. The overlay
 detects the missing bundle and says so rather than hanging. Use `make build` to exercise search
 locally, and note it must be served under the `/agni/` prefix for the bundle path to resolve.
+
+## Content is templated BEFORE it is markdown, so a stray `{{` blanks the page
+
+Every content file is run through `text/template` first. That is what makes `{{ agniRun "..." }}`,
+`{{ includeCard "..." }}` and `{{.Site.PathPrefix}}` work, and it applies to the whole file: a code
+fence does not protect you, because there is no markdown yet when the templater runs.
+
+The failure is silent and total. An unparseable action does not break the offending line, it fails
+the whole page load, and the page still builds and still exists at its URL with nothing in it but the
+title and the footer. `build/check-rule.md` shipped that way for months: two Go samples contained
+`[]check.ContextSubject{{`, an elided composite-literal brace, which the templater read as an action
+calling a function named `Kind`. Twelve sections of the repo's rule-authoring guide were absent from
+the site and nothing reported it.
+
+So: **write a Go composite literal with the element brace on its own line**, and treat any `{{` in a
+sample (Rust macros, Vue, Handlebars, Go templates as subject matter) as needing the same care.
+
+`TestEveryContentPageTemplateParses` in `docsite/template_test.go` parses every content page with the
+site's own `CommonFuncMap`, so a legitimate `{{ agniRun ... }}` passes and only an unknown function or
+a malformed action fails. It runs in `make docsite-test`, which is in the gate. If you add a template
+function, add it to `Site.CommonFuncMap` and the guard picks it up for free.

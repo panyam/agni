@@ -796,3 +796,64 @@ identity separate from `Design.uri`), but adopting it is a URL-space migration r
 **Reopen if** design addressing moves to a fixed-arity identity for other reasons, at which point the
 path form becomes cheap and `?verdict=` can alias to it.
 
+
+---
+
+## A rule STATES its considered set; the engine does not infer it
+
+`check.Rule` carries a `StatesConsideredSet bool` beside an `Eval` that returns `[]Verdict`, and both
+the flag and the redundancy look removable. Three ways to remove them were considered and none works.
+
+**Infer it from the verdicts.** An unconverted rule returns a list of `Fail` verdicts, which is
+structurally identical to a considered set whose every subject happened to fail. Nothing in the data
+separates them, so inferring would present ~50 rules' failure lists as coverage. That is the
+false-assurance shape the whole verdict layer exists to remove, and it would be most convincing in a
+report, which is exactly where it would do most damage.
+
+**Carry it in the return value: nil means "declined", empty means "considered nothing".** Go does
+distinguish them, so this is representable. It is still wrong, for two reasons found by looking. The
+distinction is produced BY ACCIDENT: `var out []Verdict` with no appends returns nil, so
+`single-pin-net` announces "I decline to state a considered set" on any design containing no nets. And
+it is a channel this codebase deliberately erases elsewhere: `Spec.Eval` and `VerdictsToFindings` both
+force `[]Finding{}` rather than nil, with a comment recording the parity break that taught them to. A
+field set once at declaration cannot be produced by control flow inside a body; a returned slice can.
+
+**Have the engine work it out.** It cannot. A rule provided by an overlay, or by a future
+non-Go plugin, is opaque: it receives the `check.Model` and returns verdicts, and nothing about it can
+be decomposed. So the contract has to be a DECLARATION by the author, which is also why it fails in
+the safe direction: forgetting the flag under-reports a rule, and no one can set it and be believed
+while reporting only failures.
+
+`Spec.Scope` is not a counter-example. It lives on the spec, not the rule, precisely because the spec
+is declarative and the ENGINE enumerates `Over` on the rule's behalf, so the engine is the party that
+has to be told which elements are the rule's business. A Go rule needs no such field: it enumerates
+its own subjects and does not emit verdicts for things it is not about.
+
+All of this is migration-only. When the last rule converts, every rule sets the flag, the filter in
+`RunVerdicts` becomes a tautology, and the field and `FailuresOnly` delete themselves, leaving a
+single `Eval(Model) []Verdict`.
+
+---
+
+## The check report is HTML, and its templates are not a feature
+
+`agni check --verdicts --format html` renders a report; there is no markdown form, and no way to
+supply your own template. Both were asked for and both were declined for reasons that still hold.
+
+**Markdown was the first proposal and HTML won on adoption, not features.** HTML is the shape
+engineers already read from the in-house checker, it collapses natively, and it survives being emailed
+or opened from a `file://` path. Markdown's one real advantage is being diffable across board
+revisions, and the CSV keeps that: it remains the machine substrate, and the report is a view over it
+rather than a replacement.
+
+**`html/template` is used for correctness, not tidiness.** Every subject and message in the page came
+out of a design file the engine did not author, so a net named with an angle bracket would inject into
+the report if this were string building.
+
+**Caller-supplied templates are a different question and the answer is "not yet".** The hard part of
+a template is not the layout, it is the CONTEXT, and publishing one freezes a data model before anyone
+knows what the report should look like. Getting the context wrong is worse than getting the layout
+wrong, because the context is the contract. The aggregation therefore lives in a tested Go model
+(`core/report`) with the layout as a template over it, which makes exposing templates later a small
+step rather than a redesign. Reopen this when there is a second consumer wanting a different shape,
+not before.

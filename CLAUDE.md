@@ -43,7 +43,7 @@ mkdocs tree that was folded into `docsite/content/` with audience-first names.
 
 ## Package layout
 
-Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/diff`,
+Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/report`, `core/diff`,
 `core/query`, `core/model`). Format readers under **`readers/`** (`readers/edif`, `readers/kicad`,
 `readers/ipc2581`, `readers/xschem`, `readers/geda`, plus `readers/formats`, the registry/Loader).
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
