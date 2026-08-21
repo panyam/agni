@@ -826,6 +826,13 @@ export class ViewerPresenter {
   // asking the wrong question.
   private async reloadForConvention(): Promise<void> {
     this.findingCache.clear();
+    // The considered set goes with them, and for a sharper reason than the findings do. A verdict is
+    // keyed by rule name, and a convention change is precisely when rule names change, so a surviving
+    // verdict could name a rule that no longer exists and answer for a subject nothing re-examined.
+    // Reporting "this was checked" under a vocabulary nobody ran is the false coverage claim verdicts
+    // exist to remove.
+    this.verdictCache.clear();
+    this.focusedVerdict = "";
     this.skippedCache.clear();
     // Query results were computed under the previous vocabulary too, and `rail` answering differently
     // is the whole point of the feature, so leaving them on screen would show two vocabularies at once.

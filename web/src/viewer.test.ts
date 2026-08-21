@@ -103,6 +103,9 @@ function harness() {
     location: onLocation,
     overview: { setState: onOverview },
     query: stubQueryView(query),
+    // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
+    // port being present changes nothing else.
+    conventionBar: { setState: vi.fn() },
   });
   return { presenter, onUndrawnNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
@@ -1018,3 +1021,50 @@ describe("the incomplete-drawing notice", () => {
     expect(calls[calls.length - 1][0]).toBeNull();
   });
 });
+
+// The verdict cache holds a per-rule considered set, and what INVALIDATES it is the interesting
+// half. A verdict is keyed by rule name and a convention change is exactly when rule names change,
+// so a surviving verdict can name a rule that no longer exists and answer for a subject nothing
+// re-examined. Reporting "this was checked" under a vocabulary nobody ran is the false coverage
+// claim verdicts exist to remove, which is why this is asserted rather than left to the mirror
+// between the two caches holding by inspection.
+describe("the considered set is invalidated with the findings", () => {
+  function withVerdicts(h: ReturnType<typeof harness>) {
+    h.checkDesign.mockImplementation(async () => ({
+      findings: [],
+      verdicts: [
+        {
+          id: "single-pin-net:net:SDA",
+          rule: "single-pin-net",
+          outcome: 1,
+          subject: { kind: "net", ref: "SDA", pin: "", netId: "" },
+          witness: { statement: "SDA has more than one pin", terms: [] },
+          context: [],
+          reason: "",
+        },
+      ],
+    })) as unknown as typeof h.checkDesign;
+  }
+
+  it("drops cached verdicts when the naming vocabulary changes", async () => {
+    const h = harness();
+    withVerdicts(h);
+    await openAndCheck(h, "m", "b.edn");
+    expect(h.presenter.verdictList()).toHaveLength(1);
+
+    await h.presenter.setConvention("");
+
+    expect(h.presenter.verdictList()).toHaveLength(0);
+  });
+
+  it("drops cached verdicts when a different design is opened", async () => {
+    const h = harness();
+    withVerdicts(h);
+    await openAndCheck(h, "m", "b.edn");
+    expect(h.presenter.verdictList()).toHaveLength(1);
+
+    await h.presenter.openFile("m", "other.edn", "");
+
+    expect(h.presenter.verdictList()).toHaveLength(0);
+  });
+})
