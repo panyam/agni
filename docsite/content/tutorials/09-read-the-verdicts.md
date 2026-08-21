@@ -78,14 +78,15 @@ the pass rests on:
 
 {{ agniRun "content/tutorials/runs/09-audit-a-pass.yaml" }}
 
-Read the middle column as the claim and the right column as the reason to believe it. A pass whose
-reason you cannot check against the design is the one to go and look at.
+Rows sit under the rule that produced them, worst first. Read the subject as the claim and the
+sentence beside it as the reason to believe it. A pass whose reason you cannot check against the
+design is the one to go and look at.
 
-Two limits worth knowing before you lean on it. A rule only appears here if it STATES what it
-considered, so a rule missing from the output is declining to answer rather than reporting that it
-considered nothing, and the HTML report labels those "findings only" for exactly that reason. And a
-pass can only cite a value the rule actually measured, so a few rules still pass with the shape of
-their test rather than a number.
+Two limits worth knowing before you lean on it. A rule that reports violations without stating what it
+examined is labelled "reports violations only" and its rows are what it FOUND rather than what it
+checked, so absence under such a heading is not evidence of correctness. And a pass can only cite a
+value the rule actually measured, so a few rules still pass with the shape of their test rather than
+a number.
 
 ## When a check cannot decide
 

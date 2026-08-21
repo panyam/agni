@@ -123,9 +123,16 @@ Across the whole catalog that is a much larger answer than the findings list:
 {{ agniRun "content/tutorials/runs/02-verdicts-summary.yaml" }}
 
 `not-considered` is the third outcome and the one with no counterpart in a findings list: the rule
-was willing to judge that subject and something was missing, so it says which input it lacked rather
-than passing on incomplete evidence. On this board most of them are asking for the datasheet values
-you seed in [rung 6](../06-part-limits/).
+was willing to judge that subject and something stopped it, so it says what stopped it rather than
+passing on incomplete evidence.
+
+On this board only one of them wants a datasheet value of the kind you seed in
+[rung 6](../06-part-limits/). The rest are the more interesting sort. Four are `floating-input`
+declining a net that carries a passive part, because a resistor on a net might be the pull that fixes
+it, might be a series element with the driver on the far side, or might be a footprint nobody stuffed,
+and a netlist cannot tell those apart. Two are `esd-clamp-not-tvs` handing a bare net to
+`esd-protection`, which is the rule that reports it. Neither is a gap you fill by seeding anything.
+They are the check telling you where its reach ends.
 
 That distinction between "checked and fine", "never checked" and "could not tell" runs through the
 whole tool, and [rung 9](../09-read-the-verdicts/) is entirely about reading it.
