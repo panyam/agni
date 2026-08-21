@@ -282,12 +282,17 @@ func rowOf(v check.Verdict, meta Report) Row {
 	for _, c := range v.Context {
 		r.Context = append(r.Context, check.EntityRef(c.Entity))
 	}
-	r.URL = verdictURL(meta, r.ID)
+	r.URL = VerdictURL(meta, r.ID)
 	return r
 }
 
-// verdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
+// VerdictURL builds the link that opens this verdict's proof in a running viewer, or "" when the
 // caller gave no base.
+//
+// Exported because three renderers need it and only one of them builds a Report: the html page and
+// the terminal read Row.URL, and the csv writer emits protos in the run's own order rather than the
+// report's, so it composes the link per row. One function so the three cannot disagree about what a
+// link to a verdict looks like.
 //
 // A MISSING LINK IS THE CORRECT ANSWER for a loose file, not a gap to fill with a guess (issue 392).
 // A URL is a promise the reader can follow, and one assembled from an invented mount resolves on
@@ -297,7 +302,7 @@ func rowOf(v check.Verdict, meta Report) Row {
 // instead of silently highlighting whatever now sits at that subject. A link that quietly points at
 // the wrong pin is the same false-confidence failure this whole layer exists to remove, relocated
 // into the browser.
-func verdictURL(meta Report, id string) string {
+func VerdictURL(meta Report, id string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
 	}

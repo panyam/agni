@@ -2,6 +2,8 @@ package main
 
 import (
 	"io"
+
+	rpt "github.com/panyam/agni/core/report"
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -26,6 +28,11 @@ import (
 // something no reader can parse and no writer can round-trip. A consumer that needs them wants json.
 var verdictCSVColumns = []string{
 	"verdict_id",
+	// url opens this verdict's proof in a running viewer, and is EMPTY unless the operator named one
+	// with --url-base and the design is one the server could resolve. A blank cell is the correct
+	// answer for a loose file rather than a gap: a link assembled from a guessed address resolves on
+	// nobody's server, which reads as a broken tool rather than a mismatched setup (agni issue 392).
+	"url",
 	"rule",
 	"outcome",
 	// One column for the whole subject tuple, as kind:ref pairs. Most rules put one entity here; a
@@ -41,7 +48,7 @@ var verdictCSVColumns = []string{
 // writeVerdictCSV emits one row per verdict, in the order the run produced them (rule, then subject,
 // matching check.RunVerdicts and therefore the findings table's axis). Like the findings writer this
 // does not re-sort, so the csv and the json describe one run in one order.
-func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict) error {
+func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report) error {
 	c := newCSVWriter(w)
 	c.header(verdictCSVColumns)
 	for _, v := range vs {
@@ -52,6 +59,7 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict) error {
 		}
 		c.row([]string{
 			v.GetId(),
+			rpt.VerdictURL(meta, v.GetId()),
 			v.GetRule(),
 			outcomeCell(v.GetOutcome()),
 			subjectsCell(v.GetSubjects()),

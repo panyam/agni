@@ -15,6 +15,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -531,9 +532,21 @@ func checkCmd() *cobra.Command {
 				// same run rather than extra rows in the findings output. --fail-on still reads the
 				// findings below, since a pass is not a gate condition.
 				if verdicts {
+					// A LINK IS A PROMISE, and this is the one place the promise is made. urlBase is
+					// empty unless the operator says where the viewer is, and linkablePath is empty
+					// for a design the CLI reached by a path the server would not recognise. Either
+					// one missing means every format emits no link rather than one assembled from a
+					// guess, which would resolve on nobody's server (agni issue 392).
+					meta := rpt.Report{
+						Design:      designURI,
+						Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+						ContentHash: hashSource(localOf(designURI)),
+						URLBase:     urlBase,
+						MountPath:   linkablePath(args[0], designURI),
+					}
 					switch format {
 					case "csv":
-						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts()); err != nil {
+						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts(), meta); err != nil {
 							return err
 						}
 					case "json":
@@ -541,15 +554,11 @@ func checkCmd() *cobra.Command {
 							return err
 						}
 					case "html":
-						// A LINK IS A PROMISE. urlBase is empty unless the operator says where the
-						// viewer is, and without it the report renders subjects as plain text rather
-						// than assembling a URL that resolves on nobody's server (agni issue 392).
-						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, catalog.Rules(),
-							designURI, hashSource(localOf(designURI)), urlBase, linkablePath(args[0], designURI)); err != nil {
+						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, catalog.Rules(), meta); err != nil {
 							return err
 						}
 					default:
-						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, catalog.Rules(), rpt.Report{}))
+						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, catalog.Rules(), meta))
 					}
 					failFindings = resp.GetFindings()
 					break
@@ -578,7 +587,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
-	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so an html report links each verdict to its proof. Omitted, the report names subjects as plain text: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
+	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so every --verdicts format links each verdict to its proof: an anchor in the html report, a url column in the csv, a line under each row in the terminal. Omitted, or for a design reached by a path the server would not recognise, no link is emitted at all: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
