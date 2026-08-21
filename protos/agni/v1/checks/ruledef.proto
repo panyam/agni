@@ -115,6 +115,11 @@ message SpecBody {
   map<string, SpecTerm> let = 2;
   SpecExpr where = 3;
   string message = 4;
+  // scope is which elements of over the rule JUDGES; absent judges all of them. It is separate from
+  // where because falling out of each means something different: out of scope produces no verdict at
+  // all, while failing where produces a PASS. With one predicate a subject the rule was never about
+  // is indistinguishable from one it checked and cleared.
+  SpecExpr scope = 5;
 }
 
 // SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer

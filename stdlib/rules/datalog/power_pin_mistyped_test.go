@@ -32,7 +32,7 @@ func mistypedFixture() *ir.Design {
 }
 
 func TestPowerPinMistyped_Fires(t *testing.T) {
-	fs := powerPinMistyped.Eval(check.NewModel(mistypedFixture()))
+	fs := powerPinMistyped.Findings(check.NewModel(mistypedFixture()))
 	if len(fs) != 1 || fs[0].Subject != "U1" || fs[0].Pin != "1" {
 		t.Fatalf("want exactly {U1 pin 1 (VDD, passive, alone)}, got %+v", fs)
 	}
@@ -56,7 +56,7 @@ func TestPowerPinMistyped_Silent(t *testing.T) {
 			{Name: "P3V3", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}, {ComponentRef: "R1", PinRef: "1"}}},
 		},
 	}
-	if fs := powerPinMistyped.Eval(check.NewModel(d)); len(fs) != 0 {
+	if fs := powerPinMistyped.Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Fatalf("want silent (correct type / connected), got %+v", fs)
 	}
 }

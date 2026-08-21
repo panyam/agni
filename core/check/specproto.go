@@ -32,6 +32,9 @@ func SpecProto(s Spec) *checkspb.SpecBody {
 	if s.Where != nil {
 		out.Where = exprProto(s.Where)
 	}
+	if s.Scope != nil {
+		out.Scope = exprProto(s.Scope)
+	}
 	return out
 }
 
@@ -56,6 +59,13 @@ func SpecFromProto(p *checkspb.SpecBody) (Spec, error) {
 			return Spec{}, err
 		}
 		s.Where = w
+	}
+	if p.GetScope() != nil {
+		sc, err := exprFromProto(p.GetScope())
+		if err != nil {
+			return Spec{}, err
+		}
+		s.Scope = sc
 	}
 	if err := s.Validate(); err != nil {
 		return Spec{}, err

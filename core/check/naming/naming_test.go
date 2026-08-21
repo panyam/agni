@@ -57,7 +57,7 @@ func TestSourceCompilesAndFires(t *testing.T) {
 		net("unconnected-(U1-Pad2)"), // marker stub -> always silent
 	}})
 	got := map[string]bool{}
-	for _, f := range rule.Eval(m) {
+	for _, f := range rule.Findings(m) {
 		got[f.Subject] = true
 	}
 	want := map[string]bool{"badname": true, "/amp1/lower": true}

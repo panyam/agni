@@ -53,6 +53,12 @@ var rowOutputOutput = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
+		// NO Scope, deliberately: contention is possible on any net, so every net is a subject and a
+		// pass says something worth saying ("at most one thing drives this"). Both clauses below are
+		// the violation condition rather than scope, including the has_pull exemption: a multi-driver
+		// net WITH a pull is an open-drain wired-OR bus working as intended, which is a real pass and
+		// not a subject the rule declined.
+		//
 		// The has_pull guard exempts open-drain wired-OR buses (see isWiredOrBus). Without it,
 		// EDIF that types open-drain pins "output" reads a shared interrupt line as N drivers
 		// fighting.
@@ -112,11 +118,14 @@ var rowNCConnected = matrixRow{
 	},
 	spec: &check.Spec{
 		Over: "nets",
-		Where: check.And{Xs: []check.Expr{
+		// SCOPE: a cross-sheet net the read did not fully cover cannot be judged, and a one-pin net
+		// cannot wire anything TO anything, so the defect is structurally impossible there rather than
+		// absent. Narrowing here keeps the considered set to nets where the question has an answer.
+		Scope: check.And{Xs: []check.Expr{
 			check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 			check.Cmp{L: check.Fact{Name: "net.pin_count"}, Op: ">=", R: check.Lit{V: 2}},
-			check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "no_connect"}}},
 		}},
+		Where:   check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "no_connect"}}},
 		Message: "net wires in a pin marked no-connect",
 	},
 }
@@ -142,15 +151,18 @@ var rowUnspecifiedWithDriver = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
-		Where: check.And{Xs: []check.Expr{
+		// SCOPE: the rule's own name says it. An undriven net cannot exhibit this defect, so a pass on
+		// one would claim a check that never happened. What is left is a real answer: of the nets
+		// something drives, these carry no pin of unknown type.
+		Scope: check.And{Xs: []check.Expr{
 			check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 			check.Cmp{L: check.Var{Name: "drivers"}, Op: ">=", R: check.Lit{V: 1}},
-			check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{
-				check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "unspecified"}},
-				check.IsTrue{T: check.Fact{Name: "pin.declared"}},
-				check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}},
-			}}},
 		}},
+		Where: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{
+			check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "unspecified"}},
+			check.IsTrue{T: check.Fact{Name: "pin.declared"}},
+			check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}},
+		}}},
 		Message: "a pin with no declared electrical type shares this driven net",
 	},
 }
