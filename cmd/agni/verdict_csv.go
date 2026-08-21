@@ -29,10 +29,10 @@ var verdictCSVColumns = []string{
 	"verdict_id",
 	"rule",
 	"outcome",
-	"kind",
-	"subject",
-	"pin",
-	"net_id",
+	// One column for the whole subject tuple, as kind:ref pairs. Most rules put one entity here; a
+	// rule whose question is a relation puts two or three, and splitting them back into kind/subject/
+	// pin columns would need a column set that changes per rule, which is not a table.
+	"subjects",
 	"statement",
 	"context",
 	"terms",
@@ -46,7 +46,6 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict) error {
 	c := newCSVWriter(w)
 	c.header(verdictCSVColumns)
 	for _, v := range vs {
-		s := v.GetSubject()
 		var stmt, terms string
 		if wit := v.GetWitness(); wit != nil {
 			stmt = wit.GetStatement()
@@ -56,10 +55,7 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict) error {
 			v.GetId(),
 			v.GetRule(),
 			outcomeCell(v.GetOutcome()),
-			s.GetKind(),
-			s.GetRef(),
-			s.GetPin(),
-			s.GetNetId(),
+			subjectsCell(v.GetSubjects()),
 			stmt,
 			contextCell(v.GetContext()),
 			terms,
@@ -138,7 +134,27 @@ func writeVerdictText(w io.Writer, vs []*checkspb.Verdict) {
 // as its ref. It matches the pin form VerdictID uses so a line and its id are recognisably the same
 // entity.
 func subjectLabel(v *checkspb.Verdict) string {
-	s := v.GetSubject()
+	parts := make([]string, 0, len(v.GetSubjects()))
+	for _, s := range v.GetSubjects() {
+		parts = append(parts, subjectRefCell(s))
+	}
+	return strings.Join(parts, " + ")
+}
+
+// subjectsCell renders a verdict's tuple for the csv as kind:ref pairs, pipe-separated, matching the
+// context column's shape so the two read the same way. The kinds stay in: a relation is commonly
+// heterogeneous (a part and a rail), and a reader of two bare refs cannot tell which is which.
+func subjectsCell(ss []*checkspb.Subject) string {
+	parts := make([]string, 0, len(ss))
+	for _, s := range ss {
+		parts = append(parts, s.GetKind()+":"+subjectRefCell(s))
+	}
+	return strings.Join(parts, "|")
+}
+
+// subjectRefCell is one entity's spelling: a pin reads as U12.7, everything else as its ref. It
+// matches the form VerdictID uses so a line and its id are recognisably the same entity.
+func subjectRefCell(s *checkspb.Subject) string {
 	if s.GetPin() != "" {
 		return s.GetRef() + "." + s.GetPin()
 	}

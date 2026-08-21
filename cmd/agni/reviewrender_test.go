@@ -16,10 +16,10 @@ import (
 // the color, and a finding that repeats (bound to several items) collapses to one spec.
 func TestFindingSpecs(t *testing.T) {
 	findings := []check.Finding{
-		{Kind: check.KindNet, Subject: "CAN_H", NetID: "n1", Severity: "warning"},
-		{Kind: check.KindNet, Subject: "CAN_H", NetID: "n1", Severity: "warning"}, // dup: same net, same id
-		{Kind: check.KindComponent, Subject: "U1", Severity: "error"},
-		{Kind: check.KindPin, Subject: "U2", Pin: "3", Severity: "info"},
+		{Subject: check.Entity{Kind: check.KindNet, Ref: "CAN_H", NetID: "n1"}, Severity: "warning"},
+		{Subject: check.Entity{Kind: check.KindNet, Ref: "CAN_H", NetID: "n1"}, Severity: "warning"}, // dup: same net, same id
+		{Subject: check.Entity{Kind: check.KindComponent, Ref: "U1"}, Severity: "error"},
+		{Subject: check.Entity{Kind: check.KindPin, Ref: "U2", Pin: "3"}, Severity: "info"},
 	}
 	specs := findingSpecs(findings)
 	if len(specs) != 3 {
@@ -88,7 +88,7 @@ func TestReviewRenderCompanion(t *testing.T) {
 	dir := t.TempDir()
 	r := review.Report{Design: "testdata/review/companion-demo.edn", Areas: []review.AreaResult{{
 		Items: []review.ItemResult{{Findings: []check.Finding{
-			{Kind: check.KindNet, Subject: "SIGA", Severity: "warning"},
+			{Subject: check.Entity{Kind: check.KindNet, Ref: "SIGA"}, Severity: "warning"},
 		}}},
 	}}}
 	summary, err := renderReviewImages([]review.Report{r}, sourcesOf([]review.Report{r}), dir, "")
@@ -118,7 +118,7 @@ func TestReviewRenderCompanionMismatch(t *testing.T) {
 	dir := t.TempDir()
 	r := review.Report{Design: "testdata/review/can-broken.edn", Areas: []review.AreaResult{{
 		Items: []review.ItemResult{{Findings: []check.Finding{
-			{Kind: check.KindNet, Subject: "CAN_CANH", Severity: "warning"},
+			{Subject: check.Entity{Kind: check.KindNet, Ref: "CAN_CANH"}, Severity: "warning"},
 		}}},
 	}}}
 	summary, err := renderReviewImages([]review.Report{r}, sourcesOf([]review.Report{r}), dir, "testdata/review/companion-demo.eds")

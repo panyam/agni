@@ -51,13 +51,13 @@ func TestCANFires(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("want 3 distinct rules firing, got %d: %+v", len(got), got)
 	}
-	if f := got["can-termination-missing"]; f.Subject != "CAN_CANH" {
+	if f := got["can-termination-missing"]; check.EntityRef(f.Subject) != "CAN_CANH" {
 		t.Errorf("termination-missing: want CAN_CANH, got %+v", f)
 	}
-	if f := got["can-signal-missing"]; f.Subject != "CAN_CANH" || !strings.Contains(f.Message, "RXD") {
+	if f := got["can-signal-missing"]; check.EntityRef(f.Subject) != "CAN_CANH" || !strings.Contains(f.Message, "RXD") {
 		t.Errorf("signal-missing: want anchor CAN_CANH + RXD, got %+v", f)
 	}
-	if f := got["can-signal-dangling"]; f.Subject != "CAN_TXD" {
+	if f := got["can-signal-dangling"]; check.EntityRef(f.Subject) != "CAN_TXD" {
 		t.Errorf("signal-dangling: want CAN_TXD, got %+v", f)
 	}
 }
@@ -107,7 +107,7 @@ func TestCANHostWhollyAbsent(t *testing.T) {
 	}
 	got := 0
 	for _, f := range check.Run(check.NewModel(d), Compile(CAN)) {
-		if f.Rule == "can-host-incomplete" && f.Subject == "U2" {
+		if f.Rule == "can-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
 	}

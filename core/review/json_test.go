@@ -19,15 +19,11 @@ func TestRenderJSONDatasheetProv(t *testing.T) {
 				Item:    Item{ID: "18", Title: "regulator output ratings"},
 				Outcome: Fail,
 				Findings: []check.Finding{
-					{
-						Rule: "review/18", Severity: "warning", Kind: check.KindComponent, Subject: "U7000",
-						Message: "IOUT below requirement",
-						DatasheetProv: []*check.DatasheetCitation{{
-							Doc: "LMR60410-Q1 (SNAS870B Rev. B)", DocRef: "snas870b", Page: 5,
-							Section: "6.3 Recommended Operating Conditions", Method: "hand", Confidence: 1.0,
-						}},
-					},
-					{Rule: "review/other", Severity: "warning", Kind: check.KindComponent, Subject: "U9", Message: "no datasheet backing"},
+					{Subject: check.Entity{Kind: check.KindComponent, Ref: "U7000"}, Rule: "review/18", Severity: "warning", Message: "IOUT below requirement", DatasheetProv: []*check.DatasheetCitation{{
+						Doc: "LMR60410-Q1 (SNAS870B Rev. B)", DocRef: "snas870b", Page: 5,
+						Section: "6.3 Recommended Operating Conditions", Method: "hand", Confidence: 1.0,
+					}}},
+					{Subject: check.Entity{Kind: check.KindComponent, Ref: "U9"}, Rule: "review/other", Severity: "warning", Message: "no datasheet backing"},
 				},
 			}},
 		}},

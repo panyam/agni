@@ -58,10 +58,7 @@ func unconnectedComponentVerdicts(m check.Model) []check.Verdict {
 
 	var out []check.Verdict
 	for _, c := range m.Components() {
-		v := check.Verdict{
-			Kind:    check.KindComponent,
-			Subject: c.RefDes,
-		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}}
 		switch {
 		case c.RefDes == "":
 			v.Outcome = check.NotConsidered

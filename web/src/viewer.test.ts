@@ -1034,7 +1034,7 @@ describe("the considered set is invalidated with the findings", () => {
       findings: [],
       verdicts: [
         {
-          id: "single-pin-net:net:SDA",
+          id: "single-pin-net:(net:SDA)",
           rule: "single-pin-net",
           outcome: 1,
           subject: { kind: "net", ref: "SDA", pin: "", netId: "" },

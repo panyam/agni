@@ -102,16 +102,7 @@ func RenderJSON(r Report) (string, error) {
 				Note:    JoinNonEmpty(it.Note, it.Item.Note),
 			}
 			for _, f := range it.Findings {
-				ji.Findings = append(ji.Findings, jsonFinding{
-					Rule:       f.Rule,
-					Severity:   f.Severity,
-					Kind:       f.Kind,
-					Subject:    f.Subject,
-					Pin:        f.Pin,
-					Message:    f.Message,
-					SourceFile: sourceFile(f),
-					Datasheets: datasheetProv(f),
-				})
+				ji.Findings = append(ji.Findings, jsonFinding{Kind: f.Subject.Kind, Subject: f.Subject.Ref, Pin: f.Subject.Pin, Rule: f.Rule, Severity: f.Severity, Message: f.Message, SourceFile: sourceFile(f), Datasheets: datasheetProv(f)})
 			}
 			ja.Items = append(ja.Items, ji)
 		}

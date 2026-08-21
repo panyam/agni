@@ -28,21 +28,11 @@ func voltageDomainRule(d Declaration) *check.Rule {
 				for _, rail := range dom.Rails {
 					n := netByName(m, rail)
 					if n == nil {
-						out = append(out, check.Finding{
-							Kind:    check.KindNet,
-							Subject: rail,
-							Message: fmt.Sprintf("declared rail %q of voltage domain %q (%gV) is not present on the design", rail, dom.Name, dom.Nominal),
-						})
+						out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: rail}, Message: fmt.Sprintf("declared rail %q of voltage domain %q (%gV) is not present on the design", rail, dom.Name, dom.Nominal)})
 						continue
 					}
 					if v, ok := check.NominalVoltageFromName(n.GetName()); ok && v != dom.Nominal {
-						out = append(out, check.Finding{
-							Kind:    check.KindNet,
-							Subject: n.GetName(),
-							NetID:   n.GetId(),
-							Prov:    n.GetProv(),
-							Message: fmt.Sprintf("rail %q is declared in voltage domain %q (%gV) but its name declares %gV", n.GetName(), dom.Name, dom.Nominal, v),
-						})
+						out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.GetName(), NetID: n.GetId()}, Prov: n.GetProv(), Message: fmt.Sprintf("rail %q is declared in voltage domain %q (%gV) but its name declares %gV", n.GetName(), dom.Name, dom.Nominal, v)})
 					}
 				}
 			}

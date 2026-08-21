@@ -33,7 +33,7 @@ func TestOVPFiresWhenNoClampOnRail(t *testing.T) {
 	decl := declOf(t, "name: I\nprotections:\n  - {rail: VBATT01, kind: ovp}")
 	// A resistor on the rail is not a clamp -> fire.
 	fs := check.Run(check.NewModel(protDesign("VBATT01", "resistor")), Compile(decl))
-	if len(fs) != 1 || fs[0].Rule != "protection-ovp" || fs[0].Subject != "VBATT01" {
+	if len(fs) != 1 || fs[0].Rule != "protection-ovp" || check.EntityRef(fs[0].Subject) != "VBATT01" {
 		t.Fatalf("want one ovp finding on VBATT01, got %+v", fs)
 	}
 }

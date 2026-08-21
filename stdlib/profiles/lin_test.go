@@ -48,13 +48,13 @@ func TestLINFires(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("want 3 distinct rules firing, got %d: %+v", len(got), got)
 	}
-	if f := got["lin-signal-missing"]; f.Subject != "BUS_LIN" || !strings.Contains(f.Message, "RXD") {
+	if f := got["lin-signal-missing"]; check.EntityRef(f.Subject) != "BUS_LIN" || !strings.Contains(f.Message, "RXD") {
 		t.Errorf("signal-missing: want anchor BUS_LIN + RXD, got %+v", f)
 	}
-	if f := got["lin-missing-pullup"]; f.Subject != "BUS_LIN" {
+	if f := got["lin-missing-pullup"]; check.EntityRef(f.Subject) != "BUS_LIN" {
 		t.Errorf("missing-pullup: want BUS_LIN, got %+v", f)
 	}
-	if f := got["lin-signal-dangling"]; f.Subject != "LIN_TXD" {
+	if f := got["lin-signal-dangling"]; check.EntityRef(f.Subject) != "LIN_TXD" {
 		t.Errorf("signal-dangling: want LIN_TXD, got %+v", f)
 	}
 }
@@ -89,7 +89,7 @@ func TestLINHostWhollyAbsent(t *testing.T) {
 	}
 	got := 0
 	for _, f := range check.Run(check.NewModel(d), Compile(LIN)) {
-		if f.Rule == "lin-host-incomplete" && f.Subject == "U2" {
+		if f.Rule == "lin-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
 	}

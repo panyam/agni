@@ -47,15 +47,7 @@ func i2cPullUpVerdicts(m check.Model) []check.Verdict {
 			continue // not a subject of this rule
 		}
 		outcome, w, ctx := check.PullUpVerdict(m, n)
-		v := check.Verdict{
-			Rule:    "i2c-pull-up",
-			Outcome: outcome,
-			Kind:    check.KindNet,
-			Subject: n.Name,
-			NetID:   n.GetId(),
-			Witness: w,
-			Context: ctx,
-		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}, Rule: "i2c-pull-up", Outcome: outcome, Witness: w, Context: ctx}
 		if outcome == check.Fail {
 			f := check.NetFinding("I2C net has no pull-up resistor to a rail")(n)
 			v.Finding = &f

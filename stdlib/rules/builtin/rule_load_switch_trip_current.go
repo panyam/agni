@@ -53,14 +53,13 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, sw := range check.ExternalFetLoadSwitches(m) {
 		v := check.Verdict{
-			Kind:    check.KindComponent,
-			Subject: sw.Fet,
+			Subjects: []check.Entity{check.ComponentEntity(sw.Fet)},
 			// The controller whose threshold sets the trip current, and the sense resistor that sets
 			// it with them. The subject is the FET, because it is the part that overheats, but the
 			// fix is usually one of these two (agni issue 349).
 			Context: []check.ContextSubject{
-				{Kind: check.KindComponent, Subject: sw.Controller, Role: "controller"},
-				{Kind: check.KindComponent, Subject: sw.Sense, Role: "sense"},
+				{Entity: check.Entity{Kind: check.KindComponent, Ref: sw.Controller}, Role: "controller"},
+				{Entity: check.Entity{Kind: check.KindComponent, Ref: sw.Sense}, Role: "sense"},
 			},
 		}
 		// An unseeded pass element and a seeded one stating no continuous rating are the same gap,
@@ -114,8 +113,7 @@ func loadSwitchTripVerdicts(m check.Model) []check.Verdict {
 				check.Citation(fetSpec, sw.OnResistance))
 		}
 		v.Finding = &check.Finding{
-			Kind:    check.KindComponent,
-			Subject: sw.Fet,
+			Subject: check.Entity{Kind: check.KindComponent, Ref: sw.Fet},
 			Message: msg,
 			Context: v.Context,
 			Prov:    componentProv(m, sw.Fet),

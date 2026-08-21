@@ -180,7 +180,7 @@ func TestDecouplingPresent(t *testing.T) {
 	fired := map[string]bool{}
 	for _, f := range check.RunDesign(d) {
 		if f.Rule == "decoupling-present" {
-			fired[f.Subject] = true
+			fired[check.EntityRef(f.Subject)] = true
 		}
 	}
 	if !fired["VCC1"] {

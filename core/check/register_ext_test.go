@@ -24,7 +24,7 @@ func widgetRule() *check.Rule {
 		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, c := range m.Components() {
-				out = append(out, check.Finding{Kind: check.KindComponent, Subject: c.RefDes, Message: "seen by the overlay rule"})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: "seen by the overlay rule"})
 			}
 			return out
 		}),
@@ -58,7 +58,7 @@ func TestExternalRuleRegistrationEndToEnd(t *testing.T) {
 		t.Fatalf("Filter for the registered rule returned %d rules, want 1", len(rules))
 	}
 	findings := check.Run(check.NewModel(d), rules)
-	if len(findings) != 1 || findings[0].Rule != "acme/widget-present" || findings[0].Subject != "U1" {
+	if len(findings) != 1 || findings[0].Rule != "acme/widget-present" || check.EntityRef(findings[0].Subject) != "U1" {
 		t.Errorf("findings = %+v, want one acme/widget-present finding on U1", findings)
 	}
 }

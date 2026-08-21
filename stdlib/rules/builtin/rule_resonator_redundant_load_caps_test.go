@@ -53,7 +53,7 @@ func resonatorFixture() *ir.Design {
 
 func TestResonatorRedundantLoadCaps(t *testing.T) {
 	fs := resonatorRedundantLoadCaps.Findings(check.NewModel(resonatorFixture()))
-	if len(fs) != 1 || fs[0].Subject != "Y1" || fs[0].Kind != check.KindComponent {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "Y1" || fs[0].Subject.Kind != check.KindComponent {
 		t.Fatalf("findings = %+v, want exactly one KindComponent finding on Y1", fs)
 	}
 	want := "ceramic resonator terminal net XIN has an external load capacitor C1 (this part integrates its load caps)"

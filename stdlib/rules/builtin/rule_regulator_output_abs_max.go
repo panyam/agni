@@ -5,6 +5,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // regulatorOutputExceedsAbsMax is the first CONNECTION-AWARE datasheet rule (WS3-028): it compares a
@@ -38,101 +39,123 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("regulator-output-exceeds-abs-max"),
-	// A RELATION-SHAPED SUBJECT, which the verdict key has no grammar for (agni issue 391).
-	//
-	// Its subject is a PAIR: a part and the source that endangers it. One load fed by two
-	// seeded regulators, or reached over two supplied nets, is two findings about one ref-des.
-	//
-	// A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names ONE entity, so keying these
-	// verdicts by the subject alone would issue one id for several different answers. `checkspb.Subject`
-	// has the same shape on the wire (kind, ref, pin, net_id, bus_id), and TestVerdictFieldCensus exists
-	// to make adding to it a decision rather than a drift, so a ref that names two entities is a
-	// wire-vocabulary change rather than something to slip in under a rule conversion. Reducing to one
-	// verdict per subject instead would mean dropping findings this rule reports today.
-	//
-	// So it reports violations only, and RunVerdicts leaves it out rather than presenting its failure
-	// list as coverage. It is one of five rules in the catalog with this shape: copper-clearance (a pair
-	// of nets), regulator-output-exceeds-abs-max (a part and the part that feeds it),
-	// fet-vdss-below-switched-rail (a part and one of the rails it touches), and the two pin-tracking
-	// rules (a pair of pins on one part).
-	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-		var out []check.Finding
-		for _, src := range m.Components() {
-			srcSpec := m.PartSpec(src.RefDes)
-			if srcSpec == nil {
-				continue
-			}
-			outputs := check.OutputVoltageLimits(srcSpec)
-			if len(outputs) == 0 {
-				continue
-			}
-			// The HIGHEST output a part can present is what a downstream part is exposed to: a
-			// regulator with an adjustable or multi-rail output endangers its load at the top of
-			// the range, not the middle.
-			srcParam := outputs[0]
-			for _, p := range outputs[1:] {
-				if p.Value.GetMax() > srcParam.Value.GetMax() {
-					srcParam = p
-				}
-			}
+	// Source, rail, load, in the order the message names them. All three are needed: one regulator
+	// feeding one part over VOUT_A and again over VOUT_B is two different answers, so a tuple without
+	// the rail would give them one name.
+	SubjectShape:        []string{check.KindComponent, check.KindNet, check.KindComponent},
+	Eval:                regulatorOutputVerdicts,
+	StatesConsideredSet: true,
+}
 
-			for _, n := range suppliedNets(m, src) {
-				for _, conn := range n.GetConnections() {
-					ref := conn.GetComponentRef()
-					if ref == src.RefDes || check.IsVirtualRef(ref) {
-						continue
-					}
-					loadSpec := m.PartSpec(ref)
-					if loadSpec == nil {
-						continue
-					}
-					limits := check.SupplyAbsMaxLimits(loadSpec)
-					if len(limits) == 0 {
-						continue
-					}
+// regulatorOutputVerdicts decides every (source, rail, load) triple the supply walk reaches, one
+// verdict each.
+//
+// THE ARITY IS THREE AND THE THIRD ELEMENT IS THE ONE THAT GETS FORGOTTEN. A regulator and a load are
+// not enough to name an answer: a part fed from one PMIC over two supplied rails is endangered twice,
+// on different rails, with different numbers. Dropping the rail from the identity would merge them.
+//
+// TWO SILENCES BECOME NotConsidered, and both are corpus gaps rather than design facts. A load with no
+// seeded datasheet, and a load whose datasheet states no absolute-maximum supply row, each took the
+// same `continue` a safely-fed load took. On a partially-seeded corpus that is most of the board, and
+// a reader who cannot tell "checked and fine" from "nobody has seeded this part" has no idea how much
+// of the supply tree this rule actually covered.
+//
+// The SOURCE side is scope rather than an outcome: a part that states no output voltage is not a
+// source, so it yields nothing at all instead of a verdict about a supply relationship that does not
+// exist.
+func regulatorOutputVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, src := range m.Components() {
+		srcSpec := m.PartSpec(src.RefDes)
+		if srcSpec == nil {
+			continue // not a seeded part, so nothing says it supplies anything
+		}
+		outputs := check.OutputVoltageLimits(srcSpec)
+		if len(outputs) == 0 {
+			continue // states no output voltage, so it is not a source and this rule is not about it
+		}
+		// The HIGHEST output a part can present is what a downstream part is exposed to: a
+		// regulator with an adjustable or multi-rail output endangers its load at the top of
+		// the range, not the middle.
+		srcParam := outputs[0]
+		for _, p := range outputs[1:] {
+			if p.Value.GetMax() > srcParam.Value.GetMax() {
+				srcParam = p
+			}
+		}
+
+		for _, n := range suppliedNets(m, src) {
+			for _, conn := range n.GetConnections() {
+				ref := conn.GetComponentRef()
+				if ref == src.RefDes || check.IsVirtualRef(ref) {
+					continue // the source itself, or a power symbol rather than a part
+				}
+				v := check.Verdict{Subjects: []check.Entity{
+					check.ComponentEntity(src.RefDes), check.NetEntity(n), check.ComponentEntity(ref),
+				}}
+				loadSpec := m.PartSpec(ref)
+				var load *parampb.Parameter
+				if loadSpec != nil {
 					// The most restrictive abs-max row is the binding one, matching
 					// supply-exceeds-abs-max: a part is endangered at its lowest rating.
-					load := limits[0]
-					for _, p := range limits[1:] {
-						if p.Value.GetMax() < load.Value.GetMax() {
+					for _, p := range check.SupplyAbsMaxLimits(loadSpec) {
+						if load == nil || p.Value.GetMax() < load.Value.GetMax() {
 							load = p
 						}
 					}
-					if srcParam.Value.GetMax() <= load.Value.GetMax() {
-						continue
+				}
+				switch {
+				case loadSpec == nil:
+					v.Outcome = check.NotConsidered
+					v.Reason = ref + " carries no seeded datasheet, so it states no supply rating to compare this rail against"
+				case load == nil:
+					v.Outcome = check.NotConsidered
+					v.Reason = "the datasheet for " + ref + " states no comparable absolute-maximum supply row"
+				default:
+					outcome, w := check.CompareToBound(srcParam.Value.GetMax(), "V",
+						check.Bound{Max: load.Value.Max}, src.RefDes+" output", ref+" absolute maximum")
+					if w != nil {
+						w.Datasheet = []*check.DatasheetCitation{
+							check.DatasheetCitationOf(loadSpec, load),
+							check.DatasheetCitationOf(srcSpec, srcParam),
+						}
 					}
-					out = append(out, check.Finding{
-						Kind:    check.KindComponent,
-						Subject: ref,
+					v.Outcome, v.Witness = outcome, w
+					if outcome != check.Fail {
+						break
+					}
+					v.Finding = &check.Finding{
+						Subject: check.ComponentEntity(ref),
 						Message: fmt.Sprintf(
 							"%s supplies net %q at %s %gV, above %s's absolute-maximum %s %gV — %s; %s",
 							src.RefDes, n.GetName(), srcParam.Symbol, srcParam.Value.GetMax(),
 							ref, load.Symbol, load.Value.GetMax(),
 							check.Citation(loadSpec, load), check.Citation(srcSpec, srcParam)),
 						Prov: conn.GetProv(),
-						// The two entities the sentence names and the subject is not: the regulator
-						// doing the supplying, and the net it supplies over. Declared in the order the
-						// message names them, so the panel's chips read like the sentence (agni issue
-						// 349). The subject stays the ENDANGERED part, because that is what a reader
-						// has to change.
+						// The two entities the sentence names and the FINDING's subject is not: the
+						// regulator doing the supplying, and the net it supplies over. Declared in the
+						// order the message names them, so the panel's chips read like the sentence
+						// (agni issue 349). The finding's subject stays the ENDANGERED part, because
+						// that is what a reader has to change.
 						Context: []check.ContextSubject{
-							{Kind: check.KindComponent, Subject: src.RefDes, Role: "source"},
-							{Kind: check.KindNet, Subject: n.GetName(), NetID: n.GetId(), Role: "rail"},
+							check.Ctx(check.ComponentEntity(src.RefDes), "source"),
+							check.Ctx(check.NetEntity(n), "rail"),
 						},
-						// BOTH citations, load first: the subject is the endangered part, so its
-						// document is the one a reviewer opens. The review's data-trust gate reads
+						// BOTH citations, load first: the finding's subject is the endangered part, so
+						// its document is the one a reviewer opens. The review's data-trust gate reads
 						// every entry and rates the finding by its weakest, which is the whole
 						// reason this field is a slice (WS3-028).
 						DatasheetProv: []*check.DatasheetCitation{
 							check.DatasheetCitationOf(loadSpec, load),
 							check.DatasheetCitationOf(srcSpec, srcParam),
 						},
-					})
+					}
 				}
+				out = append(out, v)
 			}
 		}
-		return out
-	}),
+	}
+	return out
 }
 
 // suppliedNets is the set of nets a part's output can reach: the nets it sits on, plus their

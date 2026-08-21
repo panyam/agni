@@ -71,7 +71,7 @@ func revFindings(d *ir.Design) []check.Finding {
 // blocking reverse flow.
 func TestReverseBlockingFiresOnBarePath(t *testing.T) {
 	fs := revFindings(revDesign("", false))
-	if len(fs) != 1 || fs[0].Subject != "VIN" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "VIN" {
 		t.Fatalf("want 1 finding on VIN, got %+v", fs)
 	}
 }

@@ -56,7 +56,7 @@ func inputProtectionVerdicts(m check.Model) []check.Verdict {
 			continue // a connector net that feeds no supply pin is a signal, not a power entry
 		}
 
-		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		switch {
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered

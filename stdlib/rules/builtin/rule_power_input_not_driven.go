@@ -57,7 +57,7 @@ func powerInputNotDrivenVerdicts(m check.Model) []check.Verdict {
 		}
 		drivers := check.CountDir(dirs, check.IsDriver)
 
-		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		switch {
 		case !typesPowerOut:
 			v.Outcome = check.NotConsidered

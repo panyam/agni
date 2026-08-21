@@ -82,14 +82,9 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 		out := []check.Finding{}
 		for _, row := range rows {
 			subj := row.Bind[Var(fq.SubjectVar)].S
-			f := check.Finding{
-				Kind:    fq.Kind,
-				Subject: subj,
-				Message: interpolate(fq.Message, row),
-				Prov:    provFor(m, fq.Kind, subj),
-			}
+			f := check.Finding{Subject: check.Entity{Kind: fq.Kind, Ref: subj}, Message: interpolate(fq.Message, row), Prov: provFor(m, fq.Kind, subj)}
 			if fq.PinVar != "" {
-				f.Pin = row.Bind[Var(fq.PinVar)].S
+				f.Subject.Pin = row.Bind[Var(fq.PinVar)].S
 			}
 			// In the author's declared order, which is the order the message names them. A context var
 			// that did not bind in this row contributes nothing rather than an empty chip: the row could
@@ -100,7 +95,7 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 				if ref == "" {
 					continue
 				}
-				f.Context = append(f.Context, check.ContextSubject{Kind: cv.Kind, Subject: ref, Role: cv.Role})
+				f.Context = append(f.Context, check.ContextSubject{Entity: check.Entity{Kind: cv.Kind, Ref: ref}, Role: cv.Role})
 			}
 			if fq.ParamSymbol != "" && fq.Kind == check.KindComponent {
 				if dp := check.DatasheetProvFor(m, subj, fq.ParamSymbol); dp != nil {

@@ -53,7 +53,7 @@ func decouplingPresentVerdicts(m check.Model) []check.Verdict {
 			continue // not a rail feeding a supply pin, or the reference the decoupling returns to
 		}
 
-		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		decap := firstOnNet(m, n, check.ClassCapacitor)
 		switch {
 		case n.Attributes[netgraph.AttrExternal] == "true":

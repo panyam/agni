@@ -12,10 +12,7 @@ import (
 // highlights its own drawn bus by name (WS7-042b) — and that a non-bus finding never gets a bus id,
 // keeping the two disjoint.
 func TestFindingProtoBusSubject(t *testing.T) {
-	bus := FindingProto(check.Finding{
-		Rule: "bus-not-modeled", Kind: check.KindBus, Subject: "DATA[7:0]",
-		Prov: &ir.Provenance{SourceFile: "x.kicad_sch"},
-	})
+	bus := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindBus, Ref: "DATA[7:0]"}, Rule: "bus-not-modeled", Prov: &ir.Provenance{SourceFile: "x.kicad_sch"}})
 	if bus.GetSubject().GetKind() != "bus" {
 		t.Errorf("bus subject kind = %q, want %q", bus.GetSubject().GetKind(), "bus")
 	}
@@ -27,9 +24,7 @@ func TestFindingProtoBusSubject(t *testing.T) {
 	}
 
 	// A net finding must NOT get a bus id.
-	net := FindingProto(check.Finding{
-		Rule: "single-pin-net", Kind: check.KindNet, Subject: "SIG",
-	})
+	net := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "SIG"}, Rule: "single-pin-net"})
 	if net.GetSubject().GetBusId() != "" {
 		t.Errorf("net subject bus_id = %q, want empty", net.GetSubject().GetBusId())
 	}
@@ -39,10 +34,7 @@ func TestFindingProtoBusSubject(t *testing.T) {
 // (WS9-048), so the CLI's review/check --format json and the web check panel both show the source
 // without parsing the message; a finding with no datasheet provenance leaves the field nil.
 func TestFindingProtoCarriesDatasheet(t *testing.T) {
-	backed := FindingProto(check.Finding{
-		Rule: "supply-exceeds-abs-max", Kind: check.KindComponent, Subject: "U1",
-		DatasheetProv: []*check.DatasheetCitation{{Doc: "SNOS412Q", DocRef: "snos412q", Page: 4, Section: "7.1 Absolute Maximum Ratings", Method: "hand", Confidence: 1.0}},
-	})
+	backed := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: "U1"}, Rule: "supply-exceeds-abs-max", DatasheetProv: []*check.DatasheetCitation{{Doc: "SNOS412Q", DocRef: "snos412q", Page: 4, Section: "7.1 Absolute Maximum Ratings", Method: "hand", Confidence: 1.0}}})
 	dss := backed.GetDatasheets()
 	if len(dss) != 1 {
 		t.Fatalf("datasheet-backed finding: want 1 citation on the wire, got %d", len(dss))
@@ -54,7 +46,7 @@ func TestFindingProtoCarriesDatasheet(t *testing.T) {
 	if ds.GetDoc() != "SNOS412Q" || ds.GetPage() != 4 || ds.GetSection() != "7.1 Absolute Maximum Ratings" || ds.GetMethod() != "hand" {
 		t.Errorf("citation = %+v", ds)
 	}
-	if plain := FindingProto(check.Finding{Rule: "single-pin-net", Kind: check.KindNet, Subject: "SIG"}); plain.GetDatasheets() != nil {
+	if plain := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "SIG"}, Rule: "single-pin-net"}); plain.GetDatasheets() != nil {
 		t.Errorf("non-datasheet finding got a citation = %+v", plain.GetDatasheets())
 	}
 }
@@ -121,13 +113,10 @@ func TestPartitionAvailableChangesNoFindings(t *testing.T) {
 // sentence above it. A conversion that sorted or bucketed would silently break that, and nothing
 // else in the pipeline would notice.
 func TestFindingProtoCarriesContext(t *testing.T) {
-	f := FindingProto(check.Finding{
-		Rule: "load-switch-trip-current", Kind: check.KindComponent, Subject: "Q1",
-		Context: []check.ContextSubject{
-			{Kind: check.KindComponent, Subject: "U3", Role: "controller"},
-			{Kind: check.KindComponent, Subject: "R7", Role: "sense"},
-		},
-	})
+	f := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: "Q1"}, Rule: "load-switch-trip-current", Context: []check.ContextSubject{
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: "U3"}, Role: "controller"},
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: "R7"}, Role: "sense"},
+	}})
 	got := f.GetContext()
 	if len(got) != 2 {
 		t.Fatalf("context entries = %d, want 2", len(got))
@@ -143,7 +132,7 @@ func TestFindingProtoCarriesContext(t *testing.T) {
 	}
 
 	// The common case, and always will be: a message naming only its subject carries no context.
-	plain := FindingProto(check.Finding{Rule: "single-pin-net", Kind: check.KindNet, Subject: "SIG"})
+	plain := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "SIG"}, Rule: "single-pin-net"})
 	if len(plain.GetContext()) != 0 {
 		t.Errorf("a finding naming only its subject must carry no context, got %d", len(plain.GetContext()))
 	}
@@ -154,13 +143,10 @@ func TestFindingProtoCarriesContext(t *testing.T) {
 // treat context as a list rather than a map, and this pins that so a later "tidy" keying by role
 // cannot silently drop one.
 func TestFindingProtoContextRolesNeedNotBeUnique(t *testing.T) {
-	f := FindingProto(check.Finding{
-		Rule: "i2c-address-collision", Kind: check.KindNet, Subject: "SDA",
-		Context: []check.ContextSubject{
-			{Kind: check.KindComponent, Subject: "U1", Role: "device"},
-			{Kind: check.KindComponent, Subject: "U2", Role: "device"},
-		},
-	})
+	f := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "SDA"}, Rule: "i2c-address-collision", Context: []check.ContextSubject{
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: "U1"}, Role: "device"},
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: "U2"}, Role: "device"},
+	}})
 	if n := len(f.GetContext()); n != 2 {
 		t.Fatalf("two entities in the same role must both survive, got %d", n)
 	}
@@ -170,10 +156,7 @@ func TestFindingProtoContextRolesNeedNotBeUnique(t *testing.T) {
 // reason a bus SUBJECT does — a bus carries no net, so its name is the only geometry join key it has.
 // Without this a bus named as context renders as a chip that highlights nothing.
 func TestFindingProtoContextBusJoinKey(t *testing.T) {
-	f := FindingProto(check.Finding{
-		Rule: "strap-group-collision", Kind: check.KindNet, Subject: "STRAP0",
-		Context: []check.ContextSubject{{Kind: check.KindBus, Subject: "ADDR[3:0]", Role: "bus"}},
-	})
+	f := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "STRAP0"}, Rule: "strap-group-collision", Context: []check.ContextSubject{{Entity: check.Entity{Kind: check.KindBus, Ref: "ADDR[3:0]"}, Role: "bus"}}})
 	if id := f.GetContext()[0].GetSubject().GetBusId(); id != "ADDR[3:0]" {
 		t.Errorf("bus context bus_id = %q, want the bus name", id)
 	}

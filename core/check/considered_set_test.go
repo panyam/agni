@@ -17,7 +17,7 @@ import (
 // So the claim is a DECLARATION (StatesConsideredSet), and this pins that RunVerdicts honours it.
 func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 	failing := func(m Model) []Finding {
-		return []Finding{{Kind: KindNet, Subject: "SIG", Message: "bad"}}
+		return []Finding{{Subject: NetNameEntity("SIG"), Message: "bad"}}
 	}
 	unconverted := &Rule{Name: "unconverted", Eval: FailuresOnly(failing)}
 	converted := &Rule{
@@ -25,8 +25,8 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 		StatesConsideredSet: true,
 		Eval: func(m Model) []Verdict {
 			return []Verdict{
-				{Outcome: Pass, Kind: KindNet, Subject: "CLEAN", Witness: &Witness{Statement: "fine"}},
-				{Outcome: Fail, Kind: KindNet, Subject: "SIG", Finding: &Finding{Kind: KindNet, Subject: "SIG", Message: "bad"}},
+				{Subjects: []Entity{NetNameEntity("CLEAN")}, Outcome: Pass, Witness: &Witness{Statement: "fine"}},
+				{Subjects: []Entity{NetNameEntity("SIG")}, Outcome: Fail, Finding: &Finding{Subject: NetNameEntity("SIG"), Message: "bad"}},
 			}
 		},
 	}
@@ -67,7 +67,7 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 // build/evidence.md warns about.
 func TestFailuresOnlyCarriesNoWitness(t *testing.T) {
 	eval := FailuresOnly(func(m Model) []Finding {
-		return []Finding{{Kind: KindNet, Subject: "SIG", Message: "bad"}}
+		return []Finding{{Subject: NetNameEntity("SIG"), Message: "bad"}}
 	})
 	for _, v := range eval(NewModel(&ir.Design{})) {
 		if v.Witness != nil {

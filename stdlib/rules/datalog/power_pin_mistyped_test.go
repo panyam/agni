@@ -33,7 +33,7 @@ func mistypedFixture() *ir.Design {
 
 func TestPowerPinMistyped_Fires(t *testing.T) {
 	fs := powerPinMistyped.Findings(check.NewModel(mistypedFixture()))
-	if len(fs) != 1 || fs[0].Subject != "U1" || fs[0].Pin != "1" {
+	if len(fs) != 1 || fs[0].Subject.Ref != "U1" || fs[0].Subject.Pin != "1" {
 		t.Fatalf("want exactly {U1 pin 1 (VDD, passive, alone)}, got %+v", fs)
 	}
 }

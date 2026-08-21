@@ -57,11 +57,7 @@ func unconnectedPinVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, p := range m.Pins() {
 		ref, pin := p.Component.RefDes, p.Designator
-		v := check.Verdict{
-			Kind:    check.KindPin,
-			Subject: ref,
-			Pin:     pin,
-		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: ref, Pin: pin}}}
 		switch m.PinDir(ref, pin) {
 		case ir.PinDirection_PIN_DIRECTION_NO_CONNECT:
 			v.Outcome = check.Pass
@@ -77,13 +73,7 @@ func unconnectedPinVerdicts(m check.Model) []check.Verdict {
 			}
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{Statement: "pin lands on no net and the symbol does not mark it no-connect"}
-			f := check.Finding{
-				Kind:    check.KindPin,
-				Subject: ref,
-				Pin:     pin,
-				Message: "pin connects to nothing",
-				Prov:    p.Component.Prov,
-			}
+			f := check.Finding{Subject: check.Entity{Kind: check.KindPin, Ref: ref, Pin: pin}, Message: "pin connects to nothing", Prov: p.Component.Prov}
 			v.Finding = &f
 		}
 		out = append(out, v)

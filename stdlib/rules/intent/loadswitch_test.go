@@ -165,8 +165,8 @@ func TestLoadSwitchTripBelowBudgetFires(t *testing.T) {
 		t.Fatalf("want 1 finding (a 2A limit on a 5A rail), got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Kind != check.KindNet || f.Subject != "VOUT" {
-		t.Errorf("subject = (%s, %q), want the declared rail net VOUT", f.Kind, f.Subject)
+	if f.Subject.Kind != check.KindNet || check.EntityRef(f.Subject) != "VOUT" {
+		t.Errorf("subject = (%s, %q), want the declared rail net VOUT", f.Subject.Kind, f.Subject)
 	}
 	for _, want := range []string{"5A", "2A", "V(OCP)", "R1", "U1", "0.025"} {
 		if !strings.Contains(f.Message, want) {

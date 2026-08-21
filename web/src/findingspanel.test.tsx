@@ -273,8 +273,8 @@ describe("selecting a finding keeps the rows it already rendered", () => {
 
 function v(over: Partial<VerdictItem> = {}): VerdictItem {
   return {
-    id: "i2c-pull-up:net:SDA", rule: "i2c-pull-up", outcome: "pass", kind: "net", subject: "SDA",
-    pin: "", netId: "", statement: "SDA reaches rail +3V3 through R1", terms: [], context: [], reason: "",
+    id: "i2c-pull-up:(net:SDA)", rule: "i2c-pull-up", outcome: "pass",
+    subjects: [{ kind: "net", subject: "SDA", pin: "" }], statement: "SDA reaches rail +3V3 through R1", terms: [], context: [], reason: "",
     ...over,
   };
 }
@@ -321,7 +321,7 @@ describe("the considered set", () => {
     sel.dispatchEvent(new Event("change"));
 
     (el.querySelector(".verdict-row") as HTMLElement).click();
-    expect(onSelectVerdict).toHaveBeenCalledWith("i2c-pull-up:net:SDA");
+    expect(onSelectVerdict).toHaveBeenCalledWith("i2c-pull-up:(net:SDA)");
   });
 });
 
@@ -329,7 +329,7 @@ describe("the considered set", () => {
 // rather than clicking a row, which is the CLI-to-viewer hop and the case nothing exercised.
 describe("arriving on a verdict link", () => {
   it("opens on the table containing the verdict, not on violations", () => {
-    const { el } = mountPanel({ verdicts: [v()], focusedVerdict: "i2c-pull-up:net:SDA" });
+    const { el } = mountPanel({ verdicts: [v()], focusedVerdict: "i2c-pull-up:(net:SDA)" });
     // No toggle was touched. A reader following a link has no reason to know there is one.
     expect(el.querySelector(".verdicts-table")).not.toBeNull();
     expect(el.querySelector(".verdict-row.selected")?.textContent).toContain("SDA");

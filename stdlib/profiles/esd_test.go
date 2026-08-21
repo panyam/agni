@@ -40,7 +40,7 @@ func esdFindings(t *testing.T, d *ir.Design) []check.Finding {
 func TestESDRequirementScopedToExposedLines(t *testing.T) {
 	got := map[string]bool{}
 	for _, f := range esdFindings(t, canExposed()) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if !got["BUS_CANL"] {
 		t.Errorf("want BUS_CANL reported (on a connector, no clamp), got %v", got)
@@ -89,13 +89,13 @@ func TestESDRequirementMatchesCoreRule(t *testing.T) {
 	inScope := func(subject string) bool { return strings.HasPrefix(subject, "BUS_") }
 	coreSet := map[string]bool{}
 	for _, f := range core.Findings(m) {
-		if inScope(f.Subject) {
-			coreSet[f.Subject] = true
+		if inScope(check.EntityRef(f.Subject)) {
+			coreSet[check.EntityRef(f.Subject)] = true
 		}
 	}
 	reqSet := map[string]bool{}
 	for _, f := range esdFindings(t, d) {
-		reqSet[f.Subject] = true
+		reqSet[check.EntityRef(f.Subject)] = true
 	}
 
 	if len(coreSet) == 0 {
@@ -125,7 +125,7 @@ func TestESDRequirementCreditsZener(t *testing.T) {
 
 	got := map[string]bool{}
 	for _, f := range esdFindings(t, d) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if got["BUS_CANH"] {
 		t.Errorf("a Zener-clamped net is esd-clamp-not-tvs's finding, not this one: %v", got)

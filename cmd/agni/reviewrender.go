@@ -200,23 +200,24 @@ func findingSpecs(findings []check.Finding) []*geom.HighlightSpec {
 	seen := map[string]bool{}
 	var specs []*geom.HighlightSpec
 	for _, f := range findings {
-		key := f.Kind + "\x00" + f.Subject + "\x00" + f.Pin + "\x00" + f.NetID
+		e := f.Subject
+		key := e.Kind + "\x00" + e.Ref + "\x00" + e.Pin + "\x00" + e.NetID
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
 		spec := &geom.HighlightSpec{Color: severityColor(f.Severity)}
-		switch f.Kind {
+		switch e.Kind {
 		case check.KindNet:
-			spec.Nets = []string{f.Subject}
-			if f.NetID != "" {
-				spec.NetIds = []string{f.NetID}
+			spec.Nets = []string{e.Ref}
+			if e.NetID != "" {
+				spec.NetIds = []string{e.NetID}
 			}
 			spec.Shape = geom.HighlightShape_HIGHLIGHT_SHAPE_PATH
 		case check.KindPin:
-			spec.Pins = []*geom.PinRef{{RefDes: f.Subject, Pin: f.Pin}}
+			spec.Pins = []*geom.PinRef{{RefDes: e.Ref, Pin: e.Pin}}
 		default: // KindComponent
-			spec.Components = []string{f.Subject}
+			spec.Components = []string{e.Ref}
 			spec.Shape = geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT
 		}
 		specs = append(specs, spec)

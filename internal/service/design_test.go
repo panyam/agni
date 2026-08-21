@@ -453,7 +453,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, n := range m.Nets() {
-				out = append(out, check.Finding{Kind: check.KindNet, Subject: n.Name, Message: "seen"})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.Name}, Message: "seen"})
 			}
 			return out
 		}),

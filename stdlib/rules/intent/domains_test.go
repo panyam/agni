@@ -20,7 +20,7 @@ func TestVoltageDomainFiresOnAbsentRail(t *testing.T) {
 	// Only 3V3 exists; the declared VDD_IO rail is absent -> one finding.
 	d := &ir.Design{Nets: []*ir.Net{{Name: "3V3"}}}
 	fs := check.Run(check.NewModel(d), Compile(decl))
-	if len(fs) != 1 || fs[0].Rule != RuleVoltageDomain || fs[0].Subject != "VDD_IO" {
+	if len(fs) != 1 || fs[0].Rule != RuleVoltageDomain || check.EntityRef(fs[0].Subject) != "VDD_IO" {
 		t.Fatalf("want one absent-rail finding for VDD_IO, got %+v", fs)
 	}
 }
@@ -31,7 +31,7 @@ func TestVoltageDomainFiresOnWrongDomain(t *testing.T) {
 	decl := declOf(t, "name: I\nvoltage_domains:\n  - {name: io_3v3, nominal: 3.3, rails: [5V0]}")
 	d := &ir.Design{Nets: []*ir.Net{{Name: "5V0"}}}
 	fs := check.Run(check.NewModel(d), Compile(decl))
-	if len(fs) != 1 || fs[0].Subject != "5V0" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "5V0" {
 		t.Fatalf("want one wrong-domain finding for 5V0, got %+v", fs)
 	}
 }

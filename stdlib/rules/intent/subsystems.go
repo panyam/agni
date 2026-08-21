@@ -24,19 +24,11 @@ func subsystemRule(s Subsystem) *check.Rule {
 		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			if s.Source != nil && !modulePresent(m, *s.Source) {
-				out = append(out, check.Finding{
-					Kind:    check.KindComponent,
-					Subject: s.Name,
-					Message: fmt.Sprintf("subsystem %q is missing its source component (%s)", s.Name, moduleCriterion(*s.Source)),
-				})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: s.Name}, Message: fmt.Sprintf("subsystem %q is missing its source component (%s)", s.Name, moduleCriterion(*s.Source))})
 			}
 			for _, net := range s.Nets {
 				if netByName(m, net) == nil {
-					out = append(out, check.Finding{
-						Kind:    check.KindNet,
-						Subject: net,
-						Message: fmt.Sprintf("subsystem %q requires net %q, which is not present on the design", s.Name, net),
-					})
+					out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: net}, Message: fmt.Sprintf("subsystem %q requires net %q, which is not present on the design", s.Name, net)})
 				}
 			}
 			return out

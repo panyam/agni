@@ -38,17 +38,7 @@ func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
 func findingsFromProto(fs []*checkspb.Finding) []check.Finding {
 	out := make([]check.Finding, 0, len(fs))
 	for _, f := range fs {
-		out = append(out, check.Finding{
-			Rule:          f.GetRule(),
-			Severity:      f.GetSeverity(),
-			Kind:          f.GetSubject().GetKind(),
-			Subject:       f.GetSubject().GetRef(),
-			Pin:           f.GetSubject().GetPin(),
-			NetID:         f.GetSubject().GetNetId(),
-			Message:       f.GetMessage(),
-			Prov:          f.GetProvenance(),
-			DatasheetProv: datasheetsFromProto(f.GetDatasheets()),
-		})
+		out = append(out, check.Finding{Subject: check.Entity{Kind: f.GetSubject().GetKind(), Ref: f.GetSubject().GetRef(), Pin: f.GetSubject().GetPin(), NetID: f.GetSubject().GetNetId()}, Rule: f.GetRule(), Severity: f.GetSeverity(), Message: f.GetMessage(), Prov: f.GetProvenance(), DatasheetProv: datasheetsFromProto(f.GetDatasheets())})
 	}
 	return out
 }

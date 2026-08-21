@@ -14,30 +14,26 @@ import (
 // cleanly through a conversion that drops it, because zero in is zero out, so a sparse fixture
 // reports success while covering nothing.
 func fullVerdict() check.Verdict {
-	return check.Verdict{
-		Rule:    "pin-exceeds-abs-max",
-		Outcome: check.Inconclusive,
-		Kind:    check.KindPin,
-		Subject: "U12",
-		Pin:     "7",
-		NetID:   "82ddd812ce0e",
-		Reason:  "pin could not be resolved to a datasheet terminal",
-		Witness: &check.Witness{
-			Statement: "3.3 V is within the absolute maximum of 3.6 V",
-			Terms: []check.WitnessTerm{
-				{Label: "nominal", Value: "3.3 V"},
-				{Label: "absolute maximum", Value: "3.6 V"},
-			},
-			Datasheet: []*check.DatasheetCitation{{
-				Doc: "ACME-XLAT Rev A", DocRef: "ds", Page: 4, Section: "Absolute Maximum Ratings",
-				Method: "hand", Confidence: 0.9, Verification: "verified", VerifiedRevision: "Rev A",
-			}},
+	// A TWO-entity tuple, deliberately. A repeated field round-trips at arity one for any converter
+	// that drops everything past the first element, so a one-subject fixture would pass on the bug
+	// this change exists to make impossible.
+	return check.Verdict{Subjects: []check.Entity{
+		{Kind: check.KindPin, Ref: "U12", Pin: "7", NetID: "82ddd812ce0e"},
+		{Kind: check.KindNet, Ref: "+5V", NetID: "9de85e683cf7"},
+	}, Rule: "pin-exceeds-abs-max", Outcome: check.Inconclusive, Reason: "pin could not be resolved to a datasheet terminal", Witness: &check.Witness{
+		Statement: "3.3 V is within the absolute maximum of 3.6 V",
+		Terms: []check.WitnessTerm{
+			{Label: "nominal", Value: "3.3 V"},
+			{Label: "absolute maximum", Value: "3.6 V"},
 		},
-		Context: []check.ContextSubject{
-			{Kind: check.KindNet, Subject: "+3V3", NetID: "9de85e683cf7", Role: "rail"},
-			{Kind: check.KindPin, Subject: "U9", Pin: "2", Role: "source"},
-		},
-	}
+		Datasheet: []*check.DatasheetCitation{{
+			Doc: "ACME-XLAT Rev A", DocRef: "ds", Page: 4, Section: "Absolute Maximum Ratings",
+			Method: "hand", Confidence: 0.9, Verification: "verified", VerifiedRevision: "Rev A",
+		}},
+	}, Context: []check.ContextSubject{
+		{Entity: check.Entity{Kind: check.KindNet, Ref: "+3V3", NetID: "9de85e683cf7"}, Role: "rail"},
+		{Entity: check.Entity{Kind: check.KindPin, Ref: "U9", Pin: "2"}, Role: "source"},
+	}}
 }
 
 // C26: the twin and its converter carry a deep-equality round-trip test.
@@ -83,7 +79,7 @@ func TestVerdictIDIsDerivedNotTrusted(t *testing.T) {
 func TestVerdictFieldCensus(t *testing.T) {
 	// Finding is knowingly absent from the wire: a failing verdict's finding travels in
 	// CheckDesignResponse.findings, and sending it here too would put one defect on the wire twice.
-	wire := []string{"Context", "Kind", "NetID", "Outcome", "Pin", "Reason", "Rule", "Subject", "Witness"}
+	wire := []string{"Context", "Outcome", "Reason", "Rule", "Subjects", "Witness"}
 	goOnly := []string{"Finding"}
 
 	var got []string

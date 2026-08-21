@@ -233,7 +233,7 @@ func TestRuleFromQuery(t *testing.T) {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Kind != check.KindPin || f.Subject != "U1" || f.Pin != "1" {
+	if f.Subject.Kind != check.KindPin || f.Subject.Ref != "U1" || f.Subject.Pin != "1" {
 		t.Fatalf("wrong subject/pin: %+v", f)
 	}
 	if f.Message != "pin 1 sits alone on net STUB" {
@@ -277,8 +277,8 @@ func TestRuleFromQueryCarriesContext(t *testing.T) {
 	// The entity the SENTENCE names, resolved from the same row that produced the message. If these
 	// ever disagree, the chip sends the reader somewhere the message did not mention, which is the
 	// original bug wearing a different hat.
-	if !strings.Contains(fs[0].Message, c.Subject) {
-		t.Errorf("context entity %q is not named in the message %q", c.Subject, fs[0].Message)
+	if !strings.Contains(fs[0].Message, c.Ref) {
+		t.Errorf("context entity %q is not named in the message %q", c.Ref, fs[0].Message)
 	}
 }
 

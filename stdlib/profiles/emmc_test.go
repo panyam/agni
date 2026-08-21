@@ -64,13 +64,13 @@ func TestEMMCFires(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("want 3 distinct rules firing, got %d: %+v", len(got), got)
 	}
-	if f := got["emmc-signal-missing"]; f.Subject != "MMC_CMD" || !strings.Contains(f.Message, "DAT4") {
+	if f := got["emmc-signal-missing"]; check.EntityRef(f.Subject) != "MMC_CMD" || !strings.Contains(f.Message, "DAT4") {
 		t.Errorf("signal-missing: want anchor MMC_CMD + DAT4, got %+v", f)
 	}
-	if f := got["emmc-missing-pullup"]; f.Subject != "MMC_CMD" {
+	if f := got["emmc-missing-pullup"]; check.EntityRef(f.Subject) != "MMC_CMD" {
 		t.Errorf("missing-pullup: want MMC_CMD, got %+v", f)
 	}
-	if f := got["emmc-signal-dangling"]; f.Subject != "MMC_CLK" {
+	if f := got["emmc-signal-dangling"]; check.EntityRef(f.Subject) != "MMC_CLK" {
 		t.Errorf("signal-dangling: want MMC_CLK, got %+v", f)
 	}
 }
@@ -122,7 +122,7 @@ func TestEMMCHostIncomplete(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("want exactly 1 finding (host-incomplete DAT4, convention suppressed), got %d: %+v", len(fs), fs)
 	}
-	if f := fs[0]; f.Rule != "emmc-host-incomplete" || f.Subject != "U2" || !strings.Contains(f.Message, "DAT4") {
+	if f := fs[0]; f.Rule != "emmc-host-incomplete" || check.EntityRef(f.Subject) != "U2" || !strings.Contains(f.Message, "DAT4") {
 		t.Fatalf("want host-incomplete on U2/DAT4, got %+v", f)
 	}
 }
@@ -137,7 +137,7 @@ func TestEMMCHostWhollyAbsent(t *testing.T) {
 	}
 	got := 0
 	for _, f := range check.Run(check.NewModel(d), Compile(EMMC)) {
-		if f.Rule == "emmc-host-incomplete" && f.Subject == "U2" {
+		if f.Rule == "emmc-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
 	}

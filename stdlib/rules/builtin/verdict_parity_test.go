@@ -107,18 +107,18 @@ func TestRunVerdictsCollectsAcrossRules(t *testing.T) {
 	}
 	for _, v := range vs {
 		if v.Rule == "" {
-			t.Errorf("verdict about %s/%s carries no rule identity", v.Kind, v.Subject)
+			t.Errorf("verdict about %s/%s carries no rule identity", v.Subjects[0].Kind, check.EntityRef(v.Subjects[0]))
 		}
 		if v.Outcome == "" {
-			t.Errorf("%s: verdict about %s has no outcome", v.Rule, v.Subject)
+			t.Errorf("%s: verdict about %s has no outcome", v.Rule, check.EntityRef(v.Subjects[0]))
 		}
 	}
 	// Ordering matches Run so a verdict table and a findings table read down the same axis.
 	for i := 1; i < len(vs); i++ {
 		a, b := vs[i-1], vs[i]
-		if a.Rule > b.Rule || (a.Rule == b.Rule && a.Subject > b.Subject) {
+		if a.Rule > b.Rule || (a.Rule == b.Rule && a.Subjects[0].Ref > b.Subjects[0].Ref) {
 			t.Errorf("verdicts out of order at %d: %s/%s before %s/%s",
-				i, a.Rule, a.Subject, b.Rule, b.Subject)
+				i, a.Rule, a.Subjects[0].Ref, b.Rule, b.Subjects[0].Ref)
 		}
 	}
 }

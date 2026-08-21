@@ -41,7 +41,7 @@ func run(path string) error {
 	findings := check.Run(check.NewModel(d), check.DefaultCatalog().Rules())
 	fmt.Printf("%s: %d components, %d finding(s)\n", path, len(d.Components), len(findings))
 	for _, f := range findings {
-		fmt.Printf("  [%s] %s: %s (%s)\n", f.Severity, f.Rule, f.Subject, f.Message)
+		fmt.Printf("  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	return nil
 }

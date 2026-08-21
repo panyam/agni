@@ -98,8 +98,8 @@ func resonatorRedundantLoadCapsVerdicts(m check.Model) []check.Verdict {
 		sort.Strings(names)
 		for _, name := range names {
 			t := r.terms[name]
-			v := check.Verdict{Kind: check.KindPin, Subject: ref, Pin: t.pin}
-			v.Context = []check.ContextSubject{{Kind: check.KindNet, Subject: name, NetID: t.net.Id, Role: "terminal"}}
+			v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: ref, Pin: t.pin}}}
+			v.Context = []check.ContextSubject{{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"}}
 			if t.net.Attributes[netgraph.AttrExternal] == "true" {
 				v.Outcome = check.NotConsidered
 				v.Reason = "terminal net " + name + " continues onto a sheet this read did not open, so a load capacitor may be drawn outside it"
@@ -129,18 +129,17 @@ func resonatorRedundantLoadCapsVerdicts(m check.Model) []check.Verdict {
 				Statement: "capacitor " + capRef + " sits on terminal net " + name + " with its other leg on ground, adding to the load this part already integrates",
 				Terms:     []check.WitnessTerm{{Label: "external load capacitor", Value: capRef}},
 			}
-			v.Context = append(v.Context, check.ContextSubject{Kind: check.KindComponent, Subject: capRef, Role: "capacitor"})
+			v.Context = append(v.Context, check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: capRef}, Role: "capacitor"})
 			v.Finding = &check.Finding{
-				Kind:    check.KindComponent,
-				Subject: ref,
+				Subject: check.Entity{Kind: check.KindComponent, Ref: ref},
 				Message: "ceramic resonator terminal net " + name + " has an external load capacitor " + capRef + " (this part integrates its load caps)",
 				Prov:    r.comp.Prov,
 				// The terminal and the cap, in the order the sentence names them. The subject
 				// stays the resonator, because that is the part whose datasheet makes the caps
 				// redundant, but the cap is what a reader deletes (agni issue 349).
 				Context: []check.ContextSubject{
-					{Kind: check.KindNet, Subject: name, NetID: t.net.Id, Role: "terminal"},
-					{Kind: check.KindComponent, Subject: capRef, Role: "capacitor"},
+					{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"},
+					{Entity: check.Entity{Kind: check.KindComponent, Ref: capRef}, Role: "capacitor"},
 				},
 			}
 			out = append(out, v)

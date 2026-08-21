@@ -28,14 +28,14 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 					continue
 				}
 				if msg, undecidable := propertyUndecidable(m, p); undecidable {
-					out = append(out, check.Finding{Kind: check.KindNet, Subject: p.Net, Message: msg, Inconclusive: true})
+					out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: p.Net}, Message: msg, Inconclusive: true})
 					continue
 				}
 				msg, bad := propertyViolation(m, p)
 				if !bad {
 					continue
 				}
-				out = append(out, check.Finding{Kind: check.KindNet, Subject: p.Net, Message: msg})
+				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: p.Net}, Message: msg})
 			}
 			return out
 		}),

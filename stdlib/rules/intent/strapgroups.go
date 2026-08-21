@@ -74,7 +74,7 @@ func groupValue(m check.Model, g StrapGroup) (value int, bits []strapBit, ok boo
 func netContext(names []string, role string) []check.ContextSubject {
 	out := make([]check.ContextSubject, 0, len(names))
 	for _, n := range names {
-		out = append(out, check.ContextSubject{Kind: check.KindNet, Subject: n, Role: role})
+		out = append(out, check.ContextSubject{Entity: check.Entity{Kind: check.KindNet, Ref: n}, Role: role})
 	}
 	return out
 }
@@ -103,41 +103,103 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 		Remedy:   intentRemedy(docKeyStrapGroup),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-			// A declared net absent from the design is the presence forms' business, not this rule's.
-			for _, netName := range g.Nets {
-				if netNamed(m, netName) == nil {
-					return nil
-				}
-			}
-			got, bits, ok := groupValue(m, g)
-			if !ok {
-				return []check.Finding{{
-					Kind: check.KindNet, Subject: g.Nets[0], Inconclusive: true,
-					Message: fmt.Sprintf("strap group %q on %s cannot be read: %s carry no bias and the group declares no default level, so the encoded value is unknown (declaring the part's internal pull as `default` would resolve it)",
-						g.Name, g.Device, strings.Join(undecidedNets(bits), ", ")),
-					// The part, then the nets that could not be read, in the order the message names
-					// them. The subject is only the FIRST strap net, so the others were named in prose
-					// and reachable nowhere (agni issue 349). The group NAME is a declaration from the
-					// intent file rather than a design entity, so it is not context.
-					Context: append(
-						[]check.ContextSubject{{Kind: check.KindComponent, Subject: g.Device, Role: "device"}},
-						netContext(undecidedNets(bits), "undecided")...),
-				}}
-			}
-			if got == g.Value {
-				return nil
-			}
-			return []check.Finding{{
-				Kind: check.KindNet, Subject: g.Nets[0],
-				Message: fmt.Sprintf("strap group %q on %s encodes %d, but the design intent declares %d (%s)",
-					g.Name, g.Device, got, g.Value, describeBits(bits)),
-				// The part the group straps. The subject is one of the group's nets, so the device the
-				// whole finding is about was named in prose only.
-				Context: []check.ContextSubject{{Kind: check.KindComponent, Subject: g.Device, Role: "device"}},
-			}}
-		}),
+		// The device and every net the group straps. A strap group IS an N-tuple: the value it encodes
+		// is a property of all the bits together, and no single net carries it. This rule used to name
+		// g.Nets[0] as a stand-in with the rest in prose, which its own comment recorded as "the others
+		// were named in prose and reachable nowhere".
+		SubjectShape:        strapShape(len(g.Nets)),
+		Eval:                func(m check.Model) []check.Verdict { return strapGroupVerdicts(m, g) },
+		StatesConsideredSet: true,
 	}
+}
+
+// strapShape is the declared tuple for a group of n nets: the device, then one element per bit.
+func strapShape(n int) []string {
+	out := make([]string, 0, n+1)
+	out = append(out, check.KindComponent)
+	for i := 0; i < n; i++ {
+		out = append(out, check.KindNet)
+	}
+	return out
+}
+
+// strapGroupVerdicts decides ONE subject, the group itself, because a strap group has exactly one
+// question and one answer: does the wiring encode the number the intent declares.
+//
+// THE ARITY IS THE POINT HERE and it is not two. A 4-bit address strap is a device and four nets, and
+// the answer belongs to all five together. This is the case that shows why a pair-shaped fix would
+// have been the wrong shape: nothing about the identity problem is specific to two.
+//
+// THE PASS IS NEW AND IS THE WHOLE VALUE. A strap group that encodes the declared address reported
+// nothing, exactly like one whose nets the design does not carry. For an intent rule, "the board
+// straps this part to 0x48 as declared" is the sentence the reviewer opened the report for.
+func strapGroupVerdicts(m check.Model, g StrapGroup) []check.Verdict {
+	subjects := make([]check.Entity, 0, len(g.Nets)+1)
+	subjects = append(subjects, check.ComponentEntity(g.Device))
+	for _, netName := range g.Nets {
+		subjects = append(subjects, check.NetNameEntity(netName))
+	}
+	v := check.Verdict{Subjects: subjects}
+
+	// A declared net absent from the design is the presence forms' business, not this rule's. It is
+	// still this rule's SUBJECT, so it says so rather than vanishing: an intent file naming a net the
+	// board does not have used to leave no trace here at all.
+	for _, netName := range g.Nets {
+		if netNamed(m, netName) == nil {
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the design carries no net named %q, so the group's bits cannot be read (the presence forms report the missing net)", netName)
+			return []check.Verdict{v}
+		}
+	}
+
+	got, bits, ok := groupValue(m, g)
+	if !ok {
+		msg := fmt.Sprintf("strap group %q on %s cannot be read: %s carry no bias and the group declares no default level, so the encoded value is unknown (declaring the part's internal pull as `default` would resolve it)",
+			g.Name, g.Device, strings.Join(undecidedNets(bits), ", "))
+		v.Outcome = check.Inconclusive
+		v.Witness = &check.Witness{Statement: msg}
+		v.Finding = &check.Finding{
+			Subject: check.NetNameEntity(g.Nets[0]), Inconclusive: true, Message: msg,
+			// The part, then the nets that could not be read, in the order the message names
+			// them. The FINDING's subject is one net, because a reader is told one place to start;
+			// the verdict above names the whole group (agni issue 349). The group NAME is a
+			// declaration from the intent file rather than a design entity, so it is not context.
+			Context: append(
+				[]check.ContextSubject{check.Ctx(check.ComponentEntity(g.Device), "device")},
+				netContext(undecidedNets(bits), "undecided")...),
+		}
+		return []check.Verdict{v}
+	}
+	if got == g.Value {
+		v.Outcome = check.Pass
+		v.Witness = &check.Witness{
+			Statement: fmt.Sprintf("strap group %q on %s encodes %d, which is what the design intent declares (%s)",
+				g.Name, g.Device, got, describeBits(bits)),
+			Terms: []check.WitnessTerm{
+				{Label: "encoded", Value: fmt.Sprint(got)},
+				{Label: "declared", Value: fmt.Sprint(g.Value)},
+			},
+		}
+		return []check.Verdict{v}
+	}
+	msg := fmt.Sprintf("strap group %q on %s encodes %d, but the design intent declares %d (%s)",
+		g.Name, g.Device, got, g.Value, describeBits(bits))
+	v.Outcome = check.Fail
+	v.Witness = &check.Witness{
+		Statement: msg,
+		Terms: []check.WitnessTerm{
+			{Label: "encoded", Value: fmt.Sprint(got)},
+			{Label: "declared", Value: fmt.Sprint(g.Value)},
+		},
+	}
+	v.Finding = &check.Finding{
+		Subject: check.NetNameEntity(g.Nets[0]),
+		Message: msg,
+		// The part the group straps. The finding's subject is one of the group's nets, so the device
+		// the whole finding is about was named in prose only.
+		Context: []check.ContextSubject{check.Ctx(check.ComponentEntity(g.Device), "device")},
+	}
+	return []check.Verdict{v}
 }
 
 // describeBits renders the observed bits MSB-first so a finding says WHICH pin is wrong, not only
@@ -212,11 +274,10 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 					devices := make([]check.ContextSubject, 0, len(clash))
 					for _, d := range clash {
 						names = append(names, fmt.Sprintf("%s (%s)", d.g.Device, d.g.Name))
-						devices = append(devices, check.ContextSubject{Kind: check.KindComponent, Subject: d.g.Device, Role: "device"})
+						devices = append(devices, check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: d.g.Device}, Role: "device"})
 					}
 					out = append(out, check.Finding{
-						Kind:    check.KindNet,
-						Subject: clash[0].g.Nets[0],
+						Subject: check.Entity{Kind: check.KindNet, Ref: clash[0].g.Nets[0]},
 						Message: fmt.Sprintf("%s both strap to address %d on bus %s; two devices answering one address make that bus unreliable",
 							strings.Join(names, " and "), v, bus),
 						// Both colliding devices, in message order. This is the case that made context a

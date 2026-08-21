@@ -597,7 +597,7 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
 	limit := min(len(fs), 50)
 	fmt.Fprintf(w, "\nfirst %d:\n", limit)
 	for _, f := range fs[:limit] {
-		fmt.Fprintf(w, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, f.Subject, f.Message)
+		fmt.Fprintf(w, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	fmt.Fprintf(w, "\n%d finding(s) total\n", len(fs))
 }

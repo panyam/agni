@@ -53,10 +53,8 @@ var busNotModeled = &check.Rule{
 func busNotModeledVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, b := range m.UnmodeledBuses() {
-		v := check.Verdict{
-			Kind:    check.KindBus, // a bus, not a net: its highlight join is the uuid (WS7-042b)
-			Subject: busSubject(b),
-		}
+		// A bus, not a net: its highlight join is its own label (WS7-042b).
+		v := check.Verdict{Subjects: []check.Entity{check.BusEntity(busSubject(b))}}
 		members := b.GetMembers()
 		missing := firstUnmodelledMember(m, members)
 		switch {
@@ -85,12 +83,7 @@ func busNotModeledVerdicts(m check.Model) []check.Verdict {
 			}
 		}
 		if v.Outcome == check.Fail {
-			v.Finding = &check.Finding{
-				Kind:    check.KindBus,
-				Subject: busSubject(b),
-				Message: busNotModeledMessage,
-				Prov:    b.Prov,
-			}
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindBus, Ref: busSubject(b)}, Message: busNotModeledMessage, Prov: b.Prov}
 		}
 		out = append(out, v)
 	}

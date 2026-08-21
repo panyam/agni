@@ -61,7 +61,7 @@ func reverseBlockingVerdicts(m check.Model) []check.Verdict {
 			continue // no power input downstream, so there is no power path to block
 		}
 
-		v := check.Verdict{Kind: check.KindNet, Subject: n.GetName()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.GetName()}}}
 		switch outcome {
 		case pathProtected:
 			v.Outcome = check.Pass
@@ -75,10 +75,7 @@ func reverseBlockingVerdicts(m check.Model) []check.Verdict {
 			v.Witness = &check.Witness{
 				Statement: "the connector reaches a power input through passives alone, so nothing in the path passes current one way",
 			}
-			v.Finding = &check.Finding{
-				Kind: check.KindNet, Subject: n.GetName(), Prov: n.GetProv(),
-				Message: "connector feeds a power input with no reverse-blocking element in the path",
-			}
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.GetName()}, Prov: n.GetProv(), Message: "connector feeds a power input with no reverse-blocking element in the path"}
 		case pathUnclassifiable:
 			// Inconclusive, not NotConsidered: the rule had everything it needed and REACHED the
 			// comparison, and the discrimination itself is impossible from a netlist. It still has to
@@ -91,7 +88,7 @@ func reverseBlockingVerdicts(m check.Model) []check.Verdict {
 			}
 			v.Context = compContext(ref, "transistor")
 			v.Finding = &check.Finding{
-				Kind: check.KindNet, Subject: n.GetName(), Prov: n.GetProv(), Inconclusive: true,
+				Subject: check.Entity{Kind: check.KindNet, Ref: n.GetName()}, Prov: n.GetProv(), Inconclusive: true,
 				Message: fmt.Sprintf(
 					"connector feeds a power input through transistor %s, which may be an ideal diode or "+
 						"ORing FET providing reverse protection, or may be an ordinary switch providing none. "+

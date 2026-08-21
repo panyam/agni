@@ -237,9 +237,22 @@ message Verdict {
   string id = 1;
   string rule = 2;
   Outcome outcome = 3;
-  // subject is the entity this verdict is about, the same type and the same highlight join key a
-  // Finding uses.
-  Subject subject = 4;
+  // subjects is the TUPLE of entities this verdict is about, in the rule's own order, and it is what
+  // `id` above is derived from. Never empty.
+  //
+  // REPEATED BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single entity. A
+  // clearance violation is a distance between two nets; a regulator over-driving a part it feeds is
+  // only pinned down by the regulator, the rail and the load, since one source feeding one load over
+  // two rails is two different answers; a strap group is a device and the N nets encoding its value.
+  // Keying those by one entity gives one id to several answers.
+  //
+  // ORDER IS THE RULE'S AND IS SIGNIFICANT: a tracking bound reads subject-pin minus reference-pin,
+  // so swapping the two inverts the sign. A symmetric relation is canonicalised by the rule before it
+  // gets here, never by a consumer.
+  //
+  // A Finding's subject stays SINGULAR and is one of these. The two answer different questions: this
+  // tuple is the verdict's identity, and a finding's subject is the one entity a reader has to change.
+  repeated Subject subjects = 4;
   // witness is what the outcome rests on. REQUIRED on PASS, FAIL and INCONCLUSIVE, and what makes a
   // pass evidence. Unset is legitimate only on NO_LIMIT and NOT_CONSIDERED, where the point of the
   // verdict is that there was nothing to rest on.

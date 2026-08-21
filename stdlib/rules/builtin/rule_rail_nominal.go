@@ -49,8 +49,7 @@ var railNominalOutOfRecommended = &check.Rule{
 					rel = fmt.Sprintf("is below recommended minimum %gV", binding.Value.GetMin())
 				}
 				return &check.Finding{
-					Kind:    check.KindComponent,
-					Subject: ev.comp.RefDes,
+					Subject: check.Entity{Kind: check.KindComponent, Ref: ev.comp.RefDes},
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV %s for %s — %s",
 						ev.pin, ev.net, ev.nominal, rel, binding.Symbol, check.Citation(ev.spec, binding)),
 					Prov: ev.comp.Prov,

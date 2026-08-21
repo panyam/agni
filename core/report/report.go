@@ -14,6 +14,7 @@ package report
 import (
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -76,15 +77,16 @@ func (r RuleReport) Failed() bool {
 type Row struct {
 	ID      string
 	Outcome check.Outcome
-	Kind    string
-	Subject string
-	Pin     string
-	Message string // the violation sentence, set on a failure
-	Witness string // what the outcome rests on
-	Reason  string // why an undecidable subject could not be judged
-	Terms   []Term
-	Context []string // other entities the proof names
-	URL     string   // empty when the caller supplied no base
+	// Subjects is what the row is about, in the rule's order: one entity for most rules, the whole
+	// tuple for a rule whose question is a relation. A reader of a copper-clearance row wants both
+	// nets, and a row that named one of them would be asking them to guess the other.
+	Subjects []check.Entity
+	Message  string // the violation sentence, set on a failure
+	Witness  string // what the outcome rests on
+	Reason   string // why an undecidable subject could not be judged
+	Terms    []Term
+	Context  []string // other entities the proof names
+	URL      string   // empty when the caller supplied no base
 }
 
 // Term is one labelled fact behind a row's witness.
@@ -151,11 +153,9 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 		s := section(f.Rule)
 		s.Counts[check.Fail]++
 		s.Rows = append(s.Rows, Row{
-			Outcome: check.Fail,
-			Kind:    f.Kind,
-			Subject: f.Subject,
-			Pin:     f.Pin,
-			Message: f.Message,
+			Outcome:  check.Fail,
+			Subjects: []check.Entity{f.Subject},
+			Message:  f.Message,
 		})
 	}
 
@@ -199,21 +199,27 @@ func sortRows(rows []Row) {
 		if ri != rj {
 			return ri < rj
 		}
-		if rows[i].Subject != rows[j].Subject {
-			return rows[i].Subject < rows[j].Subject
-		}
-		return rows[i].Pin < rows[j].Pin
+		return rowRef(rows[i]) < rowRef(rows[j])
 	})
+}
+
+// rowRef is a row's subject tuple as one string, for ordering only. Rows sort by the tuple in the
+// rule's own order rather than by a canonicalised one, so two rows of the same rule sort the way the
+// rule reads them.
+func rowRef(r Row) string {
+	parts := make([]string, 0, len(r.Subjects))
+	for _, e := range r.Subjects {
+		parts = append(parts, check.EntityRef(e))
+	}
+	return strings.Join(parts, ",")
 }
 
 func rowOf(v check.Verdict, meta Report) Row {
 	r := Row{
-		ID:      check.VerdictID(v),
-		Outcome: v.Outcome,
-		Kind:    v.Kind,
-		Subject: v.Subject,
-		Pin:     v.Pin,
-		Reason:  v.Reason,
+		ID:       check.VerdictID(v),
+		Outcome:  v.Outcome,
+		Subjects: v.Subjects,
+		Reason:   v.Reason,
 	}
 	if v.Witness != nil {
 		r.Witness = v.Witness.Statement
@@ -225,7 +231,7 @@ func rowOf(v check.Verdict, meta Report) Row {
 		r.Message = v.Finding.Message
 	}
 	for _, c := range v.Context {
-		r.Context = append(r.Context, c.Subject)
+		r.Context = append(r.Context, check.EntityRef(c.Entity))
 	}
 	r.URL = verdictURL(meta, r.ID)
 	return r

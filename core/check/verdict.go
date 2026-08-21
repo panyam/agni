@@ -23,12 +23,27 @@ import (
 type Verdict struct {
 	Rule    string
 	Outcome Outcome
-	Kind    string // KindNet | KindComponent | KindPin
-	Subject string // net name (KindNet) or ref_des (KindComponent | KindPin)
-	Pin     string // pin designator, set only when Kind == KindPin
-	// NetID is the per-instance net identity (ir.Net.id) for a net subject, so two nets sharing a
-	// name are distinguishable, matching Finding.NetID. Empty for any other kind.
-	NetID string
+	// Subjects is the tuple of entities this verdict is ABOUT, in the rule's own order, and it is the
+	// verdict's IDENTITY. Never empty.
+	//
+	// A TUPLE BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single entity.
+	// copper-clearance measures a distance between two nets. regulator-output-exceeds-abs-max compares
+	// a regulator against a part it feeds ACROSS a named rail, so only all three pin the answer down:
+	// one source feeding one load over two supplied rails is two different answers. A strap group is a
+	// device and the N nets encoding its value. Keying those by one entity issues one id for several
+	// answers, which was invisible while verdicts only projected down to findings and is wrong now
+	// that they are addressable: the report links every row by VerdictID.
+	//
+	// ORDER IS THE RULE'S AND IS SIGNIFICANT. Some relations are directional and the direction is the
+	// claim: pin-tracking bounds subject-pin minus reference-pin, so swapping them inverts the sign,
+	// and regulator-output reads source then load. A symmetric relation canonicalises INSIDE the rule
+	// (copper-clearance orders its pair by name) rather than leaving it to the framework, because a
+	// framework that sorted would destroy the directional ones.
+	//
+	// ARITY IS FIXED PER RULE, declared as Rule.SubjectShape, so a consumer can index a rule's
+	// verdicts and a person can construct an id without running the check first. A rule emitting a
+	// 2-tuple on one design and a 3-tuple on another is a bug, and TestSubjectShapeHolds says so.
+	Subjects []Entity
 
 	// Witness is what the outcome rests on. It is REQUIRED on Pass and Fail and is what makes a
 	// pass evidence rather than silence. Nil is legitimate only on NoLimit and NotConsidered, where
@@ -228,8 +243,8 @@ func CompareToBound(measured float64, unit string, b Bound, quantity, limitName 
 	return Pass, w
 }
 
-// VerdictID is a verdict's stable name, `<rule>:<kind>:<ref>`, DERIVED from the verdict rather than
-// assigned to it. Nothing persists a verdict, so a CLI run and a server run have to compute the same
+// VerdictID is a verdict's stable name, `<rule>:(<kind>:<ref>,...)`, DERIVED from the verdict rather
+// than assigned to it. Nothing persists a verdict, so a CLI run and a server run have to compute the same
 // name for the same verdict without talking to each other, which is the argument mount:// already won
 // one level up restated one level down.
 //
@@ -249,27 +264,75 @@ func CompareToBound(measured float64, unit string, b Bound, quantity, limitName 
 // `pin-exceeds-abs-max:pin:U12.7` without running check first to discover the name of the thing they
 // wanted to ask about. A hash makes that impossible.
 //
-// Parsing needs no escaping despite the colons. Rule names are kebab-case and Kind is a closed
-// vocabulary, so neither can contain one: split on the FIRST TWO colons and take the remainder
-// verbatim. That handles `symbol:Library:Symbol`, whose colon the KindSymbol comment documents as a
-// real spelling.
+// GENERATED, NEVER PARSED. One function builds it and nothing splits it back apart, because the
+// structure travels in Subjects where a consumer reads it typed. That is what lets a ref keep its own
+// colons (`symbol:Library:Symbol`) and its own commas (an endpoint's `0,0`) behind one escape rule
+// rather than an encoding designed around a parser nobody needs.
 //
 // KNOWN LIMIT: two nets sharing a name share an id, because using NetID instead would make the id
 // unconstructible (nobody can type a net id). That matches how Subject already behaves on the wire,
 // where a consumer joins by name, and duplicate net names are themselves a reported defect.
 func VerdictID(v Verdict) string {
-	return v.Rule + ":" + v.Kind + ":" + verdictRef(v)
+	parts := make([]string, 0, len(v.Subjects))
+	for _, e := range v.Subjects {
+		parts = append(parts, e.Kind+":"+encodeRef(EntityRef(e)))
+	}
+	return v.Rule + ":(" + strings.Join(parts, ",") + ")"
 }
 
-// verdictRef is the kind-owned half of the id. A pin joins its ref-des and designator with a dot,
-// which is already this codebase's pin-key spelling (a KiCad pad key is built as RefDes+"."+Number).
-// Split it on the LAST dot: a ref-des is passed through from the source unmodified and could in
-// principle contain one, and a pin designator is far less likely to.
-func verdictRef(v Verdict) string {
-	if v.Kind == KindPin && v.Pin != "" {
-		return v.Subject + "." + v.Pin
+// EntityRef is the kind-owned half of one element's name. A pin joins its ref-des and designator
+// with a dot, which is already this codebase's pin-key spelling (a KiCad pad key is built as
+// RefDes+"."+Number).
+func EntityRef(e Entity) string {
+	if e.Kind == KindPin && e.Pin != "" {
+		return e.Ref + "." + e.Pin
 	}
-	return v.Subject
+	return e.Ref
+}
+
+// encodeRef percent-escapes the four characters the tuple syntax uses, so two distinct tuples can
+// never produce the same id.
+//
+// THIS IS NOT AN ACADEMIC CASE. KindEndpoint's ref is literally "0,0", a comma sitting in the
+// delimiter position, and a net name is passed through from a source file that may contain anything.
+// Without the escape ("A,B") and ("A", "B") are one string, and two different verdicts answer to one
+// name.
+//
+// The colon is deliberately NOT escaped. Kind is a closed vocabulary containing none of these
+// characters, so a "kind:ref" element stays unambiguous even where the ref carries colons of its own,
+// and KindSymbol's real spelling (Library:Symbol) stays readable instead of becoming
+// Library%3ASymbol in every id a person might type.
+func encodeRef(s string) string {
+	if !strings.ContainsAny(s, "%,()") {
+		return s
+	}
+	var b strings.Builder
+	for _, r := range s {
+		switch r {
+		case '%':
+			b.WriteString("%25")
+		case ',':
+			b.WriteString("%2C")
+		case '(':
+			b.WriteString("%28")
+		case ')':
+			b.WriteString("%29")
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// SubjectRefs joins a verdict's subject refs for the callers that ORDER or DISPLAY a tuple as one
+// string (the report's row sort, the CLI table). The kinds are left out because those callers are
+// arranging rather than naming; VerdictID is the name.
+func SubjectRefs(v Verdict) string {
+	parts := make([]string, 0, len(v.Subjects))
+	for _, e := range v.Subjects {
+		parts = append(parts, EntityRef(e))
+	}
+	return strings.Join(parts, ",")
 }
 
 // VerdictsToFindings projects a verdict list down to the findings the `check` path already reports,

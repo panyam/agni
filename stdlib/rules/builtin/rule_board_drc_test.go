@@ -50,10 +50,10 @@ func drcFindings(t *testing.T) map[string][]string {
 	got := map[string][]string{}
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
 		for _, f := range r.Findings(m) {
-			if f.Kind != check.KindNet {
-				t.Errorf("%s: finding kind = %q, want net", r.Name, f.Kind)
+			if f.Subject.Kind != check.KindNet {
+				t.Errorf("%s: finding kind = %q, want net", r.Name, f.Subject.Kind)
 			}
-			got[r.Name] = append(got[r.Name], f.Subject)
+			got[r.Name] = append(got[r.Name], check.EntityRef(f.Subject))
 		}
 	}
 	return got

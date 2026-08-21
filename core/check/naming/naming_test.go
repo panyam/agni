@@ -58,7 +58,7 @@ func TestSourceCompilesAndFires(t *testing.T) {
 	}})
 	got := map[string]bool{}
 	for _, f := range rule.Findings(m) {
-		got[f.Subject] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	want := map[string]bool{"badname": true, "/amp1/lower": true}
 	if len(got) != len(want) || !got["badname"] || !got["/amp1/lower"] {

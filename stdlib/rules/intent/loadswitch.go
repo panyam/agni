@@ -89,18 +89,12 @@ func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Finding {
 			b.Rail, b.Peak, sw.TripAmps,
 			sw.Ocp.GetSymbol(), sw.Ocp.GetValue().GetMax(), sw.Sense, sw.SenseOhms, sw.Controller)
 		msg += " — " + check.Citation(ctrlSpec, sw.Ocp) + sizingClause(m, sw, b.Peak)
-		out = append(out, check.Finding{
-			Kind:    check.KindNet,
-			Subject: b.Rail,
-			Message: msg,
-			Prov:    rail.GetProv(),
-			// The controller's threshold is the only datasheet value the VERDICT rests on: the trip
+		out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: b.Rail}, Message: msg, Prov: rail.GetProv(), // The controller's threshold is the only datasheet value the VERDICT rests on: the trip
 			// current is that threshold divided by a resistance the DESIGN states. The pass FET's
 			// on-resistance is reported in the message but not cited, because a finding is rated by its
 			// WEAKEST citation and a value the conclusion never used could drag a genuine failure down
 			// to provisional.
-			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)},
-		})
+			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)}})
 	}
 	return out
 }

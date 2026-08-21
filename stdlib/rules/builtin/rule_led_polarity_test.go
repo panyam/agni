@@ -43,7 +43,7 @@ func ledFixture() *ir.Design {
 func TestLedPolarity(t *testing.T) {
 	m := check.NewModel(ledFixture())
 	fs := ledPolarity.Findings(m)
-	if len(fs) != 1 || fs[0].Subject != "LED1" || fs[0].Kind != check.KindComponent {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "LED1" || fs[0].Subject.Kind != check.KindComponent {
 		t.Fatalf("findings = %+v, want exactly LED1", fs)
 	}
 }
@@ -60,7 +60,7 @@ func TestPinNetConflict(t *testing.T) {
 		},
 	}
 	fs := pinNetConflict.Findings(check.NewModel(d))
-	if len(fs) != 1 || fs[0].Subject != "U1" || fs[0].Pin != "3" || fs[0].Kind != check.KindPin {
+	if len(fs) != 1 || fs[0].Subject.Ref != "U1" || fs[0].Subject.Pin != "3" || fs[0].Subject.Kind != check.KindPin {
 		t.Fatalf("findings = %+v, want one KindPin finding on U1 pin 3", fs)
 	}
 	if fs[0].Message != "pin appears in more than one net (NET_A, NET_B); a pin belongs to exactly one" {

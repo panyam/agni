@@ -12,6 +12,7 @@
 package check
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -21,10 +22,9 @@ import (
 // Finding is one rule violation. Prov locates it in the source (nil when the source carries
 // no provenance for the subject).
 //
-// Kind names what Subject refers to (a net, a component, or a pin) so a consumer can group and
-// highlight by entity type without re-guessing from the string: Subject is a net name when Kind is
-// KindNet and a ref_des when KindComponent or KindPin, and Pin holds the pin designator only when
-// Kind is KindPin. A rule states its subject kind at construction (see NetFinding/CompFinding).
+// The subject travels as an Entity rather than as loose kind/ref/pin strings, so a consumer can
+// group and highlight by entity type without re-guessing from the string, and so a rule builds it
+// through a constructor that knows what each kind requires (see NetFinding/CompFinding).
 type Finding struct {
 	Severity string // "error" | "warning" | "info"
 	// Inconclusive marks a finding as a RESULT the rule could not decide, rather than a defect it
@@ -49,15 +49,20 @@ type Finding struct {
 	// for everything hard converts a coverage problem into a reporting problem.
 	Inconclusive bool
 	Rule         string
-	Kind         string // KindNet | KindComponent | KindPin
-	Subject      string // net name (KindNet) or ref_des (KindComponent | KindPin)
-	Pin          string // pin designator, set only when Kind == KindPin
-	Message      string
-	Prov         *ir.Provenance
-	// NetID is the per-instance net identity (ir.Net.id) for a net subject, so two findings on
-	// nets that share a Subject name are distinguishable and each locates to ITS wires. Empty for a
-	// component/pin subject or a pinless net; consumers then join by Subject (the name).
-	NetID string
+	// Subject is the ONE entity a reader has to change to fix this, and singular is the point.
+	//
+	// A Verdict names every entity the rule quantified over, because that tuple is its IDENTITY and
+	// an incomplete one collides. A Finding answers a different question, "what do I edit", and an
+	// answer with three entities in it is not one a reader can act on: they would have to pick, and
+	// the rule's author knows which one better than they do. Everything else the sentence names goes
+	// in Context, typed and clickable and with equal structural standing for a consumer that wants it.
+	//
+	// The tie between the two is checked rather than assumed: this entity's Ref must be one of the
+	// refs in the verdict's subject tuple, so the thing a reader is told to change is always one of
+	// the things the rule looked at.
+	Subject Entity
+	Message string
+	Prov    *ir.Provenance
 	// Context are the entities this finding's message NAMES but is not ABOUT (agni issue 349).
 	//
 	// A Finding carries one Subject, so a rule whose sentence involves two entities could highlight
@@ -107,11 +112,71 @@ type Finding struct {
 // as a list rather than a map. Order is the author's and matches the order the message names them, so
 // a panel rendering chips reads in the same order as the sentence above it.
 type ContextSubject struct {
-	Kind    string // KindNet | KindComponent | KindPin | KindBus
-	Subject string // net name (KindNet) or ref_des (KindComponent | KindPin)
-	Pin     string // pin designator, set only when Kind == KindPin
-	NetID   string // per-instance net identity, for a net that shares its name with another
-	Role    string
+	Entity
+	Role string
+}
+
+// Ctx pairs an entity with the part it plays, which is the only way a ContextSubject is ever built.
+// The constructor exists so the two halves cannot be assembled out of loose strings: an entity comes
+// from one of the constructors below, which is what keeps a net's NetID and a pin's designator from
+// being forgotten at a call site that only had the name to hand.
+func Ctx(e Entity, role string) ContextSubject { return ContextSubject{Entity: e, Role: role} }
+
+// Entity names ONE design entity, and it is the single element type every subject and every context
+// list is built from.
+//
+// ONE TYPE RATHER THAN TWO SHAPES, which is what makes a subject and a context entry
+// interchangeable to a consumer that only wants to point at something. Before this they were
+// different structs that happened to carry the same four fields, so `subjectsToSpecs` in the viewer
+// had to satisfy both structurally and a third producer could have drifted from either.
+//
+// The fields are IDENTITY only. No severity, no message, no provenance: an entity is a REFERENCE to
+// something already in the design, never a second finding about it.
+type Entity struct {
+	Kind string // KindNet | KindComponent | KindPin | KindEndpoint | KindBus | KindSymbol
+	Ref  string // net name (KindNet), ref_des (KindComponent | KindPin), or the kind's own spelling
+	Pin  string // pin designator, set only when Kind == KindPin
+	// NetID is the per-instance net identity (ir.Net.id) for a net entity, so two nets sharing a
+	// name are distinguishable and each locates to ITS wires. Empty for every other kind, and for a
+	// net reached by name only; a consumer then joins by Ref.
+	NetID string
+}
+
+// The entity constructors. A rule builds an entity through one of these rather than by filling the
+// struct, because the struct's correctness is per-kind and invisible at a call site: a net entity
+// wants its NetID, a pin entity wants both halves of its key, and a component entity must leave both
+// empty. Several rules set a net subject and forgot the NetID for exactly that reason.
+
+// NetEntity names a net, carrying the per-instance id so a duplicate name stays distinguishable.
+func NetEntity(n *ir.Net) Entity {
+	return Entity{Kind: KindNet, Ref: n.GetName(), NetID: n.GetId()}
+}
+
+// NetNameEntity names a net the caller holds only by NAME, so it carries no per-instance id. It is
+// the honest constructor for a rule that resolved a rail through a name lookup and never had the
+// net itself; a consumer joins it by name and may match either of two same-named nets.
+func NetNameEntity(name string) Entity { return Entity{Kind: KindNet, Ref: name} }
+
+// ComponentEntity names a placed part by its reference designator.
+func ComponentEntity(refDes string) Entity { return Entity{Kind: KindComponent, Ref: refDes} }
+
+// PinEntity names one terminal of one part. Both halves are required: a designator alone is not a
+// pin, and a pin number alone belongs to no part.
+func PinEntity(refDes, pin string) Entity {
+	return Entity{Kind: KindPin, Ref: refDes, Pin: pin}
+}
+
+// BusEntity names a source bus construct by its display label, which is also its geometry join key.
+func BusEntity(label string) Entity { return Entity{Kind: KindBus, Ref: label} }
+
+// SymbolEntity names a symbol REFERENCE as the source spelled it, which names a file rather than
+// anything placed in the design.
+func SymbolEntity(ref string) Entity { return Entity{Kind: KindSymbol, Ref: ref} }
+
+// EndpointEntity names a geometric location in the sheet frame, for the wire-end diagnostics that
+// have no captured entity to point at.
+func EndpointEntity(x, y int64) Entity {
+	return Entity{Kind: KindEndpoint, Ref: fmt.Sprintf("%d,%d", x, y)}
 }
 
 // DatasheetCitation is the structured datasheet provenance of a finding: which document, page, and
@@ -248,6 +313,19 @@ type Rule struct {
 	// restated per rule. That is what keeps a rule's two answers from drifting: there is one body, so
 	// "the findings disagree with the verdicts" is not a state a rule can be in.
 	Eval func(Model) []Verdict
+	// SubjectShape declares the KINDS of a verdict's subject tuple, in the rule's own order, for a rule
+	// whose subject is a relation between entities. Empty means the ordinary case: one subject, of
+	// whatever kind the rule's own enumeration yields.
+	//
+	// It exists so a verdict id stays a QUESTION SOMEONE CAN POSE. A reader worried about a terminal can
+	// type `pin-exceeds-abs-max:(pin:U12.7)` without running the check first, and that only works while
+	// they know what goes in the parentheses. For a 1-tuple the shape is obvious; for
+	// `regulator-output-exceeds-abs-max:(component:U1,net:+5V,component:U5)` it is not, and nothing in
+	// the output would otherwise say that the source comes before the rail.
+	//
+	// It is also the honest place to see that a rule's arity is FIXED. A rule emitting a 2-tuple on one
+	// design and a 3-tuple on another cannot be indexed by anything, and TestSubjectShapeHolds fails it.
+	SubjectShape []string
 	// StatesConsideredSet reports whether Eval's verdicts are the rule's full CONSIDERED SET, or only
 	// the subjects that failed.
 	//
@@ -296,13 +374,10 @@ func FailuresOnly(eval func(Model) []Finding) func(Model) []Verdict {
 				outcome = Inconclusive
 			}
 			out = append(out, Verdict{
-				Outcome: outcome,
-				Kind:    f.Kind,
-				Subject: f.Subject,
-				Pin:     f.Pin,
-				NetID:   f.NetID,
-				Context: f.Context,
-				Finding: &f,
+				Outcome:  outcome,
+				Subjects: []Entity{f.Subject},
+				Context:  f.Context,
+				Finding:  &f,
 			})
 		}
 		return out
@@ -376,7 +451,7 @@ func Run(m Model, rules []*Rule) []Finding {
 		if out[i].Rule != out[j].Rule {
 			return out[i].Rule < out[j].Rule
 		}
-		return out[i].Subject < out[j].Subject
+		return EntityRef(out[i].Subject) < EntityRef(out[j].Subject)
 	})
 	return out
 }
@@ -418,7 +493,7 @@ func unresolvedSymbolGate(m Model) func(*Rule) (Finding, bool) {
 		if !readsConnectivity(r) {
 			return Finding{}, false
 		}
-		return Finding{Kind: KindSymbol, Subject: subject, Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
+		return Finding{Subject: SymbolEntity(subject), Inconclusive: true, Message: msg, Prov: unresolved[0].GetProv()}, true
 	}
 }
 
@@ -472,10 +547,7 @@ func RunVerdicts(m Model, rules []*Rule) []Verdict {
 		if out[i].Rule != out[j].Rule {
 			return out[i].Rule < out[j].Rule
 		}
-		if out[i].Subject != out[j].Subject {
-			return out[i].Subject < out[j].Subject
-		}
-		return out[i].Pin < out[j].Pin
+		return SubjectRefs(out[i]) < SubjectRefs(out[j])
 	})
 	return out
 }
@@ -490,11 +562,12 @@ func Report[T any](xs []T, mk func(T) Finding) []Finding {
 	return out
 }
 
-// NetFinding and CompFinding are the two subject constructors rules use with Report. They stamp
-// Kind so the subject's entity type travels with the finding.
+// NetFinding and CompFinding are the two subject constructors rules use with Report. They build the
+// subject through an Entity constructor, so the entity type and a net's per-instance id travel with
+// the finding rather than depending on the call site remembering both.
 func NetFinding(msg string) func(*ir.Net) Finding {
 	return func(n *ir.Net) Finding {
-		return Finding{Kind: KindNet, Subject: n.Name, NetID: n.GetId(), Message: msg, Prov: n.Prov}
+		return Finding{Subject: NetEntity(n), Message: msg, Prov: n.Prov}
 	}
 }
 
@@ -502,6 +575,6 @@ func NetFinding(msg string) func(*ir.Net) Finding {
 // stamps KindComponent so the finding's subject is the component ref-des.
 func CompFinding(msg string) func(*ir.Component) Finding {
 	return func(c *ir.Component) Finding {
-		return Finding{Kind: KindComponent, Subject: c.RefDes, Message: msg, Prov: c.Prov}
+		return Finding{Subject: ComponentEntity(c.RefDes), Message: msg, Prov: c.Prov}
 	}
 }

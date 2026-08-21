@@ -51,11 +51,7 @@ func diffPairNamingVerdicts(m check.Model) []check.Verdict {
 		if !ok {
 			continue // not a differential-positive name, so not this rule's subject
 		}
-		v := check.Verdict{
-			Kind:    check.KindNet,
-			Subject: n.Name,
-			NetID:   n.GetId(),
-		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		switch {
 		case !uses:
 			v.Outcome = check.NotConsidered
@@ -72,13 +68,7 @@ func diffPairNamingVerdicts(m check.Model) []check.Verdict {
 				Statement: fmt.Sprintf("the design carries no net named %q", neg),
 				Terms:     []check.WitnessTerm{{Label: "complement", Value: neg}},
 			}
-			v.Finding = &check.Finding{
-				Kind:    check.KindNet,
-				Subject: n.Name,
-				NetID:   n.GetId(),
-				Message: fmt.Sprintf("differential net has no complementary %q", neg),
-				Prov:    n.Prov,
-			}
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}, Message: fmt.Sprintf("differential net has no complementary %q", neg), Prov: n.Prov}
 		}
 		out = append(out, v)
 	}

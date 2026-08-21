@@ -257,21 +257,18 @@ report findings that disagree with its verdicts.
 verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site.
 Converting a rule means deleting the wrapper, writing the map, and setting `StatesConsideredSet`.
 
-Nine rules still wrap, and each says why beside its `Eval`. They fall into three groups, and the
-groups are worth knowing before you write a tenth rule that lands in one of them (agni issue 391):
+Four rules still wrap, and each says why beside its `Eval`. They fall into two groups (agni issue 391):
 
-- **The subject is a RELATION between two entities.** `copper-clearance` (a pair of nets),
-  `regulator-output-exceeds-abs-max` (a part and the part feeding it), `fet-vdss-below-switched-rail`
-  (a part and one of the rails it touches), and both `pin-tracking` rules (a pair of pins on one
-  part). A verdict is named `<rule>:<kind>:<ref>` and every kind's ref names one entity, so keying
-  these by the subject alone issues one id for several answers. `checkspb.Subject` has the same shape
-  on the wire, so the fix is a wire-vocabulary change rather than a rule conversion.
 - **The reader supplies only what failed.** `dangling-endpoint`, `wire-no-junction` and
   `symbol-unresolved` read a diagnostic list holding the offenders and nothing else, so there is no
   set to map over and the verdicts would be the failure list again. `bus-not-modeled` is the
   diagnostic rule that CAN state a set, and the difference is instructive: `unmodeled_buses` holds
   every bus the reader saw, so the rule partitions it and a resolved bus is a countable pass.
 - **The body cannot separate a pass from a gap.** `cap-voltage`, described above.
+
+The third group is gone. Five rules used to decline because their subject was a relation between
+entities and the verdict key named one; the key now names a tuple, and they state considered sets like
+everything else.
 
 **`StatesConsideredSet` is a declaration, not an inference.** A failures-only rule returns a list of
 Fail verdicts that is structurally identical to a considered set whose every subject failed, so only
@@ -296,17 +293,37 @@ used to skip silently, which reports the same nothing as a rule that never looke
 is simply OUT OF SCOPE: a pin that is not a supply terminal is not a subject of a supply rule, and
 yields no event at all.
 
-**One subject, one verdict.** A verdict is keyed by `(rule, kind, ref)`, so a rule that emits two
-about one subject produces a duplicate identity. That is invisible while verdicts only project down
-to findings and breaks the moment they are addressable, which they now are: `internal/service`
-puts the id on the wire. Where several inputs bear on one subject, reduce them: the per-pin datasheet
-rules pick the row the design has least margin against, matching what the part-level rule already did
-across a part's pins.
+**A verdict's subject is a TUPLE, and for most rules it holds one entity.** `Verdict.Subjects` is the
+entities the rule quantified over, in the rule's own order, and it is the verdict's identity:
+`VerdictID` is `<rule>:(<kind>:<ref>,...)`. A rule whose question is about ONE thing names one.
 
-Where the several inputs are not reducible without losing findings, the rule is one of the
-relation-shaped five above and stays failures-only. Do not reach for a subject that is nearly unique
-and hope: two seeded regulators feeding one load, or a high-side FET above breakdown on both its
-rails, are ordinary topologies rather than edge cases.
+**A rule whose question is a RELATION names every entity in it.** `copper-clearance` measures a
+distance between two nets and it belongs to neither. `regulator-output-exceeds-abs-max` compares a
+regulator against a part it feeds ACROSS a rail, and all three are needed, because one source feeding
+one load over two supplied rails is two different answers. A strap group is a device and the N nets
+encoding its value. Naming fewer than all of them gives several answers one id, which was invisible
+while verdicts only projected down to findings and is wrong now that the report links every row by id.
+
+Three rules to hold to:
+
+- **Order is yours and it is significant.** A tracking bound reads subject-pin minus reference-pin, so
+  swapping the two inverts the sign of the claim. A SYMMETRIC relation canonicalises INSIDE the rule
+  (`copper-clearance` orders its pair by name) rather than leaving it to the framework, because a
+  framework that sorted every tuple would break the directional ones.
+- **Declare the shape.** `Rule.SubjectShape` lists the kinds, so a person can construct an id without
+  running the check first and so `TestSubjectShapeHolds` can fail a rule whose arity moves between
+  designs. Leave it empty for the ordinary one-subject case, which the same test then enforces.
+- **Do not reach for a subject that is nearly unique and hope.** Two seeded regulators feeding one
+  load, and a high-side FET above breakdown on both its rails, are ordinary topologies rather than
+  edge cases.
+
+**A Finding's subject stays SINGULAR, and that is a different question.** The verdict's tuple is
+identity and has to be complete; the finding's subject is the one entity a reader has to CHANGE, and
+an answer with three entities in it is not one they can act on. Everything else the sentence names
+goes in `Context`, typed and clickable, and consumers that want equal standing across all of them read
+it (the cross-tool comparison in `core/results` joins on subject plus context for exactly that
+reason). `TestFindingSubjectComesFromTheVerdictsTuple` holds the two together: what a reader is told
+to change must be one of the things the rule looked at.
 
 **A verdict's subject and its finding's subject may differ in GRAIN, and often should.** A verdict
 about a supply terminal carries a finding about the whole part, because "why is this pin fine" is

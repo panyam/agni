@@ -36,7 +36,7 @@ func TestScopeExcludesRatherThanPasses(t *testing.T) {
 	}
 	bySubject := map[string]Outcome{}
 	for _, v := range s.Verdicts(NewModel(scopeDesign())) {
-		bySubject[v.Subject] = v.Outcome
+		bySubject[EntityRef(v.Subjects[0])] = v.Outcome
 	}
 	if _, present := bySubject["EMPTY"]; present {
 		t.Errorf("an out-of-scope net must produce no verdict at all, got %s", bySubject["EMPTY"])
@@ -86,7 +86,7 @@ func TestSpecPassWitnessNamesTheDecidingClause(t *testing.T) {
 	}
 	var okWitness string
 	for _, v := range s.Verdicts(NewModel(scopeDesign())) {
-		if v.Subject == "OK" {
+		if EntityRef(v.Subjects[0]) == "OK" {
 			if v.Outcome != Pass {
 				t.Fatalf("OK has two pins, want pass, got %s", v.Outcome)
 			}

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -74,11 +75,15 @@ func funcs() template.FuncMap {
 		"count": func(m map[check.Outcome]int, o check.Outcome) int { return m[o] },
 		"pass":  func() check.Outcome { return check.Pass },
 		"fail":  func() check.Outcome { return check.Fail },
+		// A row's subjects, joined the way the rule reads them. A relation-shaped rule names two or
+		// three entities and a reader needs all of them: "copper of GND and VBUS" is the fact, and
+		// naming one half would ask the reader to guess the other.
 		"subjectOf": func(row Row) string {
-			if row.Pin != "" {
-				return row.Subject + "." + row.Pin
+			parts := make([]string, 0, len(row.Subjects))
+			for _, e := range row.Subjects {
+				parts = append(parts, check.EntityRef(e))
 			}
-			return row.Subject
+			return strings.Join(parts, " + ")
 		},
 	}
 }

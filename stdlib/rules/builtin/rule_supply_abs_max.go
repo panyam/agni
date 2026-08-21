@@ -33,8 +33,7 @@ var supplyExceedsAbsMax = &check.Rule{
 			func(p *parampb.Parameter) check.Bound { return check.Bound{Max: p.Value.Max} },
 			func(ev aliasSupplyEvent, binding *parampb.Parameter, _ check.Bound) *check.Finding {
 				return &check.Finding{
-					Kind:    check.KindComponent,
-					Subject: ev.comp.RefDes,
+					Subject: check.Entity{Kind: check.KindComponent, Ref: ev.comp.RefDes},
 					Message: fmt.Sprintf("power-input pin %s on rail %q: nominal %gV exceeds absolute-maximum %s %gV — %s",
 						ev.pin, ev.net, ev.nominal, binding.Symbol, binding.Value.GetMax(), check.Citation(ev.spec, binding)),
 					Prov:          ev.comp.Prov,
@@ -66,8 +65,8 @@ type aliasSupplyEvent struct {
 // several supply pins is not located by its ref des alone (agni issue 349).
 func aliasSupplyContext(ev aliasSupplyEvent) []check.ContextSubject {
 	return []check.ContextSubject{
-		{Kind: check.KindPin, Subject: ev.comp.RefDes, Pin: ev.pin, Role: "pin"},
-		{Kind: check.KindNet, Subject: ev.net, Role: "rail"},
+		{Entity: check.Entity{Kind: check.KindPin, Ref: ev.comp.RefDes, Pin: ev.pin}, Role: "pin"},
+		{Entity: check.Entity{Kind: check.KindNet, Ref: ev.net}, Role: "rail"},
 	}
 }
 
@@ -128,7 +127,7 @@ func aliasSupplyVerdicts(
 				continue // not a supply terminal: not a subject of these rules
 			}
 			ev := aliasSupplyEvent{comp: c, pin: pin.Designator, spec: spec}
-			v := check.Verdict{Kind: check.KindPin, Subject: c.RefDes, Pin: pin.Designator}
+			v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: c.RefDes, Pin: pin.Designator}}}
 			if cannot != "" {
 				v.Outcome, v.Reason = check.NotConsidered, cannot
 				out = append(out, v)

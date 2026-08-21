@@ -510,23 +510,20 @@ func (s *Spec) Verdicts(m Model) []Verdict {
 		if s.Scope != nil && !ev.expr(s.Scope) {
 			continue // not this rule's subject; saying nothing is the honest answer
 		}
-		v := Verdict{Kind: over.kind, Subject: over.subject(e)}
+		// A spec quantifies over ONE entity set, so its subject tuple is always a 1-tuple. That is the
+		// declared shape for every spec-authored rule, and it is why the interpreter needs no notion
+		// of arity: a relation between two entities is not expressible in the AST today.
+		subj := Entity{Kind: over.kind, Ref: over.subject(e)}
 		if over.pin != nil {
-			v.Pin = over.pin(e)
+			subj.Pin = over.pin(e)
 		}
 		if over.netID != nil {
-			v.NetID = over.netID(e)
+			subj.NetID = over.netID(e)
 		}
+		v := Verdict{Subjects: []Entity{subj}}
 		if s.Where == nil || ev.expr(s.Where) {
 			v.Outcome = Fail
-			f := Finding{
-				Kind:    over.kind,
-				Subject: v.Subject,
-				Pin:     v.Pin,
-				NetID:   v.NetID,
-				Message: ev.interpolate(s.Message),
-				Prov:    over.prov(e),
-			}
+			f := Finding{Subject: subj, Message: ev.interpolate(s.Message), Prov: over.prov(e)}
 			v.Finding = &f
 			v.Witness = &Witness{Statement: ev.interpolate(s.Message)}
 		} else {

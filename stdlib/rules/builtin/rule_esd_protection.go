@@ -50,7 +50,7 @@ func esdProtectionVerdicts(m check.Model) []check.Verdict {
 		if !check.ExternalSignalNet(m, n) {
 			continue // not a connector-facing signal net, so not a subject of an ESD rule
 		}
-		v := check.Verdict{Kind: check.KindNet, Subject: n.Name, NetID: n.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		tvs := check.ReachableOfClass(m, n, check.ClassTVS)
 		rated, ratedWitness := check.ICESDCredit(m, n)
 		zener := check.ReachableOfClass(m, n, check.ClassZener)

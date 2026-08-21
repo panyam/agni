@@ -112,7 +112,7 @@ var railNotClassified = &check.Rule{
 func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
 	var out []check.Verdict
 	eachRailCandidate(m, func(rc railCandidate) {
-		v := check.Verdict{Kind: check.KindNet, Subject: rc.net.GetName(), NetID: rc.net.GetId()}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: rc.net.GetName(), NetID: rc.net.GetId()}}}
 		switch {
 		case rc.supplies == 0:
 			v.Outcome = check.NotConsidered
@@ -130,7 +130,7 @@ func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
 				},
 			}
 			v.Context = []check.ContextSubject{
-				{Kind: check.KindPin, Subject: rc.supplyRef, Pin: rc.supplyPinNo, Role: "supply-pin"},
+				{Entity: check.Entity{Kind: check.KindPin, Ref: rc.supplyRef, Pin: rc.supplyPinNo}, Role: "supply-pin"},
 			}
 		default:
 			v.Outcome = check.Fail
@@ -143,9 +143,7 @@ func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
 				},
 			}
 			v.Finding = &check.Finding{
-				Kind:    check.KindNet,
-				Subject: rc.net.GetName(),
-				NetID:   rc.net.GetId(),
+				Subject: check.NetEntity(rc.net),
 				Prov:    rc.net.GetProv(),
 				Message: fmt.Sprintf(
 					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in a --conventions lexicon",
@@ -154,7 +152,7 @@ func railNotClassifiedVerdicts(m check.Model) []check.Verdict {
 				// that makes it look like a rail was named in prose and reachable nowhere
 				// (agni issue 349).
 				Context: []check.ContextSubject{
-					{Kind: check.KindPin, Subject: rc.supplyRef, Pin: rc.supplyPinNo, Role: "supply-pin"},
+					{Entity: check.Entity{Kind: check.KindPin, Ref: rc.supplyRef, Pin: rc.supplyPinNo}, Role: "supply-pin"},
 				},
 			}
 			v.Context = v.Finding.Context
