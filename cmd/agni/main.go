@@ -345,6 +345,7 @@ func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
 	var verdicts bool
+	var urlBase string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -360,8 +361,14 @@ func checkCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch format {
 			case "text", "json", "csv", "markdown", "report":
+			case "html":
+				// html is the verdict REPORT, which has no findings-only form: it exists to show what
+				// was checked, and the findings table already has three renderings.
+				if !verdicts {
+					return fmt.Errorf("--format html is the verdict report; pass --verdicts with it")
+				}
 			default:
-				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report)", format)
+				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report, html)", format)
 			}
 			switch failOn {
 			case "", "error", "warning", "info":
@@ -522,6 +529,14 @@ func checkCmd() *cobra.Command {
 						if err := writeVerdictJSON(cmd.OutOrStdout(), resp.GetVerdicts()); err != nil {
 							return err
 						}
+					case "html":
+						// A LINK IS A PROMISE. urlBase is empty unless the operator says where the
+						// viewer is, and without it the report renders subjects as plain text rather
+						// than assembling a URL that resolves on nobody's server (agni issue 392).
+						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, catalog.Rules(),
+							designURI, hashSource(localOf(designURI)), urlBase, linkablePath(args[0], designURI)); err != nil {
+							return err
+						}
 					default:
 						writeVerdictText(cmd.OutOrStdout(), resp.GetVerdicts())
 					}
@@ -552,7 +567,8 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report")
-	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json")
+	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so an html report links each verdict to its proof. Omitted, the report names subjects as plain text: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
+	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
