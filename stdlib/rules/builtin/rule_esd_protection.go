@@ -24,7 +24,7 @@ var esdProtection = &check.Rule{
 		check.KeyDistribution: check.DistPublicReference,
 	},
 	Detail: ruleDoc("esd-protection"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			// A discrete TVS clamps it, OR an IC on the signal carries a datasheet ESD rating
 			// (IC-integrated ESD, the common industrial posture); either protects it (WS3-073).
@@ -33,7 +33,7 @@ var esdProtection = &check.Rule{
 			return check.ExternalSignalNet(m, n) && !check.TVSReachable(m, n) && !check.ICESDRated(m, n) && !check.ZenerReachable(m, n)
 		})
 		return check.Report(bad, check.NetFinding("externally-exposed signal net has no ESD protection"))
-	},
+	}),
 }
 
 // esdProtectionSpec is the rule's declarative twin (WS3-003): the widest guard stack in the

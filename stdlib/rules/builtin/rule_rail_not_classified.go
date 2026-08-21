@@ -82,7 +82,7 @@ var railNotClassified = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic,
 	},
 	Detail: ruleDoc("rail-not-classified"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		eachRailCandidate(m, func(rc railCandidate) {
 			out = append(out, check.Finding{
@@ -102,5 +102,5 @@ var railNotClassified = &check.Rule{
 			})
 		})
 		return out
-	},
+	}),
 }

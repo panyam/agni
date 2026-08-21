@@ -40,9 +40,9 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 		},
 		ParamSymbols: check.OcpThresholdSymbols(),
 		Tags:         intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			return evalLoadSwitchTrip(m, d.RailBudgets)
-		},
+		}),
 	}
 }
 

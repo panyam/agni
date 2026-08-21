@@ -26,9 +26,9 @@ func designWithUnresolved() *ir.Design {
 func alwaysFires(reads ...string) *Rule {
 	return &Rule{
 		Name: "test-rule", Severity: "error", Reads: reads,
-		Eval: func(Model) []Finding {
+		Eval: FailuresOnly(func(Model) []Finding {
 			return []Finding{{Kind: KindNet, Subject: "SIG", Message: "a defect"}}
-		},
+		}),
 	}
 }
 
@@ -89,9 +89,9 @@ func TestUnresolvedGateInactiveOnACleanRead(t *testing.T) {
 func TestUnresolvedGateIsDesignWide(t *testing.T) {
 	aboutU1 := &Rule{
 		Name: "about-u1", Severity: "error", Reads: []string{"on_net"},
-		Eval: func(Model) []Finding {
+		Eval: FailuresOnly(func(Model) []Finding {
 			return []Finding{{Kind: KindComponent, Subject: "U1", Message: "a defect on U1"}}
-		},
+		}),
 	}
 	fs := Run(NewModel(designWithUnresolved()), []*Rule{aboutU1})
 	if len(fs) != 1 || !fs[0].Inconclusive {

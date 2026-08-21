@@ -502,7 +502,11 @@ func (s *Spec) Rule(meta Rule) *Rule {
 	if err := s.Validate(); err != nil {
 		panic(fmt.Sprintf("check: invalid spec for rule %q: %v", meta.Name, err))
 	}
-	meta.Eval = s.Eval
+	// FailuresOnly, not a considered set: the interpreter is still a filter. Its loop `continue`s past
+	// every subject the Where did not match, so it knows the considered set (Over's entity set) and
+	// throws it away. Teaching it to map instead converts every spec-authored rule at once, and is
+	// tracked as its own piece of agni issue 391 rather than smuggled into a signature change.
+	meta.Eval = FailuresOnly(s.Eval)
 	meta.Reads = s.DerivedReads()
 	meta.Primitives = s.DerivedPrimitives()
 	return &meta

@@ -7,10 +7,18 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// TestVerdictParity holds every rule that states a considered set to its findings contract: where
-// EvalVerdicts is set it is the rule's single source of truth, and Eval must be exactly its
-// projection. This is the per-rule parity test generalised, so a rule converted later is covered the
-// moment it sets the field rather than when someone remembers to write a test for it.
+// TestVerdictParity pins WHICH outcomes reach the findings contract.
+//
+// Its original job is gone and that is a good thing: Eval and Findings were two hand-written bodies
+// that could disagree, and now Findings IS VerdictsToFindings(Eval), so per-rule drift is not a state
+// a rule can be in. What is left is the projection RULE itself, which is a real decision with real
+// consequences (an Inconclusive verdict must still reach a reviewer; a Pass must not).
+//
+// The expectation is therefore still rebuilt HERE rather than by calling VerdictsToFindings, and the
+// reason is sharper than before: Findings() literally is that call, so comparing the two would run
+// one function against itself and pass for any projection, broken ones included. (It did. This test
+// asserted nothing until a red-check caught it.) Restating the rule independently means a change to
+// what projects has to be made deliberately in two places instead of silently in one.
 func TestVerdictParity(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -21,7 +29,7 @@ func TestVerdictParity(t *testing.T) {
 	} {
 		var converted int
 		for _, r := range rulesByName() {
-			if r.EvalVerdicts == nil {
+			if !r.StatesConsideredSet {
 				continue
 			}
 			converted++
@@ -32,13 +40,13 @@ func TestVerdictParity(t *testing.T) {
 			// a change to what projects, such as Inconclusive gaining a finding, has to be made
 			// deliberately in both places instead of silently in one.
 			want := []check.Finding{}
-			for _, v := range r.EvalVerdicts(tc.m) {
+			for _, v := range r.Eval(tc.m) {
 				if v.Outcome == check.Fail && v.Finding != nil {
 					want = append(want, *v.Finding)
 				}
 			}
-			if got := r.Eval(tc.m); !reflect.DeepEqual(got, want) {
-				t.Errorf("%s/%s: Eval and the failing verdicts disagree\n eval: %+v\n want: %+v",
+			if got := r.Findings(tc.m); !reflect.DeepEqual(got, want) {
+				t.Errorf("%s/%s: the findings projection and the failing verdicts disagree\n got: %+v\n want: %+v",
 					tc.name, r.Name, got, want)
 			}
 		}
@@ -51,13 +59,13 @@ func TestVerdictParity(t *testing.T) {
 }
 
 // A rule that states a considered set must answer about SOMETHING on a design its subjects appear
-// in. This is the guard against a conversion that wires EvalVerdicts to a function returning nil:
-// parity above would hold (nil projects to no findings, and the rule finds none either), and the
+// in. This is the guard against a conversion that declares StatesConsideredSet over a body returning
+// nil: parity above would hold (nil projects to no findings, and the rule finds none either), and the
 // considered set would be silently empty.
 func TestConvertedRulesConsiderSomething(t *testing.T) {
 	m := check.NewModel(ruleFixture())
 	for _, r := range rulesByName() {
-		if r.EvalVerdicts == nil {
+		if !r.StatesConsideredSet {
 			continue
 		}
 		// i2c-pull-up's subjects are the fixture's SDA/SCL nets; the datasheet rules need seeded
@@ -65,7 +73,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 		if r.Name != "i2c-pull-up" {
 			continue
 		}
-		if got := r.EvalVerdicts(m); len(got) == 0 {
+		if got := r.Eval(m); len(got) == 0 {
 			t.Errorf("%s: the fixture carries this rule's subjects, so an empty considered set means "+
 				"the conversion reports nothing rather than reporting a pass", r.Name)
 		}

@@ -31,7 +31,7 @@ var symbolUnresolved = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // the reader knows the open failed; the IR cannot infer it
 	},
 	Detail: ruleDoc("symbol-unresolved"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.UnresolvedSymbols(), func(u *ir.UnresolvedSymbol) check.Finding {
 			return check.Finding{
 				Kind:    check.KindSymbol,
@@ -40,7 +40,7 @@ var symbolUnresolved = &check.Rule{
 				Prov:    u.GetProv(),
 			}
 		})
-	},
+	}),
 }
 
 // unresolvedMessage names the affected placements, because the reference alone does not say how

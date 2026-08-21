@@ -36,7 +36,7 @@ var railNominalOutOfRecommended = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("rail-nominal-out-of-recommended"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, c := range m.Components() {
 			spec := m.PartSpec(c.RefDes)
@@ -97,5 +97,5 @@ var railNominalOutOfRecommended = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }

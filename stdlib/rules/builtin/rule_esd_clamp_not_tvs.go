@@ -26,14 +26,14 @@ var esdClampNotTVS = &check.Rule{
 		check.KeyDistribution: check.DistPublicReference,
 	},
 	Detail: ruleDoc("esd-clamp-not-tvs"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			// The same external-signal scope as esd-protection, but the net HAS a Zener clamp in
 			// reach and no TVS / IC-ESD rating: the two rules are mutually exclusive on a net.
 			return check.ExternalSignalNet(m, n) && check.ZenerReachable(m, n) && !check.TVSReachable(m, n) && !check.ICESDRated(m, n)
 		})
 		return check.Report(bad, check.NetFinding("externally-exposed signal net is clamped by a Zener, not a fast ESD TVS"))
-	},
+	}),
 }
 
 // esdClampNotTVSSpec is the declarative twin: the esd-protection guard stack with the Zener clause

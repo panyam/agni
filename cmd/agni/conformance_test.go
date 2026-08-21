@@ -90,7 +90,7 @@ func TestConformanceSpecParity(t *testing.T) {
 				if !ok {
 					continue // spec-only rule: its Eval is the interpreter, nothing to compare
 				}
-				if got, want := spec.Eval(m), r.Eval(m); !reflect.DeepEqual(got, want) {
+				if got, want := spec.Eval(m), r.Findings(m); !reflect.DeepEqual(got, want) {
 					t.Errorf("%s: spec findings diverge\n spec: %+v\n   go: %+v", r.Name, got, want)
 				}
 			}

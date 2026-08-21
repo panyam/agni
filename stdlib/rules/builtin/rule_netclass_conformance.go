@@ -34,11 +34,11 @@ var netclassTrackWidth = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("netclass-track-width"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return declaredVsActual(m, "track_width",
 			func(bn check.BoardNet) (float64, bool) { return minSegmentWidthMM(bn) },
 			"routed at %s, narrower than the %s its net class %q declares")
-	},
+	}),
 }
 
 var netclassViaDrill = &check.Rule{
@@ -56,11 +56,11 @@ var netclassViaDrill = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("netclass-via-drill"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return declaredVsActual(m, "via_drill",
 			func(bn check.BoardNet) (float64, bool) { return minViaDrillMM(bn) },
 			"drilled at %s, smaller than the %s its net class %q declares")
-	},
+	}),
 }
 
 // declaredVsActual is the shared body: for each routed net, resolve what the project declared for

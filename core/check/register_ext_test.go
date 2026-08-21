@@ -21,13 +21,13 @@ func widgetRule() *check.Rule {
 		Summary:  "an external house-style rule",
 		Reads:    []string{"component.ref_des"},
 		Tags:     map[string]string{check.KeyCategory: "house-style"},
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, c := range m.Components() {
 				out = append(out, check.Finding{Kind: check.KindComponent, Subject: c.RefDes, Message: "seen by the overlay rule"})
 			}
 			return out
-		},
+		}),
 	}
 }
 

@@ -31,7 +31,7 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("load-switch-trip-above-fet-rating"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, sw := range check.ExternalFetLoadSwitches(m) {
 			// An unseeded pass element and a seeded one stating no continuous rating are the same gap,
@@ -93,7 +93,7 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 			})
 		}
 		return out
-	},
+	}),
 }
 
 // componentProv locates a component in its source file, or nil when the design carries no provenance

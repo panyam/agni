@@ -52,7 +52,7 @@ func resonatorFixture() *ir.Design {
 }
 
 func TestResonatorRedundantLoadCaps(t *testing.T) {
-	fs := resonatorRedundantLoadCaps.Eval(check.NewModel(resonatorFixture()))
+	fs := resonatorRedundantLoadCaps.Findings(check.NewModel(resonatorFixture()))
 	if len(fs) != 1 || fs[0].Subject != "Y1" || fs[0].Kind != check.KindComponent {
 		t.Fatalf("findings = %+v, want exactly one KindComponent finding on Y1", fs)
 	}
@@ -77,7 +77,7 @@ func TestResonatorRedundantSilentWithoutSeededClass(t *testing.T) {
 			tnet("GND", "C1.2", "Y1.3"),
 		},
 	}
-	if fs := resonatorRedundantLoadCaps.Eval(check.NewModel(d)); len(fs) != 0 {
+	if fs := resonatorRedundantLoadCaps.Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("un-seeded clock candidate: want silent, got %+v", fs)
 	}
 }

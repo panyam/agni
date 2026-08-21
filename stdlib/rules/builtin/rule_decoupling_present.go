@@ -21,7 +21,7 @@ var decouplingPresent = &check.Rule{
 		check.KeyDistribution: check.DistPublicReference,
 	},
 	Detail: ruleDoc("decoupling-present"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
 				return false
@@ -34,7 +34,7 @@ var decouplingPresent = &check.Rule{
 			})
 		})
 		return check.Report(bad, check.NetFinding("power rail has no decoupling capacitor"))
-	},
+	}),
 }
 
 // decouplingPresentSpec is the rule's declarative twin (WS3-003).

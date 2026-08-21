@@ -89,7 +89,7 @@ func ctxOf(f check.Finding) map[string]check.ContextSubject {
 func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	t.Run("fet-vdss-below-rail names the rail", func(t *testing.T) {
 		m := check.NewModelWithParams(fetDesign("+60V", ""), nil, param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
-		fs := fetVdssBelowRail.Eval(m)
+		fs := fetVdssBelowRail.Findings(m)
 		if len(fs) != 1 {
 			t.Fatalf("want 1 finding, got %d", len(fs))
 		}
@@ -130,7 +130,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	})
 
 	t.Run("resonator-redundant-load-caps names the terminal and the cap", func(t *testing.T) {
-		fs := resonatorRedundantLoadCaps.Eval(check.NewModel(resonatorFixture()))
+		fs := resonatorRedundantLoadCaps.Findings(check.NewModel(resonatorFixture()))
 		if len(fs) == 0 {
 			t.Fatal("want at least 1 finding")
 		}
@@ -146,7 +146,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	})
 
 	t.Run("rail-not-classified names the supply pin", func(t *testing.T) {
-		fs := railNotClassified.Eval(check.NewModel(houseNamedDesign()))
+		fs := railNotClassified.Findings(check.NewModel(houseNamedDesign()))
 		if len(fs) == 0 {
 			t.Fatal("want at least 1 finding")
 		}
@@ -161,7 +161,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		// A clearance violation is SYMMETRIC and gets filed under one of the two nets, so before this
 		// the other end had no way back into the drawing.
 		m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
-		fs := copperClearance.Eval(m)
+		fs := copperClearance.Findings(m)
 		if len(fs) != 1 {
 			t.Fatalf("want 1 finding, got %d", len(fs))
 		}

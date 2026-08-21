@@ -103,7 +103,7 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 		Remedy:   intentRemedy(docKeyStrapGroup),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			// A declared net absent from the design is the presence forms' business, not this rule's.
 			for _, netName := range g.Nets {
 				if netNamed(m, netName) == nil {
@@ -136,7 +136,7 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 				// whole finding is about was named in prose only.
 				Context: []check.ContextSubject{{Kind: check.KindComponent, Subject: g.Device, Role: "device"}},
 			}}
-		},
+		}),
 	}
 }
 
@@ -168,7 +168,7 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		Remedy:   intentRemedy(RuleStrapAddressCollision),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			type decoded struct {
 				g     StrapGroup
 				value int
@@ -228,7 +228,7 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 				}
 			}
 			return out
-		},
+		}),
 	}
 }
 

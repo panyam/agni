@@ -23,7 +23,7 @@ var diffPairNaming = &check.Rule{
 		check.KeyDistribution: check.DistPublicReference,
 	},
 	Detail: ruleDoc("diff-pair-naming"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		// Gate: only claim a broken pair on a design that USES the convention (some complete
 		// X_P/X_N pair exists). Without this, any coincidental _P suffix is a finding, so a
 		// combinational netlist where nothing is differential (e.g. LGSynth benchmarks whose
@@ -45,7 +45,7 @@ var diffPairNaming = &check.Rule{
 				Prov:    n.Prov,
 			}
 		})
-	},
+	}),
 }
 
 // diffPairNamingSpec is the rule's declarative twin (WS3-003): the complement name is a Let

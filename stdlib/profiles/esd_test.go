@@ -30,7 +30,7 @@ func esdFindings(t *testing.T, d *ir.Design) []check.Finding {
 	if r == nil {
 		t.Fatal("esdRule(CAN) returned nil; CAN declares signals, so it must compile")
 	}
-	return r.Eval(check.NewModel(d))
+	return r.Findings(check.NewModel(d))
 }
 
 // TestESDRequirementScopedToExposedLines (WS3-061): the requirement reports the connector-facing line
@@ -88,7 +88,7 @@ func TestESDRequirementMatchesCoreRule(t *testing.T) {
 
 	inScope := func(subject string) bool { return strings.HasPrefix(subject, "BUS_") }
 	coreSet := map[string]bool{}
-	for _, f := range core.Eval(m) {
+	for _, f := range core.Findings(m) {
 		if inScope(f.Subject) {
 			coreSet[f.Subject] = true
 		}

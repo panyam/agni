@@ -23,7 +23,7 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 		Symref: "res.sym", Kind: "xschem_sym", RefDes: []string{"R1", "R2"},
 		Prov: &ir.Provenance{SourceFile: "board.sch"},
 	})
-	fs := symbolUnresolved.Eval(check.NewModel(d))
+	fs := symbolUnresolved.Findings(check.NewModel(d))
 	if len(fs) != 1 {
 		t.Fatalf("findings = %d, want 1 per unresolved reference", len(fs))
 	}
@@ -48,7 +48,7 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 // TestSymbolUnresolvedSilentWhenClean: a design whose symbols all resolved reports nothing, so the
 // rule is evidence of a real gap rather than a permanent fixture of every run.
 func TestSymbolUnresolvedSilentWhenClean(t *testing.T) {
-	if fs := symbolUnresolved.Eval(check.NewModel(unresolvedDesign())); len(fs) != 0 {
+	if fs := symbolUnresolved.Findings(check.NewModel(unresolvedDesign())); len(fs) != 0 {
 		t.Errorf("findings = %v, want none for a clean read", fs)
 	}
 }
@@ -69,7 +69,7 @@ func TestSymbolUnresolvedSeverityIsWarning(t *testing.T) {
 // message rather than a dangling sentence fragment.
 func TestSymbolUnresolvedMessageWithoutPlacements(t *testing.T) {
 	d := unresolvedDesign(&ir.UnresolvedSymbol{Symref: "ghost.sym", Kind: "xschem_sym"})
-	fs := symbolUnresolved.Eval(check.NewModel(d))
+	fs := symbolUnresolved.Findings(check.NewModel(d))
 	if len(fs) != 1 || !strings.Contains(fs[0].Message, "ghost.sym") {
 		t.Errorf("findings = %+v, want one naming ghost.sym", fs)
 	}

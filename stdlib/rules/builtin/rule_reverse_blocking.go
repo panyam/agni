@@ -28,7 +28,7 @@ var reverseBlockingAbsent = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("reverse-blocking-absent"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, n := range m.Nets() {
 			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
@@ -64,7 +64,7 @@ var reverseBlockingAbsent = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }
 
 // classifyPowerPath decides what n's power path does about reverse flow.

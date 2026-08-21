@@ -79,7 +79,7 @@ func xlatModel(t *testing.T, netA, netB string) check.Model {
 // checks VCCB against VCCA's 4.6V and reports a violation that is not there.
 func TestPinAbsMaxDoesNotFireOnAPinRatedForTheRail(t *testing.T) {
 	m := xlatModel(t, "+3V3", "+5V")
-	for _, f := range pinExceedsAbsMax.Eval(m) {
+	for _, f := range pinExceedsAbsMax.Findings(m) {
 		if strings.Contains(f.Message, "VCCB") || strings.Contains(f.Message, "14") {
 			t.Errorf("VCCB tolerates 6.5V and sits on +5V; must not fire: %s", f.Message)
 		}
@@ -90,7 +90,7 @@ func TestPinAbsMaxDoesNotFireOnAPinRatedForTheRail(t *testing.T) {
 // name that terminal rather than the part.
 func TestPinAbsMaxFiresOnTheTerminalThatIsActuallyOver(t *testing.T) {
 	m := xlatModel(t, "+5V", "+5V") // both rails 5V: over VCCA's 4.6, within VCCB's 6.5
-	fs := pinExceedsAbsMax.Eval(m)
+	fs := pinExceedsAbsMax.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (VCCA only), got %d: %+v", len(fs), fs)
 	}
@@ -109,14 +109,14 @@ func TestPinAbsMaxFiresOnTheTerminalThatIsActuallyOver(t *testing.T) {
 // entirely, because that rule acts only on a spec with exactly ONE recommended row.
 func TestPinOutOfRecommendedAnswersPerTerminal(t *testing.T) {
 	m := xlatModel(t, "+5V", "+5V") // over VCCA's 3.6 max, inside VCCB's 1.65..5.5
-	fs := pinOutOfRecommended.Eval(m)
+	fs := pinOutOfRecommended.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want one finding (VCCA over its 3.6 max), got %d: %+v", len(fs), fs)
 	}
 	if !strings.Contains(fs[0].Message, "VCCA") || !strings.Contains(fs[0].Message, "3.6") {
 		t.Errorf("finding must name the terminal and its own range, got %q", fs[0].Message)
 	}
-	if n := len(railNominalOutOfRecommended.Eval(m)); n != 0 {
+	if n := len(railNominalOutOfRecommended.Findings(m)); n != 0 {
 		t.Errorf("the alias-path rule declines multi-supply parts; want 0 findings, got %d", n)
 	}
 }
@@ -125,7 +125,7 @@ func TestPinOutOfRecommendedAnswersPerTerminal(t *testing.T) {
 // the two-sided answer is what the alias path could not give for a multi-supply part.
 func TestPinOutOfRecommendedCatchesUnderVoltage(t *testing.T) {
 	m := xlatModel(t, "+3V3", "+1V2") // VCCB minimum is 1.65
-	fs := pinOutOfRecommended.Eval(m)
+	fs := pinOutOfRecommended.Findings(m)
 	if len(fs) != 1 || !strings.Contains(fs[0].Message, "VCCB") {
 		t.Fatalf("want one VCCB under-voltage finding, got %+v", fs)
 	}
@@ -139,20 +139,20 @@ func TestPinOutOfRecommendedCatchesUnderVoltage(t *testing.T) {
 // problem is reported once.
 func TestAliasPathDefersOnlyWhenPinDataExists(t *testing.T) {
 	withPins := xlatModel(t, "+5V", "+5V")
-	if n := len(supplyExceedsAbsMax.Eval(withPins)); n != 0 {
+	if n := len(supplyExceedsAbsMax.Findings(withPins)); n != 0 {
 		t.Errorf("with pin bindings the alias rule must defer; want 0 findings, got %d", n)
 	}
-	if n := len(pinExceedsAbsMax.Eval(withPins)); n == 0 {
+	if n := len(pinExceedsAbsMax.Findings(withPins)); n == 0 {
 		t.Error("the pin rule must cover what the alias rule stopped reporting")
 	}
 
 	// The pre-pin-binding shape: same rules, unchanged behaviour.
 	noPins := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil,
 		param.ParamSet{"ACME-33": ldoSpec("ACME-33", 3.6)})
-	if n := len(supplyExceedsAbsMax.Eval(noPins)); n != 1 {
+	if n := len(supplyExceedsAbsMax.Findings(noPins)); n != 1 {
 		t.Errorf("a spec with no pin data keeps today's behaviour; want 1 alias finding, got %d", n)
 	}
-	if n := len(pinExceedsAbsMax.Eval(noPins)); n != 0 {
+	if n := len(pinExceedsAbsMax.Findings(noPins)); n != 0 {
 		t.Errorf("the pin rule has nothing to bind to; want 0 findings, got %d", n)
 	}
 }
@@ -169,10 +169,10 @@ func TestPinRatingRulesSilentWithoutTheirInputs(t *testing.T) {
 		{"no voltage evidence on the rails", xlatModel(t, "VDD_MAIN", "VDD_AUX")},
 	}
 	for _, tc := range cases {
-		if n := len(pinExceedsAbsMax.Eval(tc.m)); n != 0 {
+		if n := len(pinExceedsAbsMax.Findings(tc.m)); n != 0 {
 			t.Errorf("%s: want 0 abs-max findings, got %d", tc.name, n)
 		}
-		if n := len(pinOutOfRecommended.Eval(tc.m)); n != 0 {
+		if n := len(pinOutOfRecommended.Findings(tc.m)); n != 0 {
 			t.Errorf("%s: want 0 recommended findings, got %d", tc.name, n)
 		}
 	}
@@ -191,7 +191,7 @@ func TestPinRatingSkipsAnUnresolvablePin(t *testing.T) {
 	m := check.NewModelWithParams(xlatDesign("ACME-XLAT", "+5V", "+5V"), nil,
 		param.ParamSet{"ACME-XLAT": spec})
 
-	if n := len(pinExceedsAbsMax.Eval(m)); n != 0 {
+	if n := len(pinExceedsAbsMax.Findings(m)); n != 0 {
 		t.Errorf("an ambiguous pin must be skipped, not guessed; got %d findings", n)
 	}
 }

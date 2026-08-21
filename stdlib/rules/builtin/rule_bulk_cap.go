@@ -21,7 +21,7 @@ var bulkCap = &check.Rule{
 		check.KeyDistribution: check.DistPublicReference,
 	},
 	Detail: ruleDoc("bulk-cap"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
 			if !named || n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
@@ -32,7 +32,7 @@ var bulkCap = &check.Rule{
 			})
 		})
 		return check.Report(bad, check.NetFinding("power rail has no bulk capacitor"))
-	},
+	}),
 }
 
 // bulkCapSpec is the rule's declarative twin (WS3-003).

@@ -22,11 +22,9 @@ var singlePinNet = &check.Rule{
 		check.KeyTier:         "P",
 		check.KeyDistribution: check.DistOpen,
 	},
-	Detail:       ruleDoc("single-pin-net"),
-	EvalVerdicts: singlePinNetVerdicts,
-	Eval: func(m check.Model) []check.Finding {
-		return check.VerdictsToFindings(singlePinNetVerdicts(m))
-	},
+	Detail:              ruleDoc("single-pin-net"),
+	Eval:                singlePinNetVerdicts,
+	StatesConsideredSet: true,
 }
 
 // singlePinNetVerdicts decides every net in the design and returns one verdict each, which IS this

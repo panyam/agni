@@ -24,7 +24,7 @@ var danglingEndpoint = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // detected by the reader from wire geometry (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("dangling-endpoint"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.DanglingEndpoints(), func(e *ir.DanglingEndpoint) check.Finding {
 			return check.Finding{
 				Kind:    check.KindEndpoint,
@@ -33,7 +33,7 @@ var danglingEndpoint = &check.Rule{
 				Prov:    e.Prov,
 			}
 		})
-	},
+	}),
 }
 
 // danglingEndpointSpec is the rule's declarative twin (WS3-003).

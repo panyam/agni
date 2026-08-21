@@ -22,7 +22,7 @@ var powerInputNotDriven = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("power-input-not-driven"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		// "No power source" is only conclusive where the format types power OUTPUTS. On EDIF/IPC (which
 		// carry no power_out) a rail's driver reads as a plain input, so the absence is not evidence of
 		// unpowered — it would false-fire on every switched/derived rail. WS3-072 PR2 stamps the power_IN
@@ -40,7 +40,7 @@ var powerInputNotDriven = &check.Rule{
 			return hasPowerIn && check.CountDir(dirs, check.IsDriver) == 0
 		})
 		return check.Report(bad, check.NetFinding("net has a power-input pin but no power source"))
-	},
+	}),
 }
 
 // powerInputNotDrivenSpec is the rule's declarative twin (WS3-003). The driver set mirrors

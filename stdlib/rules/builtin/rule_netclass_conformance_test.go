@@ -73,13 +73,13 @@ func TestNetclassTrackWidthCascade(t *testing.T) {
 		ncNet{net: "VBUS", widthMM: 0.8}, // obeys Power, the class that wins the cascade
 		ncNet{net: "SIG", widthMM: 0.25}, // obeys Default
 	))
-	if f := netclassTrackWidth.Eval(m); len(f) != 0 {
+	if f := netclassTrackWidth.Findings(m); len(f) != 0 {
 		t.Errorf("conforming nets produced findings: %+v", f)
 	}
 
 	// Now route VBUS below its resolved limit. It must fire, and name the class that set it.
 	m2 := ncModel(t, nets, defs, ncCopper(ncNet{net: "VBUS", widthMM: 0.3})) // 0.3 < Power's 0.8
-	f := netclassTrackWidth.Eval(m2)
+	f := netclassTrackWidth.Findings(m2)
 	if len(f) != 1 {
 		t.Fatalf("under-width net = %+v, want exactly 1 finding", f)
 	}
@@ -94,7 +94,7 @@ func TestNetclassTrackWidthCascade(t *testing.T) {
 func TestNetclassTrackWidthDefaultAppliesToUnclassedNet(t *testing.T) {
 	defs := []*ir.Constraint{ncDef("Default", 2147483647, true, map[string]string{"track_width": "0.25"})}
 	m := ncModel(t, []*ir.Net{{Name: "LONELY"}}, defs, ncCopper(ncNet{net: "LONELY", widthMM: 0.1}))
-	f := netclassTrackWidth.Eval(m)
+	f := netclassTrackWidth.Findings(m)
 	if len(f) != 1 {
 		t.Fatalf("unclassed net under Default's width = %+v, want 1 finding", f)
 	}
@@ -106,10 +106,10 @@ func TestNetclassTrackWidthDefaultAppliesToUnclassedNet(t *testing.T) {
 func TestNetclassRulesSilentWithoutDefinitions(t *testing.T) {
 	m := ncModel(t, []*ir.Net{{Name: "VBUS", NetClasses: []string{"Power"}}}, nil,
 		ncCopper(ncNet{net: "VBUS", widthMM: 0.001, drillMM: 0.001}))
-	if f := netclassTrackWidth.Eval(m); len(f) != 0 {
+	if f := netclassTrackWidth.Findings(m); len(f) != 0 {
 		t.Errorf("track-width rule fired with no definitions: %+v", f)
 	}
-	if f := netclassViaDrill.Eval(m); len(f) != 0 {
+	if f := netclassViaDrill.Findings(m); len(f) != 0 {
 		t.Errorf("via-drill rule fired with no definitions: %+v", f)
 	}
 }
@@ -128,7 +128,7 @@ func TestNetclassViaDrill(t *testing.T) {
 		ncNet{net: "VBUS", drillMM: 0.3}, // < Power's 0.4mm -> fires
 		ncNet{net: "SIG", drillMM: 0.1},  // nothing declares a drill -> skipped, not passed
 	))
-	f := netclassViaDrill.Eval(m)
+	f := netclassViaDrill.Findings(m)
 	if len(f) != 1 || f[0].Subject != "VBUS" {
 		t.Fatalf("findings = %+v, want exactly one on VBUS (SIG has no declared drill to compare)", f)
 	}
@@ -151,13 +151,13 @@ func TestNetclassTrackWidthPriorityDecides(t *testing.T) {
 
 	// 0.15mm satisfies Zeta (the winner) but is far below Alpha. Silent only if priority is honoured.
 	m := ncModel(t, nets, defs, ncCopper(ncNet{net: "SIG", widthMM: 0.15}))
-	if f := netclassTrackWidth.Eval(m); len(f) != 0 {
+	if f := netclassTrackWidth.Findings(m); len(f) != 0 {
 		t.Errorf("net routed at the WINNING class's width produced findings: %+v", f)
 	}
 
 	// Below Zeta's width: fires, and names Zeta rather than Alpha or Default.
 	m2 := ncModel(t, nets, defs, ncCopper(ncNet{net: "SIG", widthMM: 0.10}))
-	f := netclassTrackWidth.Eval(m2)
+	f := netclassTrackWidth.Findings(m2)
 	if len(f) != 1 {
 		t.Fatalf("findings = %+v, want 1", f)
 	}
