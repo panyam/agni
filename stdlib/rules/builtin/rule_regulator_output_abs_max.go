@@ -28,6 +28,7 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 	Severity:   "error",
 	Summary:    "A regulator's datasheet output voltage exceeds the absolute-maximum supply rating of a part it feeds.",
 	Impact:     "The downstream part is driven past the vendor's stress envelope by a supply the design itself creates. It may fail immediately or degrade in the field, and because both numbers are vendor values rather than a name-derived guess, the finding is actionable without further verification.",
+	Remedy:     "Reprogram the regulator's output to a voltage the downstream part is rated for, or move that part to a rail that already is. Both numbers come from vendor documents, so a design change settles this without needing a measurement.",
 	Primitives: []string{"select", "traverse", "reach", "param-join"},
 	Reads:      []string{"param.supply_abs_max", "param.output_voltage", "on_net"},
 	Tags: map[string]string{

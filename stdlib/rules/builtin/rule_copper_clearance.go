@@ -23,6 +23,7 @@ var copperClearance = &check.Rule{
 	Severity:   "error",
 	Summary:    "Copper of two different nets sits closer than the 0.127mm fabrication floor.",
 	Impact:     "Sub-clearance copper either fails DFM at order time or ships as a latent short: etch variance and solder bridging turn a too-tight gap into a connection the netlist never had. It is the defect DRC exists for.",
+	Remedy:     "Pull the two nets apart to the fab's minimum clearance. A gap below it is a short waiting on etch variance or a solder bridge.",
 	Primitives: []string{"select", "geometry-distance"},
 	Reads:      []string{"board.copper"},
 	Tags: map[string]string{

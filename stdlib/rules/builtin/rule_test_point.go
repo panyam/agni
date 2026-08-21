@@ -49,6 +49,7 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 		Severity: "info",
 		Summary:  "A power rail or ground net has no test point, on a board that uses them.",
 		Impact:   "The nets you most need to see at bring-up are the ones you cannot reach with a probe on an assembled board. A rail without a test point means debugging a power problem by touching a component pad the size of a sand grain, and factory test cannot verify the rail at all.",
+		Remedy:   "Add a test point to the rail. It costs a pad, and it is the difference between measuring a supply at bring-up and trying to hold a probe on a component lead.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryPower,
 			check.KeyTier:         "R",

@@ -260,6 +260,7 @@ message RuleInfo {
   string unavailable_reason = 7;  // why not, when available is false (e.g. "needs the datasheet parameter layer")
   string impact = 8;              // what goes wrong when the rule is violated (check.Rule.Impact)
   string detail = 9;              // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)
+  string remedy = 10;             // what to do about a violation, in the imperative (check.Rule.Remedy)
 }
 
 message ListRulesResponse {

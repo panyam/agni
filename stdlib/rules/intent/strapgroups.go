@@ -100,6 +100,7 @@ func strapGroupRule(g StrapGroup) *check.Rule {
 		Summary:  fmt.Sprintf("the %s strap group does not encode the value the design intent declares", g.Name),
 		Detail:   intentDoc(docKeyStrapGroup),
 		Impact:   "a multi-pin strap encodes a number the part reads at reset — its address on a shared bus, its boot source, its bus width. Encoding the wrong number does not look like a wiring fault: the board powers up and the part runs, configured as something else, and on a shared bus it may answer to an address another device already owns.",
+		Remedy:   intentRemedy(docKeyStrapGroup),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
 		Eval: func(m check.Model) []check.Finding {
@@ -164,6 +165,7 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		Summary:  "two devices on one bus strap to the same address",
 		Detail:   intentDoc(RuleStrapAddressCollision),
 		Impact:   "two parts answering to one address on a shared bus both drive it when either is addressed. The bus goes unreliable in a way that reads as noise or marginal timing rather than as a wiring fault, and it is invisible in a schematic review because each strap is individually correct.",
+		Remedy:   intentRemedy(RuleStrapAddressCollision),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
 		Eval: func(m check.Model) []check.Finding {

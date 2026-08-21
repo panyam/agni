@@ -11,6 +11,7 @@ var esdProtection = &check.Rule{
 	Severity:   "info",
 	Summary:    "An externally-exposed signal net (on a connector) has no TVS device.",
 	Impact:     "A signal that leaves the board through a connector is a direct ESD path into the IC behind it. Human contact discharges kilovolts; an unclamped data pin takes the hit. Failures are intermittent, latent, and appear in the field as flaky ports and dead interfaces.",
+	Remedy:     "Fit an ESD TVS from the exposed signal to ground on the connector side of everything it protects. A clamp placed behind the transceiver protects nothing.",
 	Primitives: []string{"reach", "select", "traverse", "exists", "pin-role", "pattern", "param-join"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
 	// The IC-ESD credit is an exemption, not the finding basis: esd-protection is a netlist

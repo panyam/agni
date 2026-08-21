@@ -18,6 +18,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 		Summary:  fmt.Sprintf("a net's %s contradicts what the design intent declares", kind),
 		Detail:   intentDoc("property-" + kind),
 		Impact:   propertyImpact(kind),
+		Remedy:   intentRemedy("property-" + kind),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
 		Eval: func(m check.Model) []check.Finding {

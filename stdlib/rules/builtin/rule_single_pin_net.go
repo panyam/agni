@@ -14,6 +14,7 @@ var singlePinNet = &check.Rule{
 	Severity:   "info",
 	Summary:    "A net connects to fewer than two pins (a floating stub), and is not an intentional no-connect.",
 	Impact:     "A stub is a signal wired to one thing or nothing: the other end was meant to go somewhere and does not. It shows up only at bring-up, when a pin is silently dead. Catching it at capture is free; catching it on the bench is a debugging session.",
+	Remedy:     "Wire the stub to whatever it was meant to reach, or mark the pin no-connect if it is genuinely unused, so the intent is recorded rather than left to be guessed at.",
 	Primitives: []string{"select", "count", "traverse", "exists", "pin-role"},
 	Reads:      []string{"net.names", "net.pin_count", "pin.no_connect"},
 	Tags: map[string]string{

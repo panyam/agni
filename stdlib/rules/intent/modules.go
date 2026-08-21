@@ -18,6 +18,7 @@ func moduleMissingRule(d Declaration) *check.Rule {
 		Summary:  "a module the design intent declares required is not present",
 		Detail:   intentDoc(RuleModuleMissing),
 		Impact:   "a required functional block is missing from the schematic, so the design does not match its declared architecture",
+		Remedy:   intentRemedy(RuleModuleMissing),
 		Reads:    []string{"component.class", "component.mpn"},
 		Tags:     intentTags(),
 		Eval: func(m check.Model) []check.Finding {
@@ -64,6 +65,7 @@ func moduleCountRule(d Declaration) *check.Rule {
 		Summary:  "the number of components for a declared module does not match the design intent",
 		Detail:   intentDoc(RuleModuleCount),
 		Impact:   "the design has too few or too many of a required functional block, so it does not match its declared architecture (a dropped or duplicated channel)",
+		Remedy:   intentRemedy(RuleModuleCount),
 		Reads:    []string{"component.class", "component.mpn"},
 		Tags:     intentTags(),
 		Eval: func(m check.Model) []check.Finding {

@@ -10,6 +10,41 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
+// TestEveryRuleStatesARemedy holds the catalog to the second half of a finding's prose (WS3-124
+// item 3). Impact says why a finding matters; a reader who accepts that it matters still has to know
+// the fix, and before this every rule left them to know it already.
+//
+// It lives here because this is the only package composing all four rule sources, and it is
+// catalog-wide on purpose: the point is that rule 69 cannot ship without a remedy, which a per-source
+// test would not catch for a source nobody thought to add one to. Detail-less rules are NOT skipped
+// the way TestPageSlugsUnique skips them, because a rule with no docsite page still emits findings.
+func TestEveryRuleStatesARemedy(t *testing.T) {
+	sources := []struct {
+		rules []*check.Rule
+		label string
+	}{
+		{check.BuiltinRules(), "built-in"},
+		{intent.DocRules(), "intent"},
+		{datalog.DocRules(), "datalog"},
+		{profiles.DocRules(), "profile"},
+	}
+	total := 0
+	for _, s := range sources {
+		if len(s.rules) == 0 {
+			t.Errorf("source %q contributed no rules", s.label)
+		}
+		for _, r := range s.rules {
+			total++
+			if strings.TrimSpace(r.Remedy) == "" {
+				t.Errorf("%s rule %q states no Remedy: say what to DO about a violation, in the imperative", s.label, r.Name)
+			}
+		}
+	}
+	if total == 0 {
+		t.Fatal("no rules across any source")
+	}
+}
+
 // TestPageSlugsUnique guards the reason non-built-in rules are namespaced: a rule name shared across
 // sources (or a future collision, e.g. the datalog crystal-load-caps twin of the built-in) must not
 // resolve to the same page slug, or one page would overwrite the other. It composes the same source

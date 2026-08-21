@@ -58,6 +58,34 @@ func TestSpecProtoRoundTrip(t *testing.T) {
 	}
 }
 
+// TestRuleMetaProtoRoundTrip is the same C26 field-drift guard for the OTHER converter pair in this
+// file. RuleMetaProto/RuleMetaFromProto had none, which is the asymmetry C26 exists to close: a rule's
+// prose and gates cross stdlib/ruledef through these two functions, and a field the converter never
+// learned is absent from both sides of any assertion made on the proto. That is exactly how
+// Profile.HostClass was lost.
+//
+// The fixture sets every carried field to a distinguishable non-zero value, which is the load-bearing
+// part of the guard: a field left at its zero value round-trips cleanly through a conversion that
+// drops it entirely. Reads and Primitives are deliberately absent from the wire form (they are derived
+// from a definition's body by its compiler), so they stay zero on both sides here.
+func TestRuleMetaProtoRoundTrip(t *testing.T) {
+	want := Rule{
+		Name:               "every-field-set",
+		Severity:           "warning",
+		Summary:            "a one-line summary",
+		Impact:             "what goes wrong when it is violated",
+		Remedy:             "what to do about it",
+		Detail:             "## long-form\n\nmarkdown",
+		Tags:               map[string]string{KeyCategory: CategoryConnectivity, KeyTier: "R"},
+		OptionalReads:      []string{"param.abs_max_supply"},
+		RequiresCapability: []Capability{CapTypesPowerOut, CapNetClass},
+	}
+	got := RuleMetaFromProto(RuleMetaProto(want))
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("round trip lost or changed a field:\n got %#v\nwant %#v", got, want)
+	}
+}
+
 // TestSpecLitIntNormalizes documents an ASYMMETRY that is deliberate, so nobody "fixes" it into a
 // bug. litProto encodes both int and int64, because a hand-written Go spec may carry either, while
 // litFromProto always decodes to int. The evaluator speaks int and nothing else in this package

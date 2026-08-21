@@ -22,6 +22,7 @@ var unannotatedComponents = &check.Rule{
 	Severity:   "warning",
 	Summary:    "Parts still carry a placeholder designator instead of an assigned one.",
 	Impact:     "An unannotated part has no identity, so nothing downstream can name it: it has no BOM line to order, no designator to locate it by on the board, and no stable key for a diff to track it across revisions. It also silences checks rather than failing them — a placeholder is shared by every unannotated part of its kind, so any rule keying on the designator sees one impossible part instead of many real ones, and pin-net-conflict declines to judge them at all. The parts are drawn and connected; only their names are missing, which is why the design otherwise reads as complete.",
+	Remedy:     "Annotate the schematic so every part carries an assigned designator. Until then those parts have no BOM line, no place on the board, and no identity a diff can follow across revisions.",
 	Primitives: []string{"select"},
 	Reads:      []string{"unannotated_component"},
 	Tags: map[string]string{

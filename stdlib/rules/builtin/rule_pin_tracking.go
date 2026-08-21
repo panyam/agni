@@ -321,6 +321,7 @@ var pinTrackingViolated = &check.Rule{
 	Severity:   "error",
 	Summary:    "Two pins of one part sit outside the tracking bound their datasheet requires between them.",
 	Impact:     "The vendor states this bound as a requirement, and breaking it is outside the stress envelope the part is guaranteed in: a supply ordering violation can forward-bias an internal path and damage the die on every power cycle. Where both terminals share a net the verdict rests on connectivity alone rather than on a rail's name, so it holds on a design whose nets are not named for their voltages.",
+	Remedy:     "Restore the ordering the datasheet requires between the two terminals, using sequencing, a clamp diode between them, or a shared rail. This is a stress violation, so it wants fixing before the board is powered again.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.pin", "param.pin_relation", "net.role", "net.nominal_voltage", "net.name", "on_net"},
 	Tags: map[string]string{
@@ -345,6 +346,7 @@ var pinTrackingAdvisory = &check.Rule{
 	Severity:   "warning",
 	Summary:    "Two pins of one part sit outside a tracking bound their datasheet recommends between them.",
 	Impact:     "The vendor states this bound with a recommending verb (\"should be at least 1 V higher for best operation\"), so breaking it is a loss of margin or of stated performance rather than a stress violation. It is reported separately from the required bound because a team that gates CI on datasheet violations wants the two answered differently, and folding them together would misstate one of them.",
+	Remedy:     "Restore the recommended ordering between the two terminals where the design allows it, or record that the loss of margin is accepted. Unlike the required bound, this costs performance rather than the part.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.pin", "param.pin_relation", "net.role", "net.nominal_voltage", "net.name", "on_net"},
 	Tags: map[string]string{

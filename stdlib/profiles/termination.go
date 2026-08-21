@@ -66,6 +66,7 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 			Severity: "warning",
 			Summary:  fmt.Sprintf("A %s bus has no termination across %s/%s.", p.Name, high, low),
 			Impact:   "A differential bus with no termination resistor across its pair reflects signals off the unterminated end, corrupting data at speed; the link may pass at low rate and fail intermittently under load.",
+			Remedy:   requirementRemedy("termination"),
 			Tags:     p.tags(),
 			Detail:   ruleDoc("termination"),
 		},

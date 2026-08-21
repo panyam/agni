@@ -72,6 +72,7 @@ var railNotClassified = &check.Rule{
 		"those rails invisible, and the run reports clean because the rules had nothing to quantify over rather than " +
 		"because the board is right. Declaring the project's rail patterns under `--conventions` restores them. " +
 		"This says nothing about the design being wrong: it reports that the analysis is running with less than it should.",
+	Remedy:     "Declare the project's rail naming patterns under `--conventions` so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.",
 	Primitives: []string{"select", "traverse", "pin-role"},
 	Reads:      []string{"net.name", "net.role", "pin.type", "on_net"},
 	Tags: map[string]string{

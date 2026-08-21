@@ -33,6 +33,7 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 			"cycles on ordinary operation rather than on a fault. Nothing in the schematic looks wrong: the " +
 			"trip point is the arithmetic of a threshold the controller states and a shunt the designer chose, " +
 			"and it surfaces at bring-up as an intermittent rail nobody can pin on a part.",
+		Remedy: intentRemedy(RuleLoadSwitchTripBelowBudget),
 		Reads: []string{
 			"param.ocp_threshold", "param.on_resistance",
 			"component.value", "component.class", "pin.role", "on_net",

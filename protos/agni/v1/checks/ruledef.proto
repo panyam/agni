@@ -92,6 +92,9 @@ message RuleMeta {
   // inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
   // which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
   repeated string requires_capability = 8;
+  // remedy is what to do about a violation, in the imperative. It is generic over the RULE rather
+  // than the subject, so it names the class of change and never a designator or a computed value.
+  string remedy = 9;
 }
 
 // --- The spec body: a rule as a small AST over declared facts -------------------------------------

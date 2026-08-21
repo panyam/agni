@@ -38,6 +38,7 @@ var capVoltage = func() *check.Rule {
 		Severity: "error",
 		Summary:  "A capacitor's datasheet rated voltage does not clear the worst rail it touches times the derate factor.",
 		Impact:   "A cap run at or above its rated voltage ages fast and fails early (ceramics also lose most of their capacitance near rating). Unlike a heuristic, the limit here is the vendor's own rated voltage, cited to its page.",
+		Remedy:   "Fit a capacitor rated above the worst rail it touches, with the derating the design's own rules call for. On ceramics, allow for the capacitance lost under applied DC bias as well.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryDatasheet,
 			check.KeyTier:         "R",

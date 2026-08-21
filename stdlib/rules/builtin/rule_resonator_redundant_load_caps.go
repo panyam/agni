@@ -21,6 +21,7 @@ var resonatorRedundantLoadCaps = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A ceramic resonator with integrated load capacitors also has an external load cap to ground on a terminal.",
 	Impact:     "A ceramic resonator of the built-in-cap family already presents its specified load capacitance internally. Adding external load caps to ground doubles the load: the total capacitance is now well above spec, so the oscillator starts slowly or off-frequency, or (over temperature and part spread) fails to start. The board usually oscillates on the bench and drifts or drops out in the field, and every timed peripheral clocked from it (UART baud, CAN bit timing) goes with it. It is a silent BOM/layout carry-over from a crystal design, invisible until the load is measured.",
+	Remedy:     "Remove the external load capacitors. A resonator of the built-in-cap family carries its own, so the schematic should show the resonator alone.",
 	Primitives: []string{"select", "exists", "traverse", "pattern"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net"},
 	Tags: map[string]string{

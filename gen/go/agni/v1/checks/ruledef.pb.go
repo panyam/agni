@@ -214,8 +214,11 @@ type RuleMeta struct {
 	// inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
 	// which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
 	RequiresCapability []string `protobuf:"bytes,8,rep,name=requires_capability,json=requiresCapability,proto3" json:"requires_capability,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// remedy is what to do about a violation, in the imperative. It is generic over the RULE rather
+	// than the subject, so it names the class of change and never a designator or a computed value.
+	Remedy        string `protobuf:"bytes,9,opt,name=remedy,proto3" json:"remedy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RuleMeta) Reset() {
@@ -302,6 +305,13 @@ func (x *RuleMeta) GetRequiresCapability() []string {
 		return x.RequiresCapability
 	}
 	return nil
+}
+
+func (x *RuleMeta) GetRemedy() string {
+	if x != nil {
+		return x.Remedy
+	}
+	return ""
 }
 
 // SpecRule is a rule whose body is a Spec: select an entity set, keep the entities matching a
@@ -2276,7 +2286,7 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x04spec\x18\x01 \x01(\v2\x18.agni.v1.checks.SpecRuleH\x00R\x04spec\x121\n" +
 	"\x05query\x18\x02 \x01(\v2\x19.agni.v1.checks.QueryRuleH\x00R\x05query\x126\n" +
 	"\aprofile\x18\x03 \x01(\v2\x1a.agni.v1.checks.ProfileDefH\x00R\aprofileB\x06\n" +
-	"\x04body\"\xcd\x02\n" +
+	"\x04body\"\xe5\x02\n" +
 	"\bRuleMeta\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x18\n" +
@@ -2285,7 +2295,8 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x06detail\x18\x05 \x01(\tR\x06detail\x126\n" +
 	"\x04tags\x18\x06 \x03(\v2\".agni.v1.checks.RuleMeta.TagsEntryR\x04tags\x12%\n" +
 	"\x0eoptional_reads\x18\a \x03(\tR\roptionalReads\x12/\n" +
-	"\x13requires_capability\x18\b \x03(\tR\x12requiresCapability\x1a7\n" +
+	"\x13requires_capability\x18\b \x03(\tR\x12requiresCapability\x12\x16\n" +
+	"\x06remedy\x18\t \x01(\tR\x06remedy\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"f\n" +

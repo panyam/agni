@@ -28,6 +28,7 @@ var fetVdssBelowRail = &check.Rule{
 	Severity:   "error",
 	Summary:    "A MOSFET sits on a rail at or above its datasheet drain-source breakdown voltage.",
 	Impact:     "Past its breakdown rating a switching FET no longer blocks: it can avalanche or fail short, and a shorted high-side switch applies the full rail to the load it was protecting. The rating is the vendor's own number, cited with the page it came from.",
+	Remedy:     "Fit a FET whose drain-source rating clears the rail with margin for switching overshoot, checking it against the rail's transient peak rather than its nominal.",
 	Primitives: []string{"select", "traverse", "param-join"},
 	Reads:      []string{"param.fet_breakdown", "param.output_voltage", "net.max_voltage", "on_net"},
 	Tags: map[string]string{

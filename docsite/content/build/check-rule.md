@@ -139,11 +139,42 @@ vocabulary soaks, with parity asserted between the two.
   public `check.RegisterBuiltins` seam an overlay uses, so `core/check` owns no rules of its own.
 - `stdlib/rules/builtin/docs/<name>.md`: the single source of the rule's `Detail`, embedded at build time. The
   harness fails CI without it. Write it in full as proper `###` sections under the rule's `##`
-  title, not bold run-ins: What it means, Why engineers want it, Impact, an ASCII sketch of
+  title, not bold run-ins: What it means, Why engineers want it, Impact, Remedy, an ASCII sketch of
   fires-versus-fine, a Scope note recording every guard decision from the step above, the query
   structure, and a "For software readers" section mapping the EE concepts to structural analogies
   (a test point is a metrics endpoint, and the rule reads as "critical paths must emit telemetry")
   with a diagram beside it.
+
+## Say what to do about it
+
+A rule carries four pieces of prose, and `Remedy` is the one it is easiest to leave off. `Summary`
+is the one-liner, `Impact` is what goes wrong when the rule is violated, `Detail` is the long-form
+markdown, and `Remedy` is what to DO about it, in the imperative, as one engineer would say it to
+another. Without it a reader who accepts that the finding matters still has to already know the fix,
+which is most of the distance between a report and an action.
+
+`TestEveryRuleStatesARemedy` (in `tools/catalogdocs`) holds the whole catalog to this, so a new rule
+does not ship without one.
+
+Three things keep it honest:
+
+- **It is generic over the RULE, not the subject.** The remedy names the class of change ("add a
+  bulk capacitor where the rail enters"), never a designator. A remedy templated on the bound
+  subject is a later tier and waits for verdicts to carry the binding.
+- **Where the real fix needs a value the engine cannot derive, say what to size it from and stop.**
+  The pull-up an I2C bus wants depends on its capacitance and clock rate, neither of which the
+  netlist states. `i2c-pull-up` says to size it from those and names no resistance. Inventing a
+  plausible number here would be the same silent-authority problem verdicts exist to remove, one
+  layer up.
+- **Where the finding is about the ANALYSIS rather than the design, say so.** `rail-not-classified`
+  and `symbol-unresolved` are remedied by giving the tool more (`--conventions`, `--symbol-path`),
+  and their remedies say explicitly that nothing is yet known to be wrong with the board.
+
+A rule generated per-declaration (the `intent` and `profile` families) keys its remedy by KIND rather
+than writing it at the builder, because the fix for a missing OV clamp is the same sentence on every
+rail that declares one. See `docRemedies` in `stdlib/rules/intent/docs.go` and `requirementCaption`
+in `stdlib/profiles/docs.go`: the runtime rule and the docsite exemplar read one source, so there is
+no second copy to drift.
 
 ## Say what you looked at, not only what failed
 

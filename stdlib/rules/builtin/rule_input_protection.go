@@ -12,6 +12,7 @@ var inputProtection = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A connector feeds a power-input pin directly with no fuse or TVS in the path.",
 	Impact:     "An unprotected power input passes every upstream fault into the board: a shorted load takes out the cable or supply instead of a fuse, and a hot-plug transient or miswired adapter reaches the regulator unclamped. A classic review finding with real field consequences.",
+	Remedy:     "Put a fuse and a clamp in the path between the connector and the rail: a fuse for the sustained fault, a TVS for the transient.",
 	Primitives: []string{"select", "traverse", "exists", "pin-role", "pattern", "reach"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{

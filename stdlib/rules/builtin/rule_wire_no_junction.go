@@ -14,6 +14,7 @@ var wireNoJunction = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A wire endpoint lands mid-span on another wire with no junction dot.",
 	Impact:     "The drawing shows a T-tap; the tool sees two separate nets. The author believes net A and net B are one, every visual review confirms it, and the board ships with the connection missing. It is the most dangerous silent connectivity slip in schematic capture.",
+	Remedy:     "Place a junction dot where the wires meet if the connection is intended, or move one wire clear of the other if it is not. Do not leave the crossing to be read by eye.",
 	Primitives: []string{"select"},
 	Reads:      []string{"wire.endpoint", "wire.junction"},
 	Tags: map[string]string{

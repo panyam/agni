@@ -230,7 +230,7 @@ holds one file per service.
 
 ## C14: Rule classification is open tags, not typed fields
 **Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
-`Reads` (its fact dependencies), and `Eval`, plus the prose (`Summary`/`Impact`/`Detail`). Every
+`Reads` (its fact dependencies), and `Eval`, plus the prose (`Summary`/`Impact`/`Remedy`/`Detail`). Every
 classificatory axis — category, tier, distribution, and any provider-defined one — lives in an open
 `Tags map[string]string`, never as a typed struct field. Availability derives from `Reads` (a rule
 that reads a fact whose provider layer is absent is unavailable), not a stored track/label field.
@@ -679,10 +679,16 @@ its own: `stdlib/ruledef` claimed a body's wire form is owned beside its vocabul
 a compile error, and that holds for a new NODE TYPE covered by a type switch, not for a new FIELD on
 an already-mapped struct.
 **Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
-`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All four pairs are
+`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All five pairs are
 covered: `TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip`
 (`stdlib/profiles`), `TestSpecProtoRoundTrip` (`core/check`), `TestQueryProtoRoundTrip`
-(`core/query`). A new body owes one before it ships, not after it drifts.
+(`core/query`), and `TestRuleMetaProtoRoundTrip` (`core/check`). A new body owes one before it ships,
+not after it drifts.
+
+`RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four,
+which is worth recording: the gap was found by adding a field (`Rule.Remedy`) that crosses it, not by
+auditing against the constraint. An enumeration in a Verify block is only as current as the last
+person who edited it.
 
 The remaining asymmetry is `query.FindingQueryProto`, which has no `FindingQueryFromProto`: its decode
 is inlined in `ruledef.Compile`, so there is no pair to round-trip and its field coverage rests on

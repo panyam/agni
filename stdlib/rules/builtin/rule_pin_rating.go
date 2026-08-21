@@ -297,6 +297,7 @@ var pinExceedsAbsMax = &check.Rule{
 	Severity:   "error",
 	Summary:    "A supply pin sits on a rail whose nominal voltage exceeds that pin's own absolute-maximum rating.",
 	Impact:     "Exceeding an absolute-maximum rating is outside the vendor's stress envelope: the part may be damaged immediately or degrade in the field. Unlike the part-level check, this compares against the limit the datasheet states for THIS terminal, so a part whose supplies are rated differently is answered per supply rather than against its most restrictive one.",
+	Remedy:     "Move this terminal to a rail inside its own rated maximum. A part's supplies are often rated differently from one another, so work from this pin's number rather than the part's.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.pin", "param.pin_range", "pin.electrical_type", "net.name", "on_net"},
 	Tags: map[string]string{
@@ -321,6 +322,7 @@ var pinOutOfRecommended = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A supply pin sits on a rail whose nominal voltage is outside that pin's own recommended operating range.",
 	Impact:     "Outside the recommended operating range the datasheet's guaranteed specifications no longer hold: the part may still function, but margin, accuracy, and lifetime are no longer assured. Because the range is read per terminal, a part with several supplies at different windows is checked against the right one instead of being skipped as ambiguous.",
+	Remedy:     "Bring this terminal's supply inside the range the datasheet gives for it. Where a part has several supplies, each carries its own window.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.pin", "param.pin_range", "pin.electrical_type", "net.name", "on_net"},
 	Tags: map[string]string{

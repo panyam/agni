@@ -19,6 +19,7 @@ var reverseBlockingAbsent = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A connector feeds a power input with no directional element blocking reverse flow.",
 	Impact:     "Reverse polarity from a miswired connector, or backfeed from a parallel source into a switched-off rail, reaches the board unopposed. ISO 16750-2 makes reverse voltage a qualification requirement on a vehicle, and a fuse does not help: it opens on magnitude, not direction.",
+	Remedy:     "Add a directional element between the connector and the load: a series FET where the voltage drop matters, a diode where it does not, or a bridge where the input polarity is genuinely unknown.",
 	Primitives: []string{"select", "traverse", "reach", "pin-role"},
 	Reads:      []string{"component.class", "net.attributes", "on_net", "pin.electrical_type", "pin.role"},
 	Tags: map[string]string{

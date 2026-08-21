@@ -3,7 +3,7 @@ import { type RuleItem } from "./rules.js";
 import { type Bundle, BUILTIN_BUNDLES, resolveBundle, upsertBundle, removeBundle, allBundles } from "./bundles.js";
 
 function rule(name: string, tags: Record<string, string>, available = true): RuleItem {
-  return { name, severity: "info", summary: "", impact: "", detail: "", reads: [], tags, available, unavailableReason: "" };
+  return { name, severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags, available, unavailableReason: "" };
 }
 
 const catalog: RuleItem[] = [

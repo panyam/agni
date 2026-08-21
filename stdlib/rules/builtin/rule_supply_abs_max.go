@@ -15,6 +15,7 @@ var supplyExceedsAbsMax = &check.Rule{
 	Severity:   "error",
 	Summary:    "A power-input pin sits on a rail whose nominal voltage exceeds the part's absolute-maximum supply rating.",
 	Impact:     "Exceeding an absolute-maximum rating is outside the vendor's stress envelope: the part may be damaged immediately or degrade in the field. Unlike a heuristic, this limit is the vendor's own number, with the page it came from.",
+	Remedy:     "Feed the part from a rail inside its rated supply range, or change the part for one rated to the rail it sits on. An absolute maximum is a damage threshold rather than a tolerance to design against.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.supply_abs_max", "pin.electrical_type", "net.name", "on_net"},
 	Tags: map[string]string{

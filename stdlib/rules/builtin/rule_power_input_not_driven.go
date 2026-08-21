@@ -12,6 +12,7 @@ var powerInputNotDriven = &check.Rule{
 	Severity:   "error",
 	Summary:    "A power-input pin sits on a net with no power source (no power-output and no power flag).",
 	Impact:     "A power-input pin (a chip's VCC/VDD) that nothing drives means the part is unpowered, or the rail was drawn but never tied to its regulator. The board either does not come up or a whole section is dead, and it is invisible until first power-on.",
+	Remedy:     "Connect the supply pin to the rail that feeds it, and check that the rail itself reaches its regulator. An undriven VDD is usually a missed wire rather than a missing supply.",
 	Primitives:         []string{"select", "traverse", "exists", "pin-role"},
 	Reads:              []string{"net.attributes", "on_net", "pin.electrical_type"},
 	RequiresCapability: []check.Capability{check.CapTypesPowerOut},
