@@ -155,6 +155,84 @@ makes a clean report read as better founded than it is, and nothing in the docum
 except the `catalog` snapshot, which nobody cross-reads. It is the same silence-reads-as-coverage
 shape the outcome vocabulary exists to remove, one layer up.
 
+## The considered set: what a rule looked at, not only what failed
+
+A `Finding` is a violation, so a pass emits nothing and the set of subjects a rule EXAMINED is
+recorded nowhere. That answers "what is wrong with this board" and cannot answer "prove this pin is
+fine", which is what a reviewer asks of a design they are signing off. `CheckDesignResponse.verdicts`
+carries the second answer.
+
+A `Verdict` is what one rule concluded about ONE subject, including the subjects it could not judge,
+so the verdict list IS the considered set. There is no separate coverage structure to keep in step.
+
+**Two things share the word "verdict" and are not the same thing.** The section above uses it for the
+REVIEW layer's per-item outcomes (`not-applicable`, `needs-data`, and the rest), which answer "did we
+get an answer to this question" and are mostly decided by preconditions around a rule. `check.Verdict`
+answers "what did this rule conclude about this thing", decided inside it. The two vocabularies
+deliberately do not reuse each other's spellings, and a consumer must not map one onto the other.
+
+The check-layer outcomes:
+
+| Outcome | Means |
+|---|---|
+| `PASS` / `FAIL` | the comparison was made, and which side the design is on |
+| `NO_LIMIT` | there was a row, and it stated no bound, so nothing was checked |
+| `NOT_CONSIDERED` | the rule never reached a comparison; `reason` names the step that stopped it |
+| `INCONCLUSIVE` | the rule reached its decision and could not decide |
+
+`NO_LIMIT` and `NOT_CONSIDERED` are the two that did not exist before, and both are the same failure
+this document keeps returning to. A datasheet row stating no maximum used to be indistinguishable
+from a design sitting comfortably under a real limit, and an enumerator that dropped a subject
+reported the same nothing as a rule that never looked at it.
+
+`INCONCLUSIVE` is the outcome form of `Finding.inconclusive`, which already shipped, and carries that
+field's contract: **a consumer must not count it as a failure.**
+
+### A witness is what makes a pass evidence
+
+`Witness.statement` is the line a person reads. What it rests on splits in two, and the split is
+load-bearing rather than bookkeeping:
+
+- **`Witness.terms`** are labelled VALUES ("absolute maximum" = "3.6 V"). A term's value is a bare
+  string, so nothing can resolve it to something drawable.
+- **`Verdict.context`** are typed ENTITIES, carrying the `Subject` a highlight joins on.
+
+The test is whether clicking it should light something up. A proof that is entirely a path (a pull-up
+reaching a rail through a resistor) therefore carries no terms at all, which is correct rather than a
+gap. `context` excludes the subject, which `subject` already names, so a consumer draws
+subject-as-figure over context-as-ground.
+
+### `Verdict.id` is derived, never assigned
+
+`"<rule>:<kind>:<ref>"`, computed from the verdict rather than handed to it, so a CLI run and a
+server run name the same verdict without talking to each other. It is the `mount://` parity argument
+one level down.
+
+Built from the rule, the kind and the kind's own reference, and from nothing else: not run order, not
+the message text, and **not the outcome**. Leaving the outcome out is what lets a link filed against a
+passing check survive the answer flipping, which is when someone most wants to follow it. The ref's
+grammar belongs to the kind rather than being a positional tuple of every kind's fields, because
+`Subject` is already a widening union and a positional key would change format every time a kind is
+added.
+
+Rule names are kebab-case and kind is a closed vocabulary, so neither contains a colon: split on the
+FIRST TWO colons and take the remainder verbatim. That handles `symbol:Library:Symbol`, whose colon
+`KindSymbol` documents as a real spelling.
+
+Known limit: two nets sharing a name share an id, because using the net id instead would make the id
+unconstructible. That matches how `Subject` already behaves on the wire.
+
+### Findings are unchanged
+
+`findings` carries exactly what it always did. A verdict list is a different answer to a different
+question, and folding passes into the violations list would make every consumer that counts rows
+start counting passes as defects. The CLI keeps them apart the same way: `check --verdicts` is a
+separate table, not extra rows.
+
+Only rules that STATE a considered set contribute. A rule absent from `verdicts` is declining to say,
+not reporting that it considered nothing, and a consumer must not read those the same way. That is
+the distinction `skipped` draws one layer up.
+
 ## Versioning
 
 `meta.schema` is checked on read, and an unrecognized version is an error rather than a best-effort

@@ -158,3 +158,38 @@ as real checks and went green under a deliberately broken `skipRefDes`, while th
 against literals went red. It is the same defect as the heuristic above wearing better clothes: the
 test and the code agree by construction. Assert against literals, or against a set the production
 path produced, and let only the red-check tell you which kind you wrote.
+
+**A third way a test stays green: it compares a function against itself.** A parity test was written
+to hold a rule's `Eval` to its verdict projection, `VerdictsToFindings(EvalVerdicts(m))` against
+`Eval(m)`. For a converted rule those are the same call, because its `Eval` IS that projection, so
+the test ran one function against itself and would have passed for any projection including a broken
+one. Breaking `VerdictsToFindings` deliberately left it green, which is how it was caught.
+
+The fix is the same shape as the render case above: assert the PROPERTY rather than the round trip.
+The test now rebuilds the expectation independently, keeping the failing verdicts and taking their
+findings, so a bug in the shared function shows up as a disagreement. It has a second payoff worth
+copying: when the projection rule changes, the test fails until the change is made deliberately in
+both places instead of silently in one.
+
+The tell is structural rather than about the assertion. **If both sides of an equality flow through
+the same helper, the helper is untested no matter how the assertion reads.** Worth checking before
+writing the red-check, because this one looked like a real parity test.
+
+**A positive control belongs in the test, not beside it.** A catalog-wide test that iterates
+"every rule that sets this field" passes trivially when no rule sets it. Counting the rules it
+actually asserted over and failing at zero turns a silently empty sweep into a red one. The same
+applies to a fixture: assert the fixture really contains the shape under test, or the assertion had
+nothing to catch.
+
+## Comparing output that is deliberately unstable
+
+`protojson` VARIES ITS WHITESPACE ON PURPOSE, inserting one or two spaces after a colon so callers
+cannot depend on the exact bytes. Two runs over one message differ, and a test asserting
+`"verdicts": []` passes locally and fails when the same code emits `"verdicts":  []`.
+
+So a test over proto JSON compares parsed values, or normalises whitespace first
+(`strings.Fields` joined by a single space is enough), and never the raw string. This also means
+`EmitUnpopulated` makes a newly added field appear as its zero value in every existing consumer's
+output: adding one to a response message is additive on the wire and visible in the JSON, so "no data
+changed" and "byte-identical output" are different claims and only the first survives.
+
