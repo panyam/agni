@@ -26,8 +26,14 @@ func TestVerdictParity(t *testing.T) {
 	}{
 		{"ruleFixture", check.NewModel(ruleFixture())},
 		{"parityFixture", check.NewModel(specParityFixture())},
+		// The positive control for the Inconclusive half of the projection rule below. Neither
+		// fixture above puts a transistor on a power path, so without this the Inconclusive clause
+		// is a branch no case reaches: the test would pass on a build that dropped inconclusive
+		// findings entirely, which is the negative-result-without-a-control shape build/evidence.md
+		// warns about.
+		{"unclassifiableTransistor", check.NewModel(revDesign("transistor", false))},
 	} {
-		var converted int
+		var converted, inconclusive int
 		for _, r := range rulesByName() {
 			if !r.StatesConsideredSet {
 				continue
@@ -37,12 +43,20 @@ func TestVerdictParity(t *testing.T) {
 			// converted rule's Eval already IS that call: comparing the two would run one function
 			// against itself and pass for any projection, broken ones included. (It did. This test
 			// asserted nothing until a red-check caught it.) Restating the rule independently means
-			// a change to what projects, such as Inconclusive gaining a finding, has to be made
-			// deliberately in both places instead of silently in one.
+			// a change to what projects has to be made deliberately in both places instead of
+			// silently in one.
 			want := []check.Finding{}
 			for _, v := range r.Eval(tc.m) {
-				if v.Outcome == check.Fail && v.Finding != nil {
+				// Fail AND Inconclusive. An inconclusive verdict is not a defect and must not be
+				// counted as one, but it must still reach a reviewer: a bound review item reading
+				// silence as a pass is what agni issue 74 cost. reverse-blocking-absent is the rule
+				// that produces one, and stating it here is the second half of the deliberate
+				// two-place change this test exists to force.
+				if (v.Outcome == check.Fail || v.Outcome == check.Inconclusive) && v.Finding != nil {
 					want = append(want, *v.Finding)
+				}
+				if v.Outcome == check.Inconclusive {
+					inconclusive++
 				}
 			}
 			if got := r.Findings(tc.m); !reflect.DeepEqual(got, want) {
@@ -54,6 +68,10 @@ func TestVerdictParity(t *testing.T) {
 		// which is precisely the shape this catalog treats as the expensive failure.
 		if converted == 0 {
 			t.Fatalf("%s: no rule sets EvalVerdicts, so this test asserted nothing", tc.name)
+		}
+		if tc.name == "unclassifiableTransistor" && inconclusive == 0 {
+			t.Fatal("no rule returned an Inconclusive verdict on the design chosen to produce one, " +
+				"so the Inconclusive half of the projection rule went untested")
 		}
 	}
 }
