@@ -226,10 +226,10 @@ the [CLI reference](../cli-reference/#gating-a-pipeline-on-a-review) for the ful
 
 ## The HTML report
 
-`agni check --verdicts --format html > report.html` writes one self-contained page: what each rule
+`agni check --format html > report.html` writes one self-contained page: what each rule
 looked at, what it concluded, and what to do about the parts that failed.
 
-    agni check --verdicts --format html \
+    agni check --format html \
       --url-base http://localhost:8080 \
       --mount board=. mount://board/design.kicad_sch > report.html
 

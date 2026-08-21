@@ -125,3 +125,39 @@ func TestNoLinksWithoutABase(t *testing.T) {
 		}
 	}
 }
+
+// An OPERATOR's rule (from conventions.yaml, profiles/ or intent.yaml) is namespaced and is absent
+// from the catalog the report is handed, so the catalog lookup cannot vouch for it. Its verdicts can:
+// emitting one IS stating a considered set. Before this, every rule a team wrote itself was captioned
+// "absence here is not evidence of correctness" over rows that were exactly that evidence, which is
+// the false-confidence failure this whole layer exists to remove, aimed at the rules they care most
+// about.
+func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
+	r := Build(
+		[]check.Verdict{
+			{Rule: "house/naming", Outcome: check.Pass, Subjects: []check.Entity{{Kind: check.KindNet, Ref: "OK"}},
+				Witness: &check.Witness{Statement: "name matches house style"}},
+			{Rule: "house/naming", Outcome: check.Fail, Subjects: []check.Entity{{Kind: check.KindNet, Ref: "BAD"}}},
+		},
+		[]check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "BAD"}, Rule: "house/naming", Message: "off-convention"}},
+		rules(), // deliberately does NOT contain house/naming
+		Report{},
+	)
+	if r.Totals.RulesFindingsOnly != 0 || r.Totals.RulesReporting != 1 {
+		t.Errorf("a rule with verdicts states a considered set whatever the catalog knows: %+v", r.Totals)
+	}
+	if r.Totals.Considered != 2 {
+		t.Errorf("both verdicts count as coverage, got %d", r.Totals.Considered)
+	}
+	var buf bytes.Buffer
+	if err := HTML(&buf, r); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(buf.String(), "Absence here is not evidence of correctness") {
+		t.Error("a rule that stated what it examined must not be captioned as if it had not")
+	}
+	// The failure must not be double-counted: it arrived as a verdict AND as a finding.
+	if got := strings.Count(buf.String(), "BAD"); got != 1 {
+		t.Errorf("the failing subject should appear once, got %d", got)
+	}
+}

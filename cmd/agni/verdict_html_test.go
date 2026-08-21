@@ -30,18 +30,20 @@ func TestHTMLReportHasNoLinksWithoutABase(t *testing.T) {
 	}
 }
 
-// html is the verdict report and has no findings-only form, so asking for it without --verdicts is a
-// mistake worth naming rather than silently rendering the wrong table.
-func TestHTMLRequiresVerdicts(t *testing.T) {
-	cmd := checkCmd()
-	var out strings.Builder
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	cmd.SetArgs([]string{"--format", "html", "testdata/conformance/showcase.fires.kicad_sch"})
-	if err := cmd.Execute(); err == nil {
-		t.Fatal("want an error naming the missing flag")
-	} else if !strings.Contains(err.Error(), "--verdicts") {
-		t.Errorf("error should name --verdicts, got %v", err)
+// html is the verdict report and has no findings-only form, so asking for it IS asking for the
+// considered set. It turns --verdicts on rather than refusing: a flag with no alternative is not a
+// choice the reader should have to make twice.
+func TestHTMLImpliesVerdicts(t *testing.T) {
+	bare := runCheck(t, "--format", "html", "testdata/conformance/showcase.fires.kicad_sch")
+	explicit := runCheck(t, "--verdicts", "--format", "html", "testdata/conformance/showcase.fires.kicad_sch")
+	// Same document either way. Compare a pass row rather than the whole page, whose header carries a
+	// timestamp that differs between two runs.
+	if !strings.Contains(bare, "<td class=\"o pass\">") {
+		t.Error("html without --verdicts must render the considered set, not a findings-only table")
+	}
+	if strings.Count(bare, "<details") != strings.Count(explicit, "<details") {
+		t.Errorf("html with and without --verdicts must render the same rules: %d vs %d",
+			strings.Count(bare, "<details"), strings.Count(explicit, "<details"))
 	}
 }
 

@@ -3,5 +3,5 @@
 # rot without the docsite build noticing.
 fixture: examples/tutorial-project
 script: |
-  agni check --verdicts --format html designs/gateway/gateway.edn > review.html
+  agni check --format html designs/gateway/gateway.edn > review.html
 capture: none
