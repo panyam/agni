@@ -786,6 +786,7 @@ type RuleInfo struct {
 	UnavailableReason string                 `protobuf:"bytes,7,opt,name=unavailable_reason,json=unavailableReason,proto3" json:"unavailable_reason,omitempty"`                        // why not, when available is false (e.g. "needs the datasheet parameter layer")
 	Impact            string                 `protobuf:"bytes,8,opt,name=impact,proto3" json:"impact,omitempty"`                                                                       // what goes wrong when the rule is violated (check.Rule.Impact)
 	Detail            string                 `protobuf:"bytes,9,opt,name=detail,proto3" json:"detail,omitempty"`                                                                       // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)
+	Remedy            string                 `protobuf:"bytes,10,opt,name=remedy,proto3" json:"remedy,omitempty"`                                                                      // what to do about a violation, in the imperative (check.Rule.Remedy)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -879,6 +880,13 @@ func (x *RuleInfo) GetImpact() string {
 func (x *RuleInfo) GetDetail() string {
 	if x != nil {
 		return x.Detail
+	}
+	return ""
+}
+
+func (x *RuleInfo) GetRemedy() string {
+	if x != nil {
+		return x.Remedy
 	}
 	return ""
 }
@@ -1340,7 +1348,7 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"hasSidecar\"]\n" +
 	"\x10ListRulesRequest\x127\n" +
 	"\aoverlay\x18\x01 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xd8\x02\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xf0\x02\n" +
 	"\bRuleInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x18\n" +
@@ -1350,7 +1358,9 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\tavailable\x18\x06 \x01(\bR\tavailable\x12-\n" +
 	"\x12unavailable_reason\x18\a \x01(\tR\x11unavailableReason\x12\x16\n" +
 	"\x06impact\x18\b \x01(\tR\x06impact\x12\x16\n" +
-	"\x06detail\x18\t \x01(\tR\x06detail\x1a7\n" +
+	"\x06detail\x18\t \x01(\tR\x06detail\x12\x16\n" +
+	"\x06remedy\x18\n" +
+	" \x01(\tR\x06remedy\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +

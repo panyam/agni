@@ -18,6 +18,7 @@ func subsystemRule(s Subsystem) *check.Rule {
 		Summary:  fmt.Sprintf("the %q subsystem the design intent declares is incomplete", s.Name),
 		Detail:   intentDoc(docKeySubsystem),
 		Impact:   "an architectural subsystem (clock, reset, power tree) the design was intended to contain is missing a required part or net",
+		Remedy:   intentRemedy(docKeySubsystem),
 		Reads:    []string{"component.class", "component.mpn"},
 		Tags:     intentTags(),
 		Eval: func(m check.Model) []check.Finding {

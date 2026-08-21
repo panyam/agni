@@ -3,6 +3,10 @@ title: "test-point-coverage"
 description: "A power rail or ground net has no test point, on a board that uses them."
 ---
 
+### Remedy
+
+Add a test point to the rail. It costs a pad, and it is the difference between measuring a supply at bring-up and trying to hold a probe on a component lead.
+
 ### What it means
 
 A power rail or ground net carries no test-point component, on a design

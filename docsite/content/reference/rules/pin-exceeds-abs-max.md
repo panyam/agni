@@ -3,6 +3,10 @@ title: "pin-exceeds-abs-max"
 description: "A supply pin sits on a rail whose nominal voltage exceeds that pin's own absolute-maximum rating."
 ---
 
+### Remedy
+
+Move this terminal to a rail inside its own rated maximum. A part's supplies are often rated differently from one another, so work from this pin's number rather than the part's.
+
 ### What it means
 
 A component joined to a seeded datasheet spec has a supply pin on a rail whose name states a

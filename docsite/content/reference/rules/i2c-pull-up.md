@@ -3,6 +3,10 @@ title: "i2c-pull-up"
 description: "An I2C net (SDA/SCL) reaches no rail through a pull-up resistor."
 ---
 
+### Remedy
+
+Fit a pull-up resistor from each of SDA and SCL to the bus rail, sized from the bus capacitance and the clock rate the design actually runs at rather than from a habitual value.
+
 ### What it means
 
 Every I2C net (its two lines are SDA and SCL) must have a pull-up resistor

@@ -12,6 +12,7 @@ var floatingInput = &check.Rule{
 	Severity:   "warning",
 	Summary:    "An input pin sits on a net with no driver and no pull, so its level is undefined.",
 	Impact:     "A floating logic input drifts, picks up noise, and can oscillate or sit in the forbidden region where both transistors of a CMOS stage conduct. Behavior is non-deterministic and often temperature- and board-dependent, the worst kind of intermittent bug.",
+	Remedy:     "Tie the input to its inactive level through a pull-up or pull-down, or drive it from the logic that was meant to. A CMOS input is never safe to leave floating, including on a pin the firmware does not use.",
 	Primitives: []string{"select", "traverse", "count", "exists", "pin-role"},
 	Reads:      []string{"component.class", "net.attributes", "net.pin_count", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{

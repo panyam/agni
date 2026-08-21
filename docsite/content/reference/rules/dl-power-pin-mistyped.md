@@ -3,6 +3,10 @@ title: "dl/power-pin-mistyped"
 description: "A pin named like power/ground but not typed power_in sits alone on its net."
 ---
 
+### Remedy
+
+Type the pin as a power input in its symbol, then wire it to its rail. Fixing the symbol also restores power-input-not-driven over every other board that uses it.
+
 ### What it means
 
 A pin whose *name* says power or ground (`VDD`, `VCC`, `VBAT`, `GND`, `VSS`, and the rest of the

@@ -11,6 +11,7 @@ var unconnectedComponent = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A component appears on no net (none of its pins land on any signal).",
 	Impact:     "A part on no net is either a placement mistake, a forgotten connection, or dead weight in the BOM. If it was meant to do something, the circuit is missing whatever it was meant to do.",
+	Remedy:     "Wire the part into the circuit it belongs to, or delete it from the schematic if it is left over from an earlier revision. Placed and unwired is neither.",
 	Primitives: []string{"select", "traverse"},
 	Reads:      []string{"on_net"},
 	Tags: map[string]string{

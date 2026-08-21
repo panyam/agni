@@ -12,6 +12,7 @@ var bulkCap = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A named power rail carries no capacitor at all (no bulk reservoir).",
 	Impact:     "A rail with zero capacitance has no charge reservoir: every load transient sags the rail, and the regulator's feedback loop may oscillate. Boards usually survive the lab and fail under real load patterns.",
+	Remedy:     "Add a bulk reservoir capacitor where the rail enters, sized from the load step the rail has to absorb and from the regulator's own stability requirement.",
 	Primitives: []string{"select", "exists", "traverse", "pattern"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net"},
 	Tags: map[string]string{

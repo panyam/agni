@@ -17,6 +17,7 @@ var busNotModeled = &check.Rule{
 	Severity:   "info",
 	Summary:    "A bus's member signals are not resolved into distinct nets.",
 	Impact:     "A bus groups many signals under one drawn line. When its members do not each resolve to a net, connectivity for those signals is unmodeled: a diff, a rule, or a highlight over them is unreliable. On a flat sheet the member labels on the taps already form the nets, so this is silent; it fires where the members are genuinely unresolved (e.g. a hierarchical bus port), marking the read as incomplete rather than letting silence read as coverage.",
+	Remedy:     "Resolve the bus into its member nets, usually by labelling each member at its tap or by declaring the bus on its hierarchical port. Until then, connectivity over those signals is unmodelled and any diff or highlight across them is unreliable.",
 	Primitives: []string{"select"},
 	Reads:      []string{"bus.construct", "net.names"},
 	Tags: map[string]string{

@@ -145,6 +145,87 @@ vocabulary soaks, with parity asserted between the two.
   (a test point is a metrics endpoint, and the rule reads as "critical paths must emit telemetry")
   with a diagram beside it.
 
+## Say what to do about it
+
+A rule carries four pieces of prose, and `Remedy` is the one it is easiest to leave off. `Summary`
+is the one-liner, `Impact` is what goes wrong when the rule is violated, `Detail` is the long-form
+markdown, and `Remedy` is what to DO about it, in the imperative, as one engineer would say it to
+another. Without it a reader who accepts that the finding matters still has to already know the fix,
+which is most of the distance between a report and an action.
+
+`TestEveryRuleStatesARemedy` (in `tools/catalogdocs`) holds the whole catalog to this, so a new rule
+does not ship without one.
+
+Three things keep it honest:
+
+- **It is generic over the RULE, not the subject.** The remedy names the class of change ("add a
+  bulk capacitor where the rail enters"), never a designator. A remedy templated on the bound
+  subject is a later tier and waits for verdicts to carry the binding.
+- **Where the real fix needs a value the engine cannot derive, say what to size it from and stop.**
+  The pull-up an I2C bus wants depends on its capacitance and clock rate, neither of which the
+  netlist states. `i2c-pull-up` says to size it from those and names no resistance. Inventing a
+  plausible number here would be the same silent-authority problem verdicts exist to remove, one
+  layer up.
+- **Where the finding is about the ANALYSIS rather than the design, say so.** `rail-not-classified`
+  and `symbol-unresolved` are remedied by giving the tool more (`--conventions`, `--symbol-path`),
+  and their remedies say explicitly that nothing is yet known to be wrong with the board.
+
+**Write it in the field, never in the rule's `docs/<name>.md`.** `tools/catalogdocs` projects `Remedy`
+onto the rule's docsite reference page as its leading `### Remedy` section, so a doc that also wrote
+one would print the fix twice. This is the opposite of the convention for Impact, whose field and
+whose `### Impact` doc section are both allowed to exist and say the same thing differently, which is
+also why the generator projects Remedy onto the page and not Impact.
+
+A rule generated per-declaration (the `intent` and `profile` families) keys its remedy by KIND rather
+than writing it at the builder, because the fix for a missing OV clamp is the same sentence on every
+rail that declares one. See `docRemedies` in `stdlib/rules/intent/docs.go` and `requirementCaption`
+in `stdlib/profiles/docs.go`: the runtime rule and the docsite exemplar read one source, so there is
+no second copy to drift.
+
+## Say what you looked at, not only what failed
+
+A rule may also set `EvalVerdicts`, which reports one `check.Verdict` per subject it was applied to,
+passes included. Where it is set it is the rule's single source of truth and `Eval` is its projection
+(`check.VerdictsToFindings`), which `TestVerdictParity` holds them to.
+
+It is optional, and nil is not the same as an empty considered set. A rule that has not been
+converted is DECLINING to state one, and reporting "this rule considered nothing" on its behalf is
+the same silence-reads-as-data mistake one level up from the one verdicts remove.
+
+**Enumerate, then judge.** The shape that works is two functions: one yielding the subjects the rule
+applies to, one deciding a single subject. `Eval` is then `map(judge, enumerate)`. Both rules
+converted so far factored this way without a fight, and it is what makes a single verdict answerable
+on its own.
+
+**Produce the outcome and its evidence in ONE call.** `check.CompareToBound` returns both from one
+comparison, and that shape is the point rather than a convenience. A rule that decided the outcome
+and then separately assembled a witness would fail nothing when the second step was skipped, and a
+pass with no evidence is exactly what this removes.
+
+**An enumerator that drops a subject must say so.** Every step that cannot be taken safely (a pin
+that will not resolve, a net with no voltage in its name, a datasheet binding no row of the kind)
+used to skip silently, which reports the same nothing as a rule that never looked. Those are
+`NOT_CONSIDERED` verdicts carrying the step that stopped them. Distinguish that from a subject that
+is simply OUT OF SCOPE: a pin that is not a supply terminal is not a subject of a supply rule, and
+yields no event at all.
+
+**One subject, one verdict.** A verdict is keyed by `(rule, kind, ref)`, so a rule that emits two
+about one subject produces a duplicate identity. That is invisible while verdicts only project down
+to findings and breaks the moment they are addressable. Where several inputs bear on one subject,
+reduce them: the per-pin datasheet rules pick the row the design has least margin against, matching
+what the part-level rule already did across a part's pins.
+
+### Two traps when converting a rule that has a spec twin
+
+`check.VerdictsToFindings` returns a NON-NIL empty slice, matching `check.Report`. `TestSpecParity`
+compares a rule's `Eval` to its declarative twin with `reflect.DeepEqual`, and a nil slice is not
+DeepEqual to an empty one, so a converted rule would diverge from its twin on every clean design
+while agreeing about every finding.
+
+The twinned rules therefore have three things that must agree: the Go body, the spec twin, and the
+verdicts. Converting one is worth doing early to find out whether that is comfortable, because it
+affects about a quarter of the catalog.
+
 ## A rule has one severity, so a severity axis means two rules
 
 `check.Run` stamps `Finding.Severity` from the rule's own metadata over whatever `Eval` set, and

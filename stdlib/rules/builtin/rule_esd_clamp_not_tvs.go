@@ -14,6 +14,7 @@ var esdClampNotTVS = &check.Rule{
 	Severity:   "info",
 	Summary:    "An externally-exposed signal net is clamped by a Zener, not a fast ESD TVS.",
 	Impact:     "A Zener clamps slower and at higher energy than a TVS designed for ESD (IEC 61000-4-2 is ns-scale). It gives transient / load-dump protection, but a review targeting ESD specifically may still want a dedicated TVS on the exposed pin. This is informational: the net is not unprotected, it is protected by the wrong device class for ESD.",
+	Remedy:     "Replace the Zener with an ESD-rated TVS where the review targets ESD, or record that the Zener is there for transient clamping and that ESD is covered elsewhere.",
 	Primitives: []string{"reach", "select", "traverse", "exists", "pin-role", "pattern", "param-join"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
 	// The IC-ESD credit is an exemption, not the finding basis (same as esd-protection): the rule

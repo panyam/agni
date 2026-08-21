@@ -515,6 +515,40 @@ diff-changes panels, and it shows the first three with a `+N` chip for the rest.
 "which sheet" is a menu to open rather than a label to read. The cap is what makes the common row one
 line tall; it is not what keeps the table honest, since a reader can expand the strip.
 
+## Two caches for one answer will drift
+
+The presenter caches check results per rule so toggling a rule that already ran costs no round-trip.
+When the considered set arrived it got a second cache beside the first, filled from the same response,
+and the two did not stay in step: findings were invalidated in two places and verdicts in one, so
+changing the naming vocabulary left a considered set computed under the old one on screen.
+
+The sharp part is why that matters more for verdicts than for findings. **A verdict is keyed by rule
+NAME, and a convention change is exactly when rule names change**: the server's naming rules disappear
+and the request's appear under a different namespace. A surviving verdict can therefore name a rule
+that no longer exists and answer for a subject nothing re-examined, which is a coverage claim about a
+run that never happened.
+
+The fix was to clear them together and assert it, rather than leaving the mirror between two caches to
+hold by inspection. The better fix is for the frontend not to hold answers at all, which needs the
+server to cache first or toggling a rule re-runs every selected rule. That is agni issue 390, along
+with the presenter split it enables.
+
+## A panel that works on click can still be broken on arrival
+
+Two bugs shipped past a green unit suite and were found only by driving a real browser, both on the
+arrive-by-link path rather than the click-a-row path.
+
+A cold load has empty caches, so a URL naming a verdict landed on "Press Run checks" and resolved
+nothing, which is the CLI-to-viewer hop failing at the one moment it is used. And the presenter set
+the focused id without pushing state, so the canvas drew the proof while the panel stayed on the other
+table and the sentence explaining it stayed hidden behind a toggle the reader has no reason to know
+about.
+
+Neither is a rendering bug, so neither is what `make browser-test` is for. **The general shape is that
+a panel test mounts state directly and therefore only ever exercises the state the presenter would
+push if it were working.** A deep link is a different entry point into the same panel: it arrives with
+caches cold and view state unset. Test the arrival, not just the interaction.
+
 ## Wiring a new panel
 
 **FOUR edits for a new viewer panel**, and the last one is the one everybody forgets. The island

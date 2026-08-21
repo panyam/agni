@@ -3,6 +3,10 @@ title: "rail-not-classified"
 description: "A net named for a voltage feeds a supply pin but is not classified as a rail, so the rail rules cannot see it."
 ---
 
+### Remedy
+
+Declare the project's rail naming patterns under `--conventions` so the rail rules can see this net. This does not report a fault in the design, only that the analysis is running with less than it should.
+
 ### What it means
 
 A net whose **name declares a voltage** also **feeds at least one supply pin**, yet does not carry

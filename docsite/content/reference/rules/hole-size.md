@@ -3,6 +3,10 @@ title: "hole-size"
 description: "A via's drill is smaller than the loosest common mechanical-drill floor (0.2mm)."
 ---
 
+### Remedy
+
+Enlarge the drill to the fab's minimum. Left as it is, the order is either rejected or the via is silently upsized, and the clearances around it move with it.
+
 ### What it means
 
 A via whose drill diameter is below 0.2mm, the smallest mechanical

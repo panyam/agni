@@ -773,3 +773,26 @@ built on the client.
 
 **Reopen if** the corpus grows enough that a 1.6MB index stops sharding usefully, or if typo
 tolerance turns out to matter more than the hosted-dependency cost.
+
+## A verdict rides the URL as a query param, not as a path resource
+
+`?verdict=<id>` on the viewer's design page, rather than `/designs/<mount>/<path>/checks/<id>`.
+
+The path form was argued for first, on the grounds that a verdict has its own identity and content
+and is therefore a resource rather than a fifth view knob beside `sheet`, `mode` and `layout`. That
+conflated two different things. **Which verdict the open viewer is looking at is SELECTION STATE**, the
+same category as which sheet is shown, and a query param is the right home for it.
+
+A server-resolved `GET /checks/<id>` is a genuinely different feature: it returns one verdict the
+server recomputed, needs no viewer, and is the thing the resource argument applies to. It is not
+blocked by this decision, and the two do not compete.
+
+What blocks the path form is arity rather than taste. `/designs/<mount>/<path...>` has a
+variable-length path, so a two-segment verb suffix cannot be distinguished from a folder without
+leaning on the trailing slash, which proxies and browsers normalise. Fixed-arity design identity
+removes the ambiguity by construction, and the ingredients exist (`Design.name` is already an
+identity separate from `Design.uri`), but adopting it is a URL-space migration rather than a flag.
+
+**Reopen if** design addressing moves to a fixed-arity identity for other reasons, at which point the
+path form becomes cheap and `?verdict=` can alias to it.
+

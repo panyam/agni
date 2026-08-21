@@ -14,6 +14,7 @@ var danglingEndpoint = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A wire endpoint terminates on nothing (no pin, junction, label, or other wire).",
 	Impact:     "A wire drawn to nothing is a connection the author intended but did not complete. Unlike a stub net it has no net to show up on: the wire is just there, contributing nothing, and whatever it was meant to reach is left unconnected. It is invisible at capture and only bites at bring-up.",
+	Remedy:     "Extend the wire to the pin, junction, or label it was meant to reach, or delete it. A wire that ends in space is never what the author intended.",
 	Primitives: []string{"select"},
 	Reads:      []string{"wire.endpoint", "wire.junction"},
 	Tags: map[string]string{

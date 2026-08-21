@@ -3,6 +3,10 @@ title: "crystal-load-caps"
 description: "A passive crystal has an oscillator terminal with no load capacitor to ground."
 ---
 
+### Remedy
+
+Fit a load capacitor from each oscillator terminal to ground, sized from the crystal's specified load capacitance and the stray capacitance of the layout rather than copied from another design.
+
 ### What it means
 
 A passive quartz crystal (a two-terminal resonator, ref-des `Y`/`XTAL`) needs a load

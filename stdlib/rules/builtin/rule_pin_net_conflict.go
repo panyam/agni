@@ -17,6 +17,7 @@ var pinNetConflict = (&check.Spec{
 	Severity: "info",
 	Summary:  "A pin appears in more than one net's connections, which is malformed input.",
 	Impact:   "Every consumer that asks which net a pin is on (rules, diff keying, highlights) gets an arbitrary answer for this pin. The netlist is not internally consistent, and anything derived from it inherits the ambiguity silently.",
+	Remedy:   "Fix the source netlist so the pin appears in exactly one net, then re-export. The ambiguity is in the input, so nothing downstream can resolve it.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryIntegrity,
 		check.KeyTier:         "P",

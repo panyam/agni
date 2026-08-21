@@ -171,8 +171,9 @@ const (
 //
 // The documentation fields are first-class so a rule is authored in one file and can be
 // listed, explained, and grouped without a separate catalog: Summary is the one-line form,
-// Impact is what goes wrong when the rule is violated, and Detail is the long-form markdown
-// (what it means, why engineers want it, a diagram, the query structure). Category and Tier
+// Impact is what goes wrong when the rule is violated, Remedy is what to do about it, and Detail
+// is the long-form markdown (what it means, why engineers want it, a diagram, the query
+// structure). Category and Tier
 // classify it for grouping (index.go Tree) and for the expressiveness tier (docs/19). Primitives
 // names the query primitives Eval composes, which documents the rule and seeds later coverage
 // analysis.
@@ -192,10 +193,21 @@ const (
 // own keys, and the catalog UI pivots by whatever keys are present. Nothing in the engine or the
 // IR depends on a Tag, so a new axis needs no core change.
 type Rule struct {
-	Name       string   // stable identifier, e.g. "single-pin-net"
-	Severity   string   // "error" | "warning" | "info"
-	Summary    string   // one-line description for listings
-	Impact     string   // what goes wrong when violated
+	Name     string // stable identifier, e.g. "single-pin-net"
+	Severity string // "error" | "warning" | "info"
+	Summary  string // one-line description for listings
+	Impact   string // what goes wrong when violated
+	// Remedy is what to DO about a violation, in the imperative, as a hardware engineer would say it
+	// to another one. Impact says why the finding matters; without this, a reader who accepts that it
+	// matters still has to know the fix already.
+	//
+	// It is deliberately generic over the rule, not over the subject: this is the fix for the RULE,
+	// so it names the class of change ("add a bulk capacitor at the rail's entry") and never a
+	// specific designator or a computed value. Where the real fix needs a number the engine cannot
+	// derive (the resistance an I2C pull-up should be), say what to size it from and stop. Inventing
+	// a plausible value here would be the same silent-authority problem the verdict work exists to
+	// remove, one layer up.
+	Remedy     string
 	Detail     string   // long-form markdown: meaning, rationale, diagram, query structure
 	Primitives []string // query primitives Eval composes (docs/19)
 	Reads      []string // facts the rule reads, docs/15 vocabulary (net.pin_count, on_net, param(...))

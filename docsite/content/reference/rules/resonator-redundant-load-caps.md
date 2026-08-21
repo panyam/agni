@@ -3,6 +3,10 @@ title: "resonator-redundant-load-caps"
 description: "A ceramic resonator with integrated load capacitors also has an external load cap to ground on a terminal."
 ---
 
+### Remedy
+
+Remove the external load capacitors. A resonator of the built-in-cap family carries its own, so the schematic should show the resonator alone.
+
 ### What it means
 
 A ceramic resonator of the built-in-cap family (Murata CERALOCK and kin, ref-des `Y`) already

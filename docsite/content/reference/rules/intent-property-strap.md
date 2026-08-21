@@ -3,6 +3,10 @@ title: "intent/property-strap"
 description: "A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch."
 ---
 
+### Remedy
+
+Move the strap resistor to the rail that latches the declared level. The board boots either way, configured as something other than what was intended.
+
 ### What it checks
 
 A net the design intent declares as a boot/config strap must not be biased to the **opposite** level

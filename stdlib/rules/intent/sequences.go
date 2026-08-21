@@ -38,8 +38,9 @@ func sequenceRule(s Sequence) *check.Rule {
 			"from reset before its supply is good never enumerates, and a device latched up on a bad " +
 			"sequence draws until something gives. None of it is visible in the schematic, and it surfaces " +
 			"as an intermittent bring-up failure or a part that dies after a power cycle.",
-		Reads: []string{"on_net", "component.class"},
-		Tags:  intentTags(),
+		Remedy: intentRemedy(docKeySequence),
+		Reads:  []string{"on_net", "component.class"},
+		Tags:   intentTags(),
 		Eval: func(m check.Model) []check.Finding {
 			return evalSequence(m, s)
 		},

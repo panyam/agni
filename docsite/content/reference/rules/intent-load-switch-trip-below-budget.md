@@ -3,6 +3,10 @@ title: "intent/load-switch-trip-below-budget"
 description: "A load switch's current limit is set below the peak current the design intent declares for the rail it feeds."
 ---
 
+### Remedy
+
+Raise the switch's current limit above the rail's declared peak, or lower the peak the rail is budgeted for. As set, the switch trips in normal operation.
+
 ### What it checks
 
 A load switch built from a controller and an external MOSFET limits current at a point the designer

@@ -3,6 +3,10 @@ title: "bus-not-modeled"
 description: "A bus's member signals are not resolved into distinct nets."
 ---
 
+### Remedy
+
+Resolve the bus into its member nets, usually by labelling each member at its tap or by declaring the bus on its hierarchical port. Until then, connectivity over those signals is unmodelled and any diff or highlight across them is unreliable.
+
 ### What it means
 
 A bus on the schematic (a gEDA `U` segment, a KiCad `bus` / `bus_alias`, an

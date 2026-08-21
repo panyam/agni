@@ -3,6 +3,10 @@ title: "unannotated-components"
 description: "Parts still carry a placeholder designator instead of an assigned one."
 ---
 
+### Remedy
+
+Annotate the schematic so every part carries an assigned designator. Until then those parts have no BOM line, no place on the board, and no identity a diff can follow across revisions.
+
 ### What it means
 
 Parts whose reference designator is still a placeholder (`R?`, `C?`, `REF**`, or a partly-assigned

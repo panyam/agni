@@ -14,6 +14,7 @@ var diffPairNaming = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net.",
 	Impact:     "A broken pair means the layout tool never treats the two nets as coupled, so they route like ordinary signals and the high-speed link fails signal integrity. Caught at capture it is a one-line fix; caught after layout it means re-routing.",
+	Remedy:     "Add the missing complementary net, or rename the net if it was never half of a pair. Left as it is, the layout tool routes the two as ordinary signals and the link is not a differential pair at all.",
 	Primitives: []string{"select", "pattern", "pair"},
 	Reads:      []string{"net.names"},
 	Tags: map[string]string{

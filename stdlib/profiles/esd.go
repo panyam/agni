@@ -80,6 +80,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 			Severity: "warning",
 			Summary:  fmt.Sprintf("A %s signal leaves the board through a connector with no ESD clamp.", p.Name),
 			Impact:   "A signal that leaves the board through a connector is a direct ESD path into the transceiver behind it. Human contact discharges kilovolts, and an unclamped bus pin takes the hit. Failures are intermittent, latent, and show up in the field as a port that works until it does not.",
+			Remedy:   requirementRemedy("esd"),
 			Tags:     p.tags(),
 			Detail:   ruleDoc("esd"),
 		},

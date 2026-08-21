@@ -213,6 +213,7 @@ func compile(rc *configpb.NamingRule) (*check.Rule, error) {
 		Severity: severity,
 		Summary:  "Net name violates the project naming convention.",
 		Impact:   why,
+		Remedy:   "Rename the net to match one of the convention's allowed patterns, or amend the convention if the name is right and the pattern list has not kept up.",
 		Tags: map[string]string{
 			"category":     "naming",
 			"tier":         "R",

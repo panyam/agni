@@ -3,6 +3,10 @@ title: "netclass-track-width"
 description: "A net is routed narrower than the track width its own net class declares."
 ---
 
+### Remedy
+
+Widen the track to the width its class declares, or amend the class if the declaration is the half that is out of date. The board may build either way, so decide which of the two states the design's intent.
+
 A net is routed narrower than the track width its own net class declares.
 
 ![a net in two classes takes its declared width from the first class that states one; copper below that is flagged, copper meeting it is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/netclass-track-width.svg)

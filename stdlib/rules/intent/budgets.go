@@ -30,6 +30,7 @@ func railBudgetCapacityRule(d Declaration) *check.Rule {
 		Impact: "the rail cannot deliver the current the architecture asks of it, so it sags or the regulator " +
 			"folds back under the load the design was drawn for. It is a sizing error rather than a wiring " +
 			"error, so nothing in the schematic looks wrong and it surfaces at bring-up under load.",
+		Remedy:       intentRemedy(RuleRailCurrentCapacity),
 		Reads:        []string{"param.output_current", "on_net"},
 		ParamSymbols: check.OutputCurrentSymbols(),
 		Tags:         intentTags(),
@@ -53,6 +54,7 @@ func railBudgetMarginRule(d Declaration) *check.Rule {
 		Impact: "the rail works at the budgeted load and has no headroom for the things a budget does not " +
 			"capture: an inrush transient, a load added late, a part running hotter than the budget assumed. " +
 			"The design has no room left before the capacity finding becomes real.",
+		Remedy:       intentRemedy(RuleRailCurrentMargin),
 		Reads:        []string{"param.output_current", "on_net"},
 		ParamSymbols: check.OutputCurrentSymbols(),
 		Tags:         intentTags(),

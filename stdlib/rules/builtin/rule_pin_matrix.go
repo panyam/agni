@@ -40,6 +40,7 @@ var rowOutputOutput = matrixRow{
 		Severity: "error",
 		Summary:  "Two or more driving pins (outputs / power sources) share a net and fight each other.",
 		Impact:   "Two outputs on one net drive it to opposite levels at once. The result is a low-impedance path between rails through the two drivers: contention current, brownouts, and cooked output stages. It is the classic short-through-logic bug.",
+		Remedy:   "Remove all but one driver from the net, or make the drivers arbitrate: series resistors, open-drain outputs sharing one pull-up, or a buffer whose enables are never asserted together.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -101,6 +102,7 @@ var rowNCConnected = matrixRow{
 		Severity: "error",
 		Summary:  "A pin marked no-connect is wired into a net with other members.",
 		Impact:   "The symbol says the pin must not be used and the schematic uses it anyway. Either the wire is a capture slip landing on the wrong pad, or the part is being asked to do something its maker forbids (an internal test pin, a reserved pad). Both read as working designs until the part misbehaves.",
+		Remedy:   "Disconnect the pin and mark it no-connect. Where the connection is deliberate (a factory test pad, a vendor-documented exception), cite the datasheet section that allows it in a schematic note.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -127,6 +129,7 @@ var rowUnspecifiedWithDriver = matrixRow{
 		Severity: "warning",
 		Summary:  "A pin with no declared electrical type sits on a driven net.",
 		Impact:   "The symbol author never said what the pin is, so no matrix row can clear it: it may be an input (fine), an output (contention with the driver), or a supply pin (a rail short). The ERC is flying blind on exactly the net where a wrong guess costs a driver stage.",
+		Remedy:   "Set the pin's electrical type in the symbol to what the datasheet says it is. Fixing the symbol is the remedy, because suppressing the finding leaves the ERC blind on every board that uses it.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",

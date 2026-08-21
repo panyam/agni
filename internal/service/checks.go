@@ -130,6 +130,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 			Severity:          r.Severity,
 			Summary:           r.Summary,
 			Impact:            r.Impact,
+			Remedy:            r.Remedy,
 			Detail:            r.Detail,
 			Reads:             r.Reads,
 			Tags:              r.Tags,

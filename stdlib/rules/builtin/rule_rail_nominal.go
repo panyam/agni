@@ -26,6 +26,7 @@ var railNominalOutOfRecommended = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A power-input pin sits on a rail whose nominal voltage is outside the part's recommended operating supply range.",
 	Impact:     "Outside the recommended operating range the datasheet's guaranteed specifications no longer hold: the part may still function, but its behavior is uncharacterized and margin, accuracy, and lifetime are no longer assured. Unlike a heuristic, the range is the vendor's own number, with the page it came from.",
+	Remedy:     "Bring the rail inside the part's recommended operating range, or accept the excursion in writing with the reason. Outside that window the datasheet's numbers no longer apply.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.recommended_operating", "pin.electrical_type", "net.name", "on_net"},
 	Tags: map[string]string{

@@ -18,6 +18,7 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 	Severity:   "error",
 	Summary:    "A controller-based load switch trips above the continuous drain rating of its external MOSFET.",
 	Impact:     "The current limit never protects the pass element: the external FET reaches its own rating while the controller is still below its trip point, so the part the switch exists to protect is the one that fails, and a shorted high-side switch applies the full rail to the load. Both numbers are vendor values, cited with the page they came from.",
+	Remedy:     "Lower the switch's current-limit setting below the FET's continuous drain rating, or fit a FET rated above the trip point. As drawn, the limit protects nothing.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads: []string{
 		"param.ocp_threshold", "param.drain_current", "param.on_resistance",

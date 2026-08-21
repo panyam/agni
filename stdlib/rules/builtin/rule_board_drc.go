@@ -41,6 +41,7 @@ var trackWidth = (&check.Spec{
 	Severity: "error",
 	Summary:  "A routed track is narrower than the loosest common fabrication floor (0.127mm).",
 	Impact:   "A trace below the fab's minimum width either fails DFM at order time or etches unreliably: opens, current-carrying failures, yield loss. A sub-floor trace is not tight routing; it is unmanufacturable by mainstream processes.",
+	Remedy:   "Widen the track to the fab's minimum, or move the board to a process quoted for the width you need. Below the floor a trace will not etch reliably at mainstream yields.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryBoard,
 		check.KeyTier:         "P",
@@ -61,6 +62,7 @@ var holeSize = (&check.Spec{
 	Severity: "error",
 	Summary:  "A via's drill is smaller than the loosest common mechanical-drill floor (0.2mm).",
 	Impact:   "A hole below the fab's minimum drill cannot be mechanically drilled: the order is rejected, or the via is silently upsized and clearances shift under you.",
+	Remedy:   "Enlarge the drill to the fab's minimum. Left as it is, the order is either rejected or the via is silently upsized, and the clearances around it move with it.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryBoard,
 		check.KeyTier:         "P",
@@ -81,6 +83,7 @@ var annularWidth = (&check.Spec{
 	Severity: "error",
 	Summary:  "A via's annular ring is thinner than the loosest common fabrication floor (0.075mm).",
 	Impact:   "Drill wander eats the ring: a via with too little annulus breaks out of its pad on real tolerances, and the connection opens intermittently or fails outright.",
+	Remedy:   "Enlarge the pad or reduce the drill until the annular ring clears the fab's floor with tolerance left over for drill wander.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryBoard,
 		check.KeyTier:         "P",

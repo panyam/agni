@@ -3,6 +3,10 @@ title: "symbol-unresolved"
 description: "A symbol reference did not resolve, so its placements carry no pins."
 ---
 
+### Remedy
+
+Re-run with `--symbol-path` pointing at the library that holds the symbol. Until it resolves, the part has no pins, so every connectivity result over it rests on an incomplete read.
+
 ### What it means
 
 A symbol reference the reader could not open or parse: an xschem or gEDA `.sym` file, or a KiCad

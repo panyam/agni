@@ -3,6 +3,10 @@ title: "profile/signal-missing"
 description: "A signal a required interface declares is absent from the design."
 ---
 
+### Remedy
+
+Add the missing signal to the design, or drop the interface requirement if this board genuinely does not implement it.
+
 ### What it means
 
 An interface profile lists the signals a bus must have. This fires when the interface is **in use**,

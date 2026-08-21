@@ -11,7 +11,7 @@ import {
 } from "./rules.js";
 
 function rule(name: string, tags: Record<string, string>, available = true): RuleItem {
-  return { name, severity: "info", summary: `${name} summary`, impact: "", detail: "", reads: [], tags, available, unavailableReason: available ? "" : "needs layer" };
+  return { name, severity: "info", summary: `${name} summary`, impact: "", remedy: "", detail: "", reads: [], tags, available, unavailableReason: available ? "" : "needs layer" };
 }
 
 const catalog: RuleItem[] = [

@@ -3,6 +3,10 @@ title: "load-switch-trip-above-fet-rating"
 description: "A controller-based load switch trips above the continuous drain rating of its external MOSFET."
 ---
 
+### Remedy
+
+Lower the switch's current-limit setting below the FET's continuous drain rating, or fit a FET rated above the trip point. As drawn, the limit protects nothing.
+
 ### What it checks
 
 A load switch built from a **switch controller** plus an **external MOSFET** plus an **external sense

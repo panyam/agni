@@ -3,6 +3,10 @@ title: "profile/missing-pullup"
 description: "An interface signal that needs a pull-up reaches no rail."
 ---
 
+### Remedy
+
+Fit a pull-up from the signal to its rail, sized for the speed the bus runs at and the capacitance it carries.
+
 ### What it means
 
 A signal the profile marks as needing a pull-up (a chip-select, an open-drain line) whose net

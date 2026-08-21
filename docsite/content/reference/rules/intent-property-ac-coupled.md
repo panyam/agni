@@ -3,6 +3,10 @@ title: "intent/property-ac-coupled"
 description: "A net the design intent declares AC-coupled is carried by no series capacitor."
 ---
 
+### Remedy
+
+Put a series capacitor in the net, sized for the lowest frequency the link has to pass.
+
 ### What it checks
 
 A net the design intent declares as AC-coupled must actually be carried by a **series capacitor**. If

@@ -524,6 +524,7 @@ export class ViewerPresenter {
         severity: r.severity,
         summary: r.summary,
         impact: r.impact,
+        remedy: r.remedy,
         detail: r.detail,
         reads: r.reads,
         tags: r.tags,

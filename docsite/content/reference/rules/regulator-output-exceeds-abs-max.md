@@ -3,6 +3,10 @@ title: "regulator-output-exceeds-abs-max"
 description: "A regulator's datasheet output voltage exceeds the absolute-maximum supply rating of a part it feeds."
 ---
 
+### Remedy
+
+Reprogram the regulator's output to a voltage the downstream part is rated for, or move that part to a rail that already is. Both numbers come from vendor documents, so a design change settles this without needing a measurement.
+
 ### What it checks
 
 A regulator's datasheet **output** voltage against the **absolute-maximum supply** rating of a part it

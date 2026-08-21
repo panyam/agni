@@ -3,6 +3,10 @@ title: "pin-tracking-advisory"
 description: "Two pins of one part sit outside a tracking bound their datasheet recommends between them."
 ---
 
+### Remedy
+
+Restore the recommended ordering between the two terminals where the design allows it, or record that the loss of margin is accepted. Unlike the required bound, this costs performance rather than the part.
+
 ### What it means
 
 A component joined to a seeded datasheet spec has two pins whose difference breaks a tracking bound

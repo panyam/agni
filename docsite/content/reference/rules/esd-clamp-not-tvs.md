@@ -3,6 +3,10 @@ title: "esd-clamp-not-tvs"
 description: "An externally-exposed signal net is clamped by a Zener, not a fast ESD TVS."
 ---
 
+### Remedy
+
+Replace the Zener with an ESD-rated TVS where the review targets ESD, or record that the Zener is there for transient clamping and that ESD is covered elsewhere.
+
 ### What it means
 
 An externally-exposed signal net (on a connector) has a **Zener clamp** in reach but no fast

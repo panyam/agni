@@ -34,6 +34,7 @@ var ledPolarityMeta = check.Rule{
 	Severity: "error",
 	Summary:  "An LED's anode sits on ground and its cathode on a power rail, mounted backwards.",
 	Impact:   "A reversed LED simply never lights. It passes every connectivity check (both pins are wired), survives assembly, and shows up as a dead indicator at bring-up — a part-level rework for a capture-time slip.",
+	Remedy:   "Swap the LED's anode and cathode connections so the anode faces the supply side and the cathode the return path through its series resistor.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "R",

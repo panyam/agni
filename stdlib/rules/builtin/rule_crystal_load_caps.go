@@ -14,6 +14,7 @@ var crystalLoadCaps = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A passive crystal has an oscillator terminal with no load capacitor to ground.",
 	Impact:     "A quartz crystal oscillates at its rated frequency only with the specified load capacitance on each terminal. Omit a load cap and the oscillator either will not start, starts intermittently over temperature, or runs off-frequency, which corrupts every timed peripheral downstream (UART baud, USB, CAN bit timing). The failure is analog and load-dependent, so it routinely passes bring-up and fails in the field.",
+	Remedy:     "Fit a load capacitor from each oscillator terminal to ground, sized from the crystal's specified load capacitance and the stray capacitance of the layout rather than copied from another design.",
 	Primitives: []string{"select", "exists", "traverse", "pattern"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net"},
 	Tags: map[string]string{

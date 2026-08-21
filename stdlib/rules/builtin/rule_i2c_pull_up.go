@@ -18,6 +18,7 @@ var i2cPullUp = &check.Rule{
 	Severity:   "error",
 	Summary:    "An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.",
 	Impact:     "I2C pins are open-drain: they can only pull the line low. With no pull-up the line never returns high, so the bus is stuck and nothing on it communicates. It is a total-function failure and a recurring field bug.",
+	Remedy:     "Fit a pull-up resistor from each of SDA and SCL to the bus rail, sized from the bus capacitance and the clock rate the design actually runs at rather than from a habitual value.",
 	Primitives: []string{"select", "pattern", "traverse", "exists", "reach"},
 	Reads:      []string{"net.names", "on_net", "component.class"},
 	Tags: map[string]string{

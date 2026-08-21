@@ -107,6 +107,33 @@ var docSummaries = map[string]string{
 	RuleStrapAddressCollision:           "two devices on one bus strap to the same address",
 }
 
+// docRemedies is what to DO about each intent rule KIND, in the imperative (check.Rule.Remedy).
+//
+// It is keyed by docKey rather than written at each rule builder because an intent rule is generated
+// per-declaration while its remedy is not: the fix for a missing OV clamp is the same sentence on
+// every rail that declares one. Keying it here gives the runtime rule and the docsite exemplar one
+// source instead of two copies to drift apart. Every docKey has an entry, held 1:1 by TestDocRules.
+var docRemedies = map[string]string{
+	RuleModuleMissing:                   "Add the missing block to the schematic, or amend the intent declaration if the architecture has moved on. One of the two is out of date, and only the author knows which.",
+	RuleModuleCount:                     "Add or remove instances until the count matches the declaration, or amend the declaration. A dropped channel and a stale declaration look identical from here.",
+	RuleVoltageDomain:                   "Add the declared rail, or reconcile its name with the voltage the domain declares. A rail named for one voltage and declared at another will mislead every reader after you.",
+	"protection-" + ProtectionOVP:       "Fit the over-voltage clamp the intent declares for this rail, chosen to conduct below the lowest absolute maximum the rail feeds.",
+	"protection-" + ProtectionDischarge: "Fit a bleeder resistor across the rail, sized so the rail discharges within the time the design assumes when it powers down.",
+	docKeySubsystem:                     "Add the missing part or net to the subsystem, or amend the declaration if the architecture changed and the intent document did not.",
+	"property-" + PropResetPolarity:     "Bias the reset net to its DE-asserted level. As drawn, the part is held in reset from power-up, which reads at bring-up as a device that never starts.",
+	"property-" + PropACCoupled:         "Put a series capacitor in the net, sized for the lowest frequency the link has to pass.",
+	"property-" + PropStrap:             "Move the strap resistor to the rail that latches the declared level. The board boots either way, configured as something other than what was intended.",
+	RuleRailCurrentCapacity:             "Fit a supply rated above the rail's declared peak current, or reduce the load the rail carries. As drawn, the rail is specified beyond what its source can deliver.",
+	RuleRailCurrentMargin:               "Fit a supply carrying the declared margin over the rail's peak, or lower the margin factor if the declaration is stricter than this design needs.",
+	RuleLoadSwitchTripBelowBudget:       "Raise the switch's current limit above the rail's declared peak, or lower the peak the rail is budgeted for. As set, the switch trips in normal operation.",
+	docKeySequence:                      "Wire the power-good or enable chain so each rail's release depends on the one before it, in the declared order. Check the direction as well as the presence, since a chain wired backwards satisfies neither.",
+	docKeyStrapGroup:                    "Re-bias the straps in the group until they encode the declared value, working the value out from the datasheet's strap table rather than from the resistors one at a time.",
+	RuleStrapAddressCollision:           "Re-strap one of the two devices to a free address, taking the address map from each part's datasheet rather than from the schematic.",
+}
+
+// intentRemedy is the Remedy a rule of this kind carries, for the rule builders and DocRules alike.
+func intentRemedy(docKey string) string { return docRemedies[docKey] }
+
 // DocRules returns one representative rule per intent rule KIND (docKey) for the docsite catalog
 // generator. Intent rules are generated per-declaration, so there is no static catalog to enumerate.
 // Each documented kind becomes one page-worthy rule carrying its Detail card, its classification
@@ -120,6 +147,7 @@ func DocRules() []*check.Rule {
 			Name:     k,
 			Severity: "warning",
 			Summary:  docSummaries[k],
+			Remedy:   intentRemedy(k),
 			Detail:   intentDoc(k),
 			Tags:     intentTags(),
 		})

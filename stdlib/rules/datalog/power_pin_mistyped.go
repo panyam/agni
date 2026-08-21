@@ -25,6 +25,7 @@ var powerPinMistypedQ = query.FindingQuery{
 		Severity: "warning",
 		Summary:  "A pin named like power/ground but not typed power_in sits alone on its net.",
 		Impact:   "power-input-not-driven catches an unconnected power pin only when the symbol types it as a power input. A pin the symbol author named VDD or GND but left typed as a plain signal slips through it; if that pin is also wired to nothing, the part loses a supply or a ground silently. This is the gap, expressed in datalog over the pin relations.",
+		Remedy:   "Type the pin as a power input in its symbol, then wire it to its rail. Fixing the symbol also restores power-input-not-driven over every other board that uses it.",
 		Reads:    []string{relations.RelPinRole, relations.RelPinType, relations.RelPinNet, relations.RelNetPinCount, relations.RelHasNCChannel},
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,

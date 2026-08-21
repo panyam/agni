@@ -3,6 +3,10 @@ title: "profile/esd"
 description: "An interface signal leaves the board through a connector with no ESD clamp."
 ---
 
+### Remedy
+
+Fit an ESD clamp on the signal at the connector, ahead of the transceiver it protects.
+
 ### What it checks
 
 For each of the interface's signal nets that leaves the board through a connector, whether anything
