@@ -14,7 +14,7 @@ import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import type { ViewerLocation } from "./router.js";
-import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, subjectsToSpecs, findingSpec, entitySpecs, focusStack, contextFromWire } from "./findings.js";
+import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
@@ -188,6 +188,15 @@ export class ViewerPresenter {
   // it is not re-fetched.
   private rulesByName = new Map<string, RuleItem>();
   private readonly findingCache = new Map<string, FindingItem[]>();
+  // verdictCache mirrors findingCache: the CONSIDERED SET per rule, keyed the same way and filled
+  // from the same response, since CheckDesign already returns both. A rule that states no considered
+  // set caches an empty list, which is why the panel must distinguish "this rule reported nothing"
+  // from "this rule does not report considered sets" using the catalog rather than this map.
+  private readonly verdictCache = new Map<string, VerdictItem[]>();
+  // focusedVerdict is the id currently drawn as a proof, "" when none. It rides the URL so a link
+  // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
+  // stale id in the address bar would promise a drawing the canvas is no longer showing.
+  private focusedVerdict = "";
 
   // highlights are the active highlight layers (the selection API): each spec names
   // components/nets/pins and its color/alpha. The WebGL canvas resolves them locally against
@@ -283,6 +292,50 @@ export class ViewerPresenter {
     const faithful = this.currentLayout === "" || this.currentLayout === "faithful";
     const note = faithful && reason !== LocateReason.UNSPECIFIED ? reasonMessage(reason, kind, subject) : "";
     this.views.query?.setLocateNote(note);
+  }
+
+  // locateVerdict focuses ONE verdict by its derived id and draws its proof: the verdict's context
+  // as ground, its subject as the figure on top.
+  //
+  // This is the CLI-to-viewer hop. A row printed by `agni check --verdicts` carries the same id this
+  // resolves, computed independently on both sides from the same fields, so neither has to have
+  // talked to the other. An unknown id draws nothing and returns false rather than clearing the
+  // canvas, because a stale or mistyped link should leave what the reader was looking at alone.
+  //
+  // Returns whether the id resolved, so the caller can say so. A verdict whose rule has not been run
+  // yet is simply absent, which is the same "not computed" state the findings list already models.
+  async locateVerdict(id: string): Promise<boolean> {
+    const v = this.findVerdict(id);
+    if (!v) return false;
+    if (this.mode === "native") await this.setMode("webgl");
+    const focus = withFocusShape(entitySpecs(v.kind, v.subject, v.pin), this.highlightStyle);
+    await this.setHighlights(verdictProofStack(v, focus));
+    this.focusedVerdict = v.id;
+    // Pushed so the panel learns which verdict is focused. setHighlights above cleared the field and
+    // pushed nothing, so without this the canvas shows the proof and the table never learns there is
+    // one to point at.
+    this.pushFindings();
+    this.syncLocation();
+    return true;
+  }
+
+  // findVerdict looks one up across every rule's cached considered set. Linear over a few thousand
+  // rows at worst (the sum of the considered sets, not the rules-times-subjects cross product), so
+  // an index would buy nothing a profiler could see.
+  private findVerdict(id: string): VerdictItem | undefined {
+    for (const vs of this.verdictCache.values()) {
+      const hit = vs.find((v) => v.id === id);
+      if (hit) return hit;
+    }
+    return undefined;
+  }
+
+  // verdicts is the flattened considered set across the selected rules, in the catalog's order, for
+  // the panel to render.
+  verdictList(): VerdictItem[] {
+    const out: VerdictItem[] = [];
+    for (const name of this.selectedRules) out.push(...(this.verdictCache.get(name) ?? []));
+    return out;
   }
 
   // sheetBadges denormalizes a finding's wire sheet ids into display badges (WS9-024): the id
@@ -392,6 +445,7 @@ export class ViewerPresenter {
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
       this.findingCache.clear(); // findings are per-design; a new file starts a fresh cache
+      this.verdictCache.clear();
       this.skippedCache.clear(); // and so is which rules could not run: a new design has new tiers
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks now run on demand (Run button)
@@ -428,6 +482,15 @@ export class ViewerPresenter {
     this.currentLayout = loc.layout; // empty -> server picks the effective layout, as on a fresh open
     this.faithfulSymbols = loc.symbols;
     await this.openFile(loc.mount, loc.path, loc.sheet, true);
+    // A verdict id in the link RUNS THE CHECKS before resolving it, which is a deliberate exception
+    // to checks being on-demand (WS9). A cold load has an empty verdict cache, so without this a
+    // pasted link lands on "Press Run checks" and resolves nothing, which is the whole CLI-to-viewer
+    // hop failing at the one moment it is being used. A URL naming a verdict is an explicit request
+    // for that answer, so paying for the run is what the reader asked for.
+    if (loc.verdict) {
+      await this.runChecks();
+      await this.locateVerdict(loc.verdict);
+    }
   }
 
   // currentLoc snapshots the URL-addressable state.
@@ -440,6 +503,7 @@ export class ViewerPresenter {
       mode: this.mode,
       layout: this.currentLayout,
       symbols: this.faithfulSymbols,
+      verdict: this.focusedVerdict,
     };
   }
 
@@ -529,6 +593,7 @@ export class ViewerPresenter {
         const resp = await this.checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: missing, overlay: this.overlay() });
         for (const n of missing) {
           this.findingCache.set(n, []); // mark computed (even if it fired nothing)
+          this.verdictCache.set(n, []);
           this.skippedCache.delete(n); // a rerun may have made it runnable (a board was attached)
         }
         // ?? [] because a hand-built response (a test stub, an older server) may omit it, and a
@@ -550,6 +615,25 @@ export class ViewerPresenter {
             context: contextFromWire(f.context),
             sheets: this.sheetBadges(f.sheets ?? []),
             locateReason: f.locateReason ?? 0,
+          });
+        }
+        // ?? [] for the same reason skipped uses it: an older server or a hand-built stub may omit
+        // the field, and a missing considered set must read as "this rule stated none" rather than
+        // throwing mid-run and costing the findings their display too.
+        for (const v of resp.verdicts ?? []) {
+          this.verdictCache.get(v.rule)?.push({
+            id: v.id,
+            rule: v.rule,
+            outcome: outcomeWord(v.outcome),
+            kind: v.subject?.kind ?? "",
+            subject: v.subject?.ref ?? "",
+            pin: v.subject?.pin ?? "",
+            netId: v.subject?.netId ?? "",
+            busId: v.subject?.busId ?? "",
+            statement: v.witness?.statement ?? "",
+            terms: (v.witness?.terms ?? []).map((t) => ({ label: t.label, value: t.value })),
+            context: contextFromWire(v.context),
+            reason: v.reason ?? "",
           });
         }
       } catch {
@@ -582,6 +666,8 @@ export class ViewerPresenter {
     for (const r of this.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
     const state: FindingsState = {
       findings: this.findings,
+      verdicts: this.verdictList(),
+      focusedVerdict: this.focusedVerdict,
       selected: this.selectedSubject,
       ruleCount: this.selectedRules.length,
       pending,
@@ -1048,6 +1134,12 @@ export class ViewerPresenter {
   // highlights are simply not drawn there (they appear on the next switch to WebGL/SVG).
   async setHighlights(specs: HighlightSpec[]): Promise<void> {
     this.highlights = specs;
+    // Any change to the highlight drops the focused verdict, for the same reason the controls are
+    // pushed here: there are seven paths that replace it and every one of them invalidates the
+    // claim the URL is making. locateVerdict re-sets it AFTER calling this, so the one path that
+    // legitimately owns a proof keeps it and the other six cannot leave a stale id in the address
+    // bar promising a drawing the canvas stopped showing.
+    this.focusedVerdict = "";
     this.canvas.setHighlights(specs);
     // Pushed HERE rather than at each call site, because every path that changes the highlight has to
     // reach the clear control's enabled state and there are seven of them.

@@ -1,26 +1,27 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { findingsPanelIsland } from "./findingspanel.jsx";
-import type { FindingItem, FindingsState } from "./findings.js";
+import type { FindingItem, FindingsState, VerdictItem } from "./findings.js";
 
 function f(over: Partial<FindingItem>): FindingItem {
   return { rule: "r", category: "c", profile: "", severity: "info", kind: "net", subject: "N", pin: "", netId: "", busId: "", message: "m", inconclusive: false, context: [], sheets: [], locateReason: 0, ...over };
 }
 
 function state(over: Partial<FindingsState>): FindingsState {
-  return { findings: [], selected: "", ruleCount: 1, pending: 0, running: false, skipped: [], ruleSummaries: {}, ...over };
+  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 0, running: false, skipped: [], ruleSummaries: {}, ...over };
 }
 
 function mountPanel(over: Partial<FindingsState>) {
   const onSelect = vi.fn();
   const onLocateContext = vi.fn();
   const onRun = vi.fn();
+  const onSelectVerdict = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = findingsPanelIsland(el, null, { onSelect, onLocateContext, onRun });
+  const panel = findingsPanelIsland(el, null, { onSelect, onLocateContext, onRun, onSelectVerdict });
   panel.island.activate();
   panel.view.setState(state(over));
-  return { el, panel, onSelect, onLocateContext, onRun };
+  return { el, panel, onSelect, onLocateContext, onRun, onSelectVerdict };
 }
 
 beforeEach(() => document.body.replaceChildren());
@@ -267,5 +268,75 @@ describe("selecting a finding keeps the rows it already rendered", () => {
     const after = [...m.el.querySelectorAll(".check-row")];
     expect(after.length).toBe(1);
     expect(after[0]).not.toBe(before[0]);
+  });
+});
+
+function v(over: Partial<VerdictItem> = {}): VerdictItem {
+  return {
+    id: "i2c-pull-up:net:SDA", rule: "i2c-pull-up", outcome: "pass", kind: "net", subject: "SDA",
+    pin: "", netId: "", statement: "SDA reaches rail +3V3 through R1", terms: [], context: [], reason: "",
+    ...over,
+  };
+}
+
+describe("the considered set", () => {
+  // The toggle only exists when a rule reported one. Offering an empty "what was checked" view would
+  // answer the question with a blank table, which reads as "nothing was checked" about a run where
+  // some rules simply do not report coverage yet.
+  it("offers no mode toggle when no rule states a considered set", () => {
+    const { el } = mountPanel({ findings: [f({})], verdicts: [] });
+    expect(el.querySelector(".checks-mode")).toBeNull();
+  });
+
+  it("shows a PASS with its proof, which the violations table cannot", () => {
+    const { el } = mountPanel({ verdicts: [v()] });
+    const sel = el.querySelector(".checks-mode select") as HTMLSelectElement;
+    sel.value = "considered";
+    sel.dispatchEvent(new Event("change"));
+
+    const row = el.querySelector(".verdict-row");
+    expect(row?.textContent).toContain("pass");
+    expect(row?.textContent).toContain("SDA");
+    expect(row?.textContent).toContain("SDA reaches rail +3V3 through R1");
+  });
+
+  // A not-considered verdict has no statement, and a row showing neither would be the silence this
+  // table exists to remove, so the reason takes the proof column.
+  it("falls back to the reason when the rule could not decide", () => {
+    const { el } = mountPanel({
+      verdicts: [v({ outcome: "not-considered", statement: "", reason: "pin is not connected to a net" })],
+    });
+    const sel = el.querySelector(".checks-mode select") as HTMLSelectElement;
+    sel.value = "considered";
+    sel.dispatchEvent(new Event("change"));
+    expect(el.querySelector(".verdict-row")?.textContent).toContain("pin is not connected to a net");
+  });
+
+  // Clicking resolves by ID, not by subject. Two rules can hold verdicts about one subject, and a
+  // passing verdict has no finding for the subject lookup to land on.
+  it("selects a verdict by its id", () => {
+    const { el, onSelectVerdict } = mountPanel({ verdicts: [v()] });
+    const sel = el.querySelector(".checks-mode select") as HTMLSelectElement;
+    sel.value = "considered";
+    sel.dispatchEvent(new Event("change"));
+
+    (el.querySelector(".verdict-row") as HTMLElement).click();
+    expect(onSelectVerdict).toHaveBeenCalledWith("i2c-pull-up:net:SDA");
+  });
+});
+
+// THE TWO GAPS A REAL BROWSER FOUND AND THE UNIT TESTS DID NOT. Both are about arriving on a link
+// rather than clicking a row, which is the CLI-to-viewer hop and the case nothing exercised.
+describe("arriving on a verdict link", () => {
+  it("opens on the table containing the verdict, not on violations", () => {
+    const { el } = mountPanel({ verdicts: [v()], focusedVerdict: "i2c-pull-up:net:SDA" });
+    // No toggle was touched. A reader following a link has no reason to know there is one.
+    expect(el.querySelector(".verdicts-table")).not.toBeNull();
+    expect(el.querySelector(".verdict-row.selected")?.textContent).toContain("SDA");
+  });
+
+  it("stays on violations when no verdict is focused", () => {
+    const { el } = mountPanel({ findings: [f({})], verdicts: [v()] });
+    expect(el.querySelector(".verdicts-table")).toBeNull();
   });
 });

@@ -380,7 +380,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "" });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -394,7 +394,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "" });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 
