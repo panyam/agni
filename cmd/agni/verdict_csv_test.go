@@ -32,14 +32,27 @@ func TestVerdictCSVShowsAPassWithItsProof(t *testing.T) {
 	if got := rows[0]; got != strings.Join(verdictCSVColumns, ",") {
 		t.Errorf("header must be the fixed column set\n got: %s\nwant: %s", got, strings.Join(verdictCSVColumns, ","))
 	}
+	// Select the row this test makes claims about, NOT whichever pass happens to sort last. The
+	// original loop kept the final passing row, which was this one only while i2c-pull-up was the
+	// single converted rule; the first structural conversions put an unconnected-component pass
+	// after it and the assertions below started reading a row they were never about. Every further
+	// conversion under agni issue 391 would have re-broken a positional pick.
 	var pass string
+	var anyPass bool
 	for _, r := range rows[1:] {
-		if strings.Contains(r, ",pass,") {
+		if !strings.Contains(r, ",pass,") {
+			continue
+		}
+		anyPass = true
+		if strings.HasPrefix(r, "i2c-pull-up:net:SDA,") {
 			pass = r
 		}
 	}
-	if pass == "" {
+	if !anyPass {
 		t.Fatalf("no passing row; a table that only shows failures is the findings table\n%s", out)
+	}
+	if pass == "" {
+		t.Fatalf("no passing row for i2c-pull-up on SDA, the subject this test proves out\n%s", out)
 	}
 	// The proof, and the entities a viewer would highlight from it.
 	for _, want := range []string{"i2c-pull-up:net:SDA", "SDA reaches rail +3V3 through R1", "pull-up=R1|rail=+3V3"} {
