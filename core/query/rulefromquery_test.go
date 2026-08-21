@@ -190,7 +190,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		Message:     "{r}: IOUT below requirement",
 		ParamSymbol: "IOUT",
 	})
-	fs := rule.Eval(m)
+	fs := rule.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -211,7 +211,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		SubjectVar: "r",
 		Message:    "{r}",
 	})
-	if pf := plain.Eval(m); len(pf) != 1 || pf[0].DatasheetProv != nil {
+	if pf := plain.Findings(m); len(pf) != 1 || pf[0].DatasheetProv != nil {
 		t.Fatalf("no ParamSymbol should mean no citation: %+v", pf)
 	}
 }
@@ -228,7 +228,7 @@ func TestRuleFromQuery(t *testing.T) {
 		PinVar:     "pin",
 		Message:    "pin {pin} sits alone on net {net}",
 	})
-	fs := rule.Eval(check.NewModel(pinDesign()))
+	fs := rule.Findings(check.NewModel(pinDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -263,7 +263,7 @@ func TestRuleFromQueryCarriesContext(t *testing.T) {
 			{Var: "net", Kind: check.KindNet, Role: "net"},
 		},
 	})
-	fs := rule.Eval(check.NewModel(pinDesign()))
+	fs := rule.Findings(check.NewModel(pinDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -297,7 +297,7 @@ func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
 			{Var: "net", Kind: check.KindNet, Role: "net"},
 		},
 	})
-	fs := rule.Eval(check.NewModel(pinDesign()))
+	fs := rule.Findings(check.NewModel(pinDesign()))
 	if len(fs) != 1 || len(fs[0].Context) != 2 {
 		t.Fatalf("want 1 finding with 2 context entities, got %+v", fs)
 	}
@@ -317,7 +317,7 @@ func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 		SubjectVar: "ref",
 		Message:    "no context here",
 	})
-	fs := rule.Eval(check.NewModel(pinDesign()))
+	fs := rule.Findings(check.NewModel(pinDesign()))
 	if len(fs) != 1 || fs[0].Context != nil {
 		t.Errorf("a rule declaring no context vars must carry none, got %+v", fs[0].Context)
 	}

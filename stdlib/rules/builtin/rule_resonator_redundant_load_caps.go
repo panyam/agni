@@ -30,7 +30,7 @@ var resonatorRedundantLoadCaps = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("resonator-redundant-load-caps"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		// Collect ceramic resonators (the built-in-cap clock subtype). A bare un-subtyped clock
 		// candidate is NOT one (it may be a crystal that genuinely needs caps), so this rule stays
 		// silent until the datasheet class seeds ceramic_resonator.
@@ -110,5 +110,5 @@ var resonatorRedundantLoadCaps = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }

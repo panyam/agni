@@ -150,7 +150,7 @@ func lsDecl(rail string, peak float64) Declaration {
 }
 
 func lsEval(d Declaration, m check.Model) []check.Finding {
-	return loadSwitchTripBelowBudgetRule(d).Eval(m)
+	return loadSwitchTripBelowBudgetRule(d).Findings(m)
 }
 
 // TestLoadSwitchTripBelowBudgetFires is the WS3-085 acceptance for the sizing lower bound. A 50mV
@@ -375,7 +375,7 @@ func TestLoadSwitchWithUnusableOnResistanceSaysNothing(t *testing.T) {
 func TestLoadSwitchSilentWithoutTheControllerDatasheet(t *testing.T) {
 	m := check.NewModel(oneSwitch(0.025))
 	r := loadSwitchTripBelowBudgetRule(lsDecl("VOUT", 5))
-	if fs := r.Eval(m); len(fs) != 0 {
+	if fs := r.Findings(m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(r, m); ok || reason == "" {

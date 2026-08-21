@@ -21,7 +21,7 @@ func moduleMissingRule(d Declaration) *check.Rule {
 		Remedy:   intentRemedy(RuleModuleMissing),
 		Reads:    []string{"component.class", "component.mpn"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, mod := range d.Modules {
 				if modulePresent(m, mod) {
@@ -34,7 +34,7 @@ func moduleMissingRule(d Declaration) *check.Rule {
 				})
 			}
 			return out
-		},
+		}),
 	}
 }
 
@@ -68,7 +68,7 @@ func moduleCountRule(d Declaration) *check.Rule {
 		Remedy:   intentRemedy(RuleModuleCount),
 		Reads:    []string{"component.class", "component.mpn"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, mod := range d.Modules {
 				if mod.Count <= 0 {
@@ -85,7 +85,7 @@ func moduleCountRule(d Declaration) *check.Rule {
 				})
 			}
 			return out
-		},
+		}),
 	}
 }
 

@@ -71,7 +71,10 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 	if len(r.Reads) == 0 {
 		r.Reads = Reads(q)
 	}
-	r.Eval = func(m check.Model) []check.Finding {
+	// FailuresOnly for the same reason the Spec interpreter is: a datalog goal yields the rows that
+	// MATCHED, so the subjects it silently passed over are not in the answer at all. Stating a
+	// considered set here means enumerating the goal's subject domain, which is its own change.
+	r.Eval = check.FailuresOnly(func(m check.Model) []check.Finding {
 		rows, err := Naive{}.Eval(q, NewBase(m))
 		if err != nil {
 			return nil
@@ -107,7 +110,7 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 			out = append(out, f)
 		}
 		return out
-	}
+	})
 	return &r
 }
 

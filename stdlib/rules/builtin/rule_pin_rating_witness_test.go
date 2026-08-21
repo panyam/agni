@@ -153,8 +153,8 @@ func TestVerdictsProjectToTheSameFindings(t *testing.T) {
 		verdicts []check.Verdict
 		findings []check.Finding
 	}{
-		{"abs-max", pinAbsMaxVerdicts(m), pinExceedsAbsMax.Eval(m)},
-		{"recommended", pinRecommendedVerdicts(m), pinOutOfRecommended.Eval(m)},
+		{"abs-max", pinAbsMaxVerdicts(m), pinExceedsAbsMax.Findings(m)},
+		{"recommended", pinRecommendedVerdicts(m), pinOutOfRecommended.Findings(m)},
 	} {
 		var failed int
 		for _, v := range c.verdicts {

@@ -32,7 +32,7 @@ var unannotatedComponents = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // the reader sees the designator; the IR cannot infer intent
 	},
 	Detail: ruleDoc("unannotated-components"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.UnannotatedComponents(), func(u *ir.UnannotatedComponent) check.Finding {
 			var prov *ir.Provenance
 			if len(u.GetInstances()) > 0 {
@@ -45,7 +45,7 @@ var unannotatedComponents = &check.Rule{
 				Prov:    prov,
 			}
 		})
-	},
+	}),
 }
 
 // unannotatedMessage states the count, because the placeholder alone does not say how much of the

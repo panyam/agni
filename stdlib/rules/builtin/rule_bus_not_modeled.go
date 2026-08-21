@@ -27,7 +27,7 @@ var busNotModeled = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // detected by the reader from the source's bus syntax
 	},
 	Detail: ruleDoc("bus-not-modeled"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, b := range m.UnmodeledBuses() {
 			if busResolved(m, b) {
@@ -41,7 +41,7 @@ var busNotModeled = &check.Rule{
 			})
 		}
 		return out
-	},
+	}),
 }
 
 // busResolved reports whether every member signal the bus names is already a net in the design (formed

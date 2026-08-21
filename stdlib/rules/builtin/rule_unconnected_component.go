@@ -21,11 +21,9 @@ var unconnectedComponent = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistOpen,
 	},
-	Detail:       ruleDoc("unconnected-component"),
-	EvalVerdicts: unconnectedComponentVerdicts,
-	Eval: func(m check.Model) []check.Finding {
-		return check.VerdictsToFindings(unconnectedComponentVerdicts(m))
-	},
+	Detail:              ruleDoc("unconnected-component"),
+	Eval:                unconnectedComponentVerdicts,
+	StatesConsideredSet: true,
 }
 
 // unconnectedComponentVerdicts decides every component in the design and returns one verdict each.

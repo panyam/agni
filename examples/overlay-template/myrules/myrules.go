@@ -8,6 +8,8 @@
 package myrules
 
 import (
+	"fmt"
+
 	"github.com/panyam/agni/core/check"
 )
 
@@ -25,19 +27,42 @@ var exampleRule = &check.Rule{
 	Severity: "warning",
 	Summary:  "TEMPLATE: replace with your own house-style rule",
 	Impact:   "describe what goes wrong when this rule is violated",
+	Remedy:   "describe what to DO about it, in the imperative, as one engineer would say it to another",
 	Reads:    []string{"component.ref_des"},
 	Tags:     map[string]string{check.KeyCategory: "house-style"},
-	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
+	// StatesConsideredSet says Eval below returns EVERY subject the rule looked at, not just the ones
+	// that failed. Leave it false while your Eval only reports violations, or `check --verdicts` will
+	// present your failure list as though it were coverage.
+	StatesConsideredSet: true,
+	// Eval MAPS each subject onto a verdict rather than filtering the design down to what failed. A
+	// pass carries the proof it rests on, so a reader can tell a part you cleared from one nobody
+	// checked. The findings your rule contributes are the projection of this (Rule.Findings), so
+	// there is no second body to keep in step.
+	Eval: func(m check.Model) []check.Verdict {
+		var out []check.Verdict
 		for _, c := range m.Components() {
 			// TODO: your condition. This placeholder flags an unnamed component.
 			if c.RefDes == "" {
-				out = append(out, check.Finding{
+				out = append(out, check.Verdict{
+					Outcome: check.Fail,
 					Kind:    check.KindComponent,
 					Subject: "(unnamed)",
-					Message: "component has no ref-des",
+					Finding: &check.Finding{
+						Kind:    check.KindComponent,
+						Subject: "(unnamed)",
+						Message: "component has no ref-des",
+					},
 				})
+				continue
 			}
+			out = append(out, check.Verdict{
+				Outcome: check.Pass,
+				Kind:    check.KindComponent,
+				Subject: c.RefDes,
+				// Say what the pass RESTS ON. A statement that would read the same on a design where
+				// the rule concluded the opposite proves nothing.
+				Witness: &check.Witness{Statement: fmt.Sprintf("component carries the ref-des %q", c.RefDes)},
+			})
 		}
 		return out
 	},

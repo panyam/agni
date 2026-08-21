@@ -43,7 +43,7 @@ func houseNamedDesign() *ir.Design {
 // The rule's reason for existing: a house-named rail that the built-in vocabulary misses is
 // reported, so the run says the analysis is short rather than reporting clean.
 func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
-	fs := railNotClassified.Eval(check.NewModel(houseNamedDesign()))
+	fs := railNotClassified.Findings(check.NewModel(houseNamedDesign()))
 	if len(fs) != 1 {
 		t.Fatalf("want exactly one finding (PMIC_CORE_3V3), got %d: %+v", len(fs), fs)
 	}
@@ -61,7 +61,7 @@ func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 // that SWINGS at 1.8V is named the same way a 1.8V rail is, and no naming grammar separates them. It
 // feeds an ordinary input rather than a supply pin, and must stay silent.
 func TestRailNotClassifiedIgnoresASignalAtALevel(t *testing.T) {
-	for _, f := range railNotClassified.Eval(check.NewModel(houseNamedDesign())) {
+	for _, f := range railNotClassified.Findings(check.NewModel(houseNamedDesign())) {
 		if f.Subject == "UART_TX_1V8" {
 			t.Errorf("a signal swinging at a level is not an unclassified rail: %s", f.Message)
 		}
@@ -70,7 +70,7 @@ func TestRailNotClassifiedIgnoresASignalAtALevel(t *testing.T) {
 
 // A rail the built-in vocabulary already matches carries the role, so there is no gap to report.
 func TestRailNotClassifiedSilentOnAnAlreadyClassifiedRail(t *testing.T) {
-	for _, f := range railNotClassified.Eval(check.NewModel(houseNamedDesign())) {
+	for _, f := range railNotClassified.Findings(check.NewModel(houseNamedDesign())) {
 		if f.Subject == "+5V" {
 			t.Errorf("a correctly classified rail must not be reported: %s", f.Message)
 		}
@@ -88,7 +88,7 @@ func TestRailNotClassifiedGoesSilentOnceTheLexiconIsDeclared(t *testing.T) {
 			n.Roles = classify.ConventionRoles(check.NetRoleRail)
 		}
 	}
-	if fs := railNotClassified.Eval(check.NewModel(d)); len(fs) != 0 {
+	if fs := railNotClassified.Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("declaring the lexicon must silence the rule; got %d findings: %+v", len(fs), fs)
 	}
 }
@@ -98,14 +98,14 @@ func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
 	// A rail-looking name with no supply pin on it: one channel only, so no finding.
 	noSupply := houseNamedDesign()
 	noSupply.Nets[0].Connections = []*ir.Connection{{ComponentRef: "U1", PinRef: "3"}}
-	if fs := railNotClassified.Eval(check.NewModel(noSupply)); len(fs) != 0 {
+	if fs := railNotClassified.Findings(check.NewModel(noSupply)); len(fs) != 0 {
 		t.Errorf("one channel is not evidence; want 0 findings, got %+v", fs)
 	}
 
 	// A supply pin on a net whose name declares no voltage: nothing to report about.
 	noVolts := houseNamedDesign()
 	noVolts.Nets[0].Name = "PMIC_CORE"
-	for _, f := range railNotClassified.Eval(check.NewModel(noVolts)) {
+	for _, f := range railNotClassified.Findings(check.NewModel(noVolts)) {
 		if f.Subject == "PMIC_CORE" {
 			t.Errorf("a name with no voltage token cannot be evidenced: %s", f.Message)
 		}
@@ -114,7 +114,7 @@ func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
 	// Ground carries a role of its own and is never this rule's subject.
 	gnd := houseNamedDesign()
 	gnd.Nets[0].Name = "GND_0V0"
-	for _, f := range railNotClassified.Eval(check.NewModel(gnd)) {
+	for _, f := range railNotClassified.Findings(check.NewModel(gnd)) {
 		if strings.HasPrefix(f.Subject, "GND") {
 			t.Errorf("ground must be excluded: %s", f.Message)
 		}

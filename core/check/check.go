@@ -240,21 +240,73 @@ type Rule struct {
 	// exempt findings leaves it out, the same distinction OptionalReads draws inside Reads.
 	ParamSymbols []string
 	Tags         map[string]string // open classification (category, tier, distribution, ...); see index.go Key*
-	Eval         func(Model) []Finding
-	// EvalVerdicts is the proof-carrying form of Eval: one Verdict per subject the rule was applied
-	// to, including the ones it could not judge. Where it is set it is the rule's SINGLE source of
-	// truth and Eval is its projection (VerdictsToFindings), which TestVerdictParity holds them to.
+	// Eval MAPS every subject the rule was applied to onto a verdict, rather than filtering the
+	// design down to what failed. A pass carries the proof it rests on, a subject the rule could not
+	// judge says so, and a violation carries the Finding it always did.
 	//
-	// OPTIONAL, and nil on a rule that has not been converted. That is the honest reading rather than
-	// a gap: a rule with no EvalVerdicts is not claiming an empty considered set, it is declining to
-	// state one, and a consumer must tell those apart. Reporting "this rule considered nothing" for a
-	// rule that simply predates the conversion is the same silence-reads-as-data mistake one level up
-	// from the one verdicts exist to remove.
+	// The findings contract is the PROJECTION of this (VerdictsToFindings), taken by Run rather than
+	// restated per rule. That is what keeps a rule's two answers from drifting: there is one body, so
+	// "the findings disagree with the verdicts" is not a state a rule can be in.
+	Eval func(Model) []Verdict
+	// StatesConsideredSet reports whether Eval's verdicts are the rule's full CONSIDERED SET, or only
+	// the subjects that failed.
 	//
-	// Eval stays REQUIRED even where this is set. The findings contract is what `check` and every
-	// existing consumer read, and deriving it here rather than at each call site would make a
-	// conversion a change to the check path instead of an addition beside it.
-	EvalVerdicts func(Model) []Verdict
+	// It exists because the signature alone cannot say this. A rule still on the pre-verdicts shape
+	// returns Fail verdicts and nothing else (see FailuresOnly), which is structurally
+	// indistinguishable from a rule that examined exactly those subjects and found them all wanting.
+	// Reading the second as the first is a coverage claim the run has not earned, and it is the same
+	// silence-reads-as-data mistake one level up from the one verdicts exist to remove. RunVerdicts
+	// filters on this, so an unconverted rule contributes nothing rather than contributing a lie.
+	//
+	// It fails in the SAFE direction. Forgetting it on a genuinely converted rule under-reports that
+	// rule; there is no way to set it and be believed while reporting only failures, because setting
+	// it is a deliberate claim by the author.
+	//
+	// MIGRATION-ONLY. When the last rule converts (agni issue 391) every rule sets it, the filter in
+	// RunVerdicts becomes a tautology, and the field deletes itself.
+	StatesConsideredSet bool
+}
+
+// Findings is the rule's verdicts projected onto the findings contract: the violations alone, which
+// is what `check` and every consumer of its output read.
+//
+// It is a projection rather than a second body, so a rule cannot report findings that disagree with
+// its verdicts. That used to be a parity test's job over two hand-written functions; now the shape
+// makes the disagreement unrepresentable.
+func (r *Rule) Findings(m Model) []Finding { return VerdictsToFindings(r.Eval(m)) }
+
+// FailuresOnly adapts a pre-verdicts rule body to the Eval signature, turning each Finding into a
+// Fail verdict and claiming nothing about the subjects that did not fail.
+//
+// It is deliberately conspicuous at the call site. A rule reading `Eval: check.FailuresOnly(...)` is
+// telling a reader it has not been converted yet, and `grep -c FailuresOnly` is the remaining work in
+// agni issue 391. Converting a rule means deleting the wrapper, writing the map, and setting
+// StatesConsideredSet.
+//
+// The witness is deliberately absent rather than invented. A Fail carries its Finding, which is the
+// evidence this shape has always had; manufacturing a Witness by restating the message would be the
+// decoration build/evidence.md warns about, and would make an unconverted rule look converted.
+func FailuresOnly(eval func(Model) []Finding) func(Model) []Verdict {
+	return func(m Model) []Verdict {
+		fs := eval(m)
+		out := make([]Verdict, 0, len(fs))
+		for _, f := range fs {
+			outcome := Fail
+			if f.Inconclusive {
+				outcome = Inconclusive
+			}
+			out = append(out, Verdict{
+				Outcome: outcome,
+				Kind:    f.Kind,
+				Subject: f.Subject,
+				Pin:     f.Pin,
+				NetID:   f.NetID,
+				Context: f.Context,
+				Finding: &f,
+			})
+		}
+		return out
+	}
 }
 
 // Capability names a source-format ability a rule needs to evaluate soundly (WS3-096). A rule that
@@ -315,7 +367,7 @@ func Run(m Model, rules []*Rule) []Finding {
 			out = append(out, f)
 			continue
 		}
-		for _, f := range r.Eval(m) {
+		for _, f := range r.Findings(m) {
 			f.Rule, f.Severity = r.Name, r.Severity
 			out = append(out, f)
 		}
@@ -392,21 +444,26 @@ func RunDesign(d *ir.Design) []Finding { return Run(NewModel(d), builtinRules) }
 // RunVerdicts collects the considered set across every rule that states one, stamping Rule from the
 // rule's own name so a verdict carries its identity the way Run stamps a finding's.
 //
-// Rules WITHOUT an EvalVerdicts contribute nothing, and the caller cannot tell that apart from a
-// rule that considered no subjects. That is a real limit of this seam while the catalog is part
-// converted, and it is why the return is a verdict list rather than anything shaped like a coverage
-// report: a coverage claim over a part-converted catalog would be wrong in the direction that
-// matters, reporting more assurance than the run has.
+// Rules that do not state a considered set contribute nothing, and the caller cannot tell that apart
+// from a rule that considered no subjects. That is a real limit of this seam while the catalog is
+// part converted, and it is why the return is a verdict list rather than anything shaped like a
+// coverage report: a coverage claim over a part-converted catalog would be wrong in the direction
+// that matters, reporting more assurance than the run has.
+//
+// The filter is StatesConsideredSet rather than anything read off the verdicts themselves. Every rule
+// now returns verdicts, so an unconverted one yields a list of Fail verdicts that is structurally
+// identical to a considered set whose every subject failed. Only the author knows which it is, which
+// is why the claim is a declaration rather than an inference.
 //
 // Ordering matches Run: rule name, then subject, so a verdict table and a findings table read down
 // the same axis.
 func RunVerdicts(m Model, rules []*Rule) []Verdict {
 	var out []Verdict
 	for _, r := range rules {
-		if r.EvalVerdicts == nil {
+		if !r.StatesConsideredSet {
 			continue
 		}
-		for _, v := range r.EvalVerdicts(m) {
+		for _, v := range r.Eval(m) {
 			v.Rule = r.Name
 			out = append(out, v)
 		}

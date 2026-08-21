@@ -23,7 +23,7 @@ var crystalLoadCaps = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("crystal-load-caps"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		// A crystal's terminals and whether it carries a power pin are BOTH cross-net facts about
 		// one component, so this rule quantifies over components, not nets: gather each crystal's
 		// non-ground, non-rail terminal nets and note whether any of its nets is a power rail.
@@ -115,5 +115,5 @@ var crystalLoadCaps = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }

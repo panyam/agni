@@ -41,9 +41,9 @@ func sequenceRule(s Sequence) *check.Rule {
 		Remedy: intentRemedy(docKeySequence),
 		Reads:  []string{"on_net", "component.class"},
 		Tags:   intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			return evalSequence(m, s)
-		},
+		}),
 	}
 }
 

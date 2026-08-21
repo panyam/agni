@@ -450,13 +450,13 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 		Name: "every-net", Severity: "info", Summary: "fires per net (test source)",
 		Reads: []string{"net.names"},
 		Tags:  map[string]string{check.KeyCategory: check.CategoryNaming},
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, n := range m.Nets() {
 				out = append(out, check.Finding{Kind: check.KindNet, Subject: n.Name, Message: "seen"})
 			}
 			return out
-		},
+		}),
 	}
 	catalog, err := check.NewCatalog(check.Builtins, check.NewSource("demo", []*check.Rule{everyNet}))
 	if err != nil {

@@ -89,8 +89,8 @@ func TestCrystalDatalogParity(t *testing.T) {
 	if goRule == nil {
 		t.Fatal(`built-in rule "crystal-load-caps" not found in the built-in catalog`)
 	}
-	want := findingKeys(goRule.Eval(m))
-	got := findingKeys(crystalLoadCapsDL.Eval(m))
+	want := findingKeys(goRule.Findings(m))
+	got := findingKeys(crystalLoadCapsDL.Findings(m))
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("datalog twin diverges from Go rule\n  go : %v\n  dl : %v", want, got)
@@ -134,8 +134,8 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 		name string
 		fs   []check.Finding
 	}{
-		{"go", goRule.Eval(m)},
-		{"dl", crystalLoadCapsDL.Eval(m)},
+		{"go", goRule.Findings(m)},
+		{"dl", crystalLoadCapsDL.Findings(m)},
 	} {
 		name, fs := tw.name, tw.fs
 		t.Run(name, func(t *testing.T) {

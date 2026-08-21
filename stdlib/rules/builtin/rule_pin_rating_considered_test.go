@@ -138,7 +138,7 @@ func TestNotConsideredProjectsToNoFinding(t *testing.T) {
 	if got := check.VerdictsToFindings(vs); len(got) != 0 {
 		t.Errorf("NotConsidered is not a defect, want 0 findings, got %d: %+v", len(got), got)
 	}
-	if got := pinOutOfRecommended.Eval(m); len(got) != 0 {
+	if got := pinOutOfRecommended.Findings(m); len(got) != 0 {
 		t.Errorf("Eval must be unchanged by the considered set, want 0 findings, got %d", len(got))
 	}
 }

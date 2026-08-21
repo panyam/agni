@@ -38,7 +38,7 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("regulator-output-exceeds-abs-max"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, src := range m.Components() {
 			srcSpec := m.PartSpec(src.RefDes)
@@ -115,7 +115,7 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }
 
 // suppliedNets is the set of nets a part's output can reach: the nets it sits on, plus their

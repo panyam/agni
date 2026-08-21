@@ -63,7 +63,9 @@ func revDesign(seriesKind string, flip bool) *ir.Design {
 	return d
 }
 
-func revFindings(d *ir.Design) []check.Finding { return reverseBlockingAbsent.Eval(check.NewModel(d)) }
+func revFindings(d *ir.Design) []check.Finding {
+	return reverseBlockingAbsent.Findings(check.NewModel(d))
+}
 
 // TestReverseBlockingFiresOnBarePath (WS3-094): a connector feeding a power input directly has nothing
 // blocking reverse flow.

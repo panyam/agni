@@ -38,7 +38,7 @@ var fetVdssBelowRail = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("fet-vdss-below-switched-rail"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, c := range m.Components() {
 			spec := m.PartSpec(c.RefDes)
@@ -90,7 +90,7 @@ var fetVdssBelowRail = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }
 
 // railEvidence records where a rail's voltage came from: the human-readable provenance for the

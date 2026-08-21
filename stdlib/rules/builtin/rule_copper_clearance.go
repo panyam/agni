@@ -32,7 +32,7 @@ var copperClearance = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("copper-clearance"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		type flatSeg struct {
 			net string
 			s   check.BoardSeg
@@ -97,7 +97,7 @@ var copperClearance = &check.Rule{
 			return out[i].Message < out[j].Message
 		})
 		return out
-	},
+	}),
 }
 
 // bboxNear is the cheap reject: whether two segments' bounding boxes, inflated by the

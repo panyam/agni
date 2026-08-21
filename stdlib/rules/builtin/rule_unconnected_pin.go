@@ -27,10 +27,8 @@ var unconnectedPin = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail:       ruleDoc("unconnected-pin"),
-	EvalVerdicts: unconnectedPinVerdicts,
-	Eval: func(m check.Model) []check.Finding {
-		return check.VerdictsToFindings(unconnectedPinVerdicts(m))
-	},
+	Eval: unconnectedPinVerdicts,
+	StatesConsideredSet: true,
 }
 
 // unconnectedPinVerdicts decides every pin in the design and returns one verdict each.

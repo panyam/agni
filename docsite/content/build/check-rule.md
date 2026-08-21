@@ -186,16 +186,24 @@ no second copy to drift.
 
 ## Say what you looked at, not only what failed
 
-A rule may also set `EvalVerdicts`, which reports one `check.Verdict` per subject it was applied to,
-passes included. Where it is set it is the rule's single source of truth and `Eval` is its projection
-(`check.VerdictsToFindings`), which `TestVerdictParity` holds them to.
+`Eval` returns one `check.Verdict` per subject the rule was applied to, passes included. It MAPS the
+design onto outcomes rather than filtering it down to failures, and the findings contract is the
+projection of that map, taken by `Run` through `Rule.Findings`. There is one body, so a rule cannot
+report findings that disagree with its verdicts.
 
-It is optional, and nil is not the same as an empty considered set. A rule that has not been
-converted is DECLINING to state one, and reporting "this rule considered nothing" on its behalf is
-the same silence-reads-as-data mistake one level up from the one verdicts remove.
+**A rule that has not been converted wraps its old body in `check.FailuresOnly`.** That yields Fail
+verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site:
+`grep -c FailuresOnly` is the work remaining in agni issue 391. Converting a rule means deleting the
+wrapper, writing the map, and setting `StatesConsideredSet`.
+
+**`StatesConsideredSet` is a declaration, not an inference.** A failures-only rule returns a list of
+Fail verdicts that is structurally identical to a considered set whose every subject failed, so only
+the author can say which it is. `RunVerdicts` filters on it, and an unconverted rule contributes
+nothing rather than contributing a coverage claim the run has not earned. It fails in the safe
+direction: forgetting it under-reports a converted rule and can never over-report one.
 
 **Enumerate, then judge.** The shape that works is two functions: one yielding the subjects the rule
-applies to, one deciding a single subject. `Eval` is then `map(judge, enumerate)`. Both rules
+applies to, one deciding a single subject. `Eval` is then `map(judge, enumerate)`. Every rule
 converted so far factored this way without a fight, and it is what makes a single verdict answerable
 on its own.
 

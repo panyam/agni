@@ -22,7 +22,7 @@ func voltageDomainRule(d Declaration) *check.Rule {
 		Remedy:   intentRemedy(RuleVoltageDomain),
 		Reads:    []string{"net.nominal_voltage"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, dom := range d.VoltageDomains {
 				for _, rail := range dom.Rails {
@@ -47,7 +47,7 @@ func voltageDomainRule(d Declaration) *check.Rule {
 				}
 			}
 			return out
-		},
+		}),
 	}
 }
 

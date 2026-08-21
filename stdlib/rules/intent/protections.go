@@ -29,7 +29,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 		Remedy:   intentRemedy("protection-" + kind),
 		Reads:    []string{"component-on-net", "component.class", "net.ground"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, p := range ps {
 				if p.Kind != kind {
@@ -45,7 +45,7 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 				})
 			}
 			return out
-		},
+		}),
 	}
 }
 

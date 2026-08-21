@@ -21,7 +21,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 		Remedy:   intentRemedy("property-" + kind),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			for _, p := range ps {
 				if p.Property != kind {
@@ -38,7 +38,7 @@ func propertyRule(kind string, ps []NetProperty) *check.Rule {
 				out = append(out, check.Finding{Kind: check.KindNet, Subject: p.Net, Message: msg})
 			}
 			return out
-		},
+		}),
 	}
 }
 

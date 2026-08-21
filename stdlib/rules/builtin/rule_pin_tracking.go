@@ -331,13 +331,13 @@ var pinTrackingViolated = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-violated"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		// UNSPECIFIED lands here rather than on the advisory rule so an unstated modality cannot
 		// pass in silence; trackingFindings reports it inconclusive rather than as an error.
 		return trackingFindings(m, func(md parampb.Modality) bool {
 			return md == parampb.Modality_MODALITY_REQUIRED || md == parampb.Modality_MODALITY_UNSPECIFIED
 		})
-	},
+	}),
 }
 
 // pinTrackingAdvisory flags the same breach where the datasheet RECOMMENDS rather than requires.
@@ -356,9 +356,9 @@ var pinTrackingAdvisory = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-advisory"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return trackingFindings(m, func(md parampb.Modality) bool {
 			return md == parampb.Modality_MODALITY_RECOMMENDED
 		})
-	},
+	}),
 }

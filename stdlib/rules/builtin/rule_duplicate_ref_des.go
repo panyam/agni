@@ -28,7 +28,7 @@ var duplicateRefDes = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // the reader decides duplicate vs multi-unit (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("duplicate-ref-des"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.RefDesCollisions(), func(c *ir.RefDesCollision) check.Finding {
 			var prov *ir.Provenance
 			if len(c.Instances) > 0 {
@@ -41,7 +41,7 @@ var duplicateRefDes = &check.Rule{
 				Prov:    prov,
 			}
 		})
-	},
+	}),
 }
 
 // duplicateRefDesSpec is the rule's declarative twin (WS3-003).

@@ -21,7 +21,7 @@ func subsystemRule(s Subsystem) *check.Rule {
 		Remedy:   intentRemedy(docKeySubsystem),
 		Reads:    []string{"component.class", "component.mpn"},
 		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			var out []check.Finding
 			if s.Source != nil && !modulePresent(m, *s.Source) {
 				out = append(out, check.Finding{
@@ -40,7 +40,7 @@ func subsystemRule(s Subsystem) *check.Rule {
 				}
 			}
 			return out
-		},
+		}),
 	}
 }
 

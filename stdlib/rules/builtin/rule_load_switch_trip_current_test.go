@@ -119,7 +119,7 @@ func passFetSpec(rdsOhms float64, idAmps ...float64) *parampb.PartSpec {
 }
 
 func runLoadSwitchRule(d *ir.Design, set param.ParamSet) []check.Finding {
-	return loadSwitchTripAboveFetRating.Eval(check.NewModelWithParams(d, nil, set))
+	return loadSwitchTripAboveFetRating.Findings(check.NewModelWithParams(d, nil, set))
 }
 
 // TestLoadSwitchTripAboveFetRatingFires: 50mV across a 10mOhm shunt trips at 5A, above the external
@@ -267,7 +267,7 @@ func TestLoadSwitchFetWithNoDrainRatingIsSilent(t *testing.T) {
 // no threshold to compute from and Available gates the rule to not-applicable rather than clean.
 func TestLoadSwitchSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(loadSwitchBoard(0.01))
-	if fs := loadSwitchTripAboveFetRating.Eval(m); len(fs) != 0 {
+	if fs := loadSwitchTripAboveFetRating.Findings(m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(loadSwitchTripAboveFetRating, m); ok || reason == "" {

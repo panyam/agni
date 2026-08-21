@@ -21,7 +21,7 @@ var floatingInput = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("floating-input"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			if n.Attributes[netgraph.AttrExternal] == "true" {
 				return false // the driver may be on another sheet we did not read
@@ -53,7 +53,7 @@ var floatingInput = &check.Rule{
 			return logicInputs >= 1 && ncOrIn == len(n.Connections)
 		})
 		return check.Report(bad, check.NetFinding("net carries only input pins; nothing drives it"))
-	},
+	}),
 }
 
 // floatingInputSpec is the rule's declarative twin (WS3-003): any passive member exempts

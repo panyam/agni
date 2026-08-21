@@ -51,7 +51,7 @@ func crystalFixture() *ir.Design {
 }
 
 func TestCrystalLoadCaps(t *testing.T) {
-	fs := crystalLoadCaps.Eval(check.NewModel(crystalFixture()))
+	fs := crystalLoadCaps.Findings(check.NewModel(crystalFixture()))
 	if len(fs) != 1 || fs[0].Subject != "Y1" || fs[0].Kind != check.KindComponent {
 		t.Fatalf("findings = %+v, want exactly one KindComponent finding on Y1", fs)
 	}

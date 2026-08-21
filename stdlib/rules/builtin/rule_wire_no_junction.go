@@ -24,7 +24,7 @@ var wireNoJunction = &check.Rule{
 		check.KeySite:         check.SiteDiagnostic, // reader detects it from wire geometry (docsite/content/architecture/rules-and-checks.md)
 	},
 	Detail: ruleDoc("wire-no-junction"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		return check.Report(m.NoJunctionEndpoints(), func(e *ir.DanglingEndpoint) check.Finding {
 			return check.Finding{
 				Kind:    check.KindEndpoint,
@@ -33,7 +33,7 @@ var wireNoJunction = &check.Rule{
 				Prov:    e.Prov,
 			}
 		})
-	},
+	}),
 }
 
 // wireNoJunctionSpec is the rule's declarative twin (WS3-003); the no_junction_endpoints over-set

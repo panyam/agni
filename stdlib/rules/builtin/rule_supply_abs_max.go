@@ -25,7 +25,7 @@ var supplyExceedsAbsMax = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("supply-exceeds-abs-max"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		var out []check.Finding
 		for _, c := range m.Components() {
 			spec := m.PartSpec(c.RefDes)
@@ -83,5 +83,5 @@ var supplyExceedsAbsMax = &check.Rule{
 			}
 		}
 		return out
-	},
+	}),
 }

@@ -71,7 +71,7 @@ func TestPinsModelSurface(t *testing.T) {
 func TestUnconnectedPin(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	got := map[string]bool{}
-	for _, f := range unconnectedPin.Eval(m) {
+	for _, f := range unconnectedPin.Findings(m) {
 		if f.Kind != check.KindPin {
 			t.Errorf("finding kind = %q, want %q", f.Kind, check.KindPin)
 		}

@@ -535,13 +535,13 @@ func reqRule(profile, requirement string, subjects ...string) *check.Rule {
 		Severity: "warning",
 		Summary:  requirement,
 		Tags:     map[string]string{profileTagName: profile, profileTagRequirement: requirement},
-		Eval: func(check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
 			var fs []check.Finding
 			for _, s := range subjects {
 				fs = append(fs, check.Finding{Rule: requirement, Kind: check.KindNet, Subject: s, Message: requirement})
 			}
 			return fs
-		},
+		}),
 	}
 }
 
@@ -815,15 +815,15 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	silent := &check.Rule{
 		Name: "sizing", Severity: "error", Summary: "s",
 		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
-		Eval: func(check.Model) []check.Finding { return nil },
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil }),
 	}
 	// The same rule, firing, to prove a real defect is never masked as needs-data.
 	loud := &check.Rule{
 		Name: "sizing", Severity: "error", Summary: "s",
 		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
-		Eval: func(check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
 			return []check.Finding{{Kind: check.KindNet, Subject: "N", Message: "over budget"}}
-		},
+		}),
 	}
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "18", Title: "regulator output ratings", Binding: Binding{Rule: "sz/sizing"}},
@@ -850,7 +850,7 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	}
 	// A rule that declares NO symbols is unaffected: the gate applies only where a datasheet dependency
 	// is declared, so every existing netlist-rule item keeps its behavior.
-	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: func(check.Model) []check.Finding { return nil }}
+	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil })}
 	if got := run(plain, "VDD"); got.Outcome != Pass {
 		t.Errorf("rule with no declared symbols: got %s, want pass (gate must not over-reach)", got.Outcome)
 	}
@@ -877,7 +877,7 @@ func TestInconclusiveNeverReadsPass(t *testing.T) {
 			Name:     "probe",
 			Severity: "warning",
 			Summary:  "s",
-			Eval:     func(check.Model) []check.Finding { return []check.Finding{f} },
+			Eval:     check.FailuresOnly(func(check.Model) []check.Finding { return []check.Finding{f} }),
 		}
 	}
 	run := func(r *check.Rule) ItemResult {

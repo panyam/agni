@@ -39,7 +39,7 @@ func strapBitsDesign(bits map[string]string) *ir.Design {
 
 func groupFindings(t *testing.T, d *ir.Design, g StrapGroup) []check.Finding {
 	t.Helper()
-	return strapGroupRule(g).Eval(check.NewModel(d))
+	return strapGroupRule(g).Findings(check.NewModel(d))
 }
 
 // TestStrapGroupDecodesMSBFirst (WS3-120): the group's value is read MSB-first from the declared net
@@ -135,7 +135,7 @@ func TestStrapCollisionFires(t *testing.T) {
 		{Name: "PHYAD U12", Device: "U12", Nets: []string{"A2", "A1", "A0"}, Value: 1, Bus: "MDIO"},
 		{Name: "PHYAD U13", Device: "U13", Nets: []string{"B2", "B1", "B0"}, Value: 1, Bus: "MDIO"},
 	}
-	fs := strapCollisionRule(groups).Eval(check.NewModel(d))
+	fs := strapCollisionRule(groups).Findings(check.NewModel(d))
 	if len(fs) != 1 {
 		t.Fatalf("want 1 collision finding, got %+v", fs)
 	}
@@ -157,14 +157,14 @@ func TestStrapCollisionScopedByBus(t *testing.T) {
 		{Name: "g1", Device: "U12", Nets: []string{"A2", "A1", "A0"}, Value: 1, Bus: "MDIO"},
 		{Name: "g2", Device: "U13", Nets: []string{"B2", "B1", "B0"}, Value: 1, Bus: "I2C"},
 	}
-	if fs := strapCollisionRule(diffBus).Eval(check.NewModel(d)); len(fs) != 0 {
+	if fs := strapCollisionRule(diffBus).Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("same address on different buses is not a collision: %+v", fs)
 	}
 	noBus := []StrapGroup{
 		{Name: "g1", Device: "U12", Nets: []string{"A2", "A1", "A0"}, Value: 1},
 		{Name: "g2", Device: "U13", Nets: []string{"B2", "B1", "B0"}, Value: 1},
 	}
-	if fs := strapCollisionRule(noBus).Eval(check.NewModel(d)); len(fs) != 0 {
+	if fs := strapCollisionRule(noBus).Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("a group with no declared bus opts out of collision checking: %+v", fs)
 	}
 }
@@ -183,7 +183,7 @@ func TestStrapCollisionExcludesUndecidable(t *testing.T) {
 		{Name: "g1", Device: "U12", Nets: []string{"A2", "A1", "A0"}, Value: 1, Bus: "MDIO"},
 		{Name: "g2", Device: "U13", Nets: []string{"B2", "B1", "B0"}, Value: 1, Bus: "MDIO"},
 	}
-	if fs := strapCollisionRule(groups).Eval(check.NewModel(d)); len(fs) != 0 {
+	if fs := strapCollisionRule(groups).Findings(check.NewModel(d)); len(fs) != 0 {
 		t.Errorf("an undecidable group must not produce a collision; assuming its bits would accuse two innocent parts: %+v", fs)
 	}
 	// The gap is still visible: the group's own rule reports it inconclusive.
@@ -270,7 +270,7 @@ func TestStrapGroupFindingsNameTheirDevice(t *testing.T) {
 			{Name: "PHYAD U12", Device: "U12", Nets: []string{"A2", "A1", "A0"}, Value: 1, Bus: "MDIO"},
 			{Name: "PHYAD U13", Device: "U13", Nets: []string{"B2", "B1", "B0"}, Value: 1, Bus: "MDIO"},
 		}
-		fs := strapCollisionRule(groups).Eval(check.NewModel(d))
+		fs := strapCollisionRule(groups).Findings(check.NewModel(d))
 		if len(fs) != 1 {
 			t.Fatalf("want 1 collision finding, got %+v", fs)
 		}

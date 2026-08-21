@@ -160,7 +160,7 @@ test and the code agree by construction. Assert against literals, or against a s
 path produced, and let only the red-check tell you which kind you wrote.
 
 **A third way a test stays green: it compares a function against itself.** A parity test was written
-to hold a rule's `Eval` to its verdict projection, `VerdictsToFindings(EvalVerdicts(m))` against
+to hold a rule's `Eval` to its verdict projection, `VerdictsToFindings(Eval(m))` against
 `Eval(m)`. For a converted rule those are the same call, because its `Eval` IS that projection, so
 the test ran one function against itself and would have passed for any projection including a broken
 one. Breaking `VerdictsToFindings` deliberately left it green, which is how it was caught.

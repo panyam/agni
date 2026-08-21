@@ -21,7 +21,7 @@ var inputProtection = &check.Rule{
 		check.KeyDistribution: check.DistPublicReference,
 	},
 	Detail: ruleDoc("input-protection"),
-	Eval: func(m check.Model) []check.Finding {
+	Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
 			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
 				return false
@@ -35,7 +35,7 @@ var inputProtection = &check.Rule{
 			return check.UnprotectedPowerReach(m, n)
 		})
 		return check.Report(bad, check.NetFinding("connector feeds a power input with no fuse or TVS in the path"))
-	},
+	}),
 }
 
 // inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses stay
