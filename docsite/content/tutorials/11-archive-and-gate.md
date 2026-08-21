@@ -51,7 +51,7 @@ with that verdict's proof drawn:
 
 ```
 agni serve --addr :8080 --mount work=. web
-agni check --verdicts --format html --url-base http://localhost:8080 \
+agni check --format html --url-base http://localhost:8080 \
   --mount work=. mount://work/designs/gateway/gateway.edn > review.html
 ```
 

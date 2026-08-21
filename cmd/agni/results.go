@@ -89,7 +89,9 @@ func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) 
 	}
 	switch format {
 	case "text":
-		writeCheckText(w, findingsFromProto(doc.GetFindings()), len(doc.GetCatalog()))
+		// No verdicts: a results document has no field for a considered set (see OUT_OF_SCOPE.md), so
+		// a replay states no coverage rather than inventing one from the findings it does carry.
+		writeCheckText(w, findingsFromProto(doc.GetFindings()), len(doc.GetCatalog()), nil)
 		return nil
 	case "json":
 		// Skipped travels back too, or the round trip stops being one: `check --format json` now emits

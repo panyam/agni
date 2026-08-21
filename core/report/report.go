@@ -123,8 +123,20 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 	}
 
 	out := meta
+	// Rules that emitted at least one verdict, which is the evidence that they stated a considered
+	// set. Used below in preference to the catalog flag, which cannot see an overlay's rules.
+	fromVerdict := map[string]bool{}
 	for _, v := range verdicts {
+		fromVerdict[v.Rule] = true
 		s := section(v.Rule)
+		// EMITTING A VERDICT IS STATING A CONSIDERED SET, so the verdict itself settles this and the
+		// catalog flag is only a fallback for rules that produced none. They disagree for operator
+		// rules composed from an overlay (conventions.yaml, profiles/, intent.yaml): their namespaced
+		// names are absent from the catalog the report is handed, so the lookup above leaves the flag
+		// false and the rule gets captioned "absence here is not evidence of correctness" over rows
+		// that are exactly that evidence. Believing the verdict cannot over-claim: a rule with no
+		// considered set has no verdict to reach this line.
+		s.StatesConsideredSet = true
 		s.Counts[v.Outcome]++
 		s.Rows = append(s.Rows, rowOf(v, out))
 		out.Totals.Considered++
@@ -145,8 +157,16 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 	// Findings from rules that state no considered set have no verdict to carry them, so they are
 	// added here. A rule that DOES state one already contributed its failures above; adding them
 	// again would double-count, which is why this is keyed on the rule rather than on the finding.
+	//
+	// "Already contributed" is decided by whether the rule EMITTED a verdict, not by the catalog flag.
+	// The two differ for an operator's rule composed from an overlay, whose namespaced name the
+	// catalog lookup misses, and the catalog answer double-listed every one of its failures: once as a
+	// verdict row and once here.
 	for _, f := range findings {
 		out.Totals.Findings++
+		if fromVerdict[f.Rule] {
+			continue
+		}
 		if r := byName[f.Rule]; r != nil && r.StatesConsideredSet {
 			continue
 		}

@@ -96,21 +96,33 @@ Starting at `--fail-on error` is the practical choice. It gates on the things th
 all, which almost nobody argues with, and it lets you tighten to `warning` later once the backlog is
 clear.
 
-## What a clean run looks like, and why the count is not enough
+## What the run says it looked at
 
-A run that finds nothing prints how many rules it ran:
+Look at the last two lines of that first run again. Every run ends with them, whether or not it found
+anything:
 
 ```
-no findings (29 rule(s) run)
+173 subject(s) considered by 22 rule(s), 7 not considered (--verdicts for the detail)
+3 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
 ```
 
-That count is worth something. It tells you the check exercised 29 rules rather than staying quiet
-because it had nothing to work with. If you load only a schematic and no board file, the copper rules
-do not appear in the count at all, because there is no copper for them to look at.
+This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
+examined the wrong thing produce an identical list of findings, namely none, so the findings alone
+can never tell you which one you are holding.
 
-But it still cannot tell you what those 29 rules LOOKED AT. Twenty-nine rules reporting nothing and
-twenty-nine rules that each examined the wrong thing print the same line. Add `--verdicts` and the
-run reports one outcome per subject instead, passes included:
+Read the three numbers separately. **173 considered** is how many subjects were actually judged.
+**22 rules** is how many were willing to say what they looked at, which is not the same as how many
+ran: most of the catalog has no subject in scope on any given board, and a rule with nothing to say is
+not a gap. **7 not considered** is the interesting one, and it has no counterpart in a findings list:
+the rule was willing to judge and an input was missing, so it names what it lacked instead of passing
+on incomplete evidence. On this board most of them are asking for the datasheet values you seed in
+[rung 6](../06-part-limits/).
+
+The second line is the honest edge of the claim. Those 3 rules found something and never said what
+they examined, so silence from them means nothing at all, and the coverage number above does not
+cover them.
+
+That line is the claim. `--verdicts` is the evidence, one row per subject with passes included:
 
 {{ agniRun "content/tutorials/runs/02-verdicts.yaml" }}
 
@@ -118,14 +130,10 @@ Now the pass is checkable. It names C1 and C3, so you can open the schematic and
 capacitors really are on those rails. Delete C1 next revision and this output changes, where the
 findings-only view would print the same nothing before and after.
 
-Across the whole catalog that is a much larger answer than the findings list:
+Across the whole catalog that is a much larger table than the findings list, which is why the summary
+is the default and the rows are a flag:
 
 {{ agniRun "content/tutorials/runs/02-verdicts-summary.yaml" }}
-
-`not-considered` is the third outcome and the one with no counterpart in a findings list: the rule
-was willing to judge that subject and something was missing, so it says which input it lacked rather
-than passing on incomplete evidence. On this board most of them are asking for the datasheet values
-you seed in [rung 6](../06-part-limits/).
 
 That distinction between "checked and fine", "never checked" and "could not tell" runs through the
 whole tool, and [rung 9](../09-read-the-verdicts/) is entirely about reading it.

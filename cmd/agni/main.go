@@ -354,19 +354,21 @@ func checkCmd() *cobra.Command {
 			"distribution, or a provider's own), so e.g. --tag category=connectivity runs one group. " +
 			"--format json emits the full findings array (one object per finding, subjects and all) " +
 			"for tooling; markdown renders the severity-organized report (worst first, grouped by " +
-			"rule); report emits that report as JSON (the GetCheckReport wire shape); the default " +
-			"text form is a per-rule summary. --fail-on error|warning|info exits non-zero when any " +
-			"finding sits at or above the threshold, so check gates CI.",
+			"rule); report emits that report as JSON (the GetCheckReport wire shape); html renders the " +
+			"verdict report as a self-contained page and turns --verdicts on, since that is the only " +
+			"table it has; the default text form is a per-rule summary, and it closes with what the " +
+			"run considered. --fail-on error|warning|info exits non-zero when any finding sits at or " +
+			"above the threshold, so check gates CI.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch format {
 			case "text", "json", "csv", "markdown", "report":
 			case "html":
 				// html is the verdict REPORT, which has no findings-only form: it exists to show what
-				// was checked, and the findings table already has three renderings.
-				if !verdicts {
-					return fmt.Errorf("--format html is the verdict report; pass --verdicts with it")
-				}
+				// was checked, and the findings table already has three renderings. Asking for it IS
+				// asking for the considered set, so it turns --verdicts on rather than refusing and
+				// making the reader type a second flag that has no alternative.
+				verdicts = true
 			default:
 				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report, html)", format)
 			}
@@ -488,6 +490,14 @@ func checkCmd() *cobra.Command {
 				if err := renderCheckResults(cmd.OutOrStdout(), doc, format); err != nil {
 					return err
 				}
+				// The terminal shows THE RUN, so adding --results-out must not change what you see.
+				// The rendering above comes from the document, which has no field for a considered set
+				// (OUT_OF_SCOPE.md), so the coverage line is written here from the live response
+				// instead. That is the one place the two legitimately differ: a replay of the document
+				// later cannot reproduce this line, because the document never held it.
+				if format == "text" {
+					writeCoverage(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), resp.GetVerdicts())
+				}
 				if failOn != "" && failsAtProto(resp.GetFindings(), failOn) {
 					cmd.SilenceUsage = true
 					return &gateError{msg: fmt.Sprintf("findings at or above --fail-on %s", failOn)}
@@ -553,7 +563,7 @@ func checkCmd() *cobra.Command {
 						return err
 					}
 				default:
-					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected))
+					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected), resp.GetVerdicts())
 				}
 				failFindings = resp.GetFindings()
 			}
@@ -566,9 +576,9 @@ func checkCmd() *cobra.Command {
 	}
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
-	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report")
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
 	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so an html report links each verdict to its proof. Omitted, the report names subjects as plain text: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
-	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html")
+	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
@@ -581,9 +591,18 @@ func checkCmd() *cobra.Command {
 
 // writeCheckText prints the default per-rule summary plus the first findings, the original
 // human terminal form (reports and tooling use --format markdown/report/json).
-func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
+//
+// It closes with a COVERAGE line, because a findings list cannot say what was examined and a rule
+// count is not an answer: twenty-nine rules finding nothing and twenty-nine rules that each looked at
+// the wrong thing print the same line. The considered set rides on the same response, so this costs
+// nothing to report, and it is stated by default because honesty about coverage should not be
+// something a reader has to know to ask for. The per-subject rows stay behind --verdicts: they are
+// six times the volume here and far more on a real board, so the DEFAULT states the claim and the
+// flag shows the evidence.
+func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, vs []*checkspb.Verdict) {
 	if len(fs) == 0 {
 		fmt.Fprintf(w, "no findings (%d rule(s) run)\n", rulesRun)
+		writeCoverage(w, fs, vs)
 		return
 	}
 	byRule := map[string]int{}
@@ -600,6 +619,48 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
 		fmt.Fprintf(w, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	fmt.Fprintf(w, "\n%d finding(s) total\n", len(fs))
+	writeCoverage(w, fs, vs)
+}
+
+// writeCoverage states what the run looked at, in the terms core/report already uses for the HTML
+// report, so the two cannot describe the same run differently.
+//
+// The findings-only count is over rules that REPORTED SOMETHING without stating a considered set, not
+// over every rule that ran. Those differ, and the difference matters: on the tutorial board 84 rules
+// run and 22 state a considered set, but most of the other 62 simply had no subject in scope on this
+// design. Calling them "violations only" would invent a coverage hole out of rules that correctly had
+// nothing to say, which is the same false-confidence move in the opposite direction.
+//
+// NOT_CONSIDERED is counted apart from the judged outcomes because it is the one with no counterpart
+// in a findings list: the rule was willing to judge and an input was missing.
+func writeCoverage(w io.Writer, fs []check.Finding, vs []*checkspb.Verdict) {
+	if len(vs) == 0 {
+		return // nothing stated a considered set; claiming coverage would invent it
+	}
+	stating := map[string]bool{}
+	judged, notConsidered := 0, 0
+	for _, v := range vs {
+		stating[v.GetRule()] = true
+		if v.GetOutcome() == checkspb.Outcome_OUTCOME_NOT_CONSIDERED {
+			notConsidered++
+			continue
+		}
+		judged++
+	}
+	fmt.Fprintf(w, "%d subject(s) considered by %d rule(s)", judged, len(stating))
+	if notConsidered > 0 {
+		fmt.Fprintf(w, ", %d not considered", notConsidered)
+	}
+	fmt.Fprint(w, " (--verdicts for the detail)\n")
+	silent := map[string]bool{}
+	for _, f := range fs {
+		if !stating[f.Rule] {
+			silent[f.Rule] = true
+		}
+	}
+	if len(silent) > 0 {
+		fmt.Fprintf(w, "%d rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything\n", len(silent))
+	}
 }
 
 // writeCheckDesignJSON emits the CheckDesign response in protojson form, the same wire shape the RPC
