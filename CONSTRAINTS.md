@@ -681,11 +681,12 @@ its own: `stdlib/ruledef` claimed a body's wire form is owned beside its vocabul
 a compile error, and that holds for a new NODE TYPE covered by a type switch, not for a new FIELD on
 an already-mapped struct.
 **Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
-`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All five pairs are
+`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All six pairs are
 covered: `TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip`
 (`stdlib/profiles`), `TestSpecProtoRoundTrip` (`core/check`), `TestQueryProtoRoundTrip`
-(`core/query`), and `TestRuleMetaProtoRoundTrip` (`core/check`). A new body owes one before it ships,
-not after it drifts.
+(`core/query`), `TestRuleMetaProtoRoundTrip` (`core/check`), and `TestVerdictProtoRoundTrip`
+(`internal/service`, guarded by `TestVerdictFieldCensus` beside it). A new body owes one before it
+ships, not after it drifts.
 
 `RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four,
 which is worth recording: the gap was found by adding a field (`Rule.Remedy`) that crosses it, not by
@@ -702,3 +703,9 @@ both.
 **Note:** the fixture is the load-bearing part. A field left at its zero value round-trips cleanly
 through a conversion that drops it, because zero in equals zero out, so a guard built on a sparse
 fixture reports success while covering nothing.
+
+**A REPEATED field needs more than one element in the fixture**, which is the same trap one level in.
+A converter that drops everything past the first element round-trips a one-element slice perfectly, so
+the guard passes over exactly the bug it exists to catch. `Verdict.subjects` became repeated when a
+rule's subject grew to a tuple, and its fixture was widened to two entities in the same change for
+this reason.
