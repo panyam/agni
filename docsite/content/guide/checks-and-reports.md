@@ -223,3 +223,30 @@ the [CLI reference](../cli-reference/#gating-a-pipeline-on-a-review) for the ful
   real limits.
 - [Comparing revisions](../comparing-revisions/): diff two versions of a design.
 - [CLI reference](../cli-reference/): every flag in one place.
+
+## The HTML report
+
+`agni check --verdicts --format html > report.html` writes one self-contained page: what each rule
+looked at, what it concluded, and what to do about the parts that failed.
+
+    agni check --verdicts --format html \
+      --url-base http://localhost:8080 \
+      --mount board=. mount://board/design.kicad_sch > report.html
+
+Rules with something to act on come first and open expanded; rules that cleared everything collapse to
+a one-line summary you can expand to check their working. That ordering is the whole design: a board
+with three problems and two thousand passes has to show you the three problems.
+
+**A rule that reports violations without stating what it examined is labelled as such**, and its rows
+are captioned "absence here is not evidence of correctness". Presenting a failure list beside a
+considered set as though they were the same kind of answer is the false-coverage claim this whole
+layer exists to remove, and a report is where it would be most convincing.
+
+**Links are emitted only when they are real.** `--url-base` says where the viewer is; naming the
+design as a `mount://` URI says the server can see it. A bare file path is minted a mount locally, so
+it gets no links rather than links that resolve on nobody's server. Each link carries the design's
+content hash, so a report read against different bytes can be told apart from one read against the
+same.
+
+The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
+committed, or opened from a `file://` path.
