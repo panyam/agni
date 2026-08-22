@@ -20,6 +20,11 @@ func scopeDesign() *ir.Design {
 		net("STUB", "U1.1"),       // in scope (>=1 pin), violates (<2)
 		net("OK", "U1.2", "U2.1"), // in scope, passes
 		net("EMPTY"),              // OUT of scope: no connections at all
+		// Two subjects the pass-statement tests need, because a negated clause only explains a pass
+		// when the clause HOLDS: a ground-named net for ground_name, and a marker net for
+		// intentionally_unconnected.
+		net("GND", "U3.1", "U3.2"),
+		net("NC_STUB", "U4.1", "U4.2"),
 	}}
 }
 
