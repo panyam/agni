@@ -556,19 +556,149 @@ func (ev *evalEnv) why(e Expr) string {
 		}
 		return strings.Join(parts, ", and ")
 	case Not:
-		return renderExpr(x.X) + " holds"
+		// A false Not means its operand HOLDS, so the honest explanation is why THAT is true, with the
+		// value behind it. Rendering the operand's syntax instead reads identically on every passing
+		// subject, which is the defect this family of statements exists to remove (agni issue 412).
+		return ev.holds(x.X)
 	case ExistsIn:
 		// Read an absent match as an absence, not as a failed test: "no connection is a no-connect"
-		// rather than "some connection is a no-connect does not hold".
-		return "no " + x.Over + " where " + renderExpr(x.Where)
+		// rather than "some connection is a no-connect does not hold". The COUNT is what makes it
+		// about this subject: wire a fifth pin and the sentence changes with the design.
+		return fmt.Sprintf("no %s where %s (%d examined)", x.Over, renderExpr(x.Where), ev.countMembers(x.Over))
 	case Cmp:
 		return ev.whyCmp(x)
 	case Match:
 		return ev.whyLeaf(x.T, "does not match /"+x.Pattern+"/")
 	case In:
 		return ev.whyLeaf(x.T, "is not one of ["+strings.Join(x.Set, ", ")+"]")
+	case IsTrue:
+		// The same trick holdsTrue uses, on the false side. A Call hands back a bare bool, but its
+		// ARGUMENTS are terms this interpreter can read, so a refusal can name what was refused.
+		if c, ok := x.T.(Call); ok {
+			if len(c.Args) > 0 {
+				return ev.argValues(c) + ", which " + c.Fn + " does not accept"
+			}
+			break
+		}
+		return ev.valueOf(x.T)
 	}
 	return renderExpr(e) + " does not hold"
+}
+
+// holds is why's mirror: it explains a TRUE expression, and it exists because a false Not is a true
+// operand. Everything it renders comes from the same value machinery why uses, so the two sides of a
+// negation read the same way rather than one of them falling back to the rule's syntax.
+//
+// The cases are the ones the catalog actually nests under a Not. A shape that turns up here without a
+// case falls through to the syntax, which is the old behaviour and honest about being a gap rather
+// than pretending to a value it never read.
+func (ev *evalEnv) holds(e Expr) string {
+	switch x := e.(type) {
+	case Or:
+		// The FIRST true disjunct is the reason. This is the naming-rule case: an allow-list is an Or
+		// of patterns, and the one that matched is what a reader wants named.
+		for _, sub := range x.Xs {
+			if ev.expr(sub) {
+				return ev.holds(sub)
+			}
+		}
+	case And:
+		parts := make([]string, 0, len(x.Xs))
+		for _, sub := range x.Xs {
+			parts = append(parts, ev.holds(sub))
+		}
+		return strings.Join(parts, ", and ")
+	case Not:
+		return ev.why(x.X) // a true Not is a false operand, which is why's job
+	case Cmp:
+		if x.Op == "==" || x.Op == "!=" {
+			return ev.valueOf(x.L) // the value IS the relation; "is 2, which is == 2" says it twice
+		}
+		return ev.valueOf(x.L) + ", which is " + x.Op + " " + renderTerm(x.R)
+	case Match:
+		return ev.valueOf(x.T) + ", which matches /" + x.Pattern + "/"
+	case In:
+		return ev.valueOf(x.T) + ", which is one of [" + strings.Join(x.Set, ", ") + "]"
+	case IsTrue:
+		return ev.holdsTrue(x.T)
+	case ExistsIn:
+		if m := ev.firstMember(x.Over, x.Where); m != "" {
+			return m + " is " + renderExpr(x.Where)
+		}
+	}
+	return renderExpr(e) + " holds"
+}
+
+// holdsTrue explains a true term used as a predicate.
+//
+// A FACT reads as its value. A CALL is the interesting one: the FFI hands back a bare bool and has
+// thrown away whatever it looked at, but its ARGUMENTS are terms this interpreter can evaluate, so
+// `ground_name(net.names)` names the value it accepted without the SpecFunc contract changing at all.
+// That covers every argument-carrying call in the catalog.
+//
+// An argument-LESS call is the residue and says so plainly. `intentionally_unconnected`, `tvs_reach`
+// and their kin take the whole scope and return a verdict, so there is nothing here to read and
+// nothing honest to print beyond the fact that the function accepted. Closing that needs a SpecFunc
+// able to hand back what it observed, which cap-voltage needs for the same reason (OUT_OF_SCOPE.md).
+func (ev *evalEnv) holdsTrue(t Term) string {
+	c, ok := t.(Call)
+	if !ok {
+		return ev.valueOf(t)
+	}
+	if len(c.Args) == 0 {
+		return c.Fn + " accepts this subject, which states no value it read"
+	}
+	return ev.argValues(c) + ", which " + c.Fn + " accepts"
+}
+
+// argValues renders a call's arguments as the values they evaluated to, which is the most a caller can
+// say about an FFI that returns a bare bool.
+func (ev *evalEnv) argValues(c Call) string {
+	parts := make([]string, 0, len(c.Args))
+	for _, a := range c.Args {
+		parts = append(parts, ev.valueOf(a))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// countMembers is how many members a collection has in the current scope, for a statement that has to
+// say how much it looked at rather than only that it found nothing.
+func (ev *evalEnv) countMembers(coll string) int {
+	n := 0
+	ev.eachMember(coll, func() bool { n++; return true })
+	return n
+}
+
+// firstMember names the first member satisfying where, or "" when the collection gives no label to
+// name one by. Naming WHICH member matched is the useful half of a true ExistsIn; "some member did" is
+// the same non-answer the syntax rendering was.
+func (ev *evalEnv) firstMember(coll string, where Expr) string {
+	label := ""
+	ev.eachMember(coll, func() bool {
+		if where != nil && !ev.expr(where) {
+			return true
+		}
+		label = ev.memberLabel(coll)
+		return false
+	})
+	return label
+}
+
+// memberLabel names the in-scope member of a collection, per collection, because a member's identity
+// is its own kind's business: a connection is a ref-des and a pin, a via is a location. Empty for a
+// collection with no label defined, which the caller reads as "cannot name one".
+func (ev *evalEnv) memberLabel(coll string) string {
+	if coll != "net.connections" {
+		return ""
+	}
+	c, ok := ev.ents["conn"].(*ir.Connection)
+	if !ok || c.GetComponentRef() == "" {
+		return ""
+	}
+	if p := c.GetPinRef(); p != "" {
+		return c.GetComponentRef() + "." + p
+	}
+	return c.GetComponentRef()
 }
 
 // whyCmp states a false comparison as the subject's ACTUAL value rather than as the test applied to
