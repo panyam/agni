@@ -144,6 +144,22 @@ message InputDiagnostics {
   // the read quieter and was then discarded. Recording it is what lets the pin-dependent rules
   // report inconclusive instead of passing over a netlist that is missing connections.
   repeated UnresolvedSymbol unresolved_symbols = 5;
+  // The symbol references that DID resolve, one per distinct reference, so a consumer can tell a
+  // design whose symbols all loaded from one the reader never looked at (agni issue 418).
+  //
+  // Recorded because unresolved_symbols alone is a list of failures, and the rule reading it could
+  // therefore only ever report failures: a design with no missing symbol produced the same nothing as
+  // a read that resolved no symbols at all. unmodeled_buses is the diagnostic that got this right and
+  // is the shape copied here — it holds every bus construct the reader saw, not only the ones that
+  // went badly, so the rule reading it partitions rather than filters.
+  //
+  // The reader already knew. The resolve walk decides per reference and kept only the misses, so this
+  // retains a set that already forms rather than computing a new one.
+  //
+  // Not every reader supplies it, and the omission is stated through `supplied` below rather than
+  // being indistinguishable from a design with no symbols: a rule reading an empty list where nobody
+  // looked would claim coverage it has not got.
+  repeated ResolvedSymbol resolved_symbols = 8;
   // Components the source has not annotated yet: their designator is a placeholder (`R?`, `C?`,
   // `REF**`) rather than an identity, so every unannotated resistor on the sheet reads `R?`.
   //
@@ -197,6 +213,21 @@ message UnannotatedComponent {
 // the construct ("xschem_sym", "geda_sym", "kicad_sym_lib") so a reader-neutral consumer can still
 // say what kind of thing is missing. ref_des lists the placements that lost pins, which is the
 // blast radius and the join key for the unresolved_symbol query relation.
+// ResolvedSymbol is one symbol reference that loaded, with the pin count it contributed.
+//
+// The COUNT is what makes a pass evidence rather than an assertion. "the symbol resolved" reads
+// identically on a design where it resolved to a 100-pin FPGA and one where a stale library answered
+// with an empty stub, and the second is a silent read gap of exactly the kind unresolved_symbols
+// exists to surface. A count moves when the library does.
+//
+// Keyed per REFERENCE rather than per placement, matching UnresolvedSymbol: one library entry is one
+// answer however many parts are drawn with it.
+message ResolvedSymbol {
+  string symref = 1;
+  string kind = 2;      // the construct kind, as UnresolvedSymbol.kind spells it
+  int32 pin_count = 3;  // pins the symbol declares; 0 is legal for a graphic-only symbol
+}
+
 message UnresolvedSymbol {
   string symref = 1;
   string kind = 2;

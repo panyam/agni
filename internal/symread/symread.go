@@ -60,8 +60,10 @@ type Placement struct {
 // meant to land on those pins into a phantom dangling endpoint (WS1-013). unresolved lists
 // each reference that did not resolve with the placements it cost pins, so the caller can
 // gate dangling emission (a design with any unresolved placement cannot trust its dangle
-// set) AND report the gap (WS1-052) rather than only going quieter because of it.
-func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant func(x, y float64) netgraph.Point) (out []netgraph.Pin, unresolved []Unresolved) {
+// set) AND report the gap (WS1-052) rather than only going quieter because of it. resolved is the
+// other half of the same answer, the references that DID load with the pin count each supplied, so a
+// caller can say what it examined instead of only what went wrong (agni issue 418).
+func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant func(x, y float64) netgraph.Point) (out []netgraph.Pin, resolved []Resolved, unresolved []Unresolved) {
 	type entry struct {
 		pins []Pin
 		ok   bool
@@ -79,7 +81,9 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 	// Order of first appearance, so the report is stable across runs without a sort that would
 	// scramble the source's own ordering.
 	var missing []string
+	var loaded []string
 	byRef := map[string][]string{}
+	seenOK := map[string]bool{}
 
 	for _, pl := range pls {
 		e := resolve(pl.Symref)
@@ -88,6 +92,9 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 				missing = append(missing, pl.Symref)
 			}
 			byRef[pl.Symref] = append(byRef[pl.Symref], pl.Ref)
+		} else if !seenOK[pl.Symref] {
+			seenOK[pl.Symref] = true
+			loaded = append(loaded, pl.Symref)
 		}
 		if len(pl.Part.Pins) == 0 {
 			for _, sp := range e.pins {
@@ -99,10 +106,28 @@ func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant 
 			out = append(out, netgraph.Pin{At: quant(ax, ay), Comp: pl.Ref, Pin: pl.pinNumber(sp)})
 		}
 	}
+	for _, symref := range loaded {
+		resolved = append(resolved, Resolved{Symref: symref, PinCount: len(cache[symref].pins)})
+	}
 	for _, symref := range missing {
 		unresolved = append(unresolved, Unresolved{Symref: symref, RefDes: byRef[symref]})
 	}
-	return out, unresolved
+	return out, resolved, unresolved
+}
+
+// Resolved is one symbol reference that loaded, with the pin count it contributed.
+//
+// Returned alongside Unresolved rather than left implicit, because a caller holding only the failures
+// can report only failures: a read where every symbol loaded and a read that opened no symbol at all
+// hand back the same empty slice. The PIN COUNT is what makes the success checkable, since a stale
+// library answering with an empty stub resolves just as successfully as the real symbol and costs the
+// netlist exactly as much as a missing file does.
+//
+// Grouped per reference, matching Unresolved: one library entry is one answer however many placements
+// draw with it.
+type Resolved struct {
+	Symref   string
+	PinCount int
 }
 
 // Unresolved is one symbol reference that failed to load, with every placement that lost its pins.

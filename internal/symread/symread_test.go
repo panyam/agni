@@ -28,7 +28,7 @@ func TestResolvePinsReportsUnresolved(t *testing.T) {
 	}
 	quant := func(x, y float64) netgraph.Point { return netgraph.Point{X: int64(x), Y: int64(y)} }
 
-	pins, unresolved := ResolvePins(pls, load, quant)
+	pins, resolved, unresolved := ResolvePins(pls, load, quant)
 	if len(unresolved) != 1 {
 		t.Fatalf("unresolved = %v, want exactly one entry (only missing.sym)", unresolved)
 	}
@@ -42,6 +42,16 @@ func TestResolvePinsReportsUnresolved(t *testing.T) {
 	}
 	if len(pins) != 4 { // R1 and R3 contribute 2 each; R2 and R4 none
 		t.Errorf("pins = %d, want 4", len(pins))
+	}
+	// The other half of the same answer (agni issue 418). Grouped per reference like the failures,
+	// so the cached second hit on good.sym does not report it twice, and carrying the pin count
+	// because a reference that resolved to an empty stub costs the netlist what a missing file does
+	// and reads identically without it.
+	if len(resolved) != 1 {
+		t.Fatalf("resolved = %v, want exactly one entry (only good.sym, deduped across R1 and R3)", resolved)
+	}
+	if got := resolved[0]; got.Symref != "good.sym" || got.PinCount != 2 {
+		t.Errorf("resolved[0] = %+v, want {good.sym 2}", got)
 	}
 }
 
@@ -62,7 +72,7 @@ func TestResolvePinsSlotRemap(t *testing.T) {
 		{Symref: "g.sym", Ref: "U1", Part: &ir.PartType{}, Place: place, SlotPins: []string{"9", "8"}}, // swapped order
 		{Symref: "g.sym", Ref: "U2", Part: &ir.PartType{}, Place: place},                               // no slotting -> drawn numbers
 	}
-	pins, _ := ResolvePins(pls, load, quant)
+	pins, _, _ := ResolvePins(pls, load, quant)
 	var got []string
 	for _, p := range pins {
 		got = append(got, p.Pin)
