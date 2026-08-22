@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/internal/artifact"
-	"time"
 
 	"github.com/panyam/agni/core/check"
 	rpt "github.com/panyam/agni/core/report"
@@ -20,15 +19,8 @@ import (
 // prose here exactly as a built-in does. The catalog is also the only place StatesConsideredSet can
 // come from: the verdict list alone cannot distinguish a converted rule that found no subjects from
 // one that was never converted, and guessing would make the report claim coverage the run never had.
-func writeVerdictHTML(w io.Writer, resp *webapi.CheckDesignResponse, rules []*check.Rule,
-	source, contentHash, urlBase, mountPath string) error {
-	return rpt.HTML(w, buildVerdictReport(resp, rules, rpt.Report{
-		Design:      source,
-		Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-		ContentHash: contentHash,
-		URLBase:     urlBase,
-		MountPath:   mountPath,
-	}))
+func writeVerdictHTML(w io.Writer, resp *webapi.CheckDesignResponse, rules []*check.Rule, meta rpt.Report) error {
+	return rpt.HTML(w, buildVerdictReport(resp, rules, meta))
 }
 
 // buildVerdictReport aggregates one run into the shared report model, which BOTH renderers take. It
