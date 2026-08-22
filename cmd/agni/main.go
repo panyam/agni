@@ -554,11 +554,18 @@ func checkCmd() *cobra.Command {
 							return err
 						}
 					case "html":
-						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, catalog.Rules(), meta); err != nil {
+						// resolveAgainst, NOT catalog: the report has to read the catalog the RUN used, or
+						// an operator's own rules arrive with no prose (agni issue 411). `catalog` is the
+						// built-ins plus the ad-hoc flag sources; the project's rules and the
+						// --conventions value are composed onto it by withProjectRules, and those are
+						// exactly the rules a team wrote for its own boards. Looked up in the narrower
+						// catalog they miss, and a rule with no summary, impact or remedy still renders,
+						// under a bare name, which silently rewards using the built-ins over your own.
+						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, resolveAgainst.Rules(), meta); err != nil {
 							return err
 						}
 					default:
-						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, catalog.Rules(), meta))
+						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, resolveAgainst.Rules(), meta))
 					}
 					failFindings = resp.GetFindings()
 					break
