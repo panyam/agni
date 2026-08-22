@@ -230,6 +230,21 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		Remedy:   intentRemedy(RuleStrapAddressCollision),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
+		// THE ONE INTENT RULE THAT CANNOT STATE A CONSIDERED SET, and the obstacle is arity rather than
+		// evidence (agni issue 391).
+		//
+		// Its subject is the SET OF DEVICES sharing an address, and that set is 2 on one bus and 4 on
+		// the next, INSIDE ONE RULE. Rule.SubjectShape is fixed per rule, which is what lets a consumer
+		// index a rule's verdicts and a person construct an id without running the check; a rule whose
+		// arity moves between subjects satisfies none of that, and TestSubjectShapeHolds says so.
+		//
+		// The strap-group rules next door look identical and are not: each declared group compiles to
+		// its OWN rule, so strapShape computes a fixed arity per rule instance. This rule is one rule
+		// over every group, which is what makes the difference.
+		//
+		// A per-BUS subject would fix the arity and needs a kind this vocabulary does not have. A
+		// declared logical bus is not KindBus, which is a DRAWN construct carrying a geometry join key;
+		// using it would send a viewer looking for wires that do not exist.
 		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
 			type decoded struct {
 				g     StrapGroup

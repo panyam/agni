@@ -13,33 +13,58 @@ import (
 // protectionRule uses.
 func propertyRule(kind string, ps []NetProperty) *check.Rule {
 	return &check.Rule{
-		Name:     "property-" + kind,
-		Severity: "warning",
-		Summary:  fmt.Sprintf("a net's %s contradicts what the design intent declares", kind),
-		Detail:   intentDoc("property-" + kind),
-		Impact:   propertyImpact(kind),
-		Remedy:   intentRemedy("property-" + kind),
-		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
-		Tags:     intentTags(),
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-			var out []check.Finding
-			for _, p := range ps {
-				if p.Property != kind {
-					continue
-				}
-				if msg, undecidable := propertyUndecidable(m, p); undecidable {
-					out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: p.Net}, Message: msg, Inconclusive: true})
-					continue
-				}
-				msg, bad := propertyViolation(m, p)
-				if !bad {
-					continue
-				}
-				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: p.Net}, Message: msg})
-			}
-			return out
-		}),
+		Name:                "property-" + kind,
+		Severity:            "warning",
+		Summary:             fmt.Sprintf("a net's %s contradicts what the design intent declares", kind),
+		Detail:              intentDoc("property-" + kind),
+		Impact:              propertyImpact(kind),
+		Remedy:              intentRemedy("property-" + kind),
+		Reads:               []string{"component-on-net", "component.class", "net.ground", "rail"},
+		Tags:                intentTags(),
+		Eval:                func(m check.Model) []check.Verdict { return propertyVerdicts(m, ps, kind) },
+		StatesConsideredSet: true,
 	}
+}
+
+// propertyVerdicts decides every declared property OF THIS KIND, one verdict each.
+//
+// A property of another kind is not this rule's subject and yields nothing. The families compile to
+// one rule per kind, so `property-ac-coupled` reporting on a reset-polarity declaration would claim a
+// check it never made, which is the scope mistake fet-vdss shipped and PR 405 fixed.
+//
+// The undecidable case was already computed and already reached a reviewer as an inconclusive finding
+// (agni issue 74); it becomes check.Inconclusive, which projects back to the same finding. What is new
+// is the PASS: a declared property the design honours reported nothing, exactly like a property nobody
+// declared, and for an intent rule that is the sentence the report exists to produce.
+func propertyVerdicts(m check.Model, ps []NetProperty, kind string) []check.Verdict {
+	var out []check.Verdict
+	for _, p := range ps {
+		if p.Property != kind {
+			continue // another kind's declaration: not a subject of this rule
+		}
+		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(p.Net)}}
+		if msg, undecidable := propertyUndecidable(m, p); undecidable {
+			v.Outcome = check.Inconclusive
+			v.Witness = &check.Witness{Statement: msg}
+			v.Finding = &check.Finding{Subject: check.NetNameEntity(p.Net), Message: msg, Inconclusive: true}
+			out = append(out, v)
+			continue
+		}
+		msg, bad := propertyViolation(m, p)
+		if bad {
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{Statement: msg}
+			v.Finding = &check.Finding{Subject: check.NetNameEntity(p.Net), Message: msg}
+		} else {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("net %q carries the declared %s property and the design does not contradict it", p.Net, kind),
+				Terms:     []check.WitnessTerm{{Label: "declared", Value: kind}},
+			}
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // propertyViolation reports whether the design contradicts one declared property, and the message to
