@@ -38,63 +38,100 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 			"param.ocp_threshold", "param.on_resistance",
 			"component.value", "component.class", "pin.role", "on_net",
 		},
-		ParamSymbols: check.OcpThresholdSymbols(),
-		Tags:         intentTags(),
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-			return evalLoadSwitchTrip(m, d.RailBudgets)
-		}),
+		ParamSymbols:        check.OcpThresholdSymbols(),
+		Tags:                intentTags(),
+		Eval:                func(m check.Model) []check.Verdict { return evalLoadSwitchTrip(m, d.RailBudgets) },
+		StatesConsideredSet: true,
 	}
 }
 
 // evalLoadSwitchTrip reports each DECLARED rail budget whose load switch limits current below the
 // declared peak.
 //
-// Four cases stay SILENT:
+// Four cases produced no FINDING, and they are three different answers rather than one silence:
 //
-//   - A declared rail the design does not carry. That is a missing-rail defect the voltage-domain and
-//     subsystem forms report, and firing here as well would put one defect under two review items.
-//   - A rail no controller-based load switch reaches. The design may have no switch on that rail at
-//     all, or an INTEGRATED switch (one part, no external FET, so nothing for the resolver to find), or
-//     a switch the resolver refused as ambiguous. None of those is a sizing defect.
+//   - A declared rail the design does not carry is NotConsidered. The missing rail is the
+//     voltage-domain and subsystem forms' defect, so this rule does not report it as one, but it did
+//     look and it could not judge. That used to leave through the same silence a correct switch did.
+//   - A rail no controller-based load switch reaches is NOT A SUBJECT and yields nothing. The design
+//     may have no switch there, an INTEGRATED switch (one part, no external FET, so nothing for the
+//     resolver to find), or a switch the resolver refused as ambiguous. None is a sizing defect, and
+//     none is a switch this rule failed to size.
 //   - A switch whose controller states no overcurrent threshold, or whose shunt the design does not
-//     state in ohms. There is no trip current to compare, so a verdict would be invented. That case is
-//     the review runner's needs-data gate, which this rule feeds by declaring ParamSymbols.
-//   - A trip point at or above the budget. Nothing to report.
+//     state in ohms, is absent from ExternalFetLoadSwitches for the same reason and lands in the case
+//     above. That is the review runner's needs-data gate, which this rule feeds by declaring
+//     ParamSymbols.
+//   - A trip point at or above the budget is now a PASS carrying both numbers and the citation.
 //
 // A pass says only that the limit is above the declared draw. It does not say the limit is below what
 // the FET survives (that is the builtin rule's question) and it does not say the FET runs cool at the
 // declared current (nothing states a thermal limit to judge against, see sizingClause).
-func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Finding {
+func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Verdict {
 	switches := check.ExternalFetLoadSwitches(m)
-	var out []check.Finding
+	var out []check.Verdict
 	for _, b := range budgets {
+		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(b.Rail)}}
 		rail := netNamed(m, b.Rail)
 		if rail == nil {
-			// The guard is redundant today (Reach walks nothing from a nil start, so an absent rail falls
-			// out at the sw == nil skip below) and stays anyway: a missing rail is the voltage-domain and
-			// subsystem forms' defect to report, and if Reach ever answered a nil start differently the
-			// fallthrough would build a finding with a nil Prov that the viewer cannot locate.
+			// A missing rail is the voltage-domain and subsystem forms' defect to report, so this rule
+			// does not report it AS a defect. It does say it could not judge: a declared budget whose
+			// rail is absent used to leave through the same silence a correctly-sized switch did.
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the design carries no net named %q, so there is no switch on it to size", b.Rail)
+			out = append(out, v)
 			continue
 		}
+		v.Subjects = []check.Entity{check.NetEntity(rail)}
 		sw := highestTripOnRail(m, switches, rail)
 		if sw == nil {
-			continue
-		}
-		if !below(sw.TripAmps, b.Peak) {
+			// NOT a subject: the rule is about a rail fed through a controller-based load switch, and a
+			// rail with none is not a switch this rule failed to size. A switch is only resolved when
+			// the controller, the FET and the shunt are each unambiguous, so this also covers a switch
+			// the walk could not read, which check.ExternalFetLoadSwitches reports by omission.
 			continue
 		}
 		ctrlSpec := m.PartSpec(sw.Controller)
+		v.Context = []check.ContextSubject{
+			check.Ctx(check.ComponentEntity(sw.Controller), "controller"),
+			check.Ctx(check.ComponentEntity(sw.Sense), "sense"),
+		}
+		if !below(sw.TripAmps, b.Peak) {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("the load switch feeding %q limits at %gA, at or above the %gA peak the intent declares",
+					b.Rail, sw.TripAmps, b.Peak),
+				Terms: []check.WitnessTerm{
+					{Label: "trip", Value: fmt.Sprintf("%gA", sw.TripAmps)},
+					{Label: "declared peak", Value: fmt.Sprintf("%gA", b.Peak)},
+				},
+				Datasheet: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)},
+			}
+			out = append(out, v)
+			continue
+		}
 		msg := fmt.Sprintf(
 			"rail %q is declared to draw up to %gA peak, but the load switch feeding it limits at %gA (%s %gV across sense resistor %s at %gΩ), so %s opens under the declared load rather than under a fault",
 			b.Rail, b.Peak, sw.TripAmps,
 			sw.Ocp.GetSymbol(), sw.Ocp.GetValue().GetMax(), sw.Sense, sw.SenseOhms, sw.Controller)
 		msg += " — " + check.Citation(ctrlSpec, sw.Ocp) + sizingClause(m, sw, b.Peak)
-		out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: b.Rail}, Message: msg, Prov: rail.GetProv(), // The controller's threshold is the only datasheet value the VERDICT rests on: the trip
+		f := check.Finding{Subject: check.NetEntity(rail), Message: msg, Prov: rail.GetProv(), // The controller's threshold is the only datasheet value the VERDICT rests on: the trip
 			// current is that threshold divided by a resistance the DESIGN states. The pass FET's
 			// on-resistance is reported in the message but not cited, because a finding is rated by its
 			// WEAKEST citation and a value the conclusion never used could drag a genuine failure down
 			// to provisional.
-			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)}})
+			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)}}
+		v.Outcome = check.Fail
+		v.Witness = &check.Witness{
+			Statement: fmt.Sprintf("the load switch feeding %q limits at %gA, below the %gA peak the intent declares",
+				b.Rail, sw.TripAmps, b.Peak),
+			Terms: []check.WitnessTerm{
+				{Label: "trip", Value: fmt.Sprintf("%gA", sw.TripAmps)},
+				{Label: "declared peak", Value: fmt.Sprintf("%gA", b.Peak)},
+			},
+			Datasheet: []*check.DatasheetCitation{check.DatasheetCitationOf(ctrlSpec, sw.Ocp)},
+		}
+		v.Finding = &f
+		out = append(out, v)
 	}
 	return out
 }

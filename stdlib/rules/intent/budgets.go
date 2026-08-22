@@ -34,12 +34,13 @@ func railBudgetCapacityRule(d Declaration) *check.Rule {
 		Reads:        []string{"param.output_current", "on_net"},
 		ParamSymbols: check.OutputCurrentSymbols(),
 		Tags:         intentTags(),
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
+		Eval: func(m check.Model) []check.Verdict {
 			return evalRailBudgets(m, d.RailBudgets, 1, func(b RailBudget, need float64, ref string, p *parampb.Parameter) string {
 				return fmt.Sprintf("rail %q is declared to draw up to %gA peak, but %s supplies it rated at only %s %gA",
 					b.Rail, b.Peak, ref, p.GetSymbol(), p.GetValue().GetMax())
 			})
-		}),
+		},
+		StatesConsideredSet: true,
 	}
 }
 
@@ -58,12 +59,13 @@ func railBudgetMarginRule(d Declaration) *check.Rule {
 		Reads:        []string{"param.output_current", "on_net"},
 		ParamSymbols: check.OutputCurrentSymbols(),
 		Tags:         intentTags(),
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
+		Eval: func(m check.Model) []check.Verdict {
 			return evalRailBudgets(m, d.RailBudgets, d.MarginFactor, func(b RailBudget, need float64, ref string, p *parampb.Parameter) string {
 				return fmt.Sprintf("rail %q is declared to draw up to %gA peak and the declared margin factor of %g asks for %gA, but %s supplies it rated at only %s %gA",
 					b.Rail, b.Peak, d.MarginFactor, need, ref, p.GetSymbol(), p.GetValue().GetMax())
 			})
-		}),
+		},
+		StatesConsideredSet: true,
 	}
 }
 
@@ -80,28 +82,66 @@ func railBudgetMarginRule(d Declaration) *check.Rule {
 //     ParamSymbols. The gate is design-wide (nothing on the board states an output current), so a design
 //     where SOME regulator is seeded and this rail's is not still reads pass; the doc cards say so.
 //   - A supply that clears the threshold. Nothing to report.
-func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg func(b RailBudget, need float64, ref string, p *parampb.Parameter) string) []check.Finding {
-	var out []check.Finding
+func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg func(b RailBudget, need float64, ref string, p *parampb.Parameter) string) []check.Verdict {
+	var out []check.Verdict
 	for _, b := range budgets {
+		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(b.Rail)}}
 		n := netNamed(m, b.Rail)
 		if n == nil {
+			// The missing rail is the voltage-domain and subsystem forms' defect, so this rule does not
+			// report it as one. It did look, though, and a budget it could not size is a different
+			// answer from a budget it sized and cleared.
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the design carries no net named %q, so there is no supply on it to size", b.Rail)
+			out = append(out, v)
 			continue
 		}
+		v.Subjects = []check.Entity{check.NetEntity(n)}
 		ref, spec, p := bestSupply(m, n)
 		if p == nil {
+			v.Outcome = check.NotConsidered
+			v.Reason = "no seeded part reaching this rail states an output-current rating, so there is nothing to compare the declared draw against"
+			out = append(out, v)
 			continue
 		}
 		rated := p.GetValue().GetMax()
-		// The margin rule declines the range the capacity rule owns. Without it a supply rated below the
-		// peak would fire BOTH rules for one defect.
-		if factor > 1 && below(rated, b.Peak) {
-			continue
-		}
+		v.Context = []check.ContextSubject{check.Ctx(check.ComponentEntity(ref), "supply")}
 		need := b.Peak * factor
-		if !below(rated, need) {
+		terms := []check.WitnessTerm{
+			{Label: "rated", Value: fmt.Sprintf("%gA", rated)},
+			{Label: "needed", Value: fmt.Sprintf("%gA", need)},
+		}
+		cite := []*check.DatasheetCitation{check.DatasheetCitationOf(spec, p)}
+		// The margin rule declines the range the capacity rule owns. Without it a supply rated below the
+		// peak would fire BOTH rules for one defect. Saying so is what makes the partition legible: the
+		// two rules split one range, and a reader of the margin rule's rows should be able to see that
+		// this rail is not unexamined but answered next door.
+		if factor > 1 && below(rated, b.Peak) {
+			v.Outcome = check.NotConsidered
+			v.Reason = fmt.Sprintf("the supply is rated below the %gA peak itself, which rail-current-capacity reports rather than this rule", b.Peak)
+			out = append(out, v)
 			continue
 		}
-		out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: b.Rail}, Message: msg(b, need, ref, p) + " — " + check.Citation(spec, p), Prov: n.GetProv(), DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, p)}})
+		if !below(rated, need) {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("%s supplies %q rated at %s %gA, at or above the %gA the declaration asks for",
+					ref, b.Rail, p.GetSymbol(), rated, need),
+				Terms:     terms,
+				Datasheet: cite,
+			}
+			out = append(out, v)
+			continue
+		}
+		v.Outcome = check.Fail
+		v.Witness = &check.Witness{
+			Statement: fmt.Sprintf("%s supplies %q rated at %s %gA, below the %gA the declaration asks for",
+				ref, b.Rail, p.GetSymbol(), rated, need),
+			Terms:     terms,
+			Datasheet: cite,
+		}
+		v.Finding = &check.Finding{Subject: check.NetEntity(n), Message: msg(b, need, ref, p) + " — " + check.Citation(spec, p), Prov: n.GetProv(), DatasheetProv: cite}
+		out = append(out, v)
 	}
 	return out
 }

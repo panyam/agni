@@ -41,9 +41,12 @@ func sequenceRule(s Sequence) *check.Rule {
 		Remedy: intentRemedy(docKeySequence),
 		Reads:  []string{"on_net", "component.class"},
 		Tags:   intentTags(),
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-			return evalSequence(m, s)
-		}),
+		// The two gating handles, in the order the assertion reads: the earlier stage's power-good, then
+		// the later stage's enable. A gating link belongs to neither net alone, and the pair is what the
+		// rule judges (agni issue 391's tuple).
+		SubjectShape:        []string{check.KindNet, check.KindNet},
+		Eval:                func(m check.Model) []check.Verdict { return evalSequence(m, s) },
+		StatesConsideredSet: true,
 	}
 }
 
@@ -59,12 +62,22 @@ func sequenceRule(s Sequence) *check.Rule {
 //   - a declared handle net is not on the design      -> finding (the chain is not there to enforce anything)
 //   - the handles are on the design but not linked    -> finding (nothing holds the later stage off)
 //
-// So a silent rule means every declared link was FOUND, not that nothing was looked at. An absent
-// handle net fails here rather than being skipped the way an absent RAIL is: a rail is a presence
-// question the voltage-domain and subsystem forms own, while the gating nets ARE this rule's subject.
-func evalSequence(m check.Model, s Sequence) []check.Finding {
-	var out []check.Finding
+// So a silent rule meant every declared link was FOUND, not that nothing was looked at, and that
+// distinction is now stated rather than left to be inferred: a found link is a PASS naming the two
+// handles it walked. An absent handle net fails here rather than being skipped the way an absent RAIL
+// is: a rail is a presence question the voltage-domain and subsystem forms own, while the gating nets
+// ARE this rule's subject.
+//
+// THE SUBJECT IS THE PAIR, and which pair depends on the branch. A link judged the declared way round
+// is (earlier power-good, later enable); a link the design gates BACKWARDS is judged on the mirror
+// handles, so that verdict names those instead. Both are 2-tuples of nets, which is what the declared
+// SubjectShape says, and in each case the finding's own subject is one of the two.
+func evalSequence(m check.Model, s Sequence) []check.Verdict {
+	var out []check.Verdict
 	fan := netFan(m)
+	pair := func(x, y string) []check.Entity {
+		return []check.Entity{check.NetNameEntity(x), check.NetNameEntity(y)}
+	}
 	for i := 0; i+1 < len(s.Order); i++ {
 		a, b := s.Order[i], s.Order[i+1]
 		if a.Good == "" || b.Enable == "" {
@@ -72,6 +85,15 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 		}
 		goodNet, enNet := netNamed(m, a.Good), netNamed(m, b.Enable)
 		if goodNet != nil && enNet != nil && linked(fan, goodNet, enNet) {
+			out = append(out, check.Verdict{
+				Subjects: pair(a.Good, b.Enable),
+				Outcome:  check.Pass,
+				Witness: &check.Witness{
+					Statement: fmt.Sprintf("%q (the power-good of %s) reaches %q (the enable of %s), so %s is held off until %s is good",
+						a.Good, a.Rail, b.Enable, b.Rail, b.Rail, a.Rail),
+					Terms: []check.WitnessTerm{{Label: "power-good", Value: a.Good}, {Label: "enable", Value: b.Enable}},
+				},
+			})
 			continue
 		}
 		// Looked for BEFORE the absent-handle case: an order declared the wrong way round usually
@@ -80,22 +102,36 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 		// the EARLIER stage's enable.
 		if b.Good != "" && a.Enable != "" {
 			if rGood, rEn := netNamed(m, b.Good), netNamed(m, a.Enable); linked(fan, rGood, rEn) {
-				out = append(out, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: a.Enable}, Prov: rEn.GetProv(), Message: fmt.Sprintf("sequence %q declares %s before %s, but the design gates it the other way round: %q (the power-good of %s) drives %q (the enable of %s)",
+				f := check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: a.Enable}, Prov: rEn.GetProv(), Message: fmt.Sprintf("sequence %q declares %s before %s, but the design gates it the other way round: %q (the power-good of %s) drives %q (the enable of %s)",
 					s.Name, a.Rail, b.Rail, b.Good, b.Rail, a.Enable, a.Rail), // The power-good net doing the driving. Only this one: the branch has RESOLVED it
 					// (rGood is non-nil or linked would not have matched), whereas the rail names come
 					// straight from the intent declaration and are not known to exist on the design.
 					// A chip that highlights nothing is worse than no chip (agni issue 349).
 					Context: []check.ContextSubject{
 						{Entity: check.Entity{Kind: check.KindNet, Ref: b.Good, NetID: rGood.GetId()}, Role: "power-good"},
-					}})
+					}}
+				out = append(out, check.Verdict{
+					// The MIRROR handles, because those are the pair this branch judged.
+					Subjects: pair(b.Good, a.Enable),
+					Outcome:  check.Fail,
+					Witness:  &check.Witness{Statement: fmt.Sprintf("%q reaches %q, which is the declared order inverted", b.Good, a.Enable)},
+					Context:  f.Context,
+					Finding:  &f,
+				})
 				continue
 			}
 		}
 		if goodNet == nil || enNet == nil {
-			out = append(out, absentHandleFinding(s, a, b, goodNet, enNet))
+			f := absentHandleFinding(s, a, b, goodNet, enNet)
+			out = append(out, check.Verdict{
+				Subjects: pair(a.Good, b.Enable),
+				Outcome:  check.Fail,
+				Witness:  &check.Witness{Statement: absentHandleWitness(a, b, goodNet, enNet)},
+				Finding:  &f,
+			})
 			continue
 		}
-		out = append(out, check.Finding{
+		f := check.Finding{
 			Subject: check.Entity{Kind: check.KindNet, Ref: b.Enable},
 			Prov:    enNet.GetProv(),
 			Message: fmt.Sprintf("sequence %q declares %s before %s, but nothing connects %q (the power-good of %s) to %q (the enable of %s), so %s is free to come up first",
@@ -105,9 +141,31 @@ func evalSequence(m check.Model, s Sequence) []check.Finding {
 			Context: []check.ContextSubject{
 				{Entity: check.Entity{Kind: check.KindNet, Ref: a.Good, NetID: goodNet.GetId()}, Role: "power-good"},
 			},
+		}
+		out = append(out, check.Verdict{
+			Subjects: pair(a.Good, b.Enable),
+			Outcome:  check.Fail,
+			Witness: &check.Witness{
+				Statement: fmt.Sprintf("both handles are on the design and nothing connects %q to %q", a.Good, b.Enable),
+				Terms:     []check.WitnessTerm{{Label: "power-good", Value: a.Good}, {Label: "enable", Value: b.Enable}},
+			},
+			Context: f.Context,
+			Finding: &f,
 		})
 	}
 	return out
+}
+
+// absentHandleWitness says which of the two declared handles the design does not carry, which is the
+// fact the finding's sentence rests on.
+func absentHandleWitness(a, b SequenceStage, goodNet, enNet *ir.Net) string {
+	switch {
+	case goodNet == nil && enNet == nil:
+		return fmt.Sprintf("the design carries neither %q nor %q", a.Good, b.Enable)
+	case goodNet == nil:
+		return fmt.Sprintf("the design carries no net named %q", a.Good)
+	}
+	return fmt.Sprintf("the design carries no net named %q", b.Enable)
 }
 
 // absentHandleFinding reports a declared gating net the design does not carry. Both handles are named

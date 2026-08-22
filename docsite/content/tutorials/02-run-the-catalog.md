@@ -102,22 +102,26 @@ Look at the last two lines of that first run again. Every run ends with them, wh
 anything:
 
 ```
-173 subject(s) considered by 22 rule(s), 7 not considered (--verdicts for the detail)
-3 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
+187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
+2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
 ```
 
 This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
 examined the wrong thing produce an identical list of findings, namely none, so the findings alone
 can never tell you which one you are holding.
 
-Read the three numbers separately. **173 considered** is how many subjects were actually judged.
-**22 rules** is how many were willing to say what they looked at, which is not the same as how many
+Read the three numbers separately. **187 considered** is how many subjects were actually judged.
+**27 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran: most of the catalog has no subject in scope on any given board, and a rule with nothing to say is
 not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
 
-The second line is the honest edge of the claim. Those 3 rules found something and never said what
+The second line is the honest edge of the claim. Those 2 rules found something and never said what
 they examined, so silence from them means nothing at all, and the coverage number above does not
 cover them.
+
+That number falls as the catalog converts. It was 3 while the design-intent rules still reported
+violations only, which is worth noticing: the rules you write for your own board were the last ones
+whose silence meant nothing, and they are the ones you most want a considered set from.
 
 That line is the claim. `--verdicts` is the evidence, one row per subject with passes included:
 
