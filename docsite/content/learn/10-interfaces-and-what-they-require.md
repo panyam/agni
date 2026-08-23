@@ -68,7 +68,7 @@ Look at the profile's `termination` requirement, then look at what the board has
 
 R1 is there. The requirement is satisfied. **The rule says nothing whatsoever.**
 
-That is not a bug and it is not an oversight. Profile rules are compiled from datalog queries, and a datalog goal yields the rows that *satisfy* it. `unterminated(?h)` produces unterminated buses; there is no natural complement that produces "the buses that were fine". So these rules report violations and claim nothing about anything else, which the run summary says out loud in its last line. Whether they could state one is agni issue 439.
+That is not a bug and it is not an oversight. Profile rules are compiled from datalog queries, and a datalog goal yields the rows that *satisfy* it. `unterminated(?h)` produces unterminated buses; there is no natural complement that produces "the buses that were fine". So these rules report violations and claim nothing about anything else, which the run summary says out loud in its last line. Whether they could state one is agni issue 424.
 
 Sit with what that means, because one sentence carries the whole course. **A clean result from those rules and a board with no CAN on it produce identical output.** If you had deleted R1, the termination rule would have fired. If you had deleted the entire CAN bus, it would also have said nothing, exactly as it does now. The silence cannot distinguish them.
 

@@ -20,6 +20,18 @@ becomes several blocks and the fragments after the first get parsed as markdown.
 figure contiguous, no blank lines between the opening and closing tag. Nothing in the gate catches
 this: `nav_test.go` checks wiring, not rendering.
 
+**A `learn/` chapter has a fifth edit: the level index.** `content/learn/levels.md` maps every
+`## Title (EEn)` section to the level it operates at, and `learn_levels_test.go` enforces it in both
+directions plus the per-chapter pointer line. It is hand-maintained and would otherwise go short in
+silence the moment a chapter gained a section, which is the same failure the generated captures exist
+to prevent one layer down. It caught a real omission on its first run.
+
+Two things about anchors, both learned the expensive way. **Do not put a link inside a heading**: the
+link text becomes part of the generated slug, so `## The role ([EE3](../levels/#ee3))` produces
+`the-role-ee3levelsee3` and every inbound link breaks. The level pointer goes on its own line under
+Prerequisites. And **the `{#custom-anchor}` syntax is not supported** by this renderer: it leaks into
+the visible heading text and doubles the slug. Use the natural slug the heading produces.
+
 **A tutorial's command output is GENERATED, not pasted.** A page holds
 `{{ agniRun "content/tutorials/runs/<name>.yaml" }}`; the yaml says what to run; a committed
 `<name>.yaml.output` holds the capture. The directive emits the command AND the output, so neither is
@@ -36,6 +48,26 @@ by shape and matching NOTHING is an error. **Add `show:` only when the script ca
 should not see**, since it defaults to the script. And **every run gets a scratch copy of the fixture**,
 so a rung that teaches `mv params params-old` cannot rename the checked-in one — which it did, once,
 by hand.
+
+**`from_root: true` runs the script at the scratch root with the fixture at its full relative path**,
+so a command reads as a reader would type it standing in a clone. The `learn/` runs use it; the
+tutorials deliberately do not, because they establish one working directory at the top of the course
+and every rung is relative to it. It is a mode rather than something a spec fakes with `show`, so that
+the command displayed is the command that ran: using `show` to swap in a different path would put an
+untested command in front of the reader. Output is unaffected either way, since provenance and
+resolution notes are reported relative to the design's project rather than to the invocation.
+
+**Figures are generated too.** `make -C docsite figures` re-renders the schematics `learn/` embeds,
+via `figures.sh`. Outside the gate for the same reason `tutorial-runs` is: a render depends on the
+engine build, so a code change would invalidate every figure on every branch.
+
+**To review a branch before it merges, use `make -C docsite preview PAGE=<page>`**, which folds one
+built page into a self-contained HTML file that opens anywhere. Do NOT reach for `make gh-pages`: it
+force-pushes `dist` to a branch that GitHub Pages does not serve. Pages here is configured
+`build_type: workflow`, so the live site is whatever `docs.yml` uploaded on the last push to `main`,
+and the gh-pages branch has not been served since the MkDocs tree was retired. The target is kept, with
+that written above it, because switching Pages back to branch-serving would enable real per-branch
+preview URLs and deleting it would hide that option.
 
 Blocks that cannot be generated stay hand-written and unverified: an `agni serve` that never returns,
 an excerpt of a longer output, a step needing a tool the build cannot assume (rung 12 shells out to

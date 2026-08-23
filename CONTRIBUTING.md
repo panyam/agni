@@ -153,6 +153,15 @@ and cold in the other. These sections exist so a PR is reviewable by both.
   whitespace-significant syntax; TVS = pressure-relief valve beside the path, not inline). Define
   only what the PR actually uses, where a cold reviewer needs it. This does not replace the ELI12,
   which sits above it and makes the whole PR approachable.
+- **Prerequisite reading, named.** A `## Prerequisites` block after the ELI12 and before the
+  reviewer's guide, listing two to four docsite pages a reviewer would need to evaluate the change,
+  each with a clause saying what it supplies. Pull from `learn/` for domain knowledge, `tutorials/`
+  for tool usage, `architecture/` for design rationale, `build/` for extending the engine. Prefer the
+  LEARN chapter over the rule's own catalog entry when the PR is about a rule: the catalog entry
+  explains the check, the chapter explains the instinct behind it. Omit the block when nothing
+  genuinely applies, since a forced entry is worse than none, and **say so explicitly when no page
+  covers the change** — that is a signal the course has a gap, and several chapters came from exactly
+  that observation.
 - **The circuit, for software readers.** When semantics depend on hardware behavior (a rule's
   electrical meaning, derating, rail/pin conventions, why a limit matters physically), add this
   section right after "What changes", plus a link to `docsite/content/reference/analogy.md`. A
