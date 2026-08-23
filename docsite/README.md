@@ -150,6 +150,41 @@ whichever theme it was authored in and badly in the other.
 before editing. Piping it through a pretty-printer to find the insertion point produces a shape that
 does not exist in the file, so the edit fails to match.
 
+**A header entry has two optional fields beyond `name`, `url` and `children`.** `"group": true` on a
+CHILD turns it into a subheading inside the dropdown, and it stays a real link because the section
+index it points at is where someone clicking a heading wants to land. `"columns": 2` lays that
+dropdown out in columns, with `break-before: column` starting each group in its own, so the break
+means one column per group rather than falling at the halfway point. `Guides` and `Reference` use
+both. Nesting is ONE level: the template renders `children` and nothing deeper.
+
+**Grouping is presentation, so it lives in the presentation layer.** Folding two sections under one
+heading moved no content: `content/guide/` and `content/build/` stay where they are, so every
+published URL and cross-link still resolves. Renaming a content directory to match a menu label would
+break both for a change whose whole purpose is that the header reads better.
+
+**`static/js/navdropdown.js` positions an open dropdown, and CSS alone cannot.** It measures and
+clamps into the viewport, which no stylesheet can do because it cannot know whether a menu will fit.
+Three things forced it: an 18-entry menu measured 900px against an 863px viewport with nothing
+scrolling, the rightmost menu ran past the right edge, and below 768px `.main-nav` is
+`overflow-x: auto`, which CLIPS an absolutely positioned child. Positioning `fixed` fixes all three,
+since a fixed box cannot be clipped by an ancestor. The script stands down below 768px, where the
+menu is a stacked list with its submenus inline and CSS owns it.
+
+**Measure a dropdown only while it is SHOWN.** The first version read `offsetWidth` on `pointerenter`,
+while CSS still had it `display: none`. A hidden element measures zero, so the clamp positioned the
+menu as though it took no space, which is indistinguishable from having no clamp at all.
+
+**Below 768px the header and the sidebar both collapse behind a button**, wired by the same script.
+The bar used to stay on screen and scroll sideways, hiding most sections behind a gesture nobody
+discovers, and the sidebar used to render above the article in the one-column grid and push the page
+down before a reader saw a word.
+
+**Two CSS blocks are order-dependent and say so inline.** The column overrides and the toggle base
+rules each tie on specificity with the rules they override, so SOURCE ORDER decides. Both were
+written in the wrong place first, and the second left every toggle invisible while the menus were
+hidden, which is a header with no way to open it. Nothing in the gate catches this, so read the notes
+above those blocks in `static/css/main.css` before moving them.
+
 **`docsite/_hidden/` hides pages from the SITE BUILD, not from the repo.** Files under it stay
 tracked and world-readable. A parked section sat there for months in exactly that state. Moving
 something to `_hidden/` is a publishing decision and never a confidentiality one. Anything genuinely
@@ -188,6 +223,15 @@ the site and nothing reported it.
 
 So: **write a Go composite literal with the element brace on its own line**, and treat any `{{` in a
 sample (Rust macros, Vue, Handlebars, Go templates as subject matter) as needing the same care.
+
+**A TRANSCLUDED file does not get that pass, which is the mirror trap.** `includeCard` is called
+DURING a host page's template execution and its return value is spliced in afterwards, so nothing
+re-scans it. A generated card writing `{{.Site.PathPrefix}}` in an image path renders correctly on
+its own page and reached the browser verbatim when transcluded, which requested a literal
+`%7B%7B.Site.PathPrefix%7D%7D` and 404'd on four images across two guide pages. `IncludeCard`
+substitutes the directive now, and `includecard_test.go` asserts on what it RETURNS plus follows the
+substituted path to disk, because a wrong prefix would pass a braces-only check. Anything else
+transcluded needs the same treatment.
 
 `TestEveryContentPageTemplateParses` in `docsite/template_test.go` parses every content page with the
 site's own `CommonFuncMap`, so a legitimate `{{ agniRun ... }}` passes and only an unknown function or

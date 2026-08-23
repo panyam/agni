@@ -39,6 +39,15 @@ numbers, while missing `SLVSAG5`, a real one. Wrong in both directions, and the 
 justified building an extractor on it. Run a new detector past known positives AND known negatives by
 hand before quoting a rate. When it cannot tell the two apart, that is the finding.
 
+**A SUBSTRING count is not an occurrence count, and it fails upward.** Sizing the glossary sweep meant
+counting how often each term appears, and a case-insensitive substring match reported `TP` 47 times in
+a section where the word-boundary count is ZERO: it was matching inside `http` and `output`. The same
+sweep read `pull-up` at 89 and `ESD` at 43 until rule names like `i2c-pull-up` and fenced code were
+excluded, after which both roughly halved, to 44 and 13. Every error ran the same way, inflating the
+work. Scoping off the first numbers would have oversized the job about twofold and, worse, would have
+recorded a term as well covered when the course never mentions it. Anchor the pattern, strip code and
+identifiers, and re-count before the number decides anything.
+
 **Reading the code is not running it.** Three passes through one read path did not reveal that no
 producer fills `SourceDoc.title` as its contract specifies. Opening the app and looking at the field
 showed it immediately, and invalidated part of a PR merged an hour earlier. Review catches a layer that
