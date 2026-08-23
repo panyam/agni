@@ -1,0 +1,5 @@
+# Chapter 1's central table. Three resistors, two sharing a value, three different jobs, and each job
+# is readable from the nets alone. This is the decision procedure the chapter teaches, run on real data.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'component.class(?r, "resistor"), component.mpn(?r, ?m), component-on-net(?r, ?n) => ?r, ?m, ?n'

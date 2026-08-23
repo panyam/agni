@@ -52,6 +52,7 @@
     "icon": "graduation-cap",
     "children": [
       { "name": "The seven levels", "url": "learn/" },
+      { "name": "1. What a board is made of", "url": "learn/01-what-a-board-is-made-of/" },
       { "name": "3. Why every chip needs capacitors", "url": "learn/03-why-every-chip-needs-capacitors/" }
     ]
   },
