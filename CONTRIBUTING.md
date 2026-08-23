@@ -101,6 +101,13 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 
 ## PR workflow
 
+- **Check the branch again immediately before you COMMIT, not only before you branch.** A long
+  session's branch can move underneath it: running the `/checkpoint` skill mid-feature switches the
+  checkout back to `main`, so the next `git commit` lands the feature there instead. The push then
+  sends the feature branch at its OLD position and succeeds, and the failure surfaces much later as
+  `gh pr create` reporting "No commits between main and <branch>". Recovery is cheap when the tree is
+  clean (`git branch -f <branch> <sha>`, `git branch -f main origin/main`), so the cost is entirely in
+  not noticing. `git branch --show-current` before the commit is the whole fix.
 - **Verify a push by its EXIT CODE, never by grepping its output.** `git push | tail -1` swallows a
   failure, and `git push 2>&1 | grep <branch>` reports success on a FAILED push, because the branch
   name appears inside the failure message. Run `git push; echo "EXIT=$?"`.

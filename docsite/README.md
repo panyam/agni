@@ -116,6 +116,21 @@ never adopted.
 **The tag works without JavaScript**, rendering an ordinary anchor with the summary in `title` and a
 click that lands on the full page, so `terms.js` is an upgrade rather than a dependency.
 
+**A mermaid diagram has to be RENDERED before it is committed, and parsing is not the check.**
+Diagrams go in ` ```mermaid ` fences and `BasePage.html` loads mermaid lazily on pages that contain
+one. Every block parsed on the first attempt when the three `build/` pages gained ten of them, and
+four still had to be rebuilt: a nine-step `flowchart LR` came out at a 19.6:1 aspect ratio, which the
+site's `max-width: 100%` then scales down to unreadable; a seven-leaf `TB` taxonomy fanned out just as
+wide; and a subgraph whose title was longer than its child node rendered with the TITLE CLIPPED. None
+of those is a syntax error and none is visible in the source.
+
+Render each block with `mmdc -i block.mmd -o block.png` and look at the aspect ratio before you commit.
+Roughly 1:1 to 4:1 reads at page width. Past that, the fixes are to switch `LR` to `TB` (or the
+reverse, since a wide fan-out becomes a tall stack), to wrap a long pipeline into rows with
+subgraphs, or to move the detail from side notes into the node labels. Prefer plain nodes over a
+subgraph whose title is long. `CONTRIBUTING.md` covers the separate quote-decoding trap that applies
+to a diagram in a PR body rather than a page.
+
 **Style raw SVG through `--accent-color` and `currentColor`, never a literal.** `static/css/main.css`
 defines the palette for both themes, and the docsite has a dark mode. A hardcoded hex reads fine in
 whichever theme it was authored in and badly in the other.
