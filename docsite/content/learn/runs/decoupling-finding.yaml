@@ -1,0 +1,4 @@
+# The EE4 section: the finding as it reads in a report, with its severity.
+fixture: examples/tutorial-project
+script: |
+  agni check --rule decoupling-present designs/gateway/gateway.edn

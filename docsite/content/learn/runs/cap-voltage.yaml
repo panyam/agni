@@ -1,0 +1,5 @@
+# The EE5 section: a 6.3V capacitor on a 10V rail. A purpose-built minimal fixture rather than the
+# tutorial board, because cap-voltage needs a seeded MPN and the tutorial board seeds no capacitor.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni check --rule cap-voltage --params params capcheck.fires.kicad_sch

@@ -47,6 +47,15 @@
     ]
   },
   {
+    "name": "Learn the domain",
+    "url": "learn/",
+    "icon": "graduation-cap",
+    "children": [
+      { "name": "The seven levels", "url": "learn/" },
+      { "name": "3. Why every chip needs capacitors", "url": "learn/03-why-every-chip-needs-capacitors/" }
+    ]
+  },
+  {
     "name": "Build on it",
     "url": "build/",
     "icon": "code",

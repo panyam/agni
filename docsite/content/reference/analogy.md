@@ -9,6 +9,10 @@ definitions a linter can check. This page expands that mapping one concept at a 
 each thing means in an actual circuit and where it lives in the schemas. The architecture pages
 carry the design rationale. This page is for orientation.
 
+It maps STRUCTURE and deliberately says nothing about engineering judgement: it will tell you a `Net`
+is a shared channel, not why an engineer put a resistor on one. For that, [learn the domain](../../learn/)
+is the companion section.
+
 The master table:
 
 | Hardware / the schema | Software analogy |

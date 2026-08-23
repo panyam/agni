@@ -441,8 +441,10 @@ tag-push:
 # spec and the fixture but NOT the engine build, so a code change does not invalidate a capture on its
 # own. That keeps the docs pipeline off the per-push path at the cost of catching a regression here
 # rather than immediately. Commit whatever it changes, after reading it.
+# Every runs/ directory under content/, not just the tutorials' one. A second section with generated
+# captures (learn/) went stale silently the moment it existed, because this target named one path.
 tutorial-runs:
-	@find docsite/content/tutorials/runs -name '*.output' -delete
+	@find docsite/content -path '*/runs/*.output' -delete
 	@cd docsite && $(GO) run . -build >/dev/null 2>&1
-	@git status --short -- docsite/content/tutorials/runs || true
+	@git status --short -- docsite/content || true
 	@echo "tutorial captures regenerated; review the diff above before committing"
