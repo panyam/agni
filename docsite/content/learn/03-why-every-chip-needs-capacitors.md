@@ -7,13 +7,13 @@ Open any board and you will find capacitors scattered around every chip, usually
 
 **Prerequisites:** EE1 (you know a capacitor stores charge) and EE2 (you can read a schematic as a graph of nets).
 
-## EE3 — the role
+## The role (EE3)
 
 > *What job is this part doing?*
 
 A chip's supply pin needs a **local charge reservoir**.
 
-That sentence is the whole idea, and the load-bearing word is *local*. The obvious mental model is that the voltage regulator supplies the chip, so as long as the wire gets there, the chip is powered. That model is fine for a torch and wrong for a digital chip, and the reason is time.
+Everything else on this page follows from that sentence, and the load-bearing word is *local*. The obvious mental model is that the voltage regulator supplies the chip, so as long as the wire gets there, the chip is powered. That model is fine for a torch and wrong for a digital chip, and the reason is time.
 
 When a chip's output drivers switch, they all flip within a nanosecond or two of each other, and at that instant the chip demands a gulp of current it did not need a moment earlier. The current has to come down the trace from the regulator. But a trace has **inductance**, roughly 1nH per millimetre, and inductance is the property that resists a *change* in current:
 
@@ -36,9 +36,9 @@ Run the first of those on the tutorial board and read what it concluded about ea
 
 The passes are the interesting part. They name the capacitor, so you can open the schematic and confirm that `C1` really is on `PMIC_CORE_3V3`. That is the difference between a check that ran and a check that found nothing.
 
-`bulk-cap` is deliberately absent from that run. It scopes on rails the design NAMES, using a net attribute that only the schematic-geometry readers set, so on this EDIF board it has no subject at all and reports nothing. Printing that beside the decoupling verdicts would read as "the bulk capacitors are fine", which is the exact confusion this tool exists to remove. It is filed as agni issue 426.
+`bulk-cap` is deliberately absent from that run. It scopes on rails the design NAMES, using a net attribute that only the schematic-geometry readers set, so on this EDIF board it has no subject at all and reports nothing. Printing that beside the decoupling verdicts would read as "the bulk capacitors are fine", which is the confusion this whole tool exists to remove. It is filed as agni issue 426.
 
-## EE4 — the failure mode
+## The failure mode (EE4)
 
 > *How does this break, and what does the bench see?*
 
@@ -46,9 +46,9 @@ Here is the finding on its own:
 
 {{ agniRun "content/learn/runs/decoupling-finding.yaml" }}
 
-Note the severity: **warning**, not error. That choice is the EE4 content of this rule, and it is worth sitting with, because the naive reading is that a missing decoupling cap is obviously serious and should be an error.
+Note the severity: **warning**, not error. That choice carries the EE4 content of this rule and is worth sitting with, because the naive reading says a missing decoupling cap is obviously serious and should be an error.
 
-It is serious. It is not an error, because **the board works.** That is precisely the problem.
+It is serious. It stays a warning because **the board works**, and that is what makes it expensive.
 
 A board with no decoupling on a rail powers up, runs, and passes bring-up. It fails later and intermittently: when many outputs happen to switch at once, when the enclosure is warm, on three units out of ten and not the other seven. What the bench sees is a spontaneous reset, a corrupted register read, an ADC that is noisier than it should be, a link that drops once an hour. None of those symptoms points at a capacitor. Engineers lose weeks to this class of fault, and they lose them at the end of a project rather than the beginning.
 
@@ -56,7 +56,7 @@ The rule's own `Impact` field says it in one line: *"Rarely visible at first pow
 
 This is the general shape of EE4 and it is why severity in this catalog is a **policy** signal rather than a confidence signal. An `error` is something that will not work at all, like an I2C bus with no pull-up, which cannot signal even once. A `warning` is something that usually indicates a defect but where the board still runs. Missing decoupling is the archetype of the second: maximum eventual cost, minimum immediate symptom.
 
-## EE5 — the numbers
+## The numbers (EE5)
 
 > *Is this within spec, and which datasheet row says so?*
 
@@ -72,7 +72,7 @@ Read the finding closely, because its structure is the EE5 skill in miniature. I
 
 There is a third number that nothing in this catalog checks yet, and it is the one that catches people. **A ceramic capacitor's capacitance falls as you apply DC voltage to it.** Class II dielectrics (X5R, X7R) can lose more than half their marked value at their rated voltage. A 100nF 6.3V X7R on a 5V rail may deliver under 50nF in circuit, so a design that looked correct on the schematic is short of decoupling on the bench. Class I dielectrics (C0G/NP0) do not do this, and cost more for the same capacitance. The usual working habit is to specify a voltage rating well above the rail, often 2× or more, for capacitance stability rather than for breakdown margin.
 
-## EE7 — the copper
+## The copper (EE7)
 
 > *Why must that capacitor be at the pin?*
 

@@ -123,7 +123,7 @@ to read, and `not-applicable` counts as covered. Nothing in the failure count sa
 
 {{ agniRun "content/tutorials/runs/gate-corpus-moved-trips.yaml" }}
 
-That is the whole reason `review` has a gate of its own. `check --fail-on` asks how bad the answers
+`review` therefore needs a gate of its own. `check --fail-on` asks how bad the answers
 were; this asks whether the questions were answered. A checklist quietly answering fewer of its own
 items looks identical to a clean board on every other number you have.
 
