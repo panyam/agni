@@ -67,6 +67,11 @@ Absolute maximum against recommended operating, derating, tolerance, worst case.
 
 - [The numbers](../03-why-every-chip-needs-capacitors/#the-numbers-ee5), voltage rating, derating, and DC bias
 - [Choosing the resistor](../04-pull-ups-and-undefined-states/#choosing-the-resistor-ee5), which way a pull-up can be wrong, in both directions
+- [A part is a contract](../07-reading-a-datasheet/#a-part-is-a-contract-ee5), the type-signature model
+- [Two numbers that look alike](../07-reading-a-datasheet/#two-numbers-that-look-alike-ee5), absolute maximum against recommended operating
+- [The comparison](../07-reading-a-datasheet/#the-comparison-ee5)
+- [Where did the number come from?](../07-reading-a-datasheet/#where-did-the-number-come-from-ee5), provenance and the trust floor
+- [What this layer does not cover](../07-reading-a-datasheet/#what-this-layer-does-not-cover-ee5), why coverage is bounded by the corpus
 
 ## Systems (EE6)
 

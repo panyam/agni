@@ -72,4 +72,4 @@ Take either away and the check cannot run. That is the honest boundary, and it i
 
 One rule, hence the short chapter. The general version, covering rectifiers and polarised capacitors, needs a fact about intended current direction that no netlist carries.
 
-Next: reading a datasheet like a type signature, which is where the course crosses from what a netlist can tell you into what only a document can.
+Next: [reading a datasheet like a type signature](../07-reading-a-datasheet/), where the course crosses from what a netlist can tell you into what only a document can.

@@ -1,0 +1,7 @@
+#agni-run 3487b396068aeb69
+r   m              max  provenance
+U1  ACME-BUCK-3V3  32   designs/gateway/gateway.edn ; datasheet "ACME-BUCK-3V3 Datasheet Rev A" page 4, "Recommended Operating Conditions" (hand, confidence 1)
+U1  ACME-BUCK-3V3  36   designs/gateway/gateway.edn ; datasheet "ACME-BUCK-3V3 Datasheet Rev A" page 3, "Absolute Maximum Ratings" (hand, confidence 1)
+U2  ACME-LDO-1V8   3    designs/gateway/gateway.edn ; datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3)
+
+3 result(s)

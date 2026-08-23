@@ -1,0 +1,7 @@
+# Chapter 7's centrepiece. Four lines carrying the whole chapter: U1 has TWO VIN limits (32
+# recommended, 36 absolute max) cited to different pages, U2 has one from a mock placeholder at
+# confidence 0.3, and only 2 of the board's 19 parts appear at all.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni query examples/tutorial-project/designs/gateway/gateway.edn --params examples/tutorial-project/params 'component.mpn(?r, ?m), param(?m, "VIN", ?max) => ?r, ?m, ?max'
