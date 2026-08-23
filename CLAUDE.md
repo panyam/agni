@@ -134,9 +134,10 @@ Each of these has a fixed edit-list where missing one edit is silent, and a test
 `CONTRIBUTING.md` holds the workflow rules: running several checkouts in parallel (use
 `git -C <abs-path>`, never `git add -A`), the PR workflow (verify a push by its exit code, verify
 `merged: true` via the API, never `gofmt -w` a directory), the three shell traps that have burned
-real work, and the PR prose conventions, which are ordered as a ramp that brings a cold reviewer up
-to speed (the circuit, a hardware primer, named prerequisite reading, then a reviewer's guide opening
-with the ELI12 paragraph, plus before/after images for anything visual).
+real work, and what agni ADDS to the PR body shape defined by the `start_pr` skill (the circuit and
+a hardware primer ahead of the reviewer's guide, which docsite pages the prerequisite block names,
+and the fixture-only rule for rendering captures). The general skeleton lives in the skill, so do
+not copy it back into this repo.
 
 ## Architectural constraints
 

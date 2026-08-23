@@ -142,16 +142,15 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 
 ## PR prose conventions
 
-This engine sits where electrical engineering meets software, and most reviewers are strong in one
-and cold in the other. These sections exist so a PR is reviewable by both, and they work as a ramp
-rather than as a checklist. The order carries the reviewer from the domain nouns, through the idea,
-into the code:
+The shape of a PR body is defined by the **`start_pr` skill**, distributed separately from this
+repo: what changes, prerequisite knowledge, a reviewer's guide that opens with a one-paragraph ELI
+and carries it through the reading order, a decision log, and a before/after artifact. Follow the
+skill rather than a copy kept here, because a copy drifts and this one already had.
 
-1. `## What changes`
-2. `## The circuit, for software readers`, when the semantics depend on hardware behavior
-3. `## Hardware context (for software readers)`, when the diff leans on EE terms
-4. `## Prerequisite knowledge`
-5. `## Reviewer's guide`, opening with the ELI paragraph
+What follows is only what agni adds on top, because this engine sits where electrical engineering
+meets software and most reviewers are strong in one and cold in the other. Two extra sections slot
+into the skill's skeleton ahead of the reviewer's guide, so the local ramp reads: what changes, the
+circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
 
 - **The circuit, for software readers.** When semantics depend on hardware behavior (a rule's
   electrical meaning, derating, rail/pin conventions, why a limit matters physically), add this
@@ -164,40 +163,27 @@ into the code:
   syntax; TVS = pressure-relief valve beside the path, not inline). Define only what the PR actually
   uses. It does not replace the ELI paragraph that follows, since the primer supplies the nouns and
   the ELI supplies the idea.
-- **Prerequisite reading, named.** A `## Prerequisite knowledge` block before the reviewer's guide,
-  listing two to four docsite pages a reviewer would need to evaluate the change, each with a clause
-  saying what it supplies. Pull from `learn/` for domain knowledge, `tutorials/` for tool usage,
-  `architecture/` for design rationale, `build/` for extending the engine. When the PR is about a
-  rule, prefer the LEARN chapter over the rule's catalog entry: the entry explains the check, the
-  chapter explains the instinct. Omit the block when nothing applies, and **say so explicitly when
-  no page covers the change**, which is a signal the course has a gap. Several chapters came from
-  exactly that observation.
-- **ELI12, on every PR, no exceptions.** One paragraph opening the `## Reviewer's guide`, ahead of
-  the numbered reading order, carrying the load-bearing idea through ONE concrete everyday analogy
-  (fire extinguishers for a protection radius; a wiring diagram vs a floor plan for connections vs
-  pin declarations; game mods for the registration vs authoring seam). It explains the IDEA rather
-  than the diff, aimed at a smart reader with no context on this codebase or this domain. Test the
-  analogy against the diff's actual edge case first, because one that breaks under pressure teaches
-  the reviewer something false. Then carry it into the reading order, phrasing a file's one-line
-  note in the analogy's terms wherever that reads clearer, so the idea is still working by step
-  three. Drop it on lines where it does not fit rather than forcing it. If the idea needs more than
-  a paragraph, either it is not yet reduced to its load-bearing part or the PR wants splitting.
+- **Which pages the prerequisite block names.** Pull from `learn/` for domain knowledge,
+  `tutorials/` for tool usage, `architecture/` for design rationale, `build/` for extending the
+  engine. When the PR is about a rule, prefer the LEARN chapter over the rule's catalog entry: the
+  entry explains the check, the chapter explains the instinct. Saying that no page covers the change
+  is a real entry rather than an empty one, and several chapters exist because someone wrote it.
+- **ELI analogies that have carried a PR here.** Fire extinguishers for a protection radius, a
+  wiring diagram vs a floor plan for connections vs pin declarations, game mods for the registration
+  vs authoring seam.
 - **A mermaid label must contain no quote characters, escaped or otherwise.** `&quot;` inside a
   `["..."]` node label decodes to a bare `"`, closes the string early, and GitHub renders a parse
   error instead of the diagram (`got 'STR'`). Write labels as plain text with `<br/>` for line
   breaks and keep the literal strings in the prose above the diagram, which reads better anyway.
   Parse-check before you post rather than after: extract each ` ```mermaid ` block to a file and run
-  `mmdc -i block.mmd -o /dev/null`, which exits non-zero on the syntax GitHub would reject. That
-  catches the whole class without a round trip. Looking at the rendered PR is still the only way to
-  catch a diagram that parses and reads badly.
-- **Visual before/after.** Any PR changing rendering includes an actual image pair under
-  `## Before / after`. **PNG, not SVG**, because GitHub sanitizes SVG in PR bodies. Capture from the
-  showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),
-  `examples/tutorial-project/`, or a tiny hand-authored fixture, **never from a real customer
-  board** (see "What does not belong in this repo" in `CLAUDE.md`). A browser-automation screenshot
-  lands in the CWD, which is the REPO ROOT, and a bare `.png` there is not ignored (`bin/` and
-  `.playwright-mcp/` are), so move captures out of the tree before staging and stage by explicit
-  path. That is the stray-file trap above, narrowed to one file type. To embed the pair, use the
-  committed-asset and pinned-raw-URL pattern from the global CLAUDE.md: commit to `pr-assets/`,
-  reference `.../raw/<full-SHA>/pr-assets/x.png`, then `git rm` it in a follow-up commit so it never
-  reaches `main`.
+  `mmdc -i block.mmd -o /dev/null`, which exits non-zero on the syntax GitHub would reject. Looking
+  at the rendered PR is still the only way to catch a diagram that parses and reads badly.
+- **Rendering captures come from a fixture, never a customer board.** Capture the before/after pair
+  from the showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),
+  `examples/tutorial-project/`, or a tiny hand-authored fixture, for the reasons in `CLAUDE.md`
+  under "What does not belong in this repo". A browser-automation screenshot lands in the CWD, which
+  is the REPO ROOT, and a bare `.png` there is not ignored (`bin/` and `.playwright-mcp/` are), so
+  move captures out of the tree before staging and stage by explicit path. That is the stray-file
+  trap above, narrowed to one file type. To embed the pair, commit the images to `pr-assets/`,
+  reference them as `.../raw/<full-SHA>/pr-assets/x.png` pinned to the commit rather than the
+  branch, then `git rm` them in a follow-up commit so they never reach `main`.
