@@ -44,6 +44,9 @@ Every part has a job, and there are about twenty recurring ones. This is the unl
 - [One net, one decider](../05-who-drives-this-net/#one-net-one-decider-ee3), and what two deciders costs
 - [Two nets, opposite problems](../05-who-drives-this-net/#two-nets-opposite-problems-ee3)
 - [Pins the designer said to leave alone](../05-who-drives-this-net/#pins-the-designer-said-to-leave-alone-ee3)
+- [Most parts do not care](../06-parts-that-care-which-way-round/#most-parts-do-not-care-ee3), which parts have an orientation at all
+- [Here is one, wired backwards](../06-parts-that-care-which-way-round/#here-is-one-wired-backwards-ee3)
+- [What the tool has to know](../06-parts-that-care-which-way-round/#what-the-tool-has-to-know-ee3), the two facts a polarity check needs
 
 ## Failure modes (EE4)
 
@@ -54,6 +57,7 @@ A defect has a symptom, not just a state. Some faults never appear at power-on, 
 - [The failure mode](../03-why-every-chip-needs-capacitors/#the-failure-mode-ee4), why missing decoupling is a warning
 - [Why this one is an error](../04-pull-ups-and-undefined-states/#why-this-one-is-an-error-ee4), and why the other is not
 - [The same fault on a rail](../05-who-drives-this-net/#the-same-fault-on-a-rail-ee4), plus why a passing rule proves nothing
+- [The same wiring, on a different part, is correct](../06-parts-that-care-which-way-round/#the-same-wiring-on-a-different-part-is-correct-ee4), why a topology is not a verdict
 
 ## Numbers (EE5)
 

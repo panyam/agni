@@ -77,4 +77,4 @@ The tool can only see this because a human annotated it, which is the pattern fr
 | [`unconnected-pin`](../../reference/rules/unconnected-pin/) | warning | a pin on no net, without the no-connect annotation that would explain it |
 | [`dl/power-pin-mistyped`](../../reference/rules/dl-power-pin-mistyped/) | warning | a pin named like a supply but not typed as one, sitting alone |
 
-Next: parts that care which way round, the shortest chapter in the course and the one with the most visible failure mode.
+Next: [parts that care which way round](../06-parts-that-care-which-way-round/), the shortest chapter in the course and the one with the most visible failure mode.
