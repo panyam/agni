@@ -835,6 +835,46 @@ single `Eval(Model) []Verdict`.
 
 ---
 
+## A datalog rule's considered set is declared, not derived from its goal
+
+`query.RuleFromQuery` compiles a `FindingQuery` into a rule. Since agni issue 424 a `FindingQuery`
+may carry a `Domain`, a second goal whose rows are the subjects the rule examined, and the obvious
+question is why the bridge does not work that out for itself.
+
+It looks derivable, and for two of the six profile requirements it genuinely is. `unprotected(?n)`
+is `needs_esd(?n), in_use(?iu), not esd_ok(?n)`, so the domain is the body minus its negated literal.
+Generalising that breaks on three of the six, each differently.
+
+**`signal-dangling` has no negation at all.** Its body ends in a comparison, `net.pin_count(?n, ?c),
+?c < 2`, so "the body minus its negation" is the body, and the rule would report the subjects it
+faulted as the subjects it considered. That is the exact false-assurance shape one level down from
+the rule-level decision above.
+
+**`signal-missing` has two negated literals and only one is the test.** `not has_signal(S)` is what
+the rule checks; the host guard `not any_host("y")` is SCOPE, because a design that declares a host
+is covered by the precise host path and was never in the convention rule's domain. Nothing in the
+syntax distinguishes them, and dropping the guard would report every host-annotated design as
+considered here and pass it twice.
+
+**`crystal-load-caps` negates its exemption beside its test.** `not net.external(?net)` excuses a
+terminal that leaves the board, because its load capacitor is on somebody else's sheet. Sweeping the
+exemption into the domain reports that terminal as a PASS, claiming the rule confirmed a capacitor it
+never looked for. A refusal to judge is not a verdict.
+
+The same distinction applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
+domain, because that predicate asks whether the FORMAT can answer rather than whether the pin passes.
+
+So the split between test and scope is semantic, invisible to the syntax, and known only to the
+author. A derivation right four times in six OVERSTATES coverage on the other two, which is worse
+than stating none, and an author who supplies nothing gets the failures-only shape that claims
+nothing at all.
+
+**Reopen if** a goal-body annotation appears that marks a literal as scope rather than test. That
+would move the knowledge into the data instead of inferring it, which is a different proposal and a
+reasonable one.
+
+---
+
 ## The check report is HTML, and its templates are not a feature
 
 `agni check --verdicts --format html` renders a report; there is no markdown form, and no way to

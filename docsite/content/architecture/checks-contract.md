@@ -242,6 +242,15 @@ reaching a rail through a resistor) therefore carries no terms at all, which is 
 gap. `context` excludes the subject, which `subject` already names, so a consumer draws
 subject-as-figure over context-as-ground.
 
+**A FAILING verdict needs a witness too, and forgetting one is silent in-process.** The wire form of
+a `Verdict` deliberately carries no `Finding`, because a defect travels once in `findings`. So a
+failing verdict whose only sentence lives on its `Finding` renders correctly for any consumer holding
+the Go value and renders BLANK for every consumer that reads verdicts back from the service, which
+includes the CLI's own verdict report. `check.FailuresOnly` omits the witness on purpose, since an
+unconverted rule has no proof to show; the moment a rule converts, that omission becomes a bug. It
+was caught by regenerating the docsite captures rather than by any test, which is why converting a
+rule means looking at rendered output and not only at a green package.
+
 ### A verdict's subject is a TUPLE
 
 `verdict.subjects` is the entities the rule quantified over, in the rule's own order. Most rules name

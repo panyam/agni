@@ -133,6 +133,13 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates
   ONCE over the whole blob, and a sweep that did this compared one file and reported success. Glob
   directly in the `for`, or use an array.
+- **To undo a temporary red-check edit, reverse it with the tool that made it, never `git checkout`.**
+  `git checkout <file>` and `git checkout HEAD -- <file>` restore from a COMMIT, not from "before I
+  typed that", so on a file carrying uncommitted work they destroy all of it including the change the
+  red-check was proving. This cost real work three times in one session. Commit first, even a WIP
+  commit, before any red-check pass; then break and un-break with the same replace run applied
+  backwards. The symptom is confusing rather than obvious, since a test that just passed starts
+  failing and the cause looks like the change rather than the undo.
 - **Use `git worktree add <tmp> main`, never `git stash`, to reconstruct a whole BEFORE state** such
   as a "before" binary. Stash leaves untracked new files on disk referencing stashed-away code.
   Stashing ONE tracked file (`git stash push -- path/to/file.go`, run the test, pop) is a different
@@ -168,6 +175,12 @@ circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
   engine. When the PR is about a rule, prefer the LEARN chapter over the rule's catalog entry: the
   entry explains the check, the chapter explains the instinct. Saying that no page covers the change
   is a real entry rather than an empty one, and several chapters exist because someone wrote it.
+- **Link a prerequisite page to the PUBLISHED site**, not to a repo path, since a relative path does
+  not resolve in a PR body. The site is `https://panyam.github.io/agni/`, one URL per page at
+  `/<section>/<page-basename-without-.md>/`, and a heading anchor is the slugified heading. When the
+  PR CHANGES a page it names, link both: the published page reads better, and it serves `main`, so
+  the reviewer needs the PR-diff link to see the new text. Saying which is which takes a clause and
+  saves a reviewer reading the version the PR exists to replace.
 - **ELI analogies that have carried a PR here.** Fire extinguishers for a protection radius, a
   wiring diagram vs a floor plan for connections vs pin declarations, game mods for the registration
   vs authoring seam.
