@@ -134,8 +134,9 @@ Each of these has a fixed edit-list where missing one edit is silent, and a test
 `CONTRIBUTING.md` holds the workflow rules: running several checkouts in parallel (use
 `git -C <abs-path>`, never `git add -A`), the PR workflow (verify a push by its exit code, verify
 `merged: true` via the API, never `gofmt -w` a directory), the three shell traps that have burned
-real work, and the PR prose conventions (ELI12 on every PR, a hardware primer, before/after images
-for anything visual).
+real work, and the PR prose conventions, which are ordered as a ramp that brings a cold reviewer up
+to speed (the circuit, a hardware primer, named prerequisite reading, then a reviewer's guide opening
+with the ELI12 paragraph, plus before/after images for anything visual).
 
 ## Architectural constraints
 
