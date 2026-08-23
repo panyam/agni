@@ -1,4 +1,5 @@
 # The EE4 section: the finding as it reads in a report, with its severity.
 fixture: examples/tutorial-project
+from_root: true
 script: |
-  agni check --rule decoupling-present designs/gateway/gateway.edn
+  agni check --rule decoupling-present examples/tutorial-project/designs/gateway/gateway.edn

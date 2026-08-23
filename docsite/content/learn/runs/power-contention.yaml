@@ -1,4 +1,5 @@
 # Chapter 5: the same defect on a power rail rather than a signal, where the two drivers are supplies.
 fixture: cmd/agni/testdata/conformance
+from_root: true
 script: |
-  agni check --rule output-output-conflict powerpins.fires.kicad_sch
+  agni check --rule output-output-conflict cmd/agni/testdata/conformance/powerpins.fires.kicad_sch

@@ -7,11 +7,19 @@ Open an unfamiliar schematic and it looks like several hundred arbitrary compone
 
 Two facts close it. A board is made of **very few kinds of thing**. And each of those things is doing one of a **small number of recurring jobs**, which you can usually identify from what it connects to.
 
-**Prerequisites:** EE1. You know that a resistor resists, a capacitor stores charge, and a chip does something complicated in the middle.
+**Prerequisites:** [EE1](../levels/#parts-ee1). You know that a resistor resists, a capacitor stores charge, and a chip does something complicated in the middle.
+
+**Levels on this page:** [EE1](../levels/#parts-ee1), [EE2](../levels/#nets-ee2), [EE3](../levels/#roles-ee3). Each links to [what that level means](../levels/).
 
 ## A board is a few kinds of thing (EE1)
 
-Ask the tool what is actually on the tutorial board:
+Here is the board the rest of this chapter asks questions about. You are not meant to read it yet, only to notice how few *kinds* of thing are on it:
+
+![The tutorial gateway board, drawn from its declared schematic companion]({{.Site.PathPrefix}}/static/images/learn/gateway.svg)
+
+That drawing came from `agni render examples/tutorial-project/designs/gateway`, which is worth knowing early: pointing the tool at a design rather than at a file lets it use whichever artifact answers the question, and for a picture that is the schematic the design declares.
+
+Now ask what is actually on it:
 
 {{ agniRun "content/learn/runs/board-classes.yaml" }}
 

@@ -2,5 +2,6 @@
 # exactly the two nets chapter 1 used to teach reading a pull-up and a series resistor. The reader
 # can now answer a question the tool deliberately will not.
 fixture: examples/tutorial-project
+from_root: true
 script: |
-  agni check --verdicts --rule floating-input designs/gateway/gateway.edn
+  agni check --verdicts --rule floating-input examples/tutorial-project/designs/gateway/gateway.edn

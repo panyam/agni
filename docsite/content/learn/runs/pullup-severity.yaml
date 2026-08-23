@@ -1,5 +1,6 @@
 # Chapter 4's EE4 section. Two defects on one board at different severities, so the reader can see
 # that severity encodes "does it work at all" rather than "how sure are we".
 fixture: examples/tutorial-project
+from_root: true
 script: |
-  agni check --rule i2c-pull-up --rule floating-input --rule decoupling-present designs/gateway/gateway.edn
+  agni check --rule i2c-pull-up --rule floating-input --rule decoupling-present examples/tutorial-project/designs/gateway/gateway.edn

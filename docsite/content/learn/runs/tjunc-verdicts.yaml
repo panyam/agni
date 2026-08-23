@@ -1,11 +1,12 @@
 # Chapter 2: the same pair through the rule, so the reader sees the fail and the pass side by side.
 fixture: readers/kicad/testdata
+from_root: true
 script: |
   echo "no dot:"
-  agni check --verdicts --rule wire-no-junction tjunc.kicad_sch
+  agni check --verdicts --rule wire-no-junction readers/kicad/testdata/tjunc.kicad_sch
   echo
   echo "with the dot:"
-  agni check --verdicts --rule wire-no-junction tjunc_dotted.kicad_sch
+  agni check --verdicts --rule wire-no-junction readers/kicad/testdata/tjunc_dotted.kicad_sch
 show: |
-  agni check --verdicts --rule wire-no-junction tjunc.kicad_sch
-  agni check --verdicts --rule wire-no-junction tjunc_dotted.kicad_sch
+  agni check --verdicts --rule wire-no-junction readers/kicad/testdata/tjunc.kicad_sch
+  agni check --verdicts --rule wire-no-junction readers/kicad/testdata/tjunc_dotted.kicad_sch

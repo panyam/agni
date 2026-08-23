@@ -91,6 +91,25 @@ type runSpec struct {
 	// `mv params params-old`) cannot mutate the checked-in fixture. That is not hypothetical: doing it
 	// by hand once left the real params/ renamed and two stray artifacts in the tree.
 	Fixture string `yaml:"fixture"`
+	// FromRoot runs the script at the scratch ROOT with the fixture at its full relative path, so
+	// commands read exactly as a reader would type them standing in a clone.
+	//
+	// The default is the opposite, and deliberately so: the tutorials establish one working directory
+	// at the top of the course ("cd agni/examples/tutorial-project") and every rung is relative to it,
+	// which is how somebody actually works through them. The learn course has no such setting, since a
+	// chapter reaches for whichever fixture demonstrates its point, so a bare `designs/gateway...`
+	// there is a path the reader cannot use and cannot locate without searching.
+	//
+	// It is a mode rather than something a spec fakes with `show` so that the command displayed is
+	// exactly the command that ran. `show` exists to hide plumbing, and using it to swap in a
+	// different PATH would put an untested command in front of the reader: nothing would check that
+	// the displayed form still resolves, which is the class of rot the whole generated-capture
+	// mechanism exists to remove.
+	//
+	// Output is unaffected either way. Provenance and resolution notes are reported relative to the
+	// design's project rather than to the invocation, so `designs/gateway/gateway.edn` reads the same
+	// from either working directory.
+	FromRoot bool `yaml:"from_root"`
 	// Script is the shell to run. A shell rather than an argv because the transcripts show `echo $?`
 	// to teach exit codes, and some pipe through `head`.
 	Script string `yaml:"script"`
@@ -283,8 +302,20 @@ func execute(spec runSpec) (string, error) {
 	defer os.RemoveAll(dir)
 	work := dir
 	if spec.Fixture != "" {
-		work = filepath.Join(dir, filepath.Base(spec.Fixture))
-		if out, err := exec.Command("cp", "-R", filepath.Join("..", spec.Fixture), work).CombinedOutput(); err != nil {
+		// Where the copy LANDS is what decides how paths read in the block. Under from_root it keeps
+		// its full relative path and the script runs at the scratch root, so `examples/x/y.edn` is
+		// both what runs and what a reader can type; otherwise it lands as a bare basename and the
+		// script runs inside it, which is the tutorials' cd-once-then-work-relative shape.
+		dest := filepath.Join(dir, filepath.Base(spec.Fixture))
+		if spec.FromRoot {
+			dest = filepath.Join(dir, spec.Fixture)
+			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+				return "", fmt.Errorf("preparing fixture path: %w", err)
+			}
+		} else {
+			work = dest
+		}
+		if out, err := exec.Command("cp", "-R", filepath.Join("..", spec.Fixture), dest).CombinedOutput(); err != nil {
 			return "", fmt.Errorf("copying fixture: %v: %s", err, out)
 		}
 	}

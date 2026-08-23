@@ -7,6 +7,8 @@ description: "Every net needs exactly one thing deciding its voltage. What happe
 
 **Prerequisites:** [Chapter 4](../04-pull-ups-and-undefined-states/), particularly the open-drain section.
 
+**Levels on this page:** [EE3](../levels/#roles-ee3), [EE4](../levels/#failure-modes-ee4). Each links to [what that level means](../levels/).
+
 ## One net, one decider (EE3)
 
 A net's voltage has to be decided by something. An output pin decides it by connecting the wire either to the supply rail or to ground, through a transistor, and whichever it picks the rest of the net follows.

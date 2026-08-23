@@ -9,6 +9,8 @@ A wire nothing drives does not sit at zero volts. It does not sit anywhere. This
 
 **Prerequisites:** [Chapter 1](../01-what-a-board-is-made-of/) for the idea that a part's job is readable from what it connects to.
 
+**Levels on this page:** [EE3](../levels/#roles-ee3), [EE4](../levels/#failure-modes-ee4), [EE5](../levels/#numbers-ee5). Each links to [what that level means](../levels/).
+
 ## Nothing is a voltage nothing has (EE3)
 
 A logic input on a modern chip is the gate of a MOSFET, and a gate is one plate of a very small capacitor with an insulating layer underneath. Almost no current flows into it. The input leakage on a typical part is measured in nanoamps, which means the input presents an impedance of hundreds of megohms or more.

@@ -7,7 +7,9 @@ Here is a question that sounds trivial and is not: **are these two pins connecte
 
 You would think you could tell by looking. Two wires meet on the page, so they are joined. A wire runs from a pin to somewhere, so that pin is on that net. Neither of those is reliably true, and the gap between what a schematic *looks like* and what it *means* is where a particular class of expensive bug lives.
 
-**Prerequisites:** EE1, and [chapter 1](../01-what-a-board-is-made-of/) for what the parts are doing.
+**Prerequisites:** [EE1](../levels/#parts-ee1), and [chapter 1](../01-what-a-board-is-made-of/) for what the parts are doing.
+
+**Levels on this page:** [EE2](../levels/#nets-ee2). Each links to [what that level means](../levels/).
 
 ## The drawing is a rendering (EE2)
 
@@ -20,6 +22,14 @@ This chapter is about those disagreements. A tool that reads the netlist looks a
 ## One dot changes the circuit (EE2)
 
 The clearest case. Two schematics, three components each, the same wires in the same places. They differ by a single construct, a junction dot placed where a tap wire meets a horizontal one. (Their title blocks differ too, so you can tell which file you are looking at.)
+
+Here they are. Look for the difference before reading on.
+
+![A tap wire meeting a horizontal wire with no junction dot]({{.Site.PathPrefix}}/static/images/learn/tjunc.svg)
+
+![The same three parts and the same wires, with a junction dot at the meeting point]({{.Site.PathPrefix}}/static/images/learn/tjunc-dotted.svg)
+
+The second has a dot where the vertical wire meets the horizontal one. That is the entire difference, and it is the sort of mark that survives a design review unnoticed on a dense sheet.
 
 {{ agniRun "content/learn/runs/tjunc-nets.yaml" }}
 
