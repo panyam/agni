@@ -1,0 +1,8 @@
+# Chapter 7's payoff. The SAME finding `check` reports as [error] reads as `provisional` in a review,
+# because the row it rests on is mock at confidence 0.3, below the trust floor. `match` selects the
+# checklist row by shape rather than by line number, per docsite/README.md.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni review examples/tutorial-project/designs/gateway --checklist examples/tutorial-project/review.yaml
+match: '^\| P4 \|'
