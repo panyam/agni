@@ -1,0 +1,9 @@
+# The EE3 section: what the rule concluded about every rail, not only the one that failed.
+# The pass names the capacitor, which is the thing a reader can go and confirm on the schematic.
+#
+# decoupling-present alone, NOT bulk-cap beside it: bulk-cap scopes on net attributes that only the
+# geometry readers set, so it has no subject at all on this EDIF board (agni issue 426) and showing
+# it here would teach its silence as "this board is fine".
+fixture: examples/tutorial-project
+script: |
+  agni check --verdicts --rule decoupling-present designs/gateway/gateway.edn

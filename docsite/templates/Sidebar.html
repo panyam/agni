@@ -1,5 +1,6 @@
 {{# include "nav/TutorialNav.html" #}}
 {{# include "nav/GuideNav.html" #}}
+{{# include "nav/LearnNav.html" #}}
 {{# include "nav/BuildNav.html" #}}
 {{# include "nav/ArchitectureNav.html" #}}
 {{# include "nav/ReferenceNav.html" #}}
@@ -21,6 +22,8 @@
                 {{ template "TutorialNav" . }}
             {{ else if (Contains $currentPath "/guide/") }}
                 {{ template "GuideNav" . }}
+            {{ else if (Contains $currentPath "/learn/") }}
+                {{ template "LearnNav" . }}
             {{ else if (Contains $currentPath "/build/") }}
                 {{ template "BuildNav" . }}
             {{ else if (Contains $currentPath "/architecture/") }}
@@ -38,6 +41,7 @@
                     <ul>
                         <li><a href="{{.Site.PathPrefix}}/tutorials/">Tutorials</a></li>
                         <li><a href="{{.Site.PathPrefix}}/guide/">Use it</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/learn/">Learn the domain</a></li>
                         <li><a href="{{.Site.PathPrefix}}/build/">Build on it</a></li>
                         <li><a href="{{.Site.PathPrefix}}/architecture/">Understand it</a></li>
                         <li><a href="{{.Site.PathPrefix}}/reference/">Reference</a></li>
