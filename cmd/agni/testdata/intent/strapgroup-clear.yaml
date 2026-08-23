@@ -1,0 +1,12 @@
+# The same two PHYs on the same MDIO bus, declared as they would be if U13's datasheet numbered its
+# address pins the other way round. Nothing in a netlist says which strap pin is the high bit, so the
+# declaration's net ORDER is what states it (MSB first), and reversing that order reads the same three
+# resistors as 4 rather than 1.
+#
+# This is the fixture for the case that used to be invisible: both groups encode their declared value
+# AND the two devices answer to different addresses, so every rule here passes. Before agni issue 391's
+# work on this rule that produced no output at all, which is what a bus nobody declared produced.
+name: strap group clearance demo
+strap_groups:
+  - {name: PHYAD U12, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 1, bus: MDIO}
+  - {name: PHYAD U13, device: U13, nets: [PHY2AD0, PHY2AD1, PHY2AD2], value: 4, bus: MDIO}

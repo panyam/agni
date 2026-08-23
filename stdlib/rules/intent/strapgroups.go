@@ -230,82 +230,150 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		Remedy:   intentRemedy(RuleStrapAddressCollision),
 		Reads:    []string{"component-on-net", "component.class", "net.ground", "rail"},
 		Tags:     intentTags(),
-		// THE ONE INTENT RULE THAT CANNOT STATE A CONSIDERED SET, and the obstacle is arity rather than
-		// evidence (agni issue 391).
+		// The subject is a PAIR of devices, which is what let this rule state a considered set after
+		// being the one intent rule that could not (agni issue 391).
 		//
-		// Its subject is the SET OF DEVICES sharing an address, and that set is 2 on one bus and 4 on
-		// the next, INSIDE ONE RULE. Rule.SubjectShape is fixed per rule, which is what lets a consumer
-		// index a rule's verdicts and a person construct an id without running the check; a rule whose
-		// arity moves between subjects satisfies none of that, and TestSubjectShapeHolds says so.
-		//
-		// The strap-group rules next door look identical and are not: each declared group compiles to
-		// its OWN rule, so strapShape computes a fixed arity per rule instance. This rule is one rule
-		// over every group, which is what makes the difference.
-		//
-		// A per-BUS subject would fix the arity and needs a kind this vocabulary does not have. A
-		// declared logical bus is not KindBus, which is a DRAWN construct carrying a geometry join key;
-		// using it would send a viewer looking for wires that do not exist.
-		Eval: check.FailuresOnly(func(m check.Model) []check.Finding {
-			type decoded struct {
-				g     StrapGroup
-				value int
-			}
-			byBus := map[string][]decoded{}
-			for _, g := range groups {
-				if g.Bus == "" {
-					continue // opted out: not an address on any shared bus
-				}
-				missing := false
-				for _, netName := range g.Nets {
-					if netNamed(m, netName) == nil {
-						missing = true
-					}
-				}
-				if missing {
+		// The obstacle was never evidence, it was arity, and the arity was being read off the wrong
+		// thing. A collision REPORT is about however many devices share an address, which is 2 on one
+		// bus and 4 on the next inside one rule, and Rule.SubjectShape is fixed per rule. But the
+		// QUESTION the rule answers is binary: do these two devices strap to the same number. Three
+		// devices sharing an address is three yes answers to that question, not one answer about three
+		// devices. Pairs give a fixed shape without inventing a subject kind.
+		SubjectShape:        []string{check.KindComponent, check.KindComponent},
+		Eval:                func(m check.Model) []check.Verdict { return strapCollisionVerdicts(m, groups) },
+		StatesConsideredSet: true,
+	}
+}
+
+// strapReading is one group's decoded address, or the reason it has none.
+type strapReading struct {
+	value int
+	ok    bool
+	why   string // why the address could not be read, when ok is false
+}
+
+// readGroup decodes one declared group once, so a bus with n groups decodes n times rather than once
+// per pair.
+//
+// Both failure modes are kept as REASONS rather than collapsed into a bool. Under the old
+// failures-only body each was a bare `continue` and reached the report as the same silence a
+// correctly-addressed pair produced; a pair this rule declines to judge now says which half it could
+// not read and why.
+func readGroup(m check.Model, g StrapGroup) strapReading {
+	for _, netName := range g.Nets {
+		if netNamed(m, netName) == nil {
+			return strapReading{why: fmt.Sprintf("the design carries no net named %q", netName)}
+		}
+	}
+	v, bits, ok := groupValue(m, g)
+	if !ok {
+		return strapReading{why: fmt.Sprintf("%s carry no bias and the group declares no default level, so its address is unknown",
+			strings.Join(undecidedNets(bits), ", "))}
+	}
+	return strapReading{value: v, ok: true}
+}
+
+// strapCollisionVerdicts decides every PAIR of declared groups sharing a bus.
+//
+// A pass is the sentence this rule existed to be unable to say. Two parts on one bus straping to
+// different addresses is the ordinary, correct state of every board, and it used to report exactly
+// what a bus nobody declared reported, and what a pair whose addresses could not be read reported,
+// which is nothing.
+//
+// AN UNREADABLE GROUP IS NOT-CONSIDERED, NEVER A PASS, and that is the guard the old body already
+// had in a weaker form. Decoding a group with unevidenced bits would invent an address, and an
+// invented address can invent a COLLISION: a confident accusation that two innocent parts clash is
+// worse than saying nothing. It can equally invent the absence of one, which is what a pass over an
+// unreadable group would assert. The old body dropped such a group before any comparison, so the
+// pairs it belonged to left no trace at all.
+func strapCollisionVerdicts(m check.Model, groups []StrapGroup) []check.Verdict {
+	read := make([]strapReading, len(groups))
+	byBus := map[string][]int{}
+	for i, g := range groups {
+		if g.Bus == "" {
+			continue // opted out: not an address on any shared bus
+		}
+		read[i] = readGroup(m, g)
+		byBus[g.Bus] = append(byBus[g.Bus], i)
+	}
+
+	var out []check.Verdict
+	for _, bus := range sortedKeys(byBus) {
+		idx := byBus[bus]
+		for i := 0; i < len(idx); i++ {
+			for j := i + 1; j < len(idx); j++ {
+				ga, gb := groups[idx[i]], groups[idx[j]]
+				if ga.Device == gb.Device {
+					// NOT a subject. This rule is about two PARTS answering one address, and one part
+					// declaring two groups on a bus is a declaration to read, not a bus fault. A verdict
+					// here would also name the same device twice and key on itself.
 					continue
 				}
-				v, _, ok := groupValue(m, g)
-				if !ok {
-					continue // undecidable: never invent an address, and never a collision from one
-				}
-				byBus[g.Bus] = append(byBus[g.Bus], decoded{g: g, value: v})
+				out = append(out, strapPairVerdict(bus, ga, gb, read[idx[i]], read[idx[j]]))
 			}
-
-			var out []check.Finding
-			for _, bus := range sortedKeys(byBus) {
-				seen := map[int][]decoded{}
-				for _, d := range byBus[bus] {
-					seen[d.value] = append(seen[d.value], d)
-				}
-				for _, v := range sortedIntKeys(seen) {
-					clash := seen[v]
-					if len(clash) < 2 {
-						continue
-					}
-					names := make([]string, 0, len(clash))
-					// Built in the same pass as the message, so the chips and the sentence cannot list
-					// the devices in different orders. `decoded` is local to this function, which is why
-					// this is inline rather than a helper.
-					devices := make([]check.ContextSubject, 0, len(clash))
-					for _, d := range clash {
-						names = append(names, fmt.Sprintf("%s (%s)", d.g.Device, d.g.Name))
-						devices = append(devices, check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: d.g.Device}, Role: "device"})
-					}
-					out = append(out, check.Finding{
-						Subject: check.Entity{Kind: check.KindNet, Ref: clash[0].g.Nets[0]},
-						Message: fmt.Sprintf("%s both strap to address %d on bus %s; two devices answering one address make that bus unreliable",
-							strings.Join(names, " and "), v, bus),
-						// Both colliding devices, in message order. This is the case that made context a
-						// LIST with non-unique roles rather than one entity per part: two entities play
-						// exactly the same role here (agni issue 349). The bus is a declared label from
-						// the intent file, not a design entity, so it is not context.
-						Context: devices,
-					})
-				}
-			}
-			return out
-		}),
+		}
 	}
+	return out
+}
+
+// strapPairVerdict answers the one binary question for one pair.
+func strapPairVerdict(bus string, ga, gb StrapGroup, ra, rb strapReading) check.Verdict {
+	v := check.Verdict{Subjects: []check.Entity{check.ComponentEntity(ga.Device), check.ComponentEntity(gb.Device)}}
+	switch {
+	case !ra.ok && !rb.ok:
+		v.Outcome = check.NotConsidered
+		v.Reason = fmt.Sprintf("neither address on bus %s could be read: %s for %s, and %s for %s",
+			bus, ra.why, ga.Device, rb.why, gb.Device)
+		return v
+	case !ra.ok, !rb.ok:
+		unread, other := ga, gb
+		why := ra.why
+		if ra.ok {
+			unread, other, why = gb, ga, rb.why
+		}
+		v.Outcome = check.NotConsidered
+		v.Reason = fmt.Sprintf("%s's address on bus %s could not be read (%s), so it cannot be compared with %s",
+			unread.Device, bus, why, other.Device)
+		return v
+	case ra.value != rb.value:
+		v.Outcome = check.Pass
+		v.Witness = &check.Witness{
+			Statement: fmt.Sprintf("%s straps to %d and %s to %d on bus %s, so the two answer to different addresses",
+				ga.Device, ra.value, gb.Device, rb.value, bus),
+			Terms: []check.WitnessTerm{
+				{Label: ga.Device, Value: fmt.Sprint(ra.value)},
+				{Label: gb.Device, Value: fmt.Sprint(rb.value)},
+				{Label: "bus", Value: bus},
+			},
+		}
+		return v
+	}
+
+	names := []string{fmt.Sprintf("%s (%s)", ga.Device, ga.Name), fmt.Sprintf("%s (%s)", gb.Device, gb.Name)}
+	msg := fmt.Sprintf("%s both strap to address %d on bus %s; two devices answering one address make that bus unreliable",
+		strings.Join(names, " and "), ra.value, bus)
+	v.Outcome = check.Fail
+	v.Witness = &check.Witness{
+		Statement: msg,
+		Terms: []check.WitnessTerm{
+			{Label: ga.Device, Value: fmt.Sprint(ra.value)},
+			{Label: gb.Device, Value: fmt.Sprint(rb.value)},
+			{Label: "bus", Value: bus},
+		},
+	}
+	v.Finding = &check.Finding{
+		Subject: check.Entity{Kind: check.KindNet, Ref: ga.Nets[0]},
+		Message: msg,
+		// Both colliding devices, in message order. This is the case that made context a LIST with
+		// non-unique roles rather than one entity per part: two entities play exactly the same role
+		// here (agni issue 349). The bus is a declared label from the intent file, not a design
+		// entity, so it is not context.
+		Context: []check.ContextSubject{
+			{Entity: check.Entity{Kind: check.KindComponent, Ref: ga.Device}, Role: "device"},
+			{Entity: check.Entity{Kind: check.KindComponent, Ref: gb.Device}, Role: "device"},
+		},
+	}
+	return v
 }
 
 func sortedKeys[V any](m map[string]V) []string {
@@ -314,15 +382,6 @@ func sortedKeys[V any](m map[string]V) []string {
 		out = append(out, k)
 	}
 	sort.Strings(out)
-	return out
-}
-
-func sortedIntKeys[V any](m map[int]V) []int {
-	out := make([]int, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Ints(out)
 	return out
 }
 
