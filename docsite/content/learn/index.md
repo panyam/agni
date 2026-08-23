@@ -11,17 +11,19 @@ The observation they are organized around: **on a real board, most of the passiv
 
 ## The seven levels
 
+Each links to [its full definition](levels/), which also maps every section of the course that operates at that level.
+
 Each level is defined by a question you can answer, not by a topic you have read about. The test is the definition, so a level you cannot demonstrate is a level you have not got.
 
 | | Level | The question you can answer | What is new at this level | Where the tool checks it |
 |---|---|---|---|---|
-| **EE1** | Parts | "What is that component?" | Ohm's law. What a resistor, capacitor, inductor, diode and transistor each do on their own. | nothing yet; this is the floor |
-| **EE2** | Nets | "Are these two pins connected?" | The drawing is not the circuit. A schematic is a graph, and several things that look like connections are not. | `integrity`, and the structural half of `connectivity` |
-| **EE3** | Roles | "Why is *that* resistor there?" | Every part has a job. There are about twenty recurring jobs and they cover most of a board. | most of `connectivity` and `power` |
-| **EE4** | Failure modes | "How does this break, and what does the bench see?" | A defect has a symptom, not just a state. Some faults never appear at power-on. | severity, the `Impact` field, triage and review |
-| **EE5** | Numbers | "Is this within spec, and which datasheet row says so?" | Absolute maximum versus recommended operating. Derating, tolerance, worst case. | the `datasheet` category and the parameter layer |
-| **EE6** | Systems | "What has to come up first, and what feeds what?" | A board is a power tree with a sequence, a current budget, and interfaces that carry requirements. | the design-intent layer and the `profile/` family |
-| **EE7** | Layout | "Why must that capacitor be *at* the pin?" | Where a part physically sits changes what it does electrically. | the `board` category and the geometry tier |
+| **[EE1](levels/#parts-ee1)** | Parts | "What is that component?" | Ohm's law. What a resistor, capacitor, inductor, diode and transistor each do on their own. | nothing yet; this is the floor |
+| **[EE2](levels/#nets-ee2)** | Nets | "Are these two pins connected?" | The drawing is not the circuit. A schematic is a graph, and several things that look like connections are not. | `integrity`, and the structural half of `connectivity` |
+| **[EE3](levels/#roles-ee3)** | Roles | "Why is *that* resistor there?" | Every part has a job. There are about twenty recurring jobs and they cover most of a board. | most of `connectivity` and `power` |
+| **[EE4](levels/#failure-modes-ee4)** | Failure modes | "How does this break, and what does the bench see?" | A defect has a symptom, not just a state. Some faults never appear at power-on. | severity, the `Impact` field, triage and review |
+| **[EE5](levels/#numbers-ee5)** | Numbers | "Is this within spec, and which datasheet row says so?" | Absolute maximum versus recommended operating. Derating, tolerance, worst case. | the `datasheet` category and the parameter layer |
+| **[EE6](levels/#systems-ee6)** | Systems | "What has to come up first, and what feeds what?" | A board is a power tree with a sequence, a current budget, and interfaces that carry requirements. | the design-intent layer and the `profile/` family |
+| **[EE7](levels/#layout-ee7)** | Layout | "Why must that capacitor be *at* the pin?" | Where a part physically sits changes what it does electrically. | the `board` category and the geometry tier |
 
 The levels are cumulative and the numbering is not a ranking of people. A working engineer operates at EE7 on the two subsystems they own and at EE3 on the rest of the board, which is the normal shape of the job rather than a gap.
 

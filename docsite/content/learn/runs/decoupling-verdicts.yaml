@@ -5,5 +5,6 @@
 # geometry readers set, so it has no subject at all on this EDIF board (agni issue 426) and showing
 # it here would teach its silence as "this board is fine".
 fixture: examples/tutorial-project
+from_root: true
 script: |
-  agni check --verdicts --rule decoupling-present designs/gateway/gateway.edn
+  agni check --verdicts --rule decoupling-present examples/tutorial-project/designs/gateway/gateway.edn

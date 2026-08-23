@@ -1,4 +1,4 @@
-.PHONY: run build components node-deps search-index preview gh-pages clean
+.PHONY: run build components node-deps search-index preview figures gh-pages clean
 
 # Dev server with live reload on http://localhost:8085/agni/. Builds the
 # playground bundles first so a page that opts into one (front-matter
@@ -40,6 +40,12 @@ search-index: node-deps
 
 clean:
 	rm -rf dist static/js/gen
+
+# Re-render the schematics the learn course embeds. Not in the gate; see figures.sh.
+figures:
+	@./figures.sh
+	@git status --short -- static/images/learn || true
+	@echo "learn figures regenerated; review the diff above before committing"
 
 # Fold ONE built page into a self-contained HTML file for reviewing a branch before it merges.
 #   make -C docsite preview PAGE=learn/05-who-drives-this-net

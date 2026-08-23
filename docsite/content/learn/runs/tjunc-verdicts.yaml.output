@@ -1,4 +1,4 @@
-#agni-run 53947e322db29f45
+#agni-run d65354a6192ef331
 no dot:
 wire-no-junction  1 fail
     fail  65000000,-50000000  the endpoint lands on another wire's body and nothing joins them

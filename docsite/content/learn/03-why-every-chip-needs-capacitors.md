@@ -5,7 +5,9 @@ description: "Decoupling and bulk, explained at four levels, with the rules that
 
 Open any board and you will find capacitors scattered around every chip, usually more of them than anything else. This page is about why, and it is the best single example of the [level ladder](../), because the same capacitor is a different question at four different levels and the tool checks it at a different tier each time.
 
-**Prerequisites:** EE1 (you know a capacitor stores charge) and EE2 (you can read a schematic as a graph of nets).
+**Prerequisites:** [EE1](../levels/#parts-ee1) (you know a capacitor stores charge) and [EE2](../levels/#nets-ee2) (you can read a schematic as a graph of nets).
+
+**Levels on this page:** [EE3](../levels/#roles-ee3), [EE4](../levels/#failure-modes-ee4), [EE5](../levels/#numbers-ee5), [EE7](../levels/#layout-ee7). Each links to [what that level means](../levels/).
 
 ## The role (EE3)
 

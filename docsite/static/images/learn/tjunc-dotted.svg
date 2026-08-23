@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680.0" height="1211.3" viewBox="0 0 1680.0 1211.3" font-family="Arial, 'Liberation Sans', Helvetica, sans-serif">
+<rect x="0.0" y="0.0" width="1680.0" height="1211.3" fill="#fdfdfb"/>
+<rect fill="none" stroke="#8a6d3b" stroke-width="0.8" x="62.6" y="62.6" width="1554.7" height="1086.1"/>
+<text x="192.2" y="73.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
+<text x="192.2" y="1137.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">6</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="321.8,62.6 321.8,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="321.8,1148.7 321.8,1135.1"/>
+<text x="451.3" y="73.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<text x="451.3" y="1137.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">5</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="580.9,62.6 580.9,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="580.9,1148.7 580.9,1135.1"/>
+<text x="710.4" y="73.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<text x="710.4" y="1137.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">4</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="840.0,62.6 840.0,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="840.0,1148.7 840.0,1135.1"/>
+<text x="969.6" y="73.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<text x="969.6" y="1137.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">3</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1099.1,62.6 1099.1,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1099.1,1148.7 1099.1,1135.1"/>
+<text x="1228.7" y="73.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<text x="1228.7" y="1137.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">2</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1358.2,62.6 1358.2,76.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1358.2,1148.7 1358.2,1135.1"/>
+<text x="1487.8" y="73.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="1487.8" y="1137.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">1</text>
+<text x="73.9" y="198.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">A</text>
+<text x="1606.1" y="198.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">A</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="62.6,334.1 76.2,334.1"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1617.4,334.1 1603.8,334.1"/>
+<text x="73.9" y="469.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">B</text>
+<text x="1606.1" y="469.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">B</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="62.6,605.7 76.2,605.7"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1617.4,605.7 1603.8,605.7"/>
+<text x="73.9" y="741.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">C</text>
+<text x="1606.1" y="741.4" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">C</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="62.6,877.2 76.2,877.2"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.8" points="1617.4,877.2 1603.8,877.2"/>
+<text x="73.9" y="1012.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">D</text>
+<text x="1606.1" y="1012.9" font-size="14.9" text-anchor="middle" dominant-baseline="central" fill="#8a6d3b">D</text>
+<rect fill="#fffef8" stroke="#8a6d3b" stroke-width="0.8" x="1257.4" y="1023.3" width="360.0" height="125.4"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1045.3 1617.4,1045.3"/>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1067.3 1617.4,1067.3"/>
+<text x="1261.4" y="1056.3" font-size="11.0" dominant-baseline="central" fill="#333333">Sheet: T-tap held by its junction dot</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1104.7 1617.4,1104.7"/>
+<text x="1261.4" y="1086.0" font-size="13.0" dominant-baseline="central" fill="#333333" font-weight="bold">Title: T-tap held by its junction dot</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1126.7 1617.4,1126.7"/>
+<text x="1261.4" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333">Size: A4</text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1365.4,1104.7 1365.4,1126.7"/>
+<text x="1369.4" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333">Date: </text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1516.6,1104.7 1516.6,1126.7"/>
+<text x="1520.6" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333" font-weight="bold">Rev: </text>
+<polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1516.6,1126.7 1516.6,1148.7"/>
+<text x="1520.6" y="1137.7" font-size="11.0" dominant-baseline="central" fill="#333333">Id: 1/1</text>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="309.4,309.4 471.0,309.4" data-kind="net" data-net="BUS" data-net-id="fbf5f993e0ee"/>
+<polyline fill="none" stroke="#0a7d2c" stroke-width="0.8" points="390.2,363.2 390.2,309.4" data-kind="net" data-net="BUS" data-net-id="fbf5f993e0ee"/>
+<circle cx="390.2" cy="309.4" r="1.6" fill="#333333"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="303.9" y="275.2" width="10.9" height="27.4" data-kind="component" data-ref="R1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="309.4,268.3 309.4,275.2" data-kind="component" data-ref="R1"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="309.4,309.4 309.4,302.5" data-kind="component" data-ref="R1"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="465.5" y="275.2" width="10.9" height="27.4" data-kind="component" data-ref="R2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="471.0,268.3 471.0,275.2" data-kind="component" data-ref="R2"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="471.0,309.4 471.0,302.5" data-kind="component" data-ref="R2"/>
+<rect fill="#fdf6d0" stroke="#222222" stroke-width="0.8" x="384.7" y="370.1" width="10.9" height="27.4" data-kind="component" data-ref="R3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="390.2,363.2 390.2,370.1" data-kind="component" data-ref="R3"/>
+<polyline fill="none" stroke="#222222" stroke-width="0.8" points="390.2,404.3 390.2,397.4" data-kind="component" data-ref="R3"/>
+<text x="309.4" y="309.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#555555">BUS</text>
+<text x="390.2" y="363.2" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#555555">TAP</text>
+<text x="293.2" y="282.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R1</text>
+<text x="454.8" y="282.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R2</text>
+<text x="374.0" y="379.4" font-size="6.8" text-anchor="middle" dominant-baseline="central" fill="#1560bd">R3</text>
+</svg>

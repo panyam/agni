@@ -2,12 +2,13 @@
 # The reader compares the two net counts, so both runs share one block and the script labels them;
 # `show` keeps the labelling out of the commands the reader is meant to type.
 fixture: readers/kicad/testdata
+from_root: true
 script: |
   echo "no dot:"
-  agni stats tjunc.kicad_sch | grep -E 'components|nets'
+  agni stats readers/kicad/testdata/tjunc.kicad_sch | grep -E 'components|nets'
   echo
   echo "with the dot:"
-  agni stats tjunc_dotted.kicad_sch | grep -E 'components|nets'
+  agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch | grep -E 'components|nets'
 show: |
-  agni stats tjunc.kicad_sch
-  agni stats tjunc_dotted.kicad_sch
+  agni stats readers/kicad/testdata/tjunc.kicad_sch
+  agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch
