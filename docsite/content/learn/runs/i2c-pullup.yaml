@@ -1,0 +1,5 @@
+# Chapter 4: the bus that cannot signal. Both I2C lines, and the witness naming the reach radius,
+# which is what stops the rule from demanding a resistor wired directly to the rail.
+fixture: examples/tutorial-project
+script: |
+  agni check --verdicts --rule i2c-pull-up designs/gateway/gateway.edn

@@ -99,4 +99,4 @@ This is a genuine limit of a netlist check rather than a gap someone forgot to f
 | [`bulk-cap`](../../reference/rules/bulk-cap/) | EE3 | a named rail carries any capacitor at all |
 | [`cap-voltage`](../../reference/rules/cap-voltage/) | EE5 | a capacitor's rated voltage clears its rail, with derating, cited to a datasheet |
 
-Worth reading next, once written: pull-ups and undefined states, which is the same shape of argument applied to a resistor.
+Next: [pull-ups and undefined states](../04-pull-ups-and-undefined-states/), which runs the same shape of argument over a resistor.
