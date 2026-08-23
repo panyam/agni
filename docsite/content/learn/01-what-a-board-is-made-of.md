@@ -105,4 +105,4 @@ The useful instinct here is that the small parts exist to serve the chips. Every
 
 None on its own, which a chapter 1 has no business claiming. It supplies the vocabulary the rest of the catalog is written in. Run the two queries above against any board you are handed, in that order, as the fastest way to orient yourself in an unfamiliar design.
 
-Chapter 2 comes next in the sequence, covering the ways a schematic can show a connection that does not exist, and it is not written yet. [Chapter 3 on capacitors](../03-why-every-chip-needs-capacitors/) is, and it picks up directly from the "supplying charge locally" job above.
+Next: [the drawing is not the circuit](../02-the-drawing-is-not-the-circuit/), on the ways a schematic can show a connection that does not exist and hide one that does.

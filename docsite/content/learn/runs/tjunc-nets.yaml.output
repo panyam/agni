@@ -1,0 +1,8 @@
+#agni-run 2694ea37cbc0d168
+no dot:
+components:          3 (unique ref_des)
+nets:                5
+
+with the dot:
+components:          3 (unique ref_des)
+nets:                4

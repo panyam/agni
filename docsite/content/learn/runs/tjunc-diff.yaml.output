@@ -1,0 +1,9 @@
+#agni-run d3dcd3d2a40cf592
+diff tjunc.kicad_sch -> tjunc_dotted.kicad_sch
+
+Components: +0  -0  ~0
+Nets:       new 0  deleted 1  renamed 0  hard 1  soft 0
+
+Nets changed (2):
+  [deleted] TAP
+  [hard]    BUS: +[R3.1] -[]

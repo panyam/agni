@@ -1,0 +1,5 @@
+# Chapter 2: names are connections too, so they can conflict. label-alias-conflict is two names on
+# one net; power-tap-conflict is two design-wide names claiming one net.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni check --rule label-alias-conflict --rule power-tap-conflict netalias.fires.kicad_sch

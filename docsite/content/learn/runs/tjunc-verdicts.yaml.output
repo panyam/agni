@@ -1,0 +1,14 @@
+#agni-run 53947e322db29f45
+no dot:
+wire-no-junction  1 fail
+    fail  65000000,-50000000  the endpoint lands on another wire's body and nothing joins them
+                              there, so the drawing shows one net where the netlist has two
+
+1 verdicts across 1 rule(s), 1 fail
+
+with the dot:
+wire-no-junction  1 pass
+    pass  65000000,-50000000  the endpoint lands on another wire's body and a junction dot joins
+                              them, so the 3 wire ends meeting here are one net
+
+1 verdicts across 1 rule(s), 1 pass

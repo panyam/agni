@@ -1,0 +1,11 @@
+#agni-run 082f427144dd7569
+findings by rule:
+  label-alias-conflict   1
+  power-tap-conflict     1
+
+first 2:
+  [warning] label-alias-conflict: SIG_A (one net carries rival labels in the same sheet scope: SIG_A, SIG_B)
+  [warning] power-tap-conflict: +3V3 (one net is claimed by rival design-wide names: +3.3V, +3V3)
+
+2 finding(s) total
+10 subject(s) considered by 2 rule(s) (--verdicts for the detail)
