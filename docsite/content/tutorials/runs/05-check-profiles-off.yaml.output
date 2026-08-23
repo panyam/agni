@@ -1,0 +1,30 @@
+#agni-run a1a3b7dace8161bf
+findings by rule:
+  decoupling-present     1
+  esd-protection         2
+  gateway/signal-net-naming 2
+  i2c-pull-up            2
+  intent/voltage-domain-mismatch 1
+  profile/can-esd-missing 2
+  reverse-blocking-absent 1
+  supply-exceeds-abs-max 1
+  test-point-coverage    2
+
+first 14:
+  [warning] decoupling-present: PMIC_MAIN_12V0 (power rail has no decoupling capacitor)
+  [info] esd-protection: CAN1_CANH (externally-exposed signal net has no ESD protection)
+  [info] esd-protection: CAN1_CANL (externally-exposed signal net has no ESD protection)
+  [warning] gateway/signal-net-naming: XTAL_IN (net name matches no allowed naming pattern)
+  [warning] gateway/signal-net-naming: XTAL_OUT (net name matches no allowed naming pattern)
+  [error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)
+  [error] i2c-pull-up: I2C_SDA (I2C net has no pull-up resistor to a rail)
+  [warning] intent/voltage-domain-mismatch: PMIC_IO_1V8 (rail "PMIC_IO_1V8" is declared in voltage domain "core" (3.3V) but its name declares 1.8V)
+  [warning] profile/can-esd-missing: CAN1_CANH (CAN signal net CAN1_CANH is exposed on a connector with no ESD protection in reach)
+  [warning] profile/can-esd-missing: CAN1_CANL (CAN signal net CAN1_CANL is exposed on a connector with no ESD protection in reach)
+  [warning] reverse-blocking-absent: PMIC_MAIN_12V0 (connector feeds a power input with no reverse-blocking element in the path)
+  [error] supply-exceeds-abs-max: U2 (power-input pin 1 on rail "PMIC_CORE_3V3": nominal 3.3V exceeds absolute-maximum VIN 3V — datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3))
+  [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
+  [info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
+
+14 finding(s) total
+200 subject(s) considered by 32 rule(s), 7 not considered (--verdicts for the detail)

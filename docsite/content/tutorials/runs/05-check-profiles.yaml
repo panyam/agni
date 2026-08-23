@@ -1,0 +1,8 @@
+# Rung 5: the same board with the project's own interface declarations in place.
+#
+# No --profile-path. The project names its own profiles directory and composes it, the same way it
+# composes conventions.yaml and params/, so passing the flag as well would load the directory a
+# second time under a second namespace and report every profile finding twice (agni issue 450).
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway/gateway.edn
