@@ -1,0 +1,14 @@
+#agni-run 91748c156cdbf6ea
+declared as built:
+intent/strap-address-collision  1 fail
+    fail  U12 + U13  U12 (PHYAD U12) and U13 (PHYAD U13) both strap to address 1 on bus MDIO;
+                     two devices answering one address make that bus unreliable
+
+1 verdicts across 1 rule(s), 1 fail
+
+declared for a part whose address pins are numbered the other way:
+intent/strap-address-collision  1 pass
+    pass  U12 + U13  U12 straps to 1 and U13 to 4 on bus MDIO, so the two answer to different
+                     addresses
+
+1 verdicts across 1 rule(s), 1 pass

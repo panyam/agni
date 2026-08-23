@@ -83,7 +83,12 @@ A board is a power tree with a sequence, a current budget, and interfaces carryi
 - [Nothing here is a fact about the world](../08-the-power-tree/#nothing-here-is-a-fact-about-the-world-ee6), why this level needs a declaration
 - [Enough current to go round](../08-the-power-tree/#enough-current-to-go-round-ee6), capacity against margin
 
-Sequencing, straps and interfaces are chapters 9 and 10, not yet written.
+- [Order matters, and the datasheet says so](../09-sequencing-and-straps/#order-matters-and-the-datasheet-says-so-ee6), why a chip cares which rail arrives first
+- [Declared, then checked](../09-sequencing-and-straps/#declared-then-checked-ee6), the enable chain in copper
+- [The same board, declared differently](../09-sequencing-and-straps/#the-same-board-declared-differently-ee6)
+- [What a part reads on the way up](../09-sequencing-and-straps/#what-a-part-reads-on-the-way-up-ee6), straps and address collisions
+
+Interfaces are chapter 10, not yet written.
 
 ## Layout (EE7)
 
