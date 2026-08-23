@@ -188,9 +188,16 @@ circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
   `["..."]` node label decodes to a bare `"`, closes the string early, and GitHub renders a parse
   error instead of the diagram (`got 'STR'`). Write labels as plain text with `<br/>` for line
   breaks and keep the literal strings in the prose above the diagram, which reads better anyway.
-  Parse-check before you post rather than after: extract each ` ```mermaid ` block to a file and run
-  `mmdc -i block.mmd -o /dev/null`, which exits non-zero on the syntax GitHub would reject. Looking
-  at the rendered PR is still the only way to catch a diagram that parses and reads badly.
+  Parse-check before you post rather than after: extract each ` ```mermaid ` block to a file,
+  DECODE its HTML entities, and run `mmdc -i block.mmd -o block.svg`. Two things about that command
+  are load-bearing, and the version of this note that shipped first got both wrong. **`-o /dev/null`
+  does not work**, because mmdc rejects any output path not ending `.md`, `.markdown`, `.svg`, `.png`
+  or `.pdf`, so it exits non-zero on every diagram and reports a failure that says nothing about the
+  syntax. And **the decode is what makes the check reproduce GitHub**: mmdc reads `&quot;` as literal
+  text and parses it happily, so checking the raw block PASSES the exact diagram this rule exists to
+  catch, while GitHub decodes it to a bare `"` before mermaid sees it. Decoded, the same label fails
+  with the `got 'STR'` above. Looking at the rendered PR is still the only way to catch a diagram
+  that parses and reads badly.
 - **Rendering captures come from a fixture, never a customer board.** Capture the before/after pair
   from the showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),
   `examples/tutorial-project/`, or a tiny hand-authored fixture, for the reasons in `CLAUDE.md`
