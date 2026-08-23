@@ -8,15 +8,21 @@
             </a>
         </div>
 
-        <nav class="main-nav">
+        <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="main-nav" aria-label="Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+
+        <nav class="main-nav" id="main-nav">
             {{ $navLinks := (json "HeaderNavLinks.json" "") }}
             {{ range $navLinks }}
             <div class="nav-item{{ if .children }} has-children{{ end }}">
                 <a href="{{$Site.PathPrefix}}/{{ .url }}" class="nav-link">{{ .name }}</a>
                 {{ if .children }}
-                <div class="nav-dropdown">
+                <div class="nav-dropdown{{ if .columns }} nav-dropdown-cols-{{ .columns }}{{ end }}">
                     {{ range .children }}
-                    <a href="{{$Site.PathPrefix}}/{{ .url }}" class="dropdown-item">{{ .name }}</a>
+                    <a href="{{$Site.PathPrefix}}/{{ .url }}" class="dropdown-item{{ if .group }} dropdown-group{{ end }}">{{ .name }}</a>
                     {{ end }}
                 </div>
                 {{ end }}
@@ -40,7 +46,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
             </button>
-            <a href="{{ (json "SiteMetadata.json" "repository") }}" class="btn-github" target="_blank" rel="noopener">GitHub</a>
         </div>
     </div>
 </header>
