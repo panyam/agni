@@ -257,19 +257,15 @@ report findings that disagree with its verdicts.
 verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site.
 Converting a rule means deleting the wrapper, writing the map, and setting `StatesConsideredSet`.
 
-Three rules still wrap, and each says why beside its `Eval`. They fall into two groups (agni issue 391):
+Two rules still wrap, and each says why beside its `Eval` (agni issue 391):
 
 - **The reader supplies only what failed.** `dangling-endpoint` and `wire-no-junction` read a
   diagnostic list holding the offenders and nothing else, so there is no set to map over and the
   verdicts would be the failure list again. `bus-not-modeled` is the diagnostic rule that CAN state a
   set, and the difference is instructive: `unmodeled_buses` holds every bus the reader saw, so the
   rule partitions it and a resolved bus is a countable pass.
-- **The arity moves between subjects.** `strap-address-collision` (`stdlib/rules/intent`) is ONE rule
-  over every declared strap group, and a collision involves however many nets the colliding groups
-  name, so no fixed `SubjectShape` describes it. The strap-group rules beside it look identical and
-  are not: each declared group compiles to its own rule instance, so each has a fixed arity.
 
-A fourth rule declines WITHOUT the wrapper, which is worth knowing before grepping for `FailuresOnly`
+A third rule declines WITHOUT the wrapper, which is worth knowing before grepping for `FailuresOnly`
 and believing the answer. `cap-voltage` is built from a spec, so it has no hand-written body to wrap;
 it sets `StatesConsideredSet = false` directly. Its reason is the second kind: the body cannot
 separate a pass from a gap, because `capVoltageDetail` returns `""` both for a capacitor that clears
@@ -293,6 +289,22 @@ the two ways round it.
 The third group is gone. Five rules used to decline because their subject was a relation between
 entities and the verdict key named one; the key now names a tuple, and they state considered sets like
 everything else.
+
+**A rule that seems to have no fixed arity is usually being asked the wrong question.**
+`strap-address-collision` declined for a while on those grounds, and the reasoning was that its subject
+is the SET of devices sharing an address, which is two on one bus and four on the next inside one rule,
+while `SubjectShape` is fixed per rule. That describes the FINDING. The question the rule answers is
+binary: do these two devices strap to the same number. Three devices at one address is three yes
+answers to that question, not one answer about three devices, so the subject is a PAIR and the shape is
+fixed after all (agni issue 391).
+
+Two things fell out of the reshaping, and both are the usual pattern rather than luck. Findings did not
+move for a two-way clash, which is every case the catalog had a fixture for; a three-way clash became
+three findings, and its message got less wrong, since the old single finding said "U12 and U13 and U14
+BOTH strap to". And the two cases the old body dropped with a bare `continue` (a group whose bits
+nothing evidences, and one naming a net the design does not carry) became `NOT_CONSIDERED` verdicts
+that say which half could not be read. Enumerating first is what surfaces them: a body that filters has
+nowhere to put a subject it declined.
 
 **`StatesConsideredSet` is a declaration, not an inference.** A failures-only rule returns a list of
 Fail verdicts that is structurally identical to a considered set whose every subject failed, so only
