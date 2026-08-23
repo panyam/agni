@@ -21,7 +21,7 @@ So the line drifts. It can sit anywhere between ground and the rail, including t
 
 That middle region is worse than it sounds, and this is the part people miss. A CMOS input stage is a pair of transistors, one pulling toward the rail and one toward ground. At a valid high, one is on and the other is off. At a valid low, the reverse. **Held in the middle, both are partly on**, which opens a direct path from the rail to ground through the input stage. The part draws current it was never meant to draw, warms up, and the input can oscillate as it drifts back and forth across the threshold.
 
-Hence the rule every datasheet states and nobody explains: do not leave a CMOS input floating. A resistor to a rail (**pull-up**) or to ground (**pull-down**) gives the node somewhere to sit. It is weak enough that anything genuinely driving the line overrides it easily, and strong enough that stray coupling cannot.
+Hence the rule every datasheet states and nobody explains: do not leave a CMOS input floating. A resistor to a rail (**pull-up**) or to ground (a {{ explainable "pull-down" }}) gives the node somewhere to sit. It is weak enough that anything genuinely driving the line overrides it easily, and strong enough that stray coupling cannot.
 
 The tool has a rule for this, and its verdicts are more interesting than its findings:
 

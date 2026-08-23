@@ -65,7 +65,7 @@ requirements:
 component declares it.
 
 The difference from the built-in is one line: a `STB` signal. This team always routes the
-transceiver's standby pin back to the MCU so firmware can put the bus to sleep. The built-in profile
+{{ explainable "transceiver" }}'s standby pin back to the MCU so firmware can put the bus to sleep. The built-in profile
 has no opinion about that, because it is a house practice rather than a CAN requirement.
 
 {{ agniRun "content/tutorials/runs/05-check-profile-path.yaml" }}
@@ -89,7 +89,7 @@ double-report everything and there would be no way to say your naming differs fr
 assumption.
 
 But it means an omission is silent. If `profiles/can.yaml` had listed only the `STB` signal and the
-`host-incomplete` requirement, then termination, dangling signals, and ESD would simply stop being
+`host-incomplete` requirement, then {{ explainable "termination" }}, dangling signals, and ESD would simply stop being
 checked on every board this project reviews, and nothing would say so. The run would look healthier,
 because there would be fewer findings.
 

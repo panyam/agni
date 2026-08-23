@@ -74,7 +74,7 @@ cannot merge.
 
 ## The gate reads severity, not verdict
 
-Here is the part that surprises people. Rev B fixed the I2C pull-ups and the naming, and its review
+Here is the part that surprises people. Rev B fixed the I2C {{ explainable "pull-up" "pull-ups" }} and the naming, and its review
 went from 8 failures to 6. Run the gate on it:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}

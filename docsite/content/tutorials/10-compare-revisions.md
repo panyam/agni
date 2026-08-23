@@ -81,7 +81,7 @@ Two failures became passes, and the items say which:
 | H1 | net names follow house convention | pass |  |
 ```
 
-The two added resistors are the I2C pull-ups. The two renames bring the clock nets onto house
+The two added resistors are the I2C {{ explainable "pull-up" "pull-ups" }}. The two renames bring the clock nets onto house
 convention. Every structural change in the diff is accounted for by an item that improved, and
 nothing else moved.
 

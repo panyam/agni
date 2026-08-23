@@ -73,7 +73,7 @@ it.
 
 ## The query trap
 
-Read the `H2` query again. It matches test points on nets that are **not** rails.
+Read the `H2` query again. It matches {{ explainable "test-point" "test points" }} on nets that are **not** rails.
 
 A query binding reports whatever it matches as findings, and findings mean the item failed. So the
 query has to match the violation. Write the healthy case instead, phrasing it the natural way as

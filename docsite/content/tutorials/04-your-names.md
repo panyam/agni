@@ -87,7 +87,7 @@ Two things changed, one from each half.
 ```
 
 And `test-point-coverage` went from 1 to 2. Nothing about that rule changed. A net that was
-invisible to it became a rail, and that rail has no test point:
+invisible to it became a rail, and that rail has no {{ explainable "test-point" }}:
 
 ```
 [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)

@@ -20,7 +20,7 @@ naming the specific thing on your board the rule is talking about. The **reason*
 says what is wrong in plain language.
 
 Severity is a policy signal, not a confidence signal. An `error` is something that will almost
-certainly not work: an I2C bus with no pull-up cannot signal at all, because the parts on it can
+certainly not work: an I2C bus with no {{ explainable "pull-up" }} cannot signal at all, because the parts on it can
 only pull the line down and nothing pulls it back up. A `warning` is something that usually
 indicates a defect. An `info` is worth a look. None of them is a statement about how sure the tool
 is.
