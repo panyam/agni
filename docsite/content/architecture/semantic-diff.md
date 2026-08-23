@@ -57,7 +57,59 @@ leftover deleted -> Deleted ;  leftover added -> New
 
 Uniqueness and non-emptiness are the safety rails. They stop two unrelated nets that happen to
 share a connection set, or two empty nets, from being mispaired as a rename. When a signature is
-ambiguous the engine declines to guess and reports New and Deleted instead.
+ambiguous this pass declines to guess and leaves the nets for the pass below.
+
+### Near matches, off by default
+
+Exact pairing has a cliff. The revision that renames a net is very often the revision that changes
+it slightly, because a rename lands alongside a decoupling cap added, a test point dropped, or a
+series resistor inserted. One endpoint moves, the signature no longer matches, and the rename you
+most needed to survive is the one reported as an unrelated deletion beside an unrelated addition.
+
+`--rename-approx` adds a third pass over what the exact pass could not place. It is a separate
+ranked assignment rather than a loosened version of the exact pass, and the ordering is what keeps
+a rename with no connectivity change reporting as an exact `renamed` rather than as a guess.
+
+```
+for each leftover deleted net with enough SIGNIFICANT endpoints:
+    candidates = new nets sharing at least ceil(min_old_coverage_significant * n) of them
+    score each candidate, rejecting any that fails a threshold
+rank every surviving pair, assign best-first, one-to-one, no reuse
+    -> RenamedApprox{ from, to, added, removed, evidence }
+```
+
+Endpoints are not equal. A test point coming or going is routine churn and should not cost a net
+its identity, while a device pin moving should, so the thresholds come in significant and
+all-endpoint pairs. Significance is read from `Component.device_classes`, the normalized set
+stamped at ingestion, rather than from how a ref des is spelled.
+
+The pass is **off by default** because it ASSIGNS a best match among candidates rather than
+recovering a fact. A wrong pairing claims a net kept its identity across a revision when it did
+not, and every downstream reading inherits that claim, so a `renamed-approx` is a distinct kind
+that a consumer can filter on and it carries the arithmetic that produced it. A reader has to be
+able to disagree.
+
+| knob | default | what moving it trades |
+|---|---|---|
+| `MinOldCoverage` | 0.70 | fraction of the old net's endpoints that must survive. Lower catches heavier rewires and starts pairing nets that merely overlap. |
+| `MinOldCoverageSignificant` | 0.80 | the same over significant endpoints. The one doing most of the work, because probe churn cannot move it. |
+| `MinNewCoverage` | 0.35 | fraction of the new net made of old endpoints. Guards a large net swallowing a small one. |
+| `MinNewCoverageSignificant` | 0.60 | that guard over significant endpoints. |
+| `MaxAddedSignificantFloor` | 2 | how much a net may grow and still read as itself, when half its old significant count is smaller. The floor lets a two-endpoint net become four. |
+| `MinSignificantEndpoints` | 2 | below this a net has no shape to match on. |
+| `InsignificantClasses` | `[test_point]` | which device classes are excluded from the overlap arithmetic. |
+
+These numbers are a calibrated starting point rather than a proven one. They are the settled values
+of a netlist comparison tool that has run against real revision pairs for years, and both failure
+directions were observed while arriving at them: looser values mis-paired unrelated power rails,
+and tighter values missed obvious renames where one decoupling capacitor had been added or removed.
+Produce a precision number on a revision pair that matters before trusting the pass on it, per
+[evidence](../../build/evidence/).
+
+One seam is worth knowing. `MinNewCoverage` counts ALL endpoints, so a small net that gains enough
+test points can fall under it even though every significant threshold is satisfied. On a two-endpoint
+net, three added probes pair and four do not. The significant thresholds insulate the pass from probe
+churn and this one does not.
 
 ## Provenance-annotated findings
 
@@ -68,7 +120,8 @@ in the new. The annotation is keyed by the semantic match, not by the native id.
 
 ## Hard cases
 
-- Net rename is handled by the signature pairing above.
+- Net rename is handled by the signature pairing above, and a rename that also changed by the
+  opt-in near-match pass beside it.
 - Reference-designator renumbering, a component renamed from `R1` to `R5` with the same part and
   connections, is the component analogue of a net rename. It is not yet detected.
 - An electrically identical reroute, the same endpoints wired through different copper, is
@@ -77,7 +130,9 @@ in the new. The annotation is keyed by the semantic match, not by the native id.
 - Nets with no reference designator, such as power and ground, and bus or member pins, are
   stable only if the reader emits stable keys for them. Unstable keys would surface as false Hard
   changes.
-- An ambiguous rename signature is reported as New and Deleted, never guessed.
+- An ambiguous rename signature is reported as New and Deleted by the exact pass, never guessed.
+  With `--rename-approx` it may instead be assigned, as `renamed-approx` and with its evidence
+  attached, which is a different claim and a separately filterable one.
 
 ## How it is checked
 
@@ -88,4 +143,8 @@ pair with genuine rewires to confirm the classification holds on files a tool ac
 ## Not handled yet
 
 - Provenance on component findings. Nets carry it today, components do not.
-- Component rename detection, the reference-designator renumbering case above.
+- Component rename detection, the reference-designator renumbering case above. It is the same
+  scoring problem with a different key, so the near-match pass is worth generalising over "entity
+  with a signature" when a second caller appears rather than reimplementing.
+- Near-match thresholds are a value passed to the engine and reachable from the CLI, but no project
+  config tier carries them yet, so a house cannot declare its own and have every run pick them up.

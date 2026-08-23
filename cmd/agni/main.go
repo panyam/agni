@@ -1000,6 +1000,7 @@ func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string, extr
 
 func diffCmd() *cobra.Command {
 	var format string
+	var renameApprox bool
 	c := &cobra.Command{
 		Use:   "diff <old> <new>",
 		Short: "Structural diff between two revisions of a design (over the IR)",
@@ -1013,7 +1014,9 @@ func diffCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rep := diff.Designs(a, b)
+			opts := diff.DefaultRenameOptions()
+			opts.Enabled = renameApprox
+			rep := diff.Designs(a, b, opts)
 			w := cmd.OutOrStdout()
 			switch format {
 			case "json":
@@ -1038,6 +1041,8 @@ func diffCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&format, "format", "text",
 		"output format: text (human summary), json (the DiffDesignsResponse wire shape the web API serves), or csv (one row per change)")
+	c.Flags().BoolVar(&renameApprox, "rename-approx", false,
+		"also pair a net that was renamed AND changed slightly, reported as renamed-approx with the evidence behind each pairing. Off by default: this ASSIGNS a best match among candidates rather than recovering a fact, so a gate reading the output should opt in")
 	return c
 }
 

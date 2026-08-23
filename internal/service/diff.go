@@ -225,11 +225,34 @@ func DiffResponseProto(r *diff.Report) *webapi.DiffDesignsResponse {
 			Removed: nc.Removed,
 			OldProv: nc.OldProv,
 			NewProv: nc.NewProv,
+			Approx:  renameEvidenceProto(nc.Approx),
 		})
 		nets[nc.Name] = string(nc.Kind)
-		if nc.Kind == diff.NetRenamed {
+		// BOTH rename kinds carry an old name, and the status map is what a viewer joins to the OLD
+		// design's geometry. Registering only the exact kind here left an approximate rename invisible
+		// on the old side, which is the side a reader checks when deciding whether to believe it.
+		if nc.Kind == diff.NetRenamed || nc.Kind == diff.NetRenamedApprox {
 			nets[nc.OldName] = string(nc.Kind)
 		}
 	}
 	return &webapi.DiffDesignsResponse{Report: rep, ComponentStatus: comp, NetStatus: nets}
+}
+
+// renameEvidenceProto carries a near-match pairing's arithmetic onto the wire, nil-safe because
+// every other net-change kind has none.
+func renameEvidenceProto(e *diff.RenameEvidence) *webapi.DiffReport_RenameEvidence {
+	if e == nil {
+		return nil
+	}
+	return &webapi.DiffReport_RenameEvidence{
+		OldCoverage:            e.OldCoverage,
+		OldCoverageSignificant: e.OldCoverageSignificant,
+		NewCoverageSignificant: e.NewCoverageSignificant,
+		Overlap:                int32(e.Overlap),
+		OverlapSignificant:     int32(e.OverlapSignificant),
+		OldEndpoints:           int32(e.OldEndpoints),
+		NewEndpoints:           int32(e.NewEndpoints),
+		OldSignificant:         int32(e.OldSignificant),
+		NewSignificant:         int32(e.NewSignificant),
+	}
 }

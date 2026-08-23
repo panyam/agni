@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/diff.proto.
  */
 export const file_agni_v1_webapi_diff: GenFile = /*@__PURE__*/
-  fileDesc("ChlhZ25pL3YxL3dlYmFwaS9kaWZmLnByb3RvEg5hZ25pLnYxLndlYmFwaSIyChJEaWZmRGVzaWduc1JlcXVlc3QSDQoFYV91cmkYASABKAkSDQoFYl91cmkYAiABKAkiuwMKCkRpZmZSZXBvcnQSGAoQY29tcG9uZW50c19hZGRlZBgBIAMoCRIaChJjb21wb25lbnRzX3JlbW92ZWQYAiADKAkSRgoSY29tcG9uZW50c19jaGFuZ2VkGAMgAygLMiouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydC5Db21wb25lbnRDaGFuZ2USMgoEbmV0cxgEIAMoCzIkLmFnbmkudjEud2ViYXBpLkRpZmZSZXBvcnQuTmV0Q2hhbmdlGksKD0NvbXBvbmVudENoYW5nZRIPCgdyZWZfZGVzGAEgASgJEg0KBWZpZWxkGAIgASgJEgsKA29sZBgDIAEoCRILCgNuZXcYBCABKAkarQEKCU5ldENoYW5nZRIMCgRraW5kGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIb2xkX25hbWUYAyABKAkSDQoFYWRkZWQYBCADKAkSDwoHcmVtb3ZlZBgFIAMoCRIoCghvbGRfcHJvdhgGIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIoCghuZXdfcHJvdhgHIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZSLqCwoTRGlmZkRlc2lnbnNSZXNwb25zZRIqCgZyZXBvcnQYASABKAsyGi5hZ25pLnYxLndlYmFwaS5EaWZmUmVwb3J0ElIKEGNvbXBvbmVudF9zdGF0dXMYAiADKAsyOC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFN0YXR1c0VudHJ5EkYKCm5ldF9zdGF0dXMYAyADKAsyMi5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFN0YXR1c0VudHJ5ElUKEmNvbXBvbmVudF9zaGVldHNfYRgEIAMoCzI5LmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuQ29tcG9uZW50U2hlZXRzQUVudHJ5ElUKEmNvbXBvbmVudF9zaGVldHNfYhgFIAMoCzI5LmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuQ29tcG9uZW50U2hlZXRzQkVudHJ5EkkKDG5ldF9zaGVldHNfYRgGIAMoCzIzLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuTmV0U2hlZXRzQUVudHJ5EkkKDG5ldF9zaGVldHNfYhgHIAMoCzIzLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuTmV0U2hlZXRzQkVudHJ5ElcKE3NoYXJlZF9wbGFjZW1lbnRzX2EYCCADKAsyOi5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoYXJlZFBsYWNlbWVudHNBRW50cnkSVwoTc2hhcmVkX3BsYWNlbWVudHNfYhgJIAMoCzI6LmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hhcmVkUGxhY2VtZW50c0JFbnRyeRo2ChRDb21wb25lbnRTdGF0dXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGjAKDk5ldFN0YXR1c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEaFwoIU2hlZXRJZHMSCwoDaWRzGAEgAygJGmUKFUNvbXBvbmVudFNoZWV0c0FFbnRyeRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoZWV0SWRzOgI4ARplChVDb21wb25lbnRTaGVldHNCRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaXwoPTmV0U2hlZXRzQUVudHJ5EgsKA2tleRgBIAEoCRI7CgV2YWx1ZRgCIAEoCzIsLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hlZXRJZHM6AjgBGl8KD05ldFNoZWV0c0JFbnRyeRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoZWV0SWRzOgI4ARowCglQbGFjZW1lbnQSDQoFc2hlZXQYASABKAkSCQoBeBgCIAEoARIJCgF5GAMgASgBGmcKFlNoYXJlZFBsYWNlbWVudHNBRW50cnkSCwoDa2V5GAEgASgJEjwKBXZhbHVlGAIgASgLMi0uYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5QbGFjZW1lbnQ6AjgBGmcKFlNoYXJlZFBsYWNlbWVudHNCRW50cnkSCwoDa2V5GAEgASgJEjwKBXZhbHVlGAIgASgLMi0uYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5QbGFjZW1lbnQ6AjgBMmUKC0RpZmZTZXJ2aWNlElYKC0RpZmZEZXNpZ25zEiIuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_ir_ir]);
+  fileDesc("ChlhZ25pL3YxL3dlYmFwaS9kaWZmLnByb3RvEg5hZ25pLnYxLndlYmFwaSIyChJEaWZmRGVzaWduc1JlcXVlc3QSDQoFYV91cmkYASABKAkSDQoFYl91cmkYAiABKAki8QUKCkRpZmZSZXBvcnQSGAoQY29tcG9uZW50c19hZGRlZBgBIAMoCRIaChJjb21wb25lbnRzX3JlbW92ZWQYAiADKAkSRgoSY29tcG9uZW50c19jaGFuZ2VkGAMgAygLMiouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydC5Db21wb25lbnRDaGFuZ2USMgoEbmV0cxgEIAMoCzIkLmFnbmkudjEud2ViYXBpLkRpZmZSZXBvcnQuTmV0Q2hhbmdlGksKD0NvbXBvbmVudENoYW5nZRIPCgdyZWZfZGVzGAEgASgJEg0KBWZpZWxkGAIgASgJEgsKA29sZBgDIAEoCRILCgNuZXcYBCABKAka6AEKCU5ldENoYW5nZRIMCgRraW5kGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIb2xkX25hbWUYAyABKAkSDQoFYWRkZWQYBCADKAkSDwoHcmVtb3ZlZBgFIAMoCRIoCghvbGRfcHJvdhgGIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIoCghuZXdfcHJvdhgHIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRI5CgZhcHByb3gYCCABKAsyKS5hZ25pLnYxLndlYmFwaS5EaWZmUmVwb3J0LlJlbmFtZUV2aWRlbmNlGvgBCg5SZW5hbWVFdmlkZW5jZRIUCgxvbGRfY292ZXJhZ2UYASABKAESIAoYb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBEiAKGG5ld19jb3ZlcmFnZV9zaWduaWZpY2FudBgDIAEoARIPCgdvdmVybGFwGAQgASgFEhsKE292ZXJsYXBfc2lnbmlmaWNhbnQYBSABKAUSFQoNb2xkX2VuZHBvaW50cxgGIAEoBRIVCg1uZXdfZW5kcG9pbnRzGAcgASgFEhcKD29sZF9zaWduaWZpY2FudBgIIAEoBRIXCg9uZXdfc2lnbmlmaWNhbnQYCSABKAUi6gsKE0RpZmZEZXNpZ25zUmVzcG9uc2USKgoGcmVwb3J0GAEgASgLMhouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydBJSChBjb21wb25lbnRfc3RhdHVzGAIgAygLMjguYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5Db21wb25lbnRTdGF0dXNFbnRyeRJGCgpuZXRfc3RhdHVzGAMgAygLMjIuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5OZXRTdGF0dXNFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2EYBCADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0FFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2IYBSADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0JFbnRyeRJJCgxuZXRfc2hlZXRzX2EYBiADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0FFbnRyeRJJCgxuZXRfc2hlZXRzX2IYByADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0JFbnRyeRJXChNzaGFyZWRfcGxhY2VtZW50c19hGAggAygLMjouYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGFyZWRQbGFjZW1lbnRzQUVudHJ5ElcKE3NoYXJlZF9wbGFjZW1lbnRzX2IYCSADKAsyOi5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoYXJlZFBsYWNlbWVudHNCRW50cnkaNgoUQ29tcG9uZW50U3RhdHVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARowCg5OZXRTdGF0dXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGhcKCFNoZWV0SWRzEgsKA2lkcxgBIAMoCRplChVDb21wb25lbnRTaGVldHNBRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaZQoVQ29tcG9uZW50U2hlZXRzQkVudHJ5EgsKA2tleRgBIAEoCRI7CgV2YWx1ZRgCIAEoCzIsLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hlZXRJZHM6AjgBGl8KD05ldFNoZWV0c0FFbnRyeRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoZWV0SWRzOgI4ARpfCg9OZXRTaGVldHNCRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaMAoJUGxhY2VtZW50Eg0KBXNoZWV0GAEgASgJEgkKAXgYAiABKAESCQoBeRgDIAEoARpnChZTaGFyZWRQbGFjZW1lbnRzQUVudHJ5EgsKA2tleRgBIAEoCRI8CgV2YWx1ZRgCIAEoCzItLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuUGxhY2VtZW50OgI4ARpnChZTaGFyZWRQbGFjZW1lbnRzQkVudHJ5EgsKA2tleRgBIAEoCRI8CgV2YWx1ZRgCIAEoCzItLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuUGxhY2VtZW50OgI4ATJlCgtEaWZmU2VydmljZRJWCgtEaWZmRGVzaWducxIiLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_ir_ir]);
 
 /**
  * DiffDesignsRequest names the two designs: a is the old revision, b the new, each as a
@@ -121,11 +121,12 @@ export const DiffReport_ComponentChangeSchema: GenMessage<DiffReport_ComponentCh
 
 /**
  * NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
- * "deleted", "renamed" (same connection signature, different name), "hard" (pin membership
- * changed), "soft" (attribute-only). name is the net's name where it exists (the new name
- * for a rename); old_name is set only for renames. added/removed are "refdes.pin"
- * connection deltas, set only for hard changes. old_prov/new_prov locate the net in each
- * revision's source, unset on the side where the net does not exist.
+ * "deleted", "renamed" (same connection signature, different name), "renamed-approx" (a
+ * near match the engine ASSIGNED rather than recovered, see approx below), "hard" (pin
+ * membership changed), "soft" (attribute-only). name is the net's name where it exists (the
+ * new name for a rename); old_name is set on both rename kinds. added/removed are
+ * "refdes.pin" connection deltas, set on hard changes and on renamed-approx. old_prov/new_prov
+ * locate the net in each revision's source, unset on the side where the net does not exist.
  *
  * @generated from message agni.v1.webapi.DiffReport.NetChange
  */
@@ -164,6 +165,19 @@ export type DiffReport_NetChange = Message<"agni.v1.webapi.DiffReport.NetChange"
    * @generated from field: agni.v1.ir.Provenance new_prov = 7;
    */
   newProv?: Provenance | undefined;
+
+  /**
+   * approx is why the near-match pass paired these two nets, set only on "renamed-approx".
+   *
+   * It travels with the change rather than being recomputed, because a consumer cannot
+   * rebuild it: the fractions are taken against the endpoint sets as they were BEFORE the
+   * assignment consumed them, and significance depends on the device classes of components
+   * in both revisions. A viewer that wanted to show its work would otherwise need both
+   * designs in hand.
+   *
+   * @generated from field: agni.v1.webapi.DiffReport.RenameEvidence approx = 8;
+   */
+  approx?: DiffReport_RenameEvidence | undefined;
 };
 
 /**
@@ -174,14 +188,98 @@ export const DiffReport_NetChangeSchema: GenMessage<DiffReport_NetChange> = /*@_
   messageDesc(file_agni_v1_webapi_diff, 1, 1);
 
 /**
+ * RenameEvidence is the arithmetic behind one "renamed-approx" pairing.
+ *
+ * It exists so a reader can DISAGREE with the engine. An approximate rename is a judgement
+ * among candidates rather than a fact about the two revisions, so a consumer that showed only
+ * the conclusion would be asking to be trusted. The *_significant figures exclude endpoint
+ * classes the run treats as churn (test points by default), which is why they can differ
+ * sharply from their all-endpoint counterparts on a heavily probed board.
+ *
+ * @generated from message agni.v1.webapi.DiffReport.RenameEvidence
+ */
+export type DiffReport_RenameEvidence = Message<"agni.v1.webapi.DiffReport.RenameEvidence"> & {
+  /**
+   * fraction of the old net's endpoints that survived
+   *
+   * @generated from field: double old_coverage = 1;
+   */
+  oldCoverage: number;
+
+  /**
+   * the same, ignoring insignificant endpoint classes
+   *
+   * @generated from field: double old_coverage_significant = 2;
+   */
+  oldCoverageSignificant: number;
+
+  /**
+   * fraction of the new net's significant endpoints that are old
+   *
+   * @generated from field: double new_coverage_significant = 3;
+   */
+  newCoverageSignificant: number;
+
+  /**
+   * endpoints in both
+   *
+   * @generated from field: int32 overlap = 4;
+   */
+  overlap: number;
+
+  /**
+   * significant endpoints in both
+   *
+   * @generated from field: int32 overlap_significant = 5;
+   */
+  overlapSignificant: number;
+
+  /**
+   * size of the old net
+   *
+   * @generated from field: int32 old_endpoints = 6;
+   */
+  oldEndpoints: number;
+
+  /**
+   * size of the new net
+   *
+   * @generated from field: int32 new_endpoints = 7;
+   */
+  newEndpoints: number;
+
+  /**
+   * significant endpoints on the old net
+   *
+   * @generated from field: int32 old_significant = 8;
+   */
+  oldSignificant: number;
+
+  /**
+   * significant endpoints on the new net
+   *
+   * @generated from field: int32 new_significant = 9;
+   */
+  newSignificant: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.DiffReport.RenameEvidence.
+ * Use `create(DiffReport_RenameEvidenceSchema)` to create a new message.
+ */
+export const DiffReport_RenameEvidenceSchema: GenMessage<DiffReport_RenameEvidence> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_diff, 1, 2);
+
+/**
  * DiffDesignsResponse carries the full report plus the compact highlight maps a viewer joins
  * to geometry keys without re-deriving the diff (WS9-004): component_status maps ref_des ->
  * "added" | "removed" | "changed"; net_status maps net name -> "new" | "deleted" | "renamed" |
- * "hard" | "soft". A renamed net appears under BOTH its old and new name (both -> "renamed"),
+ * "renamed-approx" | "hard" | "soft". A renamed net of either kind appears under BOTH its old and
+ * new name (both carrying that net's own kind),
  * so each side of a visual diff joins by the name its own geometry carries; the by-name match
  * in diff.Designs guarantees one name never carries two different statuses. A consumer filters
- * by side: the old design draws removed/deleted/renamed/hard/soft, the new one
- * added/new/renamed/hard/soft.
+ * by side: the old design draws removed/deleted/renamed/renamed-approx/hard/soft, the new one
+ * added/new/renamed/renamed-approx/hard/soft.
  *
  * @generated from message agni.v1.webapi.DiffDesignsResponse
  */
