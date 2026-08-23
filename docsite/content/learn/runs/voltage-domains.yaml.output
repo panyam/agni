@@ -1,0 +1,7 @@
+#agni-run 08aa1d049b66523b
+intent/voltage-domain-mismatch  1 fail, 2 pass
+    fail  PMIC_IO_1V8     the rail's name declares 1.8V against domain "core"'s 3.3V
+    pass  PMIC_CORE_3V3   the rail's name declares 3.3V, matching voltage domain "io"
+    pass  PMIC_MAIN_12V0  the rail's name declares 12V, matching voltage domain "main"
+
+3 verdicts across 1 rule(s), 2 pass, 1 fail

@@ -1,0 +1,12 @@
+#agni-run beca0412d5f4eb78
+r   n               provenance
+U1  GND             designs/gateway/gateway.edn ; designs/gateway/gateway.edn:GND
+U1  PMIC_CORE_3V3   designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_CORE_3V3
+U1  PMIC_EN         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_EN
+U1  PMIC_MAIN_12V0  designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_MAIN_12V0
+U1  PMIC_PG         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_PG
+U2  GND             designs/gateway/gateway.edn ; designs/gateway/gateway.edn:GND
+U2  PMIC_CORE_3V3   designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_CORE_3V3
+U2  PMIC_IO_1V8     designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_IO_1V8
+
+8 result(s)

@@ -1,0 +1,10 @@
+# Chapter 8: capacity and margin as two questions, and why they are two rules. 3V3's supply misses
+# the declared peak outright; 1V8's clears the peak but not the margin factor. The not-considered on
+# 3V3 is one defect being reported once rather than twice.
+#
+# The two rules are named explicitly rather than filtered out of a full run: a `match` pattern loose
+# enough to keep both rules' verdict rows also keeps every other rule's, since they share a shape.
+fixture: cmd/agni/testdata/intent
+from_root: true
+script: |
+  agni check --verdicts --rule intent/rail-current-capacity --rule intent/rail-current-margin cmd/agni/testdata/intent/rails.edn --intent-path cmd/agni/testdata/intent/rails-over.yaml --params cmd/agni/testdata/intent/params

@@ -1,0 +1,7 @@
+# Chapter 8: the first check in the course whose notion of "correct" comes from a human declaration
+# rather than from physics or a datasheet. The tutorial intent file declares one domain wrongly on
+# purpose, so there is a real deviation to report.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni check --verdicts --rule intent/voltage-domain-mismatch examples/tutorial-project/designs/gateway/gateway.edn

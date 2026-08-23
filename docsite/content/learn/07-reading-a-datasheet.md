@@ -84,4 +84,4 @@ Worth remembering [chapter 3's](../03-why-every-chip-needs-capacitors/#the-numbe
 | [`regulator-output-exceeds-abs-max`](../../reference/rules/regulator-output-exceeds-abs-max/) | error | a regulator driving a rail above what a part it feeds can survive |
 | [`load-switch-trip-above-fet-rating`](../../reference/rules/load-switch-trip-above-fet-rating/) | error | a load switch that trips above its pass FET's continuous rating |
 
-Next: the power tree, where the question stops being about one part and becomes about how the whole board is fed.
+Next: [the power tree](../08-the-power-tree/), where the question stops being about one part and becomes about how the whole board is fed.

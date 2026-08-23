@@ -1,0 +1,6 @@
+# Chapter 8: the tutorial board's power tree, read off the regulators' nets. U1 takes 12V and makes
+# 3V3; U2 takes 3V3 and makes 1V8. A cascade rather than three supplies in parallel.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "regulator"), component-on-net(?r, ?n) => ?r, ?n'
