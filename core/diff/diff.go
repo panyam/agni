@@ -28,8 +28,14 @@ const (
 	NetNew     NetChangeKind = "new"     // present only in the new design
 	NetDeleted NetChangeKind = "deleted" // present only in the old design
 	NetRenamed NetChangeKind = "renamed" // same connectivity, different name
-	NetHard    NetChangeKind = "hard"    // connectivity (pin membership) changed
-	NetSoft    NetChangeKind = "soft"    // attribute-only change; connectivity identical
+	// NetRenamedApprox is a net the near-match pass believes was renamed while ALSO changing, which
+	// the exact pass cannot recover because its signature no longer matches. It is deliberately a
+	// distinct kind rather than a NetRenamed with a caveat: an exact rename is a fact about the two
+	// revisions, and this is the engine's best assignment among candidates. A consumer that must not
+	// act on a guess can filter on the kind, and Approx carries the evidence for one that will.
+	NetRenamedApprox NetChangeKind = "renamed-approx"
+	NetHard          NetChangeKind = "hard" // connectivity (pin membership) changed
+	NetSoft          NetChangeKind = "soft" // attribute-only change; connectivity identical
 )
 
 // NetChange is one classified net-level change. Name is the net's name in the design where
@@ -44,6 +50,27 @@ type NetChange struct {
 	Removed []string
 	OldProv *ir.Provenance
 	NewProv *ir.Provenance
+	// Approx is the near-match pass's evidence, non-nil only for NetRenamedApprox.
+	Approx *RenameEvidence
+}
+
+// RenameEvidence is why the near-match pass paired one deleted net with one added net. It is set
+// only on NetRenamedApprox.
+//
+// It exists so a reader can DISAGREE. The pass makes a judgement call that no threshold can make
+// correctly in every case, so a finding that showed only its conclusion would have to be taken on
+// trust, and the added and removed endpoints beside it are usually enough to settle the question by
+// eye. The significant figures are the ones insensitive to probe churn.
+type RenameEvidence struct {
+	OldCoverage            float64 // fraction of the old net's endpoints that survived
+	OldCoverageSignificant float64 // the same, ignoring insignificant endpoint classes
+	NewCoverageSignificant float64 // fraction of the new net's significant endpoints that are old
+	Overlap                int     // endpoints in both
+	OverlapSignificant     int     // significant endpoints in both
+	OldEndpoints           int     // size of the old net
+	NewEndpoints           int     // size of the new net
+	OldSignificant         int     // significant endpoints on the old net
+	NewSignificant         int     // significant endpoints on the new net
 }
 
 // Report is the result of diffing two designs.
@@ -55,10 +82,20 @@ type Report struct {
 }
 
 // Designs diffs a (old) against b (new).
-func Designs(a, b *ir.Design) *Report {
+//
+// opts is variadic so that every existing caller keeps the exact-signature behaviour it already
+// had. Passing nothing, or passing a RenameOptions with Enabled false, reproduces the previous
+// output byte for byte; the near-match pass is opt-in because a diff that guesses is a different
+// tool from a diff that does not, and a gate reading the output should say which one it wants.
+// Later options win, so a caller may layer a default and an override.
+func Designs(a, b *ir.Design, opts ...RenameOptions) *Report {
+	var ro RenameOptions
+	for _, o := range opts {
+		ro = o
+	}
 	r := &Report{}
 	diffComponents(a, b, r)
-	diffNets(a, b, r)
+	diffNets(a, b, r, ro)
 	return r
 }
 
@@ -139,7 +176,7 @@ type netInfo struct {
 // diffNets classifies every net change. Nets are matched by name first (Equal / Soft /
 // Hard); the leftover deleted and added names are then paired by identical connection
 // signature into renames, and whatever remains is New or Deleted.
-func diffNets(a, b *ir.Design, r *Report) {
+func diffNets(a, b *ir.Design, r *Report, ro RenameOptions) {
 	an := indexNets(a)
 	bn := indexNets(b)
 
@@ -190,13 +227,30 @@ func diffNets(a, b *ir.Design, r *Report) {
 		})
 		renamedDel[dName], renamedAdd[aName] = true, true
 	}
+	// Near-match pass, over ONLY what the exact pass left. Running it after keeps the passes ordered
+	// so a net renamed with no connectivity change always comes out as an exact NetRenamed, never as
+	// an approximate one.
+	var leftDel, leftAdd []string
 	for _, name := range deleted {
 		if !renamedDel[name] {
-			r.Nets = append(r.Nets, NetChange{Kind: NetDeleted, Name: name, OldProv: an[name].prov})
+			leftDel = append(leftDel, name)
 		}
 	}
 	for _, name := range added {
 		if !renamedAdd[name] {
+			leftAdd = append(leftAdd, name)
+		}
+	}
+	approx, approxDel, approxAdd := nearRenames(leftDel, leftAdd, an, bn, indexComponents(a), indexComponents(b), ro)
+	r.Nets = append(r.Nets, approx...)
+
+	for _, name := range leftDel {
+		if !approxDel[name] {
+			r.Nets = append(r.Nets, NetChange{Kind: NetDeleted, Name: name, OldProv: an[name].prov})
+		}
+	}
+	for _, name := range leftAdd {
+		if !approxAdd[name] {
 			r.Nets = append(r.Nets, NetChange{Kind: NetNew, Name: name, NewProv: bn[name].prov})
 		}
 	}
@@ -306,8 +360,8 @@ func setDiff(a, b map[string]bool) []string {
 // section; a non-positive limit lists everything. The caller (e.g. the CLI) chooses
 // the limit, so the diff package holds no display policy of its own.
 func (r *Report) Render(limit int) string {
-	var counts [5]int // indexed by kind, see below
-	kindIdx := map[NetChangeKind]int{NetNew: 0, NetDeleted: 1, NetRenamed: 2, NetHard: 3, NetSoft: 4}
+	var counts [6]int // indexed by kind, see below
+	kindIdx := map[NetChangeKind]int{NetNew: 0, NetDeleted: 1, NetRenamed: 2, NetRenamedApprox: 3, NetHard: 4, NetSoft: 5}
 	for _, nc := range r.Nets {
 		counts[kindIdx[nc.Kind]]++
 	}
@@ -316,7 +370,13 @@ func (r *Report) Render(limit int) string {
 	fmt.Fprintf(&b, "Components: +%d  -%d  ~%d\n",
 		len(r.ComponentsAdded), len(r.ComponentsRemoved), len(r.ComponentsChanged))
 	fmt.Fprintf(&b, "Nets:       new %d  deleted %d  renamed %d  hard %d  soft %d\n",
-		counts[0], counts[1], counts[2], counts[3], counts[4])
+		counts[0], counts[1], counts[2], counts[4], counts[5])
+	// Reported on its own line, and only when the pass ran and found something, so the summary of a
+	// diff that did not guess is unchanged. Folding the count into "renamed" would let a guess be
+	// read as a recovered fact, which is the one thing the separate kind exists to prevent.
+	if counts[3] > 0 {
+		fmt.Fprintf(&b, "            renamed-approx %d (near matches, review the evidence)\n", counts[3])
+	}
 
 	section(&b, "Components added", r.ComponentsAdded, limit)
 	section(&b, "Components removed", r.ComponentsRemoved, limit)
@@ -332,6 +392,14 @@ func (r *Report) Render(limit int) string {
 			switch nc.Kind {
 			case NetRenamed:
 				fmt.Fprintf(&b, "  [renamed] %s -> %s\n", nc.OldName, nc.Name)
+			case NetRenamedApprox:
+				// Counts rather than percentages. A reader deciding whether to believe the pairing wants
+				// the numerator and the denominator, and "3/3 device endpoints" is falsifiable against the
+				// design where "100%" is only reassuring.
+				fmt.Fprintf(&b, "  [renamed?] %s -> %s: +%v -%v (kept %d/%d device endpoints, %d/%d overall)\n",
+					nc.OldName, nc.Name, nc.Added, nc.Removed,
+					nc.Approx.OverlapSignificant, nc.Approx.OldSignificant,
+					nc.Approx.Overlap, nc.Approx.OldEndpoints)
 			case NetHard:
 				fmt.Fprintf(&b, "  [hard]    %s: +%v -%v\n", nc.Name, nc.Added, nc.Removed)
 			case NetSoft:

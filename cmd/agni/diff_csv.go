@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"strconv"
 
 	"github.com/panyam/agni/core/diff"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -29,6 +30,12 @@ var diffCSVColumns = []string{
 	"removed",
 	"old_source_file",
 	"new_source_file",
+	// Populated only on net-renamed-approx rows. A near match is a judgement rather than a
+	// recovered fact, and the spreadsheet is where a reviewer triages one, so the numbers that
+	// decided it belong in sortable columns rather than in prose the reader has to parse.
+	"match_old_coverage",
+	"match_old_coverage_significant",
+	"match_new_coverage_significant",
 }
 
 // Change classes emitted in the change_class column. Net classes are the diff taxonomy's own kinds
@@ -67,6 +74,11 @@ func writeDiffCSV(w io.Writer, rep *diff.Report) error {
 		row[2] = nc.OldName
 		row[6], row[7] = joinCell(nc.Added), joinCell(nc.Removed)
 		row[8], row[9] = provFile(nc.OldProv), provFile(nc.NewProv)
+		if e := nc.Approx; e != nil {
+			row[10] = strconv.FormatFloat(e.OldCoverage, 'f', 3, 64)
+			row[11] = strconv.FormatFloat(e.OldCoverageSignificant, 'f', 3, 64)
+			row[12] = strconv.FormatFloat(e.NewCoverageSignificant, 'f', 3, 64)
+		}
 		c.row(row)
 	}
 	return c.finish()

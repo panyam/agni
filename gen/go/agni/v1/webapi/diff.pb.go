@@ -154,11 +154,12 @@ func (x *DiffReport) GetNets() []*DiffReport_NetChange {
 // DiffDesignsResponse carries the full report plus the compact highlight maps a viewer joins
 // to geometry keys without re-deriving the diff (WS9-004): component_status maps ref_des ->
 // "added" | "removed" | "changed"; net_status maps net name -> "new" | "deleted" | "renamed" |
-// "hard" | "soft". A renamed net appears under BOTH its old and new name (both -> "renamed"),
+// "renamed-approx" | "hard" | "soft". A renamed net of either kind appears under BOTH its old and
+// new name (both carrying that net's own kind),
 // so each side of a visual diff joins by the name its own geometry carries; the by-name match
 // in diff.Designs guarantees one name never carries two different statuses. A consumer filters
-// by side: the old design draws removed/deleted/renamed/hard/soft, the new one
-// added/new/renamed/hard/soft.
+// by side: the old design draws removed/deleted/renamed/renamed-approx/hard/soft, the new one
+// added/new/renamed/renamed-approx/hard/soft.
 type DiffDesignsResponse struct {
 	state             protoimpl.MessageState                    `protogen:"open.v1"`
 	Report            *DiffReport                               `protobuf:"bytes,1,opt,name=report,proto3" json:"report,omitempty"`
@@ -336,20 +337,29 @@ func (x *DiffReport_ComponentChange) GetNew() string {
 }
 
 // NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
-// "deleted", "renamed" (same connection signature, different name), "hard" (pin membership
-// changed), "soft" (attribute-only). name is the net's name where it exists (the new name
-// for a rename); old_name is set only for renames. added/removed are "refdes.pin"
-// connection deltas, set only for hard changes. old_prov/new_prov locate the net in each
-// revision's source, unset on the side where the net does not exist.
+// "deleted", "renamed" (same connection signature, different name), "renamed-approx" (a
+// near match the engine ASSIGNED rather than recovered, see approx below), "hard" (pin
+// membership changed), "soft" (attribute-only). name is the net's name where it exists (the
+// new name for a rename); old_name is set on both rename kinds. added/removed are
+// "refdes.pin" connection deltas, set on hard changes and on renamed-approx. old_prov/new_prov
+// locate the net in each revision's source, unset on the side where the net does not exist.
 type DiffReport_NetChange struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	OldName       string                 `protobuf:"bytes,3,opt,name=old_name,json=oldName,proto3" json:"old_name,omitempty"`
-	Added         []string               `protobuf:"bytes,4,rep,name=added,proto3" json:"added,omitempty"`
-	Removed       []string               `protobuf:"bytes,5,rep,name=removed,proto3" json:"removed,omitempty"`
-	OldProv       *ir.Provenance         `protobuf:"bytes,6,opt,name=old_prov,json=oldProv,proto3" json:"old_prov,omitempty"`
-	NewProv       *ir.Provenance         `protobuf:"bytes,7,opt,name=new_prov,json=newProv,proto3" json:"new_prov,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Kind    string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Name    string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	OldName string                 `protobuf:"bytes,3,opt,name=old_name,json=oldName,proto3" json:"old_name,omitempty"`
+	Added   []string               `protobuf:"bytes,4,rep,name=added,proto3" json:"added,omitempty"`
+	Removed []string               `protobuf:"bytes,5,rep,name=removed,proto3" json:"removed,omitempty"`
+	OldProv *ir.Provenance         `protobuf:"bytes,6,opt,name=old_prov,json=oldProv,proto3" json:"old_prov,omitempty"`
+	NewProv *ir.Provenance         `protobuf:"bytes,7,opt,name=new_prov,json=newProv,proto3" json:"new_prov,omitempty"`
+	// approx is why the near-match pass paired these two nets, set only on "renamed-approx".
+	//
+	// It travels with the change rather than being recomputed, because a consumer cannot
+	// rebuild it: the fractions are taken against the endpoint sets as they were BEFORE the
+	// assignment consumed them, and significance depends on the device classes of components
+	// in both revisions. A viewer that wanted to show its work would otherwise need both
+	// designs in hand.
+	Approx        *DiffReport_RenameEvidence `protobuf:"bytes,8,opt,name=approx,proto3" json:"approx,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -433,6 +443,128 @@ func (x *DiffReport_NetChange) GetNewProv() *ir.Provenance {
 	return nil
 }
 
+func (x *DiffReport_NetChange) GetApprox() *DiffReport_RenameEvidence {
+	if x != nil {
+		return x.Approx
+	}
+	return nil
+}
+
+// RenameEvidence is the arithmetic behind one "renamed-approx" pairing.
+//
+// It exists so a reader can DISAGREE with the engine. An approximate rename is a judgement
+// among candidates rather than a fact about the two revisions, so a consumer that showed only
+// the conclusion would be asking to be trusted. The *_significant figures exclude endpoint
+// classes the run treats as churn (test points by default), which is why they can differ
+// sharply from their all-endpoint counterparts on a heavily probed board.
+type DiffReport_RenameEvidence struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	OldCoverage            float64                `protobuf:"fixed64,1,opt,name=old_coverage,json=oldCoverage,proto3" json:"old_coverage,omitempty"`                                    // fraction of the old net's endpoints that survived
+	OldCoverageSignificant float64                `protobuf:"fixed64,2,opt,name=old_coverage_significant,json=oldCoverageSignificant,proto3" json:"old_coverage_significant,omitempty"` // the same, ignoring insignificant endpoint classes
+	NewCoverageSignificant float64                `protobuf:"fixed64,3,opt,name=new_coverage_significant,json=newCoverageSignificant,proto3" json:"new_coverage_significant,omitempty"` // fraction of the new net's significant endpoints that are old
+	Overlap                int32                  `protobuf:"varint,4,opt,name=overlap,proto3" json:"overlap,omitempty"`                                                                // endpoints in both
+	OverlapSignificant     int32                  `protobuf:"varint,5,opt,name=overlap_significant,json=overlapSignificant,proto3" json:"overlap_significant,omitempty"`                // significant endpoints in both
+	OldEndpoints           int32                  `protobuf:"varint,6,opt,name=old_endpoints,json=oldEndpoints,proto3" json:"old_endpoints,omitempty"`                                  // size of the old net
+	NewEndpoints           int32                  `protobuf:"varint,7,opt,name=new_endpoints,json=newEndpoints,proto3" json:"new_endpoints,omitempty"`                                  // size of the new net
+	OldSignificant         int32                  `protobuf:"varint,8,opt,name=old_significant,json=oldSignificant,proto3" json:"old_significant,omitempty"`                            // significant endpoints on the old net
+	NewSignificant         int32                  `protobuf:"varint,9,opt,name=new_significant,json=newSignificant,proto3" json:"new_significant,omitempty"`                            // significant endpoints on the new net
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *DiffReport_RenameEvidence) Reset() {
+	*x = DiffReport_RenameEvidence{}
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DiffReport_RenameEvidence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DiffReport_RenameEvidence) ProtoMessage() {}
+
+func (x *DiffReport_RenameEvidence) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DiffReport_RenameEvidence.ProtoReflect.Descriptor instead.
+func (*DiffReport_RenameEvidence) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_diff_proto_rawDescGZIP(), []int{1, 2}
+}
+
+func (x *DiffReport_RenameEvidence) GetOldCoverage() float64 {
+	if x != nil {
+		return x.OldCoverage
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetOldCoverageSignificant() float64 {
+	if x != nil {
+		return x.OldCoverageSignificant
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetNewCoverageSignificant() float64 {
+	if x != nil {
+		return x.NewCoverageSignificant
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetOverlap() int32 {
+	if x != nil {
+		return x.Overlap
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetOverlapSignificant() int32 {
+	if x != nil {
+		return x.OverlapSignificant
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetOldEndpoints() int32 {
+	if x != nil {
+		return x.OldEndpoints
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetNewEndpoints() int32 {
+	if x != nil {
+		return x.NewEndpoints
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetOldSignificant() int32 {
+	if x != nil {
+		return x.OldSignificant
+	}
+	return 0
+}
+
+func (x *DiffReport_RenameEvidence) GetNewSignificant() int32 {
+	if x != nil {
+		return x.NewSignificant
+	}
+	return 0
+}
+
 // Sheet membership for the CHANGED entities only, keyed BY the entity: in
 // component_sheets_a/b the key is a changed ref_des and the value lists the ids of the
 // SHEETS that component appears on in that revision (component_sheets_a["R3"] = ["root",
@@ -454,7 +586,7 @@ type DiffDesignsResponse_SheetIds struct {
 
 func (x *DiffDesignsResponse_SheetIds) Reset() {
 	*x = DiffDesignsResponse_SheetIds{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +598,7 @@ func (x *DiffDesignsResponse_SheetIds) String() string {
 func (*DiffDesignsResponse_SheetIds) ProtoMessage() {}
 
 func (x *DiffDesignsResponse_SheetIds) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -507,7 +639,7 @@ type DiffDesignsResponse_Placement struct {
 
 func (x *DiffDesignsResponse_Placement) Reset() {
 	*x = DiffDesignsResponse_Placement{}
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +651,7 @@ func (x *DiffDesignsResponse_Placement) String() string {
 func (*DiffDesignsResponse_Placement) ProtoMessage() {}
 
 func (x *DiffDesignsResponse_Placement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_diff_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_diff_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +695,7 @@ const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\">\n" +
 	"\x12DiffDesignsRequest\x12\x13\n" +
 	"\x05a_uri\x18\x01 \x01(\tR\x04aUri\x12\x13\n" +
-	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\"\xc8\x04\n" +
+	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\"\x9c\b\n" +
 	"\n" +
 	"DiffReport\x12)\n" +
 	"\x10components_added\x18\x01 \x03(\tR\x0fcomponentsAdded\x12-\n" +
@@ -574,7 +706,7 @@ const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n" +
 	"\x05field\x18\x02 \x01(\tR\x05field\x12\x10\n" +
 	"\x03old\x18\x03 \x01(\tR\x03old\x12\x10\n" +
-	"\x03new\x18\x04 \x01(\tR\x03new\x1a\xe4\x01\n" +
+	"\x03new\x18\x04 \x01(\tR\x03new\x1a\xa7\x02\n" +
 	"\tNetChange\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -582,7 +714,18 @@ const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\x05added\x18\x04 \x03(\tR\x05added\x12\x18\n" +
 	"\aremoved\x18\x05 \x03(\tR\aremoved\x121\n" +
 	"\bold_prov\x18\x06 \x01(\v2\x16.agni.v1.ir.ProvenanceR\aoldProv\x121\n" +
-	"\bnew_prov\x18\a \x01(\v2\x16.agni.v1.ir.ProvenanceR\anewProv\"\xe2\r\n" +
+	"\bnew_prov\x18\a \x01(\v2\x16.agni.v1.ir.ProvenanceR\anewProv\x12A\n" +
+	"\x06approx\x18\b \x01(\v2).agni.v1.webapi.DiffReport.RenameEvidenceR\x06approx\x1a\x8e\x03\n" +
+	"\x0eRenameEvidence\x12!\n" +
+	"\fold_coverage\x18\x01 \x01(\x01R\voldCoverage\x128\n" +
+	"\x18old_coverage_significant\x18\x02 \x01(\x01R\x16oldCoverageSignificant\x128\n" +
+	"\x18new_coverage_significant\x18\x03 \x01(\x01R\x16newCoverageSignificant\x12\x18\n" +
+	"\aoverlap\x18\x04 \x01(\x05R\aoverlap\x12/\n" +
+	"\x13overlap_significant\x18\x05 \x01(\x05R\x12overlapSignificant\x12#\n" +
+	"\rold_endpoints\x18\x06 \x01(\x05R\foldEndpoints\x12#\n" +
+	"\rnew_endpoints\x18\a \x01(\x05R\fnewEndpoints\x12'\n" +
+	"\x0fold_significant\x18\b \x01(\x05R\x0eoldSignificant\x12'\n" +
+	"\x0fnew_significant\x18\t \x01(\x05R\x0enewSignificant\"\xe2\r\n" +
 	"\x13DiffDesignsResponse\x122\n" +
 	"\x06report\x18\x01 \x01(\v2\x1a.agni.v1.webapi.DiffReportR\x06report\x12c\n" +
 	"\x10component_status\x18\x02 \x03(\v28.agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntryR\x0fcomponentStatus\x12Q\n" +
@@ -641,52 +784,54 @@ func file_agni_v1_webapi_diff_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_diff_proto_rawDescData
 }
 
-var file_agni_v1_webapi_diff_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_agni_v1_webapi_diff_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_agni_v1_webapi_diff_proto_goTypes = []any{
 	(*DiffDesignsRequest)(nil),            // 0: agni.v1.webapi.DiffDesignsRequest
 	(*DiffReport)(nil),                    // 1: agni.v1.webapi.DiffReport
 	(*DiffDesignsResponse)(nil),           // 2: agni.v1.webapi.DiffDesignsResponse
 	(*DiffReport_ComponentChange)(nil),    // 3: agni.v1.webapi.DiffReport.ComponentChange
 	(*DiffReport_NetChange)(nil),          // 4: agni.v1.webapi.DiffReport.NetChange
-	nil,                                   // 5: agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
-	nil,                                   // 6: agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
-	(*DiffDesignsResponse_SheetIds)(nil),  // 7: agni.v1.webapi.DiffDesignsResponse.SheetIds
-	nil,                                   // 8: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
-	nil,                                   // 9: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
-	nil,                                   // 10: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
-	nil,                                   // 11: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
-	(*DiffDesignsResponse_Placement)(nil), // 12: agni.v1.webapi.DiffDesignsResponse.Placement
-	nil,                                   // 13: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
-	nil,                                   // 14: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
-	(*ir.Provenance)(nil),                 // 15: agni.v1.ir.Provenance
+	(*DiffReport_RenameEvidence)(nil),     // 5: agni.v1.webapi.DiffReport.RenameEvidence
+	nil,                                   // 6: agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
+	nil,                                   // 7: agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
+	(*DiffDesignsResponse_SheetIds)(nil),  // 8: agni.v1.webapi.DiffDesignsResponse.SheetIds
+	nil,                                   // 9: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
+	nil,                                   // 10: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
+	nil,                                   // 11: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
+	nil,                                   // 12: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
+	(*DiffDesignsResponse_Placement)(nil), // 13: agni.v1.webapi.DiffDesignsResponse.Placement
+	nil,                                   // 14: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
+	nil,                                   // 15: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
+	(*ir.Provenance)(nil),                 // 16: agni.v1.ir.Provenance
 }
 var file_agni_v1_webapi_diff_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.webapi.DiffReport.components_changed:type_name -> agni.v1.webapi.DiffReport.ComponentChange
 	4,  // 1: agni.v1.webapi.DiffReport.nets:type_name -> agni.v1.webapi.DiffReport.NetChange
 	1,  // 2: agni.v1.webapi.DiffDesignsResponse.report:type_name -> agni.v1.webapi.DiffReport
-	5,  // 3: agni.v1.webapi.DiffDesignsResponse.component_status:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
-	6,  // 4: agni.v1.webapi.DiffDesignsResponse.net_status:type_name -> agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
-	8,  // 5: agni.v1.webapi.DiffDesignsResponse.component_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
-	9,  // 6: agni.v1.webapi.DiffDesignsResponse.component_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
-	10, // 7: agni.v1.webapi.DiffDesignsResponse.net_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
-	11, // 8: agni.v1.webapi.DiffDesignsResponse.net_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
-	13, // 9: agni.v1.webapi.DiffDesignsResponse.shared_placements_a:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
-	14, // 10: agni.v1.webapi.DiffDesignsResponse.shared_placements_b:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
-	15, // 11: agni.v1.webapi.DiffReport.NetChange.old_prov:type_name -> agni.v1.ir.Provenance
-	15, // 12: agni.v1.webapi.DiffReport.NetChange.new_prov:type_name -> agni.v1.ir.Provenance
-	7,  // 13: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	7,  // 14: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	7,  // 15: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	7,  // 16: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
-	12, // 17: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
-	12, // 18: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
-	0,  // 19: agni.v1.webapi.DiffService.DiffDesigns:input_type -> agni.v1.webapi.DiffDesignsRequest
-	2,  // 20: agni.v1.webapi.DiffService.DiffDesigns:output_type -> agni.v1.webapi.DiffDesignsResponse
-	20, // [20:21] is the sub-list for method output_type
-	19, // [19:20] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	6,  // 3: agni.v1.webapi.DiffDesignsResponse.component_status:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentStatusEntry
+	7,  // 4: agni.v1.webapi.DiffDesignsResponse.net_status:type_name -> agni.v1.webapi.DiffDesignsResponse.NetStatusEntry
+	9,  // 5: agni.v1.webapi.DiffDesignsResponse.component_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry
+	10, // 6: agni.v1.webapi.DiffDesignsResponse.component_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry
+	11, // 7: agni.v1.webapi.DiffDesignsResponse.net_sheets_a:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry
+	12, // 8: agni.v1.webapi.DiffDesignsResponse.net_sheets_b:type_name -> agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry
+	14, // 9: agni.v1.webapi.DiffDesignsResponse.shared_placements_a:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry
+	15, // 10: agni.v1.webapi.DiffDesignsResponse.shared_placements_b:type_name -> agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry
+	16, // 11: agni.v1.webapi.DiffReport.NetChange.old_prov:type_name -> agni.v1.ir.Provenance
+	16, // 12: agni.v1.webapi.DiffReport.NetChange.new_prov:type_name -> agni.v1.ir.Provenance
+	5,  // 13: agni.v1.webapi.DiffReport.NetChange.approx:type_name -> agni.v1.webapi.DiffReport.RenameEvidence
+	8,  // 14: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	8,  // 15: agni.v1.webapi.DiffDesignsResponse.ComponentSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	8,  // 16: agni.v1.webapi.DiffDesignsResponse.NetSheetsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	8,  // 17: agni.v1.webapi.DiffDesignsResponse.NetSheetsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.SheetIds
+	13, // 18: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsAEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
+	13, // 19: agni.v1.webapi.DiffDesignsResponse.SharedPlacementsBEntry.value:type_name -> agni.v1.webapi.DiffDesignsResponse.Placement
+	0,  // 20: agni.v1.webapi.DiffService.DiffDesigns:input_type -> agni.v1.webapi.DiffDesignsRequest
+	2,  // 21: agni.v1.webapi.DiffService.DiffDesigns:output_type -> agni.v1.webapi.DiffDesignsResponse
+	21, // [21:22] is the sub-list for method output_type
+	20, // [20:21] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_diff_proto_init() }
@@ -700,7 +845,7 @@ func file_agni_v1_webapi_diff_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_diff_proto_rawDesc), len(file_agni_v1_webapi_diff_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
