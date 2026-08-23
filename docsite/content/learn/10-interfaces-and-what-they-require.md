@@ -58,28 +58,39 @@ It also means that **anything the built-in checked and this file omits stops bei
 
 That shape recurs anywhere configuration replaces rather than merges, and the failure is always the same: the run gets quieter and nothing says why.
 
-## The silence at the end (EE6)
+## What a satisfied requirement says (EE6)
 
 Now the thing this chapter is really for.
 
 Look at the profile's `termination` requirement, then look at what the board has. [Chapter 1](../01-what-a-board-is-made-of/) opened the course by reading three resistors off a query, and the first of them was `R1`, a 120 Ω part bridging `CAN1_CANH` and `CAN1_CANL`. That is what the requirement asks for.
 
-{{ agniRun "content/learn/runs/termination-silent.yaml" }}
+{{ agniRun "content/learn/runs/termination-witnessed.yaml" }}
 
-R1 is there. The requirement is satisfied. **The rule says nothing whatsoever.**
+R1 is there, the requirement is satisfied, and the rule **says so, naming the net and why**.
 
-That is not a bug and it is not an oversight. Profile rules are compiled from datalog queries, and a datalog goal yields the rows that *satisfy* it. `unterminated(?h)` produces unterminated buses; there is no natural complement that produces "the buses that were fine". So these rules report violations and claim nothing about anything else, which the run summary says out loud in its last line. Whether they could state one is agni issue 424.
+That last part is worth more than it looks, because for most of this tool's life it did not happen. Profile rules are compiled from datalog queries, and a datalog goal yields the rows that *satisfy* it. `unterminated(?h)` produces unterminated buses; there is no complement that falls out of the same query and produces "the buses that were fine". So the rule reported the violations and claimed nothing about anything else.
 
-Sit with what that means, because one sentence carries the whole course. **A clean result from those rules and a board with no CAN on it produce identical output.** If you had deleted R1, the termination rule would have fired. If you had deleted the entire CAN bus, it would also have said nothing, exactly as it does now. The silence cannot distinguish them.
+Sit with what that meant, because it is the observation the whole course is built on. **A clean result from such a rule and a board with no CAN on it produce identical output.** Delete R1 and the termination rule fires. Delete the entire CAN bus and it says nothing, which is exactly what it says about a correctly terminated one. Silence cannot tell those apart, so a reader cannot either.
 
-Everything in this tool that looked fussy earlier is downstream of that observation. [Chapter 5's](../05-who-drives-this-net/#two-nets-opposite-problems-ee3) insistence that a pass is a pass about one question, the `not-considered` verdicts in [chapters 4](../04-pull-ups-and-undefined-states/) and [8](../08-the-power-tree/), and the summary line counting how many rules declined to say what they examined, are all the same idea: a report is only worth something if you can tell what it looked at.
+The fix is not cleverness about the query. It is that the rule now declares the set it examined, separately from the answer it reached, and the tool reports the difference. Nothing infers the scope from the goal, because for these rules the scope is not recoverable from the goal: `signal-missing` carries two negated conditions and only one of them is the test, and `signal-dangling` ends in a comparison with no negation at all. An author knows which half is which. A derivation would guess, and guessing wrong reports the failures as the coverage.
+
+Everything in this tool that looked fussy earlier is downstream of the same idea. [Chapter 5's](../05-who-drives-this-net/#two-nets-opposite-problems-ee3) insistence that a pass is a pass about one question, the `not-considered` verdicts in [chapters 4](../04-pull-ups-and-undefined-states/) and [8](../08-the-power-tree/), and the summary line that counts what a run considered, are all the same thing: a report is only worth something if you can tell what it looked at.
+
+Try it on the interface as a whole, and note that a house requirement and a protocol one are answered in the same voice:
+
+```
+agni check --verdicts --rule gateway-profiles/can-host-incomplete designs/gateway/gateway.edn
+```
+
+`U4` gets one verdict per required signal rather than one verdict as a part, because a host wired to four of its five lines is four right answers and one wrong one. Each is addressable on its own, and `gateway-profiles/can-host-incomplete:(component:U4,signal:STB)` is a question you can type before running anything. That is the same pair-shaped subject [chapter 9](../09-sequencing-and-straps/) used for strap collisions, for the same reason: the answer belongs to a relation rather than to either thing in it.
 
 ## What you can now answer
 
 - Why "this board has CAN" is a claim about a specification rather than about two wires. *(EE6)*
 - How a part gets recognised as an interface host when a netlist cannot say what a chip is. *(EE6)*
 - Why a profile that lists only what it adds silently switches off everything it omits. *(EE6)*
-- Why a satisfied requirement produces no output here, and why that makes a clean run and an absent bus indistinguishable. *(EE6)*
+- Why a satisfied requirement used to produce no output, and why that made a clean run and an absent bus indistinguishable. *(EE6)*
+- Why the set a rule examined has to be declared by its author rather than inferred from the check it runs. *(EE6)*
 
 ## The rules this page explains
 

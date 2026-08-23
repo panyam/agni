@@ -39,9 +39,9 @@ var powerPinMistypedQ = query.FindingQuery{
 		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
 	// The considered set: every pin the NAME says is a supply or a ground, on a format that can
-	// express intentional no-connect. Both of the rule's tests drop out — the type test and the
-	// fan-out comparison — because a pin that is correctly typed and a pin that is wired are both
-	// pins this rule looked at and cleared.
+	// express intentional no-connect. Both of the rule's tests drop out, the type test and the
+	// fan-out comparison alike, because a pin that is correctly typed and a pin that is wired are
+	// both pins this rule looked at and cleared.
 	//
 	// has_nc_channel stays. It is not a test the pin passes, it is whether the FORMAT can answer the
 	// question at all, and a pin read from a format that cannot express no-connect was never judged.

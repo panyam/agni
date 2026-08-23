@@ -100,6 +100,32 @@ is what supersession replaces.
 The printed note is your check on this. When you add a profile, read the list of superseded rules
 and confirm your file covers each of them or that you meant to drop it.
 
+## What the rung bought you
+
+Compare the last line of this run against the one from [rung 4](../04-your-names/):
+
+```
+rung 4   15 finding(s)   201 subject(s) considered by 32 rule(s)
+rung 5   18 finding(s)   213 subject(s) considered by 36 rule(s)
+```
+
+Three more findings, and twelve more subjects that something now has an opinion about. The second
+number is the one worth watching as you add tiers. Findings tell you what is wrong today; the
+considered count tells you how much of the board anything is looking at, which is what you are
+actually buying when you declare an interface.
+
+Ask a requirement what it concluded and it will tell you, whether or not it found anything:
+
+```
+agni check --profile-path profiles --verdicts --rule gateway-profiles/can-host-incomplete \
+  designs/gateway/gateway.edn
+```
+
+`U4` comes back as one answer per required signal rather than one answer as a part: `STB` fails and
+the other four pass, each with the evidence behind it. A satisfied requirement that printed nothing
+would be indistinguishable from a requirement that never ran, which is the distinction
+[rung 9](../09-read-the-verdicts/) is built on.
+
 ## Next
 
 [Part limits](../06-part-limits/), where checks start comparing your design against what a part's

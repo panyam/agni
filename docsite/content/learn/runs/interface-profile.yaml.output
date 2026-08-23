@@ -1,13 +1,15 @@
 #agni-run 7e0b4c8857f70297
 gateway-profiles/can-esd-missing  2 fail
-  (reports violations only; absence here is not evidence of correctness)
     fail  CAN1_CANH  CAN signal net CAN1_CANH is exposed on a connector with no ESD protection
                      in reach
     fail  CAN1_CANL  CAN signal net CAN1_CANL is exposed on a connector with no ESD protection
                      in reach
 
-gateway-profiles/can-host-incomplete  1 fail
-  (reports violations only; absence here is not evidence of correctness)
-    fail  U4  CAN host U4 declares the interface but is missing required signal STB
+gateway-profiles/can-host-incomplete  1 fail, 4 pass
+    fail  U4 + STB   CAN host U4 declares the interface but is missing required signal STB
+    pass  U4 + CANH  CAN host U4 is wired to required signal CANH
+    pass  U4 + CANL  CAN host U4 is wired to required signal CANL
+    pass  U4 + RXD   CAN host U4 is wired to required signal RXD
+    pass  U4 + TXD   CAN host U4 is wired to required signal TXD
 
-0 verdicts across 0 rule(s) (2 rule(s) reported findings only)
+7 verdicts across 2 rule(s), 4 pass, 3 fail

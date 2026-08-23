@@ -232,7 +232,7 @@ const (
 	KindSymbol = "symbol"
 	// KindSignal is a REQUIREMENT SLOT rather than anything in the design: the role a profile asks
 	// for ("STB", "CANL"), whose Ref is the signal name as the profile spells it. It is the one kind
-	// that names something the design may not contain, which is the point — an interface rule's
+	// that names something the design may not contain, which is the point. An interface rule's
 	// subject is the pair (the part that declares the interface, the role it was asked for), and a
 	// verdict about a role the board is MISSING has no design entity to hang on.
 	//

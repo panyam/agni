@@ -73,7 +73,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		query.Neg(query.Rel("esd_ok", query.V("n")))))
 
 	// The considered set: every net this requirement APPLIED to, protected or not. It is `unprotected`
-	// without the negated clause, which is the scope half of the same sentence — the nets the profile
+	// without the negated clause, which is the scope half of the same sentence: the nets the profile
 	// selected as exposed, on a bus the presence gate says is in use. A net that is not here was never
 	// judged, and a net that is here but absent from the findings is a net with a clamp in reach.
 	//

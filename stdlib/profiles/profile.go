@@ -423,8 +423,8 @@ func (p Profile) signalMissingRule() *check.Rule {
 			query.Neg(query.Rel("has_signal", query.Str(s.Name))))
 		body = append(body, guard...)
 		rules = append(rules, query.Def(query.Rel("missing", query.V("a"), query.Str(s.Name)), body...))
-		// The considered set: the (anchor net, required signal) pairs this rule judged — the same body
-		// with the has_signal test dropped, the guard kept.
+		// The considered set: the (anchor net, required signal) pairs this rule judged, which is the same
+		// body with the has_signal test dropped and the guard kept.
 		//
 		// THIS PAIR IS WHY THE DOMAIN IS DECLARED AND NOT DERIVED. The body carries TWO negated
 		// literals: `not has_signal(S)` is the condition, and the host guard `not any_host("y")` is
@@ -475,8 +475,8 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 				query.Pos(query.Rel("host", query.V("h"))),
 				query.Neg(query.Rel(present, query.V("h")))),
 			// The considered set: every (declared host, required signal) pair. The host path needs no
-			// in_use gate — a component that declares the interface IS the evidence the convention path
-			// has to infer — so the scope is the host relation itself, crossed with the signal list.
+			// in_use gate, because a component that declares the interface IS the evidence the convention
+			// path has to infer, so the scope is the host relation crossed with the signal list.
 			query.Def(query.Rel("host_scope", query.V("h"), query.Str(s.Name)),
 				query.Pos(query.Rel("host", query.V("h")))))
 	}

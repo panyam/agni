@@ -29,5 +29,4 @@ first 15:
   [info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
 
 15 finding(s) total
-187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
-2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
+201 subject(s) considered by 32 rule(s), 7 not considered (--verdicts for the detail)

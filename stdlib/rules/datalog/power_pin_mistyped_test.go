@@ -82,7 +82,7 @@ func TestRegistered(t *testing.T) {
 }
 
 // TestPowerPinMistyped_StatesConsideredSet (agni issue 424): the rule reports what it EXAMINED, not
-// only what it faulted. On the fires fixture that is both name-derived supply pins — VDD, which is
+// only what it faulted. On the fires fixture that is both name-derived supply pins: VDD, which is
 // mistyped and alone, and GND, which is correctly typed and therefore a pass.
 //
 // The GND pin is the assertion that matters. It is the pin the rule looked at and cleared, and before

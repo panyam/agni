@@ -57,8 +57,8 @@ type FindingQuery struct {
 	// (agni issue 424); leaving it unset keeps the failures-only shape, which under-reports the rule
 	// and never overstates it.
 	//
-	// DECLARED RATHER THAN DERIVED, which is the whole design. The domain LOOKS derivable — for the
-	// ESD and pull-up requirements it is exactly the finding goal's body minus its negated literal —
+	// DECLARED RATHER THAN DERIVED, which is the whole design. The domain LOOKS derivable. For the
+	// ESD and pull-up requirements it is exactly the finding goal's body minus its negated literal,
 	// but signal-dangling ends in a comparison rather than a negation, and taking its body as the
 	// domain would report the failures AS the considered set. That is a coverage claim the run has
 	// not earned, and it is the same lie StatesConsideredSet exists to prevent. An author knows the
@@ -184,7 +184,22 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 			}
 			subjects := fq.tuple(row)
 			failed[tupleKey(subjects)] = true
-			vs = append(vs, check.Verdict{Outcome: outcome, Subjects: subjects, Context: f.Context, Finding: &f})
+			// A witness on the FAILING verdict too, which check.FailuresOnly deliberately omits. There
+			// it would be decoration, because an unconverted rule has no proof to show and inventing one
+			// makes it look converted. Here the answer row IS the proof: the goal matched, and the
+			// message is that match stated in words.
+			//
+			// It is also load-bearing rather than tidy. Verdict.Witness is REQUIRED on Pass and Fail,
+			// and the wire form of a Verdict carries no Finding on purpose (a defect travels once, in
+			// the findings array), so a failing row that crossed the seam with only a Finding rendered
+			// with an empty sentence in every consumer that reads verdicts back from the service.
+			vs = append(vs, check.Verdict{
+				Outcome:  outcome,
+				Subjects: subjects,
+				Context:  f.Context,
+				Witness:  &check.Witness{Statement: f.Message},
+				Finding:  &f,
+			})
 		}
 		drows, err := Naive{}.Eval(fq.Domain.Query, base)
 		if err != nil {

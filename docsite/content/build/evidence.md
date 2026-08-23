@@ -181,6 +181,22 @@ actually asserted over and failing at zero turns a silently empty sweep into a r
 applies to a fixture: assert the fixture really contains the shape under test, or the assertion had
 nothing to catch.
 
+**A fixture can encode the same assumption the rule does**, and then fixing the rule makes the
+fixture fail and the tempting move is to relax the rule back. Two `i2c-pull-up` fixtures gave their
+"pull-up" resistor exactly one net: no second end, no rail. Both comments claimed a pull-up and
+neither drew one, so a rule correctly requiring the resistor to reach a rail turned them red. The
+right move was completing the fixtures. The wrong one, which looks identical from inside the failing
+run, is loosening the check until the fixture passes again. When a fix breaks a fixture, read the
+fixture against what its comment claims before touching the rule.
+
+**A discriminating assertion needs a counter-example that survives for the right reason.** A
+considered-set test asserted that a NO_CONNECT pin stayed OUT of a rule's domain, which was true, and
+the test still could not tell a domain scoped to supply-named pins from one that swept in every pin
+on the part. The NC pin sat on no net, so it dropped out of both for a reason that had nothing to do
+with its role. The red-check is what said so: broadening the domain deliberately left the test green.
+The fix was a fixture pin that differs from the failing one in EXACTLY the property under test, a
+signal pin alone on its own net, so the only thing keeping it out is the thing being asserted.
+
 **A third way a test lies, and the compiler cannot help.** When two types carry the same field
 names, changing which one a function returns silently changes what a test MEANS while it still
 compiles. `check.Verdict` and `check.Finding` both have `Subject`, `Kind`, `Pin` and `NetID`, so when

@@ -1,6 +1,7 @@
-#agni-run e9818b8a23abb5a9
+#agni-run 6154c3ead0cb6823
 r   m              n               provenance
 R1  ACME-RES-120R  CAN1_CANH       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANH
 R1  ACME-RES-120R  CAN1_CANL       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANL
-187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
-2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
+gateway-profiles/can-termination-missing  1 pass
+    pass  CAN1_CANH  CAN bus (net CAN1_CANH) is bridged to its _CANL twin by a series passive
+1 verdicts across 1 rule(s), 1 pass

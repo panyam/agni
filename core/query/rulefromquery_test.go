@@ -441,3 +441,43 @@ func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
 		}
 	}
 }
+
+// TestRuleFromQueryDomainFailuresCarryAWitness pins the half that a rendered report caught and no
+// unit test would have.
+//
+// Verdict.Witness is REQUIRED on Fail as well as Pass, and the WIRE form of a Verdict deliberately
+// carries no Finding, because a defect travels once in the findings array. So a failing verdict whose
+// only sentence lived on its Finding rendered as a blank line in every consumer that reads verdicts
+// back from the service, visible in the docsite capture and invisible in-process.
+func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "pin {pin} shares net {net} with another pin",
+		},
+	})
+	fails := 0
+	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+		if v.Outcome != check.Fail {
+			continue
+		}
+		fails++
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Fatalf("a failing verdict must carry a witness, or it crosses the service seam mute: %+v", v)
+		}
+		// The witness says what the finding says, because for a datalog rule the matched row IS the
+		// proof and there is nothing else to state. They must not drift apart.
+		if v.Finding == nil || v.Witness.Statement != v.Finding.Message {
+			t.Errorf("witness %q and finding message %q disagree", v.Witness.Statement, v.Finding.Message)
+		}
+	}
+	if fails != 1 {
+		t.Fatalf("want 1 failing verdict, got %d", fails)
+	}
+}
