@@ -4,225 +4,166 @@ title: Evidence
 
 # Evidence: measuring, testing, and trusting a result
 
-Most of the expensive mistakes in this repo have not been wrong code. They have been a correct-looking
-*result* that nobody could have falsified: a sweep that found nothing because the detector was broken,
-a rate nobody checked for precision, a green test that could not have gone red. This page is the
-accumulated set of those, and the habits that catch them.
+The expensive mistakes here have not been wrong code. They have been a correct-looking *result* nobody
+could have falsified: a sweep that found nothing because the detector was broken, a rate nobody checked
+for precision, a green test that could not have gone red. This page is the accumulated set of those.
 
-Everything here is one question in different clothes: **what would this have looked like if it were
-wrong?** When the answer is "the same", the measurement is not evidence yet.
+Everything on it is one question in different clothes.
+
+```mermaid
+flowchart LR
+    R(["a result you believe"]) --> Q{"what would this have looked<br/>like if it were wrong?"}
+    Q -->|"different"| E["evidence"]
+    Q -->|"the same"| N["not evidence yet"]
+    N --> P["plant a known instance,<br/>then measure again"]
+    P --> R
+    classDef bad stroke-dasharray: 4 3;
+    class N bad;
+```
 
 ## Measuring, and trusting a measurement
 
 **A NEGATIVE RESULT NEEDS A POSITIVE CONTROL.** "Zero hits across 62 documents" is a claim about the
-instrument until you show the instrument can find a known instance. Three separate absence claims in
-this repo turned out to be artifacts of the detector rather than facts about the data: a table shape
-the heuristic could not see, a regex that could not match `V CC` so an arity gate silently dropped the
-one sentence being looked for, and a corpus sweep that ran a different code path from the one shipping.
-Before reporting an absence, plant a known instance and confirm it is found. The fixtures usually
-already contain one.
+instrument until you show the instrument can find a known instance. Three absence claims here were
+artifacts of the detector: a table shape the heuristic could not see, a regex that could not match
+`V CC`, and a corpus sweep running a different code path from the one shipping. Plant a known instance
+first. The fixtures usually already contain one.
 
-Two habits that make this cheap. **Instrument the gates**: count and sample what each filter REJECTED,
-not only what it matched, applying the silence-never-reads-as-coverage discipline to your own
-tooling. And **exercise the shipped configuration**: a sweep run with different flags from the ones
-the feature ships with has validated a different program.
+Two habits make that cheap. **Instrument the gates**, counting what each filter REJECTED and not only
+what it matched. And **exercise the shipped configuration**, because a sweep run with different flags
+has validated a different program.
 
-**A detector that FIRES is a claim about the instrument too.** The rule above is about absence; the
-mirror case is a positive rate nobody checked for precision. A sweep for "does this document print a
-document number" reported 86% coverage, and the regex behind it accepted `TPS22918` and `TCAN1145`,
-which are PART numbers, while missing `SLVSAG5`, which is a real document number. The headline would
-have justified building an extractor on a signal that was wrong in both directions. Before quoting a
-rate, run the detector against a handful of known positives AND known negatives by hand; when it
-cannot tell the two apart, that is the finding, and it is usually more useful than the rate.
+**A detector that FIRES is a claim about the instrument too.** A sweep for "does this document print a
+document number" reported 86% coverage on a regex that accepted `TPS22918` and `TCAN1145`, both PART
+numbers, while missing `SLVSAG5`, a real one. Wrong in both directions, and the headline would have
+justified building an extractor on it. Run a new detector past known positives AND known negatives by
+hand before quoting a rate. When it cannot tell the two apart, that is the finding.
 
-**Reading the code is not running it, and the gap is where the expensive bugs live.** Three passes
-through the same read path did not reveal that no producer fills `SourceDoc.title` as its contract
-specifies; opening the app and looking at the field showed it immediately, and invalidated part of a
-PR merged an hour earlier. Code review catches a layer that is wrong. It does not catch layers that
-are each internally consistent and collectively wrong, because every file reads fine on its own. When
-a change has a user-visible surface, drive it before designing on top of it. See `build/overlay.md`
-and the web-app page for how to stand the app up.
+**Reading the code is not running it.** Three passes through one read path did not reveal that no
+producer fills `SourceDoc.title` as its contract specifies. Opening the app and looking at the field
+showed it immediately, and invalidated part of a PR merged an hour earlier. Review catches a layer that
+is wrong. It does not catch layers that are each internally consistent and collectively wrong, because
+every file reads fine on its own.
 
 **A claim about LAYOUT needs a paint-level check, not a rectangle comparison.**
-`getBoundingClientRect` reports where a box was laid out and knows nothing about whether an ancestor
-clips it, so a child of a scrolling cell reports coordinates far outside that cell while being
-perfectly contained on screen. Reading those numbers as "it still overflows" is wrong in the safe
-direction, which is the worst kind. Ask the document instead: `elementFromPoint` at a spot inside the
-NEIGHBOURING element returns whichever element actually paints there, and that answers the question a
-rectangle cannot. Two corollaries. jsdom implements no layout at all, so a CSS behaviour has no test
-in this repo's suites and has to be driven in a real browser. And an A/B where you flip the rules on a
-live page has to re-measure in each layout, since restoring the old rules reflows the row and moves
-the very element you were probing.
+`getBoundingClientRect` knows nothing about an ancestor clipping the box, so a child of a scrolling cell
+reports coordinates far outside that cell while being perfectly contained on screen. Reading those
+numbers as "it still overflows" is wrong in the safe direction, which is the worst kind. Ask the
+document instead: `elementFromPoint` inside the NEIGHBOURING element returns whatever actually paints
+there. An A/B that flips the rules on a live page has to re-measure in each layout, since restoring the
+old rules reflows the row and moves the element you were probing.
 
-**When a run contradicts your PREDICTION, the contradiction is the finding. Do not adjust the test
-to absorb it.** A test written to prove a malformed `project.yaml` fails the run came back saying the
-run had SUCCEEDED, against a confident reading that a downstream error check would catch it. The
-tempting move is to assume the fixture is wrong. Chasing the gap instead found that the descriptor
-was never reachable at all, which turned out to be the actual content of the ticket (agni issue 312)
-rather than the two call sites it named. A surprise here is cheap to investigate and has repeatedly
-been worth more than the change that surfaced it.
+**When a run contradicts your PREDICTION, the contradiction is the finding.** A test written to prove
+that a malformed `project.yaml` fails the run came back saying the run had SUCCEEDED. Chasing the gap
+rather than blaming the fixture found that the descriptor was never reachable at all, which was the
+actual content of agni issue 312 rather than the two call sites it named.
 
-**Anything matching SYMBOL TEXT out of a doc-IR must tolerate an injected space.** Producers flatten
-subscripts, so `VCCA` arrives as `V CCA` (~850 such occurrences in one corpus). This has bitten three
-times in unrelated places: a prose sweep, the derive pin path where it would have produced pin ids no
-symbol library could match, and in-document search. Assume the space is there.
-
-**A feature premised on a house CONVENTION needs its base rate measured on real designs first, and
-the fixtures cannot tell you.** Every fixture in this repo names things the way the built-in
-vocabulary expects, because that is what made them work, so a convention-shaped feature always looks
-well-founded against them. Measured on two real boards, the endpoint-encoding net-name convention an
-issue was written around covered 1.1% and 0.06% of nets, while the shipped tutorial project does not
-use it at all. The same measurement then found a live silent bug in the opposite direction. Count the
-shape on a real design before designing to it; it is one query and it has twice changed what was
-worth building.
+**A feature premised on a house CONVENTION needs its base rate measured on real designs, and the
+fixtures cannot tell you.** Every fixture here names things the way the built-in vocabulary expects,
+which is what made them work, so a convention-shaped feature always looks well-founded against them.
+The endpoint-encoding net-name convention an issue was written around covered 1.1% and 0.06% of nets on
+two real boards, and the tutorial project does not use it at all. It is one query, and it has twice
+changed what was worth building.
 
 **A feature no fixture EXERCISES cannot fail a test, and that reads exactly like working.** The
-datasheet role tier shipped against a corpus where not one seeded spec declared pins, so the pass had
-no evidence to read: every test passed, the real boards were unchanged, and nothing could have gone
-red if it were wrong. The fix was to give the shipped fixture the data the feature consumes, which is
-what turned it from unfalsifiable into demonstrable (0 rails to 3 on the tutorial netlist). Before
-believing a green run, check that some committed fixture actually carries the input.
+datasheet role tier shipped against a corpus where not one seeded spec declared pins: every test
+passed, the real boards were unchanged, and nothing could have gone red if it were wrong. Giving the
+shipped fixture the data the feature consumes turned it from unfalsifiable into demonstrable, 0 rails
+to 3 on the tutorial netlist.
 
-**`prototext` output varies its whitespace ON PURPOSE, so never grep it for a count.** Go's prototext
-marshaller inserts an unstable extra space to discourage byte-comparison, so `function:  X` and
-`function: X` are the same run on different days. A before/after table built with a one-space pattern
-read ZERO for every "before" and was nearly shipped; the tell was an internal contradiction (a file
-showing 0 typed pins and 2 supply pins at once), not the number itself. Match with `: +` or parse the
-proto, and distrust any count whose parts do not add up.
+**A long-lived ticket's PREMISE erodes silently.** Three substantial issues in one month had aged out
+before anyone picked them up: one mostly shipped already, one resting on a convention the only real
+boards contradicted, one landed in pieces under other work. Nothing was wrong with any of them when
+filed. Adjacent work moved underneath while the ticket text kept asserting the old world. Read the
+comment thread as well as the body.
 
-**A long-lived ticket's PREMISE erodes silently, so re-verify it against the code before planning.**
-Three substantial issues this month had aged out before anyone picked them up: one was mostly shipped
-already, one rested on a convention the only real boards contradicted, and one had landed in pieces
-under other work. Nothing was wrong with any of them when filed; adjacent work moved underneath and
-the ticket text kept asserting the old world. Read the comment thread, not just the body, and check
-the claims against the tree. It costs minutes and has now saved three wasted PRs.
 ## Trusting a test
 
 A new test is a measurement too, and the red-check is its positive control: neutralise the behaviour
-the test is meant to catch and confirm the test fails. Stashing ONE tracked file
-(`git stash push -- path/to/file.go`, run the test, pop) is the cheap way to do it. Two outcomes are
-worth knowing before you see them.
+the test is meant to catch, and confirm the test fails. Stashing ONE tracked file
+(`git stash push -- path/to/file.go`, run, pop) is the cheap way.
 
-**That move fails when the stashed file also carries something the test needs to compile**, such as
-a new field, type, or exported helper the test references. The stash removes both the behaviour and the
-declaration, so the run comes back `[build failed]`, which proves nothing and looks like it did. Both
-times this bit, the fix was to revert the BEHAVIOUR in place (flip the branch to `if false`, drop the
-one assignment) and leave the declarations, then restore. Read the red output before believing it: a
-compile error is not a failing assertion.
+```mermaid
+flowchart TB
+    S["neutralise the behaviour<br/>git stash push -- one/file.go"] --> R{"run the test"}
+    R -->|"red, naming the defect"| OK["the test is real"]
+    R -->|"[build failed]"| B["proves nothing, and looks like it did.<br/>The stash took a declaration too.<br/>Revert the BEHAVIOUR in place instead:<br/>flip the branch to if false."]
+    R -->|"green"| G["the test asserts nothing.<br/>Replace the heuristic with the PROPERTY."]
+    classDef bad stroke-dasharray: 4 3;
+    class B,G bad;
+```
 
-**The other outcome is that it stays GREEN, which means the test asserts nothing.** A render test
-written around a gap heuristic ("the two notes must be at least N apart") passed with the fix
-removed, because another mechanism shrank the fixture enough that the gap held either way. The
-assertion could not fail, and only the red-check revealed it. When a test survives its own fix being
-neutralized, replace the heuristic with the PROPERTY: that one added a marker at the same anchor and
-asserted the two render at the same y, which then failed with the actual defect named. Run the
-red-check on every new test, not just ones you doubt.
+A compile error is not a failing assertion, so read the red output before believing it. And the green
+branch has a worked example: a render test built on a gap heuristic ("the two notes must be at least N
+apart") passed with the fix removed, because another mechanism shrank the fixture enough that the gap
+held either way. Asserting the PROPERTY instead (add a marker at the same anchor, assert the two render
+at the same y) failed with the actual defect named. Run the red-check on every new test, not only the
+ones you doubt.
 
-**Count WHICH tests flip, not merely that the suite went red.** The set is the evidence and the total
-is not. Neutering `reviewGate.trip()` failed 6 of 8 gate tests, and the two that stayed green were the
-opt-in guard and the flag-parse guard, neither of which has any business depending on `trip`. "The
-suite went red" would have been equally true if the wrong six had failed. Naming which ones should
-survive before you run it turns the red-check from a smoke test into a real prediction, and it costs
-one sentence of thought.
+**Count WHICH tests flip, not merely that the suite went red.** Neutering `reviewGate.trip()` failed 6
+of 8 gate tests, and the two survivors were the opt-in guard and the flag-parse guard, neither of which
+has any business depending on `trip`. "The suite went red" would have been equally true if the wrong six
+had failed. Naming which ones should survive costs one sentence of thought.
 
-**An assertion over a CUMULATIVE log is already true before the action it is meant to test.** A
-composition test that clicks a finding and asserts `expect(called).toContain("HighlightSheet")` passes
-with the click handler unwired, because the page's deep-link restore highlights during boot and the
-rpc is in the log before the click happens. It asserts that the page booted. Count the calls across
-the action instead (`const before = called.filter(is).length` … `expect(after).toBeGreaterThan(before)`),
-or clear the log first. Every "did X happen" assertion over a running system has this shape, and the
-red-check is what tells the two apart: unwire the handler, and a real assertion goes red while this
-one does not.
+### Ways a test passes while asserting nothing
 
-**A layout assertion probes where the damage IS, not where the element is.** Two versions of the
-same browser test went green with the containment CSS deleted outright. The first never created the
-condition: the public fixtures top out at three sheets, so with short names nothing overflowed
-whatever the rules said, and the test asserted an invariant that could not be violated. Squeezing the
-column to its 48px minimum by dragging its own grip fixed that. The second still passed, because it
-probed the neighbouring cell's CENTRE: measured, the escaping chip reached 66px past its own cell
-while the neighbour was 301px wide, so the probe sat 84px clear of the bleed and reported everything
-fine. Bleed arrives at the BOUNDARY and fades, so probe just inside the edge nearest the offender.
-Both faults were invisible until the CSS was deliberately broken, and neither would have been caught
-by reading the test.
+```mermaid
+flowchart LR
+    G(["a test that passes"]) --> W["...and could not<br/>have failed"]
+    W --> A["the fixture never creates<br/>the condition"]
+    W --> B["the probe is in the<br/>wrong place"]
+    W --> C["the assertion was already true<br/>before the action"]
+    W --> D["the oracle is the code<br/>under test"]
+    W --> E["the sweep is empty"]
+    W --> F["both sides run through<br/>the same helper"]
+    W --> H["the meaning changed and<br/>the compiler said nothing"]
+```
 
-**`innerText` does not tell you whether something is visible.** An assertion that a caveat was
-painted, written as `expect(await locator.innerText()).toBe("...")`, passed with `display: none` on
-the element: the spec says `innerText` falls back to `textContent` for a node that is not being
-rendered, so a hidden element reads back its full string. Assert a non-zero `boundingBox()` and probe
-the point, or check the computed style. The comment above that assertion claimed it tested visibility,
-which is the part worth noticing: the reasoning was written down and was still wrong.
+| The shape | The case that taught it | What makes it real |
+|---|---|---|
+| **The fixture never creates the condition** | Two versions of one browser test went green with the containment CSS deleted. The public fixtures top out at three sheets, so with short names nothing overflowed whatever the rules said. | Squeeze the column to its 48px minimum by dragging its own grip. |
+| **The probe is in the wrong place** | The second version still passed, because it probed the neighbouring cell's CENTRE. The escaping chip reached 66px past its own cell while the neighbour was 301px wide, so the probe sat 84px clear of the bleed. | Bleed arrives at the BOUNDARY and fades. Probe just inside the edge nearest the offender. |
+| **`innerText` does not mean visible** | An assertion written `expect(await locator.innerText()).toBe("...")` passed with `display: none` on the element, because the spec falls back to `textContent` for a node that is not rendered. The comment above it claimed it tested visibility. | Assert a non-zero `boundingBox()`, or read the computed style. |
+| **The assertion was already true before the action** | A composition test clicks a finding and asserts `expect(called).toContain("HighlightSheet")`. It passes with the handler unwired, because deep-link restore highlights during boot, so it asserts that the page booted. | Count across the action (`before` and `after` filtered lengths) or clear the log first. Every "did X happen" assertion over a running system has this shape. |
+| **The oracle is the code under test** | `if skipRefDes(x) { t.Error(...) }` went green under a deliberately broken `skipRefDes`, while its siblings written against literals went red. The test and the code agree by construction. | Assert against literals, or against a set the production path produced. |
+| **The sweep is empty** | A catalog-wide test iterating "every rule that sets this field" passes trivially when no rule sets it. | Count the rules it asserted over and fail at zero. A positive control belongs IN the test, not beside it. |
+| **The fixture encodes the rule's own assumption** | Two `i2c-pull-up` fixtures gave their "pull-up" resistor exactly one net, no second end and no rail, so a rule correctly requiring a rail turned them red. | Complete the fixture. Loosening the check until it passes again looks identical from inside the failing run. |
+| **The counter-example survives for the wrong reason** | A considered-set test asserted that a NO_CONNECT pin stayed OUT of a rule's domain, and still could not tell a supply-scoped domain from one sweeping in every pin on the part, because the NC pin sat on no net and dropped out of both. | A fixture case differing from the failing one in EXACTLY the property under test, here a signal pin alone on its own net. |
 
-**A test that calls the PRODUCTION predicate to decide what counts as a failure cannot fail when
-that predicate is what broke.** Two assertions written as `if skipRefDes(x) { t.Error(...) }` read
-as real checks and went green under a deliberately broken `skipRefDes`, while their siblings written
-against literals went red. It is the same defect as the heuristic above wearing better clothes: the
-test and the code agree by construction. Assert against literals, or against a set the production
-path produced, and let only the red-check tell you which kind you wrote.
+Two more need their own room.
 
-**A third way a test stays green: it compares a function against itself.** A parity test was written
-to hold a rule's `Eval` to its verdict projection, `VerdictsToFindings(Eval(m))` against
-`Eval(m)`. For a converted rule those are the same call, because its `Eval` IS that projection, so
-the test ran one function against itself and would have passed for any projection including a broken
-one. Breaking `VerdictsToFindings` deliberately left it green, which is how it was caught.
+**A test can compare a function against itself.** A parity test held a rule's `Eval` to its verdict
+projection, `VerdictsToFindings(Eval(m))` against `Eval(m)`. For a converted rule those are the same
+call, so it ran one function against itself and would have passed for any projection including a
+broken one. It now rebuilds the expectation independently, keeping the failing verdicts and taking
+their findings. The tell is structural rather than about the assertion: **if both sides of an equality
+flow through the same helper, the helper is untested no matter how the assertion reads.**
 
-The fix is the same shape as the render case above: assert the PROPERTY rather than the round trip.
-The test now rebuilds the expectation independently, keeping the failing verdicts and taking their
-findings, so a bug in the shared function shows up as a disagreement. It has a second payoff worth
-copying: when the projection rule changes, the test fails until the change is made deliberately in
-both places instead of silently in one.
-
-The tell is structural rather than about the assertion. **If both sides of an equality flow through
-the same helper, the helper is untested no matter how the assertion reads.** Worth checking before
-writing the red-check, because this one looked like a real parity test.
-
-**A positive control belongs in the test, not beside it.** A catalog-wide test that iterates
-"every rule that sets this field" passes trivially when no rule sets it. Counting the rules it
-actually asserted over and failing at zero turns a silently empty sweep into a red one. The same
-applies to a fixture: assert the fixture really contains the shape under test, or the assertion had
-nothing to catch.
-
-**A fixture can encode the same assumption the rule does**, and then fixing the rule makes the
-fixture fail and the tempting move is to relax the rule back. Two `i2c-pull-up` fixtures gave their
-"pull-up" resistor exactly one net: no second end, no rail. Both comments claimed a pull-up and
-neither drew one, so a rule correctly requiring the resistor to reach a rail turned them red. The
-right move was completing the fixtures. The wrong one, which looks identical from inside the failing
-run, is loosening the check until the fixture passes again. When a fix breaks a fixture, read the
-fixture against what its comment claims before touching the rule.
-
-**A discriminating assertion needs a counter-example that survives for the right reason.** A
-considered-set test asserted that a NO_CONNECT pin stayed OUT of a rule's domain, which was true, and
-the test still could not tell a domain scoped to supply-named pins from one that swept in every pin
-on the part. The NC pin sat on no net, so it dropped out of both for a reason that had nothing to do
-with its role. The red-check is what said so: broadening the domain deliberately left the test green.
-The fix was a fixture pin that differs from the failing one in EXACTLY the property under test, a
-signal pin alone on its own net, so the only thing keeping it out is the thing being asserted.
-
-**A third way a test lies, and the compiler cannot help.** When two types carry the same field
-names, changing which one a function returns silently changes what a test MEANS while it still
-compiles. `check.Verdict` and `check.Finding` both have `Subject`, `Kind`, `Pin` and `NetID`, so when
-`Rule.Eval` moved from returning findings to returning verdicts, every
+**When two types carry the same field names, the compiler cannot help you.** `check.Verdict` and
+`check.Finding` both have `Subject`, `Kind`, `Pin` and `NetID`, so when `Rule.Eval` moved from
+returning findings to returning verdicts, every
 
     for _, f := range rule.Eval(m) { got[f.Subject] = true }
 
 kept building and quietly started counting passes as failures. Two tests were already wrong this way
-and each passed only by accident: the rules they covered were still wrapped in `check.FailuresOnly`,
-which emits nothing but failures, so the count happened to be right. They would have started lying
-the moment those rules converted.
+and passed only by accident, because their rules were still wrapped in `check.FailuresOnly`. What
+finds this is asking, for every call site the compiler did NOT complain about, whether the meaning
+survived. Use `Rule.Findings(m)` where a test means violations.
 
-Nothing in a signature change flags this. What finds it is asking, for every call site the compiler
-did NOT complain about, whether the meaning survived. Use `Rule.Findings(m)` where a test means
-violations, and read a test that iterates a result and counts as suspect until you have checked which
-result it iterates.
+## Text you cannot match literally
 
-## Comparing output that is deliberately unstable
+| Source | What moves | Match with |
+|---|---|---|
+| `prototext` | an unstable extra space after a colon, inserted ON PURPOSE to discourage byte-comparison | `: +`, or parse the proto |
+| `protojson` | one or two spaces after a colon, so two runs over one message differ | parsed values, or `strings.Fields` joined by a single space |
+| symbol text out of a doc-IR | flattened subscripts, so `VCCA` arrives as `V CCA` (~850 occurrences in one corpus) | a pattern tolerating the injected space |
 
-`protojson` VARIES ITS WHITESPACE ON PURPOSE, inserting one or two spaces after a colon so callers
-cannot depend on the exact bytes. Two runs over one message differ, and a test asserting
-`"verdicts": []` passes locally and fails when the same code emits `"verdicts":  []`.
+A before/after table built with a one-space `prototext` pattern read ZERO for every "before" and was
+nearly shipped. The tell was an internal contradiction, a file showing 0 typed pins and 2 supply pins at
+once, rather than the number itself. Distrust any count whose parts do not add up. The injected space
+has bitten three times in unrelated places: a prose sweep, the derive pin path where it would have
+produced pin ids no symbol library could match, and in-document search.
 
-So a test over proto JSON compares parsed values, or normalises whitespace first
-(`strings.Fields` joined by a single space is enough), and never the raw string. This also means
-`EmitUnpopulated` makes a newly added field appear as its zero value in every existing consumer's
-output: adding one to a response message is additive on the wire and visible in the JSON, so "no data
-changed" and "byte-identical output" are different claims and only the first survives.
-
+One consequence of `EmitUnpopulated`: a newly added field appears as its zero value in every existing
+consumer's output. Adding one to a response message is additive on the wire and visible in the JSON, so
+"no data changed" and "byte-identical output" are different claims and only the first survives.
