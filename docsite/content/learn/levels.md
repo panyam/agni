@@ -39,6 +39,9 @@ Every part has a job, and there are about twenty recurring ones. This is the unl
 - [The decision procedure](../01-what-a-board-is-made-of/#the-decision-procedure-ee3), a lookup table for any two-terminal part
 - [The recurring jobs](../01-what-a-board-is-made-of/#the-recurring-jobs-ee3), the twenty, with the rules attached to each
 - [The role](../03-why-every-chip-needs-capacitors/#the-role-ee3), why a chip needs charge locally
+- [A crystal is not an oscillator](../11-crystals-and-oscillators/#a-crystal-is-not-an-oscillator-ee3), where the oscillator actually is
+- [What the capacitors decide](../11-crystals-and-oscillators/#what-the-capacitors-decide-ee3), load capacitance and frequency
+- [Presence is checkable, value is not](../11-crystals-and-oscillators/#presence-is-checkable-value-is-not-ee3)
 - [Nothing is a voltage nothing has](../04-pull-ups-and-undefined-states/#nothing-is-a-voltage-nothing-has-ee3), why a floating input is not zero
 - [Some pins can only pull one way](../04-pull-ups-and-undefined-states/#some-pins-can-only-pull-one-way-ee3), open-drain
 - [One net, one decider](../05-who-drives-this-net/#one-net-one-decider-ee3), and what two deciders costs
@@ -67,6 +70,7 @@ Absolute maximum against recommended operating, derating, tolerance, worst case.
 
 - [The numbers](../03-why-every-chip-needs-capacitors/#the-numbers-ee5), voltage rating, derating, and DC bias
 - [Choosing the resistor](../04-pull-ups-and-undefined-states/#choosing-the-resistor-ee5), which way a pull-up can be wrong, in both directions
+- [More is worse](../11-crystals-and-oscillators/#more-is-worse-ee5), why adding load capacitors can be the defect
 - [A part is a contract](../07-reading-a-datasheet/#a-part-is-a-contract-ee5), the type-signature model
 - [Two numbers that look alike](../07-reading-a-datasheet/#two-numbers-that-look-alike-ee5), absolute maximum against recommended operating
 - [The comparison](../07-reading-a-datasheet/#the-comparison-ee5)

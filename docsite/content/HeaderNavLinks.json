@@ -62,7 +62,8 @@
       { "name": "7. Reading a datasheet", "url": "learn/07-reading-a-datasheet/" },
       { "name": "8. The power tree", "url": "learn/08-the-power-tree/" },
       { "name": "9. Sequencing and straps", "url": "learn/09-sequencing-and-straps/" },
-      { "name": "10. Interfaces and what they require", "url": "learn/10-interfaces-and-what-they-require/" }
+      { "name": "10. Interfaces and what they require", "url": "learn/10-interfaces-and-what-they-require/" },
+      { "name": "11. Crystals and oscillators", "url": "learn/11-crystals-and-oscillators/" }
     ]
   },
   {
