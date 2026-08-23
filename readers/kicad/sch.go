@@ -75,10 +75,11 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 		// Declared even when the slice is empty: that is the point of `supplied`. This reader
 		// looked, so an empty list means "no collisions" here, where on a reader that cannot look
 		// it would mean "nobody asked" (agni issue 309).
-		Supplied:              []string{"ref_des_collisions"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols"},
 		NoJunctionEndpoints:   noJunction,
 		UnmodeledBuses:        collectBuses(root, src, nil),
 		UnresolvedSymbols:     unresolvedSyms,
+		ResolvedSymbols:       libs.resolvedSymbols(),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
 	}
 
@@ -101,6 +102,11 @@ type libAccum struct {
 	byName   map[string]*ir.PartLibrary
 	order    []string
 	partSeen map[string]bool
+	// resolved is every symbol definition this accumulator took in, embedded or external, with the
+	// pins it carried (agni issue 418). Kept beside the failure list because a rule holding only the
+	// failures can report only failures, and a schematic whose symbols all loaded then looks exactly
+	// like one the reader never opened.
+	resolved []*ir.ResolvedSymbol
 }
 
 func newLibAccum() *libAccum {
@@ -122,6 +128,10 @@ func (a *libAccum) collect(root *node, src string) {
 			Pins:             partPins(sym),
 			Prov:             &ir.Provenance{SourceFile: src},
 		}
+		// An embedded definition cannot fail to resolve, which is exactly why it belongs in the
+		// considered set: a schematic that carries all its own symbols is the ordinary case, and
+		// leaving it out would leave that run with nothing to say about the references it read fine.
+		a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: id, Kind: "kicad_sym_embedded", PinCount: int32(len(pt.Pins))})
 		prefix := libPrefix(id)
 		lib := a.byName[prefix]
 		if lib == nil {
@@ -168,6 +178,7 @@ func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src
 				Pins:             partPins(sym),
 				Prov:             &ir.Provenance{SourceFile: src},
 			}
+			a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: sec.PartRef, Kind: "kicad_sym_lib", PinCount: int32(len(pt.Pins))})
 			prefix := libPrefix(sec.PartRef)
 			lib := a.byName[prefix]
 			if lib == nil {
@@ -189,6 +200,14 @@ func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src
 	}
 	return out
 }
+
+// resolvedSymbols returns every symbol definition the accumulator took in, in first-seen order.
+//
+// The KIND separates the two ways a KiCad reference resolves. An embedded definition comes out of the
+// schematic's own lib_symbols block and is the ordinary case; an external one came off --symbol-path
+// and is the case that can go wrong on a different machine. A reader chasing a lost connection wants
+// to know which of the two answered.
+func (a *libAccum) resolvedSymbols() []*ir.ResolvedSymbol { return a.resolved }
 
 func (a *libAccum) libraries() []*ir.PartLibrary {
 	var libs []*ir.PartLibrary

@@ -75,3 +75,79 @@ func TestUnresolvedSymbolGroupsPlacements(t *testing.T) {
 		}
 	}
 }
+
+// TestResolvedSymbolsRecorded (agni issue 418): the references that DID load are recorded too, so
+// the rule reading them can state what it examined instead of only what failed. Both routes appear
+// with the kind that separates them, because only an external library can go missing on somebody
+// else's machine.
+//
+// The PIN COUNT is the part that matters. A stale library entry resolves as successfully as the real
+// symbol and answers with no pins, which costs the netlist exactly what a missing file does, and a
+// record that said only "resolved" could not tell the two apart.
+func TestResolvedSymbolsRecorded(t *testing.T) {
+	d, err := ReadSchematicWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", extOpen(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := d.GetInputDiagnostics()
+	if !slices.Contains(diag.GetSupplied(), "resolved_symbols") {
+		t.Fatal("resolved_symbols not declared, so a consumer cannot tell a clean read from one nobody looked at")
+	}
+	got := map[string]int32{}
+	for _, r := range diag.GetResolvedSymbols() {
+		got[r.GetSymref()] = r.GetPinCount()
+		if r.GetKind() != "kicad_sym_lib" {
+			t.Errorf("%s: kind = %q, want kicad_sym_lib for a reference off the symbol path", r.GetSymref(), r.GetKind())
+		}
+	}
+	for _, want := range []string{"ext:R", "ext:R_Derived"} {
+		if n, ok := got[want]; !ok {
+			t.Errorf("%s resolved but is not in the resolved set", want)
+		} else if n == 0 {
+			t.Errorf("%s recorded with 0 pins, so the pass carries no evidence", want)
+		}
+	}
+}
+
+// TestResolvedSymbolsRecordEmbedded: a schematic that carries its own symbols is the ordinary case
+// and is the one that would otherwise have nothing to say. Leaving it out would mean a KiCad file
+// with no external dependency produced an empty considered set, which reads as "nobody looked".
+func TestResolvedSymbolsRecordEmbedded(t *testing.T) {
+	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "sch.kicad_sch")), "sch.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rs := d.GetInputDiagnostics().GetResolvedSymbols()
+	if len(rs) == 0 {
+		t.Fatal("no resolved symbols for a schematic whose lib_symbols block defines its parts")
+	}
+	for _, r := range rs {
+		if r.GetKind() != "kicad_sym_embedded" {
+			t.Errorf("%s: kind = %q, want kicad_sym_embedded", r.GetSymref(), r.GetKind())
+		}
+		if r.GetPinCount() == 0 {
+			t.Errorf("%s: 0 pins recorded for an embedded two-terminal part", r.GetSymref())
+		}
+	}
+}
+
+// TestResolvedSymbolsExcludeFailures: a reference that did not open must not appear on both lists.
+// The two are one partition, and a reference in both would let a rule count the same subject twice
+// and report it as passed and failed at once.
+func TestResolvedSymbolsExcludeFailures(t *testing.T) {
+	failing := func(lib string) ([]byte, error) { return nil, fmt.Errorf("no library %q", lib) }
+	d, err := ReadSchematicWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", failing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := d.GetInputDiagnostics()
+	resolved := map[string]bool{}
+	for _, r := range diag.GetResolvedSymbols() {
+		resolved[r.GetSymref()] = true
+	}
+	for _, u := range diag.GetUnresolvedSymbols() {
+		if resolved[u.GetSymref()] {
+			t.Errorf("%s appears as both resolved and unresolved", u.GetSymref())
+		}
+	}
+}

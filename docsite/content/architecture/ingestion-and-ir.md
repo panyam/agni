@@ -191,6 +191,7 @@ A read can succeed and still be worth complaining about. `InputDiagnostics` is w
 | `ref_des_collisions` | one designator claimed by placements that are not sections of one part |
 | `unmodeled_buses` | a bus construct recognized but not expanded into member nets |
 | `unresolved_symbols` | a symbol file that failed to open, so its placements carry no pins |
+| `resolved_symbols` | a symbol reference that DID open, with the pin count it supplied |
 | `unannotated_components` | parts whose designator is still a placeholder |
 
 They exist for one reason: **silence must not read as coverage.** Every one of these makes the design report *less* rather than reporting an error. An unresolved symbol yields a smaller netlist, and connectivity rules then pass cleanly over the gap. An unexpanded bus leaves members merged or off-net. Un-annotated parts are fully drawn and connected, so nothing looks wrong at all. In each case a clean run is indistinguishable from a design that genuinely had none of the problem, and the reader is the only layer that ever knew the difference.
@@ -209,6 +210,14 @@ InputDiagnostics{ RefDesCollisions: nil }                                       
 A rule whose whole subject is a diagnostic gates on the declaration (`check.CapRefDesCollisions`), so the second case reports **not-applicable with a reason** instead of a pass. Declaring is unconditional on purpose: a reader that only recorded it when it found something would be back to the same ambiguity on the clean read, and the clean read is the common case.
 
 The rule for a new reader is therefore: detect what your format can express, declare what you detected, and leave out what your format cannot tell apart. EDIF leaves this one out and the report says so, which is a better answer than a green check nobody earned.
+
+### Record what went right, not only what went wrong
+
+Most of the table above names a failure, and a rule reading a failure list can only ever report failures. Its silence on a clean design is then indistinguishable from its silence on a design nobody looked at, which is the same ambiguity `supplied` closes one level up. `unmodeled_buses` is the field that never had the problem, because it holds every bus construct the reader saw and the rule partitions it, so a bus whose members are already nets is a countable pass.
+
+`resolved_symbols` is `unresolved_symbols` given the same shape (agni issue 418). The resolve walk already decided per reference and threw the successes away; keeping them is what lets `symbol-unresolved` state a considered set. The **pin count** is the part that carries weight, because "the symbol resolved" reads identically on a 100-pin FPGA and on a stale library entry that answered with an empty stub, and the second costs the netlist exactly what a missing file does. A count moves when the library does.
+
+Two things to copy when adding a reader. Declare `resolved_symbols` in `supplied` only on the branch that actually opened a symbol: xschem and gEDA have a no-opener path where the caller deliberately asked for a symbol-free read, and declaring there would turn "we did not look" into "we looked and found nothing missing". And keep the two lists a partition, since a reference on both would let a rule report one subject as passed and failed at once. `readers/formats` holds the guard that a reader recording unresolved symbols also declares the resolved set.
 
 ## Emit: tiered writers
 

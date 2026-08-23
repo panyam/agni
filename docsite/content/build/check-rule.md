@@ -257,14 +257,28 @@ report findings that disagree with its verdicts.
 verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site.
 Converting a rule means deleting the wrapper, writing the map, and setting `StatesConsideredSet`.
 
-Four rules still wrap, and each says why beside its `Eval`. They fall into two groups (agni issue 391):
+Three rules still wrap, and each says why beside its `Eval`. They fall into two groups (agni issue 391):
 
-- **The reader supplies only what failed.** `dangling-endpoint`, `wire-no-junction` and
-  `symbol-unresolved` read a diagnostic list holding the offenders and nothing else, so there is no
-  set to map over and the verdicts would be the failure list again. `bus-not-modeled` is the
-  diagnostic rule that CAN state a set, and the difference is instructive: `unmodeled_buses` holds
-  every bus the reader saw, so the rule partitions it and a resolved bus is a countable pass.
+- **The reader supplies only what failed.** `dangling-endpoint` and `wire-no-junction` read a
+  diagnostic list holding the offenders and nothing else, so there is no set to map over and the
+  verdicts would be the failure list again. `bus-not-modeled` is the diagnostic rule that CAN state a
+  set, and the difference is instructive: `unmodeled_buses` holds every bus the reader saw, so the
+  rule partitions it and a resolved bus is a countable pass.
 - **The body cannot separate a pass from a gap.** `cap-voltage`, described above.
+
+**`symbol-unresolved` was in the first group and left it by changing the READER, which is the general
+fix for that group** (agni issue 418). Nothing about the rule made it unconvertible; the diagnostic it
+read was a failure list. The readers now record the references that DID resolve, with the pin count
+each supplied, so the rule partitions the set exactly as `bus-not-modeled` does. The pin count is what
+makes the pass evidence rather than an assertion: a stale library entry resolves as successfully as
+the real symbol, answers with no pins, and costs the netlist what a missing file does. A count moves
+when the library does. `readers/formats` carries the guard that a reader recording failures must also
+declare the resolved set.
+
+The endpoint pair is harder for a reason that is not about the reader. `netgraph.Build` receives the
+wire list, so the examined count is known, but the honest subject is a wire END. A board with a
+thousand wires would produce two thousand pass rows nobody wants, and there is no design- or
+sheet-level subject kind to attach one summary verdict to. Tracked separately.
 
 The third group is gone. Five rules used to decline because their subject was a relation between
 entities and the verdict key named one; the key now names a tuple, and they state considered sets like
