@@ -47,12 +47,47 @@ func renderLoader(file string) (*formats.Loader, error) {
 	return readerFor(newLoader(), opts...), nil
 }
 
+// renderSource resolves the artifact a render should DRAW, and the note to say so.
+//
+// A design already declares where its sheets live. `service.DesignSources.GeometryURI` exists for
+// exactly this ("where schematic sheets are rendered and findings located from"), and `render` was
+// the one command that never asked for it: it passed the user's path straight to the loader. So
+// `agni stats designs/gateway` read the folder and reported "sheets from gateway.kicad_sch", while
+// `agni render designs/gateway` failed with `no reader for "" files`, having tried to open a
+// directory as a design file. The descriptor had said where to look the whole time.
+//
+// Falls back to the path as named whenever nothing resolves, which is the ordinary loose-file case,
+// and whenever the resolver errors, because a render is not the place to fail on somebody else's
+// descriptor when the named file may be perfectly drawable.
+func renderSource(path string) (string, string) {
+	ws, err := workspace()
+	if err != nil {
+		return path, ""
+	}
+	src, err := newDesignResolver(ws).Resolve(context.Background(), path)
+	if err != nil || src.GeometryURI == "" {
+		return path, ""
+	}
+	geom := localOf(src.GeometryURI)
+	if geom == "" {
+		return path, ""
+	}
+	// Compare as absolute paths. localOf answers absolutely whether or not anything was redirected,
+	// so a string compare against the named path calls every loose file a redirect and hands the
+	// loader an absolute path the user never typed, which then shows up in its error messages.
+	if abs, err := filepath.Abs(path); err == nil && abs == geom {
+		return path, ""
+	}
+	return geom, src.Note
+}
+
 // renderCmd renders a design to a schematic view. Two orthogonal axes: --layout is the source
 // of node positions (faithful ingested geometry, or an auto-layout computed from the netlist
 // IR) and --format is the output encoding (svg or the WebGL pack). Both feed the same
-// backend-neutral render layer. Faithful and auto-layout accept disjoint file types today
-// (geometry comes only from an EDIF .eds; auto-layout needs an IR, which .eds does not carry),
-// so the errors say which to use.
+// backend-neutral render layer. The two accept different file types: faithful needs ingested
+// geometry (an EDIF .eds, a KiCad .kicad_sch, or whatever a design declares as its schematic
+// companion), while auto-layout needs an IR, which a bare .eds does not carry. The errors say which
+// to use.
 func renderCmd() *cobra.Command {
 	var layout, format, sheetSel, out, classFile, symbols, reportFormat string
 	var compare, stats, pinDots, report bool
@@ -67,11 +102,18 @@ func renderCmd() *cobra.Command {
 			"--format selects the output: svg (default) or pack (a PackedSheet for the WebGL viewer).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			file := args[0]
+			// The path as NAMED stays the analysis source, because readDesign resolves it itself and
+			// a design's entry is what analysis reads. `file` is what gets DRAWN, which is a
+			// different question and the one the descriptor's geometry companion answers.
+			named := args[0]
+			file, note := renderSource(named)
+			if note != "" {
+				fmt.Fprint(cmd.ErrOrStderr(), note) // already prefixed and terminated by the resolver
+			}
 			// --compare benchmarks every auto-layout on this design and prints their quality
 			// scores side by side, so choosing a layout is a comparison, not a guess. No render.
 			if compare {
-				d, err := readDesign(file)
+				d, err := readDesign(named)
 				if err != nil {
 					return err
 				}
