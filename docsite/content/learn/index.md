@@ -29,11 +29,9 @@ The levels are cumulative and the numbering is not a ranking of people. A workin
 
 ## Asking for a level
 
-Every page here marks the level of each section, so you can read one page at several depths and stop where it stops being useful. The marks look like this:
+Every page here marks the level of each section in its heading, so you can read one page at several depths and stop where it stops being useful. A chapter's headings run `The role (EE3)`, `The failure mode (EE4)`, `The numbers (EE5)`, and so on.
 
-> **EE3 — the role.** *(what job this part is doing)*
-
-When you want an explanation pitched at a level, name it: "explain `output-output-conflict` at EE4" asks for the failure mode and the bench symptom rather than the definition. It is the same request shape as ELI15, calibrated to this domain instead of to an age.
+When you want an explanation pitched at a level, name it. "Explain `output-output-conflict` at EE4" asks for the failure mode and the bench symptom rather than the definition, and it is the same request shape as ELI15 calibrated to this domain instead of to an age.
 
 ## The course
 

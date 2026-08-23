@@ -37,7 +37,7 @@ Nets changed (5):
   [renamed] XTAL_OUT -> CLK_OUT
 ```
 
-Two resistors added, three nets gained connections, two nets renamed. That is the whole change, and
+Two resistors added, three nets gained connections, two nets renamed. That accounts for the whole change, and
 it is five lines rather than a few hundred.
 
 ## Renamed is not deleted plus added

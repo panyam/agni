@@ -43,8 +43,8 @@ The declaration says the core domain runs at 3.3 V. The rail assigned to it is a
 structural is wrong with the board, and no rule from any other tier has anything to say. The only
 reason this is catchable is that somebody wrote down what was intended and the two disagree.
 
-That is the whole value of the tier. It does not find defects in the usual sense. It finds
-divergence between the board and the description of the board, and that divergence creeps in over
+The tier earns its place there. It finds divergence between the board and the description of the
+board rather than defects in the usual sense, and that divergence creeps in over
 months as a design is edited by people who did not write the original plan.
 
 ## A tier can depend on another tier

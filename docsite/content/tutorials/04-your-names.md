@@ -57,7 +57,7 @@ or `VIN` while a rail net is called `3V3` or `+5V`, so a pattern that belongs in
 in the other. There is also a `class` map, which marks a PART as belonging to a component class.
 
 **`rules`** adds checks. They join the catalog namespaced under the config's name, so this one
-appears as `gateway/signal-net-naming`. This is the half people expect a conventions file to be.
+appears as `gateway/signal-net-naming`. Most people opening a conventions file expect only this half.
 
 ## Both halves, visible
 

@@ -9,7 +9,7 @@ Two facts close it. A board is made of **very few kinds of thing**. And each of 
 
 **Prerequisites:** EE1. You know that a resistor resists, a capacitor stores charge, and a chip does something complicated in the middle.
 
-## EE1 — a board is a few kinds of thing
+## A board is a few kinds of thing (EE1)
 
 Ask the tool what is actually on the tutorial board:
 
@@ -21,13 +21,13 @@ Three details in that output are worth noticing now.
 
 **There are more rows than parts.** `D1` appears twice, as `diode` and as `tvs`, and `U1` and `U2` each appear as `ic` and as `regulator`. Class is a family tag rather than a single label, because a TVS diode genuinely is a diode and rules want to reason at both levels: a rule about reverse current cares that it is a diode, and a rule about ESD protection cares that it is specifically a TVS.
 
-**`U3`, `U4` and `U5` are only `ic`, with no second tag.** The tool cannot tell what kind of chip they are, and that is honest rather than broken. Their part numbers say exactly what they are — `ACME-MCU-G1`, `ACME-CAN-XCVR`, `ACME-EEPROM-4K` — so a processor, a CAN transceiver and a memory. But that identity lives in the part number and the datasheet, not in the connections, and a netlist reader that guessed "MCU" from a string would be wrong the first time it met a part named differently.
+**`U3`, `U4` and `U5` are only `ic`, with no second tag.** The tool cannot tell what kind of chip they are, and that is honest rather than broken. Their part numbers say exactly what they are (`ACME-MCU-G1`, `ACME-CAN-XCVR`, `ACME-EEPROM-4K`), so a processor, a CAN transceiver and a memory. But that identity lives in the part number and the datasheet, not in the connections, and a netlist reader that guessed "MCU" from a string would be wrong the first time it met a part named differently.
 
 This is the first thing you will meet that a netlist genuinely cannot answer, and the tool's response is the pattern for all of them: the information gets *declared* rather than inferred. `U4` is known to be a CAN device because the design carries an `interface: CAN` property on it, which the board's interface profile then checks against what CAN requires. That is chapter 10.
 
 **Half the board is capacitors and resistors.** Nine of the nineteen parts, and that is low only because this is a small teaching fixture. On a real board the passives are usually eighty to ninety percent of the part count, and they are exactly the parts that look arbitrary. The rest of this chapter is about them.
 
-## EE2 — the same part, different jobs
+## The same part, different jobs (EE2)
 
 Here is where the instinct starts. Ask for every resistor with its part number and the nets it touches:
 
@@ -43,7 +43,7 @@ Three resistors. **Two of them are the same value**, `10k`. All three are doing 
 
 Same class, two of them the same value, three jobs. **The value tells you almost nothing on its own. What it connects to tells you nearly everything.**
 
-## EE3 — the decision procedure
+## The decision procedure (EE3)
 
 That is generalisable, and it is the single most useful habit at this level. For a two-terminal part, look at what is on each end:
 
@@ -62,7 +62,7 @@ Two things make this work. Net names carry intent, because engineers name nets a
 
 When the procedure does not settle it, that is information too. A resistor between two signals could be damping a fast edge, limiting current into a protection diode, or a footprint nobody stuffed. A netlist cannot tell those apart, and the honest rules in this catalog say so rather than guessing. That is what a `not-considered` verdict is.
 
-## EE3 — the recurring jobs
+## The recurring jobs (EE3)
 
 The full working list. You do not need to memorise it; you need to know it is short and finite, so that an unfamiliar part is a lookup rather than a mystery.
 
@@ -103,6 +103,6 @@ The useful instinct here is that the small parts exist to serve the chips. Every
 
 ## The rules this page explains
 
-None on its own, which is the point of a chapter 1. It is the vocabulary the rest of the catalog is written in. The two queries above are worth running against any board you are handed, in that order, as the fastest way to orient yourself in an unfamiliar design.
+None on its own, which a chapter 1 has no business claiming. It supplies the vocabulary the rest of the catalog is written in. Run the two queries above against any board you are handed, in that order, as the fastest way to orient yourself in an unfamiliar design.
 
-Next in the sequence is chapter 2, the drawing versus the circuit, which is about the ways a schematic can show a connection that does not exist. It is not written yet. The one that is, and which picks up directly from the "supplying charge locally" job above, is [chapter 3 on capacitors](../03-why-every-chip-needs-capacitors/).
+Chapter 2 comes next in the sequence, covering the ways a schematic can show a connection that does not exist, and it is not written yet. [Chapter 3 on capacitors](../03-why-every-chip-needs-capacitors/) is, and it picks up directly from the "supplying charge locally" job above.
