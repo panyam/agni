@@ -48,8 +48,9 @@ Each page teaches a model, names the rules that encode it, and then has you run 
 - **[7. Reading a datasheet like a type signature](07-reading-a-datasheet/)** (EE5): two maximum voltages that look alike and license completely different things, and why the same defect reads as an error to one command and provisional to another.
 - **[8. The power tree](08-the-power-tree/)** (EE6): a board is fed by a cascade, and this is the first level where correctness comes from a declaration rather than from physics.
 - **[9. Sequencing and straps](09-sequencing-and-straps/)** (EE6): rails arrive in an order and parts read their configuration at the instant they do. The chapter where the same board passes one declaration and fails another.
+- **[10. Interfaces and what they require](10-interfaces-and-what-they-require/)** (EE6): a bus is a contract rather than two wires, and the chapter closes on a satisfied requirement that produces no output at all.
 
-The rest of the course is planned and not yet written: interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
+The rest of the course is planned and not yet written: crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
 
 ## The other direction
 

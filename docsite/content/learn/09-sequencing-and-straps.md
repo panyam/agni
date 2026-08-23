@@ -88,4 +88,4 @@ Both verdicts name a **pair** of devices for the same reason the sequencing one 
 
 The sequence rules are named after the sequence you declare, so a design with a "SoC power tree" sequence compiles a rule called `intent/sequence-soc-power-tree`. There is no fixed catalog entry to link, which is why that row points at the catalog root.
 
-Next: interfaces and what they require, the last of the three system chapters.
+Next: [interfaces and what they require](../10-interfaces-and-what-they-require/), the last of the three system chapters.

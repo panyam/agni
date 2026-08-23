@@ -1,0 +1,6 @@
+#agni-run e9818b8a23abb5a9
+r   m              n               provenance
+R1  ACME-RES-120R  CAN1_CANH       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANH
+R1  ACME-RES-120R  CAN1_CANL       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANL
+187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
+2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
