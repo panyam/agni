@@ -36,12 +36,16 @@ hideTitle: true
 <h2>Where to go next</h2>
 <div class="section-cards">
 <a href="{{.Site.PathPrefix}}/guide/" class="section-card">
-<h3>Use it</h3>
+<h3>User guide</h3>
 <p>Install Agni and run checks, diffs, and queries on a design. For hardware engineers, no Go required.</p>
 </a>
 <a href="{{.Site.PathPrefix}}/build/" class="section-card">
-<h3>Build on it</h3>
+<h3>Developer guide</h3>
 <p>Add a format reader, author a check rule, or write a private overlay against the public engine.</p>
+</a>
+<a href="{{.Site.PathPrefix}}/learn/" class="section-card">
+<h3>Learn the domain</h3>
+<p>Twelve chapters teaching what a hardware engineer knows, each ending in the rules that encode it. Written for a software background.</p>
 </a>
 <a href="{{.Site.PathPrefix}}/architecture/" class="section-card">
 <h3>Understand it</h3>
