@@ -68,7 +68,7 @@ const inProject = {
   design: { name: "projects/gateway/designs/gateway", entryUri: "mount://m/d/gateway.edn" },
   project: {
     name: "projects/gateway",
-    title: "Gateway ECU",
+    title: "Sample Board",
     config: {
       conventionsUri: "mount://m/conventions.yaml",
       checklistUri: "mount://m/review.yaml",
@@ -92,7 +92,7 @@ describe("project resolution is visible", () => {
   it("names the project whose config produced the answers", async () => {
     const h = harness(inProject);
     await h.presenter.openFile("m", "d/gateway.edn");
-    expect(projectLabel(last(h.onProject))).toBe("Gateway ECU");
+    expect(projectLabel(last(h.onProject))).toBe("Sample Board");
   });
 
   // The ordinary case on a mounted folder, and it has to look like an answer rather than a blank.

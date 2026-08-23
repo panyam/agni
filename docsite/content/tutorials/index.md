@@ -16,7 +16,7 @@ hardware knowledge, each tied back to the rules that encode it.
 ## The board
 
 Every rung runs against `examples/tutorial-project` in the engine repo. It is a synthetic industrial
-gateway ECU plus the project files a team wraps around one. Every part, MPN, and datasheet value in
+sample board plus the project files a team wraps around one. Every part, MPN, and datasheet value in
 it is invented, so you can copy the whole folder and change it freely.
 
 ```

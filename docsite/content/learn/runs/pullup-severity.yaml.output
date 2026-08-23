@@ -1,4 +1,4 @@
-#agni-run 7313bcde5e7f8dd0
+#agni-run 96a9c58cb1195ae2
 findings by rule:
   decoupling-present     1
   i2c-pull-up            2

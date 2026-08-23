@@ -26,7 +26,7 @@ func demoStore() *FSStore {
 	return NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"project.yaml":                              "name: gateway\ntitle: Gateway program\n",
 		"conventions.yaml":                          "name: gateway\n",
-		"designs/gateway/design.yaml":               "name: gateway\ntitle: Gateway ECU\nentry: gateway.edn\ncompanions: [gateway.kicad_pcb, gateway.kicad_sch]\n",
+		"designs/gateway/design.yaml":               "name: gateway\ntitle: Sample Board\nentry: gateway.edn\ncompanions: [gateway.kicad_pcb, gateway.kicad_sch]\n",
 		"designs/gateway/gateway.edn":               "x",
 		"designs/gateway/gateway.kicad_pcb":         "x",
 		"designs/gateway/gateway.kicad_sch":         "x",

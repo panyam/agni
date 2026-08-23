@@ -101,7 +101,7 @@ for nname, conns in nets.items():
         pin_net[(iid, desig)] = nname
 
 sch = ["(kicad_sch", '\t(version 20250114)', '\t(generator "agni-tutorial")', '\t(paper "A4")',
-       '\t(title_block', '\t\t(title "Gateway ECU (tutorial board)")', '\t\t(rev "A"))',
+       '\t(title_block', '\t\t(title "Sample Board")', '\t\t(rev "A"))',
        '\t(lib_symbols)']
 wires, labels, emitted = [], [], 0
 for idx, iid in enumerate(insts):

@@ -93,14 +93,14 @@ describe("recents island", () => {
 
 describe("projects island", () => {
   it("lists each project's declared designs, linking to the ENTRY file", async () => {
-    fake.projects = [{ name: "projects/gateway", title: "Gateway ECU project" }];
+    fake.projects = [{ name: "projects/gateway", title: "Sample Board project" }];
     fake.designs["projects/gateway"] = [
-      { name: "projects/gateway/designs/gw", title: "Gateway ECU", entryUri: "mount://m/gateway/gw.edn" },
+      { name: "projects/gateway/designs/gw", title: "Sample Board", entryUri: "mount://m/gateway/gw.edn" },
     ];
 
     const el = mount((e) => projectsIsland(e, null));
     await vi.waitFor(() => expect(rows(el)).toHaveLength(1));
-    expect(el.textContent).toContain("Gateway ECU project");
+    expect(el.textContent).toContain("Sample Board project");
     expect(links(el)).toEqual(["/designs/m/gateway/gw.edn/view"]);
   });
 

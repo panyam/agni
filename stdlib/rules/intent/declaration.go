@@ -30,7 +30,7 @@ package intent
 // subsystems (clock/reset/power tree). It is authored as YAML in the overlay and parsed by Load/Parse;
 // it is never derived from a netlist.
 type Declaration struct {
-	// Name identifies the declaration in findings and reports (e.g. "Automotive ECU design intent").
+	// Name identifies the declaration in findings and reports (e.g. "Automotive design intent").
 	Name string
 	// Modules is the set of functional blocks the design is required to contain. moduleMissingRule
 	// fails once per declared module absent from the design.

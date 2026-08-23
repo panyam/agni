@@ -66,7 +66,7 @@ func TestComponentClass(t *testing.T) {
 		// whole library is named "Oscillator"), so a token-only clock part stays at the clock family.
 		{&ir.Component{RefDes: "X3", Attributes: map[string]string{"Description": "50MHz Oscillator"}}, check.ClassClock},
 		// WS10-015: STRUCTURE is the reliable keyword-time oscillator signal — a Y-prefix part whose part
-		// type declares a Vcc supply pin is active (the industrial-ECU lever, where the reader surfaces the pins).
+		// type declares a Vcc supply pin is active (the industrial-board lever, where the reader surfaces the pins).
 		{&ir.Component{RefDes: "Y9", Sections: sec("OSC_4PIN")}, check.ClassOscillator},
 		// a supply pin on a NON-clock part (an MCU) must NOT become an oscillator (structure is scoped).
 		{&ir.Component{RefDes: "U7", Sections: sec("OSC_4PIN")}, check.ClassIC},

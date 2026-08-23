@@ -14,7 +14,7 @@
 # own right, and `make diff` compares it against the entry. That is why companions are declared file
 # by file instead of inferred from "everything beside the entry".
 name: gateway
-title: Gateway ECU
+title: Sample Board
 entry: gateway.edn
 companions:
   - gateway.kicad_sch

@@ -9,7 +9,7 @@
 #
 # The point of the not-automated verdicts is that a question nobody answered must not score as a
 # pass. An item bound to a profile for an interface this board does not have reads n/a, not pass.
-name: Gateway ECU design review
+name: Sample Board design review
 areas:
   - name: Power
     items:

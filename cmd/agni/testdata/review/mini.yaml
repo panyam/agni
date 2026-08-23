@@ -1,4 +1,4 @@
-name: Mini ECU review
+name: Mini board review
 areas:
   - name: CAN Interface
     items:

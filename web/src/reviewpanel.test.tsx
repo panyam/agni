@@ -24,7 +24,7 @@ function run(overrides: Partial<ReviewRunView> = {}): ReviewRunView {
     design: "proj/board.edn",
     designHash: "sha256:abc",
     createdAt: "2026-08-10T20:04:22Z",
-    manifest: "Gateway ECU review",
+    manifest: "Sample Board review",
     producerVersion: "v0.1.1",
     areas: [
       {
