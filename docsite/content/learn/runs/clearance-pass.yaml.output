@@ -1,0 +1,6 @@
+#agni-run 0fd6a889baf7aff5
+copper-clearance  1 pass
+    pass  GND + SIG  copper of "GND" and "SIG" comes close enough to measure in 1 place(s) on a
+                     shared layer and never within 0.127mm
+
+1 verdicts across 1 rule(s), 1 pass

@@ -66,4 +66,4 @@ That last phrase is the mechanism. Nobody adds redundant capacitors on purpose. 
 
 The second has no fixture in this course, so it is described from its own catalog entry rather than run. The pair is worth reading together: one fires when a capacitor is missing and the other when one is present, on parts that look nearly identical on a schematic.
 
-Next: when the copper matters, the last chapter, and the level everything so far has deferred to.
+Next: [when the copper matters](../12-when-the-copper-matters/), the last chapter, and the level everything so far has deferred to.

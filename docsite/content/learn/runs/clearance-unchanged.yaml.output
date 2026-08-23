@@ -1,0 +1,10 @@
+#agni-run 4584a763c69fd7fd
+single-pin-net  5 fail
+    fail  CLOSE_A    net has 1 connection(s) and nothing marks it no-connect
+    fail  CLOSE_B    net has 1 connection(s) and nothing marks it no-connect
+duplicate-net-name  5 pass
+    pass  CLOSE_A    passes because claims is 1, not >= 2
+    pass  CLOSE_B    passes because claims is 1, not >= 2
+output-output-conflict  5 pass
+    pass  CLOSE_A    passes because drivers is 0, not >= 2
+    pass  CLOSE_B    passes because drivers is 0, not >= 2
