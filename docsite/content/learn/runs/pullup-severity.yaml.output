@@ -1,0 +1,12 @@
+#agni-run d718bdac22727035
+findings by rule:
+  decoupling-present     1
+  i2c-pull-up            2
+
+first 3:
+  [warning] decoupling-present: PMIC_MAIN_12V0 (power rail has no decoupling capacitor)
+  [error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)
+  [error] i2c-pull-up: I2C_SDA (I2C net has no pull-up resistor to a rail)
+
+3 finding(s) total
+8 subject(s) considered by 3 rule(s), 4 not considered (--verdicts for the detail)

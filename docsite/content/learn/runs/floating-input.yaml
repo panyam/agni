@@ -1,0 +1,6 @@
+# Chapter 4's payoff, and a callback to chapter 1. The rule declines MCU_NRST and PMIC_EN, which are
+# exactly the two nets chapter 1 used to teach reading a pull-up and a series resistor. The reader
+# can now answer a question the tool deliberately will not.
+fixture: examples/tutorial-project
+script: |
+  agni check --verdicts --rule floating-input designs/gateway/gateway.edn
