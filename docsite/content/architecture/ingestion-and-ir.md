@@ -188,6 +188,7 @@ A read can succeed and still be worth complaining about. `InputDiagnostics` is w
 |---|---|
 | `dangling_endpoints` | a wire end touching nothing |
 | `no_junction_endpoints` | a wire end dropped mid-span of another with no junction dot |
+| `joined_taps` | a wire end dropped mid-span of another WITH something joining them |
 | `ref_des_collisions` | one designator claimed by placements that are not sections of one part |
 | `unmodeled_buses` | a bus construct recognized but not expanded into member nets |
 | `unresolved_symbols` | a symbol file that failed to open, so its placements carry no pins |
@@ -216,6 +217,8 @@ The rule for a new reader is therefore: detect what your format can express, dec
 Most of the table above names a failure, and a rule reading a failure list can only ever report failures. Its silence on a clean design is then indistinguishable from its silence on a design nobody looked at, which is the same ambiguity `supplied` closes one level up. `unmodeled_buses` is the field that never had the problem, because it holds every bus construct the reader saw and the rule partitions it, so a bus whose members are already nets is a countable pass.
 
 `resolved_symbols` is `unresolved_symbols` given the same shape (agni issue 418). The resolve walk already decided per reference and threw the successes away; keeping them is what lets `symbol-unresolved` state a considered set. The **pin count** is the part that carries weight, because "the symbol resolved" reads identically on a 100-pin FPGA and on a stale library entry that answered with an empty stub, and the second costs the netlist exactly what a missing file does. A count moves when the library does.
+
+`joined_taps` is the same move applied to the T-tap diagnostic (agni issue 420), and it is the case where the silence cost most. A T-tap with no junction dot is drawn as a connection the netlist does not have, so the author, the reviewer and the plot all agree while the board ships with the connection missing. Before this, a sheet whose every tap carried its dot reported what a sheet with no tap in it reported, and what a format that cannot see wire geometry reported. The reader had the answer: `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything looks. Running the same detection once more before the split recovers the set.
 
 Two things to copy when adding a reader. Declare `resolved_symbols` in `supplied` only on the branch that actually opened a symbol: xschem and gEDA have a no-opener path where the caller deliberately asked for a symbol-free read, and declaring there would turn "we did not look" into "we looked and found nothing missing". And keep the two lists a partition, since a reference on both would let a rule report one subject as passed and failed at once. `readers/formats` holds the guard that a reader recording unresolved symbols also declares the resolved set.
 

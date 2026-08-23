@@ -257,38 +257,51 @@ report findings that disagree with its verdicts.
 verdicts and claims nothing about anything else, and it is deliberately conspicuous at the call site.
 Converting a rule means deleting the wrapper, writing the map, and setting `StatesConsideredSet`.
 
-Two rules still wrap, and each says why beside its `Eval` (agni issue 391):
+Exactly one rule still wraps. `dangling-endpoint` reads a diagnostic list holding the offenders and
+nothing else, so there is no set to map over and the verdicts would be the failure list again. It says
+so beside its `Eval` (agni issue 391). `bus-not-modeled` is the diagnostic rule that always CAN state a
+set, and the difference is instructive: `unmodeled_buses` holds every bus construct the reader saw, so
+the rule partitions it and a resolved bus is a countable pass.
 
-- **The reader supplies only what failed.** `dangling-endpoint` and `wire-no-junction` read a
-  diagnostic list holding the offenders and nothing else, so there is no set to map over and the
-  verdicts would be the failure list again. `bus-not-modeled` is the diagnostic rule that CAN state a
-  set, and the difference is instructive: `unmodeled_buses` holds every bus the reader saw, so the
-  rule partitions it and a resolved bus is a countable pass.
-
-A third rule declines WITHOUT the wrapper, which is worth knowing before grepping for `FailuresOnly`
+A second rule declines WITHOUT the wrapper, which is worth knowing before grepping for `FailuresOnly`
 and believing the answer. `cap-voltage` is built from a spec, so it has no hand-written body to wrap;
-it sets `StatesConsideredSet = false` directly. Its reason is the second kind: the body cannot
+it sets `StatesConsideredSet = false` directly. Its reason is a different one: the body cannot
 separate a pass from a gap, because `capVoltageDetail` returns `""` both for a capacitor that clears
 its rating and for one with no datasheet seeded at all.
 
-**`symbol-unresolved` was in the first group and left it by changing the READER, which is the general
-fix for that group** (agni issue 418). Nothing about the rule made it unconvertible; the diagnostic it
-read was a failure list. The readers now record the references that DID resolve, with the pin count
-each supplied, so the rule partitions the set exactly as `bus-not-modeled` does. The pin count is what
-makes the pass evidence rather than an assertion: a stale library entry resolves as successfully as
-the real symbol, answers with no pins, and costs the netlist what a missing file does. A count moves
-when the library does. `readers/formats` carries the guard that a reader recording failures must also
-declare the resolved set.
+**Two rules were in that same position and left it by changing the READER, which is the general fix
+when a diagnostic holds only failures.** Neither rule was unconvertible.
 
-The endpoint pair is harder for a reason that is not about the reader. `netgraph.Build` receives the
-wire list, so the examined count is known, but the honest subject is a wire END. A board with a
-thousand wires would produce two thousand pass rows nobody wants, and there is no design- or
-sheet-level subject kind to attach one summary verdict to. Tracked as agni issue 420, which lays out
-the two ways round it.
+`symbol-unresolved` (agni issue 418): the readers now record the references that DID resolve, with the
+pin count each supplied. The count is what makes the pass evidence rather than an assertion, because a
+stale library entry resolves as successfully as the real symbol, answers with no pins, and costs the
+netlist what a missing file does. A count moves when the library does.
 
-The third group is gone. Five rules used to decline because their subject was a relation between
-entities and the verdict key named one; the key now names a tuple, and they state considered sets like
-everything else.
+`wire-no-junction` (agni issue 420): the KiCad reader now records the taps something JOINS beside the
+ones nothing does, and the pass names the construct that joined them. `splitWiresAt` runs at every
+junction dot and mid-span label before the detection pass, so a joined tap was already an endpoint of
+both wires by the time anything looked, and running the same detection once more before the split
+recovers the set. This was the most expensive silence in the catalog: the rule's own `Impact` calls a
+dotless T-tap the most dangerous silent connectivity slip in schematic capture, and a sheet whose
+every tap carried its dot reported exactly what a sheet with no tap reported.
+
+**The reader fix comes with a capability, not just a field.** Only the KiCad reader examines wire
+geometry, so `wire-no-junction` declares `RequiresCapability: CapJunctionTaps` and reports
+not-applicable with a reason on xschem, gEDA and EDIF. Without that a converted rule would contribute
+a considered set of nothing on three formats, which reads as a clean sheet. `symbol-unresolved` needed
+no gate because all three symbol-resolving readers supply the diagnostic; the difference is worth
+checking before converting the next one.
+
+`dangling-endpoint` is the one left, and the obstacle is volume rather than the reader.
+`internal/netgraph`'s `dangling` already decides per endpoint against an `occupied` map, so it knows
+what each end landed on and discards it into a bool. What stops the conversion is that its subject is
+every wire END: measured at 28 distinct endpoints for 20 wires on the showcase fixture, against 132
+subjects across the whole catalog there, so it would become the largest single contributor to the
+verdict table. Tracked as agni issue 420.
+
+A whole class of decline is gone. Five rules used to refuse because their subject was a relation
+between entities and the verdict key named one; the key now names a tuple, and they state considered
+sets like everything else.
 
 **A rule that seems to have no fixed arity is usually being asked the wrong question.**
 `strap-address-collision` declined for a while on those grounds, and the reasoning was that its subject
