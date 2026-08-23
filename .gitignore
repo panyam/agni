@@ -31,4 +31,5 @@ examples/common/designs/**/*.kicad_prl
 # fast and whose durable half belongs in DECISIONS.md, CLAUDE.md or an issue instead. Ignored rather
 # than merely untracked because this repo is PUBLIC and a root-level stray rides in on a directory
 # add, and a handoff is exactly the kind of note that reaches for a private path.
+HANDOFF.md
 HANDOFF_*.md
