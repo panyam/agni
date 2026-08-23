@@ -109,6 +109,7 @@
     "children": [
       { "name": "Rules catalog", "url": "reference/rules/" },
       { "name": "Relations catalog", "url": "reference/relations/" },
+      { "name": "Glossary", "url": "reference/terms/" },
       { "name": "The software analogy", "url": "reference/analogy/" },
       { "name": "Pins and packages", "url": "reference/pins-and-packages/" },
       { "name": "EDIF netlist primer", "url": "reference/edif-primer/" },

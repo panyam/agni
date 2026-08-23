@@ -112,6 +112,13 @@ func safeJoin(relativePath string) (string, bool) {
 	return absPath, true
 }
 
+// PathPrefix is the URL prefix every page and asset is served under.
+//
+// It is a const rather than a field read off Site because Explainable needs it to build a term's
+// URL, and Site's own literal references Explainable. Go reads that as an initialization cycle, so
+// the prefix has to exist independently of the value that carries it.
+const PathPrefix = "/agni"
+
 // Site is the s3gen configuration for the Agni documentation site.
 var Site = &s3.Site{
 	OutputDir:   "./dist",
@@ -119,7 +126,7 @@ var Site = &s3.Site{
 
 	// URL path prefix. The GitHub Pages site is served at
 	// https://panyam.github.io/agni/, so pages live under /agni.
-	PathPrefix: "/agni",
+	PathPrefix: PathPrefix,
 
 	TemplateFolders: []string{
 		"./templates",
@@ -142,6 +149,8 @@ var Site = &s3.Site{
 		"includeFileText": IncludeFileText,
 		"includeCard":     IncludeCard,
 		"agniRun":         AgniRun,
+		"explainable":     Explainable,
+		"explainableCap":  ExplainableCap,
 
 		// String/content helpers the templates use. Newer s3gen provides
 		// these via its default func map; the pinned version does not, so we

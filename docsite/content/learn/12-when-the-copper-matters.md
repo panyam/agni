@@ -19,7 +19,7 @@ Three earlier chapters ended by pointing at this one.
 
 [Chapter 11](../11-crystals-and-oscillators/) said the stray capacitance of the tracks counts toward a crystal's load, so the same oscillator schematic runs at two frequencies on two layouts.
 
-And [chapter 1](../01-what-a-board-is-made-of/) put termination on its list of jobs, which only means anything because a track is a transmission line, which is a fact about its physical length relative to the signal on it.
+And [chapter 1](../01-what-a-board-is-made-of/) put {{ explainable "termination" }} on its list of jobs, which only means anything because a track is a transmission line, which is a fact about its physical length relative to the signal on it.
 
 None of those is checkable from a netlist. All of them are ordinary.
 
