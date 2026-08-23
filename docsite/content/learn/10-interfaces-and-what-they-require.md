@@ -93,4 +93,4 @@ Everything in this tool that looked fussy earlier is downstream of that observat
 
 A project's own profile compiles these under its own name, which is why the board above reports `gateway-profiles/can-esd-missing` rather than `profile/esd`.
 
-Next: when the copper matters, the last chapter and the one level nothing so far has touched.
+Next: [crystals and oscillators](../11-crystals-and-oscillators/), a short chapter on the part whose value matters as much as its presence.
