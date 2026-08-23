@@ -63,7 +63,7 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 
 	// Nets are computed from the schematic geometry (wires + pins + labels); see sch_nets.go.
 	// The same geometry pass surfaces dangling wire endpoints (connections drawn but not completed).
-	nets, dangles, noJunction := schNets(root, src, syms)
+	nets, dangles, noJunction, joinedTaps := schNets(root, src, syms)
 	d.Nets = nets
 	// Unlike the board readers, this one KEEPS a placeholder-designated symbol: those are real
 	// circuitry somebody has not named yet, and dropping them would make the design read short.
@@ -75,8 +75,9 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 		// Declared even when the slice is empty: that is the point of `supplied`. This reader
 		// looked, so an empty list means "no collisions" here, where on a reader that cannot look
 		// it would mean "nobody asked" (agni issue 309).
-		Supplied:              []string{"ref_des_collisions", "resolved_symbols"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps"},
 		NoJunctionEndpoints:   noJunction,
+		JoinedTaps:            joinedTaps,
 		UnmodeledBuses:        collectBuses(root, src, nil),
 		UnresolvedSymbols:     unresolvedSyms,
 		ResolvedSymbols:       libs.resolvedSymbols(),

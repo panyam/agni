@@ -673,6 +673,19 @@ type InputDiagnostics struct {
 	// being indistinguishable from a design with no symbols: a rule reading an empty list where nobody
 	// looked would claim coverage it has not got.
 	ResolvedSymbols []*ResolvedSymbol `protobuf:"bytes,8,rep,name=resolved_symbols,json=resolvedSymbols,proto3" json:"resolved_symbols,omitempty"`
+	// The wire-end-on-wire-body taps that ARE joined, the other half of no_junction_endpoints
+	// (agni issue 420).
+	//
+	// Recorded for the reason resolved_symbols is: a rule reading only no_junction_endpoints could
+	// report only failures, so a schematic whose every T-tap carries its junction dot produced the same
+	// nothing as a format that cannot detect a T-tap at all. That silence costs more here than
+	// anywhere else in the diagnostics, because a silent T-tap is the failure mode wire-no-junction
+	// exists for: the drawing shows a connection the netlist does not have.
+	//
+	// The reader already knew. splitWiresAt runs at a junction dot or a mid-span label BEFORE the
+	// detection pass, so a joined tap is no longer interior to a segment by the time anything looks at
+	// it. This keeps the set that pass throws away rather than computing a new one.
+	JoinedTaps []*JoinedTap `protobuf:"bytes,9,rep,name=joined_taps,json=joinedTaps,proto3" json:"joined_taps,omitempty"`
 	// Components the source has not annotated yet: their designator is a placeholder (`R?`, `C?`,
 	// `REF**`) rather than an identity, so every unannotated resistor on the sheet reads `R?`.
 	//
@@ -778,6 +791,13 @@ func (x *InputDiagnostics) GetUnresolvedSymbols() []*UnresolvedSymbol {
 func (x *InputDiagnostics) GetResolvedSymbols() []*ResolvedSymbol {
 	if x != nil {
 		return x.ResolvedSymbols
+	}
+	return nil
+}
+
+func (x *InputDiagnostics) GetJoinedTaps() []*JoinedTap {
+	if x != nil {
+		return x.JoinedTaps
 	}
 	return nil
 }
@@ -1089,6 +1109,99 @@ func (x *BusNotModeled) GetMembers() []string {
 // pins and would fabricate dangles. The same message shape carries both endpoint-on-nothing
 // (dangling_endpoints) and endpoint-on-body (no_junction_endpoints, KiCad-only: xschem and
 // gEDA auto-connect mid-span touches, so a missing junction is not a defect there).
+// JoinedTap is one wire endpoint landing on another wire's body where something joins them.
+//
+// join_kind names WHICH construct did the joining, because the two are different things to a
+// reviewer. A junction dot is explicit intent someone placed. A mid-span label joins the wires as a
+// side effect of naming the net there, which is correct in KiCad and is easier to delete by accident.
+// label carries the text for the second case, so a pass names the net rather than asserting one.
+//
+// segments is how many wire ends meet at the point after the split. It separates an ordinary T (three)
+// from a crossing (four) and is what a reader compares against the drawing.
+type JoinedTap struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	X             int64                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int64                  `protobuf:"varint,2,opt,name=y,proto3" json:"y,omitempty"`
+	JoinKind      string                 `protobuf:"bytes,3,opt,name=join_kind,json=joinKind,proto3" json:"join_kind,omitempty"` // "junction" | "label"
+	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`                       // the label text when join_kind is "label", else empty
+	Segments      int32                  `protobuf:"varint,5,opt,name=segments,proto3" json:"segments,omitempty"`
+	Prov          *Provenance            `protobuf:"bytes,6,opt,name=prov,proto3" json:"prov,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JoinedTap) Reset() {
+	*x = JoinedTap{}
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JoinedTap) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JoinedTap) ProtoMessage() {}
+
+func (x *JoinedTap) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JoinedTap.ProtoReflect.Descriptor instead.
+func (*JoinedTap) Descriptor() ([]byte, []int) {
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *JoinedTap) GetX() int64 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *JoinedTap) GetY() int64 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+func (x *JoinedTap) GetJoinKind() string {
+	if x != nil {
+		return x.JoinKind
+	}
+	return ""
+}
+
+func (x *JoinedTap) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *JoinedTap) GetSegments() int32 {
+	if x != nil {
+		return x.Segments
+	}
+	return 0
+}
+
+func (x *JoinedTap) GetProv() *Provenance {
+	if x != nil {
+		return x.Prov
+	}
+	return nil
+}
+
 type DanglingEndpoint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             int64                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`
@@ -1100,7 +1213,7 @@ type DanglingEndpoint struct {
 
 func (x *DanglingEndpoint) Reset() {
 	*x = DanglingEndpoint{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[9]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1112,7 +1225,7 @@ func (x *DanglingEndpoint) String() string {
 func (*DanglingEndpoint) ProtoMessage() {}
 
 func (x *DanglingEndpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[9]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1125,7 +1238,7 @@ func (x *DanglingEndpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DanglingEndpoint.ProtoReflect.Descriptor instead.
 func (*DanglingEndpoint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DanglingEndpoint) GetX() int64 {
@@ -1165,7 +1278,7 @@ type RefDesCollision struct {
 
 func (x *RefDesCollision) Reset() {
 	*x = RefDesCollision{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[10]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1290,7 @@ func (x *RefDesCollision) String() string {
 func (*RefDesCollision) ProtoMessage() {}
 
 func (x *RefDesCollision) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[10]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1303,7 @@ func (x *RefDesCollision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefDesCollision.ProtoReflect.Descriptor instead.
 func (*RefDesCollision) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RefDesCollision) GetRefDes() string {
@@ -1220,7 +1333,7 @@ type PartLibrary struct {
 
 func (x *PartLibrary) Reset() {
 	*x = PartLibrary{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[11]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1232,7 +1345,7 @@ func (x *PartLibrary) String() string {
 func (*PartLibrary) ProtoMessage() {}
 
 func (x *PartLibrary) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[11]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1245,7 +1358,7 @@ func (x *PartLibrary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartLibrary.ProtoReflect.Descriptor instead.
 func (*PartLibrary) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PartLibrary) GetName() string {
@@ -1292,7 +1405,7 @@ type PartType struct {
 
 func (x *PartType) Reset() {
 	*x = PartType{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[12]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1304,7 +1417,7 @@ func (x *PartType) String() string {
 func (*PartType) ProtoMessage() {}
 
 func (x *PartType) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[12]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1317,7 +1430,7 @@ func (x *PartType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartType.ProtoReflect.Descriptor instead.
 func (*PartType) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PartType) GetName() string {
@@ -1376,7 +1489,7 @@ type Pin struct {
 
 func (x *Pin) Reset() {
 	*x = Pin{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[13]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1388,7 +1501,7 @@ func (x *Pin) String() string {
 func (*Pin) ProtoMessage() {}
 
 func (x *Pin) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[13]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1401,7 +1514,7 @@ func (x *Pin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pin.ProtoReflect.Descriptor instead.
 func (*Pin) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Pin) GetName() string {
@@ -1474,7 +1587,7 @@ type Component struct {
 
 func (x *Component) Reset() {
 	*x = Component{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[14]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1486,7 +1599,7 @@ func (x *Component) String() string {
 func (*Component) ProtoMessage() {}
 
 func (x *Component) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[14]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1499,7 +1612,7 @@ func (x *Component) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Component.ProtoReflect.Descriptor instead.
 func (*Component) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Component) GetRefDes() string {
@@ -1595,7 +1708,7 @@ type Quantity struct {
 
 func (x *Quantity) Reset() {
 	*x = Quantity{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1607,7 +1720,7 @@ func (x *Quantity) String() string {
 func (*Quantity) ProtoMessage() {}
 
 func (x *Quantity) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[15]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1620,7 +1733,7 @@ func (x *Quantity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Quantity.ProtoReflect.Descriptor instead.
 func (*Quantity) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Quantity) GetInput() string {
@@ -1660,7 +1773,7 @@ type ComponentSection struct {
 
 func (x *ComponentSection) Reset() {
 	*x = ComponentSection{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1672,7 +1785,7 @@ func (x *ComponentSection) String() string {
 func (*ComponentSection) ProtoMessage() {}
 
 func (x *ComponentSection) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[16]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1685,7 +1798,7 @@ func (x *ComponentSection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentSection.ProtoReflect.Descriptor instead.
 func (*ComponentSection) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ComponentSection) GetIndex() int32 {
@@ -1739,7 +1852,7 @@ type NetRole struct {
 
 func (x *NetRole) Reset() {
 	*x = NetRole{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1751,7 +1864,7 @@ func (x *NetRole) String() string {
 func (*NetRole) ProtoMessage() {}
 
 func (x *NetRole) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[17]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1764,7 +1877,7 @@ func (x *NetRole) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetRole.ProtoReflect.Descriptor instead.
 func (*NetRole) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *NetRole) GetRole() string {
@@ -1818,7 +1931,7 @@ type Net struct {
 
 func (x *Net) Reset() {
 	*x = Net{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1830,7 +1943,7 @@ func (x *Net) String() string {
 func (*Net) ProtoMessage() {}
 
 func (x *Net) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[18]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1843,7 +1956,7 @@ func (x *Net) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Net.ProtoReflect.Descriptor instead.
 func (*Net) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Net) GetName() string {
@@ -1915,7 +2028,7 @@ type Connection struct {
 
 func (x *Connection) Reset() {
 	*x = Connection{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1927,7 +2040,7 @@ func (x *Connection) String() string {
 func (*Connection) ProtoMessage() {}
 
 func (x *Connection) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[19]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1940,7 +2053,7 @@ func (x *Connection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Connection.ProtoReflect.Descriptor instead.
 func (*Connection) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Connection) GetComponentRef() string {
@@ -1985,7 +2098,7 @@ type Sheet struct {
 
 func (x *Sheet) Reset() {
 	*x = Sheet{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1997,7 +2110,7 @@ func (x *Sheet) String() string {
 func (*Sheet) ProtoMessage() {}
 
 func (x *Sheet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[20]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2010,7 +2123,7 @@ func (x *Sheet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sheet.ProtoReflect.Descriptor instead.
 func (*Sheet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *Sheet) GetId() string {
@@ -2056,7 +2169,7 @@ type Footprint struct {
 
 func (x *Footprint) Reset() {
 	*x = Footprint{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2068,7 +2181,7 @@ func (x *Footprint) String() string {
 func (*Footprint) ProtoMessage() {}
 
 func (x *Footprint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[21]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2081,7 +2194,7 @@ func (x *Footprint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Footprint.ProtoReflect.Descriptor instead.
 func (*Footprint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *Footprint) GetName() string {
@@ -2125,7 +2238,7 @@ type Layer struct {
 
 func (x *Layer) Reset() {
 	*x = Layer{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2137,7 +2250,7 @@ func (x *Layer) String() string {
 func (*Layer) ProtoMessage() {}
 
 func (x *Layer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[22]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2150,7 +2263,7 @@ func (x *Layer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Layer.ProtoReflect.Descriptor instead.
 func (*Layer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Layer) GetName() string {
@@ -2202,7 +2315,7 @@ type StackupLayer struct {
 
 func (x *StackupLayer) Reset() {
 	*x = StackupLayer{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2214,7 +2327,7 @@ func (x *StackupLayer) String() string {
 func (*StackupLayer) ProtoMessage() {}
 
 func (x *StackupLayer) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[23]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2227,7 +2340,7 @@ func (x *StackupLayer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StackupLayer.ProtoReflect.Descriptor instead.
 func (*StackupLayer) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *StackupLayer) GetLayerRef() string {
@@ -2269,7 +2382,7 @@ type Stackup struct {
 
 func (x *Stackup) Reset() {
 	*x = Stackup{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[24]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2281,7 +2394,7 @@ func (x *Stackup) String() string {
 func (*Stackup) ProtoMessage() {}
 
 func (x *Stackup) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[24]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2294,7 +2407,7 @@ func (x *Stackup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Stackup.ProtoReflect.Descriptor instead.
 func (*Stackup) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{24}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *Stackup) GetLayers() []*StackupLayer {
@@ -2333,7 +2446,7 @@ type Constraint struct {
 
 func (x *Constraint) Reset() {
 	*x = Constraint{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[25]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2345,7 +2458,7 @@ func (x *Constraint) String() string {
 func (*Constraint) ProtoMessage() {}
 
 func (x *Constraint) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[25]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2358,7 +2471,7 @@ func (x *Constraint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Constraint.ProtoReflect.Descriptor instead.
 func (*Constraint) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{25}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *Constraint) GetName() string {
@@ -2411,7 +2524,7 @@ type BomLine struct {
 
 func (x *BomLine) Reset() {
 	*x = BomLine{}
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[26]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2423,7 +2536,7 @@ func (x *BomLine) String() string {
 func (*BomLine) ProtoMessage() {}
 
 func (x *BomLine) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_ir_ir_proto_msgTypes[26]
+	mi := &file_agni_v1_ir_ir_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2436,7 +2549,7 @@ func (x *BomLine) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BomLine.ProtoReflect.Descriptor instead.
 func (*BomLine) Descriptor() ([]byte, []int) {
-	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{26}
+	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *BomLine) GetRefDes() []string {
@@ -2533,14 +2646,16 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc9\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x81\x05\n" +
 	"\x10InputDiagnostics\x12K\n" +
 	"\x12dangling_endpoints\x18\x01 \x03(\v2\x1c.agni.v1.ir.DanglingEndpointR\x11danglingEndpoints\x12I\n" +
 	"\x12ref_des_collisions\x18\x02 \x03(\v2\x1b.agni.v1.ir.RefDesCollisionR\x10refDesCollisions\x12P\n" +
 	"\x15no_junction_endpoints\x18\x03 \x03(\v2\x1c.agni.v1.ir.DanglingEndpointR\x13noJunctionEndpoints\x12B\n" +
 	"\x0funmodeled_buses\x18\x04 \x03(\v2\x19.agni.v1.ir.BusNotModeledR\x0eunmodeledBuses\x12K\n" +
 	"\x12unresolved_symbols\x18\x05 \x03(\v2\x1c.agni.v1.ir.UnresolvedSymbolR\x11unresolvedSymbols\x12E\n" +
-	"\x10resolved_symbols\x18\b \x03(\v2\x1a.agni.v1.ir.ResolvedSymbolR\x0fresolvedSymbols\x12W\n" +
+	"\x10resolved_symbols\x18\b \x03(\v2\x1a.agni.v1.ir.ResolvedSymbolR\x0fresolvedSymbols\x126\n" +
+	"\vjoined_taps\x18\t \x03(\v2\x15.agni.v1.ir.JoinedTapR\n" +
+	"joinedTaps\x12W\n" +
 	"\x16unannotated_components\x18\x06 \x03(\v2 .agni.v1.ir.UnannotatedComponentR\x15unannotatedComponents\x12\x1a\n" +
 	"\bsupplied\x18\a \x03(\tR\bsupplied\"e\n" +
 	"\x14UnannotatedComponent\x12\x17\n" +
@@ -2559,7 +2674,14 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12*\n" +
 	"\x04prov\x18\x03 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x12\x18\n" +
-	"\amembers\x18\x04 \x03(\tR\amembers\"Z\n" +
+	"\amembers\x18\x04 \x03(\tR\amembers\"\xa2\x01\n" +
+	"\tJoinedTap\x12\f\n" +
+	"\x01x\x18\x01 \x01(\x03R\x01x\x12\f\n" +
+	"\x01y\x18\x02 \x01(\x03R\x01y\x12\x1b\n" +
+	"\tjoin_kind\x18\x03 \x01(\tR\bjoinKind\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1a\n" +
+	"\bsegments\x18\x05 \x01(\x05R\bsegments\x12*\n" +
+	"\x04prov\x18\x06 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\"Z\n" +
 	"\x10DanglingEndpoint\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x03R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x03R\x01y\x12*\n" +
@@ -2775,7 +2897,7 @@ func file_agni_v1_ir_ir_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_ir_ir_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_agni_v1_ir_ir_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_agni_v1_ir_ir_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
 var file_agni_v1_ir_ir_proto_goTypes = []any{
 	(PinDirection)(0),            // 0: agni.v1.ir.PinDirection
 	(RoleSource)(0),              // 1: agni.v1.ir.RoleSource
@@ -2789,112 +2911,115 @@ var file_agni_v1_ir_ir_proto_goTypes = []any{
 	(*ResolvedSymbol)(nil),       // 9: agni.v1.ir.ResolvedSymbol
 	(*UnresolvedSymbol)(nil),     // 10: agni.v1.ir.UnresolvedSymbol
 	(*BusNotModeled)(nil),        // 11: agni.v1.ir.BusNotModeled
-	(*DanglingEndpoint)(nil),     // 12: agni.v1.ir.DanglingEndpoint
-	(*RefDesCollision)(nil),      // 13: agni.v1.ir.RefDesCollision
-	(*PartLibrary)(nil),          // 14: agni.v1.ir.PartLibrary
-	(*PartType)(nil),             // 15: agni.v1.ir.PartType
-	(*Pin)(nil),                  // 16: agni.v1.ir.Pin
-	(*Component)(nil),            // 17: agni.v1.ir.Component
-	(*Quantity)(nil),             // 18: agni.v1.ir.Quantity
-	(*ComponentSection)(nil),     // 19: agni.v1.ir.ComponentSection
-	(*NetRole)(nil),              // 20: agni.v1.ir.NetRole
-	(*Net)(nil),                  // 21: agni.v1.ir.Net
-	(*Connection)(nil),           // 22: agni.v1.ir.Connection
-	(*Sheet)(nil),                // 23: agni.v1.ir.Sheet
-	(*Footprint)(nil),            // 24: agni.v1.ir.Footprint
-	(*Layer)(nil),                // 25: agni.v1.ir.Layer
-	(*StackupLayer)(nil),         // 26: agni.v1.ir.StackupLayer
-	(*Stackup)(nil),              // 27: agni.v1.ir.Stackup
-	(*Constraint)(nil),           // 28: agni.v1.ir.Constraint
-	(*BomLine)(nil),              // 29: agni.v1.ir.BomLine
-	nil,                          // 30: agni.v1.ir.Design.AttributesEntry
-	nil,                          // 31: agni.v1.ir.PartLibrary.AttributesEntry
-	nil,                          // 32: agni.v1.ir.PartType.AttributesEntry
-	nil,                          // 33: agni.v1.ir.Pin.AttributesEntry
-	nil,                          // 34: agni.v1.ir.Component.AttributesEntry
-	nil,                          // 35: agni.v1.ir.ComponentSection.AttributesEntry
-	nil,                          // 36: agni.v1.ir.Net.AttributesEntry
-	nil,                          // 37: agni.v1.ir.Connection.AttributesEntry
-	nil,                          // 38: agni.v1.ir.Sheet.AttributesEntry
-	nil,                          // 39: agni.v1.ir.Footprint.AttributesEntry
-	nil,                          // 40: agni.v1.ir.Layer.AttributesEntry
-	nil,                          // 41: agni.v1.ir.StackupLayer.AttributesEntry
-	nil,                          // 42: agni.v1.ir.Stackup.AttributesEntry
-	nil,                          // 43: agni.v1.ir.Constraint.ParamsEntry
-	nil,                          // 44: agni.v1.ir.Constraint.AttributesEntry
-	nil,                          // 45: agni.v1.ir.BomLine.AttributesEntry
+	(*JoinedTap)(nil),            // 12: agni.v1.ir.JoinedTap
+	(*DanglingEndpoint)(nil),     // 13: agni.v1.ir.DanglingEndpoint
+	(*RefDesCollision)(nil),      // 14: agni.v1.ir.RefDesCollision
+	(*PartLibrary)(nil),          // 15: agni.v1.ir.PartLibrary
+	(*PartType)(nil),             // 16: agni.v1.ir.PartType
+	(*Pin)(nil),                  // 17: agni.v1.ir.Pin
+	(*Component)(nil),            // 18: agni.v1.ir.Component
+	(*Quantity)(nil),             // 19: agni.v1.ir.Quantity
+	(*ComponentSection)(nil),     // 20: agni.v1.ir.ComponentSection
+	(*NetRole)(nil),              // 21: agni.v1.ir.NetRole
+	(*Net)(nil),                  // 22: agni.v1.ir.Net
+	(*Connection)(nil),           // 23: agni.v1.ir.Connection
+	(*Sheet)(nil),                // 24: agni.v1.ir.Sheet
+	(*Footprint)(nil),            // 25: agni.v1.ir.Footprint
+	(*Layer)(nil),                // 26: agni.v1.ir.Layer
+	(*StackupLayer)(nil),         // 27: agni.v1.ir.StackupLayer
+	(*Stackup)(nil),              // 28: agni.v1.ir.Stackup
+	(*Constraint)(nil),           // 29: agni.v1.ir.Constraint
+	(*BomLine)(nil),              // 30: agni.v1.ir.BomLine
+	nil,                          // 31: agni.v1.ir.Design.AttributesEntry
+	nil,                          // 32: agni.v1.ir.PartLibrary.AttributesEntry
+	nil,                          // 33: agni.v1.ir.PartType.AttributesEntry
+	nil,                          // 34: agni.v1.ir.Pin.AttributesEntry
+	nil,                          // 35: agni.v1.ir.Component.AttributesEntry
+	nil,                          // 36: agni.v1.ir.ComponentSection.AttributesEntry
+	nil,                          // 37: agni.v1.ir.Net.AttributesEntry
+	nil,                          // 38: agni.v1.ir.Connection.AttributesEntry
+	nil,                          // 39: agni.v1.ir.Sheet.AttributesEntry
+	nil,                          // 40: agni.v1.ir.Footprint.AttributesEntry
+	nil,                          // 41: agni.v1.ir.Layer.AttributesEntry
+	nil,                          // 42: agni.v1.ir.StackupLayer.AttributesEntry
+	nil,                          // 43: agni.v1.ir.Stackup.AttributesEntry
+	nil,                          // 44: agni.v1.ir.Constraint.ParamsEntry
+	nil,                          // 45: agni.v1.ir.Constraint.AttributesEntry
+	nil,                          // 46: agni.v1.ir.BomLine.AttributesEntry
 }
 var file_agni_v1_ir_ir_proto_depIdxs = []int32{
 	3,  // 0: agni.v1.ir.Provenance.span:type_name -> agni.v1.ir.Span
 	4,  // 1: agni.v1.ir.FidelityFragment.prov:type_name -> agni.v1.ir.Provenance
-	14, // 2: agni.v1.ir.Design.libraries:type_name -> agni.v1.ir.PartLibrary
-	17, // 3: agni.v1.ir.Design.components:type_name -> agni.v1.ir.Component
-	21, // 4: agni.v1.ir.Design.nets:type_name -> agni.v1.ir.Net
-	23, // 5: agni.v1.ir.Design.sheets:type_name -> agni.v1.ir.Sheet
+	15, // 2: agni.v1.ir.Design.libraries:type_name -> agni.v1.ir.PartLibrary
+	18, // 3: agni.v1.ir.Design.components:type_name -> agni.v1.ir.Component
+	22, // 4: agni.v1.ir.Design.nets:type_name -> agni.v1.ir.Net
+	24, // 5: agni.v1.ir.Design.sheets:type_name -> agni.v1.ir.Sheet
 	7,  // 6: agni.v1.ir.Design.input_diagnostics:type_name -> agni.v1.ir.InputDiagnostics
-	24, // 7: agni.v1.ir.Design.footprints:type_name -> agni.v1.ir.Footprint
-	25, // 8: agni.v1.ir.Design.layers:type_name -> agni.v1.ir.Layer
-	27, // 9: agni.v1.ir.Design.stackup:type_name -> agni.v1.ir.Stackup
-	28, // 10: agni.v1.ir.Design.constraints:type_name -> agni.v1.ir.Constraint
-	29, // 11: agni.v1.ir.Design.bom:type_name -> agni.v1.ir.BomLine
-	30, // 12: agni.v1.ir.Design.attributes:type_name -> agni.v1.ir.Design.AttributesEntry
+	25, // 7: agni.v1.ir.Design.footprints:type_name -> agni.v1.ir.Footprint
+	26, // 8: agni.v1.ir.Design.layers:type_name -> agni.v1.ir.Layer
+	28, // 9: agni.v1.ir.Design.stackup:type_name -> agni.v1.ir.Stackup
+	29, // 10: agni.v1.ir.Design.constraints:type_name -> agni.v1.ir.Constraint
+	30, // 11: agni.v1.ir.Design.bom:type_name -> agni.v1.ir.BomLine
+	31, // 12: agni.v1.ir.Design.attributes:type_name -> agni.v1.ir.Design.AttributesEntry
 	5,  // 13: agni.v1.ir.Design.fidelity:type_name -> agni.v1.ir.FidelityFragment
 	4,  // 14: agni.v1.ir.Design.prov:type_name -> agni.v1.ir.Provenance
-	12, // 15: agni.v1.ir.InputDiagnostics.dangling_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
-	13, // 16: agni.v1.ir.InputDiagnostics.ref_des_collisions:type_name -> agni.v1.ir.RefDesCollision
-	12, // 17: agni.v1.ir.InputDiagnostics.no_junction_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
+	13, // 15: agni.v1.ir.InputDiagnostics.dangling_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
+	14, // 16: agni.v1.ir.InputDiagnostics.ref_des_collisions:type_name -> agni.v1.ir.RefDesCollision
+	13, // 17: agni.v1.ir.InputDiagnostics.no_junction_endpoints:type_name -> agni.v1.ir.DanglingEndpoint
 	11, // 18: agni.v1.ir.InputDiagnostics.unmodeled_buses:type_name -> agni.v1.ir.BusNotModeled
 	10, // 19: agni.v1.ir.InputDiagnostics.unresolved_symbols:type_name -> agni.v1.ir.UnresolvedSymbol
 	9,  // 20: agni.v1.ir.InputDiagnostics.resolved_symbols:type_name -> agni.v1.ir.ResolvedSymbol
-	8,  // 21: agni.v1.ir.InputDiagnostics.unannotated_components:type_name -> agni.v1.ir.UnannotatedComponent
-	4,  // 22: agni.v1.ir.UnannotatedComponent.instances:type_name -> agni.v1.ir.Provenance
-	4,  // 23: agni.v1.ir.UnresolvedSymbol.prov:type_name -> agni.v1.ir.Provenance
-	4,  // 24: agni.v1.ir.BusNotModeled.prov:type_name -> agni.v1.ir.Provenance
-	4,  // 25: agni.v1.ir.DanglingEndpoint.prov:type_name -> agni.v1.ir.Provenance
-	4,  // 26: agni.v1.ir.RefDesCollision.instances:type_name -> agni.v1.ir.Provenance
-	15, // 27: agni.v1.ir.PartLibrary.parts:type_name -> agni.v1.ir.PartType
-	31, // 28: agni.v1.ir.PartLibrary.attributes:type_name -> agni.v1.ir.PartLibrary.AttributesEntry
-	4,  // 29: agni.v1.ir.PartLibrary.prov:type_name -> agni.v1.ir.Provenance
-	16, // 30: agni.v1.ir.PartType.pins:type_name -> agni.v1.ir.Pin
-	32, // 31: agni.v1.ir.PartType.attributes:type_name -> agni.v1.ir.PartType.AttributesEntry
-	4,  // 32: agni.v1.ir.PartType.prov:type_name -> agni.v1.ir.Provenance
-	0,  // 33: agni.v1.ir.Pin.direction:type_name -> agni.v1.ir.PinDirection
-	33, // 34: agni.v1.ir.Pin.attributes:type_name -> agni.v1.ir.Pin.AttributesEntry
-	4,  // 35: agni.v1.ir.Pin.prov:type_name -> agni.v1.ir.Provenance
-	19, // 36: agni.v1.ir.Component.sections:type_name -> agni.v1.ir.ComponentSection
-	18, // 37: agni.v1.ir.Component.value:type_name -> agni.v1.ir.Quantity
-	34, // 38: agni.v1.ir.Component.attributes:type_name -> agni.v1.ir.Component.AttributesEntry
-	4,  // 39: agni.v1.ir.Component.prov:type_name -> agni.v1.ir.Provenance
-	35, // 40: agni.v1.ir.ComponentSection.attributes:type_name -> agni.v1.ir.ComponentSection.AttributesEntry
-	4,  // 41: agni.v1.ir.ComponentSection.prov:type_name -> agni.v1.ir.Provenance
-	1,  // 42: agni.v1.ir.NetRole.source:type_name -> agni.v1.ir.RoleSource
-	22, // 43: agni.v1.ir.Net.connections:type_name -> agni.v1.ir.Connection
-	20, // 44: agni.v1.ir.Net.roles:type_name -> agni.v1.ir.NetRole
-	36, // 45: agni.v1.ir.Net.attributes:type_name -> agni.v1.ir.Net.AttributesEntry
-	4,  // 46: agni.v1.ir.Net.prov:type_name -> agni.v1.ir.Provenance
-	37, // 47: agni.v1.ir.Connection.attributes:type_name -> agni.v1.ir.Connection.AttributesEntry
-	4,  // 48: agni.v1.ir.Connection.prov:type_name -> agni.v1.ir.Provenance
-	38, // 49: agni.v1.ir.Sheet.attributes:type_name -> agni.v1.ir.Sheet.AttributesEntry
-	4,  // 50: agni.v1.ir.Sheet.prov:type_name -> agni.v1.ir.Provenance
-	39, // 51: agni.v1.ir.Footprint.attributes:type_name -> agni.v1.ir.Footprint.AttributesEntry
-	4,  // 52: agni.v1.ir.Footprint.prov:type_name -> agni.v1.ir.Provenance
-	2,  // 53: agni.v1.ir.Layer.function:type_name -> agni.v1.ir.LayerFunction
-	40, // 54: agni.v1.ir.Layer.attributes:type_name -> agni.v1.ir.Layer.AttributesEntry
-	4,  // 55: agni.v1.ir.Layer.prov:type_name -> agni.v1.ir.Provenance
-	41, // 56: agni.v1.ir.StackupLayer.attributes:type_name -> agni.v1.ir.StackupLayer.AttributesEntry
-	26, // 57: agni.v1.ir.Stackup.layers:type_name -> agni.v1.ir.StackupLayer
-	42, // 58: agni.v1.ir.Stackup.attributes:type_name -> agni.v1.ir.Stackup.AttributesEntry
-	4,  // 59: agni.v1.ir.Stackup.prov:type_name -> agni.v1.ir.Provenance
-	43, // 60: agni.v1.ir.Constraint.params:type_name -> agni.v1.ir.Constraint.ParamsEntry
-	44, // 61: agni.v1.ir.Constraint.attributes:type_name -> agni.v1.ir.Constraint.AttributesEntry
-	4,  // 62: agni.v1.ir.Constraint.prov:type_name -> agni.v1.ir.Provenance
-	45, // 63: agni.v1.ir.BomLine.attributes:type_name -> agni.v1.ir.BomLine.AttributesEntry
-	4,  // 64: agni.v1.ir.BomLine.prov:type_name -> agni.v1.ir.Provenance
-	65, // [65:65] is the sub-list for method output_type
-	65, // [65:65] is the sub-list for method input_type
-	65, // [65:65] is the sub-list for extension type_name
-	65, // [65:65] is the sub-list for extension extendee
-	0,  // [0:65] is the sub-list for field type_name
+	12, // 21: agni.v1.ir.InputDiagnostics.joined_taps:type_name -> agni.v1.ir.JoinedTap
+	8,  // 22: agni.v1.ir.InputDiagnostics.unannotated_components:type_name -> agni.v1.ir.UnannotatedComponent
+	4,  // 23: agni.v1.ir.UnannotatedComponent.instances:type_name -> agni.v1.ir.Provenance
+	4,  // 24: agni.v1.ir.UnresolvedSymbol.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 25: agni.v1.ir.BusNotModeled.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 26: agni.v1.ir.JoinedTap.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 27: agni.v1.ir.DanglingEndpoint.prov:type_name -> agni.v1.ir.Provenance
+	4,  // 28: agni.v1.ir.RefDesCollision.instances:type_name -> agni.v1.ir.Provenance
+	16, // 29: agni.v1.ir.PartLibrary.parts:type_name -> agni.v1.ir.PartType
+	32, // 30: agni.v1.ir.PartLibrary.attributes:type_name -> agni.v1.ir.PartLibrary.AttributesEntry
+	4,  // 31: agni.v1.ir.PartLibrary.prov:type_name -> agni.v1.ir.Provenance
+	17, // 32: agni.v1.ir.PartType.pins:type_name -> agni.v1.ir.Pin
+	33, // 33: agni.v1.ir.PartType.attributes:type_name -> agni.v1.ir.PartType.AttributesEntry
+	4,  // 34: agni.v1.ir.PartType.prov:type_name -> agni.v1.ir.Provenance
+	0,  // 35: agni.v1.ir.Pin.direction:type_name -> agni.v1.ir.PinDirection
+	34, // 36: agni.v1.ir.Pin.attributes:type_name -> agni.v1.ir.Pin.AttributesEntry
+	4,  // 37: agni.v1.ir.Pin.prov:type_name -> agni.v1.ir.Provenance
+	20, // 38: agni.v1.ir.Component.sections:type_name -> agni.v1.ir.ComponentSection
+	19, // 39: agni.v1.ir.Component.value:type_name -> agni.v1.ir.Quantity
+	35, // 40: agni.v1.ir.Component.attributes:type_name -> agni.v1.ir.Component.AttributesEntry
+	4,  // 41: agni.v1.ir.Component.prov:type_name -> agni.v1.ir.Provenance
+	36, // 42: agni.v1.ir.ComponentSection.attributes:type_name -> agni.v1.ir.ComponentSection.AttributesEntry
+	4,  // 43: agni.v1.ir.ComponentSection.prov:type_name -> agni.v1.ir.Provenance
+	1,  // 44: agni.v1.ir.NetRole.source:type_name -> agni.v1.ir.RoleSource
+	23, // 45: agni.v1.ir.Net.connections:type_name -> agni.v1.ir.Connection
+	21, // 46: agni.v1.ir.Net.roles:type_name -> agni.v1.ir.NetRole
+	37, // 47: agni.v1.ir.Net.attributes:type_name -> agni.v1.ir.Net.AttributesEntry
+	4,  // 48: agni.v1.ir.Net.prov:type_name -> agni.v1.ir.Provenance
+	38, // 49: agni.v1.ir.Connection.attributes:type_name -> agni.v1.ir.Connection.AttributesEntry
+	4,  // 50: agni.v1.ir.Connection.prov:type_name -> agni.v1.ir.Provenance
+	39, // 51: agni.v1.ir.Sheet.attributes:type_name -> agni.v1.ir.Sheet.AttributesEntry
+	4,  // 52: agni.v1.ir.Sheet.prov:type_name -> agni.v1.ir.Provenance
+	40, // 53: agni.v1.ir.Footprint.attributes:type_name -> agni.v1.ir.Footprint.AttributesEntry
+	4,  // 54: agni.v1.ir.Footprint.prov:type_name -> agni.v1.ir.Provenance
+	2,  // 55: agni.v1.ir.Layer.function:type_name -> agni.v1.ir.LayerFunction
+	41, // 56: agni.v1.ir.Layer.attributes:type_name -> agni.v1.ir.Layer.AttributesEntry
+	4,  // 57: agni.v1.ir.Layer.prov:type_name -> agni.v1.ir.Provenance
+	42, // 58: agni.v1.ir.StackupLayer.attributes:type_name -> agni.v1.ir.StackupLayer.AttributesEntry
+	27, // 59: agni.v1.ir.Stackup.layers:type_name -> agni.v1.ir.StackupLayer
+	43, // 60: agni.v1.ir.Stackup.attributes:type_name -> agni.v1.ir.Stackup.AttributesEntry
+	4,  // 61: agni.v1.ir.Stackup.prov:type_name -> agni.v1.ir.Provenance
+	44, // 62: agni.v1.ir.Constraint.params:type_name -> agni.v1.ir.Constraint.ParamsEntry
+	45, // 63: agni.v1.ir.Constraint.attributes:type_name -> agni.v1.ir.Constraint.AttributesEntry
+	4,  // 64: agni.v1.ir.Constraint.prov:type_name -> agni.v1.ir.Provenance
+	46, // 65: agni.v1.ir.BomLine.attributes:type_name -> agni.v1.ir.BomLine.AttributesEntry
+	4,  // 66: agni.v1.ir.BomLine.prov:type_name -> agni.v1.ir.Provenance
+	67, // [67:67] is the sub-list for method output_type
+	67, // [67:67] is the sub-list for method input_type
+	67, // [67:67] is the sub-list for extension type_name
+	67, // [67:67] is the sub-list for extension extendee
+	0,  // [0:67] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_ir_ir_proto_init() }
@@ -2902,14 +3027,14 @@ func file_agni_v1_ir_ir_proto_init() {
 	if File_agni_v1_ir_ir_proto != nil {
 		return
 	}
-	file_agni_v1_ir_ir_proto_msgTypes[15].OneofWrappers = []any{}
+	file_agni_v1_ir_ir_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_ir_ir_proto_rawDesc), len(file_agni_v1_ir_ir_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   43,
+			NumMessages:   44,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

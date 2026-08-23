@@ -426,6 +426,17 @@ const (
 	// membership capability would let a project with assignments and no definitions run the rule over
 	// zero comparisons and report a clean pass. The queryable twin is has_netclass_defs.
 	CapNetClassDefs Capability = "netclass_defs"
+
+	// CapJunctionTaps: the READER examines wire-end-on-wire-body taps and records BOTH halves, the
+	// ones something joins and the ones nothing does. A reader-property capability like
+	// CapRefDesCollisions, declared per read rather than inferred, and for the same reason: only the
+	// KiCad reader looks at wire geometry at all, so on every other format wire-no-junction found
+	// nothing and "found nothing" is what a clean pass looks like.
+	//
+	// It gates on the JOINED half rather than on the diagnostic as a whole, because a reader could
+	// record the silent taps without recording the joined ones, which is what the KiCad reader did
+	// until agni issue 420 and is a coverage claim a considered set must not make.
+	CapJunctionTaps Capability = "junction_taps"
 )
 
 // Run evaluates rules over a Model (the query interface) and returns findings sorted by rule

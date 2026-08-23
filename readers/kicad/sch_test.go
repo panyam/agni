@@ -3,6 +3,7 @@ package kicad
 import (
 	"bytes"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -379,6 +380,86 @@ func TestNoJunctionEndpoint(t *testing.T) {
 	for _, dg := range d.GetInputDiagnostics().GetDanglingEndpoints() {
 		if dg.X == nj[0].X && dg.Y == nj[0].Y {
 			t.Error("the on-body endpoint must not also report as dangling")
+		}
+	}
+}
+
+// TestJoinedTapRecorded (agni issue 420): the same T-tap with a junction dot on it is recorded as a
+// JOINED tap rather than vanishing. It used to vanish, and that is the whole point: splitWiresAt runs
+// at the dot before the detection pass, so a joined tap is an endpoint of both wires by the time
+// anything looks and is indistinguishable from a point where no wire ever crossed. A schematic whose
+// every tap carried its dot then reported what a schematic with no tap in it reported.
+//
+// The dot fixture and the dotless one differ by exactly one line, so the pass and the fail are the
+// same geometry under one changed fact.
+func TestJoinedTapRecorded(t *testing.T) {
+	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "tjunc_dotted.kicad_sch")), "tjunc_dotted.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := d.GetInputDiagnostics()
+	if !slices.Contains(diag.GetSupplied(), "junction_taps") {
+		t.Fatal("junction_taps not declared, so a consumer cannot tell a clean sheet from a format that never looked at wire geometry")
+	}
+	if nj := diag.GetNoJunctionEndpoints(); len(nj) != 0 {
+		t.Errorf("no-junction endpoints = %+v, want none once the dot is placed", nj)
+	}
+	jt := diag.GetJoinedTaps()
+	if len(jt) != 1 {
+		t.Fatalf("joined taps = %d, want 1: %+v", len(jt), jt)
+	}
+	if jt[0].GetX() != 65000000 || jt[0].GetY() != -50000000 {
+		t.Errorf("joined tap at (%d,%d), want the same point the dotless fixture fails on", jt[0].GetX(), jt[0].GetY())
+	}
+	if jt[0].GetJoinKind() != "junction" {
+		t.Errorf("join kind = %q, want junction", jt[0].GetJoinKind())
+	}
+	// Three, not two: the split cuts the through-wire at the dot, so the tap meets two halves.
+	if jt[0].GetSegments() != 3 {
+		t.Errorf("segments = %d, want 3 (both halves of the through-wire plus the tap)", jt[0].GetSegments())
+	}
+	if jt[0].GetProv().GetNativeId() != "wtap" {
+		t.Errorf("prov native id = %q, want the tap wire's uuid", jt[0].GetProv().GetNativeId())
+	}
+}
+
+// TestJoinedTapByLabel: a mid-span LABEL joins the wires too, and it is the case worth telling apart
+// from a dot. KiCad connects there just as firmly, but nobody placed a connection symbol, so the join
+// is a side effect of naming the net and is much easier to delete by accident. The label TEXT is the
+// net the tap resolves to, which is what a reviewer opens the schematic to confirm.
+func TestJoinedTapByLabel(t *testing.T) {
+	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "tjunc_labeled.kicad_sch")), "tjunc_labeled.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	jt := d.GetInputDiagnostics().GetJoinedTaps()
+	if len(jt) != 1 {
+		t.Fatalf("joined taps = %d, want 1: %+v", len(jt), jt)
+	}
+	if jt[0].GetJoinKind() != "label" || jt[0].GetLabel() != "BUS" {
+		t.Errorf("join = %q %q, want label BUS", jt[0].GetJoinKind(), jt[0].GetLabel())
+	}
+}
+
+// TestJoinedAndSilentTapsArePartition: the two lists are one partition of the same detection, run at
+// two points in the pipeline. A point on both would let the rule report it as passed and failed at
+// once, and the two runs are far enough apart in the reader for that to happen quietly.
+func TestJoinedAndSilentTapsArePartition(t *testing.T) {
+	for _, f := range []string{"tjunc.kicad_sch", "tjunc_dotted.kicad_sch", "tjunc_labeled.kicad_sch", "sch.kicad_sch", "hier_root.kicad_sch"} {
+		d, err := ReadSchematic(bytes.NewReader(readFixture(t, f)), f)
+		if err != nil {
+			t.Errorf("%s: %v", f, err)
+			continue
+		}
+		diag := d.GetInputDiagnostics()
+		joined := map[[2]int64]bool{}
+		for _, j := range diag.GetJoinedTaps() {
+			joined[[2]int64{j.GetX(), j.GetY()}] = true
+		}
+		for _, n := range diag.GetNoJunctionEndpoints() {
+			if joined[[2]int64{n.GetX(), n.GetY()}] {
+				t.Errorf("%s: the tap at (%d,%d) is on both lists", f, n.GetX(), n.GetY())
+			}
 		}
 	}
 }

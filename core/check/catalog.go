@@ -360,6 +360,8 @@ func capabilityMet(c Capability, m Model) bool {
 		return m.HasNetClasses()
 	case CapNetClassDefs:
 		return len(m.NetClassDefs()) > 0
+	case CapJunctionTaps:
+		return m.SuppliesDiagnostic(string(CapJunctionTaps))
 	}
 	return true
 }
@@ -378,6 +380,8 @@ func capabilityReason(c Capability) string {
 		return "design carries no net-class assignments (only a KiCad project file supplies them)"
 	case CapNetClassDefs:
 		return "design declares no net-class definitions, so there is no declared limit to compare against"
+	case CapJunctionTaps:
+		return "this format's reader does not examine wire geometry, so no T-tap was checked"
 	}
 	return "source format lacks a capability this rule requires"
 }

@@ -160,6 +160,19 @@ message InputDiagnostics {
   // being indistinguishable from a design with no symbols: a rule reading an empty list where nobody
   // looked would claim coverage it has not got.
   repeated ResolvedSymbol resolved_symbols = 8;
+  // The wire-end-on-wire-body taps that ARE joined, the other half of no_junction_endpoints
+  // (agni issue 420).
+  //
+  // Recorded for the reason resolved_symbols is: a rule reading only no_junction_endpoints could
+  // report only failures, so a schematic whose every T-tap carries its junction dot produced the same
+  // nothing as a format that cannot detect a T-tap at all. That silence costs more here than
+  // anywhere else in the diagnostics, because a silent T-tap is the failure mode wire-no-junction
+  // exists for: the drawing shows a connection the netlist does not have.
+  //
+  // The reader already knew. splitWiresAt runs at a junction dot or a mid-span label BEFORE the
+  // detection pass, so a joined tap is no longer interior to a segment by the time anything looks at
+  // it. This keeps the set that pass throws away rather than computing a new one.
+  repeated JoinedTap joined_taps = 9;
   // Components the source has not annotated yet: their designator is a placeholder (`R?`, `C?`,
   // `REF**`) rather than an identity, so every unannotated resistor on the sheet reads `R?`.
   //
@@ -265,6 +278,24 @@ message BusNotModeled {
 // pins and would fabricate dangles. The same message shape carries both endpoint-on-nothing
 // (dangling_endpoints) and endpoint-on-body (no_junction_endpoints, KiCad-only: xschem and
 // gEDA auto-connect mid-span touches, so a missing junction is not a defect there).
+// JoinedTap is one wire endpoint landing on another wire's body where something joins them.
+//
+// join_kind names WHICH construct did the joining, because the two are different things to a
+// reviewer. A junction dot is explicit intent someone placed. A mid-span label joins the wires as a
+// side effect of naming the net there, which is correct in KiCad and is easier to delete by accident.
+// label carries the text for the second case, so a pass names the net rather than asserting one.
+//
+// segments is how many wire ends meet at the point after the split. It separates an ordinary T (three)
+// from a crossing (four) and is what a reader compares against the drawing.
+message JoinedTap {
+  int64 x = 1;
+  int64 y = 2;
+  string join_kind = 3;  // "junction" | "label"
+  string label = 4;      // the label text when join_kind is "label", else empty
+  int32 segments = 5;
+  Provenance prov = 6;
+}
+
 message DanglingEndpoint {
   int64 x = 1;
   int64 y = 2;
