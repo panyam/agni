@@ -104,9 +104,20 @@ the label** for a plural or an inflection: `{{ explainable "differential-pair" "
 popover fetches the term PAGE rather than a generated blob**, so there is no second copy of a
 definition to rot, which is the same argument `agnirun.go` makes for captured output.
 
-The prose convention that goes with it: **a `learn/` chapter still teaches a term in full the first
-time it introduces it, and every later mention anywhere on the site is a tag.** Chapter 10's opening
-paragraph was four inline glosses of terms chapter 1 had already taught, and it is now four tags.
+Two prose conventions go with it, and they answer different questions.
+
+**Which page keeps the gloss:** a `learn/` chapter still teaches a term in full the first time it
+introduces it, and every later mention anywhere on the site is a tag. Chapter 10's opening paragraph
+was four inline glosses of terms chapter 1 had already taught, and it is now four tags.
+
+**How often to tag within one page: ONCE per term, at the first mention.** The tag is a reading
+affordance and a page that tags every occurrence spends it. `pull-up` appears twenty times in prose
+outside `learn/`, and twenty dotted underlines in one tutorial reads as damage rather than as help.
+One tag is enough, because the popover is reachable from it and the glossary is one click further.
+`TestATermIsTaggedAtMostOncePerPage` enforces the count. It deliberately does NOT check that the
+tagged mention is the first one: deciding whether an earlier plain-text occurrence counts means
+matching an inflected label through code spans, headings and link text, and a check that fires
+wrongly on an author costs more than the convention is worth. That half is on you.
 
 `terms_test.go` enforces the rest and fails the gate on a tag naming a term that does not exist, a term
 with no `label` or `summary`, a term missing from the glossary index, and a term nothing references.
