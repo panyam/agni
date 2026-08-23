@@ -264,7 +264,16 @@ Three rules still wrap, and each says why beside its `Eval`. They fall into two 
   verdicts would be the failure list again. `bus-not-modeled` is the diagnostic rule that CAN state a
   set, and the difference is instructive: `unmodeled_buses` holds every bus the reader saw, so the
   rule partitions it and a resolved bus is a countable pass.
-- **The body cannot separate a pass from a gap.** `cap-voltage`, described above.
+- **The arity moves between subjects.** `strap-address-collision` (`stdlib/rules/intent`) is ONE rule
+  over every declared strap group, and a collision involves however many nets the colliding groups
+  name, so no fixed `SubjectShape` describes it. The strap-group rules beside it look identical and
+  are not: each declared group compiles to its own rule instance, so each has a fixed arity.
+
+A fourth rule declines WITHOUT the wrapper, which is worth knowing before grepping for `FailuresOnly`
+and believing the answer. `cap-voltage` is built from a spec, so it has no hand-written body to wrap;
+it sets `StatesConsideredSet = false` directly. Its reason is the second kind: the body cannot
+separate a pass from a gap, because `capVoltageDetail` returns `""` both for a capacitor that clears
+its rating and for one with no datasheet seeded at all.
 
 **`symbol-unresolved` was in the first group and left it by changing the READER, which is the general
 fix for that group** (agni issue 418). Nothing about the rule made it unconvertible; the diagnostic it
@@ -278,7 +287,8 @@ declare the resolved set.
 The endpoint pair is harder for a reason that is not about the reader. `netgraph.Build` receives the
 wire list, so the examined count is known, but the honest subject is a wire END. A board with a
 thousand wires would produce two thousand pass rows nobody wants, and there is no design- or
-sheet-level subject kind to attach one summary verdict to. Tracked separately.
+sheet-level subject kind to attach one summary verdict to. Tracked as agni issue 420, which lays out
+the two ways round it.
 
 The third group is gone. Five rules used to decline because their subject was a relation between
 entities and the verdict key named one; the key now names a tuple, and they state considered sets like
