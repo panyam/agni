@@ -61,7 +61,8 @@
       { "name": "6. Parts that care which way round", "url": "learn/06-parts-that-care-which-way-round/" },
       { "name": "7. Reading a datasheet", "url": "learn/07-reading-a-datasheet/" },
       { "name": "8. The power tree", "url": "learn/08-the-power-tree/" },
-      { "name": "9. Sequencing and straps", "url": "learn/09-sequencing-and-straps/" }
+      { "name": "9. Sequencing and straps", "url": "learn/09-sequencing-and-straps/" },
+      { "name": "10. Interfaces and what they require", "url": "learn/10-interfaces-and-what-they-require/" }
     ]
   },
   {

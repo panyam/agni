@@ -88,7 +88,10 @@ A board is a power tree with a sequence, a current budget, and interfaces carryi
 - [The same board, declared differently](../09-sequencing-and-straps/#the-same-board-declared-differently-ee6)
 - [What a part reads on the way up](../09-sequencing-and-straps/#what-a-part-reads-on-the-way-up-ee6), straps and address collisions
 
-Interfaces are chapter 10, not yet written.
+- [A bus is a contract](../10-interfaces-and-what-they-require/#a-bus-is-a-contract-ee6), what a standard requires beyond two wires
+- [Declared once, checked everywhere](../10-interfaces-and-what-they-require/#declared-once-checked-everywhere-ee6), profiles and interface hosts
+- [The trap in that file](../10-interfaces-and-what-they-require/#the-trap-in-that-file-ee6), supersession switching checks off silently
+- [The silence at the end](../10-interfaces-and-what-they-require/#the-silence-at-the-end-ee6), why a satisfied requirement says nothing
 
 ## Layout (EE7)
 
