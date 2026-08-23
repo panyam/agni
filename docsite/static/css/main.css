@@ -1603,3 +1603,80 @@ body.search-open {
     outline-offset: 1px;
     border-color: var(--accent-color);
 }
+
+/* Glossary terms ({{ explainable }} + terms.js).
+   The link is styled as a definition rather than a navigation link: a dotted underline reads as
+   "there is more here" without competing with the real links in the same sentence. Colours come
+   from the theme variables so both modes work. */
+.xterm {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--accent-color);
+    cursor: help;
+}
+
+.xterm:hover,
+.xterm:focus {
+    color: var(--accent-color);
+    border-bottom-style: solid;
+}
+
+.xterm-pop {
+    position: absolute;
+    z-index: 60;
+    max-width: min(34rem, calc(100vw - 2rem));
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 1rem 1.15rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-color);
+    border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    font-size: 0.94rem;
+    line-height: 1.55;
+}
+
+.xterm-pop[hidden] {
+    display: none;
+}
+
+.xterm-pop > :first-child {
+    margin-top: 0;
+}
+
+.xterm-pop h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.4rem;
+}
+
+.xterm-pop p {
+    margin: 0.5rem 0;
+}
+
+.xterm-pop .mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.xterm-more {
+    display: inline-block;
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--link-color);
+}
+
+/* A popover is a hover affordance, and a touch device has no hover. terms.js opens it on tap
+   instead, so the panel docks to the bottom of the viewport where a thumb can reach it. */
+@media (max-width: 640px) {
+    .xterm-pop {
+        position: fixed;
+        left: 0.5rem !important;
+        right: 0.5rem;
+        top: auto !important;
+        bottom: 0.5rem;
+        max-width: none;
+        max-height: 60vh;
+    }
+}

@@ -89,6 +89,33 @@ intends, and the page says why. Regenerating instead would have shipped a page c
 output. When a fixture edit changes a capture's CONTENT rather than its stamp, find which page reads
 it and decide what that page is for.
 
+**A term the docsite explains more than once belongs in the glossary.** `{{ explainable "termination" }}`
+inlines a hoverable link whose popover carries the whole term page, diagram included, so a page can USE
+a term without re-teaching it. The gloss lives in ONE file, `content/reference/terms/<id>.md`, and the
+tag is what every use site writes.
+
+Four things about it. **Adding a term is ONE file plus one line in the glossary index**, with no nav
+wiring, because `nav_test.go`'s reachability check reads files directly under a section and skips
+subdirectories, the same reason the generated catalogs need none. **The frontmatter carries `label`
+separately from `title`**, because `title` is the page's heading and `label` is the mid-sentence form
+the tag inlines; a term that is always capitalised (`EDIF`) sets `label` that way and needs nothing
+else, and `{{ explainableCap "id" }}` covers a term opening a sentence. **A second argument overrides
+the label** for a plural or an inflection: `{{ explainable "differential-pair" "pair" }}`. And **the
+popover fetches the term PAGE rather than a generated blob**, so there is no second copy of a
+definition to rot, which is the same argument `agnirun.go` makes for captured output.
+
+The prose convention that goes with it: **a `learn/` chapter still teaches a term in full the first
+time it introduces it, and every later mention anywhere on the site is a tag.** Chapter 10's opening
+paragraph was four inline glosses of terms chapter 1 had already taught, and it is now four tags.
+
+`terms_test.go` enforces the rest and fails the gate on a tag naming a term that does not exist, a term
+with no `label` or `summary`, a term missing from the glossary index, and a term nothing references.
+That last one is deliberate: a glossary entry with no caller is a definition someone wrote and the prose
+never adopted.
+
+**The tag works without JavaScript**, rendering an ordinary anchor with the summary in `title` and a
+click that lands on the full page, so `terms.js` is an upgrade rather than a dependency.
+
 **Style raw SVG through `--accent-color` and `currentColor`, never a literal.** `static/css/main.css`
 defines the palette for both themes, and the docsite has a dark mode. A hardcoded hex reads fine in
 whichever theme it was authored in and badly in the other.

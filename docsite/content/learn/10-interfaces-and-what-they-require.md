@@ -13,7 +13,7 @@ The last of the three system chapters. [Chapter 8](../08-the-power-tree/) was ho
 
 "This board has CAN on it" sounds like a statement about two wires. It is closer to a statement about a specification, and the specification requires things.
 
-CAN needs a **differential pair**, two wires carrying the same signal in opposite senses, because a receiver looking at the difference between them rejects any interference that hit both equally. It needs **termination**, a resistor bridging the pair at each end of the bus, for the transmission-line reason [chapter 1](../01-what-a-board-is-made-of/) gave. It needs a **transceiver**, since a processor's logic pins cannot drive the differential voltages the bus uses. And anything leaving the board through a connector needs **protection**, because a cable is an antenna and a person touching it is a static discharge.
+CAN needs a {{ explainable "differential-pair" }}, {{ explainable "termination" }} at each end of the bus, a {{ explainable "transceiver" }} between the bus and the processor, and {{ explainable "port-protection" }} on anything leaving the board through a connector. [Chapter 1](../01-what-a-board-is-made-of/) taught all four as jobs a part does. What is new here is that CAN *requires* them, and requires them together.
 
 None of that is visible in a netlist as a requirement. A board with CAN wired wrongly is a perfectly valid netlist. (This is the chapter where the tool stops being able to work anything out for itself, and it has been heading that way since chapter 8.) So, exactly as in the last two chapters, somebody has to declare what the interface is and what it demands.
 
