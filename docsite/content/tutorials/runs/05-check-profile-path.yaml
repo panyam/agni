@@ -1,5 +1,0 @@
-# Generated block for 05-your-interfaces.md. Edit the script, not the capture.
-fixture: examples/tutorial-project
-script: |
-  agni check designs/gateway/gateway.edn --profile-path profiles
-capture: both

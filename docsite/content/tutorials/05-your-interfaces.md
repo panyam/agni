@@ -12,21 +12,14 @@ adding your own, and about the two things that surprise people when they do.
 
 ## What the built-in profile already finds
 
-The tutorial board has CAN, and the shipped profile has something to say about it:
+The tutorial board has CAN, and the shipped profile has something to say about it. This run moves the
+project's own `profiles/` aside first, so what you see is the built-in tier on its own:
 
-```
-agni check designs/gateway/gateway.edn
-```
+{{ agniRun "content/tutorials/runs/05-check-profiles-off.yaml" }}
 
-```
-  profile/can-esd-missing 2
-  [warning] profile/can-esd-missing: CAN1_CANH (CAN signal net CAN1_CANH is exposed on a connector with no ESD protection in reach)
-  [warning] profile/can-esd-missing: CAN1_CANL (CAN signal net CAN1_CANL is exposed on a connector with no ESD protection in reach)
-9 finding(s) total
-```
-
-The bus is complete and terminated, so those checks pass silently. The pair reaches a connector with
-no protection on it, so that one fires.
+The shipped CAN profile contributes four rules here. The bus is complete and terminated, so three of
+them pass and say nothing in this view. The pair reaches a connector with no protection on it, so
+`profile/can-esd-missing` fires twice. Rung 9 shows you those passes.
 
 ## Absence is not a pass
 
@@ -68,21 +61,25 @@ The difference from the built-in is one line: a `STB` signal. This team always r
 transceiver's standby pin back to the MCU so firmware can put the bus to sleep. The built-in profile
 has no opinion about that, because it is a house practice rather than a CAN requirement.
 
-{{ agniRun "content/tutorials/runs/05-check-profile-path.yaml" }}
+There is no flag. The project names its own `profiles/` directory, so agni composes it for every
+design under `designs/`, the same way it composes `conventions.yaml` and `params/`. Putting the file
+in place is the whole step:
+
+{{ agniRun "content/tutorials/runs/05-check-profiles.yaml" }}
 
 The board does not route STB, so the new requirement has a real finding.
 
 ## Supersession, and what it costs
 
-Read that first line again:
-
-```
-note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
-```
+Compare the rule names against the run at the top of this page. `profile/can-esd-missing` has become
+`gateway-profiles/can-esd-missing`, and no `profile/can-*` rule appears in the second run at all.
 
 Your profile has the same name as a built-in one, so it **replaces** it. It does not run alongside
 it. Every rule the built-in CAN profile contributed is gone, and only what your file declares is
 checked.
+
+Supersession is per interface, not per run. The shipped LIN profile is untouched by any of this,
+because this project declared no LIN.
 
 This is the right default. Two profiles both claiming to be CAN, both firing on the same nets, would
 double-report everything and there would be no way to say your naming differs from the built-in
@@ -97,28 +94,33 @@ So the file above repeats the built-in's signals and requirements rather than li
 delta. That repetition states the whole declaration rather than repeating itself, because a whole declaration
 is what supersession replaces.
 
-The printed note is your check on this. When you add a profile, read the list of superseded rules
-and confirm your file covers each of them or that you meant to drop it.
+`agni check --verdicts` is your check on this. When you add a profile, read which rules ran and
+confirm your file covers each one the built-in contributed, or that you meant to drop it.
 
 ## What the rung bought you
 
-Compare the last line of this run against the one from [rung 4](../04-your-names/):
+Compare the last line of the two runs on this page:
 
 ```
-rung 4   15 finding(s)   201 subject(s) considered by 32 rule(s)
-rung 5   18 finding(s)   213 subject(s) considered by 36 rule(s)
+without profiles/   14 finding(s)   200 subject(s) considered by 32 rule(s)
+with profiles/      15 finding(s)   201 subject(s) considered by 32 rule(s)
 ```
 
-Three more findings, and twelve more subjects that something now has an opinion about. The second
-number is the one worth watching as you add tiers. Findings tell you what is wrong today; the
-considered count tells you how much of the board anything is looking at, which is what you are
+One more finding and one more subject, and both of them are the `STB` line you added. That is the
+size of the change you made, which is what a tier ought to move.
+
+Supersession shows up here as the rule count holding at 32. Four built-in CAN rules left and four of
+yours arrived, so the same number of rules has an opinion about this board. They are now your
+rules.
+
+The second number is the one worth watching as you add tiers. Findings tell you what is wrong today;
+the considered count tells you how much of the board anything is looking at, which is what you are
 actually buying when you declare an interface.
 
 Ask a requirement what it concluded and it will tell you, whether or not it found anything:
 
 ```
-agni check --profile-path profiles --verdicts --rule gateway-profiles/can-host-incomplete \
-  designs/gateway/gateway.edn
+agni check --verdicts --rule gateway-profiles/can-host-incomplete designs/gateway/gateway.edn
 ```
 
 `U4` comes back as one answer per required signal rather than one answer as a part: `STB` fails and

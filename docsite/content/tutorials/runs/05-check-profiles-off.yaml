@@ -1,0 +1,14 @@
+# Rung 5: what the board looks like WITHOUT this project's own interface declarations.
+#
+# The profiles directory is moved aside for the run, because the project declares it and it therefore
+# applies automatically, which makes the "before" state otherwise unreachable by naming this design.
+# Same reason and same mechanism as the rung 4 query pair. Safe because every run gets a scratch copy
+# of the fixture.
+#
+# The params corpus STAYS, unlike rung 4. A team declaring its interfaces has whatever datasheet
+# corpus it has, and the project's ESD requirement finds nothing without one, so moving params aside
+# would make the rung's delta smaller than what a reader following the ladder will see.
+fixture: examples/tutorial-project
+script: |
+  mv profiles profiles-off
+  agni check designs/gateway/gateway.edn
