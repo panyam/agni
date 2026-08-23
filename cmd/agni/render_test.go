@@ -235,6 +235,24 @@ func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
 	}
 }
 
+// TestRenderCmdDrawsADesignFolder is the end-to-end half, and it is the one that matters. The helper
+// test above passes on a build where renderCmd never calls renderSource at all, which is precisely
+// the bug being fixed: the resolution existed elsewhere in the CLI and this command did not reach for
+// it.
+func TestRenderCmdDrawsADesignFolder(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "sheet.svg")
+	runCLI(t, renderCmd(), "../../examples/tutorial-project/designs/gateway", "-o", out)
+	b, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("no svg written for a design folder: %v", err)
+	}
+	// The declared companion is a real schematic, so the drawing has wires in it. An empty or
+	// placeholder sheet would still be an SVG.
+	if !strings.Contains(string(b), "<svg") || !strings.Contains(string(b), "polyline") {
+		t.Errorf("rendered %d bytes without the drawn sheet's wires", len(b))
+	}
+}
+
 // TestRenderSourceLeavesALooseFileAlone: the ordinary case, a file belonging to no design, must pass
 // through untouched and without a note. Without this the test above passes on a resolver that
 // redirects everything.

@@ -84,9 +84,10 @@ func renderSource(path string) (string, string) {
 // renderCmd renders a design to a schematic view. Two orthogonal axes: --layout is the source
 // of node positions (faithful ingested geometry, or an auto-layout computed from the netlist
 // IR) and --format is the output encoding (svg or the WebGL pack). Both feed the same
-// backend-neutral render layer. Faithful and auto-layout accept disjoint file types today
-// (geometry comes only from an EDIF .eds; auto-layout needs an IR, which .eds does not carry),
-// so the errors say which to use.
+// backend-neutral render layer. The two accept different file types: faithful needs ingested
+// geometry (an EDIF .eds, a KiCad .kicad_sch, or whatever a design declares as its schematic
+// companion), while auto-layout needs an IR, which a bare .eds does not carry. The errors say which
+// to use.
 func renderCmd() *cobra.Command {
 	var layout, format, sheetSel, out, classFile, symbols, reportFormat string
 	var compare, stats, pinDots, report bool
