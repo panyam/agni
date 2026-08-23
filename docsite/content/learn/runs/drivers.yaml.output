@@ -1,0 +1,14 @@
+#agni-run a1fe831c1e61b24b
+floating-input  1 fail
+    fail  FLOAT  all 2 of the net's pins are inputs or no-connects, and 2 of them are logic
+                 inputs
+
+output-output-conflict  1 fail, 1 pass
+    fail  FIGHT  net has 2 driving components; at most one may drive
+    pass  FLOAT  passes because drivers is 0, not >= 2
+
+single-pin-net  2 pass
+    pass  FIGHT  net reaches 2 connections, so it is not a stub
+    pass  FLOAT  net reaches 2 connections, so it is not a stub
+
+5 verdicts across 3 rule(s), 3 pass, 2 fail

@@ -86,4 +86,4 @@ The usual landing zone is a few kilohms, with weaker values on short lightly loa
 | [`profile/missing-pullup`](../../reference/rules/profile-missing-pullup/) | warning | the same question for any bus a declared interface says needs one |
 | [`unspecified-pin-with-driver`](../../reference/rules/unspecified-pin-with-driver/) | warning | a pin whose electrical type the design never stated, sitting on a driven net |
 
-Next: who drives this net, which is the other half of the question this chapter started, and the case where two parts both answer.
+Next: [who drives this net](../05-who-drives-this-net/), the other half of the question this chapter started, and the case where two parts both answer.
