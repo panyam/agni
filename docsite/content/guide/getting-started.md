@@ -73,7 +73,7 @@ plain-language reason in parentheses. Each finding also carries its provenance: 
 and table, the finding came from.
 
 Severity is a policy signal, not a measure of certainty. An `error` is something you almost
-certainly must fix (an I2C bus with no pull-up will not communicate). `info` is a note worth
+certainly must fix (an I2C bus with no {{ explainable "pull-up" }} will not communicate). `info` is a note worth
 a look.
 
 ## A clean run, and why "no findings" has a number in it

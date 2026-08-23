@@ -86,8 +86,8 @@ reading is wrong, and the three-way split is there to stop you making it.
 footprint library mismatches. Agni has no opinion about most of that and should not pretend to.
 Your existing DRC is not being replaced.
 
-**Ours only, 6 nets.** Look at what they are. `I2C_SCL` and `I2C_SDA` are missing pull-ups.
-`CAN1_TXD` and `CAN1_RXD` are the transceiver's logic side. `PMIC_EN` and `MCU_NRST` are control
+**Ours only, 6 nets.** Look at what they are. `I2C_SCL` and `I2C_SDA` are missing {{ explainable "pull-up" "pull-ups" }}.
+`CAN1_TXD` and `CAN1_RXD` are the {{ explainable "transceiver" }}'s logic side. `PMIC_EN` and `MCU_NRST` are control
 signals. Every one is a statement about what the circuit *means*, and a board DRC structurally
 cannot reach any of them. It is checking copper against fabrication limits. It has no model in which
 "this bus needs a pull-up" is expressible.

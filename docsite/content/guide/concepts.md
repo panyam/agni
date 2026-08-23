@@ -52,7 +52,7 @@ datasheet set) and more tiers light up.
 
 **What it's like for you:** ERC and DRC, except the catalog is open. The built-in rules
 cover the general electrical cases (decoupling present, supply exceeds a part's abs-max,
-copper clearance, ESD protection on exposed nets). You can add your own house rules on
+copper clearance, {{ explainable "port-protection" "ESD protection" }} on exposed nets). You can add your own house rules on
 top without touching the engine.
 
 **Why it matters:** the rules your team argues about in review ("every regulator gets a

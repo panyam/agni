@@ -13,7 +13,7 @@ standard one, go in a directory you hand to `--profile-path`. No Go.
 ## Write a profile
 
 I2C is not one of the built-ins, which makes it a short first example. Two signals, both
-needing a pull-up:
+needing a {{ explainable "pull-up" }}:
 
 ```yaml
 # profiles/i2c.yaml

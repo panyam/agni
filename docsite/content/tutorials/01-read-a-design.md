@@ -18,7 +18,7 @@ This is the design every rung runs against. Drag to pan, scroll to zoom.
              caption="Sample Board: 12V in, 3V3 and 1V8 rails, an MCU, a CAN transceiver, an I2C EEPROM, and a crystal"></agni-viewer>
 
 A small industrial gateway. Power comes in from a connector at 12 V, a buck regulator drops it to
-3.3 V and an LDO drops that to 1.8 V. An MCU sits on both rails and talks to a CAN transceiver, an
+3.3 V and an LDO drops that to 1.8 V. An MCU sits on both rails and talks to a CAN {{ explainable "transceiver" }}, an
 I2C EEPROM, and a crystal.
 
 It is deliberately imperfect. Each flaw is a real defect a reviewer would flag, and each one is
@@ -38,7 +38,7 @@ quantifies over parts will quietly under-report. Nothing downstream will tell yo
 that finds no members produces no findings, which is indistinguishable from a rule that found
 nothing wrong.
 
-`sections` counts source instances and `components` counts distinct reference designators. They
+`sections` counts source instances and `components` counts distinct {{ explainable "reference-designator" "reference designators" }}. They
 differ when one part is drawn as several gates across sheets, which is normal. `multi-section` is
 how many parts that applies to.
 

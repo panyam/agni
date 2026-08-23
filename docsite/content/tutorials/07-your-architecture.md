@@ -56,7 +56,7 @@ Run the same thing without `--params`:
 Two extra findings, and both are false. The board plainly has two regulators.
 
 The declaration says `class: regulator`. Without a datasheet corpus, the classifier can tell U1 and
-U2 are integrated circuits from their reference designators, but not what kind. "This is a
+U2 are integrated circuits from their {{ explainable "reference-designator" "reference designators" }}, but not what kind. "This is a
 regulator" comes off the part's datasheet. Attach `--params` and the class resolves, and both
 findings disappear.
 
