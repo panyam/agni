@@ -19,3 +19,5 @@ render examples/tutorial-project/designs/gateway gateway.svg
 # Chapter 2's pair: identical but for one junction dot.
 render readers/kicad/testdata/tjunc.kicad_sch tjunc.svg
 render readers/kicad/testdata/tjunc_dotted.kicad_sch tjunc-dotted.svg
+# Chapter 6: the reversed LED, where seeing the drawing is most of the lesson.
+render cmd/agni/testdata/conformance/ledpol.fires.kicad_sch ledpol.svg

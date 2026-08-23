@@ -44,8 +44,9 @@ Each page teaches a model, names the rules that encode it, and then has you run 
 - **[3. Why every chip needs capacitors](03-why-every-chip-needs-capacitors/)** (EE3 → EE7): decoupling and bulk. The best single example of the whole ladder, because the same capacitor is a different question at four levels.
 - **[4. Pull-ups and undefined states](04-pull-ups-and-undefined-states/)** (EE3 → EE5): a wire nothing drives has no voltage. Why that needs a resistor, why an open-drain bus fails completely without one, and what severity actually encodes.
 - **[5. Who drives this net?](05-who-drives-this-net/)** (EE3 → EE4): two outputs on one net is a short circuit. Also the chapter where a rule passes a net that is broken, and is right to.
+- **[6. Parts that care which way round](06-parts-that-care-which-way-round/)** (EE3 → EE4): most components have no orientation, and the same wiring is a defect on one part and correct usage on another.
 
-The rest of the course is planned and not yet written: parts that care which way round (EE3), reading a datasheet like a type signature (EE5), the power tree (EE6), sequencing and straps (EE6), interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
+The rest of the course is planned and not yet written: reading a datasheet like a type signature (EE5), the power tree (EE6), sequencing and straps (EE6), interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
 
 ## The other direction
 
