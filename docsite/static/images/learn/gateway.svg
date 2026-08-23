@@ -40,9 +40,9 @@
 <rect fill="#fffef8" stroke="#8a6d3b" stroke-width="0.8" x="1257.4" y="1023.3" width="360.0" height="125.4"/>
 <polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1045.3 1617.4,1045.3"/>
 <polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1067.3 1617.4,1067.3"/>
-<text x="1261.4" y="1056.3" font-size="11.0" dominant-baseline="central" fill="#333333">Sheet: Gateway ECU (tutorial board)</text>
+<text x="1261.4" y="1056.3" font-size="11.0" dominant-baseline="central" fill="#333333">Sheet: Sample Board</text>
 <polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1104.7 1617.4,1104.7"/>
-<text x="1261.4" y="1086.0" font-size="13.0" dominant-baseline="central" fill="#333333" font-weight="bold">Title: Gateway ECU (tutorial board)</text>
+<text x="1261.4" y="1086.0" font-size="13.0" dominant-baseline="central" fill="#333333" font-weight="bold">Title: Sample Board</text>
 <polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1257.4,1126.7 1617.4,1126.7"/>
 <text x="1261.4" y="1115.7" font-size="11.0" dominant-baseline="central" fill="#333333">Size: A4</text>
 <polyline fill="none" stroke="#8a6d3b" stroke-width="0.5" points="1365.4,1104.7 1365.4,1126.7"/>

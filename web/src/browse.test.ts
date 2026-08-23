@@ -39,7 +39,7 @@ const REPLIES: Record<string, unknown> = {
     ],
   },
   GetDesign: {
-    name: "Gateway ECU",
+    name: "Sample Board",
     sourceFormat: "edif-2.0.0",
     componentCount: 19,
     netCount: 15,
@@ -116,7 +116,7 @@ describe("choose a design, see it, open it", () => {
 
     // The whole point of the page: the design's own drawing, and a caption naming it.
     expect(el("browse-preview").querySelector("rect")).toBeTruthy();
-    expect(el("browse-name").textContent).toBe("Gateway ECU");
+    expect(el("browse-name").textContent).toBe("Sample Board");
     expect(el("browse-summary").textContent).toContain("19 components");
     expect((el("browse-open") as HTMLButtonElement).disabled).toBe(false);
   });

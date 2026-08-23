@@ -207,10 +207,10 @@ func TestStartRejectsANonNetlistEntry(t *testing.T) {
 }
 
 // TestDeriveID sanitizes rather than rejecting, because the common case is a folder named
-// "Gateway ECU" and failing on it would send an operator to --name to type it back.
+// "Sample Board" and failing on it would send an operator to --name to type it back.
 func TestDeriveID(t *testing.T) {
 	for in, want := range map[string]string{
-		"Gateway ECU":   "gateway-ecu",
+		"Sample Board":  "sample-board",
 		"gateway":       "gateway",
 		"My_Board.v2":   "my_board.v2", // _ . - are all legal id characters and survive
 		"  spaced  ":    "spaced",

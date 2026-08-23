@@ -1,6 +1,6 @@
 (edif GATEWAYREVB
   (edifVersion 2 0 0)
-  ; Gateway ECU, the tutorial board. Synthetic: every part, MPN, and vendor here is invented for the
+  ; Sample Board, the tutorial board. Synthetic: every part, MPN, and vendor here is invented for the
   ; docs, so the file is redistributable and nothing on it is anyone's real design.
   ;
   ; It is deliberately built so each tutorial rung has something true to show:

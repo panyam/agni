@@ -66,7 +66,7 @@ func (m *memProjects) ResolveDesign(ctx context.Context, uri artifact.URI) (*web
 
 func fixtureStore() *memProjects {
 	gw := &webapi.Design{
-		Name: "projects/gateway/designs/gateway", Title: "Gateway ECU",
+		Name: "projects/gateway/designs/gateway", Title: "Sample Board",
 		Uri: "mount://boards/designs/gateway", EntryUri: "mount://boards/designs/gateway/gateway.edn",
 		CompanionUris: []string{"mount://boards/designs/gateway/gateway.kicad_pcb"},
 	}

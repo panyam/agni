@@ -17,7 +17,7 @@ and a more useful one when you are deciding whether a board is ready.
 ## The shape
 
 ```yaml
-name: Gateway ECU design review
+name: Sample Board design review
 areas:
   - name: Power
     items:
@@ -104,7 +104,7 @@ That note matters more than it looks. Which checklist scored a run is not recove
 outcomes it produced, so a checklist you did not type has to announce itself.
 
 ```
-# Review: Gateway ECU design review
+# Review: Sample Board design review
 
 Design: `designs/gateway`
 

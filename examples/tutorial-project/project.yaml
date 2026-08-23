@@ -9,4 +9,4 @@
 # "Project" is an overloaded word around here. KiCad's own `.kicad_pro` is DESIGN-scoped, one board's
 # file, and it lives under designs/gateway/ if a design has one. This is the other scope: the team's.
 name: gateway
-title: Gateway ECU review project
+title: Sample Board review project

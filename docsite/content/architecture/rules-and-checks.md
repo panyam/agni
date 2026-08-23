@@ -337,7 +337,7 @@ counts every escape hatch as evidence for new kernel features will overstate the
 
 The interpreter's own documentation says a naive join is sufficient because one design's fact base is
 small. That assumption does not survive a real board. Measured against synthetic designs bracketing
-the size of a production industrial ECU netlist (roughly 4,000 components and 1,600 nets):
+the size of a production industrial netlist (roughly 4,000 components and 1,600 nets):
 
 | query shape | 100 components | 4,000 components | scaling |
 |---|---|---|---|

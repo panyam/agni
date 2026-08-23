@@ -1,4 +1,4 @@
-#agni-run f06b46972bb52f44
+#agni-run da89af2fea4fddaa
 intent/sequence-soc-power-tree  1 fail
     fail  CORE_PG + IO_EN  "CORE_PG" reaches "IO_EN", which is the declared order inverted
 

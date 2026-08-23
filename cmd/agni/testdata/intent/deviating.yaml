@@ -1,7 +1,7 @@
-# A scaffold declaration whose expectations DEVIATE from ecu.edn, so the items fail: the design has
+# A scaffold declaration whose expectations DEVIATE from sample.edn, so the items fail: the design has
 # two ics (U1/U2) but the intent expects one and declares no soc, and it carries 3V3 but not the
 # declared 1V8 rail. The count:1 on MCU makes module-count fail (expects 1, found 2).
-name: ECU intent (deviating scaffold)
+name: Sample intent (deviating scaffold)
 modules:
   - {name: MCU, class: ic, count: 1}
   - {name: SoC, class: soc}

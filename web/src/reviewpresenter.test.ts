@@ -14,7 +14,7 @@ function doc(name: string, createdAt: string, outcomes: string[]) {
     results: {
       meta: { createdAt, producerVersion: "v0.1.1" },
       design: { source: "proj/board.edn", contentHash: "sha256:abc" },
-      manifest: "Gateway ECU review",
+      manifest: "Sample Board review",
       areas: [
         {
           name: "Power",
@@ -72,7 +72,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     reviews: [doc("reviews/r2", "2026-08-10T20:00:00Z", ["pass", "fail"]), doc("reviews/r1", "2026-08-01T09:00:00Z", ["pass", "pass"])],
   }));
   const getReviewManifest = vi.fn(async (_req: { mount: string; ref: string }) => ({
-    manifest: { name: "Gateway ECU review", areas: [] },
+    manifest: { name: "Sample Board review", areas: [] },
   }));
   const createReview = vi.fn(async (_req: { parent: string; designUri: string; manifest: unknown }) =>
     doc("reviews/r3", "2026-08-11T08:00:00Z", ["pass", "pass", "fail"]),
@@ -232,7 +232,7 @@ describe("review presenter — creating", () => {
       // for a design that resolves to none.
       parent: "",
       designUri: artifactUri("m", "proj/board.edn"),
-      manifest: { name: "Gateway ECU review", areas: [] },
+      manifest: { name: "Sample Board review", areas: [] },
     });
     const s = lastState(h.onReview);
     expect(s.selected).toBe("reviews/r3");
