@@ -38,9 +38,10 @@ When you want an explanation pitched at a level, name it. "Explain `output-outpu
 Each page teaches a model, names the rules that encode it, and then has you run those rules and read what they say. The order climbs the levels, so reading straight through works, and each page states its own prerequisites so jumping in works too.
 
 - **[1. What a board is made of, and why](01-what-a-board-is-made-of/)** (EE1 → EE3): a board is a few kinds of part doing about twenty jobs, and you can usually tell which job from what a part connects to. Start here.
+- **[2. The drawing is not the circuit](02-the-drawing-is-not-the-circuit/)** (EE2): a schematic is a rendering of a netlist, and the two can disagree. One junction dot changes the circuit.
 - **[3. Why every chip needs capacitors](03-why-every-chip-needs-capacitors/)** (EE3 → EE7): decoupling and bulk. The best single example of the whole ladder, because the same capacitor is a different question at four levels.
 
-The rest of the course is planned and not yet written: the drawing versus the circuit (EE2), pull-ups and undefined states (EE3→EE4), who drives this net (EE3→EE4), parts that care which way round (EE3), reading a datasheet like a type signature (EE5), the power tree (EE6), sequencing and straps (EE6), interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
+The rest of the course is planned and not yet written: pull-ups and undefined states (EE3→EE4), who drives this net (EE3→EE4), parts that care which way round (EE3), reading a datasheet like a type signature (EE5), the power tree (EE6), sequencing and straps (EE6), interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
 
 ## The other direction
 

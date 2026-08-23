@@ -1,0 +1,5 @@
+# Chapter 2: WHAT the dot changed, in the tool's own semantic-diff vocabulary. One net vanishes
+# because it merged into another, and R3's pin arrives on BUS.
+fixture: readers/kicad/testdata
+script: |
+  agni diff tjunc.kicad_sch tjunc_dotted.kicad_sch
