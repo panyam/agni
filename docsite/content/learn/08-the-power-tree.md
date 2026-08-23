@@ -82,4 +82,4 @@ That is one defect being reported once. A rail that cannot meet its peak also ca
 
 Every one of these needs something declared. That is the defining property of this level, and it is why a run against a design with no intent file reports these as needing design intent rather than as passing.
 
-Next: sequencing and straps, the other half of the system question. Not what the rails are, but what order they come up in and what the parts read at the moment they do.
+Next: [sequencing and straps](../09-sequencing-and-straps/), the other half of the system question. Not what the rails are, but what order they come up in and what the parts read at the moment they do.

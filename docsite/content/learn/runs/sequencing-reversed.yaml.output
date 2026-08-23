@@ -1,0 +1,5 @@
+#agni-run f06b46972bb52f44
+intent/sequence-soc-power-tree  1 fail
+    fail  CORE_PG + IO_EN  "CORE_PG" reaches "IO_EN", which is the declared order inverted
+
+1 verdicts across 1 rule(s), 1 fail

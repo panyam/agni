@@ -1,0 +1,10 @@
+#agni-run cdc8fccf3510ab0b
+intent/sequence-modem-rails  1 fail
+    fail  MODEM_PG + MODEM_EN  both handles are on the design and nothing connects "MODEM_PG" to
+                               "MODEM_EN"
+
+intent/sequence-soc-power-tree  1 pass
+    pass  CORE_PG + IO_EN  "CORE_PG" (the power-good of VDD_CORE) reaches "IO_EN" (the enable of
+                           VDD_IO), so VDD_IO is held off until VDD_CORE is good
+
+2 verdicts across 2 rule(s), 1 pass, 1 fail
