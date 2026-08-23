@@ -79,7 +79,11 @@ Absolute maximum against recommended operating, derating, tolerance, worst case.
 
 A board is a power tree with a sequence, a current budget, and interfaces carrying requirements. This is where the design-intent layer and the `profile/` family live.
 
-Not yet covered. The power tree, sequencing and straps, and interfaces are chapters 8, 9 and 10.
+- [A board is fed by a cascade](../08-the-power-tree/#a-board-is-fed-by-a-cascade-ee6), reading a power tree off its regulators
+- [Nothing here is a fact about the world](../08-the-power-tree/#nothing-here-is-a-fact-about-the-world-ee6), why this level needs a declaration
+- [Enough current to go round](../08-the-power-tree/#enough-current-to-go-round-ee6), capacity against margin
+
+Sequencing, straps and interfaces are chapters 9 and 10, not yet written.
 
 ## Layout (EE7)
 

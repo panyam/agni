@@ -46,8 +46,9 @@ Each page teaches a model, names the rules that encode it, and then has you run 
 - **[5. Who drives this net?](05-who-drives-this-net/)** (EE3 → EE4): two outputs on one net is a short circuit. Also the chapter where a rule passes a net that is broken, and is right to.
 - **[6. Parts that care which way round](06-parts-that-care-which-way-round/)** (EE3 → EE4): most components have no orientation, and the same wiring is a defect on one part and correct usage on another.
 - **[7. Reading a datasheet like a type signature](07-reading-a-datasheet/)** (EE5): two maximum voltages that look alike and license completely different things, and why the same defect reads as an error to one command and provisional to another.
+- **[8. The power tree](08-the-power-tree/)** (EE6): a board is fed by a cascade, and this is the first level where correctness comes from a declaration rather than from physics.
 
-The rest of the course is planned and not yet written: the power tree (EE6), sequencing and straps (EE6), interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
+The rest of the course is planned and not yet written: sequencing and straps (EE6), interfaces and what they require (EE6), crystals and oscillators (EE3→EE5), and when the copper matters (EE7).
 
 ## The other direction
 
