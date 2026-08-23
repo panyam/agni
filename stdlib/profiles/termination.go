@@ -60,6 +60,18 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 		 unterminated(?h) :- component-on-net(?r, ?h), suffix(?h, %q), in_use(?iu), not any_term("x");
 		 unterminated(?h) => ?h`, high, low, high))
 	tq.Rules = append(p.presenceRules(), tq.Rules...)
+	// The considered set: the high-side nets of a bus the presence gate says is in use, which is
+	// `unterminated` without its negated clause. A high net here and absent from the findings is one
+	// the series walk bridged to its low twin through a passive, so the pair is terminated.
+	//
+	// Note what this does NOT claim. The domain is per HIGH NET, not per bus: two CAN segments share
+	// one `any_term` fact, so a board with two buses and one terminator reports both as terminated.
+	// That is the rule's own long-standing shape rather than something the considered set introduces,
+	// and the coverage line now makes it visible instead of leaving it to be discovered.
+	dq := query.MustParse(fmt.Sprintf(
+		`term_scope(?h) :- component-on-net(?r, ?h), suffix(?h, %q), in_use(?iu);
+		 term_scope(?h) => ?h`, high))
+	dq.Rules = append(append([]query.Rule{}, tq.Rules...), dq.Rules...)
 	return query.RuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-termination-missing",
@@ -74,5 +86,9 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 		Kind:       check.KindNet,
 		SubjectVar: "h",
 		Message:    fmt.Sprintf("%s bus (net {h}) has no termination resistor bridging %s and %s", p.Name, high, low),
+		Domain: &query.Domain{
+			Query:   mustBindHeadFirst(dq),
+			Witness: fmt.Sprintf("%s bus (net {h}) is bridged to its %s twin by a series passive", p.Name, low),
+		},
 	})
 }

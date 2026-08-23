@@ -230,6 +230,18 @@ const (
 	// unresolved_symbol relation), not its subject — one missing file is one finding however many
 	// parts it cost pins, and a consumer that joined Subject to a component would find nothing.
 	KindSymbol = "symbol"
+	// KindSignal is a REQUIREMENT SLOT rather than anything in the design: the role a profile asks
+	// for ("STB", "CANL"), whose Ref is the signal name as the profile spells it. It is the one kind
+	// that names something the design may not contain, which is the point. An interface rule's
+	// subject is the pair (the part that declares the interface, the role it was asked for), and a
+	// verdict about a role the board is MISSING has no design entity to hang on.
+	//
+	// It exists because a verdict id has to stay unique. A host missing four of its five signals is
+	// four separate answers, and keying them all on the host alone gives one id to four rows, so a
+	// reader following a link gets whichever the report happened to write last. Nothing highlights:
+	// a consumer joining on Kind finds no geometry, correctly, because the finding's own subject is
+	// the component and that is what a reader has to change.
+	KindSignal = "signal"
 )
 
 // Rule is a named, self-describing check over the IR.

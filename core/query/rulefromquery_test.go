@@ -322,3 +322,162 @@ func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 		t.Errorf("a rule declaring no context vars must carry none, got %+v", fs[0].Context)
 	}
 }
+
+// TestRuleFromQueryWithoutDomainStatesNothing is the negative control for the whole considered-set
+// mechanism (agni issue 424). Leaving Domain unset must keep the failures-only shape, because that
+// is the case every query rule this bridge has ever compiled is still in: an author who declares
+// nothing gets a rule that CLAIMS nothing, and RunVerdicts filters it out rather than counting its
+// failures as its coverage.
+func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+	})
+	if rule.StatesConsideredSet {
+		t.Fatal("a query rule with no declared Domain must not claim a considered set")
+	}
+	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+		if v.Outcome != check.Fail {
+			t.Fatalf("want failures only, got a %s verdict: %+v", v.Outcome, v)
+		}
+	}
+}
+
+// TestRuleFromQueryDomainReportsPasses: with a Domain declared, the subjects the finding goal passed
+// over come back as Pass verdicts carrying a witness, and the rule says so.
+//
+// pinDesign has two pins. Pin U1.1 sits alone on STUB and fails; pin U1.2 shares SHARED with R1 and
+// is the pass. R1.1 is on SHARED too, so the domain is three pins wide.
+func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "pin {pin} shares net {net} with another pin",
+		},
+	})
+	if !rule.StatesConsideredSet {
+		t.Fatal("a query rule with a declared Domain must state its considered set")
+	}
+	var pass, fail []check.Verdict
+	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+		switch v.Outcome {
+		case check.Pass:
+			pass = append(pass, v)
+		case check.Fail:
+			fail = append(fail, v)
+		}
+	}
+	if len(fail) != 1 || len(pass) != 2 {
+		t.Fatalf("want 1 fail and 2 pass, got %d and %d", len(fail), len(pass))
+	}
+	// The failing subject must NOT also appear as a pass. A domain that enumerates everything and a
+	// finding goal that selects the bad ones only agree if the difference is taken by subject, and a
+	// key built from the wrong field would pass every other assertion here.
+	if check.VerdictID(fail[0]) == check.VerdictID(pass[0]) {
+		t.Fatal("the failing subject was also reported as a pass")
+	}
+	for _, v := range pass {
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Fatalf("a pass without a witness is the silence verdicts exist to remove: %+v", v)
+		}
+		if !strings.Contains(v.Witness.Statement, "shares net SHARED") {
+			t.Errorf("witness template not filled from the domain row: %q", v.Witness.Statement)
+		}
+	}
+	// The findings contract is unchanged by declaring a domain: still one violation, and the passes
+	// do not leak into it.
+	if fs := rule.Findings(check.NewModel(pinDesign())); len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
+	}
+}
+
+// TestRuleFromQueryTupleVarsSeparateVerdictIDs: a rule reporting one row per (subject, second
+// element) needs that element in the verdict tuple, or every row about one subject answers to one
+// id and a reader following a link gets whichever was written last.
+//
+// This is the host-incomplete shape reduced to the pin fixture: two verdicts about U1, distinguished
+// only by the net each concerns.
+func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "comp-pin", Severity: "info"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 1 => ?ref, ?pin, ?net`),
+		Kind:       check.KindComponent,
+		SubjectVar: "ref",
+		Message:    "{ref} on {net}",
+		TupleVars:  []TupleVar{{Var: "net", Kind: check.KindNet}},
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "{ref} sits on {net}",
+		},
+	})
+	if want := []string{check.KindComponent, check.KindNet}; len(rule.SubjectShape) != 2 ||
+		rule.SubjectShape[0] != want[0] || rule.SubjectShape[1] != want[1] {
+		t.Fatalf("SubjectShape = %v, want %v", rule.SubjectShape, want)
+	}
+	seen := map[string]int{}
+	var u1 int
+	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+		seen[check.VerdictID(v)]++
+		if v.Subjects[0].Ref == "U1" {
+			u1++
+		}
+	}
+	if u1 != 2 {
+		t.Fatalf("want 2 verdicts about U1 (one per net it sits on), got %d", u1)
+	}
+	for id, n := range seen {
+		if n > 1 {
+			t.Errorf("verdict id %q was issued %d times; the tuple does not separate these rows", id, n)
+		}
+	}
+}
+
+// TestRuleFromQueryDomainFailuresCarryAWitness pins the half that a rendered report caught and no
+// unit test would have.
+//
+// Verdict.Witness is REQUIRED on Fail as well as Pass, and the WIRE form of a Verdict deliberately
+// carries no Finding, because a defect travels once in the findings array. So a failing verdict whose
+// only sentence lived on its Finding rendered as a blank line in every consumer that reads verdicts
+// back from the service, visible in the docsite capture and invisible in-process.
+func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
+	rule := RuleFromQuery(FindingQuery{
+		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
+		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
+		Kind:       check.KindPin,
+		SubjectVar: "ref",
+		PinVar:     "pin",
+		Message:    "pin {pin} sits alone on net {net}",
+		Domain: &Domain{
+			Query:   MustParse(`pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+			Witness: "pin {pin} shares net {net} with another pin",
+		},
+	})
+	fails := 0
+	for _, v := range rule.Eval(check.NewModel(pinDesign())) {
+		if v.Outcome != check.Fail {
+			continue
+		}
+		fails++
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Fatalf("a failing verdict must carry a witness, or it crosses the service seam mute: %+v", v)
+		}
+		// The witness says what the finding says, because for a datalog rule the matched row IS the
+		// proof and there is nothing else to state. They must not drift apart.
+		if v.Finding == nil || v.Witness.Statement != v.Finding.Message {
+			t.Errorf("witness %q and finding message %q disagree", v.Witness.Statement, v.Finding.Message)
+		}
+	}
+	if fails != 1 {
+		t.Fatalf("want 1 failing verdict, got %d", fails)
+	}
+}

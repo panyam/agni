@@ -72,8 +72,22 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		query.Pos(query.Rel("in_use", query.V("iu"))),
 		query.Neg(query.Rel("esd_ok", query.V("n")))))
 
+	// The considered set: every net this requirement APPLIED to, protected or not. It is `unprotected`
+	// without the negated clause, which is the scope half of the same sentence: the nets the profile
+	// selected as exposed, on a bus the presence gate says is in use. A net that is not here was never
+	// judged, and a net that is here but absent from the findings is a net with a clamp in reach.
+	//
+	// Written out rather than derived from the goal above. It is derivable HERE, but signal-dangling
+	// ends in a comparison instead of a negation, and a derivation that handles four of the six
+	// requirement shapes would report the failures as the coverage on the other two.
+	rules = append(rules, query.Def(query.Rel("esd_scope", query.V("n")),
+		query.Pos(query.Rel("needs_esd", query.V("n"))),
+		query.Pos(query.Rel("in_use", query.V("iu")))))
+
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("unprotected", query.V("n")))}, query.V("n"))
+	domain := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("esd_scope", query.V("n")))}, query.V("n"))
 	return query.RuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-esd-missing",
@@ -88,5 +102,10 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} is exposed on a connector with no ESD protection in reach", p.Name),
+		Domain: &query.Domain{
+			Query: mustBindHeadFirst(domain),
+			Witness: fmt.Sprintf("%s signal net {n} is exposed on a connector and reaches ESD protection within %d hops",
+				p.Name, check.ProtectionReachHops),
+		},
 	})
 }

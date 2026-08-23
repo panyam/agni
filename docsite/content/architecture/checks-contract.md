@@ -194,6 +194,40 @@ Anywhere a rule compares a measurement against a limit somebody else stated, the
 `INCONCLUSIVE` is the outcome form of `Finding.inconclusive`, which already shipped, and carries that
 field's contract: **a consumer must not count it as a failure.**
 
+### A datalog rule declares its domain rather than deriving it
+
+A rule authored as a datalog query (`query.RuleFromQuery`) has a problem the hand-written rules do
+not. A goal yields the rows that MATCHED, so the subjects it passed over are not in the answer at
+all: `unterminated(?h)` produces unterminated buses and nothing produces the terminated ones. For a
+long time every rule this bridge compiled reported failures only, which covered the whole `profile/`
+and `dl/` families.
+
+A `FindingQuery` now carries an optional `Domain`: a second goal over the same program whose rows are
+the subjects the rule EXAMINED. The bridge evaluates both, reports the difference as passes, and sets
+`StatesConsideredSet`. Leaving it unset keeps the old shape, so a rule that declares nothing claims
+nothing.
+
+**The domain is declared by the author and never inferred from the goal**, and the reason is worth
+stating because the inference looks easy. For the ESD requirement the domain is exactly the goal's
+body minus its negated literal. Then:
+
+- `signal-dangling` ends in a COMPARISON with no negation, so "the body minus its negation" is the
+  body, and the rule would report the subjects it faulted as the subjects it considered.
+- `signal-missing` carries TWO negated literals. `not has_signal(S)` is the test; the host guard
+  `not any_host` is scope, because a design that declares a host is covered by the precise path and
+  was never in this rule's domain. Nothing in the syntax separates them.
+- `crystal-load-caps` negates its exemption (`not net.external`) beside its test. Sweeping the
+  exemption into the domain would report a terminal leaving the board as a PASS, claiming the rule
+  confirmed a capacitor it never looked for.
+
+A wrong derivation OVERSTATES coverage, which is worse than stating none, and four right answers out
+of six is not a property anything downstream can act on. A declaration fails safe.
+
+The same rule applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
+domain, because that predicate is not a test a pin passes: it is whether the FORMAT can answer the
+question. A pin read from EDIF was never judged, and putting it in the considered set would report
+every supply pin as verified by a rule that is structurally silent there.
+
 ### A witness is what makes a pass evidence
 
 `Witness.statement` is the line a person reads. What it rests on splits in two, and the split is

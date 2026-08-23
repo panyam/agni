@@ -34,6 +34,5 @@ first 18:
   [info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
 
 18 finding(s) total
-187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
-4 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
+213 subject(s) considered by 36 rule(s), 7 not considered (--verdicts for the detail)
 note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
