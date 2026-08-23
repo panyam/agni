@@ -50,8 +50,9 @@ Each page teaches a model, names the rules that encode it, and then has you run 
 - **[9. Sequencing and straps](09-sequencing-and-straps/)** (EE6): rails arrive in an order and parts read their configuration at the instant they do. The chapter where the same board passes one declaration and fails another.
 - **[10. Interfaces and what they require](10-interfaces-and-what-they-require/)** (EE6): a bus is a contract rather than two wires, and the chapter closes on a satisfied requirement that produces no output at all.
 - **[11. Crystals and oscillators](11-crystals-and-oscillators/)** (EE3 → EE5): a crystal produces nothing on its own, two capacitors decide what frequency it runs at, and adding more of them is a defect.
+- **[12. When the copper matters](12-when-the-copper-matters/)** (EE7): a board is a physical object, and two nets can pass every connectivity rule in the catalog while the board is defective.
 
-The last chapter, when the copper matters (EE7), is planned and not yet written.
+All twelve chapters are written. Read them in order the first time; after that they stand alone.
 
 ## The other direction
 

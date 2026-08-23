@@ -1,0 +1,12 @@
+# Chapter 12's closing point: the connectivity rules cannot see a clearance defect, because nothing
+# about the netlist is wrong.
+#
+# single-pin-net is in the run deliberately even though it FAILS. It fires because a bare .kicad_pcb
+# is a board fixture with minimal connectivity, one pad per net, which has nothing to do with the
+# clearance. Dropping it would make the block look tidier and would be cherry-picking; the chapter
+# says what it is instead.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check --verdicts --rule single-pin-net --rule duplicate-net-name --rule output-output-conflict cmd/agni/testdata/conformance/drc.fires.kicad_pcb
+match: 'CLOSE_A|CLOSE_B|^[a-z-]+ '

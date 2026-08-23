@@ -104,5 +104,9 @@ A board is a power tree with a sequence, a current budget, and interfaces carryi
 Where a part physically sits changes what it does electrically. The `board` category and the geometry tier.
 
 - [The copper](../03-why-every-chip-needs-capacitors/#the-copper-ee7), why a netlist check cannot finish the job
+- [The promises this chapter is here to keep](../12-when-the-copper-matters/#the-promises-this-chapter-is-here-to-keep-ee7)
+- [What geometry can answer](../12-when-the-copper-matters/#what-geometry-can-answer-ee7), clearance, track width, annular ring
+- [A fourth kind of authority](../12-when-the-copper-matters/#a-fourth-kind-of-authority-ee7), where a fabrication limit comes from
+- [The netlist did not change](../12-when-the-copper-matters/#the-netlist-did-not-change-ee7)
 
-Chapter 12 is the one properly about this level.
+[Chapter 12](../12-when-the-copper-matters/) is the one properly about this level.

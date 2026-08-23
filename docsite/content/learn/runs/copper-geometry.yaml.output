@@ -1,0 +1,20 @@
+#agni-run 655721588fcfb70f
+annular-width  1 fail, 4 pass
+    fail  THINRING   net has 1 via(s) with an annular ring below the 0.075mm floor
+    pass  CLOSE_A    passes because thin is 0, not >= 1
+    pass  CLOSE_B    passes because thin is 0, not >= 1
+    pass  SMALLHOLE  passes because thin is 0, not >= 1
+    pass  THIN       passes because thin is 0, not >= 1
+
+copper-clearance  1 fail
+    fail  CLOSE_A + CLOSE_B  copper of "CLOSE_A" and "CLOSE_B" closer than 0.127mm at 1
+                             place(s); worst gap 0.040mm near (10.00, -12.00)mm
+
+track-width  1 fail, 4 pass
+    fail  THIN       net has 1 track segment(s) narrower than the 0.127mm fabrication floor
+    pass  CLOSE_A    passes because thin is 0, not >= 1
+    pass  CLOSE_B    passes because thin is 0, not >= 1
+    pass  SMALLHOLE  passes because thin is 0, not >= 1
+    pass  THINRING   passes because thin is 0, not >= 1
+
+11 verdicts across 3 rule(s), 8 pass, 3 fail
