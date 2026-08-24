@@ -118,6 +118,13 @@ func serveCmd() *cobra.Command {
 			// transport-neutral internal/service implementations; internal/server wraps them
 			// for Connect (C13).
 			loader := &osLoader{mounts: mounts, loader: newLoader()}
+			// Tier-1 fallback, the same shape resolveWebDir uses: the flag wins OUTRIGHT, so an
+			// operator who named the renderers is answering for the whole set and a file cannot
+			// quietly widen it. applyEnvConfig already named the file it read, so there is nothing
+			// to announce here.
+			if len(nativeTools) == 0 {
+				nativeTools = envConfigNativeTools
+			}
 			enabledNative := map[string]bool{}
 			for _, t := range nativeTools {
 				enabledNative[t] = true

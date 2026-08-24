@@ -105,16 +105,27 @@ mounts:
 symbol_paths:
   - /usr/share/kicad/symbols
 web_dir: /usr/share/agni/web
+native_tools:
+  - kicad-cli
 ```
 
-A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path` or
-`--web-dir` wins outright rather than merging: naming a mount table is answering for the whole table.
+Paths are resolved against the directory you ran from, and a mount naming a directory that is not
+there is an error, so a file meant to serve every working directory wants absolute paths.
+
+A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path`,
+`--web-dir` or `--enable-native` wins outright rather than merging: naming a mount table is answering
+for the whole table.
 
 `web_dir` is where the viewer's own assets are. It belongs to this tier because it locates bytes and
 cannot change what a run concludes, and a wrong value fails at startup rather than quietly. A repo
 checkout needs nothing here, since the default `web` already resolves per-directory; an installed
 binary run from a design folder has no relative answer, and that is what this and `AGNI_WEB_DIR` are
 for.
+
+`native_tools` is the file form of `serve --enable-native`, and belongs here on the same test: it
+says which golden renderers EXIST, and naming one that is not installed fails at the point of use
+with the tool's own name in the error. Only `serve` consumes it, though every command reports having
+read it, because the note says what the file supplied rather than what the command went on to use.
 
 **It carries only tier-1 config, and that is a boundary rather than a to-do.** Naming conventions,
 interface profiles, seeded parameters, design intent and a review checklist decide *what a design is

@@ -53,6 +53,19 @@ type envConfig struct {
 	// wrong value fails loudly at startup, because checkWebAssets stats four named files before the
 	// listener opens, which is the property that lets this tier hold a value at all.
 	WebDir string `yaml:"web_dir"`
+	// NativeTools names the native golden renderers a served deployment may shell out to, the file
+	// form of serve's --enable-native.
+	//
+	// It passes the test at the top of this file on both halves. It says which TOOLS EXIST rather
+	// than what a design is checked against, and which renderers are installed is a property of a
+	// machine rather than of a team. And its wrongness is LOUD: naming a tool that is not on PATH
+	// fails at the point of use with the tool's own name in the error, where a wrong symbol path
+	// reads short and reports fewer findings with nothing to explain them.
+	//
+	// Only serve consumes it, and it does so where nativeTools is used rather than in the pre-run
+	// hook, which has no serve-shaped place to put it. The pre-run note still names the file, the
+	// same as WebDir above: the note reports what was LOADED, not what this command went on to use.
+	NativeTools []string `yaml:"native_tools"`
 }
 
 // loadEnvConfig finds and parses the nearest agni.yaml, returning the zero value when there is none.

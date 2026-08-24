@@ -98,6 +98,10 @@ var symbolPaths []string
 // file is read once in PersistentPreRunE, before any command knows it needed the value.
 var envConfigWebDir string
 
+// envConfigNativeTools holds the native_tools an agni.yaml named. Same shape as envConfigWebDir and
+// for the same reason: only serve consumes it, and by then the file has long been read.
+var envConfigNativeTools []string
+
 // envSymbolPath names the environment variable that supplies --symbol-path when the flag is
 // absent. It exists for the container image, where the symbol libraries ship at a fixed location
 // and EVERY subcommand needs them, not just the one the image's default CMD happens to run.
@@ -163,6 +167,10 @@ func applyEnvConfig(w io.Writer, getenv func(string) string) error {
 	if cfg.WebDir != "" {
 		envConfigWebDir = cfg.WebDir
 		used = append(used, "a web dir")
+	}
+	if len(cfg.NativeTools) > 0 {
+		envConfigNativeTools = cfg.NativeTools
+		used = append(used, fmt.Sprintf("%d native tool(s)", len(cfg.NativeTools)))
 	}
 	if len(used) > 0 {
 		fmt.Fprintf(w, "note: using %s from %s.\n", strings.Join(used, " and "), path)

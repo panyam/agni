@@ -220,3 +220,38 @@ func TestEnvConfigCarriesWebDir(t *testing.T) {
 		t.Errorf("a value nobody typed must be announced, got %q", notes.String())
 	}
 }
+
+// TestEnvConfigCarriesNativeTools: which golden renderers are installed is a property of the machine,
+// and naming an absent one fails loudly at the point of use, so it is tier-1 config like the others.
+func TestEnvConfigCarriesNativeTools(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvCfg(t, dir, "native_tools:\n  - kicad-cli\n  - xschem\n")
+	cfg, _, err := loadEnvConfig(dir, noEnv)
+	if err != nil {
+		t.Fatalf("loadEnvConfig: %v", err)
+	}
+	if len(cfg.NativeTools) != 2 || cfg.NativeTools[0] != "kicad-cli" || cfg.NativeTools[1] != "xschem" {
+		t.Errorf("native_tools = %v, want [kicad-cli xschem]", cfg.NativeTools)
+	}
+}
+
+// TestApplyEnvConfigBindsNativeTools: only serve consumes them, but the file is read once before any
+// command runs, so applyEnvConfig has to bind them for serve to find, and has to say it used them.
+func TestApplyEnvConfigBindsNativeTools(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvCfg(t, dir, "native_tools:\n  - kicad-cli\n")
+	t.Chdir(dir)
+	t.Cleanup(func() { envConfigNativeTools = nil })
+	envConfigNativeTools = nil
+
+	var note strings.Builder
+	if err := applyEnvConfig(&note, noEnv); err != nil {
+		t.Fatalf("applyEnvConfig: %v", err)
+	}
+	if len(envConfigNativeTools) != 1 || envConfigNativeTools[0] != "kicad-cli" {
+		t.Errorf("envConfigNativeTools = %v, want the file's value", envConfigNativeTools)
+	}
+	if !strings.Contains(note.String(), "native tool") {
+		t.Errorf("a value nobody typed must be announced, got %q", note.String())
+	}
+}

@@ -76,7 +76,22 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 ## Build, test, and the CLI
 
 - `make build` / `make test` / `make agni` / `make install`.
-- `make stats` / `make check` run the CLI against a committed fixture (`EDN=...` to override).
+- **Nothing here takes a private path, and a private workspace must never have to reimplement a
+  target.** Two mechanisms carry someone's own designs in. Tier-1 config (mounts, symbol paths,
+  native tools) belongs in an `agni.yaml`, which the CLI finds by walking up from the working
+  directory and then in `~/.config/agni/`, so `agni check mount://corpus/...` works from anywhere
+  with no flags: see `cmd/agni/envconfig.go` and the tier boundary it guards. Everything else is a
+  variable on a target: `EXTRA_MOUNTS` and `OVERLAY_FLAGS` on `serve`, `DESIGNS` and `OVERLAY_DIR`
+  on `dockserve`, `NATIVE_DOCKER_MOUNTS` on `natup`, `DATASHEET_DIR` on the datasheet targets. When
+  a workflow only exists as a wrapper in someone's local Makefile, that is a missing target here.
+- **A flag wins outright over `agni.yaml` rather than merging**, so a Makefile default that passes
+  `--mount` shuts the file out. `make serve MOUNTS=` is how you hand the mount table back to it.
+- `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
+  `natup` container. Both take paths INSIDE it, so they must fall under a `NATIVE_DOCKER_MOUNTS` dir.
+- `make setup` builds the docling venv the datasheet tooling runs in, then `make pdf2doc`,
+  `make pdf2doc-all`, and `make datasheets-status` work over `DATASHEET_DIR`. The venv is found by
+  lookup (repo-local `.venv`, then the parent directory's), so worktrees sharing a root share one
+  env instead of each carrying gigabytes of torch.
 - `make -C docsite preview PAGE=learn/03-why-every-chip-needs-capacitors` folds one built page into a
   self-contained HTML file, for reviewing a branch before it merges. Use it rather than
   `make -C docsite gh-pages`, which is DEAD: Pages serves the `docs.yml` workflow artifact
