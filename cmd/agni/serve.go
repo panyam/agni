@@ -60,170 +60,12 @@ func serveCmd() *cobra.Command {
 			"The viewer's own assets come from --web-dir, defaulting to ./web.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			style, ok := render.Themes[theme]
-			if !ok {
-				return fmt.Errorf("unknown --theme %q (have: %s)", theme, strings.Join(themeNames(), ", "))
-			}
-			// Where the viewer's assets are is a --web-dir question now, not a positional one. The
-			// argument this replaced was passed as the literal string "web" by every caller in the tree,
-			// which is the default anyway, so it never once carried information. What it did carry was a
-			// standing invitation to pass a DESIGN folder, which is why checkWebAssets still has to say
-			// what it is not.
-			dir, source := resolveWebDir(webDir, os.Getenv)
-			// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read, and
-			// the serving line below already prints the resolved directory, so announcing that case here
-			// says nothing a reader does not have twice over. The environment is the one provenance
-			// nothing else reports, and it is the one most worth reporting: an AGNI_WEB_DIR exported into
-			// a shell months ago outlives every memory of exporting it.
-			if source == envWebDir {
-				fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
-			}
-			if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-				return fmt.Errorf("--web-dir %q is not a directory", dir)
-			}
-			if err := checkWebAssets(dir); err != nil {
-				return err
-			}
-			explicit, err := mounts.Parse(cliMountSpecs)
-			if err != nil {
-				return err
-			}
-			// --mount-root is the container's zero-flag path: every subdirectory under it becomes a
-			// mount named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit
-			// --mount values still win on a name collision (see mounts.Merge). Empty disables
-			// discovery entirely, which is what a local `make serve` run wants.
-			var discovered []mounts.Mount
-			if mountRoot != "" {
-				if discovered, err = mounts.Discover(mountRoot); err != nil {
-					return err
-				}
-			}
-			mounts := mounts.Merge(discovered, explicit)
-			// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
-			// Absent --params leaves it nil, so the params RPC returns no joined specs (never an
-			// error) — the same optional posture as the CLI's --params (main.go readModelWithParams).
-			var specs param.ParamProvider
-			if paramsDir != "" {
-				set, err := param.LoadSet(os.DirFS(paramsDir))
-				if err != nil {
-					return fmt.Errorf("--params %q: %w", paramsDir, err)
-				}
-				specs = set
-			}
-
-			mux := http.NewServeMux()
-			// Connect handlers register under their fully-qualified service path
-			// (/agni.v1.webapi.WorkspaceService/). Static assets (the esbuild bundle) live
-			// under /static/. The goapplib page catches the rest at "/". The services are the
-			// transport-neutral internal/service implementations; internal/server wraps them
-			// for Connect (C13).
-			loader := &osLoader{mounts: mounts, loader: newLoader()}
-			// Tier-1 fallback, the same shape resolveWebDir uses: the flag wins OUTRIGHT, so an
-			// operator who named the renderers is answering for the whole set and a file cannot
-			// quietly widen it. applyEnvConfig already named the file it read, so there is nothing
-			// to announce here.
-			if len(nativeTools) == 0 {
-				nativeTools = envConfigNativeTools
-			}
-			enabledNative := map[string]bool{}
-			for _, t := range nativeTools {
-				enabledNative[t] = true
-			}
-			nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
-			wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(&osWorkspace{mounts: mounts})))
-			mux.Handle(wsPath, wsHandler)
-			// ProjectService (agni issue 170) resolves the project/design descriptors sitting in the
-			// mounts. It needs no flag: a mount either carries descriptors or it does not, and a mount
-			// with none resolves to nothing, which is what keeps one project's config from reaching
-			// another project's design.
-			//
-			// Each mount becomes one tree in the filesystem-backed store, which is the ONLY place the
-			// serve wiring knows projects live in directories. Swapping in an index- or database-backed
-			// service.ProjectStore is this line and nothing else.
-			projectStore := projects.NewFSStore(projectTrees(mounts)...)
-			// One resolver for every rule-running surface. Per-design config reaches a run through
-			// this rather than through the startup flags below, which are now only the DEFAULT for a
-			// design that resolves to no project (agni issue 173).
-			projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
-			prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projectStore)))
-			mux.Handle(prPath, prHandler)
-			dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style, projectResolver)))
-			mux.Handle(dsPath, dsHandler)
-			// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
-			// installed process-wide, which is the one legitimate use of a process-global (startup, before
-			// any request, never mutated after, C22). Its RULES join the catalog composition instead,
-			// inside serveRuleServices. A request that names its own conventions REPLACES both for that
-			// request, with that lexicon travelling with the read (WS3-106).
-			//
-			// "Replaces" is now true of both halves (WS3-124). The lexicon half always overrode, because
-			// it travels with the read; the catalog half used to ADD, so a request got its own rules
-			// stacked on the server's and could not turn the server's off. The two halves of one config
-			// composing differently is the shape that let WS3-102's bug hide, so they were made to agree.
-			var conventionCfg *configpb.NamingConvention
-			if conventions != "" {
-				cfg, err := naming.Load(conventions)
-				if err != nil {
-					return err
-				}
-				if err := naming.ApplyLexicon(cfg); err != nil {
-					return err
-				}
-				conventionCfg = cfg
-			}
-			// --review-store is the writable volume stored runs live in, deliberately separate from the
-			// read-only design mounts. Absent, the review resource methods report that they are not
-			// configured rather than silently discarding runs.
-			var reviewStore service.ReviewStore
-			if reviewStorePath != "" {
-				st, err := newOSReviewStore(reviewStorePath)
-				if err != nil {
-					return err
-				}
-				reviewStore = st
-			}
-			checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, intentPath, conventionCfg, projectResolver, cmd.ErrOrStderr())
-			if err != nil {
-				return err
-			}
-			ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc))
-			mux.Handle(ckPath, ckHandler)
-			diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
-			mux.Handle(diffPath, diffHandler)
-			dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
-			mux.Handle(dtPath, dtHandler)
-			qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
-			mux.Handle(qPath, qHandler)
-			// ReviewService (WS9-047): the served analogue of `agni review`, built alongside the
-			// CheckService above from the one composed catalog.
-			rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
-			mux.Handle(rvPath, rvHandler)
-			mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
-			// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
-			// served read-only so the rules/expectations panels resolve their relative image refs
-			// (WS9-030). Images only, from the embed FS only — no filesystem access. The built-in and
-			// intent rule docs live in separate embed FSes (WS3-093), but a rule's Detail references its
-			// card as images/<name> under this one route regardless of source, so the two handlers are
-			// composed (first non-404 wins; card basenames are unique across sources).
-			mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/",
-				firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())))
-			// The per-relation fact-doc schematic cards (WS14-005), same read-only image-only posture
-			// as the rule docs, so the query panel resolves a relation Detail's image refs.
-			mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
-			// The datasheets workbench renders the source PDF in the browser (pdf.js), so its raw
-			// bytes are served from the mounts. A more-specific prefix than the /datasheets/ page,
-			// so ServeMux routes /datasheets/raw/... here and the page space elsewhere.
-			mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(mounts)))
-			mux.Handle("GET /healthz", healthHandler())
-			registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux)
-
-			srv := &http.Server{Addr: addr, Handler: mux}
-			urls := serveURLs(addr, lanIPs)
-			fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", dir, urls[0], len(mounts))
-			for _, u := range urls[1:] {
-				fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
-			}
-			// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
-			return skhttp.ListenAndServeGraceful(srv)
+			return runViewer(cmd, viewerOpts{
+				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
+				pdf2docCmd: pdf2docCmd, theme: theme, paramsDir: paramsDir,
+				profilePath: profilePath, intentPath: intentPath, conventions: conventions,
+				reviewStorePath: reviewStorePath,
+			})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
@@ -243,6 +85,215 @@ func serveCmd() *cobra.Command {
 	c.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration composed into the catalog every rule-running surface uses, so intent-bound review items resolve and intent rules appear in the check panel")
 	c.Flags().StringVar(&reviewStorePath, "review-store", "", "a WRITABLE directory that stored review runs are kept in, created if absent; in a container, mount a volume here (docker run -v agni-reviews:/var/lib/agni/reviews --review-store /var/lib/agni/reviews). It is deliberately separate from the read-only design mounts. Without it the review resource methods report that this server stores no reviews. Runs saved here are visible to every client of this server; there is no per-user separation yet")
 	return c
+}
+
+// viewerOpts is everything the viewer server is built from, so `serve` and `open` compose the same
+// process from different inputs rather than growing two assemblies that agree until they do not.
+//
+// `serve` fills every field from its flags. `open` fills three and leaves the rest at their zero
+// values, which is the honest description of what it offers: one design, no deployment config, no
+// review store.
+type viewerOpts struct {
+	addr        string
+	webDir      string
+	mountRoot   string
+	nativeTools []string
+	pdf2docCmd  string
+	theme       string
+	paramsDir   string
+	profilePath string
+	intentPath  string
+	conventions string
+
+	reviewStorePath string
+	// extraMounts are mounts the caller composed itself, merged with the declared and discovered ones.
+	// `open` uses it to serve the single mount it minted for the design named on the command line,
+	// which is a mount no flag and no file declared.
+	extraMounts []mounts.Mount
+	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
+	// own URL instead, because landing on a browse tree is the thing it exists to skip.
+	banner func(urls []string, mountCount int)
+}
+
+// runViewer builds and runs the viewer server. The body is `serve`'s, unchanged.
+func runViewer(cmd *cobra.Command, o viewerOpts) error {
+	addr, webDir, mountRoot := o.addr, o.webDir, o.mountRoot
+	nativeTools, pdf2docCmd, theme := o.nativeTools, o.pdf2docCmd, o.theme
+	paramsDir, profilePath, intentPath, conventions := o.paramsDir, o.profilePath, o.intentPath, o.conventions
+	reviewStorePath := o.reviewStorePath
+	if theme == "" {
+		theme = "default"
+	}
+	style, ok := render.Themes[theme]
+	if !ok {
+		return fmt.Errorf("unknown --theme %q (have: %s)", theme, strings.Join(themeNames(), ", "))
+	}
+	// Where the viewer's assets are is a --web-dir question now, not a positional one. The
+	// argument this replaced was passed as the literal string "web" by every caller in the tree,
+	// which is the default anyway, so it never once carried information. What it did carry was a
+	// standing invitation to pass a DESIGN folder, which is why checkWebAssets still has to say
+	// what it is not.
+	dir, source := resolveWebDir(webDir, os.Getenv)
+	// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read, and
+	// the serving line below already prints the resolved directory, so announcing that case here
+	// says nothing a reader does not have twice over. The environment is the one provenance
+	// nothing else reports, and it is the one most worth reporting: an AGNI_WEB_DIR exported into
+	// a shell months ago outlives every memory of exporting it.
+	if source == envWebDir {
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
+	}
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return fmt.Errorf("--web-dir %q is not a directory", dir)
+	}
+	if err := checkWebAssets(dir); err != nil {
+		return err
+	}
+	explicit, err := mounts.Parse(cliMountSpecs)
+	if err != nil {
+		return err
+	}
+	// --mount-root is the container's zero-flag path: every subdirectory under it becomes a
+	// mount named after itself, so `-v ~/boards:/workspace/boards` needs no --mount. Explicit
+	// --mount values still win on a name collision (see mounts.Merge). Empty disables
+	// discovery entirely, which is what a local `make serve` run wants.
+	var discovered []mounts.Mount
+	if mountRoot != "" {
+		if discovered, err = mounts.Discover(mountRoot); err != nil {
+			return err
+		}
+	}
+	// A caller-composed mount is layered in last, so `open`'s minted mount is present alongside
+	// anything a flag or an agni.yaml declared rather than replacing it.
+	mounts := mounts.Merge(discovered, append(explicit, o.extraMounts...))
+	// The datasheet knowledge base for the params panel (WS9-035), loaded once at startup.
+	// Absent --params leaves it nil, so the params RPC returns no joined specs (never an
+	// error) — the same optional posture as the CLI's --params (main.go readModelWithParams).
+	var specs param.ParamProvider
+	if paramsDir != "" {
+		set, err := param.LoadSet(os.DirFS(paramsDir))
+		if err != nil {
+			return fmt.Errorf("--params %q: %w", paramsDir, err)
+		}
+		specs = set
+	}
+
+	mux := http.NewServeMux()
+	// Connect handlers register under their fully-qualified service path
+	// (/agni.v1.webapi.WorkspaceService/). Static assets (the esbuild bundle) live
+	// under /static/. The goapplib page catches the rest at "/". The services are the
+	// transport-neutral internal/service implementations; internal/server wraps them
+	// for Connect (C13).
+	loader := &osLoader{mounts: mounts, loader: newLoader()}
+	// Tier-1 fallback, the same shape resolveWebDir uses: the flag wins OUTRIGHT, so an
+	// operator who named the renderers is answering for the whole set and a file cannot
+	// quietly widen it. applyEnvConfig already named the file it read, so there is nothing
+	// to announce here.
+	if len(nativeTools) == 0 {
+		nativeTools = envConfigNativeTools
+	}
+	enabledNative := map[string]bool{}
+	for _, t := range nativeTools {
+		enabledNative[t] = true
+	}
+	nativeR := &osNative{mounts: mounts, enabled: enabledNative, cache: native.NewCache()}
+	wsPath, wsHandler := webapiconnect.NewWorkspaceServiceHandler(server.NewWorkspace(service.NewWorkspaceService(&osWorkspace{mounts: mounts})))
+	mux.Handle(wsPath, wsHandler)
+	// ProjectService (agni issue 170) resolves the project/design descriptors sitting in the
+	// mounts. It needs no flag: a mount either carries descriptors or it does not, and a mount
+	// with none resolves to nothing, which is what keeps one project's config from reaching
+	// another project's design.
+	//
+	// Each mount becomes one tree in the filesystem-backed store, which is the ONLY place the
+	// serve wiring knows projects live in directories. Swapping in an index- or database-backed
+	// service.ProjectStore is this line and nothing else.
+	projectStore := projects.NewFSStore(projectTrees(mounts)...)
+	// One resolver for every rule-running surface. Per-design config reaches a run through
+	// this rather than through the startup flags below, which are now only the DEFAULT for a
+	// design that resolves to no project (agni issue 173).
+	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
+	prPath, prHandler := webapiconnect.NewProjectServiceHandler(server.NewProject(service.NewProjectService(projectStore)))
+	mux.Handle(prPath, prHandler)
+	dsPath, dsHandler := webapiconnect.NewDesignServiceHandler(server.NewDesign(service.NewDesignService(loader, nativeR, style, projectResolver)))
+	mux.Handle(dsPath, dsHandler)
+	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
+	// installed process-wide, which is the one legitimate use of a process-global (startup, before
+	// any request, never mutated after, C22). Its RULES join the catalog composition instead,
+	// inside serveRuleServices. A request that names its own conventions REPLACES both for that
+	// request, with that lexicon travelling with the read (WS3-106).
+	//
+	// "Replaces" is now true of both halves (WS3-124). The lexicon half always overrode, because
+	// it travels with the read; the catalog half used to ADD, so a request got its own rules
+	// stacked on the server's and could not turn the server's off. The two halves of one config
+	// composing differently is the shape that let WS3-102's bug hide, so they were made to agree.
+	var conventionCfg *configpb.NamingConvention
+	if conventions != "" {
+		cfg, err := naming.Load(conventions)
+		if err != nil {
+			return err
+		}
+		if err := naming.ApplyLexicon(cfg); err != nil {
+			return err
+		}
+		conventionCfg = cfg
+	}
+	// --review-store is the writable volume stored runs live in, deliberately separate from the
+	// read-only design mounts. Absent, the review resource methods report that they are not
+	// configured rather than silently discarding runs.
+	var reviewStore service.ReviewStore
+	if reviewStorePath != "" {
+		st, err := newOSReviewStore(reviewStorePath)
+		if err != nil {
+			return err
+		}
+		reviewStore = st
+	}
+	checkSvc, reviewSvc, err := serveRuleServices(loader, reviewStore, specs, profilePath, intentPath, conventionCfg, projectResolver, cmd.ErrOrStderr())
+	if err != nil {
+		return err
+	}
+	ckPath, ckHandler := webapiconnect.NewCheckServiceHandler(server.NewCheck(checkSvc))
+	mux.Handle(ckPath, ckHandler)
+	diffPath, diffHandler := webapiconnect.NewDiffServiceHandler(server.NewDiff(service.NewDiffService(loader, projectResolver)))
+	mux.Handle(diffPath, diffHandler)
+	dtPath, dtHandler := webapiconnect.NewDatasheetServiceHandler(server.NewDatasheet(service.NewDatasheetService(&osDocLoader{mounts: mounts}, &osPartSpecStore{mounts: mounts}, &osDocExtractor{mounts: mounts, cmd: strings.Fields(pdf2docCmd)}, &osAnnotationStore{mounts: mounts})))
+	mux.Handle(dtPath, dtHandler)
+	qPath, qHandler := webapiconnect.NewQueryServiceHandler(server.NewQuery(service.NewQueryService(loader, specs, projectResolver)))
+	mux.Handle(qPath, qHandler)
+	// ReviewService (WS9-047): the served analogue of `agni review`, built alongside the
+	// CheckService above from the one composed catalog.
+	rvPath, rvHandler := webapiconnect.NewReviewServiceHandler(server.NewReview(reviewSvc))
+	mux.Handle(rvPath, rvHandler)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
+	// The rule-doc explainer diagrams (embedded beside each rule's markdown, WS3-025) are
+	// served read-only so the rules/expectations panels resolve their relative image refs
+	// (WS9-030). Images only, from the embed FS only — no filesystem access. The built-in and
+	// intent rule docs live in separate embed FSes (WS3-093), but a rule's Detail references its
+	// card as images/<name> under this one route regardless of source, so the two handlers are
+	// composed (first non-404 wins; card basenames are unique across sources).
+	mux.Handle("/rule-docs/", http.StripPrefix("/rule-docs/",
+		firstImageHandler(builtin.RuleDocImageHandler(), intent.RuleDocImageHandler())))
+	// The per-relation fact-doc schematic cards (WS14-005), same read-only image-only posture
+	// as the rule docs, so the query panel resolves a relation Detail's image refs.
+	mux.Handle("/relation-docs/", http.StripPrefix("/relation-docs/", relations.RelationDocImageHandler()))
+	// The datasheets workbench renders the source PDF in the browser (pdf.js), so its raw
+	// bytes are served from the mounts. A more-specific prefix than the /datasheets/ page,
+	// so ServeMux routes /datasheets/raw/... here and the page space elsewhere.
+	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(mounts)))
+	mux.Handle("GET /healthz", healthHandler())
+	registerPages(newPageApp(dir, &serveApp{mounts: mounts}), mux)
+
+	srv := &http.Server{Addr: addr, Handler: mux}
+	urls := serveURLs(addr, lanIPs)
+	if o.banner != nil {
+		o.banner(urls, len(mounts))
+	} else {
+		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", dir, urls[0], len(mounts))
+		for _, u := range urls[1:] {
+			fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
+		}
+	}
+	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
+	return skhttp.ListenAndServeGraceful(srv)
 }
 
 // projectTrees maps the configured mounts onto the filesystem-backed project store's trees. It is

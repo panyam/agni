@@ -235,6 +235,18 @@ Draw a design's schematic or board view.
 | `--format <fmt>` | `svg` (default) or `pack` (for the WebGL viewer) |
 | `-o <file>` | output path |
 
+### `open <design>`
+
+Serve one design and print the URL that shows it, so a board can be looked at from the directory it
+lives in. Binds loopback on a free port and serves only that design (and its project, where it has
+one). It also prints a ready-made `agni check … --url-base …` line, which carries `--mount` because a
+mount is minted per process and a second `agni` would not know this one.
+
+| flag | what it does |
+|---|---|
+| `--addr <addr>` | listen address; empty picks a free port on loopback |
+| `--web-dir <dir>` | the viewer's own assets, as for `serve` |
+
 ### `serve`
 
 Host the browser viewer and the web API on one port. Build the web bundle first.
