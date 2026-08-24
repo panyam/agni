@@ -80,10 +80,42 @@ func touch(t *testing.T, path string) {
 // other validated enum flag).
 func TestServeRejectsUnknownTheme(t *testing.T) {
 	cmd := rootCmd()
-	cmd.SetArgs([]string{"serve", "--theme", "solarized", "definitely-missing-dir"})
+	cmd.SetArgs([]string{"serve", "--theme", "solarized", "--web-dir", "definitely-missing-dir"})
 	err := cmd.Execute()
 	if err == nil || !strings.Contains(err.Error(), `unknown --theme "solarized"`) || !strings.Contains(err.Error(), "default") {
 		t.Fatalf("want an unknown-theme error naming the valid palettes, got %v", err)
+	}
+}
+
+// TestServeTakesNoPositional pins the compatibility break. The argument used to be the web-assets
+// dir, every caller in the tree passed the literal default, and its practical function was to invite
+// a DESIGN folder in the one position that would not accept one. Rejecting it is louder than
+// accepting and ignoring it, which would have left the mistake silent.
+func TestServeTakesNoPositional(t *testing.T) {
+	cmd := rootCmd()
+	cmd.SetArgs([]string{"serve", "some-folder-of-designs"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("serve must reject a positional argument")
+	}
+	if !strings.Contains(err.Error(), "some-folder-of-designs") {
+		t.Errorf("the error should name what was rejected, got %v", err)
+	}
+}
+
+// TestServeWebDirErrorSaysWhatItIsNot: the message is load-bearing. It exists because people pass a
+// design folder here, so it has to name the flag's real subject and point at --mount for the thing
+// they actually wanted.
+func TestServeWebDirErrorSaysWhatItIsNot(t *testing.T) {
+	dir := t.TempDir() // a real directory with none of the viewer's assets in it
+	err := checkWebAssets(dir)
+	if err == nil {
+		t.Fatal("a directory with no ViewerPage.html is not a web-assets dir")
+	}
+	for _, want := range []string{"--web-dir", "--mount", "not a folder to browse"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should mention %q, got %v", want, err)
+		}
 	}
 }
 
@@ -199,5 +231,32 @@ func TestLanIPsAreRoutable(t *testing.T) {
 		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.To4() == nil {
 			t.Fatalf("lanIPs returned %q, which is not a routable IPv4 address", s)
 		}
+	}
+}
+
+// TestServeNarratesOnlyTheEnvironment: a reader should be told once. applyEnvConfig names the
+// agni.yaml it read and the serving line names the resolved directory, so a third line for that case
+// is noise; the environment is the only provenance nothing else reports.
+func TestServeNarratesOnlyTheEnvironment(t *testing.T) {
+	t.Cleanup(func() { envConfigWebDir = "" })
+
+	envConfigWebDir = "/from/file"
+	_, source := resolveWebDir("", func(string) string { return "" })
+	if source != "agni.yaml" {
+		t.Fatalf("source = %q, want agni.yaml", source)
+	}
+	if source == envWebDir {
+		t.Error("the agni.yaml case must not be narrated by serve")
+	}
+
+	envConfigWebDir = ""
+	_, source = resolveWebDir("", func(k string) string {
+		if k == envWebDir {
+			return "/from/env"
+		}
+		return ""
+	})
+	if source != envWebDir {
+		t.Errorf("source = %q, want the environment so serve narrates it", source)
 	}
 }

@@ -104,10 +104,17 @@ mounts:
   shared: /srv/shared
 symbol_paths:
   - /usr/share/kicad/symbols
+web_dir: /usr/share/agni/web
 ```
 
-A run says which file it took config from, on stderr. An explicit `--mount` or `--symbol-path` wins
-outright rather than merging: naming a mount table is answering for the whole table.
+A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path` or
+`--web-dir` wins outright rather than merging: naming a mount table is answering for the whole table.
+
+`web_dir` is where the viewer's own assets are. It belongs to this tier because it locates bytes and
+cannot change what a run concludes, and a wrong value fails at startup rather than quietly. A repo
+checkout needs nothing here, since the default `web` already resolves per-directory; an installed
+binary run from a design folder has no relative answer, and that is what this and `AGNI_WEB_DIR` are
+for.
 
 **It carries only tier-1 config, and that is a boundary rather than a to-do.** Naming conventions,
 interface profiles, seeded parameters, design intent and a review checklist decide *what a design is
@@ -217,13 +224,14 @@ Draw a design's schematic or board view.
 | `--format <fmt>` | `svg` (default) or `pack` (for the WebGL viewer) |
 | `-o <file>` | output path |
 
-### `serve [dir]`
+### `serve`
 
 Host the browser viewer and the web API on one port. Build the web bundle first.
 
 | flag | what it does |
 |---|---|
 | `--addr <addr>` | listen address (default `:8080`) |
+| `--web-dir <dir>` | the viewer's OWN assets, not designs (default `web`; then `web_dir` in the nearest `agni.yaml`, then `AGNI_WEB_DIR`) |
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--theme <name>` | render palette: `default` or `dark` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
