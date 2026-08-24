@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="248" font-family="system-ui,sans-serif" font-size="12">
+  <text x="330" y="16" text-anchor="middle" fill="#808080">demand-driven: the rule asks, the chain answers, the cache keeps</text>
+
+  <rect x="16" y="42" width="120" height="52" rx="6" fill="none" stroke="#808080" stroke-dasharray="5 3"/>
+  <text x="76" y="64" text-anchor="middle" fill="#808080" font-size="11">a rule reads</text>
+  <text x="76" y="80" text-anchor="middle" fill="#808080" font-size="9">abs_max(part, VIN)</text>
+  <line x1="136" y1="68" x2="172" y2="68" stroke="#808080" marker-end="url(#r)"/>
+
+  <rect x="172" y="42" width="96" height="52" rx="6" fill="none" stroke="#5aa06a"/>
+  <text x="220" y="64" text-anchor="middle" fill="#5aa06a" font-size="11">cache</text>
+  <text x="220" y="80" text-anchor="middle" fill="#808080" font-size="9">a prior resolution</text>
+
+  <line x1="268" y1="68" x2="304" y2="68" stroke="#808080" marker-end="url(#r)"/>
+  <text x="286" y="60" text-anchor="middle" fill="#808080" font-size="9">miss</text>
+
+  <rect x="304" y="42" width="96" height="52" rx="6" fill="none" stroke="#4a90d9"/>
+  <text x="352" y="64" text-anchor="middle" fill="#4a90d9" font-size="11">recipe</text>
+  <text x="352" y="80" text-anchor="middle" fill="#808080" font-size="9">precise, per-vendor</text>
+
+  <line x1="400" y1="68" x2="436" y2="68" stroke="#808080" marker-end="url(#r)"/>
+  <rect x="436" y="42" width="96" height="52" rx="6" fill="none" stroke="#4a90d9"/>
+  <text x="484" y="64" text-anchor="middle" fill="#4a90d9" font-size="11">model</text>
+  <text x="484" y="80" text-anchor="middle" fill="#808080" font-size="9">general, fuzzy</text>
+
+  <line x1="532" y1="68" x2="560" y2="68" stroke="#808080" marker-end="url(#r)"/>
+  <rect x="560" y="42" width="88" height="52" rx="6" fill="none" stroke="#d98a4a"/>
+  <text x="604" y="64" text-anchor="middle" fill="#d98a4a" font-size="11">HITL</text>
+  <text x="604" y="80" text-anchor="middle" fill="#808080" font-size="9">authoritative</text>
+
+  <path d="M604,94 L604,126 L220,126 L220,100" fill="none" stroke="#5aa06a" stroke-dasharray="4 3" marker-end="url(#r)"/>
+  <text x="412" y="140" text-anchor="middle" fill="#5aa06a" font-size="10">whatever answered backfills the cache, so the fiftieth design pays nothing</text>
+
+  <rect x="150" y="160" width="360" height="40" rx="6" fill="none" stroke="#808080"/>
+  <text x="330" y="177" text-anchor="middle" fill="#808080" font-size="11">the trust gate: UnderSpecified / MachineComparable</text>
+  <text x="330" y="192" text-anchor="middle" fill="#808080" font-size="9">below it a value is a SUGGESTION, never a silent fact</text>
+
+  <text x="330" y="226" text-anchor="middle" fill="#808080" font-size="10">only HITL grants confidence 1.0. recipe and model stay tagged below it.</text>
+
+  <defs><marker id="r" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8" fill="none" stroke="#808080"/></marker></defs>
+</svg>
