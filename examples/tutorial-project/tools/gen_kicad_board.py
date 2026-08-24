@@ -36,7 +36,7 @@ FP = {"CAP": "Capacitor_SMD:C_0402", "RES": "Resistor_SMD:R_0402", "TVS": "Diode
       "CONN4": "Connector_PinHeader:J_1x04"}
 
 out = ["(kicad_pcb", '\t(version 20240108)', '\t(generator "agni-tutorial")',
-       '\t(title_block', '\t\t(title "Gateway ECU (tutorial board)"))',
+       '\t(title_block', '\t\t(title "Sample Board"))',
        '\t(layers', '\t\t(0 "F.Cu" signal)', '\t\t(2 "B.Cu" signal)', '\t\t(44 "Edge.Cuts" user)', '\t)',
        '\t(net 0 "")']
 for n, i in netno.items():

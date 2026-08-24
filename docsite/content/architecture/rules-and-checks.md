@@ -337,7 +337,7 @@ counts every escape hatch as evidence for new kernel features will overstate the
 
 The interpreter's own documentation says a naive join is sufficient because one design's fact base is
 small. That assumption does not survive a real board. Measured against synthetic designs bracketing
-the size of a production industrial ECU netlist (roughly 4,000 components and 1,600 nets):
+the size of a production industrial netlist (roughly 4,000 components and 1,600 nets):
 
 | query shape | 100 components | 4,000 components | scaling |
 |---|---|---|---|
@@ -415,7 +415,7 @@ rule i2c-pull-up (error):
   for net N where N.name matches "SDA|SCL":
     require exists pin P in N.connections
       where P.component.part_type in {"R", "Resistor"}
-    else report N "I2C net has no pull-up resistor"
+    else report N "I2C net has no pull-up resistor to a rail"
 
 rule gnd-test-point (error):
   for net N where N.name == "GND":

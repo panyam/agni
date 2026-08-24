@@ -208,6 +208,9 @@ function RulesPanel(props: { state: () => RulesState; onSelectionChange: (names:
                               <Show when={r.impact !== ""}>
                                 <p class="rule-impact">{r.impact}</p>
                               </Show>
+                              <Show when={r.remedy !== ""}>
+                                <p class="rule-remedy">{r.remedy}</p>
+                              </Show>
                               <div class="rule-detail-md" innerHTML={renderMarkdown(r.detail)} />
                             </div>
                           </Show>

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // diffPairNaming flags a differential-pair positive net that has no complementary negative net.
@@ -14,6 +13,7 @@ var diffPairNaming = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A differential-pair positive net (_P / _DP / trailing +) has no complementary negative net.",
 	Impact:     "A broken pair means the layout tool never treats the two nets as coupled, so they route like ordinary signals and the high-speed link fails signal integrity. Caught at capture it is a one-line fix; caught after layout it means re-routing.",
+	Remedy:     "Add the missing complementary net, or rename the net if it was never half of a pair. Left as it is, the layout tool routes the two as ordinary signals and the link is not a differential pair at all.",
 	Primitives: []string{"select", "pattern", "pair"},
 	Reads:      []string{"net.names"},
 	Tags: map[string]string{
@@ -21,30 +21,58 @@ var diffPairNaming = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistPublicReference,
 	},
-	Detail: ruleDoc("diff-pair-naming"),
-	Eval: func(m check.Model) []check.Finding {
-		// Gate: only claim a broken pair on a design that USES the convention (some complete
-		// X_P/X_N pair exists). Without this, any coincidental _P suffix is a finding, so a
-		// combinational netlist where nothing is differential (e.g. LGSynth benchmarks whose
-		// nets end in _P) sprays a warning per net — the profile of a rule operators disable.
-		// Folded into the predicate (not an early nil return) to stay structurally identical
-		// to the Spec twin's Where, which the parity test compares element-for-element.
-		uses := check.DiffConventionPresent(m)
-		orphans := check.Select(m.Nets(), func(n *ir.Net) bool {
-			neg, ok := check.ExpectedDiffNegative(n.Name)
-			return uses && ok && !m.HasNetName(neg)
-		})
-		return check.Report(orphans, func(n *ir.Net) check.Finding {
-			neg, _ := check.ExpectedDiffNegative(n.Name)
-			return check.Finding{
-				Kind:    check.KindNet,
-				Subject: n.Name,
-				NetID:   n.GetId(),
-				Message: fmt.Sprintf("differential net has no complementary %q", neg),
-				Prov:    n.Prov,
+	Detail:              ruleDoc("diff-pair-naming"),
+	Eval:                diffPairNamingVerdicts,
+	StatesConsideredSet: true,
+}
+
+// diffPairNamingVerdicts decides every net whose NAME claims to be the positive half of a pair, and
+// that set is the considered set. A net carrying no such suffix is not a subject of a naming rule
+// about pairs, so it yields no verdict at all: reporting it as a pass would claim the rule checked
+// something it never asked about.
+//
+// THE POPULATION GATE BECOMES NotConsidered, which is the part worth having. `DiffConventionPresent`
+// asks whether the design uses the convention anywhere, and it exists because a netlist where
+// nothing is differential can still end nets in `_P` by coincidence (the LGSynth benchmarks do).
+// Under the old shape a coincidental `_P` on such a design took the same silent path as a net whose
+// complement was found, so the two were indistinguishable. They are not the same answer: one is
+// "the pair is complete", the other is "this design states no pair anywhere, so its suffixes are not
+// evidence of one". The second is the rule declining to judge, and saying so is what stops a reader
+// from reading the silence as a clean bill.
+//
+// The witness names the complement it looked for, so it tracks the fact rather than restating the
+// outcome. Rename the negative half and a pass becomes a failure naming the name it could not find.
+func diffPairNamingVerdicts(m check.Model) []check.Verdict {
+	uses := check.DiffConventionPresent(m)
+
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		neg, ok := check.ExpectedDiffNegative(n.Name)
+		if !ok {
+			continue // not a differential-positive name, so not this rule's subject
+		}
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
+		switch {
+		case !uses:
+			v.Outcome = check.NotConsidered
+			v.Reason = "the design states no complete differential pair anywhere, so this suffix is not evidence that the net is half of one"
+		case m.HasNetName(neg):
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("the design carries the complementary net %q", neg),
+				Terms:     []check.WitnessTerm{{Label: "complement", Value: neg}},
 			}
-		})
-	},
+		default:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("the design carries no net named %q", neg),
+				Terms:     []check.WitnessTerm{{Label: "complement", Value: neg}},
+			}
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}, Message: fmt.Sprintf("differential net has no complementary %q", neg), Prov: n.Prov}
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // diffPairNamingSpec is the rule's declarative twin (WS3-003): the complement name is a Let

@@ -254,19 +254,50 @@ func evidenceText(pt pinTracking) string {
 		pt.refDes, pt.refPin.GetName(), pt.refNet.GetName(), rv, pt.diff)
 }
 
-// trackingFindings is the body both rules share: the comparison, the two inconclusive guards, and the
-// finding. Only the severity and the doc differ between them, and those live on the Rule.
-func trackingFindings(m check.Model, wantModality func(parampb.Modality) bool) []check.Finding {
-	var out []check.Finding
+// trackingVerdicts is the body both rules share: every tracking relation of the requested modality
+// whose two terminals the design places, decided and reported.
+//
+// THE SUBJECT IS THE PAIR OF PINS, because that is what a tracking relation binds. A part stating two
+// tracking relations is two answers about one ref-des, and a spec pin can be the subject of more than
+// one of them, so neither the ref-des nor a single (ref-des, pin) key separates them. The order is the
+// relation's own: subject pin then reference pin, and it is load-bearing rather than cosmetic, since
+// the bound is on subject MINUS reference and swapping the two inverts the sign of the whole claim.
+//
+// THE PASS IS THE HALF THIS RULE NEVER HAD, and it is the one a reviewer signing off a supply
+// sequence actually wants: "VCCA - VCCB is 0V, inside the required -0.3V to 0.3V, per SLLSEA9 p.6".
+// Before, a part whose ordering was correct and a part whose relation the walk could not resolve both
+// produced nothing.
+//
+// THE TWO CAVEATS KEEP THEIR MEANING and stay Inconclusive rather than becoming a pass or a decline.
+// A regime-scoped bound and an unstated modality are breaches the rule REACHED and could not rate, so
+// they must still reach a reviewer; that is the contract Finding.Inconclusive carries and the reason
+// VerdictsToFindings projects Inconclusive as well as Fail. Where the numbers are INSIDE the bound
+// those same two cases are an ordinary pass, because there is nothing for anyone to look at.
+func trackingVerdicts(m check.Model, wantModality func(parampb.Modality) bool) []check.Verdict {
+	var out []check.Verdict
 	eachPinTracking(m, wantModality, func(pt pinTracking) {
+		v := check.Verdict{Subjects: []check.Entity{
+			check.PinEntity(pt.component.RefDes, pt.subjDes),
+			check.PinEntity(pt.component.RefDes, pt.refDes),
+		}}
 		breach, bad := boundBreach(pt.bound, pt.diff)
 		if !bad {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("%s: %s, which is inside the bound", requirementText(pt), evidenceText(pt)),
+				Terms: []check.WitnessTerm{
+					{Label: "difference", Value: fmt.Sprintf("%gV", pt.diff)},
+					{Label: "required", Value: requirementText(pt)},
+				},
+				Datasheet: []*check.DatasheetCitation{check.DatasheetCitationOfProv(pt.spec, pt.rel.GetProv())},
+			}
+			out = append(out, v)
 			return
 		}
 		// Two things can reach here breached and still not be reportable as a violation, and both
-		// stay silent when the numbers are WITHIN the bound: there is nothing for a reviewer to look
-		// at, and flagging every affected relation would convert a coverage gap into noise (the
-		// Finding.Inconclusive contract asks that the rule NAME what it could not resolve).
+		// are an ordinary pass when the numbers are WITHIN the bound: there is nothing for a reviewer
+		// to look at, and flagging every affected relation would convert a coverage gap into noise
+		// (the Finding.Inconclusive contract asks that the rule NAME what it could not resolve).
 		//
 		// A regime-scoped bound: the rule cannot tell whether the regime the vendor named is the one
 		// the design is in ("transient only, not for DC").
@@ -290,14 +321,26 @@ func trackingFindings(m check.Model, wantModality func(parampb.Modality) bool) [
 				breach, caveat, check.RelationCitation(pt.spec, pt.rel))
 		}
 		inconclusive := caveat != ""
-		out = append(out, check.Finding{
-			Kind:          check.KindComponent,
-			Subject:       pt.component.RefDes,
+		v.Outcome = check.Fail
+		if inconclusive {
+			v.Outcome = check.Inconclusive
+		}
+		v.Witness = &check.Witness{
+			Statement: msg,
+			Terms: []check.WitnessTerm{
+				{Label: "difference", Value: fmt.Sprintf("%gV", pt.diff)},
+				{Label: "required", Value: requirementText(pt)},
+			},
+			Datasheet: []*check.DatasheetCitation{check.DatasheetCitationOfProv(pt.spec, pt.rel.GetProv())},
+		}
+		v.Finding = &check.Finding{
+			Subject:       check.ComponentEntity(pt.component.RefDes),
 			Inconclusive:  inconclusive,
 			Message:       msg,
 			Prov:          pt.component.Prov,
 			DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOfProv(pt.spec, pt.rel.GetProv())},
-		})
+		}
+		out = append(out, v)
 	})
 	return out
 }
@@ -321,6 +364,7 @@ var pinTrackingViolated = &check.Rule{
 	Severity:   "error",
 	Summary:    "Two pins of one part sit outside the tracking bound their datasheet requires between them.",
 	Impact:     "The vendor states this bound as a requirement, and breaking it is outside the stress envelope the part is guaranteed in: a supply ordering violation can forward-bias an internal path and damage the die on every power cycle. Where both terminals share a net the verdict rests on connectivity alone rather than on a rail's name, so it holds on a design whose nets are not named for their voltages.",
+	Remedy:     "Restore the ordering the datasheet requires between the two terminals, using sequencing, a clamp diode between them, or a shared rail. This is a stress violation, so it wants fixing before the board is powered again.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.pin", "param.pin_relation", "net.role", "net.nominal_voltage", "net.name", "on_net"},
 	Tags: map[string]string{
@@ -330,13 +374,17 @@ var pinTrackingViolated = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-violated"),
-	Eval: func(m check.Model) []check.Finding {
+	// The two pins the relation binds, subject then reference. The order is the relation's and it is
+	// the claim: the bound is on subject MINUS reference, so swapping them inverts its sign.
+	SubjectShape: []string{check.KindPin, check.KindPin},
+	Eval: func(m check.Model) []check.Verdict {
 		// UNSPECIFIED lands here rather than on the advisory rule so an unstated modality cannot
-		// pass in silence; trackingFindings reports it inconclusive rather than as an error.
-		return trackingFindings(m, func(md parampb.Modality) bool {
+		// pass in silence; trackingVerdicts reports it inconclusive rather than as an error.
+		return trackingVerdicts(m, func(md parampb.Modality) bool {
 			return md == parampb.Modality_MODALITY_REQUIRED || md == parampb.Modality_MODALITY_UNSPECIFIED
 		})
 	},
+	StatesConsideredSet: true,
 }
 
 // pinTrackingAdvisory flags the same breach where the datasheet RECOMMENDS rather than requires.
@@ -345,6 +393,7 @@ var pinTrackingAdvisory = &check.Rule{
 	Severity:   "warning",
 	Summary:    "Two pins of one part sit outside a tracking bound their datasheet recommends between them.",
 	Impact:     "The vendor states this bound with a recommending verb (\"should be at least 1 V higher for best operation\"), so breaking it is a loss of margin or of stated performance rather than a stress violation. It is reported separately from the required bound because a team that gates CI on datasheet violations wants the two answered differently, and folding them together would misstate one of them.",
+	Remedy:     "Restore the recommended ordering between the two terminals where the design allows it, or record that the loss of margin is accepted. Unlike the required bound, this costs performance rather than the part.",
 	Primitives: []string{"select", "traverse", "pin-role", "param-join"},
 	Reads:      []string{"param.pin", "param.pin_relation", "net.role", "net.nominal_voltage", "net.name", "on_net"},
 	Tags: map[string]string{
@@ -354,9 +403,13 @@ var pinTrackingAdvisory = &check.Rule{
 		"evidence":            "datasheet",
 	},
 	Detail: ruleDoc("pin-tracking-advisory"),
-	Eval: func(m check.Model) []check.Finding {
-		return trackingFindings(m, func(md parampb.Modality) bool {
+	// The two pins the relation binds, subject then reference. The order is the relation's and it is
+	// the claim: the bound is on subject MINUS reference, so swapping them inverts its sign.
+	SubjectShape: []string{check.KindPin, check.KindPin},
+	Eval: func(m check.Model) []check.Verdict {
+		return trackingVerdicts(m, func(md parampb.Modality) bool {
 			return md == parampb.Modality_MODALITY_RECOMMENDED
 		})
 	},
+	StatesConsideredSet: true,
 }

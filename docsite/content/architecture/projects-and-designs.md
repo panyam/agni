@@ -39,13 +39,13 @@ folder being renamed or moved between mounts, and it gives a review run a parent
 ```yaml
 # project.yaml
 name: gateway
-title: Gateway ECU review project
+title: Sample Board review project
 ```
 
 ```yaml
 # designs/gateway/design.yaml
 name: gateway
-title: Gateway ECU
+title: Sample Board
 entry: gateway.edn
 companions:
   - gateway.kicad_sch

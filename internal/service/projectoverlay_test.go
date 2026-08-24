@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/artifact"
 )
@@ -34,11 +35,13 @@ func (t *twoProjects) ResolveDesign(_ context.Context, uri artifact.URI) (*webap
 	return &webapi.Design{Name: "projects/x/designs/y"}, p, nil
 }
 
-func conventionNaming(name, pattern string) *webapi.NamingConvention {
-	return &webapi.NamingConvention{
-		Name:    name,
-		Lexicon: &webapi.NamingLexicon{Rail: &webapi.VocabPatterns{Patterns: []string{pattern}}},
-		Rules:   []*webapi.NamingRule{{Name: "net-naming", Severity: "warning", Allow: []string{"^" + name}}},
+func conventionNaming(name, pattern string) *configpb.NamingConvention {
+	return &configpb.NamingConvention{
+		Name: name,
+		Lexicon: &configpb.NamingLexicon{
+			Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{pattern}}},
+		},
+		Rules: []*configpb.NamingRule{{Name: "net-naming", Severity: "warning", Allow: []string{"^" + name}}},
 	}
 }
 

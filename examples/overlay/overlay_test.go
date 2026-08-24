@@ -42,7 +42,7 @@ func TestOverlayComposesReaderAndRule(t *testing.T) {
 			acme = append(acme, f)
 		}
 	}
-	if len(acme) != 1 || acme[0].Subject != "X1" {
+	if len(acme) != 1 || check.EntityRef(acme[0].Subject) != "X1" {
 		t.Errorf("acme rule findings = %+v, want one on X1", acme)
 	}
 }
@@ -75,8 +75,13 @@ func TestOverlayDatalogPinRule(t *testing.T) {
 	}
 
 	var got []string
-	for _, f := range r.Eval(m) {
-		got = append(got, f.Subject)
+	// Findings, not Eval. Eval returns VERDICTS, and Verdict shares Subject/Kind/Pin/NetID with
+	// Finding, so `for _, f := range r.Eval(m)` reading f.Subject compiles and silently counts passes
+	// as failures. It happens to be right today only because a datalog rule is still wrapped in
+	// FailuresOnly and emits nothing but failures; it would start lying the moment that seam states a
+	// considered set.
+	for _, f := range r.Findings(m) {
+		got = append(got, check.EntityRef(f.Subject))
 	}
 	// VCC carries U1's declared VDD power pin and X1. GND carries only ground-role pins, so the
 	// rule must leave it alone — a pin-ROLE discrimination a net-level rule could not make, and

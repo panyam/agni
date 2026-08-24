@@ -1,6 +1,6 @@
-(edif ECU
+(edif SAMPLE
   (edifVersion 2 0 0)
-  (design ECU (cellRef TOP (libraryRef LIB)))
+  (design SAMPLE (cellRef TOP (libraryRef LIB)))
   (library LIB
     (cell TOP
       (view V (viewType NETLIST) (interface)

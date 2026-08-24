@@ -1,0 +1,10 @@
+#agni-run 64be63d5adbf3f61
+r   m              n               provenance
+R1  ACME-RES-120R  CAN1_CANH       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANH
+R1  ACME-RES-120R  CAN1_CANL       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANL
+R2  ACME-RES-10K   PMIC_EN         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_EN
+R2  ACME-RES-10K   PMIC_MAIN_12V0  designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_MAIN_12V0
+R3  ACME-RES-10K   MCU_NRST        designs/gateway/gateway.edn ; designs/gateway/gateway.edn:MCU_NRST
+R3  ACME-RES-10K   PMIC_PG         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_PG
+
+6 result(s)

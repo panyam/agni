@@ -214,8 +214,11 @@ type RuleMeta struct {
 	// inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
 	// which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
 	RequiresCapability []string `protobuf:"bytes,8,rep,name=requires_capability,json=requiresCapability,proto3" json:"requires_capability,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// remedy is what to do about a violation, in the imperative. It is generic over the RULE rather
+	// than the subject, so it names the class of change and never a designator or a computed value.
+	Remedy        string `protobuf:"bytes,9,opt,name=remedy,proto3" json:"remedy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RuleMeta) Reset() {
@@ -304,6 +307,13 @@ func (x *RuleMeta) GetRequiresCapability() []string {
 	return nil
 }
 
+func (x *RuleMeta) GetRemedy() string {
+	if x != nil {
+		return x.Remedy
+	}
+	return ""
+}
+
 // SpecRule is a rule whose body is a Spec: select an entity set, keep the entities matching a
 // predicate, report one finding per survivor.
 type SpecRule struct {
@@ -363,11 +373,16 @@ func (x *SpecRule) GetBody() *SpecBody {
 // "{name}" interpolates a let binding or a fact and "{name:q}" quotes it. An absent where selects
 // every entity.
 type SpecBody struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Over          string                 `protobuf:"bytes,1,opt,name=over,proto3" json:"over,omitempty"`
-	Let           map[string]*SpecTerm   `protobuf:"bytes,2,rep,name=let,proto3" json:"let,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Where         *SpecExpr              `protobuf:"bytes,3,opt,name=where,proto3" json:"where,omitempty"`
-	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Over    string                 `protobuf:"bytes,1,opt,name=over,proto3" json:"over,omitempty"`
+	Let     map[string]*SpecTerm   `protobuf:"bytes,2,rep,name=let,proto3" json:"let,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Where   *SpecExpr              `protobuf:"bytes,3,opt,name=where,proto3" json:"where,omitempty"`
+	Message string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	// scope is which elements of over the rule JUDGES; absent judges all of them. It is separate from
+	// where because falling out of each means something different: out of scope produces no verdict at
+	// all, while failing where produces a PASS. With one predicate a subject the rule was never about
+	// is indistinguishable from one it checked and cleared.
+	Scope         *SpecExpr `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -428,6 +443,13 @@ func (x *SpecBody) GetMessage() string {
 		return x.Message
 	}
 	return ""
+}
+
+func (x *SpecBody) GetScope() *SpecExpr {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
 }
 
 // SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer
@@ -2022,9 +2044,17 @@ type ProfileDef struct {
 	// host_attr_key / host_attr_val bind the interface to a component that DECLARES it via an attribute
 	// (interface=SPI_NOR). A declared host gives a precise anchor and can flag a wholly-absent bus, which
 	// the naming-convention path cannot. Empty key means no host binding.
-	HostAttrKey   string                `protobuf:"bytes,3,opt,name=host_attr_key,json=hostAttrKey,proto3" json:"host_attr_key,omitempty"`
-	HostAttrVal   string                `protobuf:"bytes,4,opt,name=host_attr_val,json=hostAttrVal,proto3" json:"host_attr_val,omitempty"`
-	Requirements  []*ProfileRequirement `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
+	HostAttrKey  string                `protobuf:"bytes,3,opt,name=host_attr_key,json=hostAttrKey,proto3" json:"host_attr_key,omitempty"`
+	HostAttrVal  string                `protobuf:"bytes,4,opt,name=host_attr_val,json=hostAttrVal,proto3" json:"host_attr_val,omitempty"`
+	Requirements []*ProfileRequirement `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
+	// host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
+	// against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
+	// binds a host matching either. Empty means no class binding.
+	//
+	// It is field 6 because the message shipped without it while Profile.HostClass already existed, so
+	// a class-only host binding was dropped crossing this contract and the profile read as having no
+	// host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
+	HostClass     string `protobuf:"bytes,6,opt,name=host_class,json=hostClass,proto3" json:"host_class,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2092,6 +2122,13 @@ func (x *ProfileDef) GetRequirements() []*ProfileRequirement {
 		return x.Requirements
 	}
 	return nil
+}
+
+func (x *ProfileDef) GetHostClass() string {
+	if x != nil {
+		return x.HostClass
+	}
+	return ""
 }
 
 // ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
@@ -2261,7 +2298,7 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x04spec\x18\x01 \x01(\v2\x18.agni.v1.checks.SpecRuleH\x00R\x04spec\x121\n" +
 	"\x05query\x18\x02 \x01(\v2\x19.agni.v1.checks.QueryRuleH\x00R\x05query\x126\n" +
 	"\aprofile\x18\x03 \x01(\v2\x1a.agni.v1.checks.ProfileDefH\x00R\aprofileB\x06\n" +
-	"\x04body\"\xcd\x02\n" +
+	"\x04body\"\xe5\x02\n" +
 	"\bRuleMeta\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x18\n" +
@@ -2270,18 +2307,20 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x06detail\x18\x05 \x01(\tR\x06detail\x126\n" +
 	"\x04tags\x18\x06 \x03(\v2\".agni.v1.checks.RuleMeta.TagsEntryR\x04tags\x12%\n" +
 	"\x0eoptional_reads\x18\a \x03(\tR\roptionalReads\x12/\n" +
-	"\x13requires_capability\x18\b \x03(\tR\x12requiresCapability\x1a7\n" +
+	"\x13requires_capability\x18\b \x03(\tR\x12requiresCapability\x12\x16\n" +
+	"\x06remedy\x18\t \x01(\tR\x06remedy\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"f\n" +
 	"\bSpecRule\x12,\n" +
 	"\x04meta\x18\x01 \x01(\v2\x18.agni.v1.checks.RuleMetaR\x04meta\x12,\n" +
-	"\x04body\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecBodyR\x04body\"\xef\x01\n" +
+	"\x04body\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecBodyR\x04body\"\x9f\x02\n" +
 	"\bSpecBody\x12\x12\n" +
 	"\x04over\x18\x01 \x01(\tR\x04over\x123\n" +
 	"\x03let\x18\x02 \x03(\v2!.agni.v1.checks.SpecBody.LetEntryR\x03let\x12.\n" +
 	"\x05where\x18\x03 \x01(\v2\x18.agni.v1.checks.SpecExprR\x05where\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\x1aP\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12.\n" +
+	"\x05scope\x18\x05 \x01(\v2\x18.agni.v1.checks.SpecExprR\x05scope\x1aP\n" +
 	"\bLetEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
 	"\x05value\x18\x02 \x01(\v2\x18.agni.v1.checks.SpecTermR\x05value:\x028\x01\"\xd3\x01\n" +
@@ -2378,14 +2417,16 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x04_num\"8\n" +
 	"\x10DatalogAggregate\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x10\n" +
-	"\x03var\x18\x02 \x01(\tR\x03var\"\xe9\x01\n" +
+	"\x03var\x18\x02 \x01(\tR\x03var\"\x88\x02\n" +
 	"\n" +
 	"ProfileDef\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\asignals\x18\x02 \x03(\v2\x1d.agni.v1.checks.ProfileSignalR\asignals\x12\"\n" +
 	"\rhost_attr_key\x18\x03 \x01(\tR\vhostAttrKey\x12\"\n" +
 	"\rhost_attr_val\x18\x04 \x01(\tR\vhostAttrVal\x12F\n" +
-	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\"\xae\x01\n" +
+	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\x12\x1d\n" +
+	"\n" +
+	"host_class\x18\x06 \x01(\tR\thostClass\"\xae\x01\n" +
 	"\rProfileSignal\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06prefix\x18\x02 \x01(\tR\x06prefix\x12\x16\n" +
@@ -2458,51 +2499,52 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	4,  // 6: agni.v1.checks.SpecRule.body:type_name -> agni.v1.checks.SpecBody
 	30, // 7: agni.v1.checks.SpecBody.let:type_name -> agni.v1.checks.SpecBody.LetEntry
 	9,  // 8: agni.v1.checks.SpecBody.where:type_name -> agni.v1.checks.SpecExpr
-	6,  // 9: agni.v1.checks.SpecTerm.lit:type_name -> agni.v1.checks.SpecLit
-	7,  // 10: agni.v1.checks.SpecTerm.call:type_name -> agni.v1.checks.SpecCall
-	8,  // 11: agni.v1.checks.SpecTerm.count_of:type_name -> agni.v1.checks.SpecCountOf
-	5,  // 12: agni.v1.checks.SpecCall.args:type_name -> agni.v1.checks.SpecTerm
-	9,  // 13: agni.v1.checks.SpecCountOf.where:type_name -> agni.v1.checks.SpecExpr
-	10, // 14: agni.v1.checks.SpecExpr.and:type_name -> agni.v1.checks.SpecExprList
-	10, // 15: agni.v1.checks.SpecExpr.or:type_name -> agni.v1.checks.SpecExprList
-	9,  // 16: agni.v1.checks.SpecExpr.not:type_name -> agni.v1.checks.SpecExpr
-	11, // 17: agni.v1.checks.SpecExpr.cmp:type_name -> agni.v1.checks.SpecCmp
-	12, // 18: agni.v1.checks.SpecExpr.in:type_name -> agni.v1.checks.SpecIn
-	13, // 19: agni.v1.checks.SpecExpr.match:type_name -> agni.v1.checks.SpecMatch
-	14, // 20: agni.v1.checks.SpecExpr.exists_in:type_name -> agni.v1.checks.SpecExistsIn
-	5,  // 21: agni.v1.checks.SpecExpr.is_true:type_name -> agni.v1.checks.SpecTerm
-	9,  // 22: agni.v1.checks.SpecExprList.xs:type_name -> agni.v1.checks.SpecExpr
-	5,  // 23: agni.v1.checks.SpecCmp.l:type_name -> agni.v1.checks.SpecTerm
-	5,  // 24: agni.v1.checks.SpecCmp.r:type_name -> agni.v1.checks.SpecTerm
-	5,  // 25: agni.v1.checks.SpecIn.t:type_name -> agni.v1.checks.SpecTerm
-	5,  // 26: agni.v1.checks.SpecMatch.t:type_name -> agni.v1.checks.SpecTerm
-	9,  // 27: agni.v1.checks.SpecExistsIn.where:type_name -> agni.v1.checks.SpecExpr
-	2,  // 28: agni.v1.checks.QueryRule.meta:type_name -> agni.v1.checks.RuleMeta
-	17, // 29: agni.v1.checks.QueryRule.query:type_name -> agni.v1.checks.DatalogQuery
-	16, // 30: agni.v1.checks.QueryRule.context_vars:type_name -> agni.v1.checks.ContextVar
-	18, // 31: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
-	19, // 32: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
-	23, // 33: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
-	21, // 34: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
-	19, // 35: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
-	20, // 36: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
-	21, // 37: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
-	21, // 38: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
-	22, // 39: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
-	23, // 40: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
-	23, // 41: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
-	23, // 42: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
-	24, // 43: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
-	25, // 44: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
-	27, // 45: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
-	28, // 46: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
-	31, // 47: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 48: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	49, // [49:49] is the sub-list for method output_type
-	49, // [49:49] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	9,  // 9: agni.v1.checks.SpecBody.scope:type_name -> agni.v1.checks.SpecExpr
+	6,  // 10: agni.v1.checks.SpecTerm.lit:type_name -> agni.v1.checks.SpecLit
+	7,  // 11: agni.v1.checks.SpecTerm.call:type_name -> agni.v1.checks.SpecCall
+	8,  // 12: agni.v1.checks.SpecTerm.count_of:type_name -> agni.v1.checks.SpecCountOf
+	5,  // 13: agni.v1.checks.SpecCall.args:type_name -> agni.v1.checks.SpecTerm
+	9,  // 14: agni.v1.checks.SpecCountOf.where:type_name -> agni.v1.checks.SpecExpr
+	10, // 15: agni.v1.checks.SpecExpr.and:type_name -> agni.v1.checks.SpecExprList
+	10, // 16: agni.v1.checks.SpecExpr.or:type_name -> agni.v1.checks.SpecExprList
+	9,  // 17: agni.v1.checks.SpecExpr.not:type_name -> agni.v1.checks.SpecExpr
+	11, // 18: agni.v1.checks.SpecExpr.cmp:type_name -> agni.v1.checks.SpecCmp
+	12, // 19: agni.v1.checks.SpecExpr.in:type_name -> agni.v1.checks.SpecIn
+	13, // 20: agni.v1.checks.SpecExpr.match:type_name -> agni.v1.checks.SpecMatch
+	14, // 21: agni.v1.checks.SpecExpr.exists_in:type_name -> agni.v1.checks.SpecExistsIn
+	5,  // 22: agni.v1.checks.SpecExpr.is_true:type_name -> agni.v1.checks.SpecTerm
+	9,  // 23: agni.v1.checks.SpecExprList.xs:type_name -> agni.v1.checks.SpecExpr
+	5,  // 24: agni.v1.checks.SpecCmp.l:type_name -> agni.v1.checks.SpecTerm
+	5,  // 25: agni.v1.checks.SpecCmp.r:type_name -> agni.v1.checks.SpecTerm
+	5,  // 26: agni.v1.checks.SpecIn.t:type_name -> agni.v1.checks.SpecTerm
+	5,  // 27: agni.v1.checks.SpecMatch.t:type_name -> agni.v1.checks.SpecTerm
+	9,  // 28: agni.v1.checks.SpecExistsIn.where:type_name -> agni.v1.checks.SpecExpr
+	2,  // 29: agni.v1.checks.QueryRule.meta:type_name -> agni.v1.checks.RuleMeta
+	17, // 30: agni.v1.checks.QueryRule.query:type_name -> agni.v1.checks.DatalogQuery
+	16, // 31: agni.v1.checks.QueryRule.context_vars:type_name -> agni.v1.checks.ContextVar
+	18, // 32: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
+	19, // 33: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
+	23, // 34: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
+	21, // 35: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
+	19, // 36: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
+	20, // 37: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
+	21, // 38: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
+	21, // 39: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
+	22, // 40: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
+	23, // 41: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
+	23, // 42: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
+	23, // 43: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
+	24, // 44: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
+	25, // 45: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
+	27, // 46: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
+	28, // 47: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
+	31, // 48: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 49: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }

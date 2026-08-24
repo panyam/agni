@@ -92,6 +92,37 @@ func TestCheckStrapGroupCollisionCLI(t *testing.T) {
 	}
 }
 
+// TestCheckStrapGroupClearanceCLI is the end-to-end proof of the case that used to produce no output
+// at all (agni issue 391). The same board, declared for a part whose address pins are numbered the
+// other way round, so both groups encode their declared value AND the two devices answer to different
+// addresses. Every rule passes, and before the collision rule stated a considered set that was
+// indistinguishable from a run where nobody declared a bus.
+//
+// It pairs with TestCheckStrapGroupCollisionCLI over the SAME design file, so the difference between
+// the two runs is the declaration and nothing else.
+func TestCheckStrapGroupClearanceCLI(t *testing.T) {
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strapgroup.edn", "--intent-path", "testdata/intent/strapgroup-clear.yaml", "--verdicts"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	// The rule's own tally line, not a bare substring search. "U12", "MDIO" and "pass" all appear in
+	// other rules' rows on this design, so a looser assertion holds even when this rule emits nothing,
+	// which is the failure it exists to catch.
+	if !strings.Contains(out, "intent/strap-address-collision  1 pass") {
+		t.Fatalf("the clean pair must be reported as a pass by this rule, and it is the case that used "+
+			"to produce no output at all:\n%s", out)
+	}
+	// Both decoded addresses, so a reviewer can check them against the datasheets without opening the
+	// schematic. Without them the pass asserts a clearance it does not evidence.
+	if !strings.Contains(out, "straps to 1 and U13 to 4") {
+		t.Errorf("the pass must carry both decoded addresses:\n%s", out)
+	}
+}
+
 // TestCheckStrapGroupUndecidableCLI: with the LSB resistor's declaration widened to a net that carries
 // no bias, the group cannot be read. It must report inconclusive and drop OUT of collision detection,
 // rather than decoding the missing bit as 0 and accusing two parts that may be fine.

@@ -38,7 +38,7 @@ function resolveRelationImages(md: string): string {
 // emptyFindings is the state before the presenter has pushed anything: no rules selected, so the
 // count says "no rules selected" rather than "no findings", which would be a claim.
 function emptyFindings(): FindingsState {
-  return { findings: [], selected: "", ruleCount: 0, pending: 0, running: false, skipped: [], ruleSummaries: {} };
+  return { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 0, pending: 0, running: false, skipped: [], ruleSummaries: {} };
 }
 
 // FindingsCount says what is already CHECKED about a selection (agni issue 259), for one entity or

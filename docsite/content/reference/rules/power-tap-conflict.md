@@ -3,6 +3,10 @@ title: "power-tap-conflict"
 description: "One net is tapped by two different design-wide names (power symbols or global labels)."
 ---
 
+### Remedy
+
+Settle on one spelling for the rail and change every tap to it. Confirm afterwards which consumers moved, since the two names may have been feeding what everyone believed were separate supplies.
+
 ### What it means
 
 One net's collapsed alias list holds two or more distinct DESIGN-WIDE

@@ -1,0 +1,26 @@
+#agni-run 9a21767df1b58ce6
+r    c           provenance
+C1   capacitor   designs/gateway/gateway.edn
+C2   capacitor   designs/gateway/gateway.edn
+C3   capacitor   designs/gateway/gateway.edn
+C4   capacitor   designs/gateway/gateway.edn
+C5   capacitor   designs/gateway/gateway.edn
+C6   capacitor   designs/gateway/gateway.edn
+D1   diode       designs/gateway/gateway.edn
+D1   tvs         designs/gateway/gateway.edn
+J1   connector   designs/gateway/gateway.edn
+R1   resistor    designs/gateway/gateway.edn
+R2   resistor    designs/gateway/gateway.edn
+R3   resistor    designs/gateway/gateway.edn
+TP1  test_point  designs/gateway/gateway.edn
+TP2  test_point  designs/gateway/gateway.edn
+U1   ic          designs/gateway/gateway.edn
+U1   regulator   designs/gateway/gateway.edn
+U2   ic          designs/gateway/gateway.edn
+U2   regulator   designs/gateway/gateway.edn
+U3   ic          designs/gateway/gateway.edn
+U4   ic          designs/gateway/gateway.edn
+U5   ic          designs/gateway/gateway.edn
+Y1   clock       designs/gateway/gateway.edn
+
+22 result(s)

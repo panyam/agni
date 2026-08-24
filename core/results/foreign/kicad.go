@@ -157,17 +157,11 @@ func findings(v kicadViolation, prefix, source string) []*checkspb.Finding {
 		if it.Description != "" {
 			msg = v.Description + " — " + it.Description
 		}
-		out = append(out, &checkspb.Finding{
-			Rule:     rule,
-			Severity: sev,
-			Message:  msg,
-			Subject:  &checkspb.Subject{},
-			Provenance: &ir.Provenance{
-				SourceFile:   source,
-				NativeId:     it.UUID,
-				NativeIdKind: "kicad-uuid",
-			},
-		})
+		out = append(out, &checkspb.Finding{Subject: &checkspb.Subject{}, Rule: rule, Severity: sev, Message: msg, Provenance: &ir.Provenance{
+			SourceFile:   source,
+			NativeId:     it.UUID,
+			NativeIdKind: "kicad-uuid",
+		}})
 	}
 	return out
 }

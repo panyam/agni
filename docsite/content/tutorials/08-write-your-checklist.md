@@ -17,7 +17,7 @@ and a more useful one when you are deciding whether a board is ready.
 ## The shape
 
 ```yaml
-name: Gateway ECU design review
+name: Sample Board design review
 areas:
   - name: Power
     items:
@@ -73,7 +73,7 @@ it.
 
 ## The query trap
 
-Read the `H2` query again. It matches test points on nets that are **not** rails.
+Read the `H2` query again. It matches {{ explainable "test-point" "test points" }} on nets that are **not** rails.
 
 A query binding reports whatever it matches as findings, and findings mean the item failed. So the
 query has to match the violation. Write the healthy case instead, phrasing it the natural way as
@@ -104,7 +104,7 @@ That note matters more than it looks. Which checklist scored a run is not recove
 outcomes it produced, so a checklist you did not type has to announce itself.
 
 ```
-# Review: Gateway ECU design review
+# Review: Sample Board design review
 
 Design: `designs/gateway`
 

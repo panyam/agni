@@ -227,7 +227,7 @@ func TestReviewReportProtoMapsAllFields(t *testing.T) {
 					Item:    review.Item{ID: "1", Title: "t1"},
 					Outcome: review.Fail,
 					Findings: []check.Finding{
-						{Rule: "r", Severity: "error", Kind: check.KindNet, Subject: "N", Message: "boom"},
+						{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Rule: "r", Severity: "error", Message: "boom"},
 					},
 				},
 				{Item: review.Item{ID: "2", Title: "t2"}, Outcome: review.NotApplicable, Note: "no tier"},
@@ -441,7 +441,7 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 			if err != nil {
 				t.Fatalf("naming.Load: %v", err)
 			}
-			r.Overlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: ConventionProto(cfg)}}
+			r.Overlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: cfg}}
 		}
 		return r
 	}

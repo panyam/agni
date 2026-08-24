@@ -7,7 +7,7 @@ import (
 
 func TestParseValid(t *testing.T) {
 	d, err := Parse([]byte(`
-name: Test ECU intent
+name: Test sample intent
 modules:
   - {name: SoC, class: soc}
   - {name: eMMC, mpn: MTFC4GACAJCN}
@@ -19,7 +19,7 @@ voltage_domains:
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if d.Name != "Test ECU intent" || len(d.Modules) != 3 || len(d.VoltageDomains) != 2 {
+	if d.Name != "Test sample intent" || len(d.Modules) != 3 || len(d.VoltageDomains) != 2 {
 		t.Fatalf("parsed shape wrong: %+v", d)
 	}
 	if d.Modules[1].MPN != "MTFC4GACAJCN" || d.VoltageDomains[0].Rails[1] != "VDD_IO" {

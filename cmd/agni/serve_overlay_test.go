@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check/naming"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/service"
 )
@@ -67,7 +68,7 @@ func writeFile(t *testing.T, name, body string) string {
 // file is about.
 func servedRuleNames(t *testing.T, profileDir, intentPath, conventionsPath string) []string {
 	t.Helper()
-	var cfg naming.Config
+	var cfg *configpb.NamingConvention
 	if conventionsPath != "" {
 		loaded, err := naming.Load(conventionsPath)
 		if err != nil {
@@ -278,9 +279,9 @@ func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 	// A request naming its own convention gets ITS rule and not the server's.
 	resp, err := checkSvc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{
 		Uri: "mount://m/testdata/review/conv-demo.edn",
-		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &webapi.NamingConvention{
+		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &configpb.NamingConvention{
 			Name: "acme",
-			Rules: []*webapi.NamingRule{{
+			Rules: []*configpb.NamingRule{{
 				Name: "signal-net-naming", Severity: "warning", Allow: []string{"^ACME_"},
 			}},
 		}}},

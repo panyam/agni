@@ -163,6 +163,116 @@ message Finding {
 // alike, so no two consumers drift (WS3-022). Sections come worst-severity first and empty
 // severities are omitted; within a section findings group by rule, each group carrying the catalog's
 // one-line summary so a report reads without the tool at hand.
+// Outcome is what a rule concluded about ONE subject, which is a narrower question than the review
+// layer's per-ITEM outcome vocabulary and deliberately does not reuse its spellings. A review outcome
+// answers "did we get an answer to this question", mostly from preconditions decided around the rule.
+// This answers "what did the rule conclude about this thing", decided inside it.
+enum Outcome {
+  OUTCOME_UNSPECIFIED = 0;
+  // The comparison was made and the design is on the right side of it.
+  OUTCOME_PASS = 1;
+  // The comparison was made and the design is on the wrong side of it.
+  OUTCOME_FAIL = 2;
+  // There was no bound to compare against, so nothing was checked. Distinct from a pass: a datasheet
+  // row stating no maximum constrains nothing, and used to be indistinguishable from a design sitting
+  // comfortably under a real limit.
+  OUTCOME_NO_LIMIT = 3;
+  // The rule applied to this subject and never reached a comparison, with `reason` naming the step
+  // that stopped it. This is what makes a considered set honest: an enumerator that drops a subject
+  // silently reports the same nothing as a rule that never looked.
+  OUTCOME_NOT_CONSIDERED = 4;
+  // The rule had everything it needed, REACHED its decision, and could not decide. Distinct from
+  // NOT_CONSIDERED, where there was no decision to reach, and from NO_LIMIT, where a specific input
+  // was absent: here the inputs are present and the DISCRIMINATION is impossible. A transistor in a
+  // power path is either an ideal-diode controller or an ordinary switch and a netlist cannot tell
+  // them apart.
+  //
+  // It maps to Finding.inconclusive, which already ships, and carries that field's contract: a
+  // consumer must NOT count it as a failure.
+  OUTCOME_INCONCLUSIVE = 5;
+}
+
+// WitnessTerm is one labelled VALUE a witness rests on ("absolute maximum" = "3.6 V").
+//
+// Values only, never entities. An entity belongs in Verdict.context, which carries the Subject a
+// highlight joins on; a term's value is a bare string no consumer can resolve to anything drawable.
+message WitnessTerm {
+  string label = 1;
+  string value = 2;
+}
+
+// Witness is why a verdict holds: a line a person can read, the values it rests on, and the datasheet
+// provenance behind them. It is what makes a PASS evidence rather than silence.
+message Witness {
+  // statement is the human rendering, always set. It is the whole witness for a text consumer.
+  string statement = 1;
+  // terms are the values statement rests on, kept apart so a UI can lay them out and a test can
+  // assert on one without parsing prose. ORDERED and open rather than a fixed measured/limit pair,
+  // because a witness family whose proof is a PATH carries no values at all and would have had to
+  // rewrite this shape.
+  repeated WitnessTerm terms = 2;
+  // datasheet is the provenance of any seeded value the verdict used, the same citation form a
+  // Finding carries. Empty for a witness resting on nothing seeded.
+  repeated DatasheetCitation datasheet = 3;
+}
+
+// Verdict is what one rule concluded about ONE subject, including the subjects it could not judge.
+//
+// It exists because a Finding is a violation, so a pass emits nothing and the set of subjects a rule
+// considered is recorded nowhere. That answers "what is wrong with this board" and cannot answer
+// "prove this pin is fine", which is what a reviewer asks of a design they are signing off. A verdict
+// list IS the considered set: every subject in scope produces exactly one.
+//
+// It deliberately does NOT carry the Finding for a failing verdict. A finding travels in
+// CheckDesignResponse.findings as it always has, and duplicating it here would put the same defect on
+// the wire twice and invite the two copies to disagree.
+message Verdict {
+  // id is the verdict's stable name, "<rule>:<kind>:<ref>", DERIVED from the fields below rather than
+  // assigned, so a CLI run and a server run compute the same name without talking to each other. It
+  // is carried so a consumer need not recompute it, never so a producer can choose it.
+  //
+  // Built from rule, kind and the kind's own reference, and from NOTHING else: not run order, not the
+  // message text, and not the outcome. Leaving the outcome out is what lets a link filed against a
+  // passing check survive the answer flipping, which is when someone most wants to follow it.
+  string id = 1;
+  string rule = 2;
+  Outcome outcome = 3;
+  // subjects is the TUPLE of entities this verdict is about, in the rule's own order, and it is what
+  // `id` above is derived from. Never empty.
+  //
+  // REPEATED BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single entity. A
+  // clearance violation is a distance between two nets; a regulator over-driving a part it feeds is
+  // only pinned down by the regulator, the rail and the load, since one source feeding one load over
+  // two rails is two different answers; a strap group is a device and the N nets encoding its value.
+  // Keying those by one entity gives one id to several answers.
+  //
+  // ORDER IS THE RULE'S AND IS SIGNIFICANT: a tracking bound reads subject-pin minus reference-pin,
+  // so swapping the two inverts the sign. A symmetric relation is canonicalised by the rule before it
+  // gets here, never by a consumer.
+  //
+  // A Finding's subject stays SINGULAR and is one of these. The two answer different questions: this
+  // tuple is the verdict's identity, and a finding's subject is the one entity a reader has to change.
+  repeated Subject subjects = 4;
+  // witness is what the outcome rests on. REQUIRED on PASS, FAIL and INCONCLUSIVE, and what makes a
+  // pass evidence. Unset is legitimate only on NO_LIMIT and NOT_CONSIDERED, where the point of the
+  // verdict is that there was nothing to rest on.
+  Witness witness = 5;
+  // reason says why a NOT_CONSIDERED verdict could not be decided, in the rule author's words
+  // ("pin could not be resolved to a datasheet terminal"). Empty for every other outcome.
+  //
+  // An open string rather than an enum, for the reason Tags and ContextSubject.role are open: the
+  // useful vocabulary is rule-specific, and a closed set would either collapse distinctions a rule
+  // depends on or grow a member per rule family. What matters is that a reason EXISTS.
+  string reason = 6;
+  // context are the design entities this verdict's proof NAMES but is not ABOUT, typed so a consumer
+  // can highlight them: the resistor and rail a pull-up passes through, the rail a pin sits on.
+  //
+  // THIS IS THE HIGHLIGHTABLE HALF, and the division from witness.terms is exactly that. Excludes the
+  // subject, which `subject` already names, so a consumer draws subject-as-figure over
+  // context-as-ground.
+  repeated ContextSubject context = 7;
+}
+
 message CheckReport {
   string source = 1;   // the checked file (mount-relative path or CLI argument)
   int32 rules_run = 2; // how many rules the run evaluated (distinguishes "clean" from "skipped")

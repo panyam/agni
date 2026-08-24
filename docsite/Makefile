@@ -1,4 +1,4 @@
-.PHONY: run build components node-deps search-index gh-pages clean
+.PHONY: run build components node-deps search-index preview figures gh-pages clean
 
 # Dev server with live reload on http://localhost:8085/agni/. Builds the
 # playground bundles first so a page that opts into one (front-matter
@@ -41,7 +41,27 @@ search-index: node-deps
 clean:
 	rm -rf dist static/js/gen
 
+# Re-render the schematics the learn course embeds. Not in the gate; see figures.sh.
+figures:
+	@./figures.sh
+	@git status --short -- static/images/learn || true
+	@echo "learn figures regenerated; review the diff above before committing"
+
+# Fold ONE built page into a self-contained HTML file for reviewing a branch before it merges.
+#   make -C docsite preview PAGE=learn/05-who-drives-this-net
+# Use this rather than `gh-pages` below, which cannot preview anything: Pages is configured
+# build_type "workflow", so the live site is the artifact docs.yml uploaded on the last push to main
+# and the gh-pages branch has not been served since the MkDocs tree was retired.
+preview: build
+	@./preview.sh $(PAGE) $(or $(OUT),preview.html)
+
 # Deploy ./dist to the gh-pages branch of panyam/agni.
+#
+# DEAD as configured. GitHub Pages for this repo serves the docs.yml workflow artifact
+# (build_type "workflow"), not this branch, so a force-push here changes nothing on the live site.
+# Its own closing echo has always named the missing step and nobody ever took it. Kept because
+# switching Pages back to branch-serving is a live option (it would enable per-branch previews under
+# a path prefix), and deleting the target would hide that. Do not run it expecting a deploy.
 gh-pages: build
 	@if [ -d dist/.git ]; then echo "Error: dist is a git repo; remove it first." && exit 1; fi
 	cd dist && \

@@ -1,7 +1,11 @@
 ---
 title: "i2c-pull-up"
-description: "An I2C net (SDA/SCL) has no pull-up resistor."
+description: "An I2C net (SDA/SCL) reaches no rail through a pull-up resistor."
 ---
+
+### Remedy
+
+Fit a pull-up resistor from each of SDA and SCL to the bus rail, sized from the bus capacitance and the clock rate the design actually runs at rather than from a habitual value.
 
 ### What it means
 
@@ -28,12 +32,20 @@ pull-up value being in range is a datasheet-joined rule (a separate, Tier-X chec
 identity is the shared component.class fact: the ref-des prefix convention (R, RN) refined by
 part-type data when the source carries it.
 
-**What the check actually tests today is narrower than the sentence at the top of this page.** It
-asks whether a resistor is connected to the net, not whether that resistor reaches a rail, so a
-series termination or bus-isolation resistor satisfies it and a genuinely missing pull-up passes.
-That is a false pass on an error-severity rule and it is tracked as issue 375. The rail terminus
-needs the resistor's OTHER net, and the general form of that question is a path query, which is the
-subject of the topology-pattern design in issue 374.
+**The check follows the resistor's OTHER end.** It is not enough for a resistor to touch the bus,
+because a series termination or bus-isolation resistor does that and holds nothing high. The rule
+walks from the bus across resistors, never through ground, and passes only when it arrives at a
+rail. Until issue 375 it asked the membership question instead, so a bus with a series resistor and
+no pull-up at all passed at error severity.
+
+The walk is bounded at `check.PullUpReachHops` crossings. One is a pull-up sitting directly on the
+bus. Two is a bus segment separated from its pull-up by a series resistor, which is an ordinary
+topology and the reason a one-hop test would report a false positive on it. Past three the
+accumulated series resistance is comparable to the pull-up, so the node no longer returns high in
+the time the bus needs and there is nothing worth crediting.
+
+Resistors only, and ground is never crossed: a resistor to ground is a pull-DOWN, and counting it
+would pass exactly the bus this rule exists to catch.
 
 The SDA/SCL name match is at a **token boundary**, not a substring (WS3-037): `SDA`, `SCL`,
 `I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK` do NOT, because `SCL`

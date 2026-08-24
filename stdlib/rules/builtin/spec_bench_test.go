@@ -55,7 +55,7 @@ func BenchmarkRulesGo(b *testing.B) {
 	b.ResetTimer()
 	for b.Loop() {
 		for _, r := range rules {
-			r.Eval(m)
+			r.Findings(m)
 		}
 	}
 }
@@ -68,7 +68,7 @@ func BenchmarkRulesSpec(b *testing.B) {
 			if s, ok := specs[r.Name]; ok {
 				s.Eval(m)
 			} else {
-				r.Eval(m) // spec-only rule: its Eval already is the interpreter
+				r.Findings(m) // spec-only rule: its Eval already is the interpreter
 			}
 		}
 	}

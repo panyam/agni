@@ -132,7 +132,7 @@ describe("reviewFromWire", () => {
     results: {
       meta: { createdAt: "2026-08-10T20:04:22Z", producerVersion: "v0.1.1" },
       design: { source: "review/can-broken.edn", contentHash: "sha256:abc" },
-      manifest: "Mini ECU review",
+      manifest: "Mini board review",
       areas: [
         {
           name: "CAN Interface",
@@ -161,7 +161,7 @@ describe("reviewFromWire", () => {
     expect(run.designHash).toBe("sha256:abc");
     expect(run.createdAt).toBe("2026-08-10T20:04:22Z");
     expect(run.producerVersion).toBe("v0.1.1");
-    expect(run.manifest).toBe("Mini ECU review");
+    expect(run.manifest).toBe("Mini board review");
     expect(run.areas).toHaveLength(1);
     expect(run.areas[0].items.map((i) => i.outcome)).toEqual(["fail", "not-automated"]);
   });

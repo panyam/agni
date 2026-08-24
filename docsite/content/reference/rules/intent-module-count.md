@@ -3,6 +3,10 @@ title: "intent/module-count"
 description: "The number of components for a declared module does not match the design intent."
 ---
 
+### Remedy
+
+Add or remove instances until the count matches the declaration, or amend the declaration. A dropped channel and a stale declaration look identical from here.
+
 ### What it means
 
 When the design intent declares an exact count for a module (2 CAN transceivers, 4 radios), this

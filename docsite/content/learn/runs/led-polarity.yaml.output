@@ -1,0 +1,5 @@
+#agni-run 6710416e98a7f7ea
+led-polarity  1 fail
+    fail  LED1  LED anode is on ground and cathode on a power rail; it can never conduct
+
+1 verdicts across 1 rule(s), 1 fail

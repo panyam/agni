@@ -3,6 +3,10 @@ title: "unspecified-pin-with-driver"
 description: "A pin with no declared electrical type sits on a driven net."
 ---
 
+### Remedy
+
+Set the pin's electrical type in the symbol to what the datasheet says it is. Fixing the symbol is the remedy, because suppressing the finding leaves the ERC blind on every board that uses it.
+
 ### What it means
 
 A net has at least one hard driver (output / power-out pin, including a

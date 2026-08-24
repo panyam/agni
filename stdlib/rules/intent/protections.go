@@ -21,31 +21,48 @@ const (
 // rail).
 func protectionRule(kind string, ps []Protection) *check.Rule {
 	return &check.Rule{
-		Name:     "protection-" + kind,
-		Severity: "warning",
-		Summary:  fmt.Sprintf("a rail the design intent declares needs %s protection has none", kind),
-		Detail:   intentDoc("protection-" + kind),
-		Impact:   "a power rail the design was intended to protect (OV clamp / discharge path) lacks the protection device",
-		Reads:    []string{"component-on-net", "component.class", "net.ground"},
-		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
-			var out []check.Finding
-			for _, p := range ps {
-				if p.Kind != kind {
-					continue
-				}
-				if protected(m, p) {
-					continue
-				}
-				out = append(out, check.Finding{
-					Kind:    check.KindNet,
-					Subject: p.Rail,
-					Message: fmt.Sprintf("rail %q declares %s protection, but no %s device is on it", p.Rail, kind, protectionDevice(kind)),
-				})
-			}
-			return out
-		},
+		Name:                "protection-" + kind,
+		Severity:            "warning",
+		Summary:             fmt.Sprintf("a rail the design intent declares needs %s protection has none", kind),
+		Detail:              intentDoc("protection-" + kind),
+		Impact:              "a power rail the design was intended to protect (OV clamp / discharge path) lacks the protection device",
+		Remedy:              intentRemedy("protection-" + kind),
+		Reads:               []string{"component-on-net", "component.class", "net.ground"},
+		Tags:                intentTags(),
+		Eval:                func(m check.Model) []check.Verdict { return protectionVerdicts(m, ps, kind) },
+		StatesConsideredSet: true,
 	}
+}
+
+// protectionVerdicts decides every declared protection OF THIS KIND. A declaration of another kind
+// belongs to a sibling rule and yields no verdict here, since these families compile to one rule per
+// kind and a pass about someone else's declaration would claim a check that never happened.
+//
+// The pass is what a protection declaration is for: "the OV clamp this rail was intended to have is on
+// it" is the sentence the intent file was written to get back, and the rule said nothing at all when
+// the answer was yes.
+func protectionVerdicts(m check.Model, ps []Protection, kind string) []check.Verdict {
+	var out []check.Verdict
+	for _, p := range ps {
+		if p.Kind != kind {
+			continue // another kind's declaration: not a subject of this rule
+		}
+		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(p.Rail)}}
+		if protected(m, p) {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("a %s device sits on rail %q, as declared", protectionDevice(kind), p.Rail),
+				Terms:     []check.WitnessTerm{{Label: "declared protection", Value: kind}},
+			}
+		} else {
+			v.Outcome = check.Fail
+			msg := fmt.Sprintf("rail %q declares %s protection, but no %s device is on it", p.Rail, kind, protectionDevice(kind))
+			v.Witness = &check.Witness{Statement: fmt.Sprintf("no %s device is on rail %q", protectionDevice(kind), p.Rail)}
+			v.Finding = &check.Finding{Subject: check.NetNameEntity(p.Rail), Message: msg}
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // protected reports whether the declared protection is realized on its rail net.

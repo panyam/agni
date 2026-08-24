@@ -155,6 +155,155 @@ makes a clean report read as better founded than it is, and nothing in the docum
 except the `catalog` snapshot, which nobody cross-reads. It is the same silence-reads-as-coverage
 shape the outcome vocabulary exists to remove, one layer up.
 
+## The considered set: what a rule looked at, not only what failed
+
+A `Finding` is a violation, so a pass emits nothing and the set of subjects a rule EXAMINED is
+recorded nowhere. That answers "what is wrong with this board" and cannot answer "prove this pin is
+fine", which is what a reviewer asks of a design they are signing off. `CheckDesignResponse.verdicts`
+carries the second answer.
+
+A `Verdict` is what one rule concluded about ONE subject, including the subjects it could not judge,
+so the verdict list IS the considered set. There is no separate coverage structure to keep in step.
+
+**Two things share the word "verdict" and are not the same thing.** The section above uses it for the
+REVIEW layer's per-item outcomes (`not-applicable`, `needs-data`, and the rest), which answer "did we
+get an answer to this question" and are mostly decided by preconditions around a rule. `check.Verdict`
+answers "what did this rule conclude about this thing", decided inside it. The two vocabularies
+deliberately do not reuse each other's spellings, and a consumer must not map one onto the other.
+
+The check-layer outcomes:
+
+| Outcome | Means |
+|---|---|
+| `PASS` / `FAIL` | the comparison was made, and which side the design is on |
+| `NO_LIMIT` | the comparison was reached and nothing stated a bound, so nothing was checked |
+| `NOT_CONSIDERED` | the rule never reached a comparison; `reason` names the step that stopped it |
+| `INCONCLUSIVE` | the rule reached its decision and could not decide |
+
+`NO_LIMIT` and `NOT_CONSIDERED` are the two that did not exist before, and both are the same failure
+this document keeps returning to. A datasheet row stating no maximum used to be indistinguishable
+from a design sitting comfortably under a real limit, and an enumerator that dropped a subject
+reported the same nothing as a rule that never looked at it.
+
+`NO_LIMIT` is not a datasheet-only outcome, even though the datasheet rules are where it started. The
+question it answers is "was there a bound at all", and a project's own net-class definitions raise it
+in the same shape: `netclass-track-width` reaches its comparison over a net whose classes declare no
+width and has nothing to compare against, which is not a pass and is not a subject it failed to reach.
+Anywhere a rule compares a measurement against a limit somebody else stated, the limit can be absent.
+
+`INCONCLUSIVE` is the outcome form of `Finding.inconclusive`, which already shipped, and carries that
+field's contract: **a consumer must not count it as a failure.**
+
+### A datalog rule declares its domain rather than deriving it
+
+A rule authored as a datalog query (`query.RuleFromQuery`) has a problem the hand-written rules do
+not. A goal yields the rows that MATCHED, so the subjects it passed over are not in the answer at
+all: `unterminated(?h)` produces unterminated buses and nothing produces the terminated ones. For a
+long time every rule this bridge compiled reported failures only, which covered the whole `profile/`
+and `dl/` families.
+
+A `FindingQuery` now carries an optional `Domain`: a second goal over the same program whose rows are
+the subjects the rule EXAMINED. The bridge evaluates both, reports the difference as passes, and sets
+`StatesConsideredSet`. Leaving it unset keeps the old shape, so a rule that declares nothing claims
+nothing.
+
+**The domain is declared by the author and never inferred from the goal**, and the reason is worth
+stating because the inference looks easy. For the ESD requirement the domain is exactly the goal's
+body minus its negated literal. Then:
+
+- `signal-dangling` ends in a COMPARISON with no negation, so "the body minus its negation" is the
+  body, and the rule would report the subjects it faulted as the subjects it considered.
+- `signal-missing` carries TWO negated literals. `not has_signal(S)` is the test; the host guard
+  `not any_host` is scope, because a design that declares a host is covered by the precise path and
+  was never in this rule's domain. Nothing in the syntax separates them.
+- `crystal-load-caps` negates its exemption (`not net.external`) beside its test. Sweeping the
+  exemption into the domain would report a terminal leaving the board as a PASS, claiming the rule
+  confirmed a capacitor it never looked for.
+
+A wrong derivation OVERSTATES coverage, which is worse than stating none, and four right answers out
+of six is not a property anything downstream can act on. A declaration fails safe.
+
+The same rule applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
+domain, because that predicate is not a test a pin passes: it is whether the FORMAT can answer the
+question. A pin read from EDIF was never judged, and putting it in the considered set would report
+every supply pin as verified by a rule that is structurally silent there.
+
+### A witness is what makes a pass evidence
+
+`Witness.statement` is the line a person reads. What it rests on splits in two, and the split is
+load-bearing rather than bookkeeping:
+
+- **`Witness.terms`** are labelled VALUES ("absolute maximum" = "3.6 V"). A term's value is a bare
+  string, so nothing can resolve it to something drawable.
+- **`Verdict.context`** are typed ENTITIES, carrying the `Subject` a highlight joins on.
+
+The test is whether clicking it should light something up. A proof that is entirely a path (a pull-up
+reaching a rail through a resistor) therefore carries no terms at all, which is correct rather than a
+gap. `context` excludes the subject, which `subject` already names, so a consumer draws
+subject-as-figure over context-as-ground.
+
+**A FAILING verdict needs a witness too, and forgetting one is silent in-process.** The wire form of
+a `Verdict` deliberately carries no `Finding`, because a defect travels once in `findings`. So a
+failing verdict whose only sentence lives on its `Finding` renders correctly for any consumer holding
+the Go value and renders BLANK for every consumer that reads verdicts back from the service, which
+includes the CLI's own verdict report. `check.FailuresOnly` omits the witness on purpose, since an
+unconverted rule has no proof to show; the moment a rule converts, that omission becomes a bug. It
+was caught by regenerating the docsite captures rather than by any test, which is why converting a
+rule means looking at rendered output and not only at a green package.
+
+### A verdict's subject is a TUPLE
+
+`verdict.subjects` is the entities the rule quantified over, in the rule's own order. Most rules name
+one. A rule whose question is a RELATION names every entity in it, because a relation belongs to none
+of them alone: a clearance violation is a distance between two nets, a regulator over-driving a part it
+feeds is only pinned down by the regulator, the rail and the load, and a strap group is a device and
+the N nets encoding its value. Naming fewer would give several answers one id.
+
+Order is the rule's and is significant, since a tracking bound reads subject-pin minus reference-pin.
+A symmetric relation is canonicalised by the rule before it reaches the wire, never by a consumer.
+
+A `Finding.subject` stays SINGULAR and is one of these. The two answer different questions: the tuple
+is the verdict's identity, and a finding's subject is the one entity a reader has to change. Everything
+else the finding names is in its `context`, which is where a consumer that wants equal standing across
+all of them looks.
+
+### `Verdict.id` is derived, never assigned
+
+`"<rule>:(<kind>:<ref>,...)"`, computed from the verdict rather than handed to it, so a CLI run and a
+server run name the same verdict without talking to each other. It is the `mount://` parity argument
+one level down.
+
+Built from the rule, the kind and the kind's own reference, and from nothing else: not run order, not
+the message text, and **not the outcome**. Leaving the outcome out is what lets a link filed against a
+passing check survive the answer flipping, which is when someone most wants to follow it. The ref's
+grammar belongs to the kind rather than being a positional tuple of every kind's fields, because
+`Subject` is already a widening union and a positional key would change format every time a kind is
+added.
+
+The id is GENERATED and never parsed: one function builds it and nothing splits it back, because the
+structure travels in `subjects` where a consumer reads it typed. That is what lets a ref keep its own
+colons (`symbol:Library:Symbol`) and its own commas (an endpoint's `0,0`). The four characters the
+tuple syntax uses are percent-escaped inside a ref, which is not academic: an endpoint's ref has a
+comma in the delimiter position, and without the escape `("A,net:B")` and `("A", "B")` are one string.
+
+Known limit: two nets sharing a name share an id, because using the net id instead would make the id
+unconstructible. That matches how `Subject` already behaves on the wire.
+
+### Findings are unchanged
+
+`findings` carries exactly what it always did. A verdict list is a different answer to a different
+question, and folding passes into the violations list would make every consumer that counts rows
+start counting passes as defects. The CLI keeps them apart the same way: `check --verdicts` is a
+separate table, not extra rows.
+
+Only rules that STATE a considered set contribute. A rule absent from `verdicts` is declining to say,
+not reporting that it considered nothing, and a consumer must not read those the same way. That is
+the distinction `skipped` draws one layer up.
+
+Four rules decline, each for a reason recorded beside its `Eval` (agni issue 391). Three read a reader
+diagnostic that holds only the offenders, so there is no set to map over; one cannot separate a pass
+from a missing datasheet inside its own body.
+
 ## Versioning
 
 `meta.schema` is checked on read, and an unrecognized version is an error rather than a best-effort

@@ -69,11 +69,24 @@ describes something being wrong.
 **A rule that had no members.** An item bound to a rule that quantifies over a device class passes
 when no component is in that class, which can mean the class was never resolved rather than that
 nothing was in it. Rung 7's false module-absence findings are this shape seen from the other side.
-If an item passes and you cannot say what it examined, `agni check --rule <name>` on its own will
-tell you whether anything was there to examine.
 
 The general form: for every pass, you should be able to name the thing it looked at. If you cannot,
 the pass is a guess.
+
+`agni check --verdicts` is how you make a rule answer that, one row per subject with the evidence
+the pass rests on:
+
+{{ agniRun "content/tutorials/runs/09-audit-a-pass.yaml" }}
+
+Rows sit under the rule that produced them, worst first. Read the subject as the claim and the
+sentence beside it as the reason to believe it. A pass whose reason you cannot check against the
+design is the one to go and look at.
+
+Two limits worth knowing before you lean on it. A rule that reports violations without stating what it
+examined is labelled "reports violations only" and its rows are what it FOUND rather than what it
+checked, so absence under such a heading is not evidence of correctness. And a pass can only cite a
+value the rule actually measured, so a few rules still pass with the shape of their test rather than
+a number.
 
 ## When a check cannot decide
 

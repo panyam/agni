@@ -333,7 +333,7 @@ func subjectList(fs []check.Finding) string {
 	var out []string
 	seen := map[string]bool{}
 	for _, f := range fs {
-		if s := f.Subject; s != "" && !seen[s] {
+		if s := check.EntityRef(f.Subject); s != "" && !seen[s] {
 			seen[s] = true
 			out = append(out, s)
 		}
@@ -456,13 +456,7 @@ func presentResult(m check.Model, it Item, pb *PresentBinding) ItemResult {
 			return ItemResult{Item: it, Outcome: Pass}
 		}
 	}
-	return ItemResult{Item: it, Outcome: Fail, Findings: []check.Finding{{
-		Rule:     "present/" + pb.Class,
-		Severity: "warning",
-		Kind:     check.KindComponent,
-		Subject:  pb.Class,
-		Message:  "no component of class " + pb.Class + " is present on the design",
-	}}}
+	return ItemResult{Item: it, Outcome: Fail, Findings: []check.Finding{{Subject: check.Entity{Kind: check.KindComponent, Ref: pb.Class}, Rule: "present/" + pb.Class, Severity: "warning", Message: "no component of class " + pb.Class + " is present on the design"}}}
 }
 
 // filterToScope keeps a net-subject finding whose net is in nets, and a component-subject finding whose
@@ -471,13 +465,13 @@ func presentResult(m check.Model, it Item, pb *PresentBinding) ItemResult {
 func filterToScope(fs []check.Finding, nets, comps map[string]bool) []check.Finding {
 	kept := fs[:0]
 	for _, f := range fs {
-		switch f.Kind {
+		switch f.Subject.Kind {
 		case check.KindNet:
-			if nets[f.Subject] {
+			if nets[f.Subject.Ref] {
 				kept = append(kept, f)
 			}
 		case check.KindComponent:
-			if comps[f.Subject] {
+			if comps[f.Subject.Ref] {
 				kept = append(kept, f)
 			}
 		}

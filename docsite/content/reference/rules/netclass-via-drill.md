@@ -3,6 +3,10 @@ title: "netclass-via-drill"
 description: "A net's via is drilled smaller than the drill its own net class declares."
 ---
 
+### Remedy
+
+Enlarge the via drill to the size its class declares, or amend the class if the smaller drill is intended. The class carries an assumption about current capacity or plating, and one of the two has moved.
+
 A net's via is drilled smaller than the drill its own net class declares.
 
 ![a via drilled below the drill its net class declares is flagged; one meeting it is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/netclass-via-drill.svg)

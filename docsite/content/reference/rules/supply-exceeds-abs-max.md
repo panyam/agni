@@ -3,6 +3,10 @@ title: "supply-exceeds-abs-max"
 description: "A power-input pin sits on a rail whose nominal voltage exceeds the part's absolute-maximum supply rating."
 ---
 
+### Remedy
+
+Feed the part from a rail inside its rated supply range, or change the part for one rated to the rail it sits on. An absolute maximum is a damage threshold rather than a tolerance to design against.
+
 ### What it means
 
 A component joined to a seeded datasheet spec (by MPN) has a power-input

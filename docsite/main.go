@@ -79,7 +79,27 @@ func IncludeCard(relativePath string) string {
 		log.Printf("includeCard: %v", err)
 		return ""
 	}
-	return stripFrontmatter(string(data))
+	return resolveSiteRefs(stripFrontmatter(string(data)))
+}
+
+// resolveSiteRefs substitutes the site directives a GENERATED card carries, because a transcluded
+// card never passes through the template engine that would otherwise render them.
+//
+// The asymmetry is the whole bug. A card served as its OWN page has its body template-executed, the
+// same pass that makes `{{ agniRun }}` work, so `{{.Site.PathPrefix}}` in an image path renders. A
+// TRANSCLUDED card does not: includeCard is called during the host page's execution and its return
+// value is spliced in afterwards, so nothing re-scans it. The directive survived into the HTML and
+// the browser requested a literal `%7B%7B.Site.PathPrefix%7D%7D` path, which 404s. It went unnoticed
+// because it breaks an IMAGE rather than the prose around it, and only on the four cards that carry
+// one.
+//
+// Substituting beats re-running the template engine here: the value is a const, and re-executing
+// arbitrary card content inside a host render invites recursion for no gain.
+func resolveSiteRefs(s string) string {
+	for _, form := range []string{"{{.Site.PathPrefix}}", "{{ .Site.PathPrefix }}"} {
+		s = strings.ReplaceAll(s, form, PathPrefix)
+	}
+	return s
 }
 
 // stripFrontmatter removes a leading YAML frontmatter block. A file without one is returned
@@ -112,6 +132,13 @@ func safeJoin(relativePath string) (string, bool) {
 	return absPath, true
 }
 
+// PathPrefix is the URL prefix every page and asset is served under.
+//
+// It is a const rather than a field read off Site because Explainable needs it to build a term's
+// URL, and Site's own literal references Explainable. Go reads that as an initialization cycle, so
+// the prefix has to exist independently of the value that carries it.
+const PathPrefix = "/agni"
+
 // Site is the s3gen configuration for the Agni documentation site.
 var Site = &s3.Site{
 	OutputDir:   "./dist",
@@ -119,7 +146,7 @@ var Site = &s3.Site{
 
 	// URL path prefix. The GitHub Pages site is served at
 	// https://panyam.github.io/agni/, so pages live under /agni.
-	PathPrefix: "/agni",
+	PathPrefix: PathPrefix,
 
 	TemplateFolders: []string{
 		"./templates",
@@ -142,6 +169,8 @@ var Site = &s3.Site{
 		"includeFileText": IncludeFileText,
 		"includeCard":     IncludeCard,
 		"agniRun":         AgniRun,
+		"explainable":     Explainable,
+		"explainableCap":  ExplainableCap,
 
 		// String/content helpers the templates use. Newer s3gen provides
 		// these via its default func map; the pinned version does not, so we

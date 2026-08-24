@@ -416,11 +416,23 @@ func (p Profile) signalMissingRule() *check.Rule {
 		// so a prefix-named interface anchors only on its own nets — not a foreign same-suffix serdes.
 		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("a")))},
 			netMatch(query.V("a"), *anchorSig)...)
+		scope := append(append([]query.Literal{}, body...), query.Pos(query.Rel("in_use", query.V("iu"))))
+		scope = append(scope, guard...)
 		body = append(body,
 			query.Pos(query.Rel("in_use", query.V("iu"))),
 			query.Neg(query.Rel("has_signal", query.Str(s.Name))))
 		body = append(body, guard...)
 		rules = append(rules, query.Def(query.Rel("missing", query.V("a"), query.Str(s.Name)), body...))
+		// The considered set: the (anchor net, required signal) pairs this rule judged, which is the same
+		// body with the has_signal test dropped and the guard kept.
+		//
+		// THIS PAIR IS WHY THE DOMAIN IS DECLARED AND NOT DERIVED. The body carries TWO negated
+		// literals: `not has_signal(S)` is the condition, and the host guard `not any_host("y")` is
+		// part of the scope, since a design that declares a host is covered by the precise path and
+		// was never in this rule's domain at all. "The body minus its negation" cannot tell them
+		// apart, and dropping the guard would report every host-annotated design as considered here
+		// and pass it twice.
+		rules = append(rules, query.Def(query.Rel("sig_scope", query.V("a"), query.Str(s.Name)), scope...))
 	}
 	if n == 0 {
 		return nil
@@ -428,8 +440,17 @@ func (p Profile) signalMissingRule() *check.Rule {
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("missing", query.V("a"), query.V("sig")))},
 		query.V("a"), query.V("sig"))
-	return query.RuleFromQuery(p.missingFindingQuery("-signal-missing", q, check.KindNet, "a",
-		fmt.Sprintf("%s interface (anchored at net {a}) is missing required signal {sig}", p.Name)))
+	domain := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("sig_scope", query.V("a"), query.V("sig")))},
+		query.V("a"), query.V("sig"))
+	fq := p.missingFindingQuery("-signal-missing", q, check.KindNet, "a",
+		fmt.Sprintf("%s interface (anchored at net {a}) is missing required signal {sig}", p.Name))
+	fq.TupleVars = []query.TupleVar{{Var: "sig", Kind: check.KindSignal}}
+	fq.Domain = &query.Domain{
+		Query:   mustBindHeadFirst(domain),
+		Witness: fmt.Sprintf("%s interface (anchored at net {a}) carries required signal {sig}", p.Name),
+	}
+	return query.RuleFromQuery(fq)
 }
 
 // hostIncompleteRule (host path, WS3-042) anchors completeness on a component that DECLARES the
@@ -452,13 +473,27 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 			query.Def(query.Rel(present, query.V("h")), presentBody...),
 			query.Def(query.Rel("missing", query.V("h"), query.Str(s.Name)),
 				query.Pos(query.Rel("host", query.V("h"))),
-				query.Neg(query.Rel(present, query.V("h")))))
+				query.Neg(query.Rel(present, query.V("h")))),
+			// The considered set: every (declared host, required signal) pair. The host path needs no
+			// in_use gate, because a component that declares the interface IS the evidence the convention
+			// path has to infer, so the scope is the host relation crossed with the signal list.
+			query.Def(query.Rel("host_scope", query.V("h"), query.Str(s.Name)),
+				query.Pos(query.Rel("host", query.V("h")))))
 	}
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("missing", query.V("h"), query.V("sig")))},
 		query.V("h"), query.V("sig"))
-	return query.RuleFromQuery(p.missingFindingQuery("-host-incomplete", q, check.KindComponent, "h",
-		fmt.Sprintf("%s host {h} declares the interface but is missing required signal {sig}", p.Name)))
+	domain := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("host_scope", query.V("h"), query.V("sig")))},
+		query.V("h"), query.V("sig"))
+	fq := p.missingFindingQuery("-host-incomplete", q, check.KindComponent, "h",
+		fmt.Sprintf("%s host {h} declares the interface but is missing required signal {sig}", p.Name))
+	fq.TupleVars = []query.TupleVar{{Var: "sig", Kind: check.KindSignal}}
+	fq.Domain = &query.Domain{
+		Query:   mustBindHeadFirst(domain),
+		Witness: fmt.Sprintf("%s host {h} is wired to required signal {sig}", p.Name),
+	}
+	return query.RuleFromQuery(fq)
 }
 
 func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, subjectVar, msg string) query.FindingQuery {
@@ -468,6 +503,7 @@ func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, sub
 			Severity: "error",
 			Summary:  fmt.Sprintf("A required %s signal is absent.", p.Name),
 			Impact:   fmt.Sprintf("An %s bus that has some of its signals but not all is a wiring omission: the interface will not work, and it reads at bring-up as a dead peripheral rather than a capture slip.", p.Name),
+			Remedy:   requirementRemedy("signal-missing"),
 			Tags:     p.tags(),
 			Detail:   ruleDoc("signal-missing"),
 		},
@@ -526,15 +562,24 @@ func (p Profile) pullupRule() *check.Rule {
 		query.Def(query.Rel("unpulled", query.V("n")),
 			query.Pos(query.Rel("needs_pullup", query.V("n"))),
 			query.Pos(query.Rel("in_use", query.V("iu"))),
-			query.Neg(query.Rel("pulled", query.V("n")))))
+			query.Neg(query.Rel("pulled", query.V("n")))),
+		// The considered set: every signal net the profile declared as needing a pull-up, on a bus in
+		// use. `unpulled` minus its negated clause, so a net absent from the findings but present here
+		// is one that reached a rail.
+		query.Def(query.Rel("pullup_scope", query.V("n")),
+			query.Pos(query.Rel("needs_pullup", query.V("n"))),
+			query.Pos(query.Rel("in_use", query.V("iu")))))
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("unpulled", query.V("n")))}, query.V("n"))
+	pullupDomain := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("pullup_scope", query.V("n")))}, query.V("n"))
 	return query.RuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-missing-pullup",
 			Severity: "warning",
 			Summary:  fmt.Sprintf("A %s signal that needs a pull-up reaches no rail.", p.Name),
 			Impact:   "An open-drain or chip-select line with no pull-up floats to an undefined level between drives, so the device can select or clock spuriously at power-up.",
+			Remedy:   requirementRemedy("missing-pullup"),
 			Tags:     p.tags(),
 			Detail:   ruleDoc("missing-pullup"),
 		},
@@ -542,6 +587,10 @@ func (p Profile) pullupRule() *check.Rule {
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} needs a pull-up but reaches no rail", p.Name),
+		Domain: &query.Domain{
+			Query:   mustBindHeadFirst(pullupDomain),
+			Witness: fmt.Sprintf("%s signal net {n} needs a pull-up and reaches a rail", p.Name),
+		},
 	})
 }
 
@@ -558,15 +607,26 @@ func (p Profile) danglingRule() *check.Rule {
 		query.Pos(query.Rel("sig_net", query.V("n"))),
 		query.Pos(query.Rel("in_use", query.V("iu"))),
 		query.Pos(query.Rel("net.pin_count", query.V("n"), query.V("c"))),
-		query.Cmp(query.V("c"), "<", query.Num(2))))
+		query.Cmp(query.V("c"), "<", query.Num(2))),
+		// The considered set: every signal net of this profile that EXISTS on a bus in use, whatever
+		// its pin count. This is the requirement whose domain could not have been derived from the
+		// goal. `dangling` ends in a comparison rather than a negated literal, so "the body minus its
+		// negation" is the body itself, and the coverage claim would have been "the rule considered
+		// exactly the nets it faulted".
+		query.Def(query.Rel("dangling_scope", query.V("n")),
+			query.Pos(query.Rel("sig_net", query.V("n"))),
+			query.Pos(query.Rel("in_use", query.V("iu")))))
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("dangling", query.V("n")))}, query.V("n"))
+	danglingDomain := query.Build(rules,
+		[]query.Literal{query.Pos(query.Rel("dangling_scope", query.V("n")))}, query.V("n"))
 	return query.RuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-signal-dangling",
 			Severity: "warning",
 			Summary:  fmt.Sprintf("A %s signal net has fewer than two connections.", p.Name),
 			Impact:   "A signal that is named but wired to only one pin is a half-made connection: the net exists, so presence checks pass, but the far end of the bus is not actually reached.",
+			Remedy:   requirementRemedy("signal-dangling"),
 			Tags:     p.tags(),
 			Detail:   ruleDoc("signal-dangling"),
 		},
@@ -574,6 +634,10 @@ func (p Profile) danglingRule() *check.Rule {
 		Kind:       check.KindNet,
 		SubjectVar: "n",
 		Message:    fmt.Sprintf("%s signal net {n} has fewer than 2 connections (named but not wired through)", p.Name),
+		Domain: &query.Domain{
+			Query:   mustBindHeadFirst(danglingDomain),
+			Witness: fmt.Sprintf("%s signal net {n} is wired to at least two pins", p.Name),
+		},
 	})
 }
 

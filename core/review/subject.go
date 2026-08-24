@@ -35,10 +35,10 @@ type Subject struct {
 // matches reports whether a finding is about this subject. Kind must agree; a Subject with no Pin is
 // deliberately broad (see the type comment).
 func (s Subject) matches(f check.Finding) bool {
-	if !strings.EqualFold(f.Kind, s.Kind) || !strings.EqualFold(f.Subject, s.Subject) {
+	if !strings.EqualFold(f.Subject.Kind, s.Kind) || !strings.EqualFold(f.Subject.Ref, s.Subject) {
 		return false
 	}
-	return s.Pin == "" || strings.EqualFold(f.Pin, s.Pin)
+	return s.Pin == "" || strings.EqualFold(f.Subject.Pin, s.Pin)
 }
 
 // EntityView is what one report says about one entity: the items that examined it and what became of
@@ -161,7 +161,7 @@ func SubjectsOf(r Report) []Subject {
 	for _, ar := range r.Areas {
 		for _, it := range ar.Items {
 			for _, f := range it.Findings {
-				s := Subject{Kind: f.Kind, Subject: f.Subject, Pin: f.Pin}
+				s := Subject{Kind: f.Subject.Kind, Subject: f.Subject.Ref, Pin: f.Subject.Pin}
 				if seen[s] {
 					continue
 				}

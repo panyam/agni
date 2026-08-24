@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/artifact"
@@ -129,7 +130,7 @@ func (l *localLoader) Manifest(_ context.Context, uri artifact.URI) (review.Mani
 // --conventions at the edge and sends the value, so nothing in the CLI calls this; it exists because
 // localLoader is the no-containment sibling of osLoader behind the same interfaces, and a loader that
 // satisfied all of them but one would make the two impossible to swap.
-func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (naming.Config, error) {
+func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
 	return naming.Load(localPath(uri))
 }
 

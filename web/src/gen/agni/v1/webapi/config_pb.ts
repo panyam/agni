@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { NamingConvention } from "../config/naming_pb";
+import { file_agni_v1_config_naming } from "../config/naming_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIuABCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEud2ViYXBpLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkiewoQTmFtaW5nQ29udmVudGlvbhIMCgRuYW1lGAEgASgJEi4KB2xleGljb24YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5OYW1pbmdMZXhpY29uEikKBXJ1bGVzGAMgAygLMhouYWduaS52MS53ZWJhcGkuTmFtaW5nUnVsZSLVAgoNTmFtaW5nTGV4aWNvbhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLndlYmFwaS5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxIxCgpzdXBwbHlfcGluGAQgASgLMh0uYWduaS52MS53ZWJhcGkuVm9jYWJQYXR0ZXJucxI3CgVjbGFzcxgFIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpLCgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLmFnbmkudjEud2ViYXBpLlZvY2FiUGF0dGVybnM6AjgBIjIKDVZvY2FiUGF0dGVybnMSEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCCJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM");
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIuABCg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFwoPY29udmVudGlvbnNfdXJpGAIgASgJEhQKDHByb2ZpbGVfdXJpcxgDIAMoCRISCgpwYXJhbV91cmlzGAQgAygJEhUKDWNoZWNrbGlzdF91cmkYBSABKAkSEgoKaW50ZW50X3VyaRgGIAEoCRIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAlCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_config_naming]);
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -47,7 +49,7 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
    * so they arrive as refs the injected port loads — the same reason a design is a ref rather than an
    * inlined megabyte.
    *
-   * @generated from field: agni.v1.webapi.NamingConvention conventions = 1;
+   * @generated from field: agni.v1.config.NamingConvention conventions = 1;
    */
   conventions?: NamingConvention | undefined;
 
@@ -144,164 +146,4 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
  */
 export const AnalysisConfigSchema: GenMessage<AnalysisConfig> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_config, 0);
-
-/**
- * NamingConvention is an operator's naming policy, the wire form of core/check/naming.Config. It
- * carries two halves that do different jobs and land in different places.
- *
- * `rules` become catalog rules, namespaced <name>/<rule name>. `lexicon` extends the vocabularies that
- * decide which net names are power rails, grounds, and feedback nodes, and which pin names are
- * supplies. The lexicon is applied to the design READ, not to the catalog, because those roles are
- * resolved once at ingestion — which is also why it can be per-request at all: the vocabulary travels
- * with the read as a value (WS3-106) rather than being installed in a process global a concurrent
- * request would see.
- *
- * @generated from message agni.v1.webapi.NamingConvention
- */
-export type NamingConvention = Message<"agni.v1.webapi.NamingConvention"> & {
-  /**
-   * the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
-   *
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * @generated from field: agni.v1.webapi.NamingLexicon lexicon = 2;
-   */
-  lexicon?: NamingLexicon | undefined;
-
-  /**
-   * @generated from field: repeated agni.v1.webapi.NamingRule rules = 3;
-   */
-  rules: NamingRule[];
-};
-
-/**
- * Describes the message agni.v1.webapi.NamingConvention.
- * Use `create(NamingConventionSchema)` to create a new message.
- */
-export const NamingConventionSchema: GenMessage<NamingConvention> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_config, 1);
-
-/**
- * NamingLexicon overrides the engine's built-in role vocabularies. Each dimension is a DISTINCT name
- * space: a supply PIN is named VDD or VIN, while a rail NET is named 3V3 or +5V, so a pattern that
- * belongs in one is wrong in the other.
- *
- * @generated from message agni.v1.webapi.NamingLexicon
- */
-export type NamingLexicon = Message<"agni.v1.webapi.NamingLexicon"> & {
-  /**
-   * @generated from field: agni.v1.webapi.VocabPatterns rail = 1;
-   */
-  rail?: VocabPatterns | undefined;
-
-  /**
-   * @generated from field: agni.v1.webapi.VocabPatterns ground = 2;
-   */
-  ground?: VocabPatterns | undefined;
-
-  /**
-   * @generated from field: agni.v1.webapi.VocabPatterns feedback = 3;
-   */
-  feedback?: VocabPatterns | undefined;
-
-  /**
-   * @generated from field: agni.v1.webapi.VocabPatterns supply_pin = 4;
-   */
-  supplyPin?: VocabPatterns | undefined;
-
-  /**
-   * component-class name (e.g. "tvs") -> the patterns that mark it
-   *
-   * @generated from field: map<string, agni.v1.webapi.VocabPatterns> class = 5;
-   */
-  class: { [key: string]: VocabPatterns };
-};
-
-/**
- * Describes the message agni.v1.webapi.NamingLexicon.
- * Use `create(NamingLexiconSchema)` to create a new message.
- */
-export const NamingLexiconSchema: GenMessage<NamingLexicon> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_config, 2);
-
-/**
- * VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
- * leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
- * whole set — so a project normally teaches the engine additional names rather than discarding what it
- * already knows.
- *
- * @generated from message agni.v1.webapi.VocabPatterns
- */
-export type VocabPatterns = Message<"agni.v1.webapi.VocabPatterns"> & {
-  /**
-   * @generated from field: repeated string patterns = 1;
-   */
-  patterns: string[];
-
-  /**
-   * @generated from field: bool replace = 2;
-   */
-  replace: boolean;
-};
-
-/**
- * Describes the message agni.v1.webapi.VocabPatterns.
- * Use `create(VocabPatternsSchema)` to create a new message.
- */
-export const VocabPatternsSchema: GenMessage<VocabPatterns> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_config, 3);
-
-/**
- * NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
- * any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
- * they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
- * the reader's scoping rather than the author's spelling.
- *
- * @generated from message agni.v1.webapi.NamingRule
- */
-export type NamingRule = Message<"agni.v1.webapi.NamingRule"> & {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * error | warning | info; empty means warning
-   *
-   * @generated from field: string severity = 2;
-   */
-  severity: string;
-
-  /**
-   * one line of intent, shown in the rule prose
-   *
-   * @generated from field: string why = 3;
-   */
-  why: string;
-
-  /**
-   * @generated from field: repeated string allow = 4;
-   */
-  allow: string[];
-
-  /**
-   * @generated from field: repeated string exempt = 5;
-   */
-  exempt: string[];
-
-  /**
-   * @generated from field: bool match_full = 6;
-   */
-  matchFull: boolean;
-};
-
-/**
- * Describes the message agni.v1.webapi.NamingRule.
- * Use `create(NamingRuleSchema)` to create a new message.
- */
-export const NamingRuleSchema: GenMessage<NamingRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_config, 4);
 

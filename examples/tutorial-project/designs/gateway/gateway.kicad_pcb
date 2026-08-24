@@ -2,7 +2,7 @@
 	(version 20240108)
 	(generator "agni-tutorial")
 	(title_block
-		(title "Gateway ECU (tutorial board)"))
+		(title "Sample Board"))
 	(layers
 		(0 "F.Cu" signal)
 		(2 "B.Cu" signal)

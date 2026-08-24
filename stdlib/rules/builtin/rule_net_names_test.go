@@ -21,8 +21,8 @@ func anet(name string, aliases ...string) *ir.Net {
 func fireSubjects(t *testing.T, r *check.Rule, nets ...*ir.Net) map[string]string {
 	t.Helper()
 	got := map[string]string{}
-	for _, f := range r.Eval(check.NewModel(&ir.Design{Nets: nets})) {
-		got[f.Subject] = f.Message
+	for _, f := range r.Findings(check.NewModel(&ir.Design{Nets: nets})) {
+		got[check.EntityRef(f.Subject)] = f.Message
 	}
 	return got
 }
@@ -30,7 +30,7 @@ func fireSubjects(t *testing.T, r *check.Rule, nets ...*ir.Net) map[string]strin
 // TestDuplicateNetName: two nets stating one name both fire; stub and empty names never
 // collide; a unique name is quiet.
 func TestDuplicateNetName(t *testing.T) {
-	fs := duplicateNetName.Eval(check.NewModel(&ir.Design{Nets: []*ir.Net{
+	fs := duplicateNetName.Findings(check.NewModel(&ir.Design{Nets: []*ir.Net{
 		tnet("VCC", "U1.1"), tnet("VCC", "U2.1"), // same explicit name, two nets -> both fire
 		tnet("SIG", "U3.1"),                      // unique -> silent
 		tnet("N$1", "U4.1"), tnet("N$1", "U5.1"), // stub names are per-net inventions -> silent
@@ -40,7 +40,7 @@ func TestDuplicateNetName(t *testing.T) {
 		t.Fatalf("fired %d times (%+v), want once per claiming VCC net", len(fs), fs)
 	}
 	for _, f := range fs {
-		if f.Subject != "VCC" || !strings.Contains(f.Message, "2 electrically distinct") {
+		if check.EntityRef(f.Subject) != "VCC" || !strings.Contains(f.Message, "2 electrically distinct") {
 			t.Errorf("finding %q: %q", f.Subject, f.Message)
 		}
 	}

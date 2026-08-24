@@ -66,10 +66,35 @@ func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 	}
 	for _, f := range formats {
 		got := runCLI(t, resultsCmd(), "--format", f, doc)
-		if got != live[f] {
-			t.Errorf("results --format %s differs from check --format %s\n got:\n%s\nwant:\n%s", f, f, got, live[f])
+		want := live[f]
+		if f == "text" {
+			// THE ONE THING A DOCUMENT CANNOT REPLAY. The live text output closes with what the run
+			// considered, and CheckResults has no field for a considered set (OUT_OF_SCOPE.md), so a
+			// replay states no coverage rather than inventing one from the findings it does carry.
+			// Everything else must still come back byte for byte, which is what the strip below
+			// keeps this test honest about: it removes the coverage lines and nothing else.
+			want = stripCoverage(want)
+			if want == live[f] {
+				t.Fatal("live text output no longer states coverage; this exemption is now hiding a real diff")
+			}
+		}
+		if got != want {
+			t.Errorf("results --format %s differs from check --format %s\n got:\n%s\nwant:\n%s", f, f, got, want)
 		}
 	}
+}
+
+// stripCoverage removes the run-coverage lines the live command adds and a document cannot carry.
+func stripCoverage(s string) string {
+	keep := []string{}
+	for _, ln := range strings.Split(s, "\n") {
+		if strings.Contains(ln, "subject(s) considered by") ||
+			strings.Contains(ln, "reported violations without stating what they examined") {
+			continue
+		}
+		keep = append(keep, ln)
+	}
+	return strings.Join(keep, "\n")
 }
 
 // TestResultsDocumentRecordsTheRun checks the fields that make a document interpretable later: what

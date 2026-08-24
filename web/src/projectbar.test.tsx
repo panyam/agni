@@ -15,7 +15,7 @@ function mount(over: Partial<ProjectState> = {}) {
 
 const inProject: Partial<ProjectState> = {
   project: "projects/gateway",
-  title: "Gateway ECU",
+  title: "Sample Board",
   design: "projects/gateway/designs/gateway",
   entry: "mount://m/d/gateway.edn",
 };
@@ -23,7 +23,7 @@ const inProject: Partial<ProjectState> = {
 describe("projectBar", () => {
   it("names the project whose config produced the answers", () => {
     const { el } = mount(inProject);
-    expect(el.querySelector(".projbar-name")?.textContent).toBe("Gateway ECU");
+    expect(el.querySelector(".projbar-name")?.textContent).toBe("Sample Board");
   });
 
   // Blank reads as "still resolving", and belonging to no project is an ordinary answer rather than a

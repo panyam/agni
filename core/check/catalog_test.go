@@ -88,7 +88,7 @@ func testRule(name string) *Rule {
 	return &Rule{
 		Name: name, Severity: "info", Summary: "t", Reads: []string{"net.names"},
 		Tags: map[string]string{KeyCategory: CategoryNaming},
-		Eval: func(Model) []Finding { return nil },
+		Eval: FailuresOnly(func(Model) []Finding { return nil }),
 	}
 }
 

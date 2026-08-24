@@ -75,6 +75,21 @@ func registerBuiltinSpecFuncs() {
 			return m.IsGroundName(args[0].(string))
 		},
 	})
+	RegisterSpecFunc("pullup_reaches_rail", &SpecFunc{
+		// The i2c-pull-up walk: from the in-scope bus, does a resistor path of at most
+		// PullUpReachHops crossings arrive at a rail without going through ground. Wraps the
+		// helper so the Go Eval and the spec share one traversal.
+		//
+		// It is an FFI rather than a composition of collections because the spec language can
+		// reach a net's connections but not a connection's component's OTHER nets, so the
+		// second hop has nowhere to come from. See agni issue 374 for the surface that would
+		// make this expressible.
+		Reads:      []string{"component.class", "net.names", "on_net"},
+		Primitives: []string{"exists", "reach", "traverse"},
+		Fn: func(m Model, ents map[string]any, _ []any) any {
+			return PullUpReachesRail(m, ents["net"].(*ir.Net))
+		},
+	})
 	RegisterSpecFunc("rail_name", &SpecFunc{
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},

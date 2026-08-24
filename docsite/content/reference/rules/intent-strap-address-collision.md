@@ -3,6 +3,10 @@ title: "intent/strap-address-collision"
 description: "two devices on one bus strap to the same address"
 ---
 
+### Remedy
+
+Re-strap one of the two devices to a free address, taking the address map from each part's datasheet rather than from the schematic.
+
 ### What it checks
 
 Two declared strap groups on the **same bus** that encode the **same number**. Two devices answering

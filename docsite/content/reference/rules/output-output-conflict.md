@@ -3,6 +3,10 @@ title: "output-output-conflict"
 description: "Two or more driving pins (outputs / power sources) share a net and fight each other."
 ---
 
+### Remedy
+
+Remove all but one driver from the net, or make the drivers arbitrate: series resistors, open-drain outputs sharing one pull-up, or a buffer whose enables are never asserted together.
+
 ### What it means
 
 A net with two or more pins that actively drive it, whether signal outputs or power

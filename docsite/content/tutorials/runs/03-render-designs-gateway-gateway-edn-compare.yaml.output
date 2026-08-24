@@ -1,4 +1,4 @@
-#agni-run c7845ba625ef80cc
+#agni-run deb6160bece64c1f
 layout      nodes  nets  segments  crossings  bends  edge-length  stress
 force       19     15    56        43         0      9052         0.346
 grid        19     15    56        133        0      7798         0.486

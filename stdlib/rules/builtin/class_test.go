@@ -66,7 +66,7 @@ func TestComponentClass(t *testing.T) {
 		// whole library is named "Oscillator"), so a token-only clock part stays at the clock family.
 		{&ir.Component{RefDes: "X3", Attributes: map[string]string{"Description": "50MHz Oscillator"}}, check.ClassClock},
 		// WS10-015: STRUCTURE is the reliable keyword-time oscillator signal — a Y-prefix part whose part
-		// type declares a Vcc supply pin is active (the industrial-ECU lever, where the reader surfaces the pins).
+		// type declares a Vcc supply pin is active (the industrial-board lever, where the reader surfaces the pins).
 		{&ir.Component{RefDes: "Y9", Sections: sec("OSC_4PIN")}, check.ClassOscillator},
 		// a supply pin on a NON-clock part (an MCU) must NOT become an oscillator (structure is scoped).
 		{&ir.Component{RefDes: "U7", Sections: sec("OSC_4PIN")}, check.ClassIC},
@@ -180,7 +180,7 @@ func TestDecouplingPresent(t *testing.T) {
 	fired := map[string]bool{}
 	for _, f := range check.RunDesign(d) {
 		if f.Rule == "decoupling-present" {
-			fired[f.Subject] = true
+			fired[check.EntityRef(f.Subject)] = true
 		}
 	}
 	if !fired["VCC1"] {
@@ -204,6 +204,10 @@ func TestI2CPullUpSeesNonRDigitResistors(t *testing.T) {
 		},
 		Nets: []*ir.Net{
 			tnet("SDA", "U1.5", "RN1.1"),
+			// RN1's rail-side leg. The point of this test is that RN1 is recognised as a
+			// resistor despite the non-R-digit ref-des, so it has to be a real pull-up (two ends,
+			// one on a rail) or it is testing the old membership assumption instead.
+			tnet("VCC", "RN1.2"),
 		},
 	}
 	for _, f := range check.RunDesign(d) {

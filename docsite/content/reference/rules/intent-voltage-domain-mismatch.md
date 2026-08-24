@@ -3,6 +3,10 @@ title: "intent/voltage-domain-mismatch"
 description: "A declared voltage domain's rail is absent or named for a different nominal voltage."
 ---
 
+### Remedy
+
+Add the declared rail, or reconcile its name with the voltage the domain declares. A rail named for one voltage and declared at another will mislead every reader after you.
+
 ### What it means
 
 The design intent declares voltage domains: named rails pinned to a nominal voltage ("these rails are

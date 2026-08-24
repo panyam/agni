@@ -3,8 +3,9 @@ title: "Interface profiles"
 description: "Declare an interface's signals and what must be true of them, and check enforces that reading wherever the interface appears."
 ---
 
-A bus has a shape. CAN is a CANH/CANL pair with a termination resistor across it, driven by a
-transceiver with TXD and RXD. I2C is SCL and SDA, both pulled up. An interface profile writes
+A bus has a shape. CAN is a CANH/CANL {{ explainable "differential-pair" "pair" }} with a
+{{ explainable "termination" }} resistor across it, driven by a {{ explainable "transceiver" }} with
+TXD and RXD. I2C is SCL and SDA, both pulled up. An interface profile writes
 that shape down as YAML, and the engine compiles it into check rules. Agni ships profiles for
 SPI-NOR, eMMC, CAN, LIN, A2B, PCIe and SGMII. Your own interfaces, and your own reading of a
 standard one, go in a directory you hand to `--profile-path`. No Go.
@@ -12,7 +13,7 @@ standard one, go in a directory you hand to `--profile-path`. No Go.
 ## Write a profile
 
 I2C is not one of the built-ins, which makes it a short first example. Two signals, both
-needing a pull-up:
+needing a {{ explainable "pull-up" }}:
 
 ```yaml
 # profiles/i2c.yaml

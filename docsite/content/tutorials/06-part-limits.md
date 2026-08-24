@@ -102,7 +102,7 @@ decidable at all. None of them is a pass.
 
 `agni intake <design> --params params` lists every MPN on the board with no seeded spec. That list
 is your work queue, and it shrinks as you seed parts. Start with the parts whose limits you would
-actually worry about, which is usually regulators, transceivers, and anything near a rail boundary,
+actually worry about, which is usually regulators, {{ explainable "transceiver" "transceivers" }}, and anything near a rail boundary,
 rather than working alphabetically.
 
 ## Next

@@ -16,7 +16,7 @@ function state(over: Partial<ProjectState> = {}): ProjectState {
 
 describe("projectLabel", () => {
   it("names the project whose config produced the answers", () => {
-    expect(projectLabel(state({ project: "projects/gateway", title: "Gateway ECU" }))).toBe("Gateway ECU");
+    expect(projectLabel(state({ project: "projects/gateway", title: "Sample Board" }))).toBe("Sample Board");
   });
 
   it("falls back to the resource name when the project is untitled", () => {

@@ -9,6 +9,7 @@ function rule(name: string, category: string, available = true): RuleItem {
     severity: "info",
     summary: `${name} one-liner`,
     impact: `${name} goes wrong`,
+    remedy: `${name} is fixed by doing this`,
     detail: `## ${name}\n\nLong-form **markdown** for ${name}.`,
     reads: [],
     tags: { category, distribution: "open" },
@@ -23,15 +24,15 @@ const catalog: RuleItem[] = [
   rule("cap-voltage", "datasheet", false),
 ];
 
-const state = (selected: string[] = []): RulesState => ({ rules: catalog, selected, fired: {} });
+const state = (selected: string[] = [], rules: RuleItem[] = catalog): RulesState => ({ rules, selected, fired: {} });
 
-function mountPanel() {
+function mountPanel(rules: RuleItem[] = catalog) {
   const onSelectionChange = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
   const panel = rulesPanelIsland(el, null, { onSelectionChange });
   panel.island.activate();
-  panel.view.setState(state());
+  panel.view.setState(state([], rules));
   return { el, panel, onSelectionChange };
 }
 
@@ -151,8 +152,24 @@ describe("rulespanel rule prose (WS9-020)", () => {
     expect(detail.querySelector("h2")?.textContent).toBe("single-pin-net");
     expect(detail.querySelector("strong")?.textContent).toBe("markdown");
     expect(detail.textContent).toContain("single-pin-net goes wrong");
+    // The remedy renders in its own element rather than folded into the impact paragraph, because a
+    // reader scanning for what to DO should not have to read the consequence first.
+    expect(q<HTMLElement>(detail, ".rule-remedy").textContent).toBe("single-pin-net is fixed by doing this");
 
     toggle.click();
     expect(el.querySelector(".rule-detail")).toBeNull();
+  });
+
+  // Vacuous on its own: a panel that never rendered a remedy at all would also pass it. The test
+  // above is its positive control, pinning that the element DOES appear when the prose is there.
+  it("omits the remedy element for a rule that states none", () => {
+    const noRemedy = { ...rule("single-pin-net", "connectivity"), remedy: "" };
+    const { el } = mountPanel([noRemedy]);
+    const toggle = q<HTMLButtonElement>(el, ".rule-detail-toggle");
+    toggle.click();
+
+    const detail = q<HTMLElement>(el, ".rule-detail");
+    expect(detail.textContent).toContain("single-pin-net goes wrong");
+    expect(detail.querySelector(".rule-remedy")).toBeNull();
   });
 });

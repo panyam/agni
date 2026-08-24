@@ -3,6 +3,10 @@ title: "unconnected-pin"
 description: "A pin lands on no net and is not marked no-connect."
 ---
 
+### Remedy
+
+Connect the pin to its intended net, or mark it no-connect where the datasheet says the pin may be left open.
+
 ### What it means
 
 A pin the part type declares, on a placed component, that appears in no

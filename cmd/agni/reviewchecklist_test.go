@@ -65,7 +65,7 @@ func TestReviewUsesProjectChecklist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("review: %v\n%s", err, errOut)
 	}
-	if !strings.Contains(out, "Mini ECU review") {
+	if !strings.Contains(out, "Mini board review") {
 		t.Errorf("the project's manifest should have run, got:\n%s", out)
 	}
 	// Which checklist scored a run is not recoverable from the outcomes, so a checklist nobody typed
@@ -84,7 +84,7 @@ func TestReviewReadsTheDeclaredChecklistNotTheDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("review: %v", err)
 	}
-	if !strings.Contains(out, "Mini ECU review") {
+	if !strings.Contains(out, "Mini board review") {
 		t.Errorf("the declared checklist should have run, got:\n%s", out)
 	}
 }

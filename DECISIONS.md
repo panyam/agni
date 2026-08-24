@@ -498,6 +498,21 @@ than documented.
 **Reopen if** a tier appears whose wrongness is loud rather than silent. That is the property that
 decides, not how convenient a global would be.
 
+**Reopened once, for `native_tools`** (serve's `--enable-native`). It passes the test on both halves:
+it says which golden renderers EXIST rather than what a design is checked against, and naming a tool
+that is not installed fails at the point of use with the tool's own name in the error. Nothing reads
+it but `serve`, which applies it where it consumes the value. The pre-run hook still names the file,
+the same as `web_dir` does: that note reports what the file SUPPLIED, not what this command went on
+to use, which is why `agni check` mentions both keys and uses neither.
+
+That admission has a cost worth writing down, because it applies to every future key. Unknown keys
+are a hard ERROR here, which is what makes reaching for `conventions:` a refusal rather than a silent
+global. The same strictness means ONE machine-wide file read by several checkouts, a released binary
+and the container image can only carry a key the OLDEST of them knows: adding `native_tools` to a
+shared file makes every older binary fail on every command, not just on serve. A new key is therefore
+a coordinated upgrade, not an additive change, and that is the price of the boundary rather than a
+defect in it.
+
 ---
 
 ## `check` stays the primitive; it does not become a rendering of a review run
@@ -774,6 +789,182 @@ built on the client.
 **Reopen if** the corpus grows enough that a 1.6MB index stops sharding usefully, or if typo
 tolerance turns out to matter more than the hosted-dependency cost.
 
+## A verdict rides the URL as a query param, not as a path resource
+
+`?verdict=<id>` on the viewer's design page, rather than `/designs/<mount>/<path>/checks/<id>`.
+
+The path form was argued for first, on the grounds that a verdict has its own identity and content
+and is therefore a resource rather than a fifth view knob beside `sheet`, `mode` and `layout`. That
+conflated two different things. **Which verdict the open viewer is looking at is SELECTION STATE**, the
+same category as which sheet is shown, and a query param is the right home for it.
+
+A server-resolved `GET /checks/<id>` is a genuinely different feature: it returns one verdict the
+server recomputed, needs no viewer, and is the thing the resource argument applies to. It is not
+blocked by this decision, and the two do not compete.
+
+What blocks the path form is arity rather than taste. `/designs/<mount>/<path...>` has a
+variable-length path, so a two-segment verb suffix cannot be distinguished from a folder without
+leaning on the trailing slash, which proxies and browsers normalise. Fixed-arity design identity
+removes the ambiguity by construction, and the ingredients exist (`Design.name` is already an
+identity separate from `Design.uri`), but adopting it is a URL-space migration rather than a flag.
+
+**Reopen if** design addressing moves to a fixed-arity identity for other reasons, at which point the
+path form becomes cheap and `?verdict=` can alias to it.
+
+
+---
+
+## A rule STATES its considered set; the engine does not infer it
+
+`check.Rule` carries a `StatesConsideredSet bool` beside an `Eval` that returns `[]Verdict`, and both
+the flag and the redundancy look removable. Three ways to remove them were considered and none works.
+
+**Infer it from the verdicts.** An unconverted rule returns a list of `Fail` verdicts, which is
+structurally identical to a considered set whose every subject happened to fail. Nothing in the data
+separates them, so inferring would present ~50 rules' failure lists as coverage. That is the
+false-assurance shape the whole verdict layer exists to remove, and it would be most convincing in a
+report, which is exactly where it would do most damage.
+
+**Carry it in the return value: nil means "declined", empty means "considered nothing".** Go does
+distinguish them, so this is representable. It is still wrong, for two reasons found by looking. The
+distinction is produced BY ACCIDENT: `var out []Verdict` with no appends returns nil, so
+`single-pin-net` announces "I decline to state a considered set" on any design containing no nets. And
+it is a channel this codebase deliberately erases elsewhere: `Spec.Eval` and `VerdictsToFindings` both
+force `[]Finding{}` rather than nil, with a comment recording the parity break that taught them to. A
+field set once at declaration cannot be produced by control flow inside a body; a returned slice can.
+
+**Have the engine work it out.** It cannot. A rule provided by an overlay, or by a future
+non-Go plugin, is opaque: it receives the `check.Model` and returns verdicts, and nothing about it can
+be decomposed. So the contract has to be a DECLARATION by the author, which is also why it fails in
+the safe direction: forgetting the flag under-reports a rule, and no one can set it and be believed
+while reporting only failures.
+
+`Spec.Scope` is not a counter-example. It lives on the spec, not the rule, precisely because the spec
+is declarative and the ENGINE enumerates `Over` on the rule's behalf, so the engine is the party that
+has to be told which elements are the rule's business. A Go rule needs no such field: it enumerates
+its own subjects and does not emit verdicts for things it is not about.
+
+All of this is migration-only. When the last rule converts, every rule sets the flag, the filter in
+`RunVerdicts` becomes a tautology, and the field and `FailuresOnly` delete themselves, leaving a
+single `Eval(Model) []Verdict`.
+
+---
+
+## A datalog rule's considered set is declared, not derived from its goal
+
+`query.RuleFromQuery` compiles a `FindingQuery` into a rule. Since agni issue 424 a `FindingQuery`
+may carry a `Domain`, a second goal whose rows are the subjects the rule examined, and the obvious
+question is why the bridge does not work that out for itself.
+
+It looks derivable, and for two of the six profile requirements it genuinely is. `unprotected(?n)`
+is `needs_esd(?n), in_use(?iu), not esd_ok(?n)`, so the domain is the body minus its negated literal.
+Generalising that breaks on three of the six, each differently.
+
+**`signal-dangling` has no negation at all.** Its body ends in a comparison, `net.pin_count(?n, ?c),
+?c < 2`, so "the body minus its negation" is the body, and the rule would report the subjects it
+faulted as the subjects it considered. That is the exact false-assurance shape one level down from
+the rule-level decision above.
+
+**`signal-missing` has two negated literals and only one is the test.** `not has_signal(S)` is what
+the rule checks; the host guard `not any_host("y")` is SCOPE, because a design that declares a host
+is covered by the precise host path and was never in the convention rule's domain. Nothing in the
+syntax distinguishes them, and dropping the guard would report every host-annotated design as
+considered here and pass it twice.
+
+**`crystal-load-caps` negates its exemption beside its test.** `not net.external(?net)` excuses a
+terminal that leaves the board, because its load capacitor is on somebody else's sheet. Sweeping the
+exemption into the domain reports that terminal as a PASS, claiming the rule confirmed a capacitor it
+never looked for. A refusal to judge is not a verdict.
+
+The same distinction applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
+domain, because that predicate asks whether the FORMAT can answer rather than whether the pin passes.
+
+So the split between test and scope is semantic, invisible to the syntax, and known only to the
+author. A derivation right four times in six OVERSTATES coverage on the other two, which is worse
+than stating none, and an author who supplies nothing gets the failures-only shape that claims
+nothing at all.
+
+**Reopen if** a goal-body annotation appears that marks a literal as scope rather than test. That
+would move the knowledge into the data instead of inferring it, which is a different proposal and a
+reasonable one.
+
+---
+
+## The check report is HTML, and its templates are not a feature
+
+`agni check --verdicts --format html` renders a report; there is no markdown form, and no way to
+supply your own template. Both were asked for and both were declined for reasons that still hold.
+
+**Markdown was the first proposal and HTML won on adoption, not features.** HTML is the shape
+engineers already read from the in-house checker, it collapses natively, and it survives being emailed
+or opened from a `file://` path. Markdown's one real advantage is being diffable across board
+revisions, and the CSV keeps that: it remains the machine substrate, and the report is a view over it
+rather than a replacement.
+
+**`html/template` is used for correctness, not tidiness.** Every subject and message in the page came
+out of a design file the engine did not author, so a net named with an angle bracket would inject into
+the report if this were string building.
+
+**Caller-supplied templates are a different question and the answer is "not yet".** The hard part of
+a template is not the layout, it is the CONTEXT, and publishing one freezes a data model before anyone
+knows what the report should look like. Getting the context wrong is worse than getting the layout
+wrong, because the context is the contract. The aggregation therefore lives in a tested Go model
+(`core/report`) with the layout as a template over it, which makes exposing templates later a small
+step rather than a redesign. Reopen this when there is a second consumer wanting a different shape,
+not before.
+
+---
+
+## A verdict's subject is a tuple; a finding's subject is one entity
+
+`Verdict.Subjects` is a list and `Finding.Subject` is not, and the asymmetry is deliberate rather than
+a stage of a migration.
+
+**Why a verdict needs a tuple.** Some rules ask about a RELATION, and a relation belongs to none of its
+entities alone. A clearance violation is a distance between two nets. A regulator over-driving a part
+it feeds is only pinned down by the regulator, the rail and the load together, because one source
+feeding one load over two supplied rails is two different answers. A strap group is a device and the N
+nets encoding its value. Naming fewer than all of them gives several answers one id, which was
+invisible while verdicts only projected down to findings and is wrong now that `core/report` links
+every row by `VerdictID`.
+
+The arity is not two, which is why the fix is a tuple rather than a pair. It was measured before it was
+built: one FET with its drain on `+60V` and its source on `+55V` produces two findings under one
+ref-des, and `stdlib/rules/intent/strapgroups.go` already carried a comment admitting it named
+`Nets[0]` as a stand-in with the rest "named in prose and reachable nowhere".
+
+**Why a finding must not have one.** The two fields answer different questions and only one of them is
+allowed to be incomplete. A verdict's tuple is IDENTITY: incompleteness is the bug. A finding's subject
+is an ACTION TARGET, the one entity a reader has to change, and an answer with three entities in it is
+not one they can act on — they would have to pick, and the rule's author knows which better than they
+do. Everything else the sentence names is already in `Context`, typed and ordered.
+
+Going N-ary on findings was considered and costs four things to buy one. It reshapes 44 hand-authored
+`.expect.yaml` sidecars, the one place a person writes findings by hand. It makes every by-kind axis
+ill-defined (`groupFindings(axis: "kind")`, `sortFindings`, the report's row sort) for a tuple mixing a
+component and a net. It forces `findingKey`'s collapse identity to canonicalise an order that is
+DIRECTIONAL for `pin-tracking`, where subject-minus-reference is the claim. And it removes the
+contract's one opinion, that an author must choose what to point at. What it buys is equal standing for
+every entity in a consumer that wants it, and `Context` already provides that: the cross-tool
+comparison in `core/results` joins on subject plus context for exactly that reason, which is a
+three-line change rather than a schema one.
+
+`TestFindingSubjectComesFromTheVerdictsTuple` holds the two together: the entity a reader is told to
+change must be one of the entities the rule looked at. Kind may differ, since a pin-scoped verdict
+legitimately carries a part-scoped finding.
+
+**The id is generated and never parsed.** `<rule>:(<kind>:<ref>,...)`, with the four characters the
+tuple syntax uses percent-escaped inside a ref. Nothing split it apart before either; the old
+"split on the first two colons" rule existed because there was no structured alternative, and now
+`subjects` carries the structure typed. That is what lets a ref keep its own colons
+(`symbol:Library:Symbol`) and its own commas (an endpoint's ref is literally `0,0`). The escape is not
+decoration: a separator is always followed by `<kind>:`, so an ordinary comma is safe, but a ref
+containing the whole sequence is not — unescaped, `("A,net:B")` and `("A", "B")` are one string.
+
+**Order belongs to the rule, never to the framework.** A framework that sorted every tuple would invert
+`pin-tracking`'s claim. A symmetric relation canonicalises inside the rule instead: `copper-clearance`
+orders its pair by name before building the verdict.
+
 ## A finding's context entities are not findings about themselves
 
 `Finding.context` names the entities a message mentions but is not about, so a crystal-load-caps
@@ -800,8 +991,8 @@ Proposed as a sibling to `rail-not-classified`, which only fires when a net's NA
 The gap looked real: a net feeding a power-input pin, carrying no rail role, whose name declares
 nothing, is invisible to every name-gated rail rule and to that tripwire.
 
-Measured on a real multi-thousand-component board before building it, and the numbers argued against
-it. 91 supply nets were unrecognised against 18 recognised, which looks like a strong case until you
+Measured on a real multi-thousand-component board before building it (August 2026, against the
+catalog of the day), and the numbers argued against it. 91 supply nets were unrecognised against 18 recognised, which looks like a strong case until you
 declare the project's conventions lexicon: rail recognition moves to 62 and `rail-not-classified`
 drops from 45 findings to **zero**. The existing tripwire was already saying the right thing, 45
 times, and the remedy was configuration rather than a new rule.

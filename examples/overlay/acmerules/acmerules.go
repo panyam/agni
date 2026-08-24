@@ -9,6 +9,7 @@
 package acmerules
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -37,18 +38,20 @@ var noExperimentalRefDes = &check.Rule{
 	Severity: "warning",
 	Summary:  "ACME house rule: an X-prefixed ref-des is an experimental part, not for production",
 	Impact:   "an experimental part reaches a production build; give it a real ref-des before release",
+	Remedy:   "give the part a production ref-des, or take it out of the design before release",
 	Reads:    []string{"component.ref_des"},
 	Tags:     map[string]string{check.KeyCategory: "house-style"},
-	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
+	// This rule states its full considered set: every component gets a verdict, so a reviewer can see
+	// which parts were cleared rather than only which ones failed.
+	StatesConsideredSet: true,
+	Eval: func(m check.Model) []check.Verdict {
+		var out []check.Verdict
 		for _, c := range m.Components() {
 			if strings.HasPrefix(c.RefDes, "X") {
-				out = append(out, check.Finding{
-					Kind:    check.KindComponent,
-					Subject: c.RefDes,
-					Message: "experimental (X-prefixed) part in a production design",
-				})
+				out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Fail, Finding: &check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: c.RefDes}, Message: "experimental (X-prefixed) part in a production design"}})
+				continue
 			}
+			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}, Outcome: check.Pass, Witness: &check.Witness{Statement: fmt.Sprintf("ref-des %q does not carry the experimental X prefix", c.RefDes)}})
 		}
 		return out
 	},

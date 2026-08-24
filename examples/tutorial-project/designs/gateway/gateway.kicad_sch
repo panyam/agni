@@ -3,7 +3,7 @@
 	(generator "agni-tutorial")
 	(paper "A4")
 	(title_block
-		(title "Gateway ECU (tutorial board)")
+		(title "Sample Board")
 		(rev "A"))
 	(lib_symbols)
 	(symbol (lib_id "gateway:CONN4") (at 25.4 25.4 0) (unit 1) (uuid "ij1")

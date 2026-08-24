@@ -71,11 +71,11 @@ func TestPinsModelSurface(t *testing.T) {
 func TestUnconnectedPin(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	got := map[string]bool{}
-	for _, f := range unconnectedPin.Eval(m) {
-		if f.Kind != check.KindPin {
-			t.Errorf("finding kind = %q, want %q", f.Kind, check.KindPin)
+	for _, f := range unconnectedPin.Findings(m) {
+		if f.Subject.Kind != check.KindPin {
+			t.Errorf("finding kind = %q, want %q", f.Subject.Kind, check.KindPin)
 		}
-		got[f.Subject+"."+f.Pin] = true
+		got[check.EntityRef(f.Subject)] = true
 	}
 	want := map[string]bool{"U1.2": true, "U2.2": true}
 	if len(got) != len(want) {
@@ -91,8 +91,8 @@ func TestUnconnectedPin(t *testing.T) {
 // TestNCPinConnected: the wired NC pin's net fires; the lone-stub NC case stays silent.
 func TestNCPinConnected(t *testing.T) {
 	m := check.NewModel(pinFixture())
-	fs := ncPinConnected.Eval(m)
-	if len(fs) != 1 || fs[0].Subject != "BADNC" || fs[0].Kind != check.KindNet {
+	fs := ncPinConnected.Findings(m)
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "BADNC" || fs[0].Subject.Kind != check.KindNet {
 		t.Fatalf("findings = %+v, want one KindNet finding on BADNC", fs)
 	}
 }
@@ -117,8 +117,8 @@ func TestOutputConflictCountsComponents(t *testing.T) {
 			tnet("FIGHT", "U1.1", "U2.1"),    // two components -> fires
 		},
 	}
-	fs := outputOutputConflict.Eval(check.NewModel(d))
-	if len(fs) != 1 || fs[0].Subject != "FIGHT" {
+	fs := outputOutputConflict.Findings(check.NewModel(d))
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "FIGHT" {
 		t.Fatalf("findings = %+v, want exactly FIGHT", fs)
 	}
 }
@@ -149,8 +149,8 @@ func TestOutputConflictWiredOr(t *testing.T) {
 		},
 	}
 	got := map[string]bool{}
-	for _, f := range outputOutputConflict.Eval(check.NewModel(d)) {
-		got[f.Subject] = true
+	for _, f := range outputOutputConflict.Findings(check.NewModel(d)) {
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if got["INT_B"] {
 		t.Errorf("a wired-OR bus with a pull resistor must not fire output-output-conflict")
@@ -198,8 +198,8 @@ func TestUnspecifiedPinWithDriver(t *testing.T) {
 		},
 	}
 	got := map[string]bool{}
-	for _, f := range unspecifiedPinWithDriver.Eval(check.NewModel(d)) {
-		got[f.Subject] = true
+	for _, f := range unspecifiedPinWithDriver.Findings(check.NewModel(d)) {
+		got[check.EntityRef(f.Subject)] = true
 	}
 	want := map[string]bool{"DRIVEN_UNTYPED": true, "RAIL": true}
 	if !reflect.DeepEqual(got, want) {
@@ -231,8 +231,8 @@ func TestFloatingInputPassiveExemption(t *testing.T) {
 		},
 	}
 	m := check.NewModel(d)
-	fs := floatingInput.Eval(m)
-	if len(fs) != 1 || fs[0].Subject != "FLOATS" {
+	fs := floatingInput.Findings(m)
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "FLOATS" {
 		t.Fatalf("findings = %+v, want exactly FLOATS", fs)
 	}
 }
@@ -260,8 +260,8 @@ func TestFloatingInputDiodeExemption(t *testing.T) {
 		},
 	}
 	got := map[string]bool{}
-	for _, f := range floatingInput.Eval(check.NewModel(d)) {
-		got[f.Subject] = true
+	for _, f := range floatingInput.Findings(check.NewModel(d)) {
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if got["DIODENET"] {
 		t.Errorf("a pure diode network must not fire floating-input")
@@ -295,8 +295,8 @@ func TestTestPointCoverage(t *testing.T) {
 		},
 	}
 	got := map[string]bool{}
-	for _, f := range testPointCoverage.Eval(check.NewModel(withTP)) {
-		got[f.Subject] = true
+	for _, f := range testPointCoverage.Findings(check.NewModel(withTP)) {
+		got[check.EntityRef(f.Subject)] = true
 	}
 	if len(got) != 1 || !got["3V3"] {
 		t.Errorf("fired on %v, want exactly 3V3", got)
@@ -306,7 +306,7 @@ func TestTestPointCoverage(t *testing.T) {
 		Components: []*ir.Component{comp("U1"), comp("R1")},
 		Nets:       []*ir.Net{tnet("VCC", "U1.1", "R1.1"), tnet("GND", "U1.2", "R1.2")},
 	}
-	if fs := testPointCoverage.Eval(check.NewModel(noTP)); len(fs) != 0 {
+	if fs := testPointCoverage.Findings(check.NewModel(noTP)); len(fs) != 0 {
 		t.Errorf("zero-TP board has no DFT convention to violate; fired %+v", fs)
 	}
 }

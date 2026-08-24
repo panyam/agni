@@ -3,6 +3,10 @@ title: "pin-out-of-recommended"
 description: "A supply pin sits on a rail whose nominal voltage is outside that pin's own recommended operating range."
 ---
 
+### Remedy
+
+Bring this terminal's supply inside the range the datasheet gives for it. Where a part has several supplies, each carries its own window.
+
 ### What it means
 
 A component joined to a seeded datasheet spec has a supply pin on a rail whose name states a

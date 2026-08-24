@@ -3,6 +3,10 @@ title: "led-polarity"
 description: "An LED's anode sits on ground and its cathode on a power rail, mounted backwards."
 ---
 
+### Remedy
+
+Swap the LED's anode and cathode connections so the anode faces the supply side and the cathode the return path through its series resistor.
+
 ### What it means
 
 An LED whose anode pin lands on a ground-named net while its cathode

@@ -19,6 +19,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/datasheet/param"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
@@ -49,24 +50,36 @@ func serveCmd() *cobra.Command {
 	var theme string
 	var paramsDir, profilePath, intentPath, conventions string
 	var reviewStorePath string
+	var webDir string
 	c := &cobra.Command{
-		Use:   "serve [dir]",
+		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
 		Long: "serve hosts the server-rendered viewer shell, the esbuild bundle under /static/,\n" +
 			"and the Connect web API on one listener. Build the bundle first (pnpm build in web/).\n" +
-			"Pass --mount name=path (repeatable) to expose design folders to the file browser.",
-		Args: cobra.MaximumNArgs(1),
+			"Pass --mount name=path (repeatable) to expose design folders to the file browser.\n" +
+			"The viewer's own assets come from --web-dir, defaulting to ./web.",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			style, ok := render.Themes[theme]
 			if !ok {
 				return fmt.Errorf("unknown --theme %q (have: %s)", theme, strings.Join(themeNames(), ", "))
 			}
-			dir := "web"
-			if len(args) == 1 {
-				dir = args[0]
+			// Where the viewer's assets are is a --web-dir question now, not a positional one. The
+			// argument this replaced was passed as the literal string "web" by every caller in the tree,
+			// which is the default anyway, so it never once carried information. What it did carry was a
+			// standing invitation to pass a DESIGN folder, which is why checkWebAssets still has to say
+			// what it is not.
+			dir, source := resolveWebDir(webDir, os.Getenv)
+			// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read, and
+			// the serving line below already prints the resolved directory, so announcing that case here
+			// says nothing a reader does not have twice over. The environment is the one provenance
+			// nothing else reports, and it is the one most worth reporting: an AGNI_WEB_DIR exported into
+			// a shell months ago outlives every memory of exporting it.
+			if source == envWebDir {
+				fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
 			}
 			if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-				return fmt.Errorf("%q is not a directory", dir)
+				return fmt.Errorf("--web-dir %q is not a directory", dir)
 			}
 			if err := checkWebAssets(dir); err != nil {
 				return err
@@ -105,6 +118,13 @@ func serveCmd() *cobra.Command {
 			// transport-neutral internal/service implementations; internal/server wraps them
 			// for Connect (C13).
 			loader := &osLoader{mounts: mounts, loader: newLoader()}
+			// Tier-1 fallback, the same shape resolveWebDir uses: the flag wins OUTRIGHT, so an
+			// operator who named the renderers is answering for the whole set and a file cannot
+			// quietly widen it. applyEnvConfig already named the file it read, so there is nothing
+			// to announce here.
+			if len(nativeTools) == 0 {
+				nativeTools = envConfigNativeTools
+			}
 			enabledNative := map[string]bool{}
 			for _, t := range nativeTools {
 				enabledNative[t] = true
@@ -139,7 +159,7 @@ func serveCmd() *cobra.Command {
 			// it travels with the read; the catalog half used to ADD, so a request got its own rules
 			// stacked on the server's and could not turn the server's off. The two halves of one config
 			// composing differently is the shape that let WS3-102's bug hide, so they were made to agree.
-			var conventionCfg naming.Config
+			var conventionCfg *configpb.NamingConvention
 			if conventions != "" {
 				cfg, err := naming.Load(conventions)
 				if err != nil {
@@ -207,6 +227,12 @@ func serveCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
+	c.Flags().StringVar(&webDir, "web-dir", "",
+		"directory holding the viewer's OWN assets (templates/ and the built static/*.js), not a folder "+
+			"of designs to browse: mount those with --mount name=path. Defaults to "+defaultWebDir+
+			", which is where a repo checkout keeps them, then to web_dir in the nearest agni.yaml, then to "+
+			envWebDir+". An installed binary run from a design directory has no relative answer, which is "+
+			"what the last two are for")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
 	c.Flags().StringVar(&pdf2docCmd, "pdf2doc", "", "command that derives a datasheet's doc-IR, e.g. \"python3 tools/pdf2doc/pdf2doc.py\"; empty disables the /datasheets Extract (first pass) action")
@@ -258,13 +284,13 @@ type serveLoader interface {
 // conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here: that
 // is a process-global install the caller does once at startup, and doing it inside a function tests
 // call would leak one test's vocabulary into the next.
-func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions naming.Config, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
+func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath, intentPath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
 		return nil, nil, err
 	}
 	var extra []check.RuleSource
-	if len(conventions.Rules) > 0 {
+	if len(conventions.GetRules()) > 0 {
 		src, err := naming.Source(conventions)
 		if err != nil {
 			return nil, nil, err
@@ -279,8 +305,8 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		noteSupersededRules(notes, catalog)
 	}
 	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-	return service.NewCheckService(loader, catalog, specs, conventions.Name, loader, projects),
-		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.Name, projects), nil
+	return service.NewCheckService(loader, catalog, specs, conventions.GetName(), loader, projects),
+		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.GetName(), projects), nil
 }
 
 // serveURLs turns a listen address into URLs a human can click, which the bind address by itself is
@@ -398,7 +424,7 @@ func healthHandler() http.Handler {
 // is the assets dir (defaults to "web"); design folders are exposed with --mount, not this arg.
 func checkWebAssets(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "templates", "ViewerPage.html")); err != nil {
-		return fmt.Errorf("%q has no templates/ViewerPage.html: the positional arg is the web-assets dir (defaults to \"web\"), not a folder to browse; mount design folders with --mount name=path", dir)
+		return fmt.Errorf("%q has no templates/ViewerPage.html: --web-dir is the viewer's own assets dir (defaults to %q), not a folder to browse; mount design folders with --mount name=path", dir, defaultWebDir)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "static", "app.js")); err != nil {
 		return fmt.Errorf("%q has no static/app.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)

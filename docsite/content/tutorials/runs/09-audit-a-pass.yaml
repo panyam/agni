@@ -1,0 +1,6 @@
+# Rung 9: auditing a pass. supply-exceeds-abs-max is the example because the board both passes and
+# fails it, and both rows cite the numbers they compared, which is what makes the pass checkable
+# against the datasheet rather than merely reassuring.
+fixture: examples/tutorial-project
+script: |
+  agni check --verdicts --rule supply-exceeds-abs-max designs/gateway/gateway.edn

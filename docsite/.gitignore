@@ -7,3 +7,6 @@ templates/gen.*.html
 
 # node deps (only needed when building playground components)
 node_modules/
+
+# Self-contained page previews from `make preview` (see preview.sh).
+preview.html

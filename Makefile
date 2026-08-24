@@ -1,9 +1,6 @@
 GO ?= go
-# Design used by the stats/check convenience targets. A committed example fixture by
-# default; point EDN at your own design to run against real data.
-EDN ?= examples/common/designs/i2c-sensor.edn
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install stats check vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -67,7 +64,7 @@ tidyall:
 
 # Build all packages.
 build: ui
-	$(GO) build ./...
+	$(GO) build -o bin ./...
 
 # Build the agni CLI into bin/.
 agni:
@@ -76,13 +73,6 @@ agni:
 # Install the agni CLI into GOBIN (falls back to GOPATH/bin).
 install:
 	$(GO) install ./cmd/agni
-
-# Convenience runs against the local EDIF netlist.
-stats: agni
-	./bin/agni stats $(EDN)
-
-check: agni
-	./bin/agni check $(EDN)
 
 # Static analysis over the engine module (the examples-test loop builds the example modules).
 vet:
@@ -153,10 +143,16 @@ EXTRA_MOUNTS ?=
 NATIVE_TOOLS ?=
 NATIVE_FLAGS := $(foreach t,$(NATIVE_TOOLS),--enable-native $(t))
 # PDF2DOC configures the doc-IR producer the /datasheets "Extract (first pass)" action shells out
-# to (invoked as "<PDF2DOC> <pdf> -o <sibling>"). Empty disables extraction; needs docling. E.g.
+# to (invoked as "<PDF2DOC> <pdf> -o <sibling>"). Empty disables extraction, which is what you get
+# until `make setup` has built the docling venv: the default below turns the button on exactly when
+# there is an interpreter that can serve it, rather than wiring up a command that fails on click.
+# Absolute, because the value outlives this make and is run by the server process. Override with a
+# command of your own, or with PDF2DOC= to leave the action off.
 #   make serve PDF2DOC="python3 tools/pdf2doc/pdf2doc.py"
-PDF2DOC ?=
-PDF2DOC_FLAG := $(if $(strip $(PDF2DOC)),--pdf2doc '$(PDF2DOC)')
+# PDF2DOC_PY and the rest of the datasheet tooling are defined in their own section further down.
+PDF2DOC ?= $(if $(wildcard $(PDF2DOC_PY)),$(abspath $(PDF2DOC_PY)) $(abspath tools/pdf2doc/pdf2doc.py))
+# Recursive, not `:=`, because PDF2DOC above reads a variable defined later in this file.
+PDF2DOC_FLAG = $(if $(strip $(PDF2DOC)),--pdf2doc '$(PDF2DOC)')
 # SYMBOL_PATH points --symbol-path at an xschem/gEDA symbol library dir (repeatable flag,
 # space-separated dirs here) for pin-level nets and faithful symbol artwork on .sch files;
 # empty means components + net names + placeholder boxes (see docs/GETTING_STARTED.md).
@@ -172,20 +168,26 @@ OVERLAY_FLAGS ?=
 # REVIEW_STORE is the WRITABLE directory stored review runs live in (--review-store), created if
 # absent. It is what the viewer's Review panel reads: without it the review resource methods answer
 # "no review store configured" and the panel can show nothing, on any design. Deliberately separate
-# from the read-only design mounts, and empty by default because a server that stores runs should
-# say where, rather than inheriting a guess. E.g.
-#   make serve REVIEW_STORE=/tmp/agni-reviews
-REVIEW_STORE ?=
+# from the read-only design mounts. Set it empty to serve without a store:
+#   make serve REVIEW_STORE=
+#
+# The default is per-USER rather than per-checkout, and outside the repo on purpose. A stored run is
+# about a DESIGN, not about which clone was serving when you saved it, so several checkouts sharing
+# one store is the behaviour you want, and runs saved from a lane do not become untracked noise in
+# it. The CLI flag itself stays explicit, with no default of its own: a deployed server should say
+# where it writes rather than inherit a guess. This is the dev-convenience layer, where the cost of
+# no default is a Review panel that is empty on every design until someone finds out why.
+REVIEW_STORE ?= $(HOME)/.agni/reviews
 REVIEW_FLAGS := $(if $(strip $(REVIEW_STORE)),--review-store $(REVIEW_STORE))
 serve: ui
-	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS) web
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS)
 
 # One-command self-contained demo. Builds the web bundle and serves the viewer with only the
 # shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
 # left tree, and explore the render, checks, and query panels. See demo/README.md.
 demo: ui
 	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
-	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
+	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo
 
 # Documentation site. The live site is the s3gen app in docsite/, which owns its own targets
 # (make -C docsite run|build|gh-pages) and deploys via the docs.yml GitHub Actions workflow on
@@ -211,10 +213,9 @@ ui:
 
 # Native-tools container (Dockerfile.nattools): a Linux/X11 tool host with kicad-cli, xschem,
 # Lepton, and agni, reached over SSH. The agni SERVER runs on the host; this is only the tools.
-# natup runs sshd detached and authorizes PUBKEY; ssh in to run `agni native render` (writes to a
-# bind-mounted dir) or `ssh -X` for `agni native open` (GUI to XQuartz). Pass design folders with
-# NATIVE_DOCKER_MOUNTS (docker -v). A workspace Makefile can bind-mount your designs and add
-# file-driven natrender/natopen wrappers.
+# natup runs sshd detached and authorizes PUBKEY; natrender/natopen below drive the tools over that
+# connection. Pass your design folders in with NATIVE_DOCKER_MOUNTS (docker -v), e.g.
+#   make natup NATIVE_DOCKER_MOUNTS="-v $$HOME/boards:/boards"
 NATIVE_IMAGE ?= agni-native
 NATIVE_NAME ?= agni-nattools
 SSH_PORT ?= 2222
@@ -235,6 +236,24 @@ natdown:
 
 natlogs:
 	docker logs -f $(NATIVE_NAME)
+
+# The ssh invocation the two file-driven targets below share. LC_ALL is forced to a locale the slim
+# image actually has: Lepton's guile aborts on a forwarded LANG it cannot find.
+SSH := ssh -p $(SSH_PORT) -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o SetEnv=LC_ALL=C.UTF-8
+
+# Native render inside the running container, written back to the bind mount. FILE and OUT are
+# paths INSIDE the container, so both must fall under a directory natup mounted.
+#   make natrender FILE=/boards/amp/amp.sch OUT=/boards/amp.svg
+natrender:
+	@[ -n "$(FILE)" ] && [ -n "$(OUT)" ] || { echo "usage: make natrender FILE=<path in container> OUT=<path in container>"; exit 2; }
+	$(SSH) agni@localhost agni native render $(FILE) -o $(OUT)
+
+# Open a design's native GUI in the container; the window appears via XQuartz, so install and start
+# that first. FILE is a path inside the container. Blocks until you close the window.
+#   make natopen FILE=/boards/amp/amp.sch
+natopen:
+	@[ -n "$(FILE)" ] || { echo "usage: make natopen FILE=<path in container>"; exit 2; }
+	$(SSH) -X agni@localhost agni native open $(FILE)
 
 # The examples under examples/ are each their own Go module (their own go.mod, to keep demokit
 # and its terminal-UI deps out of the engine go.mod), so `test` above does not reach them.
@@ -274,34 +293,15 @@ image:
 	docker build --build-arg VERSION=$(IMAGE_TAG) -t $(IMAGE) .
 
 # dockserve is serve's container twin: same MOUNTS / EXTRA_MOUNTS / DESIGNS / ADDR, run from the
-# image instead of `go run`. Each "--mount NAME=PATH" becomes "-v PATH:/workspace/NAME", and the
-# image's own CMD already passes --mount-root /workspace, so nothing needs a --mount flag inside.
+# image instead of `go run`.
 #
 #   make dockserve                                     # the fixture mounts, from the image
 #   make dockserve DESIGNS=~/boards                    # plus a folder of your own
 #   make dockserve EXTRA_MOUNTS="--mount corpus=/data" # the same flag serve takes
 #
-# THREE of serve's parameters are refused here rather than forwarded, because the image does not
-# contain what they describe and the failure would otherwise be silent:
-#
-#   NATIVE_TOOLS  no kicad-cli/xschem/Lepton inside (see the Dockerfile header). Use serve, or
-#                 reach the tools through the nattools container.
-#   PDF2DOC       no Python/docling inside, and the value is a host path.
-#   OVERLAY_FLAGS host paths that do not resolve in the container. Pass OVERLAY_DIR instead: the
-#                 folder is mounted at /overlay and the flags are rebuilt against it.
-#
-# REVIEW_STORE crosses the same way OVERLAY_DIR does, mounted at /var/lib/agni/reviews, except
-# WRITABLE: stored runs are the one thing this server produces rather than reads. It is created on
-# the host first so the bind mount does not materialize as a root-owned directory.
-#
-# SYMBOL_PATH is IGNORED rather than refused, because the image ships better libraries than a host
-# path would name (AGNI_SYMBOL_PATH, baked in stage 3). Refusing it would block a caller who simply
-# has the variable set for serve. It is announced on startup so the substitution is never a guess.
-#
-# The reason these are hard errors and not warnings: --symbol-path or --profile-path pointing at a
-# directory that does not exist inside the container yields a SHORT read, and a short read is the
-# quiet kind of wrong. The rules evaluate cleanly over it and report fewer findings, with no error
-# to explain them. See the Dockerfile header for the same argument about `go install`.
+# The work is in tools/dockserve.sh, whose header documents the whole contract: which of serve's
+# parameters cannot cross into a container, and why refusing one the caller typed but dropping one
+# the environment supplied is the same rule rather than two.
 DESIGNS ?=
 # The overlay catalog (profiles/, conventions.yaml) as a single host DIRECTORY, mounted read-only.
 # serve takes assembled flags; the container needs the folder, since it has to cross the boundary.
@@ -310,53 +310,20 @@ OVERLAY_DIR ?=
 DOCKER_FLAGS ?=
 DOCKER_NAME ?= agni-dockserve
 
+# The names the CALLER typed on this command line, out of the three the script may have to refuse.
+# $(origin) is the only thing that can tell a typed argument from ambient config, and it exists only
+# here, so the answer is computed in make and passed down.
+DOCKSERVE_CLI_SET = $(foreach v,NATIVE_TOOLS PDF2DOC OVERLAY_FLAGS,$(if $(filter command line,$(origin $(v))),$(v)))
+
 dockserve:
-	@if [ -n "$(strip $(NATIVE_TOOLS))" ]; then \
-	  echo "dockserve: NATIVE_TOOLS is not available in the image (no kicad-cli/xschem/Lepton inside)." >&2; \
-	  echo "           Use 'make serve' for native golden renders." >&2; exit 1; fi
-	@if [ -n "$(strip $(PDF2DOC))" ]; then \
-	  echo "dockserve: PDF2DOC is not available in the image (no Python/docling inside), and the" >&2; \
-	  echo "           value is a host path. Use 'make serve' for the datasheet Extract action." >&2; exit 1; fi
-	@if [ -n "$(strip $(OVERLAY_FLAGS))" ]; then \
-	  echo "dockserve: OVERLAY_FLAGS names host paths that do not exist in the container." >&2; \
-	  echo "           Pass OVERLAY_DIR=<dir> instead; it is mounted at /overlay." >&2; exit 1; fi
-	@if [ -n "$(strip $(SYMBOL_PATH))" ]; then \
-	  echo "dockserve: ignoring SYMBOL_PATH; the image ships its own KiCad/xschem/gEDA libraries."; fi
-	@docker image inspect $(IMAGE) >/dev/null 2>&1 || $(MAKE) image
-	@set -e; \
-	abs() { case $$1 in /*) printf %s "$$1" ;; \
-	                     \~*) printf %s "$$HOME$${1#\~}" ;; \
-	                     *) printf %s "$(CURDIR)/$$1" ;; esac; }; \
-	vols=""; \
-	for spec in $(filter-out --mount,$(MOUNTS) $(EXTRA_MOUNTS)); do \
-	  name=$${spec%%=*}; path=$$(abs "$${spec#*=}"); \
-	  if [ ! -e "$$path" ]; then echo "dockserve: mount '$$name' has no such path: $$path" >&2; exit 1; fi; \
-	  vols="$$vols -v $$path:/workspace/$$name"; \
-	done; \
-	if [ -n "$(strip $(DESIGNS))" ]; then \
-	  d=$$(abs "$(strip $(DESIGNS))"); \
-	  if [ ! -e "$$d" ]; then echo "dockserve: DESIGNS has no such path: $$d" >&2; exit 1; fi; \
-	  vols="$$vols -v $$d:/workspace/$$(basename $$d)"; fi; \
-	overlay=""; \
-	if [ -n "$(strip $(OVERLAY_DIR))" ]; then \
-	  o=$$(abs "$(strip $(OVERLAY_DIR))"); \
-	  if [ ! -d "$$o" ]; then echo "dockserve: OVERLAY_DIR has no such directory: $$o" >&2; exit 1; fi; \
-	  vols="$$vols -v $$o:/overlay:ro"; \
-	  if [ -d "$$o/profiles" ]; then overlay="$$overlay --profile-path /overlay/profiles"; fi; \
-	  if [ -f "$$o/conventions.yaml" ]; then overlay="$$overlay --conventions /overlay/conventions.yaml"; fi; \
-	  if [ -z "$$overlay" ]; then \
-	    echo "dockserve: OVERLAY_DIR=$$o holds neither profiles/ nor conventions.yaml" >&2; exit 1; fi; \
-	  echo "dockserve: overlay$$overlay"; fi; \
-	review=""; \
-	if [ -n "$(strip $(REVIEW_STORE))" ]; then \
-	  r=$$(abs "$(strip $(REVIEW_STORE))"); \
-	  mkdir -p "$$r"; \
-	  vols="$$vols -v $$r:/var/lib/agni/reviews"; \
-	  review="--review-store /var/lib/agni/reviews"; fi; \
-	echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"; \
-	docker run --rm --name $(DOCKER_NAME) -p $(patsubst :%,%,$(ADDR)):8080 \
-	  --user $$(id -u):$$(id -g) $$vols $(DOCKER_FLAGS) $(IMAGE) \
-	  serve --addr :8080 --mount-root /workspace $$overlay $$review web
+	@MAKE='$(MAKE)' IMAGE='$(IMAGE)' ADDR='$(ADDR)' \
+	  MOUNTS='$(MOUNTS)' EXTRA_MOUNTS='$(EXTRA_MOUNTS)' DESIGNS='$(strip $(DESIGNS))' \
+	  OVERLAY_DIR='$(strip $(OVERLAY_DIR))' OVERLAY_FLAGS='$(strip $(OVERLAY_FLAGS))' \
+	  REVIEW_STORE='$(strip $(REVIEW_STORE))' NATIVE_TOOLS='$(strip $(NATIVE_TOOLS))' \
+	  PDF2DOC='$(strip $(PDF2DOC))' SYMBOL_PATH='$(strip $(SYMBOL_PATH))' \
+	  DOCKER_FLAGS='$(DOCKER_FLAGS)' DOCKER_NAME='$(DOCKER_NAME)' \
+	  CLI_SET='$(DOCKSERVE_CLI_SET)' \
+	  tools/dockserve.sh
 
 # Stop a detached dockserve (one started with DOCKER_FLAGS=-d). A foreground one ends on Ctrl-C.
 dockstop:
@@ -441,8 +408,78 @@ tag-push:
 # spec and the fixture but NOT the engine build, so a code change does not invalidate a capture on its
 # own. That keeps the docs pipeline off the per-push path at the cost of catching a regression here
 # rather than immediately. Commit whatever it changes, after reading it.
+# Every runs/ directory under content/, not just the tutorials' one. A second section with generated
+# captures (learn/) went stale silently the moment it existed, because this target named one path.
 tutorial-runs:
-	@find docsite/content/tutorials/runs -name '*.output' -delete
+	@find docsite/content -path '*/runs/*.output' -delete
 	@cd docsite && $(GO) run . -build >/dev/null 2>&1
-	@git status --short -- docsite/content/tutorials/runs || true
+	@git status --short -- docsite/content || true
 	@echo "tutorial captures regenerated; review the diff above before committing"
+
+# =============================================================================
+# Datasheet tooling
+# =============================================================================
+#
+# tools/pdf2doc derives doc-IR from a datasheet PDF. It is prototype Python, never in CI, and needs
+# docling, so it runs out of a venv `make setup` builds rather than the engine toolchain.
+#
+# The corpus it sweeps is a folder of parts laid out as <vendor>/<PART>/, each part dir holding its
+# source PDF(s) and every generated or HITL artifact beside them (doc-IR, PartSpec). Vendor PDFs are
+# licensed material and must not be committed here, so DATASHEET_DIR names a local, gitignored
+# folder by default and takes an absolute path to one kept anywhere else.
+
+# One-time (idempotent): build the venv, install docling, and PREFETCH its models so the first
+# `make pdf2doc` (or the viewer's Extract button) does not stall on a model download, which is
+# decoupled on purpose. Re-run to refresh docling or repair the env. torch has no wheels for python
+# 3.14, so the venv is built with 3.12; override VENV_PY for another base.
+#
+# WHERE THE VENV LIVES is a lookup rather than a fixed path, because the docling dependency set runs
+# to gigabytes and several worktrees of this repo should not each carry one. The search order is
+# repo-local .venv first, then the PARENT directory's, which is the shared slot when clones sit side
+# by side under one root (~/work/agni/{main,feature-x}/ all find ~/work/agni/.venv). Nothing found
+# means `make setup` builds the repo-local one. Override VENV_DIR for an env somewhere else, or
+# extend VENV_SEARCH to add a slot to the order.
+VENV_PY ?= /opt/homebrew/bin/python3.12
+VENV_SEARCH ?= .venv ../.venv
+VENV_DIR ?= $(patsubst %/bin/python,%,$(firstword $(wildcard $(addsuffix /bin/python,$(VENV_SEARCH))) .venv/bin/python))
+$(VENV_DIR)/bin/python:
+	$(VENV_PY) -m venv $(VENV_DIR)
+	$(VENV_DIR)/bin/python -m pip install --upgrade pip
+setup: $(VENV_DIR)/bin/python
+	$(VENV_DIR)/bin/python -m pip install --upgrade docling
+	$(VENV_DIR)/bin/docling-tools models download
+	@echo "setup: $(VENV_DIR) ready (docling + prefetched models)"
+
+# The python pdf2doc runs under: the venv once setup has built one, else whatever python3 is on the
+# PATH (which works only if docling is installed there).
+PDF2DOC_PY ?= $(if $(wildcard $(VENV_DIR)/bin/python),$(VENV_DIR)/bin/python,python3)
+DATASHEET_DIR ?= datasheets
+
+# Derive doc-IR from one PDF and validate it against the contract. OUT is conventionally the PDF's
+# sibling <stem>.doc.textproto, which is where the viewer's /datasheets workbench looks for it.
+#   make pdf2doc PDF=datasheets/ti/LM1117/LM1117.pdf OUT=datasheets/ti/LM1117/LM1117.doc.textproto
+pdf2doc:
+	@[ -n "$(PDF)" ] && [ -n "$(OUT)" ] || { echo "usage: make pdf2doc PDF=<file.pdf> OUT=<file.doc.textproto>"; exit 2; }
+	$(PDF2DOC_PY) tools/pdf2doc/pdf2doc.py $(PDF) -o $(OUT)
+	$(GO) run ./tools/pdf2doc/validate $(OUT)
+
+# Report-only extraction status: per part, whether each PDF has a fresh, stale, or absent doc-IR and
+# whether a part-level PartSpec exists. Reads doc-IR content_hash + producer, and writes nothing.
+#
+# The --toolchain value is the producer string the INSTALLED docling would stamp now, which is what
+# lets the walker flag a doc-IR that predates a toolchain bump. It is computed in the recipe rather
+# than in a variable so that an unrelated `make test` never pays for a python startup, and it is
+# best-effort: docling missing means the flag is omitted and only hash freshness gets reported.
+datasheets-status:
+	@v=$$($(PDF2DOC_PY) -c "import importlib.metadata as m; print(m.version('docling'))" 2>/dev/null); \
+	$(GO) run ./tools/datasheetstatus $${v:+--toolchain docling/$$v} $(DATASHEET_DIR)
+
+# Run pdf2doc on exactly the PDFs the walker flags as not-extracted or stale-source (fresh ones are
+# skipped; a stale-toolchain refresh stays a deliberate `make pdf2doc PDF=... OUT=...`). Each PDF's
+# doc-IR is written to its sibling <stem>.doc.textproto in the same part dir.
+pdf2doc-all:
+	@$(GO) run ./tools/datasheetstatus --list $(DATASHEET_DIR) | while read -r pdf; do \
+		out="$${pdf%.pdf}.doc.textproto"; \
+		echo "pdf2doc: $$pdf -> $$out"; \
+		$(PDF2DOC_PY) tools/pdf2doc/pdf2doc.py "$$pdf" -o "$$out"; \
+	done

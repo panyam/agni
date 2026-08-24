@@ -138,7 +138,7 @@ func genRules() error {
 			slug := pageSlug(s.prefix, r.Name)
 			label := linkLabel(s.prefix, r.Name)
 			body := prepareDetail(r.Detail, "rules", images)
-			page := frontMatter(label, r.Summary) + body
+			page := frontMatter(label, r.Summary) + remedySection(r.Remedy) + body
 			if err := os.WriteFile(filepath.Join(outDir, slug+".md"), []byte(page), 0o644); err != nil {
 				return err
 			}
@@ -226,6 +226,31 @@ func prepareDetail(detail, kind string, seen map[string]bool) string {
 // pathPrefixExpr is the s3gen template expression for the site's URL prefix; content markdown is
 // templated, so an absolute static link stays correct if the prefix ever changes.
 const pathPrefixExpr = "{{.Site.PathPrefix}}"
+
+// remedySection renders a rule's Remedy as the page's first "### " section, or "" for a rule that
+// states none.
+//
+// It LEADS the page rather than trailing it because of who arrives here: a reader follows this link
+// from a finding that just fired, so "what do I do" is the question they came with rather than the one
+// they work up to. Everything below it explains why the rule fired.
+//
+// A heading rather than a blockquote, because the docsite's stylesheet has no blockquote rule at all,
+// so a "> " callout renders as unstyled indented text and reads as an aside. A "### " section is
+// styled like every other section on the page, and it matches the docs' own convention of proper
+// sections over bold run-ins (build/check-rule.md).
+//
+// ONLY Remedy is projected, deliberately, though the Impact FIELD is equally absent from these pages.
+// Most rule docs already write their own "### Impact" section in prose tuned to the page, so injecting
+// the field would print the same point twice in slightly different words across the majority of the
+// catalog. Remedy has no such section anywhere, by rule, so it is the half genuinely missing. Wanting
+// the Impact field here too means first taking that section out of the doc bodies.
+func remedySection(remedy string) string {
+	remedy = strings.TrimSpace(remedy)
+	if remedy == "" {
+		return ""
+	}
+	return "### Remedy\n\n" + remedy + "\n\n"
+}
 
 // frontMatter builds a page's YAML header. The title is the entity name; the description is its
 // one-line summary with quotes escaped so the YAML stays valid.

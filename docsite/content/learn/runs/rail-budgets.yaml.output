@@ -1,0 +1,14 @@
+#agni-run 13dc570bc140cced
+intent/rail-current-capacity  1 fail, 1 pass
+    fail            3V3  U1 supplies "3V3" rated at IOUT 0.5A, below the 0.8A the declaration
+                         asks for
+    pass            1V8  U2 supplies "1V8" rated at IOUT 0.9A, at or above the 0.8A the
+                         declaration asks for
+
+intent/rail-current-margin  1 fail, 1 not-considered
+    fail            1V8  U2 supplies "1V8" rated at IOUT 0.9A, below the 0.96A the declaration
+                         asks for
+    not-considered  3V3  the supply is rated below the 0.8A peak itself, which
+                         rail-current-capacity reports rather than this rule
+
+4 verdicts across 2 rule(s), 1 pass, 2 fail, 1 not-considered

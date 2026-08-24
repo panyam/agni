@@ -58,10 +58,26 @@ type Model interface {
 	// from a design where the connections were never drawn. Rules that read pin or connectivity
 	// facts are gated to inconclusive while this is non-empty (check.Run).
 	UnresolvedSymbols() []*ir.UnresolvedSymbol
+	// ResolvedSymbols are the symbol references that DID load, one per distinct reference, with the
+	// pin count each supplied. It is the other half of UnresolvedSymbols and exists so a rule over
+	// symbol resolution can state what it examined rather than only what failed (agni issue 418).
+	//
+	// Empty means one of two different things, and SuppliesDiagnostic("resolved_symbols") is what
+	// separates them: a reader that declares the diagnostic and returns nothing placed no symbol,
+	// while a reader that does not declare it never looked. A consumer that skips the check reads
+	// "we deliberately read without symbols" as "we checked and everything was fine".
+	ResolvedSymbols() []*ir.ResolvedSymbol
 	// UnannotatedComponents are the placeholder designators the source has not assigned yet ("R?",
 	// "C?"), one entry per placeholder with every placement wearing it. Unlike UnresolvedSymbols
 	// nothing was LOST in the read: the parts and their pins are all present. What is absent is an
 	// identity, so a consumer must not key on these designators (see internal/refdes).
+	// JoinedTaps are the wire-end-on-wire-body taps something DOES join, with the construct that
+	// joined them (agni issue 420). It is the other half of NoJunctionEndpoints, and the two are one
+	// partition: a tap on both lists would be reported as passed and failed at once.
+	//
+	// Gate on SuppliesDiagnostic("junction_taps") before reading an empty slice as "no tap was
+	// silent", since a reader that never looked at wire geometry returns the same nothing.
+	JoinedTaps() []*ir.JoinedTap
 	UnannotatedComponents() []*ir.UnannotatedComponent
 	// traverse / pin-role: a pin's electrical direction, or the unspecified zero value when the
 	// source carries no part-type pin data (so direction-based rules do not fire).

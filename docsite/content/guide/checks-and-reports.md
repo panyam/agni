@@ -22,7 +22,7 @@ findings by rule:
   i2c-pull-up            1
 
 first 1:
-  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor)
+  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
 
 1 finding(s) total
 ```
@@ -61,8 +61,8 @@ The default text output is a per-rule summary. Three other forms via `--format`:
 
   ## error
 
-  ### i2c-pull-up — An I2C net (SDA/SCL) has no pull-up resistor.
-  - `SCL` — I2C net has no pull-up resistor (showcase.fires.kicad_sch)
+  ### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.
+  - `SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
   ```
 
 - **`json`**: one object per finding, for tooling (see provenance below).
@@ -71,6 +71,43 @@ The default text output is a per-rule summary. Three other forms via `--format`:
 The header line (`10 finding(s), 29 rule(s) run`) is your coverage receipt. It says how many
 rules actually ran, so a clean report is distinguishable from a report that had little to
 check. See "silence is not a pass" in [Concepts](../concepts/).
+
+## See what was checked, not only what failed
+
+A findings report lists violations, so a clean subject says nothing at all and you cannot tell it
+apart from one no rule looked at. `--verdicts` answers the other question:
+
+```
+agni check showcase.fires.kicad_sch --verdicts
+```
+
+```
+fail            SCL  no rail is reachable from SCL through a resistor within 3 hops
+pass            SDA  SDA reaches rail +3V3 through R1
+
+2 verdicts, 1 pass, 1 fail
+```
+
+SDA is fine, and now it says so and names the resistor and the rail holding it up. That second line
+is the thing a findings report cannot print.
+
+It honours `--format text|csv|json`. The CSV carries a `verdict_id` per row
+(`i2c-pull-up:net:SDA`), plus `context` (the entities to look at, as `role=ref` pairs) and `terms`
+(the values a conclusion rests on):
+
+```
+agni check showcase.fires.kicad_sch --verdicts --format csv
+```
+
+Paste an id into a running viewer as `?verdict=<id>` and it opens on that verdict with the proof
+drawn: the subject in focus, the resistor and rail behind it.
+
+**It is a separate table, not extra rows.** `--format csv` without `--verdicts` is unchanged, so
+anything already reading the findings CSV keeps working and never sees a pass counted as a defect.
+
+**Only some rules report one so far.** A rule missing from the output is declining to say what it
+looked at, which is not the same as reporting that it looked at nothing. Expect the table to be thin
+until more of the catalog converts.
 
 ## Follow a finding to its source
 
@@ -186,3 +223,30 @@ the [CLI reference](../cli-reference/#gating-a-pipeline-on-a-review) for the ful
   real limits.
 - [Comparing revisions](../comparing-revisions/): diff two versions of a design.
 - [CLI reference](../cli-reference/): every flag in one place.
+
+## The HTML report
+
+`agni check --format html > report.html` writes one self-contained page: what each rule
+looked at, what it concluded, and what to do about the parts that failed.
+
+    agni check --format html \
+      --url-base http://localhost:8080 \
+      --mount board=. mount://board/design.kicad_sch > report.html
+
+Rules with something to act on come first and open expanded; rules that cleared everything collapse to
+a one-line summary you can expand to check their working. That ordering is the whole design: a board
+with three problems and two thousand passes has to show you the three problems.
+
+**A rule that reports violations without stating what it examined is labelled as such**, and its rows
+are captioned "absence here is not evidence of correctness". Presenting a failure list beside a
+considered set as though they were the same kind of answer is the false-coverage claim this whole
+layer exists to remove, and a report is where it would be most convincing.
+
+**Links are emitted only when they are real.** `--url-base` says where the viewer is; naming the
+design as a `mount://` URI says the server can see it. A bare file path is minted a mount locally, so
+it gets no links rather than links that resolve on nobody's server. Each link carries the design's
+content hash, so a report read against different bytes can be told apart from one read against the
+same.
+
+The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
+committed, or opened from a `file://` path.

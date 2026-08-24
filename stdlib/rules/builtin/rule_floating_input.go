@@ -1,6 +1,9 @@
 package builtin
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
@@ -12,6 +15,7 @@ var floatingInput = &check.Rule{
 	Severity:   "warning",
 	Summary:    "An input pin sits on a net with no driver and no pull, so its level is undefined.",
 	Impact:     "A floating logic input drifts, picks up noise, and can oscillate or sit in the forbidden region where both transistors of a CMOS stage conduct. Behavior is non-deterministic and often temperature- and board-dependent, the worst kind of intermittent bug.",
+	Remedy:     "Tie the input to its inactive level through a pull-up or pull-down, or drive it from the logic that was meant to. A CMOS input is never safe to leave floating, including on a pin the firmware does not use.",
 	Primitives: []string{"select", "traverse", "count", "exists", "pin-role"},
 	Reads:      []string{"component.class", "net.attributes", "net.pin_count", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{
@@ -19,40 +23,89 @@ var floatingInput = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistOpen,
 	},
-	Detail: ruleDoc("floating-input"),
-	Eval: func(m check.Model) []check.Finding {
-		bad := check.Select(m.Nets(), func(n *ir.Net) bool {
-			if n.Attributes[netgraph.AttrExternal] == "true" {
-				return false // the driver may be on another sheet we did not read
-			}
-			for _, c := range n.Connections {
-				if check.IsPassiveClass(m.ComponentClass(c.ComponentRef)) {
-					return false // a pull, a filter, or a path we cannot follow: not provably floating
+	Detail:              ruleDoc("floating-input"),
+	Eval:                floatingInputVerdicts,
+	StatesConsideredSet: true,
+}
+
+// floatingInputVerdicts decides every net that carries a LOGIC INPUT and more than one pin, and that
+// is the considered set. A net with no logic input is not a subject of a floating-input rule, and a
+// one-pin net belongs to single-pin-net, so neither yields a verdict: reporting them as passes would
+// claim a check that was never made, and reporting the stub twice would put one defect under two
+// names.
+//
+// THE TWO EXEMPTIONS BECOME NotConsidered RATHER THAN PASSES, and the distinction is the substance
+// of the conversion. Both used to leave through the same silent `return false` a driven net did, so
+// downstream they were one answer. They are three:
+//
+//   - An EXTERNAL net continues onto a sheet this read did not open, so its driver may exist and be
+//     invisible here. The rule has not cleared it; it cannot see it.
+//   - A net carrying a PASSIVE part is not provably floating, which is a weaker claim than not
+//     floating. The resistor may be the pull-up that fixes it, or a series element with the driver on
+//     the far side, or a footprint nobody stuffed. The rule cannot tell those apart, so it says so and
+//     names the part in Context.
+//   - A net with a pin that is neither an input nor a no-connect genuinely passes: something on it
+//     can drive.
+//
+// The pass witness counts the non-input pins, so it tracks the fact rather than restating the
+// outcome. Retype the driver as an input and the count falls to zero and the verdict flips.
+func floatingInputVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		// Count LOGIC inputs (INPUT direction, excluding diode terminals): a diode/LED/TVS terminal is
+		// typed INPUT by some libraries but is not a logic input, so a pure diode network must not read
+		// as floating. Excluding it per-pin (not per-net) keeps a real floating IC input that merely
+		// carries a clamp diode firing.
+		logicInputs, ncOrIn := 0, 0
+		for _, c := range n.Connections {
+			switch check.ConnDir(m, c) {
+			case ir.PinDirection_PIN_DIRECTION_INPUT:
+				ncOrIn++
+				if !m.HasClass(c.ComponentRef, check.ClassDiode) {
+					logicInputs++
 				}
+			case ir.PinDirection_PIN_DIRECTION_NO_CONNECT:
+				ncOrIn++
 			}
-			if len(n.Connections) < 2 {
-				return false // a lone input is a single-pin-net finding, not this rule's job
+		}
+		if logicInputs < 1 || len(n.Connections) < 2 {
+			continue // not this rule's subject: nothing to float, or single-pin-net's finding
+		}
+
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
+		passive := firstPassive(m, n)
+		switch {
+		case n.Attributes[netgraph.AttrExternal] == "true":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the net continues onto a sheet this read did not open, so a driver may exist outside it"
+		case passive != "":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the net carries a passive part, which may be the pull that fixes it or a series element hiding the driver, so it is not provably floating"
+			v.Context = compContext(passive, "passive on the net")
+		case ncOrIn == len(n.Connections):
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("all %d of the net's pins are inputs or no-connects, and %d of them are logic inputs", len(n.Connections), logicInputs),
+				Terms: []check.WitnessTerm{
+					{Label: "pins", Value: strconv.Itoa(len(n.Connections))},
+					{Label: "logic inputs", Value: strconv.Itoa(logicInputs)},
+				},
 			}
-			// Count LOGIC inputs (INPUT direction, excluding diode terminals): a diode/LED/TVS
-			// terminal is typed INPUT by some libraries but is not a logic input, so a pure diode
-			// network must not read as floating. Excluding it per-pin (not per-net) keeps a real
-			// floating IC input that merely carries a clamp diode firing.
-			logicInputs, ncOrIn := 0, 0
-			for _, c := range n.Connections {
-				switch check.ConnDir(m, c) {
-				case ir.PinDirection_PIN_DIRECTION_INPUT:
-					ncOrIn++
-					if !m.HasClass(c.ComponentRef, check.ClassDiode) {
-						logicInputs++
-					}
-				case ir.PinDirection_PIN_DIRECTION_NO_CONNECT:
-					ncOrIn++
-				}
+			f := check.NetFinding("net carries only input pins; nothing drives it")(n)
+			v.Finding = &f
+		default:
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("%d of the net's %d pins are neither input nor no-connect, so the net is not input-only", len(n.Connections)-ncOrIn, len(n.Connections)),
+				Terms: []check.WitnessTerm{
+					{Label: "pins", Value: strconv.Itoa(len(n.Connections))},
+					{Label: "non-input pins", Value: strconv.Itoa(len(n.Connections) - ncOrIn)},
+				},
 			}
-			return logicInputs >= 1 && ncOrIn == len(n.Connections)
-		})
-		return check.Report(bad, check.NetFinding("net carries only input pins; nothing drives it"))
-	},
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // floatingInputSpec is the rule's declarative twin (WS3-003): any passive member exempts

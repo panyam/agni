@@ -13,14 +13,14 @@ rungs 4 through 8.
 
 ## Reading one finding
 
-Take `[error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor)`. It has four parts.
+Take `[error] i2c-pull-up: I2C_SCL (I2C net has no pull-up resistor to a rail)`. It has four parts.
 
 The **severity** is `error`. The **rule** is `i2c-pull-up`. The **subject** is the net `I2C_SCL`,
 naming the specific thing on your board the rule is talking about. The **reason** in parentheses
 says what is wrong in plain language.
 
 Severity is a policy signal, not a confidence signal. An `error` is something that will almost
-certainly not work: an I2C bus with no pull-up cannot signal at all, because the parts on it can
+certainly not work: an I2C bus with no {{ explainable "pull-up" }} cannot signal at all, because the parts on it can
 only pull the line down and nothing pulls it back up. A `warning` is something that usually
 indicates a defect. An `info` is worth a look. None of them is a statement about how sure the tool
 is.
@@ -47,7 +47,7 @@ agni check designs/gateway/gateway.edn --format json
     "ref": "I2C_SCL",
     "netId": "601209543ef5"
   },
-  "message": "I2C net has no pull-up resistor",
+  "message": "I2C net has no pull-up resistor to a rail",
   "inconclusive": false,
   "provenance": {
     "sourceFile": "designs/gateway/gateway.edn",
@@ -96,19 +96,60 @@ Starting at `--fail-on error` is the practical choice. It gates on the things th
 all, which almost nobody argues with, and it lets you tighten to `warning` later once the backlog is
 clear.
 
-## What a clean run looks like
+## What the run says it looked at
 
-A run that finds nothing prints how many rules it ran:
+Look at the last two lines of that first run again. Every run ends with them, whether or not it found
+anything:
 
 ```
-no findings (29 rule(s) run)
+187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
+2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
 ```
 
-The count is the important half. It tells you the check actually exercised 29 rules rather than
-staying quiet because it had nothing to work with. If you load only a schematic and no board file,
-the copper rules do not appear in that count at all, because there is no copper for them to look at.
-That distinction between "checked and fine" and "never checked" runs through the whole tool, and
-rung 9 is entirely about it.
+This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
+examined the wrong thing produce an identical list of findings, namely none, so the findings alone
+can never tell you which one you are holding.
+
+Read the three numbers separately. **187 considered** is how many subjects were actually judged.
+**27 rules** is how many were willing to say what they looked at, which is not the same as how many
+ran: most of the catalog has no subject in scope on any given board, and a rule with nothing to say is
+not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
+
+The second line is the honest edge of the claim. Those 2 rules found something and never said what
+they examined, so silence from them means nothing at all, and the coverage number above does not
+cover them.
+
+That number falls as the catalog converts. It was 3 while the design-intent rules still reported
+violations only, which is worth noticing: the rules you write for your own board were the last ones
+whose silence meant nothing, and they are the ones you most want a considered set from.
+
+That line is the claim. `--verdicts` is the evidence, one row per subject with passes included:
+
+{{ agniRun "content/tutorials/runs/02-verdicts.yaml" }}
+
+Now the pass is checkable. It names C1 and C3, so you can open the schematic and confirm that those
+capacitors really are on those rails. Delete C1 next revision and this output changes, where the
+findings-only view would print the same nothing before and after.
+
+Across the whole catalog that is a much larger table than the findings list, which is why the summary
+is the default and the rows are a flag:
+
+{{ agniRun "content/tutorials/runs/02-verdicts-summary.yaml" }}
+
+`not-considered` is the third outcome and the one with no counterpart in a findings list: the rule
+was willing to judge that subject and something stopped it, so it says what stopped it rather than
+passing on incomplete evidence.
+
+On this board only one of them wants a datasheet value of the kind you seed in
+[rung 6](../06-part-limits/). The rest are the more interesting sort. Four are `floating-input`
+declining a net that carries a passive part, because a resistor on a net might be the pull that fixes
+it, might be a series element with the driver on the far side, or might be a footprint nobody stuffed,
+and a netlist cannot tell those apart. Two are `esd-clamp-not-tvs` handing a bare net to
+`esd-protection`, which is the rule that reports it. Neither is a gap you fill by seeding anything.
+They are the check telling you where its reach ends.
+
+That distinction between "checked and fine", "never checked" and "could not tell" runs through the
+whole tool, and [rung 9](../09-read-the-verdicts/) is entirely about reading it.
 
 ## Next
 

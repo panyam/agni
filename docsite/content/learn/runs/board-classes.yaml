@@ -1,0 +1,6 @@
+# Chapter 1, "a board is a few kinds of thing": every part on the tutorial board with its class.
+# D1 appearing twice (diode AND tvs) is the family-tag behaviour, and the page relies on it.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, ?c) => ?r, ?c'

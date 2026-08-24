@@ -42,6 +42,10 @@ func ruleFixture() *ir.Design {
 			tnet("GND", "R1.2", "R2.2"),           // ok
 			tnet("SDA", "U1.5"),                   // I2C, no pull-up -> flag
 			tnet("SCL", "U1.6", "R3.1"),           // I2C, R3 pull-up -> ok
+			// R3's OTHER end. A pull-up is a resistor to a rail, and before agni issue 375 this
+			// fixture drew only the bus-side leg, which is precisely the assumption the rule was
+			// making. Without this net the "R3 pull-up" comment describes a resistor to nowhere.
+			tnet("+3V3", "R3.2", "U1.1"),
 		},
 	}
 }
@@ -49,7 +53,7 @@ func ruleFixture() *ir.Design {
 func indexFindings(d *ir.Design) map[string]check.Finding {
 	m := map[string]check.Finding{}
 	for _, f := range check.RunDesign(d) {
-		m[f.Rule+"|"+f.Subject] = f
+		m[f.Rule+"|"+check.EntityRef(f.Subject)] = f
 	}
 	return m
 }
@@ -105,13 +109,13 @@ func TestRules(t *testing.T) {
 // KindComponent.
 func TestFindingKind(t *testing.T) {
 	f := indexFindings(ruleFixture())
-	if got := f["single-pin-net|STUB"].Kind; got != check.KindNet {
+	if got := f["single-pin-net|STUB"].Subject.Kind; got != check.KindNet {
 		t.Errorf("single-pin-net STUB kind = %q, want %q", got, check.KindNet)
 	}
-	if got := f["i2c-pull-up|SDA"].Kind; got != check.KindNet {
+	if got := f["i2c-pull-up|SDA"].Subject.Kind; got != check.KindNet {
 		t.Errorf("i2c-pull-up SDA kind = %q, want %q", got, check.KindNet)
 	}
-	if got := f["unconnected-component|R9"].Kind; got != check.KindComponent {
+	if got := f["unconnected-component|R9"].Subject.Kind; got != check.KindComponent {
 		t.Errorf("unconnected-component R9 kind = %q, want %q", got, check.KindComponent)
 	}
 }
@@ -230,8 +234,8 @@ func TestDuplicateRefDes(t *testing.T) {
 	if !ok {
 		t.Fatal("U1 collision should be flagged duplicate-ref-des")
 	}
-	if got.Kind != check.KindComponent {
-		t.Errorf("kind = %q, want %q", got.Kind, check.KindComponent)
+	if got.Subject.Kind != check.KindComponent {
+		t.Errorf("kind = %q, want %q", got.Subject.Kind, check.KindComponent)
 	}
 	if got.Severity != "error" {
 		t.Errorf("severity = %q, want error", got.Severity)
@@ -256,8 +260,8 @@ func TestDanglingEndpoint(t *testing.T) {
 	if !ok {
 		t.Fatal("endpoint (0,0) should be flagged dangling-endpoint")
 	}
-	if got.Kind != check.KindEndpoint {
-		t.Errorf("kind = %q, want %q", got.Kind, check.KindEndpoint)
+	if got.Subject.Kind != check.KindEndpoint {
+		t.Errorf("kind = %q, want %q", got.Subject.Kind, check.KindEndpoint)
 	}
 	if got.Severity != "warning" {
 		t.Errorf("severity = %q, want warning", got.Severity)

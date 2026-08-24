@@ -7,13 +7,15 @@
 // RuleItem is the view-side shape of a catalog rule (the wire webapi.RuleInfo, minus proto
 // machinery). tags is the open classification the panel groups and filters by; available gates
 // whether the rule can run (an unavailable rule is shown greyed and cannot be selected).
-// summary/impact/detail are the rule's prose (WS9-020): the one-liner shown per row, what goes
-// wrong on violation, and the long-form detail markdown behind the row's expand affordance.
+// summary/impact/remedy/detail are the rule's prose (WS9-020): the one-liner shown per row, what
+// goes wrong on violation, what to do about it, and the long-form detail markdown behind the row's
+// expand affordance.
 export interface RuleItem {
   name: string;
   severity: string; // "error" | "warning" | "info"
   summary: string;
   impact: string;
+  remedy: string;
   detail: string; // markdown
   reads: string[];
   tags: Record<string, string>;

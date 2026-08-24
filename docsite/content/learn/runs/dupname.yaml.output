@@ -1,0 +1,10 @@
+#agni-run 6a8af800f142f78a
+findings by rule:
+  duplicate-net-name     2
+
+first 2:
+  [warning] duplicate-net-name: VCC (this name is stated by 2 electrically distinct nets)
+  [warning] duplicate-net-name: VCC (this name is stated by 2 electrically distinct nets)
+
+2 finding(s) total
+3 subject(s) considered by 1 rule(s) (--verdicts for the detail)

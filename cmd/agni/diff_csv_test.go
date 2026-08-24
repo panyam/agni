@@ -117,3 +117,90 @@ func TestDiffRejectsUnknownFormat(t *testing.T) {
 		t.Errorf("error = %v, want it to name the unknown format", err)
 	}
 }
+
+// TestDiffRenameApproxIsOptIn drives the near-match pass through the CLI, which is the seam the flag
+// actually crosses: the engine's default is disabled, so a missing flag here would silently produce
+// today's output and every unit test in core/diff would still pass.
+func TestDiffRenameApproxIsOptIn(t *testing.T) {
+	run := func(args ...string) string {
+		var out bytes.Buffer
+		cmd := diffCmd()
+		cmd.SetOut(&out)
+		cmd.SetErr(&out)
+		cmd.SetArgs(args)
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("diff %v: %v", args, err)
+		}
+		return out.String()
+	}
+
+	off := run("testdata/rev-a.edn", "testdata/rev-c.edn")
+	if !strings.Contains(off, "[deleted] CLK") || !strings.Contains(off, "[new]     OSC") {
+		t.Errorf("without the flag CLK and OSC are unpaired:\n%s", off)
+	}
+	if strings.Contains(off, "renamed-approx") {
+		t.Errorf("the pass must not run without the flag:\n%s", off)
+	}
+
+	on := run("--rename-approx", "testdata/rev-a.edn", "testdata/rev-c.edn")
+	if !strings.Contains(on, "[renamed?] CLK -> OSC") {
+		t.Errorf("with the flag the pairing is recovered:\n%s", on)
+	}
+	if strings.Contains(on, "[deleted] CLK") || strings.Contains(on, "[new]     OSC") {
+		t.Errorf("a recovered pairing must not ALSO report as new and deleted:\n%s", on)
+	}
+	// The exact pass is unaffected either way, which is what keeps a recovered fact from being
+	// downgraded to a guess when the flag is on.
+	for _, out := range []string{off, on} {
+		if !strings.Contains(out, "[renamed] SIG -> DATA") {
+			t.Errorf("the exact rename survives in both modes:\n%s", out)
+		}
+	}
+}
+
+// TestDiffCSVCarriesRenameEvidence: the spreadsheet is where a reviewer triages a near match, so the
+// numbers that decided it have to be in columns rather than only in the text form's prose.
+func TestDiffCSVCarriesRenameEvidence(t *testing.T) {
+	var out bytes.Buffer
+	cmd := diffCmd()
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--format", "csv", "--rename-approx", "testdata/rev-a.edn", "testdata/rev-c.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("diff csv: %v", err)
+	}
+	recs, err := csv.NewReader(strings.NewReader(out.String())).ReadAll()
+	if err != nil {
+		t.Fatalf("parse csv: %v", err)
+	}
+	idx := map[string]int{}
+	for i, h := range recs[0] {
+		idx[h] = i
+	}
+	for _, col := range []string{"match_old_coverage", "match_old_coverage_significant", "match_new_coverage_significant"} {
+		if _, ok := idx[col]; !ok {
+			t.Fatalf("column %q missing from header %v", col, recs[0])
+		}
+	}
+	var row []string
+	for _, r := range recs[1:] {
+		if r[idx["change_class"]] == "net-renamed-approx" {
+			row = r
+		}
+	}
+	if row == nil {
+		t.Fatalf("no net-renamed-approx row in:\n%s", out.String())
+	}
+	if got := row[idx["match_old_coverage_significant"]]; got != "1.000" {
+		t.Errorf("significant coverage = %q, want 1.000", got)
+	}
+	if got := row[idx["added"]]; got != "TP1.1" {
+		t.Errorf("added = %q, want the gained probe", got)
+	}
+	// Every other row leaves the columns empty, so a reader sorting on them sees only the rows the
+	// pass actually judged.
+	for _, r := range recs[1:] {
+		if r[idx["change_class"]] != "net-renamed-approx" && r[idx["match_old_coverage"]] != "" {
+			t.Errorf("%s row carries match evidence: %v", r[idx["change_class"]], r)
+		}
+	}
+}

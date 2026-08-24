@@ -12,7 +12,7 @@ If a word here is unfamiliar, that page is the glossary.
 If you have a Go toolchain, install the CLI straight onto your `PATH`:
 
 ```
-go install github.com/panyam/agni/cmd/agni@v0.1.1
+go install github.com/panyam/agni/cmd/agni@latest
 ```
 
 Pin a released version rather than `@latest` for anything whose output you keep. A check report
@@ -58,7 +58,7 @@ first 10:
   [warning] bulk-cap: +3V3 (power rail has no bulk capacitor)
   [warning] decoupling-present: +3V3 (power rail has no decoupling capacitor)
   [info] esd-protection: USB_D+ (externally-exposed signal net has no ESD protection)
-  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor)
+  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
   [warning] input-protection: VBUS (connector feeds a power input with no fuse or TVS in the path)
   [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
   ...
@@ -73,7 +73,7 @@ plain-language reason in parentheses. Each finding also carries its provenance: 
 and table, the finding came from.
 
 Severity is a policy signal, not a measure of certainty. An `error` is something you almost
-certainly must fix (an I2C bus with no pull-up will not communicate). `info` is a note worth
+certainly must fix (an I2C bus with no {{ explainable "pull-up" }} will not communicate). `info` is a note worth
 a look.
 
 ## A clean run, and why "no findings" has a number in it

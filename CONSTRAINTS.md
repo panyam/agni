@@ -230,7 +230,9 @@ holds one file per service.
 
 ## C14: Rule classification is open tags, not typed fields
 **Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
-`Reads` (its fact dependencies), and `Eval`, plus the prose (`Summary`/`Impact`/`Detail`). Every
+`Reads` (its fact dependencies), `Eval` (which MAPS every subject to a verdict), and
+`StatesConsideredSet` (whether those verdicts are the full considered set or only the failures),
+plus the prose (`Summary`/`Impact`/`Remedy`/`Detail`). Every
 classificatory axis — category, tier, distribution, and any provider-defined one — lives in an open
 `Tags map[string]string`, never as a typed struct field. Availability derives from `Reads` (a rule
 that reads a fact whose provider layer is absent is unavailable), not a stored track/label field.
@@ -655,3 +657,55 @@ the `--include` glob, or zsh expands it and grep never sees the flag.
 interface profile and a compiled intent declaration are both just rules in a catalog — so the flags
 travel on `service.ProjectConfig` rather than being derived from `Overlay.Sources`. Rationale in
 [the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
+
+## C26: One schema per contract; a hand-written twin carries a round-trip guard
+**Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
+and YAML is authoring SYNTAX rather than a second schema (parse it by converting to JSON and binding
+with `protojson`, which also gives strict unknown-field rejection for free). Where a hand-written Go
+twin genuinely must exist — a domain type that carries behaviour, an AST, a struct whose zero values
+mean something a message cannot express — the twin and its converter carry a **deep-equality
+round-trip test**: build a fixture with EVERY field set to a distinguishable non-zero value, go
+domain -> proto -> domain, and require `reflect.DeepEqual`. A tier with no wire form at all (design
+intent today) has no twin and owes neither.
+**Why:** two hand-maintained schemas for one contract drift, and they drift SILENTLY, because a field
+the converter never learned is absent from both sides of any assertion made on the proto. This has
+now shipped twice. `naming.Lexicon` grew gate/source/drain terminal vocabularies with no wire fields,
+so a project declaring them had them dropped on every path except `serve`'s startup install and
+`BuildRoleVocab` substituted the built-in names. `Profile.HostClass` (WS3-044) was added with no wire
+field, so an overlay profile binding its host by datasheet device class lost the binding crossing
+`stdlib/ruledef`, `HasHost` went false, and the host requirement compiled to nothing. Both failures
+are indistinguishable from a legitimately quiet run, which is the silent-pass shape this whole layer
+exists to prevent. `core/review`'s manifest conversion has had the guard since it was written and has
+never drifted, which is the evidence that the cheap half works. Owning the converter is NOT enough on
+its own: `stdlib/ruledef` claimed a body's wire form is owned beside its vocabulary so an omission is
+a compile error, and that holds for a new NODE TYPE covered by a type switch, not for a new FIELD on
+an already-mapped struct.
+**Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
+`FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All six pairs are
+covered: `TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip`
+(`stdlib/profiles`), `TestSpecProtoRoundTrip` (`core/check`), `TestQueryProtoRoundTrip`
+(`core/query`), `TestRuleMetaProtoRoundTrip` (`core/check`), and `TestVerdictProtoRoundTrip`
+(`internal/service`, guarded by `TestVerdictFieldCensus` beside it). A new body owes one before it
+ships, not after it drifts.
+
+`RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four,
+which is worth recording: the gap was found by adding a field (`Rule.Remedy`) that crosses it, not by
+auditing against the constraint. An enumeration in a Verify block is only as current as the last
+person who edited it.
+
+The remaining asymmetry is `query.FindingQueryProto`, which has no `FindingQueryFromProto`: its decode
+is inlined in `ruledef.Compile`, so there is no pair to round-trip and its field coverage rests on
+that one call site. Give it an inverse if it grows.
+**Verify (node vocabularies):** a body whose AST is a CLOSED vocabulary already fails loudly on a new
+NODE, because `check.termProto`/`exprProto` panic on a type with no case. That protection does not
+extend to a new FIELD, which is what the round-trip guard is for. Do not read the panic as covering
+both.
+**Note:** the fixture is the load-bearing part. A field left at its zero value round-trips cleanly
+through a conversion that drops it, because zero in equals zero out, so a guard built on a sparse
+fixture reports success while covering nothing.
+
+**A REPEATED field needs more than one element in the fixture**, which is the same trap one level in.
+A converter that drops everything past the first element round-trips a one-element slice perfectly, so
+the guard passes over exactly the bug it exists to catch. `Verdict.subjects` became repeated when a
+rule's subject grew to a tuple, and its fixture was widened to two entities in the same change for
+this reason.

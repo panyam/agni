@@ -64,7 +64,7 @@ func crystalParityDesign() *ir.Design {
 func findingKeys(fs []check.Finding) []string {
 	out := make([]string, 0, len(fs))
 	for _, f := range fs {
-		out = append(out, f.Subject+"|"+f.Message)
+		out = append(out, check.EntityRef(f.Subject)+"|"+f.Message)
 	}
 	sort.Strings(out)
 	return out
@@ -89,8 +89,8 @@ func TestCrystalDatalogParity(t *testing.T) {
 	if goRule == nil {
 		t.Fatal(`built-in rule "crystal-load-caps" not found in the built-in catalog`)
 	}
-	want := findingKeys(goRule.Eval(m))
-	got := findingKeys(crystalLoadCapsDL.Eval(m))
+	want := findingKeys(goRule.Findings(m))
+	got := findingKeys(crystalLoadCapsDL.Findings(m))
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("datalog twin diverges from Go rule\n  go : %v\n  dl : %v", want, got)
@@ -134,8 +134,8 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 		name string
 		fs   []check.Finding
 	}{
-		{"go", goRule.Eval(m)},
-		{"dl", crystalLoadCapsDL.Eval(m)},
+		{"go", goRule.Findings(m)},
+		{"dl", crystalLoadCapsDL.Findings(m)},
 	} {
 		name, fs := tw.name, tw.fs
 		t.Run(name, func(t *testing.T) {
@@ -146,8 +146,8 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 			if len(ctx) != 1 {
 				t.Fatalf("%s: want 1 context entity (the terminal net), got %d: %+v", name, len(ctx), ctx)
 			}
-			if ctx[0].Subject != "XOUT1" {
-				t.Errorf("%s: context entity = %q, want XOUT1 — the net the message names", name, ctx[0].Subject)
+			if ctx[0].Ref != "XOUT1" {
+				t.Errorf("%s: context entity = %q, want XOUT1 — the net the message names", name, ctx[0].Ref)
 			}
 			if ctx[0].Kind != check.KindNet {
 				t.Errorf("%s: context kind = %q, want %q", name, ctx[0].Kind, check.KindNet)
@@ -156,11 +156,11 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 				t.Errorf("%s: context role = %q, want %q", name, ctx[0].Role, "terminal")
 			}
 			// The whole point: the entity a reader is sent to must be the one the sentence names.
-			if !strings.Contains(fs[0].Message, ctx[0].Subject) {
-				t.Errorf("%s: context %q is not named in the message %q", name, ctx[0].Subject, fs[0].Message)
+			if !strings.Contains(fs[0].Message, ctx[0].Ref) {
+				t.Errorf("%s: context %q is not named in the message %q", name, ctx[0].Ref, fs[0].Message)
 			}
 			// And it must NOT be the subject, or the chip navigates to where the reader already is.
-			if ctx[0].Subject == fs[0].Subject {
+			if ctx[0].Ref == check.EntityRef(fs[0].Subject) {
 				t.Errorf("%s: context repeats the subject %q", name, fs[0].Subject)
 			}
 		})

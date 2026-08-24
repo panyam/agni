@@ -1,0 +1,5 @@
+# Rung 2: the whole-run shape. Only the tallies matter here; the rows are rung 9's subject.
+fixture: examples/tutorial-project
+script: |
+  agni check --verdicts designs/gateway/gateway.edn
+match: '^[0-9]+ verdicts'

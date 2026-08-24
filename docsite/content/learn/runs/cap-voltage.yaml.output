@@ -1,0 +1,8 @@
+#agni-run 0e9f1e7fc59f2813
+findings by rule:
+  cap-voltage            1
+
+first 1:
+  [error] cap-voltage: C1 (capacitor C1 (MPN DEMO-CAP-6V3): rated voltage VDC 6.3V is below 12.5V required (rail "+10V" 10V x derate 1.25) — datasheet "DEMO-CAP-6V3 Datasheet Rev A" page 2, "Ratings" (hand, confidence 1))
+
+1 finding(s) total

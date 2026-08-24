@@ -49,11 +49,11 @@ func drcFindings(t *testing.T) map[string][]string {
 	m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
 	got := map[string][]string{}
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
-		for _, f := range r.Eval(m) {
-			if f.Kind != check.KindNet {
-				t.Errorf("%s: finding kind = %q, want net", r.Name, f.Kind)
+		for _, f := range r.Findings(m) {
+			if f.Subject.Kind != check.KindNet {
+				t.Errorf("%s: finding kind = %q, want net", r.Name, f.Subject.Kind)
 			}
-			got[r.Name] = append(got[r.Name], f.Subject)
+			got[r.Name] = append(got[r.Name], check.EntityRef(f.Subject))
 		}
 	}
 	return got
@@ -74,7 +74,7 @@ func TestBoardDRCRules(t *testing.T) {
 
 func TestCopperClearanceMessageNamesBothNets(t *testing.T) {
 	m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
-	fs := copperClearance.Eval(m)
+	fs := copperClearance.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("findings = %+v", fs)
 	}
@@ -89,7 +89,7 @@ func TestCopperClearanceMessageNamesBothNets(t *testing.T) {
 func TestBoardRulesSilentWithoutBoard(t *testing.T) {
 	m := check.NewModel(ruleFixture())
 	for _, r := range []*check.Rule{trackWidth, holeSize, annularWidth, copperClearance} {
-		if fs := r.Eval(m); len(fs) != 0 {
+		if fs := r.Findings(m); len(fs) != 0 {
 			t.Errorf("%s fired %d finding(s) with no board tier", r.Name, len(fs))
 		}
 	}

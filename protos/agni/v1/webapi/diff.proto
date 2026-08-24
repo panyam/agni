@@ -47,11 +47,12 @@ message DiffReport {
   }
 
   // NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
-  // "deleted", "renamed" (same connection signature, different name), "hard" (pin membership
-  // changed), "soft" (attribute-only). name is the net's name where it exists (the new name
-  // for a rename); old_name is set only for renames. added/removed are "refdes.pin"
-  // connection deltas, set only for hard changes. old_prov/new_prov locate the net in each
-  // revision's source, unset on the side where the net does not exist.
+  // "deleted", "renamed" (same connection signature, different name), "renamed-approx" (a
+  // near match the engine ASSIGNED rather than recovered, see approx below), "hard" (pin
+  // membership changed), "soft" (attribute-only). name is the net's name where it exists (the
+  // new name for a rename); old_name is set on both rename kinds. added/removed are
+  // "refdes.pin" connection deltas, set on hard changes and on renamed-approx. old_prov/new_prov
+  // locate the net in each revision's source, unset on the side where the net does not exist.
   message NetChange {
     string kind = 1;
     string name = 2;
@@ -60,17 +61,45 @@ message DiffReport {
     repeated string removed = 5;
     agni.v1.ir.Provenance old_prov = 6;
     agni.v1.ir.Provenance new_prov = 7;
+    // approx is why the near-match pass paired these two nets, set only on "renamed-approx".
+    //
+    // It travels with the change rather than being recomputed, because a consumer cannot
+    // rebuild it: the fractions are taken against the endpoint sets as they were BEFORE the
+    // assignment consumed them, and significance depends on the device classes of components
+    // in both revisions. A viewer that wanted to show its work would otherwise need both
+    // designs in hand.
+    RenameEvidence approx = 8;
+  }
+
+  // RenameEvidence is the arithmetic behind one "renamed-approx" pairing.
+  //
+  // It exists so a reader can DISAGREE with the engine. An approximate rename is a judgement
+  // among candidates rather than a fact about the two revisions, so a consumer that showed only
+  // the conclusion would be asking to be trusted. The *_significant figures exclude endpoint
+  // classes the run treats as churn (test points by default), which is why they can differ
+  // sharply from their all-endpoint counterparts on a heavily probed board.
+  message RenameEvidence {
+    double old_coverage = 1;             // fraction of the old net's endpoints that survived
+    double old_coverage_significant = 2; // the same, ignoring insignificant endpoint classes
+    double new_coverage_significant = 3; // fraction of the new net's significant endpoints that are old
+    int32 overlap = 4;                   // endpoints in both
+    int32 overlap_significant = 5;       // significant endpoints in both
+    int32 old_endpoints = 6;             // size of the old net
+    int32 new_endpoints = 7;             // size of the new net
+    int32 old_significant = 8;           // significant endpoints on the old net
+    int32 new_significant = 9;           // significant endpoints on the new net
   }
 }
 
 // DiffDesignsResponse carries the full report plus the compact highlight maps a viewer joins
 // to geometry keys without re-deriving the diff (WS9-004): component_status maps ref_des ->
 // "added" | "removed" | "changed"; net_status maps net name -> "new" | "deleted" | "renamed" |
-// "hard" | "soft". A renamed net appears under BOTH its old and new name (both -> "renamed"),
+// "renamed-approx" | "hard" | "soft". A renamed net of either kind appears under BOTH its old and
+// new name (both carrying that net's own kind),
 // so each side of a visual diff joins by the name its own geometry carries; the by-name match
 // in diff.Designs guarantees one name never carries two different statuses. A consumer filters
-// by side: the old design draws removed/deleted/renamed/hard/soft, the new one
-// added/new/renamed/hard/soft.
+// by side: the old design draws removed/deleted/renamed/renamed-approx/hard/soft, the new one
+// added/new/renamed/renamed-approx/hard/soft.
 message DiffDesignsResponse {
   DiffReport report = 1;
   map<string, string> component_status = 2;

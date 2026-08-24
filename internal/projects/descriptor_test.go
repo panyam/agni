@@ -8,7 +8,7 @@ import (
 func TestParseDesign(t *testing.T) {
 	id, d, err := ParseDesign(strings.NewReader(`
 name: gateway
-title: Gateway ECU
+title: Sample Board
 entry: gateway.edn
 companions:
   - gateway.kicad_sch
@@ -20,7 +20,7 @@ companions:
 	if id != "gateway" {
 		t.Fatalf("id = %q", id)
 	}
-	if d.GetTitle() != "Gateway ECU" {
+	if d.GetTitle() != "Sample Board" {
 		t.Errorf("title = %q", d.GetTitle())
 	}
 	// Parsing leaves the refs DESIGN-FOLDER-RELATIVE; the store rewrites them once it knows where the

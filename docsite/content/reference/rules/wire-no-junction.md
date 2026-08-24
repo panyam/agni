@@ -3,6 +3,10 @@ title: "wire-no-junction"
 description: "A wire endpoint lands mid-span on another wire with no junction dot."
 ---
 
+### Remedy
+
+Place a junction dot where the wires meet if the connection is intended, or move one wire clear of the other if it is not. Do not leave the crossing to be read by eye.
+
 ### What it means
 
 A wire's endpoint lies strictly inside another wire segment's body, and no

@@ -92,6 +92,9 @@ message RuleMeta {
   // inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
   // which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
   repeated string requires_capability = 8;
+  // remedy is what to do about a violation, in the imperative. It is generic over the RULE rather
+  // than the subject, so it names the class of change and never a designator or a computed value.
+  string remedy = 9;
 }
 
 // --- The spec body: a rule as a small AST over declared facts -------------------------------------
@@ -112,6 +115,11 @@ message SpecBody {
   map<string, SpecTerm> let = 2;
   SpecExpr where = 3;
   string message = 4;
+  // scope is which elements of over the rule JUDGES; absent judges all of them. It is separate from
+  // where because falling out of each means something different: out of scope produces no verdict at
+  // all, while failing where produces a PASS. With one predicate a subject the rule was never about
+  // is indistinguishable from one it checked and cleared.
+  SpecExpr scope = 5;
 }
 
 // SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer
@@ -328,6 +336,14 @@ message ProfileDef {
   string host_attr_key = 3;
   string host_attr_val = 4;
   repeated ProfileRequirement requirements = 5;
+  // host_class binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
+  // against component.device_class (WS3-044). Either binding form, or both; a profile declaring both
+  // binds a host matching either. Empty means no class binding.
+  //
+  // It is field 6 because the message shipped without it while Profile.HostClass already existed, so
+  // a class-only host binding was dropped crossing this contract and the profile read as having no
+  // host at all. TestProfileProtoRoundTrip is what now makes that class of omission fail.
+  string host_class = 6;
 }
 
 // ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:

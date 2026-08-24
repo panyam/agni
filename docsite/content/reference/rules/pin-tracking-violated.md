@@ -3,6 +3,10 @@ title: "pin-tracking-violated"
 description: "Two pins of one part sit outside the tracking bound their datasheet requires between them."
 ---
 
+### Remedy
+
+Restore the ordering the datasheet requires between the two terminals, using sequencing, a clamp diode between them, or a shared rail. This is a stress violation, so it wants fixing before the board is powered again.
+
 ### What it means
 
 A component joined to a seeded datasheet spec has two pins whose difference breaks a tracking bound

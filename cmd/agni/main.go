@@ -15,6 +15,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -22,6 +23,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/diff"
+	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/core/review"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -91,6 +93,15 @@ func rootCmd() *cobra.Command {
 // symbolPaths holds the --symbol-path search directories for resolving xschem/gEDA symbols.
 var symbolPaths []string
 
+// envConfigWebDir holds the web_dir an agni.yaml named, "" when no file named one. applyEnvConfig
+// fills it; resolveWebDir consults it. It is a package var for the same reason cliMountSpecs is: the
+// file is read once in PersistentPreRunE, before any command knows it needed the value.
+var envConfigWebDir string
+
+// envConfigNativeTools holds the native_tools an agni.yaml named. Same shape as envConfigWebDir and
+// for the same reason: only serve consumes it, and by then the file has long been read.
+var envConfigNativeTools []string
+
 // envSymbolPath names the environment variable that supplies --symbol-path when the flag is
 // absent. It exists for the container image, where the symbol libraries ship at a fixed location
 // and EVERY subcommand needs them, not just the one the image's default CMD happens to run.
@@ -104,6 +115,23 @@ var symbolPaths []string
 // environment. The flag wins outright when present rather than appending, so an explicit
 // --symbol-path is never silently widened by ambient configuration.
 const envSymbolPath = "AGNI_SYMBOL_PATH"
+
+// envWebDir names the environment variable that supplies --web-dir when neither the flag nor an
+// agni.yaml names one.
+//
+// It exists for the case the relative default cannot serve: an INSTALLED binary, run from wherever
+// the user's design happens to live, whose assets sit at a fixed absolute path. From a checkout the
+// default "web" already resolves per-directory, so two checkouts serve their own assets with no
+// configuration; from /usr/local/bin there is no such relative answer.
+//
+// The flag wins outright, then agni.yaml, then this. Ambient configuration is last because it is the
+// tier whose value nobody typed.
+const envWebDir = "AGNI_WEB_DIR"
+
+// defaultWebDir is where the viewer's assets live relative to a repo checkout. It is the value every
+// in-tree caller used to pass positionally, so keeping it as the default is what makes dropping that
+// argument a no-op for `make serve`, `make demo`, and the container's CMD.
+const defaultWebDir = "web"
 
 // applyEnvConfig fills the tier-1 flags from the nearest agni.yaml, for the ones the operator did not
 // pass. It runs once, before any command.
@@ -136,10 +164,38 @@ func applyEnvConfig(w io.Writer, getenv func(string) string) error {
 		symbolPaths = cfg.SymbolPaths
 		used = append(used, fmt.Sprintf("%d symbol path(s)", len(cfg.SymbolPaths)))
 	}
+	if cfg.WebDir != "" {
+		envConfigWebDir = cfg.WebDir
+		used = append(used, "a web dir")
+	}
+	if len(cfg.NativeTools) > 0 {
+		envConfigNativeTools = cfg.NativeTools
+		used = append(used, fmt.Sprintf("%d native tool(s)", len(cfg.NativeTools)))
+	}
 	if len(used) > 0 {
 		fmt.Fprintf(w, "note: using %s from %s.\n", strings.Join(used, " and "), path)
 	}
 	return nil
+}
+
+// resolveWebDir answers where the viewer's assets are, and says where the answer came from.
+//
+// The source is returned rather than logged here so the caller can announce only the cases nobody
+// typed. A flag is the operator's own words and needs no narration; a value from an agni.yaml or the
+// environment is exactly the kind of resolution that, left silent, turns "the viewer is serving stale
+// assets from another checkout" into an unfalsifiable afternoon.
+func resolveWebDir(flag string, getenv func(string) string) (dir, source string) {
+	switch {
+	case flag != "":
+		return flag, ""
+	case envConfigWebDir != "":
+		return envConfigWebDir, "agni.yaml"
+	default:
+		if v := strings.TrimSpace(getenv(envWebDir)); v != "" {
+			return v, envWebDir
+		}
+		return defaultWebDir, ""
+	}
 }
 
 // resolveSymbolPaths applies the envSymbolPath fallback. Called once before any command runs.
@@ -344,6 +400,8 @@ func statsCmd() *cobra.Command {
 func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
+	var verdicts bool
+	var urlBase string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -352,15 +410,23 @@ func checkCmd() *cobra.Command {
 			"distribution, or a provider's own), so e.g. --tag category=connectivity runs one group. " +
 			"--format json emits the full findings array (one object per finding, subjects and all) " +
 			"for tooling; markdown renders the severity-organized report (worst first, grouped by " +
-			"rule); report emits that report as JSON (the GetCheckReport wire shape); the default " +
-			"text form is a per-rule summary. --fail-on error|warning|info exits non-zero when any " +
-			"finding sits at or above the threshold, so check gates CI.",
+			"rule); report emits that report as JSON (the GetCheckReport wire shape); html renders the " +
+			"verdict report as a self-contained page and turns --verdicts on, since that is the only " +
+			"table it has; the default text form is a per-rule summary, and it closes with what the " +
+			"run considered. --fail-on error|warning|info exits non-zero when any finding sits at or " +
+			"above the threshold, so check gates CI.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch format {
 			case "text", "json", "csv", "markdown", "report":
+			case "html":
+				// html is the verdict REPORT, which has no findings-only form: it exists to show what
+				// was checked, and the findings table already has three renderings. Asking for it IS
+				// asking for the considered set, so it turns --verdicts on rather than refusing and
+				// making the reader type a second flag that has no alternative.
+				verdicts = true
 			default:
-				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report)", format)
+				return fmt.Errorf("unknown --format %q (want: text, json, csv, markdown, report, html)", format)
 			}
 			switch failOn {
 			case "", "error", "warning", "info":
@@ -388,7 +454,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
+				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
 			}
 			if profilePath != "" {
 				ps, err := profiles.LoadDir(profilePath)
@@ -480,6 +546,14 @@ func checkCmd() *cobra.Command {
 				if err := renderCheckResults(cmd.OutOrStdout(), doc, format); err != nil {
 					return err
 				}
+				// The terminal shows THE RUN, so adding --results-out must not change what you see.
+				// The rendering above comes from the document, which has no field for a considered set
+				// (OUT_OF_SCOPE.md), so the coverage line is written here from the live response
+				// instead. That is the one place the two legitimately differ: a replay of the document
+				// later cannot reproduce this line, because the document never held it.
+				if format == "text" {
+					writeCoverage(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), resp.GetVerdicts())
+				}
 				if failOn != "" && failsAtProto(resp.GetFindings(), failOn) {
 					cmd.SilenceUsage = true
 					return &gateError{msg: fmt.Sprintf("findings at or above --fail-on %s", failOn)}
@@ -506,6 +580,50 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				// --verdicts selects the CONSIDERED SET instead of the violations: what every
+				// converted rule concluded about each subject it looked at, passes included. It is a
+				// different table answering a different question, which is why it is a flag over the
+				// same run rather than extra rows in the findings output. --fail-on still reads the
+				// findings below, since a pass is not a gate condition.
+				if verdicts {
+					// A LINK IS A PROMISE, and this is the one place the promise is made. urlBase is
+					// empty unless the operator says where the viewer is, and linkablePath is empty
+					// for a design the CLI reached by a path the server would not recognise. Either
+					// one missing means every format emits no link rather than one assembled from a
+					// guess, which would resolve on nobody's server (agni issue 392).
+					meta := rpt.Report{
+						Design:      designURI,
+						Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+						ContentHash: hashSource(localOf(designURI)),
+						URLBase:     urlBase,
+						MountPath:   linkablePath(args[0], designURI),
+					}
+					switch format {
+					case "csv":
+						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts(), meta); err != nil {
+							return err
+						}
+					case "json":
+						if err := writeVerdictJSON(cmd.OutOrStdout(), resp.GetVerdicts()); err != nil {
+							return err
+						}
+					case "html":
+						// resolveAgainst, NOT catalog: the report has to read the catalog the RUN used, or
+						// an operator's own rules arrive with no prose (agni issue 411). `catalog` is the
+						// built-ins plus the ad-hoc flag sources; the project's rules and the
+						// --conventions value are composed onto it by withProjectRules, and those are
+						// exactly the rules a team wrote for its own boards. Looked up in the narrower
+						// catalog they miss, and a rule with no summary, impact or remedy still renders,
+						// under a bare name, which silently rewards using the built-ins over your own.
+						if err := writeVerdictHTML(cmd.OutOrStdout(), resp, resolveAgainst.Rules(), meta); err != nil {
+							return err
+						}
+					default:
+						writeVerdictText(cmd.OutOrStdout(), buildVerdictReport(resp, resolveAgainst.Rules(), meta))
+					}
+					failFindings = resp.GetFindings()
+					break
+				}
 				switch format {
 				case "json":
 					if err := writeCheckDesignJSON(cmd.OutOrStdout(), resp); err != nil {
@@ -516,7 +634,7 @@ func checkCmd() *cobra.Command {
 						return err
 					}
 				default:
-					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected))
+					writeCheckText(cmd.OutOrStdout(), findingsFromProto(resp.GetFindings()), len(selected), resp.GetVerdicts())
 				}
 				failFindings = resp.GetFindings()
 			}
@@ -529,7 +647,9 @@ func checkCmd() *cobra.Command {
 	}
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
-	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report")
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
+	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so every --verdicts format links each verdict to its proof: an anchor in the html report, a url column in the csv, a line under each row in the terminal. Omitted, or for a design reached by a path the server would not recognise, no link is emitted at all: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
+	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")
@@ -542,9 +662,18 @@ func checkCmd() *cobra.Command {
 
 // writeCheckText prints the default per-rule summary plus the first findings, the original
 // human terminal form (reports and tooling use --format markdown/report/json).
-func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
+//
+// It closes with a COVERAGE line, because a findings list cannot say what was examined and a rule
+// count is not an answer: twenty-nine rules finding nothing and twenty-nine rules that each looked at
+// the wrong thing print the same line. The considered set rides on the same response, so this costs
+// nothing to report, and it is stated by default because honesty about coverage should not be
+// something a reader has to know to ask for. The per-subject rows stay behind --verdicts: they are
+// six times the volume here and far more on a real board, so the DEFAULT states the claim and the
+// flag shows the evidence.
+func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, vs []*checkspb.Verdict) {
 	if len(fs) == 0 {
 		fmt.Fprintf(w, "no findings (%d rule(s) run)\n", rulesRun)
+		writeCoverage(w, fs, vs)
 		return
 	}
 	byRule := map[string]int{}
@@ -558,9 +687,51 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
 	limit := min(len(fs), 50)
 	fmt.Fprintf(w, "\nfirst %d:\n", limit)
 	for _, f := range fs[:limit] {
-		fmt.Fprintf(w, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, f.Subject, f.Message)
+		fmt.Fprintf(w, "  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	fmt.Fprintf(w, "\n%d finding(s) total\n", len(fs))
+	writeCoverage(w, fs, vs)
+}
+
+// writeCoverage states what the run looked at, in the terms core/report already uses for the HTML
+// report, so the two cannot describe the same run differently.
+//
+// The findings-only count is over rules that REPORTED SOMETHING without stating a considered set, not
+// over every rule that ran. Those differ, and the difference matters: on the tutorial board 84 rules
+// run and 22 state a considered set, but most of the other 62 simply had no subject in scope on this
+// design. Calling them "violations only" would invent a coverage hole out of rules that correctly had
+// nothing to say, which is the same false-confidence move in the opposite direction.
+//
+// NOT_CONSIDERED is counted apart from the judged outcomes because it is the one with no counterpart
+// in a findings list: the rule was willing to judge and an input was missing.
+func writeCoverage(w io.Writer, fs []check.Finding, vs []*checkspb.Verdict) {
+	if len(vs) == 0 {
+		return // nothing stated a considered set; claiming coverage would invent it
+	}
+	stating := map[string]bool{}
+	judged, notConsidered := 0, 0
+	for _, v := range vs {
+		stating[v.GetRule()] = true
+		if v.GetOutcome() == checkspb.Outcome_OUTCOME_NOT_CONSIDERED {
+			notConsidered++
+			continue
+		}
+		judged++
+	}
+	fmt.Fprintf(w, "%d subject(s) considered by %d rule(s)", judged, len(stating))
+	if notConsidered > 0 {
+		fmt.Fprintf(w, ", %d not considered", notConsidered)
+	}
+	fmt.Fprint(w, " (--verdicts for the detail)\n")
+	silent := map[string]bool{}
+	for _, f := range fs {
+		if !stating[f.Rule] {
+			silent[f.Rule] = true
+		}
+	}
+	if len(silent) > 0 {
+		fmt.Fprintf(w, "%d rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything\n", len(silent))
+	}
 }
 
 // writeCheckDesignJSON emits the CheckDesign response in protojson form, the same wire shape the RPC
@@ -568,7 +739,25 @@ func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int) {
 // and datasheet citation). The response is already sheet-annotated server-side (WS9-048), so the CLI
 // marshals it verbatim — the conformance runner parses the same `.findings[]` whether it shells out or
 // calls the API.
+// The considered set is stripped before marshalling, so no DATA changes here: the default output
+// carries the same findings it always did. It is a different answer (every subject looked at, passes
+// included) and folding it in would change what every existing consumer receives, the same reason the
+// verdict csv is a separate table rather than extra rows in the findings one. `--verdicts --format
+// json` is where to ask for it.
+//
+// Not byte-identical, though. EmitUnpopulated means the new field still appears as `"verdicts": []`,
+// which is inherent to adding a field to the response message rather than something stripping can
+// undo. A consumer that rejects unknown keys sees one; a consumer reading `findings` is unaffected.
+//
+// It also keeps `results` honest: that command replays a written CheckResults document, which has no
+// verdicts field, so emitting them here would make the two formats of one run disagree and the
+// round-trip test says so.
 func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
+	if len(resp.GetVerdicts()) > 0 {
+		// A fresh message rather than a struct copy: a generated proto carries a MessageState with a
+		// mutex in it, so copying one by value is what go vet's copylocks check exists to catch.
+		resp = &webapi.CheckDesignResponse{Findings: resp.GetFindings(), Skipped: resp.GetSkipped()}
+	}
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
 	if err != nil {
 		return err
@@ -630,7 +819,7 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				overlay.Config = &webapi.AnalysisConfig{Conventions: service.ConventionProto(cfg)}
+				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
 			}
 			var specs param.ParamProvider
 			if paramsDir != "" {
@@ -865,6 +1054,7 @@ func composeReviewInputsFrom(overlay []profiles.Profile, intentPath string, extr
 
 func diffCmd() *cobra.Command {
 	var format string
+	var renameApprox bool
 	c := &cobra.Command{
 		Use:   "diff <old> <new>",
 		Short: "Structural diff between two revisions of a design (over the IR)",
@@ -878,7 +1068,9 @@ func diffCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			rep := diff.Designs(a, b)
+			opts := diff.DefaultRenameOptions()
+			opts.Enabled = renameApprox
+			rep := diff.Designs(a, b, opts)
 			w := cmd.OutOrStdout()
 			switch format {
 			case "json":
@@ -903,6 +1095,8 @@ func diffCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&format, "format", "text",
 		"output format: text (human summary), json (the DiffDesignsResponse wire shape the web API serves), or csv (one row per change)")
+	c.Flags().BoolVar(&renameApprox, "rename-approx", false,
+		"also pair a net that was renamed AND changed slightly, reported as renamed-approx with the evidence behind each pairing. Off by default: this ASSIGNS a best match among candidates rather than recovering a fact, so a gate reading the output should opt in")
 	return c
 }
 

@@ -226,12 +226,20 @@ func (m *irModel) NoJunctionEndpoints() []*ir.DanglingEndpoint {
 	return m.d.GetInputDiagnostics().GetNoJunctionEndpoints()
 }
 
+func (m *irModel) JoinedTaps() []*ir.JoinedTap {
+	return m.d.GetInputDiagnostics().GetJoinedTaps()
+}
+
 func (m *irModel) RefDesCollisions() []*ir.RefDesCollision {
 	return m.d.GetInputDiagnostics().GetRefDesCollisions()
 }
 
 func (m *irModel) UnresolvedSymbols() []*ir.UnresolvedSymbol {
 	return m.d.GetInputDiagnostics().GetUnresolvedSymbols()
+}
+
+func (m *irModel) ResolvedSymbols() []*ir.ResolvedSymbol {
+	return m.d.GetInputDiagnostics().GetResolvedSymbols()
 }
 
 func (m *irModel) UnannotatedComponents() []*ir.UnannotatedComponent {

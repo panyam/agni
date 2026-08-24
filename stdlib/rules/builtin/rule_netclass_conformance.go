@@ -24,6 +24,7 @@ var netclassTrackWidth = &check.Rule{
 	Severity:           "warning",
 	Summary:            "A net is routed narrower than the track width its own net class declares.",
 	Impact:             "The project states, per net class, the track width its nets are meant to route at. A net routed below its declared width is a silent departure from that intent: on a power class it is a current-density and heating risk, on a controlled-impedance class it shifts the impedance the class exists to hold. Unlike the fabrication-floor check, this can fire on a board that manufactures fine — the board is buildable, it is just not what the design asked for.",
+	Remedy:             "Widen the track to the width its class declares, or amend the class if the declaration is the half that is out of date. The board may build either way, so decide which of the two states the design's intent.",
 	Primitives:         []string{"select", "compare"},
 	Reads:              []string{"net.declared_track_width", "board.track_width"},
 	RequiresCapability: []check.Capability{check.CapNetClassDefs},
@@ -33,11 +34,13 @@ var netclassTrackWidth = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("netclass-track-width"),
-	Eval: func(m check.Model) []check.Finding {
-		return declaredVsActual(m, "track_width",
+	Eval: func(m check.Model) []check.Verdict {
+		return declaredVsActual(m, "track_width", "routed width", "declared track width",
 			func(bn check.BoardNet) (float64, bool) { return minSegmentWidthMM(bn) },
+			"the net carries no routed track, so there is no width to compare",
 			"routed at %s, narrower than the %s its net class %q declares")
 	},
+	StatesConsideredSet: true,
 }
 
 var netclassViaDrill = &check.Rule{
@@ -45,6 +48,7 @@ var netclassViaDrill = &check.Rule{
 	Severity:           "warning",
 	Summary:            "A net's via is drilled smaller than the drill its own net class declares.",
 	Impact:             "A net class declares the via drill its nets should use, usually sized for the current the class carries or for the fab process the board is quoted against. A via drilled below it departs from that intent silently: the board may still build, but the class's assumption about current capacity or plating no longer holds.",
+	Remedy:             "Enlarge the via drill to the size its class declares, or amend the class if the smaller drill is intended. The class carries an assumption about current capacity or plating, and one of the two has moved.",
 	Primitives:         []string{"select", "compare"},
 	Reads:              []string{"net.declared_via_drill", "board.via_drill"},
 	RequiresCapability: []check.Capability{check.CapNetClassDefs},
@@ -54,11 +58,13 @@ var netclassViaDrill = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("netclass-via-drill"),
-	Eval: func(m check.Model) []check.Finding {
-		return declaredVsActual(m, "via_drill",
+	Eval: func(m check.Model) []check.Verdict {
+		return declaredVsActual(m, "via_drill", "smallest drill", "declared via drill",
 			func(bn check.BoardNet) (float64, bool) { return minViaDrillMM(bn) },
+			"the net carries no via, so there is no drill to compare",
 			"drilled at %s, smaller than the %s its net class %q declares")
 	},
+	StatesConsideredSet: true,
 }
 
 // declaredVsActual is the shared body: for each routed net, resolve what the project declared for
@@ -70,11 +76,27 @@ var netclassViaDrill = &check.Rule{
 // left and applying to every net including unclassed ones. Comparing the copper against each class
 // the net belongs to would fail a net that correctly obeys the class that won.
 //
-// A net the project constrained nowhere yields nothing to compare and is skipped, never passed.
-func declaredVsActual(m check.Model, param string, actual func(check.BoardNet) (float64, bool), msg string) []check.Finding {
+// A NET THE PROJECT CONSTRAINED NOWHERE IS NoLimit, which is the outcome the datasheet rules produce
+// for a row stating no bound and is the same situation one tier down: the comparison was reached and
+// nothing constrains the value. Before, that took the same silent path as a net comfortably above its
+// declared width, so a project that forgot to state a width for its power class read exactly like one
+// whose power tracks are all wide enough. It is the false-pass shape CapNetClassDefs prevents for the
+// design as a whole and could not see per net.
+//
+// check.CompareToBound does the comparison and builds the witness in one call, so there is no way to
+// reach a pass here without the statement that justifies it.
+func declaredVsActual(
+	m check.Model,
+	param string,
+	quantity string, // names the measurement in a witness: "routed width"
+	limitName string, // names the bound in a witness: "declared track width"
+	actual func(check.BoardNet) (float64, bool),
+	noCopperReason string,
+	msg string,
+) []check.Verdict {
 	// No explicit empty-definitions guard: with no definitions there is no class stating anything,
-	// so declaredFor reports "not stated" for every net and nothing fires. Mutation testing showed a
-	// guard here was unreachable. CapNetClassDefs is what reports the situation honestly to a review.
+	// so declaredFor reports "not stated" for every net and every verdict is NoLimit.
+	// CapNetClassDefs is what reports that situation to a review as a rule-level answer.
 	defs := m.NetClassDefs()
 	byName := make(map[string]*ir.Constraint, len(defs))
 	var defaultClass string
@@ -85,22 +107,34 @@ func declaredVsActual(m check.Model, param string, actual func(check.BoardNet) (
 		}
 	}
 
-	var out []check.Finding
+	var out []check.Verdict
 	for _, bn := range m.BoardNets() {
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: bn.Net}}}
 		act, ok := actual(bn)
 		if !ok {
-			continue // no copper of this kind on the net; nothing to compare
-		}
-		declared, from, ok := declaredFor(m, bn.Net, param, byName, defaultClass)
-		if !ok || act >= declared {
+			// Not a pass and not a limit question: there is no copper of this kind to measure, so
+			// the rule reached no comparison at all.
+			v.Outcome = check.NotConsidered
+			v.Reason = noCopperReason
+			out = append(out, v)
 			continue
 		}
-		out = append(out, check.Finding{
-			Severity: "warning",
-			Kind:     check.KindNet,
-			Subject:  bn.Net,
-			Message:  fmt.Sprintf(msg, mmText(act), mmText(declared), from),
-		})
+		declared, from, stated := declaredFor(m, bn.Net, param, byName, defaultClass)
+		bound := check.Bound{}
+		if stated {
+			bound.Min = &declared
+		}
+		outcome, w := check.CompareToBound(act, "mm", bound, quantity, limitName)
+		v.Outcome, v.Witness = outcome, w
+		if stated && w != nil {
+			// Which class the limit came from. The number alone does not say whose rule it is, and
+			// on a board where several classes bear on one net that is the first thing a reader asks.
+			w.Terms = append(w.Terms, check.WitnessTerm{Label: "declared by class", Value: from})
+		}
+		if outcome == check.Fail {
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: bn.Net}, Severity: "warning", Message: fmt.Sprintf(msg, mmText(act), mmText(declared), from)}
+		}
+		out = append(out, v)
 	}
 	return out
 }

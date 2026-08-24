@@ -23,7 +23,7 @@ func assertContextContract(t *testing.T, fs []check.Finding) {
 	for _, f := range fs {
 		for i, c := range f.Context {
 			where := f.Rule + " context[" + itoa(i) + "]"
-			if c.Subject == "" {
+			if c.Ref == "" {
 				t.Errorf("%s: empty subject; a chip with no entity navigates nowhere", where)
 			}
 			if c.Role == "" {
@@ -43,14 +43,14 @@ func assertContextContract(t *testing.T, fs []check.Finding) {
 			// The two that actually bite. A context repeating the subject gives the reader a chip
 			// that navigates to where they already are; a context the message does not name is a chip
 			// with no explanation, and usually means the wrong variable was declared.
-			if c.Subject == f.Subject && c.Pin == "" {
-				t.Errorf("%s: repeats the finding's own subject %q", where, f.Subject)
+			if c.Ref == f.Subject.Ref && c.Pin == "" {
+				t.Errorf("%s: repeats the finding's own subject %q", where, f.Subject.Ref)
 			}
 			// What the message has to NAME depends on the kind. A pin context on a component-subject
 			// finding shares the subject's ref des, and the message names the pin DESIGNATOR ("pin 1"),
 			// not the ref des, because the ref des is already the subject. Checking the ref there would
 			// fail on correct rules, which is what the first version of this helper did.
-			named := c.Subject
+			named := c.Ref
 			if c.Kind == check.KindPin && c.Pin != "" {
 				named = c.Pin
 			}
@@ -89,13 +89,13 @@ func ctxOf(f check.Finding) map[string]check.ContextSubject {
 func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	t.Run("fet-vdss-below-rail names the rail", func(t *testing.T) {
 		m := check.NewModelWithParams(fetDesign("+60V", ""), nil, param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
-		fs := fetVdssBelowRail.Eval(m)
+		fs := fetVdssBelowRail.Findings(m)
 		if len(fs) != 1 {
 			t.Fatalf("want 1 finding, got %d", len(fs))
 		}
 		assertContextContract(t, fs)
 		c := ctxOf(fs[0])["rail"]
-		if c.Subject != "+60V" || c.Kind != check.KindNet {
+		if c.Ref != "+60V" || c.Kind != check.KindNet {
 			t.Errorf("rail context = %+v, want the +60V net", c)
 		}
 	})
@@ -109,10 +109,10 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		by := ctxOf(fs[0])
 		// The PIN is the interesting one: the subject is the whole part, and a part can have several
 		// supply pins, so the ref des alone cannot say which terminal is over its limit.
-		if p := by["pin"]; p.Kind != check.KindPin || p.Subject != fs[0].Subject || p.Pin == "" {
+		if p := by["pin"]; p.Kind != check.KindPin || p.Ref != fs[0].Subject.Ref || p.Pin == "" {
 			t.Errorf("pin context = %+v, want a pin of the subject part", p)
 		}
-		if r := by["rail"]; r.Kind != check.KindNet || r.Subject != "+5V" {
+		if r := by["rail"]; r.Kind != check.KindNet || r.Ref != "+5V" {
 			t.Errorf("rail context = %+v, want the +5V net", r)
 		}
 	})
@@ -124,13 +124,13 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		}
 		assertContextContract(t, fs)
 		by := ctxOf(fs[0])
-		if by["pin"].Kind != check.KindPin || by["rail"].Subject != "+5V" {
+		if by["pin"].Kind != check.KindPin || by["rail"].Ref != "+5V" {
 			t.Errorf("context = %+v, want a pin and the +5V rail", fs[0].Context)
 		}
 	})
 
 	t.Run("resonator-redundant-load-caps names the terminal and the cap", func(t *testing.T) {
-		fs := resonatorRedundantLoadCaps.Eval(check.NewModel(resonatorFixture()))
+		fs := resonatorRedundantLoadCaps.Findings(check.NewModel(resonatorFixture()))
 		if len(fs) == 0 {
 			t.Fatal("want at least 1 finding")
 		}
@@ -146,13 +146,13 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	})
 
 	t.Run("rail-not-classified names the supply pin", func(t *testing.T) {
-		fs := railNotClassified.Eval(check.NewModel(houseNamedDesign()))
+		fs := railNotClassified.Findings(check.NewModel(houseNamedDesign()))
 		if len(fs) == 0 {
 			t.Fatal("want at least 1 finding")
 		}
 		assertContextContract(t, fs)
 		c := ctxOf(fs[0])["supply-pin"]
-		if c.Kind != check.KindPin || c.Subject == "" || c.Pin == "" {
+		if c.Kind != check.KindPin || c.Ref == "" || c.Pin == "" {
 			t.Errorf("supply-pin context = %+v, want a ref/pin pair", c)
 		}
 	})
@@ -161,13 +161,13 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		// A clearance violation is SYMMETRIC and gets filed under one of the two nets, so before this
 		// the other end had no way back into the drawing.
 		m := check.NewModelWithBoard(&ir.Design{}, drcBoard())
-		fs := copperClearance.Eval(m)
+		fs := copperClearance.Findings(m)
 		if len(fs) != 1 {
 			t.Fatalf("want 1 finding, got %d", len(fs))
 		}
 		assertContextContract(t, fs)
 		c := ctxOf(fs[0])["neighbour"]
-		if c.Kind != check.KindNet || c.Subject == "" || c.Subject == fs[0].Subject {
+		if c.Kind != check.KindNet || c.Ref == "" || c.Ref == fs[0].Subject.Ref {
 			t.Errorf("neighbour context = %+v, want the OTHER net of the pair", c)
 		}
 	})
@@ -180,7 +180,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 			t.Fatalf("want the one inconclusive finding of the unclassifiable path, got %+v", fs)
 		}
 		assertContextContract(t, fs)
-		if c := ctxOf(fs[0])["transistor"]; c.Kind != check.KindComponent || c.Subject == "" {
+		if c := ctxOf(fs[0])["transistor"]; c.Kind != check.KindComponent || c.Ref == "" {
 			t.Errorf("transistor context = %+v, want the part to seed", c)
 		}
 	})
@@ -200,7 +200,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		}
 		// The subject is the FET because it is what overheats, but the fix is usually one of these.
 		for _, c := range fs[0].Context {
-			if c.Subject == fs[0].Subject {
+			if c.Ref == fs[0].Subject.Ref {
 				t.Errorf("context repeats the subject %q", fs[0].Subject)
 			}
 		}

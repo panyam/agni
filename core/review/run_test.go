@@ -273,7 +273,7 @@ func TestPresentBinding(t *testing.T) {
 	if got.Outcome != Fail || len(got.Findings) != 1 {
 		t.Fatalf("without a test_connector: want fail/one-finding, got %s / %+v", got.Outcome, got.Findings)
 	}
-	if f := got.Findings[0]; f.Rule != "present/test_connector" || f.Subject != "test_connector" {
+	if f := got.Findings[0]; f.Rule != "present/test_connector" || check.EntityRef(f.Subject) != "test_connector" {
 		t.Errorf("finding = %+v, want rule=present/test_connector subject=test_connector", f)
 	}
 }
@@ -392,8 +392,7 @@ func TestCoverageRollup(t *testing.T) {
 func TestReportCapsFindings(t *testing.T) {
 	var fs []check.Finding
 	for i := range 10 {
-		fs = append(fs, check.Finding{Rule: "esd-protection", Kind: check.KindNet,
-			Subject: "NET_" + string(rune('A'+i)), Message: "no ESD device"})
+		fs = append(fs, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "NET_" + string(rune('A'+i))}, Rule: "esd-protection", Message: "no ESD device"})
 	}
 	rep := Report{Manifest: "t", Areas: []AreaResult{{Area: Area{Name: "A"}, Items: []ItemResult{
 		{Item: Item{ID: "esd", Title: "ESD"}, Outcome: Fail, Findings: fs},
@@ -456,7 +455,7 @@ func TestScopedBindingFiltersAndPresence(t *testing.T) {
 	for _, it := range rep.Areas[0].Items {
 		items[it.Item.ID] = it
 	}
-	if got := items["scoped"]; got.Outcome != Fail || len(got.Findings) != 1 || got.Findings[0].Subject != "SIG_A" {
+	if got := items["scoped"]; got.Outcome != Fail || len(got.Findings) != 1 || check.EntityRef(got.Findings[0].Subject) != "SIG_A" {
 		t.Errorf("scoped item: want Fail on SIG_A only, got %s findings=%+v", got.Outcome, got.Findings)
 	}
 	if got := items["absent"].Outcome; got != NotApplicable {
@@ -468,7 +467,7 @@ func TestScopedBindingFiltersAndPresence(t *testing.T) {
 	if got := items["bothgone"].Outcome; got != NotApplicable {
 		t.Errorf("span all-absent: want not-applicable, got %s", got)
 	}
-	if got := items["onepresent"]; got.Outcome != Fail || len(got.Findings) != 1 || got.Findings[0].Subject != "SIG_A" {
+	if got := items["onepresent"]; got.Outcome != Fail || len(got.Findings) != 1 || check.EntityRef(got.Findings[0].Subject) != "SIG_A" {
 		t.Errorf("span one-present: want Fail on the present bus's net only, got %s findings=%+v", got.Outcome, got.Findings)
 	}
 }
@@ -517,7 +516,7 @@ func TestComponentScopedBinding(t *testing.T) {
 	for _, it := range rep.Areas[0].Items {
 		items[it.Item.ID] = it
 	}
-	if got := items["scoped"]; got.Outcome != Fail || len(got.Findings) != 1 || got.Findings[0].Subject != "U1" {
+	if got := items["scoped"]; got.Outcome != Fail || len(got.Findings) != 1 || check.EntityRef(got.Findings[0].Subject) != "U1" {
 		t.Errorf("component-scoped item: want Fail on U1 only, got %s findings=%+v", got.Outcome, got.Findings)
 	}
 	if got := items["absent"].Outcome; got != NotApplicable {
@@ -535,13 +534,13 @@ func reqRule(profile, requirement string, subjects ...string) *check.Rule {
 		Severity: "warning",
 		Summary:  requirement,
 		Tags:     map[string]string{profileTagName: profile, profileTagRequirement: requirement},
-		Eval: func(check.Model) []check.Finding {
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
 			var fs []check.Finding
 			for _, s := range subjects {
-				fs = append(fs, check.Finding{Rule: requirement, Kind: check.KindNet, Subject: s, Message: requirement})
+				fs = append(fs, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: s}, Rule: requirement, Message: requirement})
 			}
 			return fs
-		},
+		}),
 	}
 }
 
@@ -617,11 +616,11 @@ func TestProfileRequirementSelector(t *testing.T) {
 // scope, and drops out-of-scope subjects of either kind plus every pin finding (no pin→component map).
 func TestFilterToScope(t *testing.T) {
 	fs := []check.Finding{
-		{Kind: check.KindNet, Subject: "SIG_A"},
-		{Kind: check.KindNet, Subject: "SIG_X"},
-		{Kind: check.KindComponent, Subject: "U1"},
-		{Kind: check.KindComponent, Subject: "U9"},
-		{Kind: check.KindPin, Subject: "U1.1"},
+		{Subject: check.Entity{Kind: check.KindNet, Ref: "SIG_A"}},
+		{Subject: check.Entity{Kind: check.KindNet, Ref: "SIG_X"}},
+		{Subject: check.Entity{Kind: check.KindComponent, Ref: "U1"}},
+		{Subject: check.Entity{Kind: check.KindComponent, Ref: "U9"}},
+		{Subject: check.Entity{Kind: check.KindPin, Ref: "U1.1"}},
 	}
 	got := filterToScope(fs, map[string]bool{"SIG_A": true}, map[string]bool{"U1": true})
 	if len(got) != 2 {
@@ -629,7 +628,7 @@ func TestFilterToScope(t *testing.T) {
 	}
 	kept := map[string]bool{}
 	for _, f := range got {
-		kept[string(f.Kind)+":"+f.Subject] = true
+		kept[string(f.Subject.Kind)+":"+check.EntityRef(f.Subject)] = true
 	}
 	if !kept["net:SIG_A"] || !kept["component:U1"] {
 		t.Errorf("want net:SIG_A and component:U1 kept, got %v", kept)
@@ -646,9 +645,7 @@ func TestFilterToScope(t *testing.T) {
 func TestRenderJSONFullFindings(t *testing.T) {
 	var fs []check.Finding
 	for i := 0; i < 10; i++ {
-		fs = append(fs, check.Finding{Rule: "esd-protection", Kind: check.KindNet,
-			Subject: "NET_" + string(rune('A'+i)), Message: "no ESD device",
-			Prov: &ir.Provenance{SourceFile: "evt.edn"}})
+		fs = append(fs, check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "NET_" + string(rune('A'+i))}, Rule: "esd-protection", Message: "no ESD device", Prov: &ir.Provenance{SourceFile: "evt.edn"}})
 	}
 	rep := Report{Manifest: "t", Design: "evt", Areas: []AreaResult{{Area: Area{Name: "A"}, Items: []ItemResult{
 		{Item: Item{ID: "esd", Title: "ESD"}, Outcome: Fail, Findings: fs},
@@ -815,15 +812,15 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	silent := &check.Rule{
 		Name: "sizing", Severity: "error", Summary: "s",
 		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
-		Eval: func(check.Model) []check.Finding { return nil },
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil }),
 	}
 	// The same rule, firing, to prove a real defect is never masked as needs-data.
 	loud := &check.Rule{
 		Name: "sizing", Severity: "error", Summary: "s",
 		Reads: []string{"param.output_current"}, ParamSymbols: []string{"IOUT"},
-		Eval: func(check.Model) []check.Finding {
-			return []check.Finding{{Kind: check.KindNet, Subject: "N", Message: "over budget"}}
-		},
+		Eval: check.FailuresOnly(func(check.Model) []check.Finding {
+			return []check.Finding{{Subject: check.Entity{Kind: check.KindNet, Ref: "N"}, Message: "over budget"}}
+		}),
 	}
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "18", Title: "regulator output ratings", Binding: Binding{Rule: "sz/sizing"}},
@@ -850,7 +847,7 @@ func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	}
 	// A rule that declares NO symbols is unaffected: the gate applies only where a datasheet dependency
 	// is declared, so every existing netlist-rule item keeps its behavior.
-	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: func(check.Model) []check.Finding { return nil }}
+	plain := &check.Rule{Name: "sizing", Severity: "error", Summary: "s", Eval: check.FailuresOnly(func(check.Model) []check.Finding { return nil })}
 	if got := run(plain, "VDD"); got.Outcome != Pass {
 		t.Errorf("rule with no declared symbols: got %s, want pass (gate must not over-reach)", got.Outcome)
 	}
@@ -877,7 +874,7 @@ func TestInconclusiveNeverReadsPass(t *testing.T) {
 			Name:     "probe",
 			Severity: "warning",
 			Summary:  "s",
-			Eval:     func(check.Model) []check.Finding { return []check.Finding{f} },
+			Eval:     check.FailuresOnly(func(check.Model) []check.Finding { return []check.Finding{f} }),
 		}
 	}
 	run := func(r *check.Rule) ItemResult {
@@ -891,7 +888,7 @@ func TestInconclusiveNeverReadsPass(t *testing.T) {
 		return Run(RunParams{Model: check.NewModel(d), Catalog: cat, Manifest: man, Design: "d"}).Areas[0].Items[0]
 	}
 
-	undecided := run(ruleEmitting(check.Finding{Kind: check.KindNet, Subject: "RST", Message: "cannot tell", Inconclusive: true}))
+	undecided := run(ruleEmitting(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "RST"}, Message: "cannot tell", Inconclusive: true}))
 	if undecided.Outcome != Inconclusive {
 		t.Errorf("an undecided subject: got %s, want inconclusive", undecided.Outcome)
 	}
@@ -902,7 +899,7 @@ func TestInconclusiveNeverReadsPass(t *testing.T) {
 		t.Errorf("the note must name the subject the check gave up on, got %q", undecided.Note)
 	}
 
-	defect := run(ruleEmitting(check.Finding{Kind: check.KindNet, Subject: "RST", Message: "wrong"}))
+	defect := run(ruleEmitting(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "RST"}, Message: "wrong"}))
 	if defect.Outcome != Fail {
 		t.Errorf("a real defect: got %s, want fail (the new branch must not mask failures)", defect.Outcome)
 	}

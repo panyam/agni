@@ -113,15 +113,30 @@ func entityRules(doc *checkspb.CheckResults) (map[string][]string, int) {
 	out := map[string]map[string]bool{}
 	skipped := 0
 	for _, f := range doc.GetFindings() {
-		k := entityKey(f.GetSubject())
-		if k == "" {
+		// The subject AND every context entity. A finding's subject is the one entity a reader has to
+		// change, which is an editorial choice rather than the only entity the finding is about: a
+		// clearance violation is filed under one of its two nets, and another tool reporting the same
+		// violation may well file it under the other. Joining on the subject alone read that agreement
+		// as a disagreement. Context carries the rest, typed and ordered, so the join can use it.
+		keys := map[string]bool{}
+		if k := entityKey(f.GetSubject()); k != "" {
+			keys[k] = true
+		}
+		for _, c := range f.GetContext() {
+			if k := entityKey(c.GetSubject()); k != "" {
+				keys[k] = true
+			}
+		}
+		if len(keys) == 0 {
 			skipped++
 			continue
 		}
-		if out[k] == nil {
-			out[k] = map[string]bool{}
+		for k := range keys {
+			if out[k] == nil {
+				out[k] = map[string]bool{}
+			}
+			out[k][f.GetRule()] = true
 		}
-		out[k][f.GetRule()] = true
 	}
 	flat := make(map[string][]string, len(out))
 	for k, rs := range out {

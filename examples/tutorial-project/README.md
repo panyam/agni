@@ -95,7 +95,7 @@ and it is fixed.
 ## What this fixture is, and how it stays honest
 
 `examples/tutorial-project/` is the shareable review-project fixture the docsite tutorial runs on: a
-synthetic gateway ECU in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
+synthetic sample board in three views (`.edn` plus a rev-b, a `.kicad_sch` with an external symbol
 library, a `.kicad_pcb`) with `review.yaml`, `conventions.yaml`, `profiles/`, `params/`, and a
 per-design `intent.yaml`. Deliberately imperfect, one flaw per thing a tutorial rung has to show.
 The KiCad views are GENERATED from the netlist by `tools/`. From inside `examples/tutorial-project/`,

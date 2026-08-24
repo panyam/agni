@@ -3,6 +3,10 @@ title: "intent/protection-ovp"
 description: "A rail the design intent declares needs OV protection has no TVS/zener clamp."
 ---
 
+### Remedy
+
+Fit the over-voltage clamp the intent declares for this rail, chosen to conduct below the lowest absolute maximum the rail feeds.
+
 ### What it means
 
 The design intent declares that a named rail must be over-voltage protected. This rule fails when the

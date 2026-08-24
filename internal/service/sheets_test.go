@@ -21,8 +21,8 @@ func TestAnnotateBusLocateReason(t *testing.T) {
 			{Kind: geom.WireGeometry_KIND_BUS, Net: "DATA[7:0]", Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 0}, {X: 100, Y: 0}}}}},
 		},
 	}}}
-	drawn := &checkspb.Finding{Rule: "bus-not-modeled", Subject: &checkspb.Subject{Kind: check.KindBus, Ref: "DATA[7:0]"}}
-	undrawn := &checkspb.Finding{Rule: "bus-not-modeled", Subject: &checkspb.Subject{Kind: check.KindBus, Ref: "ADDR"}}
+	drawn := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindBus, Ref: "DATA[7:0]"}, Rule: "bus-not-modeled"}
+	undrawn := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindBus, Ref: "ADDR"}, Rule: "bus-not-modeled"}
 
 	AnnotateSheets([]*checkspb.Finding{drawn, undrawn}, g, nil)
 
@@ -71,10 +71,10 @@ func TestAnnotateExplainsEveryUnlocatableSubject(t *testing.T) {
 		Wires: []*geom.WireGeometry{{Net: "SDA", Polylines: []*geom.Polyline{{Points: []*geom.Point{{X: 0, Y: 0}, {X: 10, Y: 0}}}}}},
 	}}}
 
-	rail := &checkspb.Finding{Rule: "decoupling-present", Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "VDD_3V3"}}
-	drawn := &checkspb.Finding{Rule: "i2c-pull-up", Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "SDA"}}
-	ghost := &checkspb.Finding{Rule: "x", Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "NOT_A_NET"}}
-	absent := &checkspb.Finding{Rule: "y", Subject: &checkspb.Subject{Kind: check.KindComponent, Ref: "R99"}}
+	rail := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "VDD_3V3"}, Rule: "decoupling-present"}
+	drawn := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "SDA"}, Rule: "i2c-pull-up"}
+	ghost := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "NOT_A_NET"}, Rule: "x"}
+	absent := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindComponent, Ref: "R99"}, Rule: "y"}
 
 	AnnotateSheets([]*checkspb.Finding{rail, drawn, ghost, absent}, g, m)
 

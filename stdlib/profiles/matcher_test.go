@@ -136,7 +136,7 @@ func TestGlobDiscriminatesSharedSuffix(t *testing.T) {
 	if len(fs) != 1 {
 		t.Fatalf("CAN is missing _L; want 1 finding, got %d: %+v", len(fs), fs)
 	}
-	if !strings.HasPrefix(fs[0].Subject, "CAN_") {
+	if !strings.HasPrefix(check.EntityRef(fs[0].Subject), "CAN_") {
 		t.Errorf("CAN's finding anchored on %q, want a CAN_ net (no cross-match onto Ethernet)", fs[0].Subject)
 	}
 	if !strings.Contains(fs[0].Message, "L") {
@@ -178,7 +178,7 @@ func TestRegexSignalMatching(t *testing.T) {
 		t.Fatal("the 1000M H and L lines are present; a regex signal should read as matched")
 	}
 	fs := check.Run(m, Compile(p))
-	if len(fs) != 1 || fs[0].Subject != "ETH_SW1_P1_1000M_A_H" {
+	if len(fs) != 1 || check.EntityRef(fs[0].Subject) != "ETH_SW1_P1_1000M_A_H" {
 		t.Fatalf("want one finding anchored at the 1000M H net, got %+v", fs)
 	}
 	if !strings.Contains(fs[0].Message, "RST") {

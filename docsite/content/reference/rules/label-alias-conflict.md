@@ -3,6 +3,10 @@ title: "label-alias-conflict"
 description: "One net carries two different sheet-scoped labels in the same scope."
 ---
 
+### Remedy
+
+Settle on one name for the wire and delete the other label. If the two names were meant to be two signals, the wire between them is what to cut.
+
 ### What it means
 
 After net solving, one net's collapsed alias list holds two or more

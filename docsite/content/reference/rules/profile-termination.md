@@ -3,6 +3,10 @@ title: "profile/termination"
 description: "A bus that requires termination has no terminating device across its pair."
 ---
 
+### Remedy
+
+Fit the termination the bus calls for across the pair, at the physical end of the bus rather than partway along it.
+
 ### What it means
 
 A profile whose bus needs termination (a differential pair like CAN's CANH/CANL, or RS-485) is in

@@ -2,6 +2,7 @@ package intent
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -13,27 +14,16 @@ import (
 // provenance, because an absent module has no source site to cite (the presentResult shape).
 func moduleMissingRule(d Declaration) *check.Rule {
 	return &check.Rule{
-		Name:     RuleModuleMissing,
-		Severity: "warning",
-		Summary:  "a module the design intent declares required is not present",
-		Detail:   intentDoc(RuleModuleMissing),
-		Impact:   "a required functional block is missing from the schematic, so the design does not match its declared architecture",
-		Reads:    []string{"component.class", "component.mpn"},
-		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
-			var out []check.Finding
-			for _, mod := range d.Modules {
-				if modulePresent(m, mod) {
-					continue
-				}
-				out = append(out, check.Finding{
-					Kind:    check.KindComponent,
-					Subject: mod.Name,
-					Message: fmt.Sprintf("declared module %q (%s) is not present on the design", mod.Name, moduleCriterion(mod)),
-				})
-			}
-			return out
-		},
+		Name:                RuleModuleMissing,
+		Severity:            "warning",
+		Summary:             "a module the design intent declares required is not present",
+		Detail:              intentDoc(RuleModuleMissing),
+		Impact:              "a required functional block is missing from the schematic, so the design does not match its declared architecture",
+		Remedy:              intentRemedy(RuleModuleMissing),
+		Reads:               []string{"component.class", "component.mpn"},
+		Tags:                intentTags(),
+		Eval:                func(m check.Model) []check.Verdict { return modulePresenceVerdicts(m, d) },
+		StatesConsideredSet: true,
 	}
 }
 
@@ -59,32 +49,79 @@ func modulePresent(m check.Model, mod Module) bool {
 // count rule (empty-set-is-silent).
 func moduleCountRule(d Declaration) *check.Rule {
 	return &check.Rule{
-		Name:     RuleModuleCount,
-		Severity: "warning",
-		Summary:  "the number of components for a declared module does not match the design intent",
-		Detail:   intentDoc(RuleModuleCount),
-		Impact:   "the design has too few or too many of a required functional block, so it does not match its declared architecture (a dropped or duplicated channel)",
-		Reads:    []string{"component.class", "component.mpn"},
-		Tags:     intentTags(),
-		Eval: func(m check.Model) []check.Finding {
-			var out []check.Finding
-			for _, mod := range d.Modules {
-				if mod.Count <= 0 {
-					continue
-				}
-				got := moduleCount(m, mod)
-				if got == mod.Count {
-					continue
-				}
-				out = append(out, check.Finding{
-					Kind:    check.KindComponent,
-					Subject: mod.Name,
-					Message: fmt.Sprintf("declared module %q (%s) expects %d, found %d", mod.Name, moduleCriterion(mod), mod.Count, got),
-				})
-			}
-			return out
-		},
+		Name:                RuleModuleCount,
+		Severity:            "warning",
+		Summary:             "the number of components for a declared module does not match the design intent",
+		Detail:              intentDoc(RuleModuleCount),
+		Impact:              "the design has too few or too many of a required functional block, so it does not match its declared architecture (a dropped or duplicated channel)",
+		Remedy:              intentRemedy(RuleModuleCount),
+		Reads:               []string{"component.class", "component.mpn"},
+		Tags:                intentTags(),
+		Eval:                func(m check.Model) []check.Verdict { return moduleCountVerdicts(m, d) },
+		StatesConsideredSet: true,
 	}
+}
+
+// modulePresenceVerdicts decides every module the declaration names. The considered set is the
+// declaration, which is the whole point of converting an intent rule: it already knows exactly what it
+// was asked to look for, so it can say "all four declared modules are here" instead of saying nothing,
+// which is what a declaration nobody wrote says too.
+func modulePresenceVerdicts(m check.Model, d Declaration) []check.Verdict {
+	out := make([]check.Verdict, 0, len(d.Modules))
+	for _, mod := range d.Modules {
+		v := check.Verdict{Subjects: []check.Entity{check.ComponentEntity(mod.Name)}}
+		if modulePresent(m, mod) {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("the design carries a part satisfying %s", moduleCriterion(mod)),
+				Terms:     []check.WitnessTerm{{Label: "criterion", Value: moduleCriterion(mod)}},
+			}
+		} else {
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{Statement: fmt.Sprintf("no part on the design satisfies %s", moduleCriterion(mod))}
+			v.Finding = &check.Finding{
+				Subject: check.ComponentEntity(mod.Name),
+				Message: fmt.Sprintf("declared module %q (%s) is not present on the design", mod.Name, moduleCriterion(mod)),
+			}
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// moduleCountVerdicts decides every module that declares a COUNT. A module declaring none is not a
+// subject of a count rule and yields no verdict: reporting it as a pass would claim the design has the
+// right number of something nobody said a number for.
+func moduleCountVerdicts(m check.Model, d Declaration) []check.Verdict {
+	var out []check.Verdict
+	for _, mod := range d.Modules {
+		if mod.Count <= 0 {
+			continue // declares no count, so this rule is not about it
+		}
+		got := moduleCount(m, mod)
+		v := check.Verdict{
+			Subjects: []check.Entity{check.ComponentEntity(mod.Name)},
+			Witness: &check.Witness{
+				Terms: []check.WitnessTerm{
+					{Label: "found", Value: strconv.Itoa(got)},
+					{Label: "declared", Value: strconv.Itoa(mod.Count)},
+				},
+			},
+		}
+		if got == mod.Count {
+			v.Outcome = check.Pass
+			v.Witness.Statement = fmt.Sprintf("the design carries %d part(s) satisfying %s, as declared", got, moduleCriterion(mod))
+		} else {
+			v.Outcome = check.Fail
+			v.Witness.Statement = fmt.Sprintf("the design carries %d part(s) satisfying %s against the %d declared", got, moduleCriterion(mod), mod.Count)
+			v.Finding = &check.Finding{
+				Subject: check.ComponentEntity(mod.Name),
+				Message: fmt.Sprintf("declared module %q (%s) expects %d, found %d", mod.Name, moduleCriterion(mod), mod.Count, got),
+			}
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // moduleCount returns how many design components satisfy the module's criterion (class OR mpn). A

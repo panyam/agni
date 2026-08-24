@@ -22,10 +22,11 @@ var ledPolarity = func() *check.Rule {
 
 var ledPolaritySpec = &check.Spec{
 	Over: "components",
-	Where: check.And{Xs: []check.Expr{
-		check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "led"}},
-		check.IsTrue{T: check.Call{Fn: "led_reversed"}},
-	}},
+	// SCOPE: this rule is about LEDs. Without the split every resistor and capacitor in the design
+	// would report a pass reading "component.class == led does not hold", which says the part is not
+	// an LED rather than anything about its polarity.
+	Scope:   check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "led"}},
+	Where:   check.IsTrue{T: check.Call{Fn: "led_reversed"}},
 	Message: "LED anode is on ground and cathode on a power rail; it can never conduct",
 }
 
@@ -34,6 +35,7 @@ var ledPolarityMeta = check.Rule{
 	Severity: "error",
 	Summary:  "An LED's anode sits on ground and its cathode on a power rail, mounted backwards.",
 	Impact:   "A reversed LED simply never lights. It passes every connectivity check (both pins are wired), survives assembly, and shows up as a dead indicator at bring-up — a part-level rework for a capture-time slip.",
+	Remedy:   "Swap the LED's anode and cathode connections so the anode faces the supply side and the cathode the return path through its series resistor.",
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "R",

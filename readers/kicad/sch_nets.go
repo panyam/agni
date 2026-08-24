@@ -22,7 +22,7 @@ import (
 // shared transform the renderer draws with (internal/geomath, C15), which is what guarantees a pin
 // lands on the wire endpoint it connects to. Wires, labels, and pins all pass through the same coordinate conversion
 // so coincident points compare equal.
-func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint) {
+func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint, []*ir.JoinedTap) {
 	var in netInputs
 	collectSheetNets(root, sheetScope{src: src, syms: syms}, &in)
 	built, dangles, _ := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals)
@@ -34,7 +34,7 @@ func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.Dangli
 			kept = append(kept, n)
 		}
 	}
-	return netgraph.IRNets(kept, src), netgraph.IRDangles(dangles, src, "kicad-uuid"), in.noJunction
+	return netgraph.IRNets(kept, src), netgraph.IRDangles(dangles, src, "kicad-uuid"), in.noJunction, in.joinedTaps
 }
 
 // Anchor ranks for KiCad net naming (netgraph picks the lowest-ranked label on a net).
@@ -98,6 +98,9 @@ type netInputs struct {
 	// noJunction are the WS1-012 endpoint-on-body diagnostics, in SHEET-frame
 	// coordinates (collected before the walk's offset, so no translation back).
 	noJunction []*ir.DanglingEndpoint
+	// joinedTaps are the WS1-012 taps that something DOES join, the other half of noJunction, so the
+	// rule over them partitions rather than filters (agni issue 420).
+	joinedTaps []*ir.JoinedTap
 }
 
 // collectSheetNets gathers one sheet instance's wires, anchors, pins, and terminals into
@@ -111,6 +114,11 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	var pins []netgraph.Pin
 	var terminals []netgraph.Point
 	var onWire []netgraph.Point // points that bind anywhere ALONG a wire, not only at its ends
+	// joins records WHAT binds at each on-wire point, for the joined-tap half of the T-tap diagnostic
+	// (agni issue 420). Junction dots are collected before labels below and the label branches do not
+	// overwrite, so an explicit dot wins over a label sharing its point: the dot is the construct
+	// someone placed on purpose and is the one a reviewer is checking for.
+	joins := map[netgraph.Point]tapJoin{}
 
 	// Wires: each (wire (pts (xy ..) (xy ..) ..)) becomes a segment between consecutive points.
 	// The wire's uuid rides on every segment so a dangling endpoint can point back at it.
@@ -139,6 +147,7 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 					ncPts[p] = true
 				} else {
 					onWire = append(onWire, p) // a junction dot joins the wires it sits on
+					joins[p] = tapJoin{kind: "junction"}
 				}
 			}
 		}
@@ -168,18 +177,27 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 		if at := sheetPt(l.Child("at")); at != nil {
 			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: sc.local(unescapeName(atomOf(l.Arg(1)))), Rank: rankLocal})
 			onWire = append(onWire, gp(at))
+			if _, seen := joins[gp(at)]; !seen {
+				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(unescapeName(atomOf(l.Arg(1))))}
+			}
 		}
 	}
 	for _, l := range root.Children("global_label") {
 		if at := sheetPt(l.Child("at")); at != nil {
 			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: unescapeName(atomOf(l.Arg(1))), External: true, Rank: rankGlobal})
 			onWire = append(onWire, gp(at))
+			if _, seen := joins[gp(at)]; !seen {
+				joins[gp(at)] = tapJoin{kind: "label", label: unescapeName(atomOf(l.Arg(1)))}
+			}
 		}
 	}
 	for _, l := range root.Children("hierarchical_label") {
 		if at := sheetPt(l.Child("at")); at != nil {
 			anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: sc.local(unescapeName(atomOf(l.Arg(1)))), External: sc.prefix == "", Rank: rankLocal})
 			onWire = append(onWire, gp(at))
+			if _, seen := joins[gp(at)]; !seen {
+				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(unescapeName(atomOf(l.Arg(1))))}
+			}
 		}
 	}
 
@@ -232,7 +250,18 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	// showcase board has a GND symbol whose pin sits mid-span on the USB_D- wire, and
 	// kicad-cli keeps them separate), and wire-wire crossings without a junction dot
 	// likewise stay unconnected, so other wires' endpoints are not candidates either.
+	// The joined taps must be found BEFORE the split, because the split is exactly what hides them:
+	// afterwards a dotted or labeled tap is an endpoint of both wires and reads like a point where no
+	// wire ever crossed (agni issue 420). segments is counted after, since a tap joins the wire halves
+	// the split creates.
+	preSplit := wires
 	wires = splitWiresAt(wires, onWire)
+	segments := map[netgraph.Point]int{}
+	for _, w := range wires {
+		segments[w.A]++
+		segments[w.B]++
+	}
+	in.joinedTaps = append(in.joinedTaps, joinedTaps(preSplit, joins, segments, sc.src)...)
 
 	// WS1-012: after the split, a junction-dotted or labeled touch point is already an
 	// endpoint of both wires. An endpoint still INTERIOR to another segment's body is
@@ -264,11 +293,16 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	}
 }
 
-// noJunctionEndpoints reports every wire endpoint lying strictly inside another
-// segment's body (post-split, sheet frame). O(endpoints x segments) with the bbox
-// early-out in onSegment, the same cost class as the split pass.
-func noJunctionEndpoints(wires []netgraph.Wire, src string) []*ir.DanglingEndpoint {
-	var out []*ir.DanglingEndpoint
+// endpointsOnBody reports every wire endpoint lying strictly inside another segment's body, with the
+// id of the wire the endpoint belongs to. O(endpoints x segments) with the bbox early-out in
+// onSegment, the same cost class as the split pass.
+//
+// Both halves of the T-tap diagnostic come from this one definition, run at two different points in
+// the pipeline, which is what keeps them a partition. Run POST-split it yields the silent taps, since
+// a junction dot or a mid-span label has already made a joined tap an endpoint of both wires rather
+// than an interior point. Run PRE-split it yields every tap, joined or not.
+func endpointsOnBody(wires []netgraph.Wire) []bodyTap {
+	var out []bodyTap
 	seen := map[netgraph.Point]bool{}
 	for _, w := range wires {
 		for _, p := range []netgraph.Point{w.A, w.B} {
@@ -281,17 +315,68 @@ func noJunctionEndpoints(wires []netgraph.Wire, src string) []*ir.DanglingEndpoi
 				}
 				if onSegment(o.A, o.B, p) {
 					seen[p] = true
-					prov := &ir.Provenance{SourceFile: src}
-					if w.Id != "" {
-						prov.NativeId, prov.NativeIdKind = w.Id, kicadNativeIDKind
-					}
-					out = append(out, &ir.DanglingEndpoint{X: p.X, Y: p.Y, Prov: prov})
+					out = append(out, bodyTap{At: p, WireId: w.Id})
 					break
 				}
 			}
 		}
 	}
 	return out
+}
+
+// bodyTap is one wire endpoint sitting inside another wire's body, before anything decides whether
+// the two are joined.
+type bodyTap struct {
+	At     netgraph.Point
+	WireId string
+}
+
+// noJunctionEndpoints reports the taps with NOTHING joining them (post-split, sheet frame): the
+// silent T-tap the rule reports.
+func noJunctionEndpoints(wires []netgraph.Wire, src string) []*ir.DanglingEndpoint {
+	var out []*ir.DanglingEndpoint
+	for _, t := range endpointsOnBody(wires) {
+		out = append(out, &ir.DanglingEndpoint{X: t.At.X, Y: t.At.Y, Prov: tapProv(t.WireId, src)})
+	}
+	return out
+}
+
+// joinedTaps reports the taps that ARE joined (pre-split, sheet frame), naming the construct that
+// joined them (agni issue 420). joins maps a point to whatever binds along a wire there; segments
+// counts the wire ends meeting at the point once the split has run.
+//
+// Computed pre-split BECAUSE the split is what erases these: after it a joined tap is an endpoint of
+// both wires, so nothing downstream can tell it from a point where no wire ever crossed.
+func joinedTaps(wires []netgraph.Wire, joins map[netgraph.Point]tapJoin, segments map[netgraph.Point]int, src string) []*ir.JoinedTap {
+	var out []*ir.JoinedTap
+	for _, t := range endpointsOnBody(wires) {
+		j, ok := joins[t.At]
+		if !ok {
+			continue // nothing joins this tap; noJunctionEndpoints reports it after the split
+		}
+		out = append(out, &ir.JoinedTap{
+			X: t.At.X, Y: t.At.Y,
+			JoinKind: j.kind, Label: j.label,
+			Segments: int32(segments[t.At]),
+			Prov:     tapProv(t.WireId, src),
+		})
+	}
+	return out
+}
+
+// tapJoin is what binds a point along a wire: an explicit junction dot, or a label whose text names
+// the net there.
+type tapJoin struct {
+	kind  string // "junction" | "label"
+	label string
+}
+
+func tapProv(wireID, src string) *ir.Provenance {
+	prov := &ir.Provenance{SourceFile: src}
+	if wireID != "" {
+		prov.NativeId, prov.NativeIdKind = wireID, kicadNativeIDKind
+	}
+	return prov
 }
 
 // splitWiresAt splits wire segments at the given points where a point lies strictly

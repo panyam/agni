@@ -25,6 +25,7 @@ var powerPinMistypedQ = query.FindingQuery{
 		Severity: "warning",
 		Summary:  "A pin named like power/ground but not typed power_in sits alone on its net.",
 		Impact:   "power-input-not-driven catches an unconnected power pin only when the symbol types it as a power input. A pin the symbol author named VDD or GND but left typed as a plain signal slips through it; if that pin is also wired to nothing, the part loses a supply or a ground silently. This is the gap, expressed in datalog over the pin relations.",
+		Remedy:   "Type the pin as a power input in its symbol, then wire it to its rail. Fixing the symbol also restores power-input-not-driven over every other board that uses it.",
 		Reads:    []string{relations.RelPinRole, relations.RelPinType, relations.RelPinNet, relations.RelNetPinCount, relations.RelHasNCChannel},
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
@@ -37,6 +38,22 @@ var powerPinMistypedQ = query.FindingQuery{
 		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), not pin.type(?ref, ?pin, "power_in"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2, has_nc_channel(?nc);
 		bad(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+	// The considered set: every pin the NAME says is a supply or a ground, on a format that can
+	// express intentional no-connect. Both of the rule's tests drop out, the type test and the
+	// fan-out comparison alike, because a pin that is correctly typed and a pin that is wired are
+	// both pins this rule looked at and cleared.
+	//
+	// has_nc_channel stays. It is not a test the pin passes, it is whether the FORMAT can answer the
+	// question at all, and a pin read from a format that cannot express no-connect was never judged.
+	// Leaving it out would report every pin on an EDIF netlist as verified by a rule that is
+	// structurally silent there, which is the false-pass shape the capability gate exists to prevent.
+	Domain: &query.Domain{
+		Query: query.MustParse(`
+		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "power"),  pin.net(?ref, ?pin, ?net), has_nc_channel(?nc);
+		scope(?ref, ?pin, ?net) :- pin.role(?ref, ?pin, "ground"), pin.net(?ref, ?pin, ?net), has_nc_channel(?nc);
+		scope(?ref, ?pin, ?net) => ?ref, ?pin, ?net`),
+		Witness: "pin {pin} is named like a power/ground pin and is either typed power_in or wired to a shared net",
+	},
 	Kind:       check.KindPin,
 	SubjectVar: "ref",
 	PinVar:     "pin",

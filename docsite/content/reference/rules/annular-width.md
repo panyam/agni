@@ -3,6 +3,10 @@ title: "annular-width"
 description: "A via's annular ring is thinner than the loosest common fabrication floor (0.075mm)."
 ---
 
+### Remedy
+
+Enlarge the pad or reduce the drill until the annular ring clears the fab's floor with tolerance left over for drill wander.
+
 ### What it means
 
 A via whose copper ring, (pad diameter minus drill) / 2, is below

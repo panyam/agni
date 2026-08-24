@@ -1,0 +1,9 @@
+#agni-run 0391ae2d59b46a0b
+diff readers/kicad/testdata/tjunc.kicad_sch -> readers/kicad/testdata/tjunc_dotted.kicad_sch
+
+Components: +0  -0  ~0
+Nets:       new 0  deleted 1  renamed 0  hard 1  soft 0
+
+Nets changed (2):
+  [deleted] TAP
+  [hard]    BUS: +[R3.1] -[]

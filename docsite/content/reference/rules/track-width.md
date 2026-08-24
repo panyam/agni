@@ -3,6 +3,10 @@ title: "track-width"
 description: "A routed track is narrower than the loosest common fabrication floor (0.127mm)."
 ---
 
+### Remedy
+
+Widen the track to the fab's minimum, or move the board to a process quoted for the width you need. Below the floor a trace will not etch reliably at mainstream yields.
+
 ### What it means
 
 A routed copper segment narrower than 0.127mm (5mil), the minimum trace

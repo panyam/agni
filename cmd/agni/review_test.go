@@ -89,7 +89,7 @@ func TestReviewCmdMultiDesign(t *testing.T) {
 	}
 	s := out.String()
 	for _, want := range []string{
-		"# Review rollup: Mini ECU review",
+		"# Review rollup: Mini board review",
 		"**5 of 6 items covered** (manifest-level), 1 not-automated.", // coverage stated once, not 10 of 12
 		"## Per-design outcomes",
 		// The leading cell is answered/total, which differs per design even though coverage does not:
@@ -189,7 +189,7 @@ func TestReviewCmdCoverage(t *testing.T) {
 	}
 	s := out.String()
 	for _, want := range []string{
-		"# Review coverage: Mini ECU review",
+		"# Review coverage: Mini board review",
 		"**5 of 6 covered**",
 		"| CAN Interface | 3/4 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |",
 		"| **Total** | 5/6 | 1 | 2 | 0 | 0 | 0 | 0 | 0 | 2 | 1 |",
@@ -276,7 +276,7 @@ func runReview(t *testing.T, args ...string) string {
 // guard: the outcome is driven by the external declaration, not derived from the netlist.
 func TestReviewIntentContract(t *testing.T) {
 	checklist := "testdata/intent/checklist.yaml"
-	design := "testdata/intent/ecu.edn"
+	design := "testdata/intent/sample.edn"
 
 	// No --intent-path: the intent rules are not in the catalog, but the items BIND an intent/ rule, so
 	// they read needs-design-intent (covered, blocked on a declaration), not the misleading not-automated

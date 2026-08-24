@@ -38,7 +38,7 @@ func propDesign(net, biasTo, capTo string) *ir.Design {
 
 func propFindings(t *testing.T, d *ir.Design, p NetProperty) []check.Finding {
 	t.Helper()
-	return propertyRule(p.Property, []NetProperty{p}).Eval(check.NewModel(d))
+	return propertyRule(p.Property, []NetProperty{p}).Findings(check.NewModel(d))
 }
 
 // TestResetPolarityFiresOnContradiction (WS3-088): a net declared active-low that is biased LOW is

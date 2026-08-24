@@ -51,13 +51,13 @@ func TestCANFires(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("want 3 distinct rules firing, got %d: %+v", len(got), got)
 	}
-	if f := got["can-termination-missing"]; f.Subject != "CAN_CANH" {
+	if f := got["can-termination-missing"]; check.EntityRef(f.Subject) != "CAN_CANH" {
 		t.Errorf("termination-missing: want CAN_CANH, got %+v", f)
 	}
-	if f := got["can-signal-missing"]; f.Subject != "CAN_CANH" || !strings.Contains(f.Message, "RXD") {
+	if f := got["can-signal-missing"]; check.EntityRef(f.Subject) != "CAN_CANH" || !strings.Contains(f.Message, "RXD") {
 		t.Errorf("signal-missing: want anchor CAN_CANH + RXD, got %+v", f)
 	}
-	if f := got["can-signal-dangling"]; f.Subject != "CAN_TXD" {
+	if f := got["can-signal-dangling"]; check.EntityRef(f.Subject) != "CAN_TXD" {
 		t.Errorf("signal-dangling: want CAN_TXD, got %+v", f)
 	}
 }
@@ -107,11 +107,78 @@ func TestCANHostWhollyAbsent(t *testing.T) {
 	}
 	got := 0
 	for _, f := range check.Run(check.NewModel(d), Compile(CAN)) {
-		if f.Rule == "can-host-incomplete" && f.Subject == "U2" {
+		if f.Rule == "can-host-incomplete" && check.EntityRef(f.Subject) == "U2" {
 			got++
 		}
 	}
 	if got != 4 {
 		t.Fatalf("wholly-absent bus: want 4 host-incomplete findings, got %d", got)
+	}
+}
+
+// TestCANHostVerdictsAreSeparatelyAddressable is the reason host-incomplete carries a subject tuple
+// (agni issue 424). The same wholly-absent fixture as above produces FOUR answers about U2, and
+// before the signal joined the tuple all four had the id `can-host-incomplete:(component:U2)`. A
+// reader following that link reached whichever row the report wrote last, and a consumer indexing by
+// id silently kept one of four.
+//
+// The finding count above is what makes this worth pinning separately: the rule already emitted four
+// violations, so nothing in the findings contract would have shown the collision.
+func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
+	d := &ir.Design{
+		Components: append(comps("U1"), canHost("U2")),
+		Nets:       []*ir.Net{net("GND", "U2.9", "U1.9")},
+	}
+	ids := map[string]int{}
+	signals := map[string]bool{}
+	fails := 0
+	for _, v := range check.RunVerdicts(check.NewModel(d), Compile(CAN)) {
+		if v.Rule != "can-host-incomplete" {
+			continue
+		}
+		ids[check.VerdictID(v)]++
+		if len(v.Subjects) != 2 {
+			t.Fatalf("want a (component, signal) tuple, got %+v", v.Subjects)
+		}
+		if k := v.Subjects[1].Kind; k != check.KindSignal {
+			t.Errorf("tuple element 2 kind = %q, want %q", k, check.KindSignal)
+		}
+		signals[v.Subjects[1].Ref] = true
+		if v.Outcome == check.Fail {
+			fails++
+		}
+	}
+	if fails != 4 {
+		t.Fatalf("wholly-absent bus: want 4 failing verdicts, got %d", fails)
+	}
+	if len(ids) != 4 {
+		t.Fatalf("want 4 distinct verdict ids, got %d: %v", len(ids), ids)
+	}
+	// Named, not merely counted: an implementation that put the same signal in every tuple would
+	// still produce four rows and would fail here.
+	for _, want := range []string{"CANH", "CANL", "TXD", "RXD"} {
+		if !signals[want] {
+			t.Errorf("no verdict names required signal %q", want)
+		}
+	}
+}
+
+// TestCANGoodBoardPassesAreWitnessed: the good fixture reports no findings, and the point of the
+// considered set is that this silence is now backed by verdicts rather than being indistinguishable
+// from a rule that never ran. Every pass must carry a witness.
+func TestCANGoodBoardPassesAreWitnessed(t *testing.T) {
+	vs := check.RunVerdicts(check.NewModel(canGood()), Compile(CAN))
+	passes := 0
+	for _, v := range vs {
+		if v.Outcome != check.Pass {
+			continue
+		}
+		passes++
+		if v.Witness == nil || v.Witness.Statement == "" {
+			t.Errorf("%s: a pass with no witness is the silence this work removes", check.VerdictID(v))
+		}
+	}
+	if passes == 0 {
+		t.Fatal("a fully-wired CAN bus must produce passing verdicts, not silence")
 	}
 }

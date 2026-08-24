@@ -1,12 +1,19 @@
 {{# include "nav/TutorialNav.html" #}}
 {{# include "nav/GuideNav.html" #}}
+{{# include "nav/LearnNav.html" #}}
 {{# include "nav/BuildNav.html" #}}
 {{# include "nav/ArchitectureNav.html" #}}
 {{# include "nav/ReferenceNav.html" #}}
 
 {{ define "Sidebar" }}
 <aside class="sidebar">
-    <div class="sidebar-content">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-expanded="false" aria-controls="sidebar-content">
+        <span>In this section</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+    <div class="sidebar-content" id="sidebar-content">
         {{ $currentPath := .Res.FullPath }}
 
         {{ if .FrontMatter.toc }}
@@ -21,6 +28,8 @@
                 {{ template "TutorialNav" . }}
             {{ else if (Contains $currentPath "/guide/") }}
                 {{ template "GuideNav" . }}
+            {{ else if (Contains $currentPath "/learn/") }}
+                {{ template "LearnNav" . }}
             {{ else if (Contains $currentPath "/build/") }}
                 {{ template "BuildNav" . }}
             {{ else if (Contains $currentPath "/architecture/") }}
@@ -37,10 +46,11 @@
                     <h3>Sections</h3>
                     <ul>
                         <li><a href="{{.Site.PathPrefix}}/tutorials/">Tutorials</a></li>
-                        <li><a href="{{.Site.PathPrefix}}/guide/">Use it</a></li>
-                        <li><a href="{{.Site.PathPrefix}}/build/">Build on it</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/guide/">User guide</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/build/">Developer guide</a></li>
                         <li><a href="{{.Site.PathPrefix}}/architecture/">Understand it</a></li>
                         <li><a href="{{.Site.PathPrefix}}/reference/">Reference</a></li>
+                        <li><a href="{{.Site.PathPrefix}}/learn/">Learn the domain</a></li>
                     </ul>
                 </div>
             {{ end }}

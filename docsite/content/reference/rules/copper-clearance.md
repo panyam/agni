@@ -3,6 +3,10 @@ title: "copper-clearance"
 description: "Copper of two different nets sits closer than the 0.127mm fabrication floor."
 ---
 
+### Remedy
+
+Pull the two nets apart to the fab's minimum clearance. A gap below it is a short waiting on etch variance or a solder bridge.
+
 ### What it means
 
 Two track segments on the same copper layer, belonging to different

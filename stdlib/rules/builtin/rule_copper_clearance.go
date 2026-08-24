@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"strconv"
 )
 
 // copperClearance flags cross-net track segments on the same layer whose copper edges
@@ -23,6 +24,7 @@ var copperClearance = &check.Rule{
 	Severity:   "error",
 	Summary:    "Copper of two different nets sits closer than the 0.127mm fabrication floor.",
 	Impact:     "Sub-clearance copper either fails DFM at order time or ships as a latent short: etch variance and solder bridging turn a too-tight gap into a connection the netlist never had. It is the defect DRC exists for.",
+	Remedy:     "Pull the two nets apart to the fab's minimum clearance. A gap below it is a short waiting on etch variance or a solder bridge.",
 	Primitives: []string{"select", "geometry-distance"},
 	Reads:      []string{"board.copper"},
 	Tags: map[string]string{
@@ -31,72 +33,128 @@ var copperClearance = &check.Rule{
 		check.KeyDistribution: check.DistOpen,
 	},
 	Detail: ruleDoc("copper-clearance"),
-	Eval: func(m check.Model) []check.Finding {
-		type flatSeg struct {
-			net string
-			s   check.BoardSeg
+	// The two nets, ordered by name. This relation is SYMMETRIC, so the rule canonicalises the pair
+	// itself rather than leaving it to a consumer: (GND, VBUS) and (VBUS, GND) are one violation and
+	// must be one id. A framework that sorted every tuple would break the directional rules next door,
+	// which is why ordering belongs to the rule.
+	SubjectShape:        []string{check.KindNet, check.KindNet},
+	Eval:                copperClearanceVerdicts,
+	StatesConsideredSet: true,
+}
+
+// copperClearanceVerdicts decides every PAIR of nets whose copper shares a layer and comes close
+// enough to be worth measuring, one verdict per pair.
+//
+// THE PAIR IS THE SUBJECT because a distance belongs to neither net. Filing under one of them was
+// always a reporting compromise: a net running between two others is the filed subject of two
+// findings, and under a single-entity id those two answers shared one name and one report link.
+//
+// THE CONSIDERED SET IS THE PAIRS THE WALK MEASURED, not every pair of nets on the board. That is a
+// deliberate narrowing and the reason is cost: the bounding-box reject is what keeps this O(S²) walk
+// affordable, and a pair it rejects has no computed distance at all. Claiming a pass over every
+// possible pair would be claiming a measurement the walk never made. What the rule can honestly say
+// is which pairs came near enough to measure and how they came out, which is also the set a reviewer
+// cares about.
+//
+// A net with no track segments therefore appears in no pair, and that is correct rather than a gap:
+// this rule compares SEGMENTS, so a net present only as vias and pads was never measured.
+func copperClearanceVerdicts(m check.Model) []check.Verdict {
+	type flatSeg struct {
+		net string
+		s   check.BoardSeg
+	}
+	var segs []flatSeg
+	for _, bn := range m.BoardNets() {
+		for _, s := range bn.Segments {
+			segs = append(segs, flatSeg{net: bn.Net, s: s})
 		}
-		var segs []flatSeg
-		for _, bn := range m.BoardNets() {
-			for _, s := range bn.Segments {
-				segs = append(segs, flatSeg{net: bn.Net, s: s})
+	}
+	type pairKey struct{ a, b string }
+	type worst struct {
+		gap   int64
+		at    *geom.Point
+		count int
+		near  int // pairs that came within the bounding-box reject but cleared the floor
+	}
+	pairs := map[pairKey]*worst{}
+	var order []pairKey
+	for i := range segs {
+		for j := i + 1; j < len(segs); j++ {
+			a, b := segs[i], segs[j]
+			if a.net == b.net || a.s.Layer != b.s.Layer {
+				continue
+			}
+			if !bboxNear(a.s, b.s, minClearanceNm) {
+				continue // too far apart to be worth measuring, so this pair is not a subject
+			}
+			k := pairKey{a.net, b.net}
+			if k.a > k.b {
+				k.a, k.b = k.b, k.a // the pair is symmetric, so its name is canonical
+			}
+			w := pairs[k]
+			if w == nil {
+				w = &worst{gap: minClearanceNm}
+				pairs[k] = w
+				order = append(order, k)
+			}
+			gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
+			if gap >= minClearanceNm {
+				w.near++
+				continue
+			}
+			w.count++
+			if w.at == nil || gap < w.gap {
+				w.gap, w.at = gap, a.s.A
 			}
 		}
-		type pairKey struct{ a, b string }
-		type worst struct {
-			gap   int64
-			at    *geom.Point
-			count int
+	}
+	sort.Slice(order, func(i, j int) bool { // map order is random; verdicts are not
+		if order[i].a != order[j].a {
+			return order[i].a < order[j].a
 		}
-		pairs := map[pairKey]*worst{}
-		for i := range segs {
-			for j := i + 1; j < len(segs); j++ {
-				a, b := segs[i], segs[j]
-				if a.net == b.net || a.s.Layer != b.s.Layer {
-					continue
-				}
-				if !bboxNear(a.s, b.s, minClearanceNm) {
-					continue
-				}
-				gap := segDistNm(a.s.A, a.s.B, b.s.A, b.s.B) - (a.s.Width+b.s.Width)/2
-				if gap >= minClearanceNm {
-					continue
-				}
-				k := pairKey{a.net, b.net}
-				if k.a > k.b {
-					k.a, k.b = k.b, k.a
-				}
-				w := pairs[k]
-				if w == nil {
-					w = &worst{gap: gap, at: a.s.A}
-					pairs[k] = w
-				}
-				w.count++
-				if gap < w.gap {
-					w.gap, w.at = gap, a.s.A
-				}
+		return order[i].b < order[j].b
+	})
+
+	out := make([]check.Verdict, 0, len(order))
+	for _, k := range order {
+		w := pairs[k]
+		// NAME-ONLY entities, deliberately. Board copper joins the netlist by name (CONSTRAINTS C21),
+		// so this rule genuinely holds its nets by name and has no per-instance id to carry. Resolving
+		// one by name lookup would pick arbitrarily between two same-named nets and state an instance
+		// the walk never distinguished.
+		subjects := []check.Entity{check.NetNameEntity(k.a), check.NetNameEntity(k.b)}
+		v := check.Verdict{Subjects: subjects}
+		if w.count == 0 {
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("copper of %q and %q comes close enough to measure in %d place(s) on a shared layer and never within 0.127mm",
+					k.a, k.b, w.near),
+				Terms: []check.WitnessTerm{{Label: "places measured", Value: strconv.Itoa(w.near)}},
 			}
+			out = append(out, v)
+			continue
 		}
-		out := []check.Finding{}
-		for k, w := range pairs {
-			out = append(out, check.Finding{
-				Kind:    check.KindNet,
-				Subject: k.a,
-				Message: fmt.Sprintf("copper of %q and %q closer than 0.127mm at %d place(s); worst gap %.3fmm near (%.2f, %.2f)mm",
-					k.a, k.b, w.count, float64(w.gap)/1e6, float64(w.at.X)/1e6, float64(w.at.Y)/1e6),
-				// The other net in the pair. A clearance violation is symmetric and filed under one of
-				// the two, so the other end had no way back into the drawing (agni issue 349).
-				Context: []check.ContextSubject{{Kind: check.KindNet, Subject: k.b, Role: "neighbour"}},
-			})
+		msg := fmt.Sprintf("copper of %q and %q closer than 0.127mm at %d place(s); worst gap %.3fmm near (%.2f, %.2f)mm",
+			k.a, k.b, w.count, float64(w.gap)/1e6, float64(w.at.X)/1e6, float64(w.at.Y)/1e6)
+		v.Outcome = check.Fail
+		v.Witness = &check.Witness{
+			Statement: msg,
+			Terms: []check.WitnessTerm{
+				{Label: "places under the floor", Value: strconv.Itoa(w.count)},
+				{Label: "worst gap", Value: fmt.Sprintf("%.3fmm", float64(w.gap)/1e6)},
+			},
 		}
-		sort.Slice(out, func(i, j int) bool { // map order is random; findings are not
-			if out[i].Subject != out[j].Subject {
-				return out[i].Subject < out[j].Subject
-			}
-			return out[i].Message < out[j].Message
-		})
-		return out
-	},
+		v.Finding = &check.Finding{
+			Subject: subjects[0],
+			Message: msg,
+			// The other net in the pair. The FINDING's subject is one of the two, since a reader is
+			// told one place to go and look, so the other end had no way back into the drawing
+			// (agni issue 349). The verdict names both, which is what the violation is about.
+			Context: []check.ContextSubject{check.Ctx(subjects[1], "neighbour")},
+		}
+		out = append(out, v)
+	}
+	return out
 }
 
 // bboxNear is the cheap reject: whether two segments' bounding boxes, inflated by the

@@ -124,9 +124,27 @@ func (IsTrue) isExpr()   {}
 // and the provenance derive from the Over entity set (see specOvers); Name, Severity, the
 // prose, and Tags stay on the Rule a Spec binds into — the Spec is only the body.
 type Spec struct {
-	Over    string
-	Let     map[string]Term
-	Where   Expr // nil selects every entity
+	Over string
+	Let  map[string]Term
+	// Scope is which elements of Over this rule actually JUDGES. Nil means all of them.
+	//
+	// It exists because Where alone cannot answer "what did you look at". Where is the VIOLATION
+	// condition, so a subject the rule was never about fails it for the same reason a healthy subject
+	// does, and the two are indistinguishable. That was harmless while a spec only reported
+	// violations. It stops being harmless the moment the interpreter states a considered set, because
+	// then "Where is false" is read as a positive claim that the subject is fine.
+	//
+	// Concretely: test-point-coverage declares Over "nets" and is about RAILS. On the tutorial gateway
+	// design that is 15 nets and 4 rails, so without this the rule would assert that 11 signal nets
+	// carry a test point. On a real board the ratio is far worse.
+	//
+	// It is a per-element predicate in the same environment as Where, so it may quantify into a member
+	// collection (ExistsIn over net.connections) to decide one element. It does NOT widen what a
+	// subject is: a spec still ranges over one entity set, which is agni issue 370's separate concern.
+	Scope Expr
+	// Where is the violation condition, meaningful only for elements inside Scope. Nil matches every
+	// in-scope element.
+	Where   Expr
 	Message string
 }
 
@@ -466,32 +484,266 @@ type evalEnv struct {
 // Validate (or bind through Rule, which validates) before evaluating specs from an
 // untrusted source.
 func (s *Spec) Eval(m Model) []Finding {
+	return VerdictsToFindings(s.Verdicts(m))
+}
+
+// Verdicts is the interpreter as a MAPPER: one verdict per element of Over that the rule actually
+// judges, passes included. It is what a spec-authored rule binds to Rule.Eval.
+//
+// Scope decides membership of the considered set and Where decides the outcome inside it. Splitting
+// them is the whole point: an out-of-scope element is not a pass, it is not this rule's business, and
+// a rule that reported it as a pass would be claiming to have checked something it never looked at.
+//
+// A PASS NAMES THE CLAUSE THAT DECIDED IT. A witness reading "the condition did not hold" would be
+// identical on every passing subject in the catalog and would track no fact, which build/evidence.md
+// calls decoration rather than evidence. Where is a violation condition, so a pass is a refutation of
+// it, and the honest statement is which conjunct did the refuting.
+func (s *Spec) Verdicts(m Model) []Verdict {
 	over := specOvers[s.Over]
-	out := []Finding{} // non-nil like Report, so a Go Eval and its twin are DeepEqual on empty
+	out := []Verdict{}
 	for _, e := range over.elems(m) {
 		ents := map[string]any{over.scope: e}
 		if over.bind != nil {
 			over.bind(e, ents)
 		}
 		ev := &evalEnv{m: m, spec: s, ents: ents}
-		if s.Where != nil && !ev.expr(s.Where) {
-			continue
+		if s.Scope != nil && !ev.expr(s.Scope) {
+			continue // not this rule's subject; saying nothing is the honest answer
 		}
-		f := Finding{
-			Kind:    over.kind,
-			Subject: over.subject(e),
-			Message: ev.interpolate(s.Message),
-			Prov:    over.prov(e),
-		}
+		// A spec quantifies over ONE entity set, so its subject tuple is always a 1-tuple. That is the
+		// declared shape for every spec-authored rule, and it is why the interpreter needs no notion
+		// of arity: a relation between two entities is not expressible in the AST today.
+		subj := Entity{Kind: over.kind, Ref: over.subject(e)}
 		if over.pin != nil {
-			f.Pin = over.pin(e)
+			subj.Pin = over.pin(e)
 		}
 		if over.netID != nil {
-			f.NetID = over.netID(e)
+			subj.NetID = over.netID(e)
 		}
-		out = append(out, f)
+		v := Verdict{Subjects: []Entity{subj}}
+		if s.Where == nil || ev.expr(s.Where) {
+			v.Outcome = Fail
+			f := Finding{Subject: subj, Message: ev.interpolate(s.Message), Prov: over.prov(e)}
+			v.Finding = &f
+			v.Witness = &Witness{Statement: ev.interpolate(s.Message)}
+		} else {
+			v.Outcome = Pass
+			v.Witness = &Witness{Statement: "passes because " + ev.why(s.Where)}
+		}
+		out = append(out, v)
 	}
 	return out
+}
+
+// why names the clause that made a violation condition false, in the reader's terms.
+//
+// For an And it is the FIRST false conjunct, which is the one that refutes the whole condition; for
+// an Or every branch is false, so all of them are named. Anything else is described directly. The
+// rendering is deliberately structural rather than a stored English string, so a change to a rule's
+// body cannot leave a stale explanation behind.
+func (ev *evalEnv) why(e Expr) string {
+	switch x := e.(type) {
+	case And:
+		for _, sub := range x.Xs {
+			if !ev.expr(sub) {
+				return ev.why(sub)
+			}
+		}
+	case Or:
+		parts := make([]string, 0, len(x.Xs))
+		for _, sub := range x.Xs {
+			parts = append(parts, ev.why(sub))
+		}
+		return strings.Join(parts, ", and ")
+	case Not:
+		// A false Not means its operand HOLDS, so the honest explanation is why THAT is true, with the
+		// value behind it. Rendering the operand's syntax instead reads identically on every passing
+		// subject, which is the defect this family of statements exists to remove (agni issue 412).
+		return ev.holds(x.X)
+	case ExistsIn:
+		// Read an absent match as an absence, not as a failed test: "no connection is a no-connect"
+		// rather than "some connection is a no-connect does not hold". The COUNT is what makes it
+		// about this subject: wire a fifth pin and the sentence changes with the design.
+		return fmt.Sprintf("no %s where %s (%d examined)", x.Over, renderExpr(x.Where), ev.countMembers(x.Over))
+	case Cmp:
+		return ev.whyCmp(x)
+	case Match:
+		return ev.whyLeaf(x.T, "does not match /"+x.Pattern+"/")
+	case In:
+		return ev.whyLeaf(x.T, "is not one of ["+strings.Join(x.Set, ", ")+"]")
+	case IsTrue:
+		// The same trick holdsTrue uses, on the false side. A Call hands back a bare bool, but its
+		// ARGUMENTS are terms this interpreter can read, so a refusal can name what was refused.
+		if c, ok := x.T.(Call); ok {
+			if len(c.Args) > 0 {
+				return ev.argValues(c) + ", which " + c.Fn + " does not accept"
+			}
+			break
+		}
+		return ev.valueOf(x.T)
+	}
+	return renderExpr(e) + " does not hold"
+}
+
+// holds is why's mirror: it explains a TRUE expression, and it exists because a false Not is a true
+// operand. Everything it renders comes from the same value machinery why uses, so the two sides of a
+// negation read the same way rather than one of them falling back to the rule's syntax.
+//
+// The cases are the ones the catalog actually nests under a Not. A shape that turns up here without a
+// case falls through to the syntax, which is the old behaviour and honest about being a gap rather
+// than pretending to a value it never read.
+func (ev *evalEnv) holds(e Expr) string {
+	switch x := e.(type) {
+	case Or:
+		// The FIRST true disjunct is the reason. This is the naming-rule case: an allow-list is an Or
+		// of patterns, and the one that matched is what a reader wants named.
+		for _, sub := range x.Xs {
+			if ev.expr(sub) {
+				return ev.holds(sub)
+			}
+		}
+	case And:
+		parts := make([]string, 0, len(x.Xs))
+		for _, sub := range x.Xs {
+			parts = append(parts, ev.holds(sub))
+		}
+		return strings.Join(parts, ", and ")
+	case Not:
+		return ev.why(x.X) // a true Not is a false operand, which is why's job
+	case Cmp:
+		if x.Op == "==" || x.Op == "!=" {
+			return ev.valueOf(x.L) // the value IS the relation; "is 2, which is == 2" says it twice
+		}
+		return ev.valueOf(x.L) + ", which is " + x.Op + " " + renderTerm(x.R)
+	case Match:
+		return ev.valueOf(x.T) + ", which matches /" + x.Pattern + "/"
+	case In:
+		return ev.valueOf(x.T) + ", which is one of [" + strings.Join(x.Set, ", ") + "]"
+	case IsTrue:
+		return ev.holdsTrue(x.T)
+	case ExistsIn:
+		if m := ev.firstMember(x.Over, x.Where); m != "" {
+			return m + " is " + renderExpr(x.Where)
+		}
+	}
+	return renderExpr(e) + " holds"
+}
+
+// holdsTrue explains a true term used as a predicate.
+//
+// A FACT reads as its value. A CALL is the interesting one: the FFI hands back a bare bool and has
+// thrown away whatever it looked at, but its ARGUMENTS are terms this interpreter can evaluate, so
+// `ground_name(net.names)` names the value it accepted without the SpecFunc contract changing at all.
+// That covers every argument-carrying call in the catalog.
+//
+// An argument-LESS call is the residue and says so plainly. `intentionally_unconnected`, `tvs_reach`
+// and their kin take the whole scope and return a verdict, so there is nothing here to read and
+// nothing honest to print beyond the fact that the function accepted. Closing that needs a SpecFunc
+// able to hand back what it observed, which cap-voltage needs for the same reason (OUT_OF_SCOPE.md).
+func (ev *evalEnv) holdsTrue(t Term) string {
+	c, ok := t.(Call)
+	if !ok {
+		return ev.valueOf(t)
+	}
+	if len(c.Args) == 0 {
+		return c.Fn + " accepts this subject, which states no value it read"
+	}
+	return ev.argValues(c) + ", which " + c.Fn + " accepts"
+}
+
+// argValues renders a call's arguments as the values they evaluated to, which is the most a caller can
+// say about an FFI that returns a bare bool.
+func (ev *evalEnv) argValues(c Call) string {
+	parts := make([]string, 0, len(c.Args))
+	for _, a := range c.Args {
+		parts = append(parts, ev.valueOf(a))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// countMembers is how many members a collection has in the current scope, for a statement that has to
+// say how much it looked at rather than only that it found nothing.
+func (ev *evalEnv) countMembers(coll string) int {
+	n := 0
+	ev.eachMember(coll, func() bool { n++; return true })
+	return n
+}
+
+// firstMember names the first member satisfying where, or "" when the collection gives no label to
+// name one by. Naming WHICH member matched is the useful half of a true ExistsIn; "some member did" is
+// the same non-answer the syntax rendering was.
+func (ev *evalEnv) firstMember(coll string, where Expr) string {
+	label := ""
+	ev.eachMember(coll, func() bool {
+		if where != nil && !ev.expr(where) {
+			return true
+		}
+		label = ev.memberLabel(coll)
+		return false
+	})
+	return label
+}
+
+// memberLabel names the in-scope member of a collection, per collection, because a member's identity
+// is its own kind's business: a connection is a ref-des and a pin, a via is a location. Empty for a
+// collection with no label defined, which the caller reads as "cannot name one".
+func (ev *evalEnv) memberLabel(coll string) string {
+	if coll != "net.connections" {
+		return ""
+	}
+	c, ok := ev.ents["conn"].(*ir.Connection)
+	if !ok || c.GetComponentRef() == "" {
+		return ""
+	}
+	if p := c.GetPinRef(); p != "" {
+		return c.GetComponentRef() + "." + p
+	}
+	return c.GetComponentRef()
+}
+
+// whyCmp states a false comparison as the subject's ACTUAL value rather than as the test applied to
+// it. renderExpr can only print the rule's own syntax ("claims >= 2"), because it takes an Expr and
+// never the evalEnv, so the number that decided the pass is dropped at exactly the point a reader
+// needs it. The failing branch already interpolates values into Message; this is the passing branch
+// doing the same. A statement carrying no value reads identically on every passing subject a rule
+// sees, which build/evidence.md calls decoration rather than evidence.
+//
+// An ordering also names the threshold it did not reach, so a reader can see what would have made
+// the rule fire.
+func (ev *evalEnv) whyCmp(x Cmp) string {
+	// "!=" came out false, so the two sides are EQUAL. The value IS the whole reason and there is
+	// no unmet threshold to report; appending one would contradict the value just stated.
+	if x.Op == "!=" {
+		return ev.valueOf(x.L)
+	}
+	return ev.valueOf(x.L) + ", not " + renderComparand(x.Op, x.R)
+}
+
+// whyLeaf states a false membership or pattern test the same way: the value first, then the test it
+// failed.
+func (ev *evalEnv) whyLeaf(subject Term, suffix string) string {
+	return ev.valueOf(subject) + ", so it " + suffix
+}
+
+// valueOf renders "<term> is <value>" for the value the subject actually supplied. The left operand
+// is the one that gets read, because that is the subject's side of a comparison; the right side is
+// the rule's own threshold.
+func (ev *evalEnv) valueOf(t Term) string {
+	v := ev.term(t)
+	if s, ok := v.(string); ok && s == "" {
+		return renderTerm(t) + " is empty" // reads as the absence it is; `is ""` reads as an artefact
+	}
+	return renderTerm(t) + " is " + renderTerm(Lit{V: v})
+}
+
+// renderComparand phrases the threshold half of a comparison that came out false. Equality drops the
+// operator, since "not 5" already says it; an ordering keeps it, since "not >= 2" and "not 2" mean
+// different things to a reader deciding whether the value is close to firing.
+func renderComparand(op string, r Term) string {
+	if op == "==" {
+		return renderTerm(r)
+	}
+	return op + " " + renderTerm(r)
 }
 
 // Rule binds the spec into a *Rule: meta supplies the identity, severity, prose, and tags;
@@ -502,7 +754,11 @@ func (s *Spec) Rule(meta Rule) *Rule {
 	if err := s.Validate(); err != nil {
 		panic(fmt.Sprintf("check: invalid spec for rule %q: %v", meta.Name, err))
 	}
-	meta.Eval = s.Eval
+	meta.Eval = s.Verdicts
+	// A spec states its considered set: Verdicts emits one per in-scope element of Over, passes
+	// included. A spec whose Scope is nil judges every element, which is a claim the author makes by
+	// leaving it out, so it is on the author to narrow it where the rule is really about a subset.
+	meta.StatesConsideredSet = true
 	meta.Reads = s.DerivedReads()
 	meta.Primitives = s.DerivedPrimitives()
 	return &meta
@@ -875,6 +1131,10 @@ func (s *Spec) walk(f func(n any)) {
 		term(t)
 	}
 	expr(s.Where)
+	// Scope is walked too, and it has to be: DerivedReads feeds Available, so a fact consulted only in
+	// Scope would leave the rule claiming not to read it and running against a tier it needs. Moving a
+	// clause from Where to Scope must not change what a rule declares, only what its falsehood means.
+	expr(s.Scope)
 }
 
 func sortedKeys(set map[string]bool) []string {
@@ -884,4 +1144,67 @@ func sortedKeys(set map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// renderExpr describes a spec expression the way a reader of the rule would say it, for a witness.
+//
+// Deliberately structural rather than a stored English sentence per rule: an explanation derived from
+// the body cannot go stale when the body changes, which a hand-written one silently would. It is
+// terse on purpose, because it appears inside a one-line statement beside the subject.
+func renderExpr(e Expr) string {
+	switch x := e.(type) {
+	case And:
+		return strings.Join(renderEach(x.Xs), " and ")
+	case Or:
+		return strings.Join(renderEach(x.Xs), " or ")
+	case Not:
+		return "not (" + renderExpr(x.X) + ")"
+	case Cmp:
+		return fmt.Sprintf("%s %s %s", renderTerm(x.L), x.Op, renderTerm(x.R))
+	case In:
+		return fmt.Sprintf("%s is one of [%s]", renderTerm(x.T), strings.Join(x.Set, ", "))
+	case Match:
+		return fmt.Sprintf("%s matches /%s/", renderTerm(x.T), x.Pattern)
+	case ExistsIn:
+		return fmt.Sprintf("some %s where %s", x.Over, renderExpr(x.Where))
+	case IsTrue:
+		return renderTerm(x.T)
+	}
+	return "the condition"
+}
+
+func renderEach(xs []Expr) []string {
+	out := make([]string, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, renderExpr(x))
+	}
+	return out
+}
+
+// renderTerm describes a term. A Call renders as its function name applied to its arguments, which
+// is what the rule author wrote and what the rule's doc page explains.
+func renderTerm(t Term) string {
+	switch x := t.(type) {
+	case Lit:
+		if str, ok := x.V.(string); ok {
+			return strconv.Quote(str) // so an empty literal reads as "" rather than vanishing
+		}
+		return fmt.Sprintf("%v", x.V)
+	case Fact:
+		return x.Name
+	case Var:
+		return x.Name
+	case Call:
+		if len(x.Args) == 0 {
+			return x.Fn
+		}
+		args := make([]string, 0, len(x.Args))
+		for _, a := range x.Args {
+			args = append(args, renderTerm(a))
+		}
+		return x.Fn + "(" + strings.Join(args, ", ") + ")"
+	case CountOf:
+		return "count of " + x.Over
+	}
+	return "a value"
 }

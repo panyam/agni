@@ -32,18 +32,30 @@ expensive to rediscover.
 | Running the gate, and how it reads green when it is not | `build/the-gate.md` |
 | Measuring something, or trusting a green test | `build/evidence.md` |
 | Learning the domain from a software background | `reference/analogy.md`, `reference/edif-primer.md` |
+| Why a rule exists at all, as engineering rather than as code | `learn/` (twelve chapters, EE1-EE7) |
 
 `guide/` is the user-facing manual (getting-started, concepts, checks-and-reports,
 comparing-revisions, querying, naming-conventions, interface-profiles, datasheets, cli-reference).
 `tutorials/` walks one board from first read to a CI gate. `reference/` also holds the GENERATED
 rule and relation catalogs.
 
+`learn/` is the DOMAIN course, and it is the axis the other sections do not cover: twelve chapters
+teaching what a hardware engineer knows, each ending in the rules that encode it. `tutorials/` teaches
+the tool and assumes the domain; the rule pages explain the check and assume the instinct. `learn/`
+is the layer between. `learn/levels.md` defines EE1 through EE7 (parts, nets, roles, failure modes,
+numbers, systems, layout) and maps every section of the course to its level, which is also the
+vocabulary for asking: "explain `output-output-conflict` at EE4" wants the bench symptom rather than
+the definition.
+
+**When a change touches a rule the course teaches, check whether a chapter needs updating**, and cite
+the relevant pages as prerequisite reading in the PR.
+
 `site/` is stale build output, not a source tree. Some older notes reference a retired `docs/NN-*.md`
 mkdocs tree that was folded into `docsite/content/` with audience-first names.
 
 ## Package layout
 
-Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/diff`,
+Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/report`, `core/diff`,
 `core/query`, `core/model`). Format readers under **`readers/`** (`readers/edif`, `readers/kicad`,
 `readers/ipc2581`, `readers/xschem`, `readers/geda`, plus `readers/formats`, the registry/Loader).
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
@@ -64,7 +76,28 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 ## Build, test, and the CLI
 
 - `make build` / `make test` / `make agni` / `make install`.
-- `make stats` / `make check` run the CLI against a committed fixture (`EDN=...` to override).
+- **Nothing here takes a private path, and a private workspace must never have to reimplement a
+  target.** Two mechanisms carry someone's own designs in. Tier-1 config (mounts, symbol paths,
+  native tools) belongs in an `agni.yaml`, which the CLI finds by walking up from the working
+  directory and then in `~/.config/agni/`, so `agni check mount://corpus/...` works from anywhere
+  with no flags: see `cmd/agni/envconfig.go` and the tier boundary it guards. Everything else is a
+  variable on a target: `EXTRA_MOUNTS` and `OVERLAY_FLAGS` on `serve`, `DESIGNS` and `OVERLAY_DIR`
+  on `dockserve`, `NATIVE_DOCKER_MOUNTS` on `natup`, `DATASHEET_DIR` on the datasheet targets. When
+  a workflow only exists as a wrapper in someone's local Makefile, that is a missing target here.
+- **A flag wins outright over `agni.yaml` rather than merging**, so a Makefile default that passes
+  `--mount` shuts the file out. `make serve MOUNTS=` is how you hand the mount table back to it.
+- `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
+  `natup` container. Both take paths INSIDE it, so they must fall under a `NATIVE_DOCKER_MOUNTS` dir.
+- `make setup` builds the docling venv the datasheet tooling runs in, then `make pdf2doc`,
+  `make pdf2doc-all`, and `make datasheets-status` work over `DATASHEET_DIR`. The venv is found by
+  lookup (repo-local `.venv`, then the parent directory's), so worktrees sharing a root share one
+  env instead of each carrying gigabytes of torch.
+- `make -C docsite preview PAGE=learn/03-why-every-chip-needs-capacitors` folds one built page into a
+  self-contained HTML file, for reviewing a branch before it merges. Use it rather than
+  `make -C docsite gh-pages`, which is DEAD: Pages serves the `docs.yml` workflow artifact
+  (`build_type: workflow`), so force-pushing that branch changes nothing.
+- `make -C docsite figures` re-renders the schematics `learn/` embeds. Outside the gate, like
+  `make tutorial-runs`, because a render depends on the engine build.
 - CLI: `agni stats|check|diff|render|query|review|serve <file>`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
@@ -104,23 +137,27 @@ Each of these has a fixed edit-list where missing one edit is silent, and a test
 | Adding | Edits | Read | Enforced by |
 |---|---|---|---|
 | A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
+| A `learn/` chapter | 4, plus the level-index entries | `docsite/README.md` | `docsite/learn_levels_test.go` |
 | A web viewer panel | 4 | `docsite/content/architecture/web-app.md` | `web/src/composition.test.ts` |
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A format reader | — | `docsite/content/build/format-reader.md` | — |
 | A check rule | — | `docsite/content/build/check-rule.md` | — |
 | A query relation | 5, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check` |
+| A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 
 ## Working in this repo
 
 `CONTRIBUTING.md` holds the workflow rules: running several checkouts in parallel (use
 `git -C <abs-path>`, never `git add -A`), the PR workflow (verify a push by its exit code, verify
 `merged: true` via the API, never `gofmt -w` a directory), the three shell traps that have burned
-real work, and the PR prose conventions (ELI12 on every PR, a hardware primer, before/after images
-for anything visual).
+real work, and what agni ADDS to the PR body shape defined by the `start_pr` skill (the circuit and
+a hardware primer ahead of the reviewer's guide, which docsite pages the prerequisite block names,
+and the fixture-only rule for rendering captures). The general skeleton lives in the skill, so do
+not copy it back into this repo.
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1–C25). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1–C26). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a

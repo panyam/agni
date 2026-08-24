@@ -3,6 +3,10 @@ title: "unconnected-component"
 description: "A component appears on no net (none of its pins land on any signal)."
 ---
 
+### Remedy
+
+Wire the part into the circuit it belongs to, or delete it from the schematic if it is left over from an earlier revision. Placed and unwired is neither.
+
 ### What it means
 
 A component whose pins land on no net at all. It is placed but wired to

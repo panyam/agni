@@ -268,7 +268,7 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 	if open != nil {
 		anchors = append(anchors, resolveAnchors(powers, open)...)
 		resolveSlots(placements, placementSlots, open)
-		pins, unresolved := symread.ResolvePins(placements, loadPins(open), quant)
+		pins, resolved, unresolved := symread.ResolvePins(placements, loadPins(open), quant)
 		// Hidden net= pin taps land as anchors at their resolved pin points, so the pin merges
 		// onto the named net (the same mechanism power taps use, per component pin).
 		anchors = append(anchors, tapAnchors(netTaps, pins)...)
@@ -281,7 +281,15 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 		// unlike xschem. No per-wire id, so location is the subject.
 		// Recorded regardless (WS1-052): the dangle suppression below is exactly what makes an
 		// unresolved symbol invisible, so the cause has to be emitted alongside the silence.
-		d.InputDiagnostics = &ir.InputDiagnostics{UnresolvedSymbols: irUnresolved(unresolved, src)}
+		d.InputDiagnostics = &ir.InputDiagnostics{
+			UnresolvedSymbols: irUnresolved(unresolved, src),
+			// The references that DID load, recorded only on this branch (agni issue 418). The
+			// no-opener path below examines no symbol at all, and declaring the diagnostic there
+			// would turn "we deliberately read without symbols" into "we checked and found none
+			// missing", which is the coverage claim `supplied` exists to keep honest.
+			ResolvedSymbols: irResolved(resolved),
+			Supplied:        []string{"resolved_symbols"},
+		}
 		if len(unresolved) == 0 {
 			d.InputDiagnostics.DanglingEndpoints = netgraph.IRDangles(dangles, src, "")
 		}
@@ -422,6 +430,17 @@ func netFromNetAttr(v string) string {
 // irUnresolved turns the resolver's unresolved references into IR diagnostics, stamping the
 // construct kind and source file the resolver does not know. Returns nil for an empty set so a
 // clean read carries no empty slice.
+// irResolved stamps the resolver's loaded references with the construct kind, mirroring
+// irUnresolved. Returns nil for an empty set, which on this branch means a design that places no
+// external symbol rather than a read that skipped them.
+func irResolved(rs []symread.Resolved) []*ir.ResolvedSymbol {
+	var out []*ir.ResolvedSymbol
+	for _, r := range rs {
+		out = append(out, &ir.ResolvedSymbol{Symref: r.Symref, Kind: "geda_sym", PinCount: int32(r.PinCount)})
+	}
+	return out
+}
+
 func irUnresolved(us []symread.Unresolved, src string) []*ir.UnresolvedSymbol {
 	var out []*ir.UnresolvedSymbol
 	for _, u := range us {

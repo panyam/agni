@@ -1,0 +1,22 @@
+#agni-run ea5d39a50d96046a
+floating-input  4 not-considered, 3 pass
+    not-considered  GND       the net carries a passive part, which may be the pull that fixes
+                              it or a series element hiding the driver, so it is not provably
+                              floating
+    not-considered  MCU_NRST  the net carries a passive part, which may be the pull that fixes
+                              it or a series element hiding the driver, so it is not provably
+                              floating
+    not-considered  PMIC_EN   the net carries a passive part, which may be the pull that fixes
+                              it or a series element hiding the driver, so it is not provably
+                              floating
+    not-considered  XTAL_IN   the net carries a passive part, which may be the pull that fixes
+                              it or a series element hiding the driver, so it is not provably
+                              floating
+    pass            CAN1_RXD  1 of the net's 2 pins are neither input nor no-connect, so the net
+                              is not input-only
+    pass            CAN1_TXD  1 of the net's 2 pins are neither input nor no-connect, so the net
+                              is not input-only
+    pass            I2C_SCL   1 of the net's 2 pins are neither input nor no-connect, so the net
+                              is not input-only
+
+7 verdicts across 1 rule(s), 3 pass, 4 not-considered

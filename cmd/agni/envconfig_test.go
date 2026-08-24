@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,5 +153,105 @@ func TestApplyEnvConfigYieldsToFlags(t *testing.T) {
 	}
 	if !strings.Contains(note.String(), envConfigName) {
 		t.Errorf("the run should name the file it took config from, got %q", note.String())
+	}
+}
+
+// TestResolveWebDirPrecedence pins the four-tier order. The tiers exist because they answer
+// different situations: a flag is an operator's own words, agni.yaml is a repo artifact, the
+// environment is what a container or an install can set, and the default is what a checkout needs to
+// work with no configuration at all.
+func TestResolveWebDirPrecedence(t *testing.T) {
+	env := func(m map[string]string) func(string) string {
+		return func(k string) string { return m[k] }
+	}
+	t.Cleanup(func() { envConfigWebDir = "" })
+
+	for _, tc := range []struct {
+		name       string
+		flag, file string
+		env        map[string]string
+		wantDir    string
+		wantSource string
+	}{
+		{name: "nothing set falls back to the checkout layout", wantDir: "web"},
+		{name: "env alone", env: map[string]string{envWebDir: "/usr/share/agni/web"},
+			wantDir: "/usr/share/agni/web", wantSource: envWebDir},
+		{name: "agni.yaml beats env", file: "/from/file",
+			env: map[string]string{envWebDir: "/from/env"}, wantDir: "/from/file", wantSource: "agni.yaml"},
+		{name: "flag beats both", flag: "/from/flag", file: "/from/file",
+			env: map[string]string{envWebDir: "/from/env"}, wantDir: "/from/flag"},
+		{name: "flag beats the default with no narration", flag: "/from/flag", wantDir: "/from/flag"},
+		{name: "whitespace-only env is not a value", env: map[string]string{envWebDir: "   "}, wantDir: "web"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			envConfigWebDir = tc.file
+			dir, source := resolveWebDir(tc.flag, env(tc.env))
+			if dir != tc.wantDir {
+				t.Errorf("dir = %q, want %q", dir, tc.wantDir)
+			}
+			// An empty source means "nobody needs telling": either the operator typed it, or it is the
+			// documented default. A non-empty one gets announced.
+			if source != tc.wantSource {
+				t.Errorf("source = %q, want %q", source, tc.wantSource)
+			}
+		})
+	}
+}
+
+// TestEnvConfigCarriesWebDir: web_dir is tier-1 config, so the file has to actually bind it, and
+// applyEnvConfig has to say it used it.
+func TestEnvConfigCarriesWebDir(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, envConfigName), []byte("web_dir: /opt/agni/web\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	t.Cleanup(func() { envConfigWebDir = "" })
+	envConfigWebDir = ""
+
+	var notes bytes.Buffer
+	if err := applyEnvConfig(&notes, func(string) string { return "" }); err != nil {
+		t.Fatalf("applyEnvConfig: %v", err)
+	}
+	if envConfigWebDir != "/opt/agni/web" {
+		t.Errorf("envConfigWebDir = %q, want the file's value", envConfigWebDir)
+	}
+	if !strings.Contains(notes.String(), "web dir") {
+		t.Errorf("a value nobody typed must be announced, got %q", notes.String())
+	}
+}
+
+// TestEnvConfigCarriesNativeTools: which golden renderers are installed is a property of the machine,
+// and naming an absent one fails loudly at the point of use, so it is tier-1 config like the others.
+func TestEnvConfigCarriesNativeTools(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvCfg(t, dir, "native_tools:\n  - kicad-cli\n  - xschem\n")
+	cfg, _, err := loadEnvConfig(dir, noEnv)
+	if err != nil {
+		t.Fatalf("loadEnvConfig: %v", err)
+	}
+	if len(cfg.NativeTools) != 2 || cfg.NativeTools[0] != "kicad-cli" || cfg.NativeTools[1] != "xschem" {
+		t.Errorf("native_tools = %v, want [kicad-cli xschem]", cfg.NativeTools)
+	}
+}
+
+// TestApplyEnvConfigBindsNativeTools: only serve consumes them, but the file is read once before any
+// command runs, so applyEnvConfig has to bind them for serve to find, and has to say it used them.
+func TestApplyEnvConfigBindsNativeTools(t *testing.T) {
+	dir := t.TempDir()
+	writeEnvCfg(t, dir, "native_tools:\n  - kicad-cli\n")
+	t.Chdir(dir)
+	t.Cleanup(func() { envConfigNativeTools = nil })
+	envConfigNativeTools = nil
+
+	var note strings.Builder
+	if err := applyEnvConfig(&note, noEnv); err != nil {
+		t.Fatalf("applyEnvConfig: %v", err)
+	}
+	if len(envConfigNativeTools) != 1 || envConfigNativeTools[0] != "kicad-cli" {
+		t.Errorf("envConfigNativeTools = %v, want the file's value", envConfigNativeTools)
+	}
+	if !strings.Contains(note.String(), "native tool") {
+		t.Errorf("a value nobody typed must be announced, got %q", note.String())
 	}
 }

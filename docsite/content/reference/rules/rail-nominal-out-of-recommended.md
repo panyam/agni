@@ -3,6 +3,10 @@ title: "rail-nominal-out-of-recommended"
 description: "A power-input pin sits on a rail whose nominal voltage is outside the part's recommended operating supply range."
 ---
 
+### Remedy
+
+Bring the rail inside the part's recommended operating range, or accept the excursion in writing with the reason. Outside that window the datasheet's numbers no longer apply.
+
 ### What it means
 
 A component joined to a seeded datasheet spec (by MPN) has a power-input pin on a rail whose

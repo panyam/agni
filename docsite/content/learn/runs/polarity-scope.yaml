@@ -1,0 +1,9 @@
+# Chapter 6's point. D1 on the tutorial board is a TVS sitting between GND and a 12V rail, which is
+# the SAME topology led-polarity calls a defect on an LED, and is correct usage here. The rule is
+# scoped to LEDs and says nothing, which is why the second command reports no considered set at all.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "tvs"), component-on-net(?r, ?n) => ?r, ?n'
+  echo
+  agni check --verdicts --rule led-polarity examples/tutorial-project/designs/gateway/gateway.edn

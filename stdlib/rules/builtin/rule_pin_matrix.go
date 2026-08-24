@@ -40,6 +40,7 @@ var rowOutputOutput = matrixRow{
 		Severity: "error",
 		Summary:  "Two or more driving pins (outputs / power sources) share a net and fight each other.",
 		Impact:   "Two outputs on one net drive it to opposite levels at once. The result is a low-impedance path between rails through the two drivers: contention current, brownouts, and cooked output stages. It is the classic short-through-logic bug.",
+		Remedy:   "Remove all but one driver from the net, or make the drivers arbitrate: series resistors, open-drain outputs sharing one pull-up, or a buffer whose enables are never asserted together.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -52,6 +53,12 @@ var rowOutputOutput = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
+		// NO Scope, deliberately: contention is possible on any net, so every net is a subject and a
+		// pass says something worth saying ("at most one thing drives this"). Both clauses below are
+		// the violation condition rather than scope, including the has_pull exemption: a multi-driver
+		// net WITH a pull is an open-drain wired-OR bus working as intended, which is a real pass and
+		// not a subject the rule declined.
+		//
 		// The has_pull guard exempts open-drain wired-OR buses (see isWiredOrBus). Without it,
 		// EDIF that types open-drain pins "output" reads a shared interrupt line as N drivers
 		// fighting.
@@ -101,6 +108,7 @@ var rowNCConnected = matrixRow{
 		Severity: "error",
 		Summary:  "A pin marked no-connect is wired into a net with other members.",
 		Impact:   "The symbol says the pin must not be used and the schematic uses it anyway. Either the wire is a capture slip landing on the wrong pad, or the part is being asked to do something its maker forbids (an internal test pin, a reserved pad). Both read as working designs until the part misbehaves.",
+		Remedy:   "Disconnect the pin and mark it no-connect. Where the connection is deliberate (a factory test pad, a vendor-documented exception), cite the datasheet section that allows it in a schematic note.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -110,11 +118,14 @@ var rowNCConnected = matrixRow{
 	},
 	spec: &check.Spec{
 		Over: "nets",
-		Where: check.And{Xs: []check.Expr{
+		// SCOPE: a cross-sheet net the read did not fully cover cannot be judged, and a one-pin net
+		// cannot wire anything TO anything, so the defect is structurally impossible there rather than
+		// absent. Narrowing here keeps the considered set to nets where the question has an answer.
+		Scope: check.And{Xs: []check.Expr{
 			check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 			check.Cmp{L: check.Fact{Name: "net.pin_count"}, Op: ">=", R: check.Lit{V: 2}},
-			check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "no_connect"}}},
 		}},
+		Where:   check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "no_connect"}}},
 		Message: "net wires in a pin marked no-connect",
 	},
 }
@@ -127,6 +138,7 @@ var rowUnspecifiedWithDriver = matrixRow{
 		Severity: "warning",
 		Summary:  "A pin with no declared electrical type sits on a driven net.",
 		Impact:   "The symbol author never said what the pin is, so no matrix row can clear it: it may be an input (fine), an output (contention with the driver), or a supply pin (a rail short). The ERC is flying blind on exactly the net where a wrong guess costs a driver stage.",
+		Remedy:   "Set the pin's electrical type in the symbol to what the datasheet says it is. Fixing the symbol is the remedy, because suppressing the finding leaves the ERC blind on every board that uses it.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -139,15 +151,18 @@ var rowUnspecifiedWithDriver = matrixRow{
 		Let: map[string]check.Term{
 			"drivers": check.Call{Fn: "driving_components"},
 		},
-		Where: check.And{Xs: []check.Expr{
+		// SCOPE: the rule's own name says it. An undriven net cannot exhibit this defect, so a pass on
+		// one would claim a check that never happened. What is left is a real answer: of the nets
+		// something drives, these carry no pin of unknown type.
+		Scope: check.And{Xs: []check.Expr{
 			check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 			check.Cmp{L: check.Var{Name: "drivers"}, Op: ">=", R: check.Lit{V: 1}},
-			check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{
-				check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "unspecified"}},
-				check.IsTrue{T: check.Fact{Name: "pin.declared"}},
-				check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}},
-			}}},
 		}},
+		Where: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{
+			check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "unspecified"}},
+			check.IsTrue{T: check.Fact{Name: "pin.declared"}},
+			check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}},
+		}}},
 		Message: "a pin with no declared electrical type shares this driven net",
 	},
 }

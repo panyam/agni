@@ -62,12 +62,12 @@ func fetDesign(railName, regRef string) *ir.Design {
 func TestFetVdssBelowRailFromNetName(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("+60V", ""), nil,
 		param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
-	fs := fetVdssBelowRail.Eval(m)
+	fs := fetVdssBelowRail.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding (50V FET on a 60V rail), got %d: %+v", len(fs), fs)
 	}
 	f := fs[0]
-	if f.Subject != "Q1" {
+	if check.EntityRef(f.Subject) != "Q1" {
 		t.Errorf("subject = %q, want Q1", f.Subject)
 	}
 	if !strings.Contains(f.Message, "from the net name") {
@@ -86,7 +86,7 @@ func TestFetVdssBelowRailFromDatasheet(t *testing.T) {
 		"ACME-FET": fetSpec("ACME-FET", 50),
 		"ACME-REG": regSpec("ACME-REG", 60, "hand", 1),
 	})
-	fs := fetVdssBelowRail.Eval(m)
+	fs := fetVdssBelowRail.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
@@ -109,7 +109,7 @@ func TestFetVdssBelowRailFromDatasheet(t *testing.T) {
 func TestFetVdssWithinRating(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("+12V", ""), nil,
 		param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
-	if fs := fetVdssBelowRail.Eval(m); len(fs) != 0 {
+	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
 		t.Errorf("50V FET on a 12V rail must be silent, got %+v", fs)
 	}
 }
@@ -124,7 +124,7 @@ func TestFetVdssWithinRating(t *testing.T) {
 func TestFetVdssUnknownRailVoltage(t *testing.T) {
 	m := check.NewModelWithParams(fetDesign("VBUS", ""), nil,
 		param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
-	if fs := fetVdssBelowRail.Eval(m); len(fs) != 0 {
+	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
 		t.Errorf("unknown rail voltage must yield no finding, got %+v", fs)
 	}
 }
@@ -133,7 +133,7 @@ func TestFetVdssUnknownRailVoltage(t *testing.T) {
 // nothing to compare and Available gates the rule to not-applicable rather than letting it read clean.
 func TestFetVdssSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(fetDesign("+60V", ""))
-	if fs := fetVdssBelowRail.Eval(m); len(fs) != 0 {
+	if fs := fetVdssBelowRail.Findings(m); len(fs) != 0 {
 		t.Errorf("want no findings with no seeded params, got %+v", fs)
 	}
 	if ok, reason := check.Available(fetVdssBelowRail, m); ok || reason == "" {
@@ -151,11 +151,55 @@ func TestFetVdssIgnoresGround(t *testing.T) {
 		Connections: []*ir.Connection{{ComponentRef: "Q1", PinRef: "2"}},
 	})
 	m := check.NewModelWithParams(d, nil, param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)})
-	fs := fetVdssBelowRail.Eval(m)
+	fs := fetVdssBelowRail.Findings(m)
 	if len(fs) != 1 {
 		t.Fatalf("want exactly 1 finding (the +60V rail, not GND), got %d: %+v", len(fs), fs)
 	}
 	if strings.Contains(fs[0].Message, "GND") {
 		t.Errorf("ground must not be compared: %s", fs[0].Message)
+	}
+}
+
+// A rule's considered set must not include subjects the rule is not ABOUT, and this is the rule that
+// got it wrong first. Scoped on nothing, it claimed every part touching a rail: on the tutorial board
+// that was 17 verdicts about capacitors, diodes and a connector, on a design carrying no transistor.
+//
+// Reporting a capacitor as a part it could not judge for drain-source breakdown is a coverage claim in
+// the WRONG DIRECTION. A pass would say the rule checked something it did not; a not-considered says
+// the rule tried to and failed, and it never tried. Both are false, and the second is the one that is
+// easy to ship because it reads as caution.
+func TestFetVdssClaimsOnlySwitchingParts(t *testing.T) {
+	rail := func(conns ...*ir.Connection) *ir.Design {
+		return &ir.Design{
+			Components: []*ir.Component{
+				{RefDes: "C1", Prov: &ir.Provenance{SourceFile: "t"}},
+				{RefDes: "Q1", Prov: &ir.Provenance{SourceFile: "t"}},
+			},
+			Nets: []*ir.Net{{Name: "+12V", Prov: &ir.Provenance{SourceFile: "t"}, Connections: conns}},
+		}
+	}
+	d := rail(&ir.Connection{ComponentRef: "C1", PinRef: "1"}, &ir.Connection{ComponentRef: "Q1", PinRef: "1"})
+	vs := fetVdssBelowRail.Eval(check.NewModel(d))
+
+	for _, v := range vs {
+		if v.Subjects[0].Ref == "C1" {
+			t.Errorf("C1 is a capacitor and no datasheet calls it a switch; it is not a subject of a "+
+				"drain-source breakdown rule, yet the rule reports %q about it", v.Outcome)
+		}
+	}
+	// And not over-narrowed: a part the design DOES class as a transistor stays a subject even with no
+	// datasheet, because "there is a FET on this rail and nothing states what it can stand" is exactly
+	// the coverage gap worth reporting.
+	var sawQ1 bool
+	for _, v := range vs {
+		if v.Subjects[0].Ref == "Q1" {
+			sawQ1 = true
+			if v.Outcome != check.NotConsidered {
+				t.Errorf("Q1 has no seeded datasheet, so the rule cannot judge it; got %q", v.Outcome)
+			}
+		}
+	}
+	if !sawQ1 {
+		t.Error("an unseeded transistor on a rail must still be a subject, or the scope fix went too far")
 	}
 }

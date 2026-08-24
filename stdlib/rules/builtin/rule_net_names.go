@@ -65,6 +65,7 @@ var duplicateNetName = matrixlessSpecRule(func() *check.Rule {
 		Severity: "warning",
 		Summary:  "Two electrically distinct nets carry the same name.",
 		Impact:   "A name is an identity: reviews, BOM tools, and cross-artifact joins (schematic vs board, revision diffs) assume one name means one net. Two nets under one name silently alias in every one of those views, and on connect-by-name formats the same slip would have MERGED the copper.",
+		Remedy:   "Rename one of the nets. If the two were meant to be one net, connect them instead, and check whether a connect-by-name path has already merged them somewhere else in the design.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -118,6 +119,7 @@ var labelAliasConflict = matrixlessSpecRule(func() *check.Rule {
 		Severity: "warning",
 		Summary:  "One net carries two different sheet-scoped labels in the same scope.",
 		Impact:   "Two labels on one wire read as two signals to every human and one net to the tool. Whichever name a reviewer greps for, half the net's story is elsewhere; and if the author MEANT two nets, the wire between the labels is the defect.",
+		Remedy:   "Settle on one name for the wire and delete the other label. If the two names were meant to be two signals, the wire between them is what to cut.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryConnectivity,
 			check.KeyTier:         "R",
@@ -159,6 +161,7 @@ var powerTapConflict = matrixlessSpecRule(func() *check.Rule {
 		Severity: "warning",
 		Summary:  "One net is tapped by two different design-wide names (power symbols or global labels).",
 		Impact:   "A rail tapped +3V3 here and +3.3V there is one net pretending to be two rails. Every OTHER +3.3V tap in the design joins this net too — the classic multi-sheet capture slip where two supplies quietly become one, or one rail's consumers scatter across two names.",
+		Remedy:   "Settle on one spelling for the rail and change every tap to it. Confirm afterwards which consumers moved, since the two names may have been feeding what everyone believed were separate supplies.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryPower,
 			check.KeyTier:         "R",

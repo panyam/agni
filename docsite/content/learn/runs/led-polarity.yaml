@@ -1,0 +1,6 @@
+# Chapter 6: an LED wired so it can never conduct. The witness states the reason rather than the
+# rule name, which is what makes it checkable against the drawing beside it.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni check --verdicts --rule led-polarity cmd/agni/testdata/conformance/ledpol.fires.kicad_sch

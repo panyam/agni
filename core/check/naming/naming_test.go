@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -56,8 +57,8 @@ func TestSourceCompilesAndFires(t *testing.T) {
 		net("unconnected-(U1-Pad2)"), // marker stub -> always silent
 	}})
 	got := map[string]bool{}
-	for _, f := range rule.Eval(m) {
-		got[f.Subject] = true
+	for _, f := range rule.Findings(m) {
+		got[check.EntityRef(f.Subject)] = true
 	}
 	want := map[string]bool{"badname": true, "/amp1/lower": true}
 	if len(got) != len(want) || !got["badname"] || !got["/amp1/lower"] {
@@ -67,12 +68,12 @@ func TestSourceCompilesAndFires(t *testing.T) {
 
 // TestSourceRejectsBadConfig: operator input fails with errors, never panics.
 func TestSourceRejectsBadConfig(t *testing.T) {
-	for name, cfg := range map[string]Config{
-		"no source name": {Rules: []RuleConfig{{Name: "x", Allow: []string{"a"}}}},
+	for name, cfg := range map[string]*configpb.NamingConvention{
+		"no source name": {Rules: []*configpb.NamingRule{{Name: "x", Allow: []string{"a"}}}},
 		"no rules":       {Name: "acme"},
-		"no allow":       {Name: "acme", Rules: []RuleConfig{{Name: "x"}}},
-		"bad severity":   {Name: "acme", Rules: []RuleConfig{{Name: "x", Severity: "fatal", Allow: []string{"a"}}}},
-		"bad regex":      {Name: "acme", Rules: []RuleConfig{{Name: "x", Allow: []string{"("}}}},
+		"no allow":       {Name: "acme", Rules: []*configpb.NamingRule{{Name: "x"}}},
+		"bad severity":   {Name: "acme", Rules: []*configpb.NamingRule{{Name: "x", Severity: "fatal", Allow: []string{"a"}}}},
+		"bad regex":      {Name: "acme", Rules: []*configpb.NamingRule{{Name: "x", Allow: []string{"("}}}},
 	} {
 		if _, err := Source(cfg); err == nil {
 			t.Errorf("%s: want error", name)
@@ -96,16 +97,17 @@ func TestApplyLexicon(t *testing.T) {
 	cfg, err := Parse([]byte(`
 name: acme
 lexicon:
-  rail:
-    patterns: ["^HV_"]
-  feedback:
-    patterns: ["_ETH_FB$"]
+  net:
+    rail:
+      patterns: ["^HV_"]
+    feedback:
+      patterns: ["_ETH_FB$"]
 `))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if cfg.Lexicon == nil || len(cfg.Lexicon.Rail.Patterns) != 1 || cfg.Lexicon.Rail.Patterns[0] != "^HV_" {
-		t.Fatalf("lexicon did not parse: %+v", cfg.Lexicon)
+	if rail := cfg.GetLexicon().GetNet().GetRail().GetPatterns(); len(rail) != 1 || rail[0] != "^HV_" {
+		t.Fatalf("lexicon did not parse: %+v", cfg.GetLexicon())
 	}
 	if err := ApplyLexicon(cfg); err != nil {
 		t.Fatalf("apply: %v", err)

@@ -36,8 +36,9 @@ reported, because as far as the tool is concerned that net is not a rail.
 ```yaml
 name: gateway
 lexicon:
-  rail:
-    patterns: ["_[0-9]+V[0-9]$"]
+  net:
+    rail:
+      patterns: ["_[0-9]+V[0-9]$"]
 rules:
   - name: signal-net-naming
     severity: warning
@@ -45,12 +46,18 @@ rules:
     allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]
 ```
 
-**`lexicon`** teaches the engine which of your net names mean what. It is applied when the design is
+**`lexicon`** teaches the engine which of your names mean what. It is applied when the design is
 read, before any rule runs, so it changes the input every rule sees. This is the half that matters
 most and the half people skip.
 
+It is grouped by what is being named, because that is what decides whether a pattern is right.
+`net` holds `rail`, `ground` and `feedback`, matched against NET names. `pin` holds `supply`,
+`gate`, `source` and `drain`, matched against a component's PIN names. A supply pin is called `VDD`
+or `VIN` while a rail net is called `3V3` or `+5V`, so a pattern that belongs in one group is wrong
+in the other. There is also a `class` map, which marks a PART as belonging to a component class.
+
 **`rules`** adds checks. They join the catalog namespaced under the config's name, so this one
-appears as `gateway/signal-net-naming`. This is the half people expect a conventions file to be.
+appears as `gateway/signal-net-naming`. Most people opening a conventions file expect only this half.
 
 ## Both halves, visible
 
@@ -80,7 +87,7 @@ Two things changed, one from each half.
 ```
 
 And `test-point-coverage` went from 1 to 2. Nothing about that rule changed. A net that was
-invisible to it became a rail, and that rail has no test point:
+invisible to it became a rail, and that rail has no {{ explainable "test-point" }}:
 
 ```
 [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)

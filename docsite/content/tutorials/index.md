@@ -9,10 +9,14 @@ the way to a house checklist running in CI, adding one capability at a time.
 
 Work through them in order the first time. After that they stand alone.
 
+These rungs teach the TOOL and assume the domain. If the checks keep making sense mechanically while
+the engineering behind them does not, [learn the domain](../learn/) is the other axis: seven levels of
+hardware knowledge, each tied back to the rules that encode it.
+
 ## The board
 
 Every rung runs against `examples/tutorial-project` in the engine repo. It is a synthetic industrial
-gateway ECU plus the project files a team wraps around one. Every part, MPN, and datasheet value in
+sample board plus the project files a team wraps around one. Every part, MPN, and datasheet value in
 it is invented, so you can copy the whole folder and change it freely.
 
 ```

@@ -1,0 +1,9 @@
+#agni-run 7041f6f21af144a9
+findings by rule:
+  output-output-conflict 1
+
+first 1:
+  [error] output-output-conflict: VCC_RAW (net has 2 driving components; at most one may drive)
+
+1 finding(s) total
+2 subject(s) considered by 1 rule(s) (--verdicts for the detail)

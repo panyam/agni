@@ -37,7 +37,7 @@ Nets changed (5):
   [renamed] XTAL_OUT -> CLK_OUT
 ```
 
-Two resistors added, three nets gained connections, two nets renamed. That is the whole change, and
+Two resistors added, three nets gained connections, two nets renamed. That accounts for the whole change, and
 it is five lines rather than a few hundred.
 
 ## Renamed is not deleted plus added
@@ -81,7 +81,7 @@ Two failures became passes, and the items say which:
 | H1 | net names follow house convention | pass |  |
 ```
 
-The two added resistors are the I2C pull-ups. The two renames bring the clock nets onto house
+The two added resistors are the I2C {{ explainable "pull-up" "pull-ups" }}. The two renames bring the clock nets onto house
 convention. Every structural change in the diff is accounted for by an item that improved, and
 nothing else moved.
 

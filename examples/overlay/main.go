@@ -58,7 +58,7 @@ func run(path string) error {
 	}
 	fmt.Printf("%d finding(s):\n", len(findings))
 	for _, f := range findings {
-		fmt.Printf("  [%s] %s: %s (%s)\n", f.Severity, f.Rule, f.Subject, f.Message)
+		fmt.Printf("  [%s] %s: %s (%s)\n", f.Severity, f.Rule, check.EntityRef(f.Subject), f.Message)
 	}
 	return nil
 }

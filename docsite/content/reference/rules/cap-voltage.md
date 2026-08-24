@@ -3,6 +3,10 @@ title: "cap-voltage"
 description: "A capacitor's datasheet rated voltage does not clear the worst rail it touches times the derate factor."
 ---
 
+### Remedy
+
+Fit a capacitor rated above the worst rail it touches, with the derating the design's own rules call for. On ceramics, allow for the capacitance lost under applied DC bias as well.
+
 ### What it means
 
 A component classed as a capacitor, joined by MPN to a seeded datasheet

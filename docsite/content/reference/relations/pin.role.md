@@ -25,7 +25,7 @@ role is worse than a missing one here, because a topology rule would then walk a
 exist and report on it.
 
 Unlike the polarity tokens, the terminal roles read from the naming lexicon rather than engine
-literals, so a house that calls its gate `DRV` declares that under `lexicon.gate` in `--conventions`
+literals, so a house that calls its gate `DRV` declares that under `lexicon.pin.gate` in `--conventions`
 instead of patching the engine. Matching is exact-token, not substring:
 `CLKA` is not an anode. You query it to find, say, every cathode and check where it lands, or to
 confirm the polarity roles resolved on the parts you expect.

@@ -3,6 +3,10 @@ title: "intent/module-missing"
 description: "A functional block the design intent declares required is absent from the design."
 ---
 
+### Remedy
+
+Add the missing block to the schematic, or amend the intent declaration if the architecture has moved on. One of the two is out of date, and only the author knows which.
+
 ### What it means
 
 The design intent declares which functional blocks the schematic is required to contain (a SoC,

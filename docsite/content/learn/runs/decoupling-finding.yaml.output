@@ -1,0 +1,9 @@
+#agni-run 914c41f9f08e8e9e
+findings by rule:
+  decoupling-present     1
+
+first 1:
+  [warning] decoupling-present: PMIC_MAIN_12V0 (power rail has no decoupling capacitor)
+
+1 finding(s) total
+3 subject(s) considered by 1 rule(s) (--verdicts for the detail)

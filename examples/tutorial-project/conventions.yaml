@@ -11,8 +11,9 @@
 # matches none of them. Without this file the only rail on the board is GND.
 name: gateway
 lexicon:
-  rail:
-    patterns: ["_[0-9]+V[0-9]$"]
+  net:
+    rail:
+      patterns: ["_[0-9]+V[0-9]$"]
 rules:
   - name: signal-net-naming
     severity: warning

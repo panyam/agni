@@ -27,7 +27,12 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 	})
 	spec := &check.Spec{
 		Over: "nets",
-		Where: check.And{Xs: []check.Expr{
+		// SCOPE, not the violation: these four decide whether the rule is about this net at all.
+		// has_test_points is design-wide, so without the split a board using no test points would
+		// report every net as passing, which is a rule that declined to run claiming universal
+		// success. The rail clauses matter as much: Over is every net, and this rule is about rails,
+		// so on the tutorial gateway design that is 15 nets narrowed to 4.
+		Scope: check.And{Xs: []check.Expr{
 			check.IsTrue{T: check.Call{Fn: "has_test_points"}},
 			check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 			check.Or{Xs: []check.Expr{
@@ -40,8 +45,10 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 			// high-impedance sense point that must NOT be probed; exclude it (WS3-067). The
 			// feedback patterns are naming-lexicon config a project extends (WS3-069).
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "feedback_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
-			check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "test_point"}}}},
 		}},
+		// THE VIOLATION, and the only clause that is one: an in-scope rail with no test point on it.
+		// A pass here means the rail carries one, which is a claim worth making.
+		Where:   check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "test_point"}}}},
 		Message: "rail carries no test point; bring-up and factory test cannot probe it",
 	}
 	return spec.Rule(check.Rule{
@@ -49,6 +56,7 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 		Severity: "info",
 		Summary:  "A power rail or ground net has no test point, on a board that uses them.",
 		Impact:   "The nets you most need to see at bring-up are the ones you cannot reach with a probe on an assembled board. A rail without a test point means debugging a power problem by touching a component pad the size of a sand grain, and factory test cannot verify the rail at all.",
+		Remedy:   "Add a test point to the rail. It costs a pad, and it is the difference between measuring a supply at bring-up and trying to hold a probe on a component lead.",
 		Tags: map[string]string{
 			check.KeyCategory:     check.CategoryPower,
 			check.KeyTier:         "R",

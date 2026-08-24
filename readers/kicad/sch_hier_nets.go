@@ -88,10 +88,12 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		// Declared even when the slice is empty: that is the point of `supplied`. This reader
 		// looked, so an empty list means "no collisions" here, where on a reader that cannot look
 		// it would mean "nobody asked" (agni issue 309).
-		Supplied:              []string{"ref_des_collisions"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps"},
 		NoJunctionEndpoints:   w.in.noJunction,
+		JoinedTaps:            w.in.joinedTaps,
 		UnmodeledBuses:        w.buses,
 		UnresolvedSymbols:     unresolvedSyms,
+		ResolvedSymbols:       w.libs.resolvedSymbols(),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
 	}
 	return d, w.complete, nil

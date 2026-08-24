@@ -78,8 +78,8 @@ func TestCapVoltageFires(t *testing.T) {
 		t.Fatalf("6.3V-rated cap on a 10V rail: want 1 finding, got %v", fs)
 	}
 	f := fs[0]
-	if f.Kind != check.KindComponent || f.Subject != "C1" {
-		t.Errorf("subject = %s/%s, want component/C1", f.Kind, f.Subject)
+	if f.Subject.Kind != check.KindComponent || check.EntityRef(f.Subject) != "C1" {
+		t.Errorf("subject = %s/%s, want component/C1", f.Subject.Kind, f.Subject)
 	}
 	for _, want := range []string{"DEMO-CAP-6V3", "+10V", "10V", "6.3V", "1.25", "12.5V",
 		"ACME-CAP Rev C", "page 2", "Ratings", "confidence 1"} {

@@ -57,7 +57,7 @@ var idUnsafe = regexp.MustCompile(`[^a-z0-9._-]+`)
 
 // deriveID turns a folder or file name into a legal resource id, or "" when nothing usable survives.
 //
-// It sanitizes rather than rejecting, because the common case is a folder named "Gateway ECU" and
+// It sanitizes rather than rejecting, because the common case is a folder named "Sample Board" and
 // failing on it would send an operator to --name to type almost the same string back. The result is
 // printed, so a silent rename is not silent.
 func deriveID(s string) string {
@@ -312,10 +312,12 @@ func conventionsStub(projectID string) string {
 name: ` + projectID + `
 #
 # lexicon:
-#   rail:
-#     patterns: ["_[0-9]V[0-9]$"]
-#   supply_pin:
-#     patterns: ["^PWRIN"]
+#   net:
+#     rail:
+#       patterns: ["_[0-9]V[0-9]$"]
+#   pin:
+#     supply:
+#       patterns: ["^PWRIN"]
 #
 # rules:
 #   - name: signal-net-naming

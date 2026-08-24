@@ -29,6 +29,8 @@ Run the rule catalog and report findings. The workhorse. See
 | `--rule <name>` | run only this rule (repeatable) |
 | `--tag <key>=<value>` | run only rules with this tag, e.g. `--tag category=power` (repeatable) |
 | `--format <fmt>` | `text` (default), `markdown`, `json`, `csv`, or `report`. `csv` emits one row per finding with a stable header, for a spreadsheet-driven review |
+| `--verdicts` | report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. A separate table, so plain `--format csv` is unchanged. Honours `--format text/csv/json/html`. Only rules that state one contribute, and a rule absent from the output is declining to say rather than reporting that it considered nothing |
+| `--url-base <addr>` | base address of a running viewer, so an `--format html` report links each verdict to its proof. A link is emitted only when the design was named as a `mount://` URI, because a bare path is minted a mount locally and that name means nothing on a server the operator did not start with it. Omitted, subjects render as plain text |
 | `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info`. This is the **severity** axis. For the coverage axis, see `review --fail-on-outcome` and `--min-answered` below |
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
@@ -102,10 +104,28 @@ mounts:
   shared: /srv/shared
 symbol_paths:
   - /usr/share/kicad/symbols
+web_dir: /usr/share/agni/web
+native_tools:
+  - kicad-cli
 ```
 
-A run says which file it took config from, on stderr. An explicit `--mount` or `--symbol-path` wins
-outright rather than merging: naming a mount table is answering for the whole table.
+Paths are resolved against the directory you ran from, and a mount naming a directory that is not
+there is an error, so a file meant to serve every working directory wants absolute paths.
+
+A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path`,
+`--web-dir` or `--enable-native` wins outright rather than merging: naming a mount table is answering
+for the whole table.
+
+`web_dir` is where the viewer's own assets are. It belongs to this tier because it locates bytes and
+cannot change what a run concludes, and a wrong value fails at startup rather than quietly. A repo
+checkout needs nothing here, since the default `web` already resolves per-directory; an installed
+binary run from a design folder has no relative answer, and that is what this and `AGNI_WEB_DIR` are
+for.
+
+`native_tools` is the file form of `serve --enable-native`, and belongs here on the same test: it
+says which golden renderers EXIST, and naming one that is not installed fails at the point of use
+with the tool's own name in the error. Only `serve` consumes it, though every command reports having
+read it, because the note says what the file supplied rather than what the command went on to use.
 
 **It carries only tier-1 config, and that is a boundary rather than a to-do.** Naming conventions,
 interface profiles, seeded parameters, design intent and a review checklist decide *what a design is
@@ -215,13 +235,14 @@ Draw a design's schematic or board view.
 | `--format <fmt>` | `svg` (default) or `pack` (for the WebGL viewer) |
 | `-o <file>` | output path |
 
-### `serve [dir]`
+### `serve`
 
 Host the browser viewer and the web API on one port. Build the web bundle first.
 
 | flag | what it does |
 |---|---|
 | `--addr <addr>` | listen address (default `:8080`) |
+| `--web-dir <dir>` | the viewer's OWN assets, not designs (default `web`; then `web_dir` in the nearest `agni.yaml`, then `AGNI_WEB_DIR`) |
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--theme <name>` | render palette: `default` or `dark` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |

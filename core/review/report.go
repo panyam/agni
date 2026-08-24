@@ -181,7 +181,7 @@ func detail(it ItemResult) string {
 		}
 		parts := make([]string, 0, shown)
 		for _, f := range it.Findings[:shown] {
-			parts = append(parts, fmt.Sprintf("%s: %s (%s)", f.Rule, f.Subject, f.Message))
+			parts = append(parts, fmt.Sprintf("%s: %s (%s)", f.Rule, check.EntityRef(f.Subject), f.Message))
 		}
 		s := strings.Join(parts, "; ")
 		if n > shown {

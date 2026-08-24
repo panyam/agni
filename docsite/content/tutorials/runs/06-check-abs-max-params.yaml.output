@@ -1,4 +1,4 @@
-#agni-run 30adc3ab032962b0
+#agni-run d02fe931debb3b7b
 findings by rule:
   supply-exceeds-abs-max 1
 
@@ -6,3 +6,4 @@ first 1:
   [error] supply-exceeds-abs-max: U2 (power-input pin 1 on rail "PMIC_CORE_3V3": nominal 3.3V exceeds absolute-maximum VIN 3V — datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3))
 
 1 finding(s) total
+2 subject(s) considered by 1 rule(s) (--verdicts for the detail)

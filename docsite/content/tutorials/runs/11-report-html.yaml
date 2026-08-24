@@ -1,0 +1,7 @@
+# Rung 11: the human-readable sibling of the results document. capture is none because the output is
+# an HTML file rather than something to print, but the build still RUNS this, so the command cannot
+# rot without the docsite build noticing.
+fixture: examples/tutorial-project
+script: |
+  agni check --format html designs/gateway/gateway.edn > review.html
+capture: none

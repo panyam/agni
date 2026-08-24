@@ -1,0 +1,7 @@
+#agni-run 3ef58b918f0d323f
+r   m              n               provenance
+R1  ACME-RES-120R  CAN1_CANH       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANH
+R1  ACME-RES-120R  CAN1_CANL       designs/gateway/gateway.edn ; designs/gateway/gateway.edn:CAN1_CANL
+gateway-profiles/can-termination-missing  1 pass
+    pass  CAN1_CANH  CAN bus (net CAN1_CANH) is bridged to its _CANL twin by a series passive
+1 verdicts across 1 rule(s), 1 pass

@@ -19,6 +19,7 @@ var reverseBlockingAbsent = &check.Rule{
 	Severity:   "warning",
 	Summary:    "A connector feeds a power input with no directional element blocking reverse flow.",
 	Impact:     "Reverse polarity from a miswired connector, or backfeed from a parallel source into a switched-off rail, reaches the board unopposed. ISO 16750-2 makes reverse voltage a qualification requirement on a vehicle, and a fuse does not help: it opens on magnitude, not direction.",
+	Remedy:     "Add a directional element between the connector and the load: a series FET where the voltage drop matters, a diode where it does not, or a bridge where the input polarity is genuinely unknown.",
 	Primitives: []string{"select", "traverse", "reach", "pin-role"},
 	Reads:      []string{"component.class", "net.attributes", "on_net", "pin.electrical_type", "pin.role"},
 	Tags: map[string]string{
@@ -26,44 +27,82 @@ var reverseBlockingAbsent = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistOpen,
 	},
-	Detail: ruleDoc("reverse-blocking-absent"),
-	Eval: func(m check.Model) []check.Finding {
-		var out []check.Finding
-		for _, n := range m.Nets() {
-			if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
-				continue
+	Detail:              ruleDoc("reverse-blocking-absent"),
+	Eval:                reverseBlockingVerdicts,
+	StatesConsideredSet: true,
+}
+
+// reverseBlockingVerdicts decides every connector net that feeds a power input, and it is the rule
+// the Inconclusive outcome was added for. `classifyPowerPath` already answered in three values —
+// protected, unblocked, and "a transistor is in the way and a netlist cannot tell an ideal-diode
+// controller from an ordinary switch" — and two of the three reached a caller. The pass did not, so
+// a board where every entry is correctly blocked and a board where the rule saw no power path at all
+// produced the same nothing.
+//
+// THE FOURTH ANSWER IS NEW AND IS NOT AN OUTCOME. A connector net that reaches no power input is not
+// a power path, so it gets no verdict. The old shape could not tell that apart from a protected one,
+// because both took the same `return pathProtected` out of the walk, and under FailuresOnly the
+// distinction cost nothing. Under a considered set it would have claimed every signal pin on every
+// connector as reverse-protected.
+func reverseBlockingVerdicts(m check.Model) []check.Verdict {
+	var out []check.Verdict
+	for _, n := range m.Nets() {
+		if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
+			continue
+		}
+		hasConn := check.Exists(n.Connections, func(c *ir.Connection) bool {
+			return m.HasClass(c.ComponentRef, check.ClassConnector)
+		})
+		if !hasConn {
+			continue
+		}
+		outcome, ref := classifyPowerPath(m, n)
+		if outcome == pathNoLoad {
+			continue // no power input downstream, so there is no power path to block
+		}
+
+		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.GetName()}}}
+		switch outcome {
+		case pathProtected:
+			v.Outcome = check.Pass
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("%s stands between the connector and the power input it feeds, and passes current one way", ref),
+				Terms:     []check.WitnessTerm{{Label: "blocking element", Value: ref}},
 			}
-			hasConn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-				return m.HasClass(c.ComponentRef, check.ClassConnector)
-			})
-			if !hasConn {
-				continue
+			v.Context = compContext(ref, "reverse-blocking element")
+		case pathUnblocked:
+			v.Outcome = check.Fail
+			v.Witness = &check.Witness{
+				Statement: "the connector reaches a power input through passives alone, so nothing in the path passes current one way",
 			}
-			switch v, ref := classifyPowerPath(m, n); v {
-			case pathUnblocked:
-				out = append(out, check.Finding{
-					Kind: check.KindNet, Subject: n.GetName(), Prov: n.GetProv(),
-					Message: "connector feeds a power input with no reverse-blocking element in the path",
-				})
-			case pathUnclassifiable:
-				out = append(out, check.Finding{
-					Kind: check.KindNet, Subject: n.GetName(), Prov: n.GetProv(), Inconclusive: true,
-					Message: fmt.Sprintf(
-						"connector feeds a power input through transistor %s, which may be an ideal diode or "+
-							"ORing FET providing reverse protection, or may be an ordinary switch providing none. "+
-							"A netlist cannot tell them apart. Seed %s's datasheet with a device_class of "+
-							"ideal_diode_controller (or confirm by hand that reverse flow is blocked).", ref, ref),
-					// The transistor the reader has to go and identify. The subject is the net, and
-					// this finding's whole remedy is about that part, so naming it only in prose made
-					// the next step a manual search (agni issue 349).
-					Context: []check.ContextSubject{
-						{Kind: check.KindComponent, Subject: ref, Role: "transistor"},
-					},
-				})
+			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.GetName()}, Prov: n.GetProv(), Message: "connector feeds a power input with no reverse-blocking element in the path"}
+		case pathUnclassifiable:
+			// Inconclusive, not NotConsidered: the rule had everything it needed and REACHED the
+			// comparison, and the discrimination itself is impossible from a netlist. It still has to
+			// reach a reviewer, which is why the projection carries it to a finding where a
+			// NotConsidered would stop here (agni issue 74).
+			v.Outcome = check.Inconclusive
+			v.Witness = &check.Witness{
+				Statement: fmt.Sprintf("transistor %s is in the path and a netlist states nothing that separates an ideal-diode controller from an ordinary switch", ref),
+				Terms:     []check.WitnessTerm{{Label: "unidentified transistor", Value: ref}},
+			}
+			v.Context = compContext(ref, "transistor")
+			v.Finding = &check.Finding{
+				Subject: check.Entity{Kind: check.KindNet, Ref: n.GetName()}, Prov: n.GetProv(), Inconclusive: true,
+				Message: fmt.Sprintf(
+					"connector feeds a power input through transistor %s, which may be an ideal diode or "+
+						"ORing FET providing reverse protection, or may be an ordinary switch providing none. "+
+						"A netlist cannot tell them apart. Seed %s's datasheet with a device_class of "+
+						"ideal_diode_controller (or confirm by hand that reverse flow is blocked).", ref, ref),
+				// The transistor the reader has to go and identify. The subject is the net, and
+				// this finding's whole remedy is about that part, so naming it only in prose made
+				// the next step a manual search (agni issue 349).
+				Context: compContext(ref, "transistor"),
 			}
 		}
-		return out
-	},
+		out = append(out, v)
+	}
+	return out
 }
 
 // classifyPowerPath decides what n's power path does about reverse flow.
@@ -114,6 +153,12 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 		// quiet, which a bound review item reads as a pass (agni issue 74).
 		return pathUnclassifiable, transistor
 	}
+	// blocker is the directional part the walk stopped at, and its absence is what separates a
+	// protected path from NO PATH. Both used to fall out of this loop as pathProtected, because
+	// nothing downstream needed the difference; a considered set does, since "there is a diode
+	// between the connector and the load" and "this connector feeds no load" are not the same claim
+	// and only the first is a pass.
+	blocker := ""
 	unblocked := false
 	for _, rn := range r.Nets {
 		for _, c := range rn.GetConnections() {
@@ -132,14 +177,19 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 			if m.ComponentClass(ref) == check.ClassDiode {
 				if pinNetWithRole(m, ref, check.RoleAnode) != rn.GetName() {
 					unblocked = true // fitted backwards: it blocks the supply, not the fault
+				} else if blocker == "" {
+					blocker = ref // fitted the right way round, so it is the path's blocking element
 				}
 			}
 		}
 	}
-	if unblocked {
+	switch {
+	case unblocked:
 		return pathUnblocked, ""
+	case blocker != "":
+		return pathProtected, blocker
 	}
-	return pathProtected, ""
+	return pathNoLoad, ""
 }
 
 // pathVerdict is what the walk concluded about one connector-fed net. THREE outcomes, not two:
@@ -155,6 +205,10 @@ const (
 	// pathUnclassifiable: a transistor is on the path and nothing identifies it. Reported as an
 	// INCONCLUSIVE finding, never as a defect.
 	pathUnclassifiable
+	// pathNoLoad: the connector net reaches no power input, in its passive neighborhood or across a
+	// part bridging out of it. Not an outcome at all — the net is not a power path, so it is not a
+	// subject of this rule and gets no verdict (agni issue 391).
+	pathNoLoad
 )
 
 // hasPowerInput reports whether a net carries a real power-input pin (virtual power symbols excluded).
