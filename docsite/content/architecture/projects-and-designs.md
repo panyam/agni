@@ -204,6 +204,14 @@ authoritative-looking answer at exit 0. The lesson generalises past this one bug
 decides what is IN SCOPE cannot use "absent" as its error value, because everything after it is
 reasoning about a smaller world and has no way to know the world was cut down.
 
+**A minted mount is real for ONE PROCESS, which is why a link built from one is refused.** The name
+comes from the enclosing project or is invented as `local`, and either way no other `agni` has it: a
+second process resolving `mount://gateway/...` reports that the mount was not declared and says to pass
+`--mount`. That is the distinction `linkablePath` tests before emitting a verdict URL, since a link
+built from a name only this run knows resolves on nobody's server. It is also why `agni open` prints
+`--mount` in the check command it hands you, and why `agni open` may pass its own minted mount to the
+viewer safely: the process doing the minting is the server.
+
 **Absent and malformed have to stay distinct at every layer that touches config, and the CLI now
 draws it once** (`cliResolveProject`). Absent is ordinary, since most files on a mounted folder belong
 to no project and run against the fallback. Malformed is refused, matching how the served surfaces

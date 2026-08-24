@@ -109,6 +109,13 @@ held either way. Asserting the PROPERTY instead (add a marker at the same anchor
 at the same y) failed with the actual defect named. Run the red-check on every new test, not only the
 ones you doubt.
 
+**The neutralisation is code too, and it can silently do nothing.** A red-check here reported the test
+correctly finding no difference, which read as "the check is decorative". The edit had not applied: the
+string being replaced was not in the file, so the mutation was a no-op and the run was measuring an
+untouched tree. A red-check that does not confirm its own edit landed is a green run wearing a red
+hat. Assert the substitution (`assert old in s`, `grep -c` the new text) before believing what the
+suite then says.
+
 **Count WHICH tests flip, not merely that the suite went red.** Neutering `reviewGate.trip()` failed 6
 of 8 gate tests, and the two survivors were the opt-in guard and the flag-parse guard, neither of which
 has any business depending on `trip`. "The suite went red" would have been equally true if the wrong six
@@ -173,6 +180,13 @@ and had never executed its assertions. Skips are for a genuinely absent capabili
 machine), never for a fixture that did not produce the state you wanted: that is a setup bug, and
 skipping hides it behind the same green tick as a real pass. Find the input that reaches the branch,
 or the test does not exist.
+
+**A `-run` filter that matches nothing prints `ok`.** `go test -run "Supersed"` does not match
+`TestCheckReportsAProjectsOwnSupersessions`, because the pattern is a regexp over the name and
+`Supersed` is not a prefix of `Superses`. The package reported `ok` and the test had never executed,
+which is indistinguishable in the output from it passing. It is the SKIP case above with no skip
+message to notice. Run a new test by its exact name once, and read the `--- PASS` line with its name on
+it, before trusting any filtered run that includes it.
 
 ## Text you cannot match literally
 
