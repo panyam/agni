@@ -457,6 +457,14 @@ func checkCmd() *cobra.Command {
 				overlay.Config = &webapi.AnalysisConfig{Conventions: cfg}
 			}
 			if profilePath != "" {
+				// Naming the directory this design's project ALREADY composes is a mistake rather than a
+				// request, and it used to be a silent one: the same profiles loaded twice under two source
+				// names, every profile finding reported twice, and the coverage line counting each subject
+				// again (agni issue 450). It is the same mistake --conventions treats as a duplicate-source
+				// error one layer down, so it gets the same answer here.
+				if err := refuseProfilePathTheProjectOwns(cmd.Context(), args[0], profilePath); err != nil {
+					return err
+				}
 				ps, err := profiles.LoadDir(profilePath)
 				if err != nil {
 					return err
@@ -473,7 +481,6 @@ func checkCmd() *cobra.Command {
 			}
 			if len(extra) > 0 {
 				catalog = check.CatalogWith(extra...)
-				noteSupersededRules(cmd.ErrOrStderr(), catalog)
 			}
 			// Resolve the --rule/--tag facets to rule NAMES against the catalog the RUN will use, which is
 			// the service's catalog plus the convention the request carries AND the resolved project's
@@ -481,6 +488,13 @@ func checkCmd() *cobra.Command {
 			// so the two must see the same name space — and a project's rules are part of it, or
 			// `--rule gateway/signal-net-naming` would report "no rules selected" for a rule that runs.
 			resolveAgainst, runOverlay, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
+			// Noted HERE rather than above, because above is the catalog the FLAGS built and this is the
+			// one the run uses. A project whose own profiles superseded a built-in got no note at all,
+			// so the report described how the command line was spelled rather than how the run was
+			// composed, which is C25's shape on a different message (agni issue 450).
+			if err == nil {
+				noteSupersededRules(cmd.ErrOrStderr(), resolveAgainst)
+			}
 			if err != nil {
 				return err
 			}

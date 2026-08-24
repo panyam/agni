@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"os"
+	"path/filepath"
 
 	"github.com/panyam/agni/datasheet/param"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -116,4 +117,51 @@ func sourceName(namespace string) string {
 	// suffix so the two read alike in a catalog snapshot, and it cannot collide with a project's,
 	// because a project id can never be the literal "request".
 	return namespace + "-profiles"
+}
+
+// refuseProfilePathTheProjectOwns rejects a --profile-path naming a directory the design's own
+// project already composes.
+//
+// Pointing the flag at the project's own profiles/ reads as reasonable and is a mistake. The project
+// composes that directory because it declared it, so the flag loads the same files a SECOND time under
+// a second source name. Nothing collides, because the two namespaces differ, so both copies run: every
+// profile finding is reported twice, and the coverage line counts each subject again. On the tutorial
+// board that turned 15 findings into 18 and 201 considered subjects into 213, with the three extra
+// findings being the same three on the same subjects (agni issue 450).
+//
+// It refuses rather than silently dropping the duplicate, on the same reasoning the convention path
+// one layer down already uses: an operator passing --conventions for the file their project declares
+// gets a duplicate-source error rather than a merge. Resolving it quietly would leave the operator
+// believing the flag did something.
+//
+// A design in NO project, a project declaring no profiles, or a flag naming somewhere else are all
+// ordinary and return nil. So is any failure to resolve the project: this function's job is to refuse
+// a known-bad combination, and a resolution error is reported by whichever call needed the project to
+// do real work.
+func refuseProfilePathTheProjectOwns(ctx context.Context, designArg, profilePath string) error {
+	_, p, err := cliResolveProject(ctx, designArg)
+	if err != nil || p == nil {
+		return nil
+	}
+	flagDir, err := filepath.Abs(profilePath)
+	if err != nil {
+		return nil
+	}
+	ws, err := workspace()
+	if err != nil {
+		return nil
+	}
+	cfg := &osProjectConfig{mounts: ws.Mounts()}
+	for _, uri := range p.GetConfig().GetProfileUris() {
+		owned, err := cfg.dir(uri)
+		if err != nil {
+			continue
+		}
+		if filepath.Clean(owned) != filepath.Clean(flagDir) {
+			continue
+		}
+		return fmt.Errorf("--profile-path %s names the profiles project %q already composes, so passing it would load them twice and report every profile finding twice; drop the flag",
+			profilePath, p.GetName())
+	}
+	return nil
 }

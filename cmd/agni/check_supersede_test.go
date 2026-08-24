@@ -110,3 +110,38 @@ func TestSupersessionNoteIsNotAFinding(t *testing.T) {
 		t.Errorf("the supersession note leaked into the findings stream:\n%s", out.String())
 	}
 }
+
+// A PROJECT's own profiles supersede built-ins too, and that went unreported: the note was taken from
+// the catalog the FLAGS built, before withProjectRules composed the project's rules onto it (agni
+// issue 450).
+//
+// Silence here is the expensive kind. Supersession works by REMOVING rules, and a removed rule
+// produces no output, so a report whose built-in CAN rules were dropped read exactly like one where
+// they ran and found nothing. Every team using the project model was in that state.
+func TestCheckReportsAProjectsOwnSupersessions(t *testing.T) {
+	proj := t.TempDir()
+	writeTutorialLikeProject(t, proj)
+	t.Chdir(proj)
+
+	cmd := rootCmd()
+	var stderr bytes.Buffer
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&stderr)
+	// No --profile-path. The project names its own profiles/ and composes them.
+	cmd.SetArgs([]string{"check", "designs/board/board.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("check: %v\n%s", err, stderr.String())
+	}
+	note := stderr.String()
+	if !strings.Contains(note, "supersedes") {
+		t.Fatalf("a project superseding a built-in must say so:\n%s", note)
+	}
+	// The note has to name the PROJECT's source, not the flag namespace, or it describes a composition
+	// that did not happen.
+	if strings.Contains(note, "profile-overlay") {
+		t.Errorf("the note names the flag's namespace for a run that passed no flag:\n%s", note)
+	}
+	if !strings.Contains(note, "profile/can-") {
+		t.Errorf("the note should name the built-in CAN rules it dropped:\n%s", note)
+	}
+}

@@ -325,7 +325,7 @@ func execute(spec runSpec) (string, error) {
 	// injection boundary: anyone who can edit a run spec can already edit this file.
 	cmd := exec.Command("sh", "-c", spec.Script)
 	cmd.Dir = work
-	cmd.Env = append(os.Environ(), "PATH="+filepath.Dir(bin)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cmd.Env = captureEnv(dir, bin)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -431,4 +431,35 @@ func buildAgni() (string, error) {
 		}
 	})
 	return agniBuildPath, agniBuildErr
+}
+
+// captureEnv is the environment a captured run sees, built rather than inherited.
+//
+// These outputs are COMMITTED, so whatever the machine running this target happens to have configured
+// is what a reader of the docs ends up seeing. Inheriting os.Environ() made a capture a function of
+// the operator as well as of the fixture, in two ways with very different costs.
+//
+// HOME and XDG_CONFIG_HOME reach agni.yaml, so a developer with one folded a
+// `note: using N mount(s) ... from ~/.config/agni/agni.yaml` line into unrelated captures. Cosmetic,
+// and it names a path out of someone's home directory in a public repo.
+//
+// AGNI_SYMBOL_PATH is the one that matters. It changes what a read RESOLVES, so a schematic naming
+// external symbols reads more completely on a configured machine than on a bare one: different pins,
+// different nets, different findings. A capture regenerated locally would disagree with the same
+// capture regenerated in CI, and both would look correct.
+//
+// So the run gets a scratch HOME inside the same temp directory the fixture copy lives in, and only
+// the variables a shell genuinely needs. Anything agni reads from the environment is absent by
+// construction rather than by a deny-list this function would have to keep up to date.
+func captureEnv(scratch, bin string) []string {
+	home := filepath.Join(scratch, "home")
+	_ = os.MkdirAll(filepath.Join(home, ".config"), 0o755)
+	return []string{
+		"PATH=" + filepath.Dir(bin) + string(os.PathListSeparator) + os.Getenv("PATH"),
+		"HOME=" + home,
+		"XDG_CONFIG_HOME=" + filepath.Join(home, ".config"),
+		// A shell wants these, and neither reaches the engine.
+		"SHELL=/bin/sh",
+		"TMPDIR=" + os.Getenv("TMPDIR"),
+	}
 }
