@@ -73,8 +73,10 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       "--addr", `:${port}`,
       "--mount", "kicad=readers/kicad/testdata",
       "--mount", "edif=readers/edif/testdata",
-      "web",
     ],
+    // cwd is the repo root, so serve's default --web-dir ("web") resolves without a flag. This used
+    // to pass "web" positionally, which was the same value by another route.
+    //
     // detached so the spawn becomes a process-group leader: `go run` execs the compiled binary as
     // its own child, and killing only the go process would orphan the server holding the port.
     { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"], detached: true },

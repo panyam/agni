@@ -47,6 +47,12 @@ type envConfig struct {
 	// PROJECT's own libraries belong in its descriptor instead (AnalysisConfig.symbol_path_uris),
 	// where they travel with the design and reach a served surface too.
 	SymbolPaths []string `yaml:"symbol_paths"`
+	// WebDir is where the viewer's own assets live, the file form of --web-dir.
+	//
+	// It passes this tier's test cleanly: it locates BYTES and cannot change what a run concludes. A
+	// wrong value fails loudly at startup, because checkWebAssets stats four named files before the
+	// listener opens, which is the property that lets this tier hold a value at all.
+	WebDir string `yaml:"web_dir"`
 }
 
 // loadEnvConfig finds and parses the nearest agni.yaml, returning the zero value when there is none.

@@ -171,14 +171,14 @@ OVERLAY_FLAGS ?=
 REVIEW_STORE ?=
 REVIEW_FLAGS := $(if $(strip $(REVIEW_STORE)),--review-store $(REVIEW_STORE))
 serve: ui
-	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS) web
+	$(GO) run ./cmd/agni serve --addr $(ADDR) $(MOUNTS) $(EXTRA_MOUNTS) $(NATIVE_FLAGS) $(PDF2DOC_FLAG) $(SYMBOL_FLAGS) $(OVERLAY_FLAGS) $(REVIEW_FLAGS)
 
 # One-command self-contained demo. Builds the web bundle and serves the viewer with only the
 # shareable demo/ boards mounted (no private data). Open the printed URL, pick a board in the
 # left tree, and explore the render, checks, and query panels. See demo/README.md.
 demo: ui
 	@echo "Agni demo: open http://localhost$(ADDR) and load showcase.fires.kicad_pro (or .passes)"
-	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo web
+	$(GO) run ./cmd/agni serve --addr $(ADDR) --mount demo=demo
 
 # Documentation site. The live site is the s3gen app in docsite/, which owns its own targets
 # (make -C docsite run|build|gh-pages) and deploys via the docs.yml GitHub Actions workflow on
@@ -349,7 +349,7 @@ dockserve:
 	echo "serving $(IMAGE) at http://localhost:$(patsubst :%,%,$(ADDR))/"; \
 	docker run --rm --name $(DOCKER_NAME) -p $(patsubst :%,%,$(ADDR)):8080 \
 	  --user $$(id -u):$$(id -g) $$vols $(DOCKER_FLAGS) $(IMAGE) \
-	  serve --addr :8080 --mount-root /workspace $$overlay $$review web
+	  serve --addr :8080 --mount-root /workspace $$overlay $$review
 
 # Stop a detached dockserve (one started with DOCKER_FLAGS=-d). A foreground one ends on Ctrl-C.
 dockstop:

@@ -93,6 +93,11 @@ func rootCmd() *cobra.Command {
 // symbolPaths holds the --symbol-path search directories for resolving xschem/gEDA symbols.
 var symbolPaths []string
 
+// envConfigWebDir holds the web_dir an agni.yaml named, "" when no file named one. applyEnvConfig
+// fills it; resolveWebDir consults it. It is a package var for the same reason cliMountSpecs is: the
+// file is read once in PersistentPreRunE, before any command knows it needed the value.
+var envConfigWebDir string
+
 // envSymbolPath names the environment variable that supplies --symbol-path when the flag is
 // absent. It exists for the container image, where the symbol libraries ship at a fixed location
 // and EVERY subcommand needs them, not just the one the image's default CMD happens to run.
@@ -106,6 +111,23 @@ var symbolPaths []string
 // environment. The flag wins outright when present rather than appending, so an explicit
 // --symbol-path is never silently widened by ambient configuration.
 const envSymbolPath = "AGNI_SYMBOL_PATH"
+
+// envWebDir names the environment variable that supplies --web-dir when neither the flag nor an
+// agni.yaml names one.
+//
+// It exists for the case the relative default cannot serve: an INSTALLED binary, run from wherever
+// the user's design happens to live, whose assets sit at a fixed absolute path. From a checkout the
+// default "web" already resolves per-directory, so two checkouts serve their own assets with no
+// configuration; from /usr/local/bin there is no such relative answer.
+//
+// The flag wins outright, then agni.yaml, then this. Ambient configuration is last because it is the
+// tier whose value nobody typed.
+const envWebDir = "AGNI_WEB_DIR"
+
+// defaultWebDir is where the viewer's assets live relative to a repo checkout. It is the value every
+// in-tree caller used to pass positionally, so keeping it as the default is what makes dropping that
+// argument a no-op for `make serve`, `make demo`, and the container's CMD.
+const defaultWebDir = "web"
 
 // applyEnvConfig fills the tier-1 flags from the nearest agni.yaml, for the ones the operator did not
 // pass. It runs once, before any command.
@@ -138,10 +160,34 @@ func applyEnvConfig(w io.Writer, getenv func(string) string) error {
 		symbolPaths = cfg.SymbolPaths
 		used = append(used, fmt.Sprintf("%d symbol path(s)", len(cfg.SymbolPaths)))
 	}
+	if cfg.WebDir != "" {
+		envConfigWebDir = cfg.WebDir
+		used = append(used, "a web dir")
+	}
 	if len(used) > 0 {
 		fmt.Fprintf(w, "note: using %s from %s.\n", strings.Join(used, " and "), path)
 	}
 	return nil
+}
+
+// resolveWebDir answers where the viewer's assets are, and says where the answer came from.
+//
+// The source is returned rather than logged here so the caller can announce only the cases nobody
+// typed. A flag is the operator's own words and needs no narration; a value from an agni.yaml or the
+// environment is exactly the kind of resolution that, left silent, turns "the viewer is serving stale
+// assets from another checkout" into an unfalsifiable afternoon.
+func resolveWebDir(flag string, getenv func(string) string) (dir, source string) {
+	switch {
+	case flag != "":
+		return flag, ""
+	case envConfigWebDir != "":
+		return envConfigWebDir, "agni.yaml"
+	default:
+		if v := strings.TrimSpace(getenv(envWebDir)); v != "" {
+			return v, envWebDir
+		}
+		return defaultWebDir, ""
+	}
 }
 
 // resolveSymbolPaths applies the envSymbolPath fallback. Called once before any command runs.

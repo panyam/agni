@@ -113,8 +113,7 @@ shared by everyone the server serves.
 
 ## The mount model
 
-`agni serve [webdir] --mount name=path`, repeatable. The positional argument is the web asset
-directory, defaulting to `web`, not a design folder. Designs enter only through mounts, each
+`agni serve --mount name=path`, repeatable. Designs enter only through mounts, each
 exposing one folder to the file browser under a stable name. Every file-addressing request in the
 API is a pair of a mount name and a mount-relative path. The server resolves it inside the mount
 and rejects any path that escapes it. The browser never sees or sends an absolute filesystem

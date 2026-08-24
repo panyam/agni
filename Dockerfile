@@ -163,4 +163,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # (`docker run <image> check ...`) replaces these serve args entirely, which is the intent, and
 # the symbol paths survive it because they come from the environment above rather than from here.
 ENTRYPOINT ["agni"]
-CMD ["serve", "--addr", ":8080", "--mount-root", "/workspace", "web"]
+CMD ["serve", "--addr", ":8080", "--mount-root", "/workspace"]

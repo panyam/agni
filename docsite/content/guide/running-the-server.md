@@ -96,8 +96,7 @@ docker run -p 8080:8080 \
   ghcr.io/panyam/agni:v0.1.1 \
   serve --addr :8080 --mount-root /workspace \
         --profile-path /etc/agni/profiles \
-        --conventions /etc/agni/conventions.yaml \
-        web
+        --conventions /etc/agni/conventions.yaml
 ```
 
 Overriding the command like this replaces the default arguments, so `--mount-root` has to be
@@ -122,8 +121,7 @@ docker run -p 8080:8080 \
   -v agni-reviews:/var/lib/agni/reviews \
   ghcr.io/panyam/agni:v0.1.1 \
   serve --addr :8080 --mount-root /workspace \
-        --review-store /var/lib/agni/reviews \
-        web
+        --review-store /var/lib/agni/reviews
 ```
 
 It is deliberately a different volume from your board folders. Design mounts are read-only, and
