@@ -115,6 +115,22 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   (`gh api repos/.../pulls/N --jq .merged`). A PR once sat closed-UNMERGED while everyone believed
   it had merged, and `git branch -d` still allowed the local delete, because it checks the tracking
   ref rather than main.
+- **A merged PR does not mean the BRANCH is merged. Check the tip against what the PR merged.**
+  A commit pushed to the branch after the merge is stranded: the PR reads merged, GitHub offers to
+  delete the branch, `git branch -d` accepts it, and the work is gone with nothing anywhere saying
+  so. Two of roughly twenty branches audited had done this, costing 135 lines of documentation that
+  were recovered only because someone asked whether a branch was stale. Compare
+  `gh api repos/.../pulls/N --jq .head.sha` against `git rev-parse origin/<branch>`, or sweep the
+  repo with
+
+      for b in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
+        n=$(git rev-list --count origin/main..$b); [ "$n" != 0 ] && echo "$n ahead: $b"
+      done
+
+  Anything ahead of `main` whose PR already merged is the shape to look at. Content can still be in
+  `main` by another route, so confirm by grepping the branch's added lines against `main` rather
+  than by trusting the count, and validate that grep on lines you know ARE in `main` before
+  believing a zero.
 - **NEVER `gofmt -w` a whole directory.** This repo's committed import blocks are not gofmt-sorted,
   so a directory-wide run silently reordered imports in 18 untouched files. **A SINGLE file is not
   safe either**, since adding an import makes `gofmt -w` re-sort that file's whole block, which
