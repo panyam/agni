@@ -588,15 +588,20 @@ func checkCmd() *cobra.Command {
 				if verdicts {
 					// A LINK IS A PROMISE, and this is the one place the promise is made. urlBase is
 					// empty unless the operator says where the viewer is, and linkablePath is empty
-					// for a design the CLI reached by a path the server would not recognise. Either
-					// one missing means every format emits no link rather than one assembled from a
-					// guess, which would resolve on nobody's server (agni issue 392).
+					// for a design the CLI reached through a mount it minted rather than one the
+					// operator named. Either one missing means every format emits no link rather than
+					// one assembled from a guess, which would resolve on nobody's server (issue 392).
+					//
+					// A workspace that failed to build yields no link, which is the same fail-closed
+					// answer: the error is reported by whichever call needed the workspace to do real
+					// work, and a link is not worth inventing a second report for.
+					ws, _ := workspace()
 					meta := rpt.Report{
 						Design:      designURI,
 						Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
 						ContentHash: hashSource(localOf(designURI)),
 						URLBase:     urlBase,
-						MountPath:   linkablePath(args[0], designURI),
+						MountPath:   linkablePath(ws, designURI),
 					}
 					switch format {
 					case "csv":

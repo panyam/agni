@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 	"sync"
 	"testing"
@@ -98,5 +99,86 @@ func TestEveryFormatComposesTheSameLink(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("%s does not carry the shared link form %q", name, want)
 		}
+	}
+}
+
+// The point of agni issue 459: a link depends on whether the mount is real, not on how the design was
+// spelled. Both forms address the same file through the same declared mount, so both are equally
+// followable and both must be emitted.
+func TestAPlainPathThroughADeclaredMountIsLinkable(t *testing.T) {
+	withMount(t)
+	plain := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+		"testdata/conformance/showcase.fires.kicad_sch")
+	if !strings.Contains(plain, urlBaseFlag+"/designs/demo/showcase.fires.kicad_sch/view?verdict=") {
+		t.Fatalf("a plain path under a declared mount must be linkable:\n%s", plain)
+	}
+
+	spelled := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+		"mount://demo/showcase.fires.kicad_sch")
+	if plain != spelled {
+		t.Errorf("the two spellings address one design and must produce identical output.\nplain:\n%s\nspelled:\n%s", plain, spelled)
+	}
+}
+
+// The refusal is what the widening must not cost. A mount this run MINTED still gets no link, because
+// its name means nothing on a server the operator did not start with it.
+func TestAMintedMountIsStillNotLinkable(t *testing.T) {
+	// No withMount, so nothing is declared and the argument is minted a mount of its own.
+	csv := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+		"testdata/conformance/showcase.fires.kicad_sch")
+	if strings.Contains(csv, urlBaseFlag) {
+		t.Errorf("a minted mount resolves on nobody's server, so it must emit no link:\n%s", csv)
+	}
+	// Spelling it mount:// does not rescue it. An undeclared mount name is refused at URI resolution,
+	// well before a link could be composed from it, so the two routes to a link agree that DECLARED is
+	// the requirement.
+	cmd := checkCmd()
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetErr(new(bytes.Buffer))
+	cmd.SetArgs([]string{"--verdicts", "--url-base", urlBaseFlag, "mount://demo/showcase.fires.kicad_sch"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("a mount:// URI naming an undeclared mount must be refused")
+	}
+	if !strings.Contains(err.Error(), "not declared") {
+		t.Errorf("the refusal should say the mount was not declared, got %v", err)
+	}
+}
+
+// Declared separates the two tables the workspace keeps. inDeclared would answer yes to a minted
+// mount as well, since it searches Mounts(), which is why the predicate reads the field directly.
+func TestWorkspaceDeclaredSeparatesNamedFromMinted(t *testing.T) {
+	withMount(t)
+	ws, err := workspace()
+	if err != nil {
+		t.Fatalf("workspace: %v", err)
+	}
+	if !ws.Declared("demo") {
+		t.Error("demo was passed as --mount and must read as declared")
+	}
+	if ws.Declared("local") {
+		t.Error("local is the name mint invents; it must never read as declared")
+	}
+	if ws.Declared("never-named") {
+		t.Error("an unknown name is not declared")
+	}
+
+	// Minting one does not promote it.
+	if _, err := ws.URI("testdata/conformance/showcase.passes.kicad_sch"); err != nil {
+		t.Fatalf("URI: %v", err)
+	}
+	for _, m := range ws.Mounts() {
+		if m.Name != "demo" && ws.Declared(m.Name) {
+			t.Errorf("mount %q was minted and must not read as declared", m.Name)
+		}
+	}
+}
+
+// A nil workspace yields no link rather than a panic. The caller ignores workspace()'s error, because
+// a failure there is reported by whichever call needed it for real work, and fail-closed is the same
+// answer every other unlinkable case gets.
+func TestLinkablePathIsNilSafe(t *testing.T) {
+	if got := linkablePath(nil, "mount://demo/x.edn"); got != "" {
+		t.Errorf("linkablePath(nil) = %q, want no link", got)
 	}
 }

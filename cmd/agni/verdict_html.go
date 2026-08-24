@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"strings"
 
 	"github.com/panyam/agni/internal/artifact"
 
@@ -50,20 +49,33 @@ func findingsFromProtos(fs []*checkspb.Finding) []check.Finding {
 
 // linkablePath is the path half of a viewer URL, and "" whenever a link would be a guess.
 //
-// THE MOUNT HAS TO BE ONE THE OPERATOR NAMED. A bare file path is minted a mount locally, from the
-// enclosing project or as "local" (see cliWorkspace.mint), and that name means nothing on a server
-// the operator did not start with it. Emitting a URL from it produces a link that resolves nowhere,
-// which reads as a broken tool rather than a mismatched setup, so an argument that was not written as
-// mount:// gets no link at all. That is the correct answer rather than a gap (agni issue 392).
+// THE MOUNT HAS TO BE ONE THE OPERATOR NAMED. A bare file path that no declared mount covers is
+// minted one locally, from the enclosing project or as "local" (see cliWorkspace.mint), and that name
+// means nothing on a server the operator did not start with it. Emitting a URL from it produces a
+// link that resolves nowhere, which reads as a broken tool rather than a mismatched setup, so a
+// minted mount gets no link at all. That is the correct answer rather than a gap (agni issue 392).
 //
-// The operator asking for links with --url-base is not the same as the operator telling us the mount
-// is real, which is why both are required and neither implies the other.
-func linkablePath(arg, designURI string) string {
-	if !strings.HasPrefix(arg, "mount://") {
+// It asks the WORKSPACE whether the mount was declared, rather than whether the argument was spelled
+// mount://. The spelling was a proxy for the same question and answered a narrower one: a plain path
+// through a --mount the operator passed got no link either, though its mount is exactly as real as
+// the spelled form's (agni issue 459). Since agni.yaml carries a mount table the CLI and a server
+// both read, that gap became the common case rather than an edge one.
+//
+// What it does NOT verify is that the server's mount of that name has the same root. Nothing ever
+// did, including the spelled form, and the content hash on the URL is the mitigation: the viewer can
+// say the link was computed against different bytes rather than silently highlight the wrong pin.
+//
+// The operator asking for links with --url-base is not the same as the operator naming the mount,
+// which is why both are required and neither implies the other.
+func linkablePath(ws *cliWorkspace, designURI string) string {
+	if ws == nil {
 		return ""
 	}
 	u, err := artifact.Parse(designURI)
 	if err != nil || u.Mount == "" || u.Path == "" {
+		return ""
+	}
+	if !ws.Declared(u.Mount) {
 		return ""
 	}
 	return u.Mount + "/" + u.Path

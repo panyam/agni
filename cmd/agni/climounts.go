@@ -100,6 +100,23 @@ func (w *cliWorkspace) URI(arg string) (artifact.URI, error) {
 	return w.mint(abs)
 }
 
+// Declared reports whether name is a mount the OPERATOR named, through --mount or an agni.yaml, as
+// opposed to one this run minted for an argument no declared mount covered.
+//
+// The distinction is the whole reason the two are separate fields. A declared mount is part of a
+// table someone wrote down, so a server started from the same table resolves the same name to the
+// same root; a minted one is an invention of this process and means nothing anywhere else. Callers
+// that turn a URI into something an OTHER process will follow have to know which they are holding.
+//
+// It reads w.declared rather than w.Mounts(), which merges in the minted ones and would answer yes
+// to both.
+func (w *cliWorkspace) Declared(name string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_, ok := mounts.Find(w.declared, name)
+	return ok
+}
+
 // inDeclared addresses an absolute path through a declared mount that contains it. The longest root
 // wins, so nested mounts resolve to the most specific one rather than to whichever was typed first.
 func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
