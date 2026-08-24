@@ -1,4 +1,8 @@
-# Generated block for 04-your-names.md. Edit the script, not the capture.
+# Rung 4: the same board with the project's naming vocabulary in place.
+#
+# No --conventions. The project names conventions.yaml in its own layout and composes it, so passing
+# the flag as well names the same file twice and the run is identical to rung 2's. That is what this
+# capture used to show: a tier the rung claims changes things, producing no observable change at all.
 fixture: examples/tutorial-project
 script: |
-  agni check designs/gateway/gateway.edn --conventions conventions.yaml
+  agni check designs/gateway/gateway.edn

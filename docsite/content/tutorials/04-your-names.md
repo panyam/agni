@@ -27,9 +27,14 @@ That is not a bug. The built-in rail vocabulary is anchored on the names most bo
 `VDD`, `+3V3`, and so on. This project names rails function-first, subsystem before voltage, so none
 of them start the way the vocabulary expects.
 
-The consequence is quiet and it is the important part. Every rule that quantifies over rails simply
-finds fewer members. It does not warn you. It does not fail. A rail with no bulk capacitor is not
-reported, because as far as the tool is concerned that net is not a rail.
+The consequence is quiet and it is the important part. A rule that finds its rails BY NAME simply sees
+fewer of them. It does not warn you. It does not fail. A rail with no test point is not reported,
+because as far as that rule is concerned the net is not a rail.
+
+How many rules that is depends on the board, and on this one it is a single rule.
+`decoupling-present` finds the same three rails either way, because it reaches them through pin types
+rather than through names. So the vocabulary matters most to the rules that have no other route to a
+rail, and you cannot tell which rules those are by reading their descriptions.
 
 ## The two halves
 
@@ -63,15 +68,7 @@ appears as `gateway/signal-net-naming`. Most people opening a conventions file e
 
 Without the file:
 
-```
-findings by rule:
-  decoupling-present     1
-  esd-protection         2
-  i2c-pull-up            2
-  profile/can-esd-missing 2
-  reverse-blocking-absent 1
-  test-point-coverage    1
-```
+{{ agniRun "content/tutorials/runs/04-check-conventions-off.yaml" }}
 
 With it:
 
@@ -86,7 +83,7 @@ Two things changed, one from each half.
 [warning] gateway/signal-net-naming: XTAL_OUT (net name matches no allowed naming pattern)
 ```
 
-And `test-point-coverage` went from 1 to 2. Nothing about that rule changed. A net that was
+And `test-point-coverage` went from 1 finding to 2. Nothing about that rule changed. A net that was
 invisible to it became a rail, and that rail has no {{ explainable "test-point" }}:
 
 ```
