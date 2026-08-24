@@ -11,7 +11,7 @@ flowchart LR
     T --> V["vet<br/>ir-model-check"]
     T --> E["test<br/>examples-test<br/>docsite-test"]
     T --> W["ui<br/>web-test"]
-    T --> G["proto-check<br/>catalog-docs-check"]
+    T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check"]
     V --- Vn["Go hygiene, C19 ratchet"]
     E --- En["engine, example modules, docsite wiring"]
     W --- Wn["bundle, typecheck, vitest"]
@@ -22,6 +22,21 @@ flowchart LR
     class Vn,En,Wn,Gn,Bn note;
     class B,Bn out;
 ```
+
+## Generated captures are checked by REGENERATING them
+
+`tutorial-runs-check` deletes every `docsite/content/**/runs/*.output`, rebuilds them, and fails on
+any difference. It costs about 15 seconds.
+
+Regenerating is the only thing that works, because a capture's freshness stamp hashes its SPEC and its
+FIXTURE and never the engine. An engine change that alters output leaves every stamp valid, so an
+ordinary docsite build rewrites nothing. Measured: after changing the coverage line's wording, a plain
+build rewrote 0 captures and a forced regeneration rewrote 12. A capture edited BY HAND keeps its
+stamp too, and used to pass the entire gate.
+
+It snapshots and restores, so it carries no commit-first trap and leaves the tree as it found it
+whether it passes or fails. That matters more here than for the catalog, because captures move on any
+fixture or output change and the natural loop is to regenerate and run the gate before committing.
 
 ## The three traps
 
@@ -55,6 +70,10 @@ not touch right after a checkout switch or a fresh clone, not on the message.
 
 `make browser-test` drives layout assertions through a real Chromium against a real server (agni
 issue 323), deliberately outside `testall`.
+
+`make -C docsite figures` and `make -C docsite designs` re-render the images the docs embed, and
+nothing checks those for staleness at all (agni issue 453). The captures got a check; the pictures
+have not.
 
 ```mermaid
 flowchart LR

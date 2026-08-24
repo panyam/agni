@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -128,7 +128,7 @@ catalog-docs-check: catalog-docs
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
 # proto-check sits near the front because stale generated code makes every later failure a red
 # herring: it compiles and tests green while describing a different schema.
-testall: vet ir-model-check proto-check ui test examples-test web-test catalog-docs-check docsite-test
+testall: vet ir-model-check proto-check ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
@@ -404,10 +404,14 @@ tag-push:
 	git push origin $(TAG_REFS)
 
 # Force-regenerate every tutorial command capture, ignoring the input stamps, and report what moved.
-# Run this PERIODICALLY and locally: it is deliberately NOT in `testall`, because the stamps cover the
-# spec and the fixture but NOT the engine build, so a code change does not invalidate a capture on its
-# own. That keeps the docs pipeline off the per-push path at the cost of catching a regression here
-# rather than immediately. Commit whatever it changes, after reading it.
+# Commit whatever it changes, after reading it.
+#
+# The FORCING is the whole point, and it is why tutorial-runs-check below has to run this rather than
+# an ordinary docsite build. A capture's stamp hashes its spec and its fixture, NOT the engine, so an
+# engine change that alters output leaves every stamp valid and the cached build regenerates nothing.
+# Measured: after changing the coverage line's wording, a plain `go run . -build` rewrote 0 captures
+# and this target rewrote 12.
+#
 # Every runs/ directory under content/, not just the tutorials' one. A second section with generated
 # captures (learn/) went stale silently the moment it existed, because this target named one path.
 tutorial-runs:
@@ -415,6 +419,25 @@ tutorial-runs:
 	@cd docsite && $(GO) run . -build >/dev/null 2>&1
 	@git status --short -- docsite/content || true
 	@echo "tutorial captures regenerated; review the diff above before committing"
+
+# Fail when a committed capture disagrees with what the engine produces today.
+#
+# This was left out of `testall` on purpose, to keep the docs pipeline off the per-push path and
+# accept that a regression surfaced later rather than immediately. The measurement that reopened that
+# trade is 15 seconds for a full regeneration, against a gate already minutes long.
+#
+# What went uncaught meanwhile is wider than engine drift. A capture edited BY HAND keeps its stamp
+# and passes every existing check, because nothing compared a committed body against a fresh run.
+#
+# IT SNAPSHOTS AND RESTORES rather than inspecting `git status` like catalog-docs-check, for the
+# reason proto-check spells out above: a git-status check forces a regenerate -> COMMIT -> gate
+# ordering, so freshly regenerated but uncommitted output reads as stale. Captures move on any
+# fixture or output change, which is often, and the natural loop is to regenerate and run the gate
+# before committing. This leaves the tree exactly as it found it, pass or fail, and says which target
+# to run. The snapshot goes through tar rather than `cp --parents`, which is GNU-only and is not
+# on macOS.
+tutorial-runs-check:
+	./hack/tutorial_runs_check.sh
 
 # =============================================================================
 # Datasheet tooling

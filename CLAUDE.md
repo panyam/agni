@@ -96,8 +96,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   self-contained HTML file, for reviewing a branch before it merges. Use it rather than
   `make -C docsite gh-pages`, which is DEAD: Pages serves the `docs.yml` workflow artifact
   (`build_type: workflow`), so force-pushing that branch changes nothing.
-- `make -C docsite figures` re-renders the schematics `learn/` embeds. Outside the gate, like
-  `make tutorial-runs`, because a render depends on the engine build.
+- `make -C docsite figures` re-renders the schematics `learn/` embeds. Outside the gate, because a
+  render depends on the engine build and nothing checks its output for staleness (agni issue 453).
+  `make tutorial-runs` is no longer in that company: `tutorial-runs-check` regenerates every capture
+  and fails on any difference, and it is in `testall`. A capture's stamp hashes the spec and the
+  fixture but NOT the engine, so regenerating is the only way to see engine drift.
 - CLI: `agni stats|check|diff|render|query|review|serve|open <file>`. `open` serves ONE design and
   prints its URL, minting the mount itself; `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
