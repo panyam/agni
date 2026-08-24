@@ -26,8 +26,8 @@ so every analysis downstream is written once and works on all of them.
   rename churn.
 - **Rendering.** Faithful schematic and board geometry, or an auto-laid-out netlist graph,
   to SVG or a WebGL canvas.
-- **A browser viewer.** `agni serve` opens the tree, renders a design, runs the checks, and
-  locates each finding on the canvas.
+- **A browser viewer.** `agni open <design>` serves one board and prints its URL; `agni serve` opens a
+  tree of them. Either renders the design, runs the checks, and locates each finding on the canvas.
 - **A datalog query surface.** Ask arbitrary questions of the design fact base
   (`agni query`), the same fact base the rules are built on.
 - **A datasheet parameter layer.** Join a design against extracted datasheet limits and

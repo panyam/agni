@@ -47,6 +47,31 @@ server rejects any path that escapes its mount.
 Dotfile directories are skipped, so a `.git` sitting in a bind-mounted parent does not show up as a
 design folder.
 
+## Without Docker
+
+The image exists because it carries the pieces a server needs beyond the engine: the viewer's built
+assets, and the symbol libraries. Running the binary directly means supplying the first of those
+yourself.
+
+```
+agni serve --addr :8080 --mount boards=~/boards --web-dir /path/to/agni/web
+```
+
+`--web-dir` is the directory holding the viewer's own `templates/` and its built `static/*.js`, not a
+folder of designs. It defaults to `web`, which is where a repo checkout keeps them, so from a checkout
+you can leave it off. From anywhere else there is no relative answer, and the run stops with
+`--web-dir "web" is not a directory` rather than serving a broken page.
+
+Two ways to avoid typing it every time. Put `web_dir:` in an `agni.yaml`
+([machine configuration](../cli-reference/#machine-configuration-agniyaml)), which is per-directory
+and travels with a checkout. Or export `AGNI_WEB_DIR`, which suits an installed binary whose assets
+sit at a fixed path. A run says on stderr when the value came from the environment, because an
+`AGNI_WEB_DIR` exported months ago outlives the memory of exporting it.
+
+**For one design, reach for [`agni open`](../cli-reference/#open-design) instead.** It works the
+assets out for itself, picks a free port, and prints the URL of the board rather than of a file
+browser. `agni serve` is for several designs at once, or for a server other people reach.
+
 ## Symbol libraries are already there
 
 A schematic that names rather than embeds its symbols needs the symbol library to resolve to

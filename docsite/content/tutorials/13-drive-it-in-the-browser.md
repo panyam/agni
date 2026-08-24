@@ -22,6 +22,10 @@ agni serve --addr :8090 \
   --intent-path designs/gateway/intent.yaml
 ```
 
+Outside a checkout, add `--web-dir` (or set `web_dir` in an `agni.yaml`) so the server can find the
+viewer's own assets; [Running the server](../../guide/running-the-server/) covers it. The flags above
+are what this rung is about, and every one of them is a tier you built in an earlier rung.
+
 ```
 note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, ...
 serving web at http://localhost:8090/ with 1 mount(s) (Ctrl-C to stop)

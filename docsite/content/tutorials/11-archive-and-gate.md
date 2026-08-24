@@ -50,15 +50,21 @@ Give it `--url-base` and each subject becomes a link into a running viewer, whic
 with that verdict's proof drawn:
 
 ```
-agni serve --addr :8080 --mount work=. web
+agni serve --addr :8080 --mount work=.
 agni check --format html --url-base http://localhost:8080 \
-  --mount work=. mount://work/designs/gateway/gateway.edn > review.html
+  --mount work=. designs/gateway/gateway.edn > review.html
 ```
 
 The `--mount` is not decoration. A link is a promise the reader can follow, so the CLI emits one only
-when you have named the design the same way the server does. Point it at a bare file path and the
-report renders with plain text subjects instead of links, which is the honest answer rather than a
+when the design sits under a mount you NAMED, which is a mount a server started the same way also has.
+Run the check without it and the CLI mints a mount of its own, which means nothing on any server, so
+the report renders with plain text subjects instead of links. That is the honest answer rather than a
 URL that resolves on nobody's machine.
+
+`agni serve` has to be told where the viewer's own assets are unless you are running from a checkout;
+see [Running the server](../../guide/running-the-server/). For one design and a quick look,
+[`agni open`](../03-see-it/) works that out for itself and prints a check command with the mount and
+`--url-base` already filled in.
 
 Two things this is not. It is not the archival artifact: the results document replays without the
 design and this does not. And a rule that reports violations without stating what it examined is
