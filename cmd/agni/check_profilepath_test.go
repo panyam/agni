@@ -177,3 +177,121 @@ requirements:
 		t.Errorf("a sound profile must be silent, got: %q", errOut.String())
 	}
 }
+
+// TestProfilePathNamingTheProjectsOwnIsRefused: pointing the flag at the directory the design's
+// project already composes loaded the same profiles twice under two source names, so every profile
+// finding was reported twice and the coverage line counted each subject again (agni issue 450).
+func TestProfilePathNamingTheProjectsOwnIsRefused(t *testing.T) {
+	proj := t.TempDir()
+	writeTutorialLikeProject(t, proj)
+	t.Chdir(proj)
+
+	cmd := rootCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"check", "--profile-path", "profiles", "designs/board/board.edn"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("naming the project's own profiles must be refused, got:\n%s", out.String())
+	}
+	for _, want := range []string{"--profile-path", "already composes", "drop the flag"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal should mention %q, got %v", want, err)
+		}
+	}
+}
+
+// A directory the project does NOT name is an ordinary request and still composes. The refusal is
+// aimed at one mistake, not at the flag.
+func TestProfilePathElsewhereStillComposes(t *testing.T) {
+	proj := t.TempDir()
+	writeTutorialLikeProject(t, proj)
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "can.yaml"), []byte(canProfileYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(proj)
+
+	cmd := rootCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"check", "--profile-path", other, "designs/board/board.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("a directory the project does not name is a legitimate request: %v\n%s", err, out.String())
+	}
+}
+
+// A design in no project has nothing to collide with, so the flag behaves as it always did.
+func TestProfilePathWithNoProjectIsUnaffected(t *testing.T) {
+	dir := t.TempDir()
+	writeLooseDesign(t, dir)
+	t.Chdir(dir)
+
+	cmd := rootCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"check", "--profile-path", "profiles", "board.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("no project means no duplicate to refuse: %v\n%s", err, out.String())
+	}
+}
+
+// writeTutorialLikeProject builds the smallest project that reproduces agni issue 450: a project.yaml
+// so the design resolves to a project, a profiles/ directory the project therefore composes by
+// default, and a design under designs/.
+func writeTutorialLikeProject(t *testing.T, root string) {
+	t.Helper()
+	mk := func(rel, body string) {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("project.yaml", "name: board\ntitle: Test project\n")
+	mk("profiles/can.yaml", canProfileYAML)
+	mk("designs/board/design.yaml", "name: board\ntitle: Test board\nentry: board.edn\n")
+	mk("designs/board/board.edn", minimalEDN)
+}
+
+// writeLooseDesign builds a design that belongs to NO project, with a profiles/ directory beside it
+// that nothing composes automatically.
+func writeLooseDesign(t *testing.T, root string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(root, "profiles"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "profiles", "can.yaml"), []byte(canProfileYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "board.edn"), []byte(minimalEDN), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+const canProfileYAML = `name: CAN
+host: {attr: interface, value: CAN}
+signals:
+  - {name: CANH, suffix: _CANH, anchor: true}
+  - {name: CANL, suffix: _CANL}
+requirements:
+  - {type: signal-dangling}
+`
+
+const minimalEDN = `(edif BOARD
+  (edifVersion 2 0 0)
+  (design BOARD (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net CAN1_CANH (joined (portRef 1 (instanceRef U1)) (portRef 1 (instanceRef R1))))
+          (net CAN1_CANL (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef R1)))))))))
+`
