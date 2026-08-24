@@ -1,0 +1,16 @@
+# Rung 4: the same board WITHOUT this project's naming vocabulary.
+#
+# conventions.yaml is moved aside for the run, because the project declares it and it therefore
+# applies automatically, which makes the "before" state otherwise unreachable by naming this design.
+# Same mechanism as the rung 4 query pair beside it.
+#
+# The params corpus STAYS here, unlike that query pair. The query is about the rail RELATION, where a
+# seeded datasheet establishes the role on its own and would show four rails before the vocabulary
+# arrived. A check is about what the rules conclude, and the corpus covers some parts rather than all,
+# so the vocabulary still moves test-point-coverage with params in place. Keeping them also keeps the
+# before-state free of rules that fire only because the corpus is gone (rail-not-classified,
+# intent/module-*), which are an artefact of the removal rather than anything this rung teaches.
+fixture: examples/tutorial-project
+script: |
+  mv conventions.yaml conventions-off.yaml
+  agni check designs/gateway/gateway.edn
