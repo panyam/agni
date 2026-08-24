@@ -181,12 +181,14 @@ machine), never for a fixture that did not produce the state you wanted: that is
 skipping hides it behind the same green tick as a real pass. Find the input that reaches the branch,
 or the test does not exist.
 
-**A `-run` filter that matches nothing prints `ok`.** `go test -run "Supersed"` does not match
-`TestCheckReportsAProjectsOwnSupersessions`, because the pattern is a regexp over the name and
-`Supersed` is not a prefix of `Superses`. The package reported `ok` and the test had never executed,
-which is indistinguishable in the output from it passing. It is the SKIP case above with no skip
-message to notice. Run a new test by its exact name once, and read the `--- PASS` line with its name on
-it, before trusting any filtered run that includes it.
+**A `-run` filter that misses the test you care about still prints `ok`.** `go test -run "Supersed"`
+ran three tests in `cmd/agni` and passed all three, so the package reported `ok`. It never ran
+`TestCheckReportsAProjectsOwnSupersessions`, because the filter is an unanchored regexp over the test
+name and `Supersessions` carries `Superses` rather than `Supersed`. The zero-match case is the safe
+one, since Go says `ok ... [no tests to run]` when a pattern matches nothing at all. A PARTIAL match
+is what lies, because the passes it reports are real and belong to other tests. Run a new test by its
+exact name once and read the `--- PASS` line carrying that name, before trusting any filtered run that
+claims to include it.
 
 ## Text you cannot match literally
 
