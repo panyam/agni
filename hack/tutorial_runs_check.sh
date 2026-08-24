@@ -18,6 +18,13 @@ GO=${GO:-go}
 
 outputs() { find docsite/content -path '*/runs/*.output' -print0; }
 
+# Captures this check cannot compare, one per line, repo-relative, with the reason beside them.
+#
+# A capture lands here only when its command is not a function of the repo, so no amount of
+# regenerating makes it agree. That is a NARROW door: a capture that merely changed is stale, not
+# exempt. Anything listed is unchecked, so the list is short on purpose and each line names an issue.
+IGNORE_FILE=hack/tutorial_runs_check.ignore
+
 tmp=$(mktemp -d)
 # Restore on ANY exit path, including the build failing or the operator pressing Ctrl-C. A checkout
 # missing every capture is a worse state than the one this was asked to report on.
@@ -40,6 +47,14 @@ outputs | xargs -0 tar cf "$tmp/after.tar"
 mkdir -p "$tmp/before" "$tmp/after"
 tar xf "$tmp/before.tar" -C "$tmp/before"
 tar xf "$tmp/after.tar" -C "$tmp/after"
+
+# Drop the ignored captures from BOTH trees, so a difference in one is not reported and a difference
+# anywhere else still is.
+if [ -f "$IGNORE_FILE" ]; then
+  grep -vE '^\s*(#|$)' "$IGNORE_FILE" | awk '{print $1}' | while read -r rel; do
+    rm -f "$tmp/before/$rel" "$tmp/after/$rel"
+  done
+fi
 
 if diff -r "$tmp/before" "$tmp/after" >/dev/null 2>&1; then
   exit 0

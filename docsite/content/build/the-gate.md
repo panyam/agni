@@ -34,6 +34,12 @@ ordinary docsite build rewrites nothing. Measured: after changing the coverage l
 build rewrote 0 captures and a forced regeneration rewrote 12. A capture edited BY HAND keeps its
 stamp too, and used to pass the entire gate.
 
+One capture is exempt, listed with its reason in `hack/tutorial_runs_check.ignore`. The force layout is
+not bit-identical across architectures (agni issue 472), so `agni render --compare` legitimately
+answers differently on arm64 and amd64 and no amount of regenerating makes it agree. That file is the
+gate's only exemption, a capture belongs in it only when its command is not a function of this repo,
+and a capture that merely went stale is stale.
+
 It snapshots and restores, so it carries no commit-first trap and leaves the tree as it found it
 whether it passes or fails. That matters more here than for the catalog, because captures move on any
 fixture or output change and the natural loop is to regenerate and run the gate before committing.
