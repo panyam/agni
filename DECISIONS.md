@@ -498,6 +498,21 @@ than documented.
 **Reopen if** a tier appears whose wrongness is loud rather than silent. That is the property that
 decides, not how convenient a global would be.
 
+**Reopened once, for `native_tools`** (serve's `--enable-native`). It passes the test on both halves:
+it says which golden renderers EXIST rather than what a design is checked against, and naming a tool
+that is not installed fails at the point of use with the tool's own name in the error. Nothing reads
+it but `serve`, which applies it where it consumes the value. The pre-run hook still names the file,
+the same as `web_dir` does: that note reports what the file SUPPLIED, not what this command went on
+to use, which is why `agni check` mentions both keys and uses neither.
+
+That admission has a cost worth writing down, because it applies to every future key. Unknown keys
+are a hard ERROR here, which is what makes reaching for `conventions:` a refusal rather than a silent
+global. The same strictness means ONE machine-wide file read by several checkouts, a released binary
+and the container image can only carry a key the OLDEST of them knows: adding `native_tools` to a
+shared file makes every older binary fail on every command, not just on serve. A new key is therefore
+a coordinated upgrade, not an additive change, and that is the price of the boundary rather than a
+defect in it.
+
 ---
 
 ## `check` stays the primitive; it does not become a rendering of a review run
