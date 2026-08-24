@@ -1,0 +1,9 @@
+# Captures tutorial-runs-check cannot compare, because their command is not a function of this repo.
+#
+# Format: one repo-relative path per line, then the reason. Blank lines and # comments ignored.
+#
+# A capture belongs here ONLY when regenerating it on a different machine legitimately produces a
+# different answer. A capture that merely went stale is stale, and listing it here would turn this
+# file into the place drift goes to be forgotten.
+
+docsite/content/tutorials/runs/03-render-designs-gateway-gateway-edn-compare.yaml.output  agni issue 472: the force layout is not bit-identical across architectures, so its crossings, edge length and stress differ between arm64 and amd64. Measured on this board: 43/9052/0.346 against 42/9617/0.344.
