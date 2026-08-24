@@ -564,6 +564,26 @@ passed and once with a view never wired.
 on any of those omissions, so let the test tell you what you forgot. Read its header comment before
 changing the wiring; `docsite/content/architecture/web-app.md` has the rationale.
 
+**A panel's derived rows must be MEMOIZED, or selecting a row rebuilds the whole panel.** Solid's
+`<For>` keys by object REFERENCE, and a derivation like `collapseSorted(props.state().findings)` mints
+fresh objects on every call. Written as a plain function it re-runs on ANY state push, so pushing a new
+selection (which changes nothing about the rows) produced all-new objects, `<For>` matched none of
+them, and the entire table was torn down and rebuilt. Rebuilding the rows resets the scroll container,
+so clicking a finding halfway down a long list threw the reader back to the top (agni issue 367).
+
+`createMemo` over the one input that should rebuild rows fixes it, because a Solid memo compares by
+reference and a push that leaves that input identical stops at the memo boundary. The selected row
+still restyles, since the row component reads `selected` itself and that is a fine-grained read rather
+than a reason to recreate anything. A derivation feeding `<For>` is a memo, and the memo boundary is a
+correctness concern here rather than a performance one.
+
+**`LOCATE_REASON_UNSPECIFIED` is not a neutral default.** Its contract is "the entity IS drawn,
+expected to highlight", so leaving it on a subject that cannot be located actively tells the viewer to
+say nothing. `AnnotateSheets` set a reason for buses alone, so every undrawn NET shipped a value
+asserting the opposite of the truth and clicking such a finding did nothing and explained nothing,
+while the same net reached through a query result cell explained itself perfectly (agni issue 366). A
+zero value that asserts a positive claim needs every producer to set it, or it lies by omission.
+
 **A test fixture that is a PLAIN OBJECT LITERAL standing in for a proto message is invisible to
 `pnpm run typecheck`.** Nesting `Project`'s config fields under `config` left
 `projectpresenter.test.ts` structurally wrong and the typecheck green; only the runtime assertion

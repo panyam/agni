@@ -81,6 +81,18 @@ deleted.
 | `readers/kicad/testdata/*.kicad_prl` | `kicad-cli` writes one beside ANY board it reads | ignored there; never part of a change |
 | golden SVGs | fail by design on any render-affecting change | `go test ./core/render/ -run Golden -update`, then read the diff |
 
+**A tutorial run's committed output should no longer go stale on you.** It carries an `#agni-run`
+stamp that is a hash of its inputs, and that hash used to cover every file in the fixture DIRECTORY.
+The tutorial's own `make report` target writes into `examples/tutorial-project/`, gitignored, so
+anyone who had followed the tutorial hashed two files nobody else had and every gate run rewrote a
+committed output they had not touched. `git checkout --` on it became part of the routine.
+
+It now hashes the fixture's git-TRACKED files, so a committed stamp is valid in every checkout (agni
+issue 357). If you add another generated artifact of this kind, a value written INTO a committed file
+has to be a function of committed content, or no single value can be correct for two people at once.
+Regenerating and committing is the fix that looks right and only moves the staleness to whoever has
+not run the thing yet.
+
 That ignore rule is SCOPED to `readers/kicad/testdata/` rather than a blanket `*.kicad_prl`, because
 the two under `cmd/agni/testdata/conformance/` are tracked on purpose so a project read sees the full
 sibling set. Do not "clean them up". Point kicad-cli at a new folder and you add an ignore rule there,

@@ -69,6 +69,19 @@ almost none of it. On a real 1700-net board, declaring the project's patterns mo
 13 to 91. Gate anyway, and make the gap visible rather than assuming the config is there.
 `rail-not-classified` is the tripwire that does it.
 
+  Measured end to end since (August 2026, against the catalog of the day): on a real board naming
+  rails function-first with no lexicon declared,
+  18 supply nets classified as rails and 91 did not, and `rail-not-classified` fired 45 times.
+  Declaring the project's conventions moved recognition to 62 and the tripwire to **zero**. The
+  tripwire works, and the remedy it points at is configuration rather than more rules.
+- **Is your evidence tier actually asking your question?** Preferring connectivity over a name is
+  right, and it is still possible to pick a connectivity fact that is wider than the property you
+  mean. `decoupling-present` selects "a net with a non-virtual `power_in` pin and no capacitor" and
+  calls that a supply rail. On the same board every one of its 14 findings was a false positive: gate
+  drives, buck switching nodes and sense lines all carry a power-input pin, and two of them were
+  advising a capacitor that would short a switch node to ground. Write the sentence, then check that
+  the fact you selected on cannot be satisfied by something the sentence would exclude.
+
 ## If the sentence names two entities, carry both
 
 A `Finding` has one `Subject`, and the subject is what a reader has to CHANGE. That is not always the

@@ -139,7 +139,7 @@ flowchart LR
 | **The fixture encodes the rule's own assumption** | Two `i2c-pull-up` fixtures gave their "pull-up" resistor exactly one net, no second end and no rail, so a rule correctly requiring a rail turned them red. | Complete the fixture. Loosening the check until it passes again looks identical from inside the failing run. |
 | **The counter-example survives for the wrong reason** | A considered-set test asserted that a NO_CONNECT pin stayed OUT of a rule's domain, and still could not tell a supply-scoped domain from one sweeping in every pin on the part, because the NC pin sat on no net and dropped out of both. | A fixture case differing from the failing one in EXACTLY the property under test, here a signal pin alone on its own net. |
 
-Two more need their own room.
+Four more need their own room.
 
 **A test can compare a function against itself.** A parity test held a rule's `Eval` to its verdict
 projection, `VerdictsToFindings(Eval(m))` against `Eval(m)`. For a converted rule those are the same
@@ -158,6 +158,21 @@ kept building and quietly started counting passes as failures. Two tests were al
 and passed only by accident, because their rules were still wrapped in `check.FailuresOnly`. What
 finds this is asking, for every call site the compiler did NOT complain about, whether the meaning
 survived. Use `Rule.Findings(m)` where a test means violations.
+
+**`scrollTop` is always 0 under jsdom, so a scroll assertion passes with the bug present.** jsdom has
+no layout engine, so nothing scrolls and nothing has a size. A panel that threw the reader back to the
+top on every click would have satisfied `expect(el.scrollTop).toBe(prev)` perfectly. Assert the CAUSE
+instead: the scroll reset because the rows were recreated, and node identity across the action
+(`expect(after[i]).toBe(before[i])`) is visible in jsdom and goes red on the real defect. A symptom
+needing a browser often has a cause that does not, and the cause is the better assertion anyway
+because it names why.
+
+**A test that SKIPS asserts nothing, and reads like a pass.** A browser case written with
+`if (findings.length !== 1) t.Skip(...)` for the fixture it needed reported PASS in the suite output
+and had never executed its assertions. Skips are for a genuinely absent capability (no browser on the
+machine), never for a fixture that did not produce the state you wanted: that is a setup bug, and
+skipping hides it behind the same green tick as a real pass. Find the input that reaches the branch,
+or the test does not exist.
 
 ## Text you cannot match literally
 
