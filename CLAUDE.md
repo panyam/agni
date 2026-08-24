@@ -98,7 +98,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   (`build_type: workflow`), so force-pushing that branch changes nothing.
 - `make -C docsite figures` re-renders the schematics `learn/` embeds. Outside the gate, like
   `make tutorial-runs`, because a render depends on the engine build.
-- CLI: `agni stats|check|diff|render|query|review|serve <file>`. The reader is chosen by extension
+- CLI: `agni stats|check|diff|render|query|review|serve|open <file>`. `open` serves ONE design and
+  prints its URL, minting the mount itself; `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
 - Toolchain: Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in

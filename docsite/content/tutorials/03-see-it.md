@@ -77,19 +77,28 @@ diff the two, and an empty net delta is real evidence the design survived the mo
 
 ## In the browser
 
-`agni serve` hosts a viewer and the web API on one port:
+`agni open` serves one design and prints the URL that shows it:
 
 ```
-agni serve . --addr :8080
+agni open designs/gateway/gateway.edn
 ```
 
-Point it at a folder and it lists the designs it can read. The viewer pans and zooms, and its panels
-run the same checks the CLI runs, over the same catalog, so the findings you saw in rung 2 appear
-against the drawing rather than as a list. Later rungs add tiers to that catalog, and the viewer
-picks them up the same way the CLI does.
+It picks a free port on loopback, so it will not collide with anything you already have running, and
+it serves only this design and the project around it. The URL it prints goes straight to the board
+rather than to a file browser.
+
+The viewer pans and zooms, and its panels run the same checks the CLI runs, over the same catalog, so
+the findings you saw in rung 2 appear against the drawing rather than as a list. Later rungs add tiers
+to that catalog, and the viewer picks them up the same way the CLI does.
+
+`agni open` also prints a ready-made `agni check` command pointed at the server it just started, which
+is what [rung 11](../11-archive-and-gate/) uses to turn a report's subjects into links.
+
+For several designs at once, or for a server other people reach, [`agni serve`](../../guide/running-the-server/)
+takes a mount per folder. It has to be told where the viewer's own assets are, which `agni open` works
+out for itself.
 
 ## Next
 
-Rung 4, which is where the tool stops being generic and starts knowing your team's conventions, is
-still being written. Until it lands, [Naming conventions](../../guide/naming-conventions/) in the
-guide covers the same ground.
+[Your names](../04-your-names/), where the tool stops being generic and starts knowing your team's
+conventions.
