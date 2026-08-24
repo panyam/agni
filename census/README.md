@@ -1,4 +1,4 @@
-# census — the element-coverage guard (WS6-011)
+[#](#) census — the element-coverage guard (WS6-011)
 
 Readers deliberately drop constructs they do not yet consume (silkscreen text, silk graphics,
 buses, `net=` taps were all dropped silently until someone compared our render to KiCad by eye).

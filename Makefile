@@ -1,7 +1,5 @@
 GO ?= go
 # Design used by the stats/check convenience targets. A committed example fixture by
-# default; point EDN at your own design to run against real data.
-EDN ?= examples/common/designs/i2c-sensor.edn
 
 .PHONY: all proto proto-web proto-check tidy tidyall build agni install stats check vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs image dockserve dockstop tag tag-push
 
@@ -67,7 +65,7 @@ tidyall:
 
 # Build all packages.
 build: ui
-	$(GO) build ./...
+	$(GO) build -o bin ./...
 
 # Build the agni CLI into bin/.
 agni:
@@ -78,11 +76,6 @@ install:
 	$(GO) install ./cmd/agni
 
 # Convenience runs against the local EDIF netlist.
-stats: agni
-	./bin/agni stats $(EDN)
-
-check: agni
-	./bin/agni check $(EDN)
 
 # Static analysis over the engine module (the examples-test loop builds the example modules).
 vet:
