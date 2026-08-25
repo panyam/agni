@@ -1,0 +1,8 @@
+#agni-run 15a8d47efb2a1138
+design:              Showcase Board (fires)
+source format:       kicad-sch
+libraries:           2
+components:          13 (unique ref_des)
+sections:            13 (source instances)
+multi-section:       0 (one ref_des, several sections)
+nets:                11

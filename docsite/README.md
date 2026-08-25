@@ -32,11 +32,25 @@ link text becomes part of the generated slug, so `## The role ([EE3](../levels/#
 Prerequisites. And **the `{#custom-anchor}` syntax is not supported** by this renderer: it leaks into
 the visible heading text and doubles the slug. Use the natural slug the heading produces.
 
-**A tutorial's command output is GENERATED, not pasted.** A page holds
-`{{ agniRun "content/tutorials/runs/<name>.yaml" }}`; the yaml says what to run; a committed
+**A page's command output is GENERATED, not pasted.** A page holds
+`{{ agniRun "content/<section>/runs/<name>.yaml" }}`; the yaml says what to run; a committed
 `<name>.yaml.output` holds the capture. The directive emits the command AND the output, so neither is
 hand-written and they cannot disagree. Regenerate with `make tutorial-runs` and read the diff before
 committing.
+
+**Any section can have a `runs/` directory, and `guide/getting-started.md` is the one outside
+`tutorials/` and `learn/` that does.** Both the generator and `hack/tutorial_runs_check.sh` walk
+`docsite/content/**/runs/`, so a new one joins the harness by existing, with no Makefile edit. It
+went there because a hand-written fence had gone quietly wrong: the page reported 10 findings where
+its fixture produces 11 and named 29 rules where it runs 78, with the prose beneath quoting the wrong
+number back. The rest of `guide/` is still hand-written, tracked in `OUT_OF_SCOPE.md`.
+
+**Which of the two working-directory modes a section wants depends on how its commands read.**
+`getting-started` names full paths (`agni check cmd/agni/testdata/conformance/...`), so its specs set
+`from_root: true` and run at the scratch root. `checks-and-reports` names bare filenames, which want
+the default instead: the script then runs INSIDE the copied fixture directory and a bare
+`showcase.fires.kicad_pro` resolves exactly as displayed. Pick the one that makes the shown command
+the command that ran, and never use `show` to paper over the difference.
 
 `tutorial-runs-check` IS in `testall` (CONSTRAINTS C27). It deletes every capture, regenerates, and
 fails on any difference, which is the only check that works here: a capture's freshness stamp covers

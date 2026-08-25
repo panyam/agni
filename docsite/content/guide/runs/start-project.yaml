@@ -1,0 +1,9 @@
+# `agni start` scaffolding a project around a design the reader already has.
+#
+# It WRITES, which is exactly why this runs against the scratch copy every spec gets rather than in
+# the tree. The output names the design after the file, so the project it builds here is called
+# after the conformance board the rest of the page has been checking.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni start cmd/agni/testdata/conformance/showcase.fires.kicad_pro ./showcase-review
