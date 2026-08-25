@@ -88,6 +88,8 @@ present, namespaced exactly as it is at the command line, because it is the same
 
 ## What the panels are for
 
+{{ includeFile "figures/viewer-panel-map.svg" }}
+
 The **sheet badge** carries the finding count, so a multi-sheet design shows you where the problems
 are before you open anything.
 

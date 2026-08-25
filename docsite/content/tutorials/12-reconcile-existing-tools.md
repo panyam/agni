@@ -107,6 +107,8 @@ no model for it either.
 **Both, 8 entities.** The overlap, where the two tools genuinely agree, including the sub-floor track
 on `CAN1_CANH` that both flag by their own route.
 
+{{ includeFile "figures/tool-overlap-axes.svg" }}
+
 That is the useful answer to "what does this add". Not a bigger number. A different axis.
 
 ## About this board's copper

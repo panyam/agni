@@ -1,0 +1,25 @@
+<svg viewBox="0 0 640 322" role="img" aria-labelledby="tutorial-ladder-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="tutorial-ladder-title">The thirteen rungs in four groups. Evaluate covers rungs one to three, asking whether the tool read the board and what it says. Teach it your house covers rungs four to seven, which are four independent tiers. Run your review covers rungs eight to eleven. Live with it covers rungs twelve and thirteen. Stopping after any tier in the second group leaves the ones already added working.</title>
+  <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.35">
+  <rect x="20" y="40" width="600" height="56" rx="3"/>
+  <rect x="20" y="104" width="600" height="56" rx="3"/>
+  <rect x="20" y="168" width="600" height="56" rx="3"/>
+  <rect x="20" y="232" width="600" height="56" rx="3"/></g>
+  <g fill="var(--accent-color)" font-size="12" font-weight="600">
+  <text x="34" y="66">Evaluate</text>
+  <text x="34" y="130">Teach it your house</text>
+  <text x="34" y="194">Run your review</text>
+  <text x="34" y="258">Live with it</text></g>
+  <g fill="currentColor" font-size="9" opacity="0.55">
+  <text x="34" y="82">does it read my board?</text>
+  <text x="34" y="146">four independent tiers</text>
+  <text x="34" y="210">the questions your team asks</text>
+  <text x="34" y="274">alongside what you already run</text></g>
+  <g fill="currentColor" font-size="10" opacity="0.8">
+  <text x="210" y="72">1 read a design · 2 run the catalog · 3 see it</text>
+  <text x="210" y="136">4 your names · 5 your interfaces · 6 part limits · 7 your architecture</text>
+  <text x="210" y="192">8 write your checklist · 9 read the verdicts · 10 compare revisions</text>
+  <text x="210" y="210">11 archive and gate</text>
+  <text x="210" y="264">12 reconcile with the tools you already run · 13 drive it in the browser</text></g>
+  <text x="320" y="308" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">stop after any tier in the second group and the ones you already added still work</text>
+</svg>

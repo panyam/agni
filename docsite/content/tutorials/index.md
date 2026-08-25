@@ -35,6 +35,8 @@ exists so some part of the tool has something true to report.
 
 ## The rungs
 
+{{ includeFile "figures/tutorial-ladder.svg" }}
+
 **Evaluate.** Does it read my board, and what does it say?
 
 1. [Read a design](01-read-a-design/): confirm the tool read your board the way you expect, before

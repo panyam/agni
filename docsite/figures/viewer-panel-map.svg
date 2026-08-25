@@ -1,0 +1,34 @@
+<svg viewBox="0 0 640 330" role="img" aria-labelledby="viewer-panel-map-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="viewer-panel-map-title">A map of the viewer window. A file tree runs down the left, the canvas fills the middle and carries a per-sheet finding badge, and four panels stack down the right: Findings, Rules, Compare and Review. Each panel is annotated with the rung of the tutorial it comes from, because every one of them is a tier built earlier at the command line.</title>
+  <rect x="20" y="40" width="600" height="230" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
+  <line x1="20" y1="62" x2="620" y2="62" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="32" y="56" fill="currentColor" font-size="9.5" opacity="0.55">localhost:8090</text>
+  <rect x="28" y="70" width="92" height="192" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="74" y="90" text-anchor="middle" fill="currentColor" font-size="10.5" font-weight="600" opacity="0.8">the tree</text>
+  <text x="74" y="106" text-anchor="middle" fill="currentColor" font-size="9" opacity="0.55">mounts and</text>
+  <text x="74" y="118" text-anchor="middle" fill="currentColor" font-size="9" opacity="0.55">designs</text>
+  <rect x="128" y="70" width="302" height="192" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="279" y="164" text-anchor="middle" fill="var(--accent-color)" font-size="12.5" font-weight="600">Canvas</text>
+  <text x="279" y="182" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.6">faithful when the design carries geometry,</text>
+  <text x="279" y="196" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.6">a computed layout when it does not, rung 3</text>
+  <rect x="138" y="80" width="52" height="18" rx="9" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>
+  <text x="164" y="93" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.8">sheet 1 · 3</text>
+  <text x="200" y="93" fill="currentColor" font-size="9" opacity="0.55">the finding count per sheet</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
+  <rect x="438" y="70" width="174" height="44" rx="3"/>
+  <rect x="438" y="120" width="174" height="44" rx="3"/>
+  <rect x="438" y="170" width="174" height="44" rx="3"/>
+  <rect x="438" y="220" width="174" height="42" rx="3"/></g>
+  <g fill="currentColor" font-size="11" font-weight="600">
+  <text x="450" y="90">Findings</text>
+  <text x="450" y="140">Rules</text>
+  <text x="450" y="190">Compare</text>
+  <text x="450" y="240">Review</text></g>
+  <g fill="currentColor" font-size="9" opacity="0.55">
+  <text x="450" y="105">select a row to light the net, rung 2</text>
+  <text x="450" y="155">the composed catalog, rung 5</text>
+  <text x="450" y="205">the revision diff, rung 10</text>
+  <text x="450" y="255">your checklist, scored, rung 8</text></g>
+  <text x="320" y="298" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">every panel is a tier you built at the command line, namespaced exactly as it is there</text>
+  <text x="320" y="316" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">the same catalog and the same verdicts, so neither surface is a second opinion on the other</text>
+</svg>
