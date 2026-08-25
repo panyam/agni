@@ -135,6 +135,18 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   asks that server's `ListMounts` whether it serves that name from the same root; a withheld link
   always prints its reason. `agni open <design>` prints a matching `check --mount … --url-base …`
   line, and because one process mints the mount and serves it the two cannot disagree.
+- **A verdict link's PATH and its HASH are one resolution, and both name the design's declared
+  ENTRY.** `verdictLinkTarget` returns the pair, so they cannot describe different files. They were
+  two, and the split had no symptom while the argument WAS the entry. It had two once it was not. A
+  design folder minted `/designs/<mount>/<dir>/view`, which the viewer's URL space reads as the file
+  at `<dir>` and `GetDesign` refuses. A declared companion minted its own path carrying the entry's
+  hash, which the viewer reported as a revision mismatch on a design that was in sync (agni issues
+  489, 492). The viewer compares the hash before it draws, and treats "the server could not
+  hash" as a THIRD state rather than as a match (issue 392 acceptance 3, PR 490).
+- **The two `DesignHash` implementations are not symmetric.** `localLoader`'s (the CLI's) resolves the
+  design descriptor and hashes the declared entry; `osLoader`'s (the server's) hashes whatever path
+  the URI names. That is why `GetDesign` on a design FOLDER is not merely unhashable but refused
+  outright. Check which side you are on before assuming a hash resolves anything.
 - Toolchain: Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
   `go.mod` and invoked via `go tool`**, so their versions are data rather than something to match by
   hand. Only `buf` itself has to be on your PATH.
@@ -166,13 +178,15 @@ have falsified.
 
 ## Wiring, per subsystem
 
-Each of these has a fixed edit-list where missing one edit is silent, and a test that catches it.
+Each of these has a fixed edit-list where missing one edit is silent, and a test that catches it. The
+note strip is the one exception, and it is listed so the gap is visible rather than discovered.
 
 | Adding | Edits | Read | Enforced by |
 |---|---|---|---|
 | A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
 | A `learn/` chapter | 4, plus the level-index entries | `docsite/README.md` | `docsite/learn_levels_test.go` |
 | A web viewer panel | 4 | `docsite/content/architecture/web-app.md` | `web/src/composition.test.ts` |
+| A canvas note strip (undrawn, stale-link) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples | the compiler, for the `ViewSink` channel; NOTHING for the template hole |
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A format reader | — | `docsite/content/build/format-reader.md` | — |
 | A check rule | — | `docsite/content/build/check-rule.md` | — |
