@@ -58,15 +58,19 @@ agni check designs/gateway/gateway.kicad_pcb --results-out agni.results.json
 agni results agni.results.json --compare kicad.results.json
 ```
 
+The board is a declared companion of this design, so that `check` reads the netlist and pulls the
+copper in beside it, and says so on stderr. Both tools are therefore reading the same geometry, but
+only one of them is reading *only* geometry, which is the whole point of the comparison below.
+
 ```
 comparing:
-  ours:   agni (devel) — 20 finding(s) over designs/gateway/gateway.kicad_pcb
+  ours:   agni <version> — 28 finding(s) over mount://gateway/designs/gateway/gateway.kicad_pcb
   theirs: kicad-cli pcb drc 10.0.4 — 309 finding(s) over designs/gateway/gateway.kicad_pcb   [no coverage axis: its silence is not a pass]
 
 entities flagged:
-  both         5
-  ours only    6
-  theirs only  20
+  both         8
+  ours only    9
+  theirs only  17
 
 ours only:
   net CAN1_RXD
@@ -75,24 +79,32 @@ ours only:
   net I2C_SDA
   net MCU_NRST
   net PMIC_EN
+  net PMIC_PG
+  net XTAL_IN
+  net XTAL_OUT
 ```
 
 ## Reading the split
 
-The instinct is to compare 20 against 309 and conclude something about which tool is better. That
+The instinct is to compare 28 against 309 and conclude something about which tool is better. That
 reading is wrong, and the three-way split is there to stop you making it.
 
-**Theirs only, 20 components.** Physical manufacturability: edge clearance, silkscreen over pads,
+**Theirs only, 17 components.** Physical manufacturability: edge clearance, silkscreen over pads,
 footprint library mismatches. Agni has no opinion about most of that and should not pretend to.
 Your existing DRC is not being replaced.
 
-**Ours only, 6 nets.** Look at what they are. `I2C_SCL` and `I2C_SDA` are missing {{ explainable "pull-up" "pull-ups" }}.
-`CAN1_TXD` and `CAN1_RXD` are the {{ explainable "transceiver" }}'s logic side. `PMIC_EN` and `MCU_NRST` are control
-signals. Every one is a statement about what the circuit *means*, and a board DRC structurally
-cannot reach any of them. It is checking copper against fabrication limits. It has no model in which
-"this bus needs a pull-up" is expressible.
+**Ours only, 9 nets.** Look at what they are. `I2C_SCL` and `I2C_SDA` are missing {{ explainable "pull-up" "pull-ups" }}.
+`CAN1_TXD` and `CAN1_RXD` are the {{ explainable "transceiver" }}'s logic side. `PMIC_EN`, `PMIC_PG` and `MCU_NRST` are
+control signals. Each of those is a statement about what the circuit *means*, and a board DRC
+structurally cannot reach any of them. It is checking copper against fabrication limits. It has no
+model in which "this bus needs a pull-up" is expressible.
 
-**Both, 5 entities.** The overlap, where the two tools genuinely agree, including the sub-floor track
+`XTAL_IN` and `XTAL_OUT` are the last two, and they are a different kind of thing again: this
+project's naming convention says a signal net should be named for its function, and those two are
+not. That is a statement about house process rather than about the circuit, and a copper checker has
+no model for it either.
+
+**Both, 8 entities.** The overlap, where the two tools genuinely agree, including the sub-floor track
 on `CAN1_CANH` that both flag by their own route.
 
 That is the useful answer to "what does this add". Not a bigger number. A different axis.
