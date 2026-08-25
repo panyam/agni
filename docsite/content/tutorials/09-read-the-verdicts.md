@@ -41,6 +41,8 @@ the one worth knowing about: a rule can be in the catalog, selected, and still u
 the facts it reads are absent. That item reads `not-applicable` and still counts as covered. Rung 11
 gates a pipeline on the answered number for exactly that reason.
 
+{{ includeFile "figures/covered-vs-answered.svg" }}
+
 Coverage is also the number that tells you where to invest. Interfaces sits at 3 of 4 because of an
 absent bus, which is fine and will never improve. House style sits at 2 of 3 because of a genuinely
 manual item, which is also fine. Neither is a gap worth working on. A column filling up with

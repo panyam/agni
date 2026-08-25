@@ -46,6 +46,8 @@ it is five lines rather than a few hundred.
 another appearing. Structurally it is the same net with a new name, and the tool says so because the
 set of pins on it did not change.
 
+{{ includeFile "figures/net-rename.svg" }}
+
 That distinction is most of the value. A rename touching forty nets is a naming sweep and needs
 skimming. Forty nets genuinely deleted and forty added is a redesign and needs reviewing. They look
 identical in a text diff.

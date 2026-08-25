@@ -80,6 +80,8 @@ query has to match the violation. Write the healthy case instead, phrasing it th
 "every test point sits on a rail", and you get an item that fails on a good board and passes on a
 bad one.
 
+{{ includeFile "figures/query-binding-polarity.svg" }}
+
 This is the most common authoring mistake, and it is quiet, because on a healthy board an inverted
 item just looks like a finding you have not got round to.
 
