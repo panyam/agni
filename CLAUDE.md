@@ -94,6 +94,21 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   a workflow only exists as a wrapper in someone's local Makefile, that is a missing target here.
 - **A flag wins outright over `agni.yaml` rather than merging**, so a Makefile default that passes
   `--mount` shuts the file out. `make serve MOUNTS=` is how you hand the mount table back to it.
+- **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
+  does not turn it off.** `internal/projects/descriptor.go` defaults `conventions.yaml`, `profiles`,
+  `params` and `review.yaml`, and `FSStore` composes each one it finds. Two consequences that have
+  each cost a bug. Before adding a tier flag to a command, check whether the name is already
+  defaulted: `--profile-path` naming the project's own directory double-loaded every profile rule
+  (issue 450) and `--params` naming its own is merely redundant. And to reach a tier's "off" state
+  you must MOVE THE DIRECTORY ASIDE, which is why rungs 4, 5 and 6 open with `mv <tier> <tier>-off`;
+  rung 6 shipped a before/after whose two captures were byte-identical because both ran with the
+  corpus in place.
+- **Precedence between a project tier and its flag is `Overlay.SpecsOr`: the project wins.** That is
+  the opposite of the mount rule above, deliberately, because a project owns its parameters the way
+  it owns its profiles. A command that reads a tier from its flag alone is the bug shape: `intake`
+  did, so inside a project its datasheet-gap section was absent rather than empty (issue 474).
+  `readDesignWithConfig` returns the overlay the read already composed, which is where a non-service
+  command should get a tier rather than resolving the project a second time.
 - `make natrender FILE=... OUT=...` and `make natopen FILE=...` drive the native tools over the
   `natup` container. Both take paths INSIDE it, so they must fall under a `NATIVE_DOCKER_MOUNTS` dir.
 - `make setup` builds the docling venv the datasheet tooling runs in, then `make pdf2doc`,
@@ -113,6 +128,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   prints its URL, minting the mount itself; `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
+- **Two HTML reports, one stylesheet, different axes.** `check --format html` is the verdict report,
+  rule-major, and implies `--verdicts`. `review --format html` is the checklist, question-major, in
+  the manifest's order with every finding per item. Both take `--url-base` and share
+  `core/report/style.css`. **A link is only emitted for a mount you DECLARED**, and `--url-base` then
+  asks that server's `ListMounts` whether it serves that name from the same root; a withheld link
+  always prints its reason. `agni open <design>` prints a matching `check --mount … --url-base …`
+  line, and because one process mints the mount and serves it the two cannot disagree.
 - Toolchain: Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
   `go.mod` and invoked via `go tool`**, so their versions are data rather than something to match by
   hand. Only `buf` itself has to be on your PATH.

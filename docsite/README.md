@@ -35,10 +35,15 @@ the visible heading text and doubles the slug. Use the natural slug the heading 
 **A tutorial's command output is GENERATED, not pasted.** A page holds
 `{{ agniRun "content/tutorials/runs/<name>.yaml" }}`; the yaml says what to run; a committed
 `<name>.yaml.output` holds the capture. The directive emits the command AND the output, so neither is
-hand-written and they cannot disagree. Regenerate periodically with `make tutorial-runs` and read the
-diff before committing — it is deliberately NOT in `testall`, because the freshness stamp covers the
-spec and the fixture but not the engine build, so a code change does not invalidate a capture on its
-own.
+hand-written and they cannot disagree. Regenerate with `make tutorial-runs` and read the diff before
+committing.
+
+`tutorial-runs-check` IS in `testall` (CONSTRAINTS C27). It deletes every capture, regenerates, and
+fails on any difference, which is the only check that works here: a capture's freshness stamp covers
+the spec and the fixture but NOT the engine build, so an engine change that alters the output leaves
+every stamp valid. Measured by rewording one rule's coverage line, a plain docsite build rewrote 0
+captures and a forced regeneration rewrote 12. Before that target existed, a capture edited by hand
+passed the entire gate.
 
 Four things about writing one. **Never make the directive rewrite the page**: `content/` is what the
 site builder reads, and a build that wrote back into it would loop. **Use the fields, not shell
@@ -46,8 +51,15 @@ plumbing** — `capture: stdout|stderr|both|none`, `exit: true`, `match: '<re2>'
 filter (`sed -n '5p'`) silently shows the wrong line the moment that output gains one; `match` selects
 by shape and matching NOTHING is an error. **Add `show:` only when the script carries plumbing a reader
 should not see**, since it defaults to the script. And **every run gets a scratch copy of the fixture**,
-so a rung that teaches `mv params params-old` cannot rename the checked-in one — which it did, once,
-by hand.
+so a rung that teaches `mv params params-old` cannot rename the checked-in one, which it did once, by
+hand.
+
+**A before/after over a DISCOVERED project tier has to move the tier aside in the script.** A project
+composes `conventions.yaml`, `profiles/` and `params/` from naming the design, so dropping the flag
+does not reach the "before" state and the two captures come out identical. Rung 6 shipped that way:
+both of its captures ran with the corpus in place, so the page taught a contrast whose own output
+disproved it. Rungs 4, 5 and 6 all now open with `mv <tier> <tier>-off`. Before adding a tier flag to
+a capture, check whether `internal/projects/descriptor.go` already defaults the name.
 
 **`from_root: true` runs the script at the scratch root with the fixture at its full relative path**,
 so a command reads as a reader would type it standing in a clone. The `learn/` runs use it; the
