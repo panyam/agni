@@ -1,0 +1,6 @@
+# The read sanity-check. Every line matters here, including the section counts a hand-written
+# version of this block had quietly dropped.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  agni stats cmd/agni/testdata/conformance/showcase.fires.kicad_pro

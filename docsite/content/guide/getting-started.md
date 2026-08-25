@@ -41,33 +41,7 @@ agni --help
 your own schematic or board, or at a sample from the clone. Here is a sample that
 deliberately trips several rules:
 
-```
-agni check cmd/agni/testdata/conformance/showcase.fires.kicad_pro
-```
-
-```
-findings by rule:
-  bulk-cap               2
-  decoupling-present     2
-  esd-protection         2
-  i2c-pull-up            1
-  input-protection       1
-  reverse-blocking-absent 1
-  test-point-coverage    2
-
-first 11:
-  [warning] bulk-cap: +3V3 (power rail has no bulk capacitor)
-  [warning] decoupling-present: +3V3 (power rail has no decoupling capacitor)
-  [info] esd-protection: USB_D+ (externally-exposed signal net has no ESD protection)
-  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
-  [warning] input-protection: VBUS (connector feeds a power input with no fuse or TVS in the path)
-  [warning] reverse-blocking-absent: VBUS (connector feeds a power input with no reverse-blocking element in the path)
-  [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
-  ...
-
-11 finding(s) total
-150 subject(s) considered by 24 rule(s), 2 not considered (--verdicts for the detail)
-```
+{{ agniRun "content/guide/runs/first-check.yaml" }}
 
 Read a finding as three parts: the **severity** (`error` / `warning` / `info`), the
 **rule** that fired (`i2c-pull-up`), and the **subject** it fired on (the net `SCL`), with a
@@ -84,14 +58,7 @@ and fails intermittently in the field. `info` is a note worth a look.
 
 Run the passing twin of that board:
 
-```
-agni check cmd/agni/testdata/conformance/showcase.passes.kicad_pro
-```
-
-```
-no findings (78 rule(s) run)
-189 subject(s) considered by 22 rule(s) (--verdicts for the detail)
-```
+{{ agniRun "content/guide/runs/clean-run.yaml" }}
 
 The `78 rule(s) run` is the important half. It tells you the check actually *exercised* 78
 rules and none fired, rather than staying quiet because it had nothing to work with. This is
@@ -108,19 +75,7 @@ nothing to look at is not evidence about this board.
 Before trusting any finding, confirm the tool read your design the way you expect. `agni
 stats` summarizes what it ingested:
 
-```
-agni stats cmd/agni/testdata/conformance/showcase.fires.kicad_pro
-```
-
-```
-design:              Showcase Board (fires)
-source format:       kicad-sch
-libraries:           2
-components:          13 (unique ref_des)
-sections:            13 (source instances)
-multi-section:       0 (one ref_des, several sections)
-nets:                11
-```
+{{ agniRun "content/guide/runs/stats.yaml" }}
 
 If the component or net counts look wrong, the findings downstream will too. Fix the read
 (often a missing symbol library, see the `--symbol-path` note in the CLI reference) before
@@ -150,33 +105,19 @@ Everything above addresses a single file, and the flags pile up as you turn thin
 conventions, your interface profiles, your parameter corpus, your checklist. A **project** is where
 those live instead, declared once beside the design.
 
-`agni start` builds one from a design you already have:
+`agni start` builds one from a design you already have, here the same board this page has been
+checking:
 
-```
-agni start boards/gateway.edn ./gateway-review
-```
+{{ agniRun "content/guide/runs/start-project.yaml" }}
 
-```
-Created project "gateway-review".
-
-  gateway-review/project.yaml
-  gateway-review/conventions.yaml        (stub — your team's naming vocabulary)
-  gateway-review/review.yaml             (seeded from the shipped catalog — edit it)
-  gateway-review/designs/gateway/design.yaml
-  gateway-review/designs/gateway/gateway.edn   (copied)
-```
-
-From then on the commands take a design and nothing else, because the project answers the rest:
-
-```
-agni check gateway-review/designs/gateway
-agni review gateway-review/designs/gateway
-```
+From then on the commands take a design and nothing else, because the project answers the rest, which
+is what the two lines under `Next:` are.
 
 The design is **copied** into the project, which now owns its copy, so edits to the original do not
-reach it. And the generated `review.yaml` is a starting point seeded from the shipped catalog, not a
-finished checklist; [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning
-it into your team's.
+reach it, and a companion view the design declares is copied beside it. The generated `review.yaml`
+is a starting point seeded from the shipped catalog rather than a finished checklist;
+[Write your checklist](../../tutorials/08-write-your-checklist/) is about turning it into your
+team's.
 
 ## Where to go next
 

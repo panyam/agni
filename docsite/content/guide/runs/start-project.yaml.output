@@ -1,0 +1,15 @@
+#agni-run 4b44176948278377
+Created project "showcase-review".
+
+  showcase-review/project.yaml
+  showcase-review/conventions.yaml        (stub — your team's naming vocabulary)
+  showcase-review/review.yaml             (seeded from the shipped catalog — edit it)
+  showcase-review/designs/showcase.fires/design.yaml
+  showcase-review/designs/showcase.fires/showcase.fires.kicad_pro   (copied)
+  showcase-review/designs/showcase.fires/showcase.fires.kicad_sch   (copied, declared as a companion view)
+
+The project owns these copies. Edits to the original files do not reach it.
+
+Next:
+  agni check showcase-review/designs/showcase.fires
+  agni review showcase-review/designs/showcase.fires
