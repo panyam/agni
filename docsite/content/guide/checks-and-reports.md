@@ -242,11 +242,23 @@ are captioned "absence here is not evidence of correctness". Presenting a failur
 considered set as though they were the same kind of answer is the false-coverage claim this whole
 layer exists to remove, and a report is where it would be most convincing.
 
-**Links are emitted only when they are real.** `--url-base` says where the viewer is; naming the
-design as a `mount://` URI says the server can see it. A bare file path is minted a mount locally, so
-it gets no links rather than links that resolve on nobody's server. Each link carries the design's
-content hash, so a report read against different bytes can be told apart from one read against the
-same.
+**Links are emitted only when they are real.** `--url-base` says where the viewer is. The other half
+is that the mount was DECLARED, with `--mount` or in `agni.yaml`, rather than minted for this run: a
+minted name means nothing on a server that was not started with it, so it gets no links rather than
+links resolving on nobody's server.
+
+Declaring the mount says the operator named it, which is not the same as the server agreeing about
+it, so `--url-base` also asks that server for its mount table. A name served from a different root
+means every link would open a different board, and those links are dropped. A server that does not
+answer leaves the question open rather than settling it, so the links stay and the run says they went
+unverified, which keeps the case where a report is written before the viewer is up.
+
+Either way the reason is printed. A report with no links used to look like a broken renderer, because
+nothing named which half was missing.
+
+The easiest way to get all of this right is not to assemble it by hand. `agni open <design>` serves
+the board and prints the matching `agni check --mount … --url-base …` line, and because one process
+mints the mount and serves it, the two cannot disagree.
 
 The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
 committed, or opened from a `file://` path.

@@ -62,6 +62,15 @@ treat the soft ones as background.
 
 The structural diff says what moved. Running the checklist on both says whether it helped.
 
+Rev B is a second netlist in the same folder rather than a second design, so neither run here can
+name a design folder the way rung 8 did. `--as-named` reads exactly the file you name, and both
+sides need it so that the two runs differ only by the revision:
+
+```
+agni review --as-named designs/gateway/gateway.edn       --checklist review.yaml
+agni review --as-named designs/gateway/gateway-rev-b.edn --checklist review.yaml
+```
+
 Rev A:
 
 ```
@@ -73,6 +82,11 @@ Rev B:
 ```
 **5 pass, 6 fail, 1 n/a, 2 not-automated, 1 provisional (of 15)**
 ```
+
+Rev A scores one fail fewer here than it did in rung 8, and one `n/a` more. Nothing about the board
+changed. `--as-named` reads the netlist on its own, so the board companion the design declares is not
+in the run and the copper item `B1` has nothing to evaluate. That is the same effect rung 8 used
+deliberately, and it is the reason both sides of a revision comparison have to be read the same way.
 
 Two failures became passes, and the items say which:
 
