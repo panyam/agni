@@ -1,0 +1,29 @@
+<svg viewBox="0 0 640 292" role="img" aria-labelledby="design-entry-companions-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="design-entry-companions-title">A design folder listed as four rows. The entry, a netlist, is the only file authoritative for which components exist and how they are connected. Two companions, a schematic export and a board, are views of that same design and supply the drawing and the copper. A bill of materials joins onto components by reference designator and can enrich one but never add or remove one.</title>
+  <text x="16" y="30" fill="var(--accent-color)" font-size="12.5" font-weight="600">designs/gateway</text>
+  <rect x="16" y="44" width="608" height="200" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+  <g fill="currentColor" font-size="10.5" font-weight="600" opacity="0.55">
+    <text x="32" y="70">file</text>
+    <text x="180" y="70">role</text>
+    <text x="292" y="70">what it decides</text>
+  </g>
+  <line x1="32" y1="78" x2="608" y2="78" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+  <g font-size="11.5" font-weight="600" fill="var(--accent-color)">
+    <text x="32" y="104">gateway.edn</text>
+    <text x="180" y="104">entry</text>
+    <text x="292" y="104">which components exist, and how they connect</text>
+  </g>
+  <g font-size="11.5" fill="currentColor" opacity="0.85">
+    <text x="32" y="142">gateway.kicad_sch</text>
+    <text x="180" y="142">companion</text>
+    <text x="292" y="142">how it is drawn</text>
+    <text x="32" y="176">gateway.kicad_pcb</text>
+    <text x="180" y="176">companion</text>
+    <text x="292" y="176">the copper, and where a finding sits</text>
+    <text x="32" y="216">bom.csv</text>
+    <text x="180" y="216">joined on ref-des</text>
+    <text x="292" y="216">populate status, alternates, quantity</text>
+  </g>
+  <text x="320" y="270" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">a companion is a view of the same design, never a second opinion about it</text>
+  <text x="320" y="288" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">and a BOM enriches a component the entry already established, never adds one</text>
+</svg>

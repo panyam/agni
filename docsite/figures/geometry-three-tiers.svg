@@ -1,0 +1,36 @@
+<svg viewBox="0 0 640 292" role="img" aria-labelledby="geometry-three-tiers-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="geometry-three-tiers-title">Three bands, one per representation of the same geometry. Tier one is the logical contract, nested proto messages in int64, read for single reads, picking and joining back to the IR. Tier two is columnar transport, one bytes blob of little-endian int32 rebased per sheet, which is what crosses to the GPU. Tier three is the in-memory compute form, Go columnar slices the reader builds and a culler walks. Proto is the boundary format and tier three is the compute form, not a second schema.</title>
+  <text x="16" y="30" fill="var(--accent-color)" font-size="12" font-weight="600">one geometry, three representations, matched to three access patterns</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
+    <rect x="16" y="44" width="608" height="64" rx="3"/>
+    <rect x="16" y="116" width="608" height="64" rx="3"/>
+    <rect x="16" y="188" width="608" height="64" rx="3"/>
+  </g>
+  <g fill="var(--accent-color)" font-size="11.5" font-weight="600">
+    <text x="32" y="70">Tier 1</text>
+    <text x="32" y="142">Tier 2</text>
+    <text x="32" y="214">Tier 3</text>
+  </g>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+    <text x="32" y="88">logical contract</text>
+    <text x="32" y="160">columnar transport</text>
+    <text x="32" y="232">compute form</text>
+  </g>
+  <g fill="currentColor" font-size="10.5" opacity="0.8">
+    <text x="200" y="70">nested proto messages,</text>
+    <text x="200" y="86">int64, sized in the thousands</text>
+    <text x="200" y="142">one bytes blob: int32 LE,</text>
+    <text x="200" y="158">rebased per sheet</text>
+    <text x="200" y="214">Go columnar slices,</text>
+    <text x="200" y="230">allocation-light</text>
+  </g>
+  <g fill="currentColor" font-size="10.5" opacity="0.6">
+    <text x="430" y="70">single reads, picking,</text>
+    <text x="430" y="86">joining back to the IR</text>
+    <text x="430" y="142">the GPU, through</text>
+    <text x="430" y="158">typed-array views</text>
+    <text x="430" y="214">the reader, the culler,</text>
+    <text x="430" y="230">a spatial index</text>
+  </g>
+  <text x="320" y="276" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">proto is the boundary format, and tier 3 is a projection of it rather than a second schema</text>
+</svg>

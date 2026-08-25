@@ -70,8 +70,8 @@ document call. Two writers held equal by a test drift the first time someone edi
 each with the reason the rule itself gave.
 
 It exists because silence reads as coverage, one tier below where the outcome vocabulary fixes it. A
-board rule on a netlist, or a datasheet rule with no corpus, is gated before it evaluates and
-contributes no findings, and a findings list has no way to distinguish "checked and clean" from
+board rule on a {{ explainable "netlist" }}, or a datasheet rule with no corpus, is gated before it
+evaluates and contributes no findings, and a findings list has no way to distinguish "checked and clean" from
 "never ran". That lands on the viewer's default-open panel, so it is the first thing most people see
 and the last thing they would think to doubt.
 
@@ -128,6 +128,8 @@ takes and a real determination. `not-applicable` is the rule's inputs being abse
 goes unasked. `NeedsData`, `NeedsDesignIntent` and `Inconclusive` are on the unanswered side for the
 same reason.
 
+{{ includeFile "figures/covered-vs-answered.svg" }}
+
 Both numbers are rendered, and `agni review` gates on the second (`--min-answered`). Gating on
 `Covered()` would have shipped a flag that cannot see the case it was built for.
 
@@ -146,9 +148,14 @@ differently. It UNIONS the deployment's tiers with the overlay's, because a serv
 convention is the exception and does not union: a request-supplied one has already REPLACED whatever
 was in place by then, so the deployment's name is only the fallback.
 
+<details>
+<summary>Why the flags travel on the config rather than being derived from the sources</summary>
+
 Which tier a rule source came from is not recoverable after composition, since a compiled interface
 profile and a compiled intent declaration are both just rules in a catalog. That is why the flags
 travel on `ProjectConfig` rather than being derived from `Overlay.Sources`.
+
+</details>
 
 The failure direction is why this is worth stating. Recording `false` for a corpus that WAS attached
 makes a clean report read as better founded than it is, and nothing in the document contradicts it
@@ -164,6 +171,8 @@ carries the second answer.
 
 A `Verdict` is what one rule concluded about ONE subject, including the subjects it could not judge,
 so the verdict list IS the considered set. There is no separate coverage structure to keep in step.
+
+{{ includeFile "figures/findings-versus-verdicts.svg" }}
 
 **Two things share the word "verdict" and are not the same thing.** The section above uses it for the
 REVIEW layer's per-item outcomes (`not-applicable`, `needs-data`, and the rest), which answer "did we
@@ -198,18 +207,24 @@ field's contract: **a consumer must not count it as a failure.**
 
 A rule authored as a datalog query (`query.RuleFromQuery`) has a problem the hand-written rules do
 not. A goal yields the rows that MATCHED, so the subjects it passed over are not in the answer at
-all: `unterminated(?h)` produces unterminated buses and nothing produces the terminated ones. For a
-long time every rule this bridge compiled reported failures only, which covered the whole `profile/`
-and `dl/` families.
+all: `unterminated(?h)` produces {{ explainable "termination" "unterminated" }}
+{{ explainable "bus" "buses" }} and nothing produces the terminated ones. For a long time every rule
+this bridge compiled reported failures only, which covered the whole `profile/` and `dl/` families.
 
 A `FindingQuery` now carries an optional `Domain`: a second goal over the same program whose rows are
 the subjects the rule EXAMINED. The bridge evaluates both, reports the difference as passes, and sets
 `StatesConsideredSet`. Leaving it unset keeps the old shape, so a rule that declares nothing claims
 nothing.
 
-**The domain is declared by the author and never inferred from the goal**, and the reason is worth
-stating because the inference looks easy. For the ESD requirement the domain is exactly the goal's
-body minus its negated literal. Then:
+**The domain is declared by the author and never inferred from the goal.** A wrong derivation
+OVERSTATES coverage, which is worse than stating none, and four right answers out of six is not a
+property anything downstream can act on. A declaration fails safe.
+
+<details>
+<summary>The three rules that defeat the obvious inference</summary>
+
+The inference looks easy: for the ESD requirement the domain is exactly the goal's body minus its
+negated literal. Then:
 
 - `signal-dangling` ends in a COMPARISON with no negation, so "the body minus its negation" is the
   body, and the rule would report the subjects it faulted as the subjects it considered.
@@ -220,8 +235,7 @@ body minus its negated literal. Then:
   exemption into the domain would report a terminal leaving the board as a PASS, claiming the rule
   confirmed a capacitor it never looked for.
 
-A wrong derivation OVERSTATES coverage, which is worse than stating none, and four right answers out
-of six is not a property anything downstream can act on. A declaration fails safe.
+</details>
 
 The same rule applies to a capability gate. `power-pin-mistyped` keeps `has_nc_channel` in its
 domain, because that predicate is not a test a pin passes: it is whether the FORMAT can answer the
@@ -237,8 +251,9 @@ load-bearing rather than bookkeeping:
   string, so nothing can resolve it to something drawable.
 - **`Verdict.context`** are typed ENTITIES, carrying the `Subject` a highlight joins on.
 
-The test is whether clicking it should light something up. A proof that is entirely a path (a pull-up
-reaching a rail through a resistor) therefore carries no terms at all, which is correct rather than a
+The test is whether clicking it should light something up. A proof that is entirely a path (a
+{{ explainable "pull-up" }} reaching a {{ explainable "rail" }} through a resistor) therefore carries
+no terms at all, which is correct rather than a
 gap. `context` excludes the subject, which `subject` already names, so a consumer draws
 subject-as-figure over context-as-ground.
 
@@ -281,13 +296,20 @@ grammar belongs to the kind rather than being a positional tuple of every kind's
 added.
 
 The id is GENERATED and never parsed: one function builds it and nothing splits it back, because the
-structure travels in `subjects` where a consumer reads it typed. That is what lets a ref keep its own
-colons (`symbol:Library:Symbol`) and its own commas (an endpoint's `0,0`). The four characters the
-tuple syntax uses are percent-escaped inside a ref, which is not academic: an endpoint's ref has a
-comma in the delimiter position, and without the escape `("A,net:B")` and `("A", "B")` are one string.
+structure travels in `subjects` where a consumer reads it typed.
+
+<details>
+<summary>What that buys, and the one limit it accepts</summary>
+
+Never parsing it is what lets a ref keep its own colons (`symbol:Library:Symbol`) and its own commas
+(an endpoint's `0,0`). The four characters the tuple syntax uses are percent-escaped inside a ref,
+which is not academic: an endpoint's ref has a comma in the delimiter position, and without the
+escape `("A,net:B")` and `("A", "B")` are one string.
 
 Known limit: two nets sharing a name share an id, because using the net id instead would make the id
 unconstructible. That matches how `Subject` already behaves on the wire.
+
+</details>
 
 ### Findings are unchanged
 
@@ -343,8 +365,8 @@ rather than inferred.
 schematic wire's description carries only its orientation and length. Unattached findings are kept
 and counted by class in `import_summary`, because a consumer seeing 40 imported findings has to be
 able to tell "the tool found 40 things" from "the tool found 60 and we understood 40". A parsed
-ref-des that names no component in the loaded design leaves the finding unattached rather than
-inventing a subject. A wrong join attaches a real violation to an innocent part, and that is worse
+{{ explainable "reference-designator" "ref-des" }} that names no component in the loaded design
+leaves the finding unattached rather than inventing a subject. A wrong join attaches a real violation to an innocent part, and that is worse
 than no join.
 
 ### The oracle becomes a harness
@@ -448,11 +470,16 @@ map at all, and that is not an oversight. A `Spec` binds exactly one entity, so 
 ended up the one board rule with a hand-written Go `Eval`. A pairwise spatial join has
 not yet earned AST nodes.
 
-Of the 17 single-item rules, the constraint kinds with a shipped fact are `track_width` (2, via
-`segment.width`), `annular_width` (4, via `via.annular`), and the via subset of `hole_size` (via
-`via.drill`). The rest name item properties we do not model: pad geometry and plating for the pad
-`hole_size` rules, silkscreen text metrics for `text_thickness` and `text_height`, board-edge distance
-for `edge_clearance`, and blind/buried/micro-via predicates for the one `assertion`.
+<details>
+<summary>Which of the 17 single-item rules have a shipped fact today</summary>
+
+The constraint kinds with one are `track_width` (2, via `segment.width`), `annular_width` (4, via
+`via.annular`), and the via subset of `hole_size` (via `via.drill`). The rest name item properties we
+do not model: pad geometry and plating for the pad `hole_size` rules, silkscreen text metrics for
+`text_thickness` and `text_height`, board-edge distance for `edge_clearance`, and
+blind/buried/micro-via predicates for the one `assertion`.
+
+</details>
 
 **The conclusion is the useful part: the definition schema does not need to change.** The shape of a
 `.kicad_dru` rule, which names a rule, states a condition, and makes a parametric comparison, is

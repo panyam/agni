@@ -9,8 +9,9 @@ scoped to something larger, and for a long time the engine had no name for it.
 Two symptoms, both reachable without contriving anything.
 
 **A design folder holds several files and nothing says which is the design.** Open one and you find
-a netlist, a schematic export, and a board, all openable, all giving different answers. The netlist
-is what the design team produces and what component and connectivity analysis has to read; the
+a {{ explainable "netlist" }}, a schematic export, and a board, all openable, all giving different
+answers. The netlist is what the design team produces and what component and connectivity analysis
+has to read; the
 others are views of that same design ([C21](#the-netlist-is-the-source-the-rest-are-views)). Nothing
 on disk said so, so a tool had to guess, and the guess was invisible: one observed board read 565
 components off its schematic view against the netlist's 1385, with no error to explain it. The CLI
@@ -64,9 +65,11 @@ is the claim C21 makes and the one the annotation argument supports. It is not a
 part *is*. A netlist does not carry do-not-populate status, an approved alternate, or the quantity
 ordered, and where it carries a part number at all it is rarely the copy the team maintains. Those
 attributes come from a bill of materials, joined onto components the entry already established by
-reference designator. A BOM can therefore enrich a component and can be reconciled against the
-netlist so a disagreement is reported, and it never adds or removes one. The component set is the
-entry's.
+{{ explainable "reference-designator" }}. A BOM can therefore enrich a component and can be
+reconciled against the netlist so a disagreement is reported, and it never adds or removes one. The
+component set is the entry's.
+
+{{ includeFile "figures/design-entry-companions.svg" }}
 
 Companions are declared **file by file**, never inferred from "everything beside the entry". A later
 revision of the netlist sits in the same folder and is a legitimate analysis source in its own
@@ -118,7 +121,23 @@ rule then evaluates cleanly over the shortened read, and the run reports fewer f
 A tier whose absence changes the answer while still looking like an answer belongs with the config
 that changes the answer.
 
-**The descriptor is what binds config, and its absence fails exactly that way.** A team folder can hold `conventions.yaml`, `profiles/`, `params/` and a checklist at every conventional name and still bind none of it, because nothing declared a project. Measured on one such folder: adding a two-line `project.yaml` moved a run from 316 findings to 369, took `rail-not-classified` from 40 to 0 (their own lexicon recognises rails the built-ins miss), and surfaced 95 further `test-point-coverage` findings. The CLI and a `Makefile` passing the flags by hand were unaffected; only the server, which discovers config rather than being handed it, ran on the built-in vocabulary. It reported an `invalid_argument` badge and served an authoritative-looking review anyway, failing in the shape this page warns about above, where an answer still looks like an answer.
+**The descriptor is what binds config, and its absence fails exactly that way.** A team folder can
+hold `conventions.yaml`, `profiles/`, `params/` and a checklist at every conventional name and still
+bind none of it, because nothing declared a project.
+
+<details>
+<summary>What that cost on one folder, and why only the server was affected</summary>
+
+Adding a two-line `project.yaml` moved a run from 316 findings to 369, took `rail-not-classified`
+from 40 to 0 (their own lexicon recognises {{ explainable "rail" "rails" }} the built-ins miss), and
+surfaced 95 further `test-point-coverage` findings.
+
+The CLI and a `Makefile` passing the flags by hand were unaffected. Only the server, which discovers
+config rather than being handed it, ran on the built-in vocabulary. It reported an `invalid_argument`
+badge and served an authoritative-looking review anyway, failing in the shape this page warns about
+above, where an answer still looks like an answer.
+
+</details>
 
 Two operational notes follow from that. A design's `name` is an **id** (lowercase, digits, `-`, `_`, `.`), not a label; the human-readable string belongs in `title`, and a name with spaces is rejected. And a rejected descriptor is worth treating as a hard failure rather than a badge, because every downstream number is quietly computed against a different configuration.
 
@@ -158,6 +177,8 @@ here (a request overrides a project, a project overrides the deployment default)
 ACCUMULATE, so inheriting a profile set and declaring your own runs both, while the naming convention
 REPLACES, because two naming vocabularies cannot both be in effect and the nearest declaration wins.
 
+{{ includeFile "figures/config-composition.svg" }}
+
 **Inheritance is declared, never ambient, and that is the whole safety property.** A deployment-wide
 config that applied unless overridden is precisely the bug per-design config fixed: one team's
 profiles reaching every board on the server. An `extends` is written in a descriptor, scoped to the
@@ -196,13 +217,20 @@ CLI and the server run one code path and differ only in where the client rooted 
 **Where the CLI roots that tree is itself a config decision, and getting it wrong is invisible.** The
 CLI mints a mount per argument, rooted at the enclosing project when one resolves and at the file's
 own folder otherwise. So the answer to "is there a project above this path" decides the mount
-BOUNDARY, and a descriptor that exists but does not parse used to be answered as "no project here".
-That rooted the mount at the design's own folder, which put the broken descriptor outside the tree
-entirely, where no later layer could see it. Every downstream check then honestly reported a loose
-file with no project, and the run composed against the built-in vocabulary and reported an
-authoritative-looking answer at exit 0. The lesson generalises past this one bug: a layer that
-decides what is IN SCOPE cannot use "absent" as its error value, because everything after it is
-reasoning about a smaller world and has no way to know the world was cut down.
+BOUNDARY. The lesson generalises past the bug that taught it: a layer that decides what is IN SCOPE
+cannot use "absent" as its error value, because everything after it is reasoning about a smaller
+world and has no way to know the world was cut down.
+
+<details>
+<summary>The bug that taught it</summary>
+
+A descriptor that exists but does not parse used to be answered as "no project here". That rooted
+the mount at the design's own folder, which put the broken descriptor outside the tree entirely,
+where no later layer could see it. Every downstream check then honestly reported a loose file with
+no project, and the run composed against the built-in vocabulary and reported an
+authoritative-looking answer at exit 0.
+
+</details>
 
 **A minted mount is real for ONE PROCESS, which is why a link built from one is refused.** The name
 comes from the enclosing project or is invented as `local`, and either way no other `agni` has it: a
@@ -248,8 +276,16 @@ asks gets the defaults, and the defaults are a legitimate answer, so nothing any
 
 `NewQueryService` took a `*ProjectResolver` and never assigned it. Every query therefore ran against
 the built-in naming vocabulary, and on a project whose whole point is a different vocabulary that
-meant one rail where there are four. Three things kept it invisible, and each is worth recognising
-elsewhere:
+meant one rail where there are four.
+
+The general shape is this: **a collaborator whose absence is meaningful degrades instead of
+erroring.** A nil `ProjectStore`, a nil `ConfigResolver`, a nil datasheet provider all mean something
+here, so none of them can announce its own absence. The guard is a test at the surface that
+uses them, asserting the OUTCOME a project's config is supposed to produce, rather than one at the
+layer that composes it, which was correct throughout.
+
+<details>
+<summary>The three things that kept it invisible, and the same bug from the other end</summary>
 
 - it **compiles**, because an unused parameter is legal;
 - it **passes the service tests**, because those construct the service and assert on what the REQUEST
@@ -257,15 +293,11 @@ elsewhere:
 - a nil resolver is a **supported state**, meaning "this deployment resolves no projects", so the
   code took a real, tested path, just the wrong one for a caller that had handed one over.
 
-That last point is the general shape: **a collaborator whose absence is meaningful degrades instead of
-erroring.** A nil `ProjectStore`, a nil `ConfigResolver`, a nil datasheet provider all mean something
-here, so none of them can announce its own absence. The guard is a test at the surface that
-uses them, asserting the OUTCOME a project's config is supposed to produce, rather than one at the
-layer that composes it, which was correct throughout.
-
 The same shape bit the CLI's non-service commands from the other end: `readDesign` built its loader
 with no read options at all, so six commands read under the built-in vocabulary. One choke point, one
 fix, and the same class of silence.
+
+</details>
 
 ## What resolves through it, and what does not yet
 

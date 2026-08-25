@@ -1,0 +1,38 @@
+<svg viewBox="0 0 640 360" role="img" aria-labelledby="expressiveness-tiers-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="expressiveness-tiers-title">Four stacked tiers under a ceiling. From the bottom: tier P, parametric, a finite catalog where only the values vary; tier R, relational, which selects, traverses and quantifies; tier A, aggregate, counts and ratios over those selections; and tier X, external join, data from outside the design. A dashed ceiling sits above them, and above that a separate box for analysis, which computes quantities rather than asserting over them. A rule may assert over a quantity analysis produced, by naming it, without crossing the ceiling itself.</title>
+  <rect x="40" y="30" width="470" height="50" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3" stroke-dasharray="4 3"/>
+  <text x="56" y="52" fill="currentColor" font-size="12" font-weight="600" opacity="0.7">analysis, which computes the quantity</text>
+  <text x="56" y="70" fill="currentColor" font-size="9.5" opacity="0.5">worst-case tolerance, timing, signal integrity: a different engine</text>
+  <line x1="20" y1="96" x2="620" y2="96" stroke="var(--accent-color)" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <text x="20" y="90" fill="var(--accent-color)" font-size="10.5" font-weight="600">the ceiling: everything below is one evaluation model</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
+    <rect x="40" y="112" width="470" height="44" rx="3"/>
+    <rect x="40" y="164" width="470" height="44" rx="3"/>
+    <rect x="40" y="216" width="470" height="44" rx="3"/>
+    <rect x="40" y="268" width="470" height="44" rx="3"/>
+  </g>
+  <g fill="var(--accent-color)" font-size="13" font-weight="600">
+    <text x="56" y="138">X</text>
+    <text x="56" y="190">A</text>
+    <text x="56" y="242">R</text>
+    <text x="56" y="294">P</text>
+  </g>
+  <g fill="currentColor" font-size="11.5" opacity="0.9">
+    <text x="86" y="138">external join: data that lives outside the design</text>
+    <text x="86" y="190">aggregate: counts and ratios over the selections</text>
+    <text x="86" y="242">relational: select, traverse, then quantify</text>
+    <text x="86" y="294">parametric: a finite catalog where only the values vary</text>
+  </g>
+  <g fill="currentColor" font-size="9.5" opacity="0.5">
+    <text x="86" y="152">every passive has an MPN from the approved list</text>
+    <text x="86" y="204">test-point coverage of at least 95 percent</text>
+    <text x="86" y="256">for every I2C net there is a pull-up to a rail</text>
+    <text x="86" y="308">clearance, track width, via drill, pin-type conflicts</text>
+  </g>
+  <g fill="currentColor" font-size="9.5" opacity="0.6">
+    <text x="520" y="46">a rule asserts over</text>
+    <text x="520" y="60">a quantity from up</text>
+    <text x="520" y="74">here, by naming it</text>
+  </g>
+  <text x="320" y="344" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">the ceiling is not Turing-complete, which is what makes a declarative rules layer feasible</text>
+</svg>

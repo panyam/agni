@@ -170,9 +170,25 @@ Three things about the arrangement. **A bad path fails SILENTLY**, because `Incl
 empty string when the file does not resolve, so a rename drops the figure from the page and the build
 still succeeds. `includefile_test.go` is what turns that into a gate failure, and it also fails on a
 figure nothing includes, for the reason `terms_test.go` rejects a glossary entry with no caller.
-**Blank lines inside the SVG file are harmless**, unlike a figure written straight into a page, so
-format it readably. And **the file is not served**: `figures/` sits outside `static/`, so the only
-way to reach a diagram is the include, and there is no second copy to drift.
+**A blank line inside a figure file is NOT harmless**, and `TestFiguresCarryNoBlankLines` fails the
+gate on one. `IncludeFile` splices the file in before the markdown renderer runs, so the SVG is
+ordinary raw HTML by the time CommonMark sees it, and CommonMark ends an HTML block at the first
+blank line. Whether the chunk after it passes through raw depends on what it starts with: a line
+holding nothing but an open tag (`<g fill="...">`) opens a new block and survives, while a line with
+content after the tag (`<text x="8" y="44">your machine</text>`) is parsed as a paragraph. The
+renderer wraps that chunk in `<p>`, which closes the `<svg>` early, and every element after it lands
+outside the figure and never draws. Four merged figures sat in that state, each missing its closing
+caption on the live site, found by screenshotting one and counting its text runs. And **the file is
+not served**: `figures/` sits outside `static/`, so the only way to reach a diagram is the include,
+and there is no second copy to drift.
+
+**Two more things about checking a figure in a browser.** A running `go run .` HOLDS an included
+figure, so editing a file under `figures/` and re-fetching the page serves the version the server
+started with, and no cache-busting query helps. Restart it. And check for text-on-text OVERLAP as
+well as for overflow: a `getBBox()` sweep against the viewBox catches a run outside the canvas and
+says nothing about two runs sitting on each other, which is the other way a figure reads wrong.
+Compare every pair of `text` boxes in the same pass. One overlap turned up that way in a diagram
+whose every element was inside its viewBox.
 
 **Style that SVG through `--accent-color` and `currentColor`, never a literal.**
 `static/css/main.css` defines the palette for both themes, and the docsite has a dark mode. A
