@@ -56,6 +56,8 @@ worst possible change (a whole net deleted, a whole net appeared). By matching o
 connectivity, `agni diff` calls it what it is, a rename, so your review focuses on the edits
 that actually moved a wire.
 
+{{ includeFile "figures/net-rename.svg" }}
+
 For rename detection to fire, the net has to keep identical connections under the new name.
 A net that was both renamed *and* rewired shows up as a hard change, not a rename.
 
@@ -63,10 +65,10 @@ A net that was both renamed *and* rewired shows up as a hard change, not a renam
 
 `agni serve` renders the same diff visually: open two revisions and changed entities are
 tinted by kind. On faithful-geometry formats (KiCad) the two revisions can be overlaid,
-because the author coordinates are preserved between them. Netlist-only formats render via
-auto-layout, where node positions shift when the node set changes, so those revisions are
-compared side by side rather than overlaid. The web tour in the developer docs walks the
-visual diff in detail.
+because the author coordinates are preserved between them. {{ explainableCap "netlist" }}-only
+formats render via auto-layout, where node positions shift when the node set changes, so
+those revisions are compared side by side rather than overlaid. The web tour in the
+developer docs walks the visual diff in detail.
 
 ## Where to go next
 
