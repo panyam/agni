@@ -69,6 +69,13 @@ the command displayed is the command that ran: using `show` to swap in a differe
 untested command in front of the reader. Output is unaffected either way, since provenance and
 resolution notes are reported relative to the design's project rather than to the invocation.
 
+**A generated capture COUNTS as an illustration, and that is the rule for where a figure goes.** A
+page carrying five `agniRun` blocks is already broken up by five pieces of real output, so adding a
+diagram to it is decoration. The four `tutorials/` rungs that gained a figure are exactly the four
+with no capture at all, which fell out of the rule rather than being chosen, and rung 11 got nothing
+despite being the longest page on the ladder because it carries eight captures. Length is not the
+trigger; unbroken prose is.
+
 **Figures are generated too.** `make -C docsite figures` re-renders the schematics `learn/` embeds,
 via `figures.sh`. Outside the gate for the same reason `tutorial-runs` is: a render depends on the
 engine build, so a code change would invalidate every figure on every branch.
@@ -80,6 +87,16 @@ force-pushes `dist` to a branch that GitHub Pages does not serve. Pages here is 
 and the gh-pages branch has not been served since the MkDocs tree was retired. The target is kept, with
 that written above it, because switching Pages back to branch-serving would enable real per-branch
 preview URLs and deleting it would hide that option.
+
+**A guide fence is hand-written and NOTHING reads it, which is the whole reason the tutorial ones are
+generated.** `guide/` carries 37 command fences across nine pages and no `runs/` directory, so a fence
+goes stale silently and stays that way. Four had: `getting-started.md` reported 10 findings where the
+fixture produces 11 and named 29 rules where it runs 78, with its own prose quoting the wrong number
+back. They were found by grepping for a finding count with no coverage line after it, not by any test.
+`hack/tutorial_runs_check.sh` walks `docsite/content/**/runs/` rather than a fixed pair of sections,
+so converting a guide page needs a `runs/` directory and one spec per fence and no change to the
+harness. `OUT_OF_SCOPE.md` carries that as a ledger row. Until someone does it, re-run a guide fence
+before trusting it.
 
 Blocks that cannot be generated stay hand-written and unverified: an `agni serve` that never returns,
 an excerpt of a longer output, a step needing a tool the build cannot assume (rung 12 shells out to
@@ -160,6 +177,14 @@ tall stack), to wrap a long pipeline into rows with subgraphs, or to move the de
 into the node labels. Prefer plain nodes over a subgraph whose title is long. `CONTRIBUTING.md` covers
 the separate quote-decoding trap that applies to a diagram in a PR body rather than a page.
 
+**The browser sweep below does NOT cover mermaid**, because a mermaid block renders client-side from
+a `<pre>` and a detached-div fetch never runs it, so a figure sweep that comes back clean says nothing
+about the diagrams. Sweep them separately by extracting every fenced block, rendering each with
+`mmdc`, and reading the PNG's dimensions. Doing that over all 29 blocks on the site found five past
+the ceiling, where the two known ones had been found by eye: `termination` at 9.22:1 and
+`transceiver` at 7.76:1 are the unreadable pair, and `differential-pair`, `port-protection` and one
+block in `build/the-gate.md` sit between 4.4 and 5. `OUT_OF_SCOPE.md` tracks them.
+
 **A hand-authored diagram lives in `figures/` and a page pulls it in with
 `{{ includeFile "figures/<name>.svg" }}`. Do not paste an `<svg>` into a markdown page.** The
 directive reads the file at BUILD time and returns raw HTML, so the SVG still lands inline in the
@@ -181,6 +206,23 @@ outside the figure and never draws. Four merged figures sat in that state, each 
 caption on the live site, found by screenshotting one and counting its text runs. And **the file is
 not served**: `figures/` sits outside `static/`, so the only way to reach a diagram is the include,
 and there is no second copy to drift.
+
+**Copy the nearest existing figure rather than starting from an empty file.** Forty-four in, the
+shape that has held is a `viewBox` 640 wide against an 800px column, so a figure never scales up; a
+`<title>` whose `id` ends `-title`, carrying the alt description a screen reader gets; `currentColor`
+between 0.35 and 0.85 opacity for structure; `var(--accent-color)` reserved for the ONE thing the
+figure is about; and a caption line or two at the bottom at `font-size="11" opacity="0.65"`.
+`figures/covered-vs-answered.svg` is a plain one to copy and `figures/output-contention.svg` is a
+circuit. A figure that should not fill the column sets `max-width` on the root instead and centres
+itself, which is what the two package drawings on `reference/pins-and-packages.md` do; that is a
+sanctioned variant rather than a mistake to copy away.
+
+**Give it a `<title>`, not an `aria-label`, and keep `role="img"`.** Both give a valid accessible
+name, so this is a consistency rule rather than an accessibility one, and it exists because the
+verification sweep has to SELECT the figures. Select on `svg[role="img"]`, which all 44 carry, and
+never on the title's id: keying on the title is what silently skipped the two figures that used
+`aria-label` for their whole life, and a skipped figure looks exactly like a clean one in the
+results.
 
 **Style that SVG through `--accent-color` and `currentColor`, never a literal.**
 `static/css/main.css` defines the palette for both themes, and the docsite has a dark mode. A
@@ -208,10 +250,14 @@ a local `go run .` is the real check and it works**: `getBBox()` on every `text`
 guess, and it can sweep every page in one `page.evaluate` by fetching each into a detached div. That
 is how eleven figures were cleared at once. Playwright still refuses `file:` URLs, so serve the site.
 
-**Sweep for text-on-text OVERLAP in the same pass, because a viewBox check cannot see it.** A run
-outside the canvas and two runs sitting on each other are different failures, and only the first is a
-question about bounds. Compare every pair of `text` boxes as well as each box against the viewBox: 32
-figures came back clean on bounds and one of them had two labels printed over each other.
+**The sweep is THREE checks, and each one caught something the others passed.** Bounds is a `getBBox()`
+against the viewBox. **Text on text** compares every pair of `text` boxes, because two runs sitting on
+each other is a different failure from one leaving the canvas: 32 figures came back clean on bounds
+and one of them had two labels printed over each other. **Text on a wire** compares each `text` box
+against every `line` and `path` whose own box is under 3px on one axis, flagging an intersection over
+about 6px by 4px. That third one is the cheapest to get wrong, because a label placed a few pixels
+off sits exactly on the rail it names and is fully inside the viewBox, so the first two both pass it.
+It caught two figures on its first run and drove two more fixes after that.
 
 **Three things about verifying rendering in a browser, all of which produced wrong numbers first.**
 The stylesheet is cached HARD, so a CSS change measured straight after an edit reports the OLD layout

@@ -1,4 +1,5 @@
-<svg viewBox="0 0 480 270" role="img" aria-label="Bonding diagram of an illustrative chip, showing three separate legs all bonded to a single ground pad on the die." style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
+<svg viewBox="0 0 480 270" role="img" aria-labelledby="one-bond-pad-three-legs-title" style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
+  <title id="one-bond-pad-three-legs-title">Bonding diagram of an illustrative chip, showing three separate legs all bonded to a single ground pad on the die.</title>
   <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="currentColor">
     <text x="240" y="16" text-anchor="middle" font-size="10.5" opacity="0.6" letter-spacing="1">ILLUSTRATIVE &#183; NOT A SPECIFIC PART &#183; BONDING VIEW</text>
     <rect x="88" y="34" width="304" height="176" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.5"></rect>

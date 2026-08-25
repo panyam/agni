@@ -1,4 +1,5 @@
-<svg viewBox="0 0 480 300" role="img" aria-label="Top view of the TXB0104 in a 14-lead TSSOP package, showing pin numbers inside the body and pin names outside it." style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
+<svg viewBox="0 0 480 300" role="img" aria-labelledby="txb0104-tssop14-pinout-title" style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
+  <title id="txb0104-tssop14-pinout-title">Top view of the TXB0104 in a 14-lead TSSOP package, showing pin numbers inside the body and pin names outside it.</title>
   <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="currentColor">
     <text x="240" y="16" text-anchor="middle" font-size="10.5" opacity="0.6" letter-spacing="1">TXB0104 &#183; PW &#183; TSSOP-14 &#183; TOP VIEW</text>
     <rect x="170" y="34" width="140" height="232" rx="3" fill="none" stroke="currentColor" stroke-width="2" opacity="0.85"></rect>
