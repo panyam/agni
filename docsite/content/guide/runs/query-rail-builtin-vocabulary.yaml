@@ -1,0 +1,20 @@
+# What the rail relation returns under the BUILT-IN vocabulary, which is the "before" half of the
+# lexicon loop.
+#
+# Two things move aside, and neither is padding. conventions.yaml, because the project declares it
+# and it therefore applies automatically, which makes the before-state otherwise unreachable by
+# naming this design. And the params corpus, because a seeded datasheet's pin functions establish
+# the rail role on their own (agni issue 280), so with it in place this board classifies four rails
+# whatever the naming vocabulary says. Moving both isolates NAMING, which is what this section is
+# about. The tutorial's rung 4 query carries the same pair for the same reason.
+#
+# Both moves are shown rather than hidden behind `show`, because a mv that changes the ANSWER is part
+# of the experiment rather than plumbing, and hiding it would put a command in front of the reader
+# that does not reproduce the output beneath it.
+#
+# Safe because every run gets a scratch copy of the fixture; the checked-in files are untouched.
+fixture: examples/tutorial-project
+script: |
+  mv conventions.yaml conventions-off.yaml
+  mv params params-off
+  agni query designs/gateway/gateway.edn 'rail(?n) => ?n'

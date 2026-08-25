@@ -1,0 +1,4 @@
+# The transitive walk through series passives.
+fixture: readers/kicad/testdata
+script: |
+  agni query board.kicad_pcb 'reaches("GND", ?n) => ?n'

@@ -1,0 +1,4 @@
+# Aggregation: group by the plain columns, the aggregate reduces the rest.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query regulator.fires.kicad_sch 'component-on-net(?r,?n) => ?n, count(?r)'
