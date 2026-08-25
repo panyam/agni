@@ -87,3 +87,26 @@ func mountURIAuthority(designURI string) string {
 	}
 	return u.Mount
 }
+
+// designContentHash is the hash of the bytes a run actually read, for the staleness signal on a
+// verdict link (issue 392).
+//
+// It goes through the loader's DesignHash rather than hashing the caller's argument, because the
+// argument may name a design FOLDER or a companion view, and neither is the file that was analysed.
+// Hashing the argument gave "" for a folder, since opening a directory succeeds and reading it fails,
+// and hashSource reports a read failure and a genuinely unhashable file the same way.
+//
+// An error still yields "", which is what DesignRef.content_hash documents for a producer that did
+// not hash. A link without the staleness parameter is worse than one with it and better than no link,
+// and this is not the place to fail a run that has already finished its analysis.
+func designContentHash(ctx context.Context, ll *localLoader, designURI string) string {
+	u, err := artifact.Parse(designURI)
+	if err != nil {
+		return ""
+	}
+	h, err := ll.DesignHash(ctx, u)
+	if err != nil {
+		return ""
+	}
+	return h
+}

@@ -520,7 +520,8 @@ func checkCmd() *cobra.Command {
 				}
 				specs = set
 			}
-			svc := service.NewCheckService(&localLoader{loader: newLoader()}, catalog, specs, "", nil, cliProjects())
+			ll := &localLoader{loader: newLoader()}
+			svc := service.NewCheckService(ll, catalog, specs, "", nil, cliProjects())
 			ctx := cmd.Context()
 			// Addressed once, ahead of the format branches: every request below names the same two
 			// artifacts, and minting per call meant the same argument was turned into a URI up to four
@@ -632,9 +633,17 @@ func checkCmd() *cobra.Command {
 						}
 					}
 					meta := rpt.Report{
-						Design:      designURI,
-						Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-						ContentHash: hashSource(localOf(designURI)),
+						Design:    designURI,
+						Generated: time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+						// THE HASH IS OF THE ENTRY, not of the argument. hashSource on the design
+						// FOLDER opened it, failed the copy with EISDIR and returned "" without
+						// saying so, which silently dropped &hash= from every link on the form the
+						// tutorial teaches and `agni open` prints. The file form carried a hash and
+						// the folder form did not, so the staleness signal was missing on exactly the
+						// path most runs take. DesignHash resolves the descriptor's entry first,
+						// which is also what makes a run against the folder and one against a
+						// companion carry the same revision identity.
+						ContentHash: designContentHash(ctx, ll, designURI),
 						URLBase:     urlBase,
 						MountPath:   mountPath,
 					}

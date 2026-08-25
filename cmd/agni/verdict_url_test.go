@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -203,5 +205,45 @@ func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
 		if why == "" {
 			t.Errorf("linkTarget(%q) refused with no reason", uri)
 		}
+	}
+}
+
+// TestDesignContentHashIsTheEntryForBothForms: a verdict link carries &hash= so the viewer can say it
+// was computed against different bytes than the ones now on disk. That parameter went missing on the
+// design-FOLDER form, which is the form the tutorial teaches and the one `agni open` prints, because
+// hashing the caller's argument opened a directory, failed the read with EISDIR, and reported it the
+// same way it reports a genuinely unhashable file. The file form carried a hash and the folder form
+// silently did not, so the staleness signal was absent on most runs.
+//
+// Both forms name the same design, so both must hash the same entry.
+func TestDesignContentHashIsTheEntryForBothForms(t *testing.T) {
+	dir := designFolder(t)
+	ws, err := workspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ll := &localLoader{loader: newLoader()}
+	ctx := context.Background()
+
+	folderURI, err := ws.URI(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entryURI, err := ws.URI(filepath.Join(dir, "gateway.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	folder := designContentHash(ctx, ll, folderURI.String())
+	entry := designContentHash(ctx, ll, entryURI.String())
+
+	if entry == "" {
+		t.Fatal("the entry file hashed to nothing, so this test cannot tell a fix from a no-op")
+	}
+	if folder == "" {
+		t.Error("the design FOLDER hashed to nothing: hashing the argument rather than the resolved entry drops &hash= from every link on this form")
+	}
+	if folder != entry {
+		t.Errorf("folder hash %q != entry hash %q; both name the same design and must carry one revision identity", folder, entry)
 	}
 }
