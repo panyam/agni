@@ -44,13 +44,16 @@ first 1:
   [warning] profile-overlay/i2c-missing-pullup: SCL (I2C signal net SCL needs a pull-up but reaches no rail)
 
 1 finding(s) total
+5 subject(s) considered by 3 rule(s) (--verdicts for the detail)
 ```
 
-Three rules came out of that declaration, one per requirement. On the variant of the same board
-with the pull-ups fitted, all three run and stay quiet:
+Three rules came out of that declaration, one per requirement, and the last line is how you know all
+three ran rather than one. On `showcase.passes.kicad_pro`, the variant of the same board with the
+pull-ups fitted, they run and stay quiet:
 
 ```
 no findings (3 rule(s) run)
+5 subject(s) considered by 3 rule(s) (--verdicts for the detail)
 ```
 
 Rules from `--profile-path` are namespaced `profile-overlay/`, so an overlay rule is never

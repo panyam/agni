@@ -279,6 +279,22 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--review-store <dir>` | a writable directory that keeps review runs, created if absent; without it the review endpoints report that this server stores none (see [Running the server](../running-the-server/)) |
 
+### `healthcheck`
+
+GET `/healthz` on a running server and exit 0 only on a 200. It is what the container image's
+`HEALTHCHECK` runs, so the image needs no `curl` or `wget`: the runtime is debian-slim, which ships
+neither, and pulling one in to make a single HTTP request adds surface area to every deployment for
+the sake of a probe the binary can make itself. [Running the server](../running-the-server/) covers
+where it fits in a container.
+
+| flag | what it does |
+|---|---|
+| `--addr <host:port>` | the server to probe (default `localhost:8080`). `serve`'s own default is `:8080`, which binds every interface and is not a dialable host, so the probe names loopback explicitly |
+| `--timeout <duration>` | how long to wait for a response (default `3s`) |
+
+It asks one question and interprets nothing: whether the server answers 200 on `/healthz`, which is
+the whole question a restart policy acts on. It reads no other route and does not look at the body.
+
 ### `emit <in> [out]`
 
 Convert any design the tool reads into an IPC-2581 file (stdout if `out` is omitted).
