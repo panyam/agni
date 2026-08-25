@@ -52,18 +52,21 @@ findings by rule:
   esd-protection         2
   i2c-pull-up            1
   input-protection       1
+  reverse-blocking-absent 1
   test-point-coverage    2
 
-first 10:
+first 11:
   [warning] bulk-cap: +3V3 (power rail has no bulk capacitor)
   [warning] decoupling-present: +3V3 (power rail has no decoupling capacitor)
   [info] esd-protection: USB_D+ (externally-exposed signal net has no ESD protection)
   [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
   [warning] input-protection: VBUS (connector feeds a power input with no fuse or TVS in the path)
+  [warning] reverse-blocking-absent: VBUS (connector feeds a power input with no reverse-blocking element in the path)
   [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
   ...
 
-10 finding(s) total
+11 finding(s) total
+150 subject(s) considered by 24 rule(s), 2 not considered (--verdicts for the detail)
 ```
 
 Read a finding as three parts: the **severity** (`error` / `warning` / `info`), the
@@ -86,14 +89,19 @@ agni check cmd/agni/testdata/conformance/showcase.passes.kicad_pro
 ```
 
 ```
-no findings (29 rule(s) run)
+no findings (78 rule(s) run)
+189 subject(s) considered by 22 rule(s) (--verdicts for the detail)
 ```
 
-The `29 rule(s) run` is the important half. It tells you the check actually *exercised* 29
+The `78 rule(s) run` is the important half. It tells you the check actually *exercised* 78
 rules and none fired, rather than staying quiet because it had nothing to work with. This is
 the "silence is not a pass" idea from [Concepts](../concepts/): a real all-clear names how
 many rules ran. If you load only a schematic and no board file, the copper rules simply do
 not appear in that count, because their tier is empty.
+
+The second line is the narrower claim underneath it. 78 rules ran, and 22 of them reached a
+subject to say something about, over 189 subjects between them. A rule that ran and found
+nothing to look at is not evidence about this board.
 
 ## Sanity-check the read first
 
@@ -109,6 +117,8 @@ design:              Showcase Board (fires)
 source format:       kicad-sch
 libraries:           2
 components:          13 (unique ref_des)
+sections:            13 (source instances)
+multi-section:       0 (one ref_des, several sections)
 nets:                11
 ```
 
