@@ -177,6 +177,14 @@ tall stack), to wrap a long pipeline into rows with subgraphs, or to move the de
 into the node labels. Prefer plain nodes over a subgraph whose title is long. `CONTRIBUTING.md` covers
 the separate quote-decoding trap that applies to a diagram in a PR body rather than a page.
 
+**The browser sweep below does NOT cover mermaid**, because a mermaid block renders client-side from
+a `<pre>` and a detached-div fetch never runs it, so a figure sweep that comes back clean says nothing
+about the diagrams. Sweep them separately by extracting every fenced block, rendering each with
+`mmdc`, and reading the PNG's dimensions. Doing that over all 29 blocks on the site found five past
+the ceiling, where the two known ones had been found by eye: `termination` at 9.22:1 and
+`transceiver` at 7.76:1 are the unreadable pair, and `differential-pair`, `port-protection` and one
+block in `build/the-gate.md` sit between 4.4 and 5. `OUT_OF_SCOPE.md` tracks them.
+
 **A hand-authored diagram lives in `figures/` and a page pulls it in with
 `{{ includeFile "figures/<name>.svg" }}`. Do not paste an `<svg>` into a markdown page.** The
 directive reads the file at BUILD time and returns raw HTML, so the SVG still lands inline in the
@@ -205,10 +213,16 @@ shape that has held is a `viewBox` 640 wide against an 800px column, so a figure
 between 0.35 and 0.85 opacity for structure; `var(--accent-color)` reserved for the ONE thing the
 figure is about; and a caption line or two at the bottom at `font-size="11" opacity="0.65"`.
 `figures/covered-vs-answered.svg` is a plain one to copy and `figures/output-contention.svg` is a
-circuit. Two figures predate the convention and have neither a `<title>` nor the root
-`style="width:100%;height:auto;font-family:inherit"`, which means they have no accessible name and
-the verification sweep below skips them, since it keys on the title: `one-bond-pad-three-legs.svg`
-and `txb0104-tssop14-pinout.svg`.
+circuit. A figure that should not fill the column sets `max-width` on the root instead and centres
+itself, which is what the two package drawings on `reference/pins-and-packages.md` do; that is a
+sanctioned variant rather than a mistake to copy away.
+
+**Give it a `<title>`, not an `aria-label`, and keep `role="img"`.** Both give a valid accessible
+name, so this is a consistency rule rather than an accessibility one, and it exists because the
+verification sweep has to SELECT the figures. Select on `svg[role="img"]`, which all 44 carry, and
+never on the title's id: keying on the title is what silently skipped the two figures that used
+`aria-label` for their whole life, and a skipped figure looks exactly like a clean one in the
+results.
 
 **Style that SVG through `--accent-color` and `currentColor`, never a literal.**
 `static/css/main.css` defines the palette for both themes, and the docsite has a dark mode. A
