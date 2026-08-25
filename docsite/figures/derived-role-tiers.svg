@@ -1,0 +1,37 @@
+<svg viewBox="0 0 640 276" role="img" aria-labelledby="derived-role-tiers-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="derived-role-tiers-title">Three bands, one per tier of evidence that can establish a net's role. The naming convention and the source format both run at read time. A datasheet pin table runs later, at model construction. Each band ends in the RoleSource the value is stamped with, so a role read off a naming convention stays distinguishable from one a vendor's pin table established. A later tier may only add a value, never remove or downgrade one.</title>
+
+  <text x="16" y="30" fill="var(--accent-color)" font-size="12" font-weight="600">one net, three tiers that can establish its role</text>
+
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
+    <rect x="16" y="44" width="608" height="56" rx="3"/>
+    <rect x="16" y="108" width="608" height="56" rx="3"/>
+    <rect x="16" y="172" width="608" height="56" rx="3"/>
+  </g>
+
+  <g fill="currentColor" font-size="11.5" font-weight="600" opacity="0.9">
+    <text x="32" y="68">the naming convention</text>
+    <text x="32" y="132">the source format</text>
+    <text x="32" y="196">a datasheet pin table</text>
+  </g>
+  <g fill="currentColor" font-size="9.5" opacity="0.55">
+    <text x="32" y="84">at read time</text>
+    <text x="32" y="148">at read time</text>
+    <text x="32" y="212">at model construction</text>
+  </g>
+
+  <g fill="currentColor" font-size="10.5" opacity="0.75">
+    <text x="250" y="76">a start-anchored lexicon</text>
+    <text x="250" y="140">a power symbol, a net class</text>
+    <text x="250" y="204">a vendor's declared pin function</text>
+  </g>
+
+  <g fill="var(--accent-color)" font-size="10.5" font-weight="600">
+    <text x="470" y="76">RoleSource: NAMING</text>
+    <text x="470" y="140">RoleSource: FORMAT</text>
+    <text x="470" y="204">RoleSource: DATASHEET</text>
+  </g>
+
+  <text x="320" y="252" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">each value records the tier that established it, so a convention and a vendor fact never look alike</text>
+  <text x="320" y="270" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">and a later tier may only add, so no tier's absence can quietly narrow an answer</text>
+</svg>

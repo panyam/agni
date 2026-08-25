@@ -1,0 +1,46 @@
+<svg viewBox="0 0 640 256" role="img" aria-labelledby="kicad-coordinate-frames-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="kicad-coordinate-frames-title">Two coordinate frames side by side. A KiCad library symbol's own graphics are Y-up, the same as the geom contract, so those points map straight through. The schematic sheet is Y-down, so sheet-level coordinates, meaning placement origins, wires, labels and junctions, are flipped. Because the flip is a reflection it also inverts rotation direction, so the geom rotation is 360 minus the KiCad one.</title>
+
+  <defs>
+    <marker id="kicad-frames-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.6"/>
+    </marker>
+  </defs>
+
+  <g fill="currentColor" font-size="11.5" font-weight="600" opacity="0.8">
+    <text x="16" y="30">a library symbol's own graphics</text>
+    <text x="340" y="30">the schematic sheet</text>
+  </g>
+
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.25">
+    <rect x="16" y="40" width="284" height="140" rx="3"/>
+    <rect x="340" y="40" width="284" height="140" rx="3"/>
+  </g>
+
+  <g stroke="currentColor" stroke-width="1.4" opacity="0.7" marker-end="url(#kicad-frames-arrow)">
+    <line x1="64" y1="150" x2="250" y2="150"/>
+    <line x1="64" y1="150" x2="64" y2="66"/>
+    <line x1="388" y1="70" x2="574" y2="70"/>
+    <line x1="388" y1="70" x2="388" y2="156"/>
+  </g>
+  <g fill="currentColor" font-size="10.5" opacity="0.75">
+    <text x="256" y="154">x</text>
+    <text x="56" y="60">y</text>
+    <text x="580" y="74">x</text>
+    <text x="380" y="170">y</text>
+  </g>
+
+  <g fill="var(--accent-color)" font-size="11.5" font-weight="600">
+    <text x="90" y="98">Y-up, like geom</text>
+    <text x="414" y="122">Y-down</text>
+  </g>
+  <g fill="currentColor" font-size="10" opacity="0.6">
+    <text x="90" y="116">map lib-local points</text>
+    <text x="90" y="130">straight through</text>
+    <text x="414" y="140">flip placement origins, wires,</text>
+    <text x="414" y="154">labels and junctions</text>
+  </g>
+
+  <text x="320" y="212" text-anchor="middle" fill="var(--accent-color)" font-size="12" font-weight="600">the flip is a reflection, so it inverts rotation too: geom = 360 - kicad</text>
+  <text x="320" y="234" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">flip the lib points as well, or forget the negation, and an upside-down GND is the tell</text>
+</svg>

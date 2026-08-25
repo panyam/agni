@@ -29,6 +29,8 @@ The IR is a single neutral model of a design that readers normalize into and wri
 - **Semantic layer.** The normalized messages (`Design`, `PartType`, `Component`, `Net`, and so on). This is what diff, rules, and analysis consume. It is cross-format, so an Altium net and a Cadence net look identical here. Think of it as the clean domain model the rest of the system programs against.
 - **Fidelity layer.** A `FidelityFragment` list holds the raw source a lossless reader keeps, keyed back to a node by provenance, so a write-back can be byte-for-byte or semantically identical to the input. A reader that is only lossy-bounded (the current EDIF netlist reader, for one) leaves this empty. Every node also carries an `attributes` string map as an escape hatch for named properties that have not been promoted into first-class fields.
 
+{{ includeFile "figures/ir-two-layers.svg" }}
+
 Provenance links the two layers. This mirrors what programming-language tooling already does with full-fidelity syntax trees (Roslyn's red-green trees, rust-analyzer's `rowan`, tree-sitter CSTs): a concrete layer retains everything (ordering, trivia, fields not modeled) alongside the clean semantic view used for analysis. The normalized layer abstracts detail away, and the fidelity layer is how that detail is not lost.
 
 Three things come from provenance spans at once: lossless reconstruction, "this finding maps to exactly this line or figure" for trust, and surgical edits (rewrite only the changed region and leave the rest byte-identical). Carrying unmodeled fields opaquely means write-back never drops a field the reader did not understand, which also lets "lossless" survive the reader's own incomplete coverage.
@@ -64,7 +66,7 @@ The vocabulary is domain-specific. In terms a programmer already has:
 
 ## The IR as a graph: containment and cross-references
 
-The IR is a graph. It has a **containment** tree of nodes, plus **cross-references** where one node points at another by a stable key. The cross-references are what make it a netlist rather than a flat document. The proto is the source of truth for the schema. This is the picture.
+The IR is a graph. It has a **containment** tree of nodes, plus **cross-references** where one node points at another by a stable key. The cross-references are what make it a {{ explainable "netlist" }} rather than a flat document. The proto is the source of truth for the schema. This is the picture.
 
 **Containment** (what owns what):
 
@@ -110,7 +112,7 @@ The [geometry sidecar](../geometry-and-rendering/) joins back into this graph th
 
 ## A worked example: a voltage divider
 
-The smallest useful circuit is two resistors in series from an input to ground, where the midpoint is a divided-down output.
+The smallest useful circuit is two resistors in series from an input to {{ explainable "ground" }}, where the midpoint is a divided-down output.
 
 ```
 VIN ──[ R1 ]──┬── MID (output)
@@ -146,7 +148,7 @@ Some chips hold several independent circuits in one package. A 74LS00 is a singl
 | `ComponentSection` | `U1` index 2 | gate C |
 | `ComponentSection` | `U1` index 3 | gate D |
 
-A ref-des is not unique per section: all four gates share `U1`. This is why `Component` groups sections rather than the reader emitting `U1` four times. In software terms it is one object, identified once, exposing several independent sub-units that happen to share a package. Sections may reference different `PartType`s (a heterogeneous part). Diff compares the *set* of part references over sections rather than a single value, so a change to one section is reported without false positives from ordering.
+A {{ explainable "reference-designator" "ref-des" }} is not unique per section: all four gates share `U1`. This is why `Component` groups sections rather than the reader emitting `U1` four times. In software terms it is one object, identified once, exposing several independent sub-units that happen to share a package. Sections may reference different `PartType`s (a heterogeneous part). Diff compares the *set* of part references over sections rather than a single value, so a change to one section is reported without false positives from ordering.
 
 ## Provenance and identity
 
@@ -166,9 +168,16 @@ The other half of that bargain is that a reader which KEEPS unannotated parts ha
 
 Which half a reader is on follows from the format, not from the reader's taste, so the shipped answer is uniform: `kicad` (board), `ipc2581` skip; `edif`, `kicad` (schematic), `geda`, `xschem` keep and report. Asking which one a new reader is on is the first question, because the two halves are mutually exclusive and doing both would report a part the design does not contain.
 
-**Do not assume a reader groups by designator, because they disagree and the diagnostic must not.** `kicad` folds every symbol sharing a designator into one component; `geda` folds only when the source says `slot=`, so unslotted duplicates stay separate components with one designator between them; `xschem` does not fold at all. Two unannotated symbols are therefore one component or two depending on the format. `internal/refdes.Unannotated` groups by designator *before* it walks sections, so all three spellings produce one entry per placeholder carrying every placement, and "2 parts are still called `R?`" means the same thing everywhere. A reader deriving its own grouping would reintroduce the divergence the shared predicate exists to remove.
+**Do not assume a reader groups by designator, because they disagree and the diagnostic must not.** `internal/refdes.Unannotated` groups by designator *before* it walks sections, so every spelling produces one entry per placeholder carrying every placement, and "2 parts are still called `R?`" means the same thing everywhere.
 
-The temptation is to repair the identity instead, keying those parts on their native id, which really is unique. That is exactly what the paragraph above forbids: the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The absence is the truth, and the honest move is to say so, which `unannotated_components` below does.
+<details>
+<summary>How far the readers actually diverge, and why repairing the identity is worse</summary>
+
+`kicad` folds every symbol sharing a designator into one component; `geda` folds only when the source says `slot=`, so unslotted duplicates stay separate components with one designator between them; `xschem` does not fold at all. Two unannotated symbols are therefore one component or two depending on the format. A reader deriving its own grouping would reintroduce the divergence the shared predicate exists to remove.
+
+The temptation is to repair the identity instead, keying those parts on their native id, which really is unique. That is exactly what the identity model forbids: the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The absence is the truth, and the honest move is to say so, which `unannotated_components` below does.
+
+</details>
 
 ## Geometry is a keyed sidecar
 
@@ -214,11 +223,20 @@ The rule for a new reader is therefore: detect what your format can express, dec
 
 ### Record what went right, not only what went wrong
 
-Most of the table above names a failure, and a rule reading a failure list can only ever report failures. Its silence on a clean design is then indistinguishable from its silence on a design nobody looked at, which is the same ambiguity `supplied` closes one level up. `unmodeled_buses` is the field that never had the problem, because it holds every bus construct the reader saw and the rule partitions it, so a bus whose members are already nets is a countable pass.
+Most of the table above names a failure, and a rule reading a failure list can only ever report failures. Its silence on a clean design is then indistinguishable from its silence on a design nobody looked at, which is the same ambiguity `supplied` closes one level up. `unmodeled_buses` is the field that never had the problem, because it holds every {{ explainable "bus" }} construct the reader saw and the rule partitions it, so a bus whose members are already nets is a countable pass.
 
 `resolved_symbols` is `unresolved_symbols` given the same shape (agni issue 418). The resolve walk already decided per reference and threw the successes away; keeping them is what lets `symbol-unresolved` state a considered set. The **pin count** is the part that carries weight, because "the symbol resolved" reads identically on a 100-pin FPGA and on a stale library entry that answered with an empty stub, and the second costs the netlist exactly what a missing file does. A count moves when the library does.
 
-`joined_taps` is the same move applied to the T-tap diagnostic (agni issue 420), and it is the case where the silence cost most. A T-tap with no junction dot is drawn as a connection the netlist does not have, so the author, the reviewer and the plot all agree while the board ships with the connection missing. Before this, a sheet whose every tap carried its dot reported what a sheet with no tap in it reported, and what a format that cannot see wire geometry reported. The reader had the answer: `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything looks. Running the same detection once more before the split recovers the set.
+`joined_taps` is the same move applied to the T-tap diagnostic (agni issue 420), and it is the case where the silence cost most.
+
+<details>
+<summary>Why a T-tap is the worst of these silences, and what recovers the set</summary>
+
+A T-tap with no junction dot is drawn as a connection the netlist does not have, so the author, the reviewer and the plot all agree while the board ships with the connection missing. Before this, a sheet whose every tap carried its dot reported what a sheet with no tap in it reported, and what a format that cannot see wire geometry reported.
+
+The reader had the answer: `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything looks. Running the same detection once more before the split recovers the set.
+
+</details>
 
 Two things to copy when adding a reader. Declare `resolved_symbols` in `supplied` only on the branch that actually opened a symbol: xschem and gEDA have a no-opener path where the caller deliberately asked for a symbol-free read, and declaring there would turn "we did not look" into "we looked and found nothing missing". And keep the two lists a partition, since a reference on both would let a rule report one subject as passed and failed at once. `readers/formats` holds the guard that a reader recording unresolved symbols also declares the resolved set.
 
@@ -243,12 +261,17 @@ For unchanged input, `parse then emit` should be the identity function. Running 
 
 ## How formats get ingested
 
-Reading a proprietary binary directly, by reverse-engineering it, sits low on the priority list, mostly for legal reasons (this is not legal advice):
+Reading a proprietary binary directly, by reverse-engineering it, sits low on the priority list, mostly for legal reasons.
+
+<details>
+<summary>The four reasons, none of which is legal advice</summary>
 
 - EULAs typically prohibit reverse engineering. Breaching one risks contract claims.
 - Anti-circumvention law applies if any encryption or protection is involved (encrypted SPICE, protected files), a separate and worse category.
 - Trade-secret and copyright exposure. Clean-room interop has some footing but is jurisdiction-dependent and expensive.
 - Procurement review. Aerospace, defense, and industrial buyers run legal review, and a legally questionable ingestion method gets rejected there regardless of actual litigation risk.
+
+</details>
 
 So the ingest ordering prefers sanctioned paths, in this order:
 
@@ -269,7 +292,7 @@ Two mechanisms keep the schema from drifting toward whatever format is read most
 
 ## Derived fields, and the tiers that fill them
 
-Some fields no reader populates. A net's role (rail / ground / feedback) and a component's device
+Some fields no reader populates. A net's role ({{ explainable "rail" }} / ground / feedback) and a component's device
 class are *derived* from the already-read IR by a shared, format-neutral pass, so every format gets
 them the same way rather than each reader inventing its own answer.
 
@@ -291,6 +314,8 @@ what made a naming convention and a vendor fact look identical for as long as th
 switching one on can reveal more, and can never cost a value an earlier tier would have found. So a
 design read without the datasheet tier classifies exactly as it did before that tier existed, and no
 tier's absence can silently narrow an answer.
+
+{{ includeFile "figures/derived-role-tiers.svg" }}
 
 The two instances today are `enrichClassesFromParams` (a datasheet's declared device class) and
 `enrichRolesFromParams` (a datasheet's pin functions establishing rail and ground). Both live where
