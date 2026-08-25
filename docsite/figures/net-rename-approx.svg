@@ -1,0 +1,53 @@
+<svg viewBox="0 0 640 300" role="img" aria-labelledby="net-rename-approx-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="net-rename-approx-title">Two revisions side by side. The net SIG in rev A and the net DATA in rev B share three device endpoints, but rev B has gained a decoupling capacitor, so the connection signatures are no longer identical and the exact pairing pass declines. The middle column shows the coverage arithmetic the approximate pass runs instead: three of three significant endpoints kept, three of four of the new net made of old endpoints, one significant endpoint added against a ceiling of two. Every threshold is satisfied, so the pair is assigned as renamed-approx. The test point on each side is drawn dimmed, because it is excluded from the arithmetic.</title>
+
+  <g fill="currentColor" font-size="12" font-weight="600" text-anchor="middle" opacity="0.7">
+    <text x="101" y="34">rev A</text>
+    <text x="539" y="34">rev B</text>
+  </g>
+
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
+    <rect x="16" y="44" width="170" height="186" rx="3"/>
+    <rect x="454" y="44" width="170" height="186" rx="3"/>
+  </g>
+
+  <g fill="var(--accent-color)" font-size="12" font-weight="600">
+    <text x="30" y="68">SIG</text>
+    <text x="468" y="68">DATA</text>
+  </g>
+
+  <g fill="currentColor" font-size="11.5" opacity="0.85">
+    <text x="30" y="96">U1.3</text>
+    <text x="30" y="118">R5.1</text>
+    <text x="30" y="140">C2.1</text>
+    <text x="468" y="96">U1.3</text>
+    <text x="468" y="118">R5.1</text>
+    <text x="468" y="140">C2.1</text>
+  </g>
+
+  <text x="468" y="162" fill="var(--accent-color)" font-size="11.5" font-weight="600">C9.1</text>
+  <text x="468" y="178" fill="var(--accent-color)" font-size="10">a decoupling cap, added</text>
+
+  <g fill="currentColor" font-size="11.5" opacity="0.4">
+    <text x="30" y="202">TP4.1</text>
+    <text x="468" y="202">TP4.1</text>
+    <text x="30" y="218" font-size="10">test point, not counted</text>
+    <text x="468" y="218" font-size="10">test point, not counted</text>
+  </g>
+
+  <g fill="currentColor" font-size="11" opacity="0.6" text-anchor="middle">
+    <text x="320" y="70">the signatures differ, so the</text>
+    <text x="320" y="86">exact pass declines to pair them</text>
+  </g>
+
+  <g fill="currentColor" font-size="11" text-anchor="middle" opacity="0.85">
+    <text x="320" y="124">kept 3 of 3 significant, over 0.80</text>
+    <text x="320" y="144">new is 3 of 4 old, over 0.60</text>
+    <text x="320" y="164">1 significant endpoint added, under 2</text>
+  </g>
+
+  <text x="320" y="200" text-anchor="middle" fill="var(--accent-color)" font-size="12.5" font-weight="600">renamed-approx</text>
+
+  <text x="320" y="266" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">an assignment rather than a recovered fact, which is why it is off by default</text>
+  <text x="320" y="284" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">and why the finding carries the arithmetic above it</text>
+</svg>

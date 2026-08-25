@@ -11,12 +11,25 @@ designs and classifies what changed. Because it runs on the neutral IR, the same
 works over any format that reads into it, whether EDIF, KiCad, or IPC-2581. The output says
 what changed and how much it matters, not merely that the files differ.
 
+Three passes produce that answer, and the rest of this page is what each one does.
+
+```mermaid
+flowchart TB
+  B["pass 1: match by name"] --> C["Equal, Soft, or Hard"]
+  B -- "leftovers" --> E["pass 2: pair by connection signature<br/>non-empty and unique signatures only"]
+  E --> F["Renamed"]
+  E -- "--rename-approx" --> J["pass 3: score, then assign best-first and one-to-one"]
+  E -- "by default" --> I["Deleted and New"]
+  J --> K["RenamedApprox, with its evidence"]
+  J -- "unassigned" --> I
+```
+
 ## Identity strategy
 
 Matching entities across revisions uses semantic keys, never the format-native id. A native id
 is regenerated on every export, so matching on it would report the entire design as changed.
 
-- Components match by reference designator, the `R5` or `U1` label on the part.
+- Components match by {{ explainable "reference-designator" }}.
 - Nets match by name.
 - A net whose name changed is recovered by its connection signature, the canonical sorted set
   of `refdes.pin` endpoints the net touches. If the endpoints are the same, it is the same net
@@ -27,7 +40,8 @@ and an addition. Matching on what the variable connects to recovers the rename i
 
 ## Change taxonomy
 
-The classification mirrors the categories a hand-run netlist comparison already uses.
+The classification mirrors the categories a hand-run {{ explainable "netlist" }} comparison
+already uses.
 
 | Class | Meaning | Impact |
 |---|---|---|
@@ -62,8 +76,10 @@ ambiguous this pass declines to guess and leaves the nets for the pass below.
 ### Near matches, off by default
 
 Exact pairing has a cliff. The revision that renames a net is very often the revision that changes
-it slightly, because a rename lands alongside a decoupling cap added, a test point dropped, or a
-series resistor inserted. One endpoint moves, the signature no longer matches, and the rename you
+it slightly, because a rename lands alongside a
+{{ explainable "decoupling-capacitor" "decoupling cap" }} added, a {{ explainable "test-point" }}
+dropped, or a series resistor inserted. One endpoint moves, the signature no longer matches, and
+the rename you
 most needed to survive is the one reported as an unrelated deletion beside an unrelated addition.
 
 `--rename-approx` adds a third pass over what the exact pass could not place. It is a separate
@@ -77,6 +93,8 @@ for each leftover deleted net with enough SIGNIFICANT endpoints:
 rank every surviving pair, assign best-first, one-to-one, no reuse
     -> RenamedApprox{ from, to, added, removed, evidence }
 ```
+
+{{ includeFile "figures/net-rename-approx.svg" }}
 
 Endpoints are not equal. A test point coming or going is routine churn and should not cost a net
 its identity, while a device pin moving should, so the thresholds come in significant and
@@ -99,17 +117,24 @@ able to disagree.
 | `MinSignificantEndpoints` | 2 | below this a net has no shape to match on. |
 | `InsignificantClasses` | `[test_point]` | which device classes are excluded from the overlap arithmetic. |
 
-These numbers are a calibrated starting point rather than a proven one. They are the settled values
-of a netlist comparison tool that has run against real revision pairs for years, and both failure
-directions were observed while arriving at them: looser values mis-paired unrelated power rails,
-and tighter values missed obvious renames where one decoupling capacitor had been added or removed.
-Produce a precision number on a revision pair that matters before trusting the pass on it, per
+These numbers are a calibrated starting point rather than a proven one. Produce a precision number
+on a revision pair that matters before trusting the pass on it, per
 [evidence](../../build/evidence/).
 
-One seam is worth knowing. `MinNewCoverage` counts ALL endpoints, so a small net that gains enough
-test points can fall under it even though every significant threshold is satisfied. On a two-endpoint
-net, three added probes pair and four do not. The significant thresholds insulate the pass from probe
-churn and this one does not.
+<details>
+<summary>Where the numbers came from, and the one seam that behaves unlike the rest</summary>
+
+They are the settled values of a netlist comparison tool that has run against real revision pairs
+for years, and both failure directions were observed while arriving at them: looser values
+mis-paired unrelated {{ explainable "rail" "power rails" }}, and tighter values missed obvious
+renames where one decoupling capacitor had been added or removed.
+
+`MinNewCoverage` counts ALL endpoints, so a small net that gains enough test points can fall under
+it even though every significant threshold is satisfied. On a two-endpoint net, three added probes
+pair and four do not. The significant thresholds insulate the pass from probe churn and this one
+does not.
+
+</details>
 
 ## Provenance-annotated findings
 
@@ -127,7 +152,7 @@ in the new. The annotation is keyed by the semantic match, not by the native id.
 - An electrically identical reroute, the same endpoints wired through different copper, is
   invisible to a netlist diff by design. Routing is geometry, not connectivity, so it does not
   appear.
-- Nets with no reference designator, such as power and ground, and bus or member pins, are
+- Nets with no reference designator, such as power and ground, and {{ explainable "bus" }} or member pins, are
   stable only if the reader emits stable keys for them. Unstable keys would surface as false Hard
   changes.
 - An ambiguous rename signature is reported as New and Deleted by the exact pass, never guessed.

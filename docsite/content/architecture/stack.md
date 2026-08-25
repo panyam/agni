@@ -17,23 +17,33 @@ The engine packages stay pure. A reader takes an `io.Reader` or bytes, not a fil
 and checks operate on the IR. Keeping the packages free of file paths, a database, and any
 browser-only calls is what lets the same code run in every one of those places.
 
+<details>
+<summary>Why there is no parser-generator in the ingestion path</summary>
+
+Not every part of a schematic file needs a hand-rolled parser, and none of them needs a generated
+one. EDIF is S-expressions, which are trivial to parse directly in Go with no parser-generator
+involved. An in-house parser-generator toolkit that targets the browser is reserved for a future
+rules-DSL editor, where syntax highlighting, live parsing, and inline error markers are the job.
+Ingestion has none of those requirements.
+
+</details>
+
 ## Package layout
 
 The top-level tree separates the engine from the content it evaluates, and that split
 makes the open-core boundary real: the engine ships as a library and the rule content is one of
 several sources that register into it.
 
-- `core/` is the pure engine: the IR model, the net solver, `check` (the rule runtime and the
-  spec interpreter), `query` (the Datalog evaluator), `diff`, `render`, and `svg`. It owns the
-  evaluation machinery and no rules.
-- `stdlib/` is the standard content that registers into the engine through public seams:
-  `stdlib/rules/builtin` (the built-in EE rule catalog, one file per rule), `stdlib/rules/datalog`
-  and `stdlib/rules/intent` (query-authored and design-intent rules), `stdlib/relations` (the
-  query relations the fact base exposes), and `stdlib/profiles` (the interface profiles). Each
-  rule and relation keeps its reference markdown beside its code, embedded and served as the
-  runtime `Detail`.
-- `readers/` holds the format readers (EDIF, KiCad, IPC-2581, and the symbol-file dialects) plus
-  `readers/formats`, the registry and loader that own all file I/O so the core never opens a file.
+{{ includeFile "figures/engine-layers.svg" }}
+
+- `core/` is the pure engine, and it owns the evaluation machinery and no rules: the IR model, the
+  net solver, `check` (the rule runtime and the spec interpreter), `query` (the Datalog evaluator),
+  `diff`, `render`, and `svg`.
+- `stdlib/` is the standard content that registers into the engine through public seams. Each rule
+  and relation keeps its reference markdown beside its code, embedded and served as the runtime
+  `Detail`.
+- `readers/` holds the format readers plus `readers/formats`, the registry and loader that own all
+  file I/O so the core never opens a file.
 - `datasheet/` is the parameter and document stack: `datasheet/param`, `datasheet/doc`, and
   `datasheet/derive`.
 - `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
@@ -61,11 +71,9 @@ GPU buffers and the DOM, and measures text. It holds no domain logic. Data flows
 shape of an Elm or Redux app. The [web app and presenter](../web-app/) page covers the contract
 in full.
 
-Not every part of a schematic file needs a hand-rolled parser. EDIF, for example, is
-S-expressions, which are trivial to parse directly in Go with no parser-generator involved. An
-in-house parser-generator toolkit that targets the browser is reserved for a future rules-DSL
-editor, where syntax highlighting, live parsing, and inline error markers are the job, not for
-ingestion.
+Text metrics are the one measurement that has to travel the other way, because only the browser
+has them. A presenter laying out labels needs them back, so the contract includes a small
+measurement callback.
 
 ## WebAssembly is optional
 
@@ -76,7 +84,12 @@ diff and IR logic in the browser directly, for an offline or zero-server viewer.
 high-frequency surface such as an editor would use a TypeScript presenter instead, to avoid a
 per-event boundary crossing.
 
-### Keeping the WebAssembly boundary cheap
+The order of work is build the viewer, profile it, and push work into WebAssembly only if
+TypeScript cannot keep up. There is no reason to pre-optimize a boundary before a real surface
+demands it.
+
+<details>
+<summary>How the boundary would be kept cheap, if a surface ever needs it</summary>
 
 Go compiled to WebAssembly has higher per-call boundary overhead than a C or Rust equivalent, so
 if the presenter runs in the browser the boundary is designed to carry meaning, not pixels.
@@ -95,13 +108,8 @@ At 60 frames per second, roughly 16 ms per frame, this keeps interop well under 
 The real performance ceiling is geometry volume and rendering, solved with canvas or WebGL,
 viewport culling, and a spatial index, not the boundary.
 
-## Practical notes
+A Go WebAssembly binary is also large, because it carries the runtime and garbage collector. That
+is a load-time concern to address with compression, or a smaller Go toolchain, only if it becomes
+a problem.
 
-- Text metrics belong to the browser. If a presenter lays out labels it needs measurements back
-  from the view, so the contract includes a small measurement callback.
-- A Go WebAssembly binary is large, because it carries the runtime and garbage collector. That is
-  a load-time concern to address with compression, or a smaller Go toolchain, only if it becomes a
-  problem.
-- The order of work is build the viewer, profile it, and push work into WebAssembly only if
-  TypeScript cannot keep up. There is no reason to pre-optimize the boundary before a real surface
-  demands it.
+</details>

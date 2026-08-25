@@ -1,0 +1,60 @@
+<svg viewBox="0 0 640 344" role="img" aria-labelledby="engine-layers-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="engine-layers-title">A three-tier diagram. At the bottom, four content sources sit side by side: stdlib, readers, datasheet, and an overlay drawn with a dashed outline. Every one of them has an arrow pointing up into a single core box in the middle, labelled "register through public seams". The core box holds the evaluation machinery and carries the note that no core package imports stdlib. Above it, cmd is the program that composes the catalog, choosing which of the four sources register. Every arrow points into core and none point out of it.</title>
+
+  <defs>
+    <marker id="engine-layers-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.5"/>
+    </marker>
+  </defs>
+
+  <!-- the composing program -->
+  <rect x="170" y="14" width="300" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+  <text x="320" y="34" text-anchor="middle" fill="currentColor" font-size="12" font-weight="600">cmd/ and any embedding program</text>
+  <text x="320" y="50" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.6">picks the sources, and so picks the catalog</text>
+
+  <line x1="320" y1="58" x2="320" y2="98" stroke="currentColor" stroke-width="1.2" opacity="0.5" marker-end="url(#engine-layers-arrow)"/>
+  <text x="330" y="82" fill="currentColor" font-size="10" opacity="0.55">imports</text>
+
+  <!-- the engine -->
+  <rect x="90" y="102" width="460" height="82" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="320" y="126" text-anchor="middle" fill="var(--accent-color)" font-size="13" font-weight="600">core/ — the evaluation machinery, and no rules</text>
+  <text x="320" y="146" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.85">model · net solver · check · query · diff · render · svg</text>
+  <text x="320" y="170" text-anchor="middle" fill="currentColor" font-size="10.5" opacity="0.6">no core package imports stdlib in its production build</text>
+
+  <!-- registration arrows -->
+  <g stroke="currentColor" stroke-width="1.2" opacity="0.5" marker-end="url(#engine-layers-arrow)">
+    <line x1="86" y1="242" x2="86" y2="200"/>
+    <line x1="242" y1="242" x2="242" y2="200"/>
+    <line x1="398" y1="242" x2="398" y2="200"/>
+  </g>
+  <line x1="554" y1="242" x2="554" y2="200" stroke="currentColor" stroke-width="1.2" opacity="0.5" stroke-dasharray="4 3" marker-end="url(#engine-layers-arrow)"/>
+  <text x="320" y="216" text-anchor="middle" fill="var(--accent-color)" font-size="11" font-weight="600">register through public seams</text>
+
+  <!-- the content sources -->
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
+    <rect x="16" y="244" width="140" height="62" rx="3"/>
+    <rect x="172" y="244" width="140" height="62" rx="3"/>
+    <rect x="328" y="244" width="140" height="62" rx="3"/>
+  </g>
+  <rect x="484" y="244" width="140" height="62" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-dasharray="4 3"/>
+
+  <g fill="currentColor" font-size="11.5" font-weight="600" text-anchor="middle">
+    <text x="86" y="266">stdlib/</text>
+    <text x="242" y="266">readers/</text>
+    <text x="398" y="266">datasheet/</text>
+    <text x="554" y="266">an overlay</text>
+  </g>
+
+  <g fill="currentColor" font-size="10" opacity="0.7" text-anchor="middle">
+    <text x="86" y="283">rules · intent</text>
+    <text x="86" y="297">relations · profiles</text>
+    <text x="242" y="283">EDIF · KiCad</text>
+    <text x="242" y="297">IPC-2581 · xschem</text>
+    <text x="398" y="283">param · doc</text>
+    <text x="398" y="297">derive</text>
+    <text x="554" y="283">your rules, by</text>
+    <text x="554" y="297">the same route</text>
+  </g>
+
+  <text x="320" y="332" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">every arrow points into core, and none point out of it</text>
+</svg>
