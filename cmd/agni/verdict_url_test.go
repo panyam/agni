@@ -177,8 +177,31 @@ func TestWorkspaceDeclaredSeparatesNamedFromMinted(t *testing.T) {
 // A nil workspace yields no link rather than a panic. The caller ignores workspace()'s error, because
 // a failure there is reported by whichever call needed it for real work, and fail-closed is the same
 // answer every other unlinkable case gets.
-func TestLinkablePathIsNilSafe(t *testing.T) {
-	if got := linkablePath(nil, "mount://demo/x.edn"); got != "" {
-		t.Errorf("linkablePath(nil) = %q, want no link", got)
+func TestLinkTargetIsNilSafe(t *testing.T) {
+	got, why := linkTarget(nil, "mount://demo/x.edn")
+	if got != "" {
+		t.Errorf("linkTarget(nil) = %q, want no link", got)
+	}
+	if why == "" {
+		t.Error("linkTarget(nil) gave no reason; refusing to link has to say why (the silence this replaced)")
+	}
+}
+
+// Every refusal carries a reason. This is the property the note on stderr rests on: if any path can
+// return ("", "") the operator gets "no verdict links were emitted: " with nothing after the colon.
+func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
+	ws, err := newCLIWorkspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, uri := range []string{"", "not a uri", "mount://undeclared/x.edn", "mount://demo/"} {
+		got, why := linkTarget(ws, uri)
+		if got != "" {
+			t.Errorf("linkTarget(%q) = %q, want no link", uri, got)
+			continue
+		}
+		if why == "" {
+			t.Errorf("linkTarget(%q) refused with no reason", uri)
+		}
 	}
 }

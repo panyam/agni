@@ -1,4 +1,13 @@
-# Generated block for 06-part-limits.md. Edit the script, not the capture.
+# Rung 6: what the supply-limit rule can say with NO datasheet corpus.
+#
+# params/ is moved aside for the run, because the project declares it and it therefore applies
+# automatically, which makes the "before" state otherwise unreachable by naming this design. Same
+# reason and same mechanism as the rung 4 and rung 5 pairs. Safe because every run gets a scratch
+# copy of the fixture.
+#
+# This capture and 06-check-abs-max-params.yaml were byte-identical until then: both ran with the
+# corpus in place, so the page's whole before/after contrast showed the same finding twice.
 fixture: examples/tutorial-project
 script: |
+  mv params params-off
   agni check designs/gateway/gateway.edn --rule supply-exceeds-abs-max

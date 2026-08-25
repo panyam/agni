@@ -1,4 +1,7 @@
-# Generated block for 06-part-limits.md. Edit the script, not the capture.
+# Rung 6: the same rule with the project's datasheet corpus in place.
+#
+# No --params. The project names its own params directory and composes it, the same way it composes
+# conventions.yaml and profiles/, so the flag would be naming a directory the run already has.
 fixture: examples/tutorial-project
 script: |
-  agni check designs/gateway/gateway.edn --params params --rule supply-exceeds-abs-max
+  agni check designs/gateway/gateway.edn --rule supply-exceeds-abs-max

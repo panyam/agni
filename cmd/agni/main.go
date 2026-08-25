@@ -29,6 +29,7 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/readers/formats"
@@ -601,7 +602,7 @@ func checkCmd() *cobra.Command {
 				// findings below, since a pass is not a gate condition.
 				if verdicts {
 					// A LINK IS A PROMISE, and this is the one place the promise is made. urlBase is
-					// empty unless the operator says where the viewer is, and linkablePath is empty
+					// empty unless the operator says where the viewer is, and linkTarget is empty
 					// for a design the CLI reached through a mount it minted rather than one the
 					// operator named. Either one missing means every format emits no link rather than
 					// one assembled from a guess, which would resolve on nobody's server (issue 392).
@@ -609,13 +610,33 @@ func checkCmd() *cobra.Command {
 					// A workspace that failed to build yields no link, which is the same fail-closed
 					// answer: the error is reported by whichever call needed the workspace to do real
 					// work, and a link is not worth inventing a second report for.
+					//
+					// REFUSING TO LINK IS SAID OUT LOUD. Fail-closed was already right and already
+					// silent, so an operator who asked for links and got a page of rows with none had
+					// nothing to read that named the missing half. The notes below are only printed
+					// when --url-base was given, so a run that never asked for links stays quiet.
 					ws, _ := workspace()
+					mountPath, why := linkTarget(ws, designURI)
+					if urlBase != "" && why != "" {
+						fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no verdict links were emitted: %s\n", why)
+					}
+					if urlBase != "" && mountPath != "" {
+						if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
+							keep, note := verifyServerMount(cmd.Context(), urlBase, m)
+							if note != "" {
+								fmt.Fprintf(cmd.ErrOrStderr(), "note: %s\n", note)
+							}
+							if !keep {
+								mountPath = ""
+							}
+						}
+					}
 					meta := rpt.Report{
 						Design:      designURI,
 						Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
 						ContentHash: hashSource(localOf(designURI)),
 						URLBase:     urlBase,
-						MountPath:   linkablePath(ws, designURI),
+						MountPath:   mountPath,
 					}
 					switch format {
 					case "csv":
