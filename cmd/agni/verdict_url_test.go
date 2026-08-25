@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/panyam/agni/internal/projects"
 )
 
 const urlBaseFlag = "http://localhost:8080"
@@ -245,5 +247,105 @@ func TestDesignContentHashIsTheEntryForBothForms(t *testing.T) {
 	}
 	if folder != entry {
 		t.Errorf("folder hash %q != entry hash %q; both name the same design and must carry one revision identity", folder, entry)
+	}
+}
+
+// distinctDesignFolder is designFolder with the files carrying DIFFERENT bytes, so a link naming the
+// wrong artifact is observable. The shared helper writes "x" to every file, which makes the entry and
+// its companions hash identically and would let the defect below pass unseen.
+func distinctDesignFolder(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "gateway.edn"), "the netlist, which is what analysis reads")
+	write(t, filepath.Join(dir, "gateway.kicad_sch"), "a drawing of the same board, different bytes")
+	write(t, filepath.Join(dir, projects.DesignDescriptor), `
+name: gateway
+entry: gateway.edn
+companions:
+  - gateway.kicad_sch
+`)
+	return dir
+}
+
+// withDeclaredMount declares a mount rooted at dir, since a link is only promised for a mount the
+// operator NAMED and a minted one refuses before a path is ever composed.
+func withDeclaredMount(t *testing.T, dir string) {
+	t.Helper()
+	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
+	cliMountSpecs = []string{"demo=" + dir}
+	cliWSOnce, cliWSVal, cliWSErr = sync.Once{}, nil, nil
+	t.Cleanup(func() {
+		cliMountSpecs, cliWSVal, cliWSErr = prevSpecs, prevVal, prevErr
+		cliWSOnce = sync.Once{}
+	})
+}
+
+// TestVerdictLinkTargetNamesTheResolvedEntry: the link's PATH used to come from the caller's argument
+// while its hash came from the resolved entry, and the difference has no symptom until the argument
+// is not the entry (agni issue 489).
+//
+// A design FOLDER produced /designs/<mount>/<dir>/view, which the viewer's URL space reads as the
+// FILE at <dir>. GetDesign refuses it and the page loads nothing, on the form the tutorial teaches.
+// A declared COMPANION produced its own path carrying the entry's hash, so the viewer compared two
+// different files and drew the stale-link banner over a design that was in sync.
+func TestVerdictLinkTargetNamesTheResolvedEntry(t *testing.T) {
+	dir := distinctDesignFolder(t)
+	withDeclaredMount(t, dir)
+	ws, err := workspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ll := &localLoader{loader: newLoader()}
+	ctx := context.Background()
+
+	for _, tc := range []struct{ name, arg string }{
+		{"design folder", "mount://demo"},
+		{"declared companion", "mount://demo/gateway.kicad_sch"},
+		{"the entry itself", "mount://demo/gateway.edn"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path, hash, why := verdictLinkTarget(ctx, ws, ll, tc.arg)
+			if path == "" {
+				t.Fatalf("no link for %q: %s", tc.arg, why)
+			}
+			if want := "demo/gateway.edn"; path != want {
+				t.Errorf("path = %q, want %q: every form names the design, so every form must link to the artifact analysis read", path, want)
+			}
+			if hash == "" {
+				t.Fatal("no hash, so this test cannot tell a fix from a no-op")
+			}
+		})
+	}
+}
+
+// TestVerdictLinkPathAndHashNameOneArtifact is the invariant behind the fix rather than a third case
+// of it. The two halves are resolved together now, so no argument form can produce a path and a hash
+// that describe different files. A regression here is a false stale-link banner, which is worse than
+// the silence the banner replaced: it discredits the one mechanism built to catch a real mismatch.
+func TestVerdictLinkPathAndHashNameOneArtifact(t *testing.T) {
+	dir := distinctDesignFolder(t)
+	withDeclaredMount(t, dir)
+	ws, err := workspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ll := &localLoader{loader: newLoader()}
+	ctx := context.Background()
+
+	// The companion hashes differently from the entry, or the assertion below proves nothing.
+	if hashSource(filepath.Join(dir, "gateway.kicad_sch")) == hashSource(filepath.Join(dir, "gateway.edn")) {
+		t.Fatal("the fixture's entry and companion hash alike, so a link naming the wrong one would pass")
+	}
+
+	for _, arg := range []string{"mount://demo", "mount://demo/gateway.kicad_sch", "mount://demo/gateway.edn"} {
+		path, hash, why := verdictLinkTarget(ctx, ws, ll, arg)
+		if path == "" {
+			t.Fatalf("no link for %q: %s", arg, why)
+		}
+		// The path is "<mount>/<rel>", and the mount is rooted at dir.
+		rel := strings.TrimPrefix(path, "demo/")
+		if want := hashSource(filepath.Join(dir, rel)); hash != want {
+			t.Errorf("%s: link points at %q but carries the hash of a different file (%q != %q)", arg, rel, hash, want)
+		}
 	}
 }

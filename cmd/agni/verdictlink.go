@@ -49,8 +49,9 @@ func linkTarget(ws *cliWorkspace, designURI string) (path, why string) {
 // about it, and the two are different claims. `--mount gateway=/a` against a server started with
 // `--mount gateway=/b` passed every local check and emitted links that resolve to a different board,
 // which is worse than emitting none: the reader has no reason to doubt a link that loads. The
-// mitigation named in the old comment was the content hash on the URL, but the URL never carried one
-// and the viewer ignores it (agni issue 392 acceptance 3), so nothing was checking this at all.
+// mitigation named in the old comment was the content hash on the URL. That now works end to end (the
+// URL carries it and the viewer compares it), so a mount table that disagrees is caught twice: here
+// when the server can be reached, and in the browser when it cannot.
 //
 // UNREACHABLE IS NOT MISMATCHED. A server that does not answer leaves the question open, and the
 // report may well be generated now and read once the viewer is up, so an unreachable address keeps
@@ -86,6 +87,39 @@ func mountURIAuthority(designURI string) string {
 		return ""
 	}
 	return u.Mount
+}
+
+// verdictLinkTarget resolves the design ONCE and returns both halves of the link built from it: the
+// viewer path, and the revision that path is at.
+//
+// One function because the two used to be two, and they disagreed (agni issue 489). The path came
+// from the caller's ARGUMENT and the hash came from the resolved ENTRY, which is a difference with no
+// symptom until the argument is not the entry. Then it has two, both bad:
+//
+//   - A design FOLDER produced `/designs/<mount>/<dir>/view`, which the viewer's URL space reads as
+//     the FILE at <dir>. GetDesign refuses it and the page loads no design at all. That is the form
+//     the tutorial teaches.
+//   - A declared COMPANION produced its own path with the ENTRY's hash, so the viewer compared two
+//     different files and drew the stale-link banner over a design that was perfectly in sync. A
+//     false alarm in the mechanism built to prevent false confidence is worse than the silence it
+//     replaced.
+//
+// Resolving once is what makes those unrepresentable rather than merely fixed. There is no longer a
+// pair of values that could name different artifacts.
+func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, designURI string) (mountPath, contentHash, why string) {
+	target := designURI
+	// A resolution failure leaves the argument standing rather than dropping the link. The design was
+	// already read and analysed by the time anything asks for a link, so a descriptor that will not
+	// resolve here is a surprise about CONFIG, not a reason to withhold the answer.
+	if ll != nil {
+		if u, err := artifact.Parse(designURI); err == nil {
+			if e, err := ll.designEntry(ctx, u); err == nil {
+				target = e.String()
+			}
+		}
+	}
+	mountPath, why = linkTarget(ws, target)
+	return mountPath, designContentHash(ctx, ll, target), why
 }
 
 // designContentHash is the hash of the bytes a run actually read, for the staleness signal on a

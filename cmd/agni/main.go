@@ -640,7 +640,7 @@ func checkCmd() *cobra.Command {
 					// nothing to read that named the missing half. The notes below are only printed
 					// when --url-base was given, so a run that never asked for links stays quiet.
 					ws, _ := workspace()
-					mountPath, why := linkTarget(ws, designURI)
+					mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI)
 					if urlBase != "" && why != "" {
 						fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no verdict links were emitted: %s\n", why)
 					}
@@ -658,15 +658,13 @@ func checkCmd() *cobra.Command {
 					meta := rpt.Report{
 						Design:    designURI,
 						Generated: time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-						// THE HASH IS OF THE ENTRY, not of the argument. hashSource on the design
-						// FOLDER opened it, failed the copy with EISDIR and returned "" without
-						// saying so, which silently dropped &hash= from every link on the form the
-						// tutorial teaches and `agni open` prints. The file form carried a hash and
-						// the folder form did not, so the staleness signal was missing on exactly the
-						// path most runs take. DesignHash resolves the descriptor's entry first,
-						// which is also what makes a run against the folder and one against a
-						// companion carry the same revision identity.
-						ContentHash: designContentHash(ctx, ll, designURI),
+						// BOTH HALVES NAME THE ENTRY, not the argument, and they come from one
+						// resolution so they cannot drift apart (agni issue 489). The hash alone
+						// resolved the entry before, which fixed the folder form's missing &hash=
+						// (issue 479) and left the folder form's PATH pointing at a directory the
+						// viewer cannot open, plus a companion form whose correct path carried the
+						// entry's hash and read as a mismatch.
+						ContentHash: contentHash,
 						URLBase:     urlBase,
 						MountPath:   mountPath,
 					}
