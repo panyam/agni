@@ -68,6 +68,15 @@ type Loader interface {
 	// (.kicad_pcb today). nil with a nil error means the format has none — absence is
 	// normal, mirroring Expectations — and the design then simply lists no board sheet.
 	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
+	// DesignHash returns "sha256:<hex>" over the design's entry file, the revision identity a
+	// verdict link is checked against (agni issue 392). It is the same method the review service's
+	// port declares and the same one `agni check --url-base` mints its links from, so the two sides
+	// of the hop compare values computed by one implementation rather than by two.
+	//
+	// An error means this server could not hash the file, which GetDesign reports as an empty
+	// content_hash. That is a THIRD state, distinct from a match and a mismatch, and the response's
+	// doc comment binds the consumer to keep it so.
+	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
 }
 
 // boardSheetID is the synthetic sheet id the board renders under (WS7-034). It is a sheet
@@ -220,6 +229,13 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 		// uses. A render that lost its symbols still draws every ref des and wire, so without this the
 		// viewer has no way to tell a complete sheet from a bodyless one (agni issue 354).
 		Undrawn: g.GetUndrawn(),
+	}
+	// A hash failure is not a read failure. The design loaded, its sheets are drawable, and the only
+	// thing lost is the viewer's ability to VERIFY a link that points here, so the field goes empty
+	// and the response stands, exactly as DesignRef.content_hash documents for a producer that did
+	// not hash. Failing the open over a provenance field would cost the reader the design too.
+	if h, err := s.loader.DesignHash(ctx, u); err == nil {
+		resp.ContentHash = h
 	}
 	for _, sh := range g.GetSheets() {
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: sh.GetId(), Name: sh.GetName(), ParentId: sh.GetParentId()})

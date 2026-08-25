@@ -40,6 +40,7 @@ function harness(resolve: unknown, dirEntries: { name: string; uri: string; isDi
       findings: { setState: vi.fn(), setFindingLocateNote: vi.fn() },
       expectationCaption: vi.fn(),
       undrawnNote: vi.fn(),
+      staleLinkNote: vi.fn(),
       rules: { setState: vi.fn() },
       report: vi.fn(),
       projectBar: { setState: onProject },

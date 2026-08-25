@@ -107,6 +107,19 @@ message GetDesignResponse {
   // (grid, layered, ...) for files with a netlist IR. The UI offers these; `layout` above is
   // the one used for this response.
   repeated string available_layouts = 8;
+  // content_hash is "sha256:<hex>" over the design's entry file, the same revision identity
+  // agni.v1.checks.DesignRef.content_hash carries and computed by the same loader call, so a link
+  // minted by the CLI can be compared against what this server just read (agni issue 392).
+  //
+  // It is on the DESIGN response for the same reason `undrawn` is: it is a property of THIS read.
+  // The viewer needs it before it draws a proof a link asked for, which is before any check has run,
+  // so hanging it off the check response would arrive one step too late to prevent the highlight the
+  // reader should not trust.
+  //
+  // Empty when this server could not hash the file, which a consumer MUST NOT read as a match. It is
+  // the third state: an unverifiable link is not a verified one, and collapsing the two reproduces
+  // exactly the false confidence the hash exists to remove.
+  string content_hash = 10;
 }
 
 message GetSheetRequest {

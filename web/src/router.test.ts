@@ -27,6 +27,25 @@ describe("router", () => {
     expect(parsed).toEqual(l);
   });
 
+  it("carries the link's revision hash alongside the verdict it qualifies", () => {
+    const url = locationToUrl(loc({ mount: "m", path: "b.edn", verdict: "i2c-pull-up:net:SDA", hash: "sha256:abc" }));
+    expect(url).toBe("/designs/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&hash=sha256%3Aabc");
+  });
+
+  // The hash is provenance FOR a verdict, so it must not outlive one in the address bar. Every path
+  // that replaces the highlight drops the verdict, and a hash left behind would keep asserting a
+  // revision that nothing on screen still depends on.
+  it("drops the hash when no verdict is focused", () => {
+    expect(locationToUrl(loc({ mount: "m", path: "b.edn", hash: "sha256:abc" }))).toBe("/designs/m/b.edn/view");
+  });
+
+  it("round-trips a verdict link with its hash", () => {
+    const l = loc({ mount: "m", path: "b.edn", verdict: "clearance:net:VBUS", hash: "sha256:deadbeef" });
+    const url = locationToUrl(l);
+    const q = url.indexOf("?");
+    expect(parseUrl(url.slice(0, q), url.slice(q))).toEqual(l);
+  });
+
   it("splits mount from the rest of the path and decodes segments", () => {
     const parsed = parseUrl("/designs/my%20mount/deep/dir/board.eds/view", "");
     expect(parsed.mount).toBe("my mount");

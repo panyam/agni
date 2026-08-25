@@ -18,6 +18,7 @@ import { type FindingItem, type FindingsState, type FindingsView, type SheetBadg
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
+import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
@@ -107,6 +108,11 @@ export interface ViewSink {
   // complete (agni issue 354). A render that lost its symbols still draws every ref des and wire, so
   // this is the only thing on screen that can say the sheet is short.
   undrawnNote: (note: UndrawnNote | null) => void;
+  // staleLinkNote receives "the link you arrived on was computed against different bytes", or null
+  // when there is nothing to say (agni issue 392). Nothing else on screen can say it: a verdict id is
+  // derived from a rule name and a subject ref, so it resolves against an edited design just as
+  // readily and draws its proof on whatever now answers to that ref.
+  staleLinkNote: (note: StaleLinkNote | null) => void;
   // rules receives the rule catalog + active selection.
   rules: RulesView;
   // report receives the auto-layout conversion report, or null to hide the panel (the
@@ -197,6 +203,17 @@ export class ViewerPresenter {
   // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
   // stale id in the address bar would promise a drawing the canvas is no longer showing.
   private focusedVerdict = "";
+  // linkHash is the design revision the URL the viewer was opened on claimed, "" when it claimed
+  // none. designContentHash is the revision this server actually read, off GetDesign. The pair is
+  // what the stale-link note is computed from, and they are kept apart rather than reduced to a
+  // boolean at the point of comparison so the note can distinguish "different bytes" from "could not
+  // check", which is the whole reason the field exists.
+  //
+  // linkHash outlives the focused verdict deliberately. The claim is about the DESIGN this viewer
+  // read, so it still holds after the reader dismisses a proof and re-focuses it; what drops it is
+  // opening a different design, where the claim stops applying at all.
+  private linkHash = "";
+  private designContentHash = "";
 
   // highlights are the active highlight layers (the selection API): each spec names
   // components/nets/pins and its color/alpha. The WebGL canvas resolves them locally against
@@ -414,6 +431,14 @@ export class ViewerPresenter {
   async openFile(mount: string, path: string, wantSheet = "", keepLayout = false): Promise<void> {
     const newFile = mount !== this.mount || path !== this.path;
     if (!keepLayout && newFile) this.currentLayout = "";
+    // A different design retires the link's claim entirely: the hash described the bytes behind the
+    // OLD path, so carrying it forward would compare two unrelated files and report a mismatch that
+    // means nothing. restore() re-sets it after this call, which is why it clears rather than being
+    // set from a location here.
+    if (newFile) {
+      this.linkHash = "";
+      this.views.staleLinkNote(null);
+    }
     this.mount = mount;
     this.path = path;
     this.setBusy(true, "loading design…");
@@ -433,6 +458,10 @@ export class ViewerPresenter {
       // Pushed with the summary because it is a property of THIS read: the layout the server resolved
       // either found its symbols or did not, and a reader needs that before trusting the drawing.
       this.views.undrawnNote(undrawnNote(d.undrawn));
+      // Recorded with the rest of this read's properties. "" is what the server sends when it could
+      // not hash the file, and it MUST NOT be read as agreement with a link that named a revision.
+      // staleLinkNote keeps that a third state rather than folding it into a match.
+      this.designContentHash = d.contentHash ?? "";
       // If the newly opened file can't render natively but we're in native mode, fall back to
       // SVG (the always-works renderer) so switching files doesn't error.
       if (!d.nativeAvailable && this.mode === "native") this.mode = "svg";
@@ -489,6 +518,11 @@ export class ViewerPresenter {
     // pasted link lands on "Press Run checks" and resolves nothing, which is the whole CLI-to-viewer
     // hop failing at the one moment it is being used. A URL naming a verdict is an explicit request
     // for that answer, so paying for the run is what the reader asked for.
+    // Adopted and reported BEFORE the checks run and the proof is drawn, so a reader looking at a
+    // highlight has already been told not to trust it. Reporting afterwards would put the warning on
+    // screen at the same moment as the drawing it warns about, which is too late to be a warning.
+    this.linkHash = loc.hash;
+    this.views.staleLinkNote(staleLinkNote(this.linkHash, this.designContentHash));
     if (loc.verdict) {
       await this.runChecks();
       await this.locateVerdict(loc.verdict);
@@ -506,6 +540,7 @@ export class ViewerPresenter {
       layout: this.currentLayout,
       symbols: this.faithfulSymbols,
       verdict: this.focusedVerdict,
+      hash: this.linkHash,
     };
   }
 

@@ -36,6 +36,7 @@ import { LocateReason } from "./query.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
+import { staleLinkStrip } from "./stalelink.js";
 import { fillEntityQuery } from "./selection.js";
 import { baseName, noteOpen } from "./recents.js";
 
@@ -113,6 +114,7 @@ class AppRoot extends BaseComponent {
     // hidden on any design without a sidecar).
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
     const setUndrawnNote = undrawnStrip(document.getElementById("undrawn-note"));
+    const setStaleLinkNote = staleLinkStrip(document.getElementById("stale-link-note"));
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The
@@ -371,6 +373,7 @@ class AppRoot extends BaseComponent {
         findings: findings.view,
         expectationCaption: setExpectCaption,
         undrawnNote: setUndrawnNote,
+        staleLinkNote: setStaleLinkNote,
         rules: rules.view,
         report: setReport,
         // Every location report also feeds the Compare chrome: the open design is side A of any

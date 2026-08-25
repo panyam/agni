@@ -24,6 +24,9 @@ function harness() {
     nativeAvailable: boolean;
     availableLayouts: string[];
     undrawn?: { refDes: string; cellRef: string; libraryRef: string; sheetId: string }[];
+    // Optional for the same reason undrawn is, and its absence is MEANINGFUL: a server that did not
+    // hash sends nothing, which is the unverifiable case rather than agreement (agni issue 392).
+    contentHash?: string;
   };
   const getDesign = vi.fn(async (req: { layout?: string }): Promise<DesignReply> => ({
     name: "D",
@@ -87,6 +90,7 @@ function harness() {
   const onFindings = vi.fn();
   const onExpectCaption = vi.fn();
   const onUndrawnNote = vi.fn();
+  const onStaleLinkNote = vi.fn();
   const onRules = vi.fn();
   const onReport = vi.fn();
   const onLocation = vi.fn();
@@ -98,6 +102,7 @@ function harness() {
     findings: { setState: onFindings, setFindingLocateNote: () => {} },
     expectationCaption: onExpectCaption,
     undrawnNote: onUndrawnNote,
+    staleLinkNote: onStaleLinkNote,
     rules: { setState: onRules },
     report: onReport,
     location: onLocation,
@@ -107,7 +112,7 @@ function harness() {
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   });
-  return { presenter, onUndrawnNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  return { presenter, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks — the two-step the app does when the
@@ -383,7 +388,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "" });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -395,9 +400,85 @@ describe("ViewerPresenter", () => {
     }
   });
 
+  // The CLI-to-viewer hop's honesty guard (agni issue 392). `agni check --url-base` mints a link
+  // carrying the revision it ran against; a verdict id is derived from a rule name and a subject ref,
+  // so it resolves against an EDITED design just as readily and draws its proof on whatever now
+  // answers to that ref. Nothing else on screen can tell the reader that happened.
+  describe("stale verdict links", () => {
+    // A location naming a verdict and the revision it was computed against.
+    function linkLoc(hash: string) {
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash };
+    }
+    function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
+      h.getDesign.mockResolvedValue({
+        name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+        sheets: [{ id: "s1", name: "S1" }], nativeAvailable: true, availableLayouts: ["faithful"],
+        contentHash,
+      });
+    }
+    function lastNote(h: ReturnType<typeof harness>) {
+      const calls = h.onStaleLinkNote.mock.calls;
+      return calls[calls.length - 1]?.[0];
+    }
+
+    it("says nothing when the link's revision is the one the server read", async () => {
+      const h = harness();
+      servedHash(h, "sha256:aaa");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).toBeNull();
+    });
+
+    it("reports a mismatch when the server read different bytes", async () => {
+      const h = harness();
+      servedHash(h, "sha256:bbb");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).toMatchObject({ trust: "mismatch" });
+    });
+
+    // The third state. A server that could not hash has not agreed with the link, and reporting
+    // nothing here would be the same silence the hash exists to break.
+    it("reports an unverifiable link when the server sent no hash", async () => {
+      const h = harness();
+      servedHash(h, undefined);
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).toMatchObject({ trust: "unverifiable" });
+    });
+
+    it("says nothing when the link named no revision", async () => {
+      const h = harness();
+      servedHash(h, "sha256:aaa");
+      await h.presenter.restore(linkLoc(""));
+      expect(lastNote(h)).toBeNull();
+    });
+
+    // A warning that arrives with the drawing it warns about is not a warning. The reader must be
+    // told before the checks run and the proof paints, not at the same moment.
+    it("warns before running the checks that draw the proof", async () => {
+      const h = harness();
+      servedHash(h, "sha256:bbb");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      const warned = h.onStaleLinkNote.mock.invocationCallOrder;
+      const checked = h.checkDesign.mock.invocationCallOrder;
+      expect(checked.length).toBeGreaterThan(0);
+      expect(Math.max(...warned)).toBeLessThan(Math.min(...checked));
+    });
+
+    // The claim is about the bytes behind the OLD path. Carrying it to another design would compare
+    // two unrelated files and report a mismatch that means nothing.
+    it("retires the claim when a different design is opened", async () => {
+      const h = harness();
+      servedHash(h, "sha256:bbb");
+      await h.presenter.restore(linkLoc("sha256:aaa"));
+      expect(lastNote(h)).not.toBeNull();
+      await h.presenter.openFile("m", "other.eds");
+      expect(lastNote(h)).toBeNull();
+      expect(lastLocation(h).hash).toBe("");
+    });
+  });
+
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "" });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 
