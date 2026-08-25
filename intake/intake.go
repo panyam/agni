@@ -70,6 +70,7 @@ type Anomaly struct {
 // net.nominal_voltage fact, projected to the VOLTAGE only so the net name never enters the result.
 func Build(m check.Model) *Skeleton {
 	s := &Skeleton{ClassCount: map[string]int{}, HasParams: m.HasParams()}
+	gaps := map[string]struct{}{}
 	for _, c := range m.Components() {
 		s.Components++
 		s.Sections += len(c.GetSections())
@@ -89,8 +90,15 @@ func Build(m check.Model) *Skeleton {
 			Class:        string(m.ComponentClass(c.RefDes)),
 		})
 		if m.HasParams() && mpn != "" && m.PartSpec(c.RefDes) == nil {
-			s.DatasheetGaps = append(s.DatasheetGaps, mpn)
+			// By DISTINCT mpn, not per placement. Seeding is per part number: one textproto covers
+			// every component carrying that mpn, so a queue listing a jellybean forty times counts
+			// placements where the work is one file (agni issue 475). The Parts table above already
+			// collapses by distinct type, so the two sections disagreed about one board.
+			gaps[mpn] = struct{}{}
 		}
+	}
+	for mpn := range gaps {
+		s.DatasheetGaps = append(s.DatasheetGaps, mpn)
 	}
 	s.Nets = len(m.Nets())
 	sort.Slice(s.Parts, func(i, j int) bool { return s.Parts[i].RefDes < s.Parts[j].RefDes })
@@ -218,8 +226,14 @@ func Markdown(s *Skeleton, full bool) string {
 		b.WriteString("\n")
 	}
 
-	if len(s.DatasheetGaps) > 0 {
+	// Printed whenever a corpus was attached, so an EMPTY queue is distinguishable from one that was
+	// never built. Both used to render as nothing at all, which meant a run that forgot the corpus
+	// looked exactly like a board with every part seeded (agni issue 474).
+	if s.HasParams {
 		fmt.Fprintf(&b, "## Datasheet gaps (MPN on board, no seeded spec)\n")
+		if len(s.DatasheetGaps) == 0 {
+			b.WriteString("- none: every MPN on this board has a seeded spec\n")
+		}
 		for _, mpn := range s.DatasheetGaps {
 			fmt.Fprintf(&b, "- %s\n", mpn)
 		}

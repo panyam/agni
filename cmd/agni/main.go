@@ -224,14 +224,30 @@ func newLoader() *formats.Loader {
 // readDesign reads a design file into the IR through the formats registry, after the enclosing
 // design's descriptor has had its say about which file that should be (resolveSource).
 func readDesign(path string) (*ir.Design, error) {
+	d, _, err := readDesignWithConfig(path)
+	return d, err
+}
+
+// readDesignWithConfig is readDesign plus the resolved overlay, for a command that needs a config
+// tier the READ itself does not consume.
+//
+// The overlay was always being composed here; readDesign kept only ReadOptions() from it and dropped
+// the rest, including the datasheet corpus a project declares. `agni intake` then took its corpus
+// from --params alone, so inside a project that declares params/ the datasheet-gap section was
+// ABSENT rather than empty unless you named a directory the project already names (agni issue 474).
+//
+// Returning it rather than resolving a second time in the caller is the point. A second resolution
+// can disagree with the first, and the review path carries a comment about exactly that: a run would
+// then be filed against config other than the config it was read under.
+func readDesignWithConfig(path string) (*ir.Design, service.Overlay, error) {
 	ctx := context.Background()
 	ws, err := workspace()
 	if err != nil {
-		return nil, err
+		return nil, service.Overlay{}, err
 	}
 	src, err := newDesignResolver(ws).Resolve(ctx, path)
 	if err != nil {
-		return nil, err
+		return nil, service.Overlay{}, err
 	}
 	noteSource(os.Stderr, src)
 	// The design's PROJECT config reaches the read, the same way it reaches a service-backed one.
@@ -246,11 +262,12 @@ func readDesign(path string) (*ir.Design, error) {
 	// read would otherwise silently use the built-in naming vocabulary and report a different answer
 	// that looks like an answer. A design with NO descriptor still reads under the defaults, which is
 	// the ordinary loose-file case (see designReadOptions).
-	opts, err := designReadOptions(ctx, path)
+	ov, err := designOverlay(ctx, path)
 	if err != nil {
-		return nil, err
+		return nil, service.Overlay{}, err
 	}
-	return readerFor(newLoader(), opts...).ReadDesign(localOf(src.NetlistURI))
+	d, err := readerFor(newLoader(), ov.ReadOptions()...).ReadDesign(localOf(src.NetlistURI))
+	return d, ov, err
 }
 
 // designReadOptions composes the per-read config a design's project supplies: its naming vocabulary,
@@ -265,9 +282,19 @@ func readDesign(path string) (*ir.Design, error) {
 // or to form a URI is not a statement about the design's project, and the caller is about to fail on
 // its own path resolution anyway.
 func designReadOptions(ctx context.Context, path string) ([]service.ReadOption, error) {
-	ws, err := workspace()
+	ov, err := designOverlay(ctx, path)
 	if err != nil {
 		return nil, err
+	}
+	return ov.ReadOptions(), nil
+}
+
+// designOverlay resolves the whole overlay a design's project supplies, of which the read consumes
+// only part. Same contract as designReadOptions above, which is now one line of it.
+func designOverlay(ctx context.Context, path string) (service.Overlay, error) {
+	ws, err := workspace()
+	if err != nil {
+		return service.Overlay{}, err
 	}
 	// A path that names nothing is left to the reader (cliWorkspace.URI), so what comes back here is
 	// a failure to MINT: a governing project descriptor that exists and does not parse. Answering "no
@@ -275,13 +302,9 @@ func designReadOptions(ctx context.Context, path string) ([]service.ReadOption, 
 	// project's, which is the same swallow one layer down (agni issue 312).
 	u, err := ws.URI(path)
 	if err != nil {
-		return nil, err
+		return service.Overlay{}, err
 	}
-	ov, err := cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, service.Overlay{}, "")
-	if err != nil {
-		return nil, err
-	}
-	return ov.ReadOptions(), nil
+	return cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, service.Overlay{}, "")
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never

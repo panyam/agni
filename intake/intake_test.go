@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // fixtureDesign: a hand-authored design that classifies by ref-des prefix (no reader needed). It carries
@@ -132,5 +134,64 @@ func TestBuildPartTypes(t *testing.T) {
 	}
 	if s.PartTypes[1].Count != 1 || s.PartTypes[1].Manufacturer != "MURATA" {
 		t.Errorf("drift type = %+v, want {count:1 MURATA}", s.PartTypes[1])
+	}
+}
+
+// mpnDesign carries the same MPN on several components, which is the shape the gap queue got wrong:
+// seeding is per part number, so two placements of one jellybean are one piece of work.
+func mpnDesign() *ir.Design {
+	comp := func(ref, mpn string) *ir.Component {
+		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"},
+			Attributes: map[string]string{"MPN": mpn}}
+	}
+	return &ir.Design{Components: []*ir.Component{
+		comp("C1", "ACME-CAP-100N"), comp("C2", "ACME-CAP-100N"), comp("C3", "ACME-CAP-100N"),
+		comp("R1", "ACME-RES-10K"), comp("R2", "ACME-RES-10K"),
+		comp("U1", "ACME-MCU-G1"),
+	}}
+}
+
+// emptyCorpus is a provider that seeds nothing, so every MPN on the board is a gap.
+var emptyCorpus = param.ProviderFunc(func(string) *parampb.PartSpec { return nil })
+
+func TestDatasheetGapsAreDistinctMPNs(t *testing.T) {
+	s := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus))
+	want := []string{"ACME-CAP-100N", "ACME-MCU-G1", "ACME-RES-10K"}
+	if len(s.DatasheetGaps) != len(want) {
+		t.Fatalf("gaps = %v (%d), want %d distinct MPNs; six components carry three part numbers and seeding is per part number", s.DatasheetGaps, len(s.DatasheetGaps), len(want))
+	}
+	for i, w := range want {
+		if s.DatasheetGaps[i] != w {
+			t.Errorf("gaps[%d] = %q, want %q (sorted, so the queue is diffable across runs)", i, s.DatasheetGaps[i], w)
+		}
+	}
+}
+
+// TestDatasheetGapsAreStablyOrdered guards the set the dedupe introduced: Go randomizes map iteration,
+// so an unsorted queue would differ between runs and no two reports could be compared.
+func TestDatasheetGapsAreStablyOrdered(t *testing.T) {
+	first := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus)).DatasheetGaps
+	for i := 0; i < 20; i++ {
+		got := Build(check.NewModelWithParams(mpnDesign(), nil, emptyCorpus)).DatasheetGaps
+		if strings.Join(got, ",") != strings.Join(first, ",") {
+			t.Fatalf("run %d gave %v, first run gave %v", i, got, first)
+		}
+	}
+}
+
+// TestGapSectionDistinguishesEmptyFromAbsent: a corpus that seeds everything and no corpus at all both
+// used to render as no section, so a run that forgot the corpus looked like a fully seeded board.
+func TestGapSectionDistinguishesEmptyFromAbsent(t *testing.T) {
+	seeded := param.ProviderFunc(func(mpn string) *parampb.PartSpec { return &parampb.PartSpec{Mpn: mpn} })
+	withCorpus := Markdown(Build(check.NewModelWithParams(mpnDesign(), nil, seeded)), false)
+	if !strings.Contains(withCorpus, "Datasheet gaps") {
+		t.Error("a board with every part seeded printed no gap section, so it reads as a run with no corpus")
+	}
+	if !strings.Contains(withCorpus, "none") {
+		t.Errorf("the empty queue does not say so:\n%s", withCorpus)
+	}
+	noCorpus := Markdown(Build(check.NewModel(mpnDesign())), false)
+	if strings.Contains(noCorpus, "Datasheet gaps") {
+		t.Error("a run with no corpus printed a gap section, which would claim a queue it never built")
 	}
 }

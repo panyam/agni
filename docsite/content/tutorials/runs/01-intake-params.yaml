@@ -1,4 +1,8 @@
-# Generated block for 01-read-a-design.md. Edit the script, not the capture.
+# Rung 1: the sanitized summary, including the datasheet-gap work queue.
+#
+# No --params. The project declares params/ and composes it, the same way it composes conventions.yaml
+# and profiles/, so intake picks the corpus up from naming the design (agni issue 474). Before that it
+# read the flag alone, and this capture carried a --params naming a directory the run already had.
 fixture: examples/tutorial-project
 script: |
-  agni intake designs/gateway/gateway.edn --params params
+  agni intake designs/gateway/gateway.edn

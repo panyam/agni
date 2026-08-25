@@ -205,7 +205,7 @@ connection, so it is safe to hand to someone who should not see the design itsel
 
 | flag | what it does |
 |---|---|
-| `--params <dir>` | a parameter set, which populates the MPN and datasheet-gap columns |
+| `--params <dir>` | a parameter set, which populates the MPN and datasheet-gap columns. A design inside a project reads the `params/` that project declares and needs no flag; this names a corpus for a design that belongs to none |
 | `--parts <view>` | `types` (BOM by distinct part type, default) or `full` (per-component AVL) |
 | `--format <fmt>` | `md` (default) or `json` |
 

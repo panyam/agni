@@ -110,11 +110,8 @@ decidable at all. None of them is a pass.
 
 ## Where to start
 
-`agni intake <design> --params params` lists every MPN on the board with no seeded spec. That list
-is your work queue, and it shrinks as you seed parts. The flag is not optional here the way it is on
-`check`: `intake` reads the corpus from the flag alone, so inside this project you have to name a
-directory the project already declares, and without it the datasheet-gap section is absent rather
-than empty. Start with the parts whose limits you would
+`agni intake <design>` lists every MPN on the board with no seeded spec. That list is your work
+queue, and it shrinks as you seed parts. Start with the parts whose limits you would
 actually worry about, which is usually regulators, {{ explainable "transceiver" "transceivers" }}, and anything near a rail boundary,
 rather than working alphabetically.
 

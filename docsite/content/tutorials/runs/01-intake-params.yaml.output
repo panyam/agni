@@ -1,4 +1,4 @@
-#agni-run c3126a26671797b4
+#agni-run 34a46a8f965c60dc
 ## Aggregates
 - Components: 19 | Sections: 19 | Nets: 15
 
@@ -24,15 +24,12 @@
 ## Datasheet gaps (MPN on board, no seeded spec)
 - ACME-CAN-XCVR
 - ACME-CAP-100N
-- ACME-CAP-100N
 - ACME-CAP-10U
-- ACME-CAP-18P
 - ACME-CAP-18P
 - ACME-CAP-22U
 - ACME-CONN-4
 - ACME-EEPROM-4K
 - ACME-MCU-G1
-- ACME-RES-10K
 - ACME-RES-10K
 - ACME-RES-120R
 - ACME-TVS-24
