@@ -1,12 +1,10 @@
 <svg viewBox="0 0 640 396" role="img" aria-labelledby="config-composition-title" style="width:100%;height:auto;font-family:inherit">
   <title id="config-composition-title">A vertical chain composing one analysis config. From the top: the deployment default, then a shared project reached through extends, then the project itself, then the design, which sets only its intent, then the request. Each layer overrides the one above it, so the nearest declaration wins. Notes on the right record that the ref-shaped tiers such as profiles and seeded parameters accumulate down the chain, while the naming vocabulary is replaced rather than merged. The chain produces one analysis config for the run.</title>
-
   <defs>
     <marker id="config-composition-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.5"/>
     </marker>
   </defs>
-
   <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35">
     <rect x="110" y="16" width="300" height="42" rx="3"/>
     <rect x="110" y="78" width="300" height="42" rx="3"/>
@@ -15,7 +13,6 @@
     <rect x="110" y="264" width="300" height="42" rx="3"/>
   </g>
   <rect x="110" y="330" width="300" height="46" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
-
   <g stroke="currentColor" stroke-width="1.2" opacity="0.5" marker-end="url(#config-composition-arrow)">
     <line x1="260" y1="58" x2="260" y2="74"/>
     <line x1="260" y1="120" x2="260" y2="136"/>
@@ -23,7 +20,6 @@
     <line x1="260" y1="244" x2="260" y2="260"/>
     <line x1="260" y1="306" x2="260" y2="326"/>
   </g>
-
   <g fill="currentColor" font-size="12" text-anchor="middle" opacity="0.9">
     <text x="260" y="42">the deployment default</text>
     <text x="260" y="104">projects/house, reached by extends</text>
@@ -32,17 +28,14 @@
     <text x="260" y="290">the request</text>
   </g>
   <text x="260" y="236" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.55">which sets only its intent</text>
-
   <text x="260" y="352" text-anchor="middle" fill="var(--accent-color)" font-size="12.5" font-weight="600">one AnalysisConfig for this run</text>
   <text x="260" y="368" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.6">composed root-first, so the nearest declaration wins</text>
-
   <g fill="currentColor" font-size="10.5" opacity="0.7">
     <text x="432" y="112">profiles and seeded params</text>
     <text x="432" y="128">accumulate down the chain</text>
     <text x="432" y="236">the naming vocabulary is</text>
     <text x="432" y="252">replaced, never merged</text>
   </g>
-
   <g stroke="currentColor" stroke-width="1" opacity="0.25">
     <line x1="412" y1="120" x2="424" y2="120"/>
     <line x1="412" y1="244" x2="424" y2="244"/>

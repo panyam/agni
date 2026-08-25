@@ -103,3 +103,45 @@ func TestFiguresCarryNoColourLiterals(t *testing.T) {
 		}
 	}
 }
+
+// A BLANK LINE inside a figure file ends the raw-HTML block the inlined SVG is, and the failure is
+// invisible in the source and in the build.
+//
+// `IncludeFile` splices the file into the page BEFORE the markdown renderer runs, so the SVG is
+// ordinary raw HTML by the time CommonMark sees it, and CommonMark ends an HTML block at the first
+// blank line. Whether the next chunk is passed through again depends on what it starts with: a line
+// holding nothing but an open tag (`<g fill="...">`) opens a new HTML block and survives, while a
+// line with content after the tag (`<text x="8" y="44">your machine</text>`) does not, and is parsed
+// as a paragraph instead. The renderer then wraps that chunk in `<p>`, which closes the `<svg>`
+// early, and every element after it lands OUTSIDE the figure. The page still builds, the figure
+// still renders, and the elements in the orphaned tail are simply absent.
+//
+// Four figures merged before this test shipped in exactly that state, each missing its closing
+// caption on the live site. Found by screenshotting a figure and counting the text runs, not by any
+// test, which is why this one exists. `docsite/README.md` carried the opposite advice until then.
+func TestFiguresCarryNoBlankLines(t *testing.T) {
+	entries, err := os.ReadDir(filepath.Join(projectRoot, figuresDir))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		t.Fatalf("reading %s: %v", figuresDir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".svg") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(projectRoot, figuresDir, e.Name()))
+		if err != nil {
+			t.Fatalf("reading %s: %v", e.Name(), err)
+		}
+		lines := strings.Split(strings.TrimRight(string(b), "\n"), "\n")
+		for i, line := range lines {
+			if strings.TrimSpace(line) == "" {
+				t.Errorf("%s/%s has a blank line at line %d; it ends the raw-HTML block, so everything after it can fall outside the <svg>",
+					figuresDir, e.Name(), i+1)
+				break
+			}
+		}
+	}
+}

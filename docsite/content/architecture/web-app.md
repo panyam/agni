@@ -22,6 +22,8 @@ here rather than an analogy borrowed from web apps.
 
 The pattern separates three tiers.
 
+{{ includeFile "figures/presenter-tiers.svg" }}
+
 - **The view is TypeScript, always.** It renders and captures raw input. It executes canvas and
   WebGL draw calls, owns GPU buffers and the DOM, and turns a cursor position into a semantic
   intent. It never contains domain logic.
@@ -71,6 +73,8 @@ into, so there is no client-side HTML skeleton to drift from the server's.
 
 The two server layers are deliberate. The transport-neutral services are the reusable surface,
 and the Connect handlers are glue over them.
+
+{{ includeFile "figures/web-request-path.svg" }}
 
 ## The pages
 
@@ -204,8 +208,10 @@ A few contract details bite if missed.
 
 There are three render surfaces per sheet, from one geometry source.
 
+{{ includeFile "figures/render-surfaces.svg" }}
+
 - **PACKED** is the columnar form: one static integer vertex buffer uploaded once, with primitive
-  records keyed by reference designator, net, and pin so that selection and highlighting are index
+  records keyed by {{ explainable "reference-designator" }}, net, and pin so that selection and highlighting are index
   joins. Text draws in a DOM overlay, since GL draws no glyphs.
 - **SVG** is the verification backend and the default mode, with full text fidelity everywhere.
 - **NATIVE** is the format's own tool as a golden reference, per-format and opt-in.
@@ -247,7 +253,7 @@ and stacks it over the same frame.
   It asserts wiring only. Nothing rendered is checked, because jsdom does not render; the flows that
   need a real browser are tracked in agni issue 136.
 - **The diff view** is side-by-side synced panes, a changes panel with click-to-locate, and an
-  overlay (union) mode gated by an alignment check. Netlist-only formats, whose auto-layout node
+  overlay (union) mode gated by an alignment check. {{ explainable "netlist" "Netlist" }}-only formats, whose auto-layout node
   positions shift between revisions, refuse the overlay by design, while faithful-geometry
   revisions pass.
 
@@ -274,14 +280,9 @@ A WebAssembly-compiled Go presenter that reuses the diff and IR logic in the bro
 option for an offline or zero-server viewer. Nothing in the wire contract assumes the presenter's
 location, so the swap stays possible.
 
-Keeping the WebAssembly boundary cheap is why the contract is shaped this way. Go compiled to
-WebAssembly has higher per-call boundary overhead than a C or Rust equivalent, so when the
-presenter does run in the browser the boundary carries meaning, not pixels. Static geometry is
-uploaded to the GPU once, only a small dynamic overlay for highlight, selection, and cursor
-crosses per frame, input is batched to one intent per animation frame, and the camera transform
-is applied in TypeScript and the GPU so dragging stays smooth even if a presenter frame lags. At
-60 frames per second this keeps interop well under a millisecond, and the real performance ceiling
-is geometry volume and rendering, not the boundary.
+Keeping that boundary cheap is why the contract is shaped this way: it carries meaning rather than
+pixels, so static geometry is uploaded to the GPU once and only a small dynamic overlay crosses per
+frame. The [stack](../stack/) page has the full argument.
 
 ## Serving pieces worth knowing
 
@@ -310,11 +311,17 @@ The fix is the split now in place, and it generalizes to any browser-only librar
   reintroduce the problem**, since a default value is a runtime import of the implementation.
 - `datasheets.ts`, the composition root, is the single place pdf.js enters the app.
 
-So a test supplies a stub page and renders the real workbench: `regionview.test.tsx` covers the
-non-passive wheel listener, the live-transform / settled-rasterize split, and fit-on-first-page.
-`transcribe.test.tsx` needed no seam at all, only a stub handlers object, and found a swallowed
-keystroke on its first run (a signal was set before the event value was read, so Solid wrote the
-empty derived id back into the field mid-handler).
+So a test supplies a stub page and renders the real workbench.
+
+<details>
+<summary>What the tests that became possible then caught</summary>
+
+`regionview.test.tsx` covers the non-passive wheel listener, the live-transform / settled-rasterize
+split, and fit-on-first-page. `transcribe.test.tsx` needed no seam at all, only a stub handlers
+object, and found a swallowed keystroke on its first run (a signal was set before the event value
+was read, so Solid wrote the empty derived id back into the field mid-handler).
+
+</details>
 
 ## Picking: the drawing is the entry point
 
@@ -329,7 +336,7 @@ the priority order, and the intent. That is what lets a canvas click, a search r
 row produce one value.
 
 - **Priority, not topmost.** A symbol is drawn over its own pins, so topmost-wins would make a pin
-  unclickable. Resolution goes pin, component, bus, net, most specific first.
+  unclickable. Resolution goes pin, component, {{ explainable "bus" }}, net, most specific first.
 - **A click is not a pan.** The press/release pair counts as a click only if the cursor moved less
   than a few pixels, or a pan that ends over a wire selects it.
 - **Two pick aids, both opt-in** (`render.WithPickTargets`, which only the served viewer asks for).
@@ -364,9 +371,12 @@ other served preset uses.
 so long. `QueryRow.cell_refs` carries the component per row, and `selectionFromCell(kind, cell, ref)`
 reads both.
 
-It is a sibling of `cell_kinds` rather than the same mechanism, and the distinction is worth keeping
-straight. A pin column's KIND is fixed, since every row of it is a pin; what varies per row is the
-REF. The ref may come from a sibling column (`pin.net(?ref, ?pin, ?net)`), from a constant
+<details>
+<summary>Where the ref comes from, what counts as a pin column, and why a pin cannot be searched by name</summary>
+
+`cell_refs` is a sibling of `cell_kinds` rather than the same mechanism, and the distinction is worth
+keeping straight. A pin column's KIND is fixed, since every row of it is a pin; what varies per row
+is the REF. The ref may come from a sibling column (`pin.net(?ref, ?pin, ?net)`), from a constant
 (`pin.net("U1", ?pin, ?net)`), or from a variable the projection dropped, so it resolves against the
 row's bindings rather than against the visible columns.
 
@@ -385,6 +395,8 @@ Searching for a pin by name is still not possible. `entity(name, kind)` delibera
 enumerate pins, because a pin cannot be one `name` without inventing a composite string nothing else
 in the fact base joins against, and `pin(?ref, ?pin)` already enumerates them for anyone writing the
 query by hand.
+
+</details>
 
 **The table marks where the reader is standing**, because a click sends the canvas somewhere and a
 forty-row result otherwise says nothing about which answer it came from. A cell is marked when
@@ -438,16 +450,21 @@ list. `findingsFor(findings, selections)` in `findings.ts` is the filter. The pr
 `FindingsState` to both the checks panel and the query panel from a single `pushFindings`, so the two
 cannot disagree.
 
-The alternative fails in three ways at once, which is why the issue rules it out up front. A scoped
-run resolves config independently and can contradict the report beside it, the seam C25 exists to
-protect. It redoes net solving and reach walks once per click. And it makes "the union of what I
-clicked equals the full pass" a hope rather than a property.
+<details>
+<summary>Why a scoped re-run was ruled out, and why the filter takes a set</summary>
+
+The alternative fails in three ways at once. A scoped run resolves config independently and can
+contradict the report beside it, the seam C25 exists to protect. It redoes net solving and reach
+walks once per click. And it makes "the union of what I clicked equals the full pass" a hope rather
+than a property.
 
 `findingsFor` takes a SET rather than one subject, because a set is the primitive and one click is
 its degenerate case. The results footer is the set case in the UI: every locatable cell, deduped by
 `sameSelection`, which is also how a finding matching several of the given subjects is still counted
 once. `selectionFromFinding` is the third producer of a `Selection`, after a keyed element and a
 result cell, so the canvas, the query table and the checks panel share one identity rule.
+
+</details>
 
 **A count needs its state or it lies.** A zero has four meanings and only one of them is "nothing is
 wrong here": no rules are selected, nobody has run them, the ruleset is half-evaluated, or it ran
@@ -499,9 +516,8 @@ rests on. Context makes a finding REACHABLE from another entity without making i
 The results table is fixed-layout, which is what keeps the columns equal by default and makes a
 dragged width stick. Fixed layout does not clip: a cell whose content will not wrap draws straight
 over the columns to its right, and the column never widens to fit it. That happened on a 21-sheet
-design, where the sheet-badge strip on a ground net was one nowrap line and painted over the two
-columns beside it. Measured in a standalone repro of the same rules: the last badge's right edge sat
-1927px past its own cell.
+design, where the sheet-badge strip on a {{ explainable "ground" }} net was one nowrap line and
+painted over the two columns beside it, its last badge's right edge sitting 1927px past its own cell.
 
 So a cell has three behaviours in order. `overflow-wrap: anywhere` breaks a long unbroken value, which
 handles nearly everything (a 66-character net name in a 120px column wraps to four lines and stays
