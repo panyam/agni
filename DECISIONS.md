@@ -1059,10 +1059,50 @@ about that before someone assumes the tag makes it a config flip. Going linked a
 every figure to a theme-neutral palette. What the indirection genuinely buys is that the strategy
 lives in ONE function: minification, caching, or a wrapper element could be added without touching a
 page. The trigger for wanting the other mode is a figure shared by SEVERAL pages, since an include
-copies its bytes into each one while a link would let the browser cache it once. No figure has more
-than one caller today, so nothing needs it yet.
+copies its bytes into each one while a link would let the browser cache it once.
+
+**That trigger has since fired, and the answer did not change.** Five of the 44 included figures now
+have two callers each, because the readability pass reused a diagram wherever one already said the
+right thing rather than drawing a near-duplicate: `decoupling-capacitor` and `absolute-maximum-rating`
+and `via` are each on a term page and a `learn/` chapter, `net-rename` is on a guide page and a
+tutorial rung, and `covered-vs-answered` is on an architecture page and a tutorial rung. The median
+figure is about 2.8 KB, so the duplicated bytes come to roughly 12 KB across the whole site, against
+losing `currentColor` and `var(--accent-color)` on every figure. Reuse turned out to be the argument
+FOR the include rather than against it: one file, two pages, and no second copy to drift.
 
 **Measured while deciding.** Pagefind does NOT index SVG text: prose phrases from a term page appear
 in its search fragment and the same page's SVG labels do not. So inlining costs nothing in search
 noise, and diagram labels are unsearchable in either mode. The first attempt at that check returned
 zero for the control as well and would have supported the same conclusion for the wrong reason.
+
+## Deep rationale on a docsite page is collapsed, not deleted
+
+**Question.** The readability pass over `docsite/content/` was meant to make dense pages readable.
+The pilot on the datasheet-layer page landed at 38% fewer words on the page and only 14% fewer
+overall, because the difference went into `<details>` blocks rather than out of the file. Is that a
+real reduction or an accounting trick, and should the collapsed material simply be deleted?
+
+**Answer. It stays collapsed.** What sits behind these blocks is measurement and post-mortem: the
+numbers a threshold was calibrated against, the bug that forced a field to exist, the three rules
+that defeat an obvious inference. None of it is reconstructible from the code, and all of it is what
+makes a decision arguable rather than merely readable. On-page length is the number that governs
+whether a page can be skimmed, and a `<details>` costs a passing reader nothing while staying one
+click and one `grep` away.
+
+Applied across the nine `architecture/` pages, on-page word count fell between 1% and 31% per page
+while totals moved a few percent either way. `stack.md` is the honest read of the trade: identical
+total, a third less on the page.
+
+**Where it does NOT apply.** A reference page is arrived at with a question, so hiding the reasoning
+costs nothing until the reader wants it. A teaching page is read start to finish, so hiding the
+reasoning is hiding the chapter. The `learn/` pass therefore collapsed nothing at all, and the
+`tutorials/` pass collapsed nothing either. The same reasoning splits the glossary convention: a
+`learn/` chapter teaches a term in full the first time and only later mentions are tagged, which is
+why that section gained figures and almost no tags.
+
+**What this leaves open.** A closed `<details>` is not reliably reachable by a browser's find-in-page,
+which varies by engine and by whether the content opts into `hidden="until-found"`. Nothing here
+depends on it today, since the collapsed material is rationale rather than lookup, and the checklists
+a contributor greps for were deliberately left on the page for that reason. If a block someone needs
+to FIND ends up collapsed, that is the signal to reach for `hidden="until-found"` rather than to
+reopen this decision.

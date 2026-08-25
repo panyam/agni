@@ -736,3 +736,13 @@ the runner's architecture rather than on any change. Closing 472 is what lets th
 git-status check forces a regenerate-then-commit-then-gate ordering, so the first run after an edit
 fails for a reason unrelated to the edit. `proto-check` spells this out and
 `hack/tutorial_runs_check.sh` follows it.
+**Note:** the docsite's `guide/` section is the un-generated counterpart and shows the cost. Its 37
+command fences across nine pages are typed by hand with no `runs/` directory, so nothing regenerates
+them and nothing reads them. Four went stale without a word: `getting-started.md` reported 10
+findings where its fixture produces 11 and named 29 rules where it runs 78, with the prose beneath it
+quoting the wrong number back, and it was found by grepping for the shape rather than by any check.
+This is not a violation of the constraint, since a hand-written fence is not a generated artifact,
+but it is the evidence for why the constraint exists. `hack/tutorial_runs_check.sh` walks
+`docsite/content/**/runs/` rather than a fixed pair of sections, so a guide page joins the gate by
+gaining a `runs/` directory and one spec per fence, with no harness change. `OUT_OF_SCOPE.md` tracks
+it.

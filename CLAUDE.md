@@ -55,8 +55,11 @@ and the page carries `{{ includeFile "figures/<name>.svg" }}`, which inlines it 
 figure still resolves `currentColor` and `--accent-color` against the page's theme while the prose
 stays readable. An `<img src>` cannot do that, because the image renders in its own document and
 inherits nothing. `includefile_test.go` fails the gate on a path that does not resolve (`IncludeFile`
-returns an empty string and the build still succeeds), on a figure nothing includes, and on a colour
-literal. The rules and the traps are in `docsite/README.md`.
+returns an empty string and the build still succeeds), on a figure nothing includes, on a colour
+literal, and on a BLANK LINE inside the file, which ends the raw-HTML block and drops everything
+after it out of the `<svg>`. The rules and the traps are in `docsite/README.md`, including the house
+style to copy and the three-axis browser sweep that is the only thing catching a label printed on a
+wire.
 
 `site/` is stale build output, not a source tree. Some older notes reference a retired `docs/NN-*.md`
 mkdocs tree that was folded into `docsite/content/` with audience-first names.
