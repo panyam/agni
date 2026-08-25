@@ -134,19 +134,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `core/report/style.css`. **A link is only emitted for a mount you DECLARED**, and `--url-base` then
   asks that server's `ListMounts` whether it serves that name from the same root; a withheld link
   always prints its reason. `agni open <design>` prints a matching `check --mount … --url-base …`
-  line, and because one process mints the mount and serves it the two cannot disagree.
-- **A verdict link's PATH and its HASH are one resolution, and both name the design's declared
-  ENTRY.** `verdictLinkTarget` returns the pair, so they cannot describe different files. They were
-  two, and the split had no symptom while the argument WAS the entry. It had two once it was not. A
-  design folder minted `/designs/<mount>/<dir>/view`, which the viewer's URL space reads as the file
-  at `<dir>` and `GetDesign` refuses. A declared companion minted its own path carrying the entry's
-  hash, which the viewer reported as a revision mismatch on a design that was in sync (agni issues
-  489, 492). The viewer compares the hash before it draws, and treats "the server could not
-  hash" as a THIRD state rather than as a match (issue 392 acceptance 3, PR 490).
-- **The two `DesignHash` implementations are not symmetric.** `localLoader`'s (the CLI's) resolves the
-  design descriptor and hashes the declared entry; `osLoader`'s (the server's) hashes whatever path
-  the URI names. That is why `GetDesign` on a design FOLDER is not merely unhashable but refused
-  outright. Check which side you are on before assuming a hash resolves anything.
+  line, and because one process mints the mount and serves it the two cannot disagree. **A link names
+  the design's declared ENTRY whatever you pointed the command at, and carries the revision it was
+  read at**, which the viewer checks before it draws. Semantics and the two ways the halves used to
+  disagree are in `guide/checks-and-reports.md`.
 - Toolchain: Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
   `go.mod` and invoked via `go tool`**, so their versions are data rather than something to match by
   hand. Only `buf` itself has to be on your PATH.
