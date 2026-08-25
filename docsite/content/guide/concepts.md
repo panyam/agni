@@ -14,17 +14,17 @@ Every entry has the same three parts:
 - **Why it matters**: the practical consequence when you run the tool.
 
 Agni is a software engineer's attempt to learn hardware design by building tooling for it,
-so it leans on ordinary software ideas throughout. If you want the reverse map (circuit
-ideas explained to a software engineer), that framing runs the other way and shows up in
-the developer docs.
+so it leans on ordinary software ideas throughout. For the reverse map, circuit ideas
+explained to a software engineer, see [the software analogy](../../reference/analogy/).
 
 ## IR (the internal representation)
 
 **What the tool calls it:** the IR, or "the design model."
 
-**What it's like for you:** one normalized netlist-plus-BOM that every EDA export
-collapses into. KiCad, Allegro, OrCAD, and an EDIF dump all land in the same shape, the
-way a bench multimeter reads volts the same whether the board came from any of them.
+**What it's like for you:** one normalized {{ explainable "netlist" }}-plus-BOM that every
+EDA export collapses into. KiCad, Allegro, OrCAD, and an EDIF dump all land in the same
+shape, the way a bench multimeter reads volts the same whether the board came from any of
+them.
 
 **Why it matters:** a rule you write, or a report you read, behaves identically no matter
 which tool exported the design. You learn the tool once, not once per CAD package. When a
@@ -38,8 +38,8 @@ parameters tier.
 
 **What it's like for you:** each tier is a *fact source you either connected or didn't*.
 No `.kicad_pcb` loaded means there is no copper to run clearance against, the same way a
-DNP footprint contributes no connection to the circuit. The tier is not broken, it is
-simply empty.
+DNP {{ explainable "footprint" }} contributes no connection to the circuit. The tier is not
+broken, it is simply empty.
 
 **Why it matters:** **silence is not a pass.** A quiet board tier means "I had no layout
 to check," not "your layout is clean." The report names which tiers were live, so you can
@@ -78,10 +78,10 @@ versus what is a note.
 **What the tool calls it:** a parameter set (`PartSpec` values). A datasheet becomes a
 `doc-IR`.
 
-**What it's like for you:** the abs-max and operating limits you would otherwise read off
-a PDF by eye, turned into numbers the tool can compare against your design. Think of it as
-transcribing the "Absolute Maximum Ratings" table once, with the conditions attached, so
-it can be checked a thousand times.
+**What it's like for you:** the {{ explainable "absolute-maximum-rating" "abs-max" }} and
+operating limits you would otherwise read off a PDF by eye, turned into numbers the tool
+can compare against your design. Think of it as transcribing the "Absolute Maximum Ratings"
+table once, with the conditions attached, so it can be checked a thousand times.
 
 **Why it matters:** the tool can catch "you are driving 24V into a part rated for 20V"
 before the board is built, and show you the exact row it read. A limit that has only a
@@ -103,9 +103,9 @@ list instead of eyeballing two prints side by side.
 
 **What the tool calls it:** a conventions file (allow / exempt regex sets).
 
-**What it's like for you:** your net and ref-des house style, written down once as
-patterns instead of a wiki page nobody reads. "Power nets look like `+3V3`," "diff pairs
-end in `_P`/`_N`," "no ref des reused."
+**What it's like for you:** your net and {{ explainable "reference-designator" "ref-des" }}
+house style, written down once as patterns instead of a wiki page nobody reads. "Power nets
+look like `+3V3`," "diff pairs end in `_P`/`_N`," "no ref des reused."
 
 **Why it matters:** the style is enforced on every export automatically, and tool-generated
 stub names (the `N$…` autonames CAD tools invent) are exempt by default, so you are only

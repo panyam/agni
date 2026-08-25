@@ -1,0 +1,111 @@
+<svg viewBox="0 0 640 516" role="img" aria-labelledby="agni-command-map-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="agni-command-map-title">The agni commands grouped by what they take. Seven commands read one design and report on it. One compares two revisions. Two host the browser viewer. Three work on a results document written by an earlier run, which stays readable after the design is gone.</title>
+
+  <g fill="currentColor" font-size="9.5" letter-spacing="0.08em" opacity="0.45">
+    <text x="14" y="26">READ ONE DESIGN</text>
+    <text x="14" y="224">COMPARE TWO REVISIONS</text>
+    <text x="14" y="314">HOST A VIEWER</text>
+    <text x="14" y="418">KEEP A RUN</text>
+  </g>
+
+  <g stroke="currentColor" stroke-width="1" opacity="0.12">
+    <line x1="12" y1="206" x2="628" y2="206"/>
+    <line x1="12" y1="296" x2="628" y2="296"/>
+    <line x1="12" y1="400" x2="628" y2="400"/>
+  </g>
+
+  <!-- what each band takes in -->
+  <g fill="currentColor" opacity="0.04">
+    <rect x="12" y="74" width="140" height="52" rx="4"/>
+    <rect x="12" y="234" width="140" height="50" rx="4"/>
+    <rect x="12" y="326" width="140" height="50" rx="4"/>
+    <rect x="12" y="424" width="140" height="52" rx="4"/>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+    <rect x="12" y="74" width="140" height="52" rx="4"/>
+    <rect x="12" y="234" width="140" height="50" rx="4"/>
+    <rect x="12" y="326" width="140" height="50" rx="4"/>
+    <rect x="12" y="424" width="140" height="52" rx="4"/>
+  </g>
+
+  <g fill="currentColor" font-size="11" text-anchor="middle" opacity="0.8">
+    <text x="82" y="98">a design file</text>
+    <text x="82" y="116">or a design folder</text>
+    <text x="82" y="256">an older revision</text>
+    <text x="82" y="274">and a newer one</text>
+    <text x="82" y="348">a design and</text>
+    <text x="82" y="366">the project it is in</text>
+    <text x="82" y="448">a results document</text>
+    <text x="82" y="466">from an earlier run</text>
+  </g>
+
+  <text x="12" y="148" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-weight="600" fill="var(--accent-color)">agni start</text>
+  <text x="12" y="164" font-size="11" fill="currentColor" opacity="0.6">scaffolds the folder form</text>
+
+  <!-- feed lines into each band's spine -->
+  <g stroke="currentColor" stroke-width="1" opacity="0.4">
+    <line x1="152" y1="100" x2="172" y2="100"/>
+    <line x1="152" y1="259" x2="172" y2="259"/>
+    <line x1="152" y1="351" x2="172" y2="351"/>
+    <line x1="152" y1="450" x2="172" y2="450"/>
+  </g>
+  <g fill="currentColor" opacity="0.4">
+    <polygon points="172,96 178,100 172,104"/>
+    <polygon points="172,255 178,259 172,263"/>
+    <polygon points="172,347 178,351 172,355"/>
+    <polygon points="172,446 178,450 172,454"/>
+  </g>
+
+  <!-- spines and per-command ticks -->
+  <g stroke="currentColor" stroke-width="1" opacity="0.25">
+    <line x1="176" y1="44" x2="176" y2="188"/>
+    <line x1="176" y1="336" x2="176" y2="368"/>
+    <line x1="176" y1="436" x2="176" y2="484"/>
+    <line x1="176" y1="44" x2="184" y2="44"/>
+    <line x1="176" y1="68" x2="184" y2="68"/>
+    <line x1="176" y1="92" x2="184" y2="92"/>
+    <line x1="176" y1="116" x2="184" y2="116"/>
+    <line x1="176" y1="140" x2="184" y2="140"/>
+    <line x1="176" y1="164" x2="184" y2="164"/>
+    <line x1="176" y1="188" x2="184" y2="188"/>
+    <line x1="176" y1="336" x2="184" y2="336"/>
+    <line x1="176" y1="368" x2="184" y2="368"/>
+    <line x1="176" y1="436" x2="184" y2="436"/>
+    <line x1="176" y1="460" x2="184" y2="460"/>
+    <line x1="176" y1="484" x2="184" y2="484"/>
+  </g>
+
+  <g font-size="11.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-weight="600" fill="var(--accent-color)">
+    <text x="188" y="48">stats</text>
+    <text x="188" y="72">check</text>
+    <text x="188" y="96">review</text>
+    <text x="188" y="120">query</text>
+    <text x="188" y="144">render</text>
+    <text x="188" y="168">intake</text>
+    <text x="188" y="192">emit</text>
+    <text x="188" y="263">diff</text>
+    <text x="188" y="340">open</text>
+    <text x="188" y="372">serve</text>
+    <text x="188" y="440">results</text>
+    <text x="188" y="464">results --compare</text>
+    <text x="188" y="488">import-results</text>
+  </g>
+
+  <g font-size="11" fill="currentColor" opacity="0.7">
+    <text x="322" y="48">component, section, and net counts</text>
+    <text x="322" y="72">findings, gated by --fail-on</text>
+    <text x="322" y="96">one outcome per checklist item</text>
+    <text x="322" y="120">rows of facts, each with its provenance</text>
+    <text x="322" y="144">the schematic or the board, svg or pack</text>
+    <text x="322" y="168">a sanitized summary, no net names in it</text>
+    <text x="322" y="192">the same design as IPC-2581</text>
+    <text x="322" y="263">what changed, as text, json or csv</text>
+    <text x="322" y="340">one design, prints its URL</text>
+    <text x="322" y="372">named mounts, the whole viewer</text>
+    <text x="322" y="440">renders it with the design deleted</text>
+    <text x="322" y="464">the three-way entity split</text>
+    <text x="322" y="488">writes one from another tool's report</text>
+  </g>
+
+  <text x="12" y="508" font-size="10" fill="currentColor" opacity="0.5">Not shown: the global flags, and the developer commands native, validate, census and derive.</text>
+</svg>

@@ -54,7 +54,8 @@ libraries, like vendoring your dependencies).
 
 ## Instances: `Component`
 
-**Software.** `r1 := Device.R(value: "10k")`. The variable name is the reference designator.
+**Software.** `r1 := Device.R(value: "10k")`. The variable name is the
+{{ explainable "reference-designator" }}.
 Constructor arguments and fields are the instance attributes (Value, MPN/Manufacturer). Twenty
 resistors are twenty instances of one class.
 
@@ -86,10 +87,11 @@ units never do.
 memory cell. Everything attached to "+5V" IS the same electrical node. There is no caller and no
 callee, no direction on the edge itself.
 
-**Circuit.** The +5V rail: the regulator's output pin, the MCU's VDD pin, and a decoupling cap
-all tied together. Directionality lives on the pins. The regulator's pin is `power_out`, the
-MCU's is `power_in`. Those are the type annotations the connectivity rules dispatch on, and a
-missing direction means skip rather than guess.
+**Circuit.** The +5V {{ explainable "rail" }}, where the regulator's output pin, the MCU's VDD pin
+and a {{ explainable "decoupling-capacitor" "decoupling cap" }} are all tied together.
+Directionality lives on the pins. The regulator's pin is `power_out`, the MCU's is `power_in`.
+Those are the type annotations the connectivity rules dispatch on, and a missing direction means
+skip rather than guess.
 
 **Schema.** `ir.Net` with `Connections` (component ref + pin ref). Pin directions come from the
 `PartType`.
@@ -103,29 +105,38 @@ only implicit references, and the solver builds the symbol table of which tokens
 thing. Two labels "+5V" on different wires are two mentions of one symbol. The solver unifies
 them, exactly like a linker unifying external symbols by name.
 
-**Circuit.** KiCad stores no netlist. Connectivity is the drawing. A wire endpoint on a pin's
-connect point binds. A label names the node. Same-named power symbols merge across the sheet.
-Getting these binding rules right is a language-semantics problem, so they are pinned
-against the reference implementation (`kicad-cli`), the way a compiler pins against a conformance
-suite. The full binding rules are in [Net solving and hierarchy](../../architecture/net-solving/).
+**Circuit.** KiCad stores no {{ explainable "netlist" }}. Connectivity is the drawing. A wire
+endpoint on a pin's connect point binds. A label names the node. Same-named power symbols merge
+across the sheet. Getting these binding rules right is a language-semantics problem, so they are
+pinned against the reference implementation (`kicad-cli`), the way a compiler pins against a
+conformance suite. The full binding rules are in
+[Net solving and hierarchy](../../architecture/net-solving/).
 
 ## The protection walk: `Reach`
 
 **Software.** Some questions are not about one node but about a path. Is there an auth middleware
 anywhere between the public handler and the database call? Neither endpoint can answer that. You
 walk the call graph between them. `Reach` is that walk. A two-terminal series part (a resistor,
-inductor, {{ explainable "ferrite-bead" }}, or fuse) is inline middleware. It splits one logical channel into two
-named nets, so a per-net rule is blind across it. `Reach(start, hops)` is a bounded BFS over the
-pass-element adjacency, and the helpers read the result like a stack trace. `PathTo` is the path,
-`ThroughOnPath` is the middleware crossed in order, and `Between(from, to, class, hops)` is the
-one-line "does any X sit on the path" query.
+inductor, {{ explainable "ferrite-bead" }}, or fuse) is inline middleware. It splits one logical
+channel into two named nets, so a per-net rule is blind across it.
+
+`Reach(start, hops)` is a bounded BFS over the pass-element adjacency, and the helpers read the
+result like a stack trace. `PathTo` is the path, `ThroughOnPath` is the middleware crossed in order,
+and `Between(from, to, class, hops)` is the one-line "does any X sit on the path" query.
+
+<details>
+<summary>Why a series capacitor is a non-edge and a rail is a stop</summary>
 
 Two edges of the model carry the electrical meaning. A **series capacitor is a DC block**, an
 insulator between two plates, so it is a non-edge and the walk never crosses it (a decoupling cap
-to ground is a different role entirely). A **rail is a global singleton**. Ground, the
-design-wide `global` fact, or any net with bus-scale fan-out (more than 16 pins) is a stop,
-because following a pull-up onto `VCC` would make the whole design reachable. That is the graph
-equivalent of chasing an `import` into a global and treating everything it touches as local.
+to ground is a different role entirely).
+
+A **rail is a global singleton**. Ground, the design-wide `global` fact, or any net with bus-scale
+fan-out (more than 16 pins) is a stop, because following a {{ explainable "pull-up" }} onto `VCC`
+would make the whole design reachable. That is the graph equivalent of chasing an `import` into a
+global and treating everything it touches as local.
+
+</details>
 
 **Circuit.** Protection and presence rules are reachability questions. A fuse sits somewhere
 between the connector and the regulator. An ESD clamp hangs off a net on the power-entry path.
@@ -133,7 +144,8 @@ The series element that splits the net is exactly what a per-net check cannot se
 why the walk exists.
 
 **Schema.** `check.Model.Reach`/`Between` over the netlist IR. The crossable classes are
-resistor, inductor, ferrite, and fuse. The stops are ground, global, and high fan-out.
+resistor, inductor, ferrite, and fuse. The stops are {{ explainable "ground" }}, global, and high
+fan-out.
 
 ![the protection walk]({{.Site.PathPrefix}}/static/images/analogy/reach-walk.svg)
 

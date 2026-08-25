@@ -14,7 +14,7 @@ Source file: a 62MB real-world `.eds` SCHEMATIC export (proprietary, kept outsid
 ## 1. What a schematic is (the concepts)
 
 A schematic is the human-facing **drawing** of a design. It encodes the same connectivity as the
-netlist, but as a diagram a person reads. The vocabulary:
+{{ explainable "netlist" }}, but as a diagram a person reads. The vocabulary:
 
 | Concept | What it is | In EDIF |
 |---|---|---|
@@ -22,20 +22,21 @@ netlist, but as a diagram a person reads. The vocabulary:
 | **Symbol** | The reusable picture of a part type (a resistor zig-zag, an IC box with pins). Drawn once, placed many times. | `(symbol ...)` inside a cell view |
 | **Pin** | A connection point on a symbol, at a fixed local coordinate. Wires attach here. | `(portImplementation ... (connectLocation ...))` |
 | **Placement / instance** | A symbol dropped on a sheet at some position/rotation, standing for one physical part. | `(instance ...)` inside a page |
-| **Ref-des** | The reference designator of a placement (`R12`, `J1900`). Names the physical part and joins to the netlist. | `(designator (stringDisplay "J1900" ...))` |
+| **Ref-des** | The {{ explainable "reference-designator" }} of a placement (`R12`, `J1900`). Names the physical part and joins the drawing to the netlist. | `(designator (stringDisplay "J1900" ...))` |
 | **Wire / net segment** | A drawn line (polyline) connecting pins. Belongs to a net. | `(figure NET (path (pointList ...)))` |
 | **Net** | An electrical node: all the pins and wires at the same potential. | `(net ... (joined ...))` |
 | **Junction / dot** | A filled dot where wires that cross are electrically joined. | `(dot (pt ...))` |
 | **Off-page connector** | A tag that continues a net onto another sheet without a drawn wire. | `(offPageConnector ...)` |
 | **Label / annotation** | Free text on the sheet (net names, notes, table titles, block names). | `(annotate (stringDisplay ...))` |
 | **Title block** | The border/metadata frame (sheet name, revision, date). It is just another placed symbol. | `(instance ... (viewRef ... (libraryRef Borders)))` |
-| **Bus** | A bundle of wires drawn as one thick line. Present in the style palette (`WIRE_BUS`), not central to a first render. | `figureGroup BUS` |
+| **Bus** | A {{ explainable "bus" }} drawn as one thick line. Present in the style palette (`WIRE_BUS`) and not central to a first render. | `figureGroup BUS` |
 
-The key mental model for rendering is that **a symbol is defined once (shapes plus pin positions
-in symbol-local coordinates), and a placement is a symbol plus a transform (where and how
-rotated).** To draw a placed part you look up its symbol, apply the placement transform, and
-stroke the shapes. Wires are drawn directly from their own point lists. They already carry
-absolute sheet coordinates.
+For rendering, **a symbol is defined once, as shapes plus pin positions in symbol-local
+coordinates, and a placement is that symbol plus a transform.** To draw a placed part you look up
+its symbol, apply the placement transform, and stroke the shapes. Wires are drawn straight from
+their own point lists, since they already carry absolute sheet coordinates.
+
+{{ includeFile "figures/edif-symbol-placement.svg" }}
 
 ## 2. `.eds` is a superset of `.edn`
 
@@ -62,27 +63,30 @@ re-derived from the `.eds`. The two are joined by key at render time.
 
 ## 3. Coordinate system and units
 
-- **Coordinates are integers** in EDIF distance units. The header declares the scale:
-  `(scale 1 (e 1 -8) (unit DISTANCE))` means 1 unit = 1e-8 m = **10 nanometers**. So `59690000`
-  units = 0.5969 m = 596.9 mm. Store the raw integers, and record `unit_nm = 10` once so the
-  renderer can convert to mm/pixels.
-- **Why integers, not floats.** The EDIF spec (and GDSII, Gerber, ODB++, KiCad) store geometry as
-  integer counts of a database unit plus a scale, never as floats. The reason is exactness on a
-  manufacturing grid. Two wire endpoints, or a pin and a wire, must be the *same* point to be
-  electrically connected, and integers give bit-exact equality where floats give near-misses
-  (`0.1 + 0.2 != 0.3`) and ambiguous serialization (which fights round-trip fidelity, see
-  [Ingestion and IR](../../architecture/ingestion-and-ir/)). Integers are kept end to end.
-- **float32 precision trap (renderer).** `float32` represents integers exactly only up to
-  2^24 = 16,777,216, but coordinates here reach ~8.6e7. Uploading raw units as `float32` GPU
-  attributes loses precision and misaligns wires. Keep int32 through storage (int32 holds the full
-  range, max ~8.6e7 << 2.1e9) and either use integer vertex attributes converted in-shader or
-  rebase per sheet (subtract the sheet origin) before converting to float.
-- **Points** are `(pt X Y)`. Y increases upward (schematic convention). Symbol shapes frequently
-  use negative Y (the symbol origin is a top reference and pins hang below).
-- **Page size** is `(pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))`, i.e. 863.6 mm x
-  558.8 mm for this design.
-- **Bounding boxes** `(boundingBox (rectangle (pt) (pt)))` appear on symbols and sheets and are
-  the natural key for the spatial index / viewport culling.
+| Fact | In this file |
+|---|---|
+| **Coordinates are integers** | In EDIF distance units. The header's `(scale 1 (e 1 -8) (unit DISTANCE))` declares 1 unit = 1e-8 m, so **10 nanometers**, and `59690000` units = 596.9 mm. Store the raw integers and record `unit_nm = 10` once, so the renderer can convert to mm or pixels. |
+| **Points** | `(pt X Y)`, with Y increasing upward (schematic convention). Symbol shapes frequently use negative Y, because the symbol origin is a top reference and pins hang below it. |
+| **Page size** | `(pageSize (rectangle (pt 0 0) (pt 86360000 55880000)))`, so 863.6 mm by 558.8 mm for this design. |
+| **Bounding boxes** | `(boundingBox (rectangle (pt) (pt)))` appears on symbols and sheets, and is the natural key for the spatial index and for viewport culling. |
+
+**float32 precision trap (renderer).** `float32` represents integers exactly only up to
+2^24 = 16,777,216, and coordinates here reach ~8.6e7. Uploading raw units as `float32` GPU
+attributes loses precision and misaligns wires. Keep int32 through storage, where the full range
+fits comfortably (~8.6e7 against a limit of ~2.1e9), and either use integer vertex attributes
+converted in-shader or rebase per sheet, subtracting the sheet origin, before converting to float.
+
+<details>
+<summary>Why integers rather than floats</summary>
+
+The EDIF spec stores geometry as integer counts of a database unit plus a scale, and so do GDSII,
+Gerber, ODB++ and KiCad. The reason is exactness on a manufacturing grid. Two wire endpoints, or a
+pin and a wire, must be the *same* point to be electrically connected. Integers give bit-exact
+equality where floats give near-misses (`0.1 + 0.2 != 0.3`) and ambiguous serialization, which
+fights round-trip fidelity (see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
+Integers are kept end to end.
+
+</details>
 
 ## 4. Document structure (top to bottom)
 
@@ -266,15 +270,17 @@ The sidecar never contains the IR. It references the IR by stable keys, resolved
 `source_id` (the EDIF `&id`) is the crux. It is identical across `.edn` and `.eds`, so it is the
 unambiguous join even where display names collide.
 
-**The symbol join has three dimensions, not two.** A placement references a cell by display name
-*or* internal `&id`, a library likewise (`(rename Ferrite_Bead "Ferrite Bead")`), and a **view**
-by id (`(viewRef &..._D... (cellRef (name &cellid) ...))`). A multi-section cell (a connector with
-A/B/C/D banks) defines one SCHEMATIC view per bank, each its own symbol, so the reader emits one
-`SymbolDef` per view keyed by `(cell_ref, library_ref, view_ref)` and normalizes every reference
-to the display name. Builtin GRAPHIC cells (GND, no-connect, off-page) keep their geometry under
-`(view (contents (figure ...)))` with no `(symbol ...)` node. Pin-number labels come from each
-`portImplementation`'s `(name X (display (origin ...)))`, and off-page connector net names from a
-page-level `(portImplementation (name X (display ...)))`.
+**The symbol join needs a third key beyond cell and library.** A placement references a cell by
+display name *or* internal `&id`, a library likewise (`(rename Ferrite_Bead "Ferrite Bead")`), and
+a **view** by id (`(viewRef &..._D... (cellRef (name &cellid) ...))`). A multi-section cell, say a
+connector with A/B/C/D banks, defines one SCHEMATIC view per bank and each bank is its own symbol.
+So the reader emits one `SymbolDef` per view, keyed by `(cell_ref, library_ref, view_ref)`, and
+normalizes every reference to the display name.
+
+Builtin GRAPHIC cells (GND, no-connect, off-page) are the exception. They keep their geometry
+under `(view (contents (figure ...)))` with no `(symbol ...)` node at all. Pin-number labels come
+from each `portImplementation`'s `(name X (display (origin ...)))`, and off-page connector net
+names from a page-level `(portImplementation (name X (display ...)))`.
 
 ## 9. Grammar sketch (the schematic subset we read)
 
@@ -334,18 +340,12 @@ offPage       = "(offPageConnector" ID ")"
 
 ## 10. Gotchas (schematic-specific, on top of the netlist primer's)
 
-1. **Symbol vs placement split.** Shapes and pin coordinates live once in the cell's
-   `(symbol ...)`, in symbol-local coordinates. A placement is only a transform plus a `cellRef`.
-   You must join placement to symbol to draw anything.
-2. **Nets nest.** The outer `(net NAME (joined ...))` is the logical signal. The wires live in
-   inner `(net (rename ...) (joined ...) (figure NET ...))` groups. Collect wires from the inner
-   nets, but the join key (net name) is the outer one.
-3. **`cellRef` is polymorphic.** It can be a bare atom or `(name X (display ...))`.
-4. **`designator` wraps `stringDisplay` here**, not a bare string like in the netlist.
-5. **Pins need the transform.** A wire endpoint only matches a pin after you apply the placement
-   orientation plus origin to the symbol-local `connectLocation`.
-6. **Volume is per-design, not per-view.** ~121k figures and ~149k points across 82 sheets. Per
-   sheet it is a few thousand primitives, and the renderer loads one sheet at a time. See
-   [Geometry and rendering](../../architecture/geometry-and-rendering/) for why the proto models
-   bulk geometry as packed/columnar arrays rather than object-per-point.
-7. **Y is up.** Symbol shapes commonly use negative Y below a top-origin.
+| Gotcha | What it means |
+|---|---|
+| **Symbol vs placement split** | Shapes and pin coordinates live once in the cell's `(symbol ...)`, in symbol-local coordinates. A placement is only a transform plus a `cellRef`, so you must join placement to symbol to draw anything. |
+| **Nets nest** | The outer `(net NAME (joined ...))` is the logical signal. The wires live in inner `(net (rename ...) (joined ...) (figure NET ...))` groups. Collect wires from the inner nets, and take the join key, the net name, from the outer one. |
+| **`cellRef` is polymorphic** | It can be a bare atom or `(name X (display ...))`. |
+| **`designator` wraps `stringDisplay` here** | Not a bare string, as it is in the netlist. |
+| **Pins need the transform** | A wire endpoint only matches a pin after you apply the placement orientation and origin to the symbol-local `connectLocation`. |
+| **Volume is per-design, not per-view** | ~121k figures and ~149k points across 82 sheets. Per sheet that is a few thousand primitives, and the renderer loads one sheet at a time. See [Geometry and rendering](../../architecture/geometry-and-rendering/) for why the proto models bulk geometry as packed columnar arrays rather than object-per-point. |
+| **Y is up** | Symbol shapes commonly use negative Y below a top-origin. |
