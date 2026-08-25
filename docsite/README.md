@@ -142,11 +142,25 @@ subgraphs, or to move the detail from side notes into the node labels. Prefer pl
 subgraph whose title is long. `CONTRIBUTING.md` covers the separate quote-decoding trap that applies
 to a diagram in a PR body rather than a page.
 
-**Style INLINE SVG through `--accent-color` and `currentColor`, never a literal.**
+**A hand-authored diagram lives in `figures/` and a page pulls it in with
+`{{ includeFile "figures/<name>.svg" }}`. Do not paste an `<svg>` into a markdown page.** The
+directive reads the file at BUILD time and returns raw HTML, so the SVG still lands inline in the
+rendered page. That is what keeps the theming rule below working, and it keeps several hundred
+characters of path data out of the prose, where it buries the sentence either side of it.
+
+Three things about the arrangement. **A bad path fails SILENTLY**, because `IncludeFile` returns an
+empty string when the file does not resolve, so a rename drops the figure from the page and the build
+still succeeds. `includefile_test.go` is what turns that into a gate failure, and it also fails on a
+figure nothing includes, for the reason `terms_test.go` rejects a glossary entry with no caller.
+**Blank lines inside the SVG file are harmless**, unlike a figure written straight into a page, so
+format it readably. And **the file is not served**: `figures/` sits outside `static/`, so the only
+way to reach a diagram is the include, and there is no second copy to drift.
+
+**Style that SVG through `--accent-color` and `currentColor`, never a literal.**
 `static/css/main.css` defines the palette for both themes, and the docsite has a dark mode. A
-hardcoded hex reads fine in whichever theme it was authored in and badly in the other. This is the
-rule for an `<svg>` written into a template or straight into a page, which is what `Header.html`,
-`Sidebar.html` and `reference/pins-and-packages.md` do.
+hardcoded hex reads fine in whichever theme it was authored in and badly in the other.
+`TestFiguresCarryNoColourLiterals` enforces it for everything under `figures/`. The same rule applies
+to an `<svg>` written into a TEMPLATE, which is what `Header.html` and `Sidebar.html` do for UI icons.
 
 **A diagram referenced as an IMAGE cannot follow that rule, so it needs a theme-neutral palette
 instead.** An `<img src="....svg">` renders in its own document and inherits nothing from the host
@@ -154,8 +168,9 @@ page, so `currentColor` resolves to the SVG's own default and a CSS variable res
 Both diagram sets under `static/images/` are image-referenced (`![alt]({{.Site.PathPrefix}}/static/images/...)`)
 and therefore use literals on purpose. The palette to match is the one `analogy/` established and
 `datasheet/` follows: mid-grey `#808080` for structure and captions, `#4a90d9` and `#5aa06a` for two
-accented roles, `#d98a4a` for a warning or an override, all chosen to read on either theme. Reach for
-`currentColor` here only by inlining the diagram into the page instead.
+accented roles, `#d98a4a` for a warning or an override, all chosen to read on either theme. A new
+hand-authored diagram should go through `figures/` and the include instead, which gets the real
+palette back; the image-referenced sets predate that and are the reason this paragraph stays.
 
 **Check a hand-authored SVG's geometry rather than reading it.** The failure is text or a box that
 sits outside the canvas, which is invisible in the markup and obvious on the page. Parse the file and
