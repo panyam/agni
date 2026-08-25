@@ -1,0 +1,30 @@
+<svg viewBox="0 0 680 290" role="img" aria-labelledby="ferrite-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="ferrite-title">Impedance of a ferrite bead against frequency on a logarithmic axis: near zero ohms at 1 MHz, rising through about 100 ohms at 100 MHz, broadly flat to 1 GHz</title>
+  <g fill="currentColor" font-size="11" opacity="0.7">
+  <text x="90" y="26">impedance</text>
+  <text x="616" y="272" text-anchor="end">frequency</text></g>
+  <g stroke="currentColor" stroke-width="1" opacity="0.15" stroke-dasharray="3 4">
+  <path d="M90 40 H610 M90 103 H610 M90 167 H610"/></g>
+  <g stroke="currentColor" stroke-width="1.4" fill="none" opacity="0.7">
+  <path d="M90 34 V230 M90 230 H616"/></g>
+  <g fill="currentColor" font-size="11.5" text-anchor="end" opacity="0.75">
+  <text x="82" y="234">0 &#937;</text>
+  <text x="82" y="171">50 &#937;</text>
+  <text x="82" y="107">100 &#937;</text>
+  <text x="82" y="44">150 &#937;</text></g>
+  <g fill="currentColor" font-size="11.5" text-anchor="middle" opacity="0.75">
+  <text x="90" y="250">1 MHz</text>
+  <text x="263" y="250">10 MHz</text>
+  <text x="437" y="250">100 MHz</text>
+  <text x="610" y="250">1 GHz</text></g>
+  <path d="M90 227 C150 222 200 205 263 190 C320 170 380 132 437 112 C468 101 492 95 520 95 C558 95 586 104 610 116" fill="none" stroke="var(--accent-color)" stroke-width="2.5"/>
+  <g stroke="currentColor" stroke-width="1" opacity="0.4">
+  <path d="M150 158 V214 M406 72 V116"/></g>
+  <g stroke="var(--accent-color)" stroke-width="1.2" opacity="0.5" stroke-dasharray="3 3">
+  <path d="M437 230 V112"/></g>
+  <circle cx="437" cy="112" r="3.5" fill="var(--accent-color)"/>
+  <g fill="currentColor" font-size="11.5" opacity="0.75">
+  <text x="96" y="150">a near short at DC</text>
+  <text x="330" y="64">the noise turns into heat</text></g>
+  <text x="449" y="146" font-size="11.5" font-weight="600" fill="var(--accent-color)">about 100 &#937; at 100 MHz</text>
+</svg>
