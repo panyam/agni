@@ -139,6 +139,12 @@ a standalone operation.
 
 ## Compose in main
 
+An overlay reaches the engine through the same public seams the standard library uses, so the shape
+is the one [Stack and platform](../../architecture/stack/) draws, with your module as the fourth
+source:
+
+{{ includeFile "figures/engine-layers.svg" }}
+
 Blank-import the reader and rule packages so their `init` runs, then use the engine library:
 
 ```go

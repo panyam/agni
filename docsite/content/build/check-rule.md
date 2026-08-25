@@ -53,9 +53,9 @@ Then interrogate it the way a real corpus will.
 | Who decides the policy edge cases, like a feedback node named like a rail and deliberately left unprobed? | The reviewer does. Use `info` severity and say so in the rule's doc. |
 | If you do read a name, is the net actually a rail? | `net.nominal_voltage` token-scans a whole name, so a level encoded in a SIGNAL net's name parses as a rail nominal (agni issue 194: `U3_12_U7_4_3V3` yields 3.3 while classifying as neither rail nor ground). Gate on `Model.IsRailNet` first. |
 
-Two of the questions carry a lesson wider than this rule.
+Three of the questions carry a lesson wider than this rule.
 
-**Is there a tier of evidence better than the name?** A rail's voltage comes from
+**1. Is there a tier of evidence better than the name?** A rail's voltage comes from
 `check.NominalVoltageFromName`, a convention that is silent on a rail nobody named for its voltage and
 wrong on a name that outlived a design change. Connectivity sometimes answers outright: the pin-tracking
 rules bound the difference between two pins, and two pins on ONE net are one node, so that difference is
@@ -63,7 +63,7 @@ exactly zero with no name read. That tier settles a "must not exceed 0V" bound a
 be at least 1V" bound as violated on a design whose nets carry no voltage token at all. Reach for the
 convention as the fallback, not the first answer.
 
-**What does a role gate cost when the project has not configured it?** It inherits the role's whole
+**2. What does a role gate cost when the project has not configured it?** It inherits the role's whole
 configuration surface. `IsRailNet` reads a stamp derived from the naming lexicon, and the built-in
 vocabulary is start-anchored (`VCC`, `VDD`, `+3V3`), so a project naming rails function-first matches
 almost none of it. On a real 1700-net board, declaring the project's patterns moved the rail count from
@@ -75,13 +75,13 @@ almost none of it. On a real 1700-net board, declaring the project's patterns mo
   18 supply nets classified as rails and 91 did not, and `rail-not-classified` fired 45 times.
   Declaring the project's conventions moved recognition to 62 and the tripwire to **zero**. The
   tripwire works, and the remedy it points at is configuration rather than more rules.
-- **Is your evidence tier actually asking your question?** Preferring connectivity over a name is
-  right, and it is still possible to pick a connectivity fact that is wider than the property you
-  mean. `decoupling-present` selects "a net with a non-virtual `power_in` pin and no capacitor" and
-  calls that a supply rail. On the same board every one of its 14 findings was a false positive: gate
-  drives, buck switching nodes and sense lines all carry a power-input pin, and two of them were
-  advising a capacitor that would short a switch node to ground. Write the sentence, then check that
-  the fact you selected on cannot be satisfied by something the sentence would exclude.
+**3. Is your evidence tier actually asking your question?** Preferring connectivity over a name is
+right, and it is still possible to pick a connectivity fact that is wider than the property you mean.
+`decoupling-present` selects "a net with a non-virtual `power_in` pin and no capacitor" and calls that
+a supply rail. On the same board every one of its 14 findings was a false positive: gate drives, buck
+switching nodes and sense lines all carry a power-input pin, and two of them were advising a capacitor
+that would short a switch node to ground. Write the sentence, then check that the fact you selected on
+cannot be satisfied by something the sentence would exclude.
 
 ## If the sentence names two entities, carry both
 
@@ -292,6 +292,8 @@ dropped with a bare `continue` became `NOT_CONSIDERED` verdicts. A body that fil
 a subject it declined.
 
 ### Subjects: a tuple in the verdict, one entity in the finding
+
+{{ includeFile "figures/verdict-subject-grain.svg" }}
 
 **A verdict's subject is a TUPLE, and for most rules it holds one entity.** A rule whose question is a
 RELATION names every entity in it. `copper-clearance` measures a distance between two nets and belongs

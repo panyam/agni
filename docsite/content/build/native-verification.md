@@ -55,6 +55,8 @@ The exact invocations, for reference. Agni runs these into a temp dir under a ti
 
 ## Docker plus SSH: the X11 tools without a local install
 
+{{ includeFile "figures/native-tool-container.svg" }}
+
 xschem and Lepton are Linux/X11 tools with no macOS package. `Dockerfile.nattools` builds a
 Debian tool host with kicad-cli, xschem, Lepton, and `agni`, reached over SSH. The Agni server
 still runs on the host. This container only supplies the tools. `agni native render` runs inside

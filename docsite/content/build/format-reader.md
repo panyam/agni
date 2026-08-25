@@ -134,6 +134,8 @@ The `.sch` adapter sniffs the same way, dispatching to the xschem or gEDA reader
 
 ## Multi-file resolution stays in `formats`, not the reader
 
+{{ includeFile "figures/reader-boundary.svg" }}
+
 A format that references other files (KiCad sub-sheets, xschem or gEDA symbol libraries) still
 does not open a second file inside the reader. The `Loader` builds an opener closure and passes it
 in, so the reader receives already-resolved bytes or a resolver it can call, and the file I/O stays

@@ -1,0 +1,39 @@
+<svg viewBox="0 0 640 308" role="img" aria-labelledby="native-tool-container-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="native-tool-container-title">Two boxes side by side. Your machine runs the agni server, XQuartz and your design tree. A Debian tool host container runs kicad-cli, xschem, Lepton and its own agni, reached over SSH on port 2222. The design tree is bind-mounted into the container at slash hw, so a render writes its SVG back into a directory you already have. An ssh dash X tunnel carries a GUI window back to XQuartz. The container supplies tools only; the server never moves.</title>
+  <defs>
+    <marker id="ntc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.55"/>
+    </marker>
+  </defs>
+  <g fill="currentColor" font-size="11.5" font-weight="600" opacity="0.75">
+  <text x="16" y="30">your machine</text>
+  <text x="392" y="30">the tool host, a container</text></g>
+  <g fill="none" stroke="currentColor" stroke-width="1.3" opacity="0.45">
+  <rect x="16" y="40" width="232" height="176" rx="3"/>
+  <rect x="392" y="40" width="232" height="176" rx="3"/></g>
+  <g fill="currentColor" font-size="10.5" opacity="0.85">
+  <text x="30" y="66">the agni server</text>
+  <text x="30" y="92">XQuartz</text>
+  <text x="406" y="66">kicad-cli</text>
+  <text x="406" y="82">xschem</text>
+  <text x="406" y="98">lepton-cli</text>
+  <text x="406" y="114">agni, again</text></g>
+  <text x="30" y="80" fill="currentColor" font-size="9" opacity="0.55">never moves</text>
+  <text x="406" y="132" fill="currentColor" font-size="9" opacity="0.55">tools only, no server</text>
+  <rect x="30" y="140" width="204" height="58" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="132" y="160" text-anchor="middle" fill="var(--accent-color)" font-size="10.5" font-weight="600">your design tree</text>
+  <text x="132" y="176" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.7">bind-mounted, so a render</text>
+  <text x="132" y="190" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.7">lands where you can see it</text>
+  <rect x="406" y="150" width="204" height="44" rx="3" fill="none" stroke="var(--accent-color)" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <text x="508" y="168" text-anchor="middle" fill="var(--accent-color)" font-size="10.5" font-weight="600">/hw</text>
+  <text x="508" y="184" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.7">the same bytes, another name</text>
+  <line x1="238" y1="169" x2="400" y2="171" stroke="var(--accent-color)" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <g stroke="currentColor" stroke-width="1.3" opacity="0.6" marker-end="url(#ntc-arrow)">
+  <line x1="252" y1="70" x2="386" y2="70"/>
+  <line x1="386" y1="100" x2="252" y2="100"/></g>
+  <text x="319" y="62" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.7">ssh -p 2222, to render</text>
+  <text x="319" y="116" text-anchor="middle" fill="currentColor" font-size="9.5" opacity="0.7">ssh -X, a window comes back</text>
+  <text x="320" y="250" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">the container supplies the tools macOS has no package for, and nothing else</text>
+  <text x="320" y="268" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">the server stays on your machine, and the SVG comes back through the mount</text>
+  <text x="320" y="296" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.5">make natup brings it up, make natdown takes it away</text>
+</svg>
