@@ -256,6 +256,11 @@ unverified, which keeps the case where a report is written before the viewer is 
 Either way the reason is printed. A report with no links used to look like a broken renderer, because
 nothing named which half was missing.
 
+**Each link also carries the design's content hash**, so the viewer can say a link was computed
+against different bytes rather than silently highlighting whatever now sits at that subject. The hash
+is of the ENTRY the design declares, not of the argument you typed, so a report run against the design
+folder and one run against a companion view carry the same revision identity.
+
 The easiest way to get all of this right is not to assemble it by hand. `agni open <design>` serves
 the board and prints the matching `agni check --mount … --url-base …` line, and because one process
 mints the mount and serves it, the two cannot disagree.
