@@ -83,7 +83,7 @@ component-on-net(?ref, ?net), net.max_voltage(?net, ?v), ?v > 3 => ?ref, ?net, ?
 ```
 
 Reusing `?net` in two facts means "the same net in both", that is a `JOIN ... ON`. Joins are how you
-connect what a part is, where it sits, and what its rail carries.
+connect what a part is, where it sits, and what its {{ explainable "rail" }} carries.
 
 ### 4. Parts on USB nets (*predicate*)
 

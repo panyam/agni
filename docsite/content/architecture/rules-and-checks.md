@@ -37,8 +37,8 @@ the shared engine. The split follows a compiler's stages. Parsing catches malfor
 resolution catches duplicate declarations while building the symbol table. Type checking and
 dataflow run over the built program. The rules layer maps onto the same stages.
 
-The test that decides where a rule runs: can the rule be computed from the final netlist IR
-alone?
+The test that decides where a rule runs: can the rule be computed from the final
+{{ explainable "netlist" }} IR alone?
 
 - If **no**, because it needs detail the reader normalized away, such as the pre-merge
   placements, the raw label set, or the wire geometry, then it is an input diagnostic. The

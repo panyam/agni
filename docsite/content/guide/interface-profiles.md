@@ -3,7 +3,7 @@ title: "Interface profiles"
 description: "Declare an interface's signals and what must be true of them, and check enforces that reading wherever the interface appears."
 ---
 
-A bus has a shape. CAN is a CANH/CANL {{ explainable "differential-pair" "pair" }} with a
+A {{ explainable "bus" }} has a shape. CAN is a CANH/CANL {{ explainable "differential-pair" "pair" }} with a
 {{ explainable "termination" }} resistor across it, driven by a {{ explainable "transceiver" }} with
 TXD and RXD. I2C is SCL and SDA, both pulled up. An interface profile writes
 that shape down as YAML, and the engine compiles it into check rules. Agni ships profiles for
