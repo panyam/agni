@@ -50,6 +50,14 @@ the definition.
 **When a change touches a rule the course teaches, check whether a chapter needs updating**, and cite
 the relevant pages as prerequisite reading in the PR.
 
+**Never paste an `<svg>` into a markdown page.** A hand-authored diagram lives in `docsite/figures/`
+and the page carries `{{ includeFile "figures/<name>.svg" }}`, which inlines it at BUILD time, so the
+figure still resolves `currentColor` and `--accent-color` against the page's theme while the prose
+stays readable. An `<img src>` cannot do that, because the image renders in its own document and
+inherits nothing. `includefile_test.go` fails the gate on a path that does not resolve (`IncludeFile`
+returns an empty string and the build still succeeds), on a figure nothing includes, and on a colour
+literal. The rules and the traps are in `docsite/README.md`.
+
 `site/` is stale build output, not a source tree. Some older notes reference a retired `docs/NN-*.md`
 mkdocs tree that was folded into `docsite/content/` with audience-first names.
 
@@ -148,6 +156,7 @@ Each of these has a fixed edit-list where missing one edit is silent, and a test
 | A check rule | — | `docsite/content/build/check-rule.md` | — |
 | A query relation | 5, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check` |
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
+| A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
 
 ## Working in this repo
 

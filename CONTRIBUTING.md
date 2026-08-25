@@ -115,6 +115,21 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   (`gh api repos/.../pulls/N --jq .merged`). A PR once sat closed-UNMERGED while everyone believed
   it had merged, and `git branch -d` still allowed the local delete, because it checks the tracking
   ref rather than main.
+- **RETARGET A STACKED PR BEFORE MERGING ITS PARENT.** This repo deletes a branch on merge, and
+  GitHub auto-CLOSES any PR still pointing at the deleted branch, so merging the parent silently
+  closes the child. Recovering it is worse than it sounds, because the two obvious moves refuse each
+  other: you cannot reopen a PR whose base branch is gone, and you cannot change the base of a closed
+  PR. The way out is to recreate the base ref at the exact commit the parent merged from
+  (`gh api repos/OWNER/REPO/git/refs -f ref='refs/heads/<base>' -f sha=<FULL 40-char sha>`), reopen,
+  retarget to `main`, then delete the ref again, which does not re-close it because it is no longer
+  the base. `gh pr reopen` needs the FULL sha; an abbreviated one fails with a 422 that does not say
+  so. Nothing is lost either way, since the branch itself survives, but check the tip against the PR
+  head before assuming that.
+- **Level the two branches before opening a stacked PR, parent first.** Merging `main` into the child
+  and the parent independently creates divergent merge commits, and the stacked diff then shows
+  `main`'s commits as if they were the child's changes (26 files instead of 23, with
+  `mergeable: false`). Merge `main` into the parent, push, then merge the parent forward into the
+  child.
 - **A merged PR does not mean the BRANCH is merged. Check the tip against what the PR merged.**
   A commit pushed to the branch after the merge is stranded: the PR reads merged, GitHub offers to
   delete the branch, `git branch -d` accepts it, and the work is gone with nothing anywhere saying
