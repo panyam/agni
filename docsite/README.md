@@ -228,6 +228,20 @@ inline `<code>` keeps `nowrap` so an identifier is not split mid-name. A table w
 identifiers in BOTH columns is the case to avoid; the EDIF construct-to-IR mapping needed 1379px in an
 800px column that way and became a stacked list, where each identifier gets the full width.
 
+**Below 768px that behaviour holds, and the page itself never scrolls sideways.** Measured at a
+420px viewport across the course, the architecture pages, the CLI reference and the EDIF primer:
+`document.documentElement.scrollWidth` equals the viewport on every one. A table too wide to wrap
+scrolls inside its own box instead (worst seen, the five-column levels table at 2.01x), a `pre`
+scrolls the same way, and an included figure scales down with the column rather than overflowing it.
+So `.main-nav`'s `overflow-x` is not implicated here: nothing at this width is an absolutely
+positioned child of a clipping ancestor.
+
+**Measure layout on the REAL page, never in a detached div.** The detached-div sweep is right for a
+figure, because `getBBox()` reports SVG user-space coordinates that do not depend on where the
+element sits. It is wrong for anything the page grid decides: the same levels table measured 777px
+against a 452px container in a detached 800px div and fits its column exactly on the real page. The
+div has no grid to inherit, so the article width it computes is fiction.
+
 **`content/HeaderNavLinks.json` is hand-formatted with one compact object per line.** Read it as text
 before editing. Piping it through a pretty-printer to find the insertion point produces a shape that
 does not exist in the file, so the edit fails to match.
