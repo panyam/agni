@@ -883,7 +883,12 @@ func reviewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			noteSupersededRules(cmd.ErrOrStderr(), catalog)
+			// The supersession note is NOT written here, where check's equivalent used to be. This
+			// catalog is the one the FLAGS built, and a project's own profiles supersede against the
+			// catalog the RUN composes, so noting here described how the command line was spelled
+			// rather than how the run was scored. It moves into the per-design loop below, which is
+			// the only place a project has been resolved. Same defect and same shape as agni issue
+			// 450, which PR 467 fixed for check and left standing here.
 			// Reading the convention file is the CLI's job; the service takes the value.
 			overlay := &webapi.OverlayConfig{}
 			if conventions != "" {
@@ -916,10 +921,25 @@ func reviewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Notes already written, so a rollup over several designs in ONE project says it once.
+			// Per design is the correct SCOPE (two designs can resolve to projects that supersede
+			// differently), and repeating an identical line per design is only noise.
+			noted := map[string]bool{}
 			for _, design := range args {
 				parent, err := cliProjectParent(cmd.Context(), design)
 				if err != nil {
 					return err
+				}
+				// The catalog the run will be scored against, which is the flag-built one plus this
+				// design's project's own rules. Composed here only to report what it superseded; the
+				// service composes its own from the same inputs.
+				if scored, _, err := withProjectRules(cmd.Context(), catalog, design, overlay); err == nil {
+					var b strings.Builder
+					noteSupersededRules(&b, scored)
+					if line := b.String(); line != "" && !noted[line] {
+						noted[line] = true
+						fmt.Fprint(cmd.ErrOrStderr(), line)
+					}
 				}
 				designURI, err := cliArgURI(design)
 				if err != nil {

@@ -111,6 +111,9 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
 - **Verify a push by its EXIT CODE, never by grepping its output.** `git push | tail -1` swallows a
   failure, and `git push 2>&1 | grep <branch>` reports success on a FAILED push, because the branch
   name appears inside the failure message. Run `git push; echo "EXIT=$?"`.
+- **`Closes #A and #B` closes only A.** GitHub parses the keyword PER ISSUE, so a PR fixing two
+  tickets needs `Closes #A, closes #B`. The second issue stays open and silently reads as unfinished
+  work while its fix is already in `main`. Check both after the merge rather than trusting the body.
 - **Verify `merged: true` via the API before ANY post-merge cleanup**
   (`gh api repos/.../pulls/N --jq .merged`). A PR once sat closed-UNMERGED while everyone believed
   it had merged, and `git branch -d` still allowed the local delete, because it checks the tracking
@@ -168,6 +171,12 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   quoting `` `reserved` `` committed the sentence with the word missing and no error. Anything with
   backticks, `$`, or `!` goes through `git commit -F <file>` or a quoted heredoc (`<<'MSG'`), never
   `-m "..."`.
+- **The same expansion happens in an UNQUOTED heredoc, including one feeding a script.** `<<EOF`
+  expands; `<<'EOF'` does not. A PR body written through `python3 - <<PY` lost every inline-code span
+  and both fenced blocks, because the shell ate the backticks before python ever saw the text, and it
+  additionally RAN the `> review.html` redirect inside an example command and left the empty file in
+  the tree. The edit reported success, so the damage was only visible by reading the result back.
+  Quote the delimiter whenever the body is prose, and read the output back before pushing it.
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates
   ONCE over the whole blob, and a sweep that did this compared one file and reported success. Glob
   directly in the `for`, or use an array.

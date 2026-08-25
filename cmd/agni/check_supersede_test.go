@@ -145,3 +145,77 @@ func TestCheckReportsAProjectsOwnSupersessions(t *testing.T) {
 		t.Errorf("the note should name the built-in CAN rules it dropped:\n%s", note)
 	}
 }
+
+// TestReviewReportsAProjectsOwnSupersessions is the twin of the test above, for the command that kept
+// the defect after PR 467 fixed check. `agni review` took its note from the catalog the FLAGS built,
+// which is composed before any project is resolved, so a project whose own profiles dropped built-in
+// rules reported nothing at all.
+//
+// It matters more on review than on check, because a checklist ITEM bound to a superseded rule still
+// scores. The item reads pass or not-applicable on the strength of a rule that was removed from the
+// run, and the one line that would have said so was the note.
+func TestReviewReportsAProjectsOwnSupersessions(t *testing.T) {
+	proj := t.TempDir()
+	writeTutorialLikeProject(t, proj)
+	if err := os.WriteFile(filepath.Join(proj, "review.yaml"),
+		[]byte("name: Test checklist\nareas:\n  - name: Interfaces\n    items:\n      - {id: \"I1\", title: the CAN interface is complete, profile: CAN}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(proj)
+
+	cmd := rootCmd()
+	var stderr bytes.Buffer
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"review", "designs/board/board.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review: %v\n%s", err, stderr.String())
+	}
+	note := stderr.String()
+	if !strings.Contains(note, "supersedes") {
+		t.Fatalf("a project superseding a built-in must say so on review too:\n%s", note)
+	}
+	if strings.Contains(note, "profile-overlay") {
+		t.Errorf("the note names the flag's namespace for a run that passed no flag:\n%s", note)
+	}
+	if !strings.Contains(note, "profile/can-") {
+		t.Errorf("the note should name the built-in CAN rules it dropped:\n%s", note)
+	}
+}
+
+// TestReviewSupersessionNoteIsNotRepeatedPerDesign: the note moved into the per-design loop, which is
+// the only scope where a project has been resolved. Two designs in one project supersede identically,
+// so an un-deduped loop says the same line twice and a rollup over a dozen designs is a wall.
+func TestReviewSupersessionNoteIsNotRepeatedPerDesign(t *testing.T) {
+	proj := t.TempDir()
+	writeTutorialLikeProject(t, proj)
+	if err := os.WriteFile(filepath.Join(proj, "review.yaml"),
+		[]byte("name: Test checklist\nareas:\n  - name: Interfaces\n    items:\n      - {id: \"I1\", title: the CAN interface is complete, profile: CAN}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	second := filepath.Join(proj, "designs", "board2")
+	if err := os.MkdirAll(second, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range map[string]string{
+		"design.yaml": "name: board2\ntitle: Second board\nentry: board.edn\n",
+		"board.edn":   minimalEDN,
+	} {
+		if err := os.WriteFile(filepath.Join(second, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Chdir(proj)
+
+	cmd := rootCmd()
+	var stderr bytes.Buffer
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"review", "designs/board/board.edn", "designs/board2/board.edn"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("review over two designs: %v\n%s", err, stderr.String())
+	}
+	if n := strings.Count(stderr.String(), "supersedes"); n != 1 {
+		t.Errorf("the identical note appeared %d times over two designs in one project, want 1:\n%s", n, stderr.String())
+	}
+}
