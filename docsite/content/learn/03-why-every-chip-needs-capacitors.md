@@ -27,6 +27,8 @@ Put numbers on it. A 50mm trace is about 50nH. Suppose the chip's demand rises b
 
 A capacitor sitting at the supply pin already holds charge and has almost no inductance between it and the pin. It supplies that gulp locally and recharges slowly from the regulator afterwards. The regulator handles the average, the capacitor handles the transient.
 
+{{ includeFile "figures/decoupling-capacitor.svg" }}
+
 Two jobs, two rules:
 
 - A **decoupling capacitor** sits at each supply pin and handles the fast transients. → [`decoupling-present`](../../reference/rules/decoupling-present/)
@@ -81,6 +83,8 @@ There is a third number that nothing in this catalog checks yet, and it is the o
 Everything above is netlist-level: the capacitor is on the right net, with the right value and rating. A board can satisfy all of it and still have no working decoupling.
 
 The reason is the same inductance from EE3, now applied to the capacitor's own path. A decoupling cap does its job through a loop: out of the cap, into the supply pin, through the chip, out of the ground pin, back to the cap. That loop has inductance proportional to its physical area. Place the cap 20mm away, or route its ground back through a long trace instead of straight down into a ground plane, and the loop inductance swamps the capacitor at exactly the frequencies it was there for.
+
+{{ includeFile "figures/decoupling-loop-area.svg" }}
 
 The rule says so itself, in its remedy: *"Add a decoupling capacitor from the rail to ground at each supply pin, and place it at the pin in layout. A capacitor drawn on the rail but placed across the board does not decouple it."*
 

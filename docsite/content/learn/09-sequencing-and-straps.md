@@ -58,6 +58,8 @@ Many chips have pins that are read **once**, at the moment reset releases, to co
 
 Two things make them a distinctive class of bug. The value is latched at power-up and never re-read, so nothing observable later says what was read. And a strap is just a resistor to a rail or to ground, so nothing about it looks different from the pull-ups in [chapter 4](../04-pull-ups-and-undefined-states/).
 
+{{ includeFile "figures/strap-bit-order.svg" }}
+
 The number a group of straps encodes is spread across several pins, and the interesting failure is across two parts rather than within one:
 
 {{ agniRun "content/learn/runs/straps.yaml" }}

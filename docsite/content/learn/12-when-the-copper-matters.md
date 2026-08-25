@@ -35,6 +35,8 @@ Three rules, and each has a different shape from anything earlier in the course.
 
 **`track-width` and `annular-width` name a net and a count.** One track segment below `0.127mm`, one via whose ring of copper is below `0.075mm`. Neither is a connectivity question at all. The net is connected; it is connected by metal too thin to be made reliably.
 
+{{ includeFile "figures/via.svg" }}
+
 ## A fourth kind of authority (EE7)
 
 Look at where those numbers come from, because it is not any of the sources the course has met so far.

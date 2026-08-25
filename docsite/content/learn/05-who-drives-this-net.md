@@ -15,6 +15,8 @@ A net's voltage has to be decided by something. An output pin decides it by conn
 
 That works cleanly while exactly one pin is doing the deciding. Put two outputs on one net and let them disagree, and you have a problem with a mechanism rather than a vague badness. One output has connected the net to the rail. The other has connected the same net to ground. The only thing between the rail and ground is now two transistors in series, and a transistor that is fully on is a small resistance rather than a wire, typically tens of ohms.
 
+{{ includeFile "figures/output-contention.svg" }}
+
 So the current is whatever the rail divided by that resistance comes to, which lands in the tens to hundreds of milliamps. Output pins are usually rated for a few milliamps. (If you have ever touched a chip on a prototype and found it uncomfortably hot with nothing obviously wrong, this is one of the two or three things worth suspecting.) Both parts heat, both are operating far outside their ratings, and if the condition persists one of them eventually stops working.
 
 This is where [chapter 4's](../04-pull-ups-and-undefined-states/) open-drain outputs earn their keep. An open-drain pin can only ever pull the net toward ground, so two of them can share a wire and never fight: both pulling low at once is simply low. Buses that let several devices talk are built on that idea, or on the alternative, an output that can be switched into a third state where it drives nothing at all and lets someone else decide.

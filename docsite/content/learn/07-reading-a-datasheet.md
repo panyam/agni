@@ -29,6 +29,8 @@ Look at `U1`. It has **two** VIN numbers, and they come from different pages of 
 
 The gap between them is deliberate margin, and treating the bigger number as the usable one is the classic way to build something that works on the bench and fails in the field. Confusing the two is probably the single most common datasheet mistake, and it is why the parameter layer records `limit_kind` on every row rather than storing "the VIN limit".
 
+{{ includeFile "figures/absolute-maximum-rating.svg" }}
+
 There is a third thing on each row worth noticing: **conditions**. The seeded rows here carry `TA = 25C`. A number is only true under the conditions it was measured at, and a part characterised at 25°C tells you comparatively little about the same part at 85°C in a sealed enclosure.
 
 ## The comparison (EE5)

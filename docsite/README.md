@@ -182,14 +182,6 @@ caption on the live site, found by screenshotting one and counting its text runs
 not served**: `figures/` sits outside `static/`, so the only way to reach a diagram is the include,
 and there is no second copy to drift.
 
-**Two more things about checking a figure in a browser.** A running `go run .` HOLDS an included
-figure, so editing a file under `figures/` and re-fetching the page serves the version the server
-started with, and no cache-busting query helps. Restart it. And check for text-on-text OVERLAP as
-well as for overflow: a `getBBox()` sweep against the viewBox catches a run outside the canvas and
-says nothing about two runs sitting on each other, which is the other way a figure reads wrong.
-Compare every pair of `text` boxes in the same pass. One overlap turned up that way in a diagram
-whose every element was inside its viewBox.
-
 **Style that SVG through `--accent-color` and `currentColor`, never a literal.**
 `static/css/main.css` defines the palette for both themes, and the docsite has a dark mode. A
 hardcoded hex reads fine in whichever theme it was authored in and badly in the other.
@@ -216,11 +208,18 @@ a local `go run .` is the real check and it works**: `getBBox()` on every `text`
 guess, and it can sweep every page in one `page.evaluate` by fetching each into a detached div. That
 is how eleven figures were cleared at once. Playwright still refuses `file:` URLs, so serve the site.
 
-**Two things about verifying rendering in a browser, both of which produced wrong numbers first.**
+**Sweep for text-on-text OVERLAP in the same pass, because a viewBox check cannot see it.** A run
+outside the canvas and two runs sitting on each other are different failures, and only the first is a
+question about bounds. Compare every pair of `text` boxes as well as each box against the viewBox: 32
+figures came back clean on bounds and one of them had two labels printed over each other.
+
+**Three things about verifying rendering in a browser, all of which produced wrong numbers first.**
 The stylesheet is cached HARD, so a CSS change measured straight after an edit reports the OLD layout
 and looks like the change did nothing. Bust it by rewriting each `link[rel=stylesheet]` href with a
-cache-busting query before measuring. And a section index is served at `/agni/<section>/`, so
-`/agni/<section>/index/` correctly 404s and is not evidence of a broken page.
+cache-busting query before measuring. **A running `go run .` holds an included FIGURE the same way**,
+so editing a file under `figures/` and re-fetching serves the version the server started with, and no
+query string helps because the staleness is server-side: restart it. And a section index is served at
+`/agni/<section>/`, so `/agni/<section>/index/` correctly 404s and is not evidence of a broken page.
 
 **Table cells WRAP.** They used to carry `white-space: nowrap`, which laid a prose table out on one
 unwrapped line: 47 of the site's 62 tables overflowed their column and the worst ran 5.34x the content
@@ -228,6 +227,20 @@ width. Prose in a table is fine now. What still forces a scrollbar is an unbreak
 inline `<code>` keeps `nowrap` so an identifier is not split mid-name. A table whose cells hold long
 identifiers in BOTH columns is the case to avoid; the EDIF construct-to-IR mapping needed 1379px in an
 800px column that way and became a stacked list, where each identifier gets the full width.
+
+**Below 768px that behaviour holds, and the page itself never scrolls sideways.** Measured at a
+420px viewport across the course, the architecture pages, the CLI reference and the EDIF primer:
+`document.documentElement.scrollWidth` equals the viewport on every one. A table too wide to wrap
+scrolls inside its own box instead (worst seen, the five-column levels table at 2.01x), a `pre`
+scrolls the same way, and an included figure scales down with the column rather than overflowing it.
+So `.main-nav`'s `overflow-x` is not implicated here: nothing at this width is an absolutely
+positioned child of a clipping ancestor.
+
+**Measure layout on the REAL page, never in a detached div.** The detached-div sweep is right for a
+figure, because `getBBox()` reports SVG user-space coordinates that do not depend on where the
+element sits. It is wrong for anything the page grid decides: the same levels table measured 777px
+against a 452px container in a detached 800px div and fits its column exactly on the real page. The
+div has no grid to inherit, so the article width it computes is fiction.
 
 **`content/HeaderNavLinks.json` is hand-formatted with one compact object per line.** Read it as text
 before editing. Piping it through a pretty-printer to find the insertion point produces a shape that
