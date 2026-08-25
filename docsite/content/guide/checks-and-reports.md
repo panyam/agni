@@ -26,20 +26,7 @@ By default every rule runs. Two flags cut that down.
 
 **One rule by name** (`--rule`, repeatable):
 
-```
-agni check showcase.fires.kicad_pro --rule i2c-pull-up
-```
-
-```
-findings by rule:
-  i2c-pull-up            1
-
-first 1:
-  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
-
-1 finding(s) total
-2 subject(s) considered by 1 rule(s) (--verdicts for the detail)
-```
+{{ agniRun "content/guide/runs/rule-filter.yaml" }}
 
 **A whole group by tag** (`--tag key=value`, repeatable). Every rule carries catalog tags
 (category, tier, and more), so you can run one family at a time:
@@ -77,10 +64,10 @@ agni check showcase.fires.kicad_pro --format markdown
 | severity | findings |
 |---|---|
 | error | 1 |
-| warning | 5 |
+| warning | 6 |
 | info | 4 |
 
-10 finding(s), 29 rule(s) run.
+11 finding(s), 78 rule(s) run.
 
 ## error
 
@@ -88,7 +75,12 @@ agni check showcase.fires.kicad_pro --format markdown
 - `SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
 ```
 
-The header line (`10 finding(s), 29 rule(s) run`) is your coverage receipt. It says how many
+This block is one of the four on this page still typed by hand, because the command cannot yet be
+captured: every format that prints provenance emits an ABSOLUTE path today, so a generated capture
+would put the machine that ran it into the repo and the runner refuses one. The counts above are
+current; the file name is what the report should print and does not (agni issue pending).
+
+The header line (`11 finding(s), 78 rule(s) run`) is your coverage receipt. It says how many
 rules actually ran, so a clean report is distinguishable from a report that had little to
 check. See "silence is not a pass" in [Concepts](../concepts/).
 
@@ -97,20 +89,15 @@ check. See "silence is not a pass" in [Concepts](../concepts/).
 A findings report lists violations, so a clean subject says nothing at all and you cannot tell it
 apart from one no rule looked at. `--verdicts` answers the other question:
 
-```
-agni check showcase.fires.kicad_sch --verdicts
-```
+{{ agniRun "content/guide/runs/verdicts.yaml" }}
 
-```
-fail            SCL  no rail is reachable from SCL through a resistor within 3 hops
-pass            SDA  SDA reaches rail +3V3 through R1
+The table groups by rule and tallies each one, so `i2c-pull-up` reports one fail and one pass rather
+than one finding and a silence. SDA is fine, and it says so and names the resistor and the
+{{ explainable "rail" }} holding it up, which is the line a findings report cannot print.
 
-2 verdicts, 1 pass, 1 fail
-```
-
-SDA is fine, and now it says so and names the resistor and the {{ explainable "rail" }} holding it
-up. That second line
-is the thing a findings report cannot print.
+`not-considered` is the third answer, and the one worth reading closely. `bulk-cap` reaches VBUS and
+declines, because the rail continues onto a sheet this read did not open, so its reservoir may be
+drawn outside it. A findings report shows that net exactly as it shows a net that passed.
 
 It honours `--format text|csv|json|html`, and `--format html` turns it on by itself, since the HTML
 report has no findings-only form. The CSV carries a `verdict_id` per row
@@ -220,10 +207,11 @@ itself.
 `--fail-on <severity>` exits non-zero when any finding sits at or above the threshold, so
 `check` gates CI:
 
-```
-agni check showcase.fires.kicad_pro --fail-on error   # non-zero here (1 error)
-agni check showcase.passes.kicad_pro --fail-on error  # exit 0 (clean)
-```
+{{ agniRun "content/guide/runs/gate-severity.yaml" }}
+
+and its passing twin:
+
+{{ agniRun "content/guide/runs/gate-severity-clean.yaml" }}
 
 That gate reads **severity**, which is a statement about consequence. It has nothing to say about the
 distinction the section above is built on: a check that decided, versus one that never ran. A design

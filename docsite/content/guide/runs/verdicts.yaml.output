@@ -1,0 +1,229 @@
+#agni-run de01d2bba82dbc89
+esd-protection  2 fail, 1 pass
+    fail            USB_D+  no TVS or Zener is in the net's series reach and no part on it
+                            declares a datasheet ESD rating
+    fail            USB_D-  no TVS or Zener is in the net's series reach and no part on it
+                            declares a datasheet ESD rating
+    pass            SCL     TVS D7 clamps the net
+
+i2c-pull-up  1 fail, 1 pass
+    fail            SCL  no rail is reachable from SCL through a resistor within 3 hops
+    pass            SDA  SDA reaches rail +3V3 through R1
+
+reverse-blocking-absent  1 fail
+    fail            SDA  the connector reaches a power input through passives alone, so nothing
+                         in the path passes current one way
+
+bulk-cap  1 not-considered
+    not-considered  VBUS  the rail continues onto a sheet this read did not open, so its
+                          reservoir may be drawn outside it
+
+crystal-load-caps  2 pass
+    pass            Y1.1  capacitor C3 sits on terminal net XTAL1
+    pass            Y1.2  capacitor C4 sits on terminal net XTAL2
+
+decoupling-present  2 not-considered
+    not-considered  +3V3  the rail continues onto a sheet this read did not open, so its
+                          decoupling may be drawn outside it
+    not-considered  VBUS  the rail continues onto a sheet this read did not open, so its
+                          decoupling may be drawn outside it
+
+diff-pair-naming  1 pass
+    pass            USB_D+  the design carries the complementary net "USB_D-"
+
+duplicate-net-name  11 pass
+    pass            +3V3    passes because claims is 1, not >= 2
+    pass            GND     passes because claims is 1, not >= 2
+    pass            LED_A   passes because claims is 1, not >= 2
+    pass            LED_EN  passes because claims is 1, not >= 2
+    pass            SCL     passes because claims is 1, not >= 2
+    pass            SDA     passes because claims is 1, not >= 2
+    pass            USB_D+  passes because claims is 1, not >= 2
+    pass            USB_D-  passes because claims is 1, not >= 2
+    pass            VBUS    passes because claims is 1, not >= 2
+    pass            XTAL1   passes because claims is 1, not >= 2
+    pass            XTAL2   passes because claims is 1, not >= 2
+
+duplicate-ref-des  13 pass
+    pass            C3   the reader found no second physical part claiming "C3"
+    pass            C4   the reader found no second physical part claiming "C4"
+    pass            D2   the reader found no second physical part claiming "D2"
+    pass            D6   the reader found no second physical part claiming "D6"
+    pass            D7   the reader found no second physical part claiming "D7"
+    pass            J1   the reader found no second physical part claiming "J1"
+    pass            J2   the reader found no second physical part claiming "J2"
+    pass            R1   the reader found no second physical part claiming "R1"
+    pass            R3   the reader found no second physical part claiming "R3"
+    pass            TP1  the reader found no second physical part claiming "TP1"
+    pass            U1   the reader found no second physical part claiming "U1"
+    pass            U2   the reader found no second physical part claiming "U2"
+    pass            Y1   the reader found no second physical part claiming "Y1"
+
+esd-clamp-not-tvs  2 not-considered, 1 pass
+    not-considered  USB_D+  the net carries no clamp at all, so there is no device class to
+                            characterise; esd-protection reports it
+    not-considered  USB_D-  the net carries no clamp at all, so there is no device class to
+                            characterise; esd-protection reports it
+    pass            SCL     the net's clamp is TVS D7, which is the fast ESD device class this
+                            rule asks for
+
+input-protection  1 not-considered, 1 pass
+    not-considered  VBUS  the net continues onto a sheet this read did not open, so its fuse or
+                          clamp may be drawn outside it
+    pass            SDA   D6 guards the path from the connector to all 1 power entries it
+                          reaches
+
+label-alias-conflict  11 pass
+    pass            +3V3    passes because labels is empty
+    pass            GND     passes because labels is empty
+    pass            LED_A   passes because labels is empty
+    pass            LED_EN  passes because labels is empty
+    pass            SCL     passes because labels is empty
+    pass            SDA     passes because labels is empty
+    pass            USB_D+  passes because labels is empty
+    pass            USB_D-  passes because labels is empty
+    pass            VBUS    passes because labels is empty
+    pass            XTAL1   passes because labels is empty
+    pass            XTAL2   passes because labels is empty
+
+led-polarity  1 pass
+    pass            D2  passes because led_reversed does not hold
+
+nc-pin-connected  8 pass
+    pass            LED_A   passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (2 examined)
+    pass            LED_EN  passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (2 examined)
+    pass            SCL     passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (3 examined)
+    pass            SDA     passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (4 examined)
+    pass            USB_D+  passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (2 examined)
+    pass            USB_D-  passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (2 examined)
+    pass            XTAL1   passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (3 examined)
+    pass            XTAL2   passes because no net.connections where pin.electrical_type ==
+                            "no_connect" (3 examined)
+
+output-output-conflict  11 pass
+    pass            +3V3    passes because drivers is 1, not >= 2
+    pass            GND     passes because drivers is 1, not >= 2
+    pass            LED_A   passes because drivers is 0, not >= 2
+    pass            LED_EN  passes because drivers is 1, not >= 2
+    pass            SCL     passes because drivers is 0, not >= 2
+    pass            SDA     passes because drivers is 0, not >= 2
+    pass            USB_D+  passes because drivers is 0, not >= 2
+    pass            USB_D-  passes because drivers is 0, not >= 2
+    pass            VBUS    passes because drivers is 1, not >= 2
+    pass            XTAL1   passes because drivers is 0, not >= 2
+    pass            XTAL2   passes because drivers is 0, not >= 2
+
+power-input-not-driven  3 not-considered
+    not-considered  +3V3  the net continues onto a sheet this read did not open, so its feed may
+                          exist outside it
+    not-considered  GND   the net continues onto a sheet this read did not open, so its feed may
+                          exist outside it
+    not-considered  VBUS  the net continues onto a sheet this read did not open, so its feed may
+                          exist outside it
+
+power-tap-conflict  11 pass
+    pass            +3V3    passes because rails is empty
+    pass            GND     passes because rails is empty
+    pass            LED_A   passes because rails is empty
+    pass            LED_EN  passes because rails is empty
+    pass            SCL     passes because rails is empty
+    pass            SDA     passes because rails is empty
+    pass            USB_D+  passes because rails is empty
+    pass            USB_D-  passes because rails is empty
+    pass            VBUS    passes because rails is empty
+    pass            XTAL1   passes because rails is empty
+    pass            XTAL2   passes because rails is empty
+
+rail-not-classified  1 pass
+    pass            +3V3  the net carries the rail role, so the rail rules and
+                          net.nominal_voltage answer over it (3.3V, 1 supply pin(s))
+
+single-pin-net  11 pass
+    pass            +3V3    net reaches 8 connections, so it is not a stub
+    pass            GND     net reaches 19 connections, so it is not a stub
+    pass            LED_A   net reaches 2 connections, so it is not a stub
+    pass            LED_EN  net reaches 2 connections, so it is not a stub
+    pass            SCL     net reaches 3 connections, so it is not a stub
+    pass            SDA     net reaches 4 connections, so it is not a stub
+    pass            USB_D+  net reaches 2 connections, so it is not a stub
+    pass            USB_D-  net reaches 2 connections, so it is not a stub
+    pass            VBUS    net reaches 4 connections, so it is not a stub
+    pass            XTAL1   net reaches 3 connections, so it is not a stub
+    pass            XTAL2   net reaches 3 connections, so it is not a stub
+
+symbol-unresolved  16 pass
+    pass            power:+3V3       the reference resolved from the schematic's own lib_symbols
+                                     and declares 1 pin(s)
+    pass            power:GND        the reference resolved from the schematic's own lib_symbols
+                                     and declares 1 pin(s)
+    pass            power:PWR_FLAG   the reference resolved from the schematic's own lib_symbols
+                                     and declares 1 pin(s)
+    pass            power:VBUS       the reference resolved from the schematic's own lib_symbols
+                                     and declares 1 pin(s)
+    pass            power:VBUS_PROT  the reference resolved from the schematic's own lib_symbols
+                                     and declares 1 pin(s)
+    pass            test:C           the reference resolved from the schematic's own lib_symbols
+                                     and declares 2 pin(s)
+    pass            test:Crystal     the reference resolved from the schematic's own lib_symbols
+                                     and declares 2 pin(s)
+    pass            test:FUSE        the reference resolved from the schematic's own lib_symbols
+                                     and declares 2 pin(s)
+    pass            test:HDR3        the reference resolved from the schematic's own lib_symbols
+                                     and declares 3 pin(s)
+    pass            test:LDO_REG     the reference resolved from the schematic's own lib_symbols
+                                     and declares 3 pin(s)
+    pass            test:LED         the reference resolved from the schematic's own lib_symbols
+                                     and declares 2 pin(s)
+    pass            test:MCU         the reference resolved from the schematic's own lib_symbols
+                                     and declares 9 pin(s)
+    pass            test:R           the reference resolved from the schematic's own lib_symbols
+                                     and declares 2 pin(s)
+    pass            test:TVS_DIODE   the reference resolved from the schematic's own lib_symbols
+                                     and declares 2 pin(s)
+    pass            test:TestPoint   the reference resolved from the schematic's own lib_symbols
+                                     and declares 1 pin(s)
+    pass            test:USB_CONN    the reference resolved from the schematic's own lib_symbols
+                                     and declares 4 pin(s)
+
+unannotated-components  13 pass
+    pass            C3   designator "C3" is assigned, carrying no placeholder mark
+    pass            C4   designator "C4" is assigned, carrying no placeholder mark
+    pass            D2   designator "D2" is assigned, carrying no placeholder mark
+    pass            D6   designator "D6" is assigned, carrying no placeholder mark
+    pass            D7   designator "D7" is assigned, carrying no placeholder mark
+    pass            J1   designator "J1" is assigned, carrying no placeholder mark
+    pass            J2   designator "J2" is assigned, carrying no placeholder mark
+    pass            R1   designator "R1" is assigned, carrying no placeholder mark
+    pass            R3   designator "R3" is assigned, carrying no placeholder mark
+    pass            TP1  designator "TP1" is assigned, carrying no placeholder mark
+    pass            U1   designator "U1" is assigned, carrying no placeholder mark
+    pass            U2   designator "U2" is assigned, carrying no placeholder mark
+    pass            Y1   designator "Y1" is assigned, carrying no placeholder mark
+
+unconnected-component  13 pass
+    pass            C3   component's pins land on 2 net(s)
+    pass            C4   component's pins land on 2 net(s)
+    pass            D2   component's pins land on 2 net(s)
+    pass            D6   component's pins land on 2 net(s)
+    pass            D7   component's pins land on 2 net(s)
+    pass            J1   component's pins land on 4 net(s)
+    pass            J2   component's pins land on 3 net(s)
+    pass            R1   component's pins land on 2 net(s)
+    pass            R3   component's pins land on 2 net(s)
+    pass            TP1  component's pins land on 1 net(s)
+    pass            U1   component's pins land on 3 net(s)
+    pass            U2   component's pins land on 9 net(s)
+    pass            Y1   component's pins land on 2 net(s)
+
+unspecified-pin-with-driver  1 pass
+    pass            LED_EN  passes because no net.connections where pin.electrical_type ==
+                            "unspecified" and pin.declared and not (conn.virtual) (2 examined)
+
+141 verdicts across 23 rule(s), 128 pass, 4 fail, 9 not-considered
