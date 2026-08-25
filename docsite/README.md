@@ -250,14 +250,22 @@ a local `go run .` is the real check and it works**: `getBBox()` on every `text`
 guess, and it can sweep every page in one `page.evaluate` by fetching each into a detached div. That
 is how eleven figures were cleared at once. Playwright still refuses `file:` URLs, so serve the site.
 
-**The sweep is THREE checks, and each one caught something the others passed.** Bounds is a `getBBox()`
-against the viewBox. **Text on text** compares every pair of `text` boxes, because two runs sitting on
-each other is a different failure from one leaving the canvas: 32 figures came back clean on bounds
-and one of them had two labels printed over each other. **Text on a wire** compares each `text` box
-against every `line` and `path` whose own box is under 3px on one axis, flagging an intersection over
-about 6px by 4px. That third one is the cheapest to get wrong, because a label placed a few pixels
-off sits exactly on the rail it names and is fully inside the viewBox, so the first two both pass it.
-It caught two figures on its first run and drove two more fixes after that.
+**The sweep is THREE checks, and it lives in `web/browser/figures.spec.ts` under `make browser-test`**,
+not in the Go gate, because it needs a served site and a real Chromium. Bounds is a `getBBox()` against
+the viewBox. **Text on text** compares every pair of `text` boxes, because two runs sitting on each
+other is a different failure from one leaving the canvas: 32 figures came back clean on bounds and one
+of them had two labels printed over each other. **Text on a wire** compares each `text` box against
+every `line` and `path` whose own box is thin on one axis. That third one is the cheapest to get
+wrong, because a label a few pixels off sits exactly on the rail it names and is fully inside the
+viewBox, so the first two both pass it.
+
+**`getBBox()` excludes the STROKE, which made that third check unfireable for its whole first life.**
+A horizontal line's geometric box is zero tall and a vertical one's is zero wide, so a text box can
+never overlap it on the thin axis and the check reported nothing on any figure. It read as a clean
+result. What exposed it was red-checking the assertion rather than trusting it: moving a label onto a
+ground rail on purpose left the suite green. The fix is to inflate the thin axis by half the stroke
+width with a floor, so the box covers the ink rather than the path. Two figures had been reported as
+catches of this check and were not; both were found by looking at a screenshot.
 
 **Three things about verifying rendering in a browser, all of which produced wrong numbers first.**
 The stylesheet is cached HARD, so a CSS change measured straight after an edit reports the OLD layout

@@ -75,7 +75,10 @@ not touch right after a checkout switch or a fresh clone, not on the message.
 ## What the gate does NOT run
 
 `make browser-test` drives layout assertions through a real Chromium against a real server (agni
-issue 323), deliberately outside `testall`.
+issue 323), deliberately outside `testall`. It runs two suites against two servers: the viewer's own
+layout assertions against `agni serve`, and a geometry sweep of every hand-authored docsite figure
+against the docsite, which the Go gate can check for a resolving path, an uncalled file, a colour
+literal and a blank line, and cannot check for anything about the RESULT.
 
 `make -C docsite figures` and `make -C docsite designs` re-render the images the docs embed, and
 nothing checks those for staleness at all (agni issue 453). The captures got a check; the pictures
