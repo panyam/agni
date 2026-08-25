@@ -84,6 +84,16 @@ func (t Tally) String() string {
 	return s + fmt.Sprintf(" (of %d)", t.Total)
 }
 
+// Tally sums one area's outcomes. Exported because the markdown rollup and the HTML checklist both
+// need a per-area count, and the loop existed twice before one of them was written down.
+func (a AreaResult) Tally() Tally {
+	var t Tally
+	for _, it := range a.Items {
+		t.add(it.Outcome)
+	}
+	return t
+}
+
 // Tally sums the outcomes across every area of the report.
 func (r Report) Tally() Tally {
 	var t Tally
@@ -149,11 +159,7 @@ func RenderCoverageMarkdown(r Report) string {
 			name, t.Covered(), t.Total, t.Pass, t.Fail, t.Provisional, t.NeedsDesignIntent, t.NeedsData, t.Inconclusive, t.ComputedNA, t.NotApplicable, t.NotAutomated)
 	}
 	for _, a := range r.Areas {
-		var at Tally
-		for _, it := range a.Items {
-			at.add(it.Outcome)
-		}
-		row(a.Area.Name, at)
+		row(a.Area.Name, a.Tally())
 	}
 	row("**Total**", tot)
 	return b.String()

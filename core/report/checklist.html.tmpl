@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Name}} — {{.Design}}</title>
+<style>{{css}}</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>{{.Name}}</h1>
+<div class="sub">
+  <code>{{.Design}}</code>
+  {{if .Generated}} · {{.Generated}}{{end}}
+  {{if .ContentHash}} · <code>{{.ContentHash}}</code>{{end}}
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="n">{{.Answered}}</span><span class="l">answered</span></div>
+  <div class="stat"><span class="n">{{.Covered}}</span><span class="l">covered</span></div>
+  <div class="stat"><span class="n">{{.Total}}</span><span class="l">items</span></div>
+</div>
+
+<div class="note">
+  {{.Summary}}
+  <br>
+  Covered counts the items a mechanism exists for. Answered counts the ones this run actually
+  decided, which is the stricter number: an item whose rule exists but whose inputs are missing is
+  covered and unanswered. Neither is a pass rate.
+</div>
+
+{{range .Areas}}
+<div class="area">
+  <h2>{{.Name}}</h2>
+  <div class="tally">{{.Summary}}</div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Question</th><th>Outcome</th><th>What it rests on</th></tr>
+      </thead>
+      <tbody>
+      {{range .Items}}
+        <tr>
+          <td class="id">{{.ID}}</td>
+          <td>{{.Title}}</td>
+          <td class="o {{.Outcome}}">{{.Outcome}}</td>
+          <td>
+            {{if .Evidence}}
+            <ul class="ev">
+              {{range .Evidence}}
+              <li>
+                <span class="r">{{.Rule}}</span>
+                {{if .URL}}<a href="{{.URL}}">{{.Subject}}</a>{{else}}<span class="subject">{{.Subject}}</span>{{end}}
+                {{.Message}}
+              </li>
+              {{end}}
+            </ul>
+            {{end}}
+            {{if .Note}}<div class="itemnote">{{.Note}}</div>{{end}}
+          </td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+
+</div>
+</body>
+</html>

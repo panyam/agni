@@ -60,7 +60,8 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |
-| `--format <fmt>` | `markdown` (default) or `json` |
+| `--format <fmt>` | `markdown` (default), `json`, or `html`. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--url-base` is given. One design at a time, since a page's title, hash and links all name one design |
+| `--url-base <addr>` | base address of a running viewer, so an `--format html` checklist links each finding to its proof. Same promise as `check --url-base`: the mount has to be one you declared, the server is asked whether it serves that name from the same root, and a withheld link says why |
 | `--results-out <file>` | also write the run as a self-contained check-result document |
 | `--render <dir>` | also write an annotated schematic SVG per design, each finding highlighted in place |
 | `--companion <file>` | a geometry file to draw `--render` images on, joined to netlist findings by net name |

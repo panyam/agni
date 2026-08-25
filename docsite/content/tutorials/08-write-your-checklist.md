@@ -126,6 +126,23 @@ Design: `designs/gateway`
 Each item carries its outcome and the evidence behind it. An item bound to a rule that fired shows
 what fired and on which net, so the checklist row and the debugging detail are the same artifact.
 
+## A page you can walk
+
+The markdown above is for reading in a terminal and pasting into a review. `--format html` writes the
+same checklist as a self-contained page instead:
+
+```
+agni review designs/gateway --format html --url-base http://localhost:8080 > review.html
+```
+
+Two differences from the markdown. Every finding is listed per item, where the Detail cell above caps
+at three, so a rule that fired on forty nets shows forty. And with a viewer running, each finding
+links to its proof: click the net and the board opens with the checks run and that subject in focus.
+
+The link half needs the same two things `check --url-base` needs, a viewer address and a mount you
+DECLARED, and it prints the reason when it withholds one. The easiest way to get both right is
+`agni open designs/gateway`, which serves the board and prints the matching command.
+
 ## Items about the board, not the netlist
 
 Some questions are about copper, and a netlist has none:

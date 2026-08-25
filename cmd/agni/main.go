@@ -816,7 +816,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, urlBase string
 	var coverage bool
 	var ratifiedFloor float64
 	var failOnOutcome string
@@ -884,7 +884,8 @@ func reviewCmd() *cobra.Command {
 			// explicit, user-asked-for way to write one. Same engine path as a served create, so the two
 			// surfaces still cannot disagree about an outcome.
 			env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-			svc := service.NewReviewService(&localLoader{loader: newLoader()}, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
+			ll := &localLoader{loader: newLoader()}
+			svc := service.NewReviewService(ll, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
 			// One create per design: a stored run is about ONE design, so the CLI's multi-design rollup is
 			// several runs rather than one call. The loop is the rollup.
 			var docs []*checkspb.CheckResults
@@ -966,10 +967,20 @@ func reviewCmd() *cobra.Command {
 					out = review.RenderCoverageMarkdown(rep)
 				case format == "json":
 					out, err = review.RenderJSON(rep)
+				case format == "html":
+					// The checklist page, which is a different SHAPE from `check --format html` rather
+					// than a filter of it: items in the team's own order, one row per question. It
+					// carries every finding per item, where the markdown Detail cell caps at three,
+					// which is what the cap's own comment says the web surface is for.
+					meta, err := checklistMeta(cmd, ll, args[0], urlBase)
+					if err != nil {
+						return err
+					}
+					return rpt.ChecklistHTML(cmd.OutOrStdout(), buildChecklist(rep, meta))
 				case format == "" || format == "markdown":
 					out = review.RenderMarkdown(rep)
 				default:
-					return fmt.Errorf("review: unknown --format %q (want markdown or json)", format)
+					return fmt.Errorf("review: unknown --format %q (want markdown, json or html)", format)
 				}
 			} else {
 				agg := review.Aggregate{Manifest: man.Name, Reports: reports}
@@ -980,8 +991,13 @@ func reviewCmd() *cobra.Command {
 					out, err = review.RenderAggregateJSON(agg)
 				case format == "" || format == "markdown":
 					out = review.RenderAggregateMarkdown(agg)
+				case format == "html":
+					// One page addresses one design: its title, its content hash and every link in it
+					// name that design. Concatenating several would produce a document whose header
+					// belongs to whichever ran last, so this refuses instead of guessing.
+					return fmt.Errorf("review --format html takes one design (got %d); run it once per design", len(args))
 				default:
-					return fmt.Errorf("review: unknown --format %q (want markdown or json)", format)
+					return fmt.Errorf("review: unknown --format %q (want markdown, json or html)", format)
 				}
 			}
 			if err != nil {
@@ -1001,7 +1017,8 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&boardPath, "board-path", "", "a board-geometry file (.kicad_pcb / IPC-2581 .xml|.cvg) attached to the netlist design so board-tier DRC items resolve pass/fail instead of not-applicable")
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
-	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped) or json (full findings, for tooling)")
+	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), or html (the checklist as a self-contained page, every finding per item)")
+	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so an --format html checklist links each finding to its proof. Subject to the same promise as `check --url-base`: the mount has to be one you DECLARED, and the server is asked whether it serves that name from the same root. Whenever links are withheld the reason is printed")
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
 	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; one design only. Render it later with `agni results`")
