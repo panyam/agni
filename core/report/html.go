@@ -8,8 +8,14 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-//go:embed report.html.tmpl
+//go:embed report.html.tmpl checklist.html.tmpl
 var tmplFS embed.FS
+
+// CSS is the stylesheet both report pages share, so a pass is the same green on the check report
+// and on the checklist. It is a file rather than a string literal so an editor treats it as CSS.
+//
+//go:embed style.css
+var CSS string
 
 // HTML writes the report as one self-contained page.
 //
@@ -27,15 +33,24 @@ var tmplFS embed.FS
 // Self-contained on purpose: one file, no external CSS or fonts, so it still renders after being
 // moved somewhere with no network.
 func HTML(w io.Writer, r Report) error {
-	t, err := template.New("report.html.tmpl").Funcs(funcs()).ParseFS(tmplFS, "report.html.tmpl")
+	t, err := parse("report.html.tmpl")
 	if err != nil {
 		return err
 	}
 	return t.Execute(w, r)
 }
 
+// parse builds one page template by name. Both pages go through it so neither can end up with a
+// different func map than the other, which is how the shared stylesheet stays shared.
+func parse(name string) (*template.Template, error) {
+	return template.New(name).Funcs(funcs()).ParseFS(tmplFS, name)
+}
+
 func funcs() template.FuncMap {
 	return template.FuncMap{
+		// css injects the shared stylesheet. template.CSS marks it pre-escaped: it is ours, not
+		// anything read out of a design file, and html/template would otherwise escape the braces.
+		"css": func() template.CSS { return template.CSS(CSS) },
 		// outcomeClass maps an outcome to its CSS class. Kept as a function rather than a field on Row
 		// so the vocabulary lives in one place if a sixth outcome ever lands.
 		"outcomeClass": func(o check.Outcome) string {
