@@ -709,3 +709,30 @@ A converter that drops everything past the first element round-trips a one-eleme
 the guard passes over exactly the bug it exists to catch. `Verdict.subjects` became repeated when a
 rule's subject grew to a tuple, and its fixture was widened to two entities in the same change for
 this reason.
+
+## C27: A committed generated artifact is checked by REGENERATING it
+**Rule:** If a file is both committed and produced by a command in this repo, the gate regenerates it
+from its inputs and fails on any difference. Inspecting `git status`, trusting a stamp the artifact
+carries, or hashing the inputs does not count. Where regeneration cannot run in the gate yet, the
+artifact carries a NAMED exemption in a checked-in ignore file and every entry cites the issue that
+will remove it, rather than being quietly absent from the gate.
+**Why:** a generated file nothing regenerates drifts from its source and nothing says so. A stamp
+does not save you, because it hashes what the generator was pointed at rather than the generator. A
+tutorial capture's stamp hashes its spec and its fixture and never the engine, so an engine change
+that alters the output leaves every stamp valid. Changing one rule's coverage wording rewrote 0
+captures on a plain docsite build and 12 on a forced regeneration. Before `tutorial-runs-check`
+existed, a capture edited by hand passed the entire gate.
+**Verify:** `proto-check`, `catalog-docs-check` and `tutorial-runs-check` are all in `testall`, and
+each regenerates rather than reading `git status`. Exemptions live in
+`hack/tutorial_runs_check.ignore`, and a line belongs there only when its command is not a function
+of this repo, never because the artifact merely went stale.
+**Outstanding violation:** `docsite/figures.sh` renders four committed SVGs under
+`docsite/static/images/learn/` and is deliberately outside the gate (agni issue 453). Its stated
+reason, that a render depends on the engine build, does not distinguish it from a capture, which
+depends on the engine build too and is regenerated anyway. The real blocker is that the force layout
+is not bit-identical across architectures (agni issue 472), so a regenerate-and-diff would fail on
+the runner's architecture rather than on any change. Closing 472 is what lets this join the gate.
+**Note:** a regeneration check must SNAPSHOT AND RESTORE rather than read `git status`. A
+git-status check forces a regenerate-then-commit-then-gate ordering, so the first run after an edit
+fails for a reason unrelated to the edit. `proto-check` spells this out and
+`hack/tutorial_runs_check.sh` follows it.
