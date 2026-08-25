@@ -1193,14 +1193,28 @@ pre code {
     border-radius: 6px;
 }
 
+/* Prose cells WRAP. An earlier `white-space: nowrap` here was meant to stop narrow
+   code-ish columns being squeezed, but it applied to every cell, so a table whose
+   cells hold sentences laid itself out on one unwrapped line. 47 of the site's 62
+   tables overflowed their column that way and the worst ran 5.3x the content width,
+   which is a horizontal scrollbar between a reader and every row. Cells wrap now and
+   only the tokens that must stay intact are exempted below. */
 .content-body th,
 .content-body td {
     padding: 0.55rem 0.9rem;
     text-align: left;
     vertical-align: top;
-    /* Let wide tables scroll rather than squeeze the columns. */
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: break-word;
     border-bottom: 1px solid var(--border-color);
+}
+
+/* An identifier is unreadable broken across lines, so inline code, links inside a
+   cell, and the header row keep their old behaviour. A table that is genuinely wide
+   because its CONTENT is wide still scrolls, which is what the container above is for. */
+.content-body td code,
+.content-body th code {
+    white-space: nowrap;
 }
 
 .content-body thead th {
@@ -1212,6 +1226,53 @@ pre code {
 
 .content-body tbody tr:last-child td {
     border-bottom: none;
+}
+
+/* Collapsed rationale. A page states the decision in the prose and folds the argument
+   behind one of these, so the reasoning stays on the page for whoever needs it without
+   standing between everyone else and the next decision. Closed by default, and a plain
+   <details> so it works with no JavaScript and survives Ctrl-F in most browsers. */
+.content-body details {
+    margin: 1.25rem 0;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-light);
+    padding: 0 0.9rem;
+}
+
+.content-body details > summary {
+    cursor: pointer;
+    padding: 0.6rem 0;
+    font-weight: 600;
+    color: var(--text-color);
+    list-style: none;
+}
+
+.content-body details > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* The disclosure triangle is drawn rather than inherited, so it picks up the accent
+   colour in both themes instead of the browser's default grey. */
+.content-body details > summary::before {
+    content: "\25B8";
+    display: inline-block;
+    width: 1em;
+    color: var(--accent-color);
+    transition: transform 0.15s ease;
+}
+
+.content-body details[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.content-body details[open] > summary {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+}
+
+.content-body details > *:last-child {
+    margin-bottom: 0.9rem;
 }
 
 .content img,

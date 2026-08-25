@@ -1,0 +1,56 @@
+<svg viewBox="0 0 480 300" role="img" aria-label="Top view of the TXB0104 in a 14-lead TSSOP package, showing pin numbers inside the body and pin names outside it." style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="currentColor">
+    <text x="240" y="16" text-anchor="middle" font-size="10.5" opacity="0.6" letter-spacing="1">TXB0104 &#183; PW &#183; TSSOP-14 &#183; TOP VIEW</text>
+    <rect x="170" y="34" width="140" height="232" rx="3" fill="none" stroke="currentColor" stroke-width="2" opacity="0.85"></rect>
+    <circle cx="187" cy="52" r="4" opacity="0.55"></circle>
+    <g opacity="0.45">
+      <rect x="140" y="77.5" width="30" height="9"></rect>
+      <rect x="140" y="109.5" width="30" height="9"></rect>
+      <rect x="140" y="141.5" width="30" height="9"></rect>
+      <rect x="140" y="173.5" width="30" height="9"></rect>
+      <rect x="140" y="205.5" width="30" height="9"></rect>
+      <rect x="140" y="237.5" width="30" height="9"></rect>
+      <rect x="310" y="77.5" width="30" height="9"></rect>
+      <rect x="310" y="109.5" width="30" height="9"></rect>
+      <rect x="310" y="141.5" width="30" height="9"></rect>
+      <rect x="310" y="173.5" width="30" height="9"></rect>
+      <rect x="310" y="205.5" width="30" height="9"></rect>
+      <rect x="310" y="237.5" width="30" height="9"></rect>
+    </g>
+    <rect x="140" y="45.5" width="30" height="9" fill="var(--accent-color)"></rect>
+    <rect x="310" y="45.5" width="30" height="9" fill="var(--accent-color)"></rect>
+    <g font-size="12" font-weight="600">
+      <text x="132" y="54" text-anchor="end" fill="var(--accent-color)">VCCA</text>
+      <text x="132" y="86" text-anchor="end">A1</text>
+      <text x="132" y="118" text-anchor="end">A2</text>
+      <text x="132" y="150" text-anchor="end">A3</text>
+      <text x="132" y="182" text-anchor="end">A4</text>
+      <text x="132" y="214" text-anchor="end">NC</text>
+      <text x="132" y="246" text-anchor="end">GND</text>
+      <text x="348" y="54" fill="var(--accent-color)">VCCB</text>
+      <text x="348" y="86">B1</text>
+      <text x="348" y="118">B2</text>
+      <text x="348" y="150">B3</text>
+      <text x="348" y="182">B4</text>
+      <text x="348" y="214">NC</text>
+      <text x="348" y="246">OE</text>
+    </g>
+    <g font-size="11" opacity="0.6">
+      <text x="180" y="54">1</text>
+      <text x="180" y="86">2</text>
+      <text x="180" y="118">3</text>
+      <text x="180" y="150">4</text>
+      <text x="180" y="182">5</text>
+      <text x="180" y="214">6</text>
+      <text x="180" y="246">7</text>
+      <text x="300" y="54" text-anchor="end">14</text>
+      <text x="300" y="86" text-anchor="end">13</text>
+      <text x="300" y="118" text-anchor="end">12</text>
+      <text x="300" y="150" text-anchor="end">11</text>
+      <text x="300" y="182" text-anchor="end">10</text>
+      <text x="300" y="214" text-anchor="end">9</text>
+      <text x="300" y="246" text-anchor="end">8</text>
+    </g>
+    <text x="240" y="288" text-anchor="middle" font-size="10.5" opacity="0.55">the dot marks leg 1 &#183; numbering runs anticlockwise</text>
+  </g>
+</svg>
