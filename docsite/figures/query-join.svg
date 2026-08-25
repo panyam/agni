@@ -1,0 +1,80 @@
+<svg viewBox="0 0 620 410" role="img" aria-labelledby="query-join-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="query-join-title">A query over two relations. The fact base holds component-on-net rows and net.max_voltage rows. Naming the same variable in both facts joins them on the net column, the comparison drops the rows that do not satisfy it, and the arrow picks which columns the answer keeps.</title>
+
+  <!-- the query -->
+  <g fill="currentColor" font-size="9.5" letter-spacing="0.08em" opacity="0.45">
+    <text x="14" y="20">THE QUERY</text>
+    <text x="14" y="80">THE FACT BASE</text>
+    <text x="14" y="300">THE ANSWER</text>
+  </g>
+
+  <rect x="12" y="28" width="596" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity="0.25"/>
+  <text x="24" y="50" xml:space="preserve" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="currentColor"><tspan>component-on-net(?ref, </tspan><tspan fill="var(--accent-color)" font-weight="600">?net</tspan><tspan>), net.max_voltage(</tspan><tspan fill="var(--accent-color)" font-weight="600">?net</tspan><tspan>, ?v), ?v &gt; 3  =&gt;  ?ref, ?net, ?v</tspan></text>
+
+  <!-- the join column, highlighted in both relations -->
+  <g fill="var(--accent-color)" opacity="0.1">
+    <rect x="116" y="118" width="76" height="94"/>
+    <rect x="328" y="118" width="76" height="74"/>
+  </g>
+
+  <!-- relation boxes -->
+  <g fill="none" stroke="currentColor" stroke-width="1" opacity="0.25">
+    <rect x="12" y="88" width="284" height="132" rx="4"/>
+    <rect x="324" y="88" width="284" height="132" rx="4"/>
+    <rect x="12" y="308" width="284" height="88" rx="4"/>
+  </g>
+
+  <g font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-weight="600" fill="var(--accent-color)">
+    <text x="24" y="108">component-on-net</text>
+    <text x="336" y="108">net.max_voltage</text>
+  </g>
+
+  <g fill="currentColor" font-size="10" opacity="0.5" letter-spacing="0.06em">
+    <text x="24" y="130">REF</text>
+    <text x="124" y="130">NET</text>
+    <text x="336" y="130">NET</text>
+    <text x="436" y="130">VOLTS</text>
+    <text x="24" y="328">REF</text>
+    <text x="104" y="328">NET</text>
+    <text x="184" y="328">V</text>
+  </g>
+
+  <g stroke="currentColor" stroke-width="1" opacity="0.15">
+    <line x1="24" y1="138" x2="284" y2="138"/>
+    <line x1="336" y1="138" x2="596" y2="138"/>
+    <line x1="24" y1="336" x2="284" y2="336"/>
+  </g>
+
+  <g fill="currentColor" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <text x="24" y="158">U1</text>
+    <text x="124" y="158">+24V</text>
+    <text x="24" y="178">U1</text>
+    <text x="124" y="178">GND</text>
+    <text x="24" y="198">J1</text>
+    <text x="124" y="198">+24V</text>
+
+    <text x="336" y="158">+24V</text>
+    <text x="436" y="158">24</text>
+    <text x="336" y="178">GND</text>
+    <text x="436" y="178">0</text>
+
+    <text x="24" y="356">U1</text>
+    <text x="104" y="356">+24V</text>
+    <text x="184" y="356">24</text>
+    <text x="24" y="376">J1</text>
+    <text x="104" y="376">+24V</text>
+    <text x="184" y="376">24</text>
+  </g>
+
+  <!-- the join -->
+  <path d="M 154 222 C 154 252, 366 252, 366 222" fill="none" stroke="var(--accent-color)" stroke-width="1.3" stroke-dasharray="4 3" opacity="0.9"/>
+  <text x="260" y="272" text-anchor="middle" font-size="11" font-weight="600" fill="var(--accent-color)">the same variable in both facts is a join</text>
+
+  <!-- what the filter and the provenance do -->
+  <g fill="currentColor" font-size="11" opacity="0.7">
+    <text x="324" y="330">The comparison drops the GND rows,</text>
+    <text x="324" y="348">which joined at 0 V.</text>
+    <text x="324" y="392">the file each fact was read from.</text>
+  </g>
+  <text x="324" y="374" font-size="11" font-weight="600" fill="var(--accent-color)">Every answer row also carries</text>
+</svg>

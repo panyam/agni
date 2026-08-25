@@ -24,7 +24,7 @@ Each fact is a named relation with a few fields. You query them by name:
 | `param(mpn, symbol, value)` | a datasheet limit | `--params` (see [Datasheets](../datasheets/)) |
 | `reaches(from, net)` | nets reachable through passives | the connectivity |
 | `board.track_width(net, mm)` | a net's thinnest copper track | the PCB |
-| `board.via_drill(net, mm)` | a net's smallest via drill | the PCB |
+| `board.via_drill(net, mm)` | a net's smallest {{ explainable "via" }} drill | the PCB |
 | `board.layer(net, layer)` | a layer the net is routed on | the PCB |
 
 The datasheet facts need a parameter set (`--params`), the board facts need a `.kicad_pcb` or an
@@ -85,6 +85,12 @@ component-on-net(?ref, ?net), net.max_voltage(?net, ?v), ?v > 3 => ?ref, ?net, ?
 Reusing `?net` in two facts means "the same net in both", that is a `JOIN ... ON`. Joins are how you
 connect what a part is, where it sits, and what its {{ explainable "rail" }} carries.
 
+{{ includeFile "figures/query-join.svg" }}
+
+The two relations are separate tables of facts until a variable appears in both. That shared `?net`
+is what pairs a row on the left with a row on the right, and `?v > 3` then decides which of the
+paired rows survive.
+
 ### 4. Parts on USB nets (*predicate*)
 
 ```
@@ -100,9 +106,10 @@ anchored variants.
 reaches(?from, ?net) => ?from, ?net
 ```
 
-`reaches` walks connectivity transitively through series passives (R/L/ferrite/fuse), a recursive
-CTE / transitive closure over the connectivity graph. It answers "what does this rail actually feed
-after the filter", which no per-net question can see across a series element.
+`reaches` walks connectivity transitively through series passives (a resistor, an inductor, a
+{{ explainable "ferrite-bead" }}, a fuse), a recursive CTE / transitive closure over the connectivity
+graph. It answers "what does this rail actually feed after the filter", which no per-net question can
+see across a series element.
 
 ![reach-walk diagram]({{.Site.PathPrefix}}/static/images/querying/reach-walk.svg)
 
@@ -150,10 +157,10 @@ a sentence you can edit into a better question.
 
 ### Reading a result cell in the viewer
 
-A cell that names a component, a net or a bus is a link: clicking it highlights that thing on the
-drawing. The small chips beside it are the **sheets it appears on**, one per sheet, and clicking one
-opens that sheet. They are not a grouping of related names, and they have nothing to do with the
-cell being a net in particular. Any locatable cell gets them.
+A cell that names a component, a net or a {{ explainable "bus" }} is a link: clicking it highlights
+that thing on the drawing. The small chips beside it are the **sheets it appears on**, one per
+sheet, and clicking one opens that sheet. They are not a grouping of related names, and they have
+nothing to do with the cell being a net in particular. Any locatable cell gets them.
 
 ```
 AVDD_3V3   [ 04_POWER ] [ 07_SENSOR ] [ 11_MCU ] [ +2 ]
@@ -173,7 +180,7 @@ instead and the mark moves to that.
 
 This joins what the part is (`component.mpn`), what its datasheet says (`param`), where it sits
 (`component-on-net`), and the rail's voltage (`net.max_voltage`), then keeps only the ones where the
-rated maximum is below the rail.
+{{ explainable "absolute-maximum-rating" "rated maximum" }} is below the rail.
 
 ```
 agni query regulator.fires.kicad_sch --params ./params/ \
@@ -262,8 +269,8 @@ Some relations do not report what is in the file; they report what the engine *b
 `feedback`, and `pin.type` are resolved from a vocabulary at the moment the design is read.
 
 That vocabulary is the built-in one unless you say otherwise, and it is anchored on the names most
-boards use. On a board that names rails function-first, the honest answer under the built-in
-vocabulary can be badly wrong for your project:
+boards use. On a board that names rails function-first, what the built-in vocabulary returns can be
+badly wrong for your project:
 
 ```
 $ agni query gateway.edn 'rail(?n) => ?n'
@@ -293,13 +300,15 @@ Only the config's lexicon half is used here, since a query runs no rules.
 ## In the viewer
 
 The viewer has a **Query** panel that runs the same queries against the design you have open. Type a
-query, press Run (or ⌘/Ctrl+Enter), and the results appear as a table. The **vocabulary** control in
-the top bar applies here too, so a query and a check in the same session answer under the same
-vocabulary. Each row has a small toggle
-that expands its provenance, so the citations stay out of your way until you want them. The panel
-runs the query on the server over the open file. You get the same answers as `agni query`, without
-leaving the design. Datasheet (`param`) facts are not yet wired into the viewer, so a query over
-`param` returns nothing there, and datasheet joins stay on the CLI for now.
+query, press Run (or ⌘/Ctrl+Enter), and the results appear as a table. Each row has a small toggle
+that expands its provenance, so the citations stay out of your way until you want them.
+
+The panel runs the query on the server, over the open file, so you get the same answers as
+`agni query` without leaving the design. The **vocabulary** control in the top bar applies here too,
+and a query and a check in the same session then answer under the same vocabulary.
+
+Datasheet (`param`) facts are not yet wired into the viewer. A query over `param` returns nothing
+there, and datasheet joins stay on the CLI for now.
 
 You do not have to memorize the vocabulary. Below the query box the panel lists every relation as a
 **click-to-insert chip**, grouped by kind (Netlist, Board, Datasheet, Predicates, and any overlay
@@ -332,42 +341,42 @@ means the fact is absent from your design, which is a different statement from "
 the cards say which is which.
 
 <details>
-<summary><strong><code>net.max_voltage</code></strong> — a net's rail voltage</summary>
+<summary><strong><code>net.max_voltage</code></strong>, a net's rail voltage</summary>
 
 {{ includeCard "content/reference/relations/net.max_voltage.md" }}
 
 </details>
 
 <details>
-<summary><strong><code>component.mpn</code></strong> — a part's manufacturer part number</summary>
+<summary><strong><code>component.mpn</code></strong>, a part's manufacturer part number</summary>
 
 {{ includeCard "content/reference/relations/component.mpn.md" }}
 
 </details>
 
 <details>
-<summary><strong><code>component.class</code></strong> — a device class the part is in</summary>
+<summary><strong><code>component.class</code></strong>, a device class the part is in</summary>
 
 {{ includeCard "content/reference/relations/component.class.md" }}
 
 </details>
 
 <details>
-<summary><strong><code>component-on-net</code></strong> — a part sits on a net</summary>
+<summary><strong><code>component-on-net</code></strong>, a part sits on a net</summary>
 
 {{ includeCard "content/reference/relations/component-on-net.md" }}
 
 </details>
 
 <details>
-<summary><strong><code>reaches</code></strong> — nets reachable through passives</summary>
+<summary><strong><code>reaches</code></strong>, nets reachable through passives</summary>
 
 {{ includeCard "content/reference/relations/reaches.md" }}
 
 </details>
 
 <details>
-<summary><strong><code>board.track_width</code></strong> — a net's thinnest copper track</summary>
+<summary><strong><code>board.track_width</code></strong>, a net's thinnest copper track</summary>
 
 {{ includeCard "content/reference/relations/board.track_width.md" }}
 

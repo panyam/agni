@@ -3,8 +3,9 @@ title: "Naming conventions"
 description: "Write your net and ref-des house style down once as patterns, and check enforces it on every design."
 ---
 
-Your team probably has a house style for net and reference-designator names: power nets look
-like `+3V3`, signal nets are `UPPER_SNAKE`, no ref des is reused. A conventions file writes
+Your team probably has a house style for net and
+{{ explainable "reference-designator" "reference-designator" }} names: power nets look like
+`+3V3`, signal nets are `UPPER_SNAKE`, no ref des is reused. A conventions file writes
 that style down once, as patterns, and `check` enforces it on every design. This is the
 simplest way to add your own rules, and it needs no code.
 
@@ -25,8 +26,8 @@ rules:
 ```
 
 - **`allow`**: a name is fine if it matches any of these patterns.
-- **`exempt`**: names matching any of these are never checked (here, rails starting with
-  `+`, and `GND`).
+- **`exempt`**: names matching any of these are never checked (here,
+  {{ explainable "rail" "rails" }} starting with `+`, and `GND`).
 - **`name`** (top level): the namespace. The rule above appears in the catalog as
   `example/signal-net-naming`.
 

@@ -1,0 +1,58 @@
+<svg viewBox="0 0 660 310" role="img" aria-labelledby="edif-placement-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="edif-placement-title">On the left, a symbol drawn once in its own coordinate frame with two pin connect-locations. On the right, the same symbol placed on a sheet after a 90 degree rotation and a translation to the placement origin, with a wire polyline meeting the transformed pin exactly.</title>
+
+  <g fill="currentColor" font-size="11.5" font-weight="600" opacity="0.7">
+  <text x="16" y="32">symbol-local coordinates</text>
+  <text x="410" y="32">sheet coordinates</text></g>
+
+  <g fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+  <rect x="16" y="44" width="250" height="214"/>
+  <rect x="410" y="44" width="234" height="214"/></g>
+
+  <g stroke="currentColor" stroke-width="1" opacity="0.35" stroke-dasharray="3 3">
+  <line x1="66" y1="84" x2="164" y2="84"/>
+  <line x1="66" y1="84" x2="66" y2="202"/></g>
+  <g fill="currentColor" opacity="0.35">
+  <polygon points="170,84 162,80 162,88"/>
+  <polygon points="66,208 62,200 70,200"/></g>
+  <g fill="currentColor" font-size="10" opacity="0.55">
+  <text x="70" y="76">origin</text>
+  <text x="176" y="88">+X</text>
+  <text x="60" y="214" text-anchor="end">-Y</text></g>
+
+  <rect x="66" y="84" width="76" height="96" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.85"/>
+  <text x="104" y="136" text-anchor="middle" fill="currentColor" font-size="10.5" opacity="0.7">symbol body</text>
+
+  <g stroke="var(--accent-color)" stroke-width="1.4">
+  <line x1="142" y1="110" x2="172" y2="110"/>
+  <line x1="142" y1="156" x2="172" y2="156"/></g>
+  <circle cx="172" cy="110" r="3.5" fill="var(--accent-color)"/>
+  <circle cx="172" cy="156" r="3.5" fill="var(--accent-color)"/>
+  <g fill="var(--accent-color)" font-size="10">
+  <text x="180" y="106">connectLocation</text>
+  <text x="180" y="160">local units</text></g>
+  <text x="141" y="240" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.6">drawn once per part type</text>
+
+  <g fill="currentColor" font-size="10.5" font-family="ui-monospace, monospace" text-anchor="middle" opacity="0.8">
+  <text x="338" y="110">(transform</text>
+  <text x="338" y="125">  (orientation R90)</text>
+  <text x="338" y="140">  (origin (pt X Y)))</text></g>
+  <line x1="280" y1="172" x2="392" y2="172" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <polygon points="400,172 392,168 392,176" fill="var(--accent-color)"/>
+  <text x="338" y="192" text-anchor="middle" fill="currentColor" font-size="10.5" opacity="0.7">rotate, then translate</text>
+
+  <rect x="450" y="138" width="96" height="76" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.85"/>
+  <text x="498" y="182" text-anchor="middle" fill="currentColor" font-size="10.5" opacity="0.7">placed symbol</text>
+  <g stroke="var(--accent-color)" stroke-width="1.4">
+  <line x1="476" y1="138" x2="476" y2="108"/>
+  <line x1="522" y1="138" x2="522" y2="108"/></g>
+  <circle cx="476" cy="108" r="3.5" fill="var(--accent-color)"/>
+  <circle cx="522" cy="108" r="3.5" fill="var(--accent-color)"/>
+  <polyline points="476,108 476,78 600,78" fill="none" stroke="var(--accent-color)" stroke-width="1.4"/>
+  <text x="600" y="70" text-anchor="end" fill="var(--accent-color)" font-size="10">wire meets the pin exactly</text>
+  <circle cx="450" cy="214" r="3" fill="var(--accent-color)"/>
+  <text x="458" y="232" fill="currentColor" font-size="10" font-family="ui-monospace, monospace" opacity="0.7">(origin (pt X Y))</text>
+  <text x="527" y="250" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.6">one instance on one sheet</text>
+
+  <text x="330" y="292" text-anchor="middle" fill="currentColor" font-size="11.5" opacity="0.65">a pin's sheet position is orientation applied to connectLocation, plus origin</text>
+</svg>

@@ -9,8 +9,13 @@ its extension, so you pass the design file directly and never name a format.
 
 Where a `<file>` is expected you may also name a **design folder**, one holding a `design.yaml`
 that declares which file is the design's entry. Agni then reads that entry and picks up the
-companion views the descriptor lists, so a netlist's connectivity rules and a board's copper rules
-run from one argument. See [Projects and designs](../../architecture/projects-and-designs/).
+companion views the descriptor lists, so a {{ explainable "netlist" }}'s connectivity rules and a
+board's copper rules run from one argument. See
+[Projects and designs](../../architecture/projects-and-designs/).
+
+The commands fall into four groups by what each one takes as its argument.
+
+{{ includeFile "figures/agni-command-map.svg" }}
 
 ## Commands
 
@@ -70,11 +75,17 @@ was answered at all. A checklist can stop answering four of its items with its f
 at zero, and no severity predicate can see that.
 
 `--min-answered` counts the items that produced an answer: `pass`, `fail`, `provisional`, and
-`computed-n/a`. It is deliberately stricter than the covered count the report also shows. Covered
-subtracts only `not-automated`, which moves when a rule leaves the catalog; it does not move when a
-rule is present and its inputs are gone. A datasheet-backed item whose corpus moved reads
+`computed-n/a`. It is deliberately stricter than the covered count the report also shows.
+
+<details>
+<summary>Why answered is stricter than covered</summary>
+
+Covered subtracts only `not-automated`, which moves when a rule leaves the catalog. It does not move
+when a rule is present and its inputs are gone. A datasheet-backed item whose corpus moved reads
 `not-applicable`, which still counts as covered and does not count as answered. That gap is the
 regression worth gating on.
+
+</details>
 
 A `provisional` does not trip `--fail-on-outcome fail`. It is a failure resting on mock or
 below-floor datasheet data, so gating on it by default fails a pipeline on data quality rather than on
@@ -129,11 +140,18 @@ with the tool's own name in the error. Only `serve` consumes it, though every co
 read it, because the note says what the file supplied rather than what the command went on to use.
 
 **It carries only tier-1 config, and that is a boundary rather than a to-do.** Naming conventions,
-interface profiles, seeded parameters, design intent and a review checklist decide *what a design is
-checked against*, so they belong to a project where they are scoped to the designs that declared them.
-A machine-wide conventions file applying to every design a CLI opened is the bug per-design config
-fixed. Unknown keys are rejected, so reaching for `conventions:` here is told no rather than quietly
-becoming a global analysis tier. For those, see [Projects and designs](https://panyam.github.io/agni/architecture/projects-and-designs/).
+interface profiles, seeded parameters, design intent and a review checklist belong to a project
+instead. See [Projects and designs](../../architecture/projects-and-designs/).
+
+<details>
+<summary>Why analysis config cannot live here</summary>
+
+Those five decide *what a design is checked against*, so they belong where they are scoped to the
+designs that declared them. A machine-wide conventions file applying to every design a CLI opened is
+the bug per-design config fixed. Unknown keys are rejected, so reaching for `conventions:` here is
+told no rather than quietly becoming a global analysis tier.
+
+</details>
 
 ### `start <design-file> [dir]`
 
@@ -302,12 +320,13 @@ actually read. The rest sit closer to the engine and are covered in the develope
 
 ## Which formats are read
 
-The reader is picked by file extension (case-insensitive): EDIF netlists (`.edn`/`.edf`/
-`.edif`) and geometry (`.eds`), KiCad (`.kicad_sch`/`.kicad_pcb`/`.kicad_pro`), IPC-2581
-(`.xml`/`.cvg`), Telesis netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem /
-gEDA / legacy KiCad, sniffed by header). A schematic
-that references external symbols resolves them by one of three routes, in the order they are
-searched: its own `sym-lib-table` for a KiCad project, the `symbols` library its design descriptor
+The reader is picked by file extension (case-insensitive): EDIF netlists (`.edn`/`.edf`/`.edif`) and
+geometry (`.eds`), KiCad (`.kicad_sch`/`.kicad_pcb`/`.kicad_pro`), IPC-2581 (`.xml`/`.cvg`), Telesis
+netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem / gEDA / legacy KiCad, sniffed by
+header).
+
+A schematic that references external symbols resolves them by one of three routes, in the order they
+are searched: its own `sym-lib-table` for a KiCad project, the `symbols` library its design descriptor
 declares (defaulting to `symbols` beside the descriptor), and any `--symbol-path` directory. A design
 that belongs to a project needs no flag, and the flag stays the escape hatch for a library the
 project does not know about.

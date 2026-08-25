@@ -6,8 +6,9 @@ description: "Give the tool a part's real limits as data, and it checks every de
 Most rules only need your design. A few can also check it against a **part's real limits**
 from its datasheet, once you give the tool those limits as data. This page turns that on.
 
-Transcribe a part's limits once (the Absolute Maximum Ratings, the operating range) into a
-small file, and the tool compares every design that uses the part against them. See
+Transcribe a part's limits once (the
+{{ explainable "absolute-maximum-rating" "Absolute Maximum Ratings" }}, the operating range)
+into a small file, and the tool compares every design that uses the part against them. See
 "datasheets as checkable data" in [Concepts](../concepts/).
 
 ## Load a parameter set

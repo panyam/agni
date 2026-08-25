@@ -5,10 +5,11 @@ description: "Declare an interface's signals and what must be true of them, and 
 
 A {{ explainable "bus" }} has a shape. CAN is a CANH/CANL {{ explainable "differential-pair" "pair" }} with a
 {{ explainable "termination" }} resistor across it, driven by a {{ explainable "transceiver" }} with
-TXD and RXD. I2C is SCL and SDA, both pulled up. An interface profile writes
-that shape down as YAML, and the engine compiles it into check rules. Agni ships profiles for
-SPI-NOR, eMMC, CAN, LIN, A2B, PCIe and SGMII. Your own interfaces, and your own reading of a
-standard one, go in a directory you hand to `--profile-path`. No Go.
+TXD and RXD. I2C is SCL and SDA, both pulled up.
+
+An interface profile writes that shape down as YAML, and the engine compiles it into check rules.
+Agni ships profiles for SPI-NOR, eMMC, CAN, LIN, A2B, PCIe and SGMII. Your own interfaces, and your
+own reading of a standard one, go in a directory you hand to `--profile-path`. No Go.
 
 ## Write a profile
 
@@ -55,6 +56,24 @@ no findings (3 rule(s) run)
 Rules from `--profile-path` are namespaced `profile-overlay/`, so an overlay rule is never
 mistaken for a built-in one.
 
+```mermaid
+flowchart LR
+    subgraph d["i2c.yaml"]
+      S["signals<br/>SCL: anchor, pullup<br/>SDA: pullup"]
+      R["requirements<br/>signal-missing<br/>missing-pullup<br/>signal-dangling"]
+    end
+    R --> C["compile,<br/>once at load"]
+    C --> R1["profile-overlay/<br/>i2c-signal-missing"]
+    C --> R2["profile-overlay/<br/>i2c-missing-pullup"]
+    C --> R3["profile-overlay/<br/>i2c-signal-dangling"]
+    R1 --> D["each rule binds<br/>its signals to nets<br/>by net name"]
+    R2 --> D
+    R3 --> D
+    S -.->|"the matchers"| D
+```
+
+The requirements decide how many rules there are. The signals decide what each one looks at.
+
 ## The shape of the file
 
 | key | what it is |
@@ -90,7 +109,7 @@ enforce.
 |---|---|---|
 | `signal-missing` | every declared signal appears on a bus that is in use | |
 | `host-incomplete` | a declared host is wired to all of the interface's signals | |
-| `missing-pullup` | a signal marked `pullup: true` reaches a rail | |
+| `missing-pullup` | a signal marked `pullup: true` reaches a {{ explainable "rail" }} | |
 | `signal-dangling` | a signal net has at least two connections | |
 | `termination` | a terminating device bridges the bus pair | `high`, `low` |
 | `esd` | a signal leaving through a connector has an ESD clamp | |
@@ -133,6 +152,15 @@ interface is. Completeness is reported against it, so a finding reads `CAN inter
 there. At most one signal may be the anchor, and a profile that declares none generates no
 completeness rule at all.
 
+```mermaid
+flowchart TB
+    A["every signal matched<br/>against every net name"] --> B{"two or more distinct<br/>signals matched?"}
+    B -->|no| S["silent: no interface<br/>on this board"]
+    B -->|yes| C{"an anchor declared,<br/>and its net present?"}
+    C -->|no| E["pull-up and dangling<br/>rules evaluate, but no<br/>completeness finding"]
+    C -->|yes| F["those, plus missing<br/>signals reported<br/>against the anchor net"]
+```
+
 ## Re-bind a built-in instead of re-writing it
 
 When the engine already reads your interface and only the net naming differs, a naming map
@@ -167,20 +195,30 @@ built-in profiles only, so an overlay profile's findings appear while its covera
 
 ## What the tooling tells you when the declaration is wrong
 
-A profile that cannot do what it says is refused at load, with the error naming what was
-available:
+A profile that cannot do what it says is refused at load, with the error naming what was available.
+
+<details>
+<summary>The three load-time refusals, verbatim</summary>
+
+A requirement type nothing registers:
 
 ```
 error: profiles: i2c.yaml: profile "I2C": unknown requirement type "pullup" (known: esd, host-incomplete, missing-pullup, signal-dangling, signal-missing, termination)
 ```
 
+A requirement missing a param it cannot work without:
+
 ```
 error: profiles: mybus.yaml: profile "MYBUS": requirement "termination": needs the low param, naming the two bridged net-name suffixes (e.g. high: _CANH, low: _CANL); got map[high:_H]
 ```
 
+A signal declaring more than one matcher form:
+
 ```
 error: profiles: mybus.yaml: profile "MYBUS": signal "H" declares 2 matcher forms: set exactly one of suffix/prefix, glob, or regex
 ```
+
+</details>
 
 A matcher that is merely too loose cannot be caught that way, because whether `_H` names one
 role or half the board depends on the board. `check` judges that against the design in front of

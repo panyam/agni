@@ -8,9 +8,9 @@ the two looks like a matter of matching pin numbers. It is not, and the reason i
 than notational. This page starts from the article on the bench and works outward to what a tool
 has to model.
 
-The short version: **a pin number belongs to the package, not to the chip.** The same silicon is
-sold in several bodies, each wiring it to differently numbered legs, so a number means different
-things in different bodies. A pin name survives the change and a number does not.
+In short, **a pin number belongs to the package, not to the chip.** The same silicon is sold in
+several bodies, each wiring it to differently numbered legs, so a number means different things in
+different bodies. A pin name survives the change and a number does not.
 
 ## What is actually in there
 
@@ -27,7 +27,8 @@ interchangeably in conversation, which is where the confusion starts.
 
 The die is the part. The package is how it was shipped. A vendor sells the same die in a handful of
 packages, because a phone needs the small one and a lab instrument wants the one you can solder by
-hand.
+hand. Each body also lands on its own {{ explainable "footprint" }}, so picking a different one
+changes the board as well as the part.
 
 Here is a real one, the TXB0104 in its 14-lead TSSOP body, drawn the way the datasheet draws it.
 
@@ -57,10 +58,11 @@ Three things fall out of that table, and each one breaks a plausible-sounding sh
 
 **Number 11 means different terminals in different bodies.** In the TSSOP it is `B3`, a data line.
 In the UQFN it is `VCCB`, the main supply input. A tool that joined a design to a datasheet by pin
-number, on a part seeded from one body and placed in another, would compare a power rail against a
-data line's limits. It would not error while doing it, because both are real terminals with real
-limits. It would report that everything looks fine. That failure is worse than no answer at all,
-so the name serves as the primary key and the number is only ever a tie-breaker.
+number, on a part seeded from one body and placed in another, would compare a
+{{ explainable "rail" "power rail" }} against a data line's limits. It would not error while doing
+it, because both are real terminals with real limits. It would report that everything looks fine. That failure
+is worse than no answer at all, so the name serves as the primary key and the number is only ever
+a tie-breaker.
 
 **A number is not always a number.** Ball-grid packages designate by row and column, so `A2` and
 `B2` are pin "numbers" in the DSBGA. Anything storing a designator as an integer has already lost.
@@ -75,8 +77,8 @@ A terminal on the die can reach more than one leg of the same package. This is n
 convenience. Three physical reasons drive it, roughly in order of how often they decide the matter.
 
 **Current.** A bond wire and a lead can only carry so much before the resistance and the heating
-become the circuit's problem. A part drawing several amps fans its supply and ground out across
-several legs in parallel.
+become the circuit's problem. A part drawing several amps fans its supply and
+{{ explainable "ground" }} out across several legs in parallel.
 
 **Heat.** The legs are the die's main escape route for heat, out into the board's copper. More
 ground legs means a better thermal path. The exposed metal pad on the underside of a QFN is that
@@ -91,8 +93,8 @@ one. It costs a leg and buys real margin.
 </figure>
 
 So the multiplicity runs in two directions at once. One die terminal has a different number in each
-body, and it may have several numbers within one body. Both are addressing rather than anatomy: the
-terminal is still one terminal.
+body, and it may have several numbers within one body. Both are addressing rather than anatomy, and
+the terminal is still one terminal.
 
 The rule that follows is asymmetric, and worth stating on its own. **One number identifies one
 terminal. One terminal may hold many numbers.** A package cannot send leg 5 to two different places,
@@ -112,10 +114,10 @@ symmetric.
 - **Refuse when a name is ambiguous and no body is known.** Reporting nothing is recoverable.
   Reporting about the wrong terminal is not, because nothing downstream looks wrong.
 
-A design carries both channels already. A schematic connection names a component and a pin
-designator, the component resolves to a part type through its section, and the part type's pin
-carries a name alongside that designator. So the join has a name and a number available on both
-sides, and the only question is which one leads.
+A design carries both channels already. A schematic connection names a component by its
+{{ explainable "reference-designator" }} and a pin by its designator. The component resolves to a
+part type through its section, and that part type's pin carries a name alongside the designator. So
+the join has a name and a number on both sides, and the only question is which one leads.
 
 How Agni models this, and the exact precedence its resolver implements, is in
 [the datasheet layer](../../architecture/datasheet-layer/#pin-binding). The wider map from circuit
