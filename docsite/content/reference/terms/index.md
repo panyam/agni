@@ -36,3 +36,8 @@ missing from this index, or a term nothing references.
 ## Failure modes (EE4)
 
 - [Port protection](./port-protection/), what absorbs a static discharge arriving on a connector
+
+## Numbers (EE5)
+
+- [Absolute maximum rating](./absolute-maximum-rating/), the damage threshold, as against the
+  recommended operating condition it gets confused with
