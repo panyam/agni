@@ -108,14 +108,15 @@ arriving from a different direction.
 The rails section prints nominal voltages and withholds the net names, following the pattern of
 the whole command: the shape of the design crosses the boundary, the design does not.
 
-`--params` is what populates the MPN column and the datasheet-gap list. Without a parameter set
-those columns stay empty by design, since part numbers come from the seeded corpus rather than being
-lifted out of the design.
+The MPN column and the datasheet-gap list need a parameter set. This project declares one, so the
+command above carries no flag and picks up `params/` the same way `check` and `review` do. A design
+that belongs to no project names a corpus with `--params <dir>` instead, and without either those
+columns stay empty by design, since a part number crosses the boundary only once you have opted into
+a corpus.
 
 ## Then read the gaps
 
-With `--params` attached, the tail of the intake names every part on the board with no seeded
-datasheet:
+The tail of the intake names every part on the board with no seeded datasheet:
 
 ```
 ## Datasheet gaps (MPN on board, no seeded spec)
@@ -127,6 +128,13 @@ datasheet:
 
 That list is the work queue for [rung 6](../). Every part on it is one whose real limits nothing can
 currently check against.
+
+It lists distinct PART NUMBERS rather than placements, because seeding is per part number: one file
+covers every component carrying that MPN. A board with forty of one capacitor contributes one line.
+
+When the corpus is attached and nothing is missing, the section still prints and says so. An empty
+queue and a run you forgot to attach a corpus to are different states, and both would otherwise
+render as no section at all.
 
 ## Next
 

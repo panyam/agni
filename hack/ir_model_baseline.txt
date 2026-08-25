@@ -10,3 +10,4 @@ core/classify:StampValues
 cmd/agni:compareLayouts
 cmd/agni:Design
 cmd/agni:readDesign
+cmd/agni:readDesignWithConfig
