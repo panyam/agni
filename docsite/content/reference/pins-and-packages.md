@@ -32,62 +32,7 @@ hand.
 Here is a real one, the TXB0104 in its 14-lead TSSOP body, drawn the way the datasheet draws it.
 
 <figure>
-<svg viewBox="0 0 480 300" role="img" aria-label="Top view of the TXB0104 in a 14-lead TSSOP package, showing pin numbers inside the body and pin names outside it." style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
-  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="currentColor">
-    <text x="240" y="16" text-anchor="middle" font-size="10.5" opacity="0.6" letter-spacing="1">TXB0104 &#183; PW &#183; TSSOP-14 &#183; TOP VIEW</text>
-    <rect x="170" y="34" width="140" height="232" rx="3" fill="none" stroke="currentColor" stroke-width="2" opacity="0.85"></rect>
-    <circle cx="187" cy="52" r="4" opacity="0.55"></circle>
-    <g opacity="0.45">
-      <rect x="140" y="77.5" width="30" height="9"></rect>
-      <rect x="140" y="109.5" width="30" height="9"></rect>
-      <rect x="140" y="141.5" width="30" height="9"></rect>
-      <rect x="140" y="173.5" width="30" height="9"></rect>
-      <rect x="140" y="205.5" width="30" height="9"></rect>
-      <rect x="140" y="237.5" width="30" height="9"></rect>
-      <rect x="310" y="77.5" width="30" height="9"></rect>
-      <rect x="310" y="109.5" width="30" height="9"></rect>
-      <rect x="310" y="141.5" width="30" height="9"></rect>
-      <rect x="310" y="173.5" width="30" height="9"></rect>
-      <rect x="310" y="205.5" width="30" height="9"></rect>
-      <rect x="310" y="237.5" width="30" height="9"></rect>
-    </g>
-    <rect x="140" y="45.5" width="30" height="9" fill="var(--accent-color)"></rect>
-    <rect x="310" y="45.5" width="30" height="9" fill="var(--accent-color)"></rect>
-    <g font-size="12" font-weight="600">
-      <text x="132" y="54" text-anchor="end" fill="var(--accent-color)">VCCA</text>
-      <text x="132" y="86" text-anchor="end">A1</text>
-      <text x="132" y="118" text-anchor="end">A2</text>
-      <text x="132" y="150" text-anchor="end">A3</text>
-      <text x="132" y="182" text-anchor="end">A4</text>
-      <text x="132" y="214" text-anchor="end">NC</text>
-      <text x="132" y="246" text-anchor="end">GND</text>
-      <text x="348" y="54" fill="var(--accent-color)">VCCB</text>
-      <text x="348" y="86">B1</text>
-      <text x="348" y="118">B2</text>
-      <text x="348" y="150">B3</text>
-      <text x="348" y="182">B4</text>
-      <text x="348" y="214">NC</text>
-      <text x="348" y="246">OE</text>
-    </g>
-    <g font-size="11" opacity="0.6">
-      <text x="180" y="54">1</text>
-      <text x="180" y="86">2</text>
-      <text x="180" y="118">3</text>
-      <text x="180" y="150">4</text>
-      <text x="180" y="182">5</text>
-      <text x="180" y="214">6</text>
-      <text x="180" y="246">7</text>
-      <text x="300" y="54" text-anchor="end">14</text>
-      <text x="300" y="86" text-anchor="end">13</text>
-      <text x="300" y="118" text-anchor="end">12</text>
-      <text x="300" y="150" text-anchor="end">11</text>
-      <text x="300" y="182" text-anchor="end">10</text>
-      <text x="300" y="214" text-anchor="end">9</text>
-      <text x="300" y="246" text-anchor="end">8</text>
-    </g>
-    <text x="240" y="288" text-anchor="middle" font-size="10.5" opacity="0.55">the dot marks leg 1 &#183; numbering runs anticlockwise</text>
-  </g>
-</svg>
+{{ includeFile "figures/txb0104-tssop14-pinout.svg" }}
 <figcaption>One package. The names outside belong to the die. The numbers inside belong to this body.</figcaption>
 </figure>
 
@@ -141,50 +86,7 @@ idea taken as far as it goes.
 one. It costs a leg and buys real margin.
 
 <figure>
-<svg viewBox="0 0 480 270" role="img" aria-label="Bonding diagram of an illustrative chip, showing three separate legs all bonded to a single ground pad on the die." style="max-width: 480px; width: 100%; height: auto; display: block; margin: 0 auto;">
-  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="currentColor">
-    <text x="240" y="16" text-anchor="middle" font-size="10.5" opacity="0.6" letter-spacing="1">ILLUSTRATIVE &#183; NOT A SPECIFIC PART &#183; BONDING VIEW</text>
-    <rect x="88" y="34" width="304" height="176" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.5"></rect>
-    <rect x="198" y="96" width="94" height="58" rx="2" fill="none" stroke="var(--accent-color)" stroke-width="1.5"></rect>
-    <text x="245" y="130" text-anchor="middle" font-size="10.5" opacity="0.6" letter-spacing="1">DIE</text>
-    <g stroke="currentColor" stroke-width="1" opacity="0.4">
-      <line x1="120" y1="210" x2="212" y2="154"></line>
-      <line x1="192" y1="210" x2="222" y2="154"></line>
-      <line x1="228" y1="210" x2="234" y2="154"></line>
-      <line x1="300" y1="210" x2="258" y2="154"></line>
-      <line x1="372" y1="210" x2="270" y2="154"></line>
-    </g>
-    <g stroke="var(--accent-color)" stroke-width="1.9">
-      <line x1="156" y1="210" x2="245" y2="154"></line>
-      <line x1="264" y1="210" x2="245" y2="154"></line>
-      <line x1="336" y1="210" x2="245" y2="154"></line>
-    </g>
-    <circle cx="245" cy="154" r="5" fill="none" stroke="var(--accent-color)" stroke-width="1.5"></circle>
-    <g opacity="0.45">
-      <rect x="112" y="210" width="16" height="14"></rect>
-      <rect x="184" y="210" width="16" height="14"></rect>
-      <rect x="220" y="210" width="16" height="14"></rect>
-      <rect x="292" y="210" width="16" height="14"></rect>
-      <rect x="364" y="210" width="16" height="14"></rect>
-    </g>
-    <g fill="var(--accent-color)">
-      <rect x="148" y="210" width="16" height="14"></rect>
-      <rect x="256" y="210" width="16" height="14"></rect>
-      <rect x="328" y="210" width="16" height="14"></rect>
-    </g>
-    <g font-size="11" text-anchor="middle">
-      <text x="120" y="240" opacity="0.6">1</text>
-      <text x="156" y="240" fill="var(--accent-color)" font-weight="600">2</text>
-      <text x="192" y="240" opacity="0.6">3</text>
-      <text x="228" y="240" opacity="0.6">4</text>
-      <text x="264" y="240" fill="var(--accent-color)" font-weight="600">5</text>
-      <text x="300" y="240" opacity="0.6">6</text>
-      <text x="336" y="240" fill="var(--accent-color)" font-weight="600">7</text>
-      <text x="372" y="240" opacity="0.6">8</text>
-    </g>
-    <text x="240" y="262" text-anchor="middle" font-size="10.5" opacity="0.6">legs 2, 5 and 7 are three legs and one ground terminal</text>
-  </g>
-</svg>
+{{ includeFile "figures/one-bond-pad-three-legs.svg" }}
 <figcaption>Three legs, one bond pad. The datasheet prints this as a single row reading GND 2, 5, 7.</figcaption>
 </figure>
 
