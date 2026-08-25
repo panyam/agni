@@ -32,8 +32,9 @@ flowchart TB
 Ask what the rule reads. If the answer includes data no reader emits yet (net classes, datasheet limits
 before the parameters tier exists), the reader work comes first and the rule waits.
 
-The worked example comes from a design-for-test checklist: rails and ground should be probe-able. It
-reads component classes, net membership, and rail-ness, all three present in the IR. So it is a rule.
+The worked example comes from a design-for-test checklist: rails and {{ explainable "ground" }}
+should be probe-able. It reads component classes, net membership, and rail-ness, all three present in
+the IR. So it is a rule.
 
 ## Write the sentence, then the guards
 

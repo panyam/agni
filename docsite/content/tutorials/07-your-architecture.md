@@ -32,7 +32,7 @@ subsystems:
 ```
 
 Read it as the sentence you would say describing the board to a colleague. Two regulators and one
-connector. Three voltage domains at these voltages. A power tree and a CAN subsystem made of these
+connector. Three voltage domains at these voltages. A {{ explainable "power-tree" }} and a CAN subsystem made of these
 nets.
 
 ## Running it

@@ -114,7 +114,7 @@ suite. The full binding rules are in [Net solving and hierarchy](../../architect
 **Software.** Some questions are not about one node but about a path. Is there an auth middleware
 anywhere between the public handler and the database call? Neither endpoint can answer that. You
 walk the call graph between them. `Reach` is that walk. A two-terminal series part (a resistor,
-inductor, ferrite bead, or fuse) is inline middleware. It splits one logical channel into two
+inductor, {{ explainable "ferrite-bead" }}, or fuse) is inline middleware. It splits one logical channel into two
 named nets, so a per-net rule is blind across it. `Reach(start, hops)` is a bounded BFS over the
 pass-element adjacency, and the helpers read the result like a stack trace. `PathTo` is the path,
 `ThroughOnPath` is the middleware crossed in order, and `Between(from, to, class, hops)` is the

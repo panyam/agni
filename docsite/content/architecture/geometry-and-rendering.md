@@ -206,7 +206,7 @@ The reader declares lossy-bounded (a render subset). It is not a round-trip orac
 There are two geometries and two sidecars, one per physical medium.
 
 - **Schematic-page geometry**: symbol shapes, wire runs, labels. This is `SchematicGeometry`, the subject above.
-- **Board geometry**: component placement, pads, routed copper, vias, zones, the layer stackup, and the board outline. This is `BoardGeometry`, in the same `agni.v1.geom` package, so the primitive vocabulary (`Point`, `Polyline`, `BBox`, `Provenance`) is shared rather than duplicated.
+- **Board geometry**: component placement, pads, routed copper, {{ explainable "via" "vias" }}, zones, the layer stackup, and the board outline. This is `BoardGeometry`, in the same `agni.v1.geom` package, so the primitive vocabulary (`Point`, `Polyline`, `BBox`, `Provenance`) is shared rather than duplicated.
 
 The board sidecar follows every rule established above. It is a separate keyed artifact, never imported by diff, rules, or simulation, and joined to the netlist IR at consumption time by stable keys: `ref_des` for placements (with a pad `number` matching the connection's `pin_ref`, so `(ref_des, number)` joins a copper land to its netlist pin) and net name for routed copper (`NetCopper`, the board analogue of `WireGeometry`). The first producer is the KiCad reader, over the same s-expr parse as the netlist reader. IPC-2581 and ODB++ producers slot in behind the same proto, keeping the one-contract, N-producers property.
 

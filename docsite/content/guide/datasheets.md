@@ -44,7 +44,8 @@ The tool is deliberately conservative about when it compares a number automatica
 - A limit stated as a plain number the tool can act on (VIN abs-max = 20V) is
   **machine-comparable** and can fire a finding.
 - A limit that only holds under a **text condition** the tool cannot evaluate ("20V at 25°C
-  ambient, derate above") is shown to a human rather than auto-compared. The tool will not
+  ambient, derate above") is shown to a human rather than auto-compared, because applying that
+  {{ explainable "derating" }} is a judgement rather than a comparison. The tool will not
   pretend to a certainty the datasheet did not give it.
 - A part whose spec is missing the fields a rule needs is **under-specified** and is skipped,
   not guessed.

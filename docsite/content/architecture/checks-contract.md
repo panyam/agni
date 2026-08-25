@@ -256,7 +256,7 @@ rule means looking at rendered output and not only at a green package.
 `verdict.subjects` is the entities the rule quantified over, in the rule's own order. Most rules name
 one. A rule whose question is a RELATION names every entity in it, because a relation belongs to none
 of them alone: a clearance violation is a distance between two nets, a regulator over-driving a part it
-feeds is only pinned down by the regulator, the rail and the load, and a strap group is a device and
+feeds is only pinned down by the regulator, the rail and the load, and a {{ explainable "strap" }} group is a device and
 the N nets encoding its value. Naming fewer would give several answers one id.
 
 Order is the rule's and is significant, since a tracking bound reads subject-pin minus reference-pin.
