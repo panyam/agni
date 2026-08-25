@@ -1,0 +1,61 @@
+<svg viewBox="0 0 640 276" role="img" aria-labelledby="findings-versus-verdicts-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="findings-versus-verdicts-title">One rule over six subjects, in three aligned rows. The top row lists the six nets the rule examined. The findings row below it holds boxes only under the two that failed, leaving four empty columns. The verdicts row holds a box under every subject, carrying pass, fail, or n-slash-c for a subject the rule never reached. The empty columns in the findings row are exactly what a violation list cannot say anything about.</title>
+
+  <text x="30" y="34" fill="var(--accent-color)" font-size="12" font-weight="600">one rule, six subjects</text>
+
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4">
+    <rect x="64" y="46" width="72" height="30" rx="3"/>
+    <rect x="152" y="46" width="72" height="30" rx="3"/>
+    <rect x="240" y="46" width="72" height="30" rx="3"/>
+    <rect x="328" y="46" width="72" height="30" rx="3"/>
+    <rect x="416" y="46" width="72" height="30" rx="3"/>
+    <rect x="504" y="46" width="72" height="30" rx="3"/>
+  </g>
+  <g fill="currentColor" font-size="11" text-anchor="middle" opacity="0.9">
+    <text x="100" y="66">SDA</text>
+    <text x="188" y="66">SCL</text>
+    <text x="276" y="66">VBUS</text>
+    <text x="364" y="66">GND</text>
+    <text x="452" y="66">RESET</text>
+    <text x="540" y="66">CLK</text>
+  </g>
+
+  <text x="30" y="112" fill="currentColor" font-size="11.5" font-weight="600" opacity="0.8">findings</text>
+  <text x="94" y="112" fill="currentColor" font-size="10" opacity="0.55">violations only, so four columns hold nothing</text>
+  <g fill="none" stroke="var(--accent-color)" stroke-width="1.3">
+    <rect x="152" y="120" width="72" height="30" rx="3"/>
+    <rect x="416" y="120" width="72" height="30" rx="3"/>
+  </g>
+  <g fill="var(--accent-color)" font-size="11" text-anchor="middle" font-weight="600">
+    <text x="188" y="140">fail</text>
+    <text x="452" y="140">fail</text>
+  </g>
+  <g stroke="currentColor" stroke-width="1" opacity="0.18" stroke-dasharray="3 4">
+    <rect x="64" y="120" width="72" height="30" rx="3" fill="none"/>
+    <rect x="240" y="120" width="72" height="30" rx="3" fill="none"/>
+    <rect x="328" y="120" width="72" height="30" rx="3" fill="none"/>
+    <rect x="504" y="120" width="72" height="30" rx="3" fill="none"/>
+  </g>
+
+  <text x="30" y="184" fill="currentColor" font-size="11.5" font-weight="600" opacity="0.8">verdicts</text>
+  <text x="94" y="184" fill="currentColor" font-size="10" opacity="0.55">the considered set, including what the rule could not judge</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.5">
+    <rect x="64" y="192" width="72" height="30" rx="3"/>
+    <rect x="152" y="192" width="72" height="30" rx="3"/>
+    <rect x="240" y="192" width="72" height="30" rx="3"/>
+    <rect x="328" y="192" width="72" height="30" rx="3"/>
+    <rect x="416" y="192" width="72" height="30" rx="3"/>
+    <rect x="504" y="192" width="72" height="30" rx="3"/>
+  </g>
+  <g fill="currentColor" font-size="11" text-anchor="middle" opacity="0.85">
+    <text x="100" y="212">pass</text>
+    <text x="188" y="212">fail</text>
+    <text x="276" y="212">pass</text>
+    <text x="364" y="212">pass</text>
+    <text x="452" y="212">fail</text>
+    <text x="540" y="212">n/c</text>
+  </g>
+
+  <text x="320" y="248" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">a findings list answers what is wrong, and cannot answer prove this one is fine</text>
+  <text x="320" y="266" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.6">n/c is NOT_CONSIDERED, whose reason names the step that stopped the rule</text>
+</svg>

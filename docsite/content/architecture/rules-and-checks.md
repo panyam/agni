@@ -4,8 +4,8 @@ description: "The evaluation model behind checks: what a rule can express, where
 ---
 
 A rule asserts that something must hold over a design and reports where it does not. Examples:
-every I2C net has a pull-up, no output pin drives another output pin. A rule reads the
-intermediate representation and produces findings. It does not simulate or solve. This page
+every I2C net has a {{ explainable "pull-up" }}, no output pin drives another output pin. A rule
+reads the intermediate representation and produces findings. It does not simulate or solve. This page
 covers what a rule is allowed to express, where in the pipeline different rules run, and the
 model that evaluates them.
 
@@ -19,8 +19,8 @@ Analysis produces the quantity.
 
 The two cooperate without blurring the line. Some rules assert over a quantity that analysis
 computes. An inductor's saturation-current margin needs the peak current through it. A
-capacitor's derating needs a rail's worst-case maximum voltage. The rule references that
-quantity by name through an interface the analysis engine fills. The rule still only asserts and
+capacitor's {{ explainable "derating" }} needs a {{ explainable "rail" }}'s worst-case maximum
+voltage. The rule references that quantity by name through an interface the analysis engine fills. The rule still only asserts and
 reports, it never simulates, so the boundary holds even where a rule and an analysis compose.
 
 A third surface sits beside rules and analysis: queries that report. Some questions are not
@@ -40,17 +40,30 @@ dataflow run over the built program. The rules layer maps onto the same stages.
 The test that decides where a rule runs: can the rule be computed from the final
 {{ explainable "netlist" }} IR alone?
 
+```mermaid
+flowchart TB
+  S["a source file"] --> R["the reader, applying its own format's semantics"]
+  R -- "problems the IR normalizes away" --> D["input diagnostics<br/>duplicate ref-des, dangling endpoint"]
+  R -- "annotations, not problems" --> F["input facts<br/>power-driven, crosses sheets, net class"]
+  R --> IR["the netlist IR"]
+  F --> C["the analysis engine"]
+  IR --> C
+  C --> V["findings, with provenance"]
+  D --> V
+```
+
 - If **no**, because it needs detail the reader normalized away, such as the pre-merge
   placements, the raw label set, or the wire geometry, then it is an input diagnostic. The
   reader detects it while building the IR, applying its own format's semantics, and records a
-  neutral result. Duplicate reference designator is an example. The IR merges components by
-  reference designator on purpose, since a multi-unit part is one component with several
+  neutral result. Duplicate {{ explainable "reference-designator" }} is an example. The IR merges
+  components by reference designator on purpose, since a multi-unit part is one component with several
   sections, so by netlist time the collision is gone. Only the reader, mid-merge, can tell a
   genuine duplicate from a legitimate multi-unit part. A dangling endpoint is similar, because
   the wire geometry is gone by netlist time.
 - If **yes**, because nets, connections, and pin electrical types are enough, then it is an
-  analysis check. Output-drives-output, floating input, and decoupling presence are examples.
-  These run over the IR the same way regardless of source format.
+  analysis check. Output-drives-output, floating input, and
+  {{ explainable "decoupling-capacitor" "decoupling" }} presence are examples. These run over the IR
+  the same way regardless of source format.
 
 The reader emits two kinds of derived output that are easy to confuse. Input diagnostics are
 problems, statements that something is wrong: duplicate reference designator, dangling endpoint,
@@ -94,14 +107,16 @@ but the machinery the rules need is bounded. Classifying rules by the expressive
 require is the useful axis, because it decides the evaluation model.
 
 - **Tier P, parametric.** A fixed, standardized catalog with per-process parameters: geometric
-  design-rule checks (clearance, track width, via and annular ring, courtyard) and electrical
-  rule checks (pin-type conflicts, unconnected pins, single-pin nets). The rule types are finite,
+  design-rule checks (clearance, track width, {{ explainable "via" }} and annular ring, courtyard)
+  and electrical rule checks (pin-type conflicts, unconnected pins, single-pin nets). The rule types are finite,
   only the values vary. This is config-shaped, not language-shaped.
 - **Tier R, relational or graph query.** Select and traverse the netlist, then quantify. "For
-  every I2C net there exists a pull-up to VCC." "Is this net reachable from ground through only
-  passives," which is a transitive closure. This is the bulk of the design-intent tail.
-- **Tier A, aggregate.** Counts and ratios over the selections. "Test-point coverage of at least
-  95 percent." "At least one decoupling cap per power pin."
+  every I2C net there exists a pull-up to VCC." "Is this net reachable from
+  {{ explainable "ground" }} through only passives," which is a transitive closure. This is the bulk
+  of the design-intent tail.
+- **Tier A, aggregate.** Counts and ratios over the selections.
+  "{{ explainable "test-point" "Test-point" }} coverage of at least 95 percent." "At least one
+  decoupling cap per power pin."
 - **Tier X, external join.** Bring in data that lives outside the design, such as an approved-MPN
   list or part parametrics from a spec database. "Every passive has an MPN from the approved
   vendor list."
@@ -111,6 +126,8 @@ external relations: pattern-match, traverse, quantify, aggregate, join. That is 
 Turing-complete and not a general programming language. That bounded ceiling is what makes a
 declarative rules layer feasible. Anything that needs real computation is analysis, by the
 boundary above.
+
+{{ includeFile "figures/expressiveness-tiers.svg" }}
 
 For orientation on the mechanisms that fit each tier: a fixed parametric catalog covers Tier P,
 KiCad's `.kicad_dru` text rules cover Tier P and some of Tier R, Datalog with transitive closure
@@ -147,11 +164,18 @@ is declared rather than inferred and the report stays honest.
 
 A capability is usually a property of the format's grammar, decided here from the source format. One
 is not: whether the READER detected a construct is a property of the reader's implementation, so it
-is declared per read in `InputDiagnostics.supplied` and the gate consults that. `duplicate-ref-des`
-is the case, and it is why the axis exists at all. The rule IS a reader diagnostic, so on a reader
-that never computed it the rule finds nothing, and a clean design looks exactly the same. It
-read as passing on four of five formats until the declaration existed (agni issue 309). A rule whose
-entire subject is a reader diagnostic should declare the matching capability.
+is declared per read in `InputDiagnostics.supplied` and the gate consults that.
+
+<details>
+<summary>The rule that forced that second kind of capability</summary>
+
+`duplicate-ref-des` is the case, and it is why the axis exists at all. The rule IS a reader
+diagnostic, so on a reader that never computed it the rule finds nothing, and a clean design looks
+exactly the same. It read as passing on four of five formats until the declaration existed (agni
+issue 309). A rule whose entire subject is a reader diagnostic should declare the matching
+capability.
+
+</details>
 
 Sequencing the not-yet-built rules by what each waits on:
 
@@ -231,6 +255,9 @@ the hand-written reads and primitives equal the derived ones. Writing those twin
 acceptance test that fixed the primitive set: every rule fit the tree plus a handful of Go
 helpers, and none needed a new primitive.
 
+<details>
+<summary>Which rules get both forms, and what the second form costs</summary>
+
 Which rules get both forms follows what a twin checks. For the soaked original rules the Go side
 was an oracle, so their twins are the interpreter's standing regression suite and they stay. For
 a new rule on proven vocabulary, a Go twin is a second guess by the same author, weaker evidence
@@ -242,6 +269,8 @@ The two forms are close in cost. On a synthetic 2000-net design the Go closures 
 1.6 ms and the interpreter in about 8.7 ms. Both are far below interactive thresholds, so the
 value form is affordable, and the benchmark pair is the standing evidence for when an indexed
 fact base would earn its complexity.
+
+</details>
 
 ## The fact base and querying it
 
@@ -320,18 +349,24 @@ reaches(?n, ?rn, ?h), ?h <= 2, component-on-net(?t, ?rn), component.class(?t, "t
 and not `reaches(?n, ?rn, 2)`, which means exactly two crossings and silently skips a part sitting one
 away.
 
-**The consequence is that several Go escape hatches are now redundant rather than necessary.** The
-catalog reaches into Go through a small function seam for things the query language could not say.
-Five of those functions are one shape repeated with a different payload: is there a TVS, a Zener, a
-power pin, or a datasheet-rated part within the two-hop series reach of this net. All of them are
-expressible in the form above, and the equivalent is already written down in the fact documentation.
-The rules that use them have simply not moved. That is a migration backlog, not an expressiveness
-gap, and it is worth being precise about the difference: no new syntax makes those rules simpler,
+**The consequence is that several Go escape hatches are now redundant rather than necessary**, which
+is a migration backlog and not an expressiveness gap. No new syntax makes those rules simpler,
 because the syntax already exists.
+
+<details>
+<summary>Which escape hatches are redundant, and which are not shape problems at all</summary>
+
+The catalog reaches into Go through a small function seam for things the query language could not
+say. Five of those functions are one shape repeated with a different payload: is there a TVS, a
+Zener, a power pin, or a datasheet-rated part within the two-hop series reach of this net. All of
+them are expressible in the form above, and the equivalent is already written down in the fact
+documentation. The rules that use them have simply not moved.
 
 The remaining Go functions are mostly not shape problems at all. They consult the naming lexicon,
 transform strings, or fold over entities. A path operator does not remove them, and a survey that
 counts every escape hatch as evidence for new kernel features will overstate the case.
+
+</details>
 
 ### The evaluator is the real constraint
 
