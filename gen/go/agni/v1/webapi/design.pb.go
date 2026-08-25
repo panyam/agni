@@ -276,8 +276,21 @@ type GetDesignResponse struct {
 	// (grid, layered, ...) for files with a netlist IR. The UI offers these; `layout` above is
 	// the one used for this response.
 	AvailableLayouts []string `protobuf:"bytes,8,rep,name=available_layouts,json=availableLayouts,proto3" json:"available_layouts,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// content_hash is "sha256:<hex>" over the design's entry file, the same revision identity
+	// agni.v1.checks.DesignRef.content_hash carries and computed by the same loader call, so a link
+	// minted by the CLI can be compared against what this server just read (agni issue 392).
+	//
+	// It is on the DESIGN response for the same reason `undrawn` is: it is a property of THIS read.
+	// The viewer needs it before it draws a proof a link asked for, which is before any check has run,
+	// so hanging it off the check response would arrive one step too late to prevent the highlight the
+	// reader should not trust.
+	//
+	// Empty when this server could not hash the file, which a consumer MUST NOT read as a match. It is
+	// the third state: an unverifiable link is not a verified one, and collapsing the two reproduces
+	// exactly the false confidence the hash exists to remove.
+	ContentHash   string `protobuf:"bytes,10,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDesignResponse) Reset() {
@@ -371,6 +384,13 @@ func (x *GetDesignResponse) GetAvailableLayouts() []string {
 		return x.AvailableLayouts
 	}
 	return nil
+}
+
+func (x *GetDesignResponse) GetContentHash() string {
+	if x != nil {
+		return x.ContentHash
+	}
+	return ""
 }
 
 type GetSheetRequest struct {
@@ -944,7 +964,7 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\tparent_id\x18\x03 \x01(\tR\bparentId\"<\n" +
 	"\x10GetDesignRequest\x12\x16\n" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"\xee\x02\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x91\x03\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -954,7 +974,9 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x06layout\x18\x05 \x01(\tR\x06layout\x120\n" +
 	"\x06sheets\x18\x06 \x03(\v2\x18.agni.v1.webapi.SheetRefR\x06sheets\x12)\n" +
 	"\x10native_available\x18\a \x01(\bR\x0fnativeAvailable\x12+\n" +
-	"\x11available_layouts\x18\b \x03(\tR\x10availableLayouts\"\xbe\x01\n" +
+	"\x11available_layouts\x18\b \x03(\tR\x10availableLayouts\x12!\n" +
+	"\fcontent_hash\x18\n" +
+	" \x01(\tR\vcontentHash\"\xbe\x01\n" +
 	"\x0fGetSheetRequest\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +

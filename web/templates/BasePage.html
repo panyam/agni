@@ -75,6 +75,12 @@
        the clearance, because jsdom has no layout and cannot see a strip covering anything. */
     .undrawn-note { position: absolute; left: 8px; right: 8px; top: 48px; z-index: 10; padding: 6px 10px; border-radius: 4px; font-size: 12px; background: rgba(227, 154, 27, 0.14); color: #7a4f04; border: 1px solid #e39a1b; pointer-events: none; display: none; }
     .undrawn-note.on { display: block; }
+    /* The stale-link note sits above the undrawn note because it questions the whole page, not the
+       drawing: an unverified revision means the proof may be about a different net. `.warn` is the
+       confirmed mismatch; the base state is the weaker "could not check". */
+    .stale-link-note { position: absolute; left: 8px; right: 8px; top: 48px; z-index: 11; padding: 6px 10px; border-radius: 4px; font-size: 12px; background: rgba(227, 154, 27, 0.14); color: #7a4f04; border: 1px solid #e39a1b; pointer-events: none; display: none; }
+    .stale-link-note.on { display: block; }
+    .stale-link-note.warn { background: rgba(198, 40, 40, 0.14); color: #8a1c1c; border-color: #c62828; }
     .expect-caption.pass { background: rgba(34, 197, 94, 0.15); color: #166534; border: 1px solid #22c55e; }
     .expect-caption.fail { background: rgba(239, 68, 68, 0.15); color: #991b1b; border: 1px solid #ef4444; }
     .tree, .children { list-style: none; margin: 0; padding: 0; }

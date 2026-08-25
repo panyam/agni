@@ -103,6 +103,12 @@ func (m *memLoader) Board(_ context.Context, uri artifact.URI) (*geom.BoardGeome
 	return l.BoardGeometry(p)
 }
 
+// DesignHash has nothing to hash: this loader's designs are in-memory strings with no entry file, so
+// it reports the unhashable case rather than inventing a digest over bytes no reader would see.
+func (m *memLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+	return "", nil
+}
+
 var _ service.Loader = (*memLoader)(nil)
 
 // TestInMemoryServiceLoader is the done-when from WS1-049: the service tier's Loader port can be

@@ -74,6 +74,11 @@ type fakeLoader struct {
 	expect  *expect.Expectations
 	err     error
 	geomErr error
+	// hash is the canned DesignHash, and hashErr fails it alone. Zero-valued they give the
+	// unhashable case, which is deliberately the DEFAULT: a loader that says nothing about the
+	// revision is what every test not exercising the link check should present.
+	hash    string
+	hashErr error
 }
 
 func (f fakeLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
@@ -93,6 +98,9 @@ func (f fakeLoader) Expectations(context.Context, artifact.URI) (*expect.Expecta
 }
 func (f fakeLoader) Board(context.Context, artifact.URI) (*geom.BoardGeometry, error) {
 	return f.board, f.err // nil board is normal (netlist-only); a board fixture drives the tier
+}
+func (f fakeLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+	return f.hash, f.hashErr // hashErr alone, not f.err: a design that reads fine can still fail to hash
 }
 
 // noNative is a NativeRenderer that offers nothing (the common server default in tests).
@@ -680,5 +688,42 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 	}
 	if len(got.GetUndrawn()) != 0 {
 		t.Errorf("a complete geometry must report nothing undrawn, got %+v", got.GetUndrawn())
+	}
+}
+
+// TestGetDesignReportsContentHash: a verdict link carries the revision the CLI ran against, and the
+// viewer can only check it against something. The hash has to arrive with the DESIGN, before any
+// check has run, because a verdict id is derived from a rule name and a subject ref and resolves
+// against an edited design just as readily. By the time the proof paints it is too late to say so
+// (agni issue 392).
+func TestGetDesignReportsContentHash(t *testing.T) {
+	svc := NewDesignService(fakeLoader{geom: twoSheetGeom(), hash: "sha256:abc"}, noNative{}, render.Style{}, nil)
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetContentHash(); got != "sha256:abc" {
+		t.Errorf("content_hash = %q, want the loader's hash", got)
+	}
+}
+
+// TestGetDesignSurvivesAnUnhashableFile: the hash is provenance, not the design. A loader that cannot
+// hash still read the file, so the sheets must come back and the field must go empty. The response's
+// contract makes that a THIRD state, distinct from a match, so the viewer reports "could not check"
+// rather than waving the link through.
+func TestGetDesignSurvivesAnUnhashableFile(t *testing.T) {
+	svc := NewDesignService(
+		fakeLoader{geom: twoSheetGeom(), hashErr: errors.New("permission denied")},
+		noNative{}, render.Style{}, nil,
+	)
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	if err != nil {
+		t.Fatalf("a hash failure must not fail the open: %v", err)
+	}
+	if got := resp.GetContentHash(); got != "" {
+		t.Errorf("content_hash = %q, want empty for a file the server could not hash", got)
+	}
+	if len(resp.GetSheets()) == 0 {
+		t.Error("the design still loaded, so its sheets must still be listed")
 	}
 }

@@ -292,6 +292,13 @@ against different bytes rather than silently highlighting whatever now sits at t
 is of the ENTRY the design declares, not of the argument you typed, so a report run against the design
 folder and one run against a companion view carry the same revision identity.
 
+Opening such a link, the viewer compares that hash against the revision it just read and says so
+before it draws anything. A match is silent. Different bytes get a banner saying the highlight may be
+about a different net, because a verdict id is built from a rule name and a subject ref and resolves
+against an edited design just as readily. A server that could not hash the file gets its own, weaker
+banner rather than the benefit of the doubt: a link that could not be checked is not a link that
+checked out, and reading the two the same way is the false confidence the hash exists to remove.
+
 The easiest way to get all of this right is not to assemble it by hand. `agni open <design>` serves
 the board and prints the matching `agni check --mount … --url-base …` line, and because one process
 mints the mount and serves it, the two cannot disagree.

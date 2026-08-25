@@ -28,6 +28,15 @@ export interface ViewerLocation {
   // does not have yet: `/designs/<mount>/<path...>/` has a variable-length path, so a two-segment
   // verb suffix cannot be told from a folder without leaning on the trailing slash.
   verdict: string;
+  // hash is the design revision the LINK was computed against ("sha256:<hex>"), "" when it named
+  // none. It qualifies `verdict` rather than standing alone: the claim being made is "this verdict
+  // was concluded about these bytes", so it rides in and out of the URL with the verdict it
+  // qualifies and means nothing without one.
+  //
+  // Not selection state and not a view knob. It is PROVENANCE the viewer checks and reports on, and
+  // the viewer never mints one of its own. A hash in the address bar came from whoever wrote the
+  // link, which is the only reason it is worth comparing against.
+  hash: string;
 }
 
 const DESIGNS_PREFIX = "/designs/";
@@ -41,7 +50,7 @@ const VIEW_SEGMENT = "view";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "" };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "" };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -81,6 +90,9 @@ export function locationToUrl(loc: ViewerLocation): string {
   if (loc.layout) params.set("layout", loc.layout);
   if (loc.symbols) params.set("sym", "1");
   if (loc.verdict) params.set("verdict", loc.verdict);
+  // Only alongside the verdict it qualifies. A hash left in the address bar after the proof it
+  // described is gone would keep asserting a provenance nothing on screen still depends on.
+  if (loc.verdict && loc.hash) params.set("hash", loc.hash);
   const q = params.toString();
   return DESIGNS_PREFIX + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
 }
@@ -119,6 +131,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.layout = params.get("layout") ?? "";
   loc.symbols = params.get("sym") === "1";
   loc.verdict = params.get("verdict") ?? "";
+  loc.hash = params.get("hash") ?? "";
   return loc;
 }
 

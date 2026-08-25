@@ -67,6 +67,10 @@ func (l *recordingLoader) Board(context.Context, artifact.URI) (*geom.BoardGeome
 	return nil, nil
 }
 
+func (l *recordingLoader) DesignHash(context.Context, artifact.URI) (string, error) {
+	return "", nil
+}
+
 // stubProjectStore resolves every artifact to one project declaring one symbol library, standing in
 // for the descriptor tree the FS store walks.
 type stubProjectStore struct{ project *webapi.Project }
