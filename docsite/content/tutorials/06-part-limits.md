@@ -9,17 +9,24 @@ correctly and will still fail. Deciding that needs a number that exists only on 
 datasheet.
 
 A parameter set is that number, in a form a rule can compare against. `params/` holds one file per
-part worth checking.
+part worth checking. This project declares that directory the same way it declares
+`conventions.yaml` and `profiles/`, so naming the design is enough for `check` and `review` to pick
+the corpus up, and neither carries a `--params` flag below.
 
 ## Silent without it
 
+This run moves the project's `params/` aside first, so what you see is the rule with nothing to
+compare against:
+
 {{ agniRun "content/tutorials/runs/06-check-designs-gateway-gateway-edn-rule-suppl.yaml" }}
 
-The rule ran. It had no datasheet limits to compare against, so it decided nothing. Note that this
-looks identical to a board where the rule ran and everything was fine, reproducing exactly the
-ambiguity rung 9 exists to resolve.
+The rule ran. It had no datasheet limits, so it decided nothing. Note that a bare "no findings" reads
+the same here as it would on a board where the rule ran and everything was fine, reproducing exactly
+the ambiguity rung 9 exists to resolve.
 
 ## With the parameter set
+
+Put the corpus back and the same command decides:
 
 {{ agniRun "content/tutorials/runs/06-check-abs-max-params.yaml" }}
 
@@ -89,11 +96,14 @@ find a genuine problem, or you may find the placeholder was wrong.
 `--ratified-floor` sets where that line sits. The default is 0.9, so anything below that confidence
 reports provisional.
 
-And with no parameter set at all:
+And with the corpus moved aside again, so the rule has no seeded spec for U2 at all:
 
 ```
 | P4 | no part is operated above its absolute-maximum supply voltage | not-applicable | needs a seeded datasheet parameter set (check --params) |
 ```
+
+The remedy names the flag because that is the route for a design read on its own. Inside a project
+that declares `params/`, the fix is to seed the part rather than to pass anything.
 
 Three distinct states for one item: decided on trusted data, decided on untrusted data, and not
 decidable at all. None of them is a pass.
@@ -101,7 +111,10 @@ decidable at all. None of them is a pass.
 ## Where to start
 
 `agni intake <design> --params params` lists every MPN on the board with no seeded spec. That list
-is your work queue, and it shrinks as you seed parts. Start with the parts whose limits you would
+is your work queue, and it shrinks as you seed parts. The flag is not optional here the way it is on
+`check`: `intake` reads the corpus from the flag alone, so inside this project you have to name a
+directory the project already declares, and without it the datasheet-gap section is absent rather
+than empty. Start with the parts whose limits you would
 actually worry about, which is usually regulators, {{ explainable "transceiver" "transceivers" }}, and anything near a rail boundary,
 rather than working alphabetically.
 
