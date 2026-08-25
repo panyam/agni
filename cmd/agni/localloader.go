@@ -144,11 +144,29 @@ func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (*configpb
 // against a companion and one recorded against the design folder carry the same revision identity:
 // they analysed the same bytes.
 func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string, error) {
-	src, err := l.resolve(ctx, localPath(uri))
+	e, err := l.designEntry(ctx, uri)
 	if err != nil {
 		return "", err
 	}
-	return hashSource(localOf(src.NetlistURI)), nil
+	return hashSource(localPath(e)), nil
+}
+
+// designEntry resolves the ONE artifact a read of this design actually opens: the descriptor's
+// declared ENTRY when the caller named a design folder or a declared companion, and the named URI
+// itself when the folder carries no descriptor.
+//
+// It is exported from DesignHash's body rather than left inside it because the ENTRY is what a
+// verdict link has to be built from, not only what it has to be hashed from (agni issue 489). The
+// link used to take its path from the caller's argument and its hash from here, so the two halves
+// named different artifacts: a folder argument produced a path the viewer cannot open, and a
+// companion argument produced a correct path with the entry's hash, which the viewer then reported
+// as a revision mismatch on a design that was perfectly in sync.
+func (l *localLoader) designEntry(ctx context.Context, uri artifact.URI) (artifact.URI, error) {
+	src, err := l.resolve(ctx, localPath(uri))
+	if err != nil {
+		return artifact.URI{}, err
+	}
+	return artifact.Parse(src.NetlistURI)
 }
 
 // loadManifest reads and validates a checklist from a local path. It is a package function rather

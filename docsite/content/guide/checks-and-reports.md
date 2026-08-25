@@ -288,16 +288,21 @@ missing.
 </details>
 
 **Each link also carries the design's content hash**, so the viewer can say a link was computed
-against different bytes rather than silently highlighting whatever now sits at that subject. The hash
-is of the ENTRY the design declares, not of the argument you typed, so a report run against the design
-folder and one run against a companion view carry the same revision identity.
+against different bytes rather than silently highlighting whatever now sits at that subject.
+
+**A link names the ENTRY the design declares, not the argument you typed**, and so does its hash. Both
+halves come from one resolution, so pointing `check` at the design folder, at a declared companion, or
+at the entry file produces the same link. That matters twice over. A folder is not a file the viewer
+can open, so a link built from the folder argument used to load nothing at all. And a companion has
+its own bytes, so a link built from the companion argument used to carry the entry's hash and read as
+a revision mismatch on a design that was in sync.
 
 Opening such a link, the viewer compares that hash against the revision it just read and says so
 before it draws anything. A match is silent. Different bytes get a banner saying the highlight may be
 about a different net, because a verdict id is built from a rule name and a subject ref and resolves
-against an edited design just as readily. A server that could not hash the file gets its own, weaker
-banner rather than the benefit of the doubt: a link that could not be checked is not a link that
-checked out, and reading the two the same way is the false confidence the hash exists to remove.
+against an edited design just as readily. A server that could not hash the file gets its own weaker
+banner rather than the benefit of the doubt, since a link nobody could check has not been checked, and
+treating it as though it had is the false confidence the hash exists to remove.
 
 The easiest way to get all of this right is not to assemble it by hand. `agni open <design>` serves
 the board and prints the matching `agni check --mount … --url-base …` line, and because one process

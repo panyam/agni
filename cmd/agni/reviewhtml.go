@@ -93,7 +93,7 @@ func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg, urlBase strin
 		return rpt.Checklist{}, err
 	}
 	ws, _ := workspace()
-	mountPath, why := linkTarget(ws, designURI)
+	mountPath, contentHash, why := verdictLinkTarget(cmd.Context(), ws, ll, designURI)
 	if urlBase != "" && why != "" {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no findings were linked: %s\n", why)
 	}
@@ -111,7 +111,7 @@ func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg, urlBase strin
 	return rpt.Checklist{
 		Design:      designURI,
 		Generated:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-		ContentHash: designContentHash(cmd.Context(), ll, designURI),
+		ContentHash: contentHash,
 		URLBase:     urlBase,
 		MountPath:   mountPath,
 	}, nil
