@@ -1,0 +1,8 @@
+# Narrowing to one rule by name.
+#
+# No from_root: this page names bare filenames, so the script runs INSIDE the copied fixture
+# directory and `showcase.fires.kicad_pro` resolves exactly as the reader sees it. getting-started
+# takes the other mode because it names full paths.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni check showcase.fires.kicad_pro --rule i2c-pull-up

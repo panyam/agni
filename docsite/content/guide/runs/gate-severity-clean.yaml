@@ -1,0 +1,6 @@
+# The passing twin of the gate above, so the pair shows both exit codes.
+fixture: cmd/agni/testdata/conformance
+capture: none
+exit: true
+script: |
+  agni check showcase.passes.kicad_pro --fail-on error

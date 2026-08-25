@@ -1,0 +1,9 @@
+#agni-run 00badf9adc9b602c
+findings by rule:
+  i2c-pull-up            1
+
+first 1:
+  [error] i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
+
+1 finding(s) total
+2 subject(s) considered by 1 rule(s) (--verdicts for the detail)

@@ -1,0 +1,9 @@
+# The severity gate, on a board that trips it and its passing twin.
+#
+# `exit: true` rather than the inline `# non-zero here` comments the fence used to carry: the exit
+# code is the whole lesson, and a comment claiming one is exactly the thing nothing checks.
+fixture: cmd/agni/testdata/conformance
+capture: none
+exit: true
+script: |
+  agni check showcase.fires.kicad_pro --fail-on error
