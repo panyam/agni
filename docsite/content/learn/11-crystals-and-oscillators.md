@@ -17,6 +17,8 @@ The oscillator is the chip. Inside is an amplifier, and the crystal is wired acr
 
 The two capacitors are part of that feedback path. Each terminal gets one, to ground.
 
+{{ includeFile "figures/crystal-load-caps.svg" }}
+
 ## What the capacitors decide (EE3)
 
 They are not decoupling. Nothing here is being smoothed.

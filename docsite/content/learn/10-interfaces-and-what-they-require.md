@@ -15,6 +15,8 @@ The last of the three system chapters. [Chapter 8](../08-the-power-tree/) was ho
 
 CAN needs a {{ explainable "differential-pair" }}, {{ explainable "termination" }} at each end of the bus, a {{ explainable "transceiver" }} between the bus and the processor, and {{ explainable "port-protection" }} on anything leaving the board through a connector. [Chapter 1](../01-what-a-board-is-made-of/) taught all four as jobs a part does. What is new here is that CAN *requires* them, and requires them together.
 
+{{ includeFile "figures/can-interface-contract.svg" }}
+
 None of that is visible in a netlist as a requirement. A board with CAN wired wrongly is a perfectly valid netlist. (This is the chapter where the tool stops being able to work anything out for itself, and it has been heading that way since chapter 8.) So, exactly as in the last two chapters, somebody has to declare what the interface is and what it demands.
 
 ## Declared once, checked everywhere (EE6)

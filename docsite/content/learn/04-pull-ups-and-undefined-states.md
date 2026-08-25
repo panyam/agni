@@ -41,6 +41,8 @@ Some outputs are built to drive **only low**. The pin can connect the line to gr
 
 The catch is that if nothing drives high, nothing brings the line back up. An open-drain bus needs an external resistor to a rail, and it does not work at all without one.
 
+{{ includeFile "figures/open-drain-bus.svg" }}
+
 I2C is the standard example. Two lines, both open-drain, both needing a pull-up:
 
 {{ agniRun "content/learn/runs/i2c-pullup.yaml" }}

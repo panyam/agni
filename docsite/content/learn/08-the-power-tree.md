@@ -23,6 +23,17 @@ Cascading rather than running three regulators from the input is a deliberate tr
 
 Two other nets in that output are worth naming, because [chapter 1](../01-what-a-board-is-made-of/) met them already. `PMIC_EN` is the enable that R2 pulls high, and `PMIC_PG` is the power-good output that R3 feeds to the processor's reset. Neither carries power. They are how the tree gets turned on and how the rest of the board learns that it came up, which is [chapter 9](../).
 
+```mermaid
+flowchart TB
+  IN(["12 V at the connector"]) --> M["PMIC_MAIN_12V0"]
+  M --> U1["U1, the switching stage"]
+  U1 --> C["PMIC_CORE_3V3"]
+  C --> U2["U2, the linear stage"]
+  U2 --> IO["PMIC_IO_1V8"]
+  EN["PMIC_EN, pulled high by R2"] -. "turns the tree on" .-> U1
+  U1 -. "says it came up" .-> PG["PMIC_PG, through R3 to the processor reset"]
+```
+
 ## Nothing here is a fact about the world (EE6)
 
 Now the shift, and it is the reason this level feels different.

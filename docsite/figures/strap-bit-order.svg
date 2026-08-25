@@ -1,0 +1,36 @@
+<svg viewBox="0 0 640 300" role="img" aria-labelledby="strap-bit-order-title" style="width:100%;height:auto;font-family:inherit">
+  <title id="strap-bit-order-title">A PHY with three strap pins. AD0 is tied high through a resistor to the rail, AD1 and AD2 are tied low through resistors to ground. The same three resistors read one way give the bits 0 0 1, which is address 1, and read the other way give 1 0 0, which is address 4. Nothing about the resistors says which pin is the high bit; the declared net order does.</title>
+  <line x1="60" y1="44" x2="560" y2="44" stroke="currentColor" stroke-width="2" opacity="0.85"/>
+  <text x="60" y="34" fill="currentColor" font-size="11.5" font-weight="600" opacity="0.8">+3V3</text>
+  <line x1="60" y1="232" x2="560" y2="232" stroke="currentColor" stroke-width="2" opacity="0.85"/>
+  <text x="60" y="250" fill="currentColor" font-size="11.5" opacity="0.7">ground</text>
+  <rect x="30" y="96" width="110" height="86" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+  <text x="85" y="144" text-anchor="middle" fill="currentColor" font-size="12.5" font-weight="600">PHY</text>
+  <g fill="none" stroke="currentColor" stroke-width="1.8" opacity="0.85">
+  <path d="M140 112 H380 V44"/>
+  <path d="M140 140 H320 V232"/>
+  <path d="M140 168 H260 V232"/></g>
+  <g fill="none" stroke="var(--accent-color)" stroke-width="1.8">
+  <rect x="370" y="62" width="20" height="34"/>
+  <rect x="310" y="170" width="20" height="34"/>
+  <rect x="250" y="184" width="20" height="34"/></g>
+  <g fill="currentColor" font-size="10.5" opacity="0.75">
+  <text x="148" y="106">AD0</text>
+  <text x="148" y="134">AD1</text>
+  <text x="148" y="162">AD2</text></g>
+  <g fill="var(--accent-color)" font-size="13" font-weight="600">
+  <text x="398" y="86">1</text>
+  <text x="338" y="194">0</text>
+  <text x="278" y="208">0</text></g>
+  <g fill="currentColor" font-size="10.5" opacity="0.6">
+  <text x="430" y="118">if AD0 is the low bit</text>
+  <text x="430" y="178">if AD0 is the high bit</text></g>
+  <g fill="var(--accent-color)" font-size="13" font-weight="600">
+  <text x="430" y="138">address 1</text>
+  <text x="430" y="198">address 4</text></g>
+  <g fill="currentColor" font-size="9.5" opacity="0.5">
+  <text x="430" y="154">the same one pin is high</text>
+  <text x="430" y="214">and the same two are low</text></g>
+  <text x="320" y="274" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">nothing about a strap looks different from a pull-up, and nothing on the board says which pin is the high bit</text>
+  <text x="320" y="290" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.65">the declared net order does, which is why the same three resistors read as two different addresses</text>
+</svg>
