@@ -136,11 +136,17 @@ wide; and a subgraph whose title was longer than its child node rendered with th
 of those is a syntax error and none is visible in the source.
 
 Render each block with `mmdc -i block.mmd -o block.png` and look at the aspect ratio before you commit.
-Roughly 1:1 to 4:1 reads at page width. Past that, the fixes are to switch `LR` to `TB` (or the
-reverse, since a wide fan-out becomes a tall stack), to wrap a long pipeline into rows with
-subgraphs, or to move the detail from side notes into the node labels. Prefer plain nodes over a
-subgraph whose title is long. `CONTRIBUTING.md` covers the separate quote-decoding trap that applies
-to a diagram in a PR body rather than a page.
+**WIDE is the failure, and tall is not.** A block wider than the content column is scaled down by
+`max-width: 100%` until the labels are unreadable, which is what makes a 19.6:1 fan-out unusable. A
+tall one is never scaled, because `mmdc` caps its output at 784px against an 800px column, so it
+renders at natural size and simply occupies more vertical space. Diagrams at 0.74:1 and 0.76:1 read
+fine on the site today. Treat roughly 4:1 as the ceiling to stay under, and treat a low ratio as a
+question about whether the diagram is worth its height rather than a defect.
+
+Past the ceiling, the fixes are to switch `LR` to `TB` (or the reverse, since a wide fan-out becomes a
+tall stack), to wrap a long pipeline into rows with subgraphs, or to move the detail from side notes
+into the node labels. Prefer plain nodes over a subgraph whose title is long. `CONTRIBUTING.md` covers
+the separate quote-decoding trap that applies to a diagram in a PR body rather than a page.
 
 **A hand-authored diagram lives in `figures/` and a page pulls it in with
 `{{ includeFile "figures/<name>.svg" }}`. Do not paste an `<svg>` into a markdown page.** The
@@ -176,10 +182,24 @@ palette back; the image-referenced sets predate that and are the reason this par
 sits outside the canvas, which is invisible in the markup and obvious on the page. Parse the file and
 walk every `text` and `rect` against the declared `width`/`height`, estimating a text run at about
 0.55em per character and honouring `text-anchor`. That check caught a caption running 11px past the
-right edge of `datasheet/pin-precedence.svg`. Rendering in a browser is the better check when one is
-available, and neither browser route was: the Chrome extension needs connecting, and Playwright
-refuses `file:` URLs, so a diagram served over a local HTTP server is the fallback if you want to
-look at it.
+right edge of `datasheet/pin-precedence.svg`. The estimate is a fallback, though. **Playwright against
+a local `go run .` is the real check and it works**: `getBBox()` on every `text`, `rect`, `circle`,
+`line` and `path` against `svg.viewBox.baseVal` reports the true rendered geometry rather than a
+guess, and it can sweep every page in one `page.evaluate` by fetching each into a detached div. That
+is how eleven figures were cleared at once. Playwright still refuses `file:` URLs, so serve the site.
+
+**Two things about verifying rendering in a browser, both of which produced wrong numbers first.**
+The stylesheet is cached HARD, so a CSS change measured straight after an edit reports the OLD layout
+and looks like the change did nothing. Bust it by rewriting each `link[rel=stylesheet]` href with a
+cache-busting query before measuring. And a section index is served at `/agni/<section>/`, so
+`/agni/<section>/index/` correctly 404s and is not evidence of a broken page.
+
+**Table cells WRAP.** They used to carry `white-space: nowrap`, which laid a prose table out on one
+unwrapped line: 47 of the site's 62 tables overflowed their column and the worst ran 5.34x the content
+width. Prose in a table is fine now. What still forces a scrollbar is an unbreakable token, since
+inline `<code>` keeps `nowrap` so an identifier is not split mid-name. A table whose cells hold long
+identifiers in BOTH columns is the case to avoid; the EDIF construct-to-IR mapping needed 1379px in an
+800px column that way and became a stacked list, where each identifier gets the full width.
 
 **`content/HeaderNavLinks.json` is hand-formatted with one compact object per line.** Read it as text
 before editing. Piping it through a pretty-printer to find the insertion point produces a shape that

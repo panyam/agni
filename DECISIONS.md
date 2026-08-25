@@ -1038,3 +1038,31 @@ rather than a gap in coverage. That became its own ticket.
 
 Reopen if a design shows a large unrecognised-supply population AFTER its conventions are declared,
 which would mean the lexicon is not the answer there.
+
+---
+
+## A docsite diagram is included at build time, not linked as an image
+
+**Question.** Hand-authored SVG pasted into a markdown page buries the prose either side of it under
+several hundred characters of path data. Should the diagrams move out into files and be referenced as
+`<img src="...svg">`, which is the obvious way to reference an image?
+
+**Answer. They move out, but they are INCLUDED rather than linked.** The page carries
+`{{ includeFile "figures/<name>.svg" }}`, which reads the file at build time and returns raw HTML, so
+the SVG is still inlined in the rendered page. Linking would break the theming rule: an `<img>`
+renders in its own document and inherits nothing from the host page, so `currentColor` resolves to
+the SVG's own default and `var(--accent-color)` resolves to nothing. That is not a theory, it is
+already why both image-referenced diagram sets under `static/images/` carry hex literals on purpose.
+
+**What this leaves open.** The two modes are not freely interchangeable, and it is worth being clear
+about that before someone assumes the tag makes it a config flip. Going linked also means rewriting
+every figure to a theme-neutral palette. What the indirection genuinely buys is that the strategy
+lives in ONE function: minification, caching, or a wrapper element could be added without touching a
+page. The trigger for wanting the other mode is a figure shared by SEVERAL pages, since an include
+copies its bytes into each one while a link would let the browser cache it once. No figure has more
+than one caller today, so nothing needs it yet.
+
+**Measured while deciding.** Pagefind does NOT index SVG text: prose phrases from a term page appear
+in its search fragment and the same page's SVG labels do not. So inlining costs nothing in search
+noise, and diagram labels are unsearchable in either mode. The first attempt at that check returned
+zero for the control as well and would have supported the same conclusion for the wrong reason.
