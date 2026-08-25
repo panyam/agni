@@ -658,6 +658,15 @@ interface profile and a compiled intent declaration are both just rules in a cat
 travel on `service.ProjectConfig` rather than being derived from `Overlay.Sources`. Rationale in
 [the checks contract](https://panyam.github.io/agni/architecture/checks-contract/).
 
+**Second instance, outside `RunConfig` (agni issue 489).** A verdict link took its PATH from the
+caller's argument and its HASH from the resolved design, which is the same "provenance from the flag
+rather than from the resolution" shape one layer down. It cost the same kind of wrong-but-reassuring
+artifact: a link built from a declared companion carried the entry's hash, so the viewer reported a
+revision mismatch on a design nobody had edited. `verdictLinkTarget` now resolves once and returns
+both halves, which is the cheaper enforcement than a rule, since a disagreeing pair stops being
+representable. Reach for the same move whenever a value and the provenance qualifying it are computed
+by two calls: make it one call returning both.
+
 ## C26: One schema per contract; a hand-written twin carries a round-trip guard
 **Rule:** A contract with both a YAML/authoring form and a wire form has ONE schema, the `.proto`,
 and YAML is authoring SYNTAX rather than a second schema (parse it by converting to JSON and binding
