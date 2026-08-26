@@ -484,3 +484,38 @@ func cliProjectChecklist(ctx context.Context, arg string) (uri, project string, 
 	}
 	return p.GetConfig().GetChecklistUri(), p.GetName(), nil
 }
+
+// relName is what provenance should call an absolute host path: its path within the mount that
+// contains it, or its base name when no mount does.
+//
+// It is the read-time half of the same idea inDeclared implements for addressing. Both ask which
+// mount holds a file and both let the longest root win, so a file under a nested mount is named
+// against the most specific one, and both agree with the name the browser would see.
+//
+// Only the TAIL is kept, without the mount name. A CLI run mints a mount for an argument no
+// declared mount covers, and a minted name is local to the process that minted it, so carrying it
+// into a stored document would name something the reader cannot resolve. The tail is the part that
+// means the same thing everywhere, and it is what `CheckReport.source` already promises.
+//
+// The base-name fallback covers a file outside every mount, which is what a symbol library resolved
+// through --symbol-path can be. Losing the directory there is the price of never publishing one.
+func (w *cliWorkspace) relName(abs string) string {
+	if !filepath.IsAbs(abs) {
+		return filepath.ToSlash(abs)
+	}
+	best := ""
+	bestRel := ""
+	for _, m := range w.Mounts() {
+		rel, err := filepath.Rel(m.Root, abs)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		if best == "" || len(m.Root) > len(best) {
+			best, bestRel = m.Root, rel
+		}
+	}
+	if best == "" {
+		return filepath.Base(abs)
+	}
+	return filepath.ToSlash(bestRel)
+}

@@ -1,0 +1,5 @@
+# One finding, so the provenance object is readable rather than buried among ten siblings. --rule is
+# what keeps it to one, and the shape is the same for every finding in a full run.
+fixture: demo
+script: |
+  agni check showcase.fires.kicad_pro --format json --rule i2c-pull-up

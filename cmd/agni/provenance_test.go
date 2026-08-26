@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -148,5 +149,63 @@ func TestReviewResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	}
 	if run["params"] != true {
 		t.Errorf("run.params = %v, want true", run["params"])
+	}
+}
+
+// TestCheckProvenanceIsMountRelative pins the SHAPE of provenance.sourceFile: the path a locator
+// records is relative to the design's mount, never the absolute path the command was handed.
+//
+// The failure direction is the reason this is a test rather than a nicety. A results document is
+// meant to be written on one machine and re-read on another (architecture/checks-contract), and
+// `--results-out` STORES every locator. An absolute source path makes the stored document a record
+// of the producer's filesystem, so a reader holding the design still cannot resolve a finding to a
+// file, and nothing in the document says why. It also publishes a directory layout that a public
+// artifact has no business carrying.
+//
+// Asserted on an absolute argument specifically, because that is the only case that can regress: a
+// relative argument used to come out looking correct by accident.
+func TestCheckProvenanceIsMountRelative(t *testing.T) {
+	dir := projectFixture(t)
+	design := filepath.Join(dir, "board.edn")
+	results := filepath.Join(t.TempDir(), "results.json")
+
+	cmd := checkCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--format", "json", "--results-out", results, design})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("check --format json: %v", err)
+	}
+
+	var got struct {
+		Findings []struct {
+			Provenance struct {
+				SourceFile string `json:"sourceFile"`
+			} `json:"provenance"`
+		} `json:"findings"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("output is not valid JSON: %v\n%s", err, out.String())
+	}
+	if len(got.Findings) == 0 {
+		t.Fatalf("the fixture produced no findings, so nothing carries a locator to assert on")
+	}
+	for _, f := range got.Findings {
+		if f.Provenance.SourceFile != "designs/d/board.edn" {
+			t.Errorf("provenance.sourceFile = %q, want the mount-relative %q", f.Provenance.SourceFile, "designs/d/board.edn")
+		}
+	}
+
+	// The stored document is checked separately from the printed one. They are written by different
+	// code paths, and it is the stored one that outlives the machine.
+	stored, err := os.ReadFile(results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Dir(filepath.Dir(dir))
+	for what, body := range map[string]string{"printed output": out.String(), "results document": string(stored)} {
+		if strings.Contains(body, root) {
+			t.Errorf("%s carries the absolute fixture root %q", what, root)
+		}
 	}
 }

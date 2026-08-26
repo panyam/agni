@@ -1,0 +1,4 @@
+#agni-run a7368e48db9634bc
+verdict_id,url,rule,outcome,subjects,statement,context,terms,reason
+i2c-pull-up:(net:SCL),,i2c-pull-up,fail,net:SCL,no rail is reachable from SCL through a resistor within 3 hops,,hop limit=3,
+i2c-pull-up:(net:SDA),,i2c-pull-up,pass,net:SDA,SDA reaches rail +3V3 through R1,pull-up=R1|rail=+3V3,,
