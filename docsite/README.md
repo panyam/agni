@@ -58,6 +58,32 @@ machine that ran it, and the runner refused the output (agni issue 501).
 cannot disagree with the tool, so capturing it buys nothing and costs the page its "your board"
 voice. Convert a fence when it shows a TRANSCRIPT.
 
+**A hand-written `agni …` command is parse-checked, and the check depends on the fence's SHAPE.**
+`TestDocumentedCommandsParse` in `cmd/agni` walks every markdown file under `content/`, pulls the
+commands out of fenced blocks and runs each through the real command tree, so a renamed subcommand or
+a dropped flag fails the gate on the page that uses it rather than only on the page that documents
+it. Three rules decide what it reads, and a fence that breaks one is skipped rather than reported:
+
+- A block containing any `$ `-prefixed line is a TRANSCRIPT, so only the prompted lines are treated
+  as commands. That is what stops an `agni open` capture, which prints a matching `agni check …`
+  line, from having its own output parsed as a command.
+- A line indented under a line that did not end in a backslash is OUTPUT, and it disqualifies the
+  whole block. This is what keeps `agni v0.1.1` and its indented build detail out, since that fence
+  opens with the word agni and is not a command at all.
+- A backslash continuation is joined, a trailing `#` comment and a `>` redirect are dropped, and an
+  unquoted `<` is kept, because every one in the tree opens a placeholder (`agni check <file>`).
+
+`docCommandCount` pins how many commands that finds, so a fence written in an unrecognised shape
+shows up as a coverage DROP rather than as silence. Update it deliberately, and note which way it
+moved: down is normal when a fence converts to an `agniRun` spec, because a spec runs its command for
+real and needs no parse check.
+
+**The parse check does not run the command**, which is what lets it cover a fence a capture cannot:
+`agni serve` never terminates, some commands name the reader's own board, and one is on the page to
+show a mistake. The cost is that a well-formed argument with a wrong value gets through. `--format
+jsn` parses, and so does a `--web-dir` naming a directory that does not exist, which was one of the
+four regressions in agni issue 469. A fence whose OUTPUT matters wants a spec instead.
+
 **`show:` prefixes every line it displays with `$ `**, so a backslash continuation inside a `show`
 block renders as two prompted commands. Keep a shown command on one line even where the page used to
 wrap it.

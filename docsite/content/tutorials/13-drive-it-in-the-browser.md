@@ -109,7 +109,7 @@ inferring it from findings that did or did not appear.
 needs a server started with a place to keep runs:
 
 ```
-agni serve web --mount proj=. --review-store ./reviews
+agni serve --mount proj=. --review-store ./reviews
 ```
 
 Pick your `review.yaml` and press Run review. What comes back is the same verdict
