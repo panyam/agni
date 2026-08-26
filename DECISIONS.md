@@ -1106,3 +1106,41 @@ depends on it today, since the collapsed material is rationale rather than looku
 a contributor greps for were deliberately left on the page for that reason. If a block someone needs
 to FIND ends up collapsed, that is the signal to reach for `hidden="until-found"` rather than to
 reopen this decision.
+
+## A recorded locator is renamed once at read time, not repaired by each writer
+
+Provenance recorded the absolute path the CLI was handed, so every format that prints a locator
+printed the producer's directory layout and `--results-out` stored it. The question was where to fix
+it, and the answer is settled: rename once, immediately after the read, and let every writer stay
+ignorant of the problem.
+
+Two repairs already existed and neither was reached by the third surface. `portableCites` shortened a
+cite on the way out of `query`, `forDisplay` shortened one on the way out of `results`, and a stored
+document went through neither. That is the shape of a write-time fix. Each covers the surface its
+author was looking at, the next output format starts uncovered, and the gap is invisible because the
+covered surfaces look right. Renaming at read time makes a surface correct without knowing it exists.
+
+**The recorded name is the mount-relative tail, not the `mount://` URI.** A URI is portable for
+addressing inside one process and meaningless outside it, because a CLI run MINTS a mount for an
+argument no declared mount covers and that name dies with the process. The tail is the part that
+means the same thing to a reader holding the design, and `CheckReport.source` had documented itself
+as carrying exactly that since it was written.
+
+**The rewrite walks by reflection rather than visiting the types that carry a locator.** Nineteen IR
+messages carry one and the geometry sidecar carries its own. A hand-written visitor is shorter to
+read and fails in the expensive direction: a twentieth message gains a locator, the visitor keeps
+compiling, coverage silently drops, and the output still looks like an answer. The map branch of the
+walk is unexercised today because no schema has a message-valued map reaching a locator, and it is
+there because a map is the one field kind a walk skips without noticing.
+
+**What it costs.** A file outside every mount is recorded by base name alone, losing its directory.
+That case is a symbol library resolved through `--symbol-path` from outside the design tree, and the
+alternative is publishing the host path, so the trade is not close. Separately, a query's citation
+list is sorted and the source string is one of the sort keys, so this changed the ORDER of two
+committed captures: `/private/var/…` sorted ahead of `datasheet …` and `designs/…` sorts behind it.
+The order in the repo had been an artifact of a path nobody was supposed to see.
+
+**What this leaves open.** `portableCites` and `forDisplay` are now redundant for both hosts this
+repo ships and are still in the tree, because a host that builds a `formats.Loader` without
+`SourceName` and reads by absolute path would still want them, and no such host exists to test
+against. Removing them is observable through that sort order, so it wants its own change. Ledgered.

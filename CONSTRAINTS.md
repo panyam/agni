@@ -755,3 +755,28 @@ but it is the evidence for why the constraint exists. `hack/tutorial_runs_check.
 `docsite/content/**/runs/` rather than a fixed pair of sections, so a guide page joins the gate by
 gaining a `runs/` directory and one spec per fence, with no harness change. `OUT_OF_SCOPE.md` tracks
 it.
+
+## C28: A recorded locator names the artifact, never the machine that produced it
+**Rule:** A path stored in an `ir.Provenance` or `geom.Provenance`, or printed by any writer that
+renders one, is relative to the design's mount. It is never an absolute host path. Readers keep
+stamping whatever path they are handed; the rename happens ONCE, immediately after the read, through
+`Loader.SourceName` and `relocateSources`. No writer relativises a path on its way out.
+**Why:** a results document is a separate contract from the wire API precisely so it can be written
+on one machine and re-read on another (`agni.v1.checks` declares no service and imports no
+transport). An absolute source path makes that untrue in a way nothing in the document admits: the
+reader holds the design and still cannot resolve a finding to a file. It also publishes a directory
+layout out of a PUBLIC repo, since a capture, a pasted report and an archived run all carry it. The
+single-writer half is the same argument as C25: two repairs already existed, `portableCites` for
+`query` and `forDisplay` for `results`, and `--results-out` went through neither, because a
+write-time fix covers the surface its author was looking at and the next output format starts
+uncovered.
+**Verify:** `grep -rn 'relocateSources' --include='*.go' .` returns only `readers/formats/`, so the
+rename has one implementation and one call site per read entry point. Acceptance is
+`go test ./cmd/agni/ -run TestCheckProvenanceIsMountRelative`, which asserts the shape on both the
+printed and the STORED document, since those are written by different code and it is the stored one
+that outlives the machine. Quote the `--include` glob, or zsh expands it and grep never sees the flag.
+**Note:** a host that reads through `Loader.FS` leaves `SourceName` nil, and that is correct rather
+than an exemption: an `fs.ValidPath` is unrooted, so those paths already satisfy the rule. The
+constraint bites a NEW host that opens files by absolute path. A file outside every mount is recorded
+by base name, which loses its directory and is the deliberate price of never publishing one.
+Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at read time".
