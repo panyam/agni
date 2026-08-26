@@ -1,0 +1,5 @@
+# The review-paste format. The severity table and the trailing count line are what the section is
+# about, so nothing filters them.
+fixture: demo
+script: |
+  agni check showcase.fires.kicad_pro --format markdown

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -218,7 +219,19 @@ func resolveSymbolPaths(getenv func(string) string) []string {
 // formats, so a second entrypoint (WASM, cloud function) constructs the same loader without
 // importing cobra.
 func newLoader() *formats.Loader {
-	return &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv)}
+	l := &formats.Loader{SymbolPaths: resolveSymbolPaths(os.Getenv)}
+	// The CLI opens a design by absolute host path, so without this every locator in the read would
+	// record this machine's directory layout, and `--format json` and `--results-out` would publish
+	// it. The lookup is deferred into the closure because a command mints its argument's mount while
+	// resolving the design, which happens after the loader is built.
+	l.SourceName = func(path string) string {
+		ws, err := workspace()
+		if err != nil {
+			return filepath.Base(path)
+		}
+		return ws.relName(path)
+	}
+	return l
 }
 
 // readDesign reads a design file into the IR through the formats registry, after the enclosing

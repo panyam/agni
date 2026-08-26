@@ -71,33 +71,7 @@ to build exactly the set you want.
 
 The markdown one:
 
-```
-agni check showcase.fires.kicad_pro --format markdown
-```
-
-```
-# agni check — showcase.fires.kicad_pro
-
-| severity | findings |
-|---|---|
-| error | 1 |
-| warning | 6 |
-| info | 4 |
-
-11 finding(s), 78 rule(s) run.
-
-## error
-
-### i2c-pull-up — An I2C net (SDA/SCL) reaches no rail through a pull-up resistor.
-- `SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
-```
-
-This block is typed by hand, and so are the `csv` and `json` ones below it, because the command
-cannot yet be captured: every format that prints provenance emits an ABSOLUTE path today, so a
-generated capture would put the machine that ran it into the repo and the runner refuses one (agni
-issue 501). The counts above are current; the file name is what the report should print and does
-not. Every other block on this page that shows output is generated, so these are the numbers to
-re-run before trusting them.
+{{ agniRun "content/guide/runs/markdown-report.yaml" }}
 
 The header line (`11 finding(s), 78 rule(s) run`) is your coverage receipt. It says how many
 rules actually ran, so a clean report is distinguishable from a report that had little to
@@ -120,12 +94,12 @@ drawn outside it. A findings report shows that net exactly as it shows a net tha
 
 It honours `--format text|csv|json|html`, and `--format html` turns it on by itself, since the HTML
 report has no findings-only form. The CSV carries a `verdict_id` per row
-(`i2c-pull-up:net:SDA`), plus `context` (the entities to look at, as `role=ref` pairs) and `terms`
+(`i2c-pull-up:(net:SDA)`), plus `context` (the entities to look at, as `role=ref` pairs) and `terms`
 (the values a conclusion rests on):
 
-```
-agni check showcase.fires.kicad_sch --verdicts --format csv
-```
+{{ agniRun "content/guide/runs/csv-verdicts.yaml" }}
+
+That is one rule out of the table, which runs to about 140 rows on this board.
 
 Paste an id into a running viewer as `?verdict=<id>` and it opens on that verdict with the proof
 drawn: the subject in focus, the resistor and rail behind it.
@@ -142,21 +116,9 @@ until more of the catalog converts.
 Every finding carries **provenance**: the record of exactly what the tool saw. `--format
 json` exposes it:
 
-```
-agni check showcase.fires.kicad_pro --format json
-```
+{{ agniRun "content/guide/runs/json-provenance.yaml" }}
 
-```json
-{
-  "rule": "bulk-cap",
-  "severity": "warning",
-  "subject": { "kind": "net", "ref": "+3V3", "pin": "" },
-  "message": "power rail has no bulk capacitor",
-  "provenance": { "sourceFile": "showcase.fires.kicad_sch" }
-}
-```
-
-- `subject` is what the finding is about: a `net` (`+3V3`), a `component` (its
+- `subject` is what the finding is about: a `net` (`SCL`), a `component` (its
   {{ explainable "reference-designator" "ref des" }}), or a component `pin`.
 - `provenance.sourceFile` is the file the fact came from. For datasheet-backed rules the
   message also names the datasheet page and table (see [Datasheets](../datasheets/)).

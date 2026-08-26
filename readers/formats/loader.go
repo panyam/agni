@@ -51,6 +51,22 @@ type Loader struct {
 	// libraries, and the readers reach them through opener closures this loader supplies. One FS
 	// covers os, in-memory, embedded, and archive hosts with no second dispatch table.
 	FS fs.FS
+	// SourceName maps a path this loader opened onto the name provenance should record for it. Nil
+	// records the path verbatim, which is what a host reading through FS wants: an fs.ValidPath is
+	// already unrooted and portable.
+	//
+	// It exists for the host that is NOT reading through an FS. The CLI resolves its argument to an
+	// absolute path before opening it, so every locator in the read carried the machine's directory
+	// layout: `--format json` published it, `--results-out` STORED it, and an archived run therefore
+	// embedded the filesystem of whatever produced it. A results document is meant to be mailed and
+	// re-read by someone holding neither the design nor this build (see architecture/checks-contract),
+	// which a host path quietly makes untrue.
+	//
+	// It is a function rather than a base-path string because only the caller knows what a path
+	// should be CALLED: the CLI holds a mount table and can say which mount contains this file, and
+	// nothing in this package can. `CheckReport.source` already promises a mount-relative path, so a
+	// locator naming a file inside that design follows the same convention.
+	SourceName func(string) string
 }
 
 // Open reads one file in this loader's name space: from FS when it carries one, else from the host
@@ -135,6 +151,14 @@ func (l *Loader) lexicon() *classify.Lexicon {
 	return l.Lexicon
 }
 
+// sourceName is SourceName with this package's nil-loader tolerance, matching lexicon() above.
+func (l *Loader) sourceName() func(string) string {
+	if l == nil {
+		return nil
+	}
+	return l.SourceName
+}
+
 // ReadDesign reads a design file into the netlist IR, picking the reader by extension.
 func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	ext := lowerExt(path)
@@ -148,6 +172,9 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	}
 	// Stamp the format-neutral per-instance net id here, once, for every reader (WS9): netgraph-based
 	// readers already set it (a no-op), and a direct-IR reader like EDIF gets it from its connections.
+	// Every locator recorded during the read is rewritten to the name this loader was told to call
+	// its sources, before any stamp reads one and before the design reaches a caller.
+	relocateSources(d, l.sourceName())
 	netgraph.StampNetIDs(d)
 	// Classify every component into its device_classes set once at ingestion (WS3-071), so check reads
 	// a normalized data fact instead of re-deriving the class from vendor strings on every model build.
@@ -179,7 +206,12 @@ func (l *Loader) BoardGeometry(path string) (*geom.BoardGeometry, error) {
 	if f == nil || f.Board == nil {
 		return nil, nil
 	}
-	return f.Board(l, path)
+	b, err := f.Board(l, path)
+	if err != nil {
+		return nil, err
+	}
+	relocateSources(b, l.sourceName())
+	return b, nil
 }
 
 // FaithfulGeometry reads a design's ingested schematic geometry. An extension with no
@@ -200,6 +232,7 @@ func (l *Loader) FaithfulGeometry(path string) (*geom.SchematicGeometry, error) 
 	// where the symbol libraries were (or were not) found. Computing it downstream would mean a second
 	// join that can disagree with the renderer's (agni issue 354).
 	geomath.MarkUndrawn(g)
+	relocateSources(g, l.sourceName())
 	return g, nil
 }
 

@@ -1,5 +1,5 @@
 #agni-run 0b93ab042ddd2627
 r   m       vmax  n     rail  provenance
-U1  LM1117  20    +24V  24    regulator.fires.kicad_sch ; datasheet "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023" page 4, "7.1 Absolute Maximum Ratings" (hand, confidence 1)
+U1  LM1117  20    +24V  24    datasheet "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023" page 4, "7.1 Absolute Maximum Ratings" (hand, confidence 1) ; regulator.fires.kicad_sch
 
 1 result(s)

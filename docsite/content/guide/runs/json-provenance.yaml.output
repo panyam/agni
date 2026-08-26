@@ -1,0 +1,32 @@
+#agni-run a52725446e1bbbc5
+{
+  "findings":  [
+    {
+      "rule":  "i2c-pull-up",
+      "severity":  "error",
+      "subject":  {
+        "kind":  "net",
+        "ref":  "SCL",
+        "pin":  "",
+        "netId":  "9de85e683cf7",
+        "busId":  ""
+      },
+      "message":  "I2C net has no pull-up resistor to a rail",
+      "inconclusive":  false,
+      "provenance":  {
+        "sourceFile":  "showcase.fires.kicad_sch",
+        "span":  null,
+        "nativeId":  "",
+        "nativeIdKind":  ""
+      },
+      "sheets":  [
+        "/"
+      ],
+      "locateReason":  "LOCATE_REASON_UNSPECIFIED",
+      "datasheets":  [],
+      "context":  []
+    }
+  ],
+  "skipped":  [],
+  "verdicts":  []
+}

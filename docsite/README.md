@@ -48,8 +48,11 @@ prose beneath quoting the wrong number back. `querying.md` showed the `rail` rel
 rail under the built-in vocabulary when it finds four, so the contrast the section rests on had
 collapsed. `naming-conventions.md` was worse than stale: it reported findings from a convention
 called `strict/sig-only` that the page never defines, under a header claiming two over a list of one.
-Every guide fence that shows output is generated now, apart from three waiting on issue 501 and the
-`agni version` block, which is build- and host-dependent and therefore uncapturable by construction.
+Every guide fence that shows output is generated now, apart from the `agni version` block, which is
+build- and host-dependent and therefore uncapturable by construction. The last three to convert were
+the `--format markdown`, `json` and `csv` blocks on `checks-and-reports.md`, which needed the engine
+fixed first: provenance recorded an absolute host path, so a capture would have committed the
+machine that ran it, and the runner refused the output (agni issue 501).
 
 **A fence with no output block is usually better left alone.** A command over a placeholder path
 cannot disagree with the tool, so capturing it buys nothing and costs the page its "your board"
