@@ -196,6 +196,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 | A query relation | 5, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check` |
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 | A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
+| A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
 
 ## Working in this repo

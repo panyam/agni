@@ -8,11 +8,11 @@ lies to you in three specific ways, and most of this page is about them.
 ```mermaid
 flowchart LR
     T(["make testall"])
-    T --> V["vet<br/>ir-model-check"]
+    T --> V["vet<br/>ir-model-check<br/>fixture-copies-check"]
     T --> E["test<br/>examples-test<br/>docsite-test"]
     T --> W["ui<br/>web-test"]
     T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check"]
-    V --- Vn["Go hygiene, C19 ratchet"]
+    V --- Vn["Go hygiene, C19 ratchet,<br/>duplicated fixtures"]
     E --- En["engine, example modules, docsite wiring"]
     W --- Wn["bundle, typecheck, vitest"]
     G --- Gn["generated trees still match their source"]
@@ -22,6 +22,31 @@ flowchart LR
     class Vn,En,Wn,Gn,Bn note;
     class B,Bn out;
 ```
+
+## A fixture that exists twice is checked against its twin
+
+`fixture-copies-check` reads `hack/fixture_copies.txt`, which declares every group of files meant to
+be byte-identical, and fails on two things: a declared group that has drifted, and a copy in the tree
+that the manifest does not declare.
+
+The second half is the one that keeps working. Twenty-four groups are declared, so duplication here
+is a habit rather than an accident, and the failure it guards against is a false green rather than a
+missing check. `demo/showcase.passes.kicad_pro` was a snapshot that lost three commits of net-class
+work while the conformance copy kept them, and every check in the repo passed from either file
+because none of them compared the two (agni issue 509).
+
+It cannot infer which files are MEANT to match, and that is settled rather than pending. The tree is
+full of near-twins that must differ: `tjunc.fires` against `tjunc_labeled` and `tjunc_dotted`,
+`rev-a` against `rev-b`, `twosheet.fires` against `hier_root`, which are identical but for the sheet
+filename each names. Nothing in the content separates those from a copy that drifted, so the manifest
+declares intent and the check enforces it.
+
+On a red, fix by hand. The check names both paths and does not know which is right.
+`hack/fixture_copies_check.sh --dump` prints the tree's copy groups for SEEDING a new entry, writes
+nothing, and would drop a drifted group rather than repair it, because two files that differ are no
+longer a copy.
+
+It reads new unstaged files as well as committed ones, so it has no commit-first trap.
 
 ## Generated captures are checked by REGENERATING them
 
