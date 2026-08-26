@@ -1,0 +1,4 @@
+# Negation: the parts on a net that carry no MPN, so no datasheet can ever be matched to them.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query regulator.fires.kicad_sch --params ./params/ 'component-on-net(?r,?n), not component.mpn(?r,?m) => ?r'

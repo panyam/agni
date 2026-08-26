@@ -182,15 +182,7 @@ This joins what the part is (`component.mpn`), what its datasheet says (`param`)
 (`component-on-net`), and the rail's voltage (`net.max_voltage`), then keeps only the ones where the
 {{ explainable "absolute-maximum-rating" "rated maximum" }} is below the rail.
 
-```
-agni query regulator.fires.kicad_sch --params ./params/ \
-  'component.mpn(?r,?m), param(?m,"VIN",?vmax), component-on-net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?m, ?vmax, ?n, ?rail'
-```
-
-```
-r   m       vmax  n     rail  provenance
-U1  LM1117  20    +24V  24    …/regulator.fires.kicad_sch ; datasheet "SNOS412Q …" page 4, "7.1 Absolute Maximum Ratings"
-```
+{{ agniRun "content/guide/runs/query-datasheet-join.yaml" }}
 
 `U1` (an LM1117) sits on a `+24V` rail, but its datasheet caps VIN at 20V. The **provenance** column
 cites both sides, the schematic and the datasheet page, so you can open each and confirm.
@@ -200,14 +192,7 @@ cites both sides, the schematic and the datasheet page, so you can open each and
 `not` keeps the rows where a fact is **absent**. "Parts on a net that have no MPN"
 (the `component.mpn` relation is populated from the datasheet join, so pass `--params`):
 
-```
-agni query regulator.fires.kicad_sch --params ./params/ 'component-on-net(?r,?n), not component.mpn(?r,?m) => ?r'
-```
-
-```
-r   provenance
-J1  …/regulator.fires.kicad_sch
-```
+{{ agniRun "content/guide/runs/query-negation.yaml" }}
 
 `J1` is placed but carries no part number, so a datasheet can never be matched to it.
 
@@ -215,28 +200,13 @@ J1  …/regulator.fires.kicad_sch
 
 `count`, `min`, `max`, and `sum` summarize. Group by the plain columns. The aggregate reduces the rest:
 
-```
-agni query regulator.fires.kicad_sch 'component-on-net(?r,?n) => ?n, count(?r)'
-```
-
-```
-n     count(r)  provenance
-+24V  2         …
-GND   1         …
-```
+{{ agniRun "content/guide/runs/query-aggregation.yaml" }}
 
 ### Search the board (any tier, one language)
 
 Board facts query the same way. "Nets routed thinner than 0.3 mm":
 
-```
-agni query board.kicad_pcb 'board.track_width(?net,?w), ?w < 0.3 => ?net, ?w'
-```
-
-```
-net  w     provenance
-SIG  0.25  board net SIG
-```
+{{ agniRun "content/guide/runs/query-board-track-width.yaml" }}
 
 And you can **join across the schematic, the datasheet, and the board in one question**, "a net
 routed thin that carries a high-current part":
@@ -253,15 +223,7 @@ traceable back to the layer and the datasheet page.
 `reaches(from, net)` walks connectivity through series passives (resistors, ferrites, fuses). It is
 how you ask "what does this rail actually feed after the filter". "Everything reachable from GND":
 
-```
-agni query board.kicad_pcb 'reaches("GND", ?n) => ?n'
-```
-
-```
-n    provenance
-GND  reaches from GND
-SIG  reaches from GND
-```
+{{ agniRun "content/guide/runs/query-reaches.yaml" }}
 
 ## Asking under your own vocabulary
 
@@ -270,30 +232,27 @@ Some relations do not report what is in the file; they report what the engine *b
 
 That vocabulary is the built-in one unless you say otherwise, and it is anchored on the names most
 boards use. On a board that names rails function-first, what the built-in vocabulary returns can be
-badly wrong for your project:
+badly wrong for your project.
 
-```
-$ agni query gateway.edn 'rail(?n) => ?n'
-GND
+Isolating that takes moving two things aside rather than one, which is itself worth knowing. The
+tutorial project declares its `conventions.yaml`, so naming the design applies it automatically and
+the before-state is otherwise unreachable. And a seeded datasheet's pin functions establish the rail
+role on their own, so with `params/` in place this board classifies all four rails whatever the
+naming vocabulary says. Move both and the question is about NAMING alone:
 
-1 result(s)
-```
+{{ agniRun "content/guide/runs/query-rail-builtin-vocabulary.yaml" }}
 
-Pass your own and ask again:
+Pass your own vocabulary and ask again, with the corpus still aside so the pair differs in exactly
+one thing:
 
-```
-$ agni query gateway.edn 'rail(?n) => ?n' --conventions conventions.yaml
-GND
-PMIC_CORE_3V3
-PMIC_IO_1V8
-PMIC_MAIN_12V0
-
-4 result(s)
-```
+{{ agniRun "content/guide/runs/query-rail-own-vocabulary.yaml" }}
 
 Nothing about the design changed. This is the loop to author a lexicon in: ask, compare against the
 rails you know the board has, fix the pattern, ask again. See
 [Naming conventions](../naming-conventions/).
+
+The datasheet route is the other way to the same answer, and it needs no lexicon at all: that is what
+the corpus was doing before it was moved aside, and [Datasheets](../datasheets/) is where it lives.
 
 Only the config's lexicon half is used here, since a query runs no rules.
 

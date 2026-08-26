@@ -1,0 +1,4 @@
+# A board fact queried in the same language as a netlist one.
+fixture: readers/kicad/testdata
+script: |
+  agni query board.kicad_pcb 'board.track_width(?net,?w), ?w < 0.3 => ?net, ?w'

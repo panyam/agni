@@ -1,0 +1,5 @@
+# The join across what a part is, what its datasheet says, where it sits, and the rail's voltage.
+# Bare filenames, so no from_root: the script runs inside the copied fixture.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query regulator.fires.kicad_sch --params ./params/ 'component.mpn(?r,?m), param(?m,"VIN",?vmax), component-on-net(?r,?n), net.max_voltage(?n,?rail), ?vmax < ?rail => ?r, ?m, ?vmax, ?n, ?rail'
