@@ -6,6 +6,11 @@
 #
 # No from_root, for the same reason as the rest of this page: it names bare filenames, so the script
 # runs INSIDE the copied fixture directory.
-fixture: cmd/agni/testdata/conformance
+#
+# That directory is demo/, matching the other four specs on this page and the "Where these commands
+# run" section that tells the reader to stand there. The conformance tree holds a byte-identical copy
+# of the same board, so this ran green from either one, which is exactly why the mismatch had to be
+# closed by hand rather than by a failing gate.
+fixture: demo
 script: |
   agni check showcase.fires.kicad_pro --tag category=power
