@@ -1,0 +1,30 @@
+# The convention the page has just written, run on a board that follows it.
+#
+# The heredoc writes the reader's own `example.yaml`, verbatim from the fence above it on the page,
+# so `show` hides setup rather than swapping a command. The declaration is duplicated between the
+# page and this spec; the rule name in the shown command (`example/signal-net-naming`) comes from
+# the `name:` and the rule's `name:` below, so a page edited without this file names a rule the
+# capture does not run and the block says so.
+#
+# The design is real rather than the `design.edn` the page used to name, which is the trade this
+# conversion makes: a placeholder cannot be run, so the claim under it ("the rule runs and stays
+# quiet") was an assertion nothing checked. It was also short a line. The block on the page stopped
+# at `no findings (1 rule(s) run)` and the coverage receipt beneath it, which is the line the rest
+# of this guide tells you to read, was missing.
+#
+# No from_root: the page names the design and the config bare, so the script runs INSIDE the copied
+# designs directory and both resolve exactly as displayed.
+fixture: examples/common/designs
+script: |
+  cat > example.yaml <<'YAML'
+  name: example
+  rules:
+    - name: signal-net-naming
+      severity: info
+      why: "signal nets are UPPER_SNAKE, rails and stubs are exempt"
+      allow: ["^[A-Z][A-Z0-9_]*$"]
+      exempt: ["^\\+", "^GND"]
+  YAML
+  agni check i2c-sensor.edn --conventions example.yaml --rule example/signal-net-naming
+show: |
+  agni check i2c-sensor.edn --conventions example.yaml --rule example/signal-net-naming

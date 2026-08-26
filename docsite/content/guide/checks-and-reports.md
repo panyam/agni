@@ -31,13 +31,11 @@ By default every rule runs. Two flags cut that down.
 **A whole group by tag** (`--tag key=value`, repeatable). Every rule carries catalog tags
 (category, tier, and more), so you can run one family at a time:
 
-```
-agni check showcase.fires.kicad_pro --tag category=power
-```
+{{ agniRun "content/guide/runs/tag-filter.yaml" }}
 
-This runs only the power-related rules and skips the rest. `--tag category=connectivity`
-runs the connectivity group, and so on. Combine `--rule` and `--tag` to build exactly the
-set you want.
+Nine rules ran instead of the whole catalog, and the last line is where you read that.
+`--tag category=connectivity` runs the connectivity group, and so on. Combine `--rule` and `--tag`
+to build exactly the set you want.
 
 ## Read the report in the shape you need
 
@@ -75,10 +73,12 @@ agni check showcase.fires.kicad_pro --format markdown
 - `SCL` — I2C net has no pull-up resistor to a rail (showcase.fires.kicad_sch)
 ```
 
-This block is one of the four on this page still typed by hand, because the command cannot yet be
-captured: every format that prints provenance emits an ABSOLUTE path today, so a generated capture
-would put the machine that ran it into the repo and the runner refuses one. The counts above are
-current; the file name is what the report should print and does not (agni issue pending).
+This block is typed by hand, and so are the `csv` and `json` ones below it, because the command
+cannot yet be captured: every format that prints provenance emits an ABSOLUTE path today, so a
+generated capture would put the machine that ran it into the repo and the runner refuses one (agni
+issue 501). The counts above are current; the file name is what the report should print and does
+not. Every other block on this page that shows output is generated, so these are the numbers to
+re-run before trusting them.
 
 The header line (`11 finding(s), 78 rule(s) run`) is your coverage receipt. It says how many
 rules actually ran, so a clean report is distinguishable from a report that had little to

@@ -1,0 +1,14 @@
+#agni-run 089516947539ccb6
+diff rev-a.edn -> rev-b.edn
+
+Components: +1  -0  ~0
+Nets:       new 1  deleted 1  renamed 1  hard 1  soft 0
+
+Components added (1):
+  R4
+
+Nets changed (4):
+  [deleted] OLD
+  [hard]    CLK: +[U1.6] -[]
+  [new]     NEW
+  [renamed] SIG -> DATA

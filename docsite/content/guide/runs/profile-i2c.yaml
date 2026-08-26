@@ -1,0 +1,36 @@
+# The I2C overlay firing on the showcase board that omits the pull-ups.
+#
+# The heredoc is the reader's own previous step rather than a different command: the page prints
+# this exact declaration as `profiles/i2c.yaml` immediately above the fence and tells the reader to
+# point `check` at the directory holding it. `show` hides only that setup, so the command displayed
+# is the command that ran.
+#
+# The declaration is therefore duplicated between the page and this spec, which is the one thing
+# here worth watching. It is a duplication that ANNOUNCES itself: the rule names in the capture
+# (`i2c-missing-pullup`) and its "3 rule(s)" count both fall out of the requirements below, so a
+# page edited without this file contradicts the block printed under it, on the same screen. Before
+# this was generated, the same edit produced no contradiction at all.
+#
+# `show` is one line where the page used a backslash continuation, because the renderer prefixes
+# EVERY line it shows with `$ ` and a continuation line would come out looking like a second
+# command.
+#
+# from_root, because the page names the design by its full path from a clone, as getting-started
+# does.
+fixture: cmd/agni/testdata/conformance
+from_root: true
+script: |
+  mkdir -p profiles
+  cat > profiles/i2c.yaml <<'YAML'
+  name: I2C
+  signals:
+    - {name: SCL, suffix: SCL, pullup: true, anchor: true}
+    - {name: SDA, suffix: SDA, pullup: true}
+  requirements:
+    - {type: signal-missing}
+    - {type: missing-pullup}
+    - {type: signal-dangling}
+  YAML
+  agni check cmd/agni/testdata/conformance/showcase.fires.kicad_pro --profile-path ./profiles/ --tag profile=I2C
+show: |
+  agni check cmd/agni/testdata/conformance/showcase.fires.kicad_pro --profile-path ./profiles/ --tag profile=I2C

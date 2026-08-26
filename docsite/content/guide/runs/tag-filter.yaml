@@ -1,0 +1,11 @@
+# Narrowing to one catalog tag, the pair to rule-filter.yaml above it on the page.
+#
+# The fence used to show the command with nothing under it, so "this runs only the power-related
+# rules" was an assertion with no receipt. The coverage line is the receipt: 9 rules rather than the
+# 78 an unnarrowed run reports.
+#
+# No from_root, for the same reason as the rest of this page: it names bare filenames, so the script
+# runs INSIDE the copied fixture directory.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni check showcase.fires.kicad_pro --tag category=power

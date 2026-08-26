@@ -1,0 +1,9 @@
+# The datasheet-backed finding, with its dual citation: the design side (rail and pin) and the
+# datasheet side (document, page, table).
+#
+# No from_root: this page names a bare filename and a relative `./params/`, so the script runs
+# INSIDE the copied fixture directory and both resolve exactly as displayed. The params corpus is a
+# subdirectory of the same fixture, so one copy carries both halves.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni check regulator.fires.kicad_sch --params ./params/ --rule supply-exceeds-abs-max

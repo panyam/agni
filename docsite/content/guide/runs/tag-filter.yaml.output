@@ -1,0 +1,23 @@
+#agni-run a6dc03d0a1eeb481
+findings by rule:
+  bulk-cap               2
+  decoupling-present     2
+  esd-protection         2
+  input-protection       1
+  reverse-blocking-absent 1
+  test-point-coverage    2
+
+first 10:
+  [warning] bulk-cap: +3V3 (power rail has no bulk capacitor)
+  [warning] bulk-cap: VBUS (power rail has no bulk capacitor)
+  [warning] decoupling-present: +3V3 (power rail has no decoupling capacitor)
+  [warning] decoupling-present: VBUS (power rail has no decoupling capacitor)
+  [info] esd-protection: USB_D+ (externally-exposed signal net has no ESD protection)
+  [info] esd-protection: USB_D- (externally-exposed signal net has no ESD protection)
+  [warning] input-protection: VBUS (connector feeds a power input with no fuse or TVS in the path)
+  [warning] reverse-blocking-absent: VBUS (connector feeds a power input with no reverse-blocking element in the path)
+  [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
+  [info] test-point-coverage: VBUS (rail carries no test point; bring-up and factory test cannot probe it)
+
+10 finding(s) total
+29 subject(s) considered by 9 rule(s), 2 not considered (--verdicts for the detail)
