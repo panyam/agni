@@ -2,7 +2,7 @@
 #
 # `exit: true` rather than the inline `# non-zero here` comments the fence used to carry: the exit
 # code is the whole lesson, and a comment claiming one is exactly the thing nothing checks.
-fixture: cmd/agni/testdata/conformance
+fixture: demo
 capture: none
 exit: true
 script: |

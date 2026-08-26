@@ -1,0 +1,9 @@
+# A part that sits on no net, which is the case `component-on-net` structurally cannot find: such a
+# part has no row there to look through.
+#
+# fires.edn rather than the gateway, because the gateway has no unconnected part and an empty block
+# would demonstrate nothing. This is the fixture directory the negation and aggregation captures on
+# this page already run in.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query fires.edn 'entity(?ref, "component"), not component-on-net(?ref, ?any) => ?ref'

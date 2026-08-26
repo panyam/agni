@@ -1,0 +1,7 @@
+# Finding something by name, the search that does not go through a relationship.
+#
+# The gateway design rather than the conformance boards, because this section is about searching a
+# board whose names mean something to a team, and CAN1_* is the family a reader can see the point of.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'entity(?name, ?kind), contains(?name, "CAN") => ?name, ?kind'

@@ -1,0 +1,8 @@
+#agni-run 4b1ff3c8041056ff
+name       kind  provenance
+CAN1_CANH  net   designs/gateway/gateway.edn:CAN1_CANH
+CAN1_CANL  net   designs/gateway/gateway.edn:CAN1_CANL
+CAN1_RXD   net   designs/gateway/gateway.edn:CAN1_RXD
+CAN1_TXD   net   designs/gateway/gateway.edn:CAN1_TXD
+
+4 result(s)

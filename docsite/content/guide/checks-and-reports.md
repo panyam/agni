@@ -20,6 +20,25 @@ flowchart TB
     C --> B["the --verdicts table<br/>the html report"]
 ```
 
+## Where these commands run
+
+The commands below name their sample with no path in front of it, so each one runs from the directory
+that sample lives in. Two samples appear, both checked into a clone of the engine repo:
+
+| Sample | Run from | What it is |
+|---|---|---|
+| `showcase.fires.*`, `showcase.passes.*` | `demo/` | one small board that trips several rules, and its clean twin |
+| `designs/gateway` | `examples/tutorial-project` | the tutorial's synthetic board, with a team's checklist wrapped around it |
+
+So the `agni check` lines below assume you are standing in `demo/`:
+
+```
+git clone https://github.com/panyam/agni
+cd agni/demo
+```
+
+Point the same commands at your own board instead and nothing else changes.
+
 ## Narrow what runs
 
 By default every rule runs. Two flags cut that down.
