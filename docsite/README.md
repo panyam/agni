@@ -38,12 +38,26 @@ the visible heading text and doubles the slug. Use the natural slug the heading 
 hand-written and they cannot disagree. Regenerate with `make tutorial-runs` and read the diff before
 committing.
 
-**Any section can have a `runs/` directory, and `guide/getting-started.md` is the one outside
-`tutorials/` and `learn/` that does.** Both the generator and `hack/tutorial_runs_check.sh` walk
-`docsite/content/**/runs/`, so a new one joins the harness by existing, with no Makefile edit. It
-went there because a hand-written fence had gone quietly wrong: the page reported 10 findings where
-its fixture produces 11 and named 29 rules where it runs 78, with the prose beneath quoting the wrong
-number back. The rest of `guide/` is still hand-written, tracked in `OUT_OF_SCOPE.md`.
+**Any section can have a `runs/` directory**, and `guide/` now does. Both the generator and
+`hack/tutorial_runs_check.sh` walk `docsite/content/**/runs/`, so a new one joins the harness by
+existing, with no Makefile edit.
+
+`guide/` got one because a typed fence goes wrong in silence and several had. `getting-started.md`
+reported 10 findings where its fixture produces 11 and named 29 rules where it runs 78, with the
+prose beneath quoting the wrong number back. `querying.md` showed the `rail` relation finding one
+rail under the built-in vocabulary when it finds four, so the contrast the section rests on had
+collapsed. `naming-conventions.md` was worse than stale: it reported findings from a convention
+called `strict/sig-only` that the page never defines, under a header claiming two over a list of one.
+Every guide fence that shows output is generated now, apart from three waiting on issue 501 and the
+`agni version` block, which is build- and host-dependent and therefore uncapturable by construction.
+
+**A fence with no output block is usually better left alone.** A command over a placeholder path
+cannot disagree with the tool, so capturing it buys nothing and costs the page its "your board"
+voice. Convert a fence when it shows a TRANSCRIPT.
+
+**`show:` prefixes every line it displays with `$ `**, so a backslash continuation inside a `show`
+block renders as two prompted commands. Keep a shown command on one line even where the page used to
+wrap it.
 
 **Which of the two working-directory modes a section wants depends on how its commands read.**
 `getting-started` names full paths (`agni check cmd/agni/testdata/conformance/...`), so its specs set
@@ -194,10 +208,14 @@ the separate quote-decoding trap that applies to a diagram in a PR body rather t
 **The browser sweep below does NOT cover mermaid**, because a mermaid block renders client-side from
 a `<pre>` and a detached-div fetch never runs it, so a figure sweep that comes back clean says nothing
 about the diagrams. Sweep them separately by extracting every fenced block, rendering each with
-`mmdc`, and reading the PNG's dimensions. Doing that over all 29 blocks on the site found five past
-the ceiling, where the two known ones had been found by eye: `termination` at 9.22:1 and
-`transceiver` at 7.76:1 are the unreadable pair, and `differential-pair`, `port-protection` and one
-block in `build/the-gate.md` sit between 4.4 and 5. `OUT_OF_SCOPE.md` tracks them.
+`mmdc`, and reading the PNG's dimensions. Doing that over all 29 blocks found five past the ceiling
+where two had been spotted by eye, which is the argument for sweeping rather than looking. All five
+are fixed and every block on the site is now under 4:1.
+
+**Flipping `LR` to `TB` is half the fix on a diagram with two long labels.** In `LR` the width comes
+from the chain, so the flip removes it. In `TB` two long labels can land on the same RANK and set the
+width again, which is what `port-protection` and `differential-pair` did until a label also gained a
+`<br/>`. Re-measure after the flip rather than assuming it worked.
 
 **A hand-authored diagram lives in `figures/` and a page pulls it in with
 `{{ includeFile "figures/<name>.svg" }}`. Do not paste an `<svg>` into a markdown page.** The
@@ -209,6 +227,16 @@ Three things about the arrangement. **A bad path fails SILENTLY**, because `Incl
 empty string when the file does not resolve, so a rename drops the figure from the page and the build
 still succeeds. `includefile_test.go` is what turns that into a gate failure, and it also fails on a
 figure nothing includes, for the reason `terms_test.go` rejects a glossary entry with no caller.
+**A count in a lead-in drifts, and a grep finds it.** "Four more need their own room" sat above five
+paragraphs on `build/evidence.md`, and "Two of the questions carry a lesson wider than this rule" sat
+above three on `build/check-rule.md`, where the third had also drifted from a paragraph into a bullet,
+which is probably how it went unnoticed. Sweep for it by grepping the content tree for a number word
+followed by `things|ways|rules|reasons|more|questions|traps`, then counting the bolded leads and list
+items in the lines that follow until the next heading. Most hits are ordinary prose ("two different
+questions") so read the output rather than trusting it, and it is too noisy to be a gate test. The
+durable fix is to number the items and drop the total from the lead-in, so the count lives in one
+place and cannot disagree with itself.
+
 **A blank line inside a figure file is NOT harmless**, and `TestFiguresCarryNoBlankLines` fails the
 gate on one. `IncludeFile` splices the file in before the markdown renderer runs, so the SVG is
 ordinary raw HTML by the time CommonMark sees it, and CommonMark ends an HTML block at the first
