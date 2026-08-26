@@ -1,0 +1,4 @@
+# Scoping the search to one kind.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'entity(?name, "component"), prefix(?name, "U") => ?name'

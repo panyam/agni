@@ -1,0 +1,5 @@
+# A LEADING wildcard, which is the case `prefix` cannot express: every net named for the rail it
+# carries, whichever block named it.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'entity(?name, "net"), glob(?name, "*_1V8") => ?name'

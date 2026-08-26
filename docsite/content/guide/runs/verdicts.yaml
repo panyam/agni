@@ -1,5 +1,5 @@
 # What the rule LOOKED AT, not only what failed. The pass line naming the resistor and the rail is
 # the thing a findings report cannot print, so it is the reason this block exists.
-fixture: cmd/agni/testdata/conformance
+fixture: demo
 script: |
   agni check showcase.fires.kicad_sch --verdicts

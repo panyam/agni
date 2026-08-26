@@ -3,6 +3,10 @@
 # No from_root: this page names bare filenames, so the script runs INSIDE the copied fixture
 # directory and `showcase.fires.kicad_pro` resolves exactly as the reader sees it. getting-started
 # takes the other mode because it names full paths.
-fixture: cmd/agni/testdata/conformance
+#
+# The fixture is demo/ rather than the conformance copy of the same board, because demo/ is the
+# directory the page now TELLS the reader to stand in. The two copies are byte-identical today, and
+# nothing checks that they stay so, so the capture should come from the one being documented.
+fixture: demo
 script: |
   agni check showcase.fires.kicad_pro --rule i2c-pull-up

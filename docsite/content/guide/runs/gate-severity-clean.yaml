@@ -1,5 +1,5 @@
 # The passing twin of the gate above, so the pair shows both exit codes.
-fixture: cmd/agni/testdata/conformance
+fixture: demo
 capture: none
 exit: true
 script: |

@@ -1,0 +1,9 @@
+# The same shape on the other side, a net with nothing on it.
+#
+# The empty answer is committed on purpose. No fixture in this repo carries an empty net, and the
+# page's own rule is that asking for a fact a design does not carry returns no rows rather than an
+# invention. Showing the query against a board that has none is the honest form of that; a capture
+# that had to be fabricated to look useful would be the failure this mechanism exists to remove.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query fires.edn 'entity(?net, "net"), not component-on-net(?any, ?net) => ?net'
