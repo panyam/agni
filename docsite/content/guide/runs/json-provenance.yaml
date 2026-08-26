@@ -1,5 +1,19 @@
 # One finding, so the provenance object is readable rather than buried among ten siblings. --rule is
 # what keeps it to one, and the shape is the same for every finding in a full run.
+#
+# The `sed` collapses protojson's colon spacing to one space, and it is the reason this capture can
+# be committed at all. protojson emits ONE OR TWO spaces after a key colon, varying by build rather
+# than by run, which `build/evidence.md` lists among the outputs that cannot be byte-compared. This
+# is the only JSON capture in the repo, so it was the only spec that could hit it, and it did: the
+# committed body carried the two-space form while a local regeneration produced the one-space form,
+# leaving `tutorial-runs-check` green in CI and red on a clean tree elsewhere. Neither side is
+# regenerating wrongly, so the loop had no fixed point until the output was normalized.
+#
+# `show` hides the pipe because it is plumbing rather than something a reader should type. The
+# displayed command is what produces the JSON; the `sed` only decides which of two equivalent
+# spellings of the same document gets committed.
 fixture: demo
-script: |
+show: |
   agni check showcase.fires.kicad_pro --format json --rule i2c-pull-up
+script: |
+  agni check showcase.fires.kicad_pro --format json --rule i2c-pull-up | sed 's/":  */": /'

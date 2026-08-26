@@ -1,32 +1,32 @@
-#agni-run a52725446e1bbbc5
+#agni-run 207505a5c31f4d61
 {
-  "findings":  [
+  "findings": [
     {
-      "rule":  "i2c-pull-up",
-      "severity":  "error",
-      "subject":  {
-        "kind":  "net",
-        "ref":  "SCL",
-        "pin":  "",
-        "netId":  "9de85e683cf7",
-        "busId":  ""
+      "rule": "i2c-pull-up",
+      "severity": "error",
+      "subject": {
+        "kind": "net",
+        "ref": "SCL",
+        "pin": "",
+        "netId": "9de85e683cf7",
+        "busId": ""
       },
-      "message":  "I2C net has no pull-up resistor to a rail",
-      "inconclusive":  false,
-      "provenance":  {
-        "sourceFile":  "showcase.fires.kicad_sch",
-        "span":  null,
-        "nativeId":  "",
-        "nativeIdKind":  ""
+      "message": "I2C net has no pull-up resistor to a rail",
+      "inconclusive": false,
+      "provenance": {
+        "sourceFile": "showcase.fires.kicad_sch",
+        "span": null,
+        "nativeId": "",
+        "nativeIdKind": ""
       },
-      "sheets":  [
+      "sheets": [
         "/"
       ],
-      "locateReason":  "LOCATE_REASON_UNSPECIFIED",
-      "datasheets":  [],
-      "context":  []
+      "locateReason": "LOCATE_REASON_UNSPECIFIED",
+      "datasheets": [],
+      "context": []
     }
   ],
-  "skipped":  [],
-  "verdicts":  []
+  "skipped": [],
+  "verdicts": []
 }
