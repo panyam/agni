@@ -3,6 +3,12 @@ tmpfiles
 bin/
 .playwright-mcp/
 
+# Agent worktrees. They are real checkouts of this repo INSIDE this repo, so a tree-walking target
+# scans them: `make ir-model-check` from the main checkout reported every producer twice, once per
+# live worktree, and failed. Nothing under .claude/ is tracked today, so only the worktrees are
+# ignored rather than the whole directory, which leaves settings free to be committed later.
+.claude/worktrees/
+
 # Built example binaries (rebuilt by `make testall`; never commit them)
 examples/render-board/render-board
 examples/validate/validate
