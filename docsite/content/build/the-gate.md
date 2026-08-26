@@ -56,7 +56,7 @@ reads as stale. Anything touching the shipped rule or relation catalog regenerat
 `docsite/content/reference/`, which makes the order load-bearing:
 
 ```mermaid
-flowchart LR
+flowchart TB
     A["change a rule<br/>or a relation"] --> B["make catalog-docs"]
     B --> C(["git commit"])
     C --> D["make testall"]

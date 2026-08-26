@@ -13,8 +13,8 @@ Protection is whatever is placed at the connector to absorb that before it reach
 a TVS diode or diode array for the discharge, a common-mode choke or ferrite for the interference.
 
 ```mermaid
-flowchart LR
-    C["connector<br/>ESD, and whatever the cable picked up"] --> P["protection<br/>TVS diode, common-mode choke"]
+flowchart TB
+    C["connector<br/>ESD, and whatever<br/>the cable picked up"] --> P["protection<br/>TVS diode,<br/>common-mode choke"]
     P --> X["transceiver"]
     X --> M["processor"]
     C -.->|"with no protection,<br/>this is the path"| X

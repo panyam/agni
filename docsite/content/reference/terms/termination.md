@@ -13,10 +13,10 @@ A terminator is a resistor across the line at that end, sized to the line's char
 which absorbs the signal instead.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph U["unterminated"]
         direction LR
-        A["driver"] --> B["far end"] --> C["the signal reflects and<br/>collides with what follows"]
+        A["driver"] --> B["far end,<br/>nothing across the line"] --> C["the signal reflects and<br/>collides with what follows"]
     end
     subgraph T["terminated"]
         direction LR
