@@ -12,7 +12,7 @@ something a general-purpose logic pin can drive or safely receive.
 The transceiver sits between the two and translates.
 
 ```mermaid
-flowchart LR
+flowchart TB
     M["processor<br/>TXD / RXD, logic levels"] <--> X["transceiver"]
     X <--> B["the bus<br/>CANH / CANL, differential"]
 ```

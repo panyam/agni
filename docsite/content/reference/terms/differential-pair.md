@@ -12,9 +12,9 @@ That is the whole trick. Interference picked up along the run hits both wires mo
 which moves both by the same amount and leaves the difference untouched.
 
 ```mermaid
-flowchart LR
+flowchart TB
     D["driver"] -->|"CANH rises"| R["receiver<br/>reads CANH − CANL"]
-    D -->|"CANL falls by the same amount"| R
+    D -->|"CANL falls by<br/>the same amount"| R
     N["interference along the run<br/>hits both wires equally"] -.-> R
     R --> O["the difference is unchanged,<br/>so the interference cancels"]
 ```
