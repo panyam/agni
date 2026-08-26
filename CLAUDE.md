@@ -150,6 +150,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   resolved once at ingestion — so a read that skips it silently uses the built-in naming vocabulary and
   none of the project's declared symbol libraries. All six bypassed it until agni issue 228, which is
   why it is one function rather than six.
+- **A locator records the path WITHIN the design's mount, never the host path.** Readers stamp
+  `ir.Provenance.SourceFile` with whatever path they are handed, so the rename happens once after the
+  read: `Loader.SourceName` maps a path to the name provenance should carry, and `relocateSources`
+  walks the message tree by reflection to apply it to every locator in both `ir` and `geom`. A host
+  reading through `Loader.FS` sets nothing, because an `fs.ValidPath` is unrooted already; the CLI
+  sets it from its mount table. **A new output format inherits this and a NEW HOST does not** — one
+  that opens files by absolute path and leaves `SourceName` nil publishes the machine that ran it,
+  which is what `--results-out` stored until agni issue 501. Beware also that a query's citation list
+  is SORTED, so anything that changes the source string reorders committed captures.
 - **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
   fails the gate on either half being stale.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
@@ -201,7 +210,7 @@ not copy it back into this repo.
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1–C27). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1–C28). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a
