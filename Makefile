@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check fixture-copies-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -83,6 +83,12 @@ vet:
 ir-model-check:
 	./hack/ir_model_check.sh
 
+# Fail when two files declared to be copies of each other have drifted, or when a copy exists that
+# hack/fixture_copies.txt does not declare. It reads the working tree including new unstaged files,
+# so it does not have catalog-docs-check's commit-first ordering.
+fixture-copies-check:
+	./hack/fixture_copies_check.sh
+
 # Engine (Go) tests. The example modules have their own go.mod; see examples-test.
 test:
 	$(GO) test ./...
@@ -128,7 +134,7 @@ catalog-docs-check: catalog-docs
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
 # proto-check sits near the front because stale generated code makes every later failure a red
 # herring: it compiles and tests green while describing a different schema.
-testall: vet ir-model-check proto-check ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

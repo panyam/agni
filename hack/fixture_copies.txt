@@ -1,0 +1,137 @@
+# Files that are meant to be byte-identical copies of each other, one group per block.
+#
+# hack/fixture_copies_check.sh asserts every group here still matches, AND that no copy exists in the
+# tree that this file does not declare. Seed a new group with `--dump`, which prints the tree's copy
+# groups to stdout; it never writes this file, because the reasons below are hand-written and a
+# regenerate would delete them.
+#
+# Give every group a reason. The reason is what a later reader needs in order to decide whether the
+# copy should still exist, and writing one is the point at which somebody notices it should not.
+#
+# Nothing here argues that a copy is GOOD. Twenty-four groups is a lot, and the honest reading is
+# that this repo duplicates fixtures as a habit. What the file buys is that the next divergence is a
+# red gate rather than something found by reading two capture specs side by side (agni issue 509).
+
+# ---------------------------------------------------------------------------------------------
+# The showcase board: the docsite and the CLI conformance suite.
+#
+# `guide/checks-and-reports.md` runs five generated captures from demo/, because that is the
+# directory the page tells the reader to stand in. The conformance runner reads its own copy under
+# testdata/, where the rest of that corpus lives. This is the pair that drifted: demo's project file
+# was a one-commit snapshot and lost three commits of net-class work, and every check in the repo
+# stayed green because none of them compares the two.
+#
+# The .kicad_pro pair below is DECLARED BY HAND. Both files are `{}`, which is under the size floor
+# the scanner uses to keep the tree's many two-byte stubs from reading as copies of each other, so
+# --dump will never propose this group. Removing it silently un-watches the exact file that drifted.
+cmd/agni/testdata/conformance/showcase.fires.kicad_pro
+demo/showcase.fires.kicad_pro
+
+cmd/agni/testdata/conformance/showcase.fires.kicad_sch
+demo/showcase.fires.kicad_sch
+
+cmd/agni/testdata/conformance/showcase.passes.kicad_pro
+demo/showcase.passes.kicad_pro
+
+cmd/agni/testdata/conformance/showcase.passes.kicad_sch
+demo/showcase.passes.kicad_sch
+
+# ---------------------------------------------------------------------------------------------
+# A reader's own testdata against the CLI conformance corpus.
+#
+# The two ask different questions of one file. A reader test asserts what comes out of the parse; the
+# conformance runner drives the whole CLI over it and compares against an `.expect.yaml`. Neither
+# location can hold both: Go keeps a package's testdata beside the package, and the conformance
+# corpus is addressed by `<name>.<verdict>.<ext>`, which is a naming scheme the reader tests do not
+# use. That is why these are copies rather than one file with two readers.
+cmd/agni/testdata/conformance/dangling.fires.kicad_sch
+examples/common/designs/dangling-wire.kicad_sch
+readers/kicad/testdata/dangling.kicad_sch
+
+cmd/agni/testdata/conformance/ext.kicad_sym
+readers/kicad/testdata/ext.kicad_sym
+
+cmd/agni/testdata/conformance/extlib.fires.kicad_sch
+readers/kicad/testdata/extlib.kicad_sch
+
+cmd/agni/testdata/conformance/gedapwr.fires.sch
+readers/geda/testdata/pwr_untapped.sch
+
+cmd/agni/testdata/conformance/gedapwr.passes.sch
+readers/geda/testdata/pwr_tapped.sch
+
+cmd/agni/testdata/conformance/ic.sym
+readers/geda/testdata/ic.sym
+
+cmd/agni/testdata/conformance/ncmark.passes.kicad_sch
+readers/kicad/testdata/ncmark.kicad_sch
+
+cmd/agni/testdata/conformance/nets_from_wires.fires.kicad_sch
+readers/kicad/testdata/geom.kicad_sch
+
+cmd/agni/testdata/conformance/sym-lib-table
+readers/kicad/testdata/extlib-sym-lib-table
+
+cmd/agni/testdata/conformance/tjunc.fires.kicad_sch
+readers/kicad/testdata/tjunc.kicad_sch
+
+cmd/agni/testdata/conformance/vcc-1.sym
+readers/geda/testdata/vcc-1.sym
+
+# The same file under three names, and the widest group here. The examples copy is named for what it
+# DEMONSTRATES (`dangling-wire`) rather than for the rule it fires, because an example is read by
+# someone learning the tool. Renaming either of the other two to match would break the convention its
+# own directory follows.
+
+# ---------------------------------------------------------------------------------------------
+# An example's design against a test fixture.
+#
+# `examples/` is compiled and run by `make examples-test`, so its designs have to be committed beside
+# the example rather than reached for across the tree: an example that pointed into `cmd/agni/testdata`
+# would teach a reader to depend on a path that exists only in a checkout.
+cmd/agni/testdata/conformance/directions.fires.edn
+examples/common/designs/driver-conflict.edn
+
+cmd/agni/testdata/rev-a.edn
+examples/common/designs/rev-a.edn
+
+cmd/agni/testdata/rev-b.edn
+examples/common/designs/rev-b.edn
+
+examples/common/designs/duplicate-refdes.kicad_sch
+readers/kicad/testdata/dup_refdes.kicad_sch
+
+# ---------------------------------------------------------------------------------------------
+# One design, addressed two ways within examples/.
+#
+# `examples/common/designs/mixer.*` is the bare file, and the same bytes sit inside `demo-project/`
+# under a `design.yaml`. Both are deliberate: `resolve-design` and `whole-enchilada` show a design
+# resolved THROUGH a project descriptor, and `multi-format` shows the same board read as a bare file.
+# The point of those examples is that the two paths produce the same answer, which only holds while
+# the two files are the same file.
+examples/common/designs/demo-project/designs/mixer/mixer.edn
+examples/common/designs/mixer.edn
+
+examples/common/designs/demo-project/designs/mixer/mixer.kicad_pcb
+examples/common/designs/mixer.kicad_pcb
+
+# ---------------------------------------------------------------------------------------------
+# A seeded datasheet parameter, in the package that parses it and in the corpus a CLI run composes.
+cmd/agni/testdata/conformance/fetparams/bss138.textproto
+datasheet/param/testdata/bss138.textproto
+
+# Two corpora that differ by ONE spec, so the shared members are copies. `params-no-ocp` exists to
+# show what an intent rule reports when the parameter it needs is absent, which means every other
+# spec in it has to be present and identical or the comparison measures the wrong difference.
+cmd/agni/testdata/conformance/params/demo-nfet-40.textproto
+cmd/agni/testdata/intent/params-no-ocp/demo-nfet-40.textproto
+
+# ---------------------------------------------------------------------------------------------
+# A docsite figure used by two pages that keep their images in separate folders.
+#
+# `guide/querying.md` and `reference/analogy.md` both draw the protection walk. This one is a real
+# candidate for deletion rather than declaration: `static/images/` is not per-page by any rule the
+# docsite enforces, so one copy under a shared folder would do. Left alone here because moving a
+# static asset changes two page URLs and belongs in a docsite change, not this one.
+docsite/static/images/analogy/reach-walk.svg
+docsite/static/images/querying/reach-walk.svg
