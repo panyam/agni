@@ -1,0 +1,25 @@
+# The same convention, on a board that does not follow it.
+#
+# It replaces a hand-written block for an invented `strict/sig-only` convention the page never
+# showed, whose header claimed two findings and then listed one. Reusing the convention the reader
+# has in front of them costs nothing and removes an unexplained second config.
+#
+# The two names it flags are the interesting case: `USB_D+` and `USB_D-` carry characters the
+# `allow` pattern does not cover, and `^\+` exempts a name that STARTS with `+`, which these do not.
+#
+# Same heredoc and the same caveat as conventions-quiet.yaml. Keep the two declarations identical,
+# or the pair stops being one convention seen twice.
+fixture: cmd/agni/testdata/conformance
+script: |
+  cat > example.yaml <<'YAML'
+  name: example
+  rules:
+    - name: signal-net-naming
+      severity: info
+      why: "signal nets are UPPER_SNAKE, rails and stubs are exempt"
+      allow: ["^[A-Z][A-Z0-9_]*$"]
+      exempt: ["^\\+", "^GND"]
+  YAML
+  agni check showcase.fires.kicad_sch --conventions example.yaml --rule example/signal-net-naming
+show: |
+  agni check showcase.fires.kicad_sch --conventions example.yaml --rule example/signal-net-naming

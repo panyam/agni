@@ -31,30 +31,13 @@ requirements:
 Point `check` at the directory holding it. `--tag profile=I2C` narrows the run to this
 profile's rules:
 
-```
-agni check cmd/agni/testdata/conformance/showcase.fires.kicad_pro \
-  --profile-path ./profiles/ --tag profile=I2C
-```
-
-```
-findings by rule:
-  profile-overlay/i2c-missing-pullup 1
-
-first 1:
-  [warning] profile-overlay/i2c-missing-pullup: SCL (I2C signal net SCL needs a pull-up but reaches no rail)
-
-1 finding(s) total
-5 subject(s) considered by 3 rule(s) (--verdicts for the detail)
-```
+{{ agniRun "content/guide/runs/profile-i2c.yaml" }}
 
 Three rules came out of that declaration, one per requirement, and the last line is how you know all
-three ran rather than one. On `showcase.passes.kicad_pro`, the variant of the same board with the
-pull-ups fitted, they run and stay quiet:
+three ran rather than one. On the variant of the same board with the pull-ups fitted, they run and
+stay quiet:
 
-```
-no findings (3 rule(s) run)
-5 subject(s) considered by 3 rule(s) (--verdicts for the detail)
-```
+{{ agniRun "content/guide/runs/profile-i2c-clean.yaml" }}
 
 Rules from `--profile-path` are namespaced `profile-overlay/`, so an overlay rule is never
 mistaken for a built-in one.

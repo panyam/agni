@@ -11,25 +11,7 @@ two prints.
 
 Give it two files, old first:
 
-```
-agni diff rev-a.edn rev-b.edn
-```
-
-```
-diff rev-a.edn -> rev-b.edn
-
-Components: +1  -0  ~0
-Nets:       new 1  deleted 1  renamed 1  hard 1  soft 0
-
-Components added (1):
-  R4
-
-Nets changed (4):
-  [deleted] OLD
-  [hard]    CLK: +[U1.6] -[]
-  [new]     NEW
-  [renamed] SIG -> DATA
-```
+{{ agniRun "content/guide/runs/diff-revisions.yaml" }}
 
 ## Read the change taxonomy
 

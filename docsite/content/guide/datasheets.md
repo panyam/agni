@@ -16,19 +16,7 @@ into a small file, and the tool compares every design that uses the part against
 A parameter set is a directory of small text files, one per part, each holding that part's
 specs. Point `check` at it with `--params`:
 
-```
-agni check regulator.fires.kicad_sch --params ./params/ --rule supply-exceeds-abs-max
-```
-
-```
-findings by rule:
-  supply-exceeds-abs-max 1
-
-first 1:
-  [error] supply-exceeds-abs-max: U1 (power-input pin 1 on rail "+24V": nominal 24V
-  exceeds absolute-maximum VIN 20V — datasheet "SNOS412Q - FEBRUARY 2000 - REVISED
-  JANUARY 2023" page 4, "7.1 Absolute Maximum Ratings" (hand, confidence 1))
-```
+{{ agniRun "content/guide/runs/datasheet-abs-max.yaml" }}
 
 Read that finding: the design drives a `+24V` rail into `U1` pin 1, whose datasheet caps
 VIN at 20V absolute maximum. The message carries a **dual citation**, your design side
@@ -53,6 +41,10 @@ The tool is deliberately conservative about when it compares a number automatica
 
 This is why an empty or partial parameter set makes datasheet rules go quiet rather than
 wrong: no data means the rule had nothing to compare, the same tier logic as everywhere else.
+
+The last line of the run above is where that shows up. One subject was considered and one was
+**not considered**, which is the rule declining rather than passing it. A findings report on its own
+cannot tell you which of the two happened, so read that line alongside the count.
 
 ## Confidence and provenance
 

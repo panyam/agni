@@ -1,0 +1,9 @@
+#agni-run d4543436dcf8f850
+findings by rule:
+  profile-overlay/i2c-missing-pullup 1
+
+first 1:
+  [warning] profile-overlay/i2c-missing-pullup: SCL (I2C signal net SCL needs a pull-up but reaches no rail)
+
+1 finding(s) total
+5 subject(s) considered by 3 rule(s) (--verdicts for the detail)

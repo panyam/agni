@@ -33,28 +33,21 @@ rules:
 
 ## Run it
 
-Compose the file into a run with `--conventions`:
+Compose the file into a run with `--conventions`. On a board whose names all conform, the rule runs
+and stays quiet:
 
-```
-agni check design.edn --conventions example.yaml --rule example/signal-net-naming
-```
+{{ agniRun "content/guide/runs/conventions-quiet.yaml" }}
 
-If every name conforms, the rule runs and stays quiet:
+Read the second line as well as the first. It says the rule looked at six names and had nothing to
+report, which is a different statement from a rule that ran over nothing.
 
-```
-no findings (1 rule(s) run)
-```
+Point the same convention at a board that does not follow it and the non-conforming names surface:
 
-Tighten the `allow` set and non-conforming names surface. For example, a convention that
-only allows the exact name `SIG` reports everything else:
+{{ agniRun "content/guide/runs/conventions-findings.yaml" }}
 
-```
-findings by rule:
-  strict/sig-only        2
-
-first 2:
-  [info] strict/sig-only: VCC (net name matches no allowed naming pattern)
-```
+Both flagged names carry a trailing character the `allow` pattern does not cover. Neither is exempt
+either, because `^\+` exempts a name that *starts* with `+`, which neither of these does.
+Tightening `allow`, or narrowing `exempt`, surfaces more names the same way.
 
 ## Tool-generated names are exempt by default
 
