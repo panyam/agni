@@ -21,6 +21,7 @@ expensive to rediscover.
 |---|---|
 | Ingestion, the IR, a new format reader | `architecture/ingestion-and-ir.md`, `build/format-reader.md` |
 | Geometry, rendering, the web viewer | `architecture/geometry-and-rendering.md`, `architecture/web-app.md` |
+| The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
 | The checks contract (CLI/service seam) | `architecture/checks-contract.md` |
@@ -178,7 +179,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 |---|---|---|---|
 | A docsite page | 4 (5 for a new section) | `docsite/README.md` | `docsite/nav_test.go` |
 | A `learn/` chapter | 4, plus the level-index entries | `docsite/README.md` | `docsite/learn_levels_test.go` |
-| A web viewer panel | 4 | `docsite/content/architecture/web-app.md` | `web/src/composition.test.ts` |
+| A web viewer panel | 4 | `docsite/content/architecture/web-client.md` | `web/src/composition.test.ts` |
 | A canvas note strip (undrawn, stale-link) | 5 | `web/src/undrawn.ts` and `web/src/stalelink.ts` as the two worked examples | the compiler, for the `ViewSink` channel; NOTHING for the template hole |
 | A web page | 6 | `docsite/content/architecture/web-app.md` | its own boot test (one per page) |
 | A format reader | — | `docsite/content/build/format-reader.md` | — |

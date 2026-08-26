@@ -21,5 +21,12 @@ were built. Read them in any order. Each stands on its own.
   an artifact rather than terminal output.
 - **[Datasheet layer](datasheet-layer/)**: parameters and source documents as contracts, and the
   join into checks.
-- **[Web app and presenter](web-app/)**: the browser viewer and the presenter contract.
+- **[Web app and presenter](web-app/)**: the browser viewer, the mount model, and the presenter
+  contract.
+- **[Web service contract](web-services/)**: the Connect services behind `agni serve` and the
+  contract details a caller has to know.
+- **[Picking and querying](web-picking/)**: how a reader names an entity in the viewer and what the
+  viewer can then say about it.
+- **[Working in the web client](web-client/)**: the edits a new panel takes, and the traps that ship
+  green in CI and broken in the browser.
 - **[Stack and platform](stack/)**: the Go engine, the proto IR, and the boundaries.
