@@ -76,6 +76,15 @@ var examples = []ExampleQuery{
 		Teaches: "topology pattern: one net joining two device classes (the shape esd-clamp-not-tvs refines)",
 	},
 	{
+		// The rung the ladder was missing. Without it a reader finishes the whole catalog believing
+		// `not` over a single relation is all the negation there is, concludes that the positive half
+		// of a coverage question is expressible and the negative half is not, and designs around a
+		// limitation that does not exist. That happened (agni issue 522).
+		Label:   "Nets with no test point on them",
+		Query:   `has_test_point(?n) :- component-on-net(?tp, ?n), component.class(?tp, "test_point"); entity(?n, "net"), not has_test_point(?n) => ?n`,
+		Teaches: "derived relation: `;` separates clauses and `:-` names one, which is how you negate a PAIR of relations — the shape of every \"X with no related Y\" question",
+	},
+	{
 		Label:   "Rails above a part's recommended maximum",
 		Query:   `component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max), component-on-net(?ref, ?net), net.nominal_voltage(?net, ?v), ?v > ?max => ?ref, ?net, ?v, ?max`,
 		Teaches: "datasheet range: join a two-sided limit (by kind) against the design's rail voltage (needs --params)",

@@ -225,11 +225,22 @@ entity(?n,"net"), not component.class(?tp,"test_point") => ?n
 board that has even one it filters away every row. It used to answer "no results", which reads as a
 fact about the board. It is now an error naming the unanchored variable.
 
-**What it does not yet let you write** is the question that spelling was reaching for: nets with no
-test point ON THEM. That needs negating a pair of relations together, `not (component-on-net(?tp,?n),
-component.class(?tp,"test_point"))`, and `not` currently takes a single relation. So the positive
-half of a coverage question is expressible and the negative half is not. That gap is tracked and is
-not a property of the language anyone should design around.
+**To negate a pair of relations, name them first.** `not` takes one relation, so the question that
+spelling was reaching for, nets with no test point ON THEM, needs both `component-on-net` and
+`component.class` to be true of the same part. Define a relation for that and negate it by name:
+
+```
+has_test_point(?n) :- component-on-net(?tp,?n), component.class(?tp,"test_point");
+entity(?n,"net"), not has_test_point(?n) => ?n
+```
+
+Clauses are separated by `;`, a clause containing `:-` defines a relation, and the one clause
+without one is the question. This is the general shape for any "X with no related Y", which is most
+of what a coverage question asks: rails with no decoupling, buses with no pull-up, parts with no
+protection.
+
+A defined relation is fully derived before anything negates it, so the answer does not depend on the
+order you wrote the clauses in.
 
 ### Count parts per net (aggregation)
 
