@@ -1177,3 +1177,37 @@ returns bytes; the client reimplements `table.go` in TypeScript; or `Table` beco
 first is the recommendation, and it is recorded on #127 so the second is not written by reflex, since
 it is the one that looks natural from inside the frontend and it would duplicate the escaping rules
 that are easy to get subtly wrong.
+
+---
+
+## An agniRun step boundary is declared, never inferred
+
+**Question.** A run spec used to produce one capture for a whole script, so a lesson running two
+commands printed both commands and then both outputs concatenated. To pair each command with its own
+output, can the runner work out where one command's output ends and the next begins, rather than
+making every spec author say so?
+
+**Answer. No, and both routes to inferring it are closed by facts about the existing 96 specs.**
+
+Splitting the script on newlines to interleave markers writes a marker into the middle of a file:
+four specs build their fixture with a heredoc (`cat > example.yaml <<'YAML'`), and a marker echo
+inserted between those lines lands in the yaml being created.
+
+Mapping captured output back onto the DISPLAYED commands cannot align either. Nine specs set both
+`show` and `script`, and in all nine the two have a different line count, because hiding the `| grep`
+and the `echo "no dot:"` labels is exactly what `show` is for. `profile-i2c` shows one line and runs
+twelve. There is no positional correspondence to exploit.
+
+So a spec declares `steps:`, each step one command with its own capture. Steps run as separate
+processes in one shared scratch directory, which is what lets rung 11 store a results document in one
+step and re-render it in the next without the runner keeping a shell alive and delimiting its output.
+Shell variables do not carry across, and nothing in the corpus uses them.
+
+**What this leaves open.** The multi-line `script:` form stays, and is right whenever the extra lines
+are setup the reader must also type: rungs 4, 5 and 6 open with `mv <tier> <tier>-off` and want it in
+the same block as the command it changes. `steps:` is for when both commands print something the
+reader compares.
+
+**Reopen if** a spec appears that genuinely needs one shell across steps, which means shell state that
+is not a file. Interleaving markers is still not the answer; passing the state through the filesystem
+or through a step's own script is.

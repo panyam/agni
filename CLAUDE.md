@@ -60,7 +60,9 @@ inherits nothing. `includefile_test.go` fails the gate on a path that does not r
 returns an empty string and the build still succeeds), on a figure nothing includes, on a colour
 literal, and on a BLANK LINE inside the file, which ends the raw-HTML block and drops everything
 after it out of the `<svg>`. The house style, the traps, and the browser sweep that checks a
-rendered figure's geometry are in `docsite/README.md`.
+rendered figure's geometry are in `docsite/README.md`. **Serve `dist` under the `/agni/` prefix** when
+you check anything there in a browser: at a server's root every asset 404s, the page renders with no
+CSS while still returning 200, and the nav then measures as its mobile layout at any viewport width.
 
 `site/` is stale build output, not a source tree. Some older notes reference a retired `docs/NN-*.md`
 mkdocs tree that was folded into `docsite/content/` with audience-first names.
@@ -214,6 +216,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 | A query relation | 5, plus `make catalog-docs` | `stdlib/relations/facts/docs/_TEMPLATE.md` | `facts_docs_test.go`, `TestCatalogMatchesSchema`, `catalog-docs-check` |
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 | A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
+| A multi-command `agniRun` block | 1 (`steps:` in the spec, one per command) | `docsite/README.md` | `tutorial-runs-check` |
 | A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
 | A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
