@@ -22,7 +22,7 @@ const docContentDir = "../../docsite/content"
 // It moves when a page gains or loses a hand-written command, and it goes DOWN when a fence converts
 // to a generated capture (an agniRun spec runs its command for real, so it needs no parse check).
 // Either way, update it deliberately.
-const docCommandCount = 33
+const docCommandCount = 35
 
 // TestDocumentedCommandsParse runs every hand-written `agni ...` line in the docsite through the
 // real command tree, checking that the command and its flags exist.

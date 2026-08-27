@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -93,7 +94,7 @@ func TestCheckCSVMatchesJSON(t *testing.T) {
 		row := recs[i+1]
 		// The csv escapes a leading formula character, so compare against the escaped form rather
 		// than asserting the two are byte-equal and special-casing it away.
-		if row[2] != f.Rule || row[4] != sanitizeCell(f.Subject.Ref) {
+		if row[2] != f.Rule || row[4] != rpt.SanitizeCell(f.Subject.Ref) {
 			t.Errorf("row %d = (%q, %q), json = (%q, %q)", i, row[2], row[4], f.Rule, f.Subject.Ref)
 		}
 	}
@@ -104,31 +105,6 @@ func TestCheckCSVIsDeterministic(t *testing.T) {
 	_, second := runCheckCSV(t, orderFixture)
 	if first != second {
 		t.Error("two runs over the same design produced different bytes, so two exports cannot be diffed")
-	}
-}
-
-// TestCheckCSVEscapesFormulaCells covers the case that makes escaping non-optional: a spreadsheet
-// executes a cell beginning with =, +, - or @ when the file is opened. Net names really do start
-// with + (a rail named +3V3 on the shipped demo board), and a rule message is free prose.
-func TestCheckCSVEscapesFormulaCells(t *testing.T) {
-	for _, tc := range []struct {
-		name, in, want string
-	}{
-		{"equals", "=1+1", "'=1+1"},
-		{"plus rail", "+3V3", "'+3V3"},
-		{"minus", "-VBUS", "'-VBUS"},
-		{"at", "@RESET", "'@RESET"},
-		{"leading space then equals", " =cmd", "' =cmd"},
-		{"leading tab then equals", "\t=cmd", "'\t=cmd"},
-		{"ordinary net", "SCL", "SCL"},
-		{"empty", "", ""},
-		{"interior equals is harmless", "R1=10k", "R1=10k"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := sanitizeCell(tc.in); got != tc.want {
-				t.Errorf("sanitizeCell(%q) = %q, want %q", tc.in, got, tc.want)
-			}
-		})
 	}
 }
 

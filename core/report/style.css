@@ -63,3 +63,7 @@
            color: var(--muted); }
   .itemnote { color: var(--muted); font-style: italic; }
   a { color: var(--info); }
+
+  /* The query-view page (TableHTML): the question above its answer. */
+  pre.q { background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+          padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 0 0 20px 0; }

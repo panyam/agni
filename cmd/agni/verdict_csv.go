@@ -49,15 +49,15 @@ var verdictCSVColumns = []string{
 // matching check.RunVerdicts and therefore the findings table's axis). Like the findings writer this
 // does not re-sort, so the csv and the json describe one run in one order.
 func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report) error {
-	c := newCSVWriter(w)
-	c.header(verdictCSVColumns)
+	c := rpt.NewCSVWriter(w)
+	c.Header(verdictCSVColumns)
 	for _, v := range vs {
 		var stmt, terms string
 		if wit := v.GetWitness(); wit != nil {
 			stmt = wit.GetStatement()
 			terms = termsCell(wit.GetTerms())
 		}
-		c.row([]string{
+		c.Row([]string{
 			v.GetId(),
 			rpt.VerdictURL(meta, v.GetId()),
 			v.GetRule(),
@@ -69,7 +69,7 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report) error
 			v.GetReason(),
 		})
 	}
-	return c.finish()
+	return c.Finish()
 }
 
 // termsCell flattens a witness's values to one pipe-separated cell of label=value pairs, the same

@@ -1,4 +1,4 @@
-package main
+package report
 
 import (
 	"encoding/csv"
@@ -6,17 +6,17 @@ import (
 	"strings"
 )
 
-// multiValueSep joins several values inside one cell. It is deliberately not a comma: a reader
+// MultiValueSep joins several values inside one cell. It is deliberately not a comma: a reader
 // splitting a cell would then be unable to tell an intra-cell separator from the field delimiter
 // the parser already consumed.
-const multiValueSep = "|"
+const MultiValueSep = "|"
 
 // csvFormulaPrefixes are the leading characters that make a spreadsheet treat a cell as a formula
 // rather than text. Excel, LibreOffice and Sheets all do it, and they do it on open, before anyone
 // clicks anything.
 const csvFormulaPrefixes = "=+-@"
 
-// sanitizeCell makes a value safe to write into a spreadsheet cell.
+// SanitizeCell makes a value safe to write into a spreadsheet cell.
 //
 // A cell whose text begins with one of csvFormulaPrefixes is EXECUTED on open, so a net named
 // "-VBUS" or a rule message beginning with "=" becomes a formula in the reader's sheet rather than
@@ -26,7 +26,7 @@ const csvFormulaPrefixes = "=+-@"
 //
 // Leading tab, carriage return and newline are stripped first, because a cell beginning with
 // whitespace ahead of a formula character is still parsed as a formula by some readers.
-func sanitizeCell(s string) string {
+func SanitizeCell(s string) string {
 	trimmed := strings.TrimLeft(s, "\t\r\n ")
 	if trimmed == "" {
 		return s
@@ -37,44 +37,47 @@ func sanitizeCell(s string) string {
 	return s
 }
 
-// joinCell renders several values into one cell, sanitizing the result rather than each part, since
+// JoinCell renders several values into one cell, sanitizing the result rather than each part, since
 // only the leading character of the finished cell can start a formula.
-func joinCell(vals []string) string {
-	return sanitizeCell(strings.Join(vals, multiValueSep))
+func JoinCell(vals []string) string {
+	return SanitizeCell(strings.Join(vals, MultiValueSep))
 }
 
-// csvWriter wraps encoding/csv with the two behaviours every table this package emits needs: cells
+// CSVWriter wraps encoding/csv with the two behaviours every table this repo emits needs: cells
 // are sanitized on the way out, and the first error is retained so a caller checks once at the end
 // instead of after every row.
-type csvWriter struct {
+//
+// It lives here rather than in cmd/ because three CLI renderers and the query table all need the
+// same escaping, and a second copy is how the check and diff renderers drifted (agni issue 380).
+type CSVWriter struct {
 	w   *csv.Writer
 	err error
 }
 
-func newCSVWriter(w io.Writer) *csvWriter { return &csvWriter{w: csv.NewWriter(w)} }
+func NewCSVWriter(w io.Writer) *CSVWriter { return &CSVWriter{w: csv.NewWriter(w)} }
 
-// header writes the column names verbatim. They are ours, not design data, so they skip
+// Header writes the column names verbatim. They are ours, not design data, so they skip
 // sanitizing; running them through it would be harmless and would also imply they were untrusted.
-func (c *csvWriter) header(cols []string) {
+func (c *CSVWriter) Header(cols []string) {
 	if c.err == nil {
 		c.err = c.w.Write(cols)
 	}
 }
 
-// row writes one record, sanitizing every cell.
-func (c *csvWriter) row(cells []string) {
+// Row writes one record, sanitizing every cell.
+func (c *CSVWriter) Row(cells []string) {
 	if c.err != nil {
 		return
 	}
 	out := make([]string, len(cells))
 	for i, cell := range cells {
-		out[i] = sanitizeCell(cell)
+		out[i] = SanitizeCell(cell)
 	}
 	c.err = c.w.Write(out)
 }
 
-// finish flushes and returns the first error seen, from any row or from the flush itself.
-func (c *csvWriter) finish() error {
+// Finish flushes and returns the first error seen, from any row or from the flush itself.
+func (c *CSVWriter) Finish() error {
 	c.w.Flush()
 	if c.err != nil {
 		return c.err

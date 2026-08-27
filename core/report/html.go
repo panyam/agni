@@ -8,7 +8,7 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-//go:embed report.html.tmpl checklist.html.tmpl
+//go:embed report.html.tmpl checklist.html.tmpl table.html.tmpl
 var tmplFS embed.FS
 
 // CSS is the stylesheet both report pages share, so a pass is the same green on the check report

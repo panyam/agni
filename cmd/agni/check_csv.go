@@ -4,6 +4,8 @@ import (
 	"io"
 	"strconv"
 
+	rpt "github.com/panyam/agni/core/report"
+
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
@@ -38,12 +40,12 @@ var checkCSVColumns = []string{
 // csv from every other format's ordering, and two exports of one run would still have to agree with
 // the json for the round-trip test to mean anything.
 func writeCheckCSV(w io.Writer, findings []*checkspb.Finding) error {
-	c := newCSVWriter(w)
-	c.header(checkCSVColumns)
+	c := rpt.NewCSVWriter(w)
+	c.Header(checkCSVColumns)
 	for _, f := range findings {
 		subject := f.GetSubject()
 		prov := f.GetProvenance()
-		c.row([]string{
+		c.Row([]string{
 			f.GetSeverity(),
 			strconv.FormatBool(f.GetInconclusive()),
 			f.GetRule(),
@@ -57,7 +59,7 @@ func writeCheckCSV(w io.Writer, findings []*checkspb.Finding) error {
 			contextCell(f.GetContext()),
 		})
 	}
-	return c.finish()
+	return c.Finish()
 }
 
 // contextCell renders a finding's context entities as role=ref pairs in author order, which is
@@ -71,5 +73,5 @@ func contextCell(ctx []*checkspb.ContextSubject) string {
 	for _, cs := range ctx {
 		parts = append(parts, cs.GetRole()+"="+cs.GetSubject().GetRef())
 	}
-	return joinCell(parts)
+	return rpt.JoinCell(parts)
 }
