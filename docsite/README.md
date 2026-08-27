@@ -365,13 +365,20 @@ ground rail on purpose left the suite green. The fix is to inflate the thin axis
 width with a floor, so the box covers the ink rather than the path. Two figures had been reported as
 catches of this check and were not; both were found by looking at a screenshot.
 
-**Three things about verifying rendering in a browser, all of which produced wrong numbers first.**
+**Four things about verifying rendering in a browser, all of which produced wrong numbers first.**
 The stylesheet is cached HARD, so a CSS change measured straight after an edit reports the OLD layout
 and looks like the change did nothing. Bust it by rewriting each `link[rel=stylesheet]` href with a
 cache-busting query before measuring. **A running `go run .` holds an included FIGURE the same way**,
 so editing a file under `figures/` and re-fetching serves the version the server started with, and no
 query string helps because the staleness is server-side: restart it. And a section index is served at
 `/agni/<section>/`, so `/agni/<section>/index/` correctly 404s and is not evidence of a broken page.
+Worst of the four, **`dist` has to be served UNDER the `/agni/` prefix**: a page links its stylesheet
+as `/agni/static/css/main.css`, so serving `dist` at a server's root 404s every asset and the page
+renders with NO CSS while still returning 200. The nav then lays out as the mobile stacked column at
+any viewport width, and a measurement of it reads as a broken desktop rule rather than as a missing
+stylesheet, which cost two rounds of diagnosis. Symlink the tree in and serve the parent
+(`ln -s <abs>/docsite/dist <tmp>/agni`), and confirm
+`getComputedStyle(document.querySelector('.main-nav')).display` reads `flex` before trusting a number.
 
 **Table cells WRAP.** They used to carry `white-space: nowrap`, which laid a prose table out on one
 unwrapped line: 47 of the site's 62 tables overflowed their column and the worst ran 5.34x the content
@@ -426,6 +433,16 @@ menu as though it took no space, which is indistinguishable from having no clamp
 The bar used to stay on screen and scroll sideways, hiding most sections behind a gesture nobody
 discovers, and the sidebar used to render above the article in the one-column grid and push the page
 down before a reader saw a word.
+
+**A hover bridge cannot live on the element that SCROLLS.** The header dropdown sits 0.5rem below its
+nav link, and crossing that gap counts as a mouseout unless something invisible spans it. The bridge
+was a `::before` on `.nav-dropdown` at `top: -0.5rem`, which stopped working the day the panel gained
+`overflow-y: auto` for the menus that ran off the bottom of the screen: an overflow value makes the
+element a scroll container, and a scroll container clips everything outside its padding box, so the
+bridge was neither painted nor hit-tested. It now hangs off `.nav-item`, which does not scroll, with a
+`min-width` matching the panel so a diagonal move toward a wide menu stays over it. Probe it with
+`document.elementFromPoint` in the middle of the gap while hovering: the hit must be inside the
+`.nav-item`, and reading `site-header` there is the bug.
 
 **Two CSS blocks are order-dependent and say so inline.** The column overrides and the toggle base
 rules each tie on specificity with the rules they override, so SOURCE ORDER decides. Both were
