@@ -210,6 +210,38 @@ cites both sides, the schematic and the datasheet page, so you can open each and
 
 `J1` is placed but carries no part number, so a datasheet can never be matched to it.
 
+**A `not` has to be anchored.** At least one variable inside it must also appear in a positive
+relation, so the negation is about the row rather than about the design. Above, `?r` is the anchor:
+`not component.mpn(?r,?m)` asks whether THIS part has a part number. The `?m` is free on purpose and
+means "for any value", which is what you want.
+
+Drop the anchor and the question changes without looking like it has:
+
+```
+entity(?n,"net"), not component.class(?tp,"test_point") => ?n
+```
+
+`?tp` appears nowhere else, so that asks whether the design contains no test point AT ALL, and on a
+board that has even one it filters away every row. It used to answer "no results", which reads as a
+fact about the board. It is now an error naming the unanchored variable.
+
+**To negate a pair of relations, name them first.** `not` takes one relation, so the question that
+spelling was reaching for, nets with no test point ON THEM, needs both `component-on-net` and
+`component.class` to be true of the same part. Define a relation for that and negate it by name:
+
+```
+has_test_point(?n) :- component-on-net(?tp,?n), component.class(?tp,"test_point");
+entity(?n,"net"), not has_test_point(?n) => ?n
+```
+
+Clauses are separated by `;`, a clause containing `:-` defines a relation, and the one clause
+without one is the question. This is the general shape for any "X with no related Y", which is most
+of what a coverage question asks: rails with no decoupling, buses with no pull-up, parts with no
+protection.
+
+A defined relation is fully derived before anything negates it, so the answer does not depend on the
+order you wrote the clauses in.
+
 ### Count parts per net (aggregation)
 
 `count`, `min`, `max`, and `sum` summarize. Group by the plain columns. The aggregate reduces the rest:

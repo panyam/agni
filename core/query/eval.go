@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/datasheet/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // Base is the queryable fact base: the WS3-004 EDB relations indexed by name for lookup, plus the
@@ -131,7 +131,7 @@ func (Naive) Eval(q Query, b *Base) ([]Row, error) {
 		b = &nb
 	}
 	pos, negs := splitNegations(q.Goal.Literals)
-	if err := b.validateNegations(negs); err != nil {
+	if err := b.validateNegations(q.Goal, negs); err != nil {
 		return nil, err
 	}
 	sel := q.Select
@@ -183,7 +183,11 @@ func splitNegations(lits []Literal) (pos, negs []Literal) {
 // (negation as failure — atomHolds runs the same extendAtom the positive solve uses). Stratification
 // (materialize) already guarantees a negated IDB relation is fully derived before the rule or goal
 // that negates it runs, so the filter is safe.
-func (b *Base) validateNegations(negs []Literal) error {
+func (b *Base) validateNegations(goal Body, negs []Literal) error {
+	bound := map[Var]bool{}
+	for _, v := range positiveVars(goal) {
+		bound[v] = true
+	}
 	for _, lit := range negs {
 		rel := lit.Neg.Relation
 		ok, known := b.arityAccepts(rel, len(lit.Neg.Args))
@@ -193,8 +197,49 @@ func (b *Base) validateNegations(negs []Literal) error {
 		if !ok {
 			return fmt.Errorf("query: negated relation %q takes %s args, got %d", rel, b.arityLabelOf(rel), len(lit.Neg.Args))
 		}
+		if err := checkNegationAnchored(lit.Neg, bound); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// checkNegationAnchored rejects a negated atom that shares NO variable with the positive body, which
+// is the unsafe-negation case (agni issue 522).
+//
+// Such a literal has nothing to range over per row, so it collapses to a design-wide constant:
+// `entity(?n,"net"), not component.class(?tp,"test_point")` asks whether the design contains no test
+// point at all, and on any board that has one it silently filters every row away. The author meant
+// "nets with no test point", which needs a negated CONJUNCTION and is a separate gap. Returning zero
+// rows for a question that was never asked is the worst available answer, because an empty result
+// from a negation reads as a reassuring fact about the design.
+//
+// The rule is ANCHORING, not full safety, and the difference matters. Classic datalog safety demands
+// every variable in a negated literal occur positively, which would reject the shape this language
+// documents and people correctly rely on: `component-on-net(?r,?n), not component.mpn(?r,?m) => ?r`
+// leaves ?m free ON PURPOSE, and means "no m exists for this r". That is well defined precisely
+// because ?r anchors it. What is never meaningful is a negation anchored to nothing.
+//
+// A negated atom with no variables at all is ground and needs no anchor: `not component.class("U1",
+// "test_point")` is a constant filter, and a legitimate one.
+func checkNegationAnchored(a *Atom, bound map[Var]bool) error {
+	var vars []Var
+	for _, t := range a.Args {
+		// "_" is the wildcard: it never binds and never anchors, so it does not count either way.
+		if t.Var != "" && t.Var != "_" {
+			vars = append(vars, t.Var)
+		}
+	}
+	if len(vars) == 0 {
+		return nil
+	}
+	for _, v := range vars {
+		if bound[v] {
+			return nil
+		}
+	}
+	return fmt.Errorf("query: negated relation %q shares no variable with the rest of the query (?%s appears only inside the `not`, so the negation has nothing to range over and matches either every row or none)",
+		a.Relation, vars[0])
 }
 
 // isIDB reports whether a relation is a rule-defined (IDB) relation in this query's materialized set.

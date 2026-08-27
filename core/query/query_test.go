@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 // boardGeom is a two-net board: SIG routed thin (0.08mm), PWR wide (0.5mm).
@@ -903,5 +903,71 @@ func TestAbsentDoesNotCollideInIndex(t *testing.T) {
 	}
 	if a[0] == e[0] {
 		t.Errorf("absent and empty-string share the index bucket %q", a[0])
+	}
+}
+
+// TestUnanchoredNegationErrors is agni issue 522's first half. A negated atom sharing no variable
+// with the rest of the query has nothing to range over per row, so it collapses to a design-wide
+// constant and filters every row away or none. Before this it returned "no results", which reads as
+// a reassuring fact about the design rather than as a malformed question.
+//
+// The shape here is the natural spelling of "nets with no test point", which is why it matters: the
+// author gets a confident empty answer to the most ordinary question a review asks.
+func TestUnanchoredNegationErrors(t *testing.T) {
+	d, set := twoPartDesign()
+	m := check.NewModelWithParams(d, nil, set)
+	_, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param(?x,"VIN",?v) => ?m`), NewBase(m))
+	if err == nil {
+		t.Fatal("an unanchored negation was accepted; it silently answers nothing")
+	}
+	// The message has to name the offending variable, because in a long body the author cannot
+	// otherwise tell WHICH `not` is the unanchored one.
+	if !strings.Contains(err.Error(), "?x") {
+		t.Errorf("error = %v, want it to name the unanchored variable ?x", err)
+	}
+}
+
+// TestAnchoredNegationWithFreeValueStillWorks is the guard on the guard. Classic datalog safety says
+// every variable in a negated literal must occur positively, and applying that rule here would break
+// the shape this language documents and people rely on: `not param(?m,"VIN",?v)` leaves ?v free ON
+// PURPOSE and means "no VIN param for any value". It is well defined because ?m anchors it.
+//
+// So the rule implemented is ANCHORING, not full safety, and this test is what stops someone
+// "fixing" it into the stricter form later. TestNegation above covers the same shape's results; this
+// one exists to state the rule.
+func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
+	d, set := twoPartDesign()
+	m := check.NewModelWithParams(d, nil, set)
+	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param(?m,"VIN",?v) => ?m`), NewBase(m)); err != nil {
+		t.Fatalf("an anchored negation with a free value variable must be accepted: %v", err)
+	}
+}
+
+// TestGroundNegationNeedsNoAnchor. A negated atom with no variables at all is a constant filter, and
+// a legitimate one, so the anchoring rule must not reach it.
+func TestGroundNegationNeedsNoAnchor(t *testing.T) {
+	d, set := twoPartDesign()
+	m := check.NewModelWithParams(d, nil, set)
+	if _, err := (Naive{}).Eval(mustParse(t, `component.mpn(?r,?m), not param("REG-24","VIN",20) => ?m`), NewBase(m)); err != nil {
+		t.Fatalf("a ground negation carries no variables to anchor and must be accepted: %v", err)
+	}
+}
+
+// TestUnanchoredNegationErrorsInARuleBody. A rule body runs through the same solver as a goal, so it
+// gets the same guard. Without this, a query authored over the wire (which arrives as rules) keeps
+// the silent behaviour the goal path just lost.
+func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
+	d, set := twoPartDesign()
+	m := check.NewModelWithParams(d, nil, set)
+	q := mustParse(t, `bad(?m) => ?m`)
+	q.Rules = []Rule{{
+		Head: Atom{Relation: "bad", Args: []Term{{Var: "m"}}},
+		Body: Body{Literals: []Literal{
+			{Pos: &Atom{Relation: "component.mpn", Args: []Term{{Var: "r"}, {Var: "m"}}}},
+			{Neg: &Atom{Relation: "param", Args: []Term{{Var: "x"}, {Const: &Value{S: "VIN"}}, {Var: "v"}}}},
+		}},
+	}}
+	if _, err := (Naive{}).Eval(q, NewBase(m)); err == nil {
+		t.Fatal("an unanchored negation in a rule body was accepted")
 	}
 }
