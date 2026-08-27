@@ -1144,3 +1144,36 @@ The order in the repo had been an artifact of a path nobody was supposed to see.
 repo ships and are still in the tree, because a host that builds a `formats.Loader` without
 `SourceName` and reads by absolute path would still want them, and no such host exists to test
 against. Removing them is observable through that sort order, so it wants its own change. Ledgered.
+
+---
+
+## A query view is a rendering type, not a wire type
+
+**Question.** `core/report.Table` is a plain Go struct. Should it be a proto message, since a query
+answer is obviously something that crosses boundaries?
+
+**Answer.** No, and the package already contains the precedent. `report.Report` is a Go struct
+carrying `URLBase`, `MountPath` and `Generated`, which are presentation framing rather than facts
+about a run, while the check report's WIRE form is `checkspb.CheckReport`, assembled separately in
+`internal/service/report.go`. Rendering type and wire type are deliberately different things here,
+and `Table` follows `Report`.
+
+The stronger reason is that a wire type for a query answer already exists. `webapi.RunQueryResponse`
+carries the columns, the rows and the cites, plus per-cell sheet badges and locate reasons for the
+viewer's navigation. Making `Table` a proto would be a SECOND wire message for one answer.
+
+`Table` is also deliberately narrower than that response: the sheet badges and locate reasons stop at
+the CLI because they mean nothing in a file. Narrowing is what a rendering type is for. And the three
+fields someone reaches for as evidence it should cross (`Title`, `Query`, `Source`) belong to whoever
+is rendering: `Title` comes from a `--title` flag, so it is the caller's intent rather than a
+property of the result.
+
+**Today `Table` never crosses anything.** It is built at the CLI from `RunQueryResponse` and rendered
+to stdout. The web client does not use it at all; it renders the response into TSX directly.
+
+**What would reopen this.** A second renderer, and the first thing that would create one is browser
+export (#127). Three routes then exist and only one leaves `Table` alone: the server renders and
+returns bytes; the client reimplements `table.go` in TypeScript; or `Table` becomes a wire type. The
+first is the recommendation, and it is recorded on #127 so the second is not written by reflex, since
+it is the one that looks natural from inside the frontend and it would duplicate the escaping rules
+that are easy to get subtly wrong.

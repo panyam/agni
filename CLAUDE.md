@@ -33,6 +33,7 @@ expensive to rediscover.
 | Running the gate, and how it reads green when it is not | `build/the-gate.md` |
 | Measuring something, or trusting a green test | `build/evidence.md` |
 | Learning the domain from a software background | `reference/analogy.md`, `reference/edif-primer.md` |
+| Asking a "no related Y" question, or any query past one clause | `guide/querying.md` (derived relations: `;` splits clauses, `:-` names one) |
 | Why a rule exists at all, as engineering rather than as code | `learn/` (twelve chapters, EE1-EE7) |
 
 `guide/` is the user-facing manual (getting-started, concepts, checks-and-reports,
@@ -141,6 +142,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the design's declared ENTRY whatever you pointed the command at, and carries the revision it was
   read at**, which the viewer checks before it draws. Semantics and the two ways the halves used to
   disagree are in `guide/checks-and-reports.md`.
+- **`query` emits five formats and two of them are DOCUMENTS.** `--format text|csv|json|markdown|html`
+  plus `--title`. markdown and html carry the title, the design and THE QUERY above the answer, so a
+  saved view states the question it answers; csv deliberately carries no preamble, because its first
+  row has to be the header something binds to. An empty result is never an empty artifact. The
+  renderer is `core/report.Table`, which is also where the csv escaping for every command now lives:
+  it moved down out of `cmd/` rather than being copied a third time (agni issue 380).
+- **`diff --rename-approx` is OFF by default**, so a net that was renamed AND changed reports as New
+  plus Deleted unless you ask for it. Deliberate, because the pass ASSIGNS a best match rather than
+  recovering a fact. It is also a false-finding shape: a run without the flag reads as "we detect no
+  approximate renames", which is how one got written up as an engine gap before the flag was noticed.
 - Toolchain: Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
   `go.mod` and invoked via `go tool`**, so their versions are data rather than something to match by
   hand. Only `buf` itself has to be on your PATH.
@@ -159,6 +170,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   that opens files by absolute path and leaves `SourceName` nil publishes the machine that ran it,
   which is what `--results-out` stored until agni issue 501. Beware also that a query's citation list
   is SORTED, so anything that changes the source string reorders committed captures.
+- **A reader records a part number wherever its grammar puts it and NEVER promotes it itself.**
+  `classify.StampMPN` is the shared ingestion pass that fills `ir.Component.mpn`, from the component's
+  own aliases first and then from `ir.PartType.mpn`. Both halves used to live privately inside the
+  EDIF reader, so EDIF resolved part numbers and no other format did: Telesis records it on the PART
+  TYPE, every consumer read the COMPONENT, and `component.mpn` came back empty for every component of
+  every `.tel` design, silently disabling the whole datasheet tier on that format (agni issue 519). A
+  new spelling goes in `classify.MPNAliases`, never in a reader.
 - **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
   fails the gate on either half being stale.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
@@ -197,6 +215,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 | A glossary term | 2 (the term page, one index line) | `docsite/README.md` | `docsite/terms_test.go` |
 | A hand-written `agni …` fence | 1, plus `docCommandCount` | `docsite/README.md` | `cmd/agni/doccommands_test.go` |
 | A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
+| A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
 
 ## Working in this repo
