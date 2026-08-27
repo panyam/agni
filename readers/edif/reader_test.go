@@ -19,6 +19,19 @@ func readEDN(t *testing.T, name string) *ir.Design {
 	return d
 }
 
+// readEDNIngested reads a fixture and runs the shared MPN promotion the Loader runs, because since
+// agni issue 519 the reader's job stops at capturing the part number where its grammar puts it, and
+// deciding which attribute the rest of the engine reads is a format-neutral pass. A test asserting
+// the component-level MPN is therefore asserting an INGESTION outcome, not a reader one, and has to
+// run the same two steps ingestion does. The fixtures stay: the claim worth keeping is that a real
+// OrCAD export resolves, not that a hand-built IR does.
+func readEDNIngested(t *testing.T, name string) *ir.Design {
+	t.Helper()
+	d := readEDN(t, name)
+	classify.StampMPN(d)
+	return d
+}
+
 // readSrc reads an EDIF document written inline, so a structural test states the exact shape it is
 // about rather than pointing at a fixture file the reader has to be cross-referenced against.
 func readSrc(t *testing.T, src string) *ir.Design {
@@ -82,7 +95,7 @@ func hasConn(n *ir.Net, ref, pin string) bool {
 // 0 MPNs. The reader now normalizes both spellings to the canonical "MPN" attribute, and an
 // explicit "MPN" wins over the alias.
 func TestNormalizeMPN(t *testing.T) {
-	d := readEDN(t, "mpn.edn")
+	d := readEDNIngested(t, "mpn.edn")
 	for ref, want := range map[string]string{
 		"U1": "PARTX", // renamed property -> display key "Manufacturer PN"
 		"U2": "PARTY", // bare property -> id key "Manufacturer_PN"
@@ -133,7 +146,7 @@ func TestReadNetlist(t *testing.T) {
 // geometry reader does (refDesOf/propText), or every .eds component reads with an empty ref_des,
 // no MPN, and no property values (WS1-046). The .edn writes bare atoms, so this is additive there.
 func TestReadSchematicNetlist(t *testing.T) {
-	d := readEDN(t, "schematic-netlist.eds")
+	d := readEDNIngested(t, "schematic-netlist.eds")
 
 	u7 := compByRef(d, "U7")
 	if u7 == nil {
@@ -171,7 +184,7 @@ func TestReadSchematicNetlist(t *testing.T) {
 // component's MPN empty (no false fill). The join keys on the section's PartRef, resolving the cell
 // by either its display name or its &-stripped native id.
 func TestCellMPNFallback(t *testing.T) {
-	d := readEDN(t, "cell-mpn.edn")
+	d := readEDNIngested(t, "cell-mpn.edn")
 	if got := compByRef(d, "U1").Attributes["MPN"]; got != "CELL-MPN-1" {
 		t.Errorf("U1 MPN = %q, want CELL-MPN-1 (inherited from its cell, keyed by &-stripped native id)", got)
 	}
@@ -189,7 +202,7 @@ func TestCellMPNFallback(t *testing.T) {
 // cellRef here names the part by DISPLAY name, exercising the name key of the dual-keyed index. An
 // inline MPN on the .eds view still wins.
 func TestSchematicCellMPNFallback(t *testing.T) {
-	d := readEDN(t, "schematic-cell-mpn.eds")
+	d := readEDNIngested(t, "schematic-cell-mpn.eds")
 	u9 := compByRef(d, "U9")
 	if u9 == nil {
 		t.Fatalf("component U9 not found; got %d components", len(d.Components))

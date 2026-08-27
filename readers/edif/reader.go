@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
 )
@@ -153,7 +154,6 @@ func extract(root *node, src string) *ir.Design {
 				comp.Attributes[k] = v
 			}
 		}
-		normalizeMPN(comp)
 	}
 	for _, key := range order {
 		d.Components = append(d.Components, byKey[key])
@@ -163,7 +163,6 @@ func extract(root *node, src string) *ir.Design {
 	// display name and that stripped native id (matching classify.PartIndex's WS1-045 alias), so the
 	// join resolves whether the cellRef names the part by display or by native id. An inline MPN
 	// (already normalized above) is never overwritten.
-	applyCellMPNFallback(d)
 	// No RefDesCollision (input diagnostic, docs/19) is emitted here on purpose: EDIF represents a
 	// multi-gate part as several instances sharing a designator (folded into sections above), and
 	// carries no capture-unit to tell that legitimate grouping from a genuine duplicate. Detecting
@@ -258,7 +257,7 @@ func partTypeOf(n *node, src string) *ir.PartType {
 	if n.Child("contents") == nil {
 		var cprops []*node
 		collect(n, "property", &cprops)
-		for _, alias := range mpnPropertyAliases {
+		for _, alias := range classify.MPNAliases {
 			for _, p := range cprops {
 				if parseName(p.Arg(1)).best() != alias {
 					continue
@@ -267,11 +266,11 @@ func partTypeOf(n *node, src string) *ir.PartType {
 					if pt.Attributes == nil {
 						pt.Attributes = map[string]string{}
 					}
-					pt.Attributes["MPN"] = v
+					pt.Attributes[classify.MPNAttr] = v
 					break
 				}
 			}
-			if pt.GetAttributes()["MPN"] != "" {
+			if pt.GetAttributes()[classify.MPNAttr] != "" {
 				break
 			}
 		}
@@ -376,65 +375,6 @@ func instanceOf(n *node, src string) (refDes string, sec *ir.ComponentSection, i
 		}
 	}
 	return refDes, sec, id, pinMap
-}
-
-// mpnPropertyAliases are the EDIF property names an OrCAD/Allegro export prints a part's
-// manufacturer part number under, in precedence order. The reader normalizes the first present
-// to the canonical "MPN" attribute the model's datasheet join reads (ComponentMPN), so a
-// datasheet-backed rule works on an OrCAD netlist the same way it does on KiCad (whose reader
-// already carries "MPN"). Both the display spelling ("Manufacturer PN", from a renamed property)
-// and the bare id ("Manufacturer_PN") occur, so both are listed.
-var mpnPropertyAliases = []string{"Manufacturer_PN", "Manufacturer PN"}
-
-// normalizeMPN populates comp.Attributes["MPN"] from the first present alias when the component
-// carries no explicit "MPN" already (an explicit MPN always wins). The source property is left in
-// place; only the canonical key is added, so no existing attribute is lost or overwritten.
-func normalizeMPN(comp *ir.Component) {
-	if comp.Attributes["MPN"] != "" {
-		return
-	}
-	for _, alias := range mpnPropertyAliases {
-		if v := comp.Attributes[alias]; v != "" {
-			comp.Attributes["MPN"] = v
-			return
-		}
-	}
-}
-
-// applyCellMPNFallback fills each component's MPN from its part-type (cell) when the placed
-// instance carried none inline (WS1-046 Piece B). It indexes every cell that captured an MPN by
-// both its display name and its &-stripped native id, then joins on a component's first section
-// PartRef (the &-stripped cellRef). Idempotent and non-destructive: a component that already has an
-// MPN is left untouched, and a component whose cell has none stays empty (no false fill).
-func applyCellMPNFallback(d *ir.Design) {
-	cellMPN := map[string]string{}
-	for _, lib := range d.Libraries {
-		for _, pt := range lib.Parts {
-			m := pt.GetAttributes()["MPN"]
-			if m == "" {
-				continue
-			}
-			if pt.Name != "" {
-				cellMPN[pt.Name] = m
-			}
-			if id := strings.TrimPrefix(pt.GetProv().GetNativeId(), "&"); id != "" {
-				if _, ok := cellMPN[id]; !ok {
-					cellMPN[id] = m
-				}
-			}
-		}
-	}
-	if len(cellMPN) == 0 {
-		return
-	}
-	for _, comp := range d.Components {
-		if comp.Attributes["MPN"] != "" || len(comp.Sections) == 0 {
-			continue
-		}
-		if m := cellMPN[comp.Sections[0].PartRef]; m != "" {
-			comp.Attributes["MPN"] = m
-		}
-	}
 }
 
 // netOf converts an EDIF (net ...) node into an ir.Net, turning each (portRef pin

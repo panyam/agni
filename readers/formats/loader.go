@@ -195,6 +195,11 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	// only INPUT/OUTPUT/INOUT, so a VDD pin reads as plain INPUT; this promotes it so the power-pin rule
 	// family works format-neutrally on PinDir == POWER_IN. A no-op for KiCad/gEDA (already typed).
 	lex.StampPowerInPins(d)
+	// Promote every component's manufacturer part number to the one canonical attribute, from whatever
+	// key its format spelled it in and from its part type when the placement carried none (agni issue
+	// 519). Not a lexicon pass: a part number is an identifier the source states, not a name this
+	// engine interprets, so no naming vocabulary is involved.
+	classify.StampMPN(d)
 	return d, nil
 }
 
