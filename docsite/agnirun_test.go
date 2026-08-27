@@ -23,7 +23,7 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the capture should have been written: %v", err)
 	}
-	if stamp == "" || !strings.Contains(out, "13 of 15 covered") {
+	if stamp == "" || len(out) != 1 || !strings.Contains(out[0], "13 of 15 covered") {
 		t.Errorf("capture should carry a stamp and the body, got stamp=%q", stamp)
 	}
 
@@ -62,7 +62,7 @@ func TestAgniRunIsolatesTheFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(got, "GONE") {
+	if len(got) != 1 || !strings.Contains(got[0], "GONE") {
 		t.Errorf("the script should have run, got %q", got)
 	}
 	if _, err := os.Stat("../examples/tutorial-project/params"); err != nil {
@@ -94,7 +94,7 @@ func TestCaptureRulesAreDeclarative(t *testing.T) {
 			if err != nil {
 				t.Fatalf("execute: %v", err)
 			}
-			if got != tc.want {
+			if len(got) != 1 || got[0] != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
@@ -206,5 +206,165 @@ func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
 	}
 	if _, err := inputHash([]byte("spec"), "docsite/testdata-untracked-fixture"); err == nil {
 		t.Error("a fixture with no tracked files must be an error, not a hash of whatever is on disk")
+	}
+}
+
+// A continued command carries ONE prompt. Prefixing the continuation line too rendered a second `$`
+// where there is no second command, and a reader copying the block got a command broken in half.
+func TestAContinuedCommandCarriesOnePrompt(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{"continued", "agni diff a.edn b.edn \\\n  --symbol-path syms", []string{"$ agni diff a.edn b.edn \\", "  --symbol-path syms"}},
+		{"two commands", "agni stats a.edn\nagni stats b.edn", []string{"$ agni stats a.edn", "$ agni stats b.edn"}},
+		{"escaped backslash ends it", "agni query 'x\\\\'\nagni stats b.edn", []string{"$ agni query 'x\\\\'", "$ agni stats b.edn"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []string
+			continued := false
+			for _, l := range strings.Split(tc.in, "\n") {
+				if continued {
+					got = append(got, l)
+				} else {
+					got = append(got, "$ "+l)
+				}
+				continued = isContinued(l)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("got %d lines, want %d: %q", len(got), len(tc.want), got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("line %d: got %q, want %q", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// TestStepsCaptureSeparately is the acceptance for per-step pairing. A multi-command lesson used to
+// render every command and then every output concatenated, so a reader matched halves by eye.
+func TestStepsCaptureSeparately(t *testing.T) {
+	got, err := execute(runSpec{Steps: []runStep{
+		{Script: "echo first"},
+		{Script: "echo second"},
+	}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	want := []string{"first\n", "second\n"}
+	if len(got) != len(want) {
+		t.Fatalf("got %d captures, want %d: %q", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("step %d: got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// Steps share the scratch directory but not a shell, which is the whole reason a step can be its own
+// process: rung 11 writes a results document in one step and re-renders it in the next.
+func TestAStepReadsWhatAnEarlierStepWrote(t *testing.T) {
+	got, err := execute(runSpec{Steps: []runStep{
+		{Script: "echo stored > artifact.txt"},
+		{Script: "cat artifact.txt"},
+	}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if len(got) != 2 || got[1] != "stored\n" {
+		t.Errorf("the second step should have read the first step's file, got %q", got)
+	}
+}
+
+// A step that captures nothing is not a filter that stopped matching. Rung 11's first step redirects
+// its report away because the lesson is the results file it also wrote, and running the spec's
+// pattern over that empty capture failed the build.
+func TestAnEmptyCaptureIsNotAMatchFailure(t *testing.T) {
+	got, err := execute(runSpec{
+		Match: "^kept",
+		Steps: []runStep{
+			{Script: "echo noise > /dev/null"},
+			{Script: "echo kept; echo dropped"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("an empty capture must not fail the match guard: %v", err)
+	}
+	if len(got) != 2 || got[0] != "" || got[1] != "kept\n" {
+		t.Errorf("got %q, want [\"\" \"kept\\n\"]", got)
+	}
+	// The positive control: the guard must still fire on a step that printed something the filter
+	// then rejected entirely, which is the regression it exists to catch.
+	if _, err := execute(runSpec{Match: "^kept", Steps: []runStep{{Script: "echo nothing-matches"}}}); err == nil {
+		t.Error("a filter selecting nothing from a NON-empty capture must still be an error")
+	}
+}
+
+// Exit belongs to the run rather than to a command, so it lands once, on the last block.
+func TestExitLandsOnTheLastStep(t *testing.T) {
+	got, err := execute(runSpec{Exit: true, Steps: []runStep{
+		{Script: "echo one"},
+		{Script: "echo two; exit 3"},
+	}})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if len(got) != 2 || got[0] != "one\n" || got[1] != "two\nexit 3\n" {
+		t.Errorf("got %q, want [\"one\\n\" \"two\\nexit 3\\n\"]", got)
+	}
+}
+
+// The capture file round-trips through the delimiter, and a ONE-step spec writes no delimiter at all.
+// That second half is why adding steps left all 80 single-command captures byte-identical.
+func TestCaptureFileRoundTrips(t *testing.T) {
+	for name, bodies := range map[string][]string{
+		"one step":      {"only\n"},
+		"two steps":     {"first\n", "second\n"},
+		"an empty step": {"", "second\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			path := t.TempDir() + "/c.output"
+			raw := stampPrefix + "abc\n" + strings.Join(bodies, stepDelim)
+			if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if len(bodies) == 1 && strings.Contains(raw, strings.TrimSpace(stepDelim)) {
+				t.Error("a one-step capture must carry no delimiter, or every existing capture would move")
+			}
+			got, stamp, err := readOutput(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stamp != "abc" {
+				t.Errorf("stamp: got %q", stamp)
+			}
+			if len(got) != len(bodies) {
+				t.Fatalf("got %d sections, want %d: %q", len(got), len(bodies), got)
+			}
+			for i := range bodies {
+				if got[i] != bodies[i] {
+					t.Errorf("section %d: got %q, want %q", i, got[i], bodies[i])
+				}
+			}
+		})
+	}
+}
+
+// A spec that sets both fields is contradictory, and picking one silently would render a lesson
+// nobody wrote.
+func TestScriptAndStepsAreMutuallyExclusive(t *testing.T) {
+	both := runSpec{Script: "echo x", Steps: []runStep{{Script: "echo y"}}}
+	if err := both.validate("spec.yaml"); err == nil {
+		t.Error("declaring both script and steps must be an error")
+	}
+	if err := (runSpec{}).validate("spec.yaml"); err == nil {
+		t.Error("declaring neither must be an error")
+	}
+	if err := (runSpec{Steps: []runStep{{Show: "agni check x"}}}).validate("spec.yaml"); err == nil {
+		t.Error("a step with a show but no script must be an error")
 	}
 }

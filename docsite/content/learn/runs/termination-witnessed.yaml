@@ -4,8 +4,7 @@
 # state the set they considered, so the satisfied requirement has a verdict and a witness.
 fixture: examples/tutorial-project
 from_root: true
-script: |
-  agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "resistor"), component.mpn(?r, ?m), component-on-net(?r, ?n) => ?r, ?m, ?n'
-  echo
-  agni check --verdicts --rule gateway-profiles/can-termination-missing examples/tutorial-project/designs/gateway/gateway.edn
+steps:
+  - script: agni query examples/tutorial-project/designs/gateway/gateway.edn 'component.class(?r, "resistor"), component.mpn(?r, ?m), component-on-net(?r, ?n) => ?r, ?m, ?n'
+  - script: agni check --verdicts --rule gateway-profiles/can-termination-missing examples/tutorial-project/designs/gateway/gateway.edn
 match: '^(R1|r |\s+pass|gateway-profiles|[0-9]+ verdicts)'

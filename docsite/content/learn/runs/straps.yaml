@@ -2,12 +2,6 @@
 # differ. Both runs use the same .edn; only the declaration changes, mirroring the sequencing pair.
 fixture: cmd/agni/testdata/intent
 from_root: true
-script: |
-  echo "declared as built:"
-  agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-collision.yaml
-  echo
-  echo "declared for a part whose address pins are numbered the other way:"
-  agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-clear.yaml
-show: |
-  agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-collision.yaml
-  agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-clear.yaml
+steps:
+  - script: agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-collision.yaml
+  - script: agni check --verdicts --rule intent/strap-address-collision cmd/agni/testdata/intent/strapgroup.edn --intent-path cmd/agni/testdata/intent/strapgroup-clear.yaml

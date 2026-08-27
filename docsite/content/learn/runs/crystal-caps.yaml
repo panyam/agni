@@ -2,12 +2,6 @@
 # The subject is a TERMINAL rather than the part, because each side needs its own capacitor.
 fixture: cmd/agni/testdata/conformance
 from_root: true
-script: |
-  echo "one terminal short:"
-  agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.fires.edn
-  echo
-  echo "both terminals loaded:"
-  agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.passes.edn
-show: |
-  agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.fires.edn
-  agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.passes.edn
+steps:
+  - script: agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.fires.edn
+  - script: agni check --verdicts --rule crystal-load-caps cmd/agni/testdata/conformance/crystal.passes.edn

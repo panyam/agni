@@ -1,12 +1,10 @@
-#agni-run fc74764dbb3bc4a5
-one terminal short:
+#agni-run 515e1813266d46ec
 crystal-load-caps  1 fail, 1 pass
     fail  Y1.2  no capacitor sits on terminal net XTAL_OUT
     pass  Y1.1  capacitor C1 sits on terminal net XTAL_IN
 
 2 verdicts across 1 rule(s), 1 pass, 1 fail
-
-both terminals loaded:
+#agni-step
 crystal-load-caps  2 pass
     pass  Y1.1  capacitor C1 sits on terminal net XTAL_IN
     pass  Y1.2  capacitor C2 sits on terminal net XTAL_OUT
