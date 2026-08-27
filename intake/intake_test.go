@@ -142,7 +142,7 @@ func TestBuildPartTypes(t *testing.T) {
 func mpnDesign() *ir.Design {
 	comp := func(ref, mpn string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"},
-			Attributes: map[string]string{"MPN": mpn}}
+			Mpn: mpn}
 	}
 	return &ir.Design{Components: []*ir.Component{
 		comp("C1", "ACME-CAP-100N"), comp("C2", "ACME-CAP-100N"), comp("C3", "ACME-CAP-100N"),

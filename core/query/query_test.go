@@ -35,7 +35,7 @@ func TestBoardQuery(t *testing.T) {
 // datasheets at once.
 func TestCrossTierJoin(t *testing.T) {
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "REG-24"}, Prov: &ir.Provenance{SourceFile: "x"}}},
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "x"}}},
 		Nets:       []*ir.Net{{Name: "SIG", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "x"}}},
 	}
 	m := check.NewModelWithParams(d, boardGeom(), param.ParamSet{"REG-24": regSpec("REG-24", 20)})
@@ -71,7 +71,7 @@ func regSpec(mpn string, vinMax float64) *parampb.PartSpec {
 // regDesign places a regulator U1 (MPN REG-24) with pin 1 on railNet.
 func regDesign(railNet string) *ir.Design {
 	return &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "REG-24"}, Prov: &ir.Provenance{SourceFile: "reg"}}},
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "reg"}}},
 		Nets:       []*ir.Net{{Name: railNet, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "reg"}}},
 	}
 }
@@ -323,8 +323,8 @@ func TestReachesArityBothPathsAgree(t *testing.T) {
 func twoPartDesign() (*ir.Design, param.ParamSet) {
 	d := &ir.Design{
 		Components: []*ir.Component{
-			{RefDes: "U1", Attributes: map[string]string{"MPN": "REG-24"}, Prov: &ir.Provenance{SourceFile: "d"}},
-			{RefDes: "U2", Attributes: map[string]string{"MPN": "PLAIN"}, Prov: &ir.Provenance{SourceFile: "d"}},
+			{RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "d"}},
+			{RefDes: "U2", Mpn: "PLAIN", Prov: &ir.Provenance{SourceFile: "d"}},
 		},
 		Nets: []*ir.Net{
 			{Name: "+24V", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "d"}},
@@ -397,8 +397,8 @@ func TestAggregationMax(t *testing.T) {
 // positive and negated forms work, so a search box can ask "MPN contains LM" or "not".
 func TestStringPredicates(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", Attributes: map[string]string{"MPN": "LM1117"}, Prov: &ir.Provenance{SourceFile: "d"}},
-		{RefDes: "U2", Attributes: map[string]string{"MPN": "REG-24"}, Prov: &ir.Provenance{SourceFile: "d"}},
+		{RefDes: "U1", Mpn: "LM1117", Prov: &ir.Provenance{SourceFile: "d"}},
+		{RefDes: "U2", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "d"}},
 	}}
 	m := check.NewModelWithParams(d, nil, param.ParamSet{"LM1117": regSpec("LM1117", 20), "REG-24": regSpec("REG-24", 20)})
 

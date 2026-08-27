@@ -526,7 +526,7 @@ func (b *builder) partType(part string) *ir.PartType {
 		Prov: &ir.Provenance{SourceFile: b.source},
 	}
 	if mpn := b.partMPN[part]; mpn != "" {
-		pt.Attributes = map[string]string{"mpn": mpn}
+		pt.Mpn = mpn
 	}
 	for i, v := range b.partExtra[part] {
 		if v == "" {

@@ -247,8 +247,8 @@ func TestFeedbackFacts(t *testing.T) {
 // A below-floor rating and an unseeded part yield no row, and the relation is empty without --params.
 func TestEsdRatedFacts(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U9", Attributes: map[string]string{"MPN": "DEMO-XCVR"}, Prov: &ir.Provenance{SourceFile: "t"}},
-		{RefDes: "U8", Attributes: map[string]string{"MPN": "DEMO-WEAK"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{RefDes: "U9", Mpn: "DEMO-XCVR", Prov: &ir.Provenance{SourceFile: "t"}},
+		{RefDes: "U8", Mpn: "DEMO-WEAK", Prov: &ir.Provenance{SourceFile: "t"}},
 		{RefDes: "R1", Prov: &ir.Provenance{SourceFile: "t"}}, // no MPN, no spec
 	}}
 	set := param.ParamSet{

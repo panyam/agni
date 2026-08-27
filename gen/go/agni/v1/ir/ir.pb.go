@@ -1397,10 +1397,18 @@ type PartType struct {
 	Kind             string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`                                                 // format-native type tag (EDIF cellType), free-form
 	DesignatorPrefix string                 `protobuf:"bytes,3,opt,name=designator_prefix,json=designatorPrefix,proto3" json:"designator_prefix,omitempty"` // ref-des prefix, e.g. "R", "J"
 	Pins             []*Pin                 `protobuf:"bytes,4,rep,name=pins,proto3" json:"pins,omitempty"`
-	Attributes       map[string]string      `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Prov             *Provenance            `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// mpn is the part number the LIBRARY states for this type, when it states one. Set by a reader
+	// straight from its own grammar, unlike Component.mpn which a shared pass derives.
+	//
+	// A part type carries one only when the source models the type AS an orderable part (an OrCAD cell
+	// named by its part number, a Telesis $PACKAGES line). That is the minority case: a library symbol
+	// is usually generic and the part number lives on the placement. So this is the FALLBACK source
+	// for Component.mpn, never the primary one.
+	Mpn           string            `protobuf:"bytes,5,opt,name=mpn,proto3" json:"mpn,omitempty"`
+	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Prov          *Provenance       `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PartType) Reset() {
@@ -1459,6 +1467,13 @@ func (x *PartType) GetPins() []*Pin {
 		return x.Pins
 	}
 	return nil
+}
+
+func (x *PartType) GetMpn() string {
+	if x != nil {
+		return x.Mpn
+	}
+	return ""
 }
 
 func (x *PartType) GetAttributes() map[string]string {
@@ -1578,7 +1593,27 @@ type Component struct {
 	// absent) when it carried one this engine could not read, which is deliberately distinguishable:
 	// "no value stated" and "a value stated that we failed on" are different facts, and only the second
 	// is a gap worth reporting.
-	Value         *Quantity         `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
+	Value *Quantity `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
+	// mpn is the ORDERABLE PART this placement will be built as ("RC0603FR-0710KL"), derived ONCE at
+	// ingestion by the format-neutral pass classify.StampMPN (agni issue 519). It is the fourth
+	// DERIVED-NORMALIZATION field (C9), after device_classes, Net.roles and value.
+	//
+	// It is a distinct identity from the other two a component has, and confusing them is what this
+	// field exists to stop. ref_des names this PLACEMENT and means nothing on another board.
+	// ComponentSection.part_ref names the LIBRARY SYMBOL, which is internal to whoever drew the
+	// schematic. mpn names the product a manufacturer sells, and is the only one of the three that
+	// means anything outside this design: it is what the BOM lists, what procurement buys, and the key
+	// every datasheet fact joins on (param(mpn, symbol, max)).
+	//
+	// It is stated PER PLACEMENT rather than per part type because a library symbol is coarser than an
+	// orderable product: one generic 0603 resistor symbol is placed as dozens of part numbers. The pass
+	// therefore prefers a component's own value and falls back to PartType.mpn.
+	//
+	// Empty when the source states no part number, which is a normal state and NOT a defect: it means
+	// no datasheet can be joined to this component, so a parameter rule reports it as unevaluated
+	// rather than passing. Empty also when the design was built without the ingestion pass (a
+	// hand-authored test IR).
+	Mpn           string            `protobuf:"bytes,6,opt,name=mpn,proto3" json:"mpn,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // component-level properties (aggregated across sections)
 	Prov          *Provenance       `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1648,6 +1683,13 @@ func (x *Component) GetValue() *Quantity {
 		return x.Value
 	}
 	return nil
+}
+
+func (x *Component) GetMpn() string {
+	if x != nil {
+		return x.Mpn
+	}
+	return ""
 }
 
 func (x *Component) GetAttributes() map[string]string {
@@ -2698,12 +2740,13 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb5\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc7\x02\n" +
 	"\bPartType\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12+\n" +
 	"\x11designator_prefix\x18\x03 \x01(\tR\x10designatorPrefix\x12#\n" +
-	"\x04pins\x18\x04 \x03(\v2\x0f.agni.v1.ir.PinR\x04pins\x12D\n" +
+	"\x04pins\x18\x04 \x03(\v2\x0f.agni.v1.ir.PinR\x04pins\x12\x10\n" +
+	"\x03mpn\x18\x05 \x01(\tR\x03mpn\x12D\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2$.agni.v1.ir.PartType.AttributesEntryR\n" +
 	"attributes\x12*\n" +
@@ -2723,13 +2766,14 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x88\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9a\x03\n" +
 	"\tComponent\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x128\n" +
 	"\bsections\x18\x02 \x03(\v2\x1c.agni.v1.ir.ComponentSectionR\bsections\x12#\n" +
 	"\rfootprint_ref\x18\x03 \x01(\tR\ffootprintRef\x12%\n" +
 	"\x0edevice_classes\x18\x04 \x03(\tR\rdeviceClasses\x12*\n" +
-	"\x05value\x18\x05 \x01(\v2\x14.agni.v1.ir.QuantityR\x05value\x12E\n" +
+	"\x05value\x18\x05 \x01(\v2\x14.agni.v1.ir.QuantityR\x05value\x12\x10\n" +
+	"\x03mpn\x18\x06 \x01(\tR\x03mpn\x12E\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2%.agni.v1.ir.Component.AttributesEntryR\n" +
 	"attributes\x12*\n" +

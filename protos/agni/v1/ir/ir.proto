@@ -328,6 +328,14 @@ message PartType {
   string kind = 2;               // format-native type tag (EDIF cellType), free-form
   string designator_prefix = 3;  // ref-des prefix, e.g. "R", "J"
   repeated Pin pins = 4;
+  // mpn is the part number the LIBRARY states for this type, when it states one. Set by a reader
+  // straight from its own grammar, unlike Component.mpn which a shared pass derives.
+  //
+  // A part type carries one only when the source models the type AS an orderable part (an OrCAD cell
+  // named by its part number, a Telesis $PACKAGES line). That is the minority case: a library symbol
+  // is usually generic and the part number lives on the placement. So this is the FALLBACK source
+  // for Component.mpn, never the primary one.
+  string mpn = 5;
   map<string, string> attributes = 14;
   Provenance prov = 16;
 }
@@ -367,6 +375,26 @@ message Component {
   // "no value stated" and "a value stated that we failed on" are different facts, and only the second
   // is a gap worth reporting.
   Quantity value = 5;
+  // mpn is the ORDERABLE PART this placement will be built as ("RC0603FR-0710KL"), derived ONCE at
+  // ingestion by the format-neutral pass classify.StampMPN (agni issue 519). It is the fourth
+  // DERIVED-NORMALIZATION field (C9), after device_classes, Net.roles and value.
+  //
+  // It is a distinct identity from the other two a component has, and confusing them is what this
+  // field exists to stop. ref_des names this PLACEMENT and means nothing on another board.
+  // ComponentSection.part_ref names the LIBRARY SYMBOL, which is internal to whoever drew the
+  // schematic. mpn names the product a manufacturer sells, and is the only one of the three that
+  // means anything outside this design: it is what the BOM lists, what procurement buys, and the key
+  // every datasheet fact joins on (param(mpn, symbol, max)).
+  //
+  // It is stated PER PLACEMENT rather than per part type because a library symbol is coarser than an
+  // orderable product: one generic 0603 resistor symbol is placed as dozens of part numbers. The pass
+  // therefore prefers a component's own value and falls back to PartType.mpn.
+  //
+  // Empty when the source states no part number, which is a normal state and NOT a defect: it means
+  // no datasheet can be joined to this component, so a parameter rule reports it as unevaluated
+  // rather than passing. Empty also when the design was built without the ingestion pass (a
+  // hand-authored test IR).
+  string mpn = 6;
   map<string, string> attributes = 14;  // component-level properties (aggregated across sections)
   Provenance prov = 16;
 }

@@ -108,6 +108,9 @@ func TestReadSchematicPartIdentityProperties(t *testing.T) {
 	if r1 == nil {
 		t.Fatal("R1 not found")
 	}
+	// The RAW attribute, deliberately: a reader records the property under the format's own key, and
+	// ir.Component.mpn is filled later by classify.StampMPN, which no reader runs. Asserting the typed
+	// field here would test the pass, not this reader.
 	if got := r1.Attributes["MPN"]; got != "RC0603FR-0710KL" {
 		t.Errorf(`R1 MPN attribute = %q, want RC0603FR-0710KL`, got)
 	}

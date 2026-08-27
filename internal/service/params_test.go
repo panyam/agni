@@ -16,7 +16,7 @@ import (
 // never an error.
 func TestGetComponentParams(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", Attributes: map[string]string{"MPN": "LM1117"}},
+		{RefDes: "U1", Mpn: "LM1117"},
 		{RefDes: "R1"}, // no MPN -> no spec, excluded
 	}}
 	spec := &parampb.PartSpec{Mpn: "LM1117", Manufacturer: "TI", Parameters: []*parampb.Parameter{{Name: "VIN abs max"}}}

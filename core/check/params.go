@@ -47,9 +47,7 @@ func NewModelWithParams(d *ir.Design, bg *geom.BoardGeometry, specs param.ParamP
 		if _, ok := m.mpn[c.RefDes]; ok {
 			continue
 		}
-		if v := c.Attributes["MPN"]; v != "" {
-			m.mpn[c.RefDes] = v
-		} else if v := c.Attributes["mpn"]; v != "" {
+		if v := c.GetMpn(); v != "" {
 			m.mpn[c.RefDes] = v
 		}
 	}

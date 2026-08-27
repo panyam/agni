@@ -14,7 +14,7 @@ import (
 func clockDesign(mpn string) *ir.Design {
 	return &ir.Design{
 		Components: []*ir.Component{{
-			RefDes: "Y1", Attributes: map[string]string{"MPN": mpn},
+			RefDes: "Y1", Mpn: mpn,
 			Prov: &ir.Provenance{SourceFile: "t"},
 		}},
 		Nets: []*ir.Net{

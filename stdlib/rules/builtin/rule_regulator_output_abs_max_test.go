@@ -45,9 +45,9 @@ func railDesign(beadRef string) *ir.Design {
 		}}},
 		Components: []*ir.Component{
 			{RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "REG", LibraryRef: "lib"}},
-				Attributes: map[string]string{"MPN": "ACME-REG"}, Prov: &ir.Provenance{SourceFile: "t"}},
+				Mpn: "ACME-REG", Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "U2", Sections: []*ir.ComponentSection{{PartRef: "LOAD", LibraryRef: "lib"}},
-				Attributes: map[string]string{"MPN": "ACME-33"}, Prov: &ir.Provenance{SourceFile: "t"}},
+				Mpn: "ACME-33", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 	}
 	if beadRef == "" {

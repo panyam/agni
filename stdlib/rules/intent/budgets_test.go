@@ -40,8 +40,8 @@ func regCurrentSpec(mpn, symbol string, iout float64) *parampb.PartSpec {
 func budgetDesign(rail, beadRef string) *ir.Design {
 	d := &ir.Design{
 		Components: []*ir.Component{
-			{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-REG"}, Prov: &ir.Provenance{SourceFile: "t"}},
-			{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-LOAD"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Mpn: "ACME-REG", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U2", Mpn: "ACME-LOAD", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 	}
 	if beadRef == "" {
@@ -293,7 +293,7 @@ func TestRailBudgetSilentOnUndeclaredAndAbsentRails(t *testing.T) {
 func TestRailBudgetTakesTheBestSupply(t *testing.T) {
 	d := budgetDesign("3V3", "")
 	d.Components = append(d.Components, &ir.Component{
-		RefDes: "U3", Attributes: map[string]string{"MPN": "ACME-REG2"}, Prov: &ir.Provenance{SourceFile: "t"},
+		RefDes: "U3", Mpn: "ACME-REG2", Prov: &ir.Provenance{SourceFile: "t"},
 	})
 	d.Nets[0].Connections = append(d.Nets[0].Connections, &ir.Connection{ComponentRef: "U3", PinRef: "1"})
 	m := check.NewModelWithParams(d, nil, param.ParamSet{

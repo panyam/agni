@@ -61,7 +61,7 @@ func capDesign(railNet, mpn string) *ir.Design {
 		},
 	}
 	if mpn != "" {
-		d.Components[0].Attributes["MPN"] = mpn
+		d.Components[0].Mpn = mpn
 	}
 	return d
 }

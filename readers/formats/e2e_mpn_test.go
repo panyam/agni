@@ -2,8 +2,6 @@ package formats
 
 import (
 	"testing"
-
-	"github.com/panyam/agni/core/classify"
 )
 
 // TestMPNResolvesOnEveryFormat is the guard agni issue 519 needed and did not have: the same claim,
@@ -36,7 +34,7 @@ func TestMPNResolvesOnEveryFormat(t *testing.T) {
 			}
 			var resolved int
 			for _, c := range d.GetComponents() {
-				if c.GetAttributes()[classify.MPNAttr] != "" {
+				if c.GetMpn() != "" {
 					resolved++
 				}
 			}
@@ -64,7 +62,7 @@ func TestMPNNeverInvented(t *testing.T) {
 		if c.GetRefDes() != "R1" {
 			continue
 		}
-		if got := c.GetAttributes()[classify.MPNAttr]; got != "" && got != "RC0603FR-0710KL" {
+		if got := c.GetMpn(); got != "" && got != "RC0603FR-0710KL" {
 			t.Errorf("R1 resolved %q, which its source does not state", got)
 		}
 	}

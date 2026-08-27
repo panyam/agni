@@ -249,8 +249,9 @@ func partTypeOf(n *node, src string) *ir.PartType {
 	}
 	pt.DesignatorPrefix = cellDesignator(n)
 	// Cell-level MPN (WS1-046 Piece B): OrCAD names a shared part-type cell by its part number and
-	// carries the Manufacturer_PN on the CELL, not on every placed instance. Capture it (normalized
-	// to "MPN") so an instance with no inline MPN falls back to its cell's in extract(). Only a LEAF
+	// carries the Manufacturer_PN on the CELL, not on every placed instance. Capture it into the part
+	// type's typed mpn field, which classify.StampMPN uses as the fallback for an instance carrying
+	// none of its own. Only a LEAF
 	// part cell (no contents) is scanned, so a hierarchical cell's nested instance properties are
 	// never mistaken for the cell's own. classify reads component attributes, not part-type ones, so
 	// this touches no classification.
@@ -263,14 +264,11 @@ func partTypeOf(n *node, src string) *ir.PartType {
 					continue
 				}
 				if v := propValue(p); v != "" {
-					if pt.Attributes == nil {
-						pt.Attributes = map[string]string{}
-					}
-					pt.Attributes[classify.MPNAttr] = v
+					pt.Mpn = v
 					break
 				}
 			}
-			if pt.GetAttributes()[classify.MPNAttr] != "" {
+			if pt.GetMpn() != "" {
 				break
 			}
 		}

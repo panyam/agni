@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/param"
 )
 
 func TestNominalVoltageFromName(t *testing.T) {
@@ -67,7 +67,7 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 		if viaBomLine {
 			d.Bom = []*ir.BomLine{{RefDes: []string{"U1"}, Mpn: mpn, Manufacturer: "Acme"}}
 		} else {
-			d.Components[0].Attributes["MPN"] = mpn
+			d.Components[0].Mpn = mpn
 		}
 	}
 	return d
@@ -107,10 +107,10 @@ func TestUnitVocabulariesAgree(t *testing.T) {
 // UnseededSymbols keeps what that walk discards, at the unit a datasheet author works in: the PART.
 func TestUnseededSymbols(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}},
-		{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-1"}}, // same part, second placement
-		{RefDes: "U3", Attributes: map[string]string{"MPN": "ACME-2"}}, // no spec at all
-		{RefDes: "R9"},                                                // no MPN: nothing to name
+		{RefDes: "U1", Mpn: "ACME-1"},
+		{RefDes: "U2", Mpn: "ACME-1"}, // same part, second placement
+		{RefDes: "U3", Mpn: "ACME-2"}, // no spec at all
+		{RefDes: "R9"},                // no MPN: nothing to name
 	}}
 	provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
 		if mpn == "ACME-1" {
@@ -156,8 +156,8 @@ func TestUnseededSymbols(t *testing.T) {
 // it, and a work list nobody can act on is not an improvement on prose.
 func TestUnseededSymbolsRespectsClassGate(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}},
-		{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-2"}, DeviceClasses: []string{"crystal"}},
+		{RefDes: "U1", Mpn: "ACME-1"},
+		{RefDes: "U2", Mpn: "ACME-2", DeviceClasses: []string{"crystal"}},
 	}}
 	provider := param.ProviderFunc(func(mpn string) *parampb.PartSpec {
 		return &parampb.PartSpec{Mpn: mpn, DeviceClass: map[string]string{"ACME-1": "ldo"}[mpn]}
@@ -202,8 +202,8 @@ func houseNamedRailDesign(mpn string) *ir.Design {
 			{Name: "IO", Designator: "3", Direction: ir.PinDirection_PIN_DIRECTION_INPUT},
 		}}}}},
 		Components: []*ir.Component{{RefDes: "U1",
-			Sections:   []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}},
-			Attributes: map[string]string{"MPN": mpn}, Prov: &ir.Provenance{SourceFile: "t"}}},
+			Sections: []*ir.ComponentSection{{PartRef: "IC", LibraryRef: "lib"}},
+			Mpn:      mpn, Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets: []*ir.Net{
 			{Name: "PMIC_CORE_3V3", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}},
 			{Name: "SYS_RETURN", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "2"}}, Prov: &ir.Provenance{SourceFile: "t"}},
