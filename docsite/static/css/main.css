@@ -142,13 +142,18 @@ body {
     overscroll-behavior: contain;
 }
 
-/* Invisible bridge to prevent hover loss when moving to dropdown */
-.nav-dropdown::before {
+/* Invisible bridge across the 0.5rem gap between the nav link and its panel, so travelling from
+   one to the other does not read as a mouseout and close the menu. It hangs off .nav-item rather
+   than off .nav-dropdown, because the panel scrolls (overflow-y above) and a scroll container
+   clips anything outside its padding box, which made a bridge on the panel itself unhittable.
+   min-width matches the panel's, so a diagonal move toward a wide menu stays over the bridge. */
+.nav-item.has-children:hover::after {
     content: '';
     position: absolute;
-    top: -0.5rem;
+    top: 100%;
     left: 0;
     right: 0;
+    min-width: 200px;
     height: 0.5rem;
 }
 
@@ -1397,6 +1402,11 @@ pre code {
     .main-nav .nav-link {
         display: block;
         padding: 0.6rem 0;
+    }
+
+    /* The panel is inline here, so there is no gap to bridge. */
+    .main-nav .nav-item.has-children:hover::after {
+        content: none;
     }
 
     /* No hover on touch, so a submenu is shown inline rather than as a floating panel. The script
