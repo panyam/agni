@@ -210,6 +210,27 @@ cites both sides, the schematic and the datasheet page, so you can open each and
 
 `J1` is placed but carries no part number, so a datasheet can never be matched to it.
 
+**A `not` has to be anchored.** At least one variable inside it must also appear in a positive
+relation, so the negation is about the row rather than about the design. Above, `?r` is the anchor:
+`not component.mpn(?r,?m)` asks whether THIS part has a part number. The `?m` is free on purpose and
+means "for any value", which is what you want.
+
+Drop the anchor and the question changes without looking like it has:
+
+```
+entity(?n,"net"), not component.class(?tp,"test_point") => ?n
+```
+
+`?tp` appears nowhere else, so that asks whether the design contains no test point AT ALL, and on a
+board that has even one it filters away every row. It used to answer "no results", which reads as a
+fact about the board. It is now an error naming the unanchored variable.
+
+**What it does not yet let you write** is the question that spelling was reaching for: nets with no
+test point ON THEM. That needs negating a pair of relations together, `not (component-on-net(?tp,?n),
+component.class(?tp,"test_point"))`, and `not` currently takes a single relation. So the positive
+half of a coverage question is expressible and the negative half is not. That gap is tracked and is
+not a property of the language anyone should design around.
+
 ### Count parts per net (aggregation)
 
 `count`, `min`, `max`, and `sum` summarize. Group by the plain columns. The aggregate reduces the rest:
