@@ -1,8 +1,9 @@
-# Rung 11: a stored document re-renders without the design. The write is part of the lesson, so both
-# steps are shown; the rung's own `make report` does the same thing.
+# Rung 11: a stored document re-renders without the design. The write is part of the lesson, so it is
+# a step of its own rather than hidden setup; its report goes to /dev/null because what matters is the
+# results file it leaves behind, which the second step reads in the same scratch directory.
 fixture: examples/tutorial-project
-script: |
-  agni review designs/gateway --results-out review.results.json > /dev/null
-  agni results review.results.json --format markdown
+steps:
+  - script: agni review designs/gateway --results-out review.results.json > /dev/null
+  - script: agni results review.results.json --format markdown
 # The header is the point here — the per-item tables belong to rung 9.
 match: '^(# Review|Design:|\*\*|$)'

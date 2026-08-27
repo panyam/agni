@@ -38,6 +38,33 @@ the visible heading text and doubles the slug. Use the natural slug the heading 
 hand-written and they cannot disagree. Regenerate with `make tutorial-runs` and read the diff before
 committing.
 
+**A lesson that is several commands uses `steps:` rather than a multi-line `script:`.** Each step is
+one command, one capture and one rendered block, so the output sits under the command that produced
+it. A `script:` produces a single block, which is right when the extra lines are setup the reader must
+also type: rungs 4, 5 and 6 open with `mv <tier> <tier>-off` and want it in the same block as the
+command it changes. It is wrong when both commands print something the reader is meant to compare,
+which four specs used to paper over with `echo "no dot:"` labels between the runs.
+
+```yaml
+steps:
+  - show:   agni stats readers/kicad/testdata/tjunc.kicad_sch
+    script: agni stats readers/kicad/testdata/tjunc.kicad_sch | grep -E 'components|nets'
+  - script: agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch
+```
+
+Steps share one scratch directory but not one shell, so a step reads what an earlier one WROTE (rung
+11 stores a results document and re-renders it) and does not inherit its shell variables. `capture:`
+and `match:` apply to every step, `exit:` lands on the last, and a step that captures nothing renders
+as the command alone. `script:` and `steps:` are mutually exclusive and a spec setting both is an
+error. In the capture file a `#agni-step` line separates one step's output from the next; a one-step
+spec writes none, which is why adding the field regenerated no existing capture.
+
+**Copy on a rendered block takes the COMMAND, not the transcript.** `codeblocks.js` treats a leading
+`$ ` as the prompt, strips it, and follows a trailing backslash onto the next line, so a block copies
+something you can paste. A fence with no prompt lines copies whole, which is every hand-written one.
+This is why `renderRun` prompts only the line that STARTS a command: a `$` on a continuation line made
+the block read as two commands and copied a broken one.
+
 **Any section can have a `runs/` directory**, and `guide/` now does. Both the generator and
 `hack/tutorial_runs_check.sh` walk `docsite/content/**/runs/`, so a new one joins the harness by
 existing, with no Makefile edit.

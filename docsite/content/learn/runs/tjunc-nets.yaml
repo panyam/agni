@@ -1,14 +1,10 @@
 # Chapter 2's headline. Two schematics identical but for one junction dot, and the netlist differs.
-# The reader compares the two net counts, so both runs share one block and the script labels them;
-# `show` keeps the labelling out of the commands the reader is meant to type.
+# The reader compares the two net counts, so the pair is two steps of one spec rather than two specs:
+# adjacent blocks, and neither can be regenerated without the other.
 fixture: readers/kicad/testdata
 from_root: true
-script: |
-  echo "no dot:"
-  agni stats readers/kicad/testdata/tjunc.kicad_sch | grep -E 'components|nets'
-  echo
-  echo "with the dot:"
-  agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch | grep -E 'components|nets'
-show: |
-  agni stats readers/kicad/testdata/tjunc.kicad_sch
-  agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch
+steps:
+  - show: agni stats readers/kicad/testdata/tjunc.kicad_sch
+    script: agni stats readers/kicad/testdata/tjunc.kicad_sch | grep -E 'components|nets'
+  - show: agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch
+    script: agni stats readers/kicad/testdata/tjunc_dotted.kicad_sch | grep -E 'components|nets'
