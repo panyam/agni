@@ -63,7 +63,7 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 		if viaBomLine {
 			d.Bom = []*ir.BomLine{{RefDes: []string{"U1"}, Mpn: mpn, Manufacturer: "Acme"}}
 		} else {
-			d.Components[0].Attributes["MPN"] = mpn
+			d.Components[0].Mpn = mpn
 		}
 	}
 	return d

@@ -92,8 +92,9 @@ func hasConn(n *ir.Net, ref, pin string) bool {
 // TestReadNetlist is the baseline: normal parse, section grouping, connectivity.
 // TestNormalizeMPN (WS3-075): an OrCAD export carries the part number under a Manufacturer_PN
 // property (renamed to display "Manufacturer PN", or bare), not "MPN", so the datasheet join read
-// 0 MPNs. The reader now normalizes both spellings to the canonical "MPN" attribute, and an
-// explicit "MPN" wins over the alias.
+// 0 MPNs. The reader records the property under the format's own key and classify.StampMPN promotes
+// it to the typed ir.Component.mpn field, preferring an explicit "MPN" over the aliases. This test
+// runs the pass (readEDNIngested) because the promotion is an ingestion outcome, not a reader one.
 func TestNormalizeMPN(t *testing.T) {
 	d := readEDNIngested(t, "mpn.edn")
 	for ref, want := range map[string]string{
@@ -101,13 +102,13 @@ func TestNormalizeMPN(t *testing.T) {
 		"U2": "PARTY", // bare property -> id key "Manufacturer_PN"
 		"U3": "PARTZ", // explicit MPN wins over the alias's "IGNORED"
 	} {
-		if c := compByRef(d, ref); c == nil || c.Attributes["MPN"] != want {
-			t.Errorf("%s MPN = %q, want %q", ref, c.Attributes["MPN"], want)
+		if c := compByRef(d, ref); c == nil || c.GetMpn() != want {
+			t.Errorf("%s MPN = %q, want %q", ref, c.GetMpn(), want)
 		}
 	}
 	// A component with no part-number property gets no synthesized MPN (empty, not guessed).
-	if r1 := compByRef(d, "R1"); r1 == nil || r1.Attributes["MPN"] != "" {
-		t.Errorf("R1 MPN = %q, want empty (no alias property present)", r1.Attributes["MPN"])
+	if r1 := compByRef(d, "R1"); r1 == nil || r1.GetMpn() != "" {
+		t.Errorf("R1 MPN = %q, want empty (no alias property present)", r1.GetMpn())
 	}
 }
 
@@ -152,7 +153,7 @@ func TestReadSchematicNetlist(t *testing.T) {
 	if u7 == nil {
 		t.Fatalf("component U7 not found (stringDisplay instance designator not unwrapped); got %d components", len(d.Components))
 	}
-	if got := u7.Attributes["MPN"]; got != "PART-123" {
+	if got := u7.GetMpn(); got != "PART-123" {
 		t.Errorf("U7 MPN = %q, want PART-123 (normalized from a stringDisplay Manufacturer PN)", got)
 	}
 	if got := u7.Attributes["Value"]; got != "10k" {
@@ -185,13 +186,13 @@ func TestReadSchematicNetlist(t *testing.T) {
 // by either its display name or its &-stripped native id.
 func TestCellMPNFallback(t *testing.T) {
 	d := readEDNIngested(t, "cell-mpn.edn")
-	if got := compByRef(d, "U1").Attributes["MPN"]; got != "CELL-MPN-1" {
+	if got := compByRef(d, "U1").GetMpn(); got != "CELL-MPN-1" {
 		t.Errorf("U1 MPN = %q, want CELL-MPN-1 (inherited from its cell, keyed by &-stripped native id)", got)
 	}
-	if got := compByRef(d, "U2").Attributes["MPN"]; got != "INLINE-MPN-2" {
+	if got := compByRef(d, "U2").GetMpn(); got != "INLINE-MPN-2" {
 		t.Errorf("U2 MPN = %q, want INLINE-MPN-2 (inline MPN wins over the cell)", got)
 	}
-	if got := compByRef(d, "R1").Attributes["MPN"]; got != "" {
+	if got := compByRef(d, "R1").GetMpn(); got != "" {
 		t.Errorf("R1 MPN = %q, want empty (its cell carries no MPN, so no fallback)", got)
 	}
 }
@@ -207,10 +208,10 @@ func TestSchematicCellMPNFallback(t *testing.T) {
 	if u9 == nil {
 		t.Fatalf("component U9 not found; got %d components", len(d.Components))
 	}
-	if got := u9.Attributes["MPN"]; got != "CELL-PART-9" {
+	if got := u9.GetMpn(); got != "CELL-PART-9" {
 		t.Errorf("U9 MPN = %q, want CELL-PART-9 (stringDisplay cell property, inherited via the cell join)", got)
 	}
-	if got := compByRef(d, "U10").Attributes["MPN"]; got != "INLINE-10" {
+	if got := compByRef(d, "U10").GetMpn(); got != "INLINE-10" {
 		t.Errorf("U10 MPN = %q, want INLINE-10 (inline MPN wins over the cell on the schematic view too)", got)
 	}
 }

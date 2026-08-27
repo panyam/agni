@@ -375,7 +375,7 @@ func TestPackageWithExtraFields(t *testing.T) {
 	if pt == nil {
 		t.Fatal("RES-4K7 missing")
 	}
-	if got := pt.GetAttributes()["mpn"]; got != "RC0603FR-074K7L" {
+	if got := pt.GetMpn(); got != "RC0603FR-074K7L" {
 		t.Errorf("mpn = %q; the second field is still the MPN when more follow it", got)
 	}
 	if got := pt.GetAttributes()["field_3"]; got != "4.7k" {

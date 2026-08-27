@@ -27,7 +27,7 @@ var flashProfile = Profile{
 func flashDesign() *ir.Design {
 	return &ir.Design{
 		Components: []*ir.Component{
-			{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-FLASH"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Mpn: "ACME-FLASH", Attributes: map[string]string{}, Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "U2", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 		Nets: []*ir.Net{

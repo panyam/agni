@@ -218,7 +218,7 @@ func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 func TestEsdTestModelGate(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
-		{RefDes: "U9", Attributes: map[string]string{"MPN": "DEMO-HBM"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{RefDes: "U9", Mpn: "DEMO-HBM", Prov: &ir.Provenance{SourceFile: "t"}},
 	}
 	d := protDesign(comps, nil, []*ir.Net{tnet("SIG", "J1.1", "U9.1")})
 	// Same 8 kV, but the test model is HBM (handling), not IEC (system) -> must not credit.
@@ -239,7 +239,7 @@ func TestEsdTestModelGate(t *testing.T) {
 func TestEsdIcRating(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
-		{RefDes: "U9", Attributes: map[string]string{"MPN": "DEMO-XCVR"}, Prov: &ir.Provenance{SourceFile: "t"}},
+		{RefDes: "U9", Mpn: "DEMO-XCVR", Prov: &ir.Provenance{SourceFile: "t"}},
 		{RefDes: "U8", Prov: &ir.Provenance{SourceFile: "t"}},
 	}
 	d := protDesign(comps, nil, []*ir.Net{

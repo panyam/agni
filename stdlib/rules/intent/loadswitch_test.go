@@ -30,7 +30,7 @@ func lsComp(refDes, part, mpn string) *ir.Component {
 		Prov:     &ir.Provenance{SourceFile: "t"},
 	}
 	if mpn != "" {
-		c.Attributes = map[string]string{"MPN": mpn}
+		c.Mpn = mpn
 	}
 	return c
 }

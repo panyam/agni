@@ -108,12 +108,12 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 	d := &ir.Design{}
 	specs := param.ParamSet{"REG-24": regSpec("REG-24", 20)}
 	d.Components = append(d.Components, &ir.Component{
-		RefDes: "U1", Attributes: map[string]string{"MPN": "REG-24"}, Prov: &ir.Provenance{SourceFile: "reg"}})
+		RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "reg"}})
 	for i := 0; i < indexMinFacts+4; i++ {
 		mpn := fmt.Sprintf("OTHER-%d", i)
 		specs[mpn] = regSpec(mpn, float64(100+i))
 		d.Components = append(d.Components, &ir.Component{
-			RefDes: fmt.Sprintf("U%d", i+2), Attributes: map[string]string{"MPN": mpn}, Prov: &ir.Provenance{SourceFile: "reg"}})
+			RefDes: fmt.Sprintf("U%d", i+2), Mpn: mpn, Prov: &ir.Provenance{SourceFile: "reg"}})
 	}
 	m := check.NewModelWithParams(d, nil, specs)
 	canonical := runQuery(t, m, `param(?mpn,"VIN",20) => ?mpn`)

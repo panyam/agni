@@ -2,73 +2,60 @@ package classify
 
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
-// MPNAttr is the CANONICAL component attribute every consumer reads a manufacturer part number from.
-// One spelling, on the component, whatever the source called it and wherever the source hung it.
-const MPNAttr = "MPN"
-
-// MPNAliases are the spellings a source uses for a part number, in preference order. Sources disagree
-// on separator and case, and one format writes the same fact under a different key on the part type
-// than on the component, so the variance is data rather than a branch per reader.
-//
-// "mpn" is here because a reader that meant the canonical key and spelled it lowercase has said the
-// same thing; accepting it costs nothing and its absence cost a whole tier (see StampMPN).
+// MPNAliases are the attribute keys a source spells a manufacturer part number with, in preference
+// order. Sources disagree on separator and case, and this is the whole of that variance.
 //
 // Exported because a reader needs the same vocabulary to find the fact in its own grammar (EDIF
 // scans cell `property` nodes by name). Extracting the fact from a format is reader work; deciding
-// where it lives is this pass's. They must agree on the SPELLINGS, so there is one list.
-var MPNAliases = []string{"Manufacturer_PN", "Manufacturer PN", "mpn"}
+// where it lands is this pass's. They must agree on the SPELLINGS, so there is one list.
+//
+// Note these are read-only: nothing writes a canonical MPN attribute any more. The answer is the
+// typed ir.Component.mpn field, and these are the raw keys it is derived FROM.
+var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn"}
 
-// StampMPN promotes each component's manufacturer part number to MPNAttr once at ingestion, for every
-// format. It is a DERIVED-NORMALIZATION pass under C9's fill variant: no reader populates the
-// canonical key, one shared pass does, and a design built without the pass keeps whatever its reader
-// wrote (consumers still read the raw attribute, so absence degrades to the old behaviour rather than
-// to a false fact).
+// StampMPN fills ir.Component.mpn once at ingestion, for every format. It is a
+// DERIVED-NORMALIZATION pass under C9: no reader populates the field, one shared pass does, and a
+// design built without the pass leaves it empty, which consumers read as "no part number stated"
+// rather than as a fact about the design.
 //
 // WHY THIS IS A SHARED PASS AND NOT A READER'S JOB, which is the whole point of agni issue 519.
 // The EDIF reader used to carry both halves of this privately, so EDIF designs resolved part numbers
-// and nothing else did. Telesis records its part number on the PART TYPE, the model only ever looked
-// at the COMPONENT, and the two never met: `component.mpn` came back empty for every component of
-// every .tel design. Since the datasheet join is component.mpn -> param, that silently disabled the
-// entire parameter tier on that format. Nothing reported an error, because a parameter rule that
-// finds no part number cannot tell "no datasheet seeded" from "this format never delivers one".
+// and nothing else did. Telesis records its part number on the PART TYPE, every consumer read the
+// component, and the two never met: `component.mpn` came back empty for every component of every
+// .tel design. Since the datasheet join is component.mpn -> param, that silently disabled the entire
+// parameter tier on that format. Nothing reported an error, because a parameter rule that finds no
+// part number cannot tell "no datasheet seeded" from "this format never delivers one".
 //
-// Two steps, most specific first, and neither ever overwrites a value already present:
+// Three sources, most specific first, and it stops at the first that answers:
 //
-//  1. ALIAS PROMOTION on the component. The part number is usually already there under the source's
-//     own spelling.
-//  2. PART-TYPE FALLBACK. A component with none inherits its part type's, because a part number is a
-//     property of the PART and a source may state it once per type rather than once per placement.
+//  1. THE COMPONENT'S OWN ATTRIBUTES, under any alias. The usual case: a part number is stated per
+//     placement, because a library symbol is coarser than an orderable product.
+//  2. ITS PART TYPE's typed mpn, for the sources that model the type AS an orderable part.
+//  3. ITS PART TYPE's attributes, under any alias, for a reader that has not been converted to the
+//     typed field.
 //
 // It resolves the part through PartIndex/FirstPart, the same resolution Stamp and check.NewModel use,
-// so a component's class and its part number cannot disagree about which part type it has. The
-// reader-local version this replaces joined on the first section's bare PartRef, which missed a part
-// whose display name differs from its native id.
+// so a component's class and its part number cannot disagree about which part type it has.
 //
-// Idempotent: re-running finds the canonical key already set and does nothing.
+// Idempotent: a component that already has one is skipped, so re-running is a no-op.
 func StampMPN(d *ir.Design) {
 	index := PartIndex(d)
 	for _, c := range d.GetComponents() {
-		if c.GetAttributes()[MPNAttr] != "" {
+		if c.GetMpn() != "" {
 			continue
 		}
 		if v := mpnFrom(c.GetAttributes()); v != "" {
-			setMPN(c, v)
+			c.Mpn = v
 			continue
 		}
 		if p := FirstPart(index, c); p != nil {
-			if v := partMPN(p); v != "" {
-				setMPN(c, v)
+			if v := p.GetMpn(); v != "" {
+				c.Mpn = v
+			} else if v := mpnFrom(p.GetAttributes()); v != "" {
+				c.Mpn = v
 			}
 		}
 	}
-}
-
-// partMPN reads a part type's number under the canonical key or any alias.
-func partMPN(p *ir.PartType) string {
-	if v := p.GetAttributes()[MPNAttr]; v != "" {
-		return v
-	}
-	return mpnFrom(p.GetAttributes())
 }
 
 // mpnFrom returns the first alias present in an attribute map, or "".
@@ -79,13 +66,4 @@ func mpnFrom(attrs map[string]string) string {
 		}
 	}
 	return ""
-}
-
-// setMPN writes the canonical key, leaving the source's own spelling in place. Nothing is lost or
-// rewritten: a reader inspecting the original attribute still finds it.
-func setMPN(c *ir.Component, v string) {
-	if c.Attributes == nil {
-		c.Attributes = map[string]string{}
-	}
-	c.Attributes[MPNAttr] = v
 }

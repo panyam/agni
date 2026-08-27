@@ -74,8 +74,8 @@ func TestEsdRatedQuery(t *testing.T) {
 	}
 	d := &ir.Design{
 		Components: []*ir.Component{
-			{RefDes: "U9", Attributes: map[string]string{"MPN": "XCVR"}, Prov: &ir.Provenance{SourceFile: "t"}},
-			{RefDes: "U8", Attributes: map[string]string{"MPN": "PLAIN"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U9", Mpn: "XCVR", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U8", Mpn: "PLAIN", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 		Nets: []*ir.Net{
 			{Name: "CAN_H", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U9", PinRef: "1"}}},
@@ -159,7 +159,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 		}},
 	}
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "BUCKPART"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "BUCKPART", Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets:       []*ir.Net{{Name: "V1", Prov: &ir.Provenance{SourceFile: "t"}, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}}},
 	}
 	m := check.NewModelWithParams(d, nil, param.ParamSet{"BUCKPART": spec})

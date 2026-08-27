@@ -101,7 +101,7 @@ func oneDesign() *ir.Design {
 // only variable across the pass/needs-data pair is whether the symbol is seeded.
 func TestDatasheetQueryNeedsData(t *testing.T) {
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
 	}
 	// A query that always matches nothing (no net has 10^6 pins), so the outcome turns purely on
@@ -805,7 +805,7 @@ func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
 // coincidence.
 func TestRuleBoundDatasheetItemNeedsData(t *testing.T) {
 	d := &ir.Design{
-		Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}}},
+		Components: []*ir.Component{{RefDes: "U1", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets:       []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
 	}
 	// A datasheet rule that never fires, so the outcome turns purely on whether its symbol is seeded.
@@ -928,8 +928,8 @@ func TestInconclusiveCountsAsCoveredNotPassing(t *testing.T) {
 func TestNeedsDataCarriesUnmetDependencies(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{
-			{RefDes: "U1", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}},
-			{RefDes: "U2", Attributes: map[string]string{"MPN": "ACME-1"}, Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U1", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}},
+			{RefDes: "U2", Mpn: "ACME-1", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
 		Nets: []*ir.Net{{Name: "N", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
 	}

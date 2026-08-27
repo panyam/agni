@@ -130,7 +130,7 @@ func TestModuleMatchesByMPN(t *testing.T) {
 	// unmatched (fires). With the params-built model (empty specs suffices to build the mpn map from
 	// attributes), it matches.
 	d := &ir.Design{Components: []*ir.Component{
-		{RefDes: "U2", Attributes: map[string]string{"MPN": "W25Q128"}},
+		{RefDes: "U2", Mpn: "W25Q128"},
 	}}
 	if fs := check.Run(check.NewModel(d), Compile(decl)); len(fs) != 1 {
 		t.Errorf("MPN module should be unmatched without a params model, got %+v", fs)

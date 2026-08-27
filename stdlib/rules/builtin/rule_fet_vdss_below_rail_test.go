@@ -37,7 +37,7 @@ func fetSpec(mpn string, vdss float64) *parampb.PartSpec {
 func fetDesign(railName, regRef string) *ir.Design {
 	d := &ir.Design{
 		Components: []*ir.Component{{
-			RefDes: "Q1", Attributes: map[string]string{"MPN": "ACME-FET"},
+			RefDes: "Q1", Mpn: "ACME-FET",
 			Prov: &ir.Provenance{SourceFile: "t"},
 		}},
 		Nets: []*ir.Net{{
@@ -47,7 +47,7 @@ func fetDesign(railName, regRef string) *ir.Design {
 	}
 	if regRef != "" {
 		d.Components = append(d.Components, &ir.Component{
-			RefDes: regRef, Attributes: map[string]string{"MPN": "ACME-REG"},
+			RefDes: regRef, Mpn: "ACME-REG",
 			Prov: &ir.Provenance{SourceFile: "t"},
 		})
 		d.Nets[0].Connections = append(d.Nets[0].Connections,

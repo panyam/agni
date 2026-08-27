@@ -24,7 +24,7 @@ func supplyModel(method string, confidence float64, tweak ...func(*parampb.PartS
 		}}}},
 		Components: []*ir.Component{{
 			RefDes: "U1", Sections: []*ir.ComponentSection{{PartRef: "LDO", LibraryRef: "lib"}},
-			Attributes: map[string]string{"MPN": "ACME-33"}, Prov: &ir.Provenance{SourceFile: "t"},
+			Mpn: "ACME-33", Prov: &ir.Provenance{SourceFile: "t"},
 		}},
 		Nets: []*ir.Net{{Name: "+5V", Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}}},
 	}

@@ -17,7 +17,7 @@ func mpnDesign(comp map[string]string, partAttrs map[string]string) *ir.Design {
 	}
 }
 
-func mpnOf(d *ir.Design) string { return d.Components[0].GetAttributes()[MPNAttr] }
+func mpnOf(d *ir.Design) string { return d.Components[0].GetMpn() }
 
 // TestStampMPNPrefersTheComponent. A part number stated on the placement is more specific than one
 // stated on the part type, so it wins. This is the case where a shared part type is placed as several
@@ -33,7 +33,8 @@ func TestStampMPNPrefersTheComponent(t *testing.T) {
 // TestStampMPNNeverOverwrites. A reader that already wrote the canonical key has made a confident
 // statement, and C9's fill variant promotes only where the reader was under-specified.
 func TestStampMPNNeverOverwrites(t *testing.T) {
-	d := mpnDesign(map[string]string{MPNAttr: "EXPLICIT", "Manufacturer PN": "ALIAS"}, map[string]string{"mpn": "TYPE"})
+	d := mpnDesign(map[string]string{"Manufacturer PN": "ALIAS"}, map[string]string{"mpn": "TYPE"})
+	d.Components[0].Mpn = "EXPLICIT"
 	StampMPN(d)
 	if got := mpnOf(d); got != "EXPLICIT" {
 		t.Errorf("MPN = %q, want the existing canonical value untouched", got)
@@ -87,7 +88,8 @@ func TestStampMPNIsIdempotent(t *testing.T) {
 // that never went through ingestion keeps whatever it was built with, and the absence of the
 // canonical key is not read as a fact about the design.
 func TestStampMPNDegradesWhenThePassNeverRan(t *testing.T) {
-	d := mpnDesign(map[string]string{MPNAttr: "HAND-AUTHORED"}, nil)
+	d := mpnDesign(nil, nil)
+	d.Components[0].Mpn = "HAND-AUTHORED"
 	if got := mpnOf(d); got != "HAND-AUTHORED" {
 		t.Fatalf("MPN = %q before any pass, want the value the IR was built with", got)
 	}
