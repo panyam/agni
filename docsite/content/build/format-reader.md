@@ -187,13 +187,33 @@ d, err := f.Design(l, path)
 netgraph.StampNetIDs(d)      // deterministic per-instance net ids
 classify.Stamp(d)            // component device_classes
 classify.StampNetRoles(d)    // net roles (rail / ground / feedback) from the naming lexicon
+classify.StampValues(d)      // component values as machine-comparable quantities
 classify.StampPowerInPins(d) // fill POWER_IN on under-typed supply pins
+classify.StampMPN(d)         // promote the part number to one canonical attribute
 ```
 
 These run for every reader, so a new reader does not have to reproduce them. Build a faithful IR
 (components, nets, pins, provenance) and the shared passes fill in the derived facts. If your
 format under-types a construct the way EDIF types every supply pin as a plain input, the stamp
 passes normalize it after the fact rather than pushing that concern into your parser.
+
+### The part number is the one to get wrong quietly
+
+`StampMPN` deserves a note because skipping it is invisible. Record the manufacturer part number
+wherever your grammar states it, under whatever key the format spells it, and on the part type if
+that is where the format puts it. The pass promotes it to the canonical `MPN` component attribute:
+it tries the component's own aliases first, then falls back to the component's part type.
+
+Do not write your own promotion. Both halves of this used to live inside the EDIF reader, so EDIF
+designs resolved part numbers and no other format did. Telesis recorded the number on the part type,
+every consumer read the component, and `component.mpn` came back empty for every component of every
+`.tel` design, which silently disabled the whole datasheet tier on that format (agni issue 519).
+Nothing failed, because a parameter rule that finds no part number cannot tell "no datasheet seeded"
+from "this format never delivers one".
+
+If your format spells the key in some new way, add the spelling to `classify.MPNAliases` rather than
+normalizing it in your reader. The vocabulary is data, in one place, shared with the readers that
+need it to find the fact in their own grammar.
 
 ## Reconcile against the IR, not against your format
 

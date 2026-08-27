@@ -296,6 +296,41 @@ file, or a datasheet document, page, and table, or a board net. A query never gi
 cannot trace back to its source, so a search you run is one you can verify. In the viewer the
 provenance rides behind each row's expand toggle instead of a trailing column.
 
+## Taking a view out of the tool
+
+A question you keep asking is a **view**, and `--format` is how one leaves the tool.
+
+```bash
+agni query designs/gateway/gateway.edn \
+  'component-on-net(?r,?n), component.class(?r,"test_point") => ?n, ?r' \
+  --format markdown --title "Test point coverage" > tp-coverage.md
+```
+
+Five formats. `text` is the aligned terminal table and is the default. `csv` opens in a spreadsheet.
+`json` is for tooling. `markdown` and `html` are documents: they carry the title, the design, and
+**the query itself**, above the answer.
+
+That last part is the point of the flag rather than a decoration. A table pasted into a ticket is a
+screenshot, and nobody downstream can re-run it, scope it differently, or disagree with it. A view
+carries the question that produced it, so it can be checked the way any other claim can.
+
+Two behaviours worth knowing, both deliberate:
+
+- **`csv` carries no preamble.** No title, no query, no count, because its first row has to be the
+  header for a spreadsheet or a script to bind to it. The document formats carry the question; csv
+  carries the table.
+- **An empty result still says something.** `csv` writes the header alone, so a consumer can tell a
+  view that matched nothing from a run that produced no file. `markdown` and `html` write a sentence
+  rather than an empty table, because a table with no rows reads as an omission rather than an
+  answer.
+
+The design is named by its mount URI, never by the path on the machine that ran the query, so a view
+is safe to commit or mail.
+
+```bash
+agni query designs/gateway/gateway.edn 'rail(?n) => ?n' --format csv > rails.csv
+```
+
 ## What a query is not
 
 A query **reports**, it does not judge. It has no notion of pass/fail, that is what

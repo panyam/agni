@@ -106,8 +106,19 @@ field MUST: (a) be derived by one shared pass, not by any reader; (b) carry a do
 DERIVED-NORMALIZATION and naming the pass; (c) degrade safely when absent (a design built without the
 pass — a hand-authored test IR — leaves it empty and the consumer re-derives as a fallback, never
 treats empty as a fact). First instance: `Component.device_classes` (the classify pass); second:
-`ir.Net.roles` (the WS3-072 naming pass, `classify.StampNetRoles`). This is the **left-shift** rule:
+`ir.Net.roles` (the WS3-072 naming pass, `classify.StampNetRoles`); third: `Component.value` (the
+WS3-118 value pass, `classify.StampValues`). This is the **left-shift** rule:
 interpret conventions at the edge, carry normalized facts in the core.
+
+**Attribute variant (agni issue 519).** `classify.StampMPN` normalizes an ATTRIBUTE rather than a
+typed field: it promotes a manufacturer part number to the canonical `MPN` component attribute from
+whatever key the format spelled it in, and from the part type when the placement carried none. It
+obeys (a)-(c) unchanged. It is called out separately because attributes are normally the
+PRE-promotion home under this constraint, so a shared pass writing one is worth noticing rather than
+copying by reflex. The open question it raises is whether `mpn` should become a typed IR field, which
+it would now pass the two-reader test for; until that is answered the pass keeps every format
+consistent without a proto change. What it must NOT become is a per-reader promotion again: that was
+the bug, EDIF carried both halves privately and every other format silently resolved nothing.
 
 **Fill variant (WS3-072).** The same discipline extends to FILLING an EXISTING reader-populated field to
 a more-specific value where the reader was UNDER-SPECIFIED — not only to ADDING a new field. A shared

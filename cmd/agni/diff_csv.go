@@ -4,6 +4,8 @@ import (
 	"io"
 	"strconv"
 
+	rpt "github.com/panyam/agni/core/report"
+
 	"github.com/panyam/agni/core/diff"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -55,33 +57,33 @@ const (
 // same bytes without this writer sorting anything. Re-sorting here would create a second ordering
 // opinion that could drift from the one the text and json forms use.
 func writeDiffCSV(w io.Writer, rep *diff.Report) error {
-	c := newCSVWriter(w)
-	c.header(diffCSVColumns)
+	c := rpt.NewCSVWriter(w)
+	c.Header(diffCSVColumns)
 
 	for _, ref := range rep.ComponentsAdded {
-		c.row(diffRow(classComponentAdded, ref))
+		c.Row(diffRow(classComponentAdded, ref))
 	}
 	for _, ref := range rep.ComponentsRemoved {
-		c.row(diffRow(classComponentRemoved, ref))
+		c.Row(diffRow(classComponentRemoved, ref))
 	}
 	for _, cc := range rep.ComponentsChanged {
 		row := diffRow(classComponentChanged, cc.RefDes)
 		row[3], row[4], row[5] = cc.Field, cc.Old, cc.New
-		c.row(row)
+		c.Row(row)
 	}
 	for _, nc := range rep.Nets {
 		row := diffRow(classNetPrefix+string(nc.Kind), nc.Name)
 		row[2] = nc.OldName
-		row[6], row[7] = joinCell(nc.Added), joinCell(nc.Removed)
+		row[6], row[7] = rpt.JoinCell(nc.Added), rpt.JoinCell(nc.Removed)
 		row[8], row[9] = provFile(nc.OldProv), provFile(nc.NewProv)
 		if e := nc.Approx; e != nil {
 			row[10] = strconv.FormatFloat(e.OldCoverage, 'f', 3, 64)
 			row[11] = strconv.FormatFloat(e.OldCoverageSignificant, 'f', 3, 64)
 			row[12] = strconv.FormatFloat(e.NewCoverageSignificant, 'f', 3, 64)
 		}
-		c.row(row)
+		c.Row(row)
 	}
-	return c.finish()
+	return c.Finish()
 }
 
 // diffRow builds a row with every column present and empty, so a caller fills the ones its change

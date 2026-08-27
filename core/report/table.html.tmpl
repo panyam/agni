@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agni query{{if .Title}} — {{.Title}}{{end}}</title>
+<style>{{css}}</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>{{if .Title}}{{.Title}}{{else}}agni query{{end}}</h1>
+<div class="sub">
+  {{if .Source}}{{.Source}}{{end}}
+  {{if .Body}} · {{len .Body}} result(s){{end}}
+</div>
+
+{{if .Query}}<pre class="q">{{.Query}}</pre>{{end}}
+
+{{if .Body}}
+<table>
+  <thead>
+    <tr>{{range .Header}}<th>{{.}}</th>{{end}}</tr>
+  </thead>
+  <tbody>
+    {{range .Body}}<tr>{{range .}}<td class="subject">{{.}}</td>{{end}}</tr>
+    {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="note">No rows matched.</p>
+{{end}}
+
+</div>
+</body>
+</html>

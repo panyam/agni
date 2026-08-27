@@ -344,3 +344,79 @@ func countResults(t *testing.T, out string) int {
 	t.Fatalf("no result count in output:\n%s", out)
 	return 0
 }
+
+// TestQueryRejectsUnknownFormatBeforeReading is about WHERE the check happens, not that it happens.
+// A misspelled --format must fail before the design is parsed, because the designs this runs on are
+// nine-megabyte netlists and a typo that costs a full read reads as a slow tool. The path given is
+// deliberately one that does not exist: if validation ever moves after the read, this stops
+// reporting the format error and starts reporting a missing file.
+func TestQueryRejectsUnknownFormatBeforeReading(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"--format", "markdwon", "no/such/design.kicad_sch", "component.class(?r,?c) => ?r"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("a misspelled --format was accepted")
+	}
+	if !strings.Contains(err.Error(), "unknown --format") {
+		t.Errorf("error = %v, want the format complaint rather than a read failure", err)
+	}
+}
+
+// TestQueryFormatsReachTheRenderers is the end-to-end half: each format is wired to its renderer and
+// runs over a real design read. The per-format behaviour is asserted in core/report; this asserts the
+// dispatch, which is the part that can silently fall through to text.
+func TestQueryFormatsReachTheRenderers(t *testing.T) {
+	for _, tc := range []struct{ format, want string }{
+		{"csv", "r,provenance"},
+		{"json", `"columns"`},
+		{"markdown", "| r | provenance |"},
+		{"html", "<!doctype html>"},
+	} {
+		t.Run(tc.format, func(t *testing.T) {
+			cmd := queryCmd()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			cmd.SetArgs([]string{"--format", tc.format, "testdata/conformance/showcase.passes.kicad_sch", `component.class(?r, "capacitor") => ?r`})
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("query --format %s: %v", tc.format, err)
+			}
+			if !strings.Contains(out.String(), tc.want) {
+				t.Errorf("--format %s output missing %q:\n%s", tc.format, tc.want, out.String())
+			}
+		})
+	}
+}
+
+// TestQueryViewNamesTheMountNotTheHost is the leak guard, stated as the POSITIVE contract because
+// the negative form does not hold under test. A view is committed, mailed and pasted into tickets,
+// so its heading must name the design's mount URI. Asserting merely that no host path appears is
+// vacuous here: the test passes a RELATIVE path, so the buggy version (which echoes the argument)
+// leaks nothing a substring check can see, and the guard reported green with the bug reinstated.
+// Requiring the mount URI fails on any source that is not one, including a bare argument.
+//
+// This is agni issue 501's rule arriving in a new output format, which inherits the rule and not the
+// fix.
+func TestQueryViewNamesTheMountNotTheHost(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, format := range []string{"markdown", "html", "json"} {
+		cmd := queryCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetArgs([]string{"--format", format, "testdata/conformance/showcase.passes.kicad_sch", `component.class(?r, "capacitor") => ?r`})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("query --format %s: %v", format, err)
+		}
+		if !strings.Contains(out.String(), "mount://") {
+			t.Errorf("--format %s does not name the design by its mount URI:\n%s", format, out.String())
+		}
+		if strings.Contains(out.String(), wd) {
+			t.Errorf("--format %s published the host path %q", format, wd)
+		}
+	}
+}

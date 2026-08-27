@@ -7,6 +7,7 @@ core/classify:Stamp
 core/classify:StampNetRoles
 core/classify:StampPowerInPins
 core/classify:StampValues
+core/classify:StampMPN
 cmd/agni:compareLayouts
 cmd/agni:Design
 cmd/agni:readDesign
