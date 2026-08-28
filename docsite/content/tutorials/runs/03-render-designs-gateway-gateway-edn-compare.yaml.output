@@ -1,7 +1,7 @@
 #agni-run deb6160bece64c1f
-layout      nodes  nets  segments  crossings  bends  edge-length  stress
-force       19     15    56        43         0      9052         0.346
-grid        19     15    56        133        0      7798         0.486
-layered     19     15    56        95         0      20826        0.582
-orthogonal  19     15    84        104        28     9200         0.457
-stress      19     15    56        73         0      7218         0.457
+layout      nodes  nets  segments  crossings  bends  edge-length  stress  truth-residual
+force       19     15    56        43         0      9052         0.346   0.997
+grid        19     15    56        133        0      7798         0.486   0.978
+layered     19     15    56        95         0      20826        0.582   0.960
+orthogonal  19     15    84        104        28     9200         0.457   0.961
+stress      19     15    56        73         0      7218         0.457   0.961
