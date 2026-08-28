@@ -80,7 +80,8 @@ What that buys at the CLI:
 ```
 agni check designs/gateway                    # names the DESIGN: the entry's netlist, the companion's copper
 agni check designs/gateway/gateway.kicad_pcb  # names a companion: reads the entry, and says so
-agni check designs/gateway/gateway.edn        # names the entry: exactly that, as always
+agni check designs/gateway/gateway.edn        # names the ENTRY: the same design, so the same tiers
+agni check designs/gateway/gateway-rev-b.edn  # names an undeclared sibling: exactly that file
 ```
 
 The first form is new capability, and it is the one worth reaching for: a netlist carries no copper
@@ -88,6 +89,13 @@ and a board carries no reliable component identity, so a design that declares bo
 connectivity rules and its board rules from one argument. On the tutorial project that moves the
 board checklist item from **not applicable** to a real verdict, because nobody had told the tool the
 board file beside the netlist was part of the same design.
+
+The third form is the same design as the first. Naming the entry is naming the design, because the
+descriptor is what says so, and a run therefore draws on the companion's sheets whether the caller
+typed the folder or the filename inside it. Until agni issue 528 it did not, so a design whose
+faithful geometry lived in a companion rendered its auto-layout under one spelling and its real
+schematic under the other. The file-by-file rule above is what the fourth form protects, and the
+entry is by definition not the file it protects.
 
 The second form is the old warning turned into behaviour. It fires for any format rather than only
 the one stem-matched `.eds`/`.edn` pair the heuristic knew, it names the file the operator actually
