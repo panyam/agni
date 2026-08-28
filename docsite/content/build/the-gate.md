@@ -65,6 +65,13 @@ answers differently on arm64 and amd64 and no amount of regenerating makes it ag
 gate's only exemption, a capture belongs in it only when its command is not a function of this repo,
 and a capture that merely went stale is stale.
 
+**It checks the capture and not the prose around it.** A page that quotes a run's last line in a
+hand-written fence keeps whatever numbers it was written with, because the check regenerates
+`*.output` files and never reads the markdown citing them. `05-your-interfaces.md` carried
+`14 finding(s) ... 32 rule(s)` through a change that moved the run to 27 and 36, and the gate was
+green the whole time. When a change moves a capture, grep the docsite for the numbers that moved
+before believing the tutorials still read correctly.
+
 It snapshots and restores, so it carries no commit-first trap and leaves the tree as it found it
 whether it passes or fails. That matters more here than for the catalog, because captures move on any
 fixture or output change and the natural loop is to regenerate and run the gate before committing.
@@ -96,6 +103,24 @@ install` if web deps changed. A plain re-install can be INSUFFICIENT: a partiall
 rather than a toolchain one. **When the second error differs from the first**, stop re-installing and
 go to `rm -rf web/node_modules && pnpm install`. Match on the SHAPE, a failure inside a dep you did
 not touch right after a checkout switch or a fresh clone, not on the message.
+
+## A red gate that is none of your business
+
+The three above make a red gate read green. This one is the other direction, and it wasted an
+afternoon being mistaken for a regression on `main`.
+
+**A server already listening on :8080 fails three verdict-link tests.** `--url-base` asks the server
+at that address whether it serves the mount a link would name, and withholds the link when the answer
+is no. That is the feature working. But a development `agni serve` left running from earlier answers
+the probe, does not serve the tests' `demo` mount, and every link is withheld:
+
+    note: http://localhost:8080 serves no mount named "demo", so every link would resolve to nothing
+
+`TestVerdictRowsCarryAProofURL`, `TestEveryFormatComposesTheSameLink` and
+`TestAPlainPathThroughADeclaredMountIsLinkable` then fail on a tree that is fine. Before believing a
+failure in that trio, check the port. The general rule is worth more than the instance: this suite
+reaches out of the process, so **reproduce a suspected regression against unmodified `main` before
+reporting it**, which is what turned this one from a bug report into a `pkill`.
 
 ## What the gate does NOT run
 

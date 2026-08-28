@@ -1211,3 +1211,31 @@ reader compares.
 **Reopen if** a spec appears that genuinely needs one shell across steps, which means shell state that
 is not a file. Interleaving markers is still not the answer; passing the state through the filesystem
 or through a step's own script is.
+
+---
+
+## Naming a design's entry attaches every declared companion, board tier included
+
+**Question.** When a caller names the entry file rather than the design folder, should resolution
+attach only the geometry companion (fixing the visible rendering problem) or every declared companion
+including the board?
+
+**Answer. Every one, because the alternative is arbitrary.** The claim the fix rests on is that naming
+the entry IS naming the design, since the descriptor is what says which file the entry is. A design
+that got its sheets from a companion but not its copper would be a third resolution mode nobody asked
+for, and the docsite already states the principle for the companion-named case: a design's declared
+board is its board whichever view you point at.
+
+The cost is real and was accepted deliberately. Naming the entry now runs the board-tier rules, so on
+the tutorial project one invocation went from 15 findings over 32 rules to 28 over 36. That is not new
+analysis, the folder form reported all of it already, but **a CI gate pinned to an entry filename sees
+more findings than it did before**, and with `--fail-on` it can go red on copper that invocation was
+never checking. `--as-named` restores the previous single-file reading exactly.
+
+**What this leaves open.** Nothing about the entry. The guard that skips companions for an UNDECLARED
+sibling stays and is load-bearing: a later revision of the netlist sits in the same folder and is a
+legitimate analysis source, so inferring a relationship would turn a diff of two revisions into a diff
+of one against itself. Companions stay declared file by file.
+
+**Reopen if** a design appears that wants its sheets from a companion and its copper from nowhere.
+That is a descriptor that should not declare the board, not a fourth resolution mode.
