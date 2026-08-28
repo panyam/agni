@@ -89,7 +89,8 @@ const edifNativeIDKind = "edif-rename-id"
 func extract(root *node, src string) *ir.Design {
 	d := &ir.Design{Attributes: map[string]string{}, Prov: &ir.Provenance{SourceFile: src}}
 
-	if dn := findFirst(root, "design"); dn != nil {
+	dn := findFirst(root, "design")
+	if dn != nil {
 		if disp := parseName(dn.Arg(1)).Display; disp != "" {
 			d.Name = disp
 		}
@@ -97,6 +98,7 @@ func extract(root *node, src string) *ir.Design {
 	if d.Name == "" {
 		d.Name = atom(root.Arg(1)) // e.g. "DxD"
 	}
+	recordRootRefs(d, root, dn)
 
 	var libs []*node
 	collect(root, "library", &libs)
@@ -617,4 +619,37 @@ func edifVersion(root *node) []string {
 		}
 	}
 	return parts
+}
+
+// recordRootRefs stashes the three names the extraction above resolves and then discards. Each is an
+// escape-hatch attribute (CONSTRAINTS C9), in the same shape as edif_version.
+//
+// The design's root reference names two of them: which cell carries the top-level contents, and
+// which library holds that cell. extract resolves the pair once through topCell and then works from
+// the cell's contents, so neither name reaches the IR. That is fine for reading and wrong for
+// writing. The scope a read recovers is decided by (design ... (cellRef C (libraryRef L))), so an
+// emitter that guesses the pair emits a design pointing at a different cell, and the next read scopes
+// to that cell and recovers different components and nets. Recording them is what keeps a
+// write-then-read on the same scope rather than merely on the same file.
+//
+// The third is the (edif NAME ...) root name, which is a distinct name from the design's and is only
+// consulted above as a fallback. Three fixtures carry a root name their design does not
+// (CELLMPN/TOP, UNANN/D, WRAPPED/a rename), so it is genuinely lost rather than redundant. It is
+// recorded only when it differs, so the common case where the two agree adds no attribute.
+func recordRootRefs(d *ir.Design, root, design *node) {
+	if design != nil {
+		if cr := design.Child("cellRef"); cr != nil {
+			if c := atom(cr.Arg(1)); c != "" {
+				d.Attributes["edif_top_cell"] = c
+			}
+			if lr := cr.Child("libraryRef"); lr != nil {
+				if l := atom(lr.Arg(1)); l != "" {
+					d.Attributes["edif_work_library"] = l
+				}
+			}
+		}
+	}
+	if rn := atom(root.Arg(1)); rn != "" && rn != d.Name {
+		d.Attributes["edif_root_name"] = rn
+	}
 }
