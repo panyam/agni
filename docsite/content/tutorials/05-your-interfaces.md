@@ -102,14 +102,14 @@ confirm your file covers each one the built-in contributed, or that you meant to
 Compare the last line of the two runs on this page:
 
 ```
-without profiles/   14 finding(s)   200 subject(s) considered by 32 rule(s)
-with profiles/      15 finding(s)   201 subject(s) considered by 32 rule(s)
+without profiles/   27 finding(s)   257 subject(s) considered by 36 rule(s)
+with profiles/      28 finding(s)   258 subject(s) considered by 36 rule(s)
 ```
 
 One more finding and one more subject, and both of them are the `STB` line you added. That is the
 size of the change you made, which is what a tier ought to move.
 
-Supersession shows up here as the rule count holding at 32. Four built-in CAN rules left and four of
+Supersession shows up here as the rule count holding at 36. Four built-in CAN rules left and four of
 yours arrived, so the same number of rules has an opinion about this board. They are now your
 rules.
 

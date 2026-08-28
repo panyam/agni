@@ -99,20 +99,27 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 		return plain, nil
 	}
 	namedIsTheDesign := isDir && uri.String() == d.GetUri()
-	if !namedIsTheDesign && (r.asNamed || !service.IsCompanion(d, uri.String())) {
+	// Naming the design's own ENTRY is naming the design, so it gets the design's declared companions
+	// too. The rule below it guards the NETLIST tier against an inferred redirect, and the entry is by
+	// definition not the file that rule protects: an undeclared sibling revision is still left alone.
+	// Without this a design whose faithful geometry lives in a companion rendered its auto-layout
+	// whenever the caller typed the netlist's own filename rather than the folder, which is the same
+	// design read by two names giving two different drawings.
+	namedIsTheEntry := !isDir && uri.String() == d.GetEntryUri()
+	if !namedIsTheDesign && (r.asNamed || !(namedIsTheEntry || service.IsCompanion(d, uri.String()))) {
 		return plain, nil
 	}
 
-	// Either the design itself was named, or one of its declared companions was.
+	// The design itself was named, or its entry, or one of its declared companions.
 	from := uri.String()
-	if namedIsTheDesign {
+	if namedIsTheDesign || namedIsTheEntry {
 		from = ""
 	}
 	tiers := service.SourcesFor(d, from)
 	// Computed on REFS, before they become paths, so "did this tier come from the file the user
 	// named" compares like with like. A ref against the path string the user typed silently never
 	// matches, and the note then claims every tier was pulled in unasked.
-	note := resolutionNote(named, uri.String(), d, tiers, namedIsTheDesign)
+	note := resolutionNote(named, uri.String(), d, tiers, namedIsTheDesign, namedIsTheEntry)
 
 	return designSource{DesignSources: tiers, Note: note}, nil
 }
@@ -123,23 +130,33 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 // somewhere other than what the caller named, in both the design-named and companion-named cases. A
 // design's declared board is its board whichever view you point at, so pointing at the schematic
 // still runs board-tier rules against that board, which is more than was asked for.
-func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSources, namedIsTheDesign bool) string {
+func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSources, namedIsTheDesign, namedIsTheEntry bool) string {
 	// Named by the DESIGN's own mount-relative path, not by joining onto whatever the caller typed.
 	// The caller may have typed a path or a URI, and filepath.Join on a URI mangles its scheme.
 	descriptor := path.Join(uriPath(d.GetUri()), projects.DesignDescriptor)
-	var note string
-	if namedIsTheDesign {
-		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(d.GetEntryUri()), descriptor)
-	} else {
-		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (the design's entry)",
-			path.Base(uriPath(named)), descriptor, path.Base(d.GetEntryUri()))
-	}
 	var extra []string
 	if g := tiers.GeometryURI; g != tiers.NetlistURI && g != ref {
 		extra = append(extra, "sheets from "+path.Base(g))
 	}
 	if b := tiers.BoardURI; b != tiers.NetlistURI && b != ref {
 		extra = append(extra, "board geometry from "+path.Base(b))
+	}
+	// Naming the entry read exactly the file asked for, so the netlist tier is not news and a run
+	// that picked up no companion says nothing at all. Only the tiers that came from elsewhere are
+	// worth a line, on the same rule as every other case: report what was read but not asked for.
+	if namedIsTheEntry {
+		if len(extra) == 0 {
+			return ""
+		}
+		return fmt.Sprintf("note: reading %s with %s (declared by %s). Pass --as-named for the file alone.\n",
+			path.Base(uriPath(named)), strings.Join(extra, " and "), descriptor)
+	}
+	var note string
+	if namedIsTheDesign {
+		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(d.GetEntryUri()), descriptor)
+	} else {
+		note = fmt.Sprintf("note: %s is a companion view declared by %s; analysis reads %s (the design's entry)",
+			path.Base(uriPath(named)), descriptor, path.Base(d.GetEntryUri()))
 	}
 	if len(extra) > 0 {
 		note += ", with " + strings.Join(extra, " and ")

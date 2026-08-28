@@ -241,3 +241,97 @@ func TestResolveSourceMissingPathDefersToTheReader(t *testing.T) {
 		t.Errorf("netlist = %q, want the named path", localOf(src.NetlistURI))
 	}
 }
+
+// TestResolveSourceEntryGetsItsCompanions: naming the entry is naming the design, so the declared
+// companions supply the tiers the entry cannot. Before this the same design read by two names gave
+// two different drawings, because only the FOLDER form consulted companions and the entry's own
+// filename fell through to the auto-layout (the .eds/.edn pairing this exists for).
+func TestResolveSourceEntryGetsItsCompanions(t *testing.T) {
+	dir := designFolder(t)
+	entry := filepath.Join(dir, "gateway.edn")
+	src, err := resolve(t, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if localOf(src.NetlistURI) != entry {
+		t.Errorf("netlist = %q, want the named entry", localOf(src.NetlistURI))
+	}
+	if localOf(src.GeometryURI) != filepath.Join(dir, "gateway.kicad_sch") {
+		t.Errorf("geometry = %q, want the declared schematic companion", localOf(src.GeometryURI))
+	}
+	if localOf(src.BoardURI) != filepath.Join(dir, "gateway.kicad_pcb") {
+		t.Errorf("board = %q, want the declared board companion", localOf(src.BoardURI))
+	}
+}
+
+// TestResolveSourceEntryMatchesTheFolderForm pins the property the bug broke: a design is the same
+// design whether the caller names the folder or the entry inside it.
+func TestResolveSourceEntryMatchesTheFolderForm(t *testing.T) {
+	dir := designFolder(t)
+	byFolder, err := resolve(t, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byEntry, err := resolve(t, filepath.Join(dir, "gateway.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if byFolder.DesignSources != byEntry.DesignSources {
+		t.Errorf("folder = %+v, entry = %+v, want identical tiers", byFolder.DesignSources, byEntry.DesignSources)
+	}
+}
+
+// TestResolveSourceEntryAsNamedOptsOut: --as-named means the file alone, so it suppresses the
+// companion tiers on the entry as well as the companion-to-entry redirect.
+func TestResolveSourceEntryAsNamedOptsOut(t *testing.T) {
+	dir := designFolder(t)
+	entry := filepath.Join(dir, "gateway.edn")
+
+	readAsNamed = true
+	t.Cleanup(func() { readAsNamed = false })
+	src, err := resolve(t, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if localOf(src.GeometryURI) != entry || localOf(src.BoardURI) != entry {
+		t.Errorf("src = %+v, want every tier on the named file under --as-named", src)
+	}
+	if src.Note != "" {
+		t.Errorf("note = %q, want none: nothing but the named file was read", src.Note)
+	}
+}
+
+// TestResolveSourceEntryNoteNamesOnlyTheExtras: the caller got the file they asked for, so the note
+// must not claim a redirect happened; it reports only the companions attached alongside it.
+func TestResolveSourceEntryNoteNamesOnlyTheExtras(t *testing.T) {
+	dir := designFolder(t)
+	src, err := resolve(t, filepath.Join(dir, "gateway.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(src.Note, "companion view") || strings.Contains(src.Note, "analysis reads") {
+		t.Errorf("note = %q, want no redirect language: the entry was read as named", src.Note)
+	}
+	if !strings.Contains(src.Note, "gateway.kicad_sch") || !strings.Contains(src.Note, "gateway.kicad_pcb") {
+		t.Errorf("note = %q, want it to name both companions that were read", src.Note)
+	}
+}
+
+// TestResolveSourceEntryWithNoCompanionsIsSilent: a design that declares none is the ordinary case,
+// and it must not gain a note saying nothing.
+func TestResolveSourceEntryWithNoCompanionsIsSilent(t *testing.T) {
+	dir := t.TempDir()
+	entry := filepath.Join(dir, "plain.edn")
+	write(t, entry, "x")
+	write(t, filepath.Join(dir, projects.DesignDescriptor), "name: plain\nentry: plain.edn\n")
+	src, err := resolve(t, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if localOf(src.NetlistURI) != entry || localOf(src.GeometryURI) != entry {
+		t.Fatalf("src = %+v, want every tier on the entry", src)
+	}
+	if src.Note != "" {
+		t.Errorf("note = %q, want none", src.Note)
+	}
+}
