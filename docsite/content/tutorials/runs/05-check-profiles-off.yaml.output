@@ -1,5 +1,6 @@
 #agni-run a1a3b7dace8161bf
 findings by rule:
+  copper-clearance       12
   decoupling-present     1
   esd-protection         2
   gateway/signal-net-naming 2
@@ -9,8 +10,21 @@ findings by rule:
   reverse-blocking-absent 1
   supply-exceeds-abs-max 1
   test-point-coverage    2
+  track-width            1
 
-first 14:
+first 27:
+  [error] copper-clearance: CAN1_CANH (copper of "CAN1_CANH" and "I2C_SCL" closer than 0.127mm at 1 place(s); worst gap -0.175mm near (5.00, -84.00)mm)
+  [error] copper-clearance: CAN1_CANL (copper of "CAN1_CANL" and "I2C_SDA" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -85.50)mm)
+  [error] copper-clearance: CAN1_RXD (copper of "CAN1_RXD" and "PMIC_PG" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm)
+  [error] copper-clearance: CAN1_RXD (copper of "CAN1_RXD" and "PMIC_CORE_3V3" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm)
+  [error] copper-clearance: CAN1_TXD (copper of "CAN1_TXD" and "PMIC_MAIN_12V0" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm)
+  [error] copper-clearance: CAN1_TXD (copper of "CAN1_TXD" and "MCU_NRST" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm)
+  [error] copper-clearance: GND (copper of "GND" and "XTAL_OUT" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -82.50)mm)
+  [error] copper-clearance: MCU_NRST (copper of "MCU_NRST" and "PMIC_MAIN_12V0" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm)
+  [error] copper-clearance: PMIC_CORE_3V3 (copper of "PMIC_CORE_3V3" and "PMIC_PG" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm)
+  [error] copper-clearance: PMIC_EN (copper of "PMIC_EN" and "PMIC_IO_1V8" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -81.00)mm)
+  [error] copper-clearance: PMIC_EN (copper of "PMIC_EN" and "XTAL_IN" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -81.00)mm)
+  [error] copper-clearance: PMIC_IO_1V8 (copper of "PMIC_IO_1V8" and "XTAL_IN" closer than 0.127mm at 1 place(s); worst gap -0.250mm near (5.00, -81.00)mm)
   [warning] decoupling-present: PMIC_MAIN_12V0 (power rail has no decoupling capacitor)
   [info] esd-protection: CAN1_CANH (externally-exposed signal net has no ESD protection)
   [info] esd-protection: CAN1_CANL (externally-exposed signal net has no ESD protection)
@@ -25,6 +39,7 @@ first 14:
   [error] supply-exceeds-abs-max: U2 (power-input pin 1 on rail "PMIC_CORE_3V3": nominal 3.3V exceeds absolute-maximum VIN 3V — datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3))
   [info] test-point-coverage: GND (rail carries no test point; bring-up and factory test cannot probe it)
   [info] test-point-coverage: PMIC_MAIN_12V0 (rail carries no test point; bring-up and factory test cannot probe it)
+  [error] track-width: CAN1_CANH (net has 1 track segment(s) narrower than the 0.127mm fabrication floor)
 
-14 finding(s) total
-200 subject(s) considered by 32 rule(s), 7 not considered (--verdicts for the detail)
+27 finding(s) total
+257 subject(s) considered by 36 rule(s), 7 not considered (--verdicts for the detail)
