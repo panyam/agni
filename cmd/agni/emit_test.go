@@ -21,33 +21,32 @@ func readDesignForTest(t *testing.T, path string) *ir.Design {
 	return d
 }
 
-// TestEmitWriterDispatch pins how a format is chosen, which is the part of `emit` a user hits without
+// TestEmitFormatDispatch pins how a format is chosen, which is the part of `emit` a user hits without
 // reading the flag: the extension decides, so converting to an EDIF netlist needs no flag, and the
 // pre-EDIF behavior of writing IPC-2581 survives every invocation that did not name an extension.
-func TestEmitWriterDispatch(t *testing.T) {
-	// The writers are compared by what they produce on an empty design rather than by function
-	// identity, which Go does not allow.
+func TestEmitFormatDispatch(t *testing.T) {
 	for _, tc := range []struct {
 		name, format, out string
-		wantEDIF, wantErr bool
+		want              string
 		errHas            string
 	}{
-		{name: "edn extension", out: "board.edn", wantEDIF: true},
-		{name: "edf extension", out: "board.edf", wantEDIF: true},
-		{name: "uppercase extension", out: "BOARD.EDIF", wantEDIF: true},
-		{name: "stdout has no extension", out: ""},
-		{name: "xml stays ipc2581", out: "board.xml"},
-		{name: "flag beats extension", format: "ipc2581", out: "board.edn"},
-		{name: "flag beats stdout default", format: "edif", out: "", wantEDIF: true},
-		{name: "eds is refused", out: "board.eds", wantErr: true, errHas: "only the netlist writer exists"},
-		{name: "eds yields to an explicit flag", format: "edif", out: "board.eds", wantEDIF: true},
-		{name: "unknown format", format: "gerber", wantErr: true, errHas: "unknown emit format"},
+		{name: "edn extension", out: "board.edn", want: emitEDIF},
+		{name: "edf extension", out: "board.edf", want: emitEDIF},
+		{name: "uppercase extension", out: "BOARD.EDIF", want: emitEDIF},
+		{name: "stdout has no extension", out: "", want: emitIPC2581},
+		{name: "xml stays ipc2581", out: "board.xml", want: emitIPC2581},
+		{name: "flag beats extension", format: "ipc2581", out: "board.edn", want: emitIPC2581},
+		{name: "flag beats stdout default", format: "edif", out: "", want: emitEDIF},
+		{name: "flag case is not the user's problem", format: "EDIF", out: "", want: emitEDIF},
+		{name: "eds is refused", out: "board.eds", errHas: "only the netlist writer exists"},
+		{name: "eds yields to an explicit flag", format: "edif", out: "board.eds", want: emitEDIF},
+		{name: "unknown format", format: "gerber", errHas: "unknown emit format"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			w, err := emitWriter(tc.format, tc.out)
-			if tc.wantErr {
+			got, err := emitFormat(tc.format, tc.out)
+			if tc.errHas != "" {
 				if err == nil {
-					t.Fatalf("emitWriter(%q, %q) = no error, want one", tc.format, tc.out)
+					t.Fatalf("emitFormat(%q, %q) = %q, want an error", tc.format, tc.out, got)
 				}
 				if !strings.Contains(err.Error(), tc.errHas) {
 					t.Errorf("error %q should mention %q", err, tc.errHas)
@@ -57,12 +56,8 @@ func TestEmitWriterDispatch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var buf bytes.Buffer
-			if err := w(&buf, readDesignForTest(t, "testdata/conformance/crystal.passes.edn")); err != nil {
-				t.Fatal(err)
-			}
-			if gotEDIF := strings.HasPrefix(buf.String(), "(edif "); gotEDIF != tc.wantEDIF {
-				t.Errorf("wrote EDIF = %v, want %v; output starts %.40q", gotEDIF, tc.wantEDIF, buf.String())
+			if got != tc.want {
+				t.Errorf("emitFormat(%q, %q) = %q, want %q", tc.format, tc.out, got, tc.want)
 			}
 		})
 	}
