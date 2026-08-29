@@ -89,7 +89,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 
 ## Build, test, and the CLI
 
-- `make build` / `make test` / `make agni` / `make install`.
+- `make build` / `make test` / `make agni` / `make install`. **`make agni` writes `bin/agni` and does
+  NOT update the `agni` on your PATH**, which `make install` puts in `~/go/bin`. Verifying a CLI fix
+  with the wrong one reports the bug still present and reads as the fix not working.
 - **Nothing here takes a private path, and a private workspace must never have to reimplement a
   target.** Two mechanisms carry someone's own designs in. Tier-1 config (mounts, symbol paths,
   native tools) belongs in an `agni.yaml`, which the CLI finds by walking up from the working
@@ -163,6 +165,23 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   resolved once at ingestion — so a read that skips it silently uses the built-in naming vocabulary and
   none of the project's declared symbol libraries. All six bypassed it until agni issue 228, which is
   why it is one function rather than six.
+- **A design's tiers come from `service.SourcesFor`, and naming the ENTRY is naming the design.** A
+  descriptor's `companions` supply the tiers the entry cannot: a schematic export for sheets, a board
+  for copper. `NetlistURI` always stays on the entry, and only the other tiers move. All three
+  spellings of one design (the folder, the entry filename, a declared companion) now resolve
+  identically, which they did not until agni issue 528: naming the entry skipped companions entirely,
+  so a design whose faithful geometry lived in a companion drew its auto-layout under one spelling and
+  its real schematic under the other. `--as-named` is the opt-out. **An UNDECLARED sibling is still
+  read exactly as named**, and that is the point of declaring companions file by file rather than
+  inferring them: a later revision of the netlist sits in the same folder and is a legitimate analysis
+  source, so inferring would turn a diff of two revisions into a diff of one against itself.
+- **A `.eds` is dual-capability, and its netlist is NOT the `.edn`'s.** An EDIF schematic export
+  registers both a `Design` and a `Geometry` reader, because it carries nets joining portRefs in the
+  same grammar, so every tool will parse it as a netlist without complaint. It counts DRAWN instances
+  and per-sheet segments rather than resolved nets. Measured on one real board holding both files:
+  3980 components and 1617 nets off the `.edn` against 5219 and 4572 off the `.eds`, so nets inflate
+  by 183%. A design that ships only a `.eds` can be rendered and queried, and its counts must never be
+  compared against a design read from a netlist.
 - **A locator records the path WITHIN the design's mount, never the host path.** Readers stamp
   `ir.Provenance.SourceFile` with whatever path they are handed, so the rename happens once after the
   read: `Loader.SourceName` maps a path to the name provenance should carry, and `relocateSources`
@@ -192,7 +211,11 @@ a layout assertion passes while proving nothing.
 **`make testall` is the full gate, and CI runs exactly it.** Read
 `docsite/content/build/the-gate.md` before trusting a run: it has three traps that make a red gate
 read green (a pipe swallowing the exit code, a commit-first ordering rule, and a per-clone
-`pnpm install`), plus what a run leaves behind and the generated-code rules.
+`pnpm install`), one that makes a green tree read RED (a stray `agni serve` on :8080 fails three
+verdict-link tests, so reproduce against unmodified `main` before reporting a regression), plus what
+a run leaves behind and the generated-code rules. **`tutorial-runs-check` regenerates captures and
+does not read the prose quoting them**, so a tutorial can cite numbers a change moved and the gate
+stays green.
 
 **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
 negative result needs a positive control, a positive rate needs a precision check, and every new test
