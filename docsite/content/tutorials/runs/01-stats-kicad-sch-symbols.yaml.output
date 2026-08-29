@@ -1,7 +1,7 @@
-#agni-run c9a6f0cfb6770920
-design:              GATEWAY
-source format:       edif-2.0.0
-libraries:           2
+#agni-run 7cae16ded7bf57b6
+design:              Sample Board
+source format:       kicad-sch
+libraries:           1
 components:          19 (unique ref_des)
 sections:            19 (source instances)
 multi-section:       0 (one ref_des, several sections)

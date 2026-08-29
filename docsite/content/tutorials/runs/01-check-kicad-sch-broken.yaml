@@ -1,0 +1,18 @@
+# Rung 1: the checks run over the broken read, which is the point of the whole rung.
+#
+# Was a hand-written fence claiming 94 findings against "nine on the same board read correctly".
+# Both numbers had drifted (108 and 28 by the time anyone re-ran it) and nothing could catch that,
+# because tutorial-runs-check regenerates captures and never reads the prose quoting them. It is a
+# capture now so the number is checked.
+#
+# show hides only the second invocation, which exists to put the total under the elided list. The mv
+# and --as-named stay visible because they are what MAKES the read broken, not plumbing.
+fixture: examples/tutorial-project
+show: |
+  mv designs/gateway/symbols designs/gateway/symbols-off
+  agni check designs/gateway/gateway.kicad_sch --as-named
+script: |
+  mv designs/gateway/symbols designs/gateway/symbols-off
+  agni check designs/gateway/gateway.kicad_sch --as-named 2>&1 | head -12
+  echo "..."
+  agni check designs/gateway/gateway.kicad_sch --as-named 2>&1 | grep "finding(s) total"

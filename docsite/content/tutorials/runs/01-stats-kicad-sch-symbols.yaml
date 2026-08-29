@@ -1,4 +1,9 @@
-# Generated block for 01-read-a-design.md. Edit the script, not the capture.
+# Rung 1: the same file read correctly, with --symbol-path pointing at the moved-aside library.
+#
+# The library is moved to the same place its twin above moves it, so the flag has something to find
+# and is doing real work. Pointed at the shipped designs/gateway/symbols/ it would be a no-op, because
+# that directory is already searched, and the capture would be identical to the broken one.
 fixture: examples/tutorial-project
 script: |
-  agni stats designs/gateway/gateway.kicad_sch --symbol-path designs/gateway/symbols
+  mv designs/gateway/symbols designs/gateway/symbols-off
+  agni stats designs/gateway/gateway.kicad_sch --as-named --symbol-path designs/gateway/symbols-off

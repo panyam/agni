@@ -60,6 +60,12 @@ The tutorial board ships a second view of itself, `gateway.kicad_sch`, whose sym
 separate library file rather than being embedded. That is normal practice and it is the setup for
 the most common bad read there is.
 
+This project ships that library, in `designs/gateway/symbols/`, and a schematic's own directory
+subtree is always searched. So the runs below move it aside first, the way rungs 4 to 6 move a tier
+aside: without that the symbols resolve whatever you pass and the failure cannot be shown at all.
+`--as-named` is there because `gateway.kicad_sch` is a declared companion, so naming it would
+otherwise read the entry instead, which is the correct read and not the one this rung is about.
+
 {{ agniRun "content/tutorials/runs/01-stats-kicad-sch.yaml" }}
 
 Nineteen components and **zero nets**. The parts were found, their symbols were not, so no pins
@@ -74,22 +80,12 @@ enough. A KiCad project's `sym-lib-table` is picked up automatically.
 Now the part worth sitting with. Run the checks on the broken read and it does not error, it does
 not warn you that it read nothing, and it does not stay quiet:
 
-```
-agni check designs/gateway/gateway.kicad_sch
-```
+{{ agniRun "content/tutorials/runs/01-check-kicad-sch-broken.yaml" }}
 
-```
-findings by rule:
-  bulk-cap               1
-  cap-voltage            1
-  crystal-load-caps      1
-  ...
-94 finding(s) total
-```
-
-Ninety-four findings, against nine on the same board read correctly. Every one of them is an
-artefact of the bad read. Nothing in that output says "I could not resolve your symbols". It looks
-like a board in serious trouble, and a reader who skipped `stats` would spend an afternoon on it.
+A hundred and eight findings, against twenty-eight on the same board read correctly. Every one of
+them is an artefact of the bad read. Nothing in that output says "I could not resolve your symbols".
+It looks like a board in serious trouble, and a reader who skipped `stats` would spend an afternoon
+on it.
 
 That is why this rung is first.
 

@@ -1,4 +1,14 @@
-# Generated block for 01-read-a-design.md. Edit the script, not the capture.
+# Rung 1: the bad read this rung exists to teach, with the symbol library moved aside.
+#
+# The move is load-bearing. The project SHIPS designs/gateway/symbols/, and a schematic's own
+# directory subtree is always searched, so the symbols resolve whatever flags you pass and the broken
+# read is otherwise unreachable by naming this design. Without the move this capture and its
+# --symbol-path twin below produced BYTE-IDENTICAL output, and the page rendered them as a
+# before/after anyway: 15 nets under a paragraph asserting zero. Same mechanism as rungs 4-6.
+#
+# --as-named is needed too: gateway.kicad_sch is a declared companion, so naming it reads the entry
+# instead, which is the correct read and not the one this rung is about.
 fixture: examples/tutorial-project
 script: |
-  agni stats designs/gateway/gateway.kicad_sch
+  mv designs/gateway/symbols designs/gateway/symbols-off
+  agni stats designs/gateway/gateway.kicad_sch --as-named

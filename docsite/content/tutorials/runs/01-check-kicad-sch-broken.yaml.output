@@ -1,0 +1,15 @@
+#agni-run 7e127b282908a7a4
+note: gateway-profiles supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
+findings by rule:
+  bulk-cap               1
+  cap-voltage            1
+  crystal-load-caps      1
+  dangling-endpoint      56
+  decoupling-present     1
+  dl/power-pin-mistyped  1
+  esd-clamp-not-tvs      1
+  esd-protection         1
+  fet-vdss-below-switched-rail 1
+  floating-input         1
+...
+108 finding(s) total
