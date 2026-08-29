@@ -98,30 +98,37 @@ clear.
 
 ## What the run says it looked at
 
-Look at the last two lines of that first run again. Every run ends with them, whether or not it found
+Look at the last line of that first run again. Every run ends with it, whether or not it found
 anything:
 
 ```
-187 subject(s) considered by 27 rule(s), 7 not considered (--verdicts for the detail)
-2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
+258 subject(s) considered by 36 rule(s), 7 not considered (--verdicts for the detail)
 ```
 
 This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
 examined the wrong thing produce an identical list of findings, namely none, so the findings alone
 can never tell you which one you are holding.
 
-Read the three numbers separately. **187 considered** is how many subjects were actually judged.
-**27 rules** is how many were willing to say what they looked at, which is not the same as how many
+Read the three numbers separately. **258 considered** is how many subjects were actually judged.
+**36 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran: most of the catalog has no subject in scope on any given board, and a rule with nothing to say is
 not a gap. **7 not considered** is the one worth reading closely, and it gets its own look below.
 
-The second line is the honest edge of the claim. Those 2 rules found something and never said what
-they examined, so silence from them means nothing at all, and the coverage number above does not
-cover them.
+A second line used to sit under that one, and its absence is the thing to notice:
 
-That number falls as the catalog converts. It was 3 while the design-intent rules still reported
-violations only, which is worth noticing: the rules you write for your own board were the last ones
+```
+2 rule(s) reported violations without stating what they examined, so silence from those is not evidence of anything
+```
+
+It counts rules that found something and never said what they looked at, so silence from them means
+nothing and the coverage number does not cover them. It is printed whenever the count is above zero,
+and on this board it now reads zero and is omitted entirely. It was 3 before the design-intent rules
+gained a considered set, then 2, now none. The rules you write for your own board were the last ones
 whose silence meant nothing, and they are the ones you most want a considered set from.
+
+You will still see the line on a board of your own, and on any run whose read went wrong: the broken
+schematic from rung 1 reports 30 such rules. Treat it as the honest edge of the coverage claim above
+it.
 
 That line is the claim. `--verdicts` is the evidence, one row per subject with passes included:
 
