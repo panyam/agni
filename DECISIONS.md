@@ -1239,3 +1239,41 @@ of one against itself. Companions stay declared file by file.
 
 **Reopen if** a design appears that wants its sheets from a companion and its copper from nowhere.
 That is a descriptor that should not declare the board, not a fourth resolution mode.
+
+---
+
+## A writer is named for its format, not hoisted behind a generic Write
+
+**Question.** The read side dispatches through one registry: `formats.Format` carries a `Design`
+hook, a `Geometry` hook and a `Board` hook, each nil when the format has no such tier, and every
+derived surface reads that one table. When the EDIF netlist writer landed and a second writer became
+foreseeable, should the write side mirror it with a `Write` hook per format?
+
+**Answer. No. Two facts break the symmetry, and neither is about EDIF.**
+
+There are TWO geometry messages, not one. `geom.SchematicGeometry` is the drawing (sheets,
+placements, wires, labels) and `geom.BoardGeometry` is the copper (outline, layers, pads), and they
+live in separate proto files because they are separate things. Formats split on which they carry:
+`.eds` and `.kicad_sch` carry the schematic, `.kicad_pcb` and IPC-2581 carry the board. A single
+geometry hook would therefore be the wrong shape for half the table. The read side gets away with
+one hook per tier because a reader PULLS tiers independently, and `Loader` already has three doors
+for that reason (`FaithfulGeometry`, `ResolveGeometry`, `BoardGeometry`).
+
+And a writer's output SHAPE varies where a reader's input shape does not. Every reader is handed one
+path. A writer is not: a KiCad schematic hierarchy is a root sheet, its child sheets, a symbol
+library and a project file, so its writer needs a directory and a naming policy rather than the
+single `io.Writer` a shared seam would impose. A generic hook would have to grow a filesystem
+abstraction, and decide single-file versus n-file, before it wrote a byte. That cost buys nothing:
+the caller already knows what it is writing to.
+
+**What this leaves open.** Concrete per-format writers named for what they emit, which is the shape
+already in the tree: `edif.WriteNetlist` and `ipc2581.Write` today, `edif.WriteSchematic` taking an
+EDIF-local Document (the netlist plus its schematic geometry) when something needs a drawn EDIF, and
+a `WriteBoard` taking `geom.BoardGeometry` if the deferred IPC-2581 copper tier is ever picked up.
+Each declares its own C6 fidelity contract, as `ipc2581.Write` already does for the copper it omits.
+The caller resolves the output target and picks: `emitFormat` in `cmd/agni` is that seam, and its
+`.eds` refusal names the distinction where someone will hit it.
+
+**Reopen if** three or more writers exist AND their output shapes have converged on one file each, so
+a shared seam would no longer have to model the filesystem. Two writers is not evidence; the second
+one arriving with a different output shape is evidence AGAINST.
