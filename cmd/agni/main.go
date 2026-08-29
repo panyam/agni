@@ -33,6 +33,7 @@ import (
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/internal/version"
+	"github.com/panyam/agni/readers/edif"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/stdlib/profiles"        // registers built-in "profile" rules; LoadDir adds overlay profiles
@@ -1221,27 +1222,87 @@ func diffCmd() *cobra.Command {
 }
 
 func emitCmd() *cobra.Command {
-	return &cobra.Command{
+	var format string
+	c := &cobra.Command{
 		Use:   "emit <in> [out]",
-		Short: "Emit an IPC-2581 file from a design (any input format; stdout if out omitted)",
+		Short: "Convert a design to IPC-2581 or an EDIF netlist (any input format; stdout if out omitted)",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
+			out := ""
+			if len(args) == 2 {
+				out = args[1]
+			}
+			// Resolve the format BEFORE reading, so an unknown one fails on the flag rather than
+			// after the design has been read and, when out names a file, after it has been created
+			// and truncated.
+			kind, err := emitFormat(format, out)
+			if err != nil {
+				return err
+			}
 			d, err := readDesign(args[0])
 			if err != nil {
 				return err
 			}
 			w := io.Writer(os.Stdout)
-			if len(args) == 2 {
-				out, err := os.Create(args[1])
+			if out != "" {
+				f, err := os.Create(out)
 				if err != nil {
 					return err
 				}
-				defer out.Close()
-				w = out
+				defer f.Close()
+				w = f
+			}
+			if kind == emitEDIF {
+				return edif.WriteNetlist(w, d)
 			}
 			return ipc2581.Write(w, d)
 		},
 	}
+	c.Flags().StringVar(&format, "format", "",
+		"output format: ipc2581 or edif. Omitted, it follows the OUT file's extension (.edn, .edf and .edif are EDIF), and is ipc2581 when writing to stdout, which has no extension to read")
+	return c
+}
+
+// The formats emit can write. Named so the resolver below and its caller cannot disagree on a
+// spelling, which a bare string pair silently would.
+const (
+	emitEDIF    = "edif"
+	emitIPC2581 = "ipc2581"
+)
+
+// emitFormat resolves which format an emit run writes, and NOTHING else. It deliberately returns the
+// format's name rather than the writer itself: a writer value would put a raw *ir.Design in this
+// signature, and C19 reserves that for a producer or an entry point, which format selection is
+// neither. Choosing a format is a question about two strings and should not need to know the design
+// type at all.
+//
+// A named format wins outright. Otherwise the OUT file's extension decides, which is the same
+// dispatch the read side uses (readers/formats) and is what lets `agni emit board.kicad_sch
+// board.edn` need no flag at all. Writing to stdout has no extension, so it falls back to IPC-2581,
+// which is what this command emitted unconditionally before EDIF joined it.
+//
+// .eds is refused rather than treated as EDIF. It is a dual-capability format, a netlist AND the
+// faithful schematic geometry beside it, so writing one from the netlist writer alone would produce
+// a file that claims to carry a drawing and carries none. There is no schematic writer yet, and
+// silently emitting half a document is worse than saying so.
+func emitFormat(format, out string) (string, error) {
+	if format == "" {
+		switch strings.ToLower(filepath.Ext(out)) {
+		case ".edn", ".edf", ".edif":
+			format = emitEDIF
+		case ".eds":
+			return "", fmt.Errorf("cannot emit %s: .eds is an EDIF SCHEMATIC (a netlist plus its geometry) and only the netlist writer exists; write the netlist to .edn, or pass --format to override", out)
+		default:
+			format = emitIPC2581
+		}
+	}
+	switch strings.ToLower(format) {
+	case emitEDIF:
+		return emitEDIF, nil
+	case emitIPC2581:
+		return emitIPC2581, nil
+	}
+	return "", fmt.Errorf("unknown emit format %q (have: %s, %s)", format, emitIPC2581, emitEDIF)
 }
 
 // sortedKeys returns the map keys in sorted order for stable output.

@@ -299,7 +299,27 @@ the whole question a restart policy acts on. It reads no other route and does no
 
 ### `emit <in> [out]`
 
-Convert any design the tool reads into an IPC-2581 file (stdout if `out` is omitted).
+Convert any design the tool reads into IPC-2581 or an EDIF netlist (stdout if `out` is omitted).
+A conversion is `A -> IR -> B` with the IR as the pivot, so the input format does not have to match
+the output one.
+
+| Flag | Meaning |
+|---|---|
+| `--format <fmt>` | `ipc2581` or `edif`. Omitted, the OUT file's extension decides: `.edn`, `.edf` and `.edif` write EDIF, everything else writes IPC-2581. Writing to stdout has no extension to read, so it writes IPC-2581 |
+
+```
+agni emit board.kicad_sch board.edn
+```
+
+Both writers are lossy-bounded and state their limits, so a conversion carries what the IR holds
+rather than what the source file held. The EDIF writer emits the netlist tier only. A hierarchical
+design writes out FLAT, because the reader scopes a read to the design's top cell and drops every
+sub-cell's contents before the writer sees it, and array bus declarations are not written because
+the diagnostic they reach the IR as does not record which port declared them.
+
+`.eds` is refused rather than treated as EDIF. It is a dual-capability format, a netlist plus the
+faithful schematic geometry beside it, and there is no schematic writer yet, so emitting one from
+the netlist writer alone would produce a file claiming to carry a drawing that carries none.
 
 ### `version`
 

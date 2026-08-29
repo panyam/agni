@@ -10,7 +10,7 @@ actors:
 
 ## One IR, many formats
 
-Every reader normalizes its source format into the same neutral IR, and a writer emits from it. So converting format A to format B is just A -> IR -> B, with the IR as the pivot. This walkthrough reads any of three input formats and emits IPC-2581 from it.
+Every reader normalizes its source format into the same neutral IR, and a writer emits from it. So converting format A to format B is just A -> IR -> B, with the IR as the pivot. This walkthrough reads any of three input formats and emits IPC-2581 from it. There is a second writer, the EDIF netlist, which the CLI reaches through `agni emit --format edif`.
 
 ## Pick an input design {#pick}
 
@@ -36,7 +36,7 @@ Agni -->> You: *ir.Design
 
 ## Choose an output format {#pick-format}
 
-> The IR can be emitted back to a format. Today the writer is IPC-2581; more emitters slot in here as they land. Choosing it makes this an A -> IR -> IPC-2581 conversion, for example KiCad or EDIF into IPC-2581.
+> The IR can be emitted back to a format. Two writers exist, IPC-2581 and the EDIF netlist, and more slot in here as they land. Choosing IPC-2581 makes this an A -> IR -> IPC-2581 conversion, for example KiCad or EDIF into IPC-2581.
 
 ```inputs
 - name: format
@@ -65,4 +65,4 @@ This walkthrough is the narrated form of one command:
     agni emit demo-board.kicad_pcb             # IPC-2581 to stdout
     agni emit demo-board.kicad_pcb out.xml     # ... or to a file
 
-So any format agni reads can be emitted as IPC-2581: KiCad -> IPC-2581, EDIF -> IPC-2581, or IPC-2581 -> IPC-2581 (the round-trip).
+So any format agni reads can be emitted as IPC-2581: KiCad -> IPC-2581, EDIF -> IPC-2581, or IPC-2581 -> IPC-2581 (the round-trip). The same pivot runs the other way through the EDIF netlist writer, which is what `agni emit board.kicad_sch board.edn` does.
