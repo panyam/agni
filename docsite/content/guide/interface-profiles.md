@@ -8,7 +8,7 @@ A {{ explainable "bus" }} has a shape. CAN is a CANH/CANL {{ explainable "differ
 TXD and RXD. I2C is SCL and SDA, both pulled up.
 
 An interface profile writes that shape down as YAML, and the engine compiles it into check rules.
-Agni ships profiles for SPI-NOR, eMMC, CAN, LIN, A2B, PCIe and SGMII. Your own interfaces, and your
+Agni ships profiles for SPI-NOR, eMMC, CAN, LIN, A2B, PCIe, SGMII and MDIO. Your own interfaces, and your
 own reading of a standard one, go in a directory you hand to `--profile-path`. No Go.
 
 ## Write a profile
@@ -122,6 +122,41 @@ requirements:
 
 Those files are the built-ins themselves, not copies of them, so they are safe to read as
 examples.
+
+## A profile with no host, and signals that differ from each other
+
+The shipped MDIO profile is the one to copy when the boards you check are exports nobody is going to
+annotate for you. It declares no `host:` at all.
+
+```yaml
+name: MDIO
+signals:
+  - {name: MDIO, regex: '(?i)(^|[^A-Z])MDIO([^A-Z]|$)', pullup: true, anchor: true}
+  - {name: MDC,  regex: '(?i)(^|[^A-Z])MDC([^A-Z]|$)'}
+requirements:
+  - {type: signal-missing}
+  - {type: missing-pullup}
+  - {type: signal-dangling}
+```
+
+`missing-pullup` and `signal-dangling` gate on the in-use test below, which is two distinct signals
+matching by name, and not on a host part. So this profile evaluates on any board whose nets are named
+conventionally, with nothing asked of the design.
+
+The asymmetry is the more important half. **MDIO carries `pullup` and MDC does not**, because they
+are not the same kind of line. MDIO is bidirectional and open-drain, undriven between frames and
+through every turnaround cycle, so a resistor is what holds it high and IEEE 802.3 clause 22 calls
+for one. MDC is a clock sourced by the station side, push-pull, driven whenever it matters. Requiring
+a pull-up on it would report a failure on every correctly-built board that omits one.
+
+That is the general point rather than a fact about Ethernet. `pullup` belongs on the signals that
+float when nobody is driving, not on every signal of a bus that has a pull-up somewhere. Marking a
+whole bus is how a profile starts producing failures a reviewer has to learn to ignore, and a
+checklist whose failures are routinely ignored is worse than no checklist.
+
+The pattern also shows why a signal's match is bounded. `MDCLK` opens with the letters `MDC` and is
+an unrelated clock, so both patterns require a non-letter on each side of the match. RE2 has no
+lookaround, so the boundary is written as explicit character classes.
 
 ## The anchor, and when a profile decides it is looking at your board
 

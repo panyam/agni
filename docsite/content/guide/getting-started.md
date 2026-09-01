@@ -60,13 +60,13 @@ Run the passing twin of that board:
 
 {{ agniRun "content/guide/runs/clean-run.yaml" }}
 
-The `78 rule(s) run` is the important half. It tells you the check actually *exercised* 78
+The `81 rule(s) run` is the important half. It tells you the check actually *exercised* 81
 rules and none fired, rather than staying quiet because it had nothing to work with. This is
 the "silence is not a pass" idea from [Concepts](../concepts/): a real all-clear names how
 many rules ran. If you load only a schematic and no board file, the copper rules simply do
 not appear in that count, because their tier is empty.
 
-The second line is the narrower claim underneath it. 78 rules ran, and 22 of them reached a
+The second line is the narrower claim underneath it. 81 rules ran, and 22 of them reached a
 subject to say something about, over 189 subjects between them. A rule that ran and found
 nothing to look at is not evidence about this board.
 

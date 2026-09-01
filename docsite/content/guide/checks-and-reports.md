@@ -73,7 +73,7 @@ The markdown one:
 
 {{ agniRun "content/guide/runs/markdown-report.yaml" }}
 
-The header line (`11 finding(s), 78 rule(s) run`) is your coverage receipt. It says how many
+The header line (`11 finding(s), 81 rule(s) run`) is your coverage receipt. It says how many
 rules actually ran, so a clean report is distinguishable from a report that had little to
 check. See "silence is not a pass" in [Concepts](../concepts/).
 
