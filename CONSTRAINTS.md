@@ -810,15 +810,11 @@ for per-entity questions and Go for the rest — and a shape that owns the fact 
 other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
 require picking an engine. This is the query-side twin of C17's downward-only layering and of the
 `check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
-**Verify:** no core package outside the engine itself reaches it, and neither does the relation
-catalog:
-
-    for p in $(go list ./core/... | grep -v '/core/query$'); do
-      go list -deps $p | grep -q 'panyam/agni/core/query' && echo "VIOLATION: $p"
-    done
-    go list -deps ./stdlib/relations | grep 'panyam/agni/core/query'
-
-Both print nothing. Quote the `-v` pattern, or zsh globs it.
+**Verify:** `go test ./core/facts/ -run NamesNoQueryEngine`, which sweeps every package under
+`core/...` and the relation catalog. It is a TEST rather than a command in this document because the
+first draft of this constraint was a command, and it went stale within three PRs of being written:
+both halves of a violation compile and pass, so nothing surfaces one until someone re-reads the rule.
+The shape is `core/model/deps_test.go`'s, for the same reason.
 **Note:** installing NO relation catalog still builds and still runs, and the fact base is then
 empty, so every relation is unknown and a datalog-authored rule reports clean — a quiet pass on a
 design nobody checked. `Registry.Installed` is what separates "matched nothing" from "nothing
