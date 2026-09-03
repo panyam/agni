@@ -86,9 +86,13 @@ not the directory.**
 an engine that answers questions over those tuples imports `core/facts`, never the reverse. That is
 what keeps datalog (`core/query`) one query shape among several rather than the primitive: `check.Spec`
 answers per-entity questions with no fact base at all, and a path question is a shape datalog cannot
-express (issues 374, 518). **Installing no relation catalog still builds and still runs**, leaving the
-fact base empty so every datalog rule reports clean; `facts.Installed` is what separates that from a
-query that matched nothing.
+express (issues 374, 518). A relation vocabulary is a composed VALUE (`facts.DefaultRegistry`, the
+twin of `check.DefaultCatalog`): the package globals are an append-only registration buffer and every
+READ goes through a `*Registry` a caller holds. **Installing no relation catalog still builds and
+still runs**, leaving the fact base empty so every datalog rule reports clean; `Registry.Installed`
+is what separates that from a query that matched nothing. `core/review` names no query syntax either
+— a manifest's inline query compiles through a registered `review.QueryCompiler` (`stdlib/reviewquery`
+is the datalog one), so no core package outside `core/query` knows a query language.
 
 `intake/` deserves a callout: it produces a sanitized design summary, and its confidentiality
 guarantee is **structural**. The `Skeleton` type has no field that can hold a net name or a
