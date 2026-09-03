@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 )
 
 // projectTable is a ProjectStore that answers Project(name) from a map, which is all an extends walk

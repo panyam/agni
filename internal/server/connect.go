@@ -14,7 +14,7 @@ import (
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

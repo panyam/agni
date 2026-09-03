@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/datasheet/doc"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 

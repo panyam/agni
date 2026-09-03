@@ -11,14 +11,14 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/graph"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
-	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/service"
 )
 
 // mountFS mirrors the helper in the internal test file: fixtures loaded from disk but mounted

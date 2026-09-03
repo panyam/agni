@@ -1155,7 +1155,7 @@ answer is obviously something that crosses boundaries?
 **Answer.** No, and the package already contains the precedent. `report.Report` is a Go struct
 carrying `URLBase`, `MountPath` and `Generated`, which are presentation framing rather than facts
 about a run, while the check report's WIRE form is `checkspb.CheckReport`, assembled separately in
-`internal/service/report.go`. Rendering type and wire type are deliberately different things here,
+`service/report.go`. Rendering type and wire type are deliberately different things here,
 and `Table` follows `Report`.
 
 The stronger reason is that a wire type for a query answer already exists. `webapi.RunQueryResponse`

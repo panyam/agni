@@ -10,7 +10,7 @@ import (
 
 	"github.com/panyam/agni/core/results"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 func storeDoc(design string) *checkspb.CheckResults {

@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 const overlayProfileYAML = `

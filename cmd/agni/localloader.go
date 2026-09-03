@@ -9,17 +9,17 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/review"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/service"
 )
 
 // localLoader is the CLI's service.Loader: it resolves a bare LOCAL path with NO mount containment

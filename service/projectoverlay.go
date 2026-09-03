@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 )
 
 // ProjectResolver is the two ports a rule-running surface needs to answer "whose config applies to

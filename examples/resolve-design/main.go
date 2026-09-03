@@ -16,11 +16,11 @@ import (
 
 	"github.com/panyam/demokit"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 //go:embed walkthrough.md

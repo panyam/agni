@@ -7,7 +7,7 @@ import (
 	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // writeVerdictHTML renders the run as a self-contained report page.

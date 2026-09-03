@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"os"
 	"path/filepath"
 	"sync"
@@ -73,7 +73,7 @@ func outcomeOf(rv *webapi.Review, id string) (string, bool) {
 }
 
 func newReviewSvc() *ReviewService {
-	base := filepath.Join("..", "..", "cmd", "agni", "testdata")
+	base := filepath.Join("..", "cmd", "agni", "testdata")
 	return NewReviewService(fsReviewLoader{base: base}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
 }
 
@@ -83,7 +83,7 @@ func newReviewSvc() *ReviewService {
 // hand-built proto that could drift from what the YAML actually parses to.
 func fixtureManifest(t *testing.T, name string) *checkspb.ReviewManifest {
 	t.Helper()
-	man, err := fsReviewLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}.Manifest(context.Background(), testURI(t, "m", name))
+	man, err := fsReviewLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}.Manifest(context.Background(), testURI(t, "m", name))
 	if err != nil {
 		t.Fatalf("load manifest fixture %s: %v", name, err)
 	}
@@ -428,7 +428,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 // naming different conventions, must each see their own. Run concurrently and repeatedly so a shared
 // mutable vocabulary would show up as a race or a flipped outcome rather than passing by luck.
 func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
-	svc := NewReviewService(fsReviewLoader{base: "../../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
+	svc := NewReviewService(fsReviewLoader{base: "../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
 	req := func(conventions string) *webapi.CreateReviewRequest {
 		r := &webapi.CreateReviewRequest{
 			Manifest:  fixtureManifest(t, "review/conv.yaml"),
@@ -437,7 +437,7 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 		if conventions != "" {
 			// The convention travels as a VALUE, so the caller decides where it came from; here that is
 			// the same YAML the CLI test uses, read by the test rather than by the service.
-			cfg, err := naming.Load(filepath.Join("../../cmd/agni/testdata", conventions))
+			cfg, err := naming.Load(filepath.Join("../cmd/agni/testdata", conventions))
 			if err != nil {
 				t.Fatalf("naming.Load: %v", err)
 			}

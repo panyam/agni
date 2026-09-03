@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 
 	"github.com/panyam/agni/datasheet/param"
 	docpb "github.com/panyam/agni/gen/go/agni/v1/doc"

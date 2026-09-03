@@ -3,7 +3,7 @@ package projects
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"os"
 	"path/filepath"
 	"testing"

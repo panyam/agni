@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // osNative is the OS-backed service.NativeRenderer adapter: it gates and shells out to the format's

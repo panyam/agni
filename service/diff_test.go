@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"strings"
 	"testing"
 
@@ -324,7 +324,7 @@ func TestDiffDesignsLoadErrors(t *testing.T) {
 func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	l := &formats.Loader{}
 	load := func(rev string) (*ir.Design, *geom.SchematicGeometry) {
-		p := "../../web/testdata/diffdemo/msheet_rev_" + rev + ".kicad_sch"
+		p := "../web/testdata/diffdemo/msheet_rev_" + rev + ".kicad_sch"
 		d, err := l.ReadDesign(p)
 		if err != nil {
 			t.Fatalf("read %s: %v", p, err)

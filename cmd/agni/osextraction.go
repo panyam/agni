@@ -13,10 +13,10 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/panyam/agni/artifact"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // partSpecSuffix is the sibling a datasheet's shared PartSpec is written to: LM1117.pdf pairs with

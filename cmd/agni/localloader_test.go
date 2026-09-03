@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/readers/formats"
 )
 

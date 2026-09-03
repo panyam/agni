@@ -8,12 +8,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/version"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"

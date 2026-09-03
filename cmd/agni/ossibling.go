@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 

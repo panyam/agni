@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/service"
 )
 
 // readerFor picks the formats.Loader one read should use: the shared one when the read carries no

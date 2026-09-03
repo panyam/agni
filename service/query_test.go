@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -669,7 +669,7 @@ func (l fsQueryLoader) Design(_ context.Context, uri artifact.URI, opts ...ReadO
 // none of.
 func houseConvention(t *testing.T) *configpb.NamingConvention {
 	t.Helper()
-	cfg, err := naming.Load(filepath.Join("..", "..", "cmd", "agni", "testdata", "review", "conventions.yaml"))
+	cfg, err := naming.Load(filepath.Join("..", "cmd", "agni", "testdata", "review", "conventions.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -700,7 +700,7 @@ func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
 // is a loop of writing a pattern and asking which nets are rails now, and query is the tool for that
 // loop.
 func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
-	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil, nil)
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}, nil, nil)
 	ask := func(ov *webapi.OverlayConfig) []string {
 		t.Helper()
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -731,7 +731,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 // compile into a catalog must still answer, because a query composes no catalog at all — the
 // alternative is refusing a config that is fine for the question being asked.
 func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
-	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "..", "cmd", "agni", "testdata")}, nil, nil)
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}, nil, nil)
 	conv := houseConvention(t)
 	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
 	conv.Rules = append(conv.Rules, &configpb.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})

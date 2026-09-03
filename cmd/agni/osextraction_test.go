@@ -9,7 +9,7 @@ import (
 
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 func TestPartSpecSibling(t *testing.T) {

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"testing"
 
 	"github.com/panyam/agni/core/check"

@@ -214,7 +214,7 @@ and keep styling overridable (theming, dark mode, accessibility) without editing
 ## C13: Service impls are importable, transport-neutral, and take I/O via injected ports
 **Rule:** The service implementations (`WorkspaceService`, `DesignService`, `CheckService`,
 `DiffService`, and any future service such as the WS10 parameter service) live in an
-importable package (`internal/service/`), never in `package main`, and are
+importable package (`service/`), never in `package main` and never under `internal/`, and are
 **transport-neutral**: every method carries a plain protobuf signature
 (`(ctx, *pb.XRequest) (*pb.XResponse, error)`) and classifies its errors with the package's
 sentinels — no `connectrpc`/gRPC/transport imports. Transports are thin adapters over them:
@@ -233,11 +233,21 @@ runtime-agnostic; only the adapters (I/O and transport) are per-runtime.
 not run in WASM, be served over gRPC, or be reused from a second entrypoint. C1 wants "the
 same code runs on the server, in WASM, and in CLI/tests"; that must hold for the service tier
 too (the lilbattle services.go shape: gRPC-style impls, transports as translation layers).
-**Verify:** no `os.`, `syscall/js`, or `connectrpc.com` imports in `internal/service/` impl
-files (`internal/service/transport_guard_test.go` runs the transport check in CI); service
+"Importable" means importable by an EMBEDDER, not merely by a second package in this module. The tier
+lived in `internal/service/` until the SDK work, which satisfied every clause of this rule except the
+first one and made the heading false: an overlay at `github.com/yourorg/...` could not name the
+package at all, so option 3 (embed the engine as a library) could not reach option 1 (the web
+console) without forking `cmd/agni`. `examples/resolve-design` is the proof it was a real gap and not
+a theoretical one. It reaches the tier only because its own module path is nested under
+`github.com/panyam/agni/`, which is to say we shipped an embedding example no embedder could
+reproduce. `artifact` moved with it, because `artifact.URI` is in the loader ports' signatures and a
+port an embedder cannot name is not a port.
+**Verify:** no `os.`, `syscall/js`, or `connectrpc.com` imports in `service/` impl
+files (`service/transport_guard_test.go` runs the transport check in CI); service
 constructors take ports; `cmd/agni` builds the OS-backed adapters and registers
 `internal/server` wrappers via the generated Connect handlers (C2); `protos/agni/v1/webapi/`
-holds one file per service.
+holds one file per service; and `go list ./service/... ./artifact/...` names no path under
+`internal/`, so the tier cannot drift back behind the module boundary.
 
 ## C14: Rule classification is open tags, not typed fields
 **Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
@@ -296,7 +306,7 @@ into their own modules) without dragging the application tail. The generated con
 (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`) and the reader registry
 (`readers/formats`) depend
 only downward — on the contract and shared parse/geom helpers — never on the application tiers
-(`internal/service/`, `internal/server/`, the web transport, `servicekit`, `connectrpc`).
+(`service/`, `internal/server/`, the web transport, `servicekit`, `connectrpc`).
 `readers/formats` is public (not `internal/`) precisely so an out-of-module reader registers through it
 (WS12-003); that is the ONE reader extension seam. This subsumes C15 (readers ⊅ `render`/`svg`)
 and generalizes it to the whole heavy tail.
@@ -306,7 +316,7 @@ registry — not on the web/serve tier. Go module-graph pruning already keeps th
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
 the seam clean now so the split stays a rename, not a refactor.
 **Verify:** `go list -deps ./readers/... | grep -E
-'servicekit|connectrpc|panyam/agni/(core/render|core/svg|serve|internal/service|internal/server)'`
+'servicekit|connectrpc|panyam/agni/(core/render|core/svg|serve|service|internal/server)'`
 returns nothing; and `go list -deps ./gen/... | grep 'panyam/agni/' | grep -v '/gen/'` returns
 nothing (the contract imports no first-party package).
 
@@ -337,12 +347,12 @@ as its input*. A raw `*ir.Design` (or `*ir.Net`/`*ir.Component`) parameter is al
 categories: (1) **producing** the IR — the readers (under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`,
 `geda`), the `readers/formats` loader, `internal/netgraph` (IR emission); (2) **constructing** the Model or
 **loading** the design — `check`'s `NewModel`/`NewModelWithBoard`/`NewModelWithParams`/`RunDesign`,
-and the `cmd/agni`/`internal/service` loaders that read a file and build the Model; (3) a
+and the `cmd/agni`/`service` loaders that read a file and build the Model; (3) a
 **top-level analysis/transform that takes designs as its input and uses no Model index** — `diff`
 (compares two designs, builds its own by-key match maps), `validate`, and `graph` (netlist→layout).
 These consumer packages (`diff`, `validate`, `graph`) and the producers are excluded from the
 `make ir-model-check` scan wholesale; `examples/` too (demos). Everywhere else — a helper in `check`,
-`internal/service`, `cmd` handed a design to read — goes through `model.Model`; a read the Model lacks
+`service`, `cmd` handed a design to read — goes through `model.Model`; a read the Model lacks
 is added as an indexed member method (the `HasComponent`/`IsPowerRail`/`SourceFormat` precedent),
 never re-scanned inline.
 **Why:** `ir.Design` is an index-less message, so every helper that scans it re-walks O(n) per call;
@@ -355,7 +365,7 @@ ratcheting the baseline down — never a big-bang rewrite. The read-surface cont
 package `model` (WS1-043): the `Model` interface and its value types, importing only the generated
 `ir`/`geom`/`param` protos, so a consumer depends on the contract, not the `check` implementation
 (rules + `param` logic + `irModel`); `check` implements it and re-exports the names as aliases. The
-genuine helper smells have been migrated (`LocateReason`, the `internal/service` sheet-annotate
+genuine helper smells have been migrated (`LocateReason`, the `service` sheet-annotate
 helpers, `check.Available`); the baseline that remains is the sanctioned construction/loading sites
 (`NewModel*`, `readDesign`, the loader) plus a CLI render helper (`compareLayouts`), which the
 ratchet holds flat.
@@ -439,7 +449,7 @@ caller installs before invoking (`SetActiveRoleVocab` and friends) may exist onl
 never mutated per run, because ambient state cannot be scoped to one request and one caller's config
 then reaches another caller's work. It must not be a **locator the callee resolves**: a wire request
 carries the config as a message (`OverlayConfig.conventions` is a `NamingConvention`, not a
-`conventions_path`), so `internal/service` composes it with NO file I/O and how it was obtained — a
+`conventions_path`), so `service` composes it with NO file I/O and how it was obtained — a
 YAML file the CLI read, a form a browser filled, a registry a deployment queried — stays the caller's
 business.
 
@@ -514,7 +524,7 @@ never triggers it.
 
 **Verify:** no `mount` + `path` PAIR and no `*_path` or `*_ref` field in `protos/agni/v1/webapi/` — an
 artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
-travels as a value; no `os`/`path/filepath`/`io/fs` import in `internal/service/`
+travels as a value; no `os`/`path/filepath`/`io/fs` import in `service/`
 impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabulary installers
 (`naming.ApplyLexicon`, `classify.SetActive*`) are called only from entrypoint startup wiring
 (`cmd/agni`), never from a service method or any per-run path.
@@ -661,7 +671,7 @@ snapshot, which nobody cross-reads. This is C22's value-not-locator rule applied
 run rather than to its inputs, and it is a single-writer constraint for the same reason
 `service.FindingProto` is: two places that build one message agree until the day they do not.
 **Verify:** `grep -rn 'checkspb.RunConfig{' --include='*.go' . | grep -v _test.go` returns only
-`internal/service/projectoverlay.go`. Test files are excluded because a fixture legitimately builds a
+`service/projectoverlay.go`. Test files are excluded because a fixture legitimately builds a
 document to render (`core/results/results_test.go`); the rule is about who WRITES a run's record. Quote
 the `--include` glob, or zsh expands it and grep never sees the flag.
 **Note:** which tier a rule source came from is NOT recoverable after composition — a compiled
@@ -702,10 +712,10 @@ a compile error, and that holds for a new NODE TYPE covered by a type switch, no
 an already-mapped struct.
 **Verify:** every `*Proto`/`*FromProto` pair over a config or rule-definition body has a test doing
 `FromProto(Proto(full))` under `reflect.DeepEqual` with a fully-populated fixture. All six pairs are
-covered: `TestManifestProtoRoundTrip` (`internal/service`), `TestProfileProtoRoundTrip`
+covered: `TestManifestProtoRoundTrip` (`service`), `TestProfileProtoRoundTrip`
 (`stdlib/profiles`), `TestSpecProtoRoundTrip` (`core/check`), `TestQueryProtoRoundTrip`
 (`core/query`), `TestRuleMetaProtoRoundTrip` (`core/check`), and `TestVerdictProtoRoundTrip`
-(`internal/service`, guarded by `TestVerdictFieldCensus` beside it). A new body owes one before it
+(`service`, guarded by `TestVerdictFieldCensus` beside it). A new body owes one before it
 ships, not after it drifts.
 
 `RuleMetaProto`/`RuleMetaFromProto` was the fifth pair and went uncovered while this list said four,

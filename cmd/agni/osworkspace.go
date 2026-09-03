@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // osWorkspace is the OS-backed service.Workspace adapter: it resolves a (mount, relpath) to an
