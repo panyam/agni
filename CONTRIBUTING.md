@@ -108,9 +108,12 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   `gh pr create` reporting "No commits between main and <branch>". Recovery is cheap when the tree is
   clean (`git branch -f <branch> <sha>`, `git branch -f main origin/main`), so the cost is entirely in
   not noticing. `git branch --show-current` before the commit is the whole fix.
-- **Verify a push by its EXIT CODE, never by grepping its output.** `git push | tail -1` swallows a
+- **Verify ANY command by its EXIT CODE, never by grepping or truncating its output.** `git push | tail -1` swallows a
   failure, and `git push 2>&1 | grep <branch>` reports success on a FAILED push, because the branch
-  name appears inside the failure message. Run `git push; echo "EXIT=$?"`.
+  name appears inside the failure message. Run `git push; echo "EXIT=$?"`. The same shape bites every
+  piped command, not just push: `gh pr create ... | tail -3` reported `EXIT=0` on a run that had
+  FAILED with an auth error, because the pipeline's status is `tail`'s. Redirect to a file and echo
+  `$?` on its own line, then read the file.
 - **`Closes #A and #B` closes only A.** GitHub parses the keyword PER ISSUE, so a PR fixing two
   tickets needs `Closes #A, closes #B`. The second issue stays open and silently reads as unfinished
   work while its fix is already in `main`. Check both after the merge rather than trusting the body.
@@ -179,7 +182,11 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   Quote the delimiter whenever the body is prose, and read the output back before pushing it.
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates
   ONCE over the whole blob, and a sweep that did this compared one file and reported success. Glob
-  directly in the `for`, or use an array.
+  directly in the `for`, or use an array. **The nastiest form is a before/after comparison loop**:
+  `for c in "check --verdicts" "stats"; do ./bin-a $c > a; ./bin-b $c > b; diff a b; done` passes each
+  string as ONE argument, so both binaries print `unknown command` and the diff reports them
+  identical. A refactor was reported behaviour-preserving on four commands that had never run. Write
+  a function taking `"$@"`, and sanity-check the captured line COUNT before believing a diff.
 - **To undo a temporary red-check edit, reverse it with the tool that made it, never `git checkout`.**
   `git checkout <file>` and `git checkout HEAD -- <file>` restore from a COMMIT, not from "before I
   typed that", so on a file carrying uncommitted work they destroy all of it including the change the
