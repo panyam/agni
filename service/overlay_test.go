@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"os"
 	"path/filepath"
 	"strings"

@@ -5,12 +5,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/graph"
 	"github.com/panyam/agni/core/render"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/expect"
 )
 

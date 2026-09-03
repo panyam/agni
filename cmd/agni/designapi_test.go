@@ -14,7 +14,7 @@ import (
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // newDesignSvc builds a DesignService over the os-backed adapters for the given mounts (no native

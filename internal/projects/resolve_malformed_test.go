@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/panyam/agni/internal/artifact"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/service"
 )
 
 // A malformed descriptor is now fatal for the design it governs, so these pin the boundary of that:

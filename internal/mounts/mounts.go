@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/internal/artifact"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/service"
 )
 
 // Mount is one configured root folder the web API serves. Name is the handle a client

@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/panyam/agni/core/diff"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // writeDiffJSON emits the diff as a DiffDesignsResponse in protojson form, the same message

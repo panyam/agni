@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/datasheet/param"

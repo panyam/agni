@@ -2,7 +2,7 @@ package projects
 
 import (
 	"context"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"strings"
 	"testing"
 	"testing/fstest"

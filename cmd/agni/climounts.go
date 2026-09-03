@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // cliMountSpecs holds the --mount flag values. It is a root PERSISTENT flag, so the same

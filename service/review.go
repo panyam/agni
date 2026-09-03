@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"strconv"
 	"strings"
 

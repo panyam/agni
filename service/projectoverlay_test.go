@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 )
 
 // twoProjects is a deployment serving two teams' boards, each with a naming convention that names

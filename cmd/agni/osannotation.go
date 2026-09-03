@@ -12,8 +12,8 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 

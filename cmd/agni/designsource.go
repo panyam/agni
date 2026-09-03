@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/projects"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 )
 
 // readAsNamed is the --as-named flag's binding: a cobra persistent flag bound once at startup and

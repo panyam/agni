@@ -75,8 +75,9 @@ Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
 (`stdlib/rules/builtin/rule_*.go`, `stdlib/rules/datalog`, `stdlib/rules/intent`,
 `stdlib/relations`, `stdlib/profiles`). The datasheet stack under **`datasheet/`** (`param`, `doc`,
-`derive`). Plus `cmd/agni/`, `internal/`, `intake/`, `census/`, `protos/` + `gen/`, `docsite/`,
-`web/`, `hack/`, `tools/`.
+`derive`). The embedding surface under **`service/`** (the transport-neutral service impls and their
+ports) and **`artifact/`** (the `mount://` URI those ports speak). Plus `cmd/agni/`, `internal/`,
+`intake/`, `census/`, `protos/` + `gen/`, `docsite/`, `web/`, `hack/`, `tools/`.
 
 Notes written before this layout landed name the old directories. **Grep the SYMBOL or filename,
 not the directory.**
@@ -93,6 +94,15 @@ still runs**, leaving the fact base empty so every datalog rule reports clean; `
 is what separates that from a query that matched nothing. `core/review` names no query syntax either
 — a manifest's inline query compiles through a registered `review.QueryCompiler` (`stdlib/reviewquery`
 is the datalog one), so no core package outside `core/query` knows a query language.
+
+`service/` deserves a callout: it is what an EMBEDDER composes against, which is why it is not under
+`internal/` (C13). `ProjectStore` and `ProjectConfigLoader` are the two ports a private deployment
+implements to serve its own designs and its own config, and `ResolvedConfig` is the value a tier
+resolves to (rule sources, a param provider, symbol paths). It moved out of `internal/service` with
+`artifact` in tow, because `artifact.URI` is in the loader-port signatures. The rule that keeps it
+honest is unchanged: no `os`, no `path/filepath`, no transport imports, and every I/O concern
+arrives as an injected port. `internal/projects` (the directory-walking `FSStore`) stays internal on
+purpose, because everything true only of storing projects in DIRECTORIES lives behind the port.
 
 `intake/` deserves a callout: it produces a sanitized design summary, and its confidentiality
 guarantee is **structural**. The `Skeleton` type has no field that can hold a net name or a

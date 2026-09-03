@@ -183,9 +183,40 @@ go build ./... && go test ./...
 Add a smoke test that your reader loads a fixture and your rule fires. The template's
 `template_test.go` and `examples/overlay/overlay_test.go` show the shape.
 
+## Serve your own catalog with the service tier
+
+Registering a reader and a rule suite gets your extensions into a catalog. Running the engine's
+application layer over that catalog is the `service` package, which is public for exactly this
+reason (C13). The service impls are transport-neutral, so they carry plain protobuf signatures and
+take every I/O concern as an injected port:
+
+```go
+import (
+    "github.com/panyam/agni/core/check"
+    "github.com/panyam/agni/gen/go/agni/v1/webapi"
+    "github.com/panyam/agni/service"
+)
+
+// DefaultCatalog is the built-ins plus every source your init registered.
+svc := service.NewCheckService(myLoader, check.DefaultCatalog(), specs, "", conventions, projects)
+resp, err := svc.ListRules(ctx, &webapi.ListRulesRequest{})
+```
+
+Two ports are worth knowing by name. `service.ProjectStore` answers what projects and designs exist
+and which design an artifact belongs to, so a deployment backed by a PLM system or an index
+implements it instead of walking directories. `service.ProjectConfigLoader` resolves what a project's
+analysis config points at, returning a `service.ResolvedConfig` carrying rule sources, a parameter
+provider, and symbol paths. Both speak `artifact.URI`, the `mount://` name for a file, which is why
+that package is public too.
+
+Your rules reach the web console through the same path with no extra work. `CheckService.ListRules`
+maps whatever catalog it was built over to the wire, and the client resolves its filter bundles
+against that response, so there is no static rule table anywhere to also update.
+
 ## A current limitation: the CLI is not yet reusable
 
-This path drives the engine library. Reusing the engine's whole CLI, so `my-overlay serve` and
-`my-overlay check` inherit your reader and rules, needs the engine to export a reusable command
-root, which it does not do yet. `cmd/agni` is `package main`. Until then, compose the library as
-above, or run the stock `agni` and register your extensions into a binary you build.
+The service tier above is reusable; the command line over it is not yet. Reusing the engine's whole
+CLI, so `my-overlay serve` and `my-overlay check` inherit your reader and rules with their flags
+intact, needs the engine to export a reusable command root, which it does not do yet. `cmd/agni` is
+`package main`. Until then, compose the library and the services as above, or run the stock `agni`
+and register your extensions into a binary you build.

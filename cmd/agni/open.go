@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 

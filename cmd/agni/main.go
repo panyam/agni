@@ -31,11 +31,11 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/mounts"
-	"github.com/panyam/agni/internal/service"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/readers/edif"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/readers/ipc2581"
+	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/profiles"        // registers built-in "profile" rules; LoadDir adds overlay profiles
 	_ "github.com/panyam/agni/stdlib/relations"     // registers the built-in EDB query relations (netlist/board/datasheet)
 	_ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a review manifest's inline query bindings as datalog

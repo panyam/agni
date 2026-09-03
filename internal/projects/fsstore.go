@@ -3,14 +3,14 @@ package projects
 import (
 	"context"
 	"fmt"
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"io/fs"
 	"path"
 	"sort"
 
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/service"
+	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -38,5 +38,5 @@ The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's
 `FromMarkdown`. `main.go` binds the four steps that run engine code (`pick`, `list`,
 `resolve`, `read`) and wires the renderer. Descriptor parsing and discovery sit behind the port in
 [`internal/projects`](../../internal/projects), the service in
-[`internal/service`](../../internal/service), design loading in [`../common`](../common). See
+[`service`](../../service), design loading in [`../common`](../common). See
 [`../CONVENTIONS.md`](../CONVENTIONS.md) for the layout every example follows.

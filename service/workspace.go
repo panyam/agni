@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/panyam/agni/internal/artifact"
+	"github.com/panyam/agni/artifact"
 	"sort"
 	"strings"
 

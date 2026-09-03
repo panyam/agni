@@ -8,9 +8,9 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
-	"github.com/panyam/agni/internal/artifact"
 	"github.com/panyam/agni/internal/mounts"
 )
 
