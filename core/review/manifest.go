@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/query"
 	"gopkg.in/yaml.v3"
 )
 
@@ -224,6 +223,7 @@ func Validate(m Manifest) error {
 
 // compileQuery turns an item's inline QueryBinding into a check.Rule (shared by Load's validation and
 // Run's resolution). Requires match/subject/message; kind defaults to component, severity to warning.
+// Everything past that is the registered engine's business: this function never parses the query.
 func compileQuery(it Item) (*check.Rule, error) {
 	q := it.Binding.Query
 	if strings.TrimSpace(q.Match) == "" || strings.TrimSpace(q.Subject) == "" || strings.TrimSpace(q.Message) == "" {
@@ -241,21 +241,21 @@ func compileQuery(it Item) (*check.Rule, error) {
 	if sev == "" {
 		sev = "warning"
 	}
-	prog, err := query.Parse(q.Match)
+	c, err := queryCompiler()
 	if err != nil {
-		return nil, fmt.Errorf("query does not parse: %w", err)
+		return nil, err
 	}
-	return query.RuleFromQuery(query.FindingQuery{
+	return c.CompileQuery(QueryRequest{
 		Rule: check.Rule{
 			Name:     "review/" + it.ID,
 			Severity: sev,
 			Summary:  it.Title,
 			Tags:     map[string]string{check.KeyCategory: check.CategoryConnectivity, check.KeyDistribution: check.DistOpen},
 		},
-		Query:       prog,
+		Query:       q.Match,
 		Kind:        kind,
-		SubjectVar:  q.Subject,
+		Subject:     q.Subject,
 		Message:     q.Message,
 		ParamSymbol: q.ParamSymbol,
-	}), nil
+	})
 }
