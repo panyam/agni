@@ -16,11 +16,11 @@ import (
 // that omits the catalog import still builds and still runs; the fact base is simply empty, so this
 // is the one moment the omission is visible. Reading it as a bad query rather than a missing catalog
 // is how a design nobody checked comes to look clean.
-func didYouMean(name string) string {
-	if !facts.Installed() {
+func didYouMean(reg *facts.Registry, name string) string {
+	if !reg.Installed() {
 		return "; no fact relations are installed (import a relation catalog, e.g. stdlib/relations)"
 	}
-	if s := suggestRelation(name); s != "" {
+	if s := suggestRelation(reg, name); s != "" {
 		return fmt.Sprintf(`; did you mean %q?`, s)
 	}
 	return ""
@@ -29,9 +29,9 @@ func didYouMean(name string) string {
 // suggestRelation returns the catalog relation whose name is closest to `name` when it is within a
 // plausible-typo distance, else "" — so a genuinely-unrelated token gets no misleading suggestion.
 // The threshold scales with the name length (a longer name tolerates more slips) with a floor of 2.
-func suggestRelation(name string) string {
+func suggestRelation(reg *facts.Registry, name string) string {
 	best, bestDist := "", 0
-	for _, r := range Catalog() {
+	for _, r := range CatalogFrom(reg) {
 		d := levenshtein(name, r.Name)
 		if best == "" || d < bestDist {
 			best, bestDist = r.Name, d

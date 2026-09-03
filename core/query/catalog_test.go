@@ -22,7 +22,7 @@ func TestCatalogMatchesSchema(t *testing.T) {
 		byName[r.Name] = r
 	}
 	// Every EDB relation is catalogued with matching arity.
-	for rel, fields := range facts.Schema() {
+	for rel, fields := range facts.DefaultRegistry().Schema() {
 		info, ok := byName[rel]
 		if !ok {
 			t.Errorf("edb relation %q has no catalog entry", rel)
@@ -40,7 +40,7 @@ func TestCatalogMatchesSchema(t *testing.T) {
 	}
 	// No catalog row names a nonexistent built-in construct.
 	for name, info := range byName {
-		isEDB := facts.IsRelation(name)
+		isEDB := facts.DefaultRegistry().IsRelation(name)
 		_, isPred := builtins[name]
 		if !isEDB && !isPred {
 			t.Errorf("catalog entry %q (kind %s) is neither an EDB relation nor a predicate", name, info.Kind)
@@ -68,11 +68,10 @@ func TestCatalogSortedByKindThenName(t *testing.T) {
 func TestCatalogIncludesOverlayRelation(t *testing.T) {
 	// Register a throwaway overlay relation and confirm it surfaces with synthesized arg labels.
 	const name = "test.catalog_overlay"
-	if !facts.IsRelation(name) {
-		facts.RegisterRelation(name, []facts.Field{facts.FieldSubject, facts.FieldNum}, func(check.Model) []facts.Row { return nil })
-	}
+	reg := facts.RegistryWith(facts.WithRelation(name, []facts.Field{facts.FieldSubject, facts.FieldNum},
+		func(check.Model) []facts.Row { return nil }))
 	found := false
-	for _, r := range Catalog() {
+	for _, r := range CatalogFrom(reg) {
 		if r.Name == name {
 			found = true
 			if r.Kind != KindOverlay {

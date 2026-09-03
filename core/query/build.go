@@ -59,13 +59,16 @@ func MustParse(s string) Query {
 // query-backed rule declares it reads (drives check.Available's param/board gating). IDB relations a
 // Def introduces and built-in generators (reaches) are excluded; only relations in the fact schema
 // count as reads.
-func Reads(q Query) []string {
+func Reads(q Query) []string { return ReadsFrom(facts.DefaultRegistry(), q) }
+
+// ReadsFrom is Reads over an explicit relation vocabulary, for a caller composing its own.
+func ReadsFrom(reg *facts.Registry, q Query) []string {
 	seen := map[string]bool{}
 	visit := func(b Body) {
 		for _, l := range b.Literals {
 			for _, a := range []*Atom{l.Pos, l.Neg} {
 				if a != nil {
-					if facts.IsRelation(a.Relation) {
+					if reg.IsRelation(a.Relation) {
 						seen[a.Relation] = true
 					}
 				}

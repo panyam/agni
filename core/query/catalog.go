@@ -45,8 +45,11 @@ var builtinPredicates = []RelationInfo{
 // sorted by kind (KindOrder) then name, so a caller renders a stable grouped list without re-sorting.
 // Overlay predicates (RegisterPredicate) are not listed: they carry no arg-label metadata, so a
 // template would be unhelpful.
-func Catalog() []RelationInfo {
-	rels := facts.Relations()
+func Catalog() []RelationInfo { return CatalogFrom(facts.DefaultRegistry()) }
+
+// CatalogFrom is Catalog over an explicit relation vocabulary.
+func CatalogFrom(reg *facts.Registry) []RelationInfo {
+	rels := reg.Relations()
 	out := make([]RelationInfo, 0, len(rels)+len(builtinPredicates))
 	out = append(out, rels...)
 	out = append(out, builtinPredicates...)
@@ -54,7 +57,7 @@ func Catalog() []RelationInfo {
 	// documented predicate lists with its Detail and an undocumented one still lists with its Summary.
 	for i := range out {
 		if out[i].Detail == "" {
-			out[i].Detail = facts.Doc(out[i].Name)
+			out[i].Detail = reg.Doc(out[i].Name)
 		}
 	}
 	kindRank := map[string]int{}

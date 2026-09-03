@@ -19,6 +19,10 @@ type Base struct {
 	edb       map[string][]facts.Row
 	netByName map[string]*ir.Net
 	model     check.Model
+	// reg is the relation vocabulary this base was built from. It is held rather than looked up
+	// globally so a base and the schema it resolves against cannot disagree: a registration that
+	// happens after NewBase must not change how an in-flight query reads.
+	reg *facts.Registry
 	// idb holds the derived (IDB) relations materialized from a query's user-defined rules, and
 	// idbArity their positional arity (from the rule heads). Both are nil on the shared Base and
 	// populated on a per-query shallow copy, so rules never leak between queries that reuse a Base.
@@ -59,13 +63,19 @@ func (b *Base) Work() int64 {
 	return *b.work
 }
 
-// NewBase projects a Model into its fact base (every relation the fact layer has registered, built-in
-// and overlay alike) and indexes it for querying. A binary that installs no relation catalog gets an
-// EMPTY base, which answers nothing while looking exactly like a query that matched nothing — see
-// facts.Installed for the check that separates those.
-func NewBase(m check.Model) *Base {
-	b := &Base{edb: map[string][]facts.Row{}, netByName: map[string]*ir.Net{}, model: m, edbIdx: newEDBIndexCache(), work: new(int64)}
-	for _, f := range facts.Rows(m) {
+// NewBase projects a Model into its fact base over the process-default relation vocabulary. Use
+// NewBaseFrom to supply one explicitly.
+//
+// A binary that installs no relation catalog gets an EMPTY base, which answers nothing while looking
+// exactly like a query that matched nothing — see Registry.Installed for the check that separates
+// those.
+func NewBase(m check.Model) *Base { return NewBaseFrom(facts.DefaultRegistry(), m) }
+
+// NewBaseFrom projects a Model into its fact base over the given relation vocabulary and indexes it
+// for querying. The registry is captured, so what this base can answer is fixed at construction.
+func NewBaseFrom(reg *facts.Registry, m check.Model) *Base {
+	b := &Base{edb: map[string][]facts.Row{}, netByName: map[string]*ir.Net{}, model: m, reg: reg, edbIdx: newEDBIndexCache(), work: new(int64)}
+	for _, f := range reg.Rows(m) {
 		b.edb[f.Relation] = append(b.edb[f.Relation], f)
 	}
 	for _, n := range m.Nets() {
@@ -80,8 +90,13 @@ func NewBase(m check.Model) *Base {
 // model (a spec library is not a design), so model-dependent relations and predicates (net.*, component.*,
 // reaches) have no facts and yield nothing — a spec library query is over the datasheet relations only.
 func NewSpecLibBase(fs param.FactSource) *Base {
-	b := &Base{edb: map[string][]facts.Row{}, netByName: map[string]*ir.Net{}, edbIdx: newEDBIndexCache(), work: new(int64)}
-	for _, f := range facts.SpecLibRows(fs.AllSpecs()) {
+	return NewSpecLibBaseFrom(facts.DefaultRegistry(), fs)
+}
+
+// NewSpecLibBaseFrom is NewSpecLibBase over an explicit relation vocabulary.
+func NewSpecLibBaseFrom(reg *facts.Registry, fs param.FactSource) *Base {
+	b := &Base{edb: map[string][]facts.Row{}, netByName: map[string]*ir.Net{}, reg: reg, edbIdx: newEDBIndexCache(), work: new(int64)}
+	for _, f := range reg.SpecLibRows(fs.AllSpecs()) {
 		b.edb[f.Relation] = append(b.edb[f.Relation], f)
 	}
 	return b
@@ -185,7 +200,7 @@ func (b *Base) validateNegations(goal Body, negs []Literal) error {
 		rel := lit.Neg.Relation
 		ok, known := b.arityAccepts(rel, len(lit.Neg.Args))
 		if !known {
-			return fmt.Errorf("query: negation over unknown relation %q%s", rel, didYouMean(rel))
+			return fmt.Errorf("query: negation over unknown relation %q%s", rel, didYouMean(b.reg, rel))
 		}
 		if !ok {
 			return fmt.Errorf("query: negated relation %q takes %s args, got %d", rel, b.arityLabelOf(rel), len(lit.Neg.Args))

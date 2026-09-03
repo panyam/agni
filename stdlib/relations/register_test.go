@@ -50,14 +50,12 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 	}
 }
 
-// TestBuiltinRelationCollisionDetected proves the schema half of the registration wired: an overlay
-// RegisterRelation on a built-in name must panic, which only works if RegisterBuiltinFacts installed
-// that name into the engine schema.
+// TestBuiltinRelationCollisionDetected proves the schema half of the registration wired: composing an
+// overlay relation on a built-in name must fail, which only works if RegisterBuiltinFacts installed
+// that name into the vocabulary this package registers.
 func TestBuiltinRelationCollisionDetected(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("RegisterRelation on the built-in name component.mpn did not panic; the built-in schema was not registered")
-		}
-	}()
-	facts.RegisterRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
+	opt := facts.WithRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
+	if _, err := facts.NewRegistry(append(facts.Registered(), opt)...); err == nil {
+		t.Error("composing an overlay relation named component.mpn produced no error; the built-in schema was not registered")
+	}
 }

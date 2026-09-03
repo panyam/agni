@@ -15,13 +15,16 @@ import (
 // cause. A datalog-authored rule swallows that error into zero findings, which is a clean pass on a
 // design nobody checked, so this message is the one place the omission is visible.
 func TestNoCatalogSaysSo(t *testing.T) {
-	defer facts.Snapshot()()
-	// Strip the catalog the test binary installed (relations_register_test.go), leaving the evaluator
-	// with its computed predicates and nothing to look up.
-	facts.Reset()
+	// A bare vocabulary: no built-in catalog, so every relation is unknown. Composed rather than
+	// stripped from the process default, which is the state a host that omits the catalog import is
+	// actually in.
+	bare, err := facts.NewRegistry()
+	if err != nil {
+		t.Fatalf("compose empty registry: %v", err)
+	}
 
 	q := MustParse(`component-on-net(?r,?n) => ?r`)
-	_, err := Naive{}.Eval(q, NewBase(check.NewModel(chainDesign())))
+	_, err = Naive{}.Eval(q, NewBaseFrom(bare, check.NewModel(chainDesign())))
 	if err == nil {
 		t.Fatal("evaluating against an uninstalled fact base returned no error; a rule reads that as a clean pass")
 	}

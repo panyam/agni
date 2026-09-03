@@ -90,6 +90,21 @@ func runQuery(t *testing.T, m check.Model, text string) []Row {
 	return rows
 }
 
+// runQueryOn is runQuery over an explicit relation vocabulary, for a test that composes its own
+// rather than adding to the process default.
+func runQueryOn(t *testing.T, reg *facts.Registry, m check.Model, text string) []Row {
+	t.Helper()
+	q, err := Parse(text)
+	if err != nil {
+		t.Fatalf("Parse(%q): %v", text, err)
+	}
+	rows, err := (Naive{}).Eval(q, NewBaseFrom(reg, m))
+	if err != nil {
+		t.Fatalf("Eval(%q): %v", text, err)
+	}
+	return rows
+}
+
 // TestShowcaseJoin (WS3-029): the flagship datasheet query — a part whose abs-max VIN is below the
 // rail it sits on — joins param ⋈ component.mpn ⋈ component-on-net ⋈ net.max_voltage and the answer
 // carries provenance. This is "search your design incl. datasheets, with verifiability" made real.
@@ -552,21 +567,22 @@ func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 	}
 }
 
-// withCleanRegistry snapshots the fact-layer registry AND this package's builtins map, restoring both
-// after the test so a registered relation or predicate does not leak into the next one. Registration
-// is process-global and panics on a duplicate, so a leak is a failure in an unrelated test. The two
-// halves are snapshotted separately because they now live in separate packages: relations belong to
-// core/facts, predicates to this evaluator.
+// withCleanRegistry snapshots this package's builtins map, restoring it after the test so a
+// registered predicate does not leak into the next one. RegisterPredicate mutates that map, so it is
+// cloned (not aliased) before the test writes to it; the clone keeps the standard
+// reaches/contains/prefix/suffix entries.
+//
+// Relations need no equivalent any more: a test composes its own facts.Registry and passes it to
+// NewBaseFrom, so it never writes to the process default and has nothing to restore.
 func withCleanRegistry(t *testing.T) {
 	t.Helper()
-	restoreFacts := facts.Snapshot()
 	origBI := builtins
 	bi := make(map[string]builtin, len(origBI))
 	for k, v := range origBI {
 		bi[k] = v
 	}
 	builtins = bi
-	t.Cleanup(func() { builtins = origBI; restoreFacts() })
+	t.Cleanup(func() { builtins = origBI })
 }
 
 // TestRegisterPredicate (predicate-interface): an overlay filter predicate registered with
@@ -634,9 +650,9 @@ func TestNegatedReaches(t *testing.T) {
 // with RegisterRelation is a first-class query citizen — the goal joins it against a built-in
 // relation, a rule reads it, and negation ranges over it, all with no evaluator change.
 func TestRegisterRelation(t *testing.T) {
-	withCleanRegistry(t)
-	// An overlay "house.approved(ref)" relation: U1 is approved, U2 is not.
-	facts.RegisterRelation("house.approved", []facts.Field{facts.FieldSubject}, func(m check.Model) []facts.Row {
+	// An overlay "house.approved(ref)" relation: U1 is approved, U2 is not. Composed onto the process
+	// vocabulary rather than added to it, so the test owns what it queries.
+	reg := facts.RegistryWith(facts.WithRelation("house.approved", []facts.Field{facts.FieldSubject}, func(m check.Model) []facts.Row {
 		var out []facts.Row
 		for _, c := range m.Components() {
 			if c.RefDes == "U1" {
@@ -644,11 +660,11 @@ func TestRegisterRelation(t *testing.T) {
 			}
 		}
 		return out
-	})
+	}))
 	m := check.NewModel(chainDesign()) // U1, U2, U3 on shared nets
 
 	// Join the overlay relation against the built-in component-on-net, and carry its provenance.
-	rows := runQuery(t, m, `house.approved(?r), component-on-net(?r,?n) => ?r, ?n`)
+	rows := runQueryOn(t, reg, m, `house.approved(?r), component-on-net(?r,?n) => ?r, ?n`)
 	if len(rows) == 0 {
 		t.Fatal("overlay relation join produced no rows")
 	}
@@ -662,7 +678,7 @@ func TestRegisterRelation(t *testing.T) {
 	}
 
 	// A rule reads the overlay relation, and negation ranges over it: unapproved parts.
-	un := runQuery(t, m, `unapproved(?r) :- component-on-net(?r,?n), not house.approved(?r); unapproved(?r) => ?r`)
+	un := runQueryOn(t, reg, m, `unapproved(?r) :- component-on-net(?r,?n), not house.approved(?r); unapproved(?r) => ?r`)
 	got := map[string]bool{}
 	for _, r := range un {
 		got[r.Bind["r"].S] = true
@@ -672,31 +688,24 @@ func TestRegisterRelation(t *testing.T) {
 	}
 }
 
-// TestRegisterRelationRejects (WS3-029 fast-follow): a misregistration fails loudly at load, not
-// silently at query time.
+// TestRegisterRelationRejects (WS3-029 fast-follow): a misregistration fails loudly when the
+// vocabulary composes, not silently at query time. The two collision cases are here rather than in
+// core/facts because they need the REAL built-in catalog and the REAL reserved predicate names, which
+// only exist once this package and stdlib/relations are both linked in.
 func TestRegisterRelationRejects(t *testing.T) {
-	cases := map[string]func(){
-		"empty name": func() {
-			facts.RegisterRelation("", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
-		},
-		"no fields":     func() { facts.RegisterRelation("x.y", nil, func(check.Model) []facts.Row { return nil }) },
-		"nil projector": func() { facts.RegisterRelation("x.y", []facts.Field{facts.FieldSubject}, nil) },
-		"collide built-in": func() {
-			facts.RegisterRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
-		},
-		"collide reaches": func() {
-			facts.RegisterRelation("reaches", []facts.Field{facts.FieldSubject, facts.FieldObject}, func(check.Model) []facts.Row { return nil })
-		},
+	nilProj := func(check.Model) []facts.Row { return nil }
+	cases := map[string]facts.Option{
+		"empty name":       facts.WithRelation("", []facts.Field{facts.FieldSubject}, nilProj),
+		"no fields":        facts.WithRelation("x.y", nil, nilProj),
+		"nil projector":    facts.WithRelation("x.y", []facts.Field{facts.FieldSubject}, nil),
+		"collide built-in": facts.WithRelation("component.mpn", []facts.Field{facts.FieldSubject}, nilProj),
+		"collide reaches":  facts.WithRelation("reaches", []facts.Field{facts.FieldSubject, facts.FieldObject}, nilProj),
 	}
-	for name, register := range cases {
+	for name, opt := range cases {
 		t.Run(name, func(t *testing.T) {
-			withCleanRegistry(t)
-			defer func() {
-				if recover() == nil {
-					t.Errorf("facts.RegisterRelation(%s) did not panic; want a load-time rejection", name)
-				}
-			}()
-			register()
+			if _, err := facts.NewRegistry(append(facts.Registered(), opt)...); err == nil {
+				t.Errorf("composing %s produced no error; want a load-time rejection", name)
+			}
 		})
 	}
 }

@@ -43,12 +43,11 @@ func RegisterPredicate(name string, arity int, holds func(args []Value) (bool, e
 	if holds == nil {
 		panic(fmt.Sprintf("query: RegisterPredicate(%q) with nil predicate", name))
 	}
-	if facts.IsRelation(name) {
-		panic(fmt.Sprintf("query: RegisterPredicate(%q) collides with a fact-base relation", name))
-	}
 	if _, ok := builtins[name]; ok {
 		panic(fmt.Sprintf("query: RegisterPredicate(%q) collides with a built-in predicate", name))
 	}
+	// Reserve first: it panics when the name is already a fact relation, and doing it before the map
+	// write means a rejected predicate leaves nothing behind.
 	facts.Reserve("core/query", name)
 	builtins[name] = filterBuiltin(arity, holds)
 }

@@ -198,7 +198,7 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 		}
 		return bi.extend(atom, bnd, b, yield)
 	}
-	if fields, ok := facts.SchemaOf(rel); ok {
+	if fields, ok := b.reg.SchemaOf(rel); ok {
 		if len(atom.Args) != len(fields) {
 			return fmt.Errorf("query: relation %q takes %d args, got %d", rel, len(fields), len(atom.Args))
 		}
@@ -210,7 +210,7 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 		}
 		return b.extendIDB(atom, bnd, yield)
 	}
-	return fmt.Errorf("query: unknown relation %q%s", rel, didYouMean(rel))
+	return fmt.Errorf("query: unknown relation %q%s", rel, didYouMean(b.reg, rel))
 }
 
 // extendEDB fans an EDB atom over the facts of its relation, unifying each into the binding.
@@ -292,7 +292,7 @@ func (b *Base) arityAccepts(rel string, n int) (ok bool, known bool) {
 	if bi, found := builtins[rel]; found {
 		return bi.accepts(n), true
 	}
-	if fields, found := facts.SchemaOf(rel); found {
+	if fields, found := b.reg.SchemaOf(rel); found {
 		return n == len(fields), true
 	}
 	if ar, found := b.idbArity[rel]; found {
@@ -306,7 +306,7 @@ func (b *Base) arityLabelOf(rel string) string {
 	if bi, ok := builtins[rel]; ok {
 		return bi.arityLabel()
 	}
-	if fields, ok := facts.SchemaOf(rel); ok {
+	if fields, ok := b.reg.SchemaOf(rel); ok {
 		return fmt.Sprintf("%d", len(fields))
 	}
 	return fmt.Sprintf("%d", b.idbArity[rel])
