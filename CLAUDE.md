@@ -70,7 +70,7 @@ mkdocs tree that was folded into `docsite/content/` with audience-first names.
 ## Package layout
 
 Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/report`, `core/diff`,
-`core/query`, `core/model`). Format readers under **`readers/`** (`readers/edif`, `readers/kicad`,
+`core/facts`, `core/query`, `core/model`). Format readers under **`readers/`** (`readers/edif`, `readers/kicad`,
 `readers/ipc2581`, `readers/xschem`, `readers/geda`, plus `readers/formats`, the registry/Loader).
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
 (`stdlib/rules/builtin/rule_*.go`, `stdlib/rules/datalog`, `stdlib/rules/intent`,
@@ -80,6 +80,15 @@ The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`
 
 Notes written before this layout landed name the old directories. **Grep the SYMBOL or filename,
 not the directory.**
+
+`core/facts` deserves a callout: it is the fact/relation layer, and it depends on NO query engine
+(C29). A relation projects a `check.Model` into tuples and registers with `facts.RegisterRelation`;
+an engine that answers questions over those tuples imports `core/facts`, never the reverse. That is
+what keeps datalog (`core/query`) one query shape among several rather than the primitive: `check.Spec`
+answers per-entity questions with no fact base at all, and a path question is a shape datalog cannot
+express (issues 374, 518). **Installing no relation catalog still builds and still runs**, leaving the
+fact base empty so every datalog rule reports clean; `facts.Installed` is what separates that from a
+query that matched nothing.
 
 `intake/` deserves a callout: it produces a sanitized design summary, and its confidentiality
 guarantee is **structural**. The `Skeleton` type has no field that can hold a net name or a
@@ -256,7 +265,7 @@ not copy it back into this repo.
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1–C28). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1–C29). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a

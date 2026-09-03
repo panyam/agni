@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"github.com/panyam/agni/core/facts"
 	"sort"
 )
 
@@ -30,7 +31,9 @@ func Pos(a Atom) Literal { return Literal{Pos: &a} }
 func Neg(a Atom) Literal { return Literal{Neg: &a} }
 
 // Cmp builds a comparison literal, Op in {<, <=, =, !=, >, >=}.
-func Cmp(l Term, op string, r Term) Literal { return Literal{Compare: &Compare{Left: l, Op: op, Right: r}} }
+func Cmp(l Term, op string, r Term) Literal {
+	return Literal{Compare: &Compare{Left: l, Op: op, Right: r}}
+}
 
 // Def builds an IDB rule Head :- body. Disjunction is several Defs sharing a Head relation.
 func Def(head Atom, body ...Literal) Rule { return Rule{Head: head, Body: Body{Literals: body}} }
@@ -62,7 +65,7 @@ func Reads(q Query) []string {
 		for _, l := range b.Literals {
 			for _, a := range []*Atom{l.Pos, l.Neg} {
 				if a != nil {
-					if _, ok := edbSchema[a.Relation]; ok {
+					if facts.IsRelation(a.Relation) {
 						seen[a.Relation] = true
 					}
 				}

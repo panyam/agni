@@ -47,7 +47,7 @@ relation: two parameters can share a symbol and bind to different pins (a part s
 for its A-port terminals and a different one for its B port publishes both under `V(ESD)`), so a join
 on symbol alone would cross-product them onto the wrong terminals.
 
-This is the widest relation in the fact base and the reason `FactRow` grew a `Qualifier` slot:
+This is the widest relation in the fact base and the reason `facts.Row` grew a `Qualifier` slot:
 `mpn`, `pin` and `symbol` consume Subject, Object and Value, leaving the limit kind nowhere to go.
 The conditions slot was not reused for it, because every param relation carries test conditions there
 as unbound metadata and spending it would strip the trust context from exactly the rows most likely

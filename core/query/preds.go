@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/panyam/agni/core/facts"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -217,21 +218,21 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 // When the binding already fixes some of the atom's arguments, the candidates come from an index on
 // exactly those positions instead of from the whole relation (WS3-125). unify still decides every
 // candidate, so the index only ever has to avoid MISSING a match; see index.go.
-func (b *Base) extendEDB(atom *Atom, fields []edbField, bnd *binding, yield func(*binding) error) error {
-	facts := b.edb[atom.Relation]
+func (b *Base) extendEDB(atom *Atom, fields []facts.Field, bnd *binding, yield func(*binding) error) error {
+	rows := b.edb[atom.Relation]
 	pos, all := b.edbCandidates(atom, fields, bnd)
 	for i := 0; ; i++ {
-		var f FactRow
+		var f facts.Row
 		if all {
-			if i >= len(facts) {
+			if i >= len(rows) {
 				break
 			}
-			f = facts[i]
+			f = rows[i]
 		} else {
 			if i >= len(pos) {
 				break
 			}
-			f = facts[pos[i]]
+			f = rows[pos[i]]
 		}
 		b.countWork()
 		if next, ok := unify(atom.Args, fields, f, bnd); ok {

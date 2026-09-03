@@ -1,45 +1,31 @@
 package query
 
-// edbField names a FactRow field a relation's positional argument binds to.
-type edbField int
+import "github.com/panyam/agni/core/facts"
 
-const (
-	fSubject edbField = iota
-	fObject
-	fValue
-	fNum
-	fConditions
-	fMin       // the SECOND numeric slot (FactRow.Min) — a two-sided relation's lower bound (param.range)
-	fQualifier // the SECOND string-value slot (FactRow.Qualifier) — Min is to Num as this is to Value
-)
-
-// edbSchema maps each fact-base relation to its positional argument layout, so a flat FactRow is
-// queried as reln(arg0, arg1, ...). It is the engine's index of relation shapes; the built-in
-// relations' layouts are installed at init by stdlib/relations through RegisterBuiltinFacts (issue
-// 10), and overlay relations add theirs through RegisterRelation. Relations the evaluator computes
-// rather than looks up (reaches) are NOT here.
-var edbSchema = map[string][]edbField{}
-
-// fieldValue reads one FactRow field as a query Value (string + optional number). The numeric
+// fieldValue reads one fact Row field as a query Value (string + optional number). The numeric
 // field carries both so a bound term serves equality and comparison alike.
-func fieldValue(f FactRow, fld edbField) Value {
+//
+// This is the whole impedance match between the fact layer and the evaluator: above it everything is
+// datalog, below it everything is a plain Go struct. A relation's positional layout (facts.SchemaOf)
+// says which field each argument binds to; this says what that field means as a logic value.
+func fieldValue(f facts.Row, fld facts.Field) Value {
 	switch fld {
-	case fSubject:
+	case facts.FieldSubject:
 		return Value{S: f.Subject}
-	case fObject:
+	case facts.FieldObject:
 		return Value{S: f.Object}
-	case fValue:
+	case facts.FieldValue:
 		return Value{S: f.Value}
-	case fNum:
+	case facts.FieldNum:
 		if f.Num != nil {
 			return Value{S: ftoa(*f.Num), Num: f.Num, BaseUnit: f.BaseUnit}
 		}
 		return Value{Absent: true}
-	case fConditions:
+	case facts.FieldConditions:
 		return Value{S: f.Conditions}
-	case fQualifier:
+	case facts.FieldQualifier:
 		return Value{S: f.Qualifier}
-	case fMin:
+	case facts.FieldMin:
 		if f.Min != nil {
 			return Value{S: ftoa(*f.Min), Num: f.Min, BaseUnit: f.BaseUnit}
 		}

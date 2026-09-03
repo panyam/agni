@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -16,8 +17,8 @@ import (
 )
 
 // factsByRelation indexes a projection by relation name for the assertions below.
-func factsByRelation(fs []query.FactRow) map[string][]query.FactRow {
-	out := map[string][]query.FactRow{}
+func factsByRelation(fs []facts.Row) map[string][]facts.Row {
+	out := map[string][]facts.Row{}
 	for _, f := range fs {
 		out[f.Relation] = append(out[f.Relation], f)
 	}
@@ -903,7 +904,7 @@ func TestParamPinRangeFactsAnswerPerTerminal(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
 	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-XLAT"), nil, param.ParamSet{"ACME-XLAT": spec})
 
-	byPinKind := map[string]query.FactRow{}
+	byPinKind := map[string]facts.Row{}
 	for _, r := range factsByRelation(Facts(m))[RelParamPinRange] {
 		byPinKind[r.Object+"/"+r.Qualifier] = r
 	}

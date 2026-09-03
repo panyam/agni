@@ -21,10 +21,11 @@ import (
 	_ "github.com/panyam/agni/examples/overlay/acmerules"  // registers the acme/ rule suite
 
 	// The engine's fact base, needed by any DATALOG rule (the suite above has one). Omitting this
-	// import does not fail to build and does not error at runtime: the fact base is simply empty,
-	// so every datalog rule matches nothing and reports clean. A quiet pass on a design that may
-	// be violating the rule is the worst failure shape there is, so the import is deliberate and
-	// commented rather than left to be discovered.
+	// import does not fail to build: the fact base is simply empty, so every relation is unknown and
+	// every datalog rule matches nothing. A quiet pass on a design that may be violating the rule is
+	// the worst failure shape there is, so the import is deliberate and commented rather than left to
+	// be discovered. A query run without it now says "no fact relations are installed" instead of
+	// blaming a typo, but a RULE still swallows that error into zero findings, so the comment stays.
 	_ "github.com/panyam/agni/stdlib/relations"
 )
 

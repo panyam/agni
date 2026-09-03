@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/query"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	_ "github.com/panyam/agni/stdlib/relations" // registers the built-in relations via init
@@ -11,17 +12,17 @@ import (
 
 // TestBuiltinRelationsRegisteredWithQuery is the seam guard (issue 10): blank-importing
 // stdlib/relations must install the built-in EDB relations into the query engine through
-// query.RegisterBuiltinFacts, so query.Catalog lists them and query.NewBase projects them. Before
+// facts.RegisterBuiltinFacts, so query.Catalog lists them and query.NewBase projects them. Before
 // this package existed the query engine held these relations directly; if the init or the
 // RegisterBuiltinFacts payload ever regressed (a dropped projector, an empty schema), this fails
 // where the byte-identical CLI checks might not pinpoint the wiring.
 func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 	// The catalog lists the built-in relations, with their kinds, once relations is imported.
 	want := map[string]string{
-		"component.mpn":     query.KindNetlist,
-		"rail":              query.KindNetlist,
-		"board.track_width": query.KindBoard,
-		"param":             query.KindDatasheet,
+		"component.mpn":     facts.KindNetlist,
+		"rail":              facts.KindNetlist,
+		"board.track_width": facts.KindBoard,
+		"param":             facts.KindDatasheet,
 	}
 	got := map[string]string{}
 	for _, r := range query.Catalog() {
@@ -58,5 +59,5 @@ func TestBuiltinRelationCollisionDetected(t *testing.T) {
 			t.Error("RegisterRelation on the built-in name component.mpn did not panic; the built-in schema was not registered")
 		}
 	}()
-	query.RegisterRelation("component.mpn", []query.Field{query.FieldSubject}, func(check.Model) []query.FactRow { return nil })
+	facts.RegisterRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
 }
