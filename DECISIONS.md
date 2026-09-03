@@ -1361,9 +1361,99 @@ a PART TYPE identity that appears nowhere in the circuit graph; the graph tier k
 the datasheet corpus with no design loaded. That is a tier boundary the code half-acknowledges.
 
 So the settled half is that widening the tuple for everyone is the wrong fix, and the shape of the
-right one is to stop making the datasheet tier pretend to be a flat relation. **What is still open**
-is how much of the record stays queryable: `supply-exceeds-abs-max` genuinely joins a datasheet limit
-against a netlist rail, so the tier cannot simply leave the fact base. Deciding that is the
-prerequisite for any change to `facts.Row`, and issue 541 carries the options and the constraints on
-each (notably that `core/query/index.go` bounds arity at 8 through `patternMask uint8`, and that the
-44x indexing win must not regress).
+right one is to stop making the datasheet tier pretend to be a flat relation.
+
+**How much of the record stays queryable is now decided too**, in the next section. Note that this
+one's closing argument was wrong on a fact: `supply-exceeds-abs-max` was cited here as a rule that
+joins a datasheet limit against a netlist rail *in the fact base*, and it does not. It is a Go rule
+over `check.Model`. The correction is in that section, and it strengthens rather than weakens the
+conclusion above.
+
+---
+
+## The datasheet tier is normalized into narrow relations, never flattened into a wider tuple
+
+The previous section settled that widening `facts.Row` for everyone is the wrong fix and left one
+question open: how much of the datasheet record stays queryable in the fact base. Issue 541 offered
+three shapes, the middle one of which needed declared typed columns and a `patternMask` past arity 8.
+
+**Answer: the part of the record a query can BIND, and nothing else.** An argument earns a positional
+slot only if it is a join key (`mpn`, `pin`, `symbol`), a comparable scalar (`min`, `max`, `typ`), or
+a closed vocabulary a query filters on (`kind`, `modality`, `function`). Everything else is what you
+READ once a query has found the row: the condition list, condition coverage, `applies_to`, the
+`pin_refs` set, the five parts of provenance, verification, attributes, the raw sentence. Those reach
+a consumer through the record, not through an argument, and `facts.Row` grows no bindable field.
+
+**Two premises the write-up rested on did not survive checking, and both point the same way.**
+
+First, **`supply-exceeds-abs-max` does not read the fact base.** It is a Go rule whose `Eval` takes a
+`check.Model` and calls `check.SupplyAbsMaxLimits` over the nested `PartSpec`
+(`stdlib/rules/builtin/rule_supply_abs_max.go`). Its `Reads` entries (`param.supply_abs_max`) are
+`check.FactTier` gate vocabulary matched on the `param` prefix, not relation names. The same is true
+of `rail-nominal-out-of-recommended`, `pin-exceeds-abs-max` and `regulator-output-exceeds-abs-max`. A
+sweep for consumers of the five wide relations found them in four non-test places: a CLI help string,
+one picker example (`core/query/examples.go`), and two comments. No datalog rule, no profile, no
+review manifest. The only datasheet-tier relations any shipped rule joins are `component.esd_rated`
+(arity 1) and `component.device_class` (arity 2), both graph-shaped, both comfortable in the tuple.
+
+So nothing in the engine breaks if the wide relations narrow. Their audience is the ad-hoc query
+surface: `agni query`, `--speclib`, and the web picker. That turns the open question from an
+engine-correctness one into a product one about exploration, which is why it is answerable at all.
+
+Second, **`param.unit` is not a workaround for a missing unit column.** C24 states the opposite
+outright: a unit column would be ADVISORY, since a rule could ignore it and compare raw numbers,
+which is the failure that constraint exists to prevent. Decomposing into narrow relations sharing a
+key is the codebase's own remedy, adopted on safety grounds rather than to conserve a slot.
+
+**The workarounds split into two different bugs, and the second is what caused the first.**
+
+Passing the bind test and missing for want of a slot:
+
+- `RangeValue.typ`, a comparable scalar, silently dropped by `specParamRangeRows`.
+- `PinRelationKind`, a closed vocabulary, deliberately unpublished.
+
+Failing the bind test and made into an argument anyway, which is what consumed the slots:
+
+- `param.prov`'s PAGE sits in `Num`. `fieldValue` hands it `BaseUnit: ""`, so
+  `TestRelationBaseUnitsAreCanonical` skips it as dimensionless and a page number becomes
+  dimension-polymorphic. It will unify with a voltage, because unification is identity rather than
+  physics (C24's own known limitation). A page is a locator, not a quantity.
+- `param.prov`'s SECTION sits in `Conditions`, the field every other `param.*` relation uses for test
+  conditions. One field, two meanings, keyed on nothing a call site can see. That is the `Row.Object`
+  trap issue 541 names, already live.
+
+Fixing the second pair is what makes the first affordable inside today's tuple, because only
+`FieldNum` and `FieldMin` yield a numeric, dimension-carrying `Value` (`core/query/schema.go`), and
+both are spent on `param.range`'s two bounds:
+
+- `param.typ(mpn, symbol, typ)` at arity 3, rather than a sixth column on `param.range`. Separating it
+  is the better shape independently: a typ is NOT a bound, and a rule comparing a rail against one as
+  though it were guaranteed is a wrong answer. Sitting it in the same tuple as min and max is what
+  invites that; its own name makes the misuse visible at the call site.
+- `param.prov`'s page moves from `Num` to `Qualifier`, free on that relation today. Arity stays 5, the
+  tuple is untouched, and the dimension hole closes.
+- `PinRelationKind` waits for a second enum member. The enum has one today, so a column would say
+  nothing.
+- `Cite` becoming a slice is the one real `facts.Row` change, and it is METADATA rather than a
+  bindable slot, so it never reaches `patternMask`, the EDB index, or the scaling benchmarks.
+
+**Why not declared typed columns.** They move the ceiling from seven bindable slots to eight.
+`param.Parameter` has thirteen fields and four parts of the record are REPEATED (`conditions`,
+`pin_refs`, `docs`, citations), and no positional arity holds a repeated field at any width. So that
+option pays the whole cost, reworking `patternMask`, re-proving the index's superset-filter argument,
+and re-running `BenchmarkEvalFlat` / `EvalReach` / `EvalClosure`, and still drops the conditions and
+the pin bindings. It does not solve the problem it was proposed for.
+
+**What this leaves open, and it is the piece that makes the answer honest.** A query answer cannot
+reach the record. `GetComponentParams` is web-only and no CLI command prints one part's spec. "The
+record stays a record" is a way of saying "you cannot have it" until that path exists, so it is the
+follow-on that matters most.
+
+**Named relation arguments decouple from this.** Normalization lowers arity, which is most of what
+they were going to buy, so they become their own additive change carrying issue 115's sorts problem.
+The `catalogArgLabels` defect, inferring an argument's entity KIND from a catalog label string, is
+real and independent of both.
+
+**Reopen if** a rule genuinely needs to join a REPEATED part of the record inside the fact base: a
+condition list, a `pin_refs` set, several citations. That is the shape no arity fixes, and it would
+argue for the record entering the engine as a value rather than as tuples.
