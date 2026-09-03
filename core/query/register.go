@@ -52,11 +52,3 @@ func RegisterPredicate(name string, arity int, holds func(args []Value) (bool, e
 	facts.Reserve("core/query", name)
 	builtins[name] = filterBuiltin(arity, holds)
 }
-
-// edbSchemaOf resolves an EDB relation's positional layout from the fact layer, so the evaluator,
-// negation, and arity checks treat an overlay-registered relation exactly like a built-in one.
-func edbSchemaOf(rel string) ([]facts.Field, bool) { return facts.SchemaOf(rel) }
-
-// isEDBRelation reports whether a relation is a fact-base relation (built-in or overlay-registered),
-// so a rule may not redefine it and a rule body may read it.
-func isEDBRelation(rel string) bool { return facts.IsRelation(rel) }
