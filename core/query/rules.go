@@ -3,6 +3,8 @@ package query
 import (
 	"fmt"
 	"sort"
+
+	"github.com/panyam/agni/core/facts"
 )
 
 // idbTuple is one derived fact of a rule-defined (IDB) relation: positional values plus the
@@ -40,7 +42,7 @@ func (b *Base) materialize(rules []Rule) error {
 	byHead := map[string][]Rule{}
 	for _, r := range rules {
 		rel := r.Head.Relation
-		if isEDBRelation(rel) {
+		if facts.IsRelation(rel) {
 			return fmt.Errorf("query: rule head %q redefines a fact relation", rel)
 		}
 		if _, ok := builtins[rel]; ok {
@@ -127,7 +129,7 @@ func (b *Base) knownRelation(rel string) bool {
 	if _, ok := builtins[rel]; ok {
 		return true
 	}
-	if isEDBRelation(rel) {
+	if facts.IsRelation(rel) {
 		return true
 	}
 	return b.isIDB(rel)

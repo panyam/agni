@@ -1,12 +1,25 @@
 package query
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/panyam/agni/core/facts"
+)
 
 // didYouMean returns a `; did you mean "X"?` hint for a relation name the engine does not know,
 // naming the closest catalog relation when one is a plausible typo, else "" (WS14-003). It teaches
 // the vocabulary at the exact moment a user gets it wrong — the most common newcomer error is a
 // mistyped or half-remembered relation name.
+//
+// When NO relation catalog is installed it says that instead, because every name is unknown in that
+// state and a typo hint would send the reader hunting a spelling mistake they did not make. A host
+// that omits the catalog import still builds and still runs; the fact base is simply empty, so this
+// is the one moment the omission is visible. Reading it as a bad query rather than a missing catalog
+// is how a design nobody checked comes to look clean.
 func didYouMean(name string) string {
+	if !facts.Installed() {
+		return "; no fact relations are installed (import a relation catalog, e.g. stdlib/relations)"
+	}
 	if s := suggestRelation(name); s != "" {
 		return fmt.Sprintf(`; did you mean %q?`, s)
 	}

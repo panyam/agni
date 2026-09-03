@@ -4,31 +4,32 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 )
 
-// TestCatalogMatchesSchema is the drift guard: every built-in EDB relation and predicate has a
-// catalog entry with the right arity, and no catalog entry names a construct that does not exist.
-// A relation added to edbSchema (or a predicate to builtins) without a catalog row fails here, so a
-// new relation cannot ship undiscoverable. The relation catalog is registered by stdlib/relations
-// (imported for the test binary via relations_register_test.go) and the predicate catalog is
-// query's own builtinPredicates; this test spans both, since edbSchema and builtins do.
+// TestCatalogMatchesSchema is the drift guard: every EDB relation and predicate has a catalog entry
+// with the right arity, and no catalog entry names a construct that does not exist. A relation added
+// to the fact schema (or a predicate to builtins) without a catalog row fails here, so a new relation
+// cannot ship undiscoverable. The relation half is registered with core/facts by stdlib/relations
+// (imported for the test binary via relations_register_test.go) and the predicate half is query's own
+// builtinPredicates; this test spans both, since Catalog does.
 func TestCatalogMatchesSchema(t *testing.T) {
 	byName := map[string]RelationInfo{}
-	for _, r := range append(append([]RelationInfo{}, builtinRelationCatalog...), builtinPredicates...) {
+	for _, r := range Catalog() {
 		if _, dup := byName[r.Name]; dup {
 			t.Fatalf("duplicate catalog entry %q", r.Name)
 		}
 		byName[r.Name] = r
 	}
 	// Every EDB relation is catalogued with matching arity.
-	for rel, fields := range edbSchema {
+	for rel, fields := range facts.Schema() {
 		info, ok := byName[rel]
 		if !ok {
 			t.Errorf("edb relation %q has no catalog entry", rel)
 			continue
 		}
 		if len(info.Args) != len(fields) {
-			t.Errorf("catalog %q has %d args, edbSchema has %d fields", rel, len(info.Args), len(fields))
+			t.Errorf("catalog %q has %d args, the fact schema has %d fields", rel, len(info.Args), len(fields))
 		}
 	}
 	// Every built-in predicate is catalogued.
@@ -39,7 +40,7 @@ func TestCatalogMatchesSchema(t *testing.T) {
 	}
 	// No catalog row names a nonexistent built-in construct.
 	for name, info := range byName {
-		_, isEDB := edbSchema[name]
+		isEDB := facts.IsRelation(name)
 		_, isPred := builtins[name]
 		if !isEDB && !isPred {
 			t.Errorf("catalog entry %q (kind %s) is neither an EDB relation nor a predicate", name, info.Kind)
@@ -67,8 +68,8 @@ func TestCatalogSortedByKindThenName(t *testing.T) {
 func TestCatalogIncludesOverlayRelation(t *testing.T) {
 	// Register a throwaway overlay relation and confirm it surfaces with synthesized arg labels.
 	const name = "test.catalog_overlay"
-	if _, seen := registry[name]; !seen {
-		RegisterRelation(name, []Field{FieldSubject, FieldNum}, func(check.Model) []FactRow { return nil })
+	if !facts.IsRelation(name) {
+		facts.RegisterRelation(name, []facts.Field{facts.FieldSubject, facts.FieldNum}, func(check.Model) []facts.Row { return nil })
 	}
 	found := false
 	for _, r := range Catalog() {

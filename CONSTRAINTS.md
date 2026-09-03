@@ -614,7 +614,7 @@ spellings to `core/classify`'s, which is the drift that would break cross-tier c
 **This covers the query surface too.** The `param(...)` and `param.range(...)` datalog relations
 project their numbers through the same conversion, so a datalog-authored rule compares base units
 without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
-separately, because a `FactRow` has no unit column and adding one would be advisory: a rule could
+separately, because a `facts.Row` has no unit column and adding one would be advisory: a rule could
 ignore it and compare raw numbers, which is the failure this constraint exists to prevent.
 
 A row whose unit has no known scale keeps its symbol, kind, conditions and citation and loses only
@@ -791,3 +791,28 @@ than an exemption: an `fs.ValidPath` is unrooted, so those paths already satisfy
 constraint bites a NEW host that opens files by absolute path. A file outside every mount is recorded
 by base name, which loses its directory and is the deliberate price of never publishing one.
 Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at read time".
+
+## C29: The fact layer is the primitive and depends on no query engine
+**Rule:** Relations, the tuple they project into, and the registry they install themselves in live in
+`core/facts`, which imports `core/check` and nothing that answers queries. A query engine depends on
+the fact layer, never the reverse. `stdlib/relations` — the shipped netlist/board/datasheet relation
+catalog — imports `core/facts` only. A RELATION is data derived from the Model and registers with
+`facts.RegisterRelation`; a PREDICATE, a join strategy, and a query language belong to whichever
+engine computes them (`core/query` holds the datalog one, and `query.RegisterPredicate` is its seam).
+An engine claims its predicate vocabulary with `facts.Reserve`, which is checked in both directions
+because an engine and a relation catalog are independent imports and may init in either order.
+**Why:** the primitive is the design graph and a tuple view over it, not any one way of asking
+questions. Datalog answers set-of-tuples questions well and cannot return a path, a subgraph, or a
+shortest route at all (issues 374, 518), so it is one query shape among several — beside `check.Spec`
+for per-entity questions and Go for the rest — and a shape that owns the fact tuple would make the
+other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
+require picking an engine. This is the query-side twin of C17's downward-only layering and of the
+`check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
+**Verify:** `go list -deps ./stdlib/relations | grep 'panyam/agni/core/query'` returns nothing, and
+so does `go list -deps ./core/facts | grep 'panyam/agni/core/query'`.
+**Note:** installing NO relation catalog still builds and still runs, and the fact base is then
+empty, so every relation is unknown and a datalog-authored rule reports clean — a quiet pass on a
+design nobody checked. `facts.Installed` is what separates "matched nothing" from "nothing
+installed", and the unknown-relation error says which it was. Do not make a build-tag or a dropped
+blank import the way to ship without an engine; a removal that fails silently is worse than one that
+does not happen.

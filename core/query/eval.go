@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -15,7 +16,7 @@ import (
 // Model for intensional relations (reaches, computed via check.Model.Reach). Built once per design
 // from a check.Model; a query re-uses it.
 type Base struct {
-	edb       map[string][]FactRow
+	edb       map[string][]facts.Row
 	netByName map[string]*ir.Net
 	model     check.Model
 	// idb holds the derived (IDB) relations materialized from a query's user-defined rules, and
@@ -58,20 +59,14 @@ func (b *Base) Work() int64 {
 	return *b.work
 }
 
-// NewBase projects a Model into its fact base (the built-in relations installed by stdlib/relations
-// plus any overlay-registered relations) and indexes it for querying. With no stdlib/relations
-// imported the built-in projector is nil and only overlay relations populate the base.
+// NewBase projects a Model into its fact base (every relation the fact layer has registered, built-in
+// and overlay alike) and indexes it for querying. A binary that installs no relation catalog gets an
+// EMPTY base, which answers nothing while looking exactly like a query that matched nothing — see
+// facts.Installed for the check that separates those.
 func NewBase(m check.Model) *Base {
-	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}, model: m, edbIdx: newEDBIndexCache(), work: new(int64)}
-	if builtinFactsModel != nil {
-		for _, f := range builtinFactsModel(m) {
-			b.edb[f.Relation] = append(b.edb[f.Relation], f)
-		}
-	}
-	for _, name := range registryOrder { // overlay relations, keyed by their registered name
-		for _, f := range registry[name].project(m) {
-			b.edb[name] = append(b.edb[name], f)
-		}
+	b := &Base{edb: map[string][]facts.Row{}, netByName: map[string]*ir.Net{}, model: m, edbIdx: newEDBIndexCache(), work: new(int64)}
+	for _, f := range facts.Rows(m) {
+		b.edb[f.Relation] = append(b.edb[f.Relation], f)
 	}
 	for _, n := range m.Nets() {
 		b.netByName[n.Name] = n
@@ -85,11 +80,9 @@ func NewBase(m check.Model) *Base {
 // model (a spec library is not a design), so model-dependent relations and predicates (net.*, component.*,
 // reaches) have no facts and yield nothing — a spec library query is over the datasheet relations only.
 func NewSpecLibBase(fs param.FactSource) *Base {
-	b := &Base{edb: map[string][]FactRow{}, netByName: map[string]*ir.Net{}, edbIdx: newEDBIndexCache(), work: new(int64)}
-	if builtinFactsSpecLib != nil {
-		for _, f := range builtinFactsSpecLib(fs.AllSpecs()) {
-			b.edb[f.Relation] = append(b.edb[f.Relation], f)
-		}
+	b := &Base{edb: map[string][]facts.Row{}, netByName: map[string]*ir.Net{}, edbIdx: newEDBIndexCache(), work: new(int64)}
+	for _, f := range facts.SpecLibRows(fs.AllSpecs()) {
+		b.edb[f.Relation] = append(b.edb[f.Relation], f)
 	}
 	return b
 }
@@ -332,7 +325,7 @@ func solve(lits []Literal, i int, bnd *binding, b *Base, emit func(*binding) err
 // is symmetric — an argument matches whether the value comes from the fact or from an existing
 // binding — and it commits variables into the binding as a side result, closer to destructuring a
 // value against a pattern than to calling a function with arguments.
-func unify(args []Term, fields []edbField, f FactRow, bnd *binding) (*binding, bool) {
+func unify(args []Term, fields []facts.Field, f facts.Row, bnd *binding) (*binding, bool) {
 	out := bnd.clone()
 	for j, arg := range args {
 		if !bindArg(out, arg, fieldValue(f, fields[j])) {

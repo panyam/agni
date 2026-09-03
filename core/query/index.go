@@ -3,6 +3,8 @@ package query
 import (
 	"strconv"
 	"sync"
+
+	"github.com/panyam/agni/core/facts"
 )
 
 // Fact lookup by binding pattern (WS3-125/126).
@@ -25,7 +27,7 @@ import (
 
 // patternMask marks which positional arguments of an atom are bound at solve time — a constant, or
 // a variable the binding already carries. Wildcards and unbound variables are free. Relations here
-// are arity 2 or 3 (FactRow has six slots and each relation projects a couple), so one byte is
+// are arity 2 or 3 (facts.Row has six slots and each relation projects a couple), so one byte is
 // ample and the number of DISTINCT masks a query actually probes stays in single digits.
 type patternMask uint8
 
@@ -143,7 +145,7 @@ func newEDBIndexCache() *edbIndexCache { return &edbIndexCache{idx: map[idxKey]e
 // get returns the index for a relation at a pattern, building it once on first use. Lazy because a
 // rule catalog probes a handful of the possible patterns, and eagerly indexing every relation at
 // every mask would cost more than the scans it saves on a design nobody queries deeply.
-func (c *edbIndexCache) get(rel string, facts []FactRow, fields []edbField, mask patternMask) edbIndex {
+func (c *edbIndexCache) get(rel string, facts []facts.Row, fields []facts.Field, mask patternMask) edbIndex {
 	k := idxKey{rel: rel, mask: mask}
 	c.mu.RLock()
 	idx, ok := c.idx[k]
@@ -165,7 +167,7 @@ func (c *edbIndexCache) get(rel string, facts []FactRow, fields []edbField, mask
 
 // buildEDBIndex indexes every fact of rel at the given mask. Facts are immutable for the life of a
 // Base, so this is built once per (relation, pattern) and reused across queries.
-func buildEDBIndex(facts []FactRow, fields []edbField, mask patternMask) edbIndex {
+func buildEDBIndex(facts []facts.Row, fields []facts.Field, mask patternMask) edbIndex {
 	idx := edbIndex{}
 	vals := make([]Value, 0, len(fields))
 	for pos, f := range facts {
@@ -191,7 +193,7 @@ const indexMinFacts = 16
 // edbCandidates narrows an atom's facts to the positions that can match under the current binding.
 // all is true when the caller should scan the whole relation instead: nothing is bound (the driver
 // atom of a body, which has nothing to look up by) or the relation is too small to index.
-func (b *Base) edbCandidates(atom *Atom, fields []edbField, bnd *binding) (pos []int, all bool) {
+func (b *Base) edbCandidates(atom *Atom, fields []facts.Field, bnd *binding) (pos []int, all bool) {
 	facts := b.edb[atom.Relation]
 	// No cache means no indexing: a Base built by struct literal rather than NewBase, and the
 	// equivalence oracle in the tests, which needs the pre-index scan path to compare against.

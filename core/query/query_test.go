@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/datasheet/param"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -551,23 +552,21 @@ func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 	}
 }
 
-// withCleanRegistry snapshots the overlay registry AND the builtins map, restoring both after the
-// test so a registered relation or predicate does not leak into other tests. RegisterRelation and
-// RegisterPredicate mutate these package maps, so they are cloned (not just aliased) before the test
-// registers into them; the builtins clone keeps the standard reaches/contains/prefix/suffix entries.
+// withCleanRegistry snapshots the fact-layer registry AND this package's builtins map, restoring both
+// after the test so a registered relation or predicate does not leak into the next one. Registration
+// is process-global and panics on a duplicate, so a leak is a failure in an unrelated test. The two
+// halves are snapshotted separately because they now live in separate packages: relations belong to
+// core/facts, predicates to this evaluator.
 func withCleanRegistry(t *testing.T) {
 	t.Helper()
-	origReg, origOrder, origBI := registry, registryOrder, builtins
-	reg := make(map[string]relationDef, len(origReg))
-	for k, v := range origReg {
-		reg[k] = v
-	}
+	restoreFacts := facts.Snapshot()
+	origBI := builtins
 	bi := make(map[string]builtin, len(origBI))
 	for k, v := range origBI {
 		bi[k] = v
 	}
-	registry, registryOrder, builtins = reg, append([]string(nil), origOrder...), bi
-	t.Cleanup(func() { registry, registryOrder, builtins = origReg, origOrder, origBI })
+	builtins = bi
+	t.Cleanup(func() { builtins = origBI; restoreFacts() })
 }
 
 // TestRegisterPredicate (predicate-interface): an overlay filter predicate registered with
@@ -637,11 +636,11 @@ func TestNegatedReaches(t *testing.T) {
 func TestRegisterRelation(t *testing.T) {
 	withCleanRegistry(t)
 	// An overlay "house.approved(ref)" relation: U1 is approved, U2 is not.
-	RegisterRelation("house.approved", []Field{FieldSubject}, func(m check.Model) []FactRow {
-		var out []FactRow
+	facts.RegisterRelation("house.approved", []facts.Field{facts.FieldSubject}, func(m check.Model) []facts.Row {
+		var out []facts.Row
 		for _, c := range m.Components() {
 			if c.RefDes == "U1" {
-				out = append(out, FactRow{Subject: c.RefDes, Cite: "house db row 7"})
+				out = append(out, facts.Row{Subject: c.RefDes, Cite: "house db row 7"})
 			}
 		}
 		return out
@@ -677,14 +676,16 @@ func TestRegisterRelation(t *testing.T) {
 // silently at query time.
 func TestRegisterRelationRejects(t *testing.T) {
 	cases := map[string]func(){
-		"empty name":    func() { RegisterRelation("", []Field{FieldSubject}, func(check.Model) []FactRow { return nil }) },
-		"no fields":     func() { RegisterRelation("x.y", nil, func(check.Model) []FactRow { return nil }) },
-		"nil projector": func() { RegisterRelation("x.y", []Field{FieldSubject}, nil) },
+		"empty name": func() {
+			facts.RegisterRelation("", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
+		},
+		"no fields":     func() { facts.RegisterRelation("x.y", nil, func(check.Model) []facts.Row { return nil }) },
+		"nil projector": func() { facts.RegisterRelation("x.y", []facts.Field{facts.FieldSubject}, nil) },
 		"collide built-in": func() {
-			RegisterRelation("component.mpn", []Field{FieldSubject}, func(check.Model) []FactRow { return nil })
+			facts.RegisterRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
 		},
 		"collide reaches": func() {
-			RegisterRelation("reaches", []Field{FieldSubject, FieldObject}, func(check.Model) []FactRow { return nil })
+			facts.RegisterRelation("reaches", []facts.Field{facts.FieldSubject, facts.FieldObject}, func(check.Model) []facts.Row { return nil })
 		},
 	}
 	for name, register := range cases {
@@ -692,7 +693,7 @@ func TestRegisterRelationRejects(t *testing.T) {
 			withCleanRegistry(t)
 			defer func() {
 				if recover() == nil {
-					t.Errorf("RegisterRelation(%s) did not panic; want a load-time rejection", name)
+					t.Errorf("facts.RegisterRelation(%s) did not panic; want a load-time rejection", name)
 				}
 			}()
 			register()

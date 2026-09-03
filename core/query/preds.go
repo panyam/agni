@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/panyam/agni/core/facts"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -197,7 +198,7 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 		}
 		return bi.extend(atom, bnd, b, yield)
 	}
-	if fields, ok := edbSchemaOf(rel); ok {
+	if fields, ok := facts.SchemaOf(rel); ok {
 		if len(atom.Args) != len(fields) {
 			return fmt.Errorf("query: relation %q takes %d args, got %d", rel, len(fields), len(atom.Args))
 		}
@@ -217,21 +218,21 @@ func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) 
 // When the binding already fixes some of the atom's arguments, the candidates come from an index on
 // exactly those positions instead of from the whole relation (WS3-125). unify still decides every
 // candidate, so the index only ever has to avoid MISSING a match; see index.go.
-func (b *Base) extendEDB(atom *Atom, fields []edbField, bnd *binding, yield func(*binding) error) error {
-	facts := b.edb[atom.Relation]
+func (b *Base) extendEDB(atom *Atom, fields []facts.Field, bnd *binding, yield func(*binding) error) error {
+	rows := b.edb[atom.Relation]
 	pos, all := b.edbCandidates(atom, fields, bnd)
 	for i := 0; ; i++ {
-		var f FactRow
+		var f facts.Row
 		if all {
-			if i >= len(facts) {
+			if i >= len(rows) {
 				break
 			}
-			f = facts[i]
+			f = rows[i]
 		} else {
 			if i >= len(pos) {
 				break
 			}
-			f = facts[pos[i]]
+			f = rows[pos[i]]
 		}
 		b.countWork()
 		if next, ok := unify(atom.Args, fields, f, bnd); ok {
@@ -291,7 +292,7 @@ func (b *Base) arityAccepts(rel string, n int) (ok bool, known bool) {
 	if bi, found := builtins[rel]; found {
 		return bi.accepts(n), true
 	}
-	if fields, found := edbSchemaOf(rel); found {
+	if fields, found := facts.SchemaOf(rel); found {
 		return n == len(fields), true
 	}
 	if ar, found := b.idbArity[rel]; found {
@@ -305,7 +306,7 @@ func (b *Base) arityLabelOf(rel string) string {
 	if bi, ok := builtins[rel]; ok {
 		return bi.arityLabel()
 	}
-	if fields, ok := edbSchemaOf(rel); ok {
+	if fields, ok := facts.SchemaOf(rel); ok {
 		return fmt.Sprintf("%d", len(fields))
 	}
 	return fmt.Sprintf("%d", b.idbArity[rel])

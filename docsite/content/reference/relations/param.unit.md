@@ -27,7 +27,7 @@ another printed volts. When you want to know what was actually printed, join thi
 
 ### For software engineers
 
-`FactRow` has no unit column, so before agni issue 165 a datalog rule comparing
+`facts.Row` has no unit column, so before agni issue 165 a datalog rule comparing
 `param.range(?m,"VDD",_,_,?max), ?max < 5.0` was comparing a bare number with no way to know its
 scale, and no gate refused it. A spec seeded 4600 mV compared as 4600 against a 5.0 threshold and read
 as comfortably within limits. That is the same wrong-pass agni issue 148 fixed on the Go rule path,

@@ -19,7 +19,7 @@ and the web unit tests passed.
 
 ## Read this first
 
-- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C28). They keep
+- [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules (C1 to C29). They keep
   the engine format-neutral and the layering clean. Read them before proposing a change. A PR that
   violates one will be asked to change, or to justify amending the constraint.
 - The [docs site](https://panyam.github.io/agni/overview/) is the engineering source of truth, and
