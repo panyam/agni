@@ -1277,3 +1277,93 @@ The caller resolves the output target and picks: `emitFormat` in `cmd/agni` is t
 **Reopen if** three or more writers exist AND their output shapes have converged on one file each, so
 a shared seam would no longer have to model the filesystem. Two writers is not evidence; the second
 one arriving with a different output shape is evidence AGAINST.
+
+---
+
+## Datalog is one query shape, and shipping without it was never the goal
+
+Asked directly: agni treats datalog as a first-class citizen, the primitive should be the IR and the
+Model, so can the engine ship without datalog and add it back as an extension?
+
+The framing is right and the remedy is not. Removability was measured and rejected; peer status was
+adopted instead, and C29 is what encodes it.
+
+**The core was already clean.** `go list -deps ./core/check` returns no `core/query`, and the same
+holds for `core/model`, the readers, diff and render. C19 already named `check.Model` the primitive.
+The rule catalog was already language-plural: 47 built-in rules are Go or Spec, 15 intent rules are
+Go, and exactly ONE hand-authored datalog rule ships (`dl/power-pin-mistyped`). All of them register
+through `check.RegisterSource`, whose currency is a struct with an `Eval func(Model) []Verdict`, so
+nothing downstream can tell where a rule came from.
+
+**Deleting the engine costs 34 of 96 rules and three surfaces.** All 33 interface-profile rules
+compile through `query.RuleFromQuery`, plus `profiles.Coverage` behind the web coverage panel,
+`agni query`, and review-manifest house rules. Those are multi-way joins over `component-on-net`,
+`pin.net` and `reaches`, with negation and derived relations. That is the work datalog is good at, and
+a second imperative compiler for the profile mechanism would contradict the one-mechanism claim
+profiles exist to make.
+
+**What datalog genuinely cannot do is the sharper finding, and it is structural.** It answers
+set-of-tuples questions. It cannot return a path, a subgraph, a tour, or a shortest route, and this
+evaluator makes both reasons concrete: `aggregate` runs only at final projection (`core/query/eval.go`),
+never inside `materialize`'s fixpoint, so no recursive rule can carry `min` or `count`; and `Term` is
+Var/Str/Num with no function symbols, so a path cannot be a value at all.
+
+The engine already computes what the tuple then discards. `(*irModel).Reach` (`core/check/reach.go`)
+is a bounded BFS recording `Parent` (the spanning tree) and `Depth` (a shortest distance, since BFS),
+and `Reach.PathTo` / `ThroughOnPath` return ordered routes today. `reaches` projects only
+`(from, to, hops)`, so the route dies at the boundary. `PullUpPathToRail` is a SECOND independent BFS,
+written because the shared walk refuses bus-like nets and a rail is bus-like.
+
+So the target is three peer shapes over one fact layer, none primary: `check.Spec` for per-entity
+questions (no fact base at all), datalog for joins and closure, and a topology shape for routes and
+subgraphs that does not exist yet (issues 374 and 518). Issue 540 is the remaining honesty gap on the
+datalog path itself: a rule still swallows an eval error into a clean pass. `ruledef.proto` already
+stated this with
+`oneof body { SpecRule; QueryRule; ProfileDef }`; the code had drifted from its own contract.
+
+**Reopen if** a second query engine actually arrives. The `Evaluator` interface is not that seam — it
+takes `query.Query` and a concrete `*Base`, so it swaps a datalog STRATEGY, not a language. A neutral
+"query IR" is not the answer either: one supporting join, negation and recursion essentially IS
+datalog, so building it in core would mean core owning a query language while pretending not to. The
+engines meet at `*check.Rule` and `facts.Row`, and that is enough.
+
+---
+
+## The fact tuple's slot pressure is a datasheet problem, not a tuple problem
+
+`facts.Row` (was `query.FactRow`) is a fixed flat struct that gained two fields in the nine days after
+it was created, and its own doc concedes that a relation wider than its slots is a change to the
+struct. The obvious reading is that the tuple is too narrow. The arity histogram says otherwise.
+
+| arity | relations | datasheet-tier |
+|---|---|---|
+| 1-2 | 37 | 1 |
+| 3 | 7 | 2 |
+| 4-6 | 5 | 5 of 5 |
+
+**The graph tier fits the tuple and always will.** 37 of 49 relations are unary or binary, which is
+what a graph IS: node properties and edges. `rail(net)`, `component-on-net(ref,net)` and
+`pin.net(ref,pin,net)` are not straining anything.
+
+**The datasheet tier is not a relation, it is a RECORD**: symbol, min/typ/max, limit kind, unit,
+conditions (a repeated message), provenance (doc/page/table/method/confidence), pin binding, regime.
+Every slot addition and every workaround traces to crushing that record flat. `RangeValue.typ` is
+silently dropped because `Min` and `Num` are spent on the two bounds, surviving only inside a rendered
+string, so a typical value is unbindable and uncomparable. `PinRelationKind` is deliberately not
+published to conserve a slot. `param.unit` exists as a whole relation because there is no unit column.
+`param.prov` puts a page number in `Num`, the slot `BaseUnit` and the dimension guard exist to
+protect. `Cite` is one string per row where `Finding.DatasheetProv` is already a slice for the trust
+gate. The params panel declined the query surface outright, needing the nested spec.
+
+**The two tiers meet at exactly one hinge.** All eight `param.*` and `part.*` relations key on `mpn`,
+a PART TYPE identity that appears nowhere in the circuit graph; the graph tier keys on `net` or
+`ref_des`. `component.mpn(ref, mpn)` is the only bridge, and `NewSpecLibBase` already exists to query
+the datasheet corpus with no design loaded. That is a tier boundary the code half-acknowledges.
+
+So the settled half is that widening the tuple for everyone is the wrong fix, and the shape of the
+right one is to stop making the datasheet tier pretend to be a flat relation. **What is still open**
+is how much of the record stays queryable: `supply-exceeds-abs-max` genuinely joins a datasheet limit
+against a netlist rail, so the tier cannot simply leave the fact base. Deciding that is the
+prerequisite for any change to `facts.Row`, and issue 541 carries the options and the constraints on
+each (notably that `core/query/index.go` bounds arity at 8 through `patternMask uint8`, and that the
+44x indexing win must not regress).
