@@ -3,6 +3,8 @@ package query
 import (
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/core/facts"
 )
 
 func TestSuggestRelation(t *testing.T) {
@@ -15,17 +17,17 @@ func TestSuggestRelation(t *testing.T) {
 		{"components", ""}, // close to nothing within threshold
 	}
 	for _, tc := range cases {
-		if got := suggestRelation(tc.in); got != tc.want {
-			t.Errorf("suggestRelation(%q) = %q, want %q", tc.in, got, tc.want)
+		if got := suggestRelation(facts.DefaultRegistry(), tc.in); got != tc.want {
+			t.Errorf("suggestRelation(facts.DefaultRegistry(), %q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }
 
 func TestDidYouMeanFormatsOrEmpty(t *testing.T) {
-	if h := didYouMean("compnent-on-net"); !strings.Contains(h, "did you mean") || !strings.Contains(h, "component-on-net") {
+	if h := didYouMean(facts.DefaultRegistry(), "compnent-on-net"); !strings.Contains(h, "did you mean") || !strings.Contains(h, "component-on-net") {
 		t.Errorf("hint = %q, want a component-on-net suggestion", h)
 	}
-	if h := didYouMean("xyzzy"); h != "" {
+	if h := didYouMean(facts.DefaultRegistry(), "xyzzy"); h != "" {
 		t.Errorf("hint for an unrelated token = %q, want empty", h)
 	}
 }

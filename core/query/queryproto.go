@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"github.com/panyam/agni/core/facts"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
@@ -75,9 +76,12 @@ func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 //
 // It cannot see relations a not-yet-imported source registers, so it is applied where a program
 // arrives from outside (decoding a definition), not to programs this build constructs.
-func ValidateRelations(q Query) error {
+func ValidateRelations(q Query) error { return ValidateRelationsFrom(facts.DefaultRegistry(), q) }
+
+// ValidateRelationsFrom is ValidateRelations over an explicit relation vocabulary.
+func ValidateRelationsFrom(reg *facts.Registry, q Query) error {
 	known := map[string]bool{}
-	for _, r := range Catalog() {
+	for _, r := range CatalogFrom(reg) {
 		known[r.Name] = true
 	}
 	for _, r := range q.Rules {
@@ -95,7 +99,7 @@ func ValidateRelations(q Query) error {
 				continue
 			}
 			if !known[rel] {
-				return fmt.Errorf("query: %s names unknown relation %q%s", where, rel, didYouMean(rel))
+				return fmt.Errorf("query: %s names unknown relation %q%s", where, rel, didYouMean(reg, rel))
 			}
 		}
 		return nil
