@@ -13,6 +13,7 @@ import (
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -830,6 +831,149 @@ func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 	}
 	if _, bad := seen["mV"]; bad {
 		t.Error("a relation published mV; scale must be normalized before it reaches a fact")
+	}
+}
+
+// TestParamTypFacts: the typical value is its own relation rather than a sixth column on
+// param.range, because a typ is not a bound. A row with no typ emits nothing, so absence stays
+// absence instead of arriving downstream as a zero somebody compares a rail against.
+func TestParamTypFacts(t *testing.T) {
+	spec := typSpec("ACME-LDO", "A", 0.000042)
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want exactly 1: the VDD row states min and max but no typ, so it "+
+			"must not appear here", len(rows))
+	}
+	r := rows[0]
+	if r.Subject != "ACME-LDO" || r.Object != "IQ" {
+		t.Errorf("param.typ keyed (%q, %q), want (ACME-LDO, IQ)", r.Subject, r.Object)
+	}
+	if r.Num == nil || *r.Num != 0.000042 {
+		t.Errorf("param.typ Num = %v, want 0.000042", r.Num)
+	}
+	if r.BaseUnit != "A" {
+		t.Errorf("param.typ BaseUnit = %q, want A; a typ compares like any other quantity and needs its "+
+			"dimension to refuse an amps-against-volts comparison", r.BaseUnit)
+	}
+	if r.Cite == "" {
+		t.Error("param.typ has no citation; a typical value is an extracted claim like any other")
+	}
+}
+
+// TestParamTypFactsConvertToBaseUnit is the C24 end-to-end for the new relation: a printed
+// milliamp arrives as amps, so a query comparing it against another current never sees the vendor's
+// scale.
+func TestParamTypFactsConvertToBaseUnit(t *testing.T) {
+	spec := typSpec("ACME-LDO", "mA", 42)
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want 1", len(rows))
+	}
+	if rows[0].BaseUnit != "A" {
+		t.Errorf("BaseUnit = %q, want A; scale is normalized upstream and must never reach a fact as mA", rows[0].BaseUnit)
+	}
+	if rows[0].Num == nil || *rows[0].Num != 0.042 {
+		t.Errorf("Num = %v, want 0.042 (42 mA in amps)", rows[0].Num)
+	}
+}
+
+// TestParamTypFactsKeepUnconvertibleRow follows specParamRangeRows' posture: a unit with no known
+// scale costs the row its NUMBER, never its existence, so "what does this part specify" never
+// shortens its list in silence.
+func TestParamTypFactsKeepUnconvertibleRow(t *testing.T) {
+	spec := typSpec("ACME-LDO", "dBm", 12)
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want the row kept", len(rows))
+	}
+	if rows[0].Num != nil || rows[0].BaseUnit != "" {
+		t.Errorf("row = %+v, want the symbol and citation kept with no number and no base unit", rows[0])
+	}
+}
+
+// TestSpecLibFactsCarryParamTyp: the library-wide projection answers the same relation as the
+// design-scoped one, so `agni query --speclib` is not a narrower vocabulary than a design query.
+func TestSpecLibFactsCarryParamTyp(t *testing.T) {
+	rows := factsByRelation(SpecLibFacts([]*parampb.PartSpec{typSpec("ACME-LDO", "A", 0.000042)}))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ from SpecLibFacts = %d rows, want 1", len(rows))
+	}
+}
+
+// TestParamProvPageIsNotAQuantity: the page binds as a string. It is a document locator, and a
+// number in a slot the dimension guard protects unifies with a voltage (agni issue 545).
+func TestParamProvPageIsNotAQuantity(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamProv]
+	if len(rows) != 1 {
+		t.Fatalf("param.prov = %d rows, want 1", len(rows))
+	}
+	if rows[0].Num != nil {
+		t.Errorf("param.prov Num = %v, want nil: the page is a locator, not a quantity", rows[0].Num)
+	}
+	if rows[0].Qualifier != "6" {
+		t.Errorf("param.prov Qualifier = %q, want the page \"6\"", rows[0].Qualifier)
+	}
+}
+
+// dimensionlessNumericRelations names the relations whose number is legitimately a pure count with
+// no physical dimension. Membership is a decision someone makes once, never an exemption to reach
+// for when a guard complains: an unlabelled number compares against any bare literal and unifies
+// with a voltage, since unification is identity rather than physics (C24's stated limitation).
+var dimensionlessNumericRelations = map[string]bool{
+	RelNetPinCount: true, // a count of connections
+}
+
+// numericRelationControl is the positive control for the sweep below. A projector that emits no rows
+// passes an "every row is clean" assertion by saying nothing, so the sweep has to prove it actually
+// looked at the families it claims to guard.
+var numericRelationControl = []string{
+	RelParam, RelParamRange, RelParamTyp,
+	RelNetPinCount, RelNetDeclaredTrackWidth, RelBoardTrackWidth,
+}
+
+// TestNoRelationPublishesAnUnlabelledNumber closes the hole TestRelationBaseUnitsAreCanonical cannot
+// see. That test skips a row whose BaseUnit is empty, treating it as dimensionless, so a projector
+// putting a NON-quantity in a numeric slot passes it in silence. param.prov did exactly that with a
+// page number for as long as the relation existed (agni issue 545).
+//
+// The rule: a number in Num or Min carries its dimension, or its relation is on the short list above.
+func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{
+		netClassDef("Power", 1, map[string]string{"track_width": "0.8", "via_drill": "0.4", "clearance": "0.2", "via_diameter": "0.6"}),
+	}
+	d.Nets[0].NetClasses = []string{"Power"}
+	m := check.NewModelWithParams(d, drcBoard(), param.ParamSet{"ACME-33": spec})
+
+	seen := map[string]bool{}
+	for _, f := range Facts(m) {
+		if f.Num == nil && f.Min == nil {
+			continue
+		}
+		seen[f.Relation] = true
+		if f.BaseUnit == "" && !dimensionlessNumericRelations[f.Relation] {
+			t.Errorf("relation %q publishes a number with no BaseUnit (subject %q, object %q): a slot "+
+				"guarded for physical quantities is holding something else, so it compares against any "+
+				"bare literal and unifies with a voltage. Give it a dimension, move it to a string slot, "+
+				"or add the relation to dimensionlessNumericRelations deliberately",
+				f.Relation, f.Subject, f.Object)
+		}
+	}
+	for _, rel := range numericRelationControl {
+		if !seen[rel] {
+			t.Errorf("the sweep saw no numeric row from %q, so this fixture does not exercise it and a "+
+				"clean result there proves nothing", rel)
+		}
 	}
 }
 

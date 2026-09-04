@@ -125,6 +125,35 @@ func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 	}
 }
 
+// typSpec hand-builds a part whose datasheet states a TYPICAL value, the half of RangeValue that had
+// nowhere to land while Min and Num were spent on the two bounds (agni issue 545).
+func typSpec(mpn, unit string, typ float64) *parampb.PartSpec {
+	f := func(v float64) *float64 { return &v }
+	return &parampb.PartSpec{
+		Mpn:          mpn,
+		Manufacturer: "Acme",
+		Docs:         []*parampb.SourceDoc{{Id: "ds", Title: "ACME Rev C", Vendor: "Acme"}},
+		Parameters: []*parampb.Parameter{
+			{
+				Name: "Quiescent current", Symbol: "IQ",
+				LimitKind:         parampb.LimitKind_LIMIT_KIND_CHARACTERISTIC,
+				Value:             &parampb.RangeValue{Typ: f(typ)},
+				Unit:              unit,
+				ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+				Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: 8, TableOrFigure: "Electrical Characteristics", Method: "hand", Confidence: 1},
+			},
+			{
+				Name: "Supply voltage, recommended", Symbol: "VDD",
+				LimitKind:         parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING,
+				Value:             &parampb.RangeValue{Min: f(3.0), Max: f(3.6)},
+				Unit:              "V",
+				ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+				Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: 6, TableOrFigure: "Recommended Operating Conditions", Method: "hand", Confidence: 1},
+			},
+		},
+	}
+}
+
 // ldoRecommendedSpec hand-builds a supply with a two-sided recommended-operating VDD row.
 func ldoRecommendedSpec(mpn string, min, max float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }

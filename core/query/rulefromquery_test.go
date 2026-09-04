@@ -176,8 +176,10 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	if b[Var("doc")].S != "LMR60410-Q1 Buck (SNAS870B Rev. B)" || b[Var("section")].S != "6.3 Recommended Operating Conditions" {
 		t.Fatalf("citation columns wrong: %+v", b)
 	}
-	if b[Var("page")].Num == nil || *b[Var("page")].Num != 5 {
-		t.Fatalf("page not numeric 5: %+v", b[Var("page")])
+	// The page binds as a STRING. It is a document locator rather than a quantity, and a number in a
+	// numeric slot carries no BaseUnit, which made it unify with a voltage (agni issue 545).
+	if b[Var("page")].S != "5" || b[Var("page")].Num != nil {
+		t.Fatalf("page should bind as the string \"5\" with no number: %+v", b[Var("page")])
 	}
 
 	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence — the field

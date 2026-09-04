@@ -1,6 +1,6 @@
 ---
 title: "param.prov"
-description: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from (needs --params)"
+description: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from. The page is a locator and binds as a string, not a number (needs --params)"
 ---
 
 ### What it is
@@ -38,11 +38,17 @@ citation from the subject component's spec via `check.DatasheetProvFor` and atta
 
 ### Go projector
 
-`paramProvFacts` in `check/facts.go` iterates `Model.Components()`, reads each component's MPN via
+`paramProvFacts` in `stdlib/relations/facts.go` iterates `Model.Components()`, reads each component's MPN via
 `Model.ComponentMPN` and its spec via `Model.PartSpec`, dedupes by MPN, and emits one row per
-`spec.Parameters` entry. `Value` is the SourceDoc title resolved from the parameter's `doc_ref`, `Num`
-is the page, and `Conditions` is the table/figure. It shares the join and dedup shape of `paramFacts`;
-the two differ only in which fields they surface. Empty without `--params`.
+`spec.Parameters` entry. `Value` is the SourceDoc title resolved from the parameter's `doc_ref`,
+`Qualifier` is the page, and `Conditions` is the table/figure. It shares the join and dedup shape of
+`paramFacts`; the two differ only in which fields they surface. Empty without `--params`.
+
+**The page binds as a STRING, and it moved there deliberately.** It sat in `Num`, the numeric slot,
+where it carried no `BaseUnit` and so compared against any bare literal and unified with a voltage,
+since unification is identity rather than physics (CONSTRAINTS C24 states that limitation). A page is
+a document locator, not a quantity, and nothing compares page numbers, so the string costs nothing
+(agni issue 545). Write `?page = "6"` rather than `?page = 6`.
 
 ### Datalog
 

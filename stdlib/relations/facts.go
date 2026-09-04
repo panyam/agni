@@ -58,12 +58,28 @@ const (
 	// back-compat and simple max search.
 	RelParamRange = "param.range" // param.range(mpn, symbol, kind, min, max): a two-sided datasheet limit. doc: facts/docs/param.range.md
 
-	// param.prov(mpn, symbol, doc, page, section) exposes the PROVENANCE of a datasheet parameter —
-	// the SourceDoc title, the page, and the table/figure the value was read from — so "where did this
+	// param.typ(mpn, symbol, typ) is the TYPICAL value of a parameter, the third member of RangeValue
+	// and the one param.range cannot carry: Min and Num are spent on the two bounds, so a typ survived
+	// only inside a rendered string and was neither bindable nor comparable (agni issue 545).
+	//
+	// Its own relation rather than a sixth column, because A TYP IS NOT A BOUND. It is what the part
+	// usually does, not what the vendor guarantees, so a rule comparing a rail against one as though
+	// it were a limit reports a confident wrong answer. Sitting it beside min and max is what invites
+	// that; naming it separately makes the choice visible at the call site.
+	RelParamTyp = "param.typ" // param.typ(mpn, symbol, typ): a parameter's typical value. doc: facts/docs/param.typ.md
+
+	// param.prov(mpn, symbol, doc, page, section) exposes the PROVENANCE of a datasheet parameter: the
+	// SourceDoc title, the page, and the table/figure the value was read from. So "where did this
 	// number come from" is a query, and a datalog-authored rule can carry the Citation onto its
 	// findings (WS10-012). doc is the resolved SourceDoc title (not the raw doc_ref id), the readable
 	// form a check.Citation shows. Method/confidence are not columns here (the tuple has no slot); a finding
 	// gets them via check.DatasheetProvFor. Empty without --params, the same posture as param.
+	//
+	// THE PAGE BINDS AS A STRING. It is a document locator rather than a quantity, and a number in a
+	// numeric slot carries no BaseUnit here, which made it dimension-polymorphic: it compared against
+	// any bare literal and unified with a voltage, since unification is identity rather than physics
+	// (C24's stated limitation). Nothing compares page numbers, so the string costs nothing
+	// (agni issue 545).
 	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's Citation. doc: facts/docs/param.prov.md
 
 	// param.unit(mpn, symbol, unit) is the unit a parameter is PRINTED in (agni issue 165). The
@@ -251,6 +267,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, componentMPNFacts(m)...)
 	out = append(out, paramFacts(m)...)
 	out = append(out, paramRangeFacts(m)...)
+	out = append(out, paramTypFacts(m)...)
 	out = append(out, paramUnitFacts(m)...)
 	out = append(out, paramProvFacts(m)...)
 	out = append(out, paramPinFacts(m)...)
@@ -751,6 +768,40 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	return out
 }
 
+// specParamTypRows projects the TYPICAL value of each parameter of one PartSpec. One row per
+// parameter that states a typ, and none for a parameter that does not: an absent typ is a real state
+// (an absolute-max row is max-only), so it must stay absent rather than arriving as a zero a rule
+// would compare a rail against.
+//
+// Unlike specParamRangeRows, an unconvertible unit does NOT keep the row here. There is exactly one
+// number on a typ row, so a row that loses it says only "this part states a typical IQ", which no
+// query can act on. The range relation keeps such a row because its kind token still carries meaning.
+func specParamTypRows(mpn string, spec *parampb.PartSpec) []facts.Row {
+	out := make([]facts.Row, 0, len(spec.Parameters))
+	for _, p := range spec.Parameters {
+		if p.GetValue() == nil || p.GetValue().Typ == nil {
+			continue
+		}
+		f := facts.Row{Relation: RelParamTyp, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)}
+		q, ok := param.InBaseUnit(p)
+		if !ok {
+			out = append(out, f)
+			continue
+		}
+		f.Object, f.BaseUnit, f.Conditions = q.Symbol, q.Unit, conditionsText(q.Conditions)
+		v := *q.Value.Typ
+		f.Num = &v
+		out = append(out, f)
+	}
+	return out
+}
+
+// paramTypFacts emits the typical value of each joined datasheet parameter, deduped by MPN and empty
+// without --params, the same silent-by-construction posture as paramFacts.
+func paramTypFacts(m check.Model) []facts.Row {
+	return perJoinedSpec(m, specParamTypRows)
+}
+
 // paramRangeFacts emits the two-sided, limit-kind-discriminated view of the same joined datasheet
 // parameters paramFacts projects. Where param(mpn, symbol, max) exposes only the ceiling and collapses
 // an absolute-max row and a recommended-operating row on one symbol into indistinguishable tuples,
@@ -780,13 +831,13 @@ func paramRangeFacts(m check.Model) []facts.Row {
 func specParamProvRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	out := make([]facts.Row, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		page := float64(p.GetProv().GetPage())
 		out = append(out, facts.Row{
-			Relation:   RelParamProv,
-			Subject:    mpn,
-			Object:     p.Symbol,
-			Value:      check.DocTitle(spec, p.GetProv().GetDocRef()),
-			Num:        &page,
+			Relation: RelParamProv,
+			Subject:  mpn,
+			Object:   p.Symbol,
+			Value:    check.DocTitle(spec, p.GetProv().GetDocRef()),
+			// The page is a locator, so it binds as a string. See RelParamProv (agni issue 545).
+			Qualifier:  strconv.Itoa(int(p.GetProv().GetPage())),
 			Conditions: p.GetProv().GetTableOrFigure(),
 			Cite:       check.Citation(spec, p),
 		})
@@ -857,6 +908,7 @@ func SpecLibFacts(specs []*parampb.PartSpec) []facts.Row {
 		}
 		out = append(out, specParamRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamRangeRows(spec.GetMpn(), spec)...)
+		out = append(out, specParamTypRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamUnitRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamProvRows(spec.GetMpn(), spec)...)
 		out = append(out, audienceRows(spec.GetMpn(), spec)...)
