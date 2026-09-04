@@ -29,15 +29,16 @@ func init() {
 // registering it here keeps the relation shapes with the projectors that fill them. Relations the
 // evaluator computes rather than looks up (reaches) are NOT here.
 var builtinSchema = map[string][]facts.Field{
-	RelNetMaxVoltage:     {facts.FieldSubject, facts.FieldNum},                                                             // net.max_voltage(net, volts)
-	RelNetNominalVoltage: {facts.FieldSubject, facts.FieldNum},                                                             // net.nominal_voltage(net, volts)
-	RelNetSignalLevel:    {facts.FieldSubject, facts.FieldNum},                                                             // net.signal_level(net, volts)
-	RelComponentMPN:      {facts.FieldSubject, facts.FieldValue},                                                           // component.mpn(ref, mpn)
-	RelParam:             {facts.FieldSubject, facts.FieldObject, facts.FieldNum},                                          // param(mpn, symbol, max)
-	RelParamRange:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldMin, facts.FieldNum},        // param.range(mpn, symbol, kind, min, max)
-	RelParamProv:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldNum, facts.FieldConditions}, // param.prov(mpn, symbol, doc, page, section)
-	RelParamUnit:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue},                                        // param.unit(mpn, symbol, unit)
-	RelParamPin:          {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier},                  // param.pin(mpn, pin, name, function)
+	RelNetMaxVoltage:     {facts.FieldSubject, facts.FieldNum},                                                                   // net.max_voltage(net, volts)
+	RelNetNominalVoltage: {facts.FieldSubject, facts.FieldNum},                                                                   // net.nominal_voltage(net, volts)
+	RelNetSignalLevel:    {facts.FieldSubject, facts.FieldNum},                                                                   // net.signal_level(net, volts)
+	RelComponentMPN:      {facts.FieldSubject, facts.FieldValue},                                                                 // component.mpn(ref, mpn)
+	RelParam:             {facts.FieldSubject, facts.FieldObject, facts.FieldNum},                                                // param(mpn, symbol, max)
+	RelParamRange:        {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldMin, facts.FieldNum},              // param.range(mpn, symbol, kind, min, max)
+	RelParamTyp:          {facts.FieldSubject, facts.FieldObject, facts.FieldNum},                                                // param.typ(mpn, symbol, typ)
+	RelParamProv:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier, facts.FieldConditions}, // param.prov(mpn, symbol, doc, page, section). page is a STRING slot, see RelParamProv
+	RelParamUnit:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue},                                              // param.unit(mpn, symbol, unit)
+	RelParamPin:          {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier},                        // param.pin(mpn, pin, name, function)
 	// param.pin_range is the widest relation the fact base carries, and the one FieldQualifier was
 	// added for: mpn/pin/symbol fill Subject/Object/Value, leaving the limit kind nowhere to go.
 	// Conditions is NOT reused for it — every param relation carries the test conditions there as
@@ -141,7 +142,8 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "net.declared_via_drill", Args: []string{"net", "mm"}, Summary: "the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows)", Kind: facts.KindNetlist},
 	{Name: "param", Args: []string{"mpn", "symbol", "max"}, Summary: "a datasheet parameter's max value for a part, in its SI base unit (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.range", Args: []string{"mpn", "symbol", "kind", "min", "max"}, Summary: "a datasheet parameter's two-sided limit with its kind, both bounds in the SI base unit (absolute_max / recommended_operating / characteristic; needs --params)", Kind: facts.KindDatasheet},
-	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from (needs --params)", Kind: facts.KindDatasheet},
+	{Name: "param.typ", Args: []string{"mpn", "symbol", "typ"}, Summary: "a datasheet parameter's TYPICAL value in the SI base unit, the third member of the min/typ/max triple. A typical value is what the part usually does, never a guaranteed limit, so it is its own relation rather than a column on param.range (needs --params)", Kind: facts.KindDatasheet},
+	{Name: "param.prov", Args: []string{"mpn", "symbol", "doc", "page", "section"}, Summary: "the citation of a datasheet parameter: the SourceDoc title, page, and table/figure it was read from. The page is a locator and binds as a string, not a number (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.unit", Args: []string{"mpn", "symbol", "unit"}, Summary: "the unit a datasheet parameter is PRINTED in; param and param.range carry their numbers in SI base units, so join this to see the vendor's own spelling (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.pin", Args: []string{"mpn", "pin", "name", "function"}, Summary: "a pin the part's datasheet declares, keyed by its spec-local id, with the printed name and its function (power_input / ground / bidirectional / no_connect / ...; needs --params)", Kind: facts.KindDatasheet},
 	{Name: "param.pin_range", Args: []string{"mpn", "pin", "symbol", "kind", "min", "max"}, Summary: "a datasheet limit bound to ONE pin, both bounds in the SI base unit, the per-terminal counterpart to param.range, so a part with several supply pins answers per pin instead of once (needs --params)", Kind: facts.KindDatasheet},
