@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/datasheet/param"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -228,9 +229,10 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 }
 
 // columnKinds derives each answer column's entity kind for the panel's click-to-locate (WS9-038):
-// "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). It reads the
-// arg-labels the relation catalog already declares (component-on-net(ref_des, net), ...), so it adds
-// no new vocabulary. An explicit Select is walked term-by-term so an aggregate or constant column
+// "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). It reads what each
+// relation DECLARES about its arguments (facts.RelationInfo.ArgKinds), so a column's meaning is data
+// the relation states rather than something inferred from the prose of its arg labels (agni issue
+// 548). An explicit Select is walked term-by-term so an aggregate or constant column
 // stays scalar even when it reduces an entity variable (count(?ref) is a number, not a part); the
 // default select (goal variables) has no aggregates, so its columns map straight through.
 //
@@ -241,7 +243,7 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 // the variable whose per-row binding types column i; it is "" for every ordinary column, and where
 // it is set, kinds[i] is "".
 func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
-	labels := catalogArgLabels()
+	decls := catalogArgDecls()
 	terms := q.Select
 	if len(terms) == 0 {
 		for _, col := range q.Columns() {
@@ -253,7 +255,7 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 	refs = make([]query.Term, len(terms))
 	for i, t := range terms {
 		if t.Agg == nil && t.Var != "" {
-			kinds[i], kindVars[i], refs[i] = varKind(t.Var, q.Goal, labels)
+			kinds[i], kindVars[i], refs[i] = varKind(t.Var, q.Goal, decls)
 		}
 	}
 	return kinds, kindVars, refs
@@ -262,49 +264,79 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 // varKind returns the entity kind a variable resolves to, or the variable whose per-row binding
 // carries it. It walks the positive body atoms and takes the first entity-yielding binding, so a
 // variable used as a net in one atom and a scalar in another is a net; a variable bound only in
-// scalar positions, or only by a user rule / IDB relation absent from the catalog, is a scalar.
+// scalar positions, or only by a user rule / IDB relation the catalog does not describe, is a scalar.
 //
-// A `name` position in a relation that also declares a `kind` one is the polymorphic case, and the
-// PAIRING is what keeps the rule narrow: `bus(label, kind)` and `param.range(mpn, symbol, kind,
-// min, max)` both carry a `kind` that is not an entity kind, and neither pairs it with a `name`.
-// Where the kind argument is a constant (`entity(?n, "net")`) the column resolves statically after
-// all, which is worth the extra branch because "find a net by name" is the common search and it
-// should type as a plain net column. entityKind is the second guard: a per-row value outside the
-// vocabulary types the cell as a scalar rather than handing the client a kind it cannot act on.
-func varKind(col query.Var, body query.Body, labels map[string][]string) (string, query.Var, query.Term) {
+// Every branch below reads a DECLARATION. It used to match the catalog's arg-label prose, which put a
+// type system inside a naming convention and needed a hand-written pairing guard each time the
+// convention misfired: one so `bus(label, kind)` and `param.range(mpn, symbol, kind, ...)` did not
+// have their non-entity `kind` read as an entity kind, another so `param.pin(mpn, pin, ...)`'s
+// part-TYPE pin was not treated as a pin on the canvas. Both are gone, because neither relation
+// declares anything now (agni issue 548).
+func varKind(col query.Var, body query.Body, decls map[string]relArgDecl) (string, query.Var, query.Term) {
 	for _, lit := range body.Literals {
 		a := lit.Pos
 		if a == nil {
 			continue
 		}
-		ls := labels[a.Relation]
+		d, ok := decls[a.Relation]
+		if !ok {
+			continue
+		}
 		for j, term := range a.Args {
-			if j >= len(ls) || term.Var != col {
+			if j >= len(d.labels) || term.Var != col {
 				continue
 			}
-			if ls[j] == "name" {
-				if k, v, ok := kindArg(a, ls); ok {
-					return k, v, query.Term{}
+			k, ok := d.kinds[d.labels[j]]
+			if !ok {
+				continue // the relation declares this argument as a scalar
+			}
+			// A polymorphic column: its kind is the VALUE another column binds, per row.
+			if k.KindArg != "" {
+				if arg, ok := argAt(a, d.labels, k.KindArg); ok {
+					switch {
+					case arg.Var != "":
+						return "", arg.Var, query.Term{}
+					case arg.Const != nil:
+						// A constant types the column statically, which is worth the branch because
+						// "find a net by name" is the common search and should be a plain net column.
+						// entityKind is the guard: a value outside the vocabulary stays a scalar
+						// rather than handing the client a kind it cannot act on.
+						if ek := entityKind(arg.Const.S); ek != "" {
+							return ek, "", query.Term{}
+						}
+					}
 				}
 				continue
 			}
-			// A `pin` position names a DESIGN pin only when the same atom also carries the component
-			// it belongs to. pin.net(ref_des, pin, net) does; param.pin(mpn, pin, name, function)
-			// does not, and its `pin` is a datasheet pin of a part TYPE, which is not a thing on the
-			// canvas to highlight. The pairing is the whole test, the same discipline the name/kind
-			// rule uses.
-			if ls[j] == "pin" {
-				if ref, ok := argAt(a, ls, "ref_des"); ok {
-					return check.KindPin, "", ref
+			// A pin is locatable only through the component that owns it, so a declaration naming an
+			// owner must find it. A relation whose owner argument is missing declares itself wrong.
+			if k.OwnerArg != "" {
+				if ref, ok := argAt(a, d.labels, k.OwnerArg); ok {
+					return k.Entity, "", ref
 				}
 				continue
 			}
-			if k := labelKind(ls[j]); k != "" {
-				return k, "", query.Term{}
-			}
+			return k.Entity, "", query.Term{}
 		}
 	}
 	return "", "", query.Term{}
+}
+
+// relArgDecl is one relation's argument labels beside what they denote, the pair varKind resolves a
+// column through.
+type relArgDecl struct {
+	labels []string
+	kinds  map[string]facts.ArgKind
+}
+
+// catalogArgDecls indexes the relation catalog by name. A relation with no declared argument kinds
+// still appears, so a column of a known relation types as a scalar rather than as unknown.
+func catalogArgDecls() map[string]relArgDecl {
+	m := make(map[string]relArgDecl, len(query.Catalog()))
+	for _, ri := range query.Catalog() {
+		m[ri.Name] = relArgDecl{labels: ri.Args, kinds: ri.ArgKinds}
+	}
+	return m
 }
 
 // argAt returns the atom's argument at the position the catalog labels `label`, and whether the
@@ -331,28 +363,6 @@ func termValue(t query.Term, bind map[query.Var]query.Value) string {
 	return ""
 }
 
-// kindArg finds the atom's `kind` argument and reports how it types the atom's `name` argument: a
-// constant types it statically, a variable types it per row. ok is false when the relation declares
-// no kind position (so the name is just a string, as in param.pin's pin name) or when a constant
-// names something outside the entity vocabulary.
-func kindArg(a *query.Atom, labels []string) (string, query.Var, bool) {
-	for j, label := range labels {
-		if label != "kind" || j >= len(a.Args) {
-			continue
-		}
-		switch t := a.Args[j]; {
-		case t.Var != "":
-			return "", t.Var, true
-		case t.Const != nil:
-			if k := entityKind(t.Const.S); k != "" {
-				return k, "", true
-			}
-		}
-		return "", "", false
-	}
-	return "", "", false
-}
-
 // entityKind passes through the kinds a POLYMORPHIC column can take and rejects everything else.
 // The vocabulary is check's, the same one a finding's subject and a picked element on the canvas
 // carry.
@@ -366,30 +376,6 @@ func entityKind(s string) string {
 		return s
 	}
 	return ""
-}
-
-// labelKind maps a catalog arg-label to the highlightable entity kind it names, or "" for a scalar
-// (a number, or an mpn/symbol/layer string the canvas cannot locate). Only ref_des and net-valued
-// endpoints resolve — "from" is reaches' source net, so it counts as a net.
-func labelKind(label string) string {
-	switch label {
-	case "ref_des":
-		return check.KindComponent
-	case "net", "from":
-		return check.KindNet
-	default:
-		return ""
-	}
-}
-
-// catalogArgLabels indexes the relation catalog by name to its ordered arg-labels, the lookup
-// columnKinds uses to type each bound variable.
-func catalogArgLabels() map[string][]string {
-	m := map[string][]string{}
-	for _, ri := range query.Catalog() {
-		m[ri.Name] = ri.Args
-	}
-	return m
 }
 
 // ListRelations returns the queryable relation catalog (WS9-037) for the panel's relation picker:

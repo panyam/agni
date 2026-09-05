@@ -3,6 +3,7 @@ package query
 import (
 	"sort"
 
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 )
 
@@ -31,7 +32,7 @@ var KindOrder = facts.KindOrder
 // so a predicate added without a catalog entry — or with a mismatched arity — fails CI rather than
 // shipping undiscoverable.
 var builtinPredicates = []RelationInfo{
-	{Name: "reaches", Args: []string{"from", "net", "hops?"}, Summary: "transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `reaches(?a,?b,?h), ?h <= 2` and not `reaches(?a,?b,2)`, which means exactly two", Kind: KindPredicate},
+	{Name: "reaches", Args: []string{"from", "net", "hops?"}, ArgKinds: map[string]facts.ArgKind{"from": {Entity: check.KindNet}, "net": {Entity: check.KindNet}}, Summary: "transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `reaches(?a,?b,?h), ?h <= 2` and not `reaches(?a,?b,2)`, which means exactly two", Kind: KindPredicate},
 	{Name: "contains", Args: []string{"string", "substring"}, Summary: "the string contains the substring", Kind: KindPredicate},
 	{Name: "prefix", Args: []string{"string", "prefix"}, Summary: "the string starts with the prefix", Kind: KindPredicate},
 	{Name: "suffix", Args: []string{"string", "suffix"}, Summary: "the string ends with the suffix", Kind: KindPredicate},
