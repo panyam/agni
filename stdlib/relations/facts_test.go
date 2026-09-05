@@ -145,7 +145,7 @@ func TestExternalSignalNetFacts(t *testing.T) {
 	got := map[string]bool{}
 	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelExternalSignalNet] {
 		got[f.Subject] = true
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("external_signal_net(%s) has no provenance cite", f.Subject)
 		}
 	}
@@ -174,7 +174,7 @@ func TestNetClassFacts(t *testing.T) {
 	got := map[string]string{}
 	for _, f := range byRel[RelNetNetClass] {
 		got[f.Subject] = f.Value
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("net.netclass(%s) has no provenance cite", f.Subject)
 		}
 	}
@@ -261,7 +261,7 @@ func TestEsdRatedFacts(t *testing.T) {
 	if len(rated) != 1 || rated[0].Subject != "U9" {
 		t.Fatalf("component.esd_rated = %+v, want one (U9); DEMO-WEAK below floor and R1 unseeded must not appear", rated)
 	}
-	if rated[0].Cite == "" {
+	if len(rated[0].Cites) == 0 {
 		t.Error("component.esd_rated fact has no cite; it should point to the datasheet ESD row")
 	}
 	if got := factsByRelation(Facts(check.NewModel(d)))[RelEsdRated]; len(got) != 0 {
@@ -305,11 +305,11 @@ func TestFactsAlwaysCited(t *testing.T) {
 		t.Fatal("no facts derived")
 	}
 	for _, f := range facts {
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("fact %s(%s,%s) has no provenance cite", f.Relation, f.Subject, f.Object)
 		}
 	}
-	cite := factsByRelation(facts)[RelParam][0].Cite
+	cite := strings.Join(factsByRelation(facts)[RelParam][0].Cites, " ")
 	for _, want := range []string{"ACME-CAP Rev C", "page 2", "Ratings"} {
 		if !strings.Contains(cite, want) {
 			t.Errorf("param cite = %q, missing %q (want the datasheet doc/page/table)", cite, want)
@@ -366,7 +366,7 @@ func TestBoardFacts(t *testing.T) {
 
 	for _, rel := range []string{RelBoardTrackWidth, RelBoardViaDrill, RelBoardLayer} {
 		for _, f := range byRel[rel] {
-			if f.Cite == "" {
+			if len(f.Cites) == 0 {
 				t.Errorf("%s(%s) has no provenance cite", rel, f.Subject)
 			}
 		}
@@ -431,7 +431,7 @@ func TestComponentClassAndNetAttrFacts(t *testing.T) {
 
 	for _, rel := range []string{RelComponentClass, RelNetGround, RelNetExternal} {
 		for _, f := range byRel[rel] {
-			if f.Cite == "" {
+			if len(f.Cites) == 0 {
 				t.Errorf("%s(%s) has no provenance cite", rel, f.Subject)
 			}
 		}
@@ -556,7 +556,7 @@ func TestNetClassDefCascade(t *testing.T) {
 			t.Fatalf("declared track width for %q has no Num", f.Subject)
 		}
 		got[f.Subject] = *f.Num
-		cite[f.Subject] = f.Cite
+		cite[f.Subject] = strings.Join(f.Cites, " ")
 	}
 	// VBUS is in HighSpeed (priority 1) and Power (5). HighSpeed states no track width, so the
 	// value cascades to Power — NOT to Default, and NOT to "HighSpeed states nothing so give up".
@@ -641,14 +641,83 @@ func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
 	if rows[0].Num == nil || *rows[0].Num != 0.15 {
 		t.Errorf("declared track width = %v, want 0.15 from Zeta (priority 1), not 0.9 from Alpha", rows[0].Num)
 	}
-	if rows[0].Cite != "net_settings:Zeta" {
-		t.Errorf("cite = %q, want net_settings:Zeta", rows[0].Cite)
+	if !slices.Equal(rows[0].Cites, []string{"net_settings:Zeta"}) {
+		t.Errorf("cites = %v, want exactly [net_settings:Zeta]", rows[0].Cites)
 	}
 }
 
 // TestUnresolvedSymbolFacts (WS1-052): the relation is keyed by ref_des, one row per PLACEMENT, so
 // it joins to the components that lost pins. That asymmetry with the rule (one finding per
 // reference) is deliberate: the rule reports a cause, the relation exposes a blast radius.
+// TestRefDesCollisionFactsCiteEveryInstance is the reason facts.Row carries a LIST of citations
+// (agni issue 546). A ref-des collision is several placements sharing one designator, so the
+// plurality IS the finding, and a row that cites one of them withholds the half a reviewer needs:
+// they already know R5 exists, and what they are chasing is where the two R5s are.
+func TestRefDesCollisionFactsCiteEveryInstance(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "R5"}},
+		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{{
+			RefDes: "R5",
+			Instances: []*ir.Provenance{
+				{SourceFile: "sheet1.kicad_sch", NativeId: "aaa"},
+				{SourceFile: "sheet2.kicad_sch", NativeId: "bbb"},
+				{SourceFile: "sheet3.kicad_sch", NativeId: "ccc"},
+			},
+		}}},
+	}
+	rows := refDesCollisionFacts(check.NewModel(d))
+	if len(rows) != 1 {
+		t.Fatalf("rows = %d, want one per colliding designator", len(rows))
+	}
+	want := []string{"sheet1.kicad_sch:aaa", "sheet2.kicad_sch:bbb", "sheet3.kicad_sch:ccc"}
+	if !slices.Equal(rows[0].Cites, want) {
+		t.Errorf("cites = %v, want every colliding site %v", rows[0].Cites, want)
+	}
+}
+
+// TestEsdRatedFactsCiteEveryQualifyingRating: the same shape on the datasheet tier. A part may state
+// several system-level ESD ratings above the credit floor, and the row cited limits[0].
+func TestEsdRatedFactsCiteEveryQualifyingRating(t *testing.T) {
+	spec := twoEsdRatingSpec("ACME-TVS")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-TVS"), nil, param.ParamSet{"ACME-TVS": spec})
+
+	rows := factsByRelation(Facts(m))[RelEsdRated]
+	if len(rows) != 1 {
+		t.Fatalf("component.esd_rated rows = %d, want 1", len(rows))
+	}
+	if len(rows[0].Cites) != 2 {
+		t.Errorf("cites = %v, want both qualifying ratings; citing one hides which rating earned the credit", rows[0].Cites)
+	}
+}
+
+// TestEveryFactCitesSomething keeps the property turning one string into a slice could quietly lose:
+// a fact you cannot cite is not verifiable, and an EMPTY SLICE is a new way to say nothing that the
+// old empty-string check would have caught.
+func TestEveryFactCitesSomething(t *testing.T) {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{netClassDef("Power", 1, map[string]string{"track_width": "0.8"})}
+	d.Nets[0].NetClasses = []string{"Power"}
+	m := check.NewModelWithParams(d, drcBoard(), param.ParamSet{"ACME-33": spec})
+
+	seen := 0
+	for _, f := range Facts(m) {
+		seen++
+		if len(f.Cites) == 0 {
+			t.Errorf("relation %q (subject %q, object %q) cites nothing", f.Relation, f.Subject, f.Object)
+			continue
+		}
+		for _, c := range f.Cites {
+			if c == "" {
+				t.Errorf("relation %q (subject %q) carries an empty citation among %v", f.Relation, f.Subject, f.Cites)
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("the fixture produced no facts at all, so this proves nothing")
+	}
+}
+
 func TestUnresolvedSymbolFacts(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}, {RefDes: "U1"}},
@@ -769,7 +838,7 @@ func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 	if pf[0].Object != "VDD" || pf[0].Num != nil {
 		t.Errorf("param row = symbol %q num %v, want VDD with NO number", pf[0].Object, pf[0].Num)
 	}
-	if pf[0].Cite == "" {
+	if len(pf[0].Cites) == 0 {
 		t.Error("a kept row must still carry its citation; it is still a real datasheet row")
 	}
 
@@ -857,7 +926,7 @@ func TestParamTypFacts(t *testing.T) {
 		t.Errorf("param.typ BaseUnit = %q, want A; a typ compares like any other quantity and needs its "+
 			"dimension to refuse an amps-against-volts comparison", r.BaseUnit)
 	}
-	if r.Cite == "" {
+	if len(r.Cites) == 0 {
 		t.Error("param.typ has no citation; a typical value is an extracted claim like any other")
 	}
 }
@@ -1028,7 +1097,7 @@ func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
 		if r.Subject != "ACME-XLAT" {
 			t.Errorf("param.pin subject = %q, want the mpn", r.Subject)
 		}
-		if r.Cite == "" {
+		if len(r.Cites) == 0 {
 			t.Errorf("param.pin %q has no citation; a pin function is an extracted claim", r.Object)
 		}
 		got[r.Object] = [2]string{r.Value, r.Qualifier}
@@ -1224,7 +1293,7 @@ func TestEntityFacts(t *testing.T) {
 	}
 
 	for _, f := range byRel[RelEntity] {
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("entity(%q) has no citation; a search result must stay traceable", f.Subject)
 		}
 	}

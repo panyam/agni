@@ -27,9 +27,22 @@ package facts
 // a relation that must discriminate rows on a dimension Value is already spent on (param.pin_range
 // carries the symbol in Value and the limit kind here, because collapsing an absolute maximum and a
 // recommended range onto one row would be the exact confusion LimitKind exists to prevent). Empty
-// for every relation that does not need it. Cite is the rendered provenance — an IR source or a
-// datasheet doc/page/table — and is never empty for a well-formed fact: a fact you cannot cite is
-// not verifiable.
+// for every relation that does not need it.
+//
+// Cites are the rendered provenance of the fact: an IR source, or a datasheet doc/page/table. NEVER
+// EMPTY for a well-formed fact, because a fact you cannot cite is not verifiable, and an empty slice
+// is a new way to say nothing that an empty string would have shown (TestEveryFactCitesSomething is
+// what holds it).
+//
+// A SLICE because a fact can rest on several sites, and the plurality is sometimes the whole point.
+// A ref-des collision IS several placements sharing one designator, so citing one of them withholds
+// exactly what a reviewer is chasing; a part stating both an air-discharge and a contact-discharge
+// ESD rating earns its credit from either (agni issue 546).
+//
+// NOT a bindable slot. Nothing in the relation schema names it, query.fieldValue never returns it,
+// and the evaluator only accumulates it onto an answer, so widening it reaches neither the
+// binding-pattern index nor the join. That is why this could grow while the tuple's ARITY stayed
+// fixed.
 // BaseUnit is the SI BASE symbol Num and Min are expressed in ("V", "A", "Ω"), or "" when the
 // relation is dimensionless or non-numeric. Both numeric slots share it, since a two-sided range's
 // bounds are always the same dimension. It must never be a prefixed spelling; see Value.BaseUnit.
@@ -43,5 +56,5 @@ type Row struct {
 	BaseUnit   string
 	Conditions string
 	Qualifier  string
-	Cite       string
+	Cites      []string
 }
