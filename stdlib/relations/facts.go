@@ -419,22 +419,6 @@ func paramFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// limitKindToken renders a parameter's LimitKind as the lowercase token the query surface uses
-// (absolute_max / recommended_operating / characteristic / unspecified), matching how other
-// enum-ish facts are surfaced as string tokens rather than proto enum numbers.
-func limitKindToken(k parampb.LimitKind) string {
-	switch k {
-	case parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX:
-		return "absolute_max"
-	case parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING:
-		return "recommended_operating"
-	case parampb.LimitKind_LIMIT_KIND_CHARACTERISTIC:
-		return "characteristic"
-	default:
-		return "unspecified"
-	}
-}
-
 // EVERY NUMBER THE QUERY SURFACE EMITS FOR A PARAMETER IS IN ITS SI BASE UNIT (agni issue 165).
 //
 // A FactRow has no unit slot, so a datalog rule comparing `param.range(?m,"VDD",_,_,?max), ?max < 5.0`
@@ -482,33 +466,6 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	return out
 }
 
-// pinFunctionToken renders a pin's PinFunction as the lowercase token the query surface uses,
-// matching limitKindToken's posture: enum-ish facts surface as string tokens, never proto enum
-// numbers. "unspecified" is a legal and common answer here, unlike for a limit kind, because a pin
-// function table may have no type column at all.
-func pinFunctionToken(f parampb.PinFunction) string {
-	switch f {
-	case parampb.PinFunction_PIN_FUNCTION_POWER_INPUT:
-		return "power_input"
-	case parampb.PinFunction_PIN_FUNCTION_POWER_OUTPUT:
-		return "power_output"
-	case parampb.PinFunction_PIN_FUNCTION_GROUND:
-		return "ground"
-	case parampb.PinFunction_PIN_FUNCTION_INPUT:
-		return "input"
-	case parampb.PinFunction_PIN_FUNCTION_OUTPUT:
-		return "output"
-	case parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL:
-		return "bidirectional"
-	case parampb.PinFunction_PIN_FUNCTION_PASSIVE:
-		return "passive"
-	case parampb.PinFunction_PIN_FUNCTION_NO_CONNECT:
-		return "no_connect"
-	default:
-		return "unspecified"
-	}
-}
-
 // specParamPinRows projects the `param.pin` facts of one PartSpec: one row per declared pin, keyed
 // by mpn, carrying the pin's spec-local id (Object), its printed name (Value) and its function
 // (Qualifier).
@@ -526,7 +483,7 @@ func specParamPinRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	for _, pin := range spec.GetPins() {
 		out = append(out, facts.Row{
 			Relation: RelParamPin, Subject: mpn, Object: pin.GetId(),
-			Value: pin.GetName(), Qualifier: pinFunctionToken(pin.GetFunction()),
+			Value: pin.GetName(), Qualifier: param.PinFunctionToken(pin.GetFunction()),
 			Cite: check.PinCitation(spec, pin),
 		})
 	}
@@ -563,11 +520,11 @@ func specParamPinRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		for _, ref := range p.GetPinRefs() {
 			f := facts.Row{
 				Relation: RelParamPinRange, Subject: mpn, Object: ref,
-				Value: p.GetSymbol(), Qualifier: limitKindToken(p.GetLimitKind()),
+				Value: p.GetSymbol(), Qualifier: param.LimitKindToken(p.GetLimitKind()),
 				Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p),
 			}
 			if ok {
-				f.Value, f.Qualifier = q.Symbol, limitKindToken(q.LimitKind)
+				f.Value, f.Qualifier = q.Symbol, param.LimitKindToken(q.LimitKind)
 				f.BaseUnit, f.Conditions = q.Unit, conditionsText(q.Conditions)
 				if q.Value != nil {
 					// BOTH bounds reduce together, for specParamRangeRows' reason: converting only
@@ -600,20 +557,6 @@ func paramPinRangeFacts(m check.Model) []facts.Row {
 	return perJoinedSpec(m, specParamPinRangeRows)
 }
 
-// modalityToken renders a relation's modality for the Qualifier slot. UNSPECIFIED is published as
-// its own token rather than omitted, because a bound whose modal verb was never recorded is a
-// different thing from one that has none, and a query filtering on modality must be able to find it.
-func modalityToken(m parampb.Modality) string {
-	switch m {
-	case parampb.Modality_MODALITY_REQUIRED:
-		return "required"
-	case parampb.Modality_MODALITY_RECOMMENDED:
-		return "recommended"
-	default:
-		return "unspecified"
-	}
-}
-
 // specParamPinRelationRows projects the `param.pin_relation` facts of one PartSpec: one row per
 // relation, keyed by mpn, carrying the two pin ids in SUBTRACTION ORDER (Object is the subject,
 // Value the reference), the modality (Qualifier), and the bound on their difference in SI base
@@ -640,7 +583,7 @@ func specParamPinRelationRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		f := facts.Row{
 			Relation: RelParamPinRelation, Subject: mpn,
 			Object: r.GetSubjectPinRef(), Value: r.GetReferencePinRef(),
-			Qualifier:  modalityToken(r.GetModality()),
+			Qualifier:  param.ModalityToken(r.GetModality()),
 			Conditions: conditionsText(r.GetConditions()),
 			Cite:       check.RelationCitation(spec, r),
 		}
@@ -746,10 +689,10 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		if !ok {
 			// Same posture as specParamRows: the kind and the citation are still true, the bounds are
 			// not knowable, so both numeric slots stay empty rather than the row disappearing.
-			out = append(out, facts.Row{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: limitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
+			out = append(out, facts.Row{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: param.LimitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
 			continue
 		}
-		f := facts.Row{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: limitKindToken(q.LimitKind), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		f := facts.Row{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: param.LimitKindToken(q.LimitKind), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
 		if q.Value != nil {
 			// BOTH bounds are reduced, and a range rule is why that matters: converting only the max
 			// would leave a "3000..3.6" row, which reads as a rail far BELOW its minimum rather than
