@@ -48,3 +48,8 @@ examples/common/designs/**/*.kicad_prl
 # add, and a handoff is exactly the kind of note that reaches for a private path.
 HANDOFF.md
 HANDOFF_*.md
+
+# Board corpora fetched from https://github.com/panyam/agni-samples by hack/fetch_samples.sh, pinned
+# by hack/samples.pin. Not committed because these designs are not ours: each carries its own licence
+# (Apache-2.0, CERN-OHL-P), and this repo stays uniformly Apache-2.0. `make samples` puts them here.
+tools/samples/
