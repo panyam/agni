@@ -91,7 +91,11 @@ express (issues 374, 518). A relation vocabulary is a composed VALUE (`facts.Def
 twin of `check.DefaultCatalog`): the package globals are an append-only registration buffer and every
 READ goes through a `*Registry` a caller holds. **Installing no relation catalog still builds and
 still runs**, leaving the fact base empty so every datalog rule reports clean; `Registry.Installed`
-is what separates that from a query that matched nothing. `core/review` names no query syntax either
+is what separates that from a query that matched nothing. **That distinction has teeth at INIT time**:
+`stdlib/profiles` compiles its built-in profiles in an `init()` that runs before any relation catalog
+has registered, so anything validating a query against `facts.DefaultRegistry()` at construction sees
+an EMPTY registry and must stand its vocabulary checks down rather than call every relation unknown
+(agni issue 540). `core/review` names no query syntax either
 — a manifest's inline query compiles through a registered `review.QueryCompiler` (`stdlib/reviewquery`
 is the datalog one), so no core package outside `core/query` knows a query language.
 
@@ -155,7 +159,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `make tutorial-runs` is no longer in that company: `tutorial-runs-check` regenerates every capture
   and fails on any difference, and it is in `testall`. A capture's stamp hashes the spec and the
   fixture but NOT the engine, so regenerating is the only way to see engine drift.
-- CLI: `agni stats|check|diff|render|query|review|serve|open <file>`. `open` serves ONE design and
+- CLI: `agni stats|check|diff|render|query|review|serve|open <file>`, plus `agni params <mpn>`.
+  `open` serves ONE design and
   prints its URL, minting the mount itself; `serve` takes `--mount` per folder and `--web-dir`. The reader is chosen by extension
   (case-insensitively), with `.xml`/`.sch` sniffed by root/header. `--symbol-path <dir>` resolves
   external symbol files and searches each dir's SUBTREE, so a dir can be a library root.
@@ -169,6 +174,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the design's declared ENTRY whatever you pointed the command at, and carries the revision it was
   read at**, which the viewer checks before it draws. Semantics and the two ways the halves used to
   disagree are in `guide/checks-and-reports.md`.
+- **`agni params <mpn>` prints the RECORD a query answer cannot reach**, and it needs no design,
+  because a spec library is not one. The datalog relations carry what a query can BIND; the conditions
+  a value holds under, the pin bindings, the full provenance and the verification state are read off
+  the `PartSpec`. `--params <dir>` names a corpus, `--design <path>` lets a design's PROJECT supply
+  one (and the project WINS, per `Overlay.SpecsOr`), `--format json` emits the bare `PartSpec`. A
+  parameter someone verified reports `stale` when the corpus moved to a later revision, naming BOTH
+  revisions: staleness is decided on the content hash and NEVER on the printed one, so the two strings
+  are for the reader (`DECISIONS.md`, "A document revision is recorded for the reader, and never
+  compared").
 - **`query` emits five formats and two of them are DOCUMENTS.** `--format text|csv|json|markdown|html`
   plus `--title`. markdown and html carry the title, the design and THE QUERY above the answer, so a
   saved view states the question it answers; csv deliberately carries no preamble, because its first

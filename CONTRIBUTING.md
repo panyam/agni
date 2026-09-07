@@ -194,6 +194,15 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   commit, before any red-check pass; then break and un-break with the same replace run applied
   backwards. The symptom is confusing rather than obvious, since a test that just passed starts
   failing and the cause looks like the change rather than the undo.
+- **A two-tree comparison needs each side in its OWN subshell.** `( cd $before && cmd ); ( cd $after && cmd )`,
+  never `cd $before && cmd_a; cmd_b`, because the `cd` persists and BOTH commands run in the worktree.
+  That reports the two sides identical, which is the same false-identical trap as the zsh loop above
+  wearing different clothes. Check that the two outputs differ somewhere you expect them to before
+  believing a diff of zero.
+- **`--format json` output is protojson, whose whitespace VARIES BETWEEN BUILDS on purpose**, so two
+  binaries produce byte-different json for identical data (measured: a 1478-line diff that was
+  entirely `"k":  v` against `"k": v`). Never byte-compare it. Parse both sides and compare the
+  decoded values, or compare `check --verdicts` instead, which is stable.
 - **Use `git worktree add <tmp> main`, never `git stash`, to reconstruct a whole BEFORE state** such
   as a "before" binary. Stash leaves untracked new files on disk referencing stashed-away code.
   Stashing ONE tracked file (`git stash push -- path/to/file.go`, run the test, pop) is a different
@@ -235,6 +244,10 @@ circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
   PR CHANGES a page it names, link both: the published page reads better, and it serves `main`, so
   the reviewer needs the PR-diff link to see the new text. Saying which is which takes a clause and
   saves a reviewer reading the version the PR exists to replace.
+- **Run the prose checks over the PR BODY FILE, not over `git diff`.** A body is written to a scratch
+  file and never appears in a diff, so a check that greps the diff passes while the body carries
+  exactly what it was meant to catch. Measured the slow way: five merged PR bodies shipped em-dashes
+  in their reading-order lines while every one of their diffs was clean.
 - **ELI analogies that have carried a PR here.** Fire extinguishers for a protection radius, a
   wiring diagram vs a floor plan for connections vs pin declarations, game mods for the registration
   vs authoring seam.
