@@ -246,8 +246,10 @@ port an embedder cannot name is not a port.
 files (`service/transport_guard_test.go` runs the transport check in CI); service
 constructors take ports; `cmd/agni` builds the OS-backed adapters and registers
 `internal/server` wrappers via the generated Connect handlers (C2); `protos/agni/v1/webapi/`
-holds one file per service; and `go list ./service/... ./artifact/...` names no path under
-`internal/`, so the tier cannot drift back behind the module boundary.
+holds one file per service; and `TestEmbeddingSurfaceIsImportable` (`deps_test.go`) fails if any
+package an embedder is documented to import moves back under `internal/`. That was a `go list` line
+here when the tier moved, which is exactly the shape C29's Verify had before #542 replaced it with a
+test, on the grounds that it went stale within three PRs because nothing ran it.
 
 ## C14: Rule classification is open tags, not typed fields
 **Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
@@ -841,3 +843,27 @@ registration cannot change how an in-flight query reads. The registration half s
 that is the overlay seam (C18) and a startup default is what C22 permits; the READ half must not be.
 Composing in a known order is also why collisions need no order-dependent check: every option is
 applied first and clashes are swept once at the end.
+
+## C30: The rule primitive is `check.Rule`, and no authoring shape owns it
+**Rule:** A rule is a `check.Rule`, and the ways to write one are peers: Go, datalog
+(`stdlib/rules/datalog`), an interface profile (`stdlib/profiles`), a design-intent declaration
+(`stdlib/rules/intent`), and whatever an overlay adds. Each COMPILES to `[]*check.Rule` and reaches a
+catalog as a `check.RuleSource`, which is the only currency the catalog trades in. `core/check`
+depends on none of them. A new authoring shape is a package that compiles to rules and registers a
+source; it is never a new field on `Rule`, a new case in the catalog, or a second thing a catalog can
+hold.
+**Why:** this is C29 one layer over. C29 keeps the fact tuple free of any one query engine because a
+shape that owned the tuple would make its limits everyone's limits; the same is true of rules.
+Datalog cannot express a path question at all (#374, #518) and `check.Spec` answers per-entity
+questions with no fact base, so a catalog built around either would foreclose the rules that need the
+other. It is also what makes an interface a DATA value rather than new code, which is the lever that
+collapsed roughly 130 near-identical "verify signal X connected" review items into one mechanism.
+The failure is quiet in the usual way: `core/check` importing an authoring shape compiles, passes,
+and only shows up later as a rule someone cannot write.
+**Verify:** `TestRulePrimitiveNamesNoAuthoringShape` and
+`TestAuthoringShapesReachTheCatalogAsRuleSources` (`deps_test.go`) watch both halves, the arrow's
+direction and the fact that each shape still compiles to rules.
+**Note:** the direction is the checkable part. An authoring shape depending on `core/check` is
+correct and every one of them does; only the reverse is a violation. `stdlib/profiles` importing
+`core/query` is likewise fine, since a profile that targets one engine is a shape making a choice,
+not the catalog making it for everyone.
