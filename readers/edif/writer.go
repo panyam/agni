@@ -74,6 +74,9 @@ func atomOK(s string) bool {
 type emitter struct {
 	lines []string
 	ind   int
+	// inst is the design's instance-name table, built once by contents and read by both the
+	// instance and the net path, because the two have to agree on the identifier.
+	inst *instanceTable
 }
 
 func (e *emitter) line(format string, args ...any) {
@@ -258,6 +261,7 @@ func directionName(p *ir.Pin) string {
 // sections (a multi-gate IC, a connector bank), so unrolling the sections is what restores the
 // source's instance count.
 func (e *emitter) contents(d *ir.Design) {
+	e.inst = newInstanceTable(d)
 	e.open("(contents")
 	for _, c := range d.GetComponents() {
 		for _, s := range c.GetSections() {
@@ -276,7 +280,7 @@ func (e *emitter) instance(c *ir.Component, s *ir.ComponentSection) {
 		ref = fmt.Sprintf("%s (libraryRef %s)", ref, lib)
 	}
 	head := fmt.Sprintf("(instance %s (viewRef %s (cellRef %s))",
-		instanceName(s), viewName, ref)
+		e.inst.name[s], viewName, ref)
 	// A designator-less instance is a real state the reader models (refdes.Unannotated reports it),
 	// so an empty ref-des emits no designator rather than an empty one.
 	if r := c.GetRefDes(); r != "" {
@@ -297,30 +301,166 @@ func (e *emitter) instance(c *ir.Component, s *ir.ComponentSection) {
 	e.close(1)
 }
 
-// instanceName recovers the instance identifier from provenance, which is where the reader put it.
-// It is the join key nets reference through instanceRef, so a design whose sections carry none gets
-// a deterministic one derived from the ref-des and section index rather than a counter.
-func instanceName(s *ir.ComponentSection) string {
-	if id := s.GetProv().GetNativeId(); id != "" {
-		return id
-	}
-	return fmt.Sprintf("I%d", s.GetIndex())
-}
-
+// net writes one net. Every connection that names a component in the design is ANCHORED to that
+// component's instance, and the unanchored form is reachable only for a connection that names no
+// instance at all.
+//
+// That distinction is the whole point, because the two forms are not more and less detailed spellings
+// of one thing. `(portRef 1 (instanceRef iu3))` names pin 1 of instance iu3; `(portRef 1)` names a
+// port called 1 on the CONTAINING CELL, an interface port. Writing the second where the first was
+// meant does not lose the connection, it asserts a different one, and a conforming reader believes
+// it. Anchoring off Prov.NativeId alone was exactly that bug: only the EDIF reader fills that field,
+// so every design read from any other format emitted a netlist whose components were all isolated
+// while its component, net and pin counts all looked right (agni issue 563).
+//
+// The remaining unanchored case is a connection whose ComponentRef names something the design does
+// not carry as a component: a KiCad power symbol or PWR_FLAG, which the reader records as a
+// connection on "#PWR01" while deliberately keeping the component list physical. There is no
+// instance to point at and minting one would fabricate a component the source never had, so the bare
+// portRef stands. It re-reads as a connection with an empty ComponentRef, which is what an EDIF
+// no-ref connection has always been.
 func (e *emitter) net(n *ir.Net) {
 	var refs []string
 	for _, c := range n.GetConnections() {
-		// The instance id lives in the connection's provenance, including for a connection whose id
-		// resolved to no ref-des (a power symbol, an off-page marker, a top-level port). Those keep
-		// the id here and an empty ComponentRef in the IR, so writing the id back is what keeps the
-		// re-read stable (TestUnresolvedRefIsStable).
-		if id := c.GetProv().GetNativeId(); id != "" {
+		if id, ok := e.inst.anchor(c); ok {
 			refs = append(refs, fmt.Sprintf("(portRef %s (instanceRef %s))", portRefExpr(c.GetPinRef()), id))
 			continue
 		}
 		refs = append(refs, fmt.Sprintf("(portRef %s)", portRefExpr(c.GetPinRef())))
 	}
 	e.line("(net %s (joined %s))", nameExpr(n.GetName(), n.GetProv().GetNativeId()), strings.Join(refs, " "))
+}
+
+// instanceTable decides the identifier each (instance ...) is written under, for the whole design at
+// once. It exists as a table rather than a function of one section because the identifier has to be
+// UNIQUE across the contents -- a net's (instanceRef ...) is a lookup, so two instances sharing a
+// name make one of them unreachable -- and uniqueness is not a property any single section knows.
+//
+// Neither seed is unique on its own. A section's Prov.NativeId is only filled by some readers, and
+// where it is filled it still repeats: a KiCad symbol placed on two sheets of one hierarchy carries
+// the same id under two ref-des, and an unannotated part carries "R?" as many times as it occurs.
+// A ref-des repeats too, both for the multi-section part it is meant to (a multi-gate IC) and for a
+// genuine duplicate the reader models rather than resolves. So a seed is taken as a preference and
+// the collision is broken here.
+type instanceTable struct {
+	name     map[*ir.ComponentSection]string
+	byNative map[string]string
+	byRef    map[string][]*ir.ComponentSection
+	parts    map[string]*ir.PartType
+}
+
+func newInstanceTable(d *ir.Design) *instanceTable {
+	t := &instanceTable{
+		name:     map[*ir.ComponentSection]string{},
+		byNative: map[string]string{},
+		byRef:    map[string][]*ir.ComponentSection{},
+		parts:    classify.PartIndex(d),
+	}
+	taken := map[string]bool{}
+	anon := 0
+	for _, c := range d.GetComponents() {
+		secs := c.GetSections()
+		for _, s := range secs {
+			native := s.GetProv().GetNativeId()
+			seed := native
+			switch {
+			case seed != "":
+			// A ref-des is the only other name a section has, and it is the one the rest of the file
+			// already spells out in the instance's own (designator ...), so a reader diffing two
+			// exports sees a name that moves with the design rather than with the export.
+			case c.GetRefDes() != "" && len(secs) > 1:
+				seed = fmt.Sprintf("%s_%d", mintID(c.GetRefDes()), s.GetIndex())
+			case c.GetRefDes() != "":
+				seed = mintID(c.GetRefDes())
+			default:
+				anon++
+				seed = fmt.Sprintf("I%d", anon)
+			}
+			id := seed
+			for n := 2; taken[id]; n++ {
+				id = fmt.Sprintf("%s_%d", seed, n)
+			}
+			taken[id] = true
+			t.name[s] = id
+			if native != "" {
+				if _, ok := t.byNative[native]; !ok {
+					t.byNative[native] = id
+				}
+			}
+			t.byRef[c.GetRefDes()] = append(t.byRef[c.GetRefDes()], s)
+		}
+	}
+	return t
+}
+
+// anchor resolves the instance a connection hangs off, reporting false when the design carries none.
+//
+// Provenance is consulted first and wins outright, because a reader that filled it recorded the
+// source's own instance id and the connection is already keyed on it (EDIF, where a connection to an
+// instance carrying no ref-des keeps the id here and an empty ComponentRef -- TestUnresolvedRefIsStable).
+// An id naming no instance in the contents is written back verbatim for the same reason: it is what
+// the source said, and inventing a different anchor for it would be worse than preserving it.
+func (t *instanceTable) anchor(c *ir.Connection) (string, bool) {
+	if id := c.GetProv().GetNativeId(); id != "" {
+		if n, ok := t.byNative[id]; ok {
+			return n, true
+		}
+		return id, true
+	}
+	secs := t.byRef[c.GetComponentRef()]
+	if c.GetComponentRef() == "" || len(secs) == 0 {
+		return "", false
+	}
+	// Which SECTION of a multi-section component a connection belongs to is not recorded in the IR --
+	// a Connection carries a ref-des and a pin, and nothing narrows it to one gate. Where the sections
+	// have different part types (a relay's coil and its contacts) the pin itself decides; where they
+	// share one (a multi-gate IC, whose gates declare the same pins) nothing can, and the first
+	// section is taken. Both instances belong to the same component and carry the same designator, so
+	// the choice moves which gate the file names and never which part the connection reaches.
+	if len(secs) > 1 {
+		if s := t.sectionDeclaring(secs, c.GetPinRef()); s != nil {
+			return t.name[s], true
+		}
+	}
+	return t.name[secs[0]], true
+}
+
+// sectionDeclaring picks the single section whose part type declares the pin, and reports nil when
+// none or several do -- an ambiguous answer is no answer, and the caller has a defined fallback.
+func (t *instanceTable) sectionDeclaring(secs []*ir.ComponentSection, pin string) *ir.ComponentSection {
+	var hit *ir.ComponentSection
+	for _, s := range secs {
+		pt := t.parts[s.GetLibraryRef()+"/"+s.GetPartRef()]
+		if pt == nil {
+			pt = t.parts["/"+s.GetPartRef()]
+		}
+		if !declaresPin(pt, pin) {
+			continue
+		}
+		if hit != nil {
+			return nil
+		}
+		hit = s
+	}
+	return hit
+}
+
+// declaresPin matches a Connection.PinRef, which is a physical designator, against a part type's
+// pins. A pin with no designator is matched on its name, because that is what the reader used as the
+// designator when the source gave none.
+func declaresPin(pt *ir.PartType, pin string) bool {
+	for _, p := range pt.GetPins() {
+		if d := p.GetDesignator(); d != "" {
+			if d == pin {
+				return true
+			}
+			continue
+		}
+		if p.GetName() == pin {
+			return true
+		}
+	}
+	return false
 }
 
 // portRefExpr is the inverse of portName, which is a NORMALIZATION rather than a parse: it strips a

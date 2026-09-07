@@ -346,6 +346,19 @@ design writes out FLAT, because the reader scopes a read to the design's top cel
 sub-cell's contents before the writer sees it, and array bus declarations are not written because
 the diagnostic they reach the IR as does not record which port declared them.
 
+An EDIF instance needs a name, because a net anchors each of its pins with an `instanceRef` naming
+one. The writer prefers the id the source used, falls back to the ref-des (with the section index
+appended for a multi-gate part), and breaks a collision by suffixing, so the names are unique across
+the file and stable between two exports of the same design. Neither seed is unique by itself: two of
+the readers record no instance id at all, and a KiCad symbol placed on two sheets of one hierarchy
+carries the same id under two ref-des.
+
+One connection shape has no instance to name. A KiCad power symbol or `PWR_FLAG` reaches the IR as a
+connection on `#PWR01` while the component list stays physical, so there is nothing in the contents
+to anchor it to and minting one would invent a component the source never had. Those are written as
+bare `portRef`s and read back as connections with no component, which is what an EDIF no-ref
+connection has always been. Every other connection is anchored.
+
 `.eds` is refused rather than treated as EDIF. It is a dual-capability format, a netlist plus the
 faithful schematic geometry beside it, and there is no schematic writer yet, so emitting one from
 the netlist writer alone would produce a file claiming to carry a drawing that carries none.
