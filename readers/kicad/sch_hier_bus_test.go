@@ -18,11 +18,17 @@ func pinNet(d *ir.Design, ref, pin string) string {
 	return ""
 }
 
-// TestHierBusMembersDoNotCross locks the oracle finding (WS1-034 Phase 2): a bus crossing a
-// hierarchical sheet boundary via a bus sheet-pin does NOT connect its members across the boundary.
-// kicad-cli keeps the parent member `/DATA0` (node R1) and the child member `/sub/DATA0` (node R101)
-// as two distinct nets; we match. A prior "fix" that joined them would DISAGREE with kicad-cli, so
-// this is a guard against re-introducing the invalidated premise.
+// TestHierBusMembersDoNotCross pins what `DATA[1:0]` means to KiCad, which is: nothing in
+// particular. KiCad's vector-bus syntax is `PREFIX[first..last]`, so a label spelled with a colon is
+// an ordinary scalar net name and the sheet pin carrying it is a scalar port. `DATA0` and `DATA1`
+// are then unrelated local labels, kicad-cli keeps `/DATA0` (R1) and `/sub/DATA0` (R101) apart, and
+// so do we.
+//
+// It reads as a claim about buses and is not one. This fixture was once taken as evidence that bus
+// members never cross a sheet boundary, and that reading held up the fix for agni issue 561 for a
+// while: change nothing here but the spelling, to `DATA[0..1]`, and kicad-cli joins the two halves
+// into one net. TestBusVectorCrossesSheetBoundary is that fixture, against kicad-cli's own answer.
+// The pair is only meaningful together — this one is the control.
 func TestHierBusMembersDoNotCross(t *testing.T) {
 	d, _, err := ReadSchematicHierarchyNets("hier_bus_root.kicad_sch", readFixture(t, "hier_bus_root.kicad_sch"), hierOpen(t))
 	if err != nil {
@@ -37,7 +43,7 @@ func TestHierBusMembersDoNotCross(t *testing.T) {
 		t.Errorf("child R101.1 net = %q, want qualified /sub/DATA0", child)
 	}
 	if parent == child {
-		t.Errorf("bus members must NOT cross the hierarchical boundary (kicad-cli keeps them separate), got both %q", parent)
+		t.Errorf("a colon-spelled label is not a KiCad bus, so these must stay separate, got both %q", parent)
 	}
 }
 
