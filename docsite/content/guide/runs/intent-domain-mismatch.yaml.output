@@ -1,0 +1,9 @@
+#agni-run d599251b17a149bd
+findings by rule:
+  intent/voltage-domain-mismatch 1
+
+first 1:
+  [warning] intent/voltage-domain-mismatch: PMIC_IO_1V8 (rail "PMIC_IO_1V8" is declared in voltage domain "core" (3.3V) but its name declares 1.8V)
+
+1 finding(s) total
+3 subject(s) considered by 1 rule(s) (--verdicts for the detail)

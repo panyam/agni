@@ -247,6 +247,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   TYPE, every consumer read the COMPONENT, and `component.mpn` came back empty for every component of
   every `.tel` design, silently disabling the whole datasheet tier on that format (agni issue 519). A
   new spelling goes in `classify.MPNAliases`, never in a reader.
+- **Some boards are FETCHED, not committed.** `make samples` pulls a pinned tarball from
+  `panyam/agni-samples` into gitignored `tools/samples/`, and `testall` depends on it. Those designs
+  are other people's, under their own licences, which is what keeps this repo uniformly Apache-2.0.
+  `hack/samples.pin` holds the version and a checksum per artifact. **No offline escape hatch, by
+  design**: every failure path exits non-zero, and a test reading the corpus fatals rather than skips,
+  because a corpus that silently fails to arrive turns its tests into tests that pass over an empty
+  set. `make samples-oracle` adds the 19MB both-views corpus the reader cross-check wants.
 - **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
   fails the gate on either half being stale.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
@@ -292,6 +299,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 | A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
 | A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
+| An architectural constraint | 3 (the rule in `CONSTRAINTS.md`, a test in one of three homes, a `Verify` naming that test) | `build/the-gate.md`, and `CONSTRAINTS.md`'s own header | the test you wrote, and NOTHING checks that a rule has one |
 
 ## Working in this repo
 
@@ -315,9 +323,10 @@ constraint, and if the direction was wrong, suggest capturing it as one.
 and thirteen are review questions that say so. Which of the three homes a test goes in follows from
 what it reads: the package graph or the module in the root `deps_test.go`, one package's own rule
 beside that package (`service/transport_guard_test.go`, `core/facts`), a sweep over source in
-`internal/constraints`. The September 2026 audit is why, and `CONSTRAINTS.md`'s header records what
-it found: a Verify written as a command rots without anything surfacing it, and two rules were being
-violated in the tree with nobody the wiser.
+`internal/constraints`. The September 2026 audit is why, and `build/the-gate.md` carries the full
+account with the two shapes worth copying: a graph or single-writer check needs a POSITIVE CONTROL so
+a pattern matching nothing fails rather than reading as clean, and an invariant narrower than any
+sweep (C24's "never COMPARED") becomes a RATCHET with an allowlist rather than being weakened.
 
 ## What does not belong in this repo
 

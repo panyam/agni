@@ -106,9 +106,15 @@ const (
 	EDIFStrings
 )
 
-// Parse reads one top-level s-expression from r, resolving quoted strings per mode.
+// Parse reads the top-level s-expression from r, resolving quoted strings per mode.
+//
+// The whole input must be that one expression. Input left over after it is an error rather than
+// something to ignore, because the only way to reach it is an unbalanced ')' earlier in the file,
+// and the tree already built is then a truncated PREFIX of the design. Returning it looks exactly
+// like a clean read of a small board: a KiCad demo with 349 surplus parens read as 2 of its 71
+// footprints, and `agni validate` called that ok (agni issue 562).
 func Parse(r io.Reader, mode StringMode) (*Node, error) {
-	t := &tokenizer{r: bufio.NewReaderSize(r, 1<<20), mode: mode}
+	t := &tokenizer{r: bufio.NewReaderSize(r, 1<<20), mode: mode, line: 1}
 	tok, err := t.scan()
 	if err != nil {
 		return nil, err
@@ -116,7 +122,19 @@ func Parse(r io.Reader, mode StringMode) (*Node, error) {
 	if tok.kind != tokLParen {
 		return nil, fmt.Errorf("sexpr: expected '(' at start, got %q", tok.text)
 	}
-	return t.parseList()
+	n, err := t.parseList()
+	if err != nil {
+		return nil, err
+	}
+	switch tok, err := t.scan(); {
+	case err != nil:
+		return nil, err
+	case tok.kind == tokEOF:
+		return n, nil
+	default:
+		return nil, fmt.Errorf("sexpr: %q at line %d is outside the top-level expression, which an "+
+			"unbalanced ')' closed early; the rest of the input is unread", tok.text, t.line)
+	}
 }
 
 type tokKind int
@@ -137,11 +155,28 @@ type token struct {
 type tokenizer struct {
 	r    *bufio.Reader
 	mode StringMode
+	line int // 1-based, for error positions; only Parse's own errors quote it
+}
+
+// readByte reads one byte, counting lines. unread returns b, un-counting a newline, so a byte
+// pushed back and re-read is counted once.
+func (t *tokenizer) readByte() (byte, error) {
+	b, err := t.r.ReadByte()
+	if err == nil && b == '\n' {
+		t.line++
+	}
+	return b, err
+}
+
+func (t *tokenizer) unread(b byte) {
+	if t.r.UnreadByte() == nil && b == '\n' {
+		t.line--
+	}
 }
 
 func (t *tokenizer) scan() (token, error) {
 	for {
-		b, err := t.r.ReadByte()
+		b, err := t.readByte()
 		if err == io.EOF {
 			return token{kind: tokEOF}, nil
 		}
@@ -168,7 +203,7 @@ func (t *tokenizer) scan() (token, error) {
 func (t *tokenizer) scanString() (token, error) {
 	var buf []byte
 	for {
-		b, err := t.r.ReadByte()
+		b, err := t.readByte()
 		if err == io.EOF {
 			return token{}, fmt.Errorf("sexpr: unterminated string")
 		}
@@ -176,7 +211,7 @@ func (t *tokenizer) scanString() (token, error) {
 			return token{}, err
 		}
 		if t.mode == KiCadStrings && b == '\\' {
-			n, err := t.r.ReadByte()
+			n, err := t.readByte()
 			if err != nil {
 				buf = append(buf, '\\')
 				if err == io.EOF {
@@ -228,7 +263,7 @@ func (t *tokenizer) scanString() (token, error) {
 // treats the sequence as a literal '%'.
 func (t *tokenizer) readEDIFPercent() (raw []byte, closed bool) {
 	for {
-		b, err := t.r.ReadByte()
+		b, err := t.readByte()
 		if err != nil {
 			return raw, false // EOF: scanString's next read reports the unterminated string
 		}
@@ -240,7 +275,7 @@ func (t *tokenizer) readEDIFPercent() (raw []byte, closed bool) {
 		case b >= '0' && b <= '9' || b == ' ' || b == '\t':
 			raw = append(raw, b)
 		default:
-			_ = t.r.UnreadByte()
+			t.unread(b)
 			return raw, false
 		}
 	}
@@ -270,7 +305,7 @@ func decodeEDIFCodes(raw []byte) ([]byte, bool) {
 func (t *tokenizer) scanAtom(first byte) (token, error) {
 	buf := []byte{first}
 	for {
-		b, err := t.r.ReadByte()
+		b, err := t.readByte()
 		if err == io.EOF {
 			break
 		}
@@ -278,7 +313,7 @@ func (t *tokenizer) scanAtom(first byte) (token, error) {
 			return token{}, err
 		}
 		if b == ' ' || b == '\t' || b == '\r' || b == '\n' || b == '(' || b == ')' || b == '"' {
-			_ = t.r.UnreadByte()
+			t.unread(b)
 			break
 		}
 		buf = append(buf, b)

@@ -295,3 +295,38 @@ func mustRel(t *testing.T, base, target string) string {
 	}
 	return rel
 }
+
+// Every constraint carries a Verify, which is the gap that let C6 ship without one.
+//
+// C6 was violated by readers/telesis from the day that reader landed, and what made it invisible was
+// not the violation being subtle. It was that C6 had no Verify at all, so there was nothing to run
+// and nothing to notice had gone stale. Four rules were in that state when the September 2026 audit
+// read them.
+//
+// A retired constraint is the one exception, and it says so in its heading. The number stays
+// reserved rather than reused so a comment or a commit citing it still resolves.
+func TestEveryConstraintCarriesAVerify(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(repoRoot(t), "CONSTRAINTS.md"))
+	if err != nil {
+		t.Fatalf("read CONSTRAINTS.md: %v", err)
+	}
+	// Split on the headings so each constraint's body is the text up to the next one.
+	sections := constraintHeading.Split(string(b), -1)
+	headings := constraintHeading.FindAllString(string(b), -1)
+	if len(headings) < 20 {
+		t.Fatalf("found %d constraint headings, so this check proves nothing", len(headings))
+	}
+	for i, h := range headings {
+		name := strings.TrimSpace(strings.TrimPrefix(h, "\n## "))
+		if strings.Contains(name, "MERGED INTO") {
+			continue
+		}
+		if !strings.Contains(sections[i+1], "**Verify:**") {
+			t.Errorf("%q carries no **Verify:** line. A rule with nothing to run is not enforceable, "+
+				"and it is how C6 was violated from the day telesis landed. Write the "+
+				"test, or say in the Verify that this one is a review question and why.", name)
+		}
+	}
+}
+
+var constraintHeading = regexp.MustCompile(`\n## C[0-9]+:[^\n]*`)
