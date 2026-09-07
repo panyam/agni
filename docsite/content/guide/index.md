@@ -16,6 +16,7 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Querying](querying/)**: search a design as data, each answer cited.
 - **[Naming conventions](naming-conventions/)**: encode house style and check it on every export.
 - **[Interface profiles](interface-profiles/)**: declare a bus's signals and have every design checked against it.
+- **[Design intent](design-intent/)**: declare what a board is supposed to contain, and catch it drifting.
 - **[Datasheets](datasheets/)**: compare a design against a part's real limits.
 - **[Running the server](running-the-server/)**: bring the viewer up with Docker and mount your designs.
 - **[CLI reference](cli-reference/)**: the full command surface.

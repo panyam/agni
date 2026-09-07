@@ -9,9 +9,17 @@ section additionally needs `templates/Sidebar.html`, and that one is TWO edits i
 `{{# include #}}` at the top AND a branch in the `Contains $currentPath` dispatch chain. Miss the
 branch and the section silently renders the generic fallback nav.
 
-`docsite/nav_test.go` enforces all of it and runs in `make testall` via the `docsite-test` target,
-so a missed edit fails the gate instead of shipping. It found two live drifts when it landed. If you
-are adding a section, let the test tell you what you forgot rather than working from this list.
+`docsite/nav_test.go` runs in `make testall` via the `docsite-test` target and it found two live
+drifts when it landed. If you are adding a SECTION, let the test tell you what you forgot rather than
+working from this list.
+
+**For a PAGE it covers less than this list implies, so check your four edits by hand.** It catches a
+missing `templates/nav/<Section>Nav.html` entry. It does NOT catch a missing `HeaderNavLinks.json`
+entry or a missing line in the section's `index.md`: `TestHeaderNavLinksResolve` checks that every
+entry points at content that exists, which is the json-to-content direction, and nothing checks
+content-to-json. A page you forget to register in those two renders fine at its URL and is reachable
+from nothing. The reverse check is not written because `learn/`'s twelve chapters are deliberately
+absent from the header dropdown, so it needs a per-section exemption rather than a blanket rule.
 
 **A blank line inside raw HTML SPLITS it, and the render breaks silently.** Content pages may embed
 raw HTML (inline SVG figures, the home page's cards) because the renderer passes it through. But
