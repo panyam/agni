@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check fixture-copies-check test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check fixture-copies-check samples samples-oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -89,6 +89,25 @@ ir-model-check:
 fixture-copies-check:
 	./hack/fixture_copies_check.sh
 
+# Fetch the pinned board corpora from https://github.com/panyam/agni-samples into tools/samples/.
+#
+# Those boards are real, publicly-licensed designs that are NOT ours: each carries its own licence,
+# and keeping them out of this tree is what lets this repo stay uniformly Apache-2.0. hack/samples.pin
+# names the release and the checksum; see it for how to bump.
+#
+# There is no offline escape hatch, deliberately. A corpus that silently fails to arrive turns every
+# test reading it into a test that passes over an empty set, which is the exact failure shape
+# docsite/content/build/the-gate.md exists to warn about. The fetch is a no-op once the stamp matches,
+# so it costs one 3MB download per pin bump rather than one per run.
+samples:
+	./hack/fetch_samples.sh tutorial-board
+
+# The oracle corpus adds every board's copper, for the KiCad reader cross-check that compares a
+# schematic read against the board file's own netlist. 19MB against tutorial-board's 3MB, so it is
+# not in the gate's default fetch.
+samples-oracle:
+	./hack/fetch_samples.sh tutorial-board oracle-corpus
+
 # Engine (Go) tests. The example modules have their own go.mod; see examples-test.
 test:
 	$(GO) test ./...
@@ -134,7 +153,7 @@ catalog-docs-check: catalog-docs
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
 # proto-check sits near the front because stale generated code makes every later failure a red
 # herring: it compiles and tests green while describing a different schema.
-testall: vet ir-model-check fixture-copies-check proto-check ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check samples ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

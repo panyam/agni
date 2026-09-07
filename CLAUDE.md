@@ -247,6 +247,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   TYPE, every consumer read the COMPONENT, and `component.mpn` came back empty for every component of
   every `.tel` design, silently disabling the whole datasheet tier on that format (agni issue 519). A
   new spelling goes in `classify.MPNAliases`, never in a reader.
+- **Some boards are FETCHED, not committed.** `make samples` pulls a pinned tarball from
+  `panyam/agni-samples` into gitignored `tools/samples/`, and `testall` depends on it. Those designs
+  are other people's, under their own licences, which is what keeps this repo uniformly Apache-2.0.
+  `hack/samples.pin` holds the version and a checksum per artifact. **No offline escape hatch, by
+  design**: every failure path exits non-zero, and a test reading the corpus fatals rather than skips,
+  because a corpus that silently fails to arrive turns its tests into tests that pass over an empty
+  set. `make samples-oracle` adds the 19MB both-views corpus the reader cross-check wants.
 - **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
   fails the gate on either half being stale.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
