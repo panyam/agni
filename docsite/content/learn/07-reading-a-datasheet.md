@@ -33,6 +33,40 @@ The gap between them is deliberate margin, and treating the bigger number as the
 
 There is a third thing on each row worth noticing: **conditions**. The seeded rows here carry `TA = 25C`. A number is only true under the conditions it was measured at, and a part characterised at 25°C tells you comparatively little about the same part at 85°C in a sealed enclosure.
 
+## A third number, which promises nothing (EE5)
+
+The two numbers above are both promises. An absolute maximum promises damage beyond it; a recommended
+operating range promises the rest of the document holds inside it. A datasheet prints a third kind
+that promises nothing at all, and it is the one most likely to be mistaken for a fact.
+
+Both regulators on this board state an output voltage:
+
+{{ agniRun "content/learn/runs/typical-values.yaml" }}
+
+`U1` outputs 3.3 V. That is the number the schematic calls `+3V3`, the number on the rail label, the
+number you would put in a power budget. It is a **typical** value, which means it is roughly what a
+part from the middle of the production run does at room temperature with a modest load. The part on
+your bench is a sample from that distribution, and it is within spec anywhere the datasheet's
+tolerance allows, which this row does not even state.
+
+So a typical is useful for the things averages are useful for. Estimating what the board draws,
+sizing a heatsink, sanity-checking a rail label. It is the wrong number to design a threshold
+against, because the part that trips your comparator will be the one at the edge of the distribution,
+and it was in spec the whole time.
+
+Ask for it the way you would ask for a limit and you can see the layer refusing to answer:
+
+{{ agniRun "content/learn/runs/typical-not-a-limit.yaml" }}
+
+Two rows, and no number in either. `param` reports ceilings, a typical is not one, and the row stays
+with its number missing rather than quietly reporting zero. That absence is deliberate and it is
+load-bearing: a threshold written against a missing number cannot silently pass, because ordering
+refuses to compare an absent value against a present one.
+
+Note the second row's citation while you are here. `U2`'s 1.8 V comes from a placeholder at
+confidence 0.3, so it is a typical value that nobody has even transcribed from a real document. Two
+different reasons to distrust one number, which the next section is about.
+
 ## The comparison (EE5)
 
 With ratings available, the rule can do what it could not before:
@@ -73,6 +107,7 @@ Worth remembering [chapter 3's](../03-why-every-chip-needs-capacitors/#the-numbe
 
 - Why a datasheet has two maximum voltages and what each one licenses. *(EE5)*
 - Why a rating is meaningless without its conditions. *(EE5)*
+- Why a typical value is not a promise, and what it is still good for. *(EE5)*
 - Why the same defect reads as an error to one command and as provisional to another. *(EE5)*
 - Why a datasheet rule judged two subjects on a nineteen-part board, and why that is honest. *(EE5)*
 

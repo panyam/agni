@@ -1,0 +1,7 @@
+# The same two parts asked the way a limit question is asked. The rows are there and the number is
+# not, which is the visible shape of "a typical value is not a ceiling" (CONSTRAINTS C24: an absent
+# number is representable, so it neither compares nor silently reads as zero).
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni query examples/tutorial-project/designs/gateway/gateway.edn --params examples/tutorial-project/params 'component.mpn(?r, ?m), param(?m, "VOUT", ?max) => ?r, ?m, ?max'
