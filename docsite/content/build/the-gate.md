@@ -48,6 +48,46 @@ longer a copy.
 
 It reads new unstaged files as well as committed ones, so it has no commit-first trap.
 
+## The architectural constraints are tests, not a checklist
+
+`CONSTRAINTS.md` holds C1 to C30 and sixteen of them fail the gate. They ride in under `go test ./...`
+rather than a target of their own, so nothing in the diagram above names them, which is easy to read
+as the document being advisory. It is not.
+
+Where a constraint's test lives follows from what it READS, and there are three homes:
+
+| Reads | Home | Examples |
+|---|---|---|
+| the package graph, or the module | `deps_test.go` at the repo root | C13's embedding surface, C17's reader tier, C18's `go.mod`, C30's rule primitive |
+| one package's own rule | a test beside that package | C13's transport clause in `service/transport_guard_test.go`, C29 in `core/facts`, C19 as `hack/ir_model_check.sh` |
+| a line of source somewhere nobody would think to guard | `internal/constraints` | C6, C12, C20, C22, C24, C25, C28 |
+
+The other thirteen are REVIEW questions and say so. C5 turns on whether an ingestion path was
+approved, which is a fact about a conversation. C21 forbids sourcing component identity from a
+geometry model, and a rule that did would compile and pass. A proxy test for those would pass and
+read as the rule holding, which is worse than prose. The reasoning is in `DECISIONS.md`, under "A
+constraint's Verify is a test, or it says why it cannot be".
+
+**A new rule owes a test, never a command typed into the document.** The September 2026 audit read
+every constraint against the tree and found that a Verify written as a `grep` rots in four distinct
+ways. Two returned hits on clean code, because the tree beneath them had grown legitimate new call
+sites. Two deferred themselves to work that had since landed. One could not fail at all, because what
+it grepped lives in a separate Go module. And two rules had no Verify while the tree already violated
+them, both found by reading rather than by anything failing. That last part is the whole argument:
+both halves of a structural violation compile and pass, so nothing surfaces one until somebody
+re-reads the rule.
+
+Two shapes are worth copying when you write one. A graph or single-writer check needs a POSITIVE
+CONTROL, so a pattern that matched nothing fails instead of reading as clean; that is what keeps a
+check alive through the rename that would otherwise make it vacuous. And when the invariant is
+narrower than anything a sweep can express, use a RATCHET with an allowlist rather than weakening it.
+C24 wants "the raw unit is never COMPARED outside `datasheet/param`", no sweep can tell a comparison
+from a display, so the two display sites are listed in the test and a new one is a deliberate
+addition. That addition is the review moment the constraint is asking for.
+
+Red-check every one of them, per [evidence](evidence.md): break the thing it guards, watch it fail,
+put it back.
+
 ## Generated captures are checked by REGENERATING them
 
 `tutorial-runs-check` deletes every `docsite/content/**/runs/*.output`, rebuilds them, and fails on
