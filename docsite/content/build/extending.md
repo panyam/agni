@@ -107,8 +107,34 @@ Your rules appear in the catalog namespaced `myco/<rule>`, so they can never sha
 `check.DefaultCatalog()` composes the built-ins plus every registered source, so the engine's own
 CLI and serve run your rules alongside its own.
 
-A registered rule is a Go rule. It does not join the built-in Spec-twin regression suite, which is
-the engine catalog's own concern. Authoring a rule in a DSL instead of Go is future work.
+A rule registered this way does not join the built-in Spec-twin regression suite, which is the engine
+catalog's own concern.
+
+## Go is one of four ways to write a rule
+
+Go is the shape with the fewest limits, so it is the one this page starts with, and it is often not
+the one you want. `check.Rule` is the primitive, and three other shapes compile to it. Your extension
+can register any of them, because all four reach the catalog as a `check.RuleSource` and nothing
+downstream can tell them apart.
+
+```go
+check.RegisterSource(check.NewSource("myco", myGoRules))          // Go
+check.RegisterSource(profiles.Source("myco-buses", myProfiles))   // interface profiles
+check.RegisterSource(intent.Source("intent", myDeclaration))      // a design-intent declaration
+```
+
+Datalog is the fourth. `query.RuleFromQuery` compiles a parsed query into a rule, and it returns an
+error rather than a rule that reports nothing, so a query you got wrong fails at composition instead
+of reading as a clean board.
+
+Reach for a profile when the thing you are describing is a bus and the knowledge belongs to an
+architect rather than a programmer, since adding an interface is then a data value and needs no
+rebuild. Reach for an intent declaration when the fact lives outside the design entirely, like a
+rail's current budget, which no netlist carries. Reach for Go when the question needs a traversal or
+a pairwise join the query vocabulary does not express.
+
+[How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written) has the axis
+in full, including why no shape is allowed to own the primitive.
 
 ## Replace built-in rules instead of adding to them
 

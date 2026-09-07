@@ -272,3 +272,6 @@ naming is merely different rather than absent, a naming map is the cheaper fix.
 - [Extending and embedding the engine](../../build/extending/): shipping profiles alongside private readers
   and rules in your own module.
 - [CLI reference](../cli-reference/): the `--profile-path` flag.
+- [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written): where a
+  profile sits among the four ways to author a rule, and why the YAML here is the same format the
+  shipped profiles are written in rather than a layer over something else.

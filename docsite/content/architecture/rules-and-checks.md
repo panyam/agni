@@ -135,6 +135,52 @@ is a natural fit for Tier R and its aggregate variants, and policy languages suc
 constraint-unification language such as CUE cover parts of the same space. The design does not
 adopt an external engine for these, for reasons in the evaluation model below.
 
+## How a rule gets written
+
+The tiers above classify a rule by the machinery it needs, which decides the evaluation model. A
+second axis is independent of that one and decides who can write a rule at all: the FORM it is
+authored in. A Tier R rule can arrive as Go, as datalog, or as a line of YAML, and the catalog cannot
+tell which once it has run.
+
+`check.Rule` is the primitive. Everything below compiles to one and reaches the catalog as a
+`check.RuleSource`, which is the only currency the catalog trades in.
+
+| Shape | Who writes it | Changes | Compiles via |
+|---|---|---|---|
+| Go | an engineer on the engine or an extension | at build time | a `check.Rule` value, directly |
+| Datalog | an engineer, for a question with a set-of-tuples answer | at build time | `query.RuleFromQuery` |
+| Interface profile | an architect, shared across boards | rarely | `profiles.Compile` |
+| Design-intent declaration | a hardware engineer, per board | every board | `intent.Compile` |
+
+The last two are why the engine can be extended without a Go toolchain, and the reason each of them
+exists as a file is the person holding the knowledge. An EE describing CAN should not have to open a
+Go file, and a rail's declared current draw comes off a power budget, so requiring a rebuild to state
+one would put the whole design-intent tier out of reach of the people
+who own the number.
+
+Two consequences worth stating, because both look like accidents until you see the axis:
+
+**The shipped profiles are authored in the same YAML you would write.** They are embedded files under
+`stdlib/profiles/builtins/`, parsed at init. Nothing about a built-in is privileged, which is what
+makes an overriding profile a supported act rather than a hack: yours replaces one written the same
+way.
+
+**There is no built-in intent, and that absence is deliberate.** A generic statement of what a board
+should contain says nothing, and a rule that enumerated its expectations FROM the design would always
+pass. So every intent rule iterates the declaration and probes the netlist, never the reverse, and a
+design run with no declaration leaves those items not-automated rather than silently clean.
+
+This is [C29](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md) one layer up, and the argument
+transfers whole. There, the fact tuple is the primitive and no query engine owns it, because a shape
+that owned the tuple would make its limits everyone's limits. Here, the rule is the primitive and no
+authoring shape owns it, for the same reason: datalog cannot express a path question at all, and
+`check.Spec` answers per-entity questions with no fact base, so a catalog built around either would
+foreclose the rules that need the other. [C30](https://github.com/panyam/agni/blob/main/CONSTRAINTS.md)
+states it, and `deps_test.go` watches the arrow in both directions.
+
+A new shape is therefore a package that compiles to rules and registers a source. It is never a new
+field on `Rule`, a new case in the catalog, or a second thing a catalog can hold.
+
 ## What runs now, what waits
 
 - On the netlist IR today: electrical rule checks and the connectivity, attribute, quantified,
