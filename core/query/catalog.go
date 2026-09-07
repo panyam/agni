@@ -19,7 +19,7 @@ const (
 	KindBoard     = facts.KindBoard
 	KindDatasheet = facts.KindDatasheet
 	KindPredicate = facts.KindPredicate
-	KindOverlay   = facts.KindOverlay
+	KindExtension = facts.KindExtension
 )
 
 // KindOrder is the display order of the kind groups, most-common first.

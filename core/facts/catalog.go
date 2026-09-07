@@ -9,7 +9,7 @@ type RelationInfo struct {
 	Name    string
 	Args    []string
 	Summary string
-	Kind    string // "netlist" | "board" | "datasheet" | "predicate" | "overlay"
+	Kind    string // "netlist" | "board" | "datasheet" | "predicate" | "extension"
 	// Detail is the relation's rich reference markdown (WS14-005), or "" when the relation has no doc
 	// yet (the staged backfill: not every relation is documented on day one). It is the deep-dive
 	// behind Summary — a discovery surface shows Summary in a list and Detail on demand. It is not
@@ -55,8 +55,8 @@ const (
 	KindBoard     = "board"
 	KindDatasheet = "datasheet"
 	KindPredicate = "predicate"
-	KindOverlay   = "overlay"
+	KindExtension = "extension"
 )
 
 // KindOrder is the display order of the kind groups, most-common first.
-var KindOrder = []string{KindNetlist, KindBoard, KindDatasheet, KindPredicate, KindOverlay}
+var KindOrder = []string{KindNetlist, KindBoard, KindDatasheet, KindPredicate, KindExtension}

@@ -1,6 +1,6 @@
 // Package review runs a project's declared design-review checklist (a "manifest") against one
 // design and reports, per checklist item, whether its check passed, failed, did not apply, or is not
-// yet automated (WS3-050). The manifest is composition-as-config in the overlay — which checks, in
+// yet automated (WS3-050). The manifest is composition-as-config in the extension — which checks, in
 // which review areas — while the checks themselves (core rules, interface profiles, datalog queries)
 // stay the engine's closed vocabulary; review only SELECTS from the composed catalog and compiles
 // inline queries. This is the profiles-as-config pattern (WS3-045) generalized from one interface to
@@ -17,7 +17,7 @@ import (
 )
 
 // Manifest is the review checklist: named review areas, each holding items. It is authored as YAML in
-// the overlay; Load parses and validates it.
+// the extension; Load parses and validates it.
 type Manifest struct {
 	Name  string `yaml:"name"`
 	Areas []Area `yaml:"areas"`

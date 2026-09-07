@@ -36,8 +36,8 @@ import (
 )
 
 var (
-	contentDir = flag.String("content", "docsite/content/reference", "docsite reference content dir")
-	staticDir  = flag.String("static", "docsite/static/images/catalog", "docsite static dir for catalog images")
+	contentDir   = flag.String("content", "docsite/content/reference", "docsite reference content dir")
+	staticDir    = flag.String("static", "docsite/static/images/catalog", "docsite static dir for catalog images")
 	ruleImgSrc   = flag.String("rule-images", "stdlib/rules/builtin/docs/images", "source dir for built-in rule doc images")
 	intentImgSrc = flag.String("intent-images", "stdlib/rules/intent/docs/images", "source dir for intent rule doc images")
 	relImgSrc    = flag.String("relation-images", "stdlib/relations/facts/docs/images", "source dir for relation doc images")
@@ -69,7 +69,7 @@ var relationKindOrder = []string{
 	query.KindBoard,
 	query.KindDatasheet,
 	query.KindPredicate,
-	query.KindOverlay,
+	query.KindExtension,
 }
 
 func main() {

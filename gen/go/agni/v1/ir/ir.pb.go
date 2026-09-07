@@ -717,7 +717,7 @@ type InputDiagnostics struct {
 	//
 	// Declared per READ rather than per format, because it is a property of the reader's
 	// implementation and not of the file: a reader that learns to detect a construct starts
-	// supplying it, and an out-of-module reader (the C18 overlay seam) declares its own.
+	// supplying it, and an out-of-module reader (the C18 extension seam) declares its own.
 	Supplied      []string `protobuf:"bytes,7,rep,name=supplied,proto3" json:"supplied,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

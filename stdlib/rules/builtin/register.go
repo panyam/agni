@@ -1,6 +1,6 @@
 // Package builtin is the standard EE rule catalog: one file per rule (rule_*.go), each a
 // check.Rule value carrying its documentation and an Eval, plus the declarative-twin Specs that
-// the parity tests hold to those Evals. It registers through the same public seam an overlay uses,
+// the parity tests hold to those Evals. It registers through the same public seam an extension uses,
 // so the core engine (package check) owns no rules. Blank-importing this package installs the
 // catalog as the anonymous built-in source; a program that omits the import runs with no built-ins.
 package builtin
@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// init installs the catalog with the engine, the way an overlay suite calls check.RegisterSource.
+// init installs the catalog with the engine, the way an extension suite calls check.RegisterSource.
 // It runs before an importing package's own var initializers, so a blank-importing binary has the
 // built-ins at startup.
 func init() {

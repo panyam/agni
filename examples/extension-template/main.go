@@ -1,11 +1,11 @@
-// Command agni-overlay is the overlay template's composing binary. Copy this whole module,
-// rename it, fill in the myfmt/ reader and myrules/ rules, and you have a private overlay that
+// Command agni-extension is the extension template's composing binary. Copy this whole module,
+// rename it, fill in the myfmt/ reader and myrules/ rules, and you have a private extension that
 // extends the public agni engine without forking it.
 //
 // The composition is two blank imports: the reader and rule packages register themselves in
 // their init (formats.Register / check.RegisterSource), so from here the engine's library
 // resolves your format and runs your rules alongside the built-ins. See
-// docs/OVERLAY_AUTHORING.md.
+// the docsite page build/extending.md.
 package main
 
 import (
@@ -16,19 +16,19 @@ import (
 	"github.com/panyam/agni/readers/formats"
 
 	// TODO: point these at your renamed packages.
-	_ "github.com/panyam/agni/examples/overlay-template/myfmt"  // registers the .myfmt reader
-	_ "github.com/panyam/agni/examples/overlay-template/myrules" // registers the myco/ rules
+	_ "github.com/panyam/agni/examples/extension-template/myfmt"   // registers the .myfmt reader
+	_ "github.com/panyam/agni/examples/extension-template/myrules" // registers the myco/ rules
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: agni-overlay <design-file>")
+		fmt.Println("usage: agni-extension <design-file>")
 		fmt.Printf("registered custom format: %v\n", formats.NameForExt("x.myfmt") != "")
 		fmt.Printf("registered custom rules: %d in the catalog\n", len(check.DefaultCatalog().Rules()))
 		return
 	}
 	if err := run(os.Args[1]); err != nil {
-		fmt.Fprintln(os.Stderr, "agni-overlay:", err)
+		fmt.Fprintln(os.Stderr, "agni-extension:", err)
 		os.Exit(1)
 	}
 }

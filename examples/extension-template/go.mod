@@ -1,5 +1,5 @@
 // TODO: rename this module to your own path, e.g. github.com/yourorg/agni-overlay.
-module github.com/panyam/agni/examples/overlay-template
+module github.com/panyam/agni/examples/extension-template
 
 go 1.26.4
 

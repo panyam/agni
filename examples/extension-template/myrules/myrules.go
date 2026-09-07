@@ -1,10 +1,10 @@
-// Package myrules is the rule slot of the overlay template. Copy this package, rename it, and
+// Package myrules is the rule slot of the extension template. Copy this package, rename it, and
 // replace the example rule with your house-style/private rules. It registers a named rule source
 // with the engine's public rule registry (check.RegisterSource); blank-importing it makes the
 // rules appear in ListRules and run in CheckDesign, namespaced "myco/..." so they can never
 // shadow a built-in.
 //
-// See docs/OVERLAY_AUTHORING.md for the full walkthrough.
+// See the docsite page build/extending.md for the full walkthrough.
 package myrules
 
 import (

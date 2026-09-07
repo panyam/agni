@@ -1,4 +1,4 @@
-module github.com/panyam/agni/examples/overlay
+module github.com/panyam/agni/examples/extension
 
 go 1.26.4
 

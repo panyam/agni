@@ -74,8 +74,8 @@ func TestCatalogIncludesOverlayRelation(t *testing.T) {
 	for _, r := range CatalogFrom(reg) {
 		if r.Name == name {
 			found = true
-			if r.Kind != KindOverlay {
-				t.Errorf("overlay relation kind = %s, want %s", r.Kind, KindOverlay)
+			if r.Kind != KindExtension {
+				t.Errorf("overlay relation kind = %s, want %s", r.Kind, KindExtension)
 			}
 			if len(r.Args) != 2 || r.Args[0] != "subject" || r.Args[1] != "n" {
 				t.Errorf("overlay args = %v, want [subject n]", r.Args)

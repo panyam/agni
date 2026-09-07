@@ -205,7 +205,7 @@ note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/
 
 Two readings of one interface running together would invent failures rather than merely
 duplicate them, since the built-in still anchors on its own naming and reports each re-bound
-role as missing. [Authoring an overlay](../../build/overlay/) covers the mechanism.
+role as missing. [Extending and embedding the engine](../../build/extending/) covers the mechanism.
 
 ## Where the flag reaches
 
@@ -269,6 +269,6 @@ naming is merely different rather than absent, a naming map is the cheaper fix.
 
 - [Checks and reports](../checks-and-reports/): profile findings read like any other, and
   `--fail-on` can gate on them.
-- [Authoring an overlay](../../build/overlay/): shipping profiles alongside private readers
+- [Extending and embedding the engine](../../build/extending/): shipping profiles alongside private readers
   and rules in your own module.
 - [CLI reference](../cli-reference/): the `--profile-path` flag.

@@ -1,9 +1,9 @@
-// Command agni-overlay is the reference open-core overlay skeleton (WS12-001): a binary in a
+// Command agni-extension is the reference open-core extension skeleton (WS12-001): a binary in a
 // SEPARATE Go module that depends on the public engine and adds a private format reader and a
 // private rule suite through the engine's public extension points, without forking it.
 //
-// The composition is two blank imports for the overlay's own extensions, plus agni.New for the
-// engine's. The overlay's reader and rule packages register themselves via formats.Register
+// The composition is two blank imports for the extension's own extensions, plus agni.New for the
+// engine's. The extension's reader and rule packages register themselves via formats.Register
 // (WS12-003) and check.RegisterSource (WS12-004) in their init; from there the engine's own library
 // resolves the .acme format and runs the acme/ rule alongside the built-ins.
 //
@@ -22,8 +22,8 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/readers/formats"
 
-	_ "github.com/panyam/agni/examples/overlay/acmeformat" // registers the .acme reader
-	_ "github.com/panyam/agni/examples/overlay/acmerules"  // registers the acme/ rule suite
+	_ "github.com/panyam/agni/examples/extension/acmeformat" // registers the .acme reader
+	_ "github.com/panyam/agni/examples/extension/acmerules"  // registers the acme/ rule suite
 
 	_ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
 	_ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a review manifest's inline queries
@@ -37,7 +37,7 @@ func main() {
 		path = os.Args[1]
 	}
 	if err := run(path); err != nil {
-		fmt.Fprintln(os.Stderr, "agni-overlay:", err)
+		fmt.Fprintln(os.Stderr, "agni-extension:", err)
 		os.Exit(1)
 	}
 }
@@ -54,13 +54,13 @@ func run(path string) error {
 		fmt.Fprintln(os.Stderr, "note:", w)
 	}
 
-	// The overlay's reader was registered by the blank import above, so the engine's Loader
+	// The extension's reader was registered by the blank import above, so the engine's Loader
 	// resolves .acme with no special-casing.
 	d, err := (&formats.Loader{}).ReadDesign(path)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("loaded %s: %d components, %d nets (via the overlay's .acme reader)\n\n", path, len(d.Components), len(d.Nets))
+	fmt.Printf("loaded %s: %d components, %d nets (via the extension's .acme reader)\n\n", path, len(d.Components), len(d.Nets))
 
 	// The engine's catalog is the built-ins PLUS every registered source, so the acme/ rule runs
 	// alongside the engine's own checks.

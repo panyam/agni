@@ -73,7 +73,7 @@ type Loader struct {
 // filesystem. A registered reader MUST reach its bytes through this (or ReadFile) rather than
 // calling os directly, or it works on a server and fails in every host that has no filesystem —
 // that is the whole contract the FS field buys. It is exported for exactly that reason: the
-// registry is a public extension point (see Register), so an out-of-module reader in the overlay
+// registry is a public extension point (see Register), so an out-of-module reader in the extension
 // needs the same door the built-in readers use.
 //
 // *os.File already satisfies fs.File, so the host branch needs no wrapper and a caller that sniffs

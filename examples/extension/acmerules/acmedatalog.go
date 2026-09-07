@@ -5,13 +5,13 @@ import (
 	"github.com/panyam/agni/core/query"
 )
 
-// This file is the half of the overlay story the Go rule beside it cannot tell: a private rule
+// This file is the half of the extension story the Go rule beside it cannot tell: a private rule
 // authored as DATALOG over the engine's public relations, from a separate module, with no change to
 // the engine (WS3-038). The Go rule writes an Eval closure and walks the Model itself; this one
 // declares a query and lets query.RuleFromQuery turn the rows into findings with severity, message
 // and provenance. Both arrive in the catalog the same way, through check.RegisterSource.
 //
-// Why an overlay author would want the datalog form: the rule is a value, not code. It can be
+// Why an extension author would want the datalog form: the rule is a value, not code. It can be
 // reviewed by someone who does not read Go, printed in a report next to the finding it produced,
 // and moved into a config file later without rewriting the engine's half of the contract.
 //
@@ -24,7 +24,7 @@ import (
 // experimentalOnPowerNet is a house rule with no counterpart in the core catalog: an experimental
 // (X-prefixed) part must not share a net with a production part's power pin. The engine ships
 // nothing like it because it encodes a policy, not a law of electronics — which is exactly the kind
-// of rule that belongs in an overlay rather than upstream.
+// of rule that belongs in an extension rather than upstream.
 //
 // The query composes two PIN relations with a NET-level one, which is the join a pin rule needs and
 // the reason pin.role / pin.net had to exist as relations at all: find an experimental part, find a
@@ -37,10 +37,10 @@ import (
 // The reverse spelling — opening with pin.role and letting ?net fall out later — reads more naturally
 // but scans every power pin in the design first. On a toy fixture nothing notices; on a real board
 // that difference is the whole runtime, and it is how a shipped profile rule made `agni check`
-// non-terminating (WS3-114). An overlay author copying this file should copy the ordering habit too.
+// non-terminating (WS3-114). An extension author copying this file should copy the ordering habit too.
 //
 // `prefix` is an engine built-in string predicate, so the whole rule is expressible without the
-// overlay registering any relation or predicate of its own.
+// extension registering any relation or predicate of its own.
 //
 // The `?ref != ?x` clause is not decoration. Datalog matches by homomorphism, so without it the two
 // variables may bind the SAME component and an experimental part's own power pin would satisfy the

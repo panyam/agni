@@ -44,5 +44,5 @@ const (
 // `var Specs`. They moved to package stdlib/rules/builtin (phase 2b of the package reorg), which
 // installs them as the anonymous built-in source via check.RegisterBuiltins at init. The engine
 // core no longer owns any rules: a program gets the standard catalog by blank-importing
-// stdlib/rules/builtin, exactly as it registers an overlay suite. See source.go (Builtins,
+// stdlib/rules/builtin, exactly as it registers an extension suite. See source.go (Builtins,
 // RegisterBuiltins) and catalog.go (CatalogWith).

@@ -17,7 +17,7 @@ field on `ViewSink` in `web/src/viewer.ts`, and its construction plus wiring in 
 
 `main.ts` is the composition root and nothing else constructs it, so a missed fourth edit is invisible
 to every other test: the presenter's view ports are OPTIONAL by design (an embedding host may leave a
-panel out, see `build/overlay.md`), which means an unwired port is a silent no-op rather than a type
+panel out, see `build/extending.md`), which means an unwired port is a silent no-op rather than a type
 error. That has shipped a green-CI, broken-in-the-browser feature twice, once with a client never
 passed and once with a view never wired.
 

@@ -14,7 +14,7 @@
 //
 // This package is public (not internal/) because it is the engine's reader extension point
 // for the open-core split (WS12-003): a reader living in another module — a proprietary
-// format in the private overlay — registers itself with Register and gains every derived
+// format in the private extension — registers itself with Register and gains every derived
 // surface with no fork of the engine. The built-in readers use the same Register, so the
 // registry stays one table with one code path.
 package formats
@@ -62,7 +62,7 @@ type Format struct {
 }
 
 // byExt is the registry. The built-in entries are defined in registry.go; an out-of-module
-// consumer (the open-core overlay) adds its own via Register.
+// consumer (the open-core extension) adds its own via Register.
 var byExt = map[string]*Format{}
 
 // Register adds a format to the single registry, keyed by its extension. This is the public
