@@ -292,6 +292,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 | A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
 | A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
+| An architectural constraint | 3 (the rule in `CONSTRAINTS.md`, a test in one of three homes, a `Verify` naming that test) | `build/the-gate.md`, and `CONSTRAINTS.md`'s own header | the test you wrote, and NOTHING checks that a rule has one |
 
 ## Working in this repo
 
@@ -315,9 +316,10 @@ constraint, and if the direction was wrong, suggest capturing it as one.
 and thirteen are review questions that say so. Which of the three homes a test goes in follows from
 what it reads: the package graph or the module in the root `deps_test.go`, one package's own rule
 beside that package (`service/transport_guard_test.go`, `core/facts`), a sweep over source in
-`internal/constraints`. The September 2026 audit is why, and `CONSTRAINTS.md`'s header records what
-it found: a Verify written as a command rots without anything surfacing it, and two rules were being
-violated in the tree with nobody the wiser.
+`internal/constraints`. The September 2026 audit is why, and `build/the-gate.md` carries the full
+account with the two shapes worth copying: a graph or single-writer check needs a POSITIVE CONTROL so
+a pattern matching nothing fails rather than reading as clean, and an invariant narrower than any
+sweep (C24's "never COMPARED") becomes a RATCHET with an allowlist rather than being weakened.
 
 ## What does not belong in this repo
 

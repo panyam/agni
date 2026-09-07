@@ -7,9 +7,12 @@ Enforceable architectural rules for this project. Background and rationale in
 
 ## How these are enforced
 
-Each rule carries a **Verify**, and a Verify is one of two things. Sixteen are TESTS the gate runs, so
-a violation turns CI red. Thirteen are REVIEW questions a machine cannot answer, and say so. None is
-a command typed into this document for someone to remember to run, and a new rule should not add one.
+Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
+that to being true, because a rule with nothing to run is not enforceable and that is exactly how C6
+went unchecked. A Verify is one of two things. Sixteen are TESTS the gate runs, so a violation turns
+CI red. Thirteen are REVIEW questions a machine cannot answer, and each says what a reviewer should
+ask instead. None is a command typed into this document for someone to remember to run, and a new
+rule must not add one.
 
 A test goes in one of three places, and what it READS decides which. The package graph and the module
 go in the root `deps_test.go`, beside the embedding surface (C13) and the rule primitive (C30). A rule
@@ -88,6 +91,12 @@ only the dynamic overlay crosses per frame. Input batched to requestAnimationFra
 **Rule:** Ingest via open formats, official APIs, or official extractors.
 Reverse-engineering a proprietary format requires explicit approval.
 **Why:** EULA/DMCA risk plus enterprise-sales blocker (see the ingestion doc's legal-ingress ordering).
+**Verify:** by REVIEW, and no test is possible, because what this turns on is a fact about a
+conversation rather than about the tree. A reverse-engineered parser and a spec-derived one are the
+same Go code. The question a reviewer asks a new reader is where its grammar came from: a published
+specification, an official exporter's output, or a vendor's own API is sanctioned; reading a
+proprietary binary format by inspecting files is not, absent explicit approval. Cite the source in
+the reader's package doc alongside its fidelity declaration (C6), which is the artifact review reads.
 
 ## C6: Readers declare a fidelity contract
 **Rule:** Each reader declares its fidelity (lossless or lossy-bounded). Lossless
@@ -111,6 +120,13 @@ second sense: a static or read-only surface has no interactive intent loop and t
 no presenter, so the server just renders it.
 **Why:** avoid shipping a large engine before first paint, and avoid WASM boundary
 latency on high-frequency input (thesis cost section; lilbattle Viewer=WASM, Editor=TS).
+**Verify:** by REVIEW. The enforceable halves of this rule live elsewhere and are tested there: C1
+keeps domain logic in Go and out of TypeScript, C3 keeps the presenter free of framework and DOM
+imports, C4 bounds the WASM crossing. What is left here is the per-surface CHOICE of runtime, and
+that is a judgement about a surface's input frequency, which no test can make. A reviewer asks two
+things of a new surface: whether it has an interactive intent loop at all, since a read-only surface
+needs no presenter and the server just renders it, and if it does, whether its input is continuous
+(dragging, live editing) enough to want a TS presenter over a WASM one.
 
 ## C8: Proto is the contract; optimized in-memory forms are derived projections
 **Rule:** Proto is the single source of truth for any cross-runtime **contract** (IR and
