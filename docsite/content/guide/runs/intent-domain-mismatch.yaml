@@ -1,0 +1,6 @@
+# The planted deviation in the tutorial project: the core domain is declared at 3.3 V, and the rail
+# it names is PMIC_IO_1V8. No --intent-path here on purpose, because the design declares its own
+# intent.yaml and the project finds it.
+fixture: examples/tutorial-project
+script: |
+  agni check designs/gateway --rule intent/voltage-domain-mismatch

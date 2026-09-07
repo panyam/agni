@@ -43,6 +43,7 @@
       { "name": "Querying", "url": "guide/querying/" },
       { "name": "Naming conventions", "url": "guide/naming-conventions/" },
       { "name": "Interface profiles", "url": "guide/interface-profiles/" },
+      { "name": "Design intent", "url": "guide/design-intent/" },
       { "name": "Datasheets", "url": "guide/datasheets/" },
       { "name": "Running the server", "url": "guide/running-the-server/" },
       { "name": "CLI reference", "url": "guide/cli-reference/" },
