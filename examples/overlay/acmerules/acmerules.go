@@ -26,7 +26,7 @@ import (
 func init() {
 	check.RegisterSource(check.NewSource("acme", []*check.Rule{
 		noExperimentalRefDes,
-		query.RuleFromQuery(experimentalOnPowerNet),
+		query.MustRuleFromQuery(experimentalOnPowerNet),
 	}))
 }
 

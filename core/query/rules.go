@@ -37,28 +37,7 @@ type idbTuple struct {
 // no new conn tuple appears — which is where a chain U1-N1-U2-N2-U3 closes up so conn(U1,U3) exists
 // even though U1 and U3 share no net directly. See stratify for the strata assignment.
 func (b *Base) materialize(rules []Rule) error {
-	byHead := map[string][]Rule{}
-	for _, r := range rules {
-		rel := r.Head.Relation
-		if b.reg.IsRelation(rel) {
-			return fmt.Errorf("query: rule head %q redefines a fact relation", rel)
-		}
-		if _, ok := builtins[rel]; ok {
-			return fmt.Errorf("query: rule head %q redefines a built-in relation", rel)
-		}
-		ar := len(r.Head.Args)
-		if prev, ok := b.idbArity[rel]; ok && prev != ar {
-			return fmt.Errorf("query: rule %q defined with %d and %d args (arity must be consistent)", rel, prev, ar)
-		}
-		b.idbArity[rel] = ar
-		byHead[rel] = append(byHead[rel], r)
-	}
-	for _, r := range rules {
-		if err := b.validateRule(r); err != nil {
-			return err
-		}
-	}
-	strata, err := stratify(rules, b.idbArity)
+	byHead, strata, err := b.checkRules(rules)
 	if err != nil {
 		return err
 	}
@@ -80,6 +59,42 @@ func (b *Base) materialize(rules []Rule) error {
 		}
 	}
 	return nil
+}
+
+// checkRules validates a rule set and returns what evaluating it needs: the rules grouped by head,
+// and the strata to derive them in. It populates b.idbArity as it goes, since a rule's own head is
+// what gives a derived relation its arity.
+//
+// It is separated from materialize because Validate runs it WITHOUT a design (agni issue 540). Every
+// check here reads the rules and the relation vocabulary, never a row, so a broken rule set can be
+// rejected where the rule is built rather than where it first runs.
+func (b *Base) checkRules(rules []Rule) (map[string][]Rule, [][]string, error) {
+	byHead := map[string][]Rule{}
+	for _, r := range rules {
+		rel := r.Head.Relation
+		if b.reg.IsRelation(rel) {
+			return nil, nil, fmt.Errorf("query: rule head %q redefines a fact relation", rel)
+		}
+		if _, ok := builtins[rel]; ok {
+			return nil, nil, fmt.Errorf("query: rule head %q redefines a built-in relation", rel)
+		}
+		ar := len(r.Head.Args)
+		if prev, ok := b.idbArity[rel]; ok && prev != ar {
+			return nil, nil, fmt.Errorf("query: rule %q defined with %d and %d args (arity must be consistent)", rel, prev, ar)
+		}
+		b.idbArity[rel] = ar
+		byHead[rel] = append(byHead[rel], r)
+	}
+	for _, r := range rules {
+		if err := b.validateRule(r); err != nil {
+			return nil, nil, err
+		}
+	}
+	strata, err := stratify(rules, b.idbArity)
+	if err != nil {
+		return nil, nil, err
+	}
+	return byHead, strata, nil
 }
 
 // validateRule checks a single rule's well-formedness independent of evaluation order: every body
@@ -105,7 +120,11 @@ func (b *Base) validateRule(r Rule) error {
 		default:
 			continue // a comparison has no relation
 		}
-		if !b.knownRelation(rel) {
+		// Only when there IS a vocabulary to be unknown in. An empty registry cannot distinguish a
+		// misspelled relation from one nobody installed, and answering "unknown" there would be a
+		// statement about the query that the registry has no standing to make (C29, and see
+		// Validate).
+		if b.reg.Installed() && !b.knownRelation(rel) {
 			return fmt.Errorf("query: rule %q reads unknown relation %q%s", r.Head.Relation, rel, didYouMean(b.reg, rel))
 		}
 	}

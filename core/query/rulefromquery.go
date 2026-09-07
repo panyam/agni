@@ -1,9 +1,11 @@
 package query
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/facts"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -107,13 +109,57 @@ type ContextVar struct {
 
 var placeholderRe = regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
 
-// RuleFromQuery compiles a FindingQuery into a check.Rule whose Eval runs the (already-compiled)
-// query over the design and maps each answer row to a Finding. At Eval time it builds a query Base
-// from the Model, evaluates, and projects each row into a Finding. An eval error (which a validated
-// query should not produce) yields no findings rather than a panic, so a rule can never crash a
-// check run. The Finding's Prov is resolved from the Model by subject, so a query-backed finding
-// stays as locatable as a hand-written one.
-func RuleFromQuery(fq FindingQuery) *check.Rule {
+// RuleFromQuery compiles a FindingQuery into a check.Rule whose Eval runs the query over a design and
+// maps each answer row to a Finding. The Finding's Prov is resolved from the Model by subject, so a
+// query-backed finding stays as locatable as a hand-written one.
+//
+// IT VALIDATES THE QUERY AND REPORTS WHY IT CANNOT RUN. That is the whole point of the signature: a
+// rule built from a broken query used to compile silently and then report a CLEAN PASS, because the
+// error surfaced only at eval time where it was swallowed (agni issue 540). A query with a misspelled
+// relation looked exactly like a design with no defects.
+//
+// Use it where the query came from a person: a review manifest, a wire RuleDef, an overlay. For a
+// query written into this repo as code, MustRuleFromQuery says so.
+func RuleFromQuery(fq FindingQuery) (*check.Rule, error) {
+	if err := Validate(fq.Query, facts.DefaultRegistry()); err != nil {
+		return nil, err
+	}
+	return buildRule(fq), nil
+}
+
+// MustRuleFromQuery is RuleFromQuery for a query that ships as CODE, panicking if it does not
+// compile.
+//
+// A built-in rule or a compiled profile carries a query its author wrote and this repo's tests run.
+// One that does not validate is a programmer error caught at init, and the alternative is worse than
+// a panic: a package-level `var r = RuleFromQuery(q)` has nowhere to return an error to, so the
+// choice is between failing loudly at startup and dropping the error on the floor, which is the bug
+// this whole change closes.
+//
+// It follows profiles.Compile, which already panics twice on a malformed profile for the same
+// reason.
+func MustRuleFromQuery(fq FindingQuery) *check.Rule {
+	r, err := RuleFromQuery(fq)
+	if err != nil {
+		panic("query: " + fq.Rule.Name + ": " + err.Error())
+	}
+	return r
+}
+
+// evalFailed is the finding a rule reports when its query could not be evaluated against a design.
+//
+// It carries no subject, because the failure is the RULE's rather than any entity's, and naming an
+// arbitrary component would send a reader to a part that is fine. Inconclusive is the outcome the
+// vocabulary already has for a check that could not run, which is exactly what this is.
+func evalFailed(rule string, err error) check.Finding {
+	return check.Finding{
+		Inconclusive: true,
+		Message:      fmt.Sprintf("%s could not run: %v", rule, err),
+	}
+}
+
+// buildRule is RuleFromQuery's construction half, after validation has passed.
+func buildRule(fq FindingQuery) *check.Rule {
 	q := fq.Query
 	r := fq.Rule
 	if len(r.Reads) == 0 {
@@ -151,7 +197,11 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 		r.Eval = check.FailuresOnly(func(m check.Model) []check.Finding {
 			rows, err := Naive{}.Eval(q, NewBase(m))
 			if err != nil {
-				return nil
+				// Construction validated this query, so reaching here means the ENGINE failed on a
+				// design rather than the author writing something wrong. Returning nil reported that
+				// as a clean pass, which is the shape agni issue 540 exists to close. An inconclusive
+				// finding says the rule could not decide, which is what happened.
+				return []check.Finding{evalFailed(r.Name, err)}
 			}
 			out := []check.Finding{}
 			for _, row := range rows {
@@ -172,9 +222,16 @@ func RuleFromQuery(fq FindingQuery) *check.Rule {
 		failed := map[string]bool{}
 		rows, err := Naive{}.Eval(q, base)
 		if err != nil {
-			// A validated query does not reach here. Reporting nothing beats reporting a considered set
-			// whose failing half never ran.
-			return nil
+			// The failing half never ran, so no considered set can be honest here: every subject in it
+			// would be reported as passing on evidence that was never gathered. One inconclusive
+			// verdict says the rule could not decide, where returning nothing said it had nothing to
+			// report (agni issue 540).
+			f := evalFailed(r.Name, err)
+			return []check.Verdict{{
+				Outcome: check.Inconclusive,
+				Witness: &check.Witness{Statement: f.Message},
+				Finding: &f,
+			}}
 		}
 		for _, row := range rows {
 			f := findingFor(m, row)

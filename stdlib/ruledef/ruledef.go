@@ -82,7 +82,7 @@ func Compile(def *checkspb.RuleDef) ([]*check.Rule, error) {
 		if err != nil {
 			return nil, fmt.Errorf("rule %q: %w", meta.Name, err)
 		}
-		return []*check.Rule{query.RuleFromQuery(query.FindingQuery{
+		r, err := query.RuleFromQuery(query.FindingQuery{
 			Rule:        meta,
 			Query:       q,
 			Kind:        b.Query.GetKind(),
@@ -91,7 +91,11 @@ func Compile(def *checkspb.RuleDef) ([]*check.Rule, error) {
 			Message:     b.Query.GetMessage(),
 			ParamSymbol: b.Query.GetParamSymbol(),
 			ContextVars: query.ContextVarsFromProto(b.Query.GetContextVars()),
-		})}, nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("rule %q: %w", meta.Name, err)
+		}
+		return []*check.Rule{r}, nil
 
 	case *checkspb.RuleDef_Profile:
 		p := profiles.ProfileFromProto(b.Profile)
