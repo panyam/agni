@@ -1465,9 +1465,9 @@ argue for the record entering the engine as a value rather than as tuples.
 
 ## A constraint's Verify is a test, or it says why it cannot be
 
-**Question.** The September 2026 audit moved eleven checks out of prose and into
-`internal/constraints`, where the gate runs them. Should the remaining thirteen follow, and is a
-fully-automated `CONSTRAINTS.md` the target?
+**Question.** The September 2026 audit moved ten checks out of prose and into tests, taking the
+number of constraints the gate enforces from nine to sixteen. Should the remaining thirteen follow,
+and is a fully-automated `CONSTRAINTS.md` the target?
 
 **Answer. No, and the count is the wrong thing to optimise.** A Verify falls into one of three
 shapes, and only the first belongs in a test.

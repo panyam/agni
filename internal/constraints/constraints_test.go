@@ -2,7 +2,6 @@ package constraints
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -25,23 +24,20 @@ func repoRoot(t *testing.T) string {
 	return root
 }
 
-// goList runs `go list -deps` over a pattern and returns the import paths it names.
-//
-// It fails on a result naming no package under want, which is the positive control: a graph check
-// reads as clean when the pattern matched nothing, and a mistyped pattern is exactly the edit that
-// would produce that. Without this the layering tests would still pass after the tier was renamed
-// out from under them.
-func goList(t *testing.T, pattern, want string) []string {
+// engineSources returns every non-test .go file in the tiers a sweep covers, plus the root package's
+// own files. The root is listed explicitly rather than walked, because walking it would pull in
+// web/, docsite/ and every example module.
+func engineSources(t *testing.T, root string) []string {
 	t.Helper()
-	out, err := exec.Command("go", "list", "-deps", pattern).CombinedOutput()
+	out, err := filepath.Glob(filepath.Join(root, "*.go"))
 	if err != nil {
-		t.Fatalf("go list -deps %s: %v\n%s", pattern, err, out)
+		t.Fatalf("glob %s: %v", root, err)
 	}
-	deps := strings.Fields(string(out))
-	if !slices.ContainsFunc(deps, func(d string) bool { return strings.HasPrefix(d, want) }) {
-		t.Fatalf("go list -deps %s named no package under %s, so this check proves nothing", pattern, want)
+	out = slices.DeleteFunc(out, func(f string) bool { return strings.HasSuffix(f, "_test.go") })
+	for _, tier := range []string{"core", "stdlib", "readers", "internal", "cmd", "service", "datasheet", "intake", "artifact", "census"} {
+		out = append(out, nonTestSources(t, filepath.Join(root, tier))...)
 	}
-	return deps
+	return out
 }
 
 // nonTestSources returns every .go file under dir that is not a test file.
@@ -100,67 +96,6 @@ func TestC6EveryReaderDeclaresFidelity(t *testing.T) {
 			t.Errorf("readers/%s declares no fidelity contract (C6): no non-test file carries a "+
 				"`// Fidelity: ...` line stating which subset the read preserves", e.Name())
 		}
-	}
-}
-
-// C17: the reader tier depends downward only. A reader produces IR and geom; it never reaches up
-// into the presentation tier or the application tail.
-//
-// This subsumes what C15 said about render/svg specifically. A stray import from a reader into
-// internal/server would pull servicekit and connect into every consumer of the reader tier and
-// foreclose extracting it as its own module, so the check is over the transitive graph rather than
-// over the import blocks.
-func TestC17ReaderTierDependsDownwardOnly(t *testing.T) {
-	forbidden := []string{
-		"servicekit",
-		"connectrpc",
-		"github.com/panyam/agni/core/render",
-		"github.com/panyam/agni/core/svg",
-		"github.com/panyam/agni/serve",
-		"github.com/panyam/agni/service",
-		"github.com/panyam/agni/internal/server",
-	}
-	for _, dep := range goList(t, "github.com/panyam/agni/readers/...", "github.com/panyam/agni/readers/") {
-		for _, f := range forbidden {
-			if strings.Contains(dep, f) {
-				t.Errorf("the reader tier pulls %q (C17): readers depend downward on the contract "+
-					"and shared parse/geom helpers only", dep)
-			}
-		}
-	}
-}
-
-// C17, second half: the generated contract imports no first-party package, so a consumer can take
-// gen/ alone. Anything under gen/ importing back into agni would make the contract carry the tree.
-func TestC17ContractImportsNoFirstPartyPackage(t *testing.T) {
-	const self = "github.com/panyam/agni/"
-	for _, dep := range goList(t, "github.com/panyam/agni/gen/...", "github.com/panyam/agni/gen/") {
-		if strings.HasPrefix(dep, self) && !strings.Contains(dep, "/gen/") {
-			t.Errorf("the generated contract pulls the first-party package %q (C17)", dep)
-		}
-	}
-}
-
-// C18: dependencies point overlay -> engine. The engine module requires no overlay module.
-//
-// The graph half of this constraint cannot fail and so is not tested: examples/overlay is its own
-// module, so `go list -deps ./...` from the engine can never name it whatever anyone writes. What
-// CAN change is go.mod, which is how an overlay would actually get pulled in, so that is what this
-// reads. A `replace` counts as much as a `require`: it is the edit that makes a local overlay
-// resolvable, and it is the one somebody adds while debugging and forgets to remove.
-func TestC18EngineModuleRequiresNoOverlay(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join(repoRoot(t), "go.mod"))
-	if err != nil {
-		t.Fatalf("read go.mod: %v", err)
-	}
-	for i, line := range strings.Split(string(b), "\n") {
-		code, _, _ := strings.Cut(line, "//")
-		if !strings.Contains(code, "panyam/agni/") {
-			continue
-		}
-		t.Errorf("go.mod:%d names a module inside this repo (C18): %q. The engine is composed BY an "+
-			"overlay through formats.Register and check.RegisterSource, never coupled to one.",
-			i+1, strings.TrimSpace(line))
 	}
 }
 
@@ -252,54 +187,23 @@ func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 		"cmd/agni/params.go": true,
 	}
 	root := repoRoot(t)
-	for _, tier := range []string{"core", "stdlib", "readers", "internal", "cmd"} {
-		for _, f := range nonTestSources(t, filepath.Join(root, tier)) {
-			b, err := os.ReadFile(f)
-			if err != nil {
-				t.Fatalf("read %s: %v", f, err)
-			}
-			rel, _ := filepath.Rel(root, f)
-			if allowed[filepath.ToSlash(rel)] || !rawUnitRead.Match(b) {
-				continue
-			}
-			t.Errorf("%s reads a parameter's printed unit (C24). A COMPARISON converts through "+
-				"datasheet/param first; a DISPLAY belongs in this test's allowlist.", rel)
+	for _, f := range engineSources(t, root) {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("read %s: %v", f, err)
 		}
+		rel := filepath.ToSlash(mustRel(t, root, f))
+		// datasheet/param IS the one place, so it reads the raw unit by definition: that is where
+		// the conversion to SI base units happens and what every other tier compares through.
+		if strings.HasPrefix(rel, "datasheet/param/") || allowed[rel] || !rawUnitRead.Match(b) {
+			continue
+		}
+		t.Errorf("%s reads a parameter's printed unit (C24). A COMPARISON converts through "+
+			"datasheet/param first; a DISPLAY belongs in this test's allowlist.", rel)
 	}
 }
 
 var rawUnitRead = regexp.MustCompile(`\bp\.(Unit\b|GetUnit\(\))`)
-
-// C13: the service tier is importable, so no part of it sits behind the module boundary.
-//
-// The transport and filesystem halves of C13 are tested where they belong, in
-// service/transport_guard_test.go. What is left over is the one thing that is about the tier's
-// LOCATION rather than its imports: service/ and artifact/ moved out of internal/ so an embedder
-// could compose against them, and moving them back would still compile, since every in-repo caller
-// would move with them.
-//
-// The check is that these exact import paths resolve, which is what an embedder outside this module
-// writes. Listing a pattern is not enough on its own: a tier that moved under internal/ makes the
-// pattern match nothing, and a check that only looks at what came back would read that as clean.
-func TestC13ServiceTierIsImportable(t *testing.T) {
-	want := []string{"github.com/panyam/agni/service", "github.com/panyam/agni/artifact"}
-	out, err := exec.Command("go", append([]string{"list"}, want...)...).CombinedOutput()
-	if err != nil {
-		t.Fatalf("the service tier is not importable at its published paths (C13): %v\n%s", err, out)
-	}
-	got := strings.Fields(string(out))
-	for _, w := range want {
-		if !slices.Contains(got, w) {
-			t.Errorf("go list did not name %q (C13): the tier an embedder composes against cannot "+
-				"drift back behind the module boundary", w)
-		}
-	}
-	for _, pkg := range got {
-		if strings.Contains(pkg, "/internal/") {
-			t.Errorf("%q sits behind the module boundary (C13)", pkg)
-		}
-	}
-}
 
 // C22: an artifact is named by a single URI, so the web API carries no locator the callee resolves.
 //
@@ -362,22 +266,20 @@ func assertSoleWriter(t *testing.T, needle, prefix, why string) {
 	t.Helper()
 	root := repoRoot(t)
 	found := 0
-	for _, tier := range []string{"core", "stdlib", "readers", "internal", "cmd", "service", "datasheet", "intake", "artifact", "census"} {
-		for _, f := range nonTestSources(t, filepath.Join(root, tier)) {
-			b, err := os.ReadFile(f)
-			if err != nil {
-				t.Fatalf("read %s: %v", f, err)
-			}
-			if !strings.Contains(string(b), needle) {
-				continue
-			}
-			rel := filepath.ToSlash(mustRel(t, root, f))
-			if strings.HasPrefix(rel, prefix) {
-				found++
-				continue
-			}
-			t.Errorf("%s names %s: %s", rel, needle, why)
+	for _, f := range engineSources(t, root) {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("read %s: %v", f, err)
 		}
+		if !strings.Contains(string(b), needle) {
+			continue
+		}
+		rel := filepath.ToSlash(mustRel(t, root, f))
+		if strings.HasPrefix(rel, prefix) {
+			found++
+			continue
+		}
+		t.Errorf("%s names %s: %s", rel, needle, why)
 	}
 	// The positive control: a rename or a deletion would otherwise leave this reading as clean.
 	if found == 0 {

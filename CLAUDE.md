@@ -100,6 +100,17 @@ an EMPTY registry and must stand its vocabulary checks down rather than call eve
 — a manifest's inline query compiles through a registered `review.QueryCompiler` (`stdlib/reviewquery`
 is the datalog one), so no core package outside `core/query` knows a query language.
 
+The **root `agni` package** is the composition facade and the entry point for an embedder: `agni.New`
+returns an `Engine` holding one composed `*check.Catalog` and one `*facts.Registry`. Compose through
+it rather than calling `check.DefaultCatalog` at a call site. There are FOUR global registration
+seams (`check.RegisterBuiltins`, `facts.RegisterRelation`, `check.RegisterSource` for the `dl` suite,
+`review.RegisterQueryCompiler`) and three fail SILENTLY when a binary misses one, which is how the
+overlay example ran for months with zero built-in rules. `New` refuses an empty fact base and an
+uninstalled built-in catalog, and reports the two legitimate absences through `Warnings()`. Options
+take VALUES, never paths (C22), so `profiles.LoadDir`/`intent.LoadFile` stay in the caller. Note the
+seam check asks `check.BuiltinRules()` rather than measuring the composed catalog: `stdlib/profiles`
+registers from an init, so a program missing the built-ins still composes a NON-EMPTY catalog.
+
 `service/` deserves a callout: it is what an EMBEDDER composes against, which is why it is not under
 `internal/` (C13). `ProjectStore` and `ProjectConfigLoader` are the two ports a private deployment
 implements to serve its own designs and its own config, and `ResolvedConfig` is the value a tier
@@ -294,11 +305,19 @@ not copy it back into this repo.
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1–C29). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1–C30). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a
 constraint, and if the direction was wrong, suggest capturing it as one.
+
+**A new rule owes a TEST, never a command typed into the document.** Sixteen are enforced by the gate
+and thirteen are review questions that say so. Which of the three homes a test goes in follows from
+what it reads: the package graph or the module in the root `deps_test.go`, one package's own rule
+beside that package (`service/transport_guard_test.go`, `core/facts`), a sweep over source in
+`internal/constraints`. The September 2026 audit is why, and `CONSTRAINTS.md`'s header records what
+it found: a Verify written as a command rots without anything surfacing it, and two rules were being
+violated in the tree with nobody the wiser.
 
 ## What does not belong in this repo
 

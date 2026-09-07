@@ -7,15 +7,18 @@ Enforceable architectural rules for this project. Background and rationale in
 
 ## How these are enforced
 
-Each rule carries a **Verify**, and a Verify is one of three things. Most are TESTS the gate runs, so
-a violation turns CI red: the structural ones that belong to no single tier live in
-`internal/constraints`, and the ones whose subject is one package live beside it
-(`service/transport_guard_test.go` for C13 and C22, `core/facts` for C29, `hack/ir_model_check.sh`
-for C19). A few are REVIEW questions a machine cannot answer, and say so. None should be a command
-typed into this document for someone to remember to run.
+Each rule carries a **Verify**, and a Verify is one of two things. Sixteen are TESTS the gate runs, so
+a violation turns CI red. Thirteen are REVIEW questions a machine cannot answer, and say so. None is
+a command typed into this document for someone to remember to run, and a new rule should not add one.
 
-That last part is the lesson of the September 2026 audit, which read all 29 against the tree. Nine
-were in the gate and the rest were prose or a command nobody ran, and the commands had rotted in
+A test goes in one of three places, and what it READS decides which. The package graph and the module
+go in the root `deps_test.go`, beside the embedding surface (C13) and the rule primitive (C30). A rule
+whose subject is one package is tested there: `service/transport_guard_test.go` for C13's transport
+and filesystem clauses, `core/facts` for C29, `hack/ir_model_check.sh` for C19. A rule whose violation
+is a line of source somewhere nobody would think to guard goes in `internal/constraints`.
+
+The no-commands part is the lesson of the September 2026 audit, which read every constraint against
+the tree. Nine had a test; the rest were prose or a command nobody ran, and the commands had rotted in
 every way a command can. Two returned hits on a clean tree, because the code they swept had grown
 legitimate new call sites (C12, C24). Two deferred themselves to work that had since landed, so they
 still read as "not checkable yet" when they already were (C20, C21). One could not fail at all, because
@@ -25,7 +28,8 @@ already violated them: `readers/telesis` declared no fidelity contract (C6) and
 
 Both violations were found by reading, not by anything failing. That is the argument for a test over
 a command: both halves of a structural violation compile and pass, so nothing surfaces one until
-somebody re-reads the rule, and a rule nobody re-reads is not a constraint.
+somebody re-reads the rule, and a rule nobody re-reads is not a constraint. C29's Verify was a command
+for exactly three PRs before it went stale, and C13's was one for one PR.
 
 ## C1: Engine logic in Go, view in TS, core runtime-agnostic
 **Rule:** All domain/business logic (parsing, IR, diff, rules, simulation) lives in Go
@@ -285,12 +289,10 @@ port an embedder cannot name is not a port.
 files (`service/transport_guard_test.go` runs the transport check in CI); service
 constructors take ports; `cmd/agni` builds the OS-backed adapters and registers
 `internal/server` wrappers via the generated Connect handlers (C2); `protos/agni/v1/webapi/`
-holds one file per service; and `TestC13ServiceTierIsImportable` (`internal/constraints`) resolves
-`github.com/panyam/agni/service` and `.../artifact` at those exact import paths, which is what an
-embedder outside this module writes, so the tier cannot drift back behind the module boundary. It
-asserts the paths RESOLVE rather than sweeping what a pattern returned: a tier that moved under
-`internal/` makes the pattern match nothing, and a check reading only what came back calls that
-clean.
+holds one file per service; and `TestEmbeddingSurfaceIsImportable` (`deps_test.go`) fails if any
+package an embedder is documented to import moves back under `internal/`. That was a `go list` line
+here when the tier moved, which is exactly the shape C29's Verify had before #542 replaced it with a
+test, on the grounds that it went stale within three PRs because nothing ran it.
 
 ## C14: Rule classification is open tags, not typed fields
 **Rule:** A `check.Rule`'s typed fields are only what the engine acts on — `Name`, `Severity`,
@@ -361,8 +363,8 @@ registry — not on the web/serve tier. Go module-graph pruning already keeps th
 *because* the layering holds; a stray import from a reader up into `internal/server` would pull
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
 the seam clean now so the split stays a rename, not a refactor.
-**Verify:** `TestC17ReaderTierDependsDownwardOnly` and `TestC17ContractImportsNoFirstPartyPackage`
-(`internal/constraints`), which run `go list -deps` over the two tiers, so the check is over the
+**Verify:** `TestReaderTierDependsDownwardOnly` and `TestContractImportsNoFirstPartyPackage`
+(`deps_test.go`), which run `go list -deps` over the two tiers, so the check is over the
 TRANSITIVE graph rather than over anyone's import block. Both carry a positive control: a result
 naming no package under the pattern fails rather than reading as clean, because a mistyped or
 renamed-out-from-under-it pattern is exactly the edit that would make a graph check vacuous.
@@ -382,7 +384,7 @@ overlay exists (the C16 datasheet posture generalized to all of readers, rules, 
 also what lets the engine be published while overlays stay closed. The seams are global registries
 the overlay writes into at init/main, so the engine is composed *by* the overlay, never coupled to
 one.
-**Verify:** `TestC18EngineModuleRequiresNoOverlay` (`internal/constraints`), which reads `go.mod`
+**Verify:** `TestEngineModuleRequiresNoOverlay` (`deps_test.go`), which reads `go.mod`
 and fails on any `require` or `replace` naming a module inside this repo. A `replace` counts as much
 as a `require`, because it is the edit that makes a local overlay resolvable and the one somebody
 adds while debugging and forgets to remove.
@@ -691,7 +693,8 @@ day `param.unit` and `agni params` shipped. Both read the printed unit to PUBLIS
 entire point of that relation and that table. The two sites are allowlisted in the test, and a new
 one is one of two things: if it compares, it is the bug this constraint exists for and it converts
 through `datasheet/param` first; if it displays, it joins the allowlist, and that addition is the
-review moment. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
+review moment. `datasheet/param` itself is skipped rather than allowlisted, because it IS the one
+place: it is where the conversion happens and what every other tier compares through. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
 **This covers the query surface too.** The `param(...)`, `param.range(...)` and `param.typ(...)`
@@ -917,3 +920,27 @@ registration cannot change how an in-flight query reads. The registration half s
 that is the overlay seam (C18) and a startup default is what C22 permits; the READ half must not be.
 Composing in a known order is also why collisions need no order-dependent check: every option is
 applied first and clashes are swept once at the end.
+
+## C30: The rule primitive is `check.Rule`, and no authoring shape owns it
+**Rule:** A rule is a `check.Rule`, and the ways to write one are peers: Go, datalog
+(`stdlib/rules/datalog`), an interface profile (`stdlib/profiles`), a design-intent declaration
+(`stdlib/rules/intent`), and whatever an overlay adds. Each COMPILES to `[]*check.Rule` and reaches a
+catalog as a `check.RuleSource`, which is the only currency the catalog trades in. `core/check`
+depends on none of them. A new authoring shape is a package that compiles to rules and registers a
+source; it is never a new field on `Rule`, a new case in the catalog, or a second thing a catalog can
+hold.
+**Why:** this is C29 one layer over. C29 keeps the fact tuple free of any one query engine because a
+shape that owned the tuple would make its limits everyone's limits; the same is true of rules.
+Datalog cannot express a path question at all (#374, #518) and `check.Spec` answers per-entity
+questions with no fact base, so a catalog built around either would foreclose the rules that need the
+other. It is also what makes an interface a DATA value rather than new code, which is the lever that
+collapsed roughly 130 near-identical "verify signal X connected" review items into one mechanism.
+The failure is quiet in the usual way: `core/check` importing an authoring shape compiles, passes,
+and only shows up later as a rule someone cannot write.
+**Verify:** `TestRulePrimitiveNamesNoAuthoringShape` and
+`TestAuthoringShapesReachTheCatalogAsRuleSources` (`deps_test.go`) watch both halves, the arrow's
+direction and the fact that each shape still compiles to rules.
+**Note:** the direction is the checkable part. An authoring shape depending on `core/check` is
+correct and every one of them does; only the reverse is a violation. `stdlib/profiles` importing
+`core/query` is likewise fine, since a profile that targets one engine is a shape making a choice,
+not the catalog making it for everyone.

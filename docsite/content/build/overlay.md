@@ -145,24 +145,70 @@ source:
 
 {{ includeFile "figures/engine-layers.svg" }}
 
-Blank-import the reader and rule packages so their `init` runs, then use the engine library:
+Blank-import the reader and rule packages so their `init` runs, blank-import the engine's own four,
+then compose with `agni.New`:
 
 ```go
 package main
 
 import (
-    "github.com/panyam/agni/check"
-    "github.com/panyam/agni/formats"
+    "github.com/panyam/agni"
+    "github.com/panyam/agni/core/check"
+    "github.com/panyam/agni/readers/formats"
+
     _ "github.com/yourorg/my-overlay/myfmt"
     _ "github.com/yourorg/my-overlay/myrules"
+
+    _ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
+    _ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a manifest's inline queries
+    _ "github.com/panyam/agni/stdlib/rules/builtin" // the shipped EE rule catalog
+    _ "github.com/panyam/agni/stdlib/rules/datalog" // the datalog-authored rule suite
 )
 
 func main() {
+    engine, err := agni.New()
+    if err != nil {
+        log.Fatal(err)
+    }
+    for _, w := range engine.Warnings() {
+        log.Println("note:", w)
+    }
     d, _ := (&formats.Loader{}).ReadDesign("design.myfmt")
-    findings := check.Run(check.NewModel(d), check.DefaultCatalog().Rules())
+    findings := check.Run(check.NewModel(d), engine.Catalog().Rules())
     // ... report findings
 }
 ```
+
+**Compose through `agni.New` rather than reaching for `check.DefaultCatalog` directly.** Those four
+blank imports are four independent registration seams, and three of them fail SILENTLY when a binary
+misses one: no built-in rules, or an empty fact base, and every design reports clean with nothing
+saying why. `New` refuses both rather than running.
+
+That is not a hypothetical worth guarding against. The overlay example in this repo imported
+`stdlib/relations` and never `stdlib/rules/builtin`, so it ran with zero built-in rules and reported
+only its own two findings while two real defects on its own fixture went unreported. Nobody noticed
+until `New` started refusing it.
+
+Shipping without the datalog rule suite or without an inline-query compiler is a legitimate choice,
+so those are `Warnings()` rather than errors. `agni.WithoutDatalogRules()` says the first is
+deliberate.
+
+Config reaches `New` as a VALUE, never as a path, because reading files is the caller's business:
+
+```go
+ps, _ := profiles.LoadDir("profiles")        // you read it
+decl, _ := intent.LoadFile("intent.yaml")    // you read it
+engine, err := agni.New(
+    agni.WithProfiles(ps),
+    agni.WithIntent(decl),
+    agni.WithSources(check.NewSource("myco", myRules)),
+    agni.WithFSProjectStore(agni.Tree{Mount: "boards", FS: os.DirFS("/srv/boards")}),
+)
+```
+
+`WithFSProjectStore` is how the shipped directory-walking project store reaches you without the
+package implementing it becoming public API. A deployment that outgrows the directory shape
+implements `service.ProjectStore` and passes `WithProjectStore` instead.
 
 ## Registration timing: init versus explicit main
 
@@ -191,16 +237,18 @@ reason (C13). The service impls are transport-neutral, so they carry plain proto
 take every I/O concern as an injected port:
 
 ```go
-import (
-    "github.com/panyam/agni/core/check"
-    "github.com/panyam/agni/gen/go/agni/v1/webapi"
-    "github.com/panyam/agni/service"
-)
-
-// DefaultCatalog is the built-ins plus every source your init registered.
-svc := service.NewCheckService(myLoader, check.DefaultCatalog(), specs, "", conventions, projects)
-resp, err := svc.ListRules(ctx, &webapi.ListRulesRequest{})
+checkSvc, reviewSvc := engine.RuleServices(agni.RuleServiceDeps{
+    Loader:      myLoader,
+    ReviewStore: myStore,
+    Specs:       mySpecs,
+})
+resp, err := checkSvc.ListRules(ctx, &webapi.ListRulesRequest{})
 ```
+
+The two come back TOGETHER and the catalog is not a parameter, so you cannot hand one surface the
+composed catalog and the other something else. That drift is why the shape is this way: an overlay
+profile flag once reached the check surface and the review surface differently, and a rule missing
+from a catalog is indistinguishable from a rule that ran and found nothing.
 
 Two ports are worth knowing by name. `service.ProjectStore` answers what projects and designs exist
 and which design an artifact belongs to, so a deployment backed by a PLM system or an index

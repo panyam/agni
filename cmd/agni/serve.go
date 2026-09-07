@@ -15,6 +15,7 @@ import (
 	skhttp "github.com/panyam/servicekit/http"
 	"github.com/spf13/cobra"
 
+	"github.com/panyam/agni"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/render"
@@ -25,7 +26,6 @@ import (
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
-	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/relations"
 	"github.com/panyam/agni/stdlib/rules/builtin"
@@ -307,14 +307,9 @@ func projectTrees(ms []mounts.Mount) []projects.Tree {
 	return out
 }
 
-// serveLoader is what the two rule-running services need between them. The CheckService and the
-// ReviewService take different loader interfaces, and serve's osLoader satisfies both, so naming the
-// intersection here lets one function build both without widening either service's own contract.
-type serveLoader interface {
-	service.Loader
-	service.ReviewLoader
-	service.ConventionLoader
-}
+// serveLoader is what the two rule-running services need between them. The intersection is named
+// once, by the engine facade, because an embedder building the same pair needs it too.
+type serveLoader = agni.RuleLoader
 
 // serveRuleServices builds the two services that RUN rules from one composed catalog: the
 // CheckService behind the check panel and ListRules, and the ReviewService behind the review resources.
@@ -348,16 +343,23 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 		}
 		extra = append(extra, src)
 	}
-	catalog, byName, err := composeReviewInputsFrom(overlay, intentPath, extra...)
+	e, err := newEngine(overlay, intentPath, extra, agni.WithProjectResolver(projects))
 	if err != nil {
 		return nil, nil, err
 	}
 	if notes != nil {
-		noteSupersededRules(notes, catalog)
+		noteSupersededRules(notes, e.Catalog())
+		for _, w := range e.Warnings() {
+			fmt.Fprintln(notes, "note:", w)
+		}
 	}
-	env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
-	return service.NewCheckService(loader, catalog, specs, conventions.GetName(), loader, projects),
-		service.NewReviewService(loader, store, catalog, byName, specs, env, conventions.GetName(), projects), nil
+	checkSvc, reviewSvc := e.RuleServices(agni.RuleServiceDeps{
+		Loader:         loader,
+		ReviewStore:    store,
+		Specs:          specs,
+		BaseConvention: conventions.GetName(),
+	})
+	return checkSvc, reviewSvc, nil
 }
 
 // serveURLs turns a listen address into URLs a human can click, which the bind address by itself is
