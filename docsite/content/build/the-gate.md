@@ -23,6 +23,34 @@ flowchart LR
     class B,Bn out;
 ```
 
+## Some boards are fetched, not committed
+
+`make samples` downloads a pinned tarball from
+[agni-samples](https://github.com/panyam/agni-samples) and extracts it into `tools/samples/`, which is
+gitignored. `testall` depends on it, so the gate always has the corpus.
+
+Those boards are real designs published by other people, each under its own licence (Apache-2.0,
+CERN-OHL-P). Keeping them out of this tree is what lets this repo stay uniformly Apache-2.0. They are
+worth having because every fixture we authored was built to the reader's own assumptions, so none of
+them can catch an assumption that is wrong. The first one added found three reader bugs.
+
+`hack/samples.pin` names the release and carries a checksum per artifact. To bump it, change the
+version, replace the checksums with the ones from the release's `SHA256SUMS`, and run `make samples`.
+The stamp is a hash of the pin file, so editing it re-fetches without anyone remembering to clean.
+
+**There is no offline escape hatch, and that is deliberate.** Every failure path in
+`hack/fetch_samples.sh` exits non-zero: a download that fails, a checksum that does not match, a
+tarball that extracts to no schematics. A test whose corpus quietly failed to arrive does not fail, it
+passes over an empty set, which is the third trap below wearing different clothes. For the same reason
+a test that reads the corpus calls `t.Fatalf` when it is absent rather than `t.Skip`.
+
+A checksum mismatch means the published artifact changed or the download was corrupted. Do not update
+the pin to match without establishing which, because a released artifact is meant to be immutable.
+
+Two tarballs, so a run fetches only what it needs. `tutorial-board` is one board's schematics, about
+3MB, and is what the gate takes. `oracle-corpus` adds every board's copper for the KiCad reader
+cross-check, about 19MB, and `make samples-oracle` is what asks for it.
+
 ## A fixture that exists twice is checked against its twin
 
 `fixture-copies-check` reads `hack/fixture_copies.txt`, which declares every group of files meant to

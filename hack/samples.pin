@@ -1,0 +1,17 @@
+# The agni-samples release this tree is pinned to.
+#
+# https://github.com/panyam/agni-samples holds the real, publicly-licensed boards the tests and the
+# docsite tutorial read. They are not committed here because they are not ours: each carries its own
+# licence (Apache-2.0, CERN-OHL-P), and this repo stays uniformly Apache-2.0.
+#
+# hack/fetch_samples.sh reads this file, downloads each named artifact from the release, verifies it
+# against the checksum below, and extracts it into tools/samples/ (gitignored). Changing anything in
+# this file re-fetches, because the stamp is a hash of the file itself.
+#
+# TO BUMP: change VERSION, replace both checksums with the ones from the release's SHA256SUMS, and
+# run `make samples`. A checksum that does not match is a hard failure, never a warning, because a
+# fixture that silently fails to arrive turns every test that reads it into a test that proves
+# nothing.
+VERSION v0.1.0
+20a5060c7ea553bd84643b59563f9f4f429d4166350adbcb812b89f18c05a7ed  tutorial-board
+bb7b5e02a15062584e6adec0c1e83d40747c379f2df95ae8052f357a7db48585  oracle-corpus
