@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check fixture-copies-check samples samples-oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -107,6 +107,13 @@ samples:
 # not in the gate's default fetch.
 samples-oracle:
 	./hack/fetch_samples.sh tutorial-board oracle-corpus
+
+# The KiCad reader cross-check against real boards: read a design's schematic our way, read the same
+# design's .kicad_pcb for the netlist KiCad itself resolved, and require the two to agree on which
+# pins share a net. NOT in the gate, because it needs the 19MB both-views corpus; a separate suite
+# like browser-test. AGNI_ORACLE_UPDATE=1 rewrites the baseline instead of asserting it.
+oracle: samples-oracle
+	AGNI_ORACLE=1 $(GO) test ./readers/kicad/ -run TestOracleCorpus -count=1 -v
 
 # Engine (Go) tests. The example modules have their own go.mod; see examples-test.
 test:

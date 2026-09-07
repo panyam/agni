@@ -15,9 +15,15 @@ const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetso
 //
 // It is a CHARACTERIZATION test, so one of the three numbers below is knowingly wrong and is
 // asserted anyway. KiCad resolves this board to 1387 nets and we produce 1729, because a net crossing
-// a sheet boundary is read as two nets (issue 561): `/inout_user/AN0` and `AN0` where KiCad has one
-// `/AN0`. Asserting 1729 is what makes the fix VISIBLE. When 561 lands this test fails, and whoever
-// fixes it changes the constant deliberately rather than discovering months later that a number moved.
+// a sheet boundary is read as two nets: `/inout_user/AN0` and `AN0` where KiCad has one `/AN0`.
+// Asserting 1729 is what makes a fix VISIBLE, so whoever moves it changes the constant deliberately
+// rather than discovering months later that a number drifted.
+//
+// The first half of issue 561 has landed and this number did not move, which is itself the finding.
+// That fix follows a bus VECTOR (`AN[0..7]`) across a sheet boundary and clears the split entirely on
+// the boards that use one. This board crosses with GROUP buses instead — `CAM0{CSI}`, whose members
+// come from a `bus_alias` and are named `CAM0.CLK_N` — and those are still not followed. Which nets
+// are still wrong, rather than how many, is in readers/kicad/testdata/oracle_corpus.baseline.
 //
 // The other two are correct today and guard against regression: the component count matches KiCad
 // exactly, and the MPN count is what the datasheet tier joins on.
@@ -38,8 +44,8 @@ func TestSampleBoardRead(t *testing.T) {
 	}
 
 	if got, want := len(d.GetNets()), 1729; got != want {
-		t.Errorf("nets = %d, want %d; KiCad resolves 1387, and the gap is issue 561. "+
-			"If 561 is fixed, this constant should become 1387", got, want)
+		t.Errorf("nets = %d, want %d; KiCad resolves 1387, and the gap is the group-bus half of "+
+			"issue 561. As that closes this constant should fall toward 1387", got, want)
 	}
 
 	var withMPN int

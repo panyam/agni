@@ -259,6 +259,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
 
+**`make oracle` is a separate suite and is NOT in the gate.** It cross-checks the KiCad reader
+against real boards, comparing the pin-to-net PARTITION against each board's own `.kicad_pcb` rather
+than net names (auto-named nets differ by tool) or counts (compensating errors cancel). It asserts
+`readers/kicad/testdata/oracle_corpus.baseline`, a committed list of the nets we still get wrong;
+`AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Out of the gate because it needs the 19MB both-views
+corpus, not the 3MB the gate fetches.
+
 **`make browser-test` is a separate suite and is NOT in the gate.** It drives a real Chromium against
 a real server for the handful of assertions that need layout, because jsdom has none. Read
 `docsite/content/build/the-gate.md` for what belongs in it, and `build/evidence.md` for the two ways
