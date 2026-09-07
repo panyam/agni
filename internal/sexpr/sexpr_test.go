@@ -86,3 +86,79 @@ func TestParenInString(t *testing.T) {
 		t.Errorf("paren-in-string mis-parsed: %+v", n)
 	}
 }
+
+// TestParseRejectsTruncation pins the property that made a 97% under-read look like a clean read
+// (agni issue 562): a surplus ')' closes the top-level expression early, and everything after it
+// used to be discarded in silence. The board that found this is a KiCad demo whose teardrop blocks
+// are each written a '(' short, so the shape below is that file in miniature: the ')' meant to close
+// `teardrops` closes `pad` instead, and the cascade reaches depth 0 while a whole second footprint
+// is still unread.
+func TestParseRejectsTruncation(t *testing.T) {
+	// The intended structure with exactly one '(' removed, which is what the board does 349 times.
+	const src = `(kicad_pcb
+	(footprint "A"
+		(pad "1"
+			(teardrops
+				(curved_edges no)
+				filter_ratio 0.9)
+				(enabled yes)
+			)
+			(uuid "p")
+		)
+		(uuid "u")
+	)
+	(footprint "B"
+		(pad "1")
+	)
+)`
+	n, err := Parse(strings.NewReader(src), KiCadStrings)
+	if err == nil {
+		var fps []*Node
+		Collect(n, "footprint", &fps)
+		t.Fatalf("Parse accepted a truncating input and returned %d of 2 footprints; want an error", len(fps))
+	}
+	if !strings.Contains(err.Error(), "line 13") {
+		t.Errorf("error does not locate where the input was abandoned: %v", err)
+	}
+	if !strings.Contains(err.Error(), "unread") {
+		t.Errorf("error does not say input was left unread: %v", err)
+	}
+}
+
+// TestParseRejectsTrailingContent: two top-level expressions is the same defect without the paren
+// cascade. One file is one expression in both dialects.
+func TestParseRejectsTrailingContent(t *testing.T) {
+	for _, mode := range []StringMode{KiCadStrings, EDIFStrings} {
+		if _, err := Parse(strings.NewReader("(a 1)\n(b 2)\n"), mode); err == nil {
+			t.Errorf("mode %v: Parse accepted trailing expression", mode)
+		}
+		// Trailing whitespace is not trailing content: a well-formed file ends with a newline.
+		if _, err := Parse(strings.NewReader("(a 1)\n\n\t \r\n"), mode); err != nil {
+			t.Errorf("mode %v: Parse rejected trailing whitespace: %v", mode, err)
+		}
+	}
+}
+
+// TestTokenizerLineCount: the position an error quotes has to survive the tokenizer's pushbacks
+// (scanAtom unreads its terminator, which may be the newline) and the newlines held inside strings.
+func TestTokenizerLineCount(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		want string
+	}{
+		{"atom terminated by newline", "(a\nbare\natoms\n)\n)", "line 5"},
+		{"newline inside a string", "(a \"one\ntwo\"\n)\n)", "line 4"},
+		{"escaped quote inside a string", "(a \"q\\\"q\"\n)\n)", "line 3"},
+	}
+	for _, c := range cases {
+		_, err := Parse(strings.NewReader(c.src), KiCadStrings)
+		if err == nil {
+			t.Errorf("%s: want an error", c.name)
+			continue
+		}
+		if !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: got %v, want %s", c.name, err, c.want)
+		}
+	}
+}
