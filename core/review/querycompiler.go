@@ -67,6 +67,16 @@ func RegisterQueryCompiler(c QueryCompiler) {
 	compiler = c
 }
 
+// QueryCompilerInstalled reports whether an engine has claimed the inline-query seam. It exists for a
+// composition check at startup: a binary that registers no compiler loads every manifest that binds
+// no inline query, so the absence is legitimate and cannot be an error here, but it is invisible
+// until some manifest happens to use one. A composer can say so up front instead.
+func QueryCompilerInstalled() bool {
+	compilerMu.RLock()
+	defer compilerMu.RUnlock()
+	return compiler != nil
+}
+
 // queryCompiler returns the registered compiler, or an error naming the omission.
 //
 // A missing compiler is an ERROR rather than a skipped item, deliberately. A binary that composes no
