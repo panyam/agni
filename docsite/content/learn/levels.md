@@ -73,6 +73,7 @@ Absolute maximum against recommended operating, derating, tolerance, worst case.
 - [More is worse](../11-crystals-and-oscillators/#more-is-worse-ee5), why adding load capacitors can be the defect
 - [A part is a contract](../07-reading-a-datasheet/#a-part-is-a-contract-ee5), the type-signature model
 - [Two numbers that look alike](../07-reading-a-datasheet/#two-numbers-that-look-alike-ee5), absolute maximum against recommended operating
+- [A third number, which promises nothing](../07-reading-a-datasheet/#a-third-number-which-promises-nothing-ee5), the typical column and why it is not a limit
 - [The comparison](../07-reading-a-datasheet/#the-comparison-ee5)
 - [Where did the number come from?](../07-reading-a-datasheet/#where-did-the-number-come-from-ee5), provenance and the trust floor
 - [What this layer does not cover](../07-reading-a-datasheet/#what-this-layer-does-not-cover-ee5), why coverage is bounded by the corpus
