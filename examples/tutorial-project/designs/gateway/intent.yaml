@@ -1,6 +1,10 @@
 # What the gateway board is SUPPOSED to be, declared separately from what it is. The engine has no
 # built-in opinion about a board's intended architecture, so an intent-bound review item reads
-# needs-design-intent until a file like this one is supplied with --intent-path.
+# needs-design-intent until a file like this one exists.
+#
+# It needs no flag. A design descriptor defaults `intent.yaml` beside the design, so the project
+# finds this file. `--intent-path` is for a design that belongs to no project, and naming this file
+# with it is a duplicate-source ERROR rather than a silent double-load.
 #
 # This is per-DESIGN, unlike profiles/ and params/ which are per-project: each design has its own
 # intended architecture, so the file lives beside the design rather than at the project root.
