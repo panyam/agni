@@ -71,7 +71,8 @@ mkdocs tree that was folded into `docsite/content/` with audience-first names.
 
 Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/report`, `core/diff`,
 `core/facts`, `core/query`, `core/model`). Format readers under **`readers/`** (`readers/edif`, `readers/kicad`,
-`readers/ipc2581`, `readers/xschem`, `readers/geda`, plus `readers/formats`, the registry/Loader).
+`readers/ipc2581`, `readers/xschem`, `readers/geda`, `readers/telesis`, plus `readers/formats`, the
+registry/Loader).
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
 (`stdlib/rules/builtin/rule_*.go`, `stdlib/rules/datalog`, `stdlib/rules/intent`,
 `stdlib/relations`, `stdlib/profiles`). The datasheet stack under **`datasheet/`** (`param`, `doc`,
@@ -309,6 +310,14 @@ back when a request would violate one**: quote the constraint by name, explain t
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a
 constraint, and if the direction was wrong, suggest capturing it as one.
+
+**A new rule owes a TEST, never a command typed into the document.** Sixteen are enforced by the gate
+and thirteen are review questions that say so. Which of the three homes a test goes in follows from
+what it reads: the package graph or the module in the root `deps_test.go`, one package's own rule
+beside that package (`service/transport_guard_test.go`, `core/facts`), a sweep over source in
+`internal/constraints`. The September 2026 audit is why, and `CONSTRAINTS.md`'s header records what
+it found: a Verify written as a command rots without anything surfacing it, and two rules were being
+violated in the tree with nobody the wiser.
 
 ## What does not belong in this repo
 

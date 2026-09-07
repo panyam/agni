@@ -5,6 +5,32 @@ Enforceable architectural rules for this project. Background and rationale in
 [presenter contract](https://panyam.github.io/agni/architecture/web-app/), and
 [ingestion and IR](https://panyam.github.io/agni/architecture/ingestion-and-ir/).
 
+## How these are enforced
+
+Each rule carries a **Verify**, and a Verify is one of two things. Sixteen are TESTS the gate runs, so
+a violation turns CI red. Thirteen are REVIEW questions a machine cannot answer, and say so. None is
+a command typed into this document for someone to remember to run, and a new rule should not add one.
+
+A test goes in one of three places, and what it READS decides which. The package graph and the module
+go in the root `deps_test.go`, beside the embedding surface (C13) and the rule primitive (C30). A rule
+whose subject is one package is tested there: `service/transport_guard_test.go` for C13's transport
+and filesystem clauses, `core/facts` for C29, `hack/ir_model_check.sh` for C19. A rule whose violation
+is a line of source somewhere nobody would think to guard goes in `internal/constraints`.
+
+The no-commands part is the lesson of the September 2026 audit, which read every constraint against
+the tree. Nine had a test; the rest were prose or a command nobody ran, and the commands had rotted in
+every way a command can. Two returned hits on a clean tree, because the code they swept had grown
+legitimate new call sites (C12, C24). Two deferred themselves to work that had since landed, so they
+still read as "not checkable yet" when they already were (C20, C21). One could not fail at all, because
+what it grepped lives in a separate Go module (C18). And two rules had no Verify while the tree
+already violated them: `readers/telesis` declared no fidelity contract (C6) and
+`stdlib/rules/intent/protections.go` re-derived ground from net names in the check path (C20).
+
+Both violations were found by reading, not by anything failing. That is the argument for a test over
+a command: both halves of a structural violation compile and pass, so nothing surfaces one until
+somebody re-reads the rule, and a rule nobody re-reads is not a constraint. C29's Verify was a command
+for exactly three PRs before it went stale, and C13's was one for one PR.
+
 ## C1: Engine logic in Go, view in TS, core runtime-agnostic
 **Rule:** All domain/business logic (parsing, IR, diff, rules, simulation) lives in Go
 and is **runtime-agnostic**: no `syscall/js`, no DB handles, no file paths baked in (take
@@ -67,6 +93,13 @@ Reverse-engineering a proprietary format requires explicit approval.
 **Rule:** Each reader declares its fidelity (lossless or lossy-bounded). Lossless
 readers must pass the round-trip oracle (parse then emit is identity) on the corpus.
 **Why:** honest losslessness; automated validation tames the parser treadmill.
+**Verify:** `TestC6EveryReaderDeclaresFidelity` (`internal/constraints`) requires every package under
+`readers/` other than the registry to carry a `// Fidelity: ...` line in a non-test file. The
+declaration is a doc comment rather than a typed field because what it has to say is prose: WHICH
+subset survives the read and what is dropped, which a `Fidelity` enum would reduce to the word
+"lossy-bounded" and none of the bound. A machine can hold the line to existing; whether the bound it
+states is honest is a review question. `readers/telesis` shipped in August 2026 with no declaration
+at all and nothing said so, because this constraint carried no Verify until the audit.
 
 ## C7: Heavy ops server-side; presenter runtime is per-surface
 **Rule:** Large-file parsing, simulation, and other heavy operations run server-side.
@@ -168,7 +201,11 @@ keeps that API honest and gives every feature a legible entry point. Per-example
 preserve the shippable-engine goal (the engine `go.mod` stays lean, C1).
 **Verify:** each capability has an `examples/<name>/` with a `walkthrough.md` and its own
 `go.mod`; examples read fixtures from `examples/common/designs/` only (synthetic and
-redistributable, never a real board, C5).
+redistributable, never a real board, C5). Three directories owe no `walkthrough.md` and are not
+exceptions to the rule so much as not capabilities: `examples/common` is the shared harness the
+walkthroughs run on, and `examples/overlay` and `examples/overlay-template` demonstrate the
+extension SEAMS (C18) rather than an engine capability, so each carries a `README.md` and a test
+instead of a narrated run.
 
 ## C11: Server-rendered shell, framework islands at the leaves
 **Rule:** Web pages are server-rendered (goapplib + templar) and routing is server-owned:
@@ -208,8 +245,14 @@ wire (`PackedLabel.color`, `PackedSheet.font_family`) so the client renders with
 palette. Per-element font/style overrides wait until the geom IR carries them.
 **Why:** kill the duplication that let the SVG and label colors drift (`#555` vs `#555555`),
 and keep styling overridable (theming, dark mode, accessibility) without editing the engine.
-**Verify:** no `"#rrggbb"` or `font-family` literals in `core/render/*.go` outside `style.go`;
-`SheetSVG`/`PackSheet` take render options; label colors come from `Style`.
+**Verify:** `TestC12RenderLayerHasNoStyleLiterals` (`internal/constraints`) sweeps the non-test
+files of `core/render/` outside `style.go` for `"#rrggbb"` and `font-family=`; plus, by review,
+`SheetSVG`/`PackSheet` take render options and label colors come from `Style`. Two exclusions the
+naive sweep gets wrong, and it returned two dozen hits on a clean tree until the audit. TEST files
+name colours legitimately, since asserting that a custom style reaches the output means naming one.
+And the sweep must match `font-family=` rather than the bare word: the three renderers pass
+`svg.A("font-family", style.Font)`, where the literal is the ATTRIBUTE NAME and the value already
+comes from `Style`, which is the rule being obeyed.
 
 ## C13: Service impls are importable, transport-neutral, and take I/O via injected ports
 **Rule:** The service implementations (`WorkspaceService`, `DesignService`, `CheckService`,
@@ -271,17 +314,16 @@ discipline of C9 applied to the rule catalog. (This reversed a first cut that ty
 classification fields beyond the behavioral core; `check.Available` reads `r.Reads`, not a track
 field; `NewDesignService` takes a `[]*check.Rule` parameter.
 
-## C15: Readers never import the presentation tier
-**Rule:** Format readers (all under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`, and
-any future reader) must not import `core/render/` or `core/svg/`. Geometry math a reader and a renderer both need
-(placement transforms, pin world positions) lives in `internal/geomath`, imported by both
-sides. Dependencies point one way: readers produce IR/geom; the presentation tier consumes it.
-**Why:** "pins land where symbols are drawn" must hold by shared code, not by a reader
-reaching up into the renderer for its helper (which couples ingestion to presentation and
-drags drawing code into every entrypoint that only wants netlists). One implementation of the
-transform contract (the geometry doc) serves producers and consumers alike.
-**Verify:** `grep -rl '"github.com/panyam/agni/core/render"\|"github.com/panyam/agni/core/svg"'
-readers/` returns nothing.
+## C15: Readers never import the presentation tier (MERGED INTO C17)
+
+**Superseded by [C17](#c17-layered-dependencies--the-contract-and-reader-tiers-depend-downward-only).**
+C17 always said outright that it "subsumes C15 and generalizes it to the whole heavy tail", and its
+check is a strict superset: `core/render` and `core/svg` are two of the seven paths C17 forbids the
+reader tier. Two constraints over one invariant meant two places to update and two Verifies to keep
+honest, so the specific case folded into the general one and C17 absorbed what C15 said about
+`internal/geomath` and about pins landing where symbols are drawn.
+
+The number is retired rather than reused, so a comment or commit citing C15 still resolves.
 
 ## C16: Internal-seed posture (datasheet data never leaves the customer boundary)
 **Rule:** Datasheet documents, doc-IRs derived from them, and extracted parameter data
@@ -305,22 +347,27 @@ or readers, never fetch.
 **Rule:** The dependency graph is layered so the low tiers can be consumed (and one day carved
 into their own modules) without dragging the application tail. The generated contract
 (`gen/`: IR + geom + param/doc protos) imports no first-party `agni` package. Format readers
-(under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`) and the reader registry
-(`readers/formats`) depend
-only downward — on the contract and shared parse/geom helpers — never on the application tiers
+(under `readers/`: `edif`, `kicad`, `ipc2581`, `xschem`, `geda`, `telesis`, and any future reader) and
+the reader registry (`readers/formats`) depend
+only downward — on the contract and shared parse/geom helpers — never on the presentation tier
+(`core/render`, `core/svg`) or the application tiers
 (`service/`, `internal/server/`, the web transport, `servicekit`, `connectrpc`).
 `readers/formats` is public (not `internal/`) precisely so an out-of-module reader registers through it
-(WS12-003); that is the ONE reader extension seam. This subsumes C15 (readers ⊅ `render`/`svg`)
-and generalizes it to the whole heavy tail.
+(WS12-003); that is the ONE reader extension seam. This absorbs the retired C15 (readers ⊅
+`render`/`svg`) and generalizes it to the whole heavy tail. Geometry math a reader and a renderer both
+need (placement transforms, pin world positions) lives in `internal/geomath`, imported by both sides,
+so "pins land where symbols are drawn" holds by shared code rather than by a reader reaching up into
+the renderer for its helper.
 **Why:** the open-core overlay, and any future ecosystem reader, depends on the contract plus the
 registry — not on the web/serve tier. Go module-graph pruning already keeps that dependency light
 *because* the layering holds; a stray import from a reader up into `internal/server` would pull
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
 the seam clean now so the split stays a rename, not a refactor.
-**Verify:** `go list -deps ./readers/... | grep -E
-'servicekit|connectrpc|panyam/agni/(core/render|core/svg|serve|service|internal/server)'`
-returns nothing; and `go list -deps ./gen/... | grep 'panyam/agni/' | grep -v '/gen/'` returns
-nothing (the contract imports no first-party package).
+**Verify:** `TestReaderTierDependsDownwardOnly` and `TestContractImportsNoFirstPartyPackage`
+(`deps_test.go`), which run `go list -deps` over the two tiers, so the check is over the
+TRANSITIVE graph rather than over anyone's import block. Both carry a positive control: a result
+naming no package under the pattern fails rather than reading as clean, because a mistyped or
+renamed-out-from-under-it pattern is exactly the edit that would make a graph check vacuous.
 
 ## C18: The public engine never imports the overlay (dependencies point overlay → engine)
 **Rule:** The open-core structure is a public Apache-2.0 engine and a private *overlay* that
@@ -337,9 +384,15 @@ overlay exists (the C16 datasheet posture generalized to all of readers, rules, 
 also what lets the engine be published while overlays stay closed. The seams are global registries
 the overlay writes into at init/main, so the engine is composed *by* the overlay, never coupled to
 one.
-**Verify:** `go list -deps ./... 2>/dev/null | grep 'panyam/agni/examples/'` run from the engine
-module returns nothing (no engine package imports the reference overlay or any example), and the
-engine `go.mod` has no `require`/`replace` for an overlay module.
+**Verify:** `TestEngineModuleRequiresNoOverlay` (`deps_test.go`), which reads `go.mod`
+and fails on any `require` or `replace` naming a module inside this repo. A `replace` counts as much
+as a `require`, because it is the edit that makes a local overlay resolvable and the one somebody
+adds while debugging and forgets to remove.
+**Note:** the graph half of this rule is not tested, because it cannot fail. `examples/overlay` is
+its own module, so `go list -deps ./...` from the engine module can never name it whatever anyone
+writes in an engine package; an import would fail to compile first. The command sat in this document
+as the headline Verify until the audit, reading as enforcement while proving nothing. `go.mod` is
+where the arrow could actually reverse, so `go.mod` is what the test reads.
 
 ## C19: Engine processing reads the design through check.Model, not raw ir.Design
 **Rule:** Engine/processing code reads a loaded design through the composed `check.Model` (a proto
@@ -388,10 +441,19 @@ netlist carries.
 check path is O(rules x entities) of the same string parsing, and it couples the core to vendor
 conventions. Interpreting once at the boundary keeps the core convention-agnostic (it reads facts),
 makes the expensive path cheap, and puts house-style config in the overlay/edge (the C16/C18 posture
-generalized). Interim in-check heuristics (WS3-065's attribute reading, WS3-069's per-rule lexicon
-calls) are stepping stones; the left-shift tickets (WS3-071 `device_classes` at ingestion, WS3-072
-`net.role` at ingestion) move them to the edge. A `Verify` (a grep that rule `Eval`s do not call the
-name/class heuristics directly) becomes checkable once those land.
+generalized). The interim in-check heuristics are gone: both left-shift tickets landed, so
+`Loader.ReadDesign` stamps `device_classes` (WS3-071) and net roles (WS3-072) once per read and the
+check path reads them.
+**Verify:** `TestC20CheckPathReadsStampedFacts` (`internal/constraints`) sweeps `stdlib/rules/` and
+`stdlib/relations/` for `classify.Active` and `check.Active`, the two spellings of the process-wide
+vocabulary (the second is an alias of the first, in `core/check/aliases.go`). Reaching for it is two
+violations in one call: the convention matching runs in the hot path, and the vocabulary arrives as
+ambient state rather than travelling with the run (C22). Read the fact off the model instead, through
+`m.IsGroundNet`, `m.IsRailNet` or `check.NetHasRole`, which trust `ir.Net.roles` and fall back to
+THIS model's lexicon for an IR that skipped the loader.
+**Note:** this Verify still read "becomes checkable once those land" long after they had, and in
+that window `stdlib/rules/intent/protections.go` matched ground net names itself in `groundRefs`. A
+deferred Verify is not a Verify, and nothing re-reads the sentence that defers it.
 
 ## C21: The netlist is the source of truth for connectivity and component IDENTITY; schematic/board files are geometry companions
 **Rule:** Component IDENTITY and CONNECTIVITY (which components exist, their ref-des, the nets, and
@@ -438,9 +500,11 @@ cannot reproduce it. The annotation argument stands without it.
 **Verify:** analysis/rule code sources components + nets from the loaded netlist model, not from a
 geometry reader; a geometry companion contributes only render + locate. A BOM source contributes
 only attributes onto an existing ref-des, so the component COUNT of a design is unchanged by
-declaring one. (Checkable once the
-companion-file association lands, WS1-047: geometry-only readers feed no component/net into the rule
-model.)
+declaring one. Companion association landed (WS1-047, then agni issue 528): a descriptor declares its
+`companions` and `service.SourcesFor` keeps `NetlistURI` on the entry while the other tiers move, so
+a geometry-only reader feeds no component or net into the rule model. What is still checked by
+REVIEW rather than by a test is the direction of the join, since a rule sourcing components from a
+geometry model compiles and passes.
 
 ## C22: Configuration travels as a value, never as ambient state or a locator the callee resolves
 **Rule:** Configuration that changes what a run CHECKS or how it INTERPRETS a design — naming
@@ -524,9 +588,12 @@ free of I/O while still serving a browser, which holds a ref and no filesystem: 
 it is named in the contract instead of hiding inside a run, and a caller that already has the value
 never triggers it.
 
-**Verify:** no `mount` + `path` PAIR and no `*_path` or `*_ref` field in `protos/agni/v1/webapi/` — an
+**Verify:** `TestC22WebAPICarriesNoLocatorPair` (`internal/constraints`) fails on a `*_path` or
+`*_ref` FIELD in `protos/agni/v1/webapi/` — an
 artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
-travels as a value; no `os`/`path/filepath`/`io/fs` import in `service/`
+travels as a value. It reads field declarations rather than the whole line, so `ref_des` and
+`cell_refs` (domain names, not locators) and the several comments mentioning a `board_ref` do not
+match. Plus no `os`/`path/filepath`/`io/fs` import in `service/`
 impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabulary installers
 (`naming.ApplyLexicon`, `classify.SetActive*`) are called only from entrypoint startup wiring
 (`cmd/agni`), never from a service method or any per-run path.
@@ -616,11 +683,18 @@ rule structural instead of advisory: membership in an extractor's result set IS 
 the number is in base units, so a consumer cannot forget to convert. An accessor would relocate the
 same bug to whichever call site forgot it, silently.
 
-**Verify:** `grep -rnE '\bp\.(Unit|GetUnit\(\))' --include='*.go' core/ stdlib/ readers/ internal/
-cmd/ | grep -v '_test.go'` returns nothing. The naive sweep for `.Unit != "` does NOT work and must
-not be substituted: the extractors legitimately compare `q.Unit` on the converted row, so the
-invariant that actually discriminates is that the RAW row's unit is never read outside
-`datasheet/param`. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
+**Verify:** `TestC24RawUnitIsReadOnlyToDisplay` (`internal/constraints`), a RATCHET over the same
+sweep rather than a clean one, the shape `hack/ir_model_baseline.txt` uses for C19. The naive sweep
+for `.Unit != "` does NOT work and must not be substituted: the extractors legitimately compare
+`q.Unit` on the converted row, so the invariant that actually discriminates is about the RAW row's
+unit. But that invariant is "never COMPARED outside `datasheet/param`", and no grep can tell a
+comparison from a display, which is why the plain command returned two hits on a clean tree from the
+day `param.unit` and `agni params` shipped. Both read the printed unit to PUBLISH it, which is the
+entire point of that relation and that table. The two sites are allowlisted in the test, and a new
+one is one of two things: if it compares, it is the bug this constraint exists for and it converts
+through `datasheet/param` first; if it displays, it joins the allowlist, and that addition is the
+review moment. `datasheet/param` itself is skipped rather than allowlisted, because it IS the one
+place: it is where the conversion happens and what every other tier compares through. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
 **This covers the query surface too.** The `param(...)`, `param.range(...)` and `param.typ(...)`
@@ -672,10 +746,11 @@ read as better founded than it is. Nothing in the document contradicts it except
 snapshot, which nobody cross-reads. This is C22's value-not-locator rule applied to the RECORD of a
 run rather than to its inputs, and it is a single-writer constraint for the same reason
 `service.FindingProto` is: two places that build one message agree until the day they do not.
-**Verify:** `grep -rn 'checkspb.RunConfig{' --include='*.go' . | grep -v _test.go` returns only
-`service/projectoverlay.go`. Test files are excluded because a fixture legitimately builds a
-document to render (`core/results/results_test.go`); the rule is about who WRITES a run's record. Quote
-the `--include` glob, or zsh expands it and grep never sees the flag.
+**Verify:** `TestC25RunConfigHasOneWriter` (`internal/constraints`) holds `checkspb.RunConfig{` to
+one non-test site, `service/projectoverlay.go`. Test files are excluded because a fixture
+legitimately builds a document to render (`core/results/results_test.go`); the rule is about who
+WRITES a run's record. The test carries the positive control a grep cannot: finding NO site fails
+too, since a rename would otherwise leave it reading as clean.
 **Note:** which tier a rule source came from is NOT recoverable after composition — a compiled
 interface profile and a compiled intent declaration are both just rules in a catalog — so the flags
 travel on `service.ProjectConfig` rather than being derived from `Overlay.Sources`. Rationale in
@@ -793,11 +868,13 @@ single-writer half is the same argument as C25: two repairs already existed, `po
 `query` and `forDisplay` for `results`, and `--results-out` went through neither, because a
 write-time fix covers the surface its author was looking at and the next output format starts
 uncovered.
-**Verify:** `grep -rn 'relocateSources' --include='*.go' .` returns only `readers/formats/`, so the
-rename has one implementation and one call site per read entry point. Acceptance is
+**Verify:** `TestC28SourceRenameHasOneImplementation` (`internal/constraints`) holds
+`relocateSources` to `readers/formats/`, so the rename has one implementation and one call site per
+read entry point. Acceptance for the BEHAVIOUR is
 `go test ./cmd/agni/ -run TestCheckProvenanceIsMountRelative`, which asserts the shape on both the
 printed and the STORED document, since those are written by different code and it is the stored one
-that outlives the machine. Quote the `--include` glob, or zsh expands it and grep never sees the flag.
+that outlives the machine. The structural test is what stops a new output format or a new host from
+growing a second implementation, which is how host paths would start being published again.
 **Note:** a host that reads through `Loader.FS` leaves `SourceName` nil, and that is correct rather
 than an exemption: an `fs.ValidPath` is unrooted, so those paths already satisfy the rule. The
 constraint bites a NEW host that opens files by absolute path. A file outside every mount is recorded

@@ -1,7 +1,9 @@
 package agni_test
 
 import (
+	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -107,4 +109,90 @@ func deps(t *testing.T, pkg string) []string {
 func packageExists(t *testing.T, pkg string) bool {
 	t.Helper()
 	return exec.Command("go", "list", pkg).Run() == nil
+}
+
+// The two tiers C17 layers below the application tail, plus what each must not reach.
+const (
+	readerTier = "github.com/panyam/agni/readers/..."
+	contract   = "github.com/panyam/agni/gen/..."
+)
+
+// aboveTheReaderTier is the presentation tier and the application tail. A reader produces IR and
+// geom; it never reaches up into either.
+var aboveTheReaderTier = []string{
+	"servicekit",
+	"connectrpc",
+	"github.com/panyam/agni/core/render",
+	"github.com/panyam/agni/core/svg",
+	"github.com/panyam/agni/serve",
+	"github.com/panyam/agni/service",
+	"github.com/panyam/agni/internal/server",
+}
+
+// TestReaderTierDependsDownwardOnly is C17, and it absorbs the retired C15.
+//
+// A stray import from a reader up into internal/server would pull servicekit and connect into every
+// consumer of the reader tier and foreclose extracting it as its own module, so the check is over
+// the transitive graph rather than over anyone's import block. core/render and core/svg are two of
+// the seven paths, which is what makes C15 (readers never import the presentation tier) a strict
+// subset of this one.
+func TestReaderTierDependsDownwardOnly(t *testing.T) {
+	for _, dep := range depsOfTier(t, readerTier, "github.com/panyam/agni/readers/") {
+		for _, above := range aboveTheReaderTier {
+			if strings.Contains(dep, above) {
+				t.Errorf("the reader tier pulls %q (C17): readers depend downward on the contract "+
+					"and shared parse/geom helpers only", dep)
+			}
+		}
+	}
+}
+
+// TestContractImportsNoFirstPartyPackage is C17's other half. The generated contract is what a
+// consumer can take on its own, so anything under gen/ importing back into agni would make it carry
+// the tree.
+func TestContractImportsNoFirstPartyPackage(t *testing.T) {
+	const self = "github.com/panyam/agni/"
+	for _, dep := range depsOfTier(t, contract, "github.com/panyam/agni/gen/") {
+		if strings.HasPrefix(dep, self) && !strings.Contains(dep, "/gen/") {
+			t.Errorf("the generated contract pulls the first-party package %q (C17)", dep)
+		}
+	}
+}
+
+// TestEngineModuleRequiresNoOverlay is C18: dependencies point overlay -> engine.
+//
+// The graph half of that rule cannot fail, which is why it is not tested. examples/overlay is its
+// own module, so `go list -deps ./...` from the engine can never name it whatever anyone writes in
+// an engine package; an import would fail to compile first. That command sat in CONSTRAINTS.md as
+// C18's headline Verify, reading as enforcement while proving nothing.
+//
+// go.mod is where the arrow could actually reverse, so go.mod is what this reads. A `replace` counts
+// as much as a `require`: it is the edit that makes a local overlay resolvable, and it is the one
+// somebody adds while debugging and forgets to remove.
+func TestEngineModuleRequiresNoOverlay(t *testing.T) {
+	b, err := os.ReadFile("go.mod")
+	if err != nil {
+		t.Fatalf("read go.mod: %v", err)
+	}
+	for i, line := range strings.Split(string(b), "\n") {
+		code, _, _ := strings.Cut(line, "//")
+		if !strings.Contains(code, "panyam/agni/") {
+			continue
+		}
+		t.Errorf("go.mod:%d names a module inside this repo (C18): %q. The engine is composed BY an "+
+			"overlay through formats.Register and check.RegisterSource, never coupled to one.",
+			i+1, strings.TrimSpace(line))
+	}
+}
+
+// depsOfTier is deps over a PATTERN, with the positive control a pattern needs. A result naming no
+// package under want fails rather than reading as clean: a mistyped pattern, or one the tier was
+// renamed out from under, is exactly the edit that would make a graph check vacuous.
+func depsOfTier(t *testing.T, pattern, want string) []string {
+	t.Helper()
+	got := deps(t, pattern)
+	if !slices.ContainsFunc(got, func(d string) bool { return strings.HasPrefix(d, want) }) {
+		t.Fatalf("go list -deps %s named no package under %s, so this check proves nothing", pattern, want)
+	}
+	return got
 }
