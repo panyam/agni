@@ -74,7 +74,11 @@ func TestOracleCorpus(t *testing.T) {
 	}
 }
 
-const baselinePath = "testdata/oracle_corpus.baseline"
+// baselinePath is deliberately NOT under testdata/. The docsite run specs mount that directory as a
+// fixture and stamp each capture with a hash of every tracked file in it, so a baseline living there
+// would restamp five tutorial captures every time a reader fix shrinks it — coupling two things that
+// have nothing to do with each other.
+const baselinePath = "oracle_corpus.baseline"
 
 // crossCheckBoard reads one board both ways and returns its disagreement lines, sorted. A board
 // whose two halves cannot both be read reports that as its single line, so the corpus records it

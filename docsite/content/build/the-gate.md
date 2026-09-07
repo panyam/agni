@@ -213,7 +213,7 @@ another in. See `build/evidence.md` on why a matching total is not agreement.
 
 It asserts a COMMITTED BASELINE of the disagreements rather than demanding zero, because several
 reader defects are still open and a test that has never passed teaches nothing.
-`readers/kicad/testdata/oracle_corpus.baseline` names the nets we still get wrong, so a fix shrinks
+`readers/kicad/oracle_corpus.baseline` names the nets we still get wrong, so a fix shrinks
 the file and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two boards is not
 a survey, and the file says what it does not cover: neither crosses a sheet boundary with a bus
 vector, so it does not move when that fix is reverted. The in-gate fixture pair

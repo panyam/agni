@@ -23,7 +23,7 @@ const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetso
 // That fix follows a bus VECTOR (`AN[0..7]`) across a sheet boundary and clears the split entirely on
 // the boards that use one. This board crosses with GROUP buses instead — `CAM0{CSI}`, whose members
 // come from a `bus_alias` and are named `CAM0.CLK_N` — and those are still not followed. Which nets
-// are still wrong, rather than how many, is in readers/kicad/testdata/oracle_corpus.baseline.
+// are still wrong, rather than how many, is in readers/kicad/oracle_corpus.baseline.
 //
 // The other two are correct today and guard against regression: the component count matches KiCad
 // exactly, and the MPN count is what the datasheet tier joins on.

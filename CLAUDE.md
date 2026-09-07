@@ -262,7 +262,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 **`make oracle` is a separate suite and is NOT in the gate.** It cross-checks the KiCad reader
 against real boards, comparing the pin-to-net PARTITION against each board's own `.kicad_pcb` rather
 than net names (auto-named nets differ by tool) or counts (compensating errors cancel). It asserts
-`readers/kicad/testdata/oracle_corpus.baseline`, a committed list of the nets we still get wrong;
+`readers/kicad/oracle_corpus.baseline`, a committed list of the nets we still get wrong;
 `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Out of the gate because it needs the 19MB both-views
 corpus, not the 3MB the gate fetches.
 
