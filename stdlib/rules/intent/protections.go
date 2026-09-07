@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/check"
-	"github.com/panyam/agni/core/classify"
 )
 
 // Protection kinds.
@@ -100,12 +99,14 @@ func componentsOnNet(m check.Model, name string) map[string]bool {
 	return out
 }
 
-// groundRefs returns the ref-des set that touches any ground net (name-derived, the same predicate the
-// net.ground fact uses), so a discharge check can ask "does this resistor also reach ground".
+// groundRefs returns the ref-des set that touches any ground net, so a discharge check can ask "does
+// this resistor also reach ground". It asks the MODEL rather than matching the name itself: the role
+// is stamped at ingestion and the model's reader falls back to this model's own lexicon, so a rule
+// neither re-runs name matching per net (C20) nor reads the process-wide active vocabulary (C22).
 func groundRefs(m check.Model) map[string]bool {
 	out := map[string]bool{}
 	for _, n := range m.Nets() {
-		if !classify.ActiveRoleVocab().IsGround(n.GetName()) {
+		if !m.IsGroundNet(n) {
 			continue
 		}
 		for _, c := range n.GetConnections() {
