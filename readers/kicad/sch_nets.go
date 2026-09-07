@@ -19,7 +19,7 @@ import (
 //
 // Pin positions are the one non-trivial part: a lib symbol's pins are in symbol-local coordinates,
 // so each is mapped to sheet coordinates with geomath.ApplyTransform(placement, pin) — the same
-// shared transform the renderer draws with (internal/geomath, C15), which is what guarantees a pin
+// shared transform the renderer draws with (internal/geomath, C17), which is what guarantees a pin
 // lands on the wire endpoint it connects to. Wires, labels, and pins all pass through the same coordinate conversion
 // so coincident points compare equal.
 func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint, []*ir.JoinedTap) {

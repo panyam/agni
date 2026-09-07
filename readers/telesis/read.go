@@ -5,6 +5,13 @@
 // geometry at all, so this is a Design-only reader (CONSTRAINTS C21: the netlist is the source of
 // truth for connectivity and component identity; layout arrives as a separate companion).
 //
+// Fidelity: lossy-bounded (CONSTRAINTS C6). Read extracts the components and their part types
+// (with the manufacturer part number the `$PACKAGES` head carries), the nets and their pin
+// membership, and both property blocks transposed onto the components and pins they name. What is
+// dropped is the file's own ordering and its grouping: a property is stored on each component it
+// named, so the inverted-index entry it arrived on is not recoverable. There is no geometry to
+// lose, since the format carries none.
+//
 // A file is a sequence of sections, each opened by a line-initial `$MARKER`:
 //
 //	$PACKAGES        'PART' ! 'MPN' ; U1 U2 U3,          part identity, grouped by part type

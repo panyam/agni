@@ -7,7 +7,7 @@
 // Both producers and consumers of geometry depend on it: readers that compute pin
 // world positions for connectivity (kicad) and the renderers that draw placements
 // (render). Sharing one implementation is what guarantees pins land where symbols are
-// drawn — readers must never reach into the presentation tier for it (CONSTRAINTS C15).
+// drawn — readers must never reach into the presentation tier for it (CONSTRAINTS C17).
 package geomath
 
 import (
