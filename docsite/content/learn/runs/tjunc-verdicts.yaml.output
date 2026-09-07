@@ -1,4 +1,4 @@
-#agni-run 4a43d93b5950be4a
+#agni-run 4557456ce6fba58c
 wire-no-junction  1 fail
     fail  65000000,-50000000  the endpoint lands on another wire's body and nothing joins them
                               there, so the drawing shows one net where the netlist has two
