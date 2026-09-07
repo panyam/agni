@@ -176,13 +176,15 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	if b[Var("doc")].S != "LMR60410-Q1 Buck (SNAS870B Rev. B)" || b[Var("section")].S != "6.3 Recommended Operating Conditions" {
 		t.Fatalf("citation columns wrong: %+v", b)
 	}
-	if b[Var("page")].Num == nil || *b[Var("page")].Num != 5 {
-		t.Fatalf("page not numeric 5: %+v", b[Var("page")])
+	// The page binds as a STRING. It is a document locator rather than a quantity, and a number in a
+	// numeric slot carries no BaseUnit, which made it unify with a voltage (agni issue 545).
+	if b[Var("page")].S != "5" || b[Var("page")].Num != nil {
+		t.Fatalf("page should bind as the string \"5\" with no number: %+v", b[Var("page")])
 	}
 
 	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence — the field
 	// the report leans on to flag a value that should be verified before it is trusted.
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:        check.Rule{Name: "iout-check", Severity: "warning"},
 		Query:       MustParse(`component.mpn(?r, ?m), param(?m, "IOUT", ?v), ?v < 6 => ?r`),
 		Kind:        check.KindComponent,
@@ -204,7 +206,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	}
 
 	// (3) without ParamSymbol, no citation is attached (the opt-in gates it).
-	plain := RuleFromQuery(FindingQuery{
+	plain := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "iout-plain", Severity: "warning"},
 		Query:      MustParse(`component.mpn(?r, ?m), param(?m, "IOUT", ?v), ?v < 6 => ?r`),
 		Kind:       check.KindComponent,
@@ -218,8 +220,8 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 
 // RuleFromQuery turns a datalog goal into a check.Rule whose every answer row is a Finding, with
 // the subject's provenance resolved and the message template filled from the row.
-func TestRuleFromQuery(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+func TestMustRuleFromQuery(t *testing.T) {
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule: check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
 		// A pin alone on its net (fan-out < 2). Reads is left empty to exercise auto-derivation.
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
@@ -253,7 +255,7 @@ func TestRuleFromQuery(t *testing.T) {
 // This is the exact power-pin-mistyped shape: a component subject with a message naming both a pin
 // and a net.
 func TestRuleFromQueryCarriesContext(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
 		Kind:       check.KindComponent,
@@ -286,7 +288,7 @@ func TestRuleFromQueryCarriesContext(t *testing.T) {
 // which is the order the message names them, so a panel's chips read like the sentence above them.
 // A map-based implementation would pass every other assertion here and fail this one at random.
 func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "ordered", Severity: "info"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
 		Kind:       check.KindComponent,
@@ -310,7 +312,7 @@ func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
 // TestRuleFromQueryNoContextVarsIsClean: declaring none carries none. The common case, and it must
 // stay nil rather than an empty slice so a wire encoder omits the field entirely.
 func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "plain", Severity: "info"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
 		Kind:       check.KindComponent,
@@ -329,7 +331,7 @@ func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 // nothing gets a rule that CLAIMS nothing, and RunVerdicts filters it out rather than counting its
 // failures as its coverage.
 func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
 		Kind:       check.KindPin,
@@ -353,7 +355,7 @@ func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
 // pinDesign has two pins. Pin U1.1 sits alone on STUB and fails; pin U1.2 shares SHARED with R1 and
 // is the pass. R1.1 is on SHARED too, so the domain is three pins wide.
 func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
 		Kind:       check.KindPin,
@@ -408,7 +410,7 @@ func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 // This is the host-incomplete shape reduced to the pin fixture: two verdicts about U1, distinguished
 // only by the net each concerns.
 func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "comp-pin", Severity: "info"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 1 => ?ref, ?pin, ?net`),
 		Kind:       check.KindComponent,
@@ -450,7 +452,7 @@ func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
 // only sentence lived on its Finding rendered as a blank line in every consumer that reads verdicts
 // back from the service, visible in the docsite capture and invisible in-process.
 func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
-	rule := RuleFromQuery(FindingQuery{
+	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},
 		Query:      MustParse(`pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`),
 		Kind:       check.KindPin,

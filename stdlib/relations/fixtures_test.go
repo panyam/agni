@@ -125,6 +125,63 @@ func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 	}
 }
 
+// typSpec hand-builds a part whose datasheet states a TYPICAL value, the half of RangeValue that had
+// nowhere to land while Min and Num were spent on the two bounds (agni issue 545).
+func typSpec(mpn, unit string, typ float64) *parampb.PartSpec {
+	f := func(v float64) *float64 { return &v }
+	return &parampb.PartSpec{
+		Mpn:          mpn,
+		Manufacturer: "Acme",
+		Docs:         []*parampb.SourceDoc{{Id: "ds", Title: "ACME Rev C", Vendor: "Acme"}},
+		Parameters: []*parampb.Parameter{
+			{
+				Name: "Quiescent current", Symbol: "IQ",
+				LimitKind:         parampb.LimitKind_LIMIT_KIND_CHARACTERISTIC,
+				Value:             &parampb.RangeValue{Typ: f(typ)},
+				Unit:              unit,
+				ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+				Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: 8, TableOrFigure: "Electrical Characteristics", Method: "hand", Confidence: 1},
+			},
+			{
+				Name: "Supply voltage, recommended", Symbol: "VDD",
+				LimitKind:         parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING,
+				Value:             &parampb.RangeValue{Min: f(3.0), Max: f(3.6)},
+				Unit:              "V",
+				ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+				Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: 6, TableOrFigure: "Recommended Operating Conditions", Method: "hand", Confidence: 1},
+			},
+		},
+	}
+}
+
+// twoEsdRatingSpec hand-builds a part stating TWO system-level ESD ratings, which is the ordinary
+// shape for a protection part: IEC 61000-4-2 specifies air discharge and contact discharge
+// separately and a vendor prints both, on different pages. Modelled on esdSpec, including the
+// esd_test_model attribute that makes a rating system-level (WS3-077).
+func twoEsdRatingSpec(mpn string) *parampb.PartSpec {
+	f := func(v float64) *float64 { return &v }
+	row := func(name string, volts float64, page int32) *parampb.Parameter {
+		return &parampb.Parameter{
+			Name:              name,
+			Symbol:            "V_ESD",
+			LimitKind:         parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX,
+			Value:             &parampb.RangeValue{Max: f(volts)},
+			Unit:              "V",
+			ConditionCoverage: parampb.ConditionCoverage_CONDITION_COVERAGE_UNCONDITIONAL,
+			Attributes:        map[string]string{"esd_test_model": "iec"},
+			Prov:              &parampb.ParamProvenance{DocRef: "ds", Page: page, TableOrFigure: "ESD Ratings", Method: "hand", Confidence: 1},
+		}
+	}
+	return &parampb.PartSpec{
+		Mpn: mpn, Manufacturer: "Agni",
+		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "DEMO-TVS Rev A", Vendor: "Agni"}},
+		Parameters: []*parampb.Parameter{
+			row("ESD (IEC 61000-4-2, air discharge)", 15000, 2),
+			row("ESD (IEC 61000-4-2, contact discharge)", 8000, 3),
+		},
+	}
+}
+
 // ldoRecommendedSpec hand-builds a supply with a two-sided recommended-operating VDD row.
 func ldoRecommendedSpec(mpn string, min, max float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }

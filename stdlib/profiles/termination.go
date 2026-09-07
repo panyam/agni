@@ -72,7 +72,7 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 		`term_scope(?h) :- component-on-net(?r, ?h), suffix(?h, %q), in_use(?iu);
 		 term_scope(?h) => ?h`, high))
 	dq.Rules = append(append([]query.Rule{}, tq.Rules...), dq.Rules...)
-	return query.RuleFromQuery(query.FindingQuery{
+	return query.MustRuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-termination-missing",
 			Severity: "warning",

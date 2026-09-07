@@ -108,9 +108,12 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   `gh pr create` reporting "No commits between main and <branch>". Recovery is cheap when the tree is
   clean (`git branch -f <branch> <sha>`, `git branch -f main origin/main`), so the cost is entirely in
   not noticing. `git branch --show-current` before the commit is the whole fix.
-- **Verify a push by its EXIT CODE, never by grepping its output.** `git push | tail -1` swallows a
+- **Verify ANY command by its EXIT CODE, never by grepping or truncating its output.** `git push | tail -1` swallows a
   failure, and `git push 2>&1 | grep <branch>` reports success on a FAILED push, because the branch
-  name appears inside the failure message. Run `git push; echo "EXIT=$?"`.
+  name appears inside the failure message. Run `git push; echo "EXIT=$?"`. The same shape bites every
+  piped command, not just push: `gh pr create ... | tail -3` reported `EXIT=0` on a run that had
+  FAILED with an auth error, because the pipeline's status is `tail`'s. Redirect to a file and echo
+  `$?` on its own line, then read the file.
 - **`Closes #A and #B` closes only A.** GitHub parses the keyword PER ISSUE, so a PR fixing two
   tickets needs `Closes #A, closes #B`. The second issue stays open and silently reads as unfinished
   work while its fix is already in `main`. Check both after the merge rather than trusting the body.
@@ -179,7 +182,11 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   Quote the delimiter whenever the body is prose, and read the output back before pushing it.
 - **zsh does NOT word-split an unquoted `$var`.** `files=$(ls ...)` then `for f in $files` iterates
   ONCE over the whole blob, and a sweep that did this compared one file and reported success. Glob
-  directly in the `for`, or use an array.
+  directly in the `for`, or use an array. **The nastiest form is a before/after comparison loop**:
+  `for c in "check --verdicts" "stats"; do ./bin-a $c > a; ./bin-b $c > b; diff a b; done` passes each
+  string as ONE argument, so both binaries print `unknown command` and the diff reports them
+  identical. A refactor was reported behaviour-preserving on four commands that had never run. Write
+  a function taking `"$@"`, and sanity-check the captured line COUNT before believing a diff.
 - **To undo a temporary red-check edit, reverse it with the tool that made it, never `git checkout`.**
   `git checkout <file>` and `git checkout HEAD -- <file>` restore from a COMMIT, not from "before I
   typed that", so on a file carrying uncommitted work they destroy all of it including the change the
@@ -187,6 +194,15 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   commit, before any red-check pass; then break and un-break with the same replace run applied
   backwards. The symptom is confusing rather than obvious, since a test that just passed starts
   failing and the cause looks like the change rather than the undo.
+- **A two-tree comparison needs each side in its OWN subshell.** `( cd $before && cmd ); ( cd $after && cmd )`,
+  never `cd $before && cmd_a; cmd_b`, because the `cd` persists and BOTH commands run in the worktree.
+  That reports the two sides identical, which is the same false-identical trap as the zsh loop above
+  wearing different clothes. Check that the two outputs differ somewhere you expect them to before
+  believing a diff of zero.
+- **`--format json` output is protojson, whose whitespace VARIES BETWEEN BUILDS on purpose**, so two
+  binaries produce byte-different json for identical data (measured: a 1478-line diff that was
+  entirely `"k":  v` against `"k": v`). Never byte-compare it. Parse both sides and compare the
+  decoded values, or compare `check --verdicts` instead, which is stable.
 - **Use `git worktree add <tmp> main`, never `git stash`, to reconstruct a whole BEFORE state** such
   as a "before" binary. Stash leaves untracked new files on disk referencing stashed-away code.
   Stashing ONE tracked file (`git stash push -- path/to/file.go`, run the test, pop) is a different
@@ -228,6 +244,10 @@ circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
   PR CHANGES a page it names, link both: the published page reads better, and it serves `main`, so
   the reviewer needs the PR-diff link to see the new text. Saying which is which takes a clause and
   saves a reviewer reading the version the PR exists to replace.
+- **Run the prose checks over the PR BODY FILE, not over `git diff`.** A body is written to a scratch
+  file and never appears in a diff, so a check that greps the diff passes while the body carries
+  exactly what it was meant to catch. Measured the slow way: five merged PR bodies shipped em-dashes
+  in their reading-order lines while every one of their diffs was clean.
 - **ELI analogies that have carried a PR here.** Fire extinguishers for a protection radius, a
   wiring diagram vs a floor plan for connections vs pin declarations, game mods for the registration
   vs authoring seam.

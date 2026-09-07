@@ -32,14 +32,21 @@ func (Compiler) CompileQuery(req review.QueryRequest) (*check.Rule, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query does not parse: %w", err)
 	}
-	return query.RuleFromQuery(query.FindingQuery{
+	// A manifest's inline query is authored by a person, so a fault in it is reported rather than
+	// swallowed. Before agni issue 540 this compiled anything and the resulting rule reported a clean
+	// pass, which reads as "your board is fine" instead of "your query is wrong".
+	r, err := query.RuleFromQuery(query.FindingQuery{
 		Rule:        req.Rule,
 		Query:       prog,
 		Kind:        req.Kind,
 		SubjectVar:  req.Subject,
 		Message:     req.Message,
 		ParamSymbol: req.ParamSymbol,
-	}), nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query does not compile: %w", err)
+	}
+	return r, nil
 }
 
 func init() { review.RegisterQueryCompiler(Compiler{}) }

@@ -58,12 +58,28 @@ const (
 	// back-compat and simple max search.
 	RelParamRange = "param.range" // param.range(mpn, symbol, kind, min, max): a two-sided datasheet limit. doc: facts/docs/param.range.md
 
-	// param.prov(mpn, symbol, doc, page, section) exposes the PROVENANCE of a datasheet parameter —
-	// the SourceDoc title, the page, and the table/figure the value was read from — so "where did this
+	// param.typ(mpn, symbol, typ) is the TYPICAL value of a parameter, the third member of RangeValue
+	// and the one param.range cannot carry: Min and Num are spent on the two bounds, so a typ survived
+	// only inside a rendered string and was neither bindable nor comparable (agni issue 545).
+	//
+	// Its own relation rather than a sixth column, because A TYP IS NOT A BOUND. It is what the part
+	// usually does, not what the vendor guarantees, so a rule comparing a rail against one as though
+	// it were a limit reports a confident wrong answer. Sitting it beside min and max is what invites
+	// that; naming it separately makes the choice visible at the call site.
+	RelParamTyp = "param.typ" // param.typ(mpn, symbol, typ): a parameter's typical value. doc: facts/docs/param.typ.md
+
+	// param.prov(mpn, symbol, doc, page, section) exposes the PROVENANCE of a datasheet parameter: the
+	// SourceDoc title, the page, and the table/figure the value was read from. So "where did this
 	// number come from" is a query, and a datalog-authored rule can carry the Citation onto its
 	// findings (WS10-012). doc is the resolved SourceDoc title (not the raw doc_ref id), the readable
 	// form a check.Citation shows. Method/confidence are not columns here (the tuple has no slot); a finding
 	// gets them via check.DatasheetProvFor. Empty without --params, the same posture as param.
+	//
+	// THE PAGE BINDS AS A STRING. It is a document locator rather than a quantity, and a number in a
+	// numeric slot carries no BaseUnit here, which made it dimension-polymorphic: it compared against
+	// any bare literal and unified with a voltage, since unification is identity rather than physics
+	// (C24's stated limitation). Nothing compares page numbers, so the string costs nothing
+	// (agni issue 545).
 	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's Citation. doc: facts/docs/param.prov.md
 
 	// param.unit(mpn, symbol, unit) is the unit a parameter is PRINTED in (agni issue 165). The
@@ -251,6 +267,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, componentMPNFacts(m)...)
 	out = append(out, paramFacts(m)...)
 	out = append(out, paramRangeFacts(m)...)
+	out = append(out, paramTypFacts(m)...)
 	out = append(out, paramUnitFacts(m)...)
 	out = append(out, paramProvFacts(m)...)
 	out = append(out, paramPinFacts(m)...)
@@ -308,7 +325,7 @@ func netMaxVoltageFacts(m check.Model) []facts.Row {
 	for _, n := range m.Nets() {
 		if v, ok := check.RailMaxVoltage(n, n.Name); ok {
 			vv := v
-			out = append(out, facts.Row{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -341,7 +358,7 @@ func netNominalVoltageFacts(m check.Model) []facts.Row {
 		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
 			vv := v
-			out = append(out, facts.Row{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -364,7 +381,7 @@ func netSignalLevelFacts(m check.Model) []facts.Row {
 		}
 		if v, ok := check.NominalVoltageFromName(n.Name); ok {
 			vv := v
-			out = append(out, facts.Row{Relation: RelNetSignalLevel, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetSignalLevel, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -374,7 +391,7 @@ func componentMPNFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, c := range m.Components() {
 		if mpn := m.ComponentMPN(c.RefDes); mpn != "" {
-			out = append(out, facts.Row{Relation: RelComponentMPN, Subject: c.RefDes, Value: mpn, Cite: irCite(c.Prov)})
+			out = append(out, facts.Row{Relation: RelComponentMPN, Subject: c.RefDes, Value: mpn, Cites: cite(irCite(c.Prov))})
 		}
 	}
 	return out
@@ -400,22 +417,6 @@ func paramFacts(m check.Model) []facts.Row {
 		out = append(out, specParamRows(mpn, spec)...)
 	}
 	return out
-}
-
-// limitKindToken renders a parameter's LimitKind as the lowercase token the query surface uses
-// (absolute_max / recommended_operating / characteristic / unspecified), matching how other
-// enum-ish facts are surfaced as string tokens rather than proto enum numbers.
-func limitKindToken(k parampb.LimitKind) string {
-	switch k {
-	case parampb.LimitKind_LIMIT_KIND_ABSOLUTE_MAX:
-		return "absolute_max"
-	case parampb.LimitKind_LIMIT_KIND_RECOMMENDED_OPERATING:
-		return "recommended_operating"
-	case parampb.LimitKind_LIMIT_KIND_CHARACTERISTIC:
-		return "characteristic"
-	default:
-		return "unspecified"
-	}
 }
 
 // EVERY NUMBER THE QUERY SURFACE EMITS FOR A PARAMETER IS IN ITS SI BASE UNIT (agni issue 165).
@@ -452,10 +453,10 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 			// carrying its symbol, conditions and citation, with the numeric slot EMPTY: an
 			// unmeasurable value must not be orderable, and evalCompare refuses to order an absent
 			// number against a present one.
-			out = append(out, facts.Row{Relation: RelParam, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
+			out = append(out, facts.Row{Relation: RelParam, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cites: cite(check.Citation(spec, p))})
 			continue
 		}
-		f := facts.Row{Relation: RelParam, Subject: mpn, Object: q.Symbol, Value: rangeText(q.Value), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		f := facts.Row{Relation: RelParam, Subject: mpn, Object: q.Symbol, Value: rangeText(q.Value), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cites: cite(check.Citation(spec, p))}
 		if q.Value != nil && q.Value.Max != nil {
 			v := *q.Value.Max
 			f.Num = &v
@@ -463,33 +464,6 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		out = append(out, f)
 	}
 	return out
-}
-
-// pinFunctionToken renders a pin's PinFunction as the lowercase token the query surface uses,
-// matching limitKindToken's posture: enum-ish facts surface as string tokens, never proto enum
-// numbers. "unspecified" is a legal and common answer here, unlike for a limit kind, because a pin
-// function table may have no type column at all.
-func pinFunctionToken(f parampb.PinFunction) string {
-	switch f {
-	case parampb.PinFunction_PIN_FUNCTION_POWER_INPUT:
-		return "power_input"
-	case parampb.PinFunction_PIN_FUNCTION_POWER_OUTPUT:
-		return "power_output"
-	case parampb.PinFunction_PIN_FUNCTION_GROUND:
-		return "ground"
-	case parampb.PinFunction_PIN_FUNCTION_INPUT:
-		return "input"
-	case parampb.PinFunction_PIN_FUNCTION_OUTPUT:
-		return "output"
-	case parampb.PinFunction_PIN_FUNCTION_BIDIRECTIONAL:
-		return "bidirectional"
-	case parampb.PinFunction_PIN_FUNCTION_PASSIVE:
-		return "passive"
-	case parampb.PinFunction_PIN_FUNCTION_NO_CONNECT:
-		return "no_connect"
-	default:
-		return "unspecified"
-	}
 }
 
 // specParamPinRows projects the `param.pin` facts of one PartSpec: one row per declared pin, keyed
@@ -509,8 +483,8 @@ func specParamPinRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	for _, pin := range spec.GetPins() {
 		out = append(out, facts.Row{
 			Relation: RelParamPin, Subject: mpn, Object: pin.GetId(),
-			Value: pin.GetName(), Qualifier: pinFunctionToken(pin.GetFunction()),
-			Cite: check.PinCitation(spec, pin),
+			Value: pin.GetName(), Qualifier: param.PinFunctionToken(pin.GetFunction()),
+			Cites: cite(check.PinCitation(spec, pin)),
 		})
 	}
 	return out
@@ -546,11 +520,11 @@ func specParamPinRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		for _, ref := range p.GetPinRefs() {
 			f := facts.Row{
 				Relation: RelParamPinRange, Subject: mpn, Object: ref,
-				Value: p.GetSymbol(), Qualifier: limitKindToken(p.GetLimitKind()),
-				Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p),
+				Value: p.GetSymbol(), Qualifier: param.LimitKindToken(p.GetLimitKind()),
+				Conditions: conditionsText(p.GetConditions()), Cites: cite(check.Citation(spec, p)),
 			}
 			if ok {
-				f.Value, f.Qualifier = q.Symbol, limitKindToken(q.LimitKind)
+				f.Value, f.Qualifier = q.Symbol, param.LimitKindToken(q.LimitKind)
 				f.BaseUnit, f.Conditions = q.Unit, conditionsText(q.Conditions)
 				if q.Value != nil {
 					// BOTH bounds reduce together, for specParamRangeRows' reason: converting only
@@ -583,20 +557,6 @@ func paramPinRangeFacts(m check.Model) []facts.Row {
 	return perJoinedSpec(m, specParamPinRangeRows)
 }
 
-// modalityToken renders a relation's modality for the Qualifier slot. UNSPECIFIED is published as
-// its own token rather than omitted, because a bound whose modal verb was never recorded is a
-// different thing from one that has none, and a query filtering on modality must be able to find it.
-func modalityToken(m parampb.Modality) string {
-	switch m {
-	case parampb.Modality_MODALITY_REQUIRED:
-		return "required"
-	case parampb.Modality_MODALITY_RECOMMENDED:
-		return "recommended"
-	default:
-		return "unspecified"
-	}
-}
-
 // specParamPinRelationRows projects the `param.pin_relation` facts of one PartSpec: one row per
 // relation, keyed by mpn, carrying the two pin ids in SUBTRACTION ORDER (Object is the subject,
 // Value the reference), the modality (Qualifier), and the bound on their difference in SI base
@@ -623,9 +583,9 @@ func specParamPinRelationRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		f := facts.Row{
 			Relation: RelParamPinRelation, Subject: mpn,
 			Object: r.GetSubjectPinRef(), Value: r.GetReferencePinRef(),
-			Qualifier:  modalityToken(r.GetModality()),
+			Qualifier:  param.ModalityToken(r.GetModality()),
 			Conditions: conditionsText(r.GetConditions()),
-			Cite:       check.RelationCitation(spec, r),
+			Cites:      cite(check.RelationCitation(spec, r)),
 		}
 		if base, exp, ok := param.BaseUnit(r.GetUnit()); ok {
 			scale := math.Pow(10, float64(exp))
@@ -693,7 +653,7 @@ func specParamUnitRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	for _, p := range spec.Parameters {
 		out = append(out, facts.Row{
 			Relation: RelParamUnit, Subject: mpn, Object: p.GetSymbol(), Value: p.GetUnit(),
-			Cite: check.Citation(spec, p),
+			Cites: cite(check.Citation(spec, p)),
 		})
 	}
 	return out
@@ -729,10 +689,10 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		if !ok {
 			// Same posture as specParamRows: the kind and the citation are still true, the bounds are
 			// not knowable, so both numeric slots stay empty rather than the row disappearing.
-			out = append(out, facts.Row{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: limitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cite: check.Citation(spec, p)})
+			out = append(out, facts.Row{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: param.LimitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cites: cite(check.Citation(spec, p))})
 			continue
 		}
-		f := facts.Row{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: limitKindToken(q.LimitKind), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cite: check.Citation(spec, p)}
+		f := facts.Row{Relation: RelParamRange, Subject: mpn, Object: q.Symbol, Value: param.LimitKindToken(q.LimitKind), BaseUnit: q.Unit, Conditions: conditionsText(q.Conditions), Cites: cite(check.Citation(spec, p))}
 		if q.Value != nil {
 			// BOTH bounds are reduced, and a range rule is why that matters: converting only the max
 			// would leave a "3000..3.6" row, which reads as a rail far BELOW its minimum rather than
@@ -749,6 +709,40 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 		out = append(out, f)
 	}
 	return out
+}
+
+// specParamTypRows projects the TYPICAL value of each parameter of one PartSpec. One row per
+// parameter that states a typ, and none for a parameter that does not: an absent typ is a real state
+// (an absolute-max row is max-only), so it must stay absent rather than arriving as a zero a rule
+// would compare a rail against.
+//
+// Unlike specParamRangeRows, an unconvertible unit does NOT keep the row here. There is exactly one
+// number on a typ row, so a row that loses it says only "this part states a typical IQ", which no
+// query can act on. The range relation keeps such a row because its kind token still carries meaning.
+func specParamTypRows(mpn string, spec *parampb.PartSpec) []facts.Row {
+	out := make([]facts.Row, 0, len(spec.Parameters))
+	for _, p := range spec.Parameters {
+		if p.GetValue() == nil || p.GetValue().Typ == nil {
+			continue
+		}
+		f := facts.Row{Relation: RelParamTyp, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cites: cite(check.Citation(spec, p))}
+		q, ok := param.InBaseUnit(p)
+		if !ok {
+			out = append(out, f)
+			continue
+		}
+		f.Object, f.BaseUnit, f.Conditions = q.Symbol, q.Unit, conditionsText(q.Conditions)
+		v := *q.Value.Typ
+		f.Num = &v
+		out = append(out, f)
+	}
+	return out
+}
+
+// paramTypFacts emits the typical value of each joined datasheet parameter, deduped by MPN and empty
+// without --params, the same silent-by-construction posture as paramFacts.
+func paramTypFacts(m check.Model) []facts.Row {
+	return perJoinedSpec(m, specParamTypRows)
 }
 
 // paramRangeFacts emits the two-sided, limit-kind-discriminated view of the same joined datasheet
@@ -780,15 +774,15 @@ func paramRangeFacts(m check.Model) []facts.Row {
 func specParamProvRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	out := make([]facts.Row, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
-		page := float64(p.GetProv().GetPage())
 		out = append(out, facts.Row{
-			Relation:   RelParamProv,
-			Subject:    mpn,
-			Object:     p.Symbol,
-			Value:      check.DocTitle(spec, p.GetProv().GetDocRef()),
-			Num:        &page,
+			Relation: RelParamProv,
+			Subject:  mpn,
+			Object:   p.Symbol,
+			Value:    check.DocTitle(spec, p.GetProv().GetDocRef()),
+			// The page is a locator, so it binds as a string. See RelParamProv (agni issue 545).
+			Qualifier:  strconv.Itoa(int(p.GetProv().GetPage())),
 			Conditions: p.GetProv().GetTableOrFigure(),
-			Cite:       check.Citation(spec, p),
+			Cites:      cite(check.Citation(spec, p)),
 		})
 	}
 	return out
@@ -857,6 +851,7 @@ func SpecLibFacts(specs []*parampb.PartSpec) []facts.Row {
 		}
 		out = append(out, specParamRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamRangeRows(spec.GetMpn(), spec)...)
+		out = append(out, specParamTypRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamUnitRows(spec.GetMpn(), spec)...)
 		out = append(out, specParamProvRows(spec.GetMpn(), spec)...)
 		out = append(out, audienceRows(spec.GetMpn(), spec)...)
@@ -881,19 +876,19 @@ func entityFacts(m check.Model) []facts.Row {
 		if c.RefDes == "" {
 			continue
 		}
-		out = append(out, facts.Row{Relation: RelEntity, Subject: c.RefDes, Value: check.KindComponent, Cite: irCite(c.Prov)})
+		out = append(out, facts.Row{Relation: RelEntity, Subject: c.RefDes, Value: check.KindComponent, Cites: cite(irCite(c.Prov))})
 	}
 	for _, n := range m.Nets() {
 		if n.Name == "" {
 			continue
 		}
-		out = append(out, facts.Row{Relation: RelEntity, Subject: n.Name, Value: check.KindNet, Cite: irCite(n.Prov)})
+		out = append(out, facts.Row{Relation: RelEntity, Subject: n.Name, Value: check.KindNet, Cites: cite(irCite(n.Prov))})
 	}
 	for _, b := range m.UnmodeledBuses() {
 		if b.GetLabel() == "" {
 			continue
 		}
-		out = append(out, facts.Row{Relation: RelEntity, Subject: b.GetLabel(), Value: check.KindBus, Cite: irCite(b.GetProv())})
+		out = append(out, facts.Row{Relation: RelEntity, Subject: b.GetLabel(), Value: check.KindBus, Cites: cite(irCite(b.GetProv()))})
 	}
 	return out
 }
@@ -902,7 +897,7 @@ func componentOnNetFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		for _, conn := range n.Connections {
-			out = append(out, facts.Row{Relation: RelComponentOnNet, Subject: conn.ComponentRef, Object: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelComponentOnNet, Subject: conn.ComponentRef, Object: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -917,14 +912,16 @@ func pinFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, p := range m.Pins() {
 		ref, des := p.Component.RefDes, p.Designator
-		cite := irCite(p.Component.Prov)
-		out = append(out, facts.Row{Relation: RelPin, Subject: ref, Object: des, Cite: cite})
+		// One slice per pin, shared by its four rows. They all rest on the same placement, so
+		// rebuilding it four times would allocate for no reason. Rows are read-only downstream.
+		cites := cite(irCite(p.Component.Prov))
+		out = append(out, facts.Row{Relation: RelPin, Subject: ref, Object: des, Cites: cites})
 		if role := m.PinRole(ref, des); role != check.RoleUnknown {
-			out = append(out, facts.Row{Relation: RelPinRole, Subject: ref, Object: des, Value: string(role), Cite: cite})
+			out = append(out, facts.Row{Relation: RelPinRole, Subject: ref, Object: des, Value: string(role), Cites: cites})
 		}
-		out = append(out, facts.Row{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cite: cite})
+		out = append(out, facts.Row{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cites: cites})
 		if net := m.PinNetName(ref, des); net != "" {
-			out = append(out, facts.Row{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cite: cite})
+			out = append(out, facts.Row{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cites: cites})
 		}
 	}
 	return out
@@ -936,7 +933,7 @@ func netPinCountFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		c := float64(len(n.Connections))
-		out = append(out, facts.Row{Relation: RelNetPinCount, Subject: n.Name, Num: &c, Cite: irCite(n.Prov)})
+		out = append(out, facts.Row{Relation: RelNetPinCount, Subject: n.Name, Num: &c, Cites: cite(irCite(n.Prov))})
 	}
 	return out
 }
@@ -946,7 +943,7 @@ func netPinCountFacts(m check.Model) []facts.Row {
 // Absent (zero rows) otherwise, so the gate fails closed on a format that cannot express intent.
 func ncChannelFacts(m check.Model) []facts.Row {
 	if m.HasNoConnectChannel() {
-		return []facts.Row{{Relation: RelHasNCChannel, Subject: "true", Cite: "design"}}
+		return []facts.Row{{Relation: RelHasNCChannel, Subject: "true", Cites: cite("design")}}
 	}
 	return nil
 }
@@ -957,7 +954,7 @@ func ncChannelFacts(m check.Model) []facts.Row {
 // answerable from `agni query`, the same shape as has_nc_channel.
 func typesPowerOutFacts(m check.Model) []facts.Row {
 	if m.FormatTypesPowerOut() {
-		return []facts.Row{{Relation: RelTypesPowerOut, Subject: "true", Cite: "design"}}
+		return []facts.Row{{Relation: RelTypesPowerOut, Subject: "true", Cites: cite("design")}}
 	}
 	return nil
 }
@@ -969,7 +966,7 @@ func railFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if m.IsPowerRail(n.Name) {
-			out = append(out, facts.Row{Relation: RelRail, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelRail, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -983,7 +980,7 @@ func feedbackFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if check.NetHasRole(n, check.NetRoleFeedback, m.IsFeedbackName) {
-			out = append(out, facts.Row{Relation: RelFeedback, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelFeedback, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -997,7 +994,7 @@ func componentAttrFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, c := range m.Components() {
 		for k, v := range c.Attributes {
-			out = append(out, facts.Row{Relation: RelComponentAttr, Subject: c.RefDes, Object: k, Value: v, Cite: irCite(c.Prov)})
+			out = append(out, facts.Row{Relation: RelComponentAttr, Subject: c.RefDes, Object: k, Value: v, Cites: cite(irCite(c.Prov))})
 		}
 	}
 	return out
@@ -1013,7 +1010,7 @@ func componentClassFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, c := range m.Components() {
 		for _, cl := range m.Classes(c.RefDes) {
-			out = append(out, facts.Row{Relation: RelComponentClass, Subject: c.RefDes, Value: string(cl), Cite: irCite(c.Prov)})
+			out = append(out, facts.Row{Relation: RelComponentClass, Subject: c.RefDes, Value: string(cl), Cites: cite(irCite(c.Prov))})
 		}
 	}
 	return out
@@ -1035,7 +1032,16 @@ func esdRatedFacts(m check.Model) []facts.Row {
 		if len(limits) == 0 {
 			continue
 		}
-		out = append(out, facts.Row{Relation: RelEsdRated, Subject: c.RefDes, Cite: check.Citation(spec, limits[0])})
+		// EVERY qualifying rating, not limits[0]. IEC 61000-4-2 specifies air discharge and contact
+		// discharge separately and a vendor prints both, so a reader asking which rating earned the
+		// credit was being shown one of two answers with nothing saying so (agni issue 546).
+		cites := make([]string, 0, len(limits))
+		for _, l := range limits {
+			if s := check.Citation(spec, l); s != "" {
+				cites = append(cites, s)
+			}
+		}
+		out = append(out, facts.Row{Relation: RelEsdRated, Subject: c.RefDes, Cites: cites})
 	}
 	return out
 }
@@ -1065,7 +1071,7 @@ func componentDeviceClassFacts(m check.Model) []facts.Row {
 			continue
 		}
 		cl := string(classify.NormalizeDeviceClass(spec.GetDeviceClass()))
-		out = append(out, facts.Row{Relation: RelComponentDeviceClass, Subject: c.RefDes, Value: cl, Cite: specDocCite(spec)})
+		out = append(out, facts.Row{Relation: RelComponentDeviceClass, Subject: c.RefDes, Value: cl, Cites: cite(specDocCite(spec))})
 	}
 	return out
 }
@@ -1089,7 +1095,7 @@ func netGroundFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if m.IsGroundNet(n) {
-			out = append(out, facts.Row{Relation: RelNetGround, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetGround, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -1104,7 +1110,7 @@ func netExternalFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if n.GetAttributes()[netgraph.AttrExternal] == "true" {
-			out = append(out, facts.Row{Relation: RelNetExternal, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetExternal, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -1116,7 +1122,7 @@ func netExternalFacts(m check.Model) []facts.Row {
 func busFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, b := range m.UnmodeledBuses() {
-		out = append(out, facts.Row{Relation: RelBus, Subject: b.GetLabel(), Value: b.GetKind(), Cite: irCite(b.GetProv())})
+		out = append(out, facts.Row{Relation: RelBus, Subject: b.GetLabel(), Value: b.GetKind(), Cites: cite(irCite(b.GetProv()))})
 	}
 	return out
 }
@@ -1130,7 +1136,7 @@ func unresolvedSymbolFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, u := range m.UnresolvedSymbols() {
 		for _, ref := range u.GetRefDes() {
-			out = append(out, facts.Row{Relation: RelUnresolvedSymbol, Subject: ref, Value: u.GetSymref(), Cite: irCite(u.GetProv())})
+			out = append(out, facts.Row{Relation: RelUnresolvedSymbol, Subject: ref, Value: u.GetSymref(), Cites: cite(irCite(u.GetProv()))})
 		}
 	}
 	return out
@@ -1138,15 +1144,19 @@ func unresolvedSymbolFacts(m check.Model) []facts.Row {
 
 // refDesCollisionFacts emits ref_des_collision(ref) for each designator used by more than one part
 // (WS3-081), keyed by ref_des so a query joins it to components (e.g. collisions on a ref-des prefix).
-// The check.Citation is the first colliding instance. Empty for a design with no collision.
+// EVERY colliding instance is cited, because the plurality is the finding. A reviewer chasing "R5 is
+// used twice" already knows R5 exists; what they need is where the two R5s are, and citing one of
+// them withholds exactly that (agni issue 546).
 func refDesCollisionFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, c := range m.RefDesCollisions() {
-		cite := ""
-		if len(c.Instances) > 0 {
-			cite = irCite(c.Instances[0])
+		cites := make([]string, 0, len(c.Instances))
+		for _, inst := range c.Instances {
+			if s := irCite(inst); s != "" {
+				cites = append(cites, s)
+			}
 		}
-		out = append(out, facts.Row{Relation: RelRefDesCollision, Subject: c.GetRefDes(), Cite: cite})
+		out = append(out, facts.Row{Relation: RelRefDesCollision, Subject: c.GetRefDes(), Cites: cites})
 	}
 	return out
 }
@@ -1158,7 +1168,7 @@ func pinNetConflictFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, pc := range m.PinNetConflicts() {
 		for _, net := range pc.Nets {
-			out = append(out, facts.Row{Relation: RelPinNetConflict, Subject: pc.RefDes, Object: pc.Pin, Value: net, Cite: irCite(pc.Prov)})
+			out = append(out, facts.Row{Relation: RelPinNetConflict, Subject: pc.RefDes, Object: pc.Pin, Value: net, Cites: cite(irCite(pc.Prov))})
 		}
 	}
 	return out
@@ -1171,7 +1181,7 @@ func netBusLikeFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if check.IsBusLike(m, n) {
-			out = append(out, facts.Row{Relation: RelNetBusLike, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetBusLike, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -1185,7 +1195,7 @@ func externalSignalNetFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if check.ExternalSignalNet(m, n) {
-			out = append(out, facts.Row{Relation: RelExternalSignalNet, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelExternalSignalNet, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -1207,7 +1217,7 @@ func netBiasFacts(m check.Model) []facts.Row {
 		default:
 			continue
 		}
-		out = append(out, facts.Row{Relation: RelNetBias, Subject: n.Name, Value: level, Cite: irCite(n.Prov)})
+		out = append(out, facts.Row{Relation: RelNetBias, Subject: n.Name, Value: level, Cites: cite(irCite(n.Prov))})
 	}
 	return out
 }
@@ -1219,7 +1229,7 @@ func netACCoupledFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		if check.ACCoupled(m, n) {
-			out = append(out, facts.Row{Relation: RelNetACCoupled, Subject: n.Name, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetACCoupled, Subject: n.Name, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -1236,7 +1246,7 @@ func netNetClassFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
 		for _, c := range n.NetClasses {
-			out = append(out, facts.Row{Relation: RelNetNetClass, Subject: n.Name, Value: c, Cite: irCite(n.Prov)})
+			out = append(out, facts.Row{Relation: RelNetNetClass, Subject: n.Name, Value: c, Cites: cite(irCite(n.Prov))})
 		}
 	}
 	return out
@@ -1249,7 +1259,7 @@ func netNetClassFacts(m check.Model) []facts.Row {
 // same empty result.
 func hasNetClassFacts(m check.Model) []facts.Row {
 	if m.HasNetClasses() {
-		return []facts.Row{{Relation: RelHasNetClass, Subject: "true", Cite: "design"}}
+		return []facts.Row{{Relation: RelHasNetClass, Subject: "true", Cites: cite("design")}}
 	}
 	return nil
 }
@@ -1262,17 +1272,17 @@ func hasNetClassFacts(m check.Model) []facts.Row {
 func boardFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, bn := range m.BoardNets() {
-		cite := "board net " + bn.Net
+		cites := cite("board net " + bn.Net)
 		if w, ok := minSegmentWidthNm(bn.Segments); ok {
 			mm := nmToMM(w)
-			out = append(out, facts.Row{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cite: cite})
+			out = append(out, facts.Row{Relation: RelBoardTrackWidth, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cites: cites})
 		}
 		if d, ok := minViaDrillNm(bn.Vias); ok {
 			mm := nmToMM(d)
-			out = append(out, facts.Row{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cite: cite})
+			out = append(out, facts.Row{Relation: RelBoardViaDrill, Subject: bn.Net, Value: mmStr(mm), Num: &mm, BaseUnit: unitMillimetre, Cites: cites})
 		}
 		for _, layer := range netLayers(bn.Segments) {
-			out = append(out, facts.Row{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cite: cite})
+			out = append(out, facts.Row{Relation: RelBoardLayer, Subject: bn.Net, Object: layer, Cites: cites})
 		}
 	}
 	return out
@@ -1339,7 +1349,7 @@ func netClassDefFacts(m check.Model) []facts.Row {
 				continue
 			}
 			v := mm
-			out = append(out, facts.Row{Relation: p.rel, Subject: c.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre, Cite: "net_settings"})
+			out = append(out, facts.Row{Relation: p.rel, Subject: c.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre, Cites: cite("net_settings")})
 		}
 	}
 	return out
@@ -1353,7 +1363,7 @@ func hasNetClassDefsFacts(m check.Model) []facts.Row {
 	if len(m.NetClassDefs()) == 0 {
 		return nil
 	}
-	return []facts.Row{{Relation: RelHasNetClassDefs, Subject: "true", Cite: "design"}}
+	return []facts.Row{{Relation: RelHasNetClassDefs, Subject: "true", Cites: cite("design")}}
 }
 
 // netDeclaredFacts resolves each net's EFFECTIVE declared values and emits one row per net per
@@ -1413,7 +1423,7 @@ func netDeclaredFacts(m check.Model) []facts.Row {
 				v := mm
 				out = append(out, facts.Row{
 					Relation: q.rel, Subject: n.GetName(), Value: mmStr(v), Num: &v, BaseUnit: unitMillimetre,
-					Cite: "net_settings:" + cls,
+					Cites: cite("net_settings:" + cls),
 				})
 				break // first stating class wins for THIS field only
 			}
@@ -1455,6 +1465,20 @@ func mmStr(mm float64) string { return fmt.Sprintf("%gmm", mm) }
 
 // irCite renders an IR provenance as a one-line source check.Citation: the source file, narrowed by
 // the reader's native id when present (the addressable unit a viewer can navigate to).
+// cite wraps one rendered citation as the slice facts.Row carries. Nearly every fact rests on a
+// single site, so this keeps those projectors reading the way they did; a fact with SEVERAL sources
+// builds the slice itself (refDesCollisionFacts, esdRatedFacts).
+//
+// An empty string yields no citation rather than one blank entry, so a projector that failed to
+// resolve a source reports "cites nothing" instead of "cites the empty string". The first is the
+// honest failure, and the one TestEveryFactCitesSomething names.
+func cite(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return []string{s}
+}
+
 func irCite(p *ir.Provenance) string {
 	if p == nil {
 		return ""

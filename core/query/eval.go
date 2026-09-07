@@ -347,7 +347,7 @@ func unify(args []Term, fields []facts.Field, f facts.Row, bnd *binding) (*bindi
 			return nil, false
 		}
 	}
-	out.cites = append(out.cites, f.Cite)
+	out.cites = append(out.cites, f.Cites...)
 	return out, true
 }
 

@@ -209,6 +209,35 @@ connection, so it is safe to hand to someone who should not see the design itsel
 | `--parts <view>` | `types` (BOM by distinct part type, default) or `full` (per-component AVL) |
 | `--format <fmt>` | `md` (default) or `json` |
 
+### `params <mpn>`
+
+Print one part's whole datasheet record: its source documents, every parameter with its limit kind,
+bounds, test conditions and citation, the pins the datasheet declares, and any constraints between
+them.
+
+This is the record behind a query answer. The datalog relations carry what a query can bind
+(`param`, `param.range`, `param.typ`, `param.pin`); the conditions a value is valid under, the pin
+bindings, the full provenance and the verification state live here.
+
+It needs no design, because a spec library is not a design. Name a corpus with `--params`, or name a
+design with `--design` so the project that design belongs to supplies its own `params/`.
+
+A parameter someone has verified reports whether that still means anything. When the corpus has moved
+to a later revision of the document, the row reads `stale` and names BOTH revisions: the one that was
+checked, and the one held now. That pair is the re-confirm task; a pair of content hashes is not.
+
+| flag | what it does |
+|---|---|
+| `--params <dir>` | the datasheet corpus to read. A project's own `params/` wins over this when `--design` names a design in that project |
+| `--design <path>` | a design whose project supplies the corpus, for a part seeded in a project rather than a loose directory |
+| `--format <fmt>` | `text` (default) or `json`. `json` emits the `PartSpec` itself, so a script binds to the same message the viewer carries |
+
+```
+agni params LM1117 --params seed/
+agni params LM1117 --design designs/gateway/gateway.kicad_sch
+agni params LM1117 --params seed/ --format json
+```
+
 ### `results <file>`
 
 Render a check-result document written earlier by `check --results-out` or `review --results-out`.

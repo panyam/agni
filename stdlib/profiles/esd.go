@@ -88,7 +88,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		[]query.Literal{query.Pos(query.Rel("unprotected", query.V("n")))}, query.V("n"))
 	domain := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("esd_scope", query.V("n")))}, query.V("n"))
-	return query.RuleFromQuery(query.FindingQuery{
+	return query.MustRuleFromQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-esd-missing",
 			Severity: "warning",

@@ -191,24 +191,45 @@ func extendReaches(atom *Atom, bnd *binding, b *Base, yield func(*binding) error
 // IDB rule relation — each checked for arity first so a wrong-arity atom fails clearly. yield is
 // called per solution and its error (from a deeper solve, or the negation early-stop) propagates.
 func (b *Base) extendAtom(atom *Atom, bnd *binding, yield func(*binding) error) error {
+	if err := b.checkAtom(atom); err != nil {
+		return err
+	}
+	rel := atom.Relation
+	if bi, ok := builtins[rel]; ok {
+		return bi.extend(atom, bnd, b, yield)
+	}
+	if fields, ok := b.reg.SchemaOf(rel); ok {
+		return b.extendEDB(atom, fields, bnd, yield)
+	}
+	return b.extendIDB(atom, bnd, yield)
+}
+
+// checkAtom reports whether an atom names something the evaluator can read, at an arity that relation
+// accepts. It is the three-way dispatch's precondition, split out so Validate can apply it to EVERY
+// atom without evaluating (agni issue 540).
+//
+// Splitting it matters for a reason worth stating: solving stops as soon as an atom yields nothing,
+// so a wrong-arity atom LATER in a body is never reached on a design where an earlier one matches
+// nothing. Checking arity only where a solve happens to arrive is checking it sometimes.
+func (b *Base) checkAtom(atom *Atom) error {
 	rel := atom.Relation
 	if bi, ok := builtins[rel]; ok {
 		if !bi.accepts(len(atom.Args)) {
 			return fmt.Errorf("query: %s takes %s args, got %d", rel, bi.arityLabel(), len(atom.Args))
 		}
-		return bi.extend(atom, bnd, b, yield)
+		return nil
 	}
 	if fields, ok := b.reg.SchemaOf(rel); ok {
 		if len(atom.Args) != len(fields) {
 			return fmt.Errorf("query: relation %q takes %d args, got %d", rel, len(fields), len(atom.Args))
 		}
-		return b.extendEDB(atom, fields, bnd, yield)
+		return nil
 	}
 	if b.isIDB(rel) {
 		if len(atom.Args) != b.idbArity[rel] {
 			return fmt.Errorf("query: relation %q takes %d args, got %d", rel, b.idbArity[rel], len(atom.Args))
 		}
-		return b.extendIDB(atom, bnd, yield)
+		return nil
 	}
 	return fmt.Errorf("query: unknown relation %q%s", rel, didYouMean(b.reg, rel))
 }

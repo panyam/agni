@@ -656,7 +656,7 @@ func TestRegisterRelation(t *testing.T) {
 		var out []facts.Row
 		for _, c := range m.Components() {
 			if c.RefDes == "U1" {
-				out = append(out, facts.Row{Subject: c.RefDes, Cite: "house db row 7"})
+				out = append(out, facts.Row{Subject: c.RefDes, Cites: []string{"house db row 7"}})
 			}
 		}
 		return out

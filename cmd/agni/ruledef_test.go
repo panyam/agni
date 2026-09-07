@@ -20,7 +20,7 @@ func deckOf(defs ...*checkspb.RuleDef) *checkspb.RuleDeck {
 }
 
 // queryRule compiles a declaration the way the shipping package does, giving the comparison baseline.
-func queryRule(fq query.FindingQuery) *check.Rule { return query.RuleFromQuery(fq) }
+func queryRule(fq query.FindingQuery) *check.Rule { return query.MustRuleFromQuery(fq) }
 
 // conformanceModels loads every conformance fixture into a Model, so a rule can be run against the
 // whole fixture corpus rather than one hand-picked design. It lives at the CLI edge for the same

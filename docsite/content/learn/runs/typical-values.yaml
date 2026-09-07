@@ -1,0 +1,7 @@
+# Chapter 7's third kind of number. Both regulators state a VOUT with only a TYPICAL value, which is
+# the figure everyone reads as "the 3V3 rail". Asking the ceiling-shaped `param` for it returns the
+# rows with the number missing, because a typical is not a limit; `param.typ` is where it lives.
+fixture: examples/tutorial-project
+from_root: true
+script: |
+  agni query examples/tutorial-project/designs/gateway/gateway.edn --params examples/tutorial-project/params 'component.mpn(?r, ?m), param.typ(?m, "VOUT", ?typ) => ?r, ?m, ?typ'

@@ -31,7 +31,7 @@ func TestComponentDeviceClassFact(t *testing.T) {
 	if len(rows) != 1 || rows[0].Subject != "U1" || rows[0].Value != "efuse" {
 		t.Fatalf("component.device_class = %+v, want one (U1, efuse)", rows)
 	}
-	if rows[0].Cite == "" {
+	if len(rows[0].Cites) == 0 {
 		t.Error("component.device_class row carries no Citation")
 	}
 

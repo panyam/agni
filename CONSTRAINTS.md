@@ -621,9 +621,9 @@ invariant that actually discriminates is that the RAW row's unit is never read o
 `datasheet/param`. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
-**This covers the query surface too.** The `param(...)` and `param.range(...)` datalog relations
-project their numbers through the same conversion, so a datalog-authored rule compares base units
-without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
+**This covers the query surface too.** The `param(...)`, `param.range(...)` and `param.typ(...)`
+datalog relations project their numbers through the same conversion, so a datalog-authored rule
+compares base units without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
 separately, because a `facts.Row` has no unit column and adding one would be advisory: a rule could
 ignore it and compare raw numbers, which is the failure this constraint exists to prevent.
 
@@ -809,8 +809,10 @@ the fact layer, never the reverse. `stdlib/relations` — the shipped netlist/bo
 catalog — imports `core/facts` only. A RELATION is data derived from the Model and registers with
 `facts.RegisterRelation`; a PREDICATE, a join strategy, and a query language belong to whichever
 engine computes them (`core/query` holds the datalog one, and `query.RegisterPredicate` is its seam).
-An engine claims its predicate vocabulary with `facts.Reserve`, which is checked in both directions
-because an engine and a relation catalog are independent imports and may init in either order.
+An engine claims its predicate vocabulary with `facts.Reserve`. **No package under `core/` outside
+`core/query` may name a query syntax at all**: `core/review` compiles a manifest's inline query
+through a registered `QueryCompiler` returning a `*check.Rule`, which is the same neutral currency
+`check.RegisterSource` trades in.
 **Why:** the primitive is the design graph and a tuple view over it, not any one way of asking
 questions. Datalog answers set-of-tuples questions well and cannot return a path, a subgraph, or a
 shortest route at all (issues 374, 518), so it is one query shape among several — beside `check.Spec`
@@ -818,11 +820,24 @@ for per-entity questions and Go for the rest — and a shape that owns the fact 
 other shapes second-class and the tuple's limits everyone's limits. Authoring a relation must not
 require picking an engine. This is the query-side twin of C17's downward-only layering and of the
 `check.RegisterSource` posture that already keeps the rule catalog engine-neutral (C14, C18).
-**Verify:** `go list -deps ./stdlib/relations | grep 'panyam/agni/core/query'` returns nothing, and
-so does `go list -deps ./core/facts | grep 'panyam/agni/core/query'`.
+**Verify:** `go test ./core/facts/ -run NamesNoQueryEngine`, which sweeps every package under
+`core/...` and the relation catalog. It is a TEST rather than a command in this document because the
+first draft of this constraint was a command, and it went stale within three PRs of being written:
+both halves of a violation compile and pass, so nothing surfaces one until someone re-reads the rule.
+The shape is `core/model/deps_test.go`'s, for the same reason.
 **Note:** installing NO relation catalog still builds and still runs, and the fact base is then
 empty, so every relation is unknown and a datalog-authored rule reports clean — a quiet pass on a
-design nobody checked. `facts.Installed` is what separates "matched nothing" from "nothing
-installed", and the unknown-relation error says which it was. Do not make a build-tag or a dropped
-blank import the way to ship without an engine; a removal that fails silently is worse than one that
-does not happen.
+design nobody checked. `Registry.Installed` is what separates "matched nothing" from "nothing
+installed", and the unknown-relation error says which it was. The same shape one layer up: a binary
+that registers no `review.QueryCompiler` fails at manifest Load rather than resolving an inline query
+to no rules. Do not make a build-tag or a dropped blank import the way to ship without an engine; a
+removal that fails silently is worse than one that does not happen.
+
+**A relation vocabulary is a composed VALUE, not ambient state.** The package globals are an
+append-only buffer of registration options and nothing reads them directly: `facts.DefaultRegistry`
+composes a `*Registry` from them, exactly as `check.DefaultCatalog` composes a `*Catalog`, and a
+`Registry` is immutable once built. A `query.Base` captures the one it was built from, so a
+registration cannot change how an in-flight query reads. The registration half stays global because
+that is the overlay seam (C18) and a startup default is what C22 permits; the READ half must not be.
+Composing in a known order is also why collisions need no order-dependent check: every option is
+applied first and clashes are swept once at the end.

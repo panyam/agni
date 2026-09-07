@@ -13,6 +13,7 @@ import (
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/datasheet/param"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -144,7 +145,7 @@ func TestExternalSignalNetFacts(t *testing.T) {
 	got := map[string]bool{}
 	for _, f := range factsByRelation(Facts(check.NewModel(d)))[RelExternalSignalNet] {
 		got[f.Subject] = true
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("external_signal_net(%s) has no provenance cite", f.Subject)
 		}
 	}
@@ -173,7 +174,7 @@ func TestNetClassFacts(t *testing.T) {
 	got := map[string]string{}
 	for _, f := range byRel[RelNetNetClass] {
 		got[f.Subject] = f.Value
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("net.netclass(%s) has no provenance cite", f.Subject)
 		}
 	}
@@ -260,7 +261,7 @@ func TestEsdRatedFacts(t *testing.T) {
 	if len(rated) != 1 || rated[0].Subject != "U9" {
 		t.Fatalf("component.esd_rated = %+v, want one (U9); DEMO-WEAK below floor and R1 unseeded must not appear", rated)
 	}
-	if rated[0].Cite == "" {
+	if len(rated[0].Cites) == 0 {
 		t.Error("component.esd_rated fact has no cite; it should point to the datasheet ESD row")
 	}
 	if got := factsByRelation(Facts(check.NewModel(d)))[RelEsdRated]; len(got) != 0 {
@@ -304,11 +305,11 @@ func TestFactsAlwaysCited(t *testing.T) {
 		t.Fatal("no facts derived")
 	}
 	for _, f := range facts {
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("fact %s(%s,%s) has no provenance cite", f.Relation, f.Subject, f.Object)
 		}
 	}
-	cite := factsByRelation(facts)[RelParam][0].Cite
+	cite := strings.Join(factsByRelation(facts)[RelParam][0].Cites, " ")
 	for _, want := range []string{"ACME-CAP Rev C", "page 2", "Ratings"} {
 		if !strings.Contains(cite, want) {
 			t.Errorf("param cite = %q, missing %q (want the datasheet doc/page/table)", cite, want)
@@ -365,7 +366,7 @@ func TestBoardFacts(t *testing.T) {
 
 	for _, rel := range []string{RelBoardTrackWidth, RelBoardViaDrill, RelBoardLayer} {
 		for _, f := range byRel[rel] {
-			if f.Cite == "" {
+			if len(f.Cites) == 0 {
 				t.Errorf("%s(%s) has no provenance cite", rel, f.Subject)
 			}
 		}
@@ -430,7 +431,7 @@ func TestComponentClassAndNetAttrFacts(t *testing.T) {
 
 	for _, rel := range []string{RelComponentClass, RelNetGround, RelNetExternal} {
 		for _, f := range byRel[rel] {
-			if f.Cite == "" {
+			if len(f.Cites) == 0 {
 				t.Errorf("%s(%s) has no provenance cite", rel, f.Subject)
 			}
 		}
@@ -555,7 +556,7 @@ func TestNetClassDefCascade(t *testing.T) {
 			t.Fatalf("declared track width for %q has no Num", f.Subject)
 		}
 		got[f.Subject] = *f.Num
-		cite[f.Subject] = f.Cite
+		cite[f.Subject] = strings.Join(f.Cites, " ")
 	}
 	// VBUS is in HighSpeed (priority 1) and Power (5). HighSpeed states no track width, so the
 	// value cascades to Power — NOT to Default, and NOT to "HighSpeed states nothing so give up".
@@ -640,14 +641,83 @@ func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
 	if rows[0].Num == nil || *rows[0].Num != 0.15 {
 		t.Errorf("declared track width = %v, want 0.15 from Zeta (priority 1), not 0.9 from Alpha", rows[0].Num)
 	}
-	if rows[0].Cite != "net_settings:Zeta" {
-		t.Errorf("cite = %q, want net_settings:Zeta", rows[0].Cite)
+	if !slices.Equal(rows[0].Cites, []string{"net_settings:Zeta"}) {
+		t.Errorf("cites = %v, want exactly [net_settings:Zeta]", rows[0].Cites)
 	}
 }
 
 // TestUnresolvedSymbolFacts (WS1-052): the relation is keyed by ref_des, one row per PLACEMENT, so
 // it joins to the components that lost pins. That asymmetry with the rule (one finding per
 // reference) is deliberate: the rule reports a cause, the relation exposes a blast radius.
+// TestRefDesCollisionFactsCiteEveryInstance is the reason facts.Row carries a LIST of citations
+// (agni issue 546). A ref-des collision is several placements sharing one designator, so the
+// plurality IS the finding, and a row that cites one of them withholds the half a reviewer needs:
+// they already know R5 exists, and what they are chasing is where the two R5s are.
+func TestRefDesCollisionFactsCiteEveryInstance(t *testing.T) {
+	d := &ir.Design{
+		Components: []*ir.Component{{RefDes: "R5"}},
+		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{{
+			RefDes: "R5",
+			Instances: []*ir.Provenance{
+				{SourceFile: "sheet1.kicad_sch", NativeId: "aaa"},
+				{SourceFile: "sheet2.kicad_sch", NativeId: "bbb"},
+				{SourceFile: "sheet3.kicad_sch", NativeId: "ccc"},
+			},
+		}}},
+	}
+	rows := refDesCollisionFacts(check.NewModel(d))
+	if len(rows) != 1 {
+		t.Fatalf("rows = %d, want one per colliding designator", len(rows))
+	}
+	want := []string{"sheet1.kicad_sch:aaa", "sheet2.kicad_sch:bbb", "sheet3.kicad_sch:ccc"}
+	if !slices.Equal(rows[0].Cites, want) {
+		t.Errorf("cites = %v, want every colliding site %v", rows[0].Cites, want)
+	}
+}
+
+// TestEsdRatedFactsCiteEveryQualifyingRating: the same shape on the datasheet tier. A part may state
+// several system-level ESD ratings above the credit floor, and the row cited limits[0].
+func TestEsdRatedFactsCiteEveryQualifyingRating(t *testing.T) {
+	spec := twoEsdRatingSpec("ACME-TVS")
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-TVS"), nil, param.ParamSet{"ACME-TVS": spec})
+
+	rows := factsByRelation(Facts(m))[RelEsdRated]
+	if len(rows) != 1 {
+		t.Fatalf("component.esd_rated rows = %d, want 1", len(rows))
+	}
+	if len(rows[0].Cites) != 2 {
+		t.Errorf("cites = %v, want both qualifying ratings; citing one hides which rating earned the credit", rows[0].Cites)
+	}
+}
+
+// TestEveryFactCitesSomething keeps the property turning one string into a slice could quietly lose:
+// a fact you cannot cite is not verifiable, and an EMPTY SLICE is a new way to say nothing that the
+// old empty-string check would have caught.
+func TestEveryFactCitesSomething(t *testing.T) {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{netClassDef("Power", 1, map[string]string{"track_width": "0.8"})}
+	d.Nets[0].NetClasses = []string{"Power"}
+	m := check.NewModelWithParams(d, drcBoard(), param.ParamSet{"ACME-33": spec})
+
+	seen := 0
+	for _, f := range Facts(m) {
+		seen++
+		if len(f.Cites) == 0 {
+			t.Errorf("relation %q (subject %q, object %q) cites nothing", f.Relation, f.Subject, f.Object)
+			continue
+		}
+		for _, c := range f.Cites {
+			if c == "" {
+				t.Errorf("relation %q (subject %q) carries an empty citation among %v", f.Relation, f.Subject, f.Cites)
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("the fixture produced no facts at all, so this proves nothing")
+	}
+}
+
 func TestUnresolvedSymbolFacts(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}, {RefDes: "U1"}},
@@ -768,7 +838,7 @@ func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 	if pf[0].Object != "VDD" || pf[0].Num != nil {
 		t.Errorf("param row = symbol %q num %v, want VDD with NO number", pf[0].Object, pf[0].Num)
 	}
-	if pf[0].Cite == "" {
+	if len(pf[0].Cites) == 0 {
 		t.Error("a kept row must still carry its citation; it is still a real datasheet row")
 	}
 
@@ -833,6 +903,149 @@ func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 	}
 }
 
+// TestParamTypFacts: the typical value is its own relation rather than a sixth column on
+// param.range, because a typ is not a bound. A row with no typ emits nothing, so absence stays
+// absence instead of arriving downstream as a zero somebody compares a rail against.
+func TestParamTypFacts(t *testing.T) {
+	spec := typSpec("ACME-LDO", "A", 0.000042)
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want exactly 1: the VDD row states min and max but no typ, so it "+
+			"must not appear here", len(rows))
+	}
+	r := rows[0]
+	if r.Subject != "ACME-LDO" || r.Object != "IQ" {
+		t.Errorf("param.typ keyed (%q, %q), want (ACME-LDO, IQ)", r.Subject, r.Object)
+	}
+	if r.Num == nil || *r.Num != 0.000042 {
+		t.Errorf("param.typ Num = %v, want 0.000042", r.Num)
+	}
+	if r.BaseUnit != "A" {
+		t.Errorf("param.typ BaseUnit = %q, want A; a typ compares like any other quantity and needs its "+
+			"dimension to refuse an amps-against-volts comparison", r.BaseUnit)
+	}
+	if len(r.Cites) == 0 {
+		t.Error("param.typ has no citation; a typical value is an extracted claim like any other")
+	}
+}
+
+// TestParamTypFactsConvertToBaseUnit is the C24 end-to-end for the new relation: a printed
+// milliamp arrives as amps, so a query comparing it against another current never sees the vendor's
+// scale.
+func TestParamTypFactsConvertToBaseUnit(t *testing.T) {
+	spec := typSpec("ACME-LDO", "mA", 42)
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want 1", len(rows))
+	}
+	if rows[0].BaseUnit != "A" {
+		t.Errorf("BaseUnit = %q, want A; scale is normalized upstream and must never reach a fact as mA", rows[0].BaseUnit)
+	}
+	if rows[0].Num == nil || *rows[0].Num != 0.042 {
+		t.Errorf("Num = %v, want 0.042 (42 mA in amps)", rows[0].Num)
+	}
+}
+
+// TestParamTypFactsKeepUnconvertibleRow follows specParamRangeRows' posture: a unit with no known
+// scale costs the row its NUMBER, never its existence, so "what does this part specify" never
+// shortens its list in silence.
+func TestParamTypFactsKeepUnconvertibleRow(t *testing.T) {
+	spec := typSpec("ACME-LDO", "dBm", 12)
+	m := check.NewModelWithParams(supplyDesign("+3V3", false, "ACME-LDO"), nil, param.ParamSet{"ACME-LDO": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ = %d rows, want the row kept", len(rows))
+	}
+	if rows[0].Num != nil || rows[0].BaseUnit != "" {
+		t.Errorf("row = %+v, want the symbol and citation kept with no number and no base unit", rows[0])
+	}
+}
+
+// TestSpecLibFactsCarryParamTyp: the library-wide projection answers the same relation as the
+// design-scoped one, so `agni query --speclib` is not a narrower vocabulary than a design query.
+func TestSpecLibFactsCarryParamTyp(t *testing.T) {
+	rows := factsByRelation(SpecLibFacts([]*parampb.PartSpec{typSpec("ACME-LDO", "A", 0.000042)}))[RelParamTyp]
+	if len(rows) != 1 {
+		t.Fatalf("param.typ from SpecLibFacts = %d rows, want 1", len(rows))
+	}
+}
+
+// TestParamProvPageIsNotAQuantity: the page binds as a string. It is a document locator, and a
+// number in a slot the dimension guard protects unifies with a voltage (agni issue 545).
+func TestParamProvPageIsNotAQuantity(t *testing.T) {
+	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
+	m := check.NewModelWithParams(supplyDesign("+5V", false, "ACME-33"), nil, param.ParamSet{"ACME-33": spec})
+
+	rows := factsByRelation(Facts(m))[RelParamProv]
+	if len(rows) != 1 {
+		t.Fatalf("param.prov = %d rows, want 1", len(rows))
+	}
+	if rows[0].Num != nil {
+		t.Errorf("param.prov Num = %v, want nil: the page is a locator, not a quantity", rows[0].Num)
+	}
+	if rows[0].Qualifier != "6" {
+		t.Errorf("param.prov Qualifier = %q, want the page \"6\"", rows[0].Qualifier)
+	}
+}
+
+// dimensionlessNumericRelations names the relations whose number is legitimately a pure count with
+// no physical dimension. Membership is a decision someone makes once, never an exemption to reach
+// for when a guard complains: an unlabelled number compares against any bare literal and unifies
+// with a voltage, since unification is identity rather than physics (C24's stated limitation).
+var dimensionlessNumericRelations = map[string]bool{
+	RelNetPinCount: true, // a count of connections
+}
+
+// numericRelationControl is the positive control for the sweep below. A projector that emits no rows
+// passes an "every row is clean" assertion by saying nothing, so the sweep has to prove it actually
+// looked at the families it claims to guard.
+var numericRelationControl = []string{
+	RelParam, RelParamRange, RelParamTyp,
+	RelNetPinCount, RelNetDeclaredTrackWidth, RelBoardTrackWidth,
+}
+
+// TestNoRelationPublishesAnUnlabelledNumber closes the hole TestRelationBaseUnitsAreCanonical cannot
+// see. That test skips a row whose BaseUnit is empty, treating it as dimensionless, so a projector
+// putting a NON-quantity in a numeric slot passes it in silence. param.prov did exactly that with a
+// page number for as long as the relation existed (agni issue 545).
+//
+// The rule: a number in Num or Min carries its dimension, or its relation is on the short list above.
+func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
+	spec := typSpec("ACME-33", "A", 0.000042)
+	d := supplyDesign("+5V", false, "ACME-33")
+	d.Constraints = []*ir.Constraint{
+		netClassDef("Power", 1, map[string]string{"track_width": "0.8", "via_drill": "0.4", "clearance": "0.2", "via_diameter": "0.6"}),
+	}
+	d.Nets[0].NetClasses = []string{"Power"}
+	m := check.NewModelWithParams(d, drcBoard(), param.ParamSet{"ACME-33": spec})
+
+	seen := map[string]bool{}
+	for _, f := range Facts(m) {
+		if f.Num == nil && f.Min == nil {
+			continue
+		}
+		seen[f.Relation] = true
+		if f.BaseUnit == "" && !dimensionlessNumericRelations[f.Relation] {
+			t.Errorf("relation %q publishes a number with no BaseUnit (subject %q, object %q): a slot "+
+				"guarded for physical quantities is holding something else, so it compares against any "+
+				"bare literal and unifies with a voltage. Give it a dimension, move it to a string slot, "+
+				"or add the relation to dimensionlessNumericRelations deliberately",
+				f.Relation, f.Subject, f.Object)
+		}
+	}
+	for _, rel := range numericRelationControl {
+		if !seen[rel] {
+			t.Errorf("the sweep saw no numeric row from %q, so this fixture does not exercise it and a "+
+				"clean result there proves nothing", rel)
+		}
+	}
+}
+
 // TestParamFactsCarryBaseUnit: the number and its dimension travel together, so a comparison can
 // refuse volts-against-amps without any rule having to remember to join a unit column.
 func TestParamFactsCarryBaseUnit(t *testing.T) {
@@ -884,7 +1097,7 @@ func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
 		if r.Subject != "ACME-XLAT" {
 			t.Errorf("param.pin subject = %q, want the mpn", r.Subject)
 		}
-		if r.Cite == "" {
+		if len(r.Cites) == 0 {
 			t.Errorf("param.pin %q has no citation; a pin function is an extracted claim", r.Object)
 		}
 		got[r.Object] = [2]string{r.Value, r.Qualifier}
@@ -1080,7 +1293,7 @@ func TestEntityFacts(t *testing.T) {
 	}
 
 	for _, f := range byRel[RelEntity] {
-		if f.Cite == "" {
+		if len(f.Cites) == 0 {
 			t.Errorf("entity(%q) has no citation; a search result must stay traceable", f.Subject)
 		}
 	}
