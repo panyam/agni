@@ -21,7 +21,7 @@ func (datalogCompiler) CompileQuery(req QueryRequest) (*check.Rule, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query does not parse: %w", err)
 	}
-	return query.RuleFromQuery(query.FindingQuery{
+	return query.MustRuleFromQuery(query.FindingQuery{
 		Rule:        req.Rule,
 		Query:       prog,
 		Kind:        req.Kind,

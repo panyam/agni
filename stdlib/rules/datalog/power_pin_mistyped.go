@@ -64,7 +64,7 @@ var powerPinMistypedQ = query.FindingQuery{
 	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "net"}},
 }
 
-var powerPinMistyped = query.RuleFromQuery(powerPinMistypedQ)
+var powerPinMistyped = query.MustRuleFromQuery(powerPinMistypedQ)
 
 // dlRules is the rule set registered under the "dl" source.
 var dlRules = []*check.Rule{powerPinMistyped}

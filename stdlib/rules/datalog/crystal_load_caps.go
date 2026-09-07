@@ -66,4 +66,4 @@ var crystalLoadCapsQ = query.FindingQuery{
 	ContextVars: []query.ContextVar{{Var: "net", Kind: check.KindNet, Role: "terminal"}},
 }
 
-var crystalLoadCapsDL = query.RuleFromQuery(crystalLoadCapsQ)
+var crystalLoadCapsDL = query.MustRuleFromQuery(crystalLoadCapsQ)

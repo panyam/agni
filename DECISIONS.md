@@ -1316,10 +1316,13 @@ written because the shared walk refuses bus-like nets and a rail is bus-like.
 
 So the target is three peer shapes over one fact layer, none primary: `check.Spec` for per-entity
 questions (no fact base at all), datalog for joins and closure, and a topology shape for routes and
-subgraphs that does not exist yet (issues 374 and 518). Issue 540 is the remaining honesty gap on the
-datalog path itself: a rule still swallows an eval error into a clean pass. `ruledef.proto` already
-stated this with
+subgraphs that does not exist yet (issues 374 and 518). `ruledef.proto` already stated this with
 `oneof body { SpecRule; QueryRule; ProfileDef }`; the code had drifted from its own contract.
+
+The honesty gap this section used to name on the datalog path, a rule swallowing an eval error into a
+clean pass, closed in issue 540. `RuleFromQuery` validates and returns an error, `MustRuleFromQuery`
+is the form for a query that ships as code, and an eval failure now reports Inconclusive rather than
+nothing.
 
 **Reopen if** a second query engine actually arrives. The `Evaluator` interface is not that seam — it
 takes `query.Query` and a concrete `*Base`, so it swaps a datalog STRATEGY, not a language. A neutral
