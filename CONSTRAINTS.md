@@ -621,9 +621,9 @@ invariant that actually discriminates is that the RAW row's unit is never read o
 `datasheet/param`. Also `TestUnitVocabulariesAgree` (core/check) holds the parameter layer's base
 spellings to `core/classify`'s, which is the drift that would break cross-tier comparison.
 
-**This covers the query surface too.** The `param(...)` and `param.range(...)` datalog relations
-project their numbers through the same conversion, so a datalog-authored rule compares base units
-without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
+**This covers the query surface too.** The `param(...)`, `param.range(...)` and `param.typ(...)`
+datalog relations project their numbers through the same conversion, so a datalog-authored rule
+compares base units without knowing it (agni issue 165). `param.unit(mpn, symbol, unit)` carries the printed spelling
 separately, because a `facts.Row` has no unit column and adding one would be advisory: a rule could
 ignore it and compare raw numbers, which is the failure this constraint exists to prevent.
 
