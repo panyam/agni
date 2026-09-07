@@ -71,7 +71,8 @@ mkdocs tree that was folded into `docsite/content/` with audience-first names.
 
 Engine analysis under **`core/`** (`core/check`, `core/review`, `core/render`, `core/report`, `core/diff`,
 `core/facts`, `core/query`, `core/model`). Format readers under **`readers/`** (`readers/edif`, `readers/kicad`,
-`readers/ipc2581`, `readers/xschem`, `readers/geda`, plus `readers/formats`, the registry/Loader).
+`readers/ipc2581`, `readers/xschem`, `readers/geda`, `readers/telesis`, plus `readers/formats`, the
+registry/Loader).
 The shipped rule catalog, fact relations, profiles, and intent under **`stdlib/`**
 (`stdlib/rules/builtin/rule_*.go`, `stdlib/rules/datalog`, `stdlib/rules/intent`,
 `stdlib/relations`, `stdlib/profiles`). The datasheet stack under **`datasheet/`** (`param`, `doc`,
