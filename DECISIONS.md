@@ -1460,3 +1460,41 @@ real and independent of both.
 **Reopen if** a rule genuinely needs to join a REPEATED part of the record inside the fact base: a
 condition list, a `pin_refs` set, several citations. That is the shape no arity fixes, and it would
 argue for the record entering the engine as a value rather than as tuples.
+
+---
+
+## A constraint's Verify is a test, or it says why it cannot be
+
+**Question.** The September 2026 audit moved eleven checks out of prose and into
+`internal/constraints`, where the gate runs them. Should the remaining thirteen follow, and is a
+fully-automated `CONSTRAINTS.md` the target?
+
+**Answer. No, and the count is the wrong thing to optimise.** A Verify falls into one of three
+shapes, and only the first belongs in a test.
+
+Some rules are STRUCTURAL: the violation is a file, an import, a field, or a call site, and a
+machine can see it. Those are now tests, and there is no reason to leave one as a command in prose,
+because a command in prose rots. The audit found all four ways it rots. Two of the greps returned
+hits on a clean tree, because the code beneath them had grown legitimate new call sites nobody went
+back to re-approve. Two deferred themselves to work that had since landed. One could not fail at all.
+
+Some rules are REVIEW questions, and no test would be honest. C5 turns on whether an ingestion path
+was approved, which is a fact about a conversation. C9 asks whether a semantic field has earned its
+place across two formats, which is a judgement about a cross-format map. C21 forbids sourcing
+component identity from a geometry model, and a rule that did would compile and pass. C23 asks
+whether a message that owns state is shaped as a resource. Writing a test for these means writing
+one that checks a proxy, and a proxy that passes reads as the rule holding.
+
+And some are checkable in principle but the check needs a hand-maintained list, where the list IS the
+judgement and the test only restates it. C10 is the one: which `examples/` directories are
+capabilities owing a narrated walkthrough, and which are the shared harness or an extension-seam
+template, is a call somebody makes per directory.
+
+**What this leaves open.** C10 stays a review question until the capability set is stable enough that
+a list is worth maintaining, which is recorded in `OUT_OF_SCOPE.md`. Nothing else here is deferred
+work: the thirteen are prose because prose is the correct form for them, and converting one to a
+proxy test would make `CONSTRAINTS.md` less trustworthy rather than more.
+
+**Reopen if** a review-shaped rule is violated in the tree and review does not catch it. That is
+evidence the proxy is worth its cost, and it is the same evidence C6 and C20 supplied for their side
+of the line.
