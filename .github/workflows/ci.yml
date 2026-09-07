@@ -41,5 +41,15 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: web
 
+      # The board corpus `make samples` fetches, keyed on the pin file rather than on anything about
+      # this repo. agni gets far more PRs than agni-samples gets releases, so keying on the pin means
+      # a download happens once per corpus bump instead of once per CI run. A miss still fetches and
+      # still fails loudly, so this changes how often the network is touched and not what happens when
+      # it is unreachable.
+      - uses: actions/cache@v4
+        with:
+          path: tools/samples
+          key: samples-${{ hashFiles('hack/samples.pin') }}
+
       - name: make testall
         run: make testall
