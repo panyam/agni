@@ -40,6 +40,6 @@ the read-first version.
 ## How these docs are organized
 
 - **[Use it](../guide/)** covers running the tool on a design.
-- **[Build on it](../build/)** covers adding readers, rules, or an overlay.
+- **[Build on it](../build/)** covers adding readers, rules, or an extension.
 - **[Understand it](../architecture/)** covers how the internals fit together, by subsystem.
 - **[Reference](../reference/)** holds the software-to-hardware analogy and the format primers.

@@ -22,7 +22,7 @@ func init() {
 	facts.Reserve("core/query", names...)
 }
 
-// RegisterPredicate adds an overlay-supplied filter predicate to the query surface. name is how
+// RegisterPredicate adds an extension-supplied filter predicate to the query surface. name is how
 // queries call it, arity its argument count, and holds the boolean it computes over the (all-bound)
 // argument values. It is a pure filter, the same kind as the built-in contains/prefix/suffix: it
 // keeps a binding when holds is true, and `not name(...)` keeps it when holds is false — both derived

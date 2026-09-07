@@ -5,7 +5,7 @@
 //
 // The split it enforces: a RELATION is data derived from the Model (this package), while a
 // PREDICATE, a join strategy, and a query language are an engine's own business (core/query holds
-// the datalog one). An overlay contributing house facts imports this package and never a query
+// the datalog one). An extension contributing house facts imports this package and never a query
 // engine; an engine imports this package to read what has been registered.
 package facts
 

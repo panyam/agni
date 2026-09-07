@@ -1,9 +1,9 @@
-// Package myfmt is the format-reader slot of the overlay template. Copy this package, rename it,
+// Package myfmt is the format-reader slot of the extension template. Copy this package, rename it,
 // and replace the toy parser with your proprietary format's reader. It registers a ".myfmt"
 // reader with the engine's public formats registry (formats.Register); blank-importing it
 // (import _ ".../myfmt") makes the extension resolve through the engine's Loader and CLI.
 //
-// See docs/OVERLAY_AUTHORING.md for the full walkthrough.
+// See the docsite page build/extending.md for the full walkthrough.
 package myfmt
 
 import (
@@ -12,8 +12,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/panyam/agni/readers/formats"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // init registers the reader by import side effect. To register explicitly from your binary's

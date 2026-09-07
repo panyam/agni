@@ -51,7 +51,7 @@ several sources that register into it.
 
 The `core` and `stdlib` boundary is load-bearing: no `core` package depends on `stdlib` in its
 production build, so the engine has no built-in rules baked in, and a program composes the catalog
-it wants by importing the sources it wants. An overlay adds its own rules the same way the standard
+it wants by importing the sources it wants. An extension adds its own rules the same way the standard
 library does.
 
 ## The IR is protobuf

@@ -1,6 +1,6 @@
-# A toy .acme netlist read by the overlay's private format reader.
+# A toy .acme netlist read by the extension's private format reader.
 #
-# Two house-rule violations are seeded, one per overlay rule:
+# Two house-rule violations are seeded, one per extension rule:
 #   X1 uses an X-prefixed ref-des        -> acme/no-experimental-refdes (a Go rule)
 #   X1 sits on VCC, which carries U1's
 #   declared power pin                   -> acme/experimental-on-power-net (a datalog rule)

@@ -159,17 +159,17 @@ func TestContractImportsNoFirstPartyPackage(t *testing.T) {
 	}
 }
 
-// TestEngineModuleRequiresNoOverlay is C18: dependencies point overlay -> engine.
+// TestEngineModuleRequiresNoExtension is C18: dependencies point extension -> engine.
 //
-// The graph half of that rule cannot fail, which is why it is not tested. examples/overlay is its
+// The graph half of that rule cannot fail, which is why it is not tested. examples/extension is its
 // own module, so `go list -deps ./...` from the engine can never name it whatever anyone writes in
 // an engine package; an import would fail to compile first. That command sat in CONSTRAINTS.md as
 // C18's headline Verify, reading as enforcement while proving nothing.
 //
 // go.mod is where the arrow could actually reverse, so go.mod is what this reads. A `replace` counts
-// as much as a `require`: it is the edit that makes a local overlay resolvable, and it is the one
+// as much as a `require`: it is the edit that makes a local extension resolvable, and it is the one
 // somebody adds while debugging and forgets to remove.
-func TestEngineModuleRequiresNoOverlay(t *testing.T) {
+func TestEngineModuleRequiresNoExtension(t *testing.T) {
 	b, err := os.ReadFile("go.mod")
 	if err != nil {
 		t.Fatalf("read go.mod: %v", err)
@@ -180,7 +180,7 @@ func TestEngineModuleRequiresNoOverlay(t *testing.T) {
 			continue
 		}
 		t.Errorf("go.mod:%d names a module inside this repo (C18): %q. The engine is composed BY an "+
-			"overlay through formats.Register and check.RegisterSource, never coupled to one.",
+			"extension through formats.Register and check.RegisterSource, never coupled to one.",
 			i+1, strings.TrimSpace(line))
 	}
 }

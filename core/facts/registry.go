@@ -20,9 +20,9 @@ import (
 // than guarding against it: collisions are checked once, at the end, so a relation and a predicate
 // clash whichever registered first, with no bidirectional check and no init-order reasoning.
 //
-// The registration half stays global because that is the overlay seam (C18): a private overlay
+// The registration half stays global because that is the extension seam (C18): a private extension
 // blank-imports a package whose init calls RegisterRelation, and the engine is composed BY the
-// overlay rather than coupled to one. That is a startup default, never mutated per run, which is
+// extension rather than coupled to one. That is a startup default, never mutated per run, which is
 // exactly the carve-out C22 makes for ambient state.
 
 // Projector derives a relation's rows from a Model. It runs once per fact base; an empty result is
@@ -40,7 +40,7 @@ type SpecLibProjector func([]*parampb.PartSpec) []Row
 // design-scoped and library-wide projectors; Doc resolves a relation's reference markdown ("" when it
 // has none).
 //
-// Bulk, not per-relation: a single relation is the OVERLAY shape (one at a time, namespaced), while
+// Bulk, not per-relation: a single relation is the EXTENSION shape (one at a time, namespaced), while
 // the built-ins arrive as one payload because their projector is a single monolithic pass and several
 // share it. The rule side made the same call (check.RegisterBuiltins).
 type BuiltinFacts struct {
@@ -51,7 +51,7 @@ type BuiltinFacts struct {
 	Doc     func(name string) string
 }
 
-// Relation is one overlay-supplied relation as a value: the name a query writes, its positional
+// Relation is one extension-supplied relation as a value: the name a query writes, its positional
 // layout over Row, and the projector that derives its rows.
 type Relation struct {
 	Name    string
@@ -63,21 +63,21 @@ type Relation struct {
 // them. It is built once and never mutated, so reads need no lock and a caller holding one cannot
 // have it change underneath them because something else registered later.
 type Registry struct {
-	schema   map[string][]Field // every relation, built-in and overlay alike
-	overlay  []Relation         // in composition order, so a merge is deterministic
-	builtin  BuiltinFacts
-	reserved map[string]string // predicate name -> the engine that claimed it
+	schema    map[string][]Field // every relation, built-in and extension alike
+	extension []Relation         // in composition order, so a merge is deterministic
+	builtin   BuiltinFacts
+	reserved  map[string]string // predicate name -> the engine that claimed it
 }
 
 // An Option contributes to a Registry under construction. The three kinds mirror the three ways a
-// relation vocabulary is assembled: a bulk built-in payload, one overlay relation, and an engine
+// relation vocabulary is assembled: a bulk built-in payload, one extension relation, and an engine
 // claiming names for predicates it computes itself.
 type Option func(*builder)
 
 type builder struct {
 	builtin    BuiltinFacts
 	hasBuiltin bool
-	overlay    []Relation
+	extension  []Relation
 	reserved   map[string]string
 	errs       []error
 }
@@ -95,10 +95,10 @@ func WithBuiltins(bf BuiltinFacts) Option {
 	}
 }
 
-// WithRelation adds one overlay-supplied relation.
+// WithRelation adds one extension-supplied relation.
 //
 // This is the open-core seam generalized to the fact layer: the public engine ships the built-in
-// relations, and a private overlay contributes its OWN — house part attributes, a compliance
+// relations, and a private extension contributes its OWN — house part attributes, a compliance
 // database, an approved-vendor feed — without editing the engine. A registered relation is a
 // first-class citizen of every query surface with no evaluator change, because an engine treats every
 // relation uniformly (name -> field layout -> rows).
@@ -112,7 +112,7 @@ func WithRelation(name string, fields []Field, project Projector) Option {
 		case project == nil:
 			b.err(fmt.Errorf("relation %q has a nil projector", name))
 		default:
-			b.overlay = append(b.overlay, Relation{Name: name, Fields: append([]Field(nil), fields...), Project: project})
+			b.extension = append(b.extension, Relation{Name: name, Fields: append([]Field(nil), fields...), Project: project})
 		}
 	}
 }
@@ -148,13 +148,13 @@ func NewRegistry(opts ...Option) (*Registry, error) {
 	for name, f := range b.builtin.Schema {
 		r.schema[name] = append([]Field(nil), f...)
 	}
-	for _, rel := range b.overlay {
+	for _, rel := range b.extension {
 		if _, dup := r.schema[rel.Name]; dup {
 			b.err(fmt.Errorf("relation %q is registered twice", rel.Name))
 			continue
 		}
 		r.schema[rel.Name] = rel.Fields
-		r.overlay = append(r.overlay, rel)
+		r.extension = append(r.extension, rel)
 	}
 	// One collision sweep, after everything is in. Sorted so the error reads the same on every run
 	// (map iteration order would otherwise reshuffle it).
@@ -174,7 +174,7 @@ func NewRegistry(opts ...Option) (*Registry, error) {
 	return r, nil
 }
 
-// SchemaOf resolves a relation's positional layout. An overlay relation resolves exactly like a
+// SchemaOf resolves a relation's positional layout. An extension relation resolves exactly like a
 // built-in one, which is what lets an engine treat the two the same.
 func (r *Registry) SchemaOf(rel string) ([]Field, bool) {
 	f, ok := r.schema[rel]
@@ -204,10 +204,10 @@ func (r *Registry) Schema() map[string][]Field {
 // nothing. That reads as a clean pass on a design nobody checked.
 func (r *Registry) Installed() bool { return len(r.schema) > 0 }
 
-// Rows projects the whole fact base for a design: the built-in relations first, then each overlay
+// Rows projects the whole fact base for a design: the built-in relations first, then each extension
 // relation in composition order.
 //
-// An overlay row is stamped with the name it was REGISTERED under, overriding whatever the projector
+// An extension row is stamped with the name it was REGISTERED under, overriding whatever the projector
 // put in Row.Relation. The registration name is the one a query writes, so letting a projector name
 // its own rows would let a relation answer under a name nothing registered, and silently shadow
 // another. The built-in payload is a single pass over many relations, so its rows carry their own
@@ -217,7 +217,7 @@ func (r *Registry) Rows(m check.Model) []Row {
 	if r.builtin.Model != nil {
 		out = append(out, r.builtin.Model(m)...)
 	}
-	for _, rel := range r.overlay {
+	for _, rel := range r.extension {
 		for _, row := range rel.Project(m) {
 			row.Relation = rel.Name
 			out = append(out, row)
@@ -234,21 +234,21 @@ func (r *Registry) SpecLibRows(specs []*parampb.PartSpec) []Row {
 	return r.builtin.SpecLib(specs)
 }
 
-// Relations returns the discoverable relation set: the built-ins plus each overlay relation, the
+// Relations returns the discoverable relation set: the built-ins plus each extension relation, the
 // latter with argument labels synthesized from its field layout. Order is composition order and is
 // not sorted here — a caller that also has predicates to show merges both lists and sorts once.
 //
 // Each entry's Detail is resolved through the doc resolver, so an undocumented relation still lists
 // with its Summary.
 func (r *Registry) Relations() []RelationInfo {
-	out := make([]RelationInfo, 0, len(r.builtin.Catalog)+len(r.overlay))
+	out := make([]RelationInfo, 0, len(r.builtin.Catalog)+len(r.extension))
 	out = append(out, r.builtin.Catalog...)
-	for _, rel := range r.overlay {
+	for _, rel := range r.extension {
 		args := make([]string, len(rel.Fields))
 		for i, f := range rel.Fields {
 			args[i] = f.Label()
 		}
-		out = append(out, RelationInfo{Name: rel.Name, Args: args, Summary: "overlay-registered relation", Kind: KindOverlay})
+		out = append(out, RelationInfo{Name: rel.Name, Args: args, Summary: "extension-registered relation", Kind: KindExtension})
 	}
 	for i := range out {
 		out[i].Detail = r.Doc(out[i].Name)
@@ -276,7 +276,7 @@ var (
 // package calls it from its init, so any binary that blank-imports that package has the relations.
 func RegisterBuiltinFacts(bf BuiltinFacts) { addOption(WithBuiltins(bf)) }
 
-// RegisterRelation adds an overlay-supplied relation to the process default. Call it once at init.
+// RegisterRelation adds an extension-supplied relation to the process default. Call it once at init.
 func RegisterRelation(name string, fields []Field, project Projector) {
 	addOption(WithRelation(name, fields, project))
 }

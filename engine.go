@@ -90,7 +90,7 @@ var MissingBuiltinsError = errors.New(
 		`Add: import _ "github.com/panyam/agni/stdlib/rules/builtin"`)
 
 // MissingRelationsError reports that no relation catalog was installed, so the fact base is empty
-// and every datalog-authored rule matches nothing. This is the failure examples/overlay carried a
+// and every datalog-authored rule matches nothing. This is the failure examples/extension carried a
 // hand-written warning comment about, since it neither fails to build nor errors at runtime.
 var MissingRelationsError = errors.New(
 	`agni: no fact relations are installed, so every datalog rule matches nothing and reports clean. ` +

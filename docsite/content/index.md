@@ -41,7 +41,7 @@ hideTitle: true
 </a>
 <a href="{{.Site.PathPrefix}}/build/" class="section-card">
 <h3>Developer guide</h3>
-<p>Add a format reader, author a check rule, or write a private overlay against the public engine.</p>
+<p>Add a format reader, author a check rule, or write a private extension against the public engine.</p>
 </a>
 <a href="{{.Site.PathPrefix}}/learn/" class="section-card">
 <h3>Learn the domain</h3>

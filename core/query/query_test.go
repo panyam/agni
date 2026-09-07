@@ -646,7 +646,7 @@ func TestNegatedReaches(t *testing.T) {
 	}
 }
 
-// TestRegisterRelation (WS3-029 fast-follow): the overlay seam. An out-of-engine relation registered
+// TestRegisterRelation (WS3-029 fast-follow): the extension seam. An out-of-engine relation registered
 // with RegisterRelation is a first-class query citizen — the goal joins it against a built-in
 // relation, a rule reads it, and negation ranges over it, all with no evaluator change.
 func TestRegisterRelation(t *testing.T) {

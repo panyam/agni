@@ -98,8 +98,8 @@ renderers draw, and a parameter IR that N datasheet extractors fill and the chec
   (`kicad-cli` ERC/DRC) and real design exports, not only hand-written fixtures. A feature is
   done when it works on a real file.
 - **Open core with a clear boundary.** The engine is shareable under Apache-2.0. Proprietary
-  formats, house rules, and confidential designs live in a private overlay that depends on
-  the engine without forking it. Company-specific material stays in the overlay, never in the
+  formats, house rules, and confidential designs live in a private extension that depends on
+  the engine without forking it. Company-specific material stays in the extension, never in the
   shared engine.
 - **Legible to software engineers.** EDA carries decades of domain vocabulary. Agni maps it
   to concepts software engineers already know (an IR, a linter, a semantic diff, a lockfile),
@@ -132,7 +132,7 @@ Full documentation lives at [panyam.github.io/agni](https://panyam.github.io/agn
 - [CONSTRAINTS.md](CONSTRAINTS.md) — the enforceable architectural rules. Read before
   proposing changes.
 - [Open core](https://panyam.github.io/agni/decisions/open-core/) — the open-core split: this
-  public engine, and how a private overlay adds proprietary readers and rules without forking
+  public engine, and how a private extension adds proprietary readers and rules without forking
   it.
 
 ## Status

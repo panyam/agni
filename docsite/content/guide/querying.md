@@ -316,7 +316,7 @@ Datasheet (`param`) facts are not yet wired into the viewer. A query over `param
 there, and datasheet joins stay on the CLI for now.
 
 You do not have to memorize the vocabulary. Below the query box the panel lists every relation as a
-**click-to-insert chip**, grouped by kind (Netlist, Board, Datasheet, Predicates, and any overlay
+**click-to-insert chip**, grouped by kind (Netlist, Board, Datasheet, Predicates, and any extension
 relations your deployment adds). Clicking a chip drops its template at your cursor, so
 `component-on-net` inserts `component-on-net(?ref_des, ?net)` ready to wire into the rest of the
 query. Hover a chip to see its full signature and a one-line description.

@@ -1,10 +1,10 @@
 // Package relations is the standard EDB relation catalog: the built-in "data providers" that
 // project a check.Model (and a seeded datasheet library) into the query engine's fact base —
 // netlist, board, and datasheet relations. It moved out of package check (issue 10) so the built-in
-// relations register through the same public seam an overlay uses (facts.RegisterBuiltinFacts), the
+// relations register through the same public seam an extension uses (facts.RegisterBuiltinFacts), the
 // symmetric twin of how the built-in RULES moved to stdlib/rules/builtin in issue 4 phase 2b. The
 // core engine (packages check and query) owns no relations; blank-importing this package installs
-// the catalog, and a binary that omits the import runs the query engine with only overlay relations.
+// the catalog, and a binary that omits the import runs the query engine with only extension relations.
 package relations
 
 import (

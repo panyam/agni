@@ -203,7 +203,7 @@ preserve the shippable-engine goal (the engine `go.mod` stays lean, C1).
 `go.mod`; examples read fixtures from `examples/common/designs/` only (synthetic and
 redistributable, never a real board, C5). Three directories owe no `walkthrough.md` and are not
 exceptions to the rule so much as not capabilities: `examples/common` is the shared harness the
-walkthroughs run on, and `examples/overlay` and `examples/overlay-template` demonstrate the
+walkthroughs run on, and `examples/extension` and `examples/extension-template` demonstrate the
 extension SEAMS (C18) rather than an engine capability, so each carries a `README.md` and a test
 instead of a narrated run.
 
@@ -220,7 +220,7 @@ place. Server routing plus per-page islands, not an SPA (thesis Principles 3, 5,
 goapplib presenter-contract reference).
 **Corollary — the composition root is the fourth edit, and it is tested.** An island is only real
 once `main.ts` constructs it and passes its view to the presenter. Because the `ViewSink` ports are
-optional (so an embedding host may leave a panel out, C13 / `build/overlay.md`), an unwired port is a
+optional (so an embedding host may leave a panel out, C13 / `build/extending.md`), an unwired port is a
 silent no-op rather than a type error, and no panel-level test can see it: every one of them supplies
 its own collaborators. That gap shipped a broken feature twice, once with a client never passed
 (WS9-052) and once with a view never wired (agni issue 175). The rule is that the four registration
@@ -278,7 +278,7 @@ same code runs on the server, in WASM, and in CLI/tests"; that must hold for the
 too (the lilbattle services.go shape: gRPC-style impls, transports as translation layers).
 "Importable" means importable by an EMBEDDER, not merely by a second package in this module. The tier
 lived in `internal/service/` until the SDK work, which satisfied every clause of this rule except the
-first one and made the heading false: an overlay at `github.com/yourorg/...` could not name the
+first one and made the heading false: an extension at `github.com/yourorg/...` could not name the
 package at all, so option 3 (embed the engine as a library) could not reach option 1 (the web
 console) without forking `cmd/agni`. `examples/resolve-design` is the proof it was a real gap and not
 a theoretical one. It reaches the tier only because its own module path is nested under
@@ -358,7 +358,7 @@ only downward — on the contract and shared parse/geom helpers — never on the
 need (placement transforms, pin world positions) lives in `internal/geomath`, imported by both sides,
 so "pins land where symbols are drawn" holds by shared code rather than by a reader reaching up into
 the renderer for its helper.
-**Why:** the open-core overlay, and any future ecosystem reader, depends on the contract plus the
+**Why:** the open-core extension, and any future ecosystem reader, depends on the contract plus the
 registry — not on the web/serve tier. Go module-graph pruning already keeps that dependency light
 *because* the layering holds; a stray import from a reader up into `internal/server` would pull
 servicekit/connect into every consumer and foreclose extracting the reader tier as a module. Keep
@@ -369,26 +369,26 @@ TRANSITIVE graph rather than over anyone's import block. Both carry a positive c
 naming no package under the pattern fails rather than reading as clean, because a mistyped or
 renamed-out-from-under-it pattern is exactly the edit that would make a graph check vacuous.
 
-## C18: The public engine never imports the overlay (dependencies point overlay → engine)
-**Rule:** The open-core structure is a public Apache-2.0 engine and a private *overlay* that
+## C18: The public engine never imports the extension (dependencies point extension → engine)
+**Rule:** The open-core structure is a public Apache-2.0 engine and a private *extension* that
 depends on it (Go `require github.com/panyam/agni`) to add proprietary-format readers,
-house-style/private rules, and private design data. Dependencies point **overlay → engine
-only**: no engine package may import an overlay, and the engine `go.mod` requires no overlay
-module. An overlay contributes exclusively through the public extension seams — `formats.Register`
+house-style/private rules, and private design data. Dependencies point **extension → engine
+only**: no engine package may import an extension, and the engine `go.mod` requires no extension
+module. An extension contributes exclusively through the public extension seams — `formats.Register`
 (readers, WS12-003) and `check.RegisterSource` (rules, WS12-004) — never by the engine reaching
-into it. The reference overlay lives at `examples/overlay/` (its own module, `replace => ../..`);
-a real overlay is a separate private repo (the open-core doc).
-**Why:** the split only holds if the arrow points one way. An engine that imported an overlay
+into it. The reference extension lives at `examples/extension/` (its own module, `replace => ../..`);
+a real extension is a separate private repo (the open-core doc).
+**Why:** the split only holds if the arrow points one way. An engine that imported an extension
 would drag private/customer code into the shareable, open-source repo — the whole reason the
-overlay exists (the C16 datasheet posture generalized to all of readers, rules, and data). It is
-also what lets the engine be published while overlays stay closed. The seams are global registries
-the overlay writes into at init/main, so the engine is composed *by* the overlay, never coupled to
+extension exists (the C16 datasheet posture generalized to all of readers, rules, and data). It is
+also what lets the engine be published while extensions stay closed. The seams are global registries
+the extension writes into at init/main, so the engine is composed *by* the extension, never coupled to
 one.
-**Verify:** `TestEngineModuleRequiresNoOverlay` (`deps_test.go`), which reads `go.mod`
+**Verify:** `TestEngineModuleRequiresNoExtension` (`deps_test.go`), which reads `go.mod`
 and fails on any `require` or `replace` naming a module inside this repo. A `replace` counts as much
-as a `require`, because it is the edit that makes a local overlay resolvable and the one somebody
+as a `require`, because it is the edit that makes a local extension resolvable and the one somebody
 adds while debugging and forgets to remove.
-**Note:** the graph half of this rule is not tested, because it cannot fail. `examples/overlay` is
+**Note:** the graph half of this rule is not tested, because it cannot fail. `examples/extension` is
 its own module, so `go list -deps ./...` from the engine module can never name it whatever anyone
 writes in an engine package; an import would fail to compile first. The command sat in this document
 as the headline Verify until the audit, reading as enforcement while proving nothing. `go.mod` is
@@ -440,7 +440,7 @@ netlist carries.
 **Why:** the catalog runs many rules over many entities, so re-deriving "is this a rail / a TVS" in the
 check path is O(rules x entities) of the same string parsing, and it couples the core to vendor
 conventions. Interpreting once at the boundary keeps the core convention-agnostic (it reads facts),
-makes the expensive path cheap, and puts house-style config in the overlay/edge (the C16/C18 posture
+makes the expensive path cheap, and puts house-style config in the extension/edge (the C16/C18 posture
 generalized). The interim in-check heuristics are gone: both left-shift tickets landed, so
 `Loader.ReadDesign` stamps `device_classes` (WS3-071) and net roles (WS3-072) once per read and the
 check path reads them.
@@ -779,7 +779,7 @@ the converter never learned is absent from both sides of any assertion made on t
 now shipped twice. `naming.Lexicon` grew gate/source/drain terminal vocabularies with no wire fields,
 so a project declaring them had them dropped on every path except `serve`'s startup install and
 `BuildRoleVocab` substituted the built-in names. `Profile.HostClass` (WS3-044) was added with no wire
-field, so an overlay profile binding its host by datasheet device class lost the binding crossing
+field, so an extension profile binding its host by datasheet device class lost the binding crossing
 `stdlib/ruledef`, `HasHost` went false, and the host requirement compiled to nothing. Both failures
 are indistinguishable from a legitimately quiet run, which is the silent-pass shape this whole layer
 exists to prevent. `core/review`'s manifest conversion has had the guard since it was written and has
@@ -917,14 +917,14 @@ append-only buffer of registration options and nothing reads them directly: `fac
 composes a `*Registry` from them, exactly as `check.DefaultCatalog` composes a `*Catalog`, and a
 `Registry` is immutable once built. A `query.Base` captures the one it was built from, so a
 registration cannot change how an in-flight query reads. The registration half stays global because
-that is the overlay seam (C18) and a startup default is what C22 permits; the READ half must not be.
+that is the extension seam (C18) and a startup default is what C22 permits; the READ half must not be.
 Composing in a known order is also why collisions need no order-dependent check: every option is
 applied first and clashes are swept once at the end.
 
 ## C30: The rule primitive is `check.Rule`, and no authoring shape owns it
 **Rule:** A rule is a `check.Rule`, and the ways to write one are peers: Go, datalog
 (`stdlib/rules/datalog`), an interface profile (`stdlib/profiles`), a design-intent declaration
-(`stdlib/rules/intent`), and whatever an overlay adds. Each COMPILES to `[]*check.Rule` and reaches a
+(`stdlib/rules/intent`), and whatever an extension adds. Each COMPILES to `[]*check.Rule` and reaches a
 catalog as a `check.RuleSource`, which is the only currency the catalog trades in. `core/check`
 depends on none of them. A new authoring shape is a package that compiles to rules and registers a
 source; it is never a new field on `Rule`, a new case in the catalog, or a second thing a catalog can

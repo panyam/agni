@@ -74,7 +74,7 @@ var (
 // RegisterBuiltins installs the standard EE rule catalog as the anonymous built-in source. It is
 // the built-in analogue of RegisterSource: stdlib/rules/builtin calls it from its init so the
 // rules pass through the Catalog bare (the empty source name is reserved for the built-ins), while
-// overlay suites register named and are namespaced. rules is exposed through Builtins (and
+// extension suites register named and are namespaced. rules is exposed through Builtins (and
 // BuiltinRules); specs is the Go-eval'd rules' declarative twins (BuiltinSpecs), held to their Go
 // Eval by the parity tests. Calling it more than once replaces the set (the last import wins);
 // there is exactly one built-in source, so this is a set, not an append.
@@ -111,7 +111,7 @@ func (s fixedSource) Rules() []*Rule { return s.rules }
 var registeredSources []RuleSource
 
 // RegisterSource adds a rule source to the process-global registry, so a suite living in
-// another module — house-style or proprietary rules in the open-core overlay — is picked up by
+// another module — house-style or proprietary rules in the open-core extension — is picked up by
 // the engine's own surfaces (the CLI and serve both compose DefaultCatalog / CatalogWith) with
 // no re-wiring. This is the rule-side twin of the reader registry's formats.Register (WS12-004):
 // an embedder calls it from an init or the composing binary's main and its rules appear in

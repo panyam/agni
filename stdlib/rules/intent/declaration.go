@@ -21,13 +21,13 @@
 // point here.
 //
 // The mechanism (this package, the rules, the --intent-path flag) is shareable engine code; a specific
-// design's declaration is customer-boundary data authored in the overlay (the C16 datasheet posture
+// design's declaration is customer-boundary data authored in the extension (the C16 datasheet posture
 // generalized). Compile turns a Declaration into check rules the same way profiles.Compile turns a
 // Profile into rules; the CLI splices them into the catalog via check.CatalogWith.
 package intent
 
 // Declaration is one design's intended architecture: the expected modules, voltage domains, and
-// subsystems (clock/reset/power tree). It is authored as YAML in the overlay and parsed by Load/Parse;
+// subsystems (clock/reset/power tree). It is authored as YAML in the extension and parsed by Load/Parse;
 // it is never derived from a netlist.
 type Declaration struct {
 	// Name identifies the declaration in findings and reports (e.g. "Automotive design intent").

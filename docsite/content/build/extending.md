@@ -1,33 +1,39 @@
 ---
-title: "Authoring an overlay"
-description: "Build a private Go module that extends the public engine with your own reader and rules, without forking it."
+title: "Extending and embedding the engine"
+description: "Add your own readers and rules to the engine, and run it inside your own program, without forking it."
 ---
 
-An overlay is a private Go module that extends the public Agni engine with your own format reader
-and rules, without forking it. This page walks from an empty directory to a working overlay.
+An extension is a private Go module that builds on the public Agni engine without forking it. There
+are two things you can do from one, and this page covers both.
+
+**Extending** adds capability to the engine: your own format reader, your own rules, your own fact
+relations, registered through the public seams. **Embedding** runs the engine inside your own
+program: composing it with `agni.New`, and serving your own catalog through the service tier.
+
+This page walks from an empty directory to a working extension that does both.
 
 Two artifacts back this guide, both in the engine repo under `examples/`:
 
-- `overlay-template` is a bare scaffold to copy.
-- `overlay` is a fuller worked example, a `.acme` reader and a rule that fires, to read when you
+- `extension-template` is a bare scaffold to copy.
+- `extension` is a fuller worked example, a `.acme` reader and a rule that fires, to read when you
   want to see a real one.
 
 ## Prerequisites
 
-Go 1.26+ and the public engine module `github.com/panyam/agni`. An overlay depends on the engine.
-The engine never depends on the overlay. That one-way arrow is what keeps your private code out of
+Go 1.26+ and the public engine module `github.com/panyam/agni`. An extension depends on the engine.
+The engine never depends on the extension. That one-way arrow is what keeps your private code out of
 the open-source repo.
 
 ## Create the module
 
 ```
-mkdir my-overlay && cd my-overlay
-go mod init github.com/yourorg/my-overlay
+mkdir my-extension && cd my-extension
+go mod init github.com/yourorg/my-extension
 go get github.com/panyam/agni@latest
 ```
 
 Your `go.mod` requires a published engine version. The in-repo template uses a
-`replace => ../..` so it builds against the working tree. A real overlay deletes that and pins a
+`replace => ../..` so it builds against the working tree. A real extension deletes that and pins a
 release, as the template's `go.mod` TODOs describe.
 
 ## Register a custom reader with `formats.Register`
@@ -118,7 +124,7 @@ Each `Facets` selects what to drop, using the same grammar `Filter` uses for sel
 replaces individual rules, and `Tags` replaces a family. A source's declaration never applies to its
 own rules, so a replacement cannot delete itself.
 
-Interface profiles do this for you. An overlay profile that carries a built-in's name supersedes that
+Interface profiles do this for you. A profile that carries a built-in's name supersedes that
 built-in's rules, and that is the job a naming map does: re-binding `SPI_NOR` to your own net-name
 suffixes replaces the engine's reading of that interface rather than running beside it.
 [Interface profiles](../../guide/interface-profiles/) covers the YAML these are written in.
@@ -139,7 +145,7 @@ a standalone operation.
 
 ## Compose in main
 
-An overlay reaches the engine through the same public seams the standard library uses, so the shape
+An extension reaches the engine through the same public seams the standard library uses, so the shape
 is the one [Stack and platform](../../architecture/stack/) draws, with your module as the fourth
 source:
 
@@ -156,8 +162,8 @@ import (
     "github.com/panyam/agni/core/check"
     "github.com/panyam/agni/readers/formats"
 
-    _ "github.com/yourorg/my-overlay/myfmt"
-    _ "github.com/yourorg/my-overlay/myrules"
+    _ "github.com/yourorg/my-extension/myfmt"
+    _ "github.com/yourorg/my-extension/myrules"
 
     _ "github.com/panyam/agni/stdlib/relations"     // the fact base every datalog rule reads
     _ "github.com/panyam/agni/stdlib/reviewquery"   // compiles a manifest's inline queries
@@ -184,7 +190,7 @@ blank imports are four independent registration seams, and three of them fail SI
 misses one: no built-in rules, or an empty fact base, and every design reports clean with nothing
 saying why. `New` refuses both rather than running.
 
-That is not a hypothetical worth guarding against. The overlay example in this repo imported
+That is not a hypothetical worth guarding against. The extension example in this repo imported
 `stdlib/relations` and never `stdlib/rules/builtin`, so it ran with zero built-in rules and reported
 only its own two findings while two real defects on its own fixture went unreported. Nobody noticed
 until `New` started refusing it.
@@ -217,7 +223,7 @@ Two styles both work:
 - `init` (import side effect), like the standard library's image readers. Wire an extension in
   with one blank import. This is what the template uses.
 - Explicit from `main`. Drop the `init` and call `formats.Register` / `check.RegisterSource`
-  yourself. More visible, no hidden ordering. Prefer this when a binary composes several overlays
+  yourself. More visible, no hidden ordering. Prefer this when a binary composes several extensions
   and you want the wiring in one place.
 
 ## Verify
@@ -227,7 +233,7 @@ go build ./... && go test ./...
 ```
 
 Add a smoke test that your reader loads a fixture and your rule fires. The template's
-`template_test.go` and `examples/overlay/overlay_test.go` show the shape.
+`template_test.go` and `examples/extension/extension_test.go` show the shape.
 
 ## Serve your own catalog with the service tier
 
@@ -246,7 +252,7 @@ resp, err := checkSvc.ListRules(ctx, &webapi.ListRulesRequest{})
 ```
 
 The two come back TOGETHER and the catalog is not a parameter, so you cannot hand one surface the
-composed catalog and the other something else. That drift is why the shape is this way: an overlay
+composed catalog and the other something else. That drift is why the shape is this way: an extension
 profile flag once reached the check surface and the review surface differently, and a rule missing
 from a catalog is indistinguishable from a rule that ran and found nothing.
 
@@ -264,7 +270,7 @@ against that response, so there is no static rule table anywhere to also update.
 ## A current limitation: the CLI is not yet reusable
 
 The service tier above is reusable; the command line over it is not yet. Reusing the engine's whole
-CLI, so `my-overlay serve` and `my-overlay check` inherit your reader and rules with their flags
+CLI, so `my-extension serve` and `my-extension check` inherit your reader and rules with their flags
 intact, needs the engine to export a reusable command root, which it does not do yet. `cmd/agni` is
 `package main`. Until then, compose the library and the services as above, or run the stock `agni`
 and register your extensions into a binary you build.

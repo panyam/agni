@@ -1,10 +1,10 @@
-// Package acmeformat is a demonstration out-of-module format reader for the open-core overlay
+// Package acmeformat is a demonstration out-of-module format reader for the open-core extension
 // skeleton (WS12-001). It parses a toy ".acme" netlist into the agni IR and registers itself
 // with the engine's public formats registry (WS12-003). Blank-importing it for the side effect
 // (import _ ".../acmeformat") makes ".acme" resolve through every engine surface — the CLI
 // reader dispatch, the file-tree label, the Loader — with no fork of the engine.
 //
-// A real overlay's reader would be a proprietary schematic/netlist format the house does not
+// A real extension's reader would be a proprietary schematic/netlist format the house does not
 // release; the point here is only the wiring, so the format is deliberately trivial.
 package acmeformat
 
@@ -15,11 +15,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/panyam/agni/readers/formats"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/readers/formats"
 )
 
-// init registers the .acme reader. An overlay chooses import-side-effect registration (like the
+// init registers the .acme reader. An extension chooses import-side-effect registration (like the
 // standard library's image format readers) so a consumer wires the format in with one blank
 // import; the alternative is an explicit call from the composing binary's main (see WS12-003).
 func init() {

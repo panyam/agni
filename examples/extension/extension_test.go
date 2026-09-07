@@ -7,12 +7,12 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// TestOverlayComposesReaderAndRule is the WS12-001 acceptance: a SEPARATE module (this one)
+// TestExtensionComposesReaderAndRule is the WS12-001 acceptance: a SEPARATE module (this one)
 // contributes a format reader and a rule suite through the engine's public extension points,
 // and both take effect on the engine's own surfaces. The blank imports in main.go run the
-// overlay packages' init, so by the time this test runs the .acme reader and the acme/ rule
+// extension packages' init, so by the time this test runs the .acme reader and the acme/ rule
 // are registered.
-func TestOverlayComposesReaderAndRule(t *testing.T) {
+func TestExtensionComposesReaderAndRule(t *testing.T) {
 	// The reader reached the engine's registry (WS12-003): the extension resolves and loads.
 	if formats.ByExt("x.acme") == nil {
 		t.Fatal(".acme reader not registered with the engine's formats registry")
@@ -34,7 +34,7 @@ func TestOverlayComposesReaderAndRule(t *testing.T) {
 		t.Errorf("source tag = %q, want acme", r.Tags[check.KeySource])
 	}
 
-	// End to end: the overlay's rule runs over the overlay's format and fires on X1.
+	// End to end: the extension's rule runs over the extension's format and fires on X1.
 	findings := check.Run(check.NewModel(d), check.DefaultCatalog().Rules())
 	var acme []check.Finding
 	for _, f := range findings {
@@ -47,18 +47,18 @@ func TestOverlayComposesReaderAndRule(t *testing.T) {
 	}
 }
 
-// TestOverlayDatalogPinRule is the WS3-038 acceptance: a separate module authors a PIN-level rule as
+// TestExtensionDatalogPinRule is the WS3-038 acceptance: a separate module authors a PIN-level rule as
 // DATALOG over the engine's public relations, with no engine change, and it produces findings like
 // any built-in. The Go rule above proves the registration seam; this proves the AUTHORING seam, which
 // is the one the open-core story actually rests on.
-func TestOverlayDatalogPinRule(t *testing.T) {
+func TestExtensionDatalogPinRule(t *testing.T) {
 	d, err := (&formats.Loader{}).ReadDesign("testdata/example.acme")
 	if err != nil {
 		t.Fatal(err)
 	}
 	m := check.NewModel(d)
 
-	// The overlay's own reader has to declare PART-TYPE pins for any of this to work: the engine's
+	// The extension's own reader has to declare PART-TYPE pins for any of this to work: the engine's
 	// pin relations project from declared pins, not from net connections. A format that emits only
 	// connections leaves them all empty and a pin rule silently finds nothing, so this guards the
 	// reader half from regressing and taking the rule's evidence with it.

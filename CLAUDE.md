@@ -28,7 +28,7 @@ expensive to rediscover.
 | Config: what a run is checked against, and where it comes from | `architecture/projects-and-designs.md` |
 | Semantic diff | `architecture/semantic-diff.md` |
 | The datasheet param/doc/derive layer | `architecture/datasheet-layer.md` |
-| Extending the engine from outside | `build/overlay.md` |
+| Extending the engine from outside | `build/extending.md` |
 | xschem / Lepton native tools | `build/native-verification.md` |
 | Running the gate, and how it reads green when it is not | `build/the-gate.md` |
 | Measuring something, or trusting a green test | `build/evidence.md` |
