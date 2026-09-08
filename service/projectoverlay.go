@@ -138,3 +138,68 @@ func (o Overlay) SpecsOr(fallback param.ParamProvider) param.ParamProvider {
 	}
 	return fallback
 }
+
+// Sources resolves an artifact ref to the artifact each tier should read, applying the enclosing
+// design's declaration when there is one.
+//
+// This is the served counterpart of what `cmd/agni` does around `ResolveSources`, and it exists
+// because nothing on this side called it: every geometry decision keyed off the URI as handed in, so
+// a netlist entry yielded no faithful geometry and the design fell back to an auto-layout while the
+// CLI drew the real sheets from the declared companion (agni issue 656, constraint C32).
+//
+// A nil resolver, a resolver with no store, and a ref belonging to no declared design all yield the
+// ref in every tier. That is the ordinary case for a mounted folder, not an error, which is why the
+// store's own miss is (nil, nil, nil).
+//
+// isDir is derived rather than stat'ed, because a design's URI IS its directory (`fsstore` sets it
+// from the descriptor's folder), so a ref equal to it names the design and nothing else can. The
+// service reads no filesystem of its own (C13), and this is what lets it decide without one.
+//
+// asNamed comes off the request. It has to be expressible, because the CLI is itself a client of
+// these services and carries the same flag: resolving here unconditionally would silently override
+// a caller that asked for the file it named.
+func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed bool) (Resolution, error) {
+	ref := uri.String()
+	plain := Resolution{DesignSources: DesignSources{NetlistURI: ref, BoardURI: ref, GeometryURI: ref}}
+	if r == nil || r.Store == nil {
+		return plain, nil
+	}
+	d, _, err := r.Store.ResolveDesign(ctx, uri)
+	if err != nil {
+		return plain, err
+	}
+	return ResolveSources(d, ref, d != nil && ref == d.GetUri(), asNamed), nil
+}
+
+// TierURIs is Sources with the refs parsed back into artifact URIs, which is what every read takes.
+//
+// It is the one call a service makes to learn which artifact each of its tiers should open. Doing it
+// per service rather than inside the loader keeps the loader a reader of what it is handed, which is
+// what lets a caller deliberately read a companion as a netlist by naming it.
+//
+// boardOverride is the request's own board_uri, and it WINS over the design's declaration, matching
+// `--board-path` on the CLI: a caller who named a board is answering the question the descriptor
+// would otherwise answer. A zero override leaves the declared board in place, which is the case that
+// was broken, since the request field is empty on nearly every call.
+func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOverride artifact.URI, asNamed bool) (netlist, board, geometry artifact.URI, err error) {
+	src, err := r.Sources(ctx, u, asNamed)
+	if err != nil {
+		return u, boardOverride, u, err
+	}
+	if netlist, err = artifactURI(src.NetlistURI); err != nil {
+		return u, boardOverride, u, err
+	}
+	if geometry, err = artifactURI(src.GeometryURI); err != nil {
+		return u, boardOverride, u, err
+	}
+	board = boardOverride
+	if board.IsZero() && src.BoardURI != src.NetlistURI {
+		// Only when the design declared a SEPARATE board. Leaving it zero otherwise preserves
+		// BuildModel's own rule, which reads the netlist artifact for copper when it carries any and
+		// treats a non-board override as a loud error.
+		if board, err = artifactURI(src.BoardURI); err != nil {
+			return u, boardOverride, u, err
+		}
+	}
+	return netlist, board, geometry, nil
+}

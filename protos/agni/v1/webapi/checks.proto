@@ -97,6 +97,18 @@ message CheckDesignRequest {
   // `check` could not, so the one command most likely to be asked "does this layout pass" was the one
   // that could not be pointed at a layout.
   string board_uri = 4;
+  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
+  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+  // companion, copper from a board one.
+  //
+  // It exists because the CLI is a client of this service and carries the same flag. Resolution
+  // happens here, once, so a caller that wants the file itself has to be able to say so; without
+  // this field the service would silently override the CLI's own opt-out (agni issue 656).
+  //
+  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+  // how two views of one design are checked against each other.
+  bool as_named = 5;
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
@@ -186,6 +198,18 @@ message GetCheckReportRequest {
   string uri = 3;
   // Same semantics as CheckDesignRequest.board_uri.
   string board_uri = 4;
+  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
+  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+  // companion, copper from a board one.
+  //
+  // It exists because the CLI is a client of this service and carries the same flag. Resolution
+  // happens here, once, so a caller that wants the file itself has to be able to say so; without
+  // this field the service would silently override the CLI's own opt-out (agni issue 656).
+  //
+  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+  // how two views of one design are checked against each other.
+  bool as_named = 5;
 }
 
 message GetCheckReportResponse {

@@ -254,7 +254,19 @@ type GetDesignRequest struct {
 	// empty uses the default. Ignored for geometry-bearing files, which render faithfully.
 	Layout string `protobuf:"bytes,1,opt,name=layout,proto3" json:"layout,omitempty"`
 	// uri names the design to load, "mount://<mount>/<path>".
-	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
+	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+	// companion, copper from a board one.
+	//
+	// It exists because the CLI is a client of this service and carries the same flag. Resolution
+	// happens here, once, so a caller that wants the file itself has to be able to say so; without
+	// this field the service would silently override the CLI's own opt-out (agni issue 656).
+	//
+	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+	// how two views of one design are checked against each other.
+	AsNamed       bool `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -301,6 +313,13 @@ func (x *GetDesignRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *GetDesignRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 type GetDesignResponse struct {
@@ -460,7 +479,19 @@ type GetSheetRequest struct {
 	// faithful layout (always the design's own symbols).
 	Symbols SymbolSource `protobuf:"varint,4,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
 	// uri names the design the sheet belongs to.
-	Uri           string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
+	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
+	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+	// companion, copper from a board one.
+	//
+	// It exists because the CLI is a client of this service and carries the same flag. Resolution
+	// happens here, once, so a caller that wants the file itself has to be able to say so; without
+	// this field the service would silently override the CLI's own opt-out (agni issue 656).
+	//
+	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+	// how two views of one design are checked against each other.
+	AsNamed       bool `protobuf:"varint,6,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -528,6 +559,13 @@ func (x *GetSheetRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *GetSheetRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 type GetSheetResponse struct {
@@ -627,7 +665,11 @@ type HighlightSheetRequest struct {
 	// specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
 	Specs []*geom.HighlightSpec `protobuf:"bytes,5,rep,name=specs,proto3" json:"specs,omitempty"`
 	// uri names the design the sheet belongs to.
-	Uri           string `protobuf:"bytes,6,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,6,opt,name=uri,proto3" json:"uri,omitempty"`
+	// as_named matches GetSheetRequest's, and must, or a highlight would be drawn against a different
+	// artifact than the sheet it lands on: the two calls resolve one design and have to resolve it the
+	// same way.
+	AsNamed       bool `protobuf:"varint,7,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -702,6 +744,13 @@ func (x *HighlightSheetRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *HighlightSheetRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 type HighlightSheetResponse struct {
@@ -794,7 +843,19 @@ type GetLayoutReportRequest struct {
 	// symbols selects the node artwork the report explains; unset means GLYPH.
 	Symbols SymbolSource `protobuf:"varint,1,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
 	// uri names the design to report on.
-	Uri           string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
+	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+	// companion, copper from a board one.
+	//
+	// It exists because the CLI is a client of this service and carries the same flag. Resolution
+	// happens here, once, so a caller that wants the file itself has to be able to say so; without
+	// this field the service would silently override the CLI's own opt-out (agni issue 656).
+	//
+	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+	// how two views of one design are checked against each other.
+	AsNamed       bool `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -841,6 +902,13 @@ func (x *GetLayoutReportRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *GetLayoutReportRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 type GetLayoutReportResponse struct {
@@ -1570,10 +1638,11 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
-	"\tparent_id\x18\x03 \x01(\tR\bparentId\"<\n" +
+	"\tparent_id\x18\x03 \x01(\tR\bparentId\"W\n" +
 	"\x10GetDesignRequest\x12\x16\n" +
 	"\x06layout\x18\x01 \x01(\tR\x06layout\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"\x91\x03\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x19\n" +
+	"\bas_named\x18\x03 \x01(\bR\aasNamed\"\x91\x03\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -1585,31 +1654,34 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x10native_available\x18\a \x01(\bR\x0fnativeAvailable\x12+\n" +
 	"\x11available_layouts\x18\b \x03(\tR\x10availableLayouts\x12!\n" +
 	"\fcontent_hash\x18\n" +
-	" \x01(\tR\vcontentHash\"\xbe\x01\n" +
+	" \x01(\tR\vcontentHash\"\xd9\x01\n" +
 	"\x0fGetSheetRequest\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +
 	"\x06format\x18\x03 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x126\n" +
 	"\asymbols\x18\x04 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
-	"\x03uri\x18\x05 \x01(\tR\x03uri\"f\n" +
+	"\x03uri\x18\x05 \x01(\tR\x03uri\x12\x19\n" +
+	"\bas_named\x18\x06 \x01(\bR\aasNamed\"f\n" +
 	"\x10GetSheetResponse\x123\n" +
 	"\x06packed\x18\x01 \x01(\v2\x19.agni.v1.geom.PackedSheetH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svgB\t\n" +
-	"\acontent\"\xf7\x01\n" +
+	"\acontent\"\x92\x02\n" +
 	"\x15HighlightSheetRequest\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x126\n" +
 	"\asymbols\x18\x03 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x123\n" +
 	"\x06format\x18\x04 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x121\n" +
 	"\x05specs\x18\x05 \x03(\v2\x1b.agni.v1.geom.HighlightSpecR\x05specs\x12\x10\n" +
-	"\x03uri\x18\x06 \x01(\tR\x03uri\"p\n" +
+	"\x03uri\x18\x06 \x01(\tR\x03uri\x12\x19\n" +
+	"\bas_named\x18\a \x01(\bR\aasNamed\"p\n" +
 	"\x16HighlightSheetResponse\x127\n" +
 	"\x06packed\x18\x01 \x01(\v2\x1d.agni.v1.geom.PackedHighlightH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svgB\t\n" +
-	"\acontent\"b\n" +
+	"\acontent\"}\n" +
 	"\x16GetLayoutReportRequest\x126\n" +
 	"\asymbols\x18\x01 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\"S\n" +
+	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x19\n" +
+	"\bas_named\x18\x03 \x01(\bR\aasNamed\"S\n" +
 	"\x17GetLayoutReportResponse\x128\n" +
 	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"\x9c\x01\n" +
 	"\x12TraceDesignRequest\x12\x10\n" +

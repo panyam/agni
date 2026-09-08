@@ -51,7 +51,19 @@ type RunQueryRequest struct {
 	// a result table, from a board with nothing to report. Same ref semantics as `path`.
 	BoardUri string `protobuf:"bytes,3,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	// uri names the design to query.
-	Uri           string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
+	Uri string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
+	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
+	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+	// companion, copper from a board one.
+	//
+	// It exists because the CLI is a client of this service and carries the same flag. Resolution
+	// happens here, once, so a caller that wants the file itself has to be able to say so; without
+	// this field the service would silently override the CLI's own opt-out (agni issue 656).
+	//
+	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+	// how two views of one design are checked against each other.
+	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,6 +124,13 @@ func (x *RunQueryRequest) GetUri() string {
 		return x.Uri
 	}
 	return ""
+}
+
+func (x *RunQueryRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the
@@ -765,12 +784,13 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x8f\x01\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xaa\x01\n" +
 	"\x0fRunQueryRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
 	"\tboard_uri\x18\x03 \x01(\tR\bboardUri\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uri\"\xf0\x01\n" +
+	"\x03uri\x18\x04 \x01(\tR\x03uri\x12\x19\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\"\xf0\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x14\n" +
 	"\x05cites\x18\x02 \x03(\tR\x05cites\x12;\n" +

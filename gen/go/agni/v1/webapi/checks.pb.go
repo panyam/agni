@@ -43,7 +43,19 @@ type CheckDesignRequest struct {
 	// review that has not landed in the design yet. `review` and `query` have taken one since WS3-089;
 	// `check` could not, so the one command most likely to be asked "does this layout pass" was the one
 	// that could not be pointed at a layout.
-	BoardUri      string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	BoardUri string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
+	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+	// companion, copper from a board one.
+	//
+	// It exists because the CLI is a client of this service and carries the same flag. Resolution
+	// happens here, once, so a caller that wants the file itself has to be able to say so; without
+	// this field the service would silently override the CLI's own opt-out (agni issue 656).
+	//
+	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+	// how two views of one design are checked against each other.
+	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,6 +116,13 @@ func (x *CheckDesignRequest) GetBoardUri() string {
 		return x.BoardUri
 	}
 	return ""
+}
+
+func (x *CheckDesignRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
@@ -335,7 +354,19 @@ type GetCheckReportRequest struct {
 	// uri names the design to report on.
 	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	// Same semantics as CheckDesignRequest.board_uri.
-	BoardUri      string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	BoardUri string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
+	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
+	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+	// companion, copper from a board one.
+	//
+	// It exists because the CLI is a client of this service and carries the same flag. Resolution
+	// happens here, once, so a caller that wants the file itself has to be able to say so; without
+	// this field the service would silently override the CLI's own opt-out (agni issue 656).
+	//
+	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+	// how two views of one design are checked against each other.
+	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,6 +427,13 @@ func (x *GetCheckReportRequest) GetBoardUri() string {
 		return x.BoardUri
 	}
 	return ""
+}
+
+func (x *GetCheckReportRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 type GetCheckReportResponse struct {
@@ -1306,12 +1344,13 @@ var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\x92\x01\n" +
+	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\xad\x01\n" +
 	"\x12CheckDesignRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
-	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\"z\n" +
+	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\"z\n" +
 	"\rOverlayConfig\x126\n" +
 	"\x06config\x18\x04 \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12%\n" +
 	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProjectJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03\"\xb6\x01\n" +
@@ -1321,12 +1360,13 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\bverdicts\x18\x03 \x03(\v2\x17.agni.v1.checks.VerdictR\bverdicts\"9\n" +
 	"\vSkippedRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"\x95\x01\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xb0\x01\n" +
 	"\x15GetCheckReportRequest\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x127\n" +
 	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n" +
-	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\"M\n" +
+	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\"M\n" +
 	"\x16GetCheckReportResponse\x123\n" +
 	"\x06report\x18\x01 \x01(\v2\x1b.agni.v1.checks.CheckReportR\x06report\".\n" +
 	"\x1aGetNamingConventionRequest\x12\x10\n" +

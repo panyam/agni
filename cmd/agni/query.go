@@ -131,7 +131,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				return err
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
-				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI,
+				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
 			})
 			if err != nil {
 				return err

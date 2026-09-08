@@ -142,6 +142,78 @@ func SourcesFor(d *webapi.Design, named string) DesignSources {
 	return s
 }
 
+// ResolveSources decides which artifact each tier reads, for a ref that has already been resolved to
+// a design. It is the DECISION half of resolution and does no I/O: the caller finds the design (the
+// CLI over a store rooted at its argument's mount, a server over the store it was built with) and
+// this says what to open.
+//
+// It exists because the rule was written twice. `SourcesFor` was already shared for the "which
+// companion supplies the board" half, and the half ABOVE it, deciding whether the caller named the
+// design, its entry, a declared companion or an unrelated file, lived only in `cmd/agni`. So the CLI
+// composed a design and the served path did not, and one design read two ways gave two different
+// drawings with nothing to say why (agni issue 656, constraint C32).
+//
+// The four cases, and the reasoning for each:
+//
+//   - `d` is nil: the ref belongs to no declared design. Read exactly what was named, which is the
+//     ordinary case for any mounted folder without descriptors.
+//   - The ref names the design itself (a folder) or its ENTRY: it gets the design's declared
+//     companions. Naming the entry IS naming the design, and treating it otherwise is what made one
+//     design render two ways.
+//   - The ref names a declared COMPANION: analysis moves to the entry and the named artifact keeps
+//     whatever tier it alone supplies, which is why the caller pointed at it.
+//   - The ref names an UNDECLARED sibling: read exactly what was named. Redirection is confined to
+//     files an operator listed, because a later revision of the netlist sits in the same folder and
+//     is a legitimate analysis source; inferring would turn a diff of two revisions into a diff of
+//     one against itself.
+//
+// asNamed disables redirection entirely: read the artifact named, whatever the descriptor says.
+// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake.
+func ResolveSources(d *webapi.Design, ref string, isDir, asNamed bool) Resolution {
+	plain := Resolution{DesignSources: DesignSources{NetlistURI: ref, BoardURI: ref, GeometryURI: ref}}
+	if d == nil {
+		return plain
+	}
+	r := Resolution{
+		NamedIsTheDesign: isDir && ref == d.GetUri(),
+		NamedIsTheEntry:  !isDir && ref == d.GetEntryUri(),
+	}
+	// asNamed does NOT apply to the design itself. A folder is not a readable artifact, so "read
+	// exactly what I named" has no meaning for one and would resolve every tier to a directory.
+	if !r.NamedIsTheDesign && (asNamed || !(r.NamedIsTheEntry || IsCompanion(d, ref))) {
+		return plain
+	}
+	// Naming the design or its entry asks for the design as declared, so no tier is pinned to the
+	// ref. Naming a companion pins the tiers only that companion can supply.
+	from := ref
+	if r.NamedIsTheDesign || r.NamedIsTheEntry {
+		from = ""
+	}
+	r.DesignSources = SourcesFor(d, from)
+	r.FromDeclaration = true
+	return r
+}
+
+// Resolution is what a ref resolved to: the artifact each tier reads, and how that was arrived at.
+//
+// The two flags are carried rather than left for the caller to recompute, because a caller that
+// re-derives "was this the entry" against a path it typed instead of the ref it resolved compares
+// unlike with unlike, silently, and then narrates the wrong thing. The CLI's stderr note is written
+// from these.
+type Resolution struct {
+	DesignSources
+	// NamedIsTheDesign is set when the ref named the design itself, which is a folder.
+	NamedIsTheDesign bool
+	// NamedIsTheEntry is set when the ref named the design's declared entry file. Naming the entry IS
+	// naming the design, and treating it otherwise is what made one design render two ways.
+	NamedIsTheEntry bool
+	// FromDeclaration is set when the tiers came from the design's declaration rather than from the
+	// ref alone. It is not the same as "a tier moved": naming the entry of a design that declares no
+	// companion applies the declaration and changes nothing, and a caller narrating what it read
+	// wants to distinguish those two from a ref that was never resolved at all.
+	FromDeclaration bool
+}
+
 // IsCompanion reports whether ref is one of the views this design declared of itself.
 func IsCompanion(d *webapi.Design, ref string) bool {
 	for _, c := range d.GetCompanionUris() {

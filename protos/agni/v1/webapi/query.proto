@@ -62,6 +62,18 @@ message RunQueryRequest {
   string board_uri = 3;
   // uri names the design to query.
   string uri = 4;
+  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
+  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+  // companion, copper from a board one.
+  //
+  // It exists because the CLI is a client of this service and carries the same flag. Resolution
+  // happens here, once, so a caller that wants the file itself has to be able to say so; without
+  // this field the service would silently override the CLI's own opt-out (agni issue 656).
+  //
+  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+  // how two views of one design are checked against each other.
+  bool as_named = 5;
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns, and cites is the

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/design.proto.
  */
 export const file_agni_v1_webapi_design: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIi8KEEdldERlc2lnblJlcXVlc3QSDgoGbGF5b3V0GAEgASgJEgsKA3VyaRgCIAEoCSKaAgoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCSKZAQoPR2V0U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEgsKA3VyaRgFIAEoCSJZChBHZXRTaGVldFJlc3BvbnNlEisKBnBhY2tlZBgBIAEoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRTaGVldEgAEg0KA3N2ZxgCIAEoCUgAQgkKB2NvbnRlbnQiywEKFUhpZ2hsaWdodFNoZWV0UmVxdWVzdBINCgVzaGVldBgBIAEoCRIOCgZsYXlvdXQYAiABKAkSLQoHc3ltYm9scxgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRIrCgZmb3JtYXQYBCABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBIqCgVzcGVjcxgFIAMoCzIbLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTcGVjEgsKA3VyaRgGIAEoCSJjChZIaWdobGlnaHRTaGVldFJlc3BvbnNlEi8KBnBhY2tlZBgBIAEoCzIdLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHRIABINCgNzdmcYAiABKAlIAEIJCgdjb250ZW50IlQKFkdldExheW91dFJlcG9ydFJlcXVlc3QSLQoHc3ltYm9scxgBIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRILCgN1cmkYAiABKAkiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKHAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCRIrCgRmcm9tGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIpCgJ0bxgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kcG9pbnQSDAoEaG9wcxgEIAEoBSItCg1UcmFjZUVuZHBvaW50Eg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJIjsKE1RyYWNlRGVzaWduUmVzcG9uc2USJAoFdHJhY2UYASABKAsyFS5hZ25pLnYxLndlYmFwaS5UcmFjZSL7AQoFVHJhY2USJgoEZnJvbRgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kEiQKAnRvGAIgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSLQoHb3V0Y29tZRgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlRyYWNlT3V0Y29tZRIOCgZyZWFzb24YBCABKAkSDgoGcmFkaXVzGAUgASgFEi0KCWNyb3NzaW5ncxgGIAMoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSJgoEbmV0cxgHIAMoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlTmV0IloKCFRyYWNlRW5kEi8KCGVuZHBvaW50GAEgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIQCghwaW5fbmFtZRgCIAEoCRILCgNuZXQYAyABKAkicwoKVHJhY2VDcm9zcxIPCgdyZWZfZGVzGAEgASgJEg0KBWNsYXNzGAIgASgJEhEKCWVudGVyX3BpbhgDIAEoCRIQCghleGl0X3BpbhgEIAEoCRIQCghmcm9tX25ldBgFIAEoCRIOCgZ0b19uZXQYBiABKAkiagoIVHJhY2VOZXQSDAoEbmFtZRgBIAEoCRIoCgVzdHVicxgCIAMoCzIZLmFnbmkudjEud2ViYXBpLlRyYWNlU3R1YhIUCgxzdHVic19lbGlkZWQYAyABKAUSEAoIYnVzX2xpa2UYBCABKAgiOAoJVHJhY2VTdHViEg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJEg0KBWNsYXNzGAMgASgJIkcKEENvbnZlcnNpb25SZXBvcnQSMwoKY29tcG9uZW50cxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLkNvbXBvbmVudFJlcG9ydCJkCg9Db21wb25lbnRSZXBvcnQSDwoHcmVmX2RlcxgBIAEoCRIOCgZzeW1ib2wYAiABKAkSFAoMZGV2aWNlX2NsYXNzGAMgASgJEgwKBGNlbGwYBCABKAkSDAoEa2luZBgFIAEoCSpzCgtTaGVldEZvcm1hdBIcChhTSEVFVF9GT1JNQVRfVU5TUEVDSUZJRUQQABIXChNTSEVFVF9GT1JNQVRfUEFDS0VEEAESFAoQU0hFRVRfRk9STUFUX1NWRxACEhcKE1NIRUVUX0ZPUk1BVF9OQVRJVkUQAypiCgxTeW1ib2xTb3VyY2USHQoZU1lNQk9MX1NPVVJDRV9VTlNQRUNJRklFRBAAEhcKE1NZTUJPTF9TT1VSQ0VfR0xZUEgQARIaChZTWU1CT0xfU09VUkNFX0ZBSVRIRlVMEAIqgQEKDFRyYWNlT3V0Y29tZRIdChlUUkFDRV9PVVRDT01FX1VOU1BFQ0lGSUVEEAASGAoUVFJBQ0VfT1VUQ09NRV9ST1VURUQQARIaChZUUkFDRV9PVVRDT01FX05PX1JPVVRFEAISHAoYVFJBQ0VfT1VUQ09NRV9VTlJFU09MVkVEEAMyzQMKDURlc2lnblNlcnZpY2USUAoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlc3BvbnNlEk0KCEdldFNoZWV0Eh8uYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXNwb25zZRJfCg5IaWdobGlnaHRTaGVldBIlLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVzcG9uc2USYgoPR2V0TGF5b3V0UmVwb3J0EiYuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlc3BvbnNlElYKC1RyYWNlRGVzaWduEiIuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIkEKEEdldERlc2lnblJlcXVlc3QSDgoGbGF5b3V0GAEgASgJEgsKA3VyaRgCIAEoCRIQCghhc19uYW1lZBgDIAEoCCKaAgoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCSKrAQoPR2V0U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEgsKA3VyaRgFIAEoCRIQCghhc19uYW1lZBgGIAEoCCJZChBHZXRTaGVldFJlc3BvbnNlEisKBnBhY2tlZBgBIAEoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRTaGVldEgAEg0KA3N2ZxgCIAEoCUgAQgkKB2NvbnRlbnQi3QEKFUhpZ2hsaWdodFNoZWV0UmVxdWVzdBINCgVzaGVldBgBIAEoCRIOCgZsYXlvdXQYAiABKAkSLQoHc3ltYm9scxgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRIrCgZmb3JtYXQYBCABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBIqCgVzcGVjcxgFIAMoCzIbLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTcGVjEgsKA3VyaRgGIAEoCRIQCghhc19uYW1lZBgHIAEoCCJjChZIaWdobGlnaHRTaGVldFJlc3BvbnNlEi8KBnBhY2tlZBgBIAEoCzIdLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHRIABINCgNzdmcYAiABKAlIAEIJCgdjb250ZW50ImYKFkdldExheW91dFJlcG9ydFJlcXVlc3QSLQoHc3ltYm9scxgBIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRILCgN1cmkYAiABKAkSEAoIYXNfbmFtZWQYAyABKAgiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKHAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCRIrCgRmcm9tGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIpCgJ0bxgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kcG9pbnQSDAoEaG9wcxgEIAEoBSItCg1UcmFjZUVuZHBvaW50Eg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJIjsKE1RyYWNlRGVzaWduUmVzcG9uc2USJAoFdHJhY2UYASABKAsyFS5hZ25pLnYxLndlYmFwaS5UcmFjZSL7AQoFVHJhY2USJgoEZnJvbRgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kEiQKAnRvGAIgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSLQoHb3V0Y29tZRgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlRyYWNlT3V0Y29tZRIOCgZyZWFzb24YBCABKAkSDgoGcmFkaXVzGAUgASgFEi0KCWNyb3NzaW5ncxgGIAMoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSJgoEbmV0cxgHIAMoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlTmV0IloKCFRyYWNlRW5kEi8KCGVuZHBvaW50GAEgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIQCghwaW5fbmFtZRgCIAEoCRILCgNuZXQYAyABKAkicwoKVHJhY2VDcm9zcxIPCgdyZWZfZGVzGAEgASgJEg0KBWNsYXNzGAIgASgJEhEKCWVudGVyX3BpbhgDIAEoCRIQCghleGl0X3BpbhgEIAEoCRIQCghmcm9tX25ldBgFIAEoCRIOCgZ0b19uZXQYBiABKAkiagoIVHJhY2VOZXQSDAoEbmFtZRgBIAEoCRIoCgVzdHVicxgCIAMoCzIZLmFnbmkudjEud2ViYXBpLlRyYWNlU3R1YhIUCgxzdHVic19lbGlkZWQYAyABKAUSEAoIYnVzX2xpa2UYBCABKAgiOAoJVHJhY2VTdHViEg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJEg0KBWNsYXNzGAMgASgJIkcKEENvbnZlcnNpb25SZXBvcnQSMwoKY29tcG9uZW50cxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLkNvbXBvbmVudFJlcG9ydCJkCg9Db21wb25lbnRSZXBvcnQSDwoHcmVmX2RlcxgBIAEoCRIOCgZzeW1ib2wYAiABKAkSFAoMZGV2aWNlX2NsYXNzGAMgASgJEgwKBGNlbGwYBCABKAkSDAoEa2luZBgFIAEoCSpzCgtTaGVldEZvcm1hdBIcChhTSEVFVF9GT1JNQVRfVU5TUEVDSUZJRUQQABIXChNTSEVFVF9GT1JNQVRfUEFDS0VEEAESFAoQU0hFRVRfRk9STUFUX1NWRxACEhcKE1NIRUVUX0ZPUk1BVF9OQVRJVkUQAypiCgxTeW1ib2xTb3VyY2USHQoZU1lNQk9MX1NPVVJDRV9VTlNQRUNJRklFRBAAEhcKE1NZTUJPTF9TT1VSQ0VfR0xZUEgQARIaChZTWU1CT0xfU09VUkNFX0ZBSVRIRlVMEAIqgQEKDFRyYWNlT3V0Y29tZRIdChlUUkFDRV9PVVRDT01FX1VOU1BFQ0lGSUVEEAASGAoUVFJBQ0VfT1VUQ09NRV9ST1VURUQQARIaChZUUkFDRV9PVVRDT01FX05PX1JPVVRFEAISHAoYVFJBQ0VfT1VUQ09NRV9VTlJFU09MVkVEEAMyzQMKDURlc2lnblNlcnZpY2USUAoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlc3BvbnNlEk0KCEdldFNoZWV0Eh8uYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXNwb25zZRJfCg5IaWdobGlnaHRTaGVldBIlLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVzcG9uc2USYgoPR2V0TGF5b3V0UmVwb3J0EiYuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlc3BvbnNlElYKC1RyYWNlRGVzaWduEiIuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed]);
 
 /**
  * SheetRef identifies a drawable sheet within a design.
@@ -67,6 +67,23 @@ export type GetDesignRequest = Message<"agni.v1.webapi.GetDesignRequest"> & {
    * @generated from field: string uri = 2;
    */
   uri: string;
+
+  /**
+   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
+   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+   * companion, copper from a board one.
+   *
+   * It exists because the CLI is a client of this service and carries the same flag. Resolution
+   * happens here, once, so a caller that wants the file itself has to be able to say so; without
+   * this field the service would silently override the CLI's own opt-out (agni issue 656).
+   *
+   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+   * how two views of one design are checked against each other.
+   *
+   * @generated from field: bool as_named = 3;
+   */
+  asNamed: boolean;
 };
 
 /**
@@ -214,6 +231,23 @@ export type GetSheetRequest = Message<"agni.v1.webapi.GetSheetRequest"> & {
    * @generated from field: string uri = 5;
    */
   uri: string;
+
+  /**
+   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
+   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+   * companion, copper from a board one.
+   *
+   * It exists because the CLI is a client of this service and carries the same flag. Resolution
+   * happens here, once, so a caller that wants the file itself has to be able to say so; without
+   * this field the service would silently override the CLI's own opt-out (agni issue 656).
+   *
+   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+   * how two views of one design are checked against each other.
+   *
+   * @generated from field: bool as_named = 6;
+   */
+  asNamed: boolean;
 };
 
 /**
@@ -301,6 +335,15 @@ export type HighlightSheetRequest = Message<"agni.v1.webapi.HighlightSheetReques
    * @generated from field: string uri = 6;
    */
   uri: string;
+
+  /**
+   * as_named matches GetSheetRequest's, and must, or a highlight would be drawn against a different
+   * artifact than the sheet it lands on: the two calls resolve one design and have to resolve it the
+   * same way.
+   *
+   * @generated from field: bool as_named = 7;
+   */
+  asNamed: boolean;
 };
 
 /**
@@ -359,6 +402,23 @@ export type GetLayoutReportRequest = Message<"agni.v1.webapi.GetLayoutReportRequ
    * @generated from field: string uri = 2;
    */
   uri: string;
+
+  /**
+   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
+   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+   * companion, copper from a board one.
+   *
+   * It exists because the CLI is a client of this service and carries the same flag. Resolution
+   * happens here, once, so a caller that wants the file itself has to be able to say so; without
+   * this field the service would silently override the CLI's own opt-out (agni issue 656).
+   *
+   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+   * how two views of one design are checked against each other.
+   *
+   * @generated from field: bool as_named = 3;
+   */
+  asNamed: boolean;
 };
 
 /**

@@ -98,30 +98,21 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 		plain.Note = edsSiblingNote(named)
 		return plain, nil
 	}
-	namedIsTheDesign := isDir && uri.String() == d.GetUri()
-	// Naming the design's own ENTRY is naming the design, so it gets the design's declared companions
-	// too. The rule below it guards the NETLIST tier against an inferred redirect, and the entry is by
-	// definition not the file that rule protects: an undeclared sibling revision is still left alone.
-	// Without this a design whose faithful geometry lives in a companion rendered its auto-layout
-	// whenever the caller typed the netlist's own filename rather than the folder, which is the same
-	// design read by two names giving two different drawings.
-	namedIsTheEntry := !isDir && uri.String() == d.GetEntryUri()
-	if !namedIsTheDesign && (r.asNamed || !(namedIsTheEntry || service.IsCompanion(d, uri.String()))) {
+	// The decision itself is service.ResolveSources, so the CLI and the served path cannot disagree
+	// about which artifact a tier reads (C32). What stays here is the I/O around it: turning a typed
+	// path into a ref, finding the tree root, and the stderr note.
+	res := service.ResolveSources(d, uri.String(), isDir, r.asNamed)
+	if !res.FromDeclaration {
+		// Read exactly what was named, so there is nothing to narrate: an undeclared sibling, or
+		// --as-named on a companion. plain already holds the ref in all three tiers.
 		return plain, nil
 	}
-
-	// The design itself was named, or its entry, or one of its declared companions.
-	from := uri.String()
-	if namedIsTheDesign || namedIsTheEntry {
-		from = ""
-	}
-	tiers := service.SourcesFor(d, from)
 	// Computed on REFS, before they become paths, so "did this tier come from the file the user
 	// named" compares like with like. A ref against the path string the user typed silently never
 	// matches, and the note then claims every tier was pulled in unasked.
-	note := resolutionNote(named, uri.String(), d, tiers, namedIsTheDesign, namedIsTheEntry)
+	note := resolutionNote(named, uri.String(), d, res.DesignSources, res.NamedIsTheDesign, res.NamedIsTheEntry)
 
-	return designSource{DesignSources: tiers, Note: note}, nil
+	return designSource{DesignSources: res.DesignSources, Note: note}, nil
 }
 
 // resolutionNote is the stderr line naming every artifact that was read but not asked for.

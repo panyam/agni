@@ -591,7 +591,7 @@ func checkCmd() *cobra.Command {
 			// document rather than beside it is what makes the written artifact the SAME artifact the
 			// terminal showed, instead of a second one that happens to agree today.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 				if err != nil {
 					return err
 				}
@@ -629,7 +629,7 @@ func checkCmd() *cobra.Command {
 			}
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 				if err != nil {
 					return err
 				}
@@ -643,7 +643,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json, csv — all three need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 				if err != nil {
 					return err
 				}
