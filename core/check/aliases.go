@@ -21,6 +21,7 @@ type (
 	BoardVia       = model.BoardVia
 	Reach          = model.Reach
 	ReachStep      = model.ReachStep
+	RouteHop       = model.RouteHop
 
 	// The classification lexicon (WS3-070) lives in package classify (WS3-071) so the loader can run
 	// the ingestion pass without importing check. These aliases keep the historical check.* names for
@@ -101,3 +102,7 @@ const (
 
 // irModel is the default implementation of the model.Model contract.
 var _ model.Model = (*irModel)(nil)
+
+// RenderRoute is the single renderer for a series route, re-exported so a rule printing one need
+// not import core/model for the format alone.
+var RenderRoute = model.RenderRoute

@@ -24,6 +24,7 @@ expensive to rediscover.
 | The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
+| A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the nine forms), `core/ident`'s package comment |
 | The checks contract (CLI/service seam) | `architecture/checks-contract.md` |
 | Config: what a run is checked against, and where it comes from | `architecture/projects-and-designs.md` |
 | Semantic diff | `architecture/semantic-diff.md` |
@@ -242,6 +243,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   TEXT in `readers/formats/e2e_edif_conformance_test.go`, because a re-read goes back through the same
   forgiving reader and agrees with the writer whatever either does. `build/evidence.md` carries the
   out-of-tree oracle that says which properties are the right ones.
+- **`reaches` answers whether, `route` answers how.** `route(from, net, path)` is the same walk with
+  the route bound as a rendered string (`VBUS -> [R5] -> VBUS_F`), so a connectivity answer carries
+  its own evidence. It holds for exactly the pairs `reaches` holds for, so a route never ENDS on a
+  rail; `agni trace` is the pin-to-pin form that does. ONE route per pair, the BFS tree path, so it
+  cannot speak about parallel paths. **The rendered string is a CONTRACT**, owned by
+  `model.RenderRoute` and nowhere else: it was written twice within a week and the copies agreed only
+  by luck. DECISIONS.md carries the reversal that admitted a path as a column and what was accepted
+  with it.
 - **`query` emits five formats and two of them are DOCUMENTS.** `--format text|csv|json|markdown|html`
   plus `--title`. markdown and html carry the title, the design and THE QUERY above the answer, so a
   saved view states the question it answers; csv deliberately carries no preamble, because its first
@@ -341,6 +350,32 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   so orchestrating beats in bash duplicates demokit and produces no recording. **Run an example over a
   REAL board before trusting it** — the fixtures are small enough to hide scale bugs, and printing
   every ref-des in a bucket read fine at three parts and buried the screen at 531 (agni issue 644).
+
+**A declared pin map is the ninth intent form, and it compiles to FOUR rules.** `io_map` on a design's
+`intent.yaml` says which net lands on which pin of which device. Three rules ask whether the design
+kept that promise (`io-map-pin-mismatch`, `io-map-net-absent`, `io-map-far-end`) and the fourth,
+`io-map-coverage`, inverts the question: its considered set is the NETLIST, so it reports how much of
+the design the map never mentioned. That number is usually the point, because a map declaring two
+hundred of sixteen hundred nets leaves fourteen hundred UNEXAMINED, which is not clean. An undeclared
+net is `not-considered` and never a fail, and rails stay in the denominator with their reason saying
+so, because excusing them is the tool deciding which absences are acceptable. `function` is carried
+and NOTHING READS IT (issue 188); every verdict on a row declaring one says so outright.
+
+**Comparing an identifier across two documents goes through `core/ident`, never `==`.** A pin map is
+authored in the datasheet's vocabulary and a netlist answers in package designators, and both carry
+zero-padded indices, invisible characters pasted out of a PDF, and cells naming several functions at
+once. Measured against a shipped in-house checker on a real board: EVERY warning it produced was a
+string-comparison artifact and none was a design defect. `Canonical` is the one canonical form, used
+on BOTH sides; `\s` does NOT match U+200B, which is the defence that looks right and is not.
+**A pin name is compared loosely and a NET name is not** — a vendor table is inconsistent with itself,
+where a net name is the design's own identifier. **A caller comparing many against many builds a map
+keyed on `Canonical` rather than nesting `Compare`**: two hundred rows against sixteen hundred nets is
+320,000 comparisons however fast one is.
+
+**`pin.name(ref_des, pin, name)` is the pin's FUNCTIONAL name**, beside the package designator every
+other pin relation keys on. Both have always been in `ir.Pin` and only the designator was projected,
+so a question asked the way a datasheet asks it had nothing to read. It is projected VERBATIM, so
+canonicalizing belongs on the comparison and never at the projector.
 
 **`make oracle` is a separate suite and is NOT in the gate.** It cross-checks the KiCad reader
 against real boards, comparing the pin-to-net PARTITION against each board's own `.kicad_pcb` rather
@@ -483,6 +518,11 @@ Never commit:
   cite the document revision and page.
 
   The fixture-versus-corpus rule is in `docsite/content/architecture/datasheet-layer.md`.
+
+**The `--verdicts` list caps NON-ACTIONABLE rows at twenty per rule**, states the elided count, and
+never elides a fail or an inconclusive. One sample board went from 1977 lines to 799 with all 150
+actionable rows intact. A long list is a worse read; a hidden failure is a wrong answer. csv and html
+are untouched, because a spreadsheet and a scrollable page have no reason to fold anything.
 
 **A generated report IS customer data.** `check --format html` on a real board is tens of megabytes
 carrying every net name, ref-des and the design's title, and `-o` makes writing one a keystroke. The

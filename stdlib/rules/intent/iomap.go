@@ -435,12 +435,18 @@ func notEvaluatedFunction(v check.Verdict, a IOAssignment) check.Verdict {
 	return v
 }
 
+// routeText renders a trace through the SHARED route renderer rather than joining the parts here.
+//
+// It used to build the string itself, which made a second implementation of a format core/model
+// already owned, agreeing with it only because one person wrote both within a week. That is the
+// hazard DECISIONS.md names under "A path is not a query column": once a path is rendered into a
+// string, the rendering becomes a format nobody can change, and a second copy is how that begins.
 func routeText(t check.Trace) string {
-	parts := []string{t.From.Net}
-	for _, c := range t.Crossings {
-		parts = append(parts, "["+c.RefDes+"]", c.ToNet)
+	hops := make([]check.RouteHop, len(t.Crossings))
+	for i, c := range t.Crossings {
+		hops[i] = check.RouteHop{Through: c.RefDes, To: c.ToNet}
 	}
-	return strings.Join(parts, " -> ")
+	return check.RenderRoute(t.From.Net, hops)
 }
 
 func orNone(net string) string {

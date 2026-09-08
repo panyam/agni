@@ -1524,6 +1524,38 @@ counting datalog is otherwise unable to do (agni issue 374 names it as a motivat
 which the tuple form cannot express without the caller re-sorting by `?i`. Rendering a saved view is
 the likely candidate, and the answer there may be a report-side join rather than a column type.
 
+**REOPENED AND REVERSED (agni issue 518, PR 647).** The candidate above is the one that turned up.
+`query --format markdown|html|csv` renders a saved view, a rule's finding carries its evidence as one
+sentence, and neither can express a route as tuples without re-sorting and re-joining what the walk
+already had in order. `route(from, net, path)` ships, and `path` is a rendered string.
+
+What was accepted with it, since the objections above were right and none of them went away:
+
+- **Nothing joins, sorts or counts on `path`.** Those questions still want the tuple form, which is
+  still unbuilt. `route` answers "show me", never "how many".
+- **The rendering IS a format now.** That was the sharpest objection and it bit within the week: the
+  IO-map rules grew a second implementation of the same string (PR 653), agreeing with the first only
+  because one person wrote both. `model.RenderRoute` is now the single owner and
+  `TestRenderRouteIsTheOnlyFormat` holds the two callers to one answer. Treat the format as a
+  contract, because it is one.
+- **One route per pair**, the BFS tree path, so `route` cannot answer about parallel paths at all.
+- **It crosses the API boundary as an opaque string, in fields that already existed.** No proto
+  changed, which is what made the reversal cheap and is also what hides the cost: the rendering
+  travels in `QueryRow.cells` and in a `Witness`, so it is a wire contract with no schema, nothing
+  validating it and nothing versioning it. That is the whole reason `model.RenderRoute` has to be the
+  only producer.
+- **A client cannot make the crossed parts clickable.** The column-kind declaration types `from` and
+  `net` as net entities and `path` as a plain string, so a viewer can link both endpoints of a route
+  and not the resistor between them. The same route arrives fully structured over `TraceDesign`
+  (`repeated TraceCross`), so the engine answers the identical question two ways with different
+  fidelity depending on which surface asked.
+
+The tuple form would close that last one as a side effect, since `?through` would carry a component
+kind per row, which is worth knowing when 374 is picked up: it is not only about counting.
+
+The tuple form is not superseded. A `hop(?from, ?through, ?to, ?i)` relation remains the right answer
+for counting and joining, and issue 374 still names it; this decided the rendering question only.
+
 ## A KiCad part's library prefix is stripped by the WRITER, not by the reader
 
 A KiCad part is named `gateway:CONN4` and sits in a library already called `gateway`, so the

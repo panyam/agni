@@ -284,10 +284,43 @@ func (r Reach) RouteLine(target *ir.Net) string {
 	if _, reached := r.Depth[target.Name]; !reached {
 		return ""
 	}
+	// StepsTo records the net a step came FROM, and the rendering names the net each crossing arrives
+	// AT, so the two are shifted one place against each other. Step i arrives at step i+1's From, and
+	// the last one arrives at the target.
 	steps := r.StepsTo(target)
-	hops := make([]string, 0, 2*len(steps)+1)
-	for _, s := range steps {
-		hops = append(hops, s.From, "["+s.Through+"]")
+	if len(steps) == 0 {
+		return target.Name // the target IS the walk's start: one node, no crossings
 	}
-	return strings.Join(append(hops, target.Name), routeArrow)
+	hops := make([]RouteHop, len(steps))
+	for i, s := range steps {
+		to := target.Name
+		if i+1 < len(steps) {
+			to = steps[i+1].From
+		}
+		hops[i] = RouteHop{Through: s.Through, To: to}
+	}
+	return RenderRoute(steps[0].From, hops)
+}
+
+// RouteHop is one crossing of a rendered route: the part gone THROUGH and the net it arrives at.
+type RouteHop struct {
+	Through string
+	To      string
+}
+
+// RenderRoute is the ONE renderer for a series route, and every surface that prints one calls it.
+//
+// It exists because the format was written twice within a week of itself, once here off a walk result
+// and once in the IO-map rules off a check.Trace, and the two agreed only because one person wrote
+// both. DECISIONS.md ("A path is not a query column") names that hazard exactly: rendering a path into
+// a string makes the rendering a format nobody can change, and a second implementation is how that
+// starts. The two shapes carry different types, which is why the duplication looked reasonable at the
+// time; the fix is a renderer that takes neither of them.
+func RenderRoute(first string, hops []RouteHop) string {
+	parts := make([]string, 0, 2*len(hops)+1)
+	parts = append(parts, first)
+	for _, h := range hops {
+		parts = append(parts, "["+h.Through+"]", h.To)
+	}
+	return strings.Join(parts, routeArrow)
 }

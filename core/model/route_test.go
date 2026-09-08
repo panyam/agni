@@ -66,3 +66,25 @@ func TestRouteLineReadsTheSameWalkAsStepsTo(t *testing.T) {
 		}
 	}
 }
+
+// The two surfaces that print a route must agree, and nothing held them together before: the query
+// column rendered off a walk result and the IO-map witness rendered off a check.Trace, in two
+// separate implementations that matched only because one person wrote both.
+//
+// This drives RenderRoute the way each caller does and requires one answer. It is the guard
+// DECISIONS.md asks for under "A path is not a query column": rendering a path into a string makes
+// the rendering a format nobody can change, so the format needs exactly one owner.
+func TestRenderRouteIsTheOnlyFormat(t *testing.T) {
+	r, nets := chainReach()
+	viaWalk := r.RouteLine(nets["N2"])
+
+	// The trace-shaped caller: a first net plus one hop per crossing, naming the net it arrives at.
+	viaTrace := RenderRoute("N0", []RouteHop{{Through: "R1", To: "N1"}, {Through: "R2", To: "N2"}})
+
+	if viaWalk != viaTrace {
+		t.Errorf("the two callers render one route differently:\n  walk:  %q\n  trace: %q", viaWalk, viaTrace)
+	}
+	if viaWalk != "N0 -> [R1] -> N1 -> [R2] -> N2" {
+		t.Errorf("RouteLine = %q, want the documented format", viaWalk)
+	}
+}
