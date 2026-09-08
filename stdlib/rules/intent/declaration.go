@@ -336,7 +336,8 @@ type IOAssignment struct {
 	// YET.
 	//
 	// Deciding whether a selected function is LEGAL on a given pin means reading the part's
-	// alternate-function table, which is a different modality and is agni issue 188's job. The field
+	// alternate-function table, which is a different modality and has no shape in the datasheet contract
+	// yet. That is agni issue 667, NOT issue 188, which is the pin FUNCTION table and is done. The field
 	// is carried now so a map is authored once rather than twice.
 	//
 	// Carrying a field nothing checks is a real hazard and this package says so elsewhere: the

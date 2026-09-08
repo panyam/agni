@@ -423,7 +423,7 @@ func notEvaluatedFunction(v check.Verdict, a IOAssignment) check.Verdict {
 	if a.Function == "" {
 		return v
 	}
-	note := fmt.Sprintf("the declared function %q was NOT evaluated: deciding whether a function is legal on a pin needs the part's alternate-function table (agni issue 188)", a.Function)
+	note := fmt.Sprintf("the declared function %q was NOT evaluated: deciding whether a function is legal on a pin needs the part's alternate-function table, which the contract has no shape for (agni issue 667)", a.Function)
 	switch {
 	case v.Witness != nil:
 		v.Witness.Statement += ". " + note
