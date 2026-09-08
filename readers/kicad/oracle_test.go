@@ -158,6 +158,69 @@ func TestBusVectorOffsetRangeMapsByPosition(t *testing.T) {
 	}
 }
 
+// TestGroupBusCrossesSheetBoundary is the guard for agni issue 597, the other third of issue 561.
+// A GROUP bus takes its members from a `bus_alias` rather than an index range, and it crosses a sheet
+// boundary the same way a vector does: the root's `I2C0.SDA` tap and the sub-sheet's `I2C7.SDA` tap
+// are one net, named by the parent's prefix.
+//
+// The fixture carries its own control. `I2C8{I2C}` expands the SAME two member names off the SAME
+// alias and crosses nothing, so R3 and R4 must stay off I2C0's nets. That direction is the dangerous
+// one: eight buses share the `I2C` alias on the jetson baseboard, so a promotion that dropped the
+// prefix would short all eight while moving the net count toward KiCad's answer.
+//
+// It red-checks both ways: drop the group branch of busPinPromotions and the crossing halves split;
+// promote without the prefix and the control merges.
+func TestGroupBusCrossesSheetBoundary(t *testing.T) {
+	d, complete, err := ReadSchematicHierarchyNets("hier_busgroup_root.kicad_sch",
+		readFixture(t, "hier_busgroup_root.kicad_sch"), hierOpen(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !complete {
+		t.Fatal("hierarchy walk did not complete; the sub-sheet did not open")
+	}
+	if bad := disagreements(pinNets(d), readOracle(t, "hier_busgroup.oracle")); len(bad) > 0 {
+		t.Errorf("net partition disagrees with kicad-cli:\n  %s", strings.Join(bad, "\n  "))
+	}
+}
+
+// TestGroupBusNeedsADeclaredAlias is the false-positive control, and the reason recognition is a
+// table lookup rather than a tighter pattern.
+//
+// KiCad renders `_{...}` as a subscript, so `A_{1}` and `3V3_{OUT}` are ordinary scalar labels with
+// the exact shape of a group bus. No pattern separates them from `I2C0{I2C}`; what separates them is
+// that no `bus_alias` declares `1` or `OUT`. The jetson baseboard carries over a hundred distinct
+// subscript groups and not one names an alias, so the lookup is exact where a pattern could only
+// guess.
+func TestGroupBusNeedsADeclaredAlias(t *testing.T) {
+	aliases := map[string][]string{"I2C": {"SDA", "SCL"}}
+	for _, tc := range []struct {
+		name    string
+		prefix  string
+		isGroup bool
+	}{
+		{name: "I2C0{I2C}", prefix: "I2C0", isGroup: true},
+		// The alias is the LAST brace group, and a prefix may carry one of its own. This spelling is
+		// the most common group bus on the jetson baseboard.
+		{name: "I2C_{SYS}{I2C}", prefix: "I2C_{SYS}", isGroup: true},
+		{name: "A_{1}"},
+		{name: "3V3_{OUT}"},
+		{name: "I2C0{SPI}"},
+		{name: "I2C0"},
+		{name: "DATA[0..1]"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			prefix, _, ok := groupBus(tc.name, aliases)
+			if ok != tc.isGroup {
+				t.Fatalf("groupBus(%q) recognized = %v, want %v", tc.name, ok, tc.isGroup)
+			}
+			if ok && prefix != tc.prefix {
+				t.Errorf("groupBus(%q) prefix = %q, want %q", tc.name, prefix, tc.prefix)
+			}
+		})
+	}
+}
+
 // TestBusMembersAscending pins the ordering the positional map is built on. kicad-cli joins the
 // child's bit 0 of `B[0..1]` to `A0` of a parent bus spelled `A[3..0]`, not to `A3`, so the members
 // pair off by ascending index whatever direction the range is written in. netgraph.ExpandBusName

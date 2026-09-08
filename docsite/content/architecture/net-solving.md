@@ -82,6 +82,16 @@ Per sheet instance (a reused file is walked once per placement), pre-order:
 4. **Ports.** For each `(sheet ...)` block, the parent emits an anchor at every sheet pin's position, labeled `<childID>/<pin name>`: the same string the child's same-named hierarchical label produces under its prefix. Label-union joins the parent net to the child net, and rank 1 makes the port name the net's name when nothing better exists. This works per instance edge, so two `amp` instances bind their `CTRL` ports to different parent nets.
 5. **Recursion and completeness.** A child that fails to open (or a `Sheetfile` cycling back to an ancestor) is skipped and flips `complete` to false. The rest still reads.
 
+### Buses cross by a different rule
+
+A sheet pin joins a scalar signal by POSITION: the parent drops an anchor at the pin carrying the child-qualified name, the child's hierarchical label emits the same string, and label-union does the rest. A bus pin cannot work that way, because a bus is a drawing convention rather than a wire and its members are not at the pin. Each member is tapped off the bus somewhere else on each sheet, under its own label. So members cross by NAME instead: every member of a crossing bus resolves, inside the child, to the name it lands on in the parent.
+
+KiCad spells a bus two ways, and they pair their members by opposite rules. A **vector** `AN[0..7]` takes its members from the index range, and two vectors pair by bit position, so a child's `B0` joins a parent's `A0` across a rename and joins `PP2` when the parent's bus is `PP[2..3]`. A **group bus** `CAM0{CSI}` takes its members from a `bus_alias` declaration and names them `CAM0.CSI2_CLK+`, and two group buses pair by member name, so a parent of members `XX`/`YY` against a child of members `PP`/`QQ` joins nothing at all even though both are two wide. Both rules were measured against `kicad-cli sch export netlist` rather than reasoned about, and guessing either one wrong joins signals the design keeps apart.
+
+Two things decide whether a label names a bus at all, and neither is its spelling. A bus label is only read off the BUS wire graph, so a label on an ordinary wire never promotes anything. And a group bus is recognised by its alias being DECLARED, because KiCad renders `_{...}` as a subscript and `A_{1}` has the exact shape of `I2C0{I2C}`. Aliases resolve project-wide rather than per file: nine of the fourteen sheets on the sample board that use a group bus declare no alias at all.
+
+Where the drawing does not say which branch a pin sits on, nothing is promoted. Two different bus labels tying at the same distance from the pin, or one sheet file placed several times so every instance's pin is spelled identically, both resolve to no promotion, leaving the members split. That is the safe direction: a split net reports as stubs and someone notices, while a wrongly joined one is a short that every later rule believes.
+
 {{ includeFile "figures/hierarchy-bands.svg" }}
 
 After the walk there is one solve, then pinless named nets are filtered (KiCad omits a label on a dangling wire), and dangling endpoints are translated back out of their bands (subtract `k · 2^41`, with the source file looked up by band index) so diagnostics carry sheet-frame coordinates the viewer can draw.

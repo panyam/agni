@@ -14,16 +14,18 @@ const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetso
 // TestSampleBoardRead pins what the reader currently produces for a real hierarchical board.
 //
 // It is a CHARACTERIZATION test, so one of the three numbers below is knowingly wrong and is
-// asserted anyway. KiCad resolves this board to 1387 nets and we produce 1729, because a net crossing
-// a sheet boundary is read as two nets: `/inout_user/AN0` and `AN0` where KiCad has one `/AN0`.
-// Asserting 1729 is what makes a fix VISIBLE, so whoever moves it changes the constant deliberately
-// rather than discovering months later that a number drifted.
+// asserted anyway. KiCad resolves this board to 1387 nets and we produce 1478, because a net crossing
+// a sheet boundary can still be read as two. Asserting the wrong number is what makes the next fix
+// VISIBLE, so whoever moves it changes the constant deliberately rather than discovering months later
+// that a number drifted.
 //
-// The first half of issue 561 has landed and this number did not move, which is itself the finding.
-// That fix follows a bus VECTOR (`AN[0..7]`) across a sheet boundary and clears the split entirely on
-// the boards that use one. This board crosses with GROUP buses instead — `CAM0{CSI}`, whose members
-// come from a `bus_alias` and are named `CAM0.CLK_N` — and those are still not followed. Which nets
-// are still wrong, rather than how many, is in readers/kicad/oracle_corpus.baseline.
+// It has moved once, from 1729, when issue 597 taught the walk to follow a GROUP bus across a sheet
+// boundary. A group bus is the spelling this board uses, `CAM0{CSI}`, whose members come from a
+// `bus_alias` and are named `CAM0.CSI2_CLK+`. Following them closed 251 of the 342 and took the
+// board's single-pin group-bus member nets from 450 to none. Issue 561's first half, the bus VECTOR
+// (`AN[0..7]`), had landed before that and moved this number not at all, which is why the two are
+// separate issues. Which nets are still wrong, rather than how many, is in
+// readers/kicad/oracle_corpus.baseline.
 //
 // The other two are correct today and guard against regression: the component count matches KiCad
 // exactly, and the MPN count is what the datasheet tier joins on.
@@ -43,9 +45,9 @@ func TestSampleBoardRead(t *testing.T) {
 		t.Errorf("components = %d, want %d (KiCad resolves the same 1123 from the board file)", got, want)
 	}
 
-	if got, want := len(d.GetNets()), 1729; got != want {
-		t.Errorf("nets = %d, want %d; KiCad resolves 1387, and the gap is the group-bus half of "+
-			"issue 561. As that closes this constant should fall toward 1387", got, want)
+	if got, want := len(d.GetNets()), 1478; got != want {
+		t.Errorf("nets = %d, want %d; KiCad resolves 1387, and the remaining gap is the "+
+			"sliced-prefix half of issue 561. As that closes this constant should fall toward 1387", got, want)
 	}
 
 	var withMPN int
