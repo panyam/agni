@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // designsFS holds the synthetic sample designs the examples read. They are hand-authored
@@ -76,17 +77,14 @@ func fixturePath(name string) (string, error) {
 	return "", fmt.Errorf("no bundled fixture named %q", name)
 }
 
-// ReadFixture decodes a bundled design into the IR, picking the reader by extension exactly as
-// ReadDesign does for on-disk files. name is either the path Designs reports or a bare base name.
+// ReadFixture decodes a bundled design into the IR through the same formats.Loader an on-disk
+// read uses, so a fixture and a file of the same design produce the same IR. Loader.FS is the
+// embedded case: it makes every path an fs.ValidPath name, which the embed FS already is.
+// name is either the path Designs reports or a bare base name.
 func ReadFixture(name string) (*ir.Design, error) {
 	p, err := fixturePath(name)
 	if err != nil {
 		return nil, err
 	}
-	f, err := designsFS.Open(p)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return readByExt(f, name)
+	return (&formats.Loader{FS: designsFS}).ReadDesign(p)
 }

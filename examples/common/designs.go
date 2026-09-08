@@ -5,54 +5,21 @@
 // markdown, not a copy of the same plumbing.
 //
 // This package deliberately lives at the I/O edge. CONSTRAINTS C1 keeps file paths out of
-// the engine core (edif/kicad/ipc2581 each take an io.Reader), so the readByExt/ReadDesign
-// edge here mirrors cmd/agni's readDesign: examples do their file I/O the same way the CLI
-// does, without the core ever learning about paths.
+// the engine core (edif/kicad/ipc2581 each take an io.Reader), so the path handling lives
+// here and the reading goes through formats.Loader, which is the same entry point cmd/agni
+// uses. That is not a stylistic choice: the Loader is where the format-neutral INGESTION
+// PASSES run, and dispatching to a reader directly skips them silently.
 package common
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/panyam/agni/readers/edif"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
-	"github.com/panyam/agni/readers/ipc2581"
-	"github.com/panyam/agni/readers/kicad"
-	"github.com/panyam/agni/readers/telesis"
+	"github.com/panyam/agni/readers/formats"
 )
-
-// readByExt picks a reader by the name's extension and decodes r into the neutral IR. It is
-// the format dispatch shared by ReadDesign (on-disk files) and ReadFixture (embedded
-// fixtures); name supplies both the extension and the provenance source path.
-func readByExt(r io.Reader, name string) (*ir.Design, error) {
-	switch strings.ToLower(filepath.Ext(name)) {
-	case ".edn":
-		return edif.Read(r, name)
-	case ".tel":
-		return telesis.Read(r, name)
-	case ".kicad_pcb":
-		return kicad.Read(r, name)
-	case ".kicad_sch":
-		return kicad.ReadSchematic(r, name)
-	case ".xml", ".cvg":
-		// .xml is ambiguous, so sniff for the IPC-2581 root before committing to that reader.
-		br := bufio.NewReader(r)
-		head, _ := br.Peek(1024)
-		if !bytes.Contains(head, []byte("IPC-2581")) {
-			return nil, fmt.Errorf("%q: not an IPC-2581 file (no IPC-2581 root element)", name)
-		}
-		return ipc2581.Read(br, name)
-	default:
-		return nil, fmt.Errorf("no reader for %q (have: .edn, .kicad_pcb, .kicad_sch, .kicad_pro, .xml/.cvg)", filepath.Ext(name))
-	}
-}
 
 // Load reads a design from arg, which an example takes as user input. arg may be a filesystem
 // path (absolute, or relative to the working directory, e.g. "../common/designs/foo.edn") or
@@ -74,37 +41,15 @@ func Load(arg string) (*ir.Design, error) {
 	return nil, fmt.Errorf("no design at path %q, and no bundled fixture named %q", arg, filepath.Base(arg))
 }
 
-// ReadDesign reads a design file from disk into the IR, picking a reader by extension. A
-// .kicad_pro is a whole project (its sibling schematic + board merged); the rest are single
-// files. It mirrors cmd/agni's readDesign so examples read on-disk files exactly as the CLI
-// does. Examples that only touch bundled fixtures use ReadFixture instead.
+// ReadDesign reads a design file from disk into the IR through formats.Loader, which is what
+// cmd/agni reads through. Reader dispatch by extension, the .kicad_pro project merge, and the
+// format-neutral ingestion passes all live there.
+//
+// Going through the Loader rather than calling a reader directly is the whole point of this
+// function. The passes are where ir.Component.mpn is filled (classify.StampMPN) and where
+// provenance paths are rewritten, and a read that skips them produces an IR that parses,
+// counts correctly, and answers every datasheet-tier question with nothing. Nothing catches a
+// pass that is never called, so this stays one call and not a dispatch of its own.
 func ReadDesign(path string) (*ir.Design, error) {
-	if strings.ToLower(filepath.Ext(path)) == ".kicad_pro" {
-		return readKicadProject(path)
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return readByExt(f, path)
-}
-
-// readKicadProject merges the sibling .kicad_sch and .kicad_pcb sharing the .kicad_pro stem
-// into one IR. Either sibling may be absent; the merge degrades to whichever exists.
-func readKicadProject(proPath string) (*ir.Design, error) {
-	stem := strings.TrimSuffix(proPath, filepath.Ext(proPath))
-	var schR, pcbR io.Reader
-	if f, err := os.Open(stem + ".kicad_sch"); err == nil {
-		defer f.Close()
-		schR = f
-	}
-	if f, err := os.Open(stem + ".kicad_pcb"); err == nil {
-		defer f.Close()
-		pcbR = f
-	}
-	if schR == nil && pcbR == nil {
-		return nil, fmt.Errorf("kicad project %q: no sibling .kicad_sch or .kicad_pcb found", proPath)
-	}
-	return kicad.ReadProject(schR, pcbR, stem+".kicad_sch", stem+".kicad_pcb", nil)
+	return (&formats.Loader{}).ReadDesign(path)
 }
