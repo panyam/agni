@@ -231,6 +231,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   3980 components and 1617 nets off the `.edn` against 5219 and 4572 off the `.eds`, so nets inflate
   by 183%. A design that ships only a `.eds` can be rendered and queried, and its counts must never be
   compared against a design read from a netlist.
+- **KiCad's placement and bus rules are pinned against `kicad-cli`, and three of them are not what you
+  would guess.** A symbol is rotated and THEN mirrored, where the shared transform composes mirror
+  first, so a mirrored placement at 90 or 270 swapped its two pins onto each other's nets until agni
+  issue 577; the fix is the INVERSE angle rather than a reordering, which is why the renderer needed
+  no change. A bus VECTOR is spelled `[first..last]` and only that, so a KiCad label written
+  `DATA[1:0]` is a plain scalar name (xschem and gEDA do use that form). Two buses WIRED together
+  share the members whose names match, while a bus crossing a SHEET PIN pairs off by bit position,
+  ascending index. All of it is in `architecture/net-solving.md`, and **none of it is visible in a net
+  COUNT**: a pin swap moves one connection out of a net and another in, so one demo board read 47 nets
+  against KiCad's 47 while 19 were wrong.
 - **A locator records the path WITHIN the design's mount, never the host path.** Readers stamp
   `ir.Provenance.SourceFile` with whatever path they are handed, so the rename happens once after the
   read: `Loader.SourceName` maps a path to the name provenance should carry, and `relocateSources`

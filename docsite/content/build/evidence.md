@@ -69,6 +69,23 @@ passed, the real boards were unchanged, and nothing could have gone red if it we
 shipped fixture the data the feature consumes turned it from unfalsifiable into demonstrable, 0 rails
 to 3 on the tutorial netlist.
 
+**6. A fixture written to test a behaviour may be unable to EXHIBIT it, and then the finding is about
+the fixture.** `hier_bus_root.kicad_sch` labels its bus `DATA[1:0]`, and a session concluded from it
+that KiCad keeps bus members apart across a sheet boundary, which held up a fix for a while. KiCad's
+vector syntax is `[first..last]`, so that fixture contains no bus at all and could never have shown
+members crossing. Change nothing but the spelling and `kicad-cli` joins them. The fixture is kept as
+the control it actually is, with a comment saying so, and a sibling fixture carries the real case; the
+pair is only meaningful together. Before trusting a negative result from a fixture, check that a
+POSITIVE one was reachable from it.
+
+**7. Ask the reference tool rather than reasoning about the format.** Three defects in one session
+turned on a detail no reasonable derivation got right: bus members pair off by ascending index and not
+in written order, a symbol is rotated before it is mirrored, and a colon-spelled range is not a bus.
+Sign conventions, a Y-flip and two composition orders were all in play. Build the smallest input that
+distinguishes the cases, run it through the tool that owns the format, and read the answer off the
+output. A schematic with labelled wire stubs at the compass points reports where a pin landed; one
+with a tap per bus member reports which members crossed.
+
 ### What reading cannot see
 
 **6. Reading the code is not running it.** Three passes through one read path did not reveal that no
@@ -147,7 +164,15 @@ flowchart LR
     W --> E["the sweep is empty"]
     W --> F["both sides run through<br/>the same helper"]
     W --> H["the meaning changed and<br/>the compiler said nothing"]
+    W --> I["the baseline run did not<br/>build, and you grepped for<br/>matches"]
 ```
+
+That last one is about MEASURING a change rather than testing it, and it produces a confident number
+out of nothing. Comparing a branch against `main` by stashing one file gives a baseline only if the
+tree still compiles: a test file elsewhere referencing a symbol that file defines breaks the build,
+and a pipeline that greps the output for differences then reports none. Three such comparisons in a
+row came back clean and were all empty. Build the baseline in a `git worktree` at the commit you mean,
+where nothing can half-apply, and check that the run produced output at all before reading it.
 
 | The shape | The case that taught it | What makes it real |
 |---|---|---|

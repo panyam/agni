@@ -155,6 +155,22 @@ fixture directory, so it is a hash of COMMITTED content and of the tracked file 
 tutorial-runs` run before you commit a new fixture file computes a stamp that does not know about it,
 and the gate then goes red after the commit lands. Commit the fixtures first, regenerate second.
 
+**That ordering is now enforced rather than remembered** (agni issue 588). `inputHash` refuses a
+fixture holding files git neither tracks nor ignores, naming them and saying to commit first, so the
+local run fails the way CI would instead of passing and failing one push later. It cost three
+branches in one session before the check existed, twice right after the person had described the
+trap. Files git IGNORES stay invisible, and that distinction is the whole of it: counting them is
+agni issue 357, where the tutorial's own `make report` output meant everyone who had followed the
+tutorial rewrote the committed stamp on every gate run. `--exclude-standard` is the line between
+generated output nobody commits and a fixture somebody forgot to.
+
+A spec that cannot render does NOT fail the docsite build, by design: `AgniRun` puts the error in the
+page, on the theory that a tutorial showing an error is a tutorial someone fixes. It also writes to
+stderr now, because an operator running the build otherwise sees nothing at all, and
+`tutorial_runs_check.sh` keeps that output and prints it when a capture did not regenerate rather
+than merely changing. A MISSING capture and a stale one look identical in a `diff -rq` and want
+opposite responses.
+
 That has a consequence worth knowing before it surprises you: **a file added to a fixture directory
 restamps every capture reading that directory, whatever the file is for.** The directories are shared
 test-data trees, not per-capture folders, so an addition made for an unrelated reason moves captures
@@ -221,6 +237,12 @@ the probe, does not serve the tests' `demo` mount, and every link is withheld:
 failure in that trio, check the port. The general rule is worth more than the instance: this suite
 reaches out of the process, so **reproduce a suspected regression against unmodified `main` before
 reporting it**, which is what turned this one from a bug report into a `pkill`.
+
+**A gate that greps the tree sees a nested checkout too.** An agent that finishes inside this repo can
+leave a git worktree under `.claude/worktrees/`, a second full copy of the source, and
+`ir_model_check.sh` then found every reader's producer twice and failed. It skips that directory now.
+Same shape as the stamp trap from the other end: a check reading the working directory rather than
+the commit.
 
 ## What the gate does NOT run
 
