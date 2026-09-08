@@ -69,7 +69,7 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 			fmt.Fprintf(w, "    %-*s  %-*s  %s\n", outcomeWidth, outcomeWord(row.Outcome), width, row.SubjectLabel(), detail)
 			// The link goes on its own line rather than in a column. It runs past sixty characters,
 			// so a column of them would push the proof off the terminal, and it is absent by default:
-			// a row only carries one when the operator named a viewer with --url-base AND the design
+			// a row only carries one when the operator named a viewer with --server AND the design
 			// is one that viewer could resolve.
 			if row.URL != "" {
 				fmt.Fprintf(w, "    %s%s\n", strings.Repeat(" ", indent-4), row.URL)

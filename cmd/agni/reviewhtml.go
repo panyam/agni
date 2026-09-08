@@ -83,7 +83,7 @@ func evidenceFor(it review.ItemResult, meta rpt.Checklist) []rpt.ChecklistEviden
 
 // checklistMeta builds the page header and settles whether the run may promise links.
 //
-// It applies exactly the rule `check --url-base` applies, by calling the same two functions rather
+// It applies exactly the rule `check --server` applies, by calling the same two functions rather
 // than restating them: the mount has to be one the operator DECLARED, and the server has to agree it
 // serves that name from the same root. Restating it here is how the two surfaces would drift into
 // disagreeing about what a link means, which is the whole reason the report model is shared.
@@ -96,7 +96,7 @@ func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg string, spec s
 	urlBase := spec.base()
 	mountPath, contentHash, why := verdictLinkTarget(cmd.Context(), ws, ll, designURI, spec.self)
 	if urlBase != "" && why != "" {
-		fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no findings were linked: %s\n", why)
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: --server is set but no findings were linked: %s\n", why)
 	}
 	if urlBase != "" && mountPath != "" {
 		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {

@@ -11,7 +11,7 @@ import (
 // name means nothing on a server the operator did not start with it. --url-base says where the viewer
 // is; it does not say that this design is on it. Both are needed, and neither implies the other.
 func TestHTMLReportOnlyLinksAMountTheOperatorNamed(t *testing.T) {
-	loose := runCheck(t, "--verdicts", "--format", "html", "--url-base", "http://localhost:8080",
+	loose := runCheck(t, "--verdicts", "--format", "html", "--server", "http://localhost:8080",
 		"testdata/conformance/showcase.fires.kicad_sch")
 	if strings.Contains(loose, "<a href") {
 		t.Error("a locally-minted mount must not produce links; they resolve on nobody's server")

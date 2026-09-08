@@ -46,25 +46,33 @@ That writes a self-contained page: failures first, then each rule with what it e
 rule exists, and what to do about a failure. It needs no server and no assets, so it attaches to a
 review ticket or a release folder as one file.
 
-Give it `--url-base` and each subject becomes a link into a running viewer, which opens the board
-with that verdict's proof drawn:
+Give it `--server self` and each subject becomes a link into a viewer, which opens the board with
+that verdict's proof drawn:
 
 ```
-agni serve --addr :8080 --mount work=.
-agni check --format html --url-base http://localhost:8080 \
+agni check --format html --server self designs/gateway/gateway.edn > review.html
+```
+
+That is one command rather than two, and the reason is worth understanding, because it is the same
+reason a link can be withheld. A link is a promise the reader can follow, so the CLI emits one only
+when it knows the server serves the design it just read. `self` starts a viewer on a free port over
+THIS run's own mount table and blocks until Ctrl-C, so the two cannot disagree by construction.
+
+Point it at a server someone else is running and the promise has to be checked instead:
+
+```
+agni check --format html --server http://localhost:8080 \
   --mount work=. designs/gateway/gateway.edn > review.html
 ```
 
-The `--mount` is not decoration. A link is a promise the reader can follow, so the CLI emits one only
-when the design sits under a mount you NAMED, which is a mount a server started the same way also has.
-Run the check without it and the CLI mints a mount of its own, which means nothing on any server, so
-the report renders with plain text subjects instead of links. That is the honest answer rather than a
-URL that resolves on nobody's machine.
+The `--mount` is load-bearing there. The CLI asks that server whether it serves the same mounts from
+the same roots, and a mount you did not NAME is one it minted for this run alone, which means nothing
+on anybody's server. Then the report renders plain text subjects instead of links, and says why. That
+is the honest answer rather than a URL that resolves on nobody's machine.
 
-`agni serve` has to be told where the viewer's own assets are unless you are running from a checkout;
-see [Running the server](../../guide/running-the-server/). For one design and a quick look,
-[`agni open`](../03-see-it/) works that out for itself and prints a check command with the mount and
-`--url-base` already filled in.
+For one design and a quick look, [`agni open`](../03-see-it/) serves it and prints a ready-made check
+command with the mount already filled in, which is the same trade in the other order: `open` when you
+want the viewer open anyway, `--server self` when you want the report.
 
 Two things this is not. It is not the archival artifact: the results document replays without the
 design and this does not. And a rule that reports violations without stating what it examined is

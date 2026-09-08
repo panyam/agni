@@ -17,7 +17,7 @@ import (
 	rpt "github.com/panyam/agni/core/report"
 )
 
-// serverMountTimeout bounds the one call --url-base makes. A wrong address must cost a moment, not
+// serverMountTimeout bounds the one call --server makes. A wrong address must cost a moment, not
 // the run: the links are a convenience on top of an analysis that has already finished.
 const serverMountTimeout = 2 * time.Second
 
@@ -31,7 +31,7 @@ const serverMountTimeout = 2 * time.Second
 // What is new is the second return. Refusing to link is the right answer, but refusing silently is
 // not: a report with 265 rows and no links looks like a broken renderer, and nothing on the page or
 // in the terminal said which of the two halves was missing. The caller prints this whenever
-// --url-base was given and nothing came back.
+// --server was given and nothing came back.
 func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why string) {
 	if ws == nil {
 		return "", "this run has no mount table"
@@ -170,7 +170,7 @@ func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, de
 	urlBase := spec.base()
 	mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI, spec.self)
 	if urlBase != "" && why != "" {
-		fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no links were emitted: %s\n", why)
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: --server is set but no links were emitted: %s\n", why)
 	}
 	// A remote server is asked whether it agrees about the mount. `self` is not asked, because there is
 	// nobody to disagree: the table the links name is the table this process is about to serve.

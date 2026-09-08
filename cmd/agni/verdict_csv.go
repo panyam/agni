@@ -29,7 +29,7 @@ import (
 var verdictCSVColumns = []string{
 	"verdict_id",
 	// url opens this verdict's proof in a running viewer, and is EMPTY unless the operator named one
-	// with --url-base and the design is one the server could resolve. A blank cell is the correct
+	// with --server and the design is one the server could resolve. A blank cell is the correct
 	// answer for a loose file rather than a gap: a link assembled from a guessed address resolves on
 	// nobody's server, which reads as a broken tool rather than a mismatched setup (agni issue 392).
 	"url",

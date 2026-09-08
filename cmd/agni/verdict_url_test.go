@@ -39,7 +39,7 @@ func mountedShowcase(t *testing.T, args ...string) string {
 	t.Helper()
 	withMount(t)
 	return runCheck(t, append([]string{
-		"--verdicts", "--url-base", urlBaseFlag, "mount://demo/showcase.fires.kicad_sch",
+		"--verdicts", "--server", urlBaseFlag, "mount://demo/showcase.fires.kicad_sch",
 	}, args...)...)
 }
 
@@ -66,11 +66,11 @@ func TestVerdictRowsCarryAProofURL(t *testing.T) {
 // minted a mount locally, and that name means nothing on a server the operator did not start with it,
 // so a link built from it resolves nowhere. Silence is the correct answer.
 func TestALooseFileCarriesNoURL(t *testing.T) {
-	text := runCheck(t, "--verdicts", "--url-base", urlBaseFlag, "testdata/conformance/showcase.fires.kicad_sch")
+	text := runCheck(t, "--verdicts", "--server", urlBaseFlag, "testdata/conformance/showcase.fires.kicad_sch")
 	if strings.Contains(text, urlBaseFlag) {
 		t.Errorf("a loose file has no mount the server would recognise, so it must emit no link:\n%s", text)
 	}
-	csv := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+	csv := runCheck(t, "--verdicts", "--format", "csv", "--server", urlBaseFlag,
 		"testdata/conformance/showcase.fires.kicad_sch")
 	if strings.Contains(csv, urlBaseFlag) {
 		t.Errorf("same for the csv, whose url column stays empty:\n%s", csv)
@@ -111,13 +111,13 @@ func TestEveryFormatComposesTheSameLink(t *testing.T) {
 // followable and both must be emitted.
 func TestAPlainPathThroughADeclaredMountIsLinkable(t *testing.T) {
 	withMount(t)
-	plain := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+	plain := runCheck(t, "--verdicts", "--format", "csv", "--server", urlBaseFlag,
 		"testdata/conformance/showcase.fires.kicad_sch")
 	if !strings.Contains(plain, urlBaseFlag+"/designs/demo/showcase.fires.kicad_sch/view?verdict=") {
 		t.Fatalf("a plain path under a declared mount must be linkable:\n%s", plain)
 	}
 
-	spelled := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+	spelled := runCheck(t, "--verdicts", "--format", "csv", "--server", urlBaseFlag,
 		"mount://demo/showcase.fires.kicad_sch")
 	if plain != spelled {
 		t.Errorf("the two spellings address one design and must produce identical output.\nplain:\n%s\nspelled:\n%s", plain, spelled)
@@ -128,7 +128,7 @@ func TestAPlainPathThroughADeclaredMountIsLinkable(t *testing.T) {
 // its name means nothing on a server the operator did not start with it.
 func TestAMintedMountIsStillNotLinkable(t *testing.T) {
 	// No withMount, so nothing is declared and the argument is minted a mount of its own.
-	csv := runCheck(t, "--verdicts", "--format", "csv", "--url-base", urlBaseFlag,
+	csv := runCheck(t, "--verdicts", "--format", "csv", "--server", urlBaseFlag,
 		"testdata/conformance/showcase.fires.kicad_sch")
 	if strings.Contains(csv, urlBaseFlag) {
 		t.Errorf("a minted mount resolves on nobody's server, so it must emit no link:\n%s", csv)
@@ -139,7 +139,7 @@ func TestAMintedMountIsStillNotLinkable(t *testing.T) {
 	cmd := checkCmd()
 	cmd.SetOut(new(bytes.Buffer))
 	cmd.SetErr(new(bytes.Buffer))
-	cmd.SetArgs([]string{"--verdicts", "--url-base", urlBaseFlag, "mount://demo/showcase.fires.kicad_sch"})
+	cmd.SetArgs([]string{"--verdicts", "--server", urlBaseFlag, "mount://demo/showcase.fires.kicad_sch"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("a mount:// URI naming an undeclared mount must be refused")

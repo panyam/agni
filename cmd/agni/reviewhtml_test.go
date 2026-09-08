@@ -70,7 +70,7 @@ func TestChecklistCarriesEveryFinding(t *testing.T) {
 	}
 }
 
-// TestChecklistPromisesNoLinkWithoutAMount: same rule as `check --url-base`. A base address alone is
+// TestChecklistPromisesNoLinkWithoutAMount: same rule as `check --server`. A base address alone is
 // half the pair, and a link built from the other half missing resolves on nobody's server.
 func TestChecklistPromisesNoLinkWithoutAMount(t *testing.T) {
 	c := buildChecklist(twoAreas(), rpt.Checklist{URLBase: "http://localhost:8080"})

@@ -440,7 +440,7 @@ func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
 	var verdicts bool
-	var urlBase, serverVal, outPath string
+	var serverVal, outPath string
 	var srvSpec serverSpec
 	cmd := &cobra.Command{
 		Use:   "check <file>",
@@ -462,7 +462,7 @@ func checkCmd() *cobra.Command {
 				return err
 			}
 			defer closeOut()
-			if srvSpec, err = resolveServer(cmd, serverVal, urlBase); err != nil {
+			if srvSpec, err = resolveServer(serverVal); err != nil {
 				return err
 			}
 			switch format {
@@ -662,7 +662,7 @@ func checkCmd() *cobra.Command {
 					// REFUSING TO LINK IS SAID OUT LOUD. Fail-closed was already right and already
 					// silent, so an operator who asked for links and got a page of rows with none had
 					// nothing to read that named the missing half. The notes below are only printed
-					// when --url-base was given, so a run that never asked for links stays quiet.
+					// when --server was given, so a run that never asked for links stays quiet.
 					//
 					// BOTH HALVES NAME THE ENTRY, not the argument, and they come from one
 					// resolution so they cannot drift apart (agni issue 489). The hash alone
@@ -722,7 +722,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
-	serverFlag(cmd, &serverVal, &urlBase)
+	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
 	outFileFlag(cmd, &outPath)
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
@@ -843,7 +843,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, urlBase, serverVal, reviewOutPath string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, serverVal, reviewOutPath string
 	var srvSpec serverSpec
 	var coverage bool
 	var ratifiedFloor float64
@@ -868,7 +868,7 @@ func reviewCmd() *cobra.Command {
 				return err
 			}
 			defer closeOut()
-			if srvSpec, err = resolveServer(cmd, serverVal, urlBase); err != nil {
+			if srvSpec, err = resolveServer(serverVal); err != nil {
 				return err
 			}
 			// Parsed BEFORE anything is read, so a typo in a CI config fails in the first millisecond
@@ -1074,7 +1074,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), or html (the checklist as a self-contained page, every finding per item)")
-	serverFlag(cmd, &serverVal, &urlBase)
+	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
 	outFileFlag(cmd, &reviewOutPath)
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
