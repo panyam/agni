@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -39,6 +40,25 @@ const topologyReachHops = 100
 // (a value-producing generator could break the finiteness guarantee), while reaches stays an
 // internal builtin.
 const relReaches = "reaches"
+
+// relRoute is the built-in route(from, to, path): the SAME walk reaches makes, with the route it
+// found bound as a value instead of discarded. `path` renders as
+//
+//	VBUS -[R5]- VBUS_F -[L1]- VDD_3V3
+//
+// which is a string, so every query column stays scalar and a route survives into a csv cell, a
+// markdown table and a rule's finding unchanged. That is the whole reason this is a separate
+// predicate rather than a fourth argument on reaches: arity 3 there already means hops, so a path
+// could only be reached by binding a distance the caller did not ask for.
+//
+// It yields exactly the pairs reaches yields, deliberately, so the two never disagree about what is
+// connected to what. One consequence follows and is worth stating: a route never ENDS on a rail
+// here, because the walk excludes a bus-like net entirely rather than admitting it as a terminus.
+// `agni trace` is the pin-to-pin form that does admit one.
+//
+// ONE route per pair, not every route. The walk is a BFS and the path is its tree path, so where two
+// resistors bridge the same two nets the answer names one of them and is silent about the other.
+const relRoute = "route"
 
 // builtin is a computed relation: an accepted arity range plus extend, the positive primitive for
 // that name. Filters (contains/prefix/suffix and overlay predicates) are built from a boolean via
@@ -80,6 +100,7 @@ func (bi builtin) arityLabel() string {
 
 var builtins = map[string]builtin{
 	relReaches: {arity: 2, maxArity: 3, generator: true, extend: extendReaches},
+	relRoute:   {arity: 3, generator: true, extend: extendRoute},
 	"contains": strFilter(strings.Contains),
 	"prefix":   strFilter(strings.HasPrefix),
 	"suffix":   strFilter(strings.HasSuffix),
@@ -152,8 +173,40 @@ func filterBuiltin(arity int, holds func(args []Value) (bool, error)) builtin {
 // One walk serves both arities: the third argument is an extra bindArg over a distance the BFS
 // already recorded, never a second traversal with different semantics.
 func extendReaches(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error {
+	return extendWalk(atom, bnd, b, func(next *binding, r check.Reach, dst *ir.Net) bool {
+		if len(atom.Args) <= 2 {
+			return true
+		}
+		hops := float64(r.Depth[dst.Name])
+		return bindArg(next, atom.Args[2], Value{S: ftoa(hops), Num: &hops})
+	}, yield)
+}
+
+// extendRoute binds route(from, to, path): the walk extendReaches makes, with the route rendered
+// into the third argument rather than the distance.
+//
+// A path is bound and never TESTED against, which is what keeps it safe as a generator output. The
+// value is drawn from the walk, so the set of strings it can produce is bounded by the design the
+// same way the net names in the first two arguments are, and the finiteness the evaluator rests on
+// is untouched. Comparing two of them is legal and meaningless, which is true of comparing two net
+// names as well.
+func extendRoute(atom *Atom, bnd *binding, b *Base, yield func(*binding) error) error {
+	return extendWalk(atom, bnd, b, func(next *binding, r check.Reach, dst *ir.Net) bool {
+		return bindArg(next, atom.Args[2], Value{S: r.RouteLine(dst)})
+	}, yield)
+}
+
+// extendWalk is the body reaches and route share: resolve the start argument to one net or to every
+// net, walk from each, and offer every net the walk reached as a binding of the first two arguments.
+// bindRest binds whatever the caller's third argument is, and returning false from it drops that
+// destination the way a failed unification does.
+//
+// One body rather than two because the START RESOLUTION is the part with the trap in it, and a
+// second copy is a second place for it to drift. A bound or constant `from` is one walk; an unbound
+// one walks from every net on the board, which is what GeneratorFirstRules exists to report.
+func extendWalk(atom *Atom, bnd *binding, b *Base, bindRest func(next *binding, r check.Reach, dst *ir.Net) bool, yield func(*binding) error) error {
 	if b.model == nil {
-		return nil // spec library mode (NewSpecLibBase): no design topology, so reaches yields nothing
+		return nil // spec library mode (NewSpecLibBase): no design topology, so the walk yields nothing
 	}
 	from, to := atom.Args[0], atom.Args[1]
 	starts := b.netByName
@@ -164,18 +217,15 @@ func extendReaches(atom *Atom, bnd *binding, b *Base, yield func(*binding) error
 		if start == nil {
 			continue
 		}
-		cite := "reaches from " + name
+		cite := atom.Relation + " from " + name
 		r := b.model.Reach(start, topologyReachHops)
 		for _, dst := range r.Nets {
 			next := bnd.clone()
 			if !bindArg(next, from, Value{S: name}) || !bindArg(next, to, Value{S: dst.Name}) {
 				continue
 			}
-			if len(atom.Args) > 2 {
-				hops := float64(r.Depth[dst.Name])
-				if !bindArg(next, atom.Args[2], Value{S: ftoa(hops), Num: &hops}) {
-					continue
-				}
+			if !bindRest(next, r, dst) {
+				continue
 			}
 			next.cites = append(next.cites, cite)
 			if err := yield(next); err != nil {

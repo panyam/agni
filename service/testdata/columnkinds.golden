@@ -118,6 +118,9 @@ reaches	arg0=from	kind="net"	kindVar=""	ref=-
 reaches	arg1=net	kind="net"	kindVar=""	ref=-
 reaches	arg2=hops?	kind=""	kindVar=""	ref=-
 ref_des_collision	arg0=ref_des	kind="component"	kindVar=""	ref=-
+route	arg0=from	kind="net"	kindVar=""	ref=-
+route	arg1=net	kind="net"	kindVar=""	ref=-
+route	arg2=path	kind=""	kindVar=""	ref=-
 suffix	arg0=string	kind=""	kindVar=""	ref=-
 suffix	arg1=suffix	kind=""	kindVar=""	ref=-
 types_power_out	arg0=present	kind=""	kindVar=""	ref=-

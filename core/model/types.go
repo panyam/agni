@@ -1,6 +1,9 @@
 package model
 
 import (
+	"fmt"
+	"strings"
+
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -248,4 +251,44 @@ func (r Reach) StepsTo(target *ir.Net) []ReachStep {
 		rev[i], rev[j] = rev[j], rev[i]
 	}
 	return rev
+}
+
+// routeCrossing brackets the part a route step goes THROUGH, so a rendered route cannot be misread
+// as a list of nets. The two names on either side of `-[R5]-` are nets and the one inside it is not,
+// which is the whole ambiguity a bare arrow separator leaves open.
+const routeCrossing = " -[%s]- "
+
+// RouteLine renders the route from the walk's start to target as one line, naming the nets it passed
+// through and the part crossed between each pair:
+//
+//	VBUS -[R5]- VBUS_F -[L1]- VDD_3V3
+//
+// It is the fourth reading of one walk, beside PathTo (the nets), ThroughOnPath (the parts) and
+// StepsTo (both, with pins). Those three answer questions a caller then has to render; this answers
+// the one where the rendering IS the answer, so a query can bind a route as a value and a table can
+// carry it in a cell (agni issue 518).
+//
+// Three returns, kept apart because two of them are answers and one is not:
+//
+//   - a route, when target was reached across one or more crossings
+//   - target's own name, when target IS the start: the two points are one electrical node, which is
+//     the strongest form of connected there is rather than a degenerate case
+//   - "", when target was not reached, so a caller cannot print an empty line and call it a route
+//
+// The pins on each crossing are deliberately left out. They are on StepsTo for a caller with room to
+// print them, and a column a hundred rows tall is not that caller.
+func (r Reach) RouteLine(target *ir.Net) string {
+	if target == nil {
+		return ""
+	}
+	if _, reached := r.Depth[target.Name]; !reached {
+		return ""
+	}
+	var b strings.Builder
+	for _, s := range r.StepsTo(target) {
+		b.WriteString(s.From)
+		fmt.Fprintf(&b, routeCrossing, s.Through)
+	}
+	b.WriteString(target.Name)
+	return b.String()
 }
