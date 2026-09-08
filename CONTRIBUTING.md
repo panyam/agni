@@ -98,6 +98,16 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   checkout committed stale generated output. `git checkout` it and tell that session rather than
   adopting it.
 - **Pull after a push.** Shared schema files (`protos/`) are coordination points.
+- **Never `git pull` a branch that is mid-rebase, and be careful pulling one at all.** With
+  `pull.rebase` set, a pull on a feature branch rebases the INCOMING commits onto yours, which is
+  backwards, and on a branch already in a conflicted rebase it re-injects conflict markers into files
+  you have just resolved. The symptom is markers reappearing in a file you know you fixed, naming a
+  commit you were not merging. `git rebase --abort` restores the branch, including a rebase you had
+  already completed, because that commit still exists. Then `git fetch` and `git rebase origin/main`
+  as two steps.
+- **Verify a rebase left the branch mergeable, and prefer local evidence.** `git merge-base --is-ancestor
+  origin/main HEAD` says fast-forward or not immediately, where GitHub's `mergeable` field lags a
+  force-push by a minute and will still say `CONFLICTING` after you have fixed it.
 
 ## PR workflow
 
@@ -187,6 +197,18 @@ Concurrent sessions work against separate clones (or worktrees) of this repo, on
   string as ONE argument, so both binaries print `unknown command` and the diff reports them
   identical. A refactor was reported behaviour-preserving on four commands that had never run. Write
   a function taking `"$@"`, and sanity-check the captured line COUNT before believing a diff.
+- **`wait "$PID"` returns IMMEDIATELY when a trap is installed.** A script that starts a server, sets
+  `trap cleanup EXIT INT TERM`, and then blocks on `wait` does not block: it falls straight through to
+  whatever follows. A demo driver meant to hold a server open ran its whole script instead, twice, and
+  the symptom looked like the guard clause not firing rather than like `wait` returning. Poll the child
+  instead: `while kill -0 "$PID" 2>/dev/null; do sleep 1; done`.
+- **A quoted assignment prefix is not an assignment in zsh, and `env VAR=~/x` does not expand the
+  tilde.** `"FOO=$HOME/bin" cmd` runs `FOO=...` as a COMMAND and exits 127; `env FOO=~/bin cmd` passes
+  a literal `~`. Both produce a "not found" that reads like a broken script rather than a broken
+  invocation. Use `env FOO="$HOME/bin" cmd`.
+- **Piping a long-running script into `head` makes it look like it fell through.** `head` exits after
+  its lines, the writer takes SIGPIPE, and with no `set -e` bash carries on to the next command, so
+  output appears past the point the script should have blocked. Redirect to a file and read the file.
 - **To undo a temporary red-check edit, reverse it with the tool that made it, never `git checkout`.**
   `git checkout <file>` and `git checkout HEAD -- <file>` restore from a COMMIT, not from "before I
   typed that", so on a file carrying uncommitted work they destroy all of it including the change the

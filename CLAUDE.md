@@ -229,6 +229,17 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   row has to be the header something binds to. An empty result is never an empty artifact. The
   renderer is `core/report.Table`, which is also where the csv escaping for every command now lives:
   it moved down out of `cmd/` rather than being copied a third time (agni issue 380).
+- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/list`
+  group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.
+  The distinction is the trap: a goal that joins two things yields one binding per combination, so on
+  a net carrying 7 test points and 20 capacitors `count(?tp)` is 140 and `count(distinct ?tp)` is 7.
+  `distinct` is uniform across every function, `list` included, deliberately — an implicitly-distinct
+  `list` would put `count(?r)` and `list(?r)` in one projection disagreeing about what the group
+  holds. **`having` filters the GROUPS after the reduce**, which a goal comparison cannot do, because
+  before grouping there is nothing to count: `... => ?p having count(distinct ?n) = 1`. An aggregate
+  may be filtered on without being projected, which answers with the subjects rather than the tally
+  (agni issue 613). A derived relation is the other route to a distinct reduce, by projecting the
+  extra variable away before the group forms.
 - **`diff --rename-approx` is OFF by default**, so a net that was renamed AND changed reports as New
   plus Deleted unless you ask for it. Deliberate, because the pass ASSIGNS a best match rather than
   recovering a fact. It is also a false-finding shape: a run without the flag reads as "we detect no
@@ -302,6 +313,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   note goes to stderr, so `-o` composes with a pipe.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
+- **`AGNI_EXAMPLE_DESIGN` points every example at a board this repo cannot carry.** Each example asks
+  for its design through `common.AskPath`, which defaults to a bundled synthetic fixture; the variable
+  replaces that DEFAULT, so the prompt still shows it, a typed path still wins, and
+  `--non-interactive`, `--record` and `--replay` pick it up, which is the whole reason it beats typing.
+  A blank value is not a value. **A demo over someone's real board is an example driven this way**,
+  not a script of its own: `dft-coverage` is the coverage walkthrough and `whole-enchilada` the tour,
+  so orchestrating beats in bash duplicates demokit and produces no recording. **Run an example over a
+  REAL board before trusting it** — the fixtures are small enough to hide scale bugs, and printing
+  every ref-des in a bucket read fine at three parts and buried the screen at 531 (agni issue 644).
 
 **`make oracle` is a separate suite and is NOT in the gate.** It cross-checks the KiCad reader
 against real boards, comparing the pin-to-net PARTITION against each board's own `.kicad_pcb` rather
@@ -376,7 +396,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 
 `CONTRIBUTING.md` holds the workflow rules: running several checkouts in parallel (use
 `git -C <abs-path>`, never `git add -A`), the PR workflow (verify a push by its exit code, verify
-`merged: true` via the API, never `gofmt -w` a directory), the three shell traps that have burned
+`merged: true` via the API, never `gofmt -w` a directory), the shell traps that have burned
 real work, and what agni ADDS to the PR body shape defined by the `start_pr` skill (the circuit and
 a hardware primer ahead of the reviewer's guide, which docsite pages the prerequisite block names,
 and the fixture-only rule for rendering captures). The general skeleton lives in the skill, so do

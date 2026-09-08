@@ -129,6 +129,24 @@ boards contradicted, one landed in pieces under other work. Nothing was wrong wi
 filed. Adjacent work moved underneath while the ticket text kept asserting the old world. Read the
 comment thread as well as the body.
 
+**10. A ratio needs its DENOMINATOR constrained, not just its numerator.** Counting the passives with
+exactly one probe-covered net returned a number that was plausible, within a few percent of an
+independent tool's, and read correctly in English. It was wrong. The query constrained how many nets
+were COVERED and never how many the part HAD, so it also matched parts with one net whose only net was
+covered, and multi-pin arrays with one of four covered. Two opposite errors, one missing clause.
+
+Nothing internal could have caught it: the query returns rows, the rows are all real parts, and the
+count is stable across runs. It took a second tool's answer to falsify. The general form is worth
+carrying, because it is not specific to coverage: **whenever a result is "the things where N of M hold",
+a filter on N alone silently admits every row whose M is not what you assumed.** State M as a clause
+even when you believe every subject has the same one.
+
+**11. A positive control catches a fixture that satisfies part of a check.** A test asserting that a
+complete directory passes validation failed, because the fixture listed four of the six files the check
+wants. Had the fixture been used only in the NEGATIVE test, it would have failed for the missing files
+and read exactly like the guard working. A fixture that is supposed to pass has to actually pass, and
+that is what the positive control is for.
+
 ## Trusting a test
 
 A new test is a measurement too, and the red-check is its positive control: neutralise the behaviour
