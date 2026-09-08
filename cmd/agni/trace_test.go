@@ -3,8 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -136,4 +140,105 @@ func TestTraceCLIRejectsAMalformedEndpoint(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "<ref-des>.<pin>") {
 		t.Errorf("err = %v, want it to say how to name a pin", err)
 	}
+}
+
+func TestTraceCLIRendersTheRouteOntoTheSchematic(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "route.svg")
+	stdout, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1", "--render", out)
+	if err != nil {
+		t.Fatalf("trace --render: %v\n%s", err, stdout)
+	}
+	svg, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read %s: %v", out, err)
+	}
+	// The route's own colour has to be in the drawing, or the flag wrote a plain render.
+	if !bytes.Contains(svg, []byte(traceRouteColor)) {
+		t.Errorf("rendered svg carries no route highlight:\n%s", firstBytes(svg, 400))
+	}
+	if !bytes.Contains(svg, []byte(traceCrossColor)) {
+		t.Errorf("rendered svg does not mark the part the route crosses")
+	}
+	// The board has a drawn schematic, so nothing should claim an auto-layout.
+	if strings.Contains(stdout, "auto-layout") {
+		t.Errorf("a design with its own sheets was drawn as an auto-layout:\n%s", stdout)
+	}
+}
+
+// A netlist has no sheets, and refusing to draw it would make the flag useless on most designs. It
+// falls back to an auto-layout and SAYS so, which is what stops the picture being mistaken for a
+// schematic somebody drew.
+func TestTraceCLIFallsBackToAnAutoLayoutAndSaysSo(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "route.svg")
+	stdout, err := runTrace(t, "testdata/conformance/fires.edn", "--from", "U1.5", "--to", "R5.1", "--render", out)
+	if err != nil {
+		t.Fatalf("trace --render on a netlist: %v\n%s", err, stdout)
+	}
+	if !strings.Contains(stdout, "auto-layout") {
+		t.Errorf("no note that the drawing is an auto-layout:\n%s", stdout)
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Errorf("nothing was drawn: %v", err)
+	}
+}
+
+// A no-route draws the two nets that fail to join, because that is the picture a reader goes looking
+// for the moment they read the words.
+func TestTraceSpecsDrawTheAnswerWhateverItWas(t *testing.T) {
+	routed := check.Trace{
+		Outcome:   check.TraceRouted,
+		From:      check.TraceEnd{Endpoint: check.Endpoint{RefDes: "U1", Pin: "3"}, Net: "SDA"},
+		To:        check.TraceEnd{Endpoint: check.Endpoint{RefDes: "J1", Pin: "1"}, Net: "VCC"},
+		Nets:      []check.TraceNet{{Name: "SDA"}, {Name: "VCC"}},
+		Crossings: []check.TraceCross{{RefDes: "R1"}},
+	}
+	specs := traceSpecs(routed)
+	if n := countSpecNets(specs); n != 2 {
+		t.Errorf("routed: %d net highlights, want 2", n)
+	}
+	if n := countSpecComponents(specs); n != 1 {
+		t.Errorf("routed: %d component highlights, want the one crossing", n)
+	}
+
+	noRoute := check.Trace{
+		Outcome: check.TraceNoRoute,
+		From:    check.TraceEnd{Endpoint: check.Endpoint{RefDes: "U1", Pin: "3"}, Net: "SDA"},
+		To:      check.TraceEnd{Endpoint: check.Endpoint{RefDes: "U1", Pin: "2"}, Net: "GND"},
+	}
+	if n := countSpecNets(traceSpecs(noRoute)); n != 2 {
+		t.Errorf("no-route: %d net highlights, want both endpoints' nets", n)
+	}
+
+	// An endpoint that resolved to nothing contributes no net, and the one that did still draws.
+	unresolved := check.Trace{
+		Outcome: check.TraceUnresolved,
+		From:    check.TraceEnd{Endpoint: check.Endpoint{RefDes: "U99", Pin: "1"}},
+		To:      check.TraceEnd{Endpoint: check.Endpoint{RefDes: "U1", Pin: "3"}, Net: "SDA"},
+	}
+	if n := countSpecNets(traceSpecs(unresolved)); n != 1 {
+		t.Errorf("unresolved: %d net highlights, want only the end that resolved", n)
+	}
+}
+
+func countSpecNets(specs []*geom.HighlightSpec) int {
+	n := 0
+	for _, s := range specs {
+		n += len(s.GetNets())
+	}
+	return n
+}
+
+func countSpecComponents(specs []*geom.HighlightSpec) int {
+	n := 0
+	for _, s := range specs {
+		n += len(s.GetComponents())
+	}
+	return n
+}
+
+func firstBytes(b []byte, n int) []byte {
+	if len(b) < n {
+		return b
+	}
+	return b[:n]
 }

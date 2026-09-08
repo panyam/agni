@@ -2,6 +2,7 @@ package common
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -12,9 +13,12 @@ import (
 func TestDesigns(t *testing.T) {
 	got := Designs()
 	// Contains the fixtures the examples rely on; other examples add more over time, so this
-	// is a subset check, not an exact-list assertion.
+	// is a subset check, not an exact-list assertion. A fixture that is a declared design is
+	// listed at its path, since that is where it lives beside the companions it declares.
 	for _, name := range []string{
-		"demo-board.ipc2581.xml", "demo-board.kicad_pcb", "two-resistors.edn", "i2c-sensor.edn",
+		"demo-board.ipc2581.xml", "demo-board.kicad_pcb", "two-resistors.edn",
+		"i2c-sensor/i2c-sensor.edn", "i2c-sensor/i2c-sensor.eds",
+		"demo-project/designs/mixer/mixer.edn",
 	} {
 		if !slices.Contains(got, name) {
 			t.Errorf("Designs() missing %q; got %v", name, got)
@@ -169,5 +173,31 @@ func TestMixerConvergence(t *testing.T) {
 		if len(r.ComponentsAdded) != 0 || len(r.ComponentsRemoved) != 0 {
 			t.Errorf("EDIF vs %s: components +%v -%v, want the same set", name, r.ComponentsAdded, r.ComponentsRemoved)
 		}
+	}
+}
+
+// A descriptor is not a design, and the listing exists so a walkthrough can offer a choice.
+func TestDesignsOmitsDescriptors(t *testing.T) {
+	for _, name := range Designs() {
+		if strings.HasSuffix(name, ".yaml") {
+			t.Errorf("Designs() offers %q, which no reader opens", name)
+		}
+	}
+}
+
+// The base name keeps working after a fixture moves into a declared design's folder, which is what
+// lets a walkthrough's default and a prose sentence go on naming it the way a reader would.
+func TestReadFixtureResolvesABareBaseName(t *testing.T) {
+	byBase, err := ReadFixture("i2c-sensor.edn")
+	if err != nil {
+		t.Fatalf("ReadFixture by base name: %v", err)
+	}
+	byPath, err := ReadFixture("i2c-sensor/i2c-sensor.edn")
+	if err != nil {
+		t.Fatalf("ReadFixture by path: %v", err)
+	}
+	if byBase.Name != byPath.Name || len(byBase.Nets) != len(byPath.Nets) {
+		t.Errorf("the two spellings read different designs: %q/%d vs %q/%d",
+			byBase.Name, len(byBase.Nets), byPath.Name, len(byPath.Nets))
 	}
 }

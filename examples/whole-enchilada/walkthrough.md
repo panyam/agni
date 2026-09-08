@@ -34,7 +34,7 @@ agni diff  examples/common/designs/mixer.edn examples/common/designs/mixer.ipc25
 > `check.Run` applies structural rules to the netlist: single-pin nets, unconnected components, I2C pull-ups. The bundled i2c-sensor trips a few, and each finding carries provenance back to its source.
 
 ```bash
-agni check examples/common/designs/i2c-sensor.edn
+agni check examples/common/designs/i2c-sensor
 ```
 
 ## Semantic diff of two revisions {#diff}
@@ -81,8 +81,8 @@ agni render examples/common/designs/demo-schematic.eds -o schematic.svg
 > The payoff shows at scale. Run `--compare` on a real board and `layered` cuts crossings sharply against `grid`. More layouts (force-directed, orthogonal) are next, and the crossings metric is how we prove they help.
 
 ```bash
-agni render --layout layered examples/common/designs/i2c-sensor.edn -o graph.svg
-agni render --compare examples/common/designs/i2c-sensor.edn
+agni render --layout layered examples/common/designs/i2c-sensor -o graph.svg
+agni render --compare examples/common/designs/i2c-sensor
 agni render --compare path/to/your-board.edn   # the payoff at scale
 ```
 

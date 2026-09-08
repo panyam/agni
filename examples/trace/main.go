@@ -10,11 +10,15 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/panyam/demokit"
 
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/examples/common"
 )
 
@@ -26,9 +30,12 @@ var walkthroughMD []byte
 // against the fixture. A default that lived only inside main() could move without the test noticing,
 // which is how a narrated example starts teaching something the code no longer does.
 const (
-	defaultDesign = "../common/designs/i2c-sensor.edn"
-	defaultFrom   = "U1.3"
-	defaultTo     = "J1.1"
+	defaultDesign = "../common/designs/i2c-sensor/i2c-sensor.edn"
+	// The schematic the design declares as its companion. The CLI finds this through the folder's
+	// design.yaml; an example naming one file names both, which keeps the drawing step readable.
+	defaultSchematic = "../common/designs/i2c-sensor/i2c-sensor.eds"
+	defaultFrom      = "U1.3"
+	defaultTo        = "J1.1"
 )
 
 // unreachable is a pin pair the bundled fixture joins through nothing, for the no-route step.
@@ -89,6 +96,19 @@ func main() {
 		}
 		fmt.Println("Not rail-scale on this design, so the walk stopped because it had arrived.")
 		fmt.Println("A supply on a real board crosses the fan-out cutoff and takes the other branch.")
+		return nil
+	})
+
+	demo.Bind("draw").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		t, err := traceOn(design, from, to)
+		if err != nil {
+			return demokit.Errf("%v", err)
+		}
+		out, err := drawTrace(design.Path(), *t, "route.svg")
+		if err != nil {
+			return demokit.Errf("%v", err)
+		}
+		fmt.Printf("Wrote %s: %d highlighted subject(s) on the design's sheet.\n", out, len(t.Nets)+len(t.Crossings))
 		return nil
 	})
 
@@ -172,3 +192,48 @@ func traceLines(t check.Trace) string {
 	fmt.Fprintf(&b, "\n%d crossing(s), %d net(s), radius %d\n", len(t.Crossings), len(t.Nets), t.Radius)
 	return b.String()
 }
+
+// drawTrace writes the trace onto the design's drawn schematic as an SVG, and returns the path.
+//
+// The conversion is four lines because Trace was built to make it four lines: the nets it passed
+// through and the parts it crossed ARE the subjects a highlight overlay takes, so nothing has to be
+// re-derived and no second walk happens. An embedder wanting different colours or a different set of
+// subjects writes their own version of this loop, which is the point of showing it rather than
+// calling a helper that hides it.
+func drawTrace(designPath string, t check.Trace, out string) (string, error) {
+	if designPath != defaultDesign {
+		return "", fmt.Errorf("this step draws the bundled design's own schematic (%s); "+
+			"for another design use `agni trace <design> --render <file.svg>`, which finds the "+
+			"schematic through the design's descriptor", defaultSchematic)
+	}
+	g, err := common.LoadSchematic(defaultSchematic)
+	if err != nil {
+		return "", fmt.Errorf("load %s: %w", defaultSchematic, err)
+	}
+	if len(g.GetSheets()) == 0 {
+		return "", fmt.Errorf("%s has no sheets to draw on", defaultSchematic)
+	}
+	var specs []*geom.HighlightSpec
+	for _, n := range t.Nets {
+		specs = append(specs, &geom.HighlightSpec{
+			Nets: []string{n.Name}, Color: routeColor, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_PATH,
+		})
+	}
+	for _, c := range t.Crossings {
+		specs = append(specs, &geom.HighlightSpec{
+			Components: []string{c.RefDes}, Color: crossColor,
+			Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT,
+		})
+	}
+	svg := render.SheetSVGHighlighted(g, g.GetSheets()[0], specs)
+	if err := os.WriteFile(out, []byte(svg), 0o644); err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+// The wire the signal travels on, and the part it travels through.
+const (
+	routeColor = "#2563eb"
+	crossColor = "#e11d48"
+)

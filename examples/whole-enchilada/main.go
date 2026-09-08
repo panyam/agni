@@ -73,7 +73,7 @@ func main() {
 
 	// 2) Structural checks over the netlist.
 	demo.Bind("check").Run(func(ctx demokit.StepContext) *demokit.StepResult {
-		echo("agni check examples/common/designs/i2c-sensor.edn")
+		echo("agni check examples/common/designs/i2c-sensor")
 		d, err := common.ReadFixture("i2c-sensor.edn")
 		if err != nil {
 			return demokit.Errf("read i2c-sensor.edn: %v", err)
@@ -140,8 +140,8 @@ func main() {
 	// every registered layout by crossings so the choice is a number, not an opinion.
 	demo.Bind("graph").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 		echo(
-			"agni render --compare examples/common/designs/i2c-sensor.edn",
-			"agni render --layout layered examples/common/designs/i2c-sensor.edn -o graph.svg",
+			"agni render --compare examples/common/designs/i2c-sensor",
+			"agni render --layout layered examples/common/designs/i2c-sensor -o graph.svg",
 		)
 		d, err := common.ReadFixture("i2c-sensor.edn")
 		if err != nil {
