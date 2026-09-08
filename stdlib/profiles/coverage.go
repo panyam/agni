@@ -2,8 +2,8 @@ package profiles
 
 import (
 	"github.com/panyam/agni/core/check"
-	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/core/query"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // Coverage states (WS9-041). They match the conditions the profile rules fire on, so a coverage
@@ -36,7 +36,9 @@ type InterfaceCoverage struct {
 // is not DETECTED — silent by construction, matching the rules. Detection is the profile's in-use
 // confidence gate: two of its signals present, or a component declares the interface via its host
 // attribute. It reuses the same signal matcher (matcher.go) and reaches-rail pull-up walk the profile
-// rules compile to, so the panel and the findings cannot drift.
+// rules compile to, so the panel and the findings cannot drift. The pull-up half calls
+// check.PullUpReachesRail, which is the SAME function the missing-pullup rule decides on, so "cannot
+// drift" is now true by construction rather than by two implementations agreeing.
 func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 	base := query.NewBase(m)
 	nets := make([]*ir.Net, len(p.Signals))
@@ -63,7 +65,7 @@ func Coverage(p Profile, m check.Model) *InterfaceCoverage {
 			sc.State = StateMissing
 		case len(n.GetConnections()) < 2:
 			sc.Net, sc.State = n.GetName(), StateDangling
-		case s.PullUp && !reachesRail(base, n.GetName()):
+		case s.PullUp && !reachesRail(m, n.GetName()):
 			sc.Net, sc.State = n.GetName(), StatePullupMissing
 		default:
 			sc.Net, sc.State = n.GetName(), StatePresent
@@ -85,17 +87,29 @@ func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	return nil
 }
 
-// reachesRail reports whether the net reaches a power rail through the reach walk (a pull-up path),
-// the same reaches(?n, ?rail), rail(?rail) the missing-pullup rule negates.
-func reachesRail(base *query.Base, net string) bool {
-	q := query.Build(nil,
-		[]query.Literal{
-			query.Pos(query.Rel("reaches", query.Str(net), query.V("rail"))),
-			query.Pos(query.Rel("rail", query.V("rail"))),
-		},
-		query.V("rail"))
-	rows, err := query.Naive{}.Eval(q, base)
-	return err == nil && len(rows) > 0
+// reachesRail reports whether the net reaches a power rail through a pull-up, by calling the same
+// check.PullUpReachesRail the missing-pullup rule decides on.
+//
+// IT USED TO ASK ITS OWN QUESTION, and the two disagreed on the common case. This built a
+// `reaches(?n, ?rail), rail(?rail)` query and claimed in a comment that it was what the rule negated;
+// the rule had a second clause the comment did not mention, and that clause existed because the reach
+// walk refuses to enter a net whose fan-out exceeds maxWalkFan (WS3-108). A rail is wide almost by
+// definition, so a DIRECT pull-up onto a real rail was invisible to the reaches form. Measured on a
+// resistor sitting on a signal and on a 21-connection rail: this returned false while
+// PullUpReachesRail returned true, so the coverage panel scored a correctly pulled signal
+// `pullup_missing` and the rule, correctly, said nothing.
+//
+// The panel and the rule agreeing is not a nicety. InUse's own contract says the gate must agree with
+// the rules or an interface the rules will not fire on gets scored as a clean pass, and this was the
+// same failure pointing the other way: a clean bus scored as a defect, in the one surface a reviewer
+// reads before the findings.
+func reachesRail(m check.Model, net string) bool {
+	for _, n := range m.Nets() {
+		if n.GetName() == net {
+			return check.PullUpReachesRail(m, n)
+		}
+	}
+	return false
 }
 
 // hostDeclares reports whether a component declares this interface via its host attribute

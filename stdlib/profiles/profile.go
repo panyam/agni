@@ -515,83 +515,100 @@ func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, sub
 }
 
 // pullupRule fires when a pull-up signal net reaches no rail (no pull-up resistor to power/ground).
+//
+// IT IS THE ONLY REQUIREMENT THAT COMPILES TO GO RATHER THAN TO A QUERY, and the exception is the
+// point of it. Every other requirement asks a question datalog can state; this one asks whether a
+// bounded walk lands on a rail, which the spec language cannot express and the datalog form could
+// only approximate. The approximation was visible in the report: the built-in i2c-pull-up proves a
+// pass with the PATH it walked ("SCL reaches rail +3V3 through R7") and the datalog form proved one
+// with the net's own name, so "show me the pull-up" got an answer on I2C and a restatement of the
+// question on every profile-driven bus (agni issue 516).
+//
+// Calling check.PullUpVerdict is what closes that, and closes it by construction rather than by two
+// implementations agreeing: the profile route and the built-in now return the same witness and the
+// same context entities because they are the same function. It also collapses what were three
+// answers to one question, since coverage.go's reachesRail now calls the same predicate.
+//
+// C30 allows this. A requirement type is a compiler from a profile to a *check.Rule and the shapes
+// are peers, so one of them producing a Go body is a shape making a choice rather than the catalog
+// making it for everyone. What it costs is that Reads and Primitives are hand-declared here rather
+// than derived from a query body, so they can drift from what the rule does in a way the other
+// requirements cannot.
 func (p Profile) pullupRule() *check.Rule {
-	rules := p.presenceRules()
-	needs := 0
+	var pullups []Signal
 	for _, s := range p.Signals {
-		if !s.PullUp {
-			continue
+		if s.PullUp {
+			pullups = append(pullups, s)
 		}
-		needs++
-		body := append([]query.Literal{query.Pos(query.Rel("component-on-net", query.V("r"), query.V("n")))},
-			netMatch(query.V("n"), s)...)
-		rules = append(rules, query.Def(query.Rel("needs_pullup", query.V("n")), body...))
 	}
-	if needs == 0 {
+	if len(pullups) == 0 {
 		return nil
 	}
-	rules = append(rules,
-		// A signal is pulled two ways, and two rules sharing a head is how datalog spells disjunction.
-		//
-		// The DIRECT form — a resistor sitting on this net and also on a rail — is the shape a pull-up
-		// actually has, and it is the one that works on a real board. The reaches form cannot see it
-		// (WS3-108): the series walk refuses to cross INTO a net whose fan-out exceeds maxWalkFan, which
-		// is right for its own purpose, but a pull-up TERMINATES on a rail and a rail is wide almost by
-		// definition. So the one destination this rule needs was the one kind of net the walk would not
-		// enter, and `pulled` could not become true however correct the design was.
-		//
-		// The reaches form is KEPT rather than replaced. It covers the multi-hop cases that work today
-		// (a pull-up behind a series element to a narrow rail), and adding a clause can only make more
-		// nets pulled — so this change can remove a false positive and cannot introduce a finding.
-		// Both clauses open with needs_pullup(?n) so the head variable is BOUND before anything
-		// scans (WS3-114). Without it the direct form's first atom enumerates every (component,
-		// net) pair on the board and the third re-scans per survivor; the reaches form walks from
-		// every net. unpulled already conjoins needs_pullup, so this removes only head facts that
-		// were computed and then thrown away.
-		query.Def(query.Rel("pulled", query.V("n")),
-			query.Pos(query.Rel("needs_pullup", query.V("n"))),
-			query.Pos(query.Rel("component-on-net", query.V("pu"), query.V("n"))),
-			query.Pos(query.Rel("component.class", query.V("pu"), query.Str("resistor"))),
-			query.Pos(query.Rel("component-on-net", query.V("pu"), query.V("rail"))),
-			query.Cmp(query.V("rail"), "!=", query.V("n")),
-			query.Pos(query.Rel("rail", query.V("rail")))),
-		query.Def(query.Rel("pulled", query.V("n")),
-			query.Pos(query.Rel("needs_pullup", query.V("n"))),
-			query.Pos(query.Rel("reaches", query.V("n"), query.V("rail"))),
-			query.Pos(query.Rel("rail", query.V("rail")))),
-		query.Def(query.Rel("unpulled", query.V("n")),
-			query.Pos(query.Rel("needs_pullup", query.V("n"))),
-			query.Pos(query.Rel("in_use", query.V("iu"))),
-			query.Neg(query.Rel("pulled", query.V("n")))),
-		// The considered set: every signal net the profile declared as needing a pull-up, on a bus in
-		// use. `unpulled` minus its negated clause, so a net absent from the findings but present here
-		// is one that reached a rail.
-		query.Def(query.Rel("pullup_scope", query.V("n")),
-			query.Pos(query.Rel("needs_pullup", query.V("n"))),
-			query.Pos(query.Rel("in_use", query.V("iu")))))
-	q := query.Build(rules,
-		[]query.Literal{query.Pos(query.Rel("unpulled", query.V("n")))}, query.V("n"))
-	pullupDomain := query.Build(rules,
-		[]query.Literal{query.Pos(query.Rel("pullup_scope", query.V("n")))}, query.V("n"))
-	return query.MustRuleFromQuery(query.FindingQuery{
-		Rule: check.Rule{
-			Name:     p.lname() + "-missing-pullup",
-			Severity: "warning",
-			Summary:  fmt.Sprintf("A %s signal that needs a pull-up reaches no rail.", p.Name),
-			Impact:   "An open-drain or chip-select line with no pull-up floats to an undefined level between drives, so the device can select or clock spuriously at power-up.",
-			Remedy:   requirementRemedy("missing-pullup"),
-			Tags:     p.tags(),
-			Detail:   ruleDoc("missing-pullup"),
-		},
-		Query:      mustBindHeadFirst(q),
-		Kind:       check.KindNet,
-		SubjectVar: "n",
-		Message:    fmt.Sprintf("%s signal net {n} needs a pull-up but reaches no rail", p.Name),
-		Domain: &query.Domain{
-			Query:   mustBindHeadFirst(pullupDomain),
-			Witness: fmt.Sprintf("%s signal net {n} needs a pull-up and reaches a rail", p.Name),
-		},
-	})
+	name := p.Name
+	return &check.Rule{
+		Name:     p.lname() + "-missing-pullup",
+		Severity: "warning",
+		Summary:  fmt.Sprintf("A %s signal that needs a pull-up reaches no rail.", name),
+		Impact:   "An open-drain or chip-select line with no pull-up floats to an undefined level between drives, so the device can select or clock spuriously at power-up.",
+		Remedy:   requirementRemedy("missing-pullup"),
+		Tags:     p.tags(),
+		Detail:   ruleDoc("missing-pullup"),
+		// Hand-declared, because there is no query body to derive them from. They name the same reads
+		// the datalog form derived and the same primitives i2c-pull-up declares for the same walk.
+		Reads:               []string{"net.names", "on_net", "component.class"},
+		Primitives:          []string{"select", "pattern", "traverse", "exists", "reach"},
+		Eval:                p.pullupVerdicts(pullups),
+		StatesConsideredSet: true,
+	}
+}
+
+// pullupVerdicts decides every net this profile declared as needing a pull-up, on a bus in use.
+//
+// The considered set is those nets whether or not they are pulled, which is what the datalog form's
+// Domain query stated and what a coverage claim rests on: a bus absent from the findings is one that
+// reached a rail, not one nobody examined.
+//
+// GATED ON InUse, the same gate the datalog form conjoined, so a profile whose signals are not on
+// this board contributes no verdicts at all rather than a page of failures about an interface that is
+// not there.
+func (p Profile) pullupVerdicts(pullups []Signal) func(check.Model) []check.Verdict {
+	rule := p.lname() + "-missing-pullup"
+	name := p.Name
+	return func(m check.Model) []check.Verdict {
+		if !InUse(m, p) {
+			return nil
+		}
+		var out []check.Verdict
+		for _, n := range m.Nets() {
+			if !anySignalMatches(n.GetName(), pullups) {
+				continue
+			}
+			outcome, w, ctx := check.PullUpVerdict(m, n)
+			v := check.Verdict{
+				Subjects: []check.Entity{{Kind: check.KindNet, Ref: n.GetName(), NetID: n.GetId()}},
+				Rule:     rule, Outcome: outcome, Witness: w, Context: ctx,
+			}
+			if outcome == check.Fail {
+				f := check.NetFinding(fmt.Sprintf("%s signal net %s needs a pull-up but reaches no rail", name, n.GetName()))(n)
+				v.Finding = &f
+			}
+			out = append(out, v)
+		}
+		return out
+	}
+}
+
+// anySignalMatches reports whether a net name satisfies any of these signals' full declared matchers,
+// the same netMatchesSignal the InUse gate and the datalog netMatch both apply. Applying the WHOLE
+// matcher is what keeps a prefix-discriminated profile from claiming a foreign net that shares a bare
+// suffix.
+func anySignalMatches(net string, signals []Signal) bool {
+	for _, s := range signals {
+		if netMatchesSignal(net, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // danglingRule fires when a signal net exists by name but carries fewer than two connections (present
