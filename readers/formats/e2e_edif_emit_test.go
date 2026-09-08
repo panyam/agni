@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"testing"
 
@@ -108,12 +109,13 @@ func TestEmitEDIFNamesEveryInstanceOnce(t *testing.T) {
 				t.Fatal(err)
 			}
 			seen := map[string]bool{}
-			for line := range bytes.SplitSeq(buf.Bytes(), []byte("\n")) {
-				fields := bytes.Fields(line)
-				if len(fields) < 2 || string(fields[0]) != "(instance" {
-					continue
+			for _, m := range emittedInstanceIDs.FindAllStringSubmatch(buf.String(), -1) {
+				// The identifier is the bare atom, or the ID inside a (rename ID "display") for a
+				// source name that had to be minted into a legal one.
+				name := m[1]
+				if name == "" {
+					name = m[2]
 				}
-				name := string(fields[1])
 				if seen[name] {
 					t.Errorf("instance name %q written twice; an instanceRef to it reaches only the first", name)
 				}
@@ -170,3 +172,7 @@ func anchoredPairs(d *ir.Design) ([]string, int) {
 	}
 	return pairs, unanchored
 }
+
+// emittedInstanceIDs pulls the identifier an (instance ...) is written under, in either name form.
+// The identifier is what an (instanceRef ...) looks up, so it is the string that has to be unique.
+var emittedInstanceIDs = regexp.MustCompile(`\(instance (?:\(rename ([^\s()]+) "[^"]*"\)|([^\s()]+)) `)

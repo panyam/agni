@@ -430,7 +430,7 @@ func (e *emitter) instance(c *ir.Component, s *ir.ComponentSection) {
 		ref = fmt.Sprintf("%s (libraryRef %s)", ref, refID(lib))
 	}
 	head := fmt.Sprintf("(instance %s (viewRef %s (cellRef %s))",
-		e.inst.name[s], viewName, ref)
+		nameExpr(e.inst.displayOr(s), e.inst.name[s]), viewName, ref)
 	// A designator-less instance is a real state the reader models (refdes.Unannotated reports it),
 	// so an empty ref-des emits no designator rather than an empty one.
 	if r := c.GetRefDes(); r != "" {
@@ -514,6 +514,7 @@ func (e *emitter) net(n *ir.Net) {
 // the collision is broken here.
 type instanceTable struct {
 	name        map[*ir.ComponentSection]string
+	display     map[*ir.ComponentSection]string
 	byNative    map[string]string
 	byNativeSec map[string]*ir.ComponentSection
 	byRef       map[string][]*ir.ComponentSection
@@ -532,6 +533,7 @@ type cellRef struct{ lib, name string }
 func newInstanceTable(d *ir.Design, work string) *instanceTable {
 	t := &instanceTable{
 		name:        map[*ir.ComponentSection]string{},
+		display:     map[*ir.ComponentSection]string{},
 		byNative:    map[string]string{},
 		byNativeSec: map[string]*ir.ComponentSection{},
 		byRef:       map[string][]*ir.ComponentSection{},
@@ -551,7 +553,14 @@ func newInstanceTable(d *ir.Design, work string) *instanceTable {
 				seed = refID(native)
 			}
 			switch {
+			// A native id is kept verbatim when the format it came from already spells a legal EDIF
+			// identifier, so an EDIF round-trip is byte-faithful. A KiCad uuid is neither: it opens
+			// with a digit and carries hyphens, so it is minted and the original rides along as the
+			// instance's display name (agni issue 582).
 			case seed != "":
+				if !identOK(seed) {
+					seed = mintID(seed)
+				}
 			// A ref-des is the only other name a section has, and it is the one the rest of the file
 			// already spells out in the instance's own (designator ...), so a reader diffing two
 			// exports sees a name that moves with the design rather than with the export.
@@ -569,6 +578,9 @@ func newInstanceTable(d *ir.Design, work string) *instanceTable {
 			}
 			taken[id] = true
 			t.name[s] = id
+			if native != "" && native != id {
+				t.display[s] = native
+			}
 			if native != "" {
 				if _, ok := t.byNative[native]; !ok {
 					t.byNative[native] = id
@@ -610,6 +622,17 @@ func newInstanceTable(d *ir.Design, work string) *instanceTable {
 		}
 	}
 	return t
+}
+
+// displayOr returns the name the instance should PRESENT: the source's own id when that had to be
+// minted into a legal identifier, so the original survives as the rename's display string, and the
+// identifier itself otherwise. nameExpr then writes a bare atom in the second case and a
+// (rename id "display") in the first.
+func (t *instanceTable) displayOr(s *ir.ComponentSection) string {
+	if d := t.display[s]; d != "" {
+		return d
+	}
+	return t.name[s]
 }
 
 // anchor resolves the instance a connection hangs off, reporting false when the design carries none.
@@ -866,6 +889,30 @@ func nameExpr(name, nativeID string) string {
 	default:
 		return fmt.Sprintf("(rename %s %s)", mintID(name), edifString(name))
 	}
+}
+
+// identOK reports whether s is already a legal EDIF identifier: a letter or underscore followed by
+// letters, digits and underscores, or the "&" escape the format defines for a name that would
+// otherwise open with a digit. It is deliberately stricter than atomOK, which asks only whether a
+// string survives the TOKENIZER. A name can clear atomOK and still be unreadable to a conforming
+// parser, which is what agni issue 582 measured: raw KiCad UUIDs opened with a digit and carried
+// hyphens, and a third-party reader skipped all 1123 instances built on them.
+func identOK(s string) bool {
+	if s == "" {
+		return false
+	}
+	body := s
+	if s[0] == '&' {
+		body = s[1:]
+	} else if !(s[0] >= 'A' && s[0] <= 'Z' || s[0] >= 'a' && s[0] <= 'z' || s[0] == '_') {
+		return false
+	}
+	for _, r := range body {
+		if !(r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_') {
+			return false
+		}
+	}
+	return true
 }
 
 // mintID derives a bare identifier from a display name, mapping every character the grammar rejects

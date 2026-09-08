@@ -148,9 +148,11 @@ type emitted struct {
 type portRef struct{ port, inst string }
 
 var (
-	reCell     = regexp.MustCompile(`^\s*\(cell (?:\(rename ([^\s()"]+)|([^\s()"]+))`)
-	rePort     = regexp.MustCompile(`^\s*\(port (?:\(rename ([^\s()"]+)|([^\s()"]+))`)
-	reInstance = regexp.MustCompile(`^\s*\(instance ([^\s()"]+) \(viewRef [^\s()"]+ \(cellRef ([^\s()"]+)`)
+	reCell = regexp.MustCompile(`^\s*\(cell (?:\(rename ([^\s()"]+)|([^\s()"]+))`)
+	rePort = regexp.MustCompile(`^\s*\(port (?:\(rename ([^\s()"]+)|([^\s()"]+))`)
+	// Both name forms, as reCell above. An instance carries a rename when its source id is not a
+	// legal identifier (a KiCad uuid), and the identifier half is what an instanceRef looks up.
+	reInstance = regexp.MustCompile(`^\s*\(instance (?:\(rename ([^\s()"]+) "[^"]*"\)|([^\s()"]+)) \(viewRef [^\s()"]+ \(cellRef ([^\s()"]+)`)
 	rePortInst = regexp.MustCompile(`^\s*\(portInstance ([^\s()"]+)`)
 	rePortRef  = regexp.MustCompile(`\(portRef ([^\s()"]+) \(instanceRef ([^\s()"]+)\)\)`)
 )
@@ -173,8 +175,8 @@ func scanEmitted(text string) emitted {
 			f.cellPorts[cell] = map[string]bool{}
 		case reInstance.MatchString(line):
 			m := reInstance.FindStringSubmatch(line)
-			inst = m[1]
-			f.instCell[inst] = m[2]
+			inst = firstNonEmpty(m[1], m[2])
+			f.instCell[inst] = m[3]
 			f.instPorts[inst] = map[string]bool{}
 		case rePortInst.MatchString(line) && inst != "":
 			f.instPorts[inst][rePortInst.FindStringSubmatch(line)[1]] = true
@@ -194,4 +196,50 @@ func firstNonEmpty(a, b string) string {
 		return a
 	}
 	return b
+}
+
+// opensLegally matches an identifier the EDIF grammar allows to START a name: a letter, an
+// underscore, or the "&" escape the format provides for anything else. It is a narrower question
+// than badAtom above, which asks what a reader refuses mid-name.
+var opensLegally = regexp.MustCompile(`^[A-Za-z_&]`)
+
+// TestEmitEDIFInstanceIdentifiersOpenLegally pins the one identifier position a foreign reader
+// resolves instances THROUGH. An instanceRef is a lookup by identifier, so a name it cannot parse
+// costs every connection hanging off that instance rather than the instance alone.
+//
+// KiCad names a symbol placement with a uuid, which opens with a digit and carries hyphens. Our
+// reader takes any atom, and Electric tolerates it, so neither oracle above objects. A third-party
+// EDIF parser read 1123 components and 0 of 1123 instances from a board exported that way, because
+// it gates on the instance carrying a (rename ...) the way real exports write one:
+//
+//	(instance  (rename &04441I612 "$41I612")
+//	  (viewRef Resistor  (cellRef RK73Z1ETTP  (libraryRef Resistor)))
+//
+// That is a real EDIF file from a commercial tool, and the "&" is the format's escape for a name
+// that would otherwise open with a digit. The writer now mints the same way, keeping a native id
+// that is already legal exactly as it was so an EDIF round-trip stays byte-faithful.
+func TestEmitEDIFInstanceIdentifiersOpenLegally(t *testing.T) {
+	for _, tc := range emitCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ids := emittedInstanceIDs.FindAllStringSubmatch(emitText(t, tc.path), -1)
+			if len(ids) == 0 {
+				t.Fatal("no instances emitted; the assertion would pass vacuously")
+			}
+			var bad []string
+			for _, m := range ids {
+				id := m[1]
+				if id == "" {
+					id = m[2]
+				}
+				if !opensLegally.MatchString(id) {
+					bad = append(bad, id)
+				}
+			}
+			if len(bad) > 0 {
+				sort.Strings(bad)
+				t.Errorf("%d of %d instance identifier(s) open with a character the grammar does not "+
+					"allow, first few: %v", len(bad), len(ids), bad[:min(5, len(bad))])
+			}
+		})
+	}
 }
