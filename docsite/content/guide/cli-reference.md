@@ -57,7 +57,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
 | `--intent-path <file>` | a design-intent declaration, so intent-bound items resolve instead of reading `needs-design-intent` |
 | `--board-path <file>` | a board-geometry file attached to a netlist design, so board-tier items resolve instead of `n/a` |
-| `--coverage` | a per-area rollup of how many items each area decided, instead of the per-item report |
+| `--coverage` | a per-area rollup of how many items each area decided, instead of the per-item report. Renders as markdown only, so it refuses an explicit `--format`; the `--format html` page carries the same rollup in its header |
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |

@@ -47,6 +47,12 @@ func resultsCmd() *cobra.Command {
 			"person reads side by side.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Same shadowing as review's, in the same shape: the render switch tests coverage before it
+			// tests format, so an explicit --format was discarded without a word.
+			if coverageShadowsFormat(cmd, coverage) {
+				return fmt.Errorf("results: --coverage emits the per-area rollup, which renders as markdown "+
+					"only, so --format %q would be discarded. Pass one or the other", format)
+			}
 			b, err := os.ReadFile(args[0])
 			if err != nil {
 				return err
