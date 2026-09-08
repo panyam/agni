@@ -256,3 +256,38 @@ func firstBytes(b []byte, n int) []byte {
 	}
 	return b[:n]
 }
+
+// A link is only promised for a mount the operator DECLARED, and a run that asked for one and got
+// none says which half was missing. Both halves of that are shared with `check` through
+// viewerLinkMeta, so this asserts trace inherits the promise rather than restating the rule.
+func TestTraceCLIWithholdsALinkForAnUndeclaredMountAndSaysSo(t *testing.T) {
+	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1",
+		"--url-base", "http://127.0.0.1:1")
+	if err != nil {
+		t.Fatalf("trace: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "look at it:") {
+		t.Errorf("a link was emitted for a mount minted by this run:\n%s", out)
+	}
+	if !strings.Contains(out, "no links were emitted") {
+		t.Errorf("links were withheld silently:\n%s", out)
+	}
+}
+
+// Without --url-base nothing is printed and nothing is asked of any server, so a run that never
+// wanted links stays quiet.
+//
+// This holds through TraceURL's own refusal rather than through the early-out beside the call:
+// deleting that guard leaves this green, which is worth saying so nobody reads the guard as the
+// thing being tested here.
+func TestTraceCLIStaysQuietWithoutAUrlBase(t *testing.T) {
+	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1")
+	if err != nil {
+		t.Fatalf("trace: %v\n%s", err, out)
+	}
+	for _, unwanted := range []string{"look at it:", "no links were emitted", "url-base"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("output mentions %q with no --url-base given:\n%s", unwanted, out)
+		}
+	}
+}

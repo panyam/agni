@@ -37,6 +37,23 @@ export interface ViewerLocation {
   // the viewer never mints one of its own. A hash in the address bar came from whoever wrote the
   // link, which is the only reason it is worth comparing against.
   hash: string;
+  // trace is a pin-to-pin question the viewer should ask on arrival, "U1.3,J1.1", "" when none.
+  //
+  // It carries the QUESTION rather than an answer, which is what makes it different in kind from
+  // `verdict` and simpler than it. A verdict id names something already concluded, so it needs a
+  // `hash` beside it to say which bytes it was concluded about, and the viewer has to warn when
+  // those bytes have moved. Two pin names are re-asked against whatever the design is now, and a
+  // pin that has since gone is already an outcome the panel states plainly, so there is nothing
+  // here for a staleness banner to add.
+  trace: string;
+  // traceHops is the search radius the question was asked at, 0 when the URL names none (the server
+  // default applies).
+  //
+  // It rides with `trace` and means nothing without one. A link that dropped it would re-ask a
+  // NARROWER question wider, so a reader following a link from a run that said "no route within 2
+  // crossings" could be shown a route, and the two would be describing different questions while
+  // appearing to describe one answer.
+  traceHops: number;
 }
 
 const DESIGNS_PREFIX = "/designs/";
@@ -50,7 +67,7 @@ const VIEW_SEGMENT = "view";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "" };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", trace: "", traceHops: 0 };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -93,6 +110,10 @@ export function locationToUrl(loc: ViewerLocation): string {
   // Only alongside the verdict it qualifies. A hash left in the address bar after the proof it
   // described is gone would keep asserting a provenance nothing on screen still depends on.
   if (loc.verdict && loc.hash) params.set("hash", loc.hash);
+  if (loc.trace) params.set("trace", loc.trace);
+  // Only alongside the trace it qualifies, and only when it is not the server default, so an
+  // ordinary link stays short and one that pinned a radius keeps saying so.
+  if (loc.trace && loc.traceHops > 0) params.set("hops", String(loc.traceHops));
   const q = params.toString();
   return DESIGNS_PREFIX + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
 }
@@ -132,6 +153,12 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.symbols = params.get("sym") === "1";
   loc.verdict = params.get("verdict") ?? "";
   loc.hash = params.get("hash") ?? "";
+  loc.trace = params.get("trace") ?? "";
+  // A hops that is not a positive integer is DROPPED rather than clamped: the alternative is asking
+  // a question nobody wrote, and a link with a mangled radius should fall back to the default the
+  // rest of the tool uses rather than to whatever Number() made of it.
+  const hops = Number(params.get("hops"));
+  loc.traceHops = Number.isInteger(hops) && hops > 0 ? hops : 0;
   return loc;
 }
 

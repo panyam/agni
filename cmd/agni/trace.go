@@ -12,6 +12,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/render"
+	rpt "github.com/panyam/agni/core/report"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
@@ -23,7 +24,7 @@ import (
 // walk held the path and discarded it on the way out. This is the smallest surface over the walk
 // that now returns it.
 func traceCmd() *cobra.Command {
-	var from, to, format, renderOut string
+	var from, to, format, renderOut, urlBase string
 	var hops int
 	cmd := &cobra.Command{
 		Use:   "trace <file>",
@@ -53,7 +54,8 @@ func traceCmd() *cobra.Command {
 			//
 			// nil for the native renderer: TraceDesign never reaches it, and passing a real one would
 			// mean building the shell-out platform effect for a command that cannot use it.
-			svc := service.NewDesignService(&localLoader{loader: newLoader()}, nil, render.Style{}, cliProjects())
+			ll := &localLoader{loader: newLoader()}
+			svc := service.NewDesignService(ll, nil, render.Style{}, cliProjects())
 			uri, err := cliArgURI(args[0])
 			if err != nil {
 				return err
@@ -68,6 +70,23 @@ func traceCmd() *cobra.Command {
 				return err
 			}
 			t := service.TraceFromProto(resp.GetTrace())
+
+			// A LINK IS A PROMISE, decided by the one helper `check` also uses, so the two commands
+			// cannot drift on when a link is safe to make. It is printed whatever the outcome was:
+			// "these two pins do not join" is a thing worth sending someone, and a link that only
+			// survived a route would quietly drop half the answers people argue about.
+			//
+			// The guard is an EARLY-OUT, not the refusal. Withholding lives in viewerLinkMeta and
+			// TraceURL, both of which yield nothing without a url base, so removing this line changes
+			// no output; what it saves is the design resolution and the content hash that
+			// viewerLinkMeta computes for a run that asked for no links. Worth knowing before reading
+			// it as the thing that keeps a link honest.
+			if urlBase != "" {
+				meta := viewerLinkMeta(cmd, cmd.Context(), ll, string(uri), urlBase)
+				if u := rpt.TraceURL(meta, a.String(), b.String(), hops); u != "" {
+					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
+				}
+			}
 			// An endpoint that names nothing is a failed QUESTION, not an answer about the design,
 			// so it exits non-zero. A no-route is an answer and exits clean: a script asking whether
 			// two pins are joined must be able to tell "they are not" from "you named a pin that
@@ -111,6 +130,13 @@ func traceCmd() *cobra.Command {
 			"budget rather than an electrical claim, and the answer states the value it rests on, so a "+
 			"no-route can be re-asked wider.")
 	cmd.Flags().StringVar(&format, "format", "text", "text|json")
+	cmd.Flags().StringVar(&urlBase, "url-base", "",
+		"base address of a RUNNING viewer (e.g. http://localhost:8080), so the answer comes with a link "+
+			"that re-asks it there. It starts no server: run `agni open <design>` or `agni serve` first, "+
+			"and `open` prints a ready-made command. Same promise as `check --url-base`: the mount has to "+
+			"be one you declared, the server is asked whether it serves that name from the same root, and "+
+			"a withheld link says why. The link carries the QUESTION, so it needs no revision hash and is "+
+			"re-asked against whatever the design is when someone follows it.")
 	cmd.Flags().StringVar(&renderOut, "render", "",
 		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+
 			"design's own schematic where it has one and on an auto-layout of its netlist where it "+

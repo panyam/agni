@@ -31,7 +31,6 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
-	"github.com/panyam/agni/internal/mounts"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/readers/edif"
 	"github.com/panyam/agni/readers/formats"
@@ -655,35 +654,15 @@ func checkCmd() *cobra.Command {
 					// silent, so an operator who asked for links and got a page of rows with none had
 					// nothing to read that named the missing half. The notes below are only printed
 					// when --url-base was given, so a run that never asked for links stays quiet.
-					ws, _ := workspace()
-					mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI)
-					if urlBase != "" && why != "" {
-						fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no verdict links were emitted: %s\n", why)
-					}
-					if urlBase != "" && mountPath != "" {
-						if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
-							keep, note := verifyServerMount(cmd.Context(), urlBase, m)
-							if note != "" {
-								fmt.Fprintf(cmd.ErrOrStderr(), "note: %s\n", note)
-							}
-							if !keep {
-								mountPath = ""
-							}
-						}
-					}
-					meta := rpt.Report{
-						Design:    designURI,
-						Generated: time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-						// BOTH HALVES NAME THE ENTRY, not the argument, and they come from one
-						// resolution so they cannot drift apart (agni issue 489). The hash alone
-						// resolved the entry before, which fixed the folder form's missing &hash=
-						// (issue 479) and left the folder form's PATH pointing at a directory the
-						// viewer cannot open, plus a companion form whose correct path carried the
-						// entry's hash and read as a mismatch.
-						ContentHash: contentHash,
-						URLBase:     urlBase,
-						MountPath:   mountPath,
-					}
+					//
+					// BOTH HALVES NAME THE ENTRY, not the argument, and they come from one
+					// resolution so they cannot drift apart (agni issue 489). The hash alone
+					// resolved the entry before, which fixed the folder form's missing &hash=
+					// (issue 479) and left the folder form's PATH pointing at a directory the
+					// viewer cannot open, plus a companion form whose correct path carried the
+					// entry's hash and read as a mismatch.
+					meta := viewerLinkMeta(cmd, ctx, ll, designURI, urlBase)
+					meta.Generated = time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
 					switch format {
 					case "csv":
 						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts(), meta); err != nil {

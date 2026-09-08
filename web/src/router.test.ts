@@ -119,3 +119,42 @@ describe("router", () => {
     expect(parsed.mode).toBe("");
   });
 });
+
+describe("a trace in the URL", () => {
+  // The question round-trips, which is what makes a link from the CLI and a link the panel put in
+  // the address bar the same kind of thing.
+  it("round-trips the pins and the radius", () => {
+    const loc = { ...emptyLocation(), mount: "m", path: "b.edn", trace: "U1.3,J1.1", traceHops: 3 };
+    const back = parseUrl(...splitHref(locationToUrl(loc)));
+    expect(back.trace).toBe("U1.3,J1.1");
+    expect(back.traceHops).toBe(3);
+  });
+
+  // The radius is only in the URL when it was pinned, so an ordinary link stays short.
+  it("omits the radius when the question used the default", () => {
+    const url = locationToUrl({ ...emptyLocation(), mount: "m", path: "b.edn", trace: "U1.3,J1.1", traceHops: 0 });
+    expect(url).toContain("trace=U1.3%2CJ1.1");
+    expect(url).not.toContain("hops=");
+  });
+
+  // A radius means nothing without the question it qualifies, the same rule `hash` follows for a
+  // verdict.
+  it("drops a radius with no trace beside it", () => {
+    const url = locationToUrl({ ...emptyLocation(), mount: "m", path: "b.edn", trace: "", traceHops: 4 });
+    expect(url).not.toContain("hops=");
+  });
+
+  // A mangled radius falls back to the default rather than to whatever Number() made of it, because
+  // clamping would ask a question nobody wrote.
+  it("ignores a radius that is not a positive integer", () => {
+    for (const bad of ["0", "-2", "2.5", "lots", ""]) {
+      expect(parseUrl("/designs/m/b.edn/view", `?trace=U1.3,J1.1&hops=${bad}`).traceHops).toBe(0);
+    }
+  });
+});
+
+// splitHref splits a built URL back into the pathname+search pair parseUrl takes.
+function splitHref(url: string): [string, string] {
+  const i = url.indexOf("?");
+  return i < 0 ? [url, ""] : [url.slice(0, i), url.slice(i)];
+}

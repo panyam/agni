@@ -161,3 +161,38 @@ func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
 		t.Errorf("the failing subject should appear once, got %d", got)
 	}
 }
+
+func TestTraceURL(t *testing.T) {
+	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	got := TraceURL(meta, "U1.3", "J1.1", 3)
+	want := "http://h:8080/designs/m/b.edn/view?trace=U1.3%2CJ1.1&hops=3"
+	if got != want {
+		t.Errorf("TraceURL = %q, want %q", got, want)
+	}
+	if got := TraceURL(meta, "U1.3", "J1.1", 0); strings.Contains(got, "hops=") {
+		t.Errorf("a caller stating no radius must not freeze one into the link: %q", got)
+	}
+}
+
+// A URL is a promise the reader can follow. Every condition that cannot promise one yields no link
+// at all rather than one assembled from a guess, which is the rule VerdictURL states and this shares.
+func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
+	full := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	cases := []struct {
+		name     string
+		meta     Report
+		from, to string
+	}{
+		{"no server named", Report{MountPath: "m/b.edn"}, "U1.3", "J1.1"},
+		{"no mount the server would recognise", Report{URLBase: "http://h:8080"}, "U1.3", "J1.1"},
+		{"no start pin", full, "", "J1.1"},
+		{"no end pin", full, "U1.3", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := TraceURL(c.meta, c.from, c.to, 0); got != "" {
+				t.Errorf("got %q, want no link", got)
+			}
+		})
+	}
+}

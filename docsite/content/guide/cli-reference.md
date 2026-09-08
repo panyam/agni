@@ -286,6 +286,7 @@ pins that are not connected.
 | `--to <ref.pin>` | the pin to end at |
 | `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it rests on, so a no-route can be re-asked wider |
 | `--format <fmt>` | `text` (default), or `json`, which emits the same `Trace` message the `TraceDesign` rpc returns, in protojson, so a script reading the CLI and a client reading the API parse one shape |
+| `--url-base <addr>` | base address of a RUNNING viewer, so the answer comes with a link that re-asks it there. It starts no server: run `agni open <design>` or `agni serve` first. Same promise as `check --url-base`, and a link is printed for a no-route too, since "these two pins do not join" is worth sending someone. The link carries the QUESTION rather than an answer, so it needs no revision hash and is re-asked against whatever the design is when it is followed |
 | `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
 
 ### `diff <old> <new>`

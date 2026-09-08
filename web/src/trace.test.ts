@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
-import { emptyTrace, parseEndpoint, traceFromResponse, traceSubjects } from "./trace.js";
+import { emptyTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects } from "./trace.js";
 
 // create(TraceSchema, ...) rather than an object literal: a plain literal standing in for a proto is
 // invisible to `pnpm run typecheck`, which is how a fixture goes structurally wrong while the build
@@ -70,5 +70,15 @@ describe("traceSubjects", () => {
 
   it("lights nothing before anything has been asked", () => {
     expect(traceSubjects(emptyTrace())).toHaveLength(0);
+  });
+});
+
+describe("splitTraceParam", () => {
+  it("splits a ?trace= value at the first comma", () => {
+    expect(splitTraceParam("U1.3,J1.1")).toEqual(["U1.3", "J1.1"]);
+    expect(splitTraceParam(" U1.3 , J1.1 ")).toEqual(["U1.3", "J1.1"]);
+  });
+  it("yields an empty second pin rather than throwing on a malformed value", () => {
+    expect(splitTraceParam("U1.3")).toEqual(["U1.3", ""]);
   });
 });

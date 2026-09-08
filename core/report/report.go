@@ -14,6 +14,7 @@ package report
 import (
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -302,6 +303,35 @@ func rowOf(v check.Verdict, meta Report) Row {
 // instead of silently highlighting whatever now sits at that subject. A link that quietly points at
 // the wrong pin is the same false-confidence failure this whole layer exists to remove, relocated
 // into the browser.
+// TraceURL is the viewer link that re-asks a pin-to-pin question, "" when this run cannot promise
+// one. Same two conditions VerdictURL applies, for the same reason: a URL is a promise the reader can
+// follow, and one assembled from a mount the operator never declared resolves on nobody's server.
+//
+// It carries the QUESTION rather than an answer, which is why it takes no content hash and why the
+// viewer draws no stale-link banner for one. A verdict id names something already concluded, so it
+// has to say which bytes it was concluded about; two pin names are re-asked against whatever the
+// design is now, and a pin that has since gone is an outcome the panel states plainly.
+//
+// hops rides along whenever the caller STATES one, and the two callers legitimately differ. The CLI
+// knows the concrete radius it searched at, so it always states it and the link re-asks that exact
+// question by construction rather than by the CLI's default and the server's happening to be the
+// same number. The viewer states one only when the reader pinned it, since 0 there means "whatever
+// the server uses" and writing the number down would freeze a default into a URL.
+//
+// What neither may do is drop a radius that was pinned. A link that did would re-ask a narrower
+// question wider, so a run reporting "no route within 2 crossings" could show a route to whoever
+// followed it, and the two would describe different questions while appearing to describe one answer.
+func TraceURL(meta Report, from, to string, hops int) string {
+	if meta.URLBase == "" || meta.MountPath == "" || from == "" || to == "" {
+		return ""
+	}
+	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?trace=" + url.QueryEscape(from+","+to)
+	if hops > 0 {
+		u += "&hops=" + url.QueryEscape(strconv.Itoa(hops))
+	}
+	return u
+}
+
 func VerdictURL(meta Report, id string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
