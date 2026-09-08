@@ -290,3 +290,103 @@ func contains(all []string, want string) bool {
 	}
 	return false
 }
+
+// Coverage is the one io-map rule whose considered set is the NETLIST rather than the declaration:
+// which parts of the design the map never spoke about. The fixture has four nets and the map names
+// one, so a run that reported only what it checked would look entirely clean.
+func TestIOMapCoverageCountsEveryNet(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
+	vs := verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage)
+	if len(vs) != 4 {
+		t.Fatalf("got %d verdicts, want one per net in the design so the denominator is visible", len(vs))
+	}
+	var pass, unexamined int
+	for _, v := range vs {
+		switch v.Outcome {
+		case check.Pass:
+			pass++
+		case check.NotConsidered:
+			unexamined++
+		default:
+			t.Errorf("unexpected outcome %s: an undeclared net is a question nobody asked, not a defect", v.Outcome)
+		}
+	}
+	if pass != 1 || unexamined != 3 {
+		t.Errorf("got %d covered and %d unexamined, want 1 and 3", pass, unexamined)
+	}
+}
+
+// An undeclared net is never a fail. It is not a defect in the design, and reporting it as one would
+// make every incomplete map look like a broken board.
+func TestIOMapCoverageNeverFails(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: NOTHING_LIKE_IT, device: U101, pin: '41'}")
+	for _, v := range verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage) {
+		if v.Outcome == check.Fail {
+			t.Errorf("%v reported as a fail", check.SubjectRefs(v))
+		}
+	}
+}
+
+// Rails and grounds stay IN the denominator and say which they are. Excusing them would be the tool
+// deciding which absences are acceptable, and a map that forgot a whole peripheral bank would read as
+// well-covered if the arithmetic quietly dropped a third of the board.
+func TestIOMapCoverageCountsRailsAndSaysSo(t *testing.T) {
+	decl := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
+	var gnd *check.Verdict
+	for _, v := range verdictsFor(t, decl, check.NewModel(ioMapDesign()), RuleIOMapCoverage) {
+		if strings.Contains(check.SubjectRefs(v), "GND") {
+			cp := v
+			gnd = &cp
+		}
+	}
+	if gnd == nil {
+		t.Fatal("the ground net is absent from the considered set, so it was excused rather than counted")
+	}
+	if gnd.Outcome != check.NotConsidered {
+		t.Errorf("outcome = %s, want not-considered", gnd.Outcome)
+	}
+	if !strings.Contains(gnd.Reason, "rail or ground") {
+		t.Errorf("the reason should say the net is a rail, so a reader can tell it apart: %q", gnd.Reason)
+	}
+}
+
+// The map's spelling and the design's need not agree, and the coverage answer has to survive that or
+// it would report a covered net as unexamined for a reason nobody can see.
+//
+// BOTH sides are exercised, and that is not belt-and-braces. A first version of this test declared a
+// lowercase net against a fixture whose net names are already canonical, so canonicalizing the
+// DECLARATION alone was enough to pass it: a build that looked the design's raw name up in a
+// canonical index matched anyway and the test stayed green. Each case below fails if the
+// canonicalization on its own side is dropped.
+func TestIOMapCoverageMatchesAcrossSpelling(t *testing.T) {
+	covered := func(t *testing.T, designNet, declaredNet string) int {
+		t.Helper()
+		d := ioMapDesign()
+		for _, n := range d.Nets {
+			if n.Name == "ADC_BATT_SENSE" {
+				n.Name = designNet
+			}
+		}
+		decl := ioMapDecl(t, "  - {net: \""+declaredNet+"\", device: U101, pin: '41'}")
+		var n int
+		for _, v := range verdictsFor(t, decl, check.NewModel(d), RuleIOMapCoverage) {
+			if v.Outcome == check.Pass {
+				n++
+				if !strings.Contains(v.Witness.Statement, "spelled") {
+					t.Errorf("a net matched under a different spelling should say so: %q", v.Witness.Statement)
+				}
+			}
+		}
+		return n
+	}
+	t.Run("the DESIGN's name needs canonicalizing", func(t *testing.T) {
+		if got := covered(t, "adc_batt_sense", "ADC_BATT_SENSE"); got != 1 {
+			t.Errorf("got %d covered, want 1", got)
+		}
+	})
+	t.Run("the DECLARATION's name needs canonicalizing", func(t *testing.T) {
+		if got := covered(t, "ADC_BATT_SENSE", "adc_batt_sense"); got != 1 {
+			t.Errorf("got %d covered, want 1", got)
+		}
+	})
+}

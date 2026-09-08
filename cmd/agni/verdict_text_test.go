@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/core/check"
+	rpt "github.com/panyam/agni/core/report"
 )
 
 // ruleOf returns the rule heading each line of the grouped text output sits under, which is the whole
@@ -137,4 +141,97 @@ func section(t *testing.T, out, rule string) string {
 		return rest[:j]
 	}
 	return rest
+}
+
+// bigRule builds one rule's section with the given number of each outcome, for exercising the row
+// cap without needing a design that produces a thousand subjects.
+func bigRule(passes, notConsidered, fails int) rpt.RuleReport {
+	r := rpt.RuleReport{
+		Name: "big-rule", StatesConsideredSet: true,
+		Counts: map[check.Outcome]int{
+			check.Pass: passes, check.NotConsidered: notConsidered, check.Fail: fails,
+		},
+	}
+	// Worst first, which is the order the report builder produces and the order the cap relies on.
+	for i := 0; i < fails; i++ {
+		r.Rows = append(r.Rows, rpt.Row{Outcome: check.Fail,
+			Subjects: []check.Entity{check.NetNameEntity(fmt.Sprintf("BAD%d", i))}, Message: "broken"})
+	}
+	for i := 0; i < notConsidered; i++ {
+		r.Rows = append(r.Rows, rpt.Row{Outcome: check.NotConsidered,
+			Subjects: []check.Entity{check.NetNameEntity(fmt.Sprintf("UNK%d", i))}, Reason: "not asked"})
+	}
+	for i := 0; i < passes; i++ {
+		r.Rows = append(r.Rows, rpt.Row{Outcome: check.Pass,
+			Subjects: []check.Entity{check.NetNameEntity(fmt.Sprintf("OK%d", i))}, Witness: "fine"})
+	}
+	return r
+}
+
+func renderRule(r rpt.RuleReport) string {
+	var b strings.Builder
+	writeVerdictText(&b, rpt.Report{Rules: []rpt.RuleReport{r}})
+	return b.String()
+}
+
+// A rule that examined a thousand subjects and cleared them says so in its heading, and printing all
+// thousand pushes every other rule off the screen. One sample board reports 351 unconnected pins
+// under a single rule, which is the shape agni issue 644 describes.
+func TestVerdictTextCapsNonActionableRows(t *testing.T) {
+	out := renderRule(bigRule(500, 500, 0))
+	shown := strings.Count(out, "OK") + strings.Count(out, "UNK")
+	if shown > verdictQuietRowLimit {
+		t.Errorf("printed %d non-actionable rows, want at most %d", shown, verdictQuietRowLimit)
+	}
+	if !strings.Contains(out, "more, not shown") {
+		t.Errorf("a capped list must say it was capped, or it reads as the whole answer:\n%s", out)
+	}
+	// The heading is the complete count and must not be capped with the list, or the elision would
+	// hide the denominator as well as the rows.
+	if !strings.Contains(out, "500 not-considered") || !strings.Contains(out, "500 pass") {
+		t.Errorf("the heading should carry the full tally:\n%s", firstLines(out, 3))
+	}
+}
+
+// The cap must never hide a row someone has to act on. A long list is a worse read than a short one;
+// a hidden failure is a wrong answer.
+func TestVerdictTextNeverCapsFailures(t *testing.T) {
+	out := renderRule(bigRule(0, 0, 200))
+	if n := strings.Count(out, "BAD"); n != 200 {
+		t.Errorf("printed %d of 200 failures; a failure must never be elided", n)
+	}
+	if strings.Contains(out, "more, not shown") {
+		t.Errorf("nothing should have been elided:\n%s", firstLines(out, 3))
+	}
+}
+
+// The mixed case is the real one: failures survive in full and the quiet rows around them are folded.
+func TestVerdictTextKeepsFailuresWhileFoldingTheRest(t *testing.T) {
+	out := renderRule(bigRule(400, 400, 5))
+	if n := strings.Count(out, "BAD"); n != 5 {
+		t.Errorf("printed %d of 5 failures, want all of them", n)
+	}
+	if quiet := strings.Count(out, "OK") + strings.Count(out, "UNK"); quiet > verdictQuietRowLimit {
+		t.Errorf("printed %d non-actionable rows, want at most %d", quiet, verdictQuietRowLimit)
+	}
+	if !strings.Contains(out, "and 780 more, not shown") {
+		t.Errorf("the elided count should be exact:\n%s", out)
+	}
+}
+
+// A rule small enough to print whole must say nothing about eliding, or every ordinary run grows a
+// line that means nothing.
+func TestVerdictTextSaysNothingWhenNothingIsElided(t *testing.T) {
+	out := renderRule(bigRule(3, 2, 1))
+	if strings.Contains(out, "not shown") {
+		t.Errorf("nothing was elided, so nothing should say so:\n%s", out)
+	}
+}
+
+func firstLines(s string, n int) string {
+	lines := strings.Split(s, "\n")
+	if len(lines) > n {
+		lines = lines[:n]
+	}
+	return strings.Join(lines, "\n")
 }

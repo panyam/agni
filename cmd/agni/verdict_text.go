@@ -63,7 +63,15 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 				width = n
 			}
 		}
+		shown, elided := 0, 0
 		for _, row := range r.Rows {
+			if quietOutcome(row.Outcome) {
+				if shown >= verdictQuietRowLimit {
+					elided++
+					continue
+				}
+				shown++
+			}
 			indent := 4 + outcomeWidth + 2 + width + 2
 			detail := wrapText(row.Detail(), textWrapWidth-indent, indent)
 			fmt.Fprintf(w, "    %-*s  %-*s  %s\n", outcomeWidth, outcomeWord(row.Outcome), width, row.SubjectLabel(), detail)
@@ -74,6 +82,12 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 			if row.URL != "" {
 				fmt.Fprintf(w, "    %s%s\n", strings.Repeat(" ", indent-4), row.URL)
 			}
+		}
+		if elided > 0 {
+			// The count is stated rather than the list simply ending, and the heading is named as the
+			// complete tally, because a list that stops without saying so reads as the whole answer.
+			// This is the shape TraceNet.StubsElided already uses on the trace output.
+			fmt.Fprintf(w, "    ... and %d more, not shown here. The tally beside the rule name is the full count.\n", elided)
 		}
 	}
 	fmt.Fprintf(w, "\n%d verdicts across %d rule(s)", rep.Totals.Considered, rep.Totals.RulesReporting)
@@ -92,6 +106,29 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 		fmt.Fprintf(w, " (%d rule(s) reported findings only)", rep.Totals.RulesFindingsOnly)
 	}
 	fmt.Fprintln(w)
+}
+
+// verdictQuietRowLimit caps how many NON-ACTIONABLE rows one rule prints: the passes, the
+// not-considered and the no-limits. A rule that examined a thousand subjects and cleared them says so
+// in its heading tally, and printing all thousand pushes every other rule off the screen.
+//
+// It is deliberately not a cap on the whole list. A fail or an inconclusive is a row someone has to
+// act on, and hiding one behind an ellipsis to save space is a worse outcome than a long list, so
+// those are never elided however many there are.
+//
+// Twenty is above every committed tutorial capture (the largest is sixteen), so no capture moves, and
+// far below what a real board produces: one sample board reports 351 unconnected pins under a single
+// rule, which is the shape agni issue 644 describes, where output that read fine at three subjects
+// buried the screen at 531.
+const verdictQuietRowLimit = 20
+
+// quietOutcome reports an outcome nobody has to act on, which is what makes a row safe to elide.
+func quietOutcome(o check.Outcome) bool {
+	switch o {
+	case check.Fail, check.Inconclusive:
+		return false
+	}
+	return true
 }
 
 // ruleTally is the heading's right-hand side: what this rule concluded, worst first, so the number a
