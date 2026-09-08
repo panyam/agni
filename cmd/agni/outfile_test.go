@@ -121,6 +121,32 @@ func TestOutFileIsNotResultsOut(t *testing.T) {
 	}
 }
 
+// TestQueryWritesItsViewToAFile: query is the command whose own help calls markdown and html "a VIEW
+// ... ready to hand to someone", so it wants a file more than any of the others and was missed when
+// the flag first landed. The shared helper means this is a wiring test rather than a second
+// implementation, which is why one format is enough here and check sweeps them all.
+func TestQueryWritesItsViewToAFile(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "view.html")
+	var out, errOut bytes.Buffer
+	cmd := queryCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetArgs([]string{outFileFixture, `component.class(?c, ?k) => ?k, count(?c)`, "--format", "html", "-o", p})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("-o wrote no file: %v", err)
+	}
+	if !bytes.Contains(b, []byte("<html")) {
+		t.Errorf("the file is not the html view: %.120s", b)
+	}
+	if out.Len() != 0 {
+		t.Errorf("stdout carried %d bytes that should have gone to the file", out.Len())
+	}
+}
+
 // TestOutFileNoteGoesToStderr keeps `-o` composable with a pipe: the human line about the write must
 // not land in whatever reads stdout next. Matches render, which has said this since it shipped.
 func TestOutFileNoteGoesToStderr(t *testing.T) {
