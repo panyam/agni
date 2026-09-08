@@ -266,6 +266,27 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (rows with their citations kept apart), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
 | `--title <name>` | name the view, used as the heading in `--format markdown` and `html` |
 
+### `trace <file>`
+
+Follow a signal from one pin to another and print what it goes through. See
+[Following a signal](../querying/#following-a-signal-across-the-parts-in-the-way).
+
+The walk crosses series pass elements (resistors, inductors, ferrites, fuses), because those split a
+net without breaking the path. A capacitor is a DC block and is never crossed. A rail or a plane may
+be where a route ENDS and is never passed through, so a trace onto a supply reports the supply and
+stops there.
+
+Both endpoints are pins, named `<ref-des>.<pin>`. An endpoint that names nothing the design has is an
+error and exits non-zero, because a pin spelled wrong in a declaration is not the same answer as two
+pins that are not connected.
+
+| flag | what it does |
+|---|---|
+| `--from <ref.pin>` | the pin to start at, e.g. `U7.3` |
+| `--to <ref.pin>` | the pin to end at |
+| `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it rests on, so a no-route can be re-asked wider |
+| `--format <fmt>` | `text` (default) or `json` |
+
 ### `diff <old> <new>`
 
 Structural diff between two revisions, over the IR. See

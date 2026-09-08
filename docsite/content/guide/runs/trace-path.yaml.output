@@ -1,0 +1,32 @@
+#agni-run 92ada8357c9ee362
+U3.10 (NRST) --> R3 --> U1.5 (PG)
+
+route
+  U3.10 (NRST)
+  net MCU_NRST
+  cross R3 (resistor) pin 1 --> pin 2
+  net PMIC_PG
+  U1.5 (PG)
+
+routed: 1 crossing, 2 nets, searched to a radius of 6
+#agni-step
+U1.2 (VOUT) --> U3.2 (VDDIO)
+
+route
+  U1.2 (VOUT)
+  net PMIC_CORE_3V3
+      probe: TP1.1
+      also: C1.1 (capacitor), C2.1 (capacitor), U2.1 (ic), U4.1 (ic), U5.1 (ic)
+  U3.2 (VDDIO)
+
+routed: 0 crossings, 1 net, searched to a radius of 6
+#agni-step
+no route: U3.10 (NRST) --> U1.1 (VIN)
+
+  U3.10 (NRST) on net MCU_NRST
+  U1.1 (VIN) on net PMIC_MAIN_12V0
+
+no series path from MCU_NRST to PMIC_MAIN_12V0 within 6 crossings.
+The walk crosses resistors, inductors, ferrites and fuses.
+A capacitor is a DC block and is never crossed.
+A rail or plane may END a route and is never passed through.

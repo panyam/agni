@@ -151,11 +151,19 @@ type Reach struct {
 	Depth map[string]int // net name -> series crossings from the start
 }
 
-// ReachStep records how a net was reached during the series walk: the net crossed FROM and
-// the pass element (ref-des) crossed THROUGH.
+// ReachStep records how a net was reached during the series walk: the net crossed FROM, the pass
+// element (ref-des) crossed THROUGH, and that element's own pin on each side of the crossing.
+//
+// The pins are what make a step renderable as the thing a reviewer reads, "R5.1 to R5.2", rather
+// than as a component name with the direction left implicit. They come off ir.Connection.pin_ref
+// on each net, so recording them costs the walk a scan of the net it just landed on and needs
+// nothing new in the IR. Either may be empty on a source whose connections carry no pin reference,
+// which a renderer has to expect rather than assume away.
 type ReachStep struct {
 	From    string
 	Through string
+	FromPin string // Through's pin on the From net
+	ToPin   string // Through's pin on the net this step reached
 }
 
 // PathTo returns the series path from the walk's start net to target, in crossing order
@@ -210,6 +218,34 @@ func (r Reach) ThroughOnPath(target *ir.Net) []string {
 	}
 	if len(rev) == 0 && at != target.Name {
 		return nil
+	}
+	return rev
+}
+
+// StepsTo returns the crossings from the walk's start to target, in crossing order; nil when the
+// target was not reached or IS the start. It is ThroughOnPath with the whole step kept rather than
+// only the ref-des, which is what a caller reporting the route needs: the pins on each side of a
+// crossing are on the step and were being dropped on the way out.
+//
+// The two coexist because the older callers ask a membership question over the path ("is a fuse on
+// it") and a ref-des list answers that exactly. Widening ThroughOnPath's return would have made
+// every one of them index into a struct to ask the same thing.
+func (r Reach) StepsTo(target *ir.Net) []ReachStep {
+	if target == nil {
+		return nil
+	}
+	var rev []ReachStep
+	at := target.Name
+	for {
+		s, ok := r.Parent[at]
+		if !ok {
+			break
+		}
+		rev = append(rev, s)
+		at = s.From
+	}
+	for i, j := 0, len(rev)-1; i < j; i, j = i+1, j-1 {
+		rev[i], rev[j] = rev[j], rev[i]
 	}
 	return rev
 }
