@@ -47,9 +47,15 @@ a test that reads the corpus calls `t.Fatalf` when it is absent rather than `t.S
 A checksum mismatch means the published artifact changed or the download was corrupted. Do not update
 the pin to match without establishing which, because a released artifact is meant to be immutable.
 
-Two tarballs, so a run fetches only what it needs. `tutorial-board` is one board's schematics, about
-3MB, and is what the gate takes. `oracle-corpus` adds every board's copper for the KiCad reader
-cross-check, about 19MB, and `make samples-oracle` is what asks for it.
+Two tarballs, and one stamp per artifact so the targets compose. `tutorial-board` is one board's
+schematics, about 3MB. `oracle-corpus` adds every board's copper for the reader cross-checks, about
+19MB, and the gate takes that one.
+
+The per-artifact stamp is worth knowing about, because a single stamp over the requested SET made the
+two targets alternate: each wiped what the other had fetched. So `make testall` deleted the corpus a
+cross-view test needed, that test skipped, and it ran on nobody's machine for as long as it existed.
+A skipped test reports the same green as a passing one, which is why the tests that read the corpus
+now call `t.Fatalf` when it is absent rather than `t.Skip`.
 
 ## A fixture that exists twice is checked against its twin
 

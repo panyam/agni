@@ -21,11 +21,20 @@ repo=panyam/agni-samples
 version=$(awk '$1=="VERSION"{print $2}' "$pin")
 [ -n "$version" ] || { echo "fetch_samples: no VERSION in $pin" >&2; exit 1; }
 
-# The stamp is a hash of the pin file plus the requested set, so bumping the pin or asking for a
-# different artifact re-fetches without anyone having to remember to clean.
-stamp_want=$(cat "$pin" <(printf '%s\n' "$@") | shasum -a 256 | cut -d' ' -f1)
-stamp_file="$dest/.stamp"
-if [ -f "$stamp_file" ] && [ "$(cat "$stamp_file")" = "$stamp_want" ]; then
+# One stamp PER ARTIFACT, hashed from the pin file, so the targets compose. A single stamp over the
+# requested set made `make samples` and `make samples-oracle` alternate: each wiped what the other
+# fetched, so the gate silently removed the corpus the cross-view test needs and that test skipped
+# every run (agni issue 591).
+pin_hash=$(shasum -a 256 < "$pin" | cut -d' ' -f1)
+needed=()
+for name in "$@"; do
+  stamp="$dest/.stamp-$name"
+  if [ -f "$stamp" ] && [ "$(cat "$stamp")" = "$pin_hash" ]; then
+    continue
+  fi
+  needed+=("$name")
+done
+if [ ${#needed[@]} -eq 0 ]; then
   exit 0
 fi
 
@@ -38,7 +47,7 @@ trap 'rm -rf "$tmp"' EXIT
 # round means a network blip or a bad checksum leaves the tree with no corpus at all, so a transient
 # failure costs the working copy someone already had.
 files=()
-for name in "$@"; do
+for name in "${needed[@]}"; do
   want=$(awk -v n="$name" '$2==n{print $1}' "$pin")
   [ -n "$want" ] || { echo "fetch_samples: '$name' is not pinned in $pin" >&2; exit 1; }
 
@@ -60,8 +69,8 @@ for name in "$@"; do
   files+=("$file")
 done
 
-# Everything verified. Stage into a sibling and swap, so an extract failure does not leave a
-# half-populated tree that looks fetched.
+# Everything verified. Extract into a staging tree first, so a failure part way through does not
+# leave a half-populated corpus that looks fetched.
 staged="$tmp/staged"
 mkdir -p "$staged"
 for file in "${files[@]}"; do
@@ -74,7 +83,10 @@ if [ -z "$(find "$staged" -name '*.kicad_sch' -print -quit)" ]; then
   exit 1
 fi
 
-rm -rf "$dest"
-mkdir -p "$(dirname "$dest")"
-mv "$staged" "$dest"
-echo "$stamp_want" > "$stamp_file"
+# Merge rather than replace, so an artifact this run did not ask for survives. cp -R of the staging
+# tree's CONTENTS overwrites the files an artifact owns and leaves every other tree alone.
+mkdir -p "$dest"
+cp -R "$staged"/. "$dest"/
+for name in "${needed[@]}"; do
+  echo "$pin_hash" > "$dest/.stamp-$name"
+done

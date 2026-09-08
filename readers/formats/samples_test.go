@@ -65,11 +65,14 @@ const sampleJetsonBoard = "../../tools/samples/boards/jetson-agx-thor-baseboard/
 // part numbers. It is a stronger claim than either view's count, because the schematic and the board
 // state the MPN in different places and a reader can satisfy a count while joining on nothing.
 //
-// The board file is in the oracle corpus rather than the tutorial tarball, so this needs
-// `make samples-oracle`.
+// The board file is in the oracle corpus rather than the tutorial tarball, which is why testall
+// depends on `samples-oracle` rather than on `samples`.
 func TestSampleBoardPartIdentityAgreesAcrossViews(t *testing.T) {
 	if _, err := os.Stat(sampleJetsonBoard); err != nil {
-		t.Skipf("oracle corpus not fetched, run `make samples-oracle`: %v", err)
+		// Fatal rather than skipped, as its neighbour above. `make samples-oracle` is what testall
+		// depends on, so an absent corpus is a broken checkout rather than a normal state, and a skip
+		// here is how this test spent its first hours not running at all (agni issue 591).
+		t.Fatalf("oracle corpus missing, run `make samples-oracle`: %v", err)
 	}
 
 	mpns := func(path string) map[string]string {
