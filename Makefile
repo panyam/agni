@@ -102,9 +102,10 @@ fixture-copies-check:
 samples:
 	./hack/fetch_samples.sh tutorial-board
 
-# The oracle corpus adds every board's copper, for the KiCad reader cross-check that compares a
-# schematic read against the board file's own netlist. 19MB against tutorial-board's 3MB, so it is
-# not in the gate's default fetch.
+# The oracle corpus adds every board's copper, for the KiCad reader cross-check and for the test that
+# compares a design's schematic and board views against each other. The gate takes THIS one rather
+# than `samples` alone, because a test whose corpus is absent skips, and a skipped test is a test that
+# proves nothing (agni issue 591). 19MB against tutorial-board's 3MB, fetched once per pin bump.
 samples-oracle:
 	./hack/fetch_samples.sh tutorial-board oracle-corpus
 
@@ -160,7 +161,7 @@ catalog-docs-check: catalog-docs
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
 # proto-check sits near the front because stale generated code makes every later failure a red
 # herring: it compiles and tests green while describing a different schema.
-testall: vet ir-model-check fixture-copies-check proto-check samples ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check samples-oracle ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
