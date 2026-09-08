@@ -533,7 +533,7 @@ export class ViewerPresenter {
     this.linkHash = loc.hash;
     this.views.staleLinkNote(staleLinkNote(this.linkHash, this.designContentHash));
     if (loc.verdict) {
-      await this.runChecks();
+      await this.runChecksForLink(loc.rule);
       await this.locateVerdict(loc.verdict);
     }
     // A trace link needs no run first, unlike a verdict: it carries the QUESTION, so the viewer just
@@ -556,6 +556,9 @@ export class ViewerPresenter {
       symbols: this.faithfulSymbols,
       verdict: this.focusedVerdict,
       hash: this.linkHash,
+      // Named from the focused verdict rather than remembered from the URL, so a verdict reached by
+      // clicking in the panel produces the same cheap link as one arrived at from a report.
+      rule: this.focusedVerdict ? (this.findVerdict(this.focusedVerdict)?.rule ?? "") : "",
       // The trace the panel is showing, so a route found by typing two pins is addressable without
       // the reader having to think about it, and the address bar and the panel never disagree.
       trace: this.tracedPins,
@@ -615,6 +618,39 @@ export class ViewerPresenter {
     this.selectedRules = names;
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.findings));
+  }
+
+  // runChecksForLink resolves a verdict a URL named, running ONE rule when the link says which.
+  //
+  // A cold load has an empty verdict cache, so a link has to run something before it can resolve
+  // anything. What it does not have to do is run everything: the catalog was 56 rules on the board
+  // this was measured against and one link cost the whole of it, about fifteen seconds, on every
+  // click, because each click is a fresh page load and the cache never survives one.
+  //
+  // The rule comes off the URL rather than out of the verdict id (agni issue 518's neighbour). Ids
+  // are generated and never parsed, so the minting side names the rule instead.
+  //
+  // An unnamed rule falls back to the full run, which is what every link written before this
+  // parameter existed carries, and what a hand-typed verdict id carries too. A named rule the
+  // catalog does not have also falls back, because the alternative is resolving nothing at all and
+  // reporting it as a stale link.
+  //
+  // The rest of the catalog stays PENDING afterwards rather than running behind the scenes. Following
+  // a link is a question about one verdict, and the findings panel already models an unrun rule, so
+  // the reader who wants the others presses Run.
+  private async runChecksForLink(rule: string): Promise<void> {
+    if (!rule || !this.rulesByName.has(rule)) {
+      await this.runChecks();
+      return;
+    }
+    const restore = this.selectedRules;
+    this.selectedRules = [rule];
+    try {
+      await this.runChecks();
+    } finally {
+      this.selectedRules = restore;
+    }
+    this.assembleFindings();
   }
 
   // runChecks is the on-demand check trigger (the Run button): it fetches the selected rules not yet

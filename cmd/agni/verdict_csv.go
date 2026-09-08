@@ -59,7 +59,7 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report) error
 		}
 		c.Row([]string{
 			v.GetId(),
-			rpt.VerdictURL(meta, v.GetId()),
+			rpt.VerdictURL(meta, v.GetId(), v.GetRule()),
 			v.GetRule(),
 			outcomeCell(v.GetOutcome()),
 			subjectsCell(v.GetSubjects()),

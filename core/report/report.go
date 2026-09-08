@@ -283,7 +283,7 @@ func rowOf(v check.Verdict, meta Report) Row {
 	for _, c := range v.Context {
 		r.Context = append(r.Context, check.EntityRef(c.Entity))
 	}
-	r.URL = VerdictURL(meta, r.ID)
+	r.URL = VerdictURL(meta, r.ID, v.Rule)
 	return r
 }
 
@@ -332,13 +332,24 @@ func TraceURL(meta Report, from, to string, hops int) string {
 	return u
 }
 
-func VerdictURL(meta Report, id string) string {
+func VerdictURL(meta Report, id, rule string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
 	}
 	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?verdict=" + url.QueryEscape(id)
 	if meta.ContentHash != "" {
 		u += "&hash=" + url.QueryEscape(meta.ContentHash)
+	}
+	// The rule rides along so the viewer can resolve this verdict by running ONE rule rather than the
+	// whole catalog. It is named here rather than recovered from the id because VerdictID is generated
+	// and never parsed (core/check/verdict.go): the id escapes its delimiters precisely so a ref may
+	// carry its own colons and commas, and splitting it back apart would undo that.
+	//
+	// It is a HINT, not part of the address. Two verdicts of one rule differ by subject, so the id
+	// stays the identity and a link that lost this parameter still resolves, just by the slower route.
+	// That is what keeps every link already written into a saved report working.
+	if rule != "" {
+		u += "&rule=" + url.QueryEscape(rule)
 	}
 	return u
 }

@@ -75,7 +75,7 @@ func evidenceFor(it review.ItemResult, meta rpt.Checklist) []rpt.ChecklistEviden
 			Message: f.Message,
 			URL: rpt.VerdictURL(rpt.Report{
 				URLBase: meta.URLBase, MountPath: meta.MountPath, ContentHash: meta.ContentHash,
-			}, id),
+			}, id, f.Rule),
 		})
 	}
 	return out

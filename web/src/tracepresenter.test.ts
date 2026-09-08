@@ -150,7 +150,7 @@ describe("a trace arriving in the URL", () => {
     const h = harness();
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
-      symbols: false, verdict: "", hash: "", trace: "U1.3,J1.1", traceHops: 0,
+      symbols: false, verdict: "", hash: "", rule: "", trace: "U1.3,J1.1", traceHops: 0,
     });
     expect(h.traceDesign).toHaveBeenCalledWith({
       uri: artifactUri("m", "proj/board.edn"),
@@ -166,7 +166,7 @@ describe("a trace arriving in the URL", () => {
     const h = harness();
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
-      symbols: false, verdict: "", hash: "", trace: "U1.3,J1.1", traceHops: 2,
+      symbols: false, verdict: "", hash: "", rule: "", trace: "U1.3,J1.1", traceHops: 2,
     });
     const calls = h.traceDesign.mock.calls;
     expect(calls[calls.length - 1][0].hops).toBe(2);
@@ -176,7 +176,7 @@ describe("a trace arriving in the URL", () => {
     const h = harness();
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
-      symbols: false, verdict: "", hash: "", trace: "", traceHops: 0,
+      symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0,
     });
     expect(h.traceDesign).not.toHaveBeenCalled();
   });

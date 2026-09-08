@@ -27,6 +27,26 @@ describe("router", () => {
     expect(parsed).toEqual(l);
   });
 
+  it("carries the rule alongside the verdict it qualifies", () => {
+    const url = locationToUrl(loc({ mount: "m", path: "b.edn", verdict: "i2c-pull-up:net:SDA", rule: "i2c-pull-up" }));
+    expect(url).toBe("/designs/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&rule=i2c-pull-up");
+  });
+
+  it("drops a rule with no verdict to qualify", () => {
+    const url = locationToUrl(loc({ mount: "m", path: "b.edn", rule: "i2c-pull-up" }));
+    expect(url).not.toContain("rule=");
+  });
+
+  it("reads the rule back out of the query", () => {
+    const parsed = parseUrl("/designs/m/b.edn/view", "?verdict=i2c-pull-up%3Anet%3ASDA&rule=i2c-pull-up");
+    expect(parsed.rule).toBe("i2c-pull-up");
+  });
+
+  it("reads a rule-less link as one that names no rule", () => {
+    const parsed = parseUrl("/designs/m/b.edn/view", "?verdict=i2c-pull-up%3Anet%3ASDA");
+    expect(parsed.rule).toBe("");
+  });
+
   it("carries the link's revision hash alongside the verdict it qualifies", () => {
     const url = locationToUrl(loc({ mount: "m", path: "b.edn", verdict: "i2c-pull-up:net:SDA", hash: "sha256:abc" }));
     expect(url).toBe("/designs/m/b.edn/view?verdict=i2c-pull-up%3Anet%3ASDA&hash=sha256%3Aabc");
