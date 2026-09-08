@@ -267,6 +267,7 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
 | `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQueryResponse` the `RunQuery` rpc returns, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
 | `--title <name>` | name the view, used as the heading in `--format markdown` and `html` |
+| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default). A view is a thing to hand to someone, so it wants a filename rather than a redirect. The written-file note goes to stderr |
 
 ### `trace <file>`
 

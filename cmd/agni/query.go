@@ -25,6 +25,7 @@ func queryCmd() *cobra.Command {
 	var paramsDir string
 	var conventions string
 	var boardPath string
+	var outPath string
 	var showExamples bool
 	var showRelations bool
 	var verbose bool
@@ -68,6 +69,11 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			return cobra.ExactArgs(2)(cmd, args)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			closeOut, err := redirectOut(cmd, outPath)
+			if err != nil {
+				return err
+			}
+			defer closeOut()
 			if showRelations {
 				printRelations(cmd.OutOrStdout(), verbose)
 				return nil
@@ -140,6 +146,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().BoolVar(&showExamples, "examples", false, "print starter queries (the concept ladder the web panel shows) and exit")
 	c.Flags().BoolVar(&showRelations, "relations", false, "print the queryable relation catalog (grouped by kind) and exit")
 	c.Flags().StringVar(&format, "format", "text", "output format: text (the aligned terminal table), csv (spreadsheet-safe, header row, table only), json (rows with their citations kept apart), markdown or html (a VIEW: the question above its answer, ready to hand to someone). markdown and html carry the query; csv deliberately does not, because its first row has to be the header")
+	outFileFlag(c, &outPath)
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
 	c.Flags().BoolVar(&verbose, "verbose", false, "with --relations, also print each relation's full reference doc")
 	return c
