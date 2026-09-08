@@ -37,14 +37,18 @@ func traceCmd() *cobra.Command {
 			"route but is never passed through.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Before redirectOut, so a --server this process cannot honour refuses the run while the
+			// output file is still uncreated. Creating it first meant a refused run still announced
+			// "wrote <file>" over an empty one (agni issue 637).
+			var err error
+			if srvSpec, err = resolveServer(serverVal); err != nil {
+				return err
+			}
 			closeOut, err := redirectOut(cmd, traceOutPath)
 			if err != nil {
 				return err
 			}
 			defer closeOut()
-			if srvSpec, err = resolveServer(serverVal); err != nil {
-				return err
-			}
 			a, err := parseEndpoint(from, "--from")
 			if err != nil {
 				return err
