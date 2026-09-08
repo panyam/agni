@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/panyam/agni/artifact"
 
 	"github.com/panyam/agni/core/check"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -122,12 +123,24 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 	if err != nil {
 		return nil, err
 	}
-	d, err := s.loader.Design(ctx, u, opts...)
+	// Tiers from the design's declaration, like every other read here: the walk is over the NETLIST
+	// and the sheets come from the geometry companion, which for a netlist entry is a different
+	// artifact (C32). This call was reading whatever ref it was handed.
+	nu, _, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	d, err := s.loader.Design(ctx, nu, opts...)
 	if err != nil {
 		return nil, err
 	}
 	from := check.Endpoint{RefDes: req.GetFrom().GetRefDes(), Pin: req.GetFrom().GetPin()}
 	to := check.Endpoint{RefDes: req.GetTo().GetRefDes(), Pin: req.GetTo().GetPin()}
-	t := check.TracePins(check.NewModel(d), from, to, int(req.GetHops()))
-	return &webapi.TraceDesignResponse{Trace: TraceProto(t)}, nil
+	m := check.NewModel(d)
+	t := check.TracePins(m, from, to, int(req.GetHops()))
+	p := TraceProto(t)
+	// Where each net of the answer is drawn, so the panel can badge it and both renderers can open
+	// the sheet the route is actually on rather than the design's first (agni issue 657).
+	AnnotateTraceSheets(p, BuildGeometry(ctx, s.loader, gu, opts...), m)
+	return &webapi.TraceDesignResponse{Trace: p}, nil
 }

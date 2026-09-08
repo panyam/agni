@@ -9,7 +9,7 @@ import type { TraceState } from "./trace.js";
 // harness builds a presenter with only what the trace path needs; every other collaborator is a stub
 // sufficient for openFile to complete. wireTrace off is the unwired-panel case, which must be a
 // no-op rather than a throw, since the presenter's view ports are optional by design.
-function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error; onLocation?: ReturnType<typeof vi.fn> } = {}) {
+function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error; onLocation?: ReturnType<typeof vi.fn>; sheets?: string[] } = {}) {
   const wireTrace = opts.wireTrace !== false;
   const answer =
     opts.trace ??
@@ -20,8 +20,8 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
       radius: 6,
       crossings: [{ refDes: "R1", class: "resistor", enterPin: "2", exitPin: "1", fromNet: "SDA", toNet: "VCC" }],
       nets: [
-        { name: "SDA", stubs: [], stubsElided: 0, busLike: false },
-        { name: "VCC", stubs: [], stubsElided: 0, busLike: true },
+        { name: "SDA", stubs: [], stubsElided: 0, busLike: false, sheetIds: opts.sheets ?? [] },
+        { name: "VCC", stubs: [], stubsElided: 0, busLike: true, sheetIds: [] },
       ],
     });
   const traceDesign = vi.fn(async (_req: { uri: string; from: unknown; to: unknown; hops?: number }) => {
@@ -31,7 +31,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
   const client = {
     getDesign: vi.fn(async () => ({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
-      sheets: [{ id: "s1", name: "S1" }], nativeAvailable: false, availableLayouts: ["faithful"],
+      sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }], nativeAvailable: false, availableLayouts: ["faithful"],
     })),
     getSheet: vi.fn(async (req: { format?: SheetFormat }) =>
       req.format === SheetFormat.SVG
@@ -77,7 +77,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     trace: wireTrace ? { setState: onTrace } : undefined,
     location: opts.onLocation,
   });
-  return { presenter, onTrace, traceDesign, canvas };
+  return { presenter, onTrace, traceDesign, canvas, getSheet: client.getSheet };
 }
 
 function lastState(onTrace: ReturnType<typeof vi.fn>): TraceState {
@@ -195,5 +195,31 @@ describe("a trace reaching the URL", () => {
     const loc = locCalls[locCalls.length - 1][0];
     expect(loc.trace).toBe("U1.3,J1.1");
     expect(loc.traceHops).toBe(0);
+  });
+});
+
+// A route is drawn on a sheet, and before agni 657 the viewer never went to it: runTrace painted the
+// highlight onto whichever sheet happened to be showing, which on a cold link is the design's first.
+// On an 82-sheet export that is a table of contents with no wires on it at all.
+describe("a trace goes to a sheet the route is on", () => {
+  it("navigates when the route is drawn elsewhere", async () => {
+    const h = harness({ sheets: ["s2"] });
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.getSheet.mockClear();
+    await h.presenter.runTrace("U1.3", "J1.1");
+    const asked = h.getSheet.mock.calls.map((c: unknown[]) => (c[0] as { sheet?: string }).sheet);
+    expect(asked).toContain("s2");
+  });
+
+  // The control for the case above: with the route drawn nowhere there is no sheet to go to, and
+  // jumping somewhere arbitrary would be worse than staying. Without it the test above passes on a
+  // presenter that navigates unconditionally.
+  it("stays put when nothing on the route is drawn", async () => {
+    const h = harness({ sheets: [] });
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.getSheet.mockClear();
+    await h.presenter.runTrace("U1.3", "J1.1");
+    const asked = h.getSheet.mock.calls.map((c: unknown[]) => (c[0] as { sheet?: string }).sheet);
+    expect(asked).not.toContain("s2");
   });
 });

@@ -30,6 +30,10 @@ export interface TraceNetItem {
   stubs: TraceStubItem[];
   stubsElided: number;
   busLike: boolean;
+  // The sheets this net is drawn on, empty when it is drawn on none. Per net rather than one per
+  // trace, because a route crossing three sheets is exactly when a reader wants to choose which to
+  // open, and this is the same list a finding and a query cell already carry.
+  sheetIds: string[];
 }
 
 export interface TraceEndItem {
@@ -37,6 +41,10 @@ export interface TraceEndItem {
   pin: string;
   pinName: string;
   net: string;
+  // Where this endpoint is DRAWN, resolved from its placement and falling back to its net. Filled on
+  // a no-route too: the two nets that fail to join are drawn somewhere, and that is the picture a
+  // reader goes looking for the moment they read that the pins do not join.
+  sheetIds: string[];
 }
 
 // TraceState is the panel's whole state.
@@ -61,7 +69,7 @@ export interface TraceState {
   ran: boolean;
 }
 
-const emptyEnd: TraceEndItem = { refDes: "", pin: "", pinName: "", net: "" };
+const emptyEnd: TraceEndItem = { refDes: "", pin: "", pinName: "", net: "", sheetIds: [] };
 
 export function emptyTrace(): TraceState {
   return {
@@ -88,11 +96,12 @@ export function errorTrace(message: string): TraceState {
 
 // traceFromResponse maps the wire Trace into the panel's view state.
 export function traceFromResponse(t: Trace): TraceState {
-  const end = (e: { endpoint?: { refDes: string; pin: string }; pinName: string; net: string } | undefined): TraceEndItem => ({
+  const end = (e: { endpoint?: { refDes: string; pin: string }; pinName: string; net: string; sheetIds?: string[] } | undefined): TraceEndItem => ({
     refDes: e?.endpoint?.refDes ?? "",
     pin: e?.endpoint?.pin ?? "",
     pinName: e?.pinName ?? "",
     net: e?.net ?? "",
+    sheetIds: e?.sheetIds ?? [],
   });
   return {
     from: end(t.from),
@@ -111,6 +120,7 @@ export function traceFromResponse(t: Trace): TraceState {
       stubs: n.stubs.map((s) => ({ refDes: s.refDes, pin: s.pin, cls: s.class })),
       stubsElided: n.stubsElided,
       busLike: n.busLike,
+      sheetIds: n.sheetIds ?? [],
     })),
     error: "",
     loading: false,
@@ -173,4 +183,18 @@ export function splitTraceParam(param: string): [string, string] {
   const i = param.indexOf(",");
   if (i < 0) return [param.trim(), ""];
   return [param.slice(0, i).trim(), param.slice(i + 1).trim()];
+}
+
+// traceSheet is the sheet a trace answer should open on, "" when it is drawn nowhere.
+//
+// The FROM endpoint's first, because the reader named that pin and a route reads in that direction;
+// then the first net of the route that is drawn. It picks ONE because the canvas shows one sheet at
+// a time. Every other sheet of every net stays reachable as a badge, which is the affordance a
+// finding and a query cell already use for an entity that lives on several.
+export function traceSheet(t: TraceState): string {
+  if (t.from.sheetIds.length > 0) return t.from.sheetIds[0];
+  for (const n of t.nets) {
+    if (n.sheetIds.length > 0) return n.sheetIds[0];
+  }
+  return "";
 }

@@ -23,7 +23,7 @@ import (
 // and refusing those would make the flag useless exactly where a picture helps most: an auto-layout
 // is a true picture of the connectivity, and the note is what stops it being mistaken for the
 // schematic somebody drew.
-func renderSubjects(errOut io.Writer, named, out string, specs []*geom.HighlightSpec) error {
+func renderSubjects(errOut io.Writer, named, out, sheetID string, specs []*geom.HighlightSpec) error {
 	// The resolver's note is DROPPED here, and errOut carries only this function's own. Every caller
 	// had to read the design to compute its subjects, so it has already resolved and reported the
 	// same design, and renderSource produces the identical sentence. What errOut must still carry is
@@ -49,9 +49,18 @@ func renderSubjects(errOut io.Writer, named, out string, specs []*geom.Highlight
 		}
 		fmt.Fprintf(errOut, "note: %s carries no drawn schematic, so this is an auto-layout of its netlist.\n", file)
 	}
-	sheet, err := render.PickSheet(g, "0")
+	// The sheet the ANSWER is on, when the caller knows it. Defaulting to "0" drew the design's first
+	// sheet whatever the subjects were, which on an 82-sheet export is a table of contents with no
+	// wires on it at all (agni issue 657).
+	//
+	// A sheet the loaded geometry does not hold falls back rather than failing: the auto-layout path
+	// above has its own sheet names, so a sheet id resolved against the faithful drawing means nothing
+	// there, and a picture of the right subjects on a computed layout beats an error.
+	sheet, err := render.PickSheet(g, sheetID)
 	if err != nil {
-		return err
+		if sheet, err = render.PickSheet(g, "0"); err != nil {
+			return err
+		}
 	}
 	return writeRender(out, g, sheet, "svg", specs)
 }

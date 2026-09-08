@@ -23,7 +23,7 @@ import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
-import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects } from "./trace.js";
+import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
 import { type ConventionBarView } from "./conventions.js";
@@ -1169,6 +1169,15 @@ export class ViewerPresenter {
     const subjects = traceSubjects(state);
     if (subjects.length === 0) return;
     if (this.mode === "native") await this.setMode("webgl");
+    // Go to a sheet the answer is ON, the way selectFinding does. Without this a route was drawn on
+    // whatever sheet happened to be open, which on a cold link is the design's first: an 82-sheet
+    // export opens on a table of contents with no wires at all (agni issue 657).
+    //
+    // The FROM endpoint first, because the reader named that pin and a route reads in that direction,
+    // then any net of the route that is drawn. An answer drawn nowhere leaves the view alone rather
+    // than jumping somewhere arbitrary.
+    const target = traceSheet(state);
+    if (target && target !== this.currentSheet) await this.showSheet(target);
     const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
     await this.setHighlights(focusStack(this.findings, subjects, focus));
   }

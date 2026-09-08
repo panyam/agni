@@ -966,7 +966,11 @@ type TraceDesignRequest struct {
 	// radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
 	// the value it rests on: nothing about a route degrades with distance, so a no-route can be
 	// re-asked wider and the reader has to be able to see what was asked the first time.
-	Hops          int32 `protobuf:"varint,4,opt,name=hops,proto3" json:"hops,omitempty"`
+	Hops int32 `protobuf:"varint,4,opt,name=hops,proto3" json:"hops,omitempty"`
+	// as_named reads exactly the artifact this uri names, as it does on every other design request.
+	// A trace resolves tiers too: the walk is over the netlist and the sheets come from the geometry
+	// companion, which for a netlist entry is a different artifact.
+	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1027,6 +1031,13 @@ func (x *TraceDesignRequest) GetHops() int32 {
 		return x.Hops
 	}
 	return 0
+}
+
+func (x *TraceDesignRequest) GetAsNamed() bool {
+	if x != nil {
+		return x.AsNamed
+	}
+	return false
 }
 
 // TraceEndpoint names one pin of one component.
@@ -1230,7 +1241,14 @@ type TraceEnd struct {
 	// the pin, so it is what makes the endpoint recognisable to the person reading.
 	PinName string `protobuf:"bytes,2,opt,name=pin_name,json=pinName,proto3" json:"pin_name,omitempty"`
 	// net is the net the pin sits on, empty when the endpoint did not resolve.
-	Net           string `protobuf:"bytes,3,opt,name=net,proto3" json:"net,omitempty"`
+	Net string `protobuf:"bytes,3,opt,name=net,proto3" json:"net,omitempty"`
+	// sheet_ids names the sheets this endpoint's net is drawn on, empty when it is drawn on none.
+	//
+	// Filled on EVERY outcome, including no-route. The two nets that fail to join are drawn somewhere,
+	// and that picture is what a reader goes looking for the moment they read "no route", so a field
+	// populated only on success would answer with silence exactly where the question is sharpest. Empty
+	// then honestly means not drawn, rather than nobody looked.
+	SheetIds      []string `protobuf:"bytes,4,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1284,6 +1302,13 @@ func (x *TraceEnd) GetNet() string {
 		return x.Net
 	}
 	return ""
+}
+
+func (x *TraceEnd) GetSheetIds() []string {
+	if x != nil {
+		return x.SheetIds
+	}
+	return nil
 }
 
 // TraceCross is one series element crossed on the route, with its own pins on each side.
@@ -1382,7 +1407,14 @@ type TraceNet struct {
 	// bus_like marks a net the walk would refuse to continue THROUGH: a rail, a ground, or any
 	// rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
 	// assuming the trace stopped early for some other reason.
-	BusLike       bool `protobuf:"varint,4,opt,name=bus_like,json=busLike,proto3" json:"bus_like,omitempty"`
+	BusLike bool `protobuf:"varint,4,opt,name=bus_like,json=busLike,proto3" json:"bus_like,omitempty"`
+	// sheet_ids names the sheets this net is drawn on, empty when it is drawn on none.
+	//
+	// PER NET rather than one sheet for the whole trace, because a route crossing three sheets is
+	// exactly when a reader wants to choose. It is the same shape a Finding's `sheets` and a query
+	// cell's `cell_sheets` already carry, so the panel renders the same SheetBadges and a click
+	// navigates the same way.
+	SheetIds      []string `protobuf:"bytes,5,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1443,6 +1475,13 @@ func (x *TraceNet) GetBusLike() bool {
 		return x.BusLike
 	}
 	return false
+}
+
+func (x *TraceNet) GetSheetIds() []string {
+	if x != nil {
+		return x.SheetIds
+	}
+	return nil
 }
 
 // TraceStub is a part sitting on a net of the route that the route does not pass through. Test
@@ -1683,12 +1722,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x19\n" +
 	"\bas_named\x18\x03 \x01(\bR\aasNamed\"S\n" +
 	"\x17GetLayoutReportResponse\x128\n" +
-	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"\x9c\x01\n" +
+	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"\xb7\x01\n" +
 	"\x12TraceDesignRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\x121\n" +
 	"\x04from\x18\x02 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x04from\x12-\n" +
 	"\x02to\x18\x03 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x02to\x12\x12\n" +
-	"\x04hops\x18\x04 \x01(\x05R\x04hops\":\n" +
+	"\x04hops\x18\x04 \x01(\x05R\x04hops\x12\x19\n" +
+	"\bas_named\x18\x05 \x01(\bR\aasNamed\":\n" +
 	"\rTraceEndpoint\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03pin\x18\x02 \x01(\tR\x03pin\"B\n" +
@@ -1701,11 +1741,12 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x16\n" +
 	"\x06radius\x18\x05 \x01(\x05R\x06radius\x128\n" +
 	"\tcrossings\x18\x06 \x03(\v2\x1a.agni.v1.webapi.TraceCrossR\tcrossings\x12,\n" +
-	"\x04nets\x18\a \x03(\v2\x18.agni.v1.webapi.TraceNetR\x04nets\"r\n" +
+	"\x04nets\x18\a \x03(\v2\x18.agni.v1.webapi.TraceNetR\x04nets\"\x8f\x01\n" +
 	"\bTraceEnd\x129\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\bendpoint\x12\x19\n" +
 	"\bpin_name\x18\x02 \x01(\tR\apinName\x12\x10\n" +
-	"\x03net\x18\x03 \x01(\tR\x03net\"\xa5\x01\n" +
+	"\x03net\x18\x03 \x01(\tR\x03net\x12\x1b\n" +
+	"\tsheet_ids\x18\x04 \x03(\tR\bsheetIds\"\xa5\x01\n" +
 	"\n" +
 	"TraceCross\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n" +
@@ -1713,12 +1754,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\tenter_pin\x18\x03 \x01(\tR\benterPin\x12\x19\n" +
 	"\bexit_pin\x18\x04 \x01(\tR\aexitPin\x12\x19\n" +
 	"\bfrom_net\x18\x05 \x01(\tR\afromNet\x12\x15\n" +
-	"\x06to_net\x18\x06 \x01(\tR\x05toNet\"\x8d\x01\n" +
+	"\x06to_net\x18\x06 \x01(\tR\x05toNet\"\xaa\x01\n" +
 	"\bTraceNet\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12/\n" +
 	"\x05stubs\x18\x02 \x03(\v2\x19.agni.v1.webapi.TraceStubR\x05stubs\x12!\n" +
 	"\fstubs_elided\x18\x03 \x01(\x05R\vstubsElided\x12\x19\n" +
-	"\bbus_like\x18\x04 \x01(\bR\abusLike\"L\n" +
+	"\bbus_like\x18\x04 \x01(\bR\abusLike\x12\x1b\n" +
+	"\tsheet_ids\x18\x05 \x03(\tR\bsheetIds\"L\n" +
 	"\tTraceStub\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03pin\x18\x02 \x01(\tR\x03pin\x12\x14\n" +

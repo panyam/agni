@@ -8,6 +8,7 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // TestAnnotateBusLocateReason checks the WS7-042c annotation: a bus finding whose bus is drawn gets
@@ -102,5 +103,56 @@ func TestAnnotateWithoutAModelExplainsNothing(t *testing.T) {
 	AnnotateSheets([]*checkspb.Finding{f}, g, nil)
 	if f.GetLocateReason() != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
 		t.Errorf("reason = %v, want UNSPECIFIED with no model to ask", f.GetLocateReason())
+	}
+}
+
+// A trace was the third consumer of the sheet index and the only one that never asked, so a route
+// drew on the design's first sheet whatever it crossed (agni issue 657). These pin the two lookups
+// that differ from a finding's, and the outcome that is easiest to leave unfilled.
+func TestAnnotateTraceSheets(t *testing.T) {
+	// Two sheets, and the parts are on the SECOND. A one-sheet fixture cannot tell "found the right
+	// sheet" from "returned the first one", which is exactly the bug.
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "contents"},
+		{Id: "page2", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}, {RefDes: "R1"}}},
+	}}
+	tr := &webapi.Trace{
+		From: &webapi.TraceEnd{Endpoint: &webapi.TraceEndpoint{RefDes: "U1", Pin: "3"}, Net: "SDA"},
+		To:   &webapi.TraceEnd{Endpoint: &webapi.TraceEndpoint{RefDes: "R1", Pin: "1"}, Net: "VCC"},
+		Nets: []*webapi.TraceNet{{Name: "SDA"}, {Name: "VCC"}},
+	}
+	AnnotateTraceSheets(tr, g, nil)
+
+	// An endpoint resolves by PLACEMENT, not by its net: it is a pin on a part, and where that part
+	// is drawn is what a reader opens. Resolving by net first put a route on a sheet carrying the
+	// middle net and none of the parts.
+	if got := tr.GetFrom().GetSheetIds(); len(got) != 1 || got[0] != "page2" {
+		t.Errorf("from endpoint sheets = %v, want [page2] from U1's placement", got)
+	}
+	if got := tr.GetTo().GetSheetIds(); len(got) != 1 || got[0] != "page2" {
+		t.Errorf("to endpoint sheets = %v, want [page2] from R1's placement", got)
+	}
+}
+
+// The no-route case is the one a field filled only on success answers with silence, and it is the
+// case a reader most wants a picture of: the two nets that do NOT join are still drawn somewhere.
+func TestAnnotateTraceSheetsFillsANoRoute(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "contents"},
+		{Id: "page2", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}}},
+	}}
+	tr := &webapi.Trace{
+		Outcome: webapi.TraceOutcome_TRACE_OUTCOME_NO_ROUTE,
+		From:    &webapi.TraceEnd{Endpoint: &webapi.TraceEndpoint{RefDes: "U1", Pin: "3"}, Net: "SDA"},
+		To:      &webapi.TraceEnd{Endpoint: &webapi.TraceEndpoint{RefDes: "J9", Pin: "1"}, Net: "FAR"},
+	}
+	AnnotateTraceSheets(tr, g, nil)
+
+	if got := tr.GetFrom().GetSheetIds(); len(got) != 1 || got[0] != "page2" {
+		t.Errorf("a no-route still has a drawn FROM: sheets = %v, want [page2]", got)
+	}
+	// The other end is genuinely not drawn, and empty must mean that rather than "nobody looked".
+	if got := tr.GetTo().GetSheetIds(); len(got) != 0 {
+		t.Errorf("an undrawn endpoint got sheets %v, want none", got)
 	}
 }
