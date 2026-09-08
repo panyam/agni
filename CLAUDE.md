@@ -186,17 +186,20 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **`agni trace <design> --from U7.3 --to U12.4` follows a signal through the series parts between
   them** and prints the route, the nets, and the probe points on each. `--render <file.svg>` draws it,
   on the design's own schematic where it has one and on an auto-layout where it does not, saying which.
-  `--url-base` mints a link that re-asks the question in the viewer, and unlike a verdict link it
+  `--server` mints a link that re-asks the question in the viewer, and unlike a verdict link it
   carries the QUESTION, so it needs no content hash. Three outcomes stay apart: a route, no route
   within the radius, and an endpoint naming nothing the design has, which exits non-zero because a pin
   spelled wrong and two pins genuinely unconnected are opposite problems.
 - **Two HTML reports, one stylesheet, different axes.** `check --format html` is the verdict report,
   rule-major, and implies `--verdicts`. `review --format html` is the checklist, question-major, in
-  the manifest's order with every finding per item. Both take `--url-base` and share
-  `core/report/style.css`. **A link is only emitted for a mount you DECLARED**, and `--url-base` then
-  asks that server's `ListMounts` whether it serves that name from the same root; a withheld link
-  always prints its reason. `agni open <design>` prints a matching `check --mount … --url-base …`
-  line, and because one process mints the mount and serves it the two cannot disagree. **A link names
+  the manifest's order with every finding per item. Both take `--server` and share
+  `core/report/style.css`. **Against a REMOTE server a link is only emitted for a mount you DECLARED**,
+  because a mount minted for one run means nothing on a server not started with it, and that server is
+  then asked through `ListMounts` whether it serves the name from the same root; a withheld link always
+  prints its reason. **`--server self` removes the question instead of answering it**: one process
+  reads the design and serves it, so a minted mount is as linkable as a declared one, and it blocks
+  until Ctrl-C because the links live exactly as long as the server does. `self:PORT` fails on a taken
+  port rather than moving. `--url-base` is a deprecated alias for one release. **A link names
   the design's declared ENTRY whatever you pointed the command at, and carries the revision it was
   read at**, which the viewer checks before it draws. Semantics and the two ways the halves used to
   disagree are in `guide/checks-and-reports.md`.
@@ -293,6 +296,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `make samples` and `make samples-oracle` compose instead of deleting each other's work.
 - **After ANY proto change run BOTH `make proto` (Go) AND `make proto-web` (TS).** `make proto-check`
   fails the gate on either half being stale.
+- **`-o/--out` writes the `--format` output to a file** on `check`, `review`, `trace` and `query`,
+  `-` meaning stdout and being the default, so nothing that omits it changed. Distinct from
+  `--results-out`, which writes the check-result DOCUMENT `agni results` re-renders. The written-file
+  note goes to stderr, so `-o` composes with a pipe.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
 
@@ -320,6 +327,21 @@ a run leaves behind and the generated-code rules. **`tutorial-runs-check` regene
 does not read the prose quoting them**, so a tutorial can cite numbers a change moved and the gate
 stays green.
 
+**Three ways to read a design and get a confident WRONG answer, all silent, all hit in one sitting.**
+Each returns an empty answer rather than an error, which reads as "the design does not have that".
+
+- **A bare reader instead of `formats.Loader`.** The Loader is where the format-neutral passes run, so
+  `classify.StampMPN` never fires and every component's `mpn` is empty, which empties the whole
+  datasheet tier. This is agni issue 228's shape, and it recurred in `examples/common` (issue 618)
+  because the examples are their own Go modules, outside the root build and outside the wiring table.
+- **`check.NewModel` instead of `check.NewModelWithParams`.** The model's MPN map is filled by the
+  params constructor ALONE and `component.mpn` reads that map, not `ir.Component.mpn`. Built the other
+  way the relation is empty on a design where every component carries a part number. A nil spec
+  provider is fine; only the datasheet relations need a real one.
+- **A missing registration blank-import.** `check.BuiltinRules()` returns nothing without
+  `_ "github.com/panyam/agni/stdlib/rules/builtin"`, and a verdict sweep then reports "0 pass, 0 fail,
+  across 0 rules". Three of the four seams fail this way; see the composition facade note above.
+
 **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
 negative result needs a positive control, a positive rate needs a precision check, and every new test
 needs a red-check. Most of the expensive mistakes here have been correct-looking results nobody could
@@ -346,6 +368,7 @@ note strip is the one exception, and it is listed so the gap is visible rather t
 | A fixture copied from another directory | 1, plus a group in `hack/fixture_copies.txt` | `build/the-gate.md` | `hack/fixture_copies_check.sh` |
 | A file added to a capture's fixture directory | 1, plus `make tutorial-runs` AFTER committing it | `build/the-gate.md` | `tutorial-runs-check`, but only once the file is committed |
 | A format-neutral ingestion pass | 3 (the pass, the `Loader.ReadDesign` call, `hack/ir_model_baseline.txt` for C19) | `build/format-reader.md` | a cross-format e2e test you write; NOTHING catches a pass that is never called |
+| A host that reads designs | 1 (go through `formats.Loader`, never a bare reader) | `build/evidence.md` | `TestReadCarriesTheIngestionPasses` in `examples/common`; nothing guards a NEW host |
 | A hand-authored diagram | 2 (the file in `docsite/figures/`, one `{{ includeFile }}` in the page) | `docsite/README.md` | `docsite/includefile_test.go` |
 | An architectural constraint | 3 (the rule in `CONSTRAINTS.md`, a test in one of three homes, a `Verify` naming that test) | `build/the-gate.md`, and `CONSTRAINTS.md`'s own header | the test you wrote, and NOTHING checks that a rule has one |
 
@@ -396,6 +419,12 @@ Never commit:
   cite the document revision and page.
 
   The fixture-versus-corpus rule is in `docsite/content/architecture/datasheet-layer.md`.
+
+**A generated report IS customer data.** `check --format html` on a real board is tens of megabytes
+carrying every net name, ref-des and the design's title, and `-o` makes writing one a keystroke. The
+root `.gitignore` covers `report.html` and friends by SHAPE, because one sat untracked in the working
+tree for a session before anyone looked. Write them to `/tmp` or outside the repo, and never `git add`
+a file you did not author.
 
 **Sanitize at the point of writing rather than cleaning up later.** The engineering content nearly
 always survives sanitizing and only the provenance goes. "Customer item 112 mock-failed against a
