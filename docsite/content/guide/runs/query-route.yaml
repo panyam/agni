@@ -1,0 +1,4 @@
+# The same walk as query-reaches.yaml, binding what it crossed rather than only where it got to.
+fixture: readers/kicad/testdata
+script: |
+  agni query board.kicad_pcb 'route("GND", ?n, ?path) => ?n, ?path'

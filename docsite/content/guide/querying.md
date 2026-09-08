@@ -23,6 +23,7 @@ Each fact is a named relation with a few fields. You query them by name:
 | `component-on-net(ref, net)` | a part sits on a net | the schematic |
 | `param(mpn, symbol, value)` | a datasheet limit | `--params` (see [Datasheets](../datasheets/)) |
 | `reaches(from, net)` | nets reachable through passives | the connectivity |
+| `route(from, net, path)` | the same walk, plus what it crossed to get there | the connectivity |
 | `board.track_width(net, mm)` | a net's thinnest copper track | the PCB |
 | `board.via_drill(net, mm)` | a net's smallest {{ explainable "via" }} drill | the PCB |
 | `board.layer(net, layer)` | a layer the net is routed on | the PCB |
@@ -315,6 +316,25 @@ how you ask "what does this rail actually feed after the filter". "Everything re
 
 {{ agniRun "content/guide/runs/query-reaches.yaml" }}
 
+### See what the walk crossed (route)
+
+`reaches` tells you a net is reachable. It does not tell you what stands between the two, so you
+end up opening the schematic to check an answer the tool already knew. `route(from, net, path)` is
+the same walk with that half kept: `path` binds the nets in crossing order with the part crossed
+between each pair, so an answer carries the evidence for itself.
+
+{{ agniRun "content/guide/runs/query-route.yaml" }}
+
+Read `GND -> [R1] -> SIG` as: the walk left GND, went through R1, and arrived at SIG. The names outside
+the brackets are nets and the one inside is the part. The first row is the reflexive one, since a net
+reaches itself at zero crossings and its route is its own name.
+
+It answers with *a* route and not every route. The walk is breadth-first, so where two resistors
+bridge the same two nets you get the shorter one and no mention of the other. And a route never ends
+on a rail or a plane, because the walk refuses to enter one at all. For the pin-to-pin form, which
+does end on a rail and reports the test points sitting on each net along the way, use
+[`agni trace`](../cli-reference/#trace).
+
 ## Asking under your own vocabulary
 
 Some relations do not report what is in the file; they report what the engine *believes*. `rail`,
@@ -488,6 +508,13 @@ the cards say which is which.
 <summary><strong><code>reaches</code></strong>, nets reachable through passives</summary>
 
 {{ includeCard "content/reference/relations/reaches.md" }}
+
+</details>
+
+<details>
+<summary><strong><code>route</code></strong>, the same walk, with the path it took</summary>
+
+{{ includeCard "content/reference/relations/route.md" }}
 
 </details>
 

@@ -51,6 +51,11 @@ var examples = []ExampleQuery{
 		Teaches: "distance: ?hops binds the EXACT crossing count, so a radius is a comparison (writing 1 in that slot would mean exactly one hop, skipping the net itself)",
 	},
 	{
+		Label:   "Reachable, with the route it took",
+		Query:   "route(?from, ?net, ?path) => ?from, ?net, ?path",
+		Teaches: "evidence: the same walk as reaches, binding what it crossed (`VBUS -> [R5] -> VBUS_F`), so an answer can be checked without re-asking it",
+	},
+	{
 		Label:   "Power pins on a single-connection net",
 		Query:   `pin.role(?ref, ?pin, "power"), pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?c), ?c < 2 => ?ref, ?pin, ?net`,
 		Teaches: "pin-level join: a pin, its role, and its net's fan-out",

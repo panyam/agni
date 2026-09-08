@@ -1,6 +1,8 @@
 package model
 
 import (
+	"strings"
+
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -248,4 +250,44 @@ func (r Reach) StepsTo(target *ir.Net) []ReachStep {
 		rev[i], rev[j] = rev[j], rev[i]
 	}
 	return rev
+}
+
+// routeArrow separates the hops of a rendered route, and the brackets around a part are what keep it
+// readable out of context. Nets and ref-des are not distinguishable by shape on a real board (one
+// sample names its nets N$1 and N$6 and its parts R1 and L1), so without the brackets a reader has
+// to count positions to know which is which. With them, `N$6 -> [L1] -> N$1` needs no counting.
+const routeArrow = " -> "
+
+// RouteLine renders the route from the walk's start to target as one line, naming the nets it passed
+// through and the part crossed between each pair:
+//
+//	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
+//
+// It is the fourth reading of one walk, beside PathTo (the nets), ThroughOnPath (the parts) and
+// StepsTo (both, with pins). Those three answer questions a caller then has to render; this answers
+// the one where the rendering IS the answer, so a query can bind a route as a value and a table can
+// carry it in a cell (agni issue 518).
+//
+// Three returns, kept apart because two of them are answers and one is not:
+//
+//   - a route, when target was reached across one or more crossings
+//   - target's own name, when target IS the start: the two points are one electrical node, which is
+//     the strongest form of connected there is rather than a degenerate case
+//   - "", when target was not reached, so a caller cannot print an empty line and call it a route
+//
+// The pins on each crossing are deliberately left out. They are on StepsTo for a caller with room to
+// print them, and a column a hundred rows tall is not that caller.
+func (r Reach) RouteLine(target *ir.Net) string {
+	if target == nil {
+		return ""
+	}
+	if _, reached := r.Depth[target.Name]; !reached {
+		return ""
+	}
+	steps := r.StepsTo(target)
+	hops := make([]string, 0, 2*len(steps)+1)
+	for _, s := range steps {
+		hops = append(hops, s.From, "["+s.Through+"]")
+	}
+	return strings.Join(append(hops, target.Name), routeArrow)
 }
