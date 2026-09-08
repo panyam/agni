@@ -265,7 +265,7 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | `--params <dir>` | a parameter set, to query datasheet facts (`param(...)`) |
 | `--conventions <file>` | apply a naming convention's LEXICON to the read, so `rail`/`feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here: a query runs no rules |
 | `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
-| `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (rows with their citations kept apart), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
+| `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQueryResponse` the `RunQuery` rpc returns, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
 | `--title <name>` | name the view, used as the heading in `--format markdown` and `html` |
 
 ### `trace <file>`

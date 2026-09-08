@@ -126,6 +126,18 @@ message RunQueryResponse {
   // (a ref_des), "net", or "" for a scalar or unresolved column. It drives which cells the panel
   // renders as clickable-to-locate. Empty (or all "") when no column resolves to an entity.
   repeated string column_kinds = 3;
+  // query and source echo the request's identifying inputs, so an ANSWER says which question
+  // produced it and which design it was asked of.
+  //
+  // Added when the CLI's `--format json` moved onto this message. The CLI had been emitting a
+  // hand-rolled shape that carried both, and dropping them to adopt the wire form would have made
+  // the machine-readable format the only one that cannot say what it is an answer to, which is
+  // backwards: markdown and html carry them precisely so a saved view states its own question.
+  //
+  // The panel ignores them, since it sent the request and already knows. That is the ordinary cost
+  // of a self-describing response and it is one string each.
+  string query = 4;
+  string source = 5;
 }
 
 message ListRelationsRequest {}

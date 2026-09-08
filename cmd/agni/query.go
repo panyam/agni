@@ -14,6 +14,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // queryCmd runs an ad-hoc datalog query over the design's fact base (WS3-029). The fact relations
@@ -88,7 +89,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				return renderTable(cmd.OutOrStdout(), format, tableFromRows(q, rows, title, args[0], filepath.Base(paramsDir)))
+				resp := respFromRows(q, rows, args[0], filepath.Base(paramsDir))
+				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)))
 			}
 			// Thin client of the in-process QueryService (WS9-048): the CLI provides an os-backed
 			// no-containment loader and the datasheet corpus, then renders the proto rows — the same
@@ -128,7 +130,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			if err != nil {
 				return err
 			}
-			return renderTable(cmd.OutOrStdout(), format, tableFromProto(resp, title, args[1], designURI))
+			return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[1], designURI))
 		},
 	}
 	c.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (datasheet corpus) — enables the param relation")
@@ -178,12 +180,25 @@ func printExamples(w io.Writer) {
 
 // renderTable writes a query answer in the requested format. One dispatch for both evaluation paths
 // (the service and the --speclib direct one), so a format can never work on one and not the other.
-func renderTable(w io.Writer, format string, t rpt.Table) error {
+func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rpt.Table) error {
 	switch format {
 	case "csv":
 		return rpt.TableCSV(w, t)
 	case "json":
-		return rpt.TableJSON(w, t)
+		// protojson of the WIRE message, the same RunQueryResponse RunQuery returns, so a script
+		// reading this CLI and a client reading the rpc parse one shape. It carries column_kinds,
+		// which the hand-rolled shape dropped, and it carries the query and the design because the
+		// response now echoes them: a machine-readable answer that cannot say what it answers is the
+		// wrong one to have made the exception for.
+		//
+		// Both evaluation paths build the message, so json cannot work on one and not the other,
+		// which is the invariant this dispatch exists to hold.
+		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(resp)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(w, string(b))
+		return err
 	case "markdown":
 		return rpt.TableMarkdown(w, t)
 	case "html":
@@ -209,20 +224,29 @@ func tableFromProto(resp *webapi.RunQueryResponse, title, query, source string) 
 	return t
 }
 
-// tableFromRows builds the view from Go rows, the --speclib path, which evaluates against the spec
-// library rather than a design and so never goes through the service.
-func tableFromRows(q query.Query, rows []query.Row, title, queryText, corpus string) rpt.Table {
+// respFromRows builds the wire message from Go rows, the --speclib path, which evaluates against the
+// spec library rather than a design and so never goes through the service.
+//
+// It exists so BOTH paths render from one shape. They used to diverge here, with the service path
+// holding a RunQueryResponse and this one holding a Table, which was harmless while every format was
+// derived from the Table and stopped being harmless the moment json became the wire message: the
+// format would have worked on a design and not on a corpus.
+//
+// It carries no column_kinds. A spec-library answer ranges over a corpus and not a design, so no cell
+// names an entity anything could locate, and inventing kinds here would promise a navigation that
+// resolves nowhere.
+func respFromRows(q query.Query, rows []query.Row, queryText, corpus string) *webapi.RunQueryResponse {
 	cols := q.Columns()
-	t := rpt.Table{Title: title, Query: queryText, Source: corpus, Columns: make([]string, 0, len(cols))}
+	resp := &webapi.RunQueryResponse{Query: queryText, Source: corpus, Columns: make([]string, 0, len(cols))}
 	for _, c := range cols {
-		t.Columns = append(t.Columns, string(c))
+		resp.Columns = append(resp.Columns, string(c))
 	}
 	for _, r := range rows {
 		cells := make([]string, 0, len(cols))
 		for _, c := range cols {
 			cells = append(cells, r.Bind[c].S)
 		}
-		t.Rows = append(t.Rows, rpt.TableRow{Cells: cells, Cites: r.Cites})
+		resp.Rows = append(resp.Rows, &webapi.QueryRow{Cells: cells, Cites: r.Cites})
 	}
-	return t
+	return resp
 }

@@ -295,6 +295,31 @@ func reportToProto(r *graph.ConversionReport) *webapi.ConversionReport {
 	return out
 }
 
+// ReportFromProto is reportToProto's inverse.
+//
+// It exists so the pair carries the deep-equality round-trip guard C26 asks of a hand-written twin,
+// and so `agni render --report --report-format json` can emit the same message GetLayoutReport
+// returns rather than a second hand-rolled shape of the same report. Before that the CLI encoded the
+// Go struct directly, so the two publishers of one report disagreed by construction and nothing could
+// detect it.
+func ReportFromProto(p *webapi.ConversionReport) *graph.ConversionReport {
+	out := &graph.ConversionReport{}
+	for _, c := range p.GetComponents() {
+		out.Components = append(out.Components, graph.ComponentReport{
+			RefDes: c.GetRefDes(),
+			Symbol: c.GetSymbol(),
+			Class:  c.GetDeviceClass(),
+			Cell:   c.GetCell(),
+			Kind:   c.GetKind(),
+		})
+	}
+	return out
+}
+
+// ReportProto is reportToProto exported, for a caller outside this package that holds the engine's
+// report and wants the wire form (the CLI's --report-format json).
+func ReportProto(r *graph.ConversionReport) *webapi.ConversionReport { return reportToProto(r) }
+
 // GetSheet resolves the file's geometry, selects one sheet (by id, name, or 0-based index; empty
 // selects the first), and renders it in the requested format: PACKED (tier-2 geometry for the
 // WebGL viewer, the default), SVG (the render.SheetSVG reference), or NATIVE (the format's own

@@ -21,6 +21,22 @@ import (
 // part identity (ref-des / MPN / manufacturer / value), an anomaly kind + ref-des, or a nominal VOLTAGE.
 // There is deliberately no field for a net name, a connection, or any topology (CONSTRAINTS C16); the
 // boundary is enforced by this type, not by discipline. Same design + model => same Skeleton.
+// ITS JSON IS HAND-ROLLED, AND THAT IS THE ONE EXCEPTION to the CLI's json convention (agni issue
+// 603). Every other `--format json` emits protojson of the wire message that command's rpc returns,
+// so a script reading the CLI and a client reading the API parse one shape. Intake has no rpc and,
+// more to the point, should not get one lightly.
+//
+// The reason is C16 and the confidentiality posture in CLAUDE.md. This type's guarantee is
+// STRUCTURAL: it has no field that can hold a net name or a connection, so an intake summary cannot
+// express the confidential parts of a design. That turns a policy ("do not paste a net name") into a
+// property of the type ("there is no field for one"), and it holds because the struct is small enough
+// to read in one screen and every field's comment says what it deliberately drops.
+//
+// A proto twin would have to carry that guarantee too, and a message is edited in a different file by
+// people adding a field for a different reason. The guarantee would survive only as long as everyone
+// remembered it, which is exactly the policy this design replaced. So intake keeps encoding/json
+// until something actually needs it on a wire, and then the guarantee gets designed rather than
+// inherited.
 type Skeleton struct {
 	Components    int            `json:"components"`
 	Sections      int            `json:"sections"`

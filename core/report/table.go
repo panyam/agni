@@ -1,7 +1,6 @@
 package report
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -94,36 +93,6 @@ func TableCSV(w io.Writer, t Table) error {
 		c.Row(r.cells())
 	}
 	return c.Finish()
-}
-
-// tableJSON is the wire shape of TableJSON, named separately so the field tags are visible at the
-// point the format is defined rather than inferred from a struct built for rendering.
-type tableJSON struct {
-	Title   string         `json:"title,omitempty"`
-	Query   string         `json:"query,omitempty"`
-	Source  string         `json:"source,omitempty"`
-	Columns []string       `json:"columns"`
-	Rows    []tableRowJSON `json:"rows"`
-	Count   int            `json:"count"`
-}
-
-type tableRowJSON struct {
-	Cells []string `json:"cells"`
-	Cites []string `json:"cites,omitempty"`
-}
-
-// TableJSON writes the view as one json object for tooling. Provenance stays a per-row LIST here
-// rather than being flattened into a trailing cell the way the text and csv forms need: a consumer
-// that wants the citations wants them apart, and json is the one format with somewhere to put them.
-func TableJSON(w io.Writer, t Table) error {
-	out := tableJSON{Title: t.Title, Query: t.Query, Source: t.Source, Columns: t.Columns, Count: len(t.Rows)}
-	out.Rows = make([]tableRowJSON, 0, len(t.Rows))
-	for _, r := range t.Rows {
-		out.Rows = append(out.Rows, tableRowJSON{Cells: r.Cells, Cites: r.Cites})
-	}
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
 }
 
 // TableMarkdown writes the view as a GitHub-flavoured markdown section: a heading, the query in a

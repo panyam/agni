@@ -2,7 +2,8 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"os"
 	"path/filepath"
@@ -198,17 +199,19 @@ func TestWriteReport(t *testing.T) {
 	if err := writeReport(&b, fixture, symbolsGlyph, nil, "json"); err != nil {
 		t.Fatalf("writeReport json: %v", err)
 	}
-	var rep struct {
-		Components []struct {
-			RefDes string `json:"ref_des"`
-			Kind   string `json:"kind"`
-		} `json:"components"`
+	// protojson of the WIRE message now (C31), the same ConversionReport GetLayoutReport returns, so
+	// this decodes the proto rather than a shape only this command spoke.
+	var rep webapi.ConversionReport
+	if err := protojson.Unmarshal(b.Bytes(), &rep); err != nil {
+		t.Fatalf("report json is not protojson of webapi.ConversionReport: %v\n%s", err, b.String())
 	}
-	if err := json.Unmarshal(b.Bytes(), &rep); err != nil {
-		t.Fatalf("report json invalid: %v", err)
+	if len(rep.GetComponents()) == 0 || rep.GetComponents()[0].GetRefDes() == "" || rep.GetComponents()[0].GetKind() == "" {
+		t.Errorf("json report components malformed: %+v", rep.GetComponents())
 	}
-	if len(rep.Components) == 0 || rep.Components[0].RefDes == "" || rep.Components[0].Kind == "" {
-		t.Errorf("json report components malformed: %+v", rep.Components)
+	// EmitUnpopulated keeps a zero field present, so a consumer never has to tell "absent" from
+	// "empty" by whether a key showed up.
+	if !strings.Contains(b.String(), "\"deviceClass\"") {
+		t.Errorf("a zero-valued field was omitted, so the shape changes per run:\n%s", b.String())
 	}
 
 	if err := writeReport(io.Discard, fixture, symbolsGlyph, nil, "bogus"); err == nil {

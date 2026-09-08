@@ -3,7 +3,6 @@ package report
 import (
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -168,38 +167,6 @@ func TestTableMarkdownCarriesItsQuestion(t *testing.T) {
 	}
 }
 
-// TestTableJSONKeepsCitesApart. The text and csv forms flatten provenance into one trailing cell
-// because they have nowhere else to put it. json does, and a consumer that wants the citations
-// wants them separable.
-func TestTableJSONKeepsCitesApart(t *testing.T) {
-	var b bytes.Buffer
-	if err := TableJSON(&b, sampleTable()); err != nil {
-		t.Fatal(err)
-	}
-	var got struct {
-		Columns []string `json:"columns"`
-		Count   int      `json:"count"`
-		Rows    []struct {
-			Cells []string `json:"cells"`
-			Cites []string `json:"cites"`
-		} `json:"rows"`
-	}
-	if err := json.Unmarshal(b.Bytes(), &got); err != nil {
-		t.Fatal(err)
-	}
-	if got.Count != 2 || len(got.Rows) != 2 {
-		t.Fatalf("count=%d rows=%d, want 2 and 2", got.Count, len(got.Rows))
-	}
-	if len(got.Rows[1].Cites) != 2 {
-		t.Errorf("second row has %d cite(s), want 2 kept apart", len(got.Rows[1].Cites))
-	}
-	if len(got.Columns) != 2 {
-		t.Errorf("columns = %v, want the projection without provenance folded in", got.Columns)
-	}
-}
-
-// TestTableHTMLEscapesDesignData. Every cell came out of a file this engine did not author, so a net
-// name carrying a bracket must not become markup.
 func TestTableHTMLEscapesDesignData(t *testing.T) {
 	tbl := sampleTable()
 	tbl.Rows = []TableRow{{Cells: []string{"<script>x</script>", "TP1"}, Cites: []string{"c"}}}
