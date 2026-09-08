@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -270,5 +271,111 @@ func TestReachStepCarriesPinsOnBothSides(t *testing.T) {
 	}
 	if steps[0].FromPin != "1" || steps[0].ToPin != "2" {
 		t.Errorf("step pins = %q/%q, want 1/2", steps[0].FromPin, steps[0].ToPin)
+	}
+}
+
+// pullupFixture: SDA is pulled to +3V3 by TWO resistors, SCL by one, and ADDR by two that land on
+// DIFFERENT rails. R_GND is a pull-DOWN and must never count, and R_FAR sits four hops out.
+func pullupFixture() *ir.Design {
+	comp := func(ref string) *ir.Component {
+		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
+	}
+	rail := func(name string, conns ...string) *ir.Net {
+		n := tnet(name, conns...)
+		n.Attributes = map[string]string{"global": "true"}
+		return n
+	}
+	return &ir.Design{
+		Components: []*ir.Component{
+			comp("U1"), comp("R1"), comp("R2"), comp("R3"), comp("R4"), comp("R5"), comp("R_GND"),
+			comp("R_TWO"), // one part whose far side touches BOTH rails
+			comp("R_VIA"), // ground to a rail: only reachable if the walk crosses ground
+		},
+		Nets: []*ir.Net{
+			tnet("SDA", "U1.1", "R1.1", "R2.1", "R_GND.1"),
+			tnet("SCL", "U1.2", "R3.1", "R_TWO.1"),
+			tnet("ADDR", "U1.3", "R4.1", "R5.1"),
+			rail("+3V3", "R1.2", "R2.2", "R3.2", "R4.2", "R_TWO.2"),
+			rail("+1V8", "R5.2", "R_TWO.3", "R_VIA.2"),
+			tnet("GND", "R_GND.2", "R_VIA.1"),
+		},
+	}
+}
+
+func terminationsOn(t *testing.T, d *ir.Design, net string) []PullUpTermination {
+	t.Helper()
+	m := NewModel(d)
+	for _, n := range m.Nets() {
+		if n.Name == net {
+			return AllPullUpPathsToRail(m, n)
+		}
+	}
+	t.Fatalf("no net %q in the fixture", net)
+	return nil
+}
+
+// The question PullUpPathToRail cannot answer: how many. Two resistors in parallel are two
+// terminations and one reach.
+func TestAllPullUpPathsFindsBothParallelResistors(t *testing.T) {
+	got := terminationsOn(t, pullupFixture(), "SDA")
+	var refs []string
+	for _, e := range got {
+		refs = append(refs, e.Resistor)
+	}
+	sort.Strings(refs)
+	if len(refs) != 2 || refs[0] != "R1" || refs[1] != "R2" {
+		t.Errorf("SDA terminations = %v, want R1 and R2", refs)
+	}
+	for _, e := range got {
+		if e.Rail != "+3V3" {
+			t.Errorf("%s landed on %q, want +3V3", e.Resistor, e.Rail)
+		}
+		if len(e.Path) == 0 {
+			t.Errorf("%s carries no path, so a finding could not show its route", e.Resistor)
+		}
+	}
+	// The boolean walk still answers what it always did.
+	m2 := NewModel(pullupFixture())
+	if PullUpPathToRail(m2, netNamed(m2, "SDA")) == nil {
+		t.Error("PullUpPathToRail stopped finding a pull-up it used to find")
+	}
+}
+
+func TestAllPullUpPathsReportsTheRailEachLandedOn(t *testing.T) {
+	rails := map[string]string{}
+	for _, e := range terminationsOn(t, pullupFixture(), "ADDR") {
+		rails[e.Resistor] = e.Rail
+	}
+	if rails["R4"] != "+3V3" || rails["R5"] != "+1V8" {
+		t.Errorf("ADDR rails = %v, want R4 on +3V3 and R5 on +1V8", rails)
+	}
+}
+
+// One PART is one termination however many rails its far side happens to touch, because the count is
+// how many things there are to remove and R_TWO is one thing.
+func TestOnePartIsOneTerminationEvenTouchingTwoRails(t *testing.T) {
+	var refs []string
+	for _, e := range terminationsOn(t, pullupFixture(), "SCL") {
+		refs = append(refs, e.Resistor)
+	}
+	sort.Strings(refs)
+	if len(refs) != 2 || refs[0] != "R3" || refs[1] != "R_TWO" {
+		t.Errorf("SCL terminations = %v, want R3 and R_TWO once each", refs)
+	}
+}
+
+// Ground is never CROSSED, and that is what the guard is for. A resistor to ground is a pull-down and
+// terminates on nothing, since IsRailNet is false for a ground, so the guard's real job is stopping
+// the walk from entering the ground plane and reaching everything on it. R_VIA takes ground to a
+// rail, so a walk that crossed ground would report a third pull-up on SDA that no reader would
+// recognise, and every bus on a real board would report the same phantom.
+func TestGroundIsNeverCrossed(t *testing.T) {
+	var refs []string
+	for _, e := range terminationsOn(t, pullupFixture(), "SDA") {
+		refs = append(refs, e.Resistor)
+	}
+	sort.Strings(refs)
+	if len(refs) != 2 || refs[0] != "R1" || refs[1] != "R2" {
+		t.Errorf("SDA terminations = %v, want only R1 and R2; anything else came through the ground plane", refs)
 	}
 }

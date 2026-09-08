@@ -566,6 +566,94 @@ func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 	return nil
 }
 
+// PullUpTermination is one resistor that takes a net to a rail, with the rail it landed on and the
+// hops it took to get there.
+type PullUpTermination struct {
+	Resistor string      // the resistor whose far side is the rail
+	Rail     string      // the rail it landed on
+	Path     []PullUpHop // from the subject net to the rail, the last hop crossing Resistor
+}
+
+// AllPullUpPathsToRail returns every DISTINCT resistor that takes n to a rail, with the rail each
+// landed on. PullUpPathToRail answers whether there is one; this answers how many, which is a
+// different question and the one a second pull-up shows up in.
+//
+// Two resistors pulling one bus to one rail is an ordinary defect, usually because a module carries
+// its own termination for a bus the board already pulls. Two 2.2k in parallel are an effective 1.1k,
+// so the bus sinks about twice the current it was sized for and a device driving low may not reach
+// its VOL. To any reachability question that board is indistinguishable from a correct one, since the
+// rail is reached either way, which is why the count has to be computed rather than inferred.
+//
+// DISTINCT BY RESISTOR, not by path and not by rail. Two routes through one resistor are one
+// pull-up, and one resistor reaching two nets that are both rails is still one part to remove.
+//
+// The walk is the existing one with the early return taken out. Its `seen` set still prunes revisits
+// of INTERMEDIATE nets, which bounds the search, and that does not cost a termination: at every net
+// it reaches it enumerates ALL resistors whose far side is a rail, so two resistors in parallel on
+// the subject net are both found on the first pass. What the pruning does drop is a second ROUTE to
+// an already-visited intermediate net, and a route is not what is being counted.
+func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
+	if n == nil {
+		return nil
+	}
+	resistorNets := resistorNetIndex(m)
+
+	type step struct {
+		net   *ir.Net
+		depth int
+		used  map[string]bool
+		path  []PullUpHop
+	}
+	seen := map[string]bool{n.Name: true}
+	queue := []step{{net: n, depth: 0, used: map[string]bool{}}}
+	extend := func(path []PullUpHop, h PullUpHop) []PullUpHop {
+		out := make([]PullUpHop, len(path), len(path)+1)
+		copy(out, path)
+		return append(out, h)
+	}
+
+	var out []PullUpTermination
+	found := map[string]bool{} // resistor ref-des, so a part reached twice counts once
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if cur.depth >= PullUpReachHops {
+			continue
+		}
+		for _, c := range cur.net.Connections {
+			ref := c.ComponentRef
+			if cur.used[ref] || !m.HasClass(ref, ClassResistor) {
+				continue
+			}
+			for _, other := range resistorNets[ref] {
+				if other.Name == cur.net.Name || m.IsGroundNet(other) {
+					continue
+				}
+				hop := PullUpHop{Resistor: ref, Net: other.Name}
+				if m.IsRailNet(other) {
+					if !found[ref] {
+						found[ref] = true
+						out = append(out, PullUpTermination{Resistor: ref, Rail: other.Name, Path: extend(cur.path, hop)})
+					}
+					continue // a rail terminates the walk; it is never a transit node
+				}
+				if seen[other.Name] {
+					continue
+				}
+				seen[other.Name] = true
+				used := map[string]bool{ref: true}
+				for k := range cur.used {
+					used[k] = true
+				}
+				queue = append(queue, step{
+					net: other, depth: cur.depth + 1, used: used, path: extend(cur.path, hop),
+				})
+			}
+		}
+	}
+	return out
+}
+
 // PullUpVerdict decides one I2C net and returns the outcome with its witness from a single call,
 // the discipline CompareToBound applies to a limit. There is no way to reach a Pass without the path
 // that justifies it, so a pass with no evidence cannot be written by forgetting a second step.
