@@ -3,6 +3,8 @@ package formats
 import (
 	"os"
 	"testing"
+
+	"github.com/panyam/agni/core/classify"
 )
 
 // The pinned sample board, fetched by `make samples` from github.com/panyam/agni-samples. It is a
@@ -109,5 +111,45 @@ func TestSampleBoardPartIdentityAgreesAcrossViews(t *testing.T) {
 		t.Errorf("views disagree on part identity: %d ref_des present in the schematic and absent "+
 			"from the board, %d carrying a different MPN (schematic %d, board %d)",
 			missing, differ, len(fromSch), len(fromPCB))
+	}
+}
+
+// TestSampleBoardPartIdentitySurvivesEmit requires the part numbers a board file states to reach an
+// EDIF export. An export is how a design leaves for a toolchain that is not ours, and a part-number
+// column is among the first things such a tool joins on, so an export with correct connectivity and
+// no part numbers hands the recipient a netlist that silently fails a BOM join.
+//
+// It reads the BOARD view on purpose. The schematic view exercised the same path already, and the
+// board view is where the value was lost: the reader recorded the part number on the component and
+// the writer emits a SECTION's attributes, so the value sat in the IR one field away from the half
+// the writer reads (agni issue 584).
+func TestSampleBoardPartIdentitySurvivesEmit(t *testing.T) {
+	if _, err := os.Stat(sampleJetsonBoard); err != nil {
+		t.Fatalf("oracle corpus missing, run `make samples-oracle`: %v", err)
+	}
+	src, err := (&Loader{}).ReadDesign(sampleJetsonBoard)
+	if err != nil {
+		t.Fatalf("ReadDesign: %v", err)
+	}
+	want := map[string]string{}
+	for _, c := range src.GetComponents() {
+		if m := c.GetMpn(); m != "" {
+			want[c.GetRefDes()] = m
+		}
+	}
+	if len(want) == 0 {
+		t.Fatal("the board states an MPN on every footprint and the read resolved none")
+	}
+
+	out := roundTripEDIF(t, src, sampleJetsonBoard)
+	classify.StampMPN(out)
+	var lost int
+	for _, c := range out.GetComponents() {
+		if want[c.GetRefDes()] != "" && c.GetMpn() != want[c.GetRefDes()] {
+			lost++
+		}
+	}
+	if lost != 0 {
+		t.Errorf("%d of %d part number(s) lost through the EDIF emit", lost, len(want))
 	}
 }
