@@ -88,6 +88,12 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 //     on, so an array port has nowhere to be written back to; and partTypeOf, whose parseName knows
 //     four name forms and not (array DATA 8), files the port itself as a pin with no name at all.
 //     Excluding one without the other would assert that a bus we decline to write comes back anyway.
+//   - PART TYPES, AND PART-TYPE PINS, THE NETLIST REFERENCES AND NO LIBRARY DECLARES. Both halves of
+//     one exclusion, because EDIF resolves a reference against a declaration and our reader does not
+//     need one. basic.edn instantiates cells RES and GATE that its single library never declares, and
+//     reads fine here; written back without those cells it is a file a conforming reader cannot
+//     follow, so the writer declares them and the re-read reports them as part types. The pins half is
+//     the same thing one level down, and is described next.
 //   - PART-TYPE PINS THE NETLIST REFERENCES AND THE INTERFACE DOES NOT DECLARE. Read consumes the
 //     portInstance table that resolved a logical port to its physical pins and keeps only the
 //     resolved pin (WS1-025), so for a source that used one the writer cannot tell that pins 5 and 6
@@ -161,7 +167,16 @@ func normalize(d, src *ir.Design) *ir.Design {
 	clearSourceFiles(c.ProtoReflect())
 	delete(c.Attributes, "edif_hierarchical")
 	synthesized := portsTheNetlistAdds(src)
+	mintedParts := partsTheNetlistAdds(src)
 	for _, lib := range c.GetLibraries() {
+		keptParts := lib.Parts[:0]
+		for _, pt := range lib.GetParts() {
+			if mintedParts[pt.GetName()] {
+				continue
+			}
+			keptParts = append(keptParts, pt)
+		}
+		lib.Parts = keptParts
 		for _, pt := range lib.GetParts() {
 			kept := pt.Pins[:0]
 			for _, p := range pt.GetPins() {
@@ -182,6 +197,26 @@ func normalize(d, src *ir.Design) *ir.Design {
 		}
 	}
 	return c
+}
+
+// partsTheNetlistAdds names the part types the writer has to declare because a section references
+// them and no library does. Same shape as portsTheNetlistAdds, one level up.
+func partsTheNetlistAdds(d *ir.Design) map[string]bool {
+	declared := map[string]bool{}
+	for _, lib := range d.GetLibraries() {
+		for _, pt := range lib.GetParts() {
+			declared[pt.GetName()] = true
+		}
+	}
+	out := map[string]bool{}
+	for _, c := range d.GetComponents() {
+		for _, s := range c.GetSections() {
+			if ref := s.GetPartRef(); ref != "" && !declared[ref] {
+				out[ref] = true
+			}
+		}
+	}
+	return out
 }
 
 // portsTheNetlistAdds names, per part type, the ports the writer has to declare because a net

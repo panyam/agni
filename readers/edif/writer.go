@@ -85,6 +85,28 @@ const badAtomChars = " \t\r\n()\":;{}|"
 // Sections carry the reference strings raw (`s.PartRef` is the cellRef id an EDIF source used, and
 // the part's own name for every other format), which is why this takes the raw string and is the
 // same function on both sides.
+// localName is a cell's name WITHIN its library. A KiCad part is named `gateway:CONN4` and sits in a
+// library already called `gateway`, so the qualification is spelled twice, and EDIF's own library
+// scoping is the half that a reader acts on. Writing the local name says the same thing and is what
+// makes the cell name legal: a reader that takes the rename's display string as the cell's name (GNU
+// Electric does, where ours takes the identifier) refuses a colon and abandons the whole import, so a
+// clean identifier beside a qualified display was not enough.
+//
+// It is a WRITER decision and stops here. The prefix is load-bearing in the reader, where it selects
+// the .kicad_sym file an external symbol is resolved from, so stripping it upstream would break
+// symbol resolution rather than tidy a name (agni issue 580). The cost is that a KiCad design taken
+// out through EDIF and read back names the part `CONN4` in library `gateway` rather than
+// `gateway:CONN4` in library `gateway`, which is the same fact with the redundancy gone.
+//
+// Only an EXACT match of the enclosing library is stripped. A prefix naming some other library is a
+// real part of the name and is kept.
+func localName(lib, name string) string {
+	if lib == "" {
+		return name
+	}
+	return strings.TrimPrefix(name, lib+":")
+}
+
 func refID(name string) string {
 	if atomOK(name) {
 		return name
@@ -150,20 +172,56 @@ func (e *emitter) design(d *ir.Design) {
 	// naming a cell no library declares. Minting a cell to hold them instead would add a part type
 	// the source never had, and the round trip would report the writer's invention as a difference.
 	inCell := hasCell(d, work, top)
-	e.inst = newInstanceTable(d)
+	e.inst = newInstanceTable(d, work)
 
 	// LIBRARIES FIRST, and the design node last, because the design's cellRef is a FORWARD reference
 	// otherwise. Our own reader walks the parsed tree and does not care, which is how the order
 	// survived: it resolves every reference after the whole file is in memory. A reader that resolves
 	// as it goes cannot, and GNU Electric is one, so it reported the top cell as missing on every file
 	// this writer had ever produced. Real EDIF exports put the design node at the end.
+	// The contents need a cell to live in. Where the source NAMED a top cell we reproduce its shape,
+	// including the shape where that name resolves to nothing and the contents sit under the design
+	// node itself (unannotated.edn is exactly that file). Where the name is one we invented, because
+	// the design never came from EDIF at all, we owe the cell as well as the name: contents directly
+	// under a design node is not a construct EDIF has, and a reader rejects it.
+	mintTop := !inCell && d.GetAttributes()["edif_top_cell"] == ""
+
+	declared := map[string]bool{}
 	for _, lib := range d.GetLibraries() {
+		declared[lib.GetName()] = true
 		e.open("(library %s", nameExpr(lib.GetName(), ""))
 		for _, pt := range lib.GetParts() {
-			e.cell(pt, d, inCell && lib.GetName() == work && pt.GetName() == top)
+			e.cell(lib.GetName(), pt, d, inCell && lib.GetName() == work && pt.GetName() == top)
+		}
+		e.mintedCells(lib.GetName())
+		if mintTop && lib.GetName() == work {
+			e.topCell(d, top)
+			mintTop, inCell = false, true
 		}
 		e.close(1)
 	}
+	// A library the design references and does not declare. A board read produces nothing but these,
+	// because copper carries footprints and pads and never says what the part is.
+	for _, lib := range e.inst.mintedLibraries() {
+		if declared[lib] {
+			continue
+		}
+		declared[lib] = true
+		e.open("(library %s", nameExpr(lib, ""))
+		e.mintedCells(lib)
+		if mintTop && lib == work {
+			e.topCell(d, top)
+			mintTop, inCell = false, true
+		}
+		e.close(1)
+	}
+	if mintTop {
+		e.open("(library %s", nameExpr(work, ""))
+		e.topCell(d, top)
+		e.close(1)
+		inCell = true
+	}
+
 	decl := fmt.Sprintf("(design %s (cellRef %s (libraryRef %s))", nameExpr(name, ""), refID(top), refID(work))
 	if inCell {
 		e.line("%s)", decl)
@@ -173,6 +231,37 @@ func (e *emitter) design(d *ir.Design) {
 		e.close(1)
 	}
 	e.close(1)
+}
+
+// topCell writes the cell the contents live in, for a design whose source never named one.
+func (e *emitter) topCell(d *ir.Design, name string) {
+	e.open("(cell %s", nameExpr(name, ""))
+	e.open("(view %s (viewType %s)", viewName, viewType)
+	e.line("(interface)")
+	e.contents(d)
+	e.close(2)
+}
+
+// mintedCells writes the cells of one library that nothing declares. Their interfaces come from the
+// connections, which is the completion cell() already does for a part type declaring too few pins,
+// applied where there is no part type at all. It declares what the cellRefs and portRefs in this very
+// file already name, so it adds no claim the file was not making.
+func (e *emitter) mintedCells(lib string) {
+	for _, k := range e.inst.mintedCells(lib) {
+		e.open("(cell %s", nameExpr(k.name, ""))
+		e.open("(view %s (viewType %s)", viewName, viewType)
+		ports := e.inst.mintedPortsOf(k)
+		if len(ports) == 0 {
+			e.line("(interface)")
+		} else {
+			e.open("(interface")
+			for _, p := range ports {
+				e.line("(port %s (designator %s))", refID(p), edifString(p))
+			}
+			e.close(1)
+		}
+		e.close(2)
+	}
 }
 
 // hasCell reports whether the design declares the named cell in the named library, which is the test
@@ -219,8 +308,8 @@ func edifVersionOf(d *ir.Design) string {
 // cell writes one part type. The designator prefix goes at CELL level, which is one of the three
 // places cellDesignator accepts and the one the fixtures use; putting it in the interface would work
 // equally but reads worse beside the ports, whose own designators are pin numbers.
-func (e *emitter) cell(pt *ir.PartType, d *ir.Design, contents bool) {
-	e.open("(cell %s", nameExpr(pt.GetName(), pt.GetProv().GetNativeId()))
+func (e *emitter) cell(libName string, pt *ir.PartType, d *ir.Design, contents bool) {
+	e.open("(cell %s", nameExpr(localName(libName, pt.GetName()), pt.GetProv().GetNativeId()))
 	if k := pt.GetKind(); k != "" {
 		e.line("(cellType %s)", k)
 	}
@@ -336,7 +425,7 @@ func (e *emitter) contents(d *ir.Design) {
 }
 
 func (e *emitter) instance(c *ir.Component, s *ir.ComponentSection) {
-	ref := refID(s.GetPartRef())
+	ref := refID(localName(s.GetLibraryRef(), s.GetPartRef()))
 	if lib := s.GetLibraryRef(); lib != "" {
 		ref = fmt.Sprintf("%s (libraryRef %s)", ref, refID(lib))
 	}
@@ -430,9 +519,17 @@ type instanceTable struct {
 	byRef       map[string][]*ir.ComponentSection
 	parts       map[string]*ir.PartType
 	usedPorts   map[*ir.PartType]map[string]bool
+	// mintPorts is usedPorts for the cells NOTHING declares, keyed by the libraryRef and partRef a
+	// section names, because there is no part type to key on. A board read produces only these.
+	mintPorts map[cellRef]map[string]bool
+	mintOrder []cellRef
+	work      string
 }
 
-func newInstanceTable(d *ir.Design) *instanceTable {
+// cellRef is a cell the file references: the library it is named in and its name within that library.
+type cellRef struct{ lib, name string }
+
+func newInstanceTable(d *ir.Design, work string) *instanceTable {
 	t := &instanceTable{
 		name:        map[*ir.ComponentSection]string{},
 		byNative:    map[string]string{},
@@ -440,6 +537,8 @@ func newInstanceTable(d *ir.Design) *instanceTable {
 		byRef:       map[string][]*ir.ComponentSection{},
 		parts:       classify.PartIndex(d),
 		usedPorts:   map[*ir.PartType]map[string]bool{},
+		mintPorts:   map[cellRef]map[string]bool{},
+		work:        work,
 	}
 	taken := map[string]bool{}
 	anon := 0
@@ -477,6 +576,16 @@ func newInstanceTable(d *ir.Design) *instanceTable {
 				}
 			}
 			t.byRef[c.GetRefDes()] = append(t.byRef[c.GetRefDes()], s)
+			// Registered from the SECTION rather than from the connections, because a component
+			// connected to nothing still names its cell and EDIF still needs that cell declared. The
+			// three mounting holes on the sample board are exactly this: no nets, and a cellRef each.
+			if t.partOf(s) == nil {
+				k := t.mintKey(s)
+				if t.mintPorts[k] == nil {
+					t.mintPorts[k] = map[string]bool{}
+					t.mintOrder = append(t.mintOrder, k)
+				}
+			}
 		}
 	}
 	// A second pass, because resolving a connection to its section needs the index the first pass
@@ -487,14 +596,17 @@ func newInstanceTable(d *ir.Design) *instanceTable {
 			if s == nil {
 				continue
 			}
+			port := t.portOf(c)
 			pt := t.partOf(s)
 			if pt == nil {
+				// No part type at all, so the cell was minted above and gains its interface here.
+				t.mintPorts[t.mintKey(s)][port] = true
 				continue
 			}
 			if t.usedPorts[pt] == nil {
 				t.usedPorts[pt] = map[string]bool{}
 			}
-			t.usedPorts[pt][t.portOf(c)] = true
+			t.usedPorts[pt][port] = true
 		}
 	}
 	return t
@@ -530,6 +642,52 @@ func (t *instanceTable) anchor(c *ir.Connection) (string, bool) {
 		}
 	}
 	return t.name[secs[0]], true
+}
+
+// mintKey names the cell a section references. A section naming no library (IPC-2581 records none)
+// puts its cell in the work library, which is where the top cell is, so a bare cellRef resolves
+// against it.
+func (t *instanceTable) mintKey(s *ir.ComponentSection) cellRef {
+	lib := s.GetLibraryRef()
+	if lib == "" {
+		lib = t.work
+	}
+	return cellRef{lib: lib, name: localName(s.GetLibraryRef(), s.GetPartRef())}
+}
+
+// mintedCells lists the cells of one library that nothing declares, in first-reference order so the
+// output is deterministic.
+func (t *instanceTable) mintedCells(lib string) []cellRef {
+	var out []cellRef
+	for _, k := range t.mintOrder {
+		if k.lib == lib {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// mintedLibraries lists the library names holding minted cells, in first-reference order.
+func (t *instanceTable) mintedLibraries() []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, k := range t.mintOrder {
+		if !seen[k.lib] {
+			seen[k.lib] = true
+			out = append(out, k.lib)
+		}
+	}
+	return out
+}
+
+// mintedPortsOf lists one minted cell's ports, sorted so the output is stable.
+func (t *instanceTable) mintedPortsOf(k cellRef) []string {
+	var out []string
+	for p := range t.mintPorts[k] {
+		out = append(out, p)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // undeclaredPorts lists, in a stable order, the port identifiers nets reference on instances of this

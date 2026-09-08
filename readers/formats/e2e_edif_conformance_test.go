@@ -92,11 +92,11 @@ func TestEmitEDIFWritesLegalIdentifiers(t *testing.T) {
 // A reference resolves if the cell declares a port of that name, or the instance's portInstance
 // table maps it. The table is what the writer now rebuilds from the part type's pins.
 //
-// Two rows are CHARACTERIZED rather than clean, and the count is asserted so the gap stays visible.
-// A design read from a board file or from IPC-2581 carries NO part types at all, so there is no cell
-// for a port to be declared on and no library holding one. Completing an interface is one thing, and
-// the writer does it; minting the cell and the top cell to put it in is the open half of agni issue
-// 580. When that lands these two constants go to zero.
+// EVERY row resolves, including the two formats that deliver no part types at all. A design read from
+// a board file or from IPC-2581 knows its footprints, its pads and its nets and never learns what the
+// parts are, so the writer declares the cell and its ports from the connections. That is why this
+// assertion is a plain zero rather than a per-row count: there is no format left where a reference
+// dangles.
 func TestEmitEDIFResolvesEveryPortRef(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -118,11 +118,10 @@ func TestEmitEDIFResolvesEveryPortRef(t *testing.T) {
 					fmt.Sprintf("(portRef %s (instanceRef %s)): cell %s declares no port %s and the instance maps none",
 						r.port, r.inst, cell, r.port))
 			}
-			sort.Strings(unresolved)
-			if len(unresolved) != tc.unresolvedRefs {
-				t.Errorf("%d of %d portRef(s) name nothing on the instance's cell, want %d; first few: %v",
-					len(unresolved), len(f.portRefs), tc.unresolvedRefs,
-					unresolved[:min(4, len(unresolved))])
+			if len(unresolved) > 0 {
+				sort.Strings(unresolved)
+				t.Errorf("%d of %d portRef(s) name nothing on the instance's cell; first few: %v",
+					len(unresolved), len(f.portRefs), unresolved[:min(4, len(unresolved))])
 			}
 		})
 	}
