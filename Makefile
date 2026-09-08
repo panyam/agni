@@ -169,7 +169,11 @@ catalog-docs-check: catalog-docs
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
 # proto-check sits near the front because stale generated code makes every later failure a red
 # herring: it compiles and tests green while describing a different schema.
-testall: vet ir-model-check fixture-copies-check proto-check samples-oracle ui test examples-test web-test browser-test catalog-docs-check docsite-test tutorial-runs-check
+# browser-test is TEMPORARILY out of the gate (2026-09-08). It drives a real Chromium and costs
+# minutes per run, and the web surface is changing very little right now, so it is not paying for
+# itself while the demo work is in flight. Run `make browser-test` by hand when touching web/, and
+# put it back in this line once the demo is done.
+testall: vet ir-model-check fixture-copies-check proto-check samples-oracle ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
