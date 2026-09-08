@@ -1,10 +1,27 @@
 package common
 
 import (
+	"os"
 	"testing"
 
 	"github.com/panyam/demokit"
 )
+
+// TestMain clears AGNI_EXAMPLE_DESIGN for this package.
+//
+// Every test below asserts what AskPath does with its BUNDLED default, and replacing that default is
+// the variable's entire job (agni 643). So a developer who exports it to drive a walkthrough over
+// their own board could not run this package's tests: three failed, and each printed the path they
+// had set into the test log. The gate was green in CI and red on the machine that had the variable,
+// which is the worst way round for a test to fail.
+//
+// Clearing it here rather than in each test means one added later inherits the isolation instead of
+// inheriting the bug. TestAskPathEnvDefault sets it back with t.Setenv, which restores afterwards, so
+// the one test that is ABOUT the variable still exercises it.
+func TestMain(m *testing.M) {
+	os.Unsetenv(DesignPathEnv)
+	os.Exit(m.Run())
+}
 
 func TestPathInputCapture(t *testing.T) {
 	p := AskPath("design", "designs/two-resistors.edn")

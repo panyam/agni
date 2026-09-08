@@ -407,17 +407,18 @@ a run leaves behind and the generated-code rules. **`tutorial-runs-check` regene
 does not read the prose quoting them**, so a tutorial can cite numbers a change moved and the gate
 stays green.
 
-**The CLI and the SERVER do not compose a design the same way, and the difference is invisible.**
-`service.SourcesFor` resolves a named path to a design's tiers and its callers are `cmd/agni` and one
-example; nothing on the served path calls it. So the CLI reads a netlist entry and attaches the
-schematic companion its descriptor declares, while the server hands the same URI to the loader, finds
-no faithful geometry on a netlist, and falls back to an auto-layout. Same file, same mount, same
-spelling, two different designs, no error either side. Four symptoms follow and each reads as its own
-defect: findings with no sheet badges, query cells reporting `LOCATE_REASON_NO_GEOMETRY`,
-`trace --render` writing the design's FIRST sheet whatever the route crossed, and every minted link
-opening on a computed layout. Check `availableLayouts` from `GetDesign` before believing anything
-geometric on the served path: no `faithful` in it means the companion was not attached. C32 names the
-rule, agni 656 is the fix, and 658 is the test it still needs.
+**A design's tiers are resolved ONCE, in `service.ResolveSources`, and both surfaces call it.** For
+most of 2026 they did not: `SourcesFor` was shared, and the half above it, deciding whether a ref
+names the design, its entry, a declared companion or an unrelated file, lived only in `cmd/agni`. So
+the CLI attached the schematic companion a descriptor declared and the server did not, and one design
+read two ways gave 3980 components on a computed layout or 82 real sheets with no counts, depending
+on which name you typed. Nothing errored, because "no geometry" is a legitimate thing for a design to
+be. Four symptoms followed and each read as its own defect: findings with no sheet badges, query
+cells reporting `LOCATE_REASON_NO_GEOMETRY`, `trace --render` writing the first sheet whatever the
+route crossed, and every minted link opening on an auto-layout. C32 is the rule, agni 656 the fix.
+Two things it leaves behind. `as_named` is on the wire because the CLI is itself a client of these
+services and resolving unconditionally overrode its own flag. And a trace still carries no sheet
+(agni 657), so `trace --render` is the one symptom 656 did not cure.
 
 **A variable projected through a DERIVED relation loses its entity kind**, so a query answer that is
 correct and complete cannot be clicked in the viewer. `varKind` types a projected variable from the

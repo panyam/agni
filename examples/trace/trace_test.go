@@ -1,12 +1,22 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/examples/common"
 )
+
+// TestMain clears AGNI_EXAMPLE_DESIGN, for the same reason examples/common does: every test here
+// asserts what the walkthrough does on its BUNDLED fixture, and the variable exists to replace that
+// fixture with someone's own board. Left set, these assert the narration against a design the prose
+// was never written about.
+func TestMain(m *testing.M) {
+	os.Unsetenv(common.DesignPathEnv)
+	os.Exit(m.Run())
+}
 
 // The walkthrough's prose states what the bundled fixture does, and prose cannot be checked by
 // building. These hold the three claims it makes, so a change to the fixture or to the walk turns
