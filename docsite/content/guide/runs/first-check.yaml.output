@@ -22,4 +22,4 @@ first 11:
   [info] test-point-coverage: VBUS (rail carries no test point; bring-up and factory test cannot probe it)
 
 11 finding(s) total
-150 subject(s) considered by 24 rule(s), 2 not considered (--verdicts for the detail)
+152 subject(s) considered by 26 rule(s), 2 not considered (--verdicts for the detail)

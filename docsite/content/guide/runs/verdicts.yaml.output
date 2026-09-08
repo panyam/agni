@@ -67,6 +67,12 @@ esd-clamp-not-tvs  2 not-considered, 1 pass
     pass            SCL     the net's clamp is TVS D7, which is the fast ESD device class this
                             rule asks for
 
+i2c-pull-up-split-rail  1 pass
+    pass            SDA  SDA is pulled to +3V3 by R1
+
+i2c-redundant-pull-up  1 pass
+    pass            SDA  SDA is pulled to +3V3 by R1
+
 input-protection  1 not-considered, 1 pass
     not-considered  VBUS  the net continues onto a sheet this read did not open, so its fuse or
                           clamp may be drawn outside it
@@ -226,4 +232,4 @@ unspecified-pin-with-driver  1 pass
     pass            LED_EN  passes because no net.connections where pin.electrical_type ==
                             "unspecified" and pin.declared and not (conn.virtual) (2 examined)
 
-141 verdicts across 23 rule(s), 128 pass, 4 fail, 9 not-considered
+143 verdicts across 25 rule(s), 130 pass, 4 fail, 9 not-considered
