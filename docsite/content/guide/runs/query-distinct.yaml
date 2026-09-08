@@ -1,0 +1,5 @@
+# Every aggregate reduces BINDINGS unless asked for distinct. The second component-on-net is what
+# makes the two spellings differ: +24V has four (?r,?other) pairs over two parts.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query regulator.fires.kicad_sch 'component-on-net(?r,?n), component-on-net(?other,?n) => ?n, count(?r), count(distinct ?r), list(distinct ?r)'

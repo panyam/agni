@@ -53,7 +53,7 @@ func Validate(q Query, reg *facts.Registry) error {
 	if len(sel) == 0 {
 		sel = defaultSelect(q.Goal)
 	}
-	return validateSelect(sel, q.Goal)
+	return validateSelect(sel, q.Having, q.Goal)
 }
 
 // validateWithoutVocabulary is Validate minus the checks that need a relation catalog installed.
@@ -74,7 +74,7 @@ func validateWithoutVocabulary(q Query, reg *facts.Registry) error {
 	if len(sel) == 0 {
 		sel = defaultSelect(q.Goal)
 	}
-	return validateSelect(sel, q.Goal)
+	return validateSelect(sel, q.Having, q.Goal)
 }
 
 // checkLiterals applies checkAtom to every relation-bearing literal, positive or negated. A

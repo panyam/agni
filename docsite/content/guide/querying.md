@@ -244,9 +244,53 @@ order you wrote the clauses in.
 
 ### Count parts per net (aggregation)
 
-`count`, `min`, `max`, and `sum` summarize. Group by the plain columns. The aggregate reduces the rest:
+`count`, `min`, `max`, `sum` and `list` summarize. Group by the plain columns. The aggregate reduces
+the rest:
 
 {{ agniRun "content/guide/runs/query-aggregation.yaml" }}
+
+### Keep only some groups (having)
+
+A comparison in the question filters facts, one at a time, before there is any group. To ask about
+the group itself you need `having`, which runs after the reduce. "Nets carrying more than one part":
+
+{{ agniRun "content/guide/runs/query-having.yaml" }}
+
+The aggregate does not have to be a column. Drop `count(?r)` from the projection and keep the
+`having`, and the answer is the nets rather than the tally, which is usually what a coverage question
+wants:
+
+```
+component-on-net(?r,?n) => ?n having count(?r) > 1
+```
+
+### Counting values instead of bindings (distinct)
+
+**An aggregate reduces one entry per ANSWER, not per distinct value.** A question that joins two
+things produces one answer per combination, so a part appears once for every partner it was paired
+with, and `count` counts all of them. `distinct` reduces the values instead:
+
+{{ agniRun "content/guide/runs/query-distinct.yaml" }}
+
+`+24V` carries two parts. Asking twice about what sits on a net pairs each with each, so there are
+four answers and `count(?r)` reports 4. `count(distinct ?r)` reports the 2 you meant, and
+`list(distinct ?r)` names them.
+
+`distinct` works the same way on every aggregate, `list` included, so a projection carrying both
+`count(?r)` and `list(?r)` always describes the same set. If you are ever unsure which you have,
+select both spellings and compare, as above.
+
+The other way to get there is a defined relation, which projects the extra column away before the
+group forms:
+
+```
+on(?r,?n) :- component-on-net(?r,?n), component-on-net(?other,?n);
+on(?r,?n) => ?n, count(?r)
+```
+
+The defined relation keeps `?r` and drops `?other`, so its tuples are already one per part per net
+and a plain `count` matches `count(distinct ?r)`. Drop `?r` from the head too and you are counting
+nets, not parts, which is the mistake this idiom is easiest to make.
 
 ### Search the board (any tier, one language)
 

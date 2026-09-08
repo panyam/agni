@@ -242,6 +242,10 @@ message DatalogQuery {
   repeated DatalogRule rules = 1;
   DatalogBody goal = 2;
   repeated DatalogTerm select = 3;
+  // having filters the GROUPS the select's aggregates form, after the reduce. Each is a
+  // DatalogCompare whose left term is an aggregate, which is why it needs no message of its own: a
+  // group filter and a body comparison differ in WHEN they run, not in what they say.
+  repeated DatalogCompare having = 4;
 }
 
 // DatalogRule derives its head for every binding satisfying its body. Disjunction is several rules
@@ -315,8 +319,12 @@ message DatalogValue {
 
 // DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.
 message DatalogAggregate {
-  string func = 1; // count | min | max | sum
+  string func = 1; // count | min | max | sum | list
   string var = 2;
+  // distinct reduces var's distinct VALUES rather than one entry per binding. Uniform across every
+  // func: bare spellings stay binding-wise, so an encoded query written before this field decodes to
+  // the same answer it always gave.
+  bool distinct = 3;
 }
 
 // --- The profile body: one declaration, a family of rules ------------------------------------------

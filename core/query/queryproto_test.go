@@ -11,11 +11,14 @@ import (
 // naming a relation that resolves to nothing fails on decode and never reaches the comparison. The
 // program therefore defines its own relation (big_net) and otherwise names catalog ones.
 //
+// Aggregate.Distinct and Query.Having (agni issue 613) are here for the same reason.
+//
 // Value is the field set most worth covering. It carries four independent things (a string, an
 // optional number, an absent marker, and a base unit), and absent in particular exists because an
 // unstated field binding to the empty string made ordering comparisons silently pass.
 func fullQuery() Query {
 	num := 3.3
+	two := 2.0
 	return Query{
 		Rules: []Rule{{
 			Head: Atom{Relation: "big_net", Args: []Term{{Var: "n"}}},
@@ -39,7 +42,15 @@ func fullQuery() Query {
 			Hops: 2,
 		}},
 		Goal:   Body{Literals: []Literal{{Pos: &Atom{Relation: "big_net", Args: []Term{{Var: "n"}}}}}},
-		Select: []Term{{Var: "n"}, {Agg: &Aggregate{Func: "count", Var: "n"}}},
+		Select: []Term{{Var: "n"}, {Agg: &Aggregate{Func: "count", Var: "n"}}, {Agg: &Aggregate{Func: "list", Var: "n", Distinct: true}}},
+		// A having, whose left term is an aggregate. It shares DatalogCompare with a body comparison,
+		// so this also asserts the two decode back to their own halves of the query rather than one
+		// leaking into the other.
+		Having: []Compare{{
+			Left:  Term{Agg: &Aggregate{Func: "count", Var: "n", Distinct: true}},
+			Op:    ">=",
+			Right: Term{Const: &Value{S: "2", Num: &two}},
+		}},
 	}
 }
 
