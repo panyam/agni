@@ -325,7 +325,7 @@ between each pair, so an answer carries the evidence for itself.
 
 {{ agniRun "content/guide/runs/query-route.yaml" }}
 
-Read `GND -[R1]- SIG` as: the walk left GND, went through R1, and arrived at SIG. The names outside
+Read `GND -> [R1] -> SIG` as: the walk left GND, went through R1, and arrived at SIG. The names outside
 the brackets are nets and the one inside is the part. The first row is the reflexive one, since a net
 reaches itself at zero crossings and its route is its own name.
 

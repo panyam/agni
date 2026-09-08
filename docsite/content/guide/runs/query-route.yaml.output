@@ -1,6 +1,6 @@
 #agni-run 703e67fbaf1a39b6
-n    path            provenance
-GND  GND             route from GND
-SIG  GND -[R1]- SIG  route from GND
+n    path                provenance
+GND  GND                 route from GND
+SIG  GND -> [R1] -> SIG  route from GND
 
 2 result(s)

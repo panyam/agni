@@ -1,6 +1,6 @@
 ---
 title: "route"
-description: "the same walk as `reaches`, with the route it found bound as a readable value (`VBUS -[R5]- VBUS_F -[L1]- VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one"
+description: "the same walk as `reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one"
 ---
 
 ### What it is
@@ -10,7 +10,7 @@ instead of discarded. It holds for the same pairs `reaches(from, net)` holds for
 readable rendering of what the walk crossed to get there:
 
 ```
-VBUS -[R5]- VBUS_F -[L1]- VDD_3V3
+VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
 ```
 
 The names outside the brackets are nets, in crossing order. The name inside each bracket is the
@@ -29,7 +29,7 @@ connection, so "is this pin joined to that one" is a question about a path acros
 in the way. `reaches` answers it. This says which parts those were.
 
 That is usually the part you actually wanted. "VDD_3V3 is reachable from VBUS" is a fact you then go
-and look up in the schematic; "VBUS -[R5]- VBUS_F -[L1]- VDD_3V3" is the same fact with the series
+and look up in the schematic; "VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3" is the same fact with the series
 bead and the sense resistor named, which is enough to decide whether that path is the intended one
 without opening anything.
 

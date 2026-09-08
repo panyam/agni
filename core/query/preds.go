@@ -44,7 +44,7 @@ const relReaches = "reaches"
 // relRoute is the built-in route(from, to, path): the SAME walk reaches makes, with the route it
 // found bound as a value instead of discarded. `path` renders as
 //
-//	VBUS -[R5]- VBUS_F -[L1]- VDD_3V3
+//	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
 //
 // which is a string, so every query column stays scalar and a route survives into a csv cell, a
 // markdown table and a rule's finding unchanged. That is the whole reason this is a separate

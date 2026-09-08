@@ -24,9 +24,9 @@ func TestRouteBindsTheRouteItWalked(t *testing.T) {
 	}
 	want := map[string]string{
 		"N0": "N0",
-		"N1": "N0 -[R1]- N1",
-		"N2": "N0 -[R1]- N1 -[R2]- N2",
-		"N3": "N0 -[R1]- N1 -[R2]- N2 -[R3]- N3",
+		"N1": "N0 -> [R1] -> N1",
+		"N2": "N0 -> [R1] -> N1 -> [R2] -> N2",
+		"N3": "N0 -> [R1] -> N1 -> [R2] -> N2 -> [R3] -> N3",
 	}
 	if len(got) != len(want) {
 		t.Errorf("route bound %d destinations, want %d: %v", len(got), len(want), got)

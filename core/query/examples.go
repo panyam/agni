@@ -53,7 +53,7 @@ var examples = []ExampleQuery{
 	{
 		Label:   "Reachable, with the route it took",
 		Query:   "route(?from, ?net, ?path) => ?from, ?net, ?path",
-		Teaches: "evidence: the same walk as reaches, binding what it crossed (`VBUS -[R5]- VBUS_F`), so an answer can be checked without re-asking it",
+		Teaches: "evidence: the same walk as reaches, binding what it crossed (`VBUS -> [R5] -> VBUS_F`), so an answer can be checked without re-asking it",
 	},
 	{
 		Label:   "Power pins on a single-connection net",

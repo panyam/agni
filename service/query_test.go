@@ -576,6 +576,16 @@ func TestListRelationsReturnsCatalog(t *testing.T) {
 	if byName["reaches"] == nil || byName["reaches"].GetKind() != "predicate" {
 		t.Errorf("reaches should be catalogued as a predicate")
 	}
+	// route rides the same generic path and needs no proto of its own: RelationInfo is populated by
+	// iterating query.Catalog(), and column_kinds is a repeated string rather than an enum, so a new
+	// predicate reaches a client without a schema change. This is the assertion that says so.
+	if rt := byName["route"]; rt == nil || rt.GetKind() != "predicate" {
+		t.Errorf("route should be catalogued as a predicate")
+	} else if got := rt.GetArgs(); len(got) != 3 || got[0] != "from" || got[2] != "path" {
+		t.Errorf("route args = %v, want [from net path]", got)
+	} else if !strings.HasPrefix(rt.GetDetail(), "## route") {
+		t.Errorf("route Detail should be its reference doc, got %.40q", rt.GetDetail())
+	}
 	// Detail (WS14-005) rides the catalog: a documented relation carries its reference markdown, an
 	// undocumented one carries "" (so the panel falls back to the summary).
 	if bl := byName["net.bus_like"]; bl == nil || !strings.HasPrefix(bl.GetDetail(), "## net.bus_like") {

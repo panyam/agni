@@ -34,8 +34,8 @@ func TestRouteLineRendersTheCrossings(t *testing.T) {
 	for _, c := range []struct {
 		name, target, want string
 	}{
-		{"a route names the parts it crossed", "N2", "N0 -[R1]- N1 -[R2]- N2"},
-		{"one crossing", "N1", "N0 -[R1]- N1"},
+		{"a route names the parts it crossed", "N2", "N0 -> [R1] -> N1 -> [R2] -> N2"},
+		{"one crossing", "N1", "N0 -> [R1] -> N1"},
 		{"the start is its own route", "N0", "N0"},
 		{"an unreached net has no route", "OFF", ""},
 	} {

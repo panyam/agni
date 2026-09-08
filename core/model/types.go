@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -253,15 +252,16 @@ func (r Reach) StepsTo(target *ir.Net) []ReachStep {
 	return rev
 }
 
-// routeCrossing brackets the part a route step goes THROUGH, so a rendered route cannot be misread
-// as a list of nets. The two names on either side of `-[R5]-` are nets and the one inside it is not,
-// which is the whole ambiguity a bare arrow separator leaves open.
-const routeCrossing = " -[%s]- "
+// routeArrow separates the hops of a rendered route, and the brackets around a part are what keep it
+// readable out of context. Nets and ref-des are not distinguishable by shape on a real board (one
+// sample names its nets N$1 and N$6 and its parts R1 and L1), so without the brackets a reader has
+// to count positions to know which is which. With them, `N$6 -> [L1] -> N$1` needs no counting.
+const routeArrow = " -> "
 
 // RouteLine renders the route from the walk's start to target as one line, naming the nets it passed
 // through and the part crossed between each pair:
 //
-//	VBUS -[R5]- VBUS_F -[L1]- VDD_3V3
+//	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
 //
 // It is the fourth reading of one walk, beside PathTo (the nets), ThroughOnPath (the parts) and
 // StepsTo (both, with pins). Those three answer questions a caller then has to render; this answers
@@ -284,11 +284,10 @@ func (r Reach) RouteLine(target *ir.Net) string {
 	if _, reached := r.Depth[target.Name]; !reached {
 		return ""
 	}
-	var b strings.Builder
-	for _, s := range r.StepsTo(target) {
-		b.WriteString(s.From)
-		fmt.Fprintf(&b, routeCrossing, s.Through)
+	steps := r.StepsTo(target)
+	hops := make([]string, 0, 2*len(steps)+1)
+	for _, s := range steps {
+		hops = append(hops, s.From, "["+s.Through+"]")
 	}
-	b.WriteString(target.Name)
-	return b.String()
+	return strings.Join(append(hops, target.Name), routeArrow)
 }
