@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"path"
+	"regexp"
+	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
@@ -64,7 +66,7 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		complete: true,
 		open:     open,
 	}
-	if err := w.walk(rootContent, rootName, "/", "", map[string]bool{}); err != nil {
+	if err := w.walk(rootContent, rootName, "/", "", map[string]bool{}, nil); err != nil {
 		return nil, false, err
 	}
 
@@ -99,6 +101,146 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	return d, w.complete, nil
 }
 
+// busPrefix is a vector bus name without its index range: "PP_OUT[8..15]" -> "PP_OUT".
+func busPrefix(name string) string {
+	if i := strings.IndexByte(name, '['); i >= 0 {
+		return name[:i]
+	}
+	return name
+}
+
+// slicedBusPrefixes names the bus prefixes this sheet cuts into more than one range, which is the
+// case where a member name stops identifying a signal. `vme-wren` draws PP_OUT[0..31] alongside
+// PP_OUT[0..7], PP_OUT[8..15], PP_OUT[16..23] and PP_OUT[24..31], and hands each slice to one
+// instance of the same 8-wide driver sheet. Every instance's pin is PP_OUT[0..7], so its member
+// PP_OUT1 is the parent's PP_OUT1 in one instance and PP_OUT9 in the next: KiCad maps the two buses
+// by BIT POSITION, and only a positional map gets that right. Promoting by name would merge nets the
+// design keeps apart, so a sliced prefix is left alone.
+func slicedBusPrefixes(root *node) map[string]bool {
+	ranges := map[string]map[string]bool{}
+	for _, tag := range []string{"label", "global_label", "hierarchical_label"} {
+		for _, l := range root.Children(tag) {
+			name := unescapeName(atomOf(l.Arg(1)))
+			if !isKiCadBusVector(name) {
+				continue
+			}
+			pfx := busPrefix(name)
+			if ranges[pfx] == nil {
+				ranges[pfx] = map[string]bool{}
+			}
+			ranges[pfx][name] = true
+		}
+	}
+	out := map[string]bool{}
+	for pfx, rs := range ranges {
+		if len(rs) > 1 {
+			out[pfx] = true
+		}
+	}
+	return out
+}
+
+// sheetBusNames solves ONE sheet's bus geometry and returns the bus name at each bus point.
+//
+// It is a second, tiny net solve over the `(bus ...)` segments alone, with the sheet's labels as
+// anchors, reusing the same union-find the wire solve uses. Buses are otherwise not modelled (a bus
+// is a drawing convention, and its members connect through the tap labels), but a bus SHEET PIN
+// needs to know which bus it sits on, and that is a connectivity question about the bus itself.
+func sheetBusNames(root *node) map[netgraph.Point]string {
+	var segs []netgraph.Wire
+	for _, b := range root.Children("bus") {
+		pts := xyPoints(b.Child("pts"), sheetPt)
+		for i := 0; i+1 < len(pts); i++ {
+			segs = append(segs, netgraph.Wire{A: gp(pts[i]), B: gp(pts[i+1])})
+		}
+	}
+	if len(segs) == 0 {
+		return nil
+	}
+	var anchors []netgraph.Anchor
+	var onBus []netgraph.Point
+	for _, tag := range []string{"label", "global_label", "hierarchical_label"} {
+		for _, l := range root.Children(tag) {
+			if at := sheetPt(l.Child("at")); at != nil {
+				anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: unescapeName(atomOf(l.Arg(1)))})
+				onBus = append(onBus, gp(at))
+			}
+		}
+	}
+	// A sheet pin is registered as a label-less anchor purely so its point appears in the map; an
+	// empty label neither names nor unions anything.
+	for _, sh := range root.Children("sheet") {
+		for _, p := range sh.Children("pin") {
+			if at := sheetPt(p.Child("at")); at != nil {
+				anchors = append(anchors, netgraph.Anchor{At: gp(at)})
+				onBus = append(onBus, gp(at))
+			}
+		}
+	}
+	// A bus label is placed ALONG the bus, not at a segment end, so the segments have to be split
+	// at it exactly as the wire solve splits wires — otherwise the label is an isolated point that
+	// names nothing and every bus comes back anonymous.
+	_, _, _, pointNets := netgraph.BuildWithPoints(splitWiresAt(segs, onBus), anchors, nil, nil)
+	out := map[netgraph.Point]string{}
+	for pt, ref := range pointNets {
+		out[pt] = ref.Name
+	}
+	return out
+}
+
+// busPinPromotions returns the name overrides a child sheet inherits through sub's sheet pins.
+//
+// A scalar sheet pin joins its two halves positionally: the parent drops an anchor at the pin
+// carrying the CHILD-qualified name, which is the same string the child's hierarchical_label emits,
+// so label-union does the rest. A BUS sheet pin cannot work that way, because the members are not
+// at the pin — each one is tapped off the bus somewhere else on each sheet, under its own label. So
+// the join is by NAME instead: every member of a crossing bus vector resolves, inside the child, to
+// the name it has in the PARENT (agni issue 561). `AN[0..7]` entering `inout_user` makes the child's
+// `AN0` label mean the root's `AN0` rather than `/inout_user/AN0`, which is what KiCad does and what
+// its own netlist export shows.
+//
+// It promotes ONLY when the parent's bus at that pin carries the same vector name as the pin, which
+// is the case where joining by member name and joining by bit position are the same answer. KiCad
+// really joins the two buses positionally, so a parent bus under another name maps its bit 0 to the
+// child's bit 0 whatever the two are called, and promoting by name there is wrong in the expensive
+// direction: `vme-wren` instantiates one driver sheet four times, and name-promotion merged four
+// distinct bank buses into one net. Skipping leaves those split, which is the status quo and is
+// visible in the oracle baseline, rather than inventing a connection the design does not have.
+//
+// Only the members are promoted, never the bus name itself: the parent's anchor for the bus pin is
+// the child-qualified `/<sheet>/AN[0..7]`, and promoting that would break the very join it makes.
+// Promotion composes through nesting, because sc.local already carries whatever this sheet inherited.
+func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string, sliced map[string]bool) map[string]string {
+	var out map[string]string
+	for _, p := range sub.Children("pin") {
+		name := unescapeName(atomOf(p.Arg(1)))
+		if !isKiCadBusVector(name) {
+			continue
+		}
+		at := sheetPt(p.Child("at"))
+		if at == nil || busAt[gp(at)] != name || sliced[busPrefix(name)] {
+			continue
+		}
+		for _, m := range netgraph.ExpandBusName(name) {
+			if out == nil {
+				out = map[string]string{}
+			}
+			out[m] = sc.local(m)
+		}
+	}
+	return out
+}
+
+// kicadBusVectorRe is KiCad's vector-bus spelling and ONLY it: `PREFIX[first..last]`, two dots.
+// netgraph.IsBusName also accepts the `[hi:lo]` form that xschem and gEDA use, which is right for
+// the shared bus-not-modeled diagnostic but wrong to act on here. KiCad reads `DATA[1:0]` as an
+// ordinary scalar label, and its own netlist export keeps `/DATA0` and `/sub/DATA0` apart for such
+// a label — so promoting members off one would invent a connection the design does not have.
+// TestHierBusMembersDoNotCross is that control.
+var kicadBusVectorRe = regexp.MustCompile(`^.*\[\d+\.\.\d+\]$`)
+
+func isKiCadBusVector(name string) bool { return kicadBusVectorRe.MatchString(name) }
+
 // hierNetWalker carries the accumulator state for the hierarchical netlist walk — the fields a
 // recursive closure would otherwise capture: the Design under construction, the library and
 // component accumulators, the external symbol-library cache, the collected net inputs, the
@@ -120,7 +262,7 @@ type hierNetWalker struct {
 // components, nets, and sheet record, then recurses into referenced sub-sheets. ancestors is
 // the source-file set on the path from the root, for cycle breaking; instPath is the KiCad
 // instance path used to resolve per-instance reference designators.
-func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors map[string]bool) error {
+func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]string) error {
 	if len(ancestors) > 64 {
 		w.complete = false // depth backstop, in addition to the ancestor-cycle guard
 		return nil
@@ -146,11 +288,12 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 
 	k := int64(len(w.srcs))
 	w.srcs = append(w.srcs, src)
-	sc := sheetScope{offset: netgraph.Point{X: k * instStep}, instPath: instPath, src: src, syms: w.syms}
+	sc := sheetScope{offset: netgraph.Point{X: k * instStep}, instPath: instPath, src: src, syms: w.syms, promoted: promoted}
 	if id != "/" {
 		sc.prefix = id
 		name = path.Base(id)
 	}
+	busAt, slicedBus := sheetBusNames(root), slicedBusPrefixes(root)
 	w.libs.collect(root, src)
 	w.comps.collect(root, src, instPath)
 	collectSheetNets(root, sc, &w.in)
@@ -187,7 +330,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		for a := range ancestors {
 			childAnc[a] = true
 		}
-		if err := w.walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc); err != nil {
+		if err := w.walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, slicedBus)); err != nil {
 			return err
 		}
 	}
@@ -207,8 +350,8 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 	var in netInputs
 	var k int64
 
-	var walk func(content []byte, src, id, instPath string, ancestors map[string]bool)
-	walk = func(content []byte, src, id, instPath string, ancestors map[string]bool) {
+	var walk func(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]string)
+	walk = func(content []byte, src, id, instPath string, ancestors map[string]bool, promoted map[string]string) {
 		if len(ancestors) > 64 {
 			return
 		}
@@ -221,7 +364,8 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 				instPath = "/" + u
 			}
 		}
-		sc := sheetScope{offset: netgraph.Point{X: k * instStep}, instPath: instPath, src: src, syms: syms, wirePfx: id}
+		busAt, slicedBus := sheetBusNames(root), slicedBusPrefixes(root)
+		sc := sheetScope{offset: netgraph.Point{X: k * instStep}, instPath: instPath, src: src, syms: syms, wirePfx: id, promoted: promoted}
 		if id != "/" {
 			sc.prefix = id
 		}
@@ -246,14 +390,14 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 			for a := range ancestors {
 				childAnc[a] = true
 			}
-			walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc)
+			walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, slicedBus))
 		}
 	}
 
 	if open == nil {
 		open = func(string) ([]byte, error) { return nil, fmt.Errorf("no sub-sheet opener") }
 	}
-	walk(rootContent, rootName, "/", "", map[string]bool{})
+	walk(rootContent, rootName, "/", "", map[string]bool{}, nil)
 	_, _, wireNets := netgraph.Build(in.wires, in.anchors, in.pins, in.terminals)
 	return wireNets
 }

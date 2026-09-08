@@ -198,6 +198,27 @@ layout assertions against `agni serve`, and a geometry sweep of every hand-autho
 against the docsite, which the Go gate can check for a resolving path, an uncalled file, a colour
 literal and a blank line, and cannot check for anything about the RESULT.
 
+`make oracle` cross-checks the KiCad reader against real boards, and is outside `testall` for a
+different reason: cost. It reads a design's schematic our way, reads the same design's `.kicad_pcb`
+for the netlist KiCad itself resolved, and requires the two to agree on which pins share a net. That
+needs the 19MB both-views corpus rather than the 3MB the gate already fetches, so the target pulls it
+first.
+
+It compares the PARTITION, never net names and never counts, and both halves of that cost time to
+learn. Names cannot match, because an unnamed net is auto-named by each tool in its own vocabulary
+(`N$37` against `Net-(C104-Pad1)`) and KiCad writes a root-sheet label as `/AN0` where we write `AN0`.
+Counts hide compensating errors: on one demo board we read 47 nets against KiCad's 47 while
+disagreeing about 19 of them, because a swapped pin pair moves one connection out of a net and
+another in. See `build/evidence.md` on why a matching total is not agreement.
+
+It asserts a COMMITTED BASELINE of the disagreements rather than demanding zero, because several
+reader defects are still open and a test that has never passed teaches nothing.
+`readers/kicad/oracle_corpus.baseline` names the nets we still get wrong, so a fix shrinks
+the file and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two boards is not
+a survey, and the file says what it does not cover: neither crosses a sheet boundary with a bus
+vector, so it does not move when that fix is reverted. The in-gate fixture pair
+(`hier_busvec_root.kicad_sch` against kicad-cli's own netlist) is that guard.
+
 `make -C docsite figures` and `make -C docsite designs` re-render the images the docs embed, and
 nothing checks those for staleness at all (agni issue 453). The captures got a check; the pictures
 have not.

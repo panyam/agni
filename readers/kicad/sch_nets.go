@@ -61,6 +61,12 @@ type sheetScope struct {
 	src      string // this instance's source file, for collector-emitted diagnostics
 	syms     *symLibCache
 	wirePfx  string // per-instance wire-id namespace for the WS1-022 wire->net map ("" = bare uuid)
+	// promoted maps a sheet-scoped name to the name it takes INSTEAD of this instance's
+	// qualification, for the members of a bus vector that entered through a bus sheet pin. A bus
+	// crossing the boundary carries its members with it, so `AN0` inside a sub-sheet reached by
+	// `AN[0..7]` is the PARENT's `AN0` and not this sheet's own (agni issue 561). Nil on the root
+	// and on any instance no bus enters, which is the common case.
+	promoted map[string]string
 }
 
 func (sc sheetScope) at(p netgraph.Point) netgraph.Point {
@@ -82,6 +88,9 @@ func (sc sheetScope) wireID(uuid string) string {
 // it becomes "/<sheet path>/X" — KiCad's own net-name convention, which is what the board
 // reader already produces, so schematic-vs-board joins agree.
 func (sc sheetScope) local(name string) string {
+	if p, ok := sc.promoted[name]; ok {
+		return p
+	}
 	if sc.prefix == "" {
 		return name
 	}
