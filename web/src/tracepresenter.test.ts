@@ -9,7 +9,7 @@ import type { TraceState } from "./trace.js";
 // harness builds a presenter with only what the trace path needs; every other collaborator is a stub
 // sufficient for openFile to complete. wireTrace off is the unwired-panel case, which must be a
 // no-op rather than a throw, since the presenter's view ports are optional by design.
-function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error } = {}) {
+function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<typeof TraceSchema>>; fail?: Error; onLocation?: ReturnType<typeof vi.fn> } = {}) {
   const wireTrace = opts.wireTrace !== false;
   const answer =
     opts.trace ??
@@ -24,7 +24,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
         { name: "VCC", stubs: [], stubsElided: 0, busLike: true },
       ],
     });
-  const traceDesign = vi.fn(async (_req: { uri: string; from: unknown; to: unknown }) => {
+  const traceDesign = vi.fn(async (_req: { uri: string; from: unknown; to: unknown; hops?: number }) => {
     if (opts.fail) throw opts.fail;
     return { trace: answer };
   });
@@ -75,6 +75,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     report: vi.fn(),
     query: stubQueryView(),
     trace: wireTrace ? { setState: onTrace } : undefined,
+    location: opts.onLocation,
   });
   return { presenter, onTrace, traceDesign, canvas };
 }
@@ -93,6 +94,7 @@ describe("trace presenter", () => {
       uri: artifactUri("m", "proj/board.edn"),
       from: { refDes: "U1", pin: "3" },
       to: { refDes: "J1", pin: "1" },
+      hops: 0,
     });
     const s = lastState(h.onTrace);
     expect(s.outcome).toBe(TraceOutcome.ROUTED);
@@ -140,5 +142,58 @@ describe("trace presenter", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await expect(h.presenter.runTrace("U1.3", "J1.1")).resolves.toBeUndefined();
     expect(h.traceDesign).not.toHaveBeenCalled();
+  });
+});
+
+describe("a trace arriving in the URL", () => {
+  it("asks the question on load, with no check run first", async () => {
+    const h = harness();
+    await h.presenter.restore({
+      mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
+      symbols: false, verdict: "", hash: "", trace: "U1.3,J1.1", traceHops: 0,
+    });
+    expect(h.traceDesign).toHaveBeenCalledWith({
+      uri: artifactUri("m", "proj/board.edn"),
+      from: { refDes: "U1", pin: "3" },
+      to: { refDes: "J1", pin: "1" },
+      hops: 0,
+    });
+  });
+
+  // A link that dropped the radius would re-ask a NARROWER question wider, so a run reporting "no
+  // route within 2 crossings" could show a route to whoever followed the link.
+  it("carries the radius the link pinned", async () => {
+    const h = harness();
+    await h.presenter.restore({
+      mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
+      symbols: false, verdict: "", hash: "", trace: "U1.3,J1.1", traceHops: 2,
+    });
+    const calls = h.traceDesign.mock.calls;
+    expect(calls[calls.length - 1][0].hops).toBe(2);
+  });
+
+  it("does not trace when the URL names none", async () => {
+    const h = harness();
+    await h.presenter.restore({
+      mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
+      symbols: false, verdict: "", hash: "", trace: "", traceHops: 0,
+    });
+    expect(h.traceDesign).not.toHaveBeenCalled();
+  });
+});
+
+// The address bar and the panel must not disagree: a route found by typing pins is addressable
+// without the reader doing anything, and a NEGATIVE answer is addressable too, since "these two pins
+// do not join" is a thing worth sending someone.
+describe("a trace reaching the URL", () => {
+  it("reports the question it asked, whatever the outcome", async () => {
+    const onLocation = vi.fn();
+    const h = harness({ onLocation });
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.runTrace("U1.3", "J1.1");
+    const locCalls = onLocation.mock.calls;
+    const loc = locCalls[locCalls.length - 1][0];
+    expect(loc.trace).toBe("U1.3,J1.1");
+    expect(loc.traceHops).toBe(0);
   });
 });

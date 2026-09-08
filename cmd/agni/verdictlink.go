@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/spf13/cobra"
 
 	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/mounts"
+
+	rpt "github.com/panyam/agni/core/report"
 )
 
 // serverMountTimeout bounds the one call --url-base makes. A wrong address must cost a moment, not
@@ -143,4 +146,42 @@ func designContentHash(ctx context.Context, ll *localLoader, designURI string) s
 		return ""
 	}
 	return h
+}
+
+// viewerLinkMeta resolves the LINK half of a run: where a viewer would serve this design, the bytes
+// the run read, and whether the server at urlBase agrees about the mount. It is the one place the
+// promise a link makes is decided, which is why `check` and `trace` share it rather than each
+// applying the rule and drifting.
+//
+// Three refusals, all fail-closed and all SAID OUT LOUD when urlBase was given. A workspace that
+// failed to build, a design reached through a mount the CLI minted rather than one the operator
+// named, and a server that serves that mount name from a different root. Refusing was already the
+// right answer and was already silent, so an operator who asked for links and got none had nothing
+// to read that named the missing half.
+//
+// It returns an rpt.Report because that is what the renderers take; a caller wanting only the URL
+// halves reads URLBase and MountPath off it and ignores the rest.
+func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, designURI, urlBase string) rpt.Report {
+	ws, _ := workspace()
+	mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI)
+	if urlBase != "" && why != "" {
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no links were emitted: %s\n", why)
+	}
+	if urlBase != "" && mountPath != "" {
+		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
+			keep, note := verifyServerMount(ctx, urlBase, m)
+			if note != "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "note: %s\n", note)
+			}
+			if !keep {
+				mountPath = ""
+			}
+		}
+	}
+	return rpt.Report{
+		Design:      designURI,
+		ContentHash: contentHash,
+		URLBase:     urlBase,
+		MountPath:   mountPath,
+	}
 }

@@ -162,3 +162,15 @@ export function parseEndpoint(text: string): { refDes: string; pin: string } | n
   if (i <= 0 || i === t.length - 1) return null;
   return { refDes: t.slice(0, i), pin: t.slice(i + 1) };
 }
+
+// splitTraceParam reads a `?trace=U1.3,J1.1` URL parameter into its two pins.
+//
+// The FIRST comma separates them, which bounds what is addressable: a pin designator containing a
+// comma cannot be named this way. That is a real limit and a cheap one, since a comma in a
+// designator would already be unusual, and the alternative is an escaping scheme in a parameter
+// whose whole value is being readable in an address bar.
+export function splitTraceParam(param: string): [string, string] {
+  const i = param.indexOf(",");
+  if (i < 0) return [param.trim(), ""];
+  return [param.slice(0, i).trim(), param.slice(i + 1).trim()];
+}

@@ -23,7 +23,7 @@ import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
 import { type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
-import { type TraceView, errorTrace, loadingTrace, parseEndpoint, traceFromResponse, traceSubjects } from "./trace.js";
+import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects } from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
 import { type ConventionBarView } from "./conventions.js";
@@ -219,6 +219,11 @@ export class ViewerPresenter {
   private linkHash = "";
   private designContentHash = "";
 
+  // tracedPins is the "from,to" the panel last asked about ("" when none), and tracedHops the radius
+  // it asked at (0 for the server default). They are URL state in the same category as the focused
+  // verdict: which question the open viewer is looking at.
+  private tracedPins = "";
+  private tracedHops = 0;
   // highlights are the active highlight layers (the selection API): each spec names
   // components/nets/pins and its color/alpha. The WebGL canvas resolves them locally against
   // the packed keys; SVG mode composites a server-rendered overlay (HighlightSheet).
@@ -531,6 +536,12 @@ export class ViewerPresenter {
       await this.runChecks();
       await this.locateVerdict(loc.verdict);
     }
+    // A trace link needs no run first, unlike a verdict: it carries the QUESTION, so the viewer just
+    // asks it. Nothing has to be cached, derived on both sides, or checked against a revision.
+    if (loc.trace) {
+      const [from, to] = splitTraceParam(loc.trace);
+      await this.runTrace(from, to, loc.traceHops);
+    }
   }
 
   // currentLoc snapshots the URL-addressable state.
@@ -545,6 +556,10 @@ export class ViewerPresenter {
       symbols: this.faithfulSymbols,
       verdict: this.focusedVerdict,
       hash: this.linkHash,
+      // The trace the panel is showing, so a route found by typing two pins is addressable without
+      // the reader having to think about it, and the address bar and the panel never disagree.
+      trace: this.tracedPins,
+      traceHops: this.tracedHops,
     };
   }
 
@@ -1082,7 +1097,7 @@ export class ViewerPresenter {
   //
   // A malformed pin is caught HERE rather than at the server: it is a typo in the box, the panel is
   // showing the box, and a round trip to be told the same thing would only make it slower.
-  async runTrace(fromText: string, toText: string): Promise<void> {
+  async runTrace(fromText: string, toText: string, hops = 0): Promise<void> {
     const view = this.views.trace;
     if (!view) return;
     const from = parseEndpoint(fromText);
@@ -1098,7 +1113,7 @@ export class ViewerPresenter {
     view.setState(loadingTrace());
     let state;
     try {
-      const resp = await this.client.traceDesign({ uri: artifactUri(this.mount, this.path), from, to });
+      const resp = await this.client.traceDesign({ uri: artifactUri(this.mount, this.path), from, to, hops });
       if (!resp.trace) {
         view.setState(errorTrace("The server answered with no trace"));
         return;
@@ -1109,6 +1124,12 @@ export class ViewerPresenter {
       return;
     }
     view.setState(state);
+    // Recorded whatever the outcome was, so a link can carry a NEGATIVE answer too. "these two pins
+    // do not join" is a thing worth sending someone, and a URL that only survived a success would
+    // quietly drop the half of the answers people argue about.
+    this.tracedPins = `${from.refDes}.${from.pin},${to.refDes}.${to.pin}`;
+    this.tracedHops = hops;
+    this.syncLocation();
     const subjects = traceSubjects(state);
     if (subjects.length === 0) return;
     if (this.mode === "native") await this.setMode("webgl");

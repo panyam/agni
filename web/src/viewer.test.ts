@@ -388,7 +388,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", trace: "", traceHops: 0 });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -407,7 +407,7 @@ describe("ViewerPresenter", () => {
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, trace: "", traceHops: 0 };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
       h.getDesign.mockResolvedValue({
@@ -478,7 +478,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", trace: "", traceHops: 0 });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 
