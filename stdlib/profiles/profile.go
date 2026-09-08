@@ -580,7 +580,12 @@ func (p Profile) pullupVerdicts(pullups []Signal) func(check.Model) []check.Verd
 		}
 		var out []check.Verdict
 		for _, n := range m.Nets() {
-			if !anySignalMatches(n.GetName(), pullups) {
+			// A net with NO connections is not a subject, which mirrors the datalog form's
+			// `component-on-net(?r, ?n)` in needs_pullup and is not a detail. On a read whose symbols
+			// did not resolve, the net NAMES survive and the connections do not, so matching by name
+			// alone turned an incomplete read into four confident findings about buses whose pins the
+			// reader never saw. matchSignalNet applies the same condition for the coverage panel.
+			if !anySignalMatches(n.GetName(), pullups) || len(n.GetConnections()) == 0 {
 				continue
 			}
 			outcome, w, ctx := check.PullUpVerdict(m, n)
