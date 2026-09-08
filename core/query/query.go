@@ -30,9 +30,19 @@ type Query struct {
 	Rules []Rule
 	Goal  Body
 	// Select is the answer columns: each item is a variable (a group key) or an aggregate over the
-	// group formed by the variable columns (count/min/max/sum). Empty selects Goal's variables in
-	// first-seen order. When any item is an aggregate, the result is grouped-and-reduced.
+	// group formed by the variable columns (count/min/max/sum/list). Empty selects Goal's variables
+	// in first-seen order. When any item is an aggregate, the result is grouped-and-reduced.
 	Select []Term
+	// Having filters the GROUPS a Select's aggregates form, after the reduce. Each item is a Compare
+	// whose left term is an aggregate, so `=> ?p, count(?n) having count(?n) < 2` keeps the groups of
+	// size one. A Goal comparison cannot express this: it is applied per binding, before there is a
+	// group to count.
+	//
+	// An aggregate may appear here without being selected, which is how you ask for the subjects
+	// rather than the tally. That still groups: a Having aggregate makes the query grouped-and-reduced
+	// exactly as a Select one does, and its column is computed, filtered on, and then not printed
+	// (Columns is keyed off Select alone).
+	Having []Compare
 }
 
 // A Rule derives its Head for every binding satisfying Body. A rule is recursive when its Head
@@ -80,8 +90,9 @@ type Compare struct {
 	Right Term
 }
 
-// A Term is a variable, a constant, or (in a Rule Head only) an aggregate over the group formed by
-// the Head's other variables. Exactly one of Var/Const/Agg is set (Var == "" means not a variable).
+// A Term is a variable, a constant, or an aggregate over the group formed by the projection's plain
+// variables. Exactly one of Var/Const/Agg is set (Var == "" means not a variable). An Agg is legal in
+// a Select column and on the left of a Having; anywhere else there is no group for it to reduce.
 type Term struct {
 	Var   Var
 	Const *Value
@@ -124,10 +135,35 @@ type Value struct {
 // An Aggregate reduces Var over each group of the projection's plain-variable columns. Example:
 // `component-on-net(?ref,?net) => ?net, count(?ref)` groups by ?net and counts the ?ref bindings
 // per group (parts per net); Aggregate{Func: "count", Var: "ref"}. min/max/sum reduce Var's numeric
-// value over the group.
+// value over the group, and list joins its values.
+//
+// EVERY AGGREGATE REDUCES BINDINGS, NOT VALUES, unless Distinct is set. A binding is the unit the
+// whole evaluator deals in, so a group holds one row per solution and a goal that binds anything Var
+// does not determine repeats Var once per combination. On a net carrying 7 test points and 20
+// capacitors, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
+// component.class(?c,"capacitor"), component-on-net(?c,?net) => ?net, count(?tp)` reports 140.
+//
+// Distinct reduces the SET of Var's values instead: count(distinct ?tp) is 7 on that net, and
+// list(distinct ?tp) names those 7 once each. It is uniform across every function rather than
+// special-cased on count, deliberately. Making list implicitly distinct would put count(?tp) and
+// list(?tp) in one projection disagreeing about what the group holds, 140 against 7, with nothing in
+// the query saying why — which is this same trap one function over, and harder to see because both
+// columns look right on a group of size one.
+//
+// A derived relation is the other way to get a distinct reduce, by projecting the extra variable away
+// before the group forms:
+//
+//	has_tp(?n) :- component-on-net(?x,?n), component.class(?x,"test_point");
+//	component.class(?p,"capacitor"), component-on-net(?p,?n), has_tp(?n) => ?p, count(?n)
+//
+// The rule makes has_tp a SET of nets, so count(?n) counts nets whether or not Distinct is set.
 type Aggregate struct {
-	Func string // count | min | max | sum
+	Func string // count | min | max | sum | list
 	Var  Var
+	// Distinct reduces Var's distinct values rather than one entry per binding. Spelled
+	// `count(distinct ?x)`. Bare aggregates keep their binding-wise meaning, so no existing query
+	// moves.
+	Distinct bool
 }
 
 // Row is one answer: the projected variables bound to values, plus the provenance of the base

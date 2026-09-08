@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -979,5 +980,148 @@ func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 	}}
 	if _, err := (Naive{}).Eval(q, NewBase(m)); err == nil {
 		t.Fatal("an unanchored negation in a rule body was accepted")
+	}
+}
+
+// aggFixture is a design shaped like the group-filter question: three nets whose test-point coverage
+// differs, and one net carrying a second capacitor so a flat goal produces more bindings than values.
+//
+//	TPONLY   TP1                       -> 1 test point,  no capacitor
+//	BOTH     TP2, TP3, C1              -> 2 test points, 1 capacitor  (2 bindings, 2 values)
+//	DOUBLE   TP4, C2, C3               -> 1 test point,  2 capacitors (2 bindings, 1 value)
+func aggFixture() *ir.Design {
+	prov := func() *ir.Provenance { return &ir.Provenance{SourceFile: "d"} }
+	comp := func(ref, class string) *ir.Component {
+		return &ir.Component{RefDes: ref, DeviceClasses: []string{class}, Prov: prov()}
+	}
+	net := func(name string, refs ...string) *ir.Net {
+		n := &ir.Net{Name: name, Prov: prov()}
+		for i, r := range refs {
+			n.Connections = append(n.Connections, &ir.Connection{ComponentRef: r, PinRef: fmt.Sprint(i + 1)})
+		}
+		return n
+	}
+	return &ir.Design{
+		Components: []*ir.Component{
+			comp("TP1", "test_point"), comp("TP2", "test_point"), comp("TP3", "test_point"), comp("TP4", "test_point"),
+			comp("C1", "capacitor"), comp("C2", "capacitor"), comp("C3", "capacitor"),
+		},
+		Nets: []*ir.Net{
+			net("TPONLY", "TP1"),
+			net("BOTH", "TP2", "TP3", "C1"),
+			net("DOUBLE", "TP4", "C2", "C3"),
+		},
+	}
+}
+
+func aggRows(t *testing.T, q string) map[string]string {
+	t.Helper()
+	rows := runQuery(t, check.NewModel(aggFixture()), q)
+	got := map[string]string{}
+	for _, r := range rows {
+		key := r.Bind["net"].S
+		var vals []string
+		for k, v := range r.Bind {
+			if k != "net" {
+				vals = append(vals, string(k)+"="+v.S)
+			}
+		}
+		sort.Strings(vals)
+		got[key] = strings.Join(vals, " ")
+	}
+	return got
+}
+
+// TestHavingFiltersGroups: a having filters after the reduce, which is the thing a goal comparison
+// cannot do — before grouping there is no count to compare.
+func TestHavingFiltersGroups(t *testing.T) {
+	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net) => ?net, count(?tp) having count(?tp) > 1`)
+	if len(got) != 1 || got["BOTH"] != "count(tp)=2" {
+		t.Errorf("rows = %v, want only BOTH with count 2", got)
+	}
+}
+
+// TestHavingWithoutSelectingTheAggregate: an aggregate may be filtered on without being projected, so
+// the answer is the subjects rather than the tally. Its column must not reach the output.
+func TestHavingWithoutSelectingTheAggregate(t *testing.T) {
+	q := `component.class(?tp,"test_point"), component-on-net(?tp,?net) => ?net having count(?tp) = 1`
+	rows := runQuery(t, check.NewModel(aggFixture()), q)
+	names := []string{}
+	for _, r := range rows {
+		names = append(names, r.Bind["net"].S)
+		if _, leaked := r.Bind["count(tp)"]; leaked {
+			t.Errorf("row %v carries the having column, which was not selected", r.Bind)
+		}
+	}
+	sort.Strings(names)
+	if strings.Join(names, ",") != "DOUBLE,TPONLY" {
+		t.Errorf("nets = %v, want [DOUBLE TPONLY]", names)
+	}
+	parsed, err := Parse(q)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if cols := parsed.Columns(); len(cols) != 1 || cols[0] != "net" {
+		t.Errorf("Columns() = %v, want [net]", cols)
+	}
+}
+
+// TestHavingComparedAgainstAGroupKey: the right side may be a selected variable, not only a
+// constant. "Nets whose every pin is a test point" is that question — only TPONLY qualifies, where
+// BOTH and DOUBLE each carry three pins and fewer test points.
+func TestHavingComparedAgainstAGroupKey(t *testing.T) {
+	rows := runQuery(t, check.NewModel(aggFixture()),
+		`component.class(?tp,"test_point"), component-on-net(?tp,?net), net.pin_count(?net,?pc) => ?net, ?pc having count(?tp) = ?pc`)
+	if len(rows) != 1 || rows[0].Bind["net"].S != "TPONLY" {
+		t.Errorf("rows = %+v, want only TPONLY", rows)
+	}
+}
+
+// TestHavingRejectsANonGroupKeyOnTheRight: caught at validation, so the query fails on the query
+// rather than on whichever design happens to produce the first group.
+func TestHavingRejectsANonGroupKeyOnTheRight(t *testing.T) {
+	q, perr := Parse(`component.class(?tp,"test_point"), component-on-net(?tp,?net) => ?net having count(?tp) = ?tp`)
+	if perr != nil {
+		t.Fatalf("Parse: %v", perr)
+	}
+	_, err := (Naive{}).Eval(q, NewBase(check.NewModel(aggFixture())))
+	if err == nil || !strings.Contains(err.Error(), "group key") {
+		t.Errorf("err = %v, want a complaint that ?tp is not a group key", err)
+	}
+}
+
+// TestDistinctReducesValuesNotBindings is the trap this feature exists to make spellable. DOUBLE
+// carries one test point and two capacitors, so the flat goal yields two bindings for one value.
+func TestDistinctReducesValuesNotBindings(t *testing.T) {
+	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
+		component.class(?c,"capacitor"), component-on-net(?c,?net) => ?net, count(?tp), count(distinct ?tp)`)
+	if got["DOUBLE"] != "count(distinct tp)=1 count(tp)=2" {
+		t.Errorf("DOUBLE = %q, want 2 bindings reduced to 1 distinct value", got["DOUBLE"])
+	}
+	if got["BOTH"] != "count(distinct tp)=2 count(tp)=2" {
+		t.Errorf("BOTH = %q, want both spellings to agree when every binding is a fresh value", got["BOTH"])
+	}
+}
+
+// TestListNamesTheGroupMembers: list joins the members sorted, and is binding-wise until asked
+// otherwise — the same rule count follows, so the two columns describe the same set.
+func TestListNamesTheGroupMembers(t *testing.T) {
+	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
+		component.class(?c,"capacitor"), component-on-net(?c,?net) => ?net, list(?tp), list(distinct ?tp)`)
+	if got["DOUBLE"] != "list(distinct tp)=TP4 list(tp)=TP4 TP4" {
+		t.Errorf("DOUBLE = %q, want the bare list to repeat per binding and distinct to collapse it", got["DOUBLE"])
+	}
+	if got["BOTH"] != "list(distinct tp)=TP2 TP3 list(tp)=TP2 TP3" {
+		t.Errorf("BOTH = %q, want sorted members", got["BOTH"])
+	}
+}
+
+// TestSumDistinctReducesDistinctValues: distinct is uniform across the aggregates, not a count
+// special case. Two bindings carrying the same number contribute once.
+func TestSumDistinctReducesDistinctValues(t *testing.T) {
+	got := aggRows(t, `component.class(?tp,"test_point"), component-on-net(?tp,?net),
+		net.pin_count(?net,?pc) => ?net, sum(?pc), sum(distinct ?pc)`)
+	if got["BOTH"] != "sum(distinct pc)=3 sum(pc)=6" {
+		t.Errorf("BOTH = %q, want the repeated pin count summed once when distinct", got["BOTH"])
 	}
 }

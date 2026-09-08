@@ -1,6 +1,9 @@
 package query
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestParse (WS3-029): the surface syntax parses atoms, comparisons, term kinds, and the
 // projection into the IR the evaluator runs.
@@ -66,5 +69,81 @@ func TestParseErrors(t *testing.T) {
 				t.Errorf("Parse(%q) succeeded; want an error", text)
 			}
 		})
+	}
+}
+
+// TestParseHaving: the group filter parses into Having rather than into the goal, so it is applied
+// after the reduce.
+func TestParseHaving(t *testing.T) {
+	q, err := Parse(`component-on-net(?r,?n) => ?n, count(?r) having count(?r) >= 2`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(q.Goal.Literals) != 1 {
+		t.Errorf("goal literals = %d, want 1 (the having must not land in the goal)", len(q.Goal.Literals))
+	}
+	if len(q.Having) != 1 {
+		t.Fatalf("Having = %+v, want one filter", q.Having)
+	}
+	h := q.Having[0]
+	if h.Left.Agg == nil || h.Left.Agg.Func != "count" || h.Left.Agg.Var != "r" || h.Op != ">=" || h.Right.Const == nil || h.Right.Const.S != "2" {
+		t.Errorf("Having[0] = %+v, want count(?r) >= 2", h)
+	}
+}
+
+// TestParseHavingRejectsAPlainComparison: a filter over a group key is a goal comparison written in
+// the wrong place, and the error says so rather than silently accepting a filter that never fires.
+func TestParseHavingRejectsAPlainComparison(t *testing.T) {
+	_, err := Parse(`component-on-net(?r,?n) => ?n having ?n < 2`)
+	if err == nil || !strings.Contains(err.Error(), "=>") {
+		t.Errorf("err = %v, want a complaint pointing at the goal", err)
+	}
+}
+
+// TestParseHavingKeywordNeedsAWordBoundary: "having" splits the projection only as a bare word, so a
+// name that merely contains those letters is left alone.
+func TestParseHavingKeywordNeedsAWordBoundary(t *testing.T) {
+	q, err := Parse(`shaving(?r,?n) => ?n, ?r`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(q.Having) != 0 {
+		t.Errorf("Having = %+v, want none: the relation is named shaving", q.Having)
+	}
+}
+
+// TestParseDistinctAggregate: distinct is a modifier inside the parens, and it labels its own column
+// so a projection may carry both spellings of one aggregate.
+func TestParseDistinctAggregate(t *testing.T) {
+	q, err := Parse(`component-on-net(?r,?n) => ?n, count(?r), count(distinct ?r), list(distinct ?r)`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(q.Select) != 4 {
+		t.Fatalf("Select = %+v, want four columns", q.Select)
+	}
+	if q.Select[1].Agg.Distinct {
+		t.Error("count(?r) parsed as distinct")
+	}
+	if !q.Select[2].Agg.Distinct || q.Select[2].Agg.Var != "r" {
+		t.Errorf("count(distinct ?r) = %+v", q.Select[2].Agg)
+	}
+	if !q.Select[3].Agg.Distinct || q.Select[3].Agg.Func != "list" {
+		t.Errorf("list(distinct ?r) = %+v", q.Select[3].Agg)
+	}
+	cols := q.Columns()
+	if len(cols) != 4 || cols[1] != "count(r)" || cols[2] != "count(distinct r)" {
+		t.Errorf("Columns() = %v, want the two count spellings to be different columns", cols)
+	}
+}
+
+// TestParseDistinctNeedsWhitespace: a variable whose name starts with the keyword is not a modifier.
+func TestParseDistinctNeedsWhitespace(t *testing.T) {
+	q, err := Parse(`component-on-net(?r,?distinctive) => ?r, count(?distinctive)`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if a := q.Select[1].Agg; a.Distinct || a.Var != "distinctive" {
+		t.Errorf("agg = %+v, want a plain count over ?distinctive", a)
 	}
 }

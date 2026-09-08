@@ -1,0 +1,5 @@
+# having filters the GROUPS the aggregate formed, which a goal comparison cannot: before grouping
+# there is no count to compare against.
+fixture: cmd/agni/testdata/conformance
+script: |
+  agni query regulator.fires.kicad_sch 'component-on-net(?r,?n) => ?n, count(?r) having count(?r) > 1'

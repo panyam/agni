@@ -1414,10 +1414,14 @@ func (x *ContextVar) GetRole() string {
 // DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
 // solve, with select naming the answer columns.
 type DatalogQuery struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rules         []*DatalogRule         `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
-	Goal          *DatalogBody           `protobuf:"bytes,2,opt,name=goal,proto3" json:"goal,omitempty"`
-	Select        []*DatalogTerm         `protobuf:"bytes,3,rep,name=select,proto3" json:"select,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Rules  []*DatalogRule         `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
+	Goal   *DatalogBody           `protobuf:"bytes,2,opt,name=goal,proto3" json:"goal,omitempty"`
+	Select []*DatalogTerm         `protobuf:"bytes,3,rep,name=select,proto3" json:"select,omitempty"`
+	// having filters the GROUPS the select's aggregates form, after the reduce. Each is a
+	// DatalogCompare whose left term is an aggregate, which is why it needs no message of its own: a
+	// group filter and a body comparison differ in WHEN they run, not in what they say.
+	Having        []*DatalogCompare `protobuf:"bytes,4,rep,name=having,proto3" json:"having,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1469,6 +1473,13 @@ func (x *DatalogQuery) GetGoal() *DatalogBody {
 func (x *DatalogQuery) GetSelect() []*DatalogTerm {
 	if x != nil {
 		return x.Select
+	}
+	return nil
+}
+
+func (x *DatalogQuery) GetHaving() []*DatalogCompare {
+	if x != nil {
+		return x.Having
 	}
 	return nil
 }
@@ -1980,9 +1991,13 @@ func (x *DatalogValue) GetBaseUnit() string {
 
 // DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.
 type DatalogAggregate struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Func          string                 `protobuf:"bytes,1,opt,name=func,proto3" json:"func,omitempty"` // count | min | max | sum
-	Var           string                 `protobuf:"bytes,2,opt,name=var,proto3" json:"var,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Func  string                 `protobuf:"bytes,1,opt,name=func,proto3" json:"func,omitempty"` // count | min | max | sum | list
+	Var   string                 `protobuf:"bytes,2,opt,name=var,proto3" json:"var,omitempty"`
+	// distinct reduces var's distinct VALUES rather than one entry per binding. Uniform across every
+	// func: bare spellings stay binding-wise, so an encoded query written before this field decodes to
+	// the same answer it always gave.
+	Distinct      bool `protobuf:"varint,3,opt,name=distinct,proto3" json:"distinct,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2029,6 +2044,13 @@ func (x *DatalogAggregate) GetVar() string {
 		return x.Var
 	}
 	return ""
+}
+
+func (x *DatalogAggregate) GetDistinct() bool {
+	if x != nil {
+		return x.Distinct
+	}
+	return false
 }
 
 // ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...): its required signals, an optional
@@ -2381,11 +2403,12 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"ContextVar\x12\x10\n" +
 	"\x03var\x18\x01 \x01(\tR\x03var\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04role\"\xa7\x01\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\"\xdf\x01\n" +
 	"\fDatalogQuery\x121\n" +
 	"\x05rules\x18\x01 \x03(\v2\x1b.agni.v1.checks.DatalogRuleR\x05rules\x12/\n" +
 	"\x04goal\x18\x02 \x01(\v2\x1b.agni.v1.checks.DatalogBodyR\x04goal\x123\n" +
-	"\x06select\x18\x03 \x03(\v2\x1b.agni.v1.checks.DatalogTermR\x06select\"\x83\x01\n" +
+	"\x06select\x18\x03 \x03(\v2\x1b.agni.v1.checks.DatalogTermR\x06select\x126\n" +
+	"\x06having\x18\x04 \x03(\v2\x1e.agni.v1.checks.DatalogCompareR\x06having\"\x83\x01\n" +
 	"\vDatalogRule\x12/\n" +
 	"\x04head\x18\x01 \x01(\v2\x1b.agni.v1.checks.DatalogAtomR\x04head\x12/\n" +
 	"\x04body\x18\x02 \x01(\v2\x1b.agni.v1.checks.DatalogBodyR\x04body\x12\x12\n" +
@@ -2414,10 +2437,11 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x03num\x18\x02 \x01(\x01H\x00R\x03num\x88\x01\x01\x12\x16\n" +
 	"\x06absent\x18\x03 \x01(\bR\x06absent\x12\x1b\n" +
 	"\tbase_unit\x18\x04 \x01(\tR\bbaseUnitB\x06\n" +
-	"\x04_num\"8\n" +
+	"\x04_num\"T\n" +
 	"\x10DatalogAggregate\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x10\n" +
-	"\x03var\x18\x02 \x01(\tR\x03var\"\x88\x02\n" +
+	"\x03var\x18\x02 \x01(\tR\x03var\x12\x1a\n" +
+	"\bdistinct\x18\x03 \x01(\bR\bdistinct\"\x88\x02\n" +
 	"\n" +
 	"ProfileDef\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
@@ -2525,26 +2549,27 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	18, // 32: agni.v1.checks.DatalogQuery.rules:type_name -> agni.v1.checks.DatalogRule
 	19, // 33: agni.v1.checks.DatalogQuery.goal:type_name -> agni.v1.checks.DatalogBody
 	23, // 34: agni.v1.checks.DatalogQuery.select:type_name -> agni.v1.checks.DatalogTerm
-	21, // 35: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
-	19, // 36: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
-	20, // 37: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
-	21, // 38: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
-	21, // 39: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
-	22, // 40: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
-	23, // 41: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
-	23, // 42: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
-	23, // 43: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
-	24, // 44: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
-	25, // 45: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
-	27, // 46: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
-	28, // 47: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
-	31, // 48: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 49: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	50, // [50:50] is the sub-list for method output_type
-	50, // [50:50] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	22, // 35: agni.v1.checks.DatalogQuery.having:type_name -> agni.v1.checks.DatalogCompare
+	21, // 36: agni.v1.checks.DatalogRule.head:type_name -> agni.v1.checks.DatalogAtom
+	19, // 37: agni.v1.checks.DatalogRule.body:type_name -> agni.v1.checks.DatalogBody
+	20, // 38: agni.v1.checks.DatalogBody.literals:type_name -> agni.v1.checks.DatalogLiteral
+	21, // 39: agni.v1.checks.DatalogLiteral.pos:type_name -> agni.v1.checks.DatalogAtom
+	21, // 40: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
+	22, // 41: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
+	23, // 42: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
+	23, // 43: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
+	23, // 44: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
+	24, // 45: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
+	25, // 46: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
+	27, // 47: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
+	28, // 48: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
+	31, // 49: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 50: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	51, // [51:51] is the sub-list for method output_type
+	51, // [51:51] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }

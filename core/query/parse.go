@@ -10,7 +10,7 @@ import (
 //
 //	query       = { rule ";" } goal ;                 (* zero or more rules, then one goal *)
 //	rule        = atom ":-" literals ;                (* head :- body; defines a derived relation *)
-//	goal        = literals [ "=>" projection ] ;
+//	goal        = literals [ "=>" projection [ "having" havings ] ] ;
 //	literals    = literal { "," literal } ;
 //	literal     = atom | "not" atom | comparison ;    (* "not atom" = stratified negation *)
 //	atom        = relation "(" [ term { "," term } ] ")" ;
@@ -18,8 +18,10 @@ import (
 //	op          = "<" | "<=" | "=" | "!=" | ">" | ">=" ;
 //	projection  = column { "," column } ;
 //	column      = variable | aggregate ;
-//	aggregate   = aggfunc "(" variable ")" ;          (* grouped by the variable columns *)
-//	aggfunc     = "count" | "min" | "max" | "sum" ;
+//	aggregate   = aggfunc "(" [ "distinct" ] variable ")" ; (* grouped by the variable columns *)
+//	aggfunc     = "count" | "min" | "max" | "sum" | "list" ;
+//	havings     = having { "," having } ;
+//	having      = aggregate op term ;                 (* filters GROUPS, after the reduce *)
 //	term        = variable | string | number ;
 //	variable    = "?" ident | "_" ;
 //	string      = '"' { char } '"' ;
@@ -34,9 +36,15 @@ import (
 // ordinary atoms; the evaluator dispatches them. A rule head may not redefine a built-in or an EDB
 // relation.
 //
+// A comparison in the LITERALS and one after `having` read alike and are applied at different times,
+// which is the distinction to hold on to. A literal comparison filters BINDINGS, before any grouping;
+// a having filters GROUPS, after the reduce. So `?c < 2` in the body narrows the facts that reach the
+// group, and `having count(?n) < 2` narrows the groups the reduce produced. Only the second can ask
+// about a count, because before grouping there is nothing to count.
+//
 // This covers the whole bounded fragment the evaluator serves: user-defined (recursive, stratified)
 // rules, conjunction, comparison, the built-in reaches and string predicates, stratified negation,
-// and aggregation.
+// aggregation, and post-aggregation filtering.
 // It parses to the query.Query IR; for
 //
 //	component.mpn(?r,"REG-24"), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
@@ -57,11 +65,120 @@ func Parse(s string) (Query, error) {
 	if err != nil {
 		return Query{}, err
 	}
-	sel, err := parseSelect(proj)
+	projText, havingText := splitHaving(proj)
+	sel, err := parseSelect(projText)
 	if err != nil {
 		return Query{}, err
 	}
-	return Query{Rules: rules, Goal: Body{Literals: lits}, Select: sel}, nil
+	having, err := parseHaving(havingText)
+	if err != nil {
+		return Query{}, err
+	}
+	return Query{Rules: rules, Goal: Body{Literals: lits}, Select: sel, Having: having}, nil
+}
+
+// splitHaving cuts the projection at the `having` keyword. It matches the bare word only — at paren
+// depth zero, outside quotes, and bounded on both sides — so a relation or variable whose name merely
+// contains those letters is left alone.
+func splitHaving(proj string) (sel, having string) {
+	depth, inQuote := 0, false
+	for i := 0; i < len(proj); i++ {
+		switch c := proj[i]; {
+		case c == '"':
+			inQuote = !inQuote
+		case inQuote:
+		case c == '(':
+			depth++
+		case c == ')':
+			depth--
+		case depth == 0 && isWordAt(proj, i, "having"):
+			return proj[:i], proj[i+len("having"):]
+		}
+	}
+	return proj, ""
+}
+
+// isWordAt reports whether word sits at s[i:] with a non-identifier character (or the string edge) on
+// either side, so "having" matches and "?shaving" and "having_x" do not.
+func isWordAt(s string, i int, word string) bool {
+	if !strings.HasPrefix(s[i:], word) {
+		return false
+	}
+	if i > 0 && isIdentByte(s[i-1]) {
+		return false
+	}
+	if j := i + len(word); j < len(s) && isIdentByte(s[j]) {
+		return false
+	}
+	return true
+}
+
+// cutWord strips a leading keyword and the whitespace after it, reporting whether it was there. It
+// requires the whitespace, so `distinct ?x` is the modifier and a variable literally named
+// `?distinctxyz` is not mistaken for one.
+func cutWord(s, word string) (rest string, ok bool) {
+	if !strings.HasPrefix(s, word) {
+		return s, false
+	}
+	rest = s[len(word):]
+	if rest == "" || !isSpaceByte(rest[0]) {
+		return s, false
+	}
+	return rest, true
+}
+
+func isSpaceByte(c byte) bool { return c == ' ' || c == '\t' || c == '\n' || c == '\r' }
+
+func isIdentByte(c byte) bool {
+	return c == '_' || c == '?' || c == '.' || c == '-' ||
+		(c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+// parseHaving reads the comma-separated group filters. Each is a comparison whose LEFT side is an
+// aggregate: the right side is an ordinary term, so `count(?n) < 2` and `count(?n) = ?limit` both
+// parse, and the evaluator rejects the second when nothing binds ?limit per group.
+func parseHaving(s string) ([]Compare, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, nil
+	}
+	var out []Compare
+	for _, piece := range splitTop(s, ",") {
+		piece = strings.TrimSpace(piece)
+		if piece == "" {
+			continue
+		}
+		c, err := parseHavingOne(piece)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+// parseHavingOne reads one group filter. The left side goes through parseSelItem (the projection's
+// term parser, which is the one that knows aggregates) rather than parseTerm, so an aggregate stays
+// spellable HERE and stays unspellable in the goal body, where it would have nothing to reduce.
+func parseHavingOne(piece string) (Compare, error) {
+	for _, op := range compareOps {
+		parts := splitTop(piece, op)
+		if len(parts) != 2 {
+			continue
+		}
+		left, err := parseSelItem(strings.TrimSpace(parts[0]))
+		if err != nil {
+			return Compare{}, fmt.Errorf("query: having %q: %w", piece, err)
+		}
+		if left.Agg == nil {
+			return Compare{}, fmt.Errorf("query: having %q filters ?%s, which is a group key rather than an aggregate — a comparison over plain variables belongs in the goal, before the %q", piece, left.Var, "=>")
+		}
+		right, err := parseTerm(parts[1])
+		if err != nil {
+			return Compare{}, fmt.Errorf("query: having %q: %w", piece, err)
+		}
+		return Compare{Left: left, Op: op, Right: right}, nil
+	}
+	return Compare{}, fmt.Errorf("query: having %q is not a comparison (want an aggregate, an operator and a value, as in %q)", piece, "count(?n) < 2")
 }
 
 // splitClauses separates a query into its rule definitions and its single goal clause. Clauses are
@@ -268,10 +385,14 @@ func parseSelItem(p string) (Term, error) {
 			return Term{}, fmt.Errorf("query: malformed aggregate %q", p)
 		}
 		inner := strings.TrimSpace(p[i+1 : len(p)-1])
+		distinct := false
+		if rest, ok := cutWord(inner, "distinct"); ok {
+			distinct, inner = true, strings.TrimSpace(rest)
+		}
 		if len(inner) < 2 || inner[0] != '?' {
 			return Term{}, fmt.Errorf("query: aggregate %s(...) expects a ?variable, got %q", fn, inner)
 		}
-		return Term{Agg: &Aggregate{Func: fn, Var: Var(inner[1:])}}, nil
+		return Term{Agg: &Aggregate{Func: fn, Var: Var(inner[1:]), Distinct: distinct}}, nil
 	}
 	if p[0] != '?' || len(p) == 1 {
 		return Term{}, fmt.Errorf("query: projection column %q must be a ?variable or an aggregate", p)

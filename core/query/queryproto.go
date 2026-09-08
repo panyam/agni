@@ -31,6 +31,9 @@ func QueryProto(q Query) *checkspb.DatalogQuery {
 	for _, t := range q.Select {
 		out.Select = append(out.Select, qtermProto(t))
 	}
+	for _, h := range q.Having {
+		out.Having = append(out.Having, compareProto(h))
+	}
 	return out
 }
 
@@ -62,6 +65,13 @@ func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 			return Query{}, err
 		}
 		q.Select = append(q.Select, term)
+	}
+	for _, h := range p.GetHaving() {
+		c, err := compareFromProto(h)
+		if err != nil {
+			return Query{}, err
+		}
+		q.Having = append(q.Having, c)
 	}
 	if err := ValidateRelations(q); err != nil {
 		return Query{}, err
@@ -126,11 +136,7 @@ func bodyProto(b Body) *checkspb.DatalogBody {
 			})
 		case lit.Compare != nil:
 			out.Literals = append(out.Literals, &checkspb.DatalogLiteral{
-				Literal: &checkspb.DatalogLiteral_Compare{Compare: &checkspb.DatalogCompare{
-					Left:  qtermProto(lit.Compare.Left),
-					Op:    lit.Compare.Op,
-					Right: qtermProto(lit.Compare.Right),
-				}},
+				Literal: &checkspb.DatalogLiteral_Compare{Compare: compareProto(*lit.Compare)},
 			})
 		}
 	}
@@ -154,20 +160,36 @@ func bodyFromProto(p *checkspb.DatalogBody) (Body, error) {
 			}
 			b.Literals = append(b.Literals, Literal{Neg: &a})
 		case *checkspb.DatalogLiteral_Compare:
-			left, err := qtermFromProto(l.Compare.GetLeft())
+			c, err := compareFromProto(l.Compare)
 			if err != nil {
 				return Body{}, err
 			}
-			right, err := qtermFromProto(l.Compare.GetRight())
-			if err != nil {
-				return Body{}, err
-			}
-			b.Literals = append(b.Literals, Literal{Compare: &Compare{Left: left, Op: l.Compare.GetOp(), Right: right}})
+			b.Literals = append(b.Literals, Literal{Compare: &c})
 		default:
 			return Body{}, fmt.Errorf("query: literal is empty (no variant set)")
 		}
 	}
 	return b, nil
+}
+
+// compareProto and compareFromProto carry a two-term comparison. Shared by a body literal and a
+// having filter, which differ in WHEN they are applied and not in what they encode — so a having
+// needs no message of its own, and an aggregate on the left is the only thing that tells them apart
+// on the wire.
+func compareProto(c Compare) *checkspb.DatalogCompare {
+	return &checkspb.DatalogCompare{Left: qtermProto(c.Left), Op: c.Op, Right: qtermProto(c.Right)}
+}
+
+func compareFromProto(p *checkspb.DatalogCompare) (Compare, error) {
+	left, err := qtermFromProto(p.GetLeft())
+	if err != nil {
+		return Compare{}, err
+	}
+	right, err := qtermFromProto(p.GetRight())
+	if err != nil {
+		return Compare{}, err
+	}
+	return Compare{Left: left, Op: p.GetOp(), Right: right}, nil
 }
 
 func atomProto(a Atom) *checkspb.DatalogAtom {
@@ -194,7 +216,7 @@ func qtermProto(t Term) *checkspb.DatalogTerm {
 	switch {
 	case t.Agg != nil:
 		return &checkspb.DatalogTerm{Term: &checkspb.DatalogTerm_Agg{Agg: &checkspb.DatalogAggregate{
-			Func: t.Agg.Func, Var: string(t.Agg.Var),
+			Func: t.Agg.Func, Var: string(t.Agg.Var), Distinct: t.Agg.Distinct,
 		}}}
 	case t.Const != nil:
 		v := &checkspb.DatalogValue{S: t.Const.S, Absent: t.Const.Absent, BaseUnit: t.Const.BaseUnit}
@@ -219,7 +241,7 @@ func qtermFromProto(p *checkspb.DatalogTerm) (Term, error) {
 		}
 		return Term{Const: v}, nil
 	case *checkspb.DatalogTerm_Agg:
-		return Term{Agg: &Aggregate{Func: t.Agg.GetFunc(), Var: Var(t.Agg.GetVar())}}, nil
+		return Term{Agg: &Aggregate{Func: t.Agg.GetFunc(), Var: Var(t.Agg.GetVar()), Distinct: t.Agg.GetDistinct()}}, nil
 	}
 	return Term{}, fmt.Errorf("query: term is empty (no variant set)")
 }

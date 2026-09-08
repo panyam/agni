@@ -146,7 +146,7 @@ func (Naive) Eval(q Query, b *Base) ([]Row, error) {
 	if len(sel) == 0 {
 		sel = defaultSelect(q.Goal)
 	}
-	if err := validateSelect(sel, q.Goal); err != nil {
+	if err := validateSelect(sel, q.Having, q.Goal); err != nil {
 		return nil, err
 	}
 
@@ -164,8 +164,8 @@ func (Naive) Eval(q Query, b *Base) ([]Row, error) {
 	if err != nil {
 		return nil, err
 	}
-	if hasAggregate(sel) {
-		return aggregate(sel, raw), nil
+	if hasAggregate(sel) || len(q.Having) > 0 {
+		return aggregate(sel, q.Having, raw)
 	}
 	return projectRows(sel, raw), nil
 }
@@ -445,30 +445,38 @@ func evalCompare(c Compare, bnd *binding) (bool, error) {
 	if !okl || !okr {
 		return false, fmt.Errorf("query: comparison operand is unbound (a variable must appear in a relation before it is compared)")
 	}
+	return compareValues(l, c.Op, r), nil
+}
+
+// compareValues is the value-level half of evalCompare, split out so a HAVING filter compares by the
+// same rules a goal comparison does. The three refusals documented on evalCompare live here; that
+// function keeps the binding resolution and the unbound-operand error, which a having does not have
+// (its operands are a reduced column and a group key, both already values).
+func compareValues(l Value, op string, r Value) bool {
 	if l.Absent || r.Absent {
 		// An unstated value has no ORDER, but it does have an IDENTITY: two unstated bounds are the
 		// same answer to "what does this row state". Routing equality through valueEq keeps the
 		// explicit operator and implicit unification agreeing, which is the property that stops
 		// `?a = ?b` and a repeated `?a` meaning different things.
-		if orderingOps[c.Op] {
-			return false, nil
+		if orderingOps[op] {
+			return false
 		}
 		eq := valueEq(l, r)
-		if c.Op == "!=" {
-			return !eq, nil
+		if op == "!=" {
+			return !eq
 		}
-		return eq, nil
+		return eq
 	}
 	if l.Num != nil && r.Num != nil {
-		if orderingOps[c.Op] && l.BaseUnit != "" && r.BaseUnit != "" && l.BaseUnit != r.BaseUnit {
-			return false, nil
+		if orderingOps[op] && l.BaseUnit != "" && r.BaseUnit != "" && l.BaseUnit != r.BaseUnit {
+			return false
 		}
-		return cmpNum(*l.Num, c.Op, *r.Num), nil
+		return cmpNum(*l.Num, op, *r.Num)
 	}
-	if orderingOps[c.Op] && (l.Num != nil) != (r.Num != nil) {
-		return false, nil
+	if orderingOps[op] && (l.Num != nil) != (r.Num != nil) {
+		return false
 	}
-	return cmpStr(l.S, c.Op, r.S), nil
+	return cmpStr(l.S, op, r.S)
 }
 
 func cmpNum(a float64, op string, b float64) bool {
@@ -520,6 +528,9 @@ func (q Query) Columns() []Var {
 // It is also the key an aggregate result is stored under in Row.Bind, so printing keys both alike.
 func colLabel(t Term) Var {
 	if t.Agg != nil {
+		if t.Agg.Distinct {
+			return Var(t.Agg.Func + "(distinct " + string(t.Agg.Var) + ")")
+		}
 		return Var(t.Agg.Func + "(" + string(t.Agg.Var) + ")")
 	}
 	return t.Var
@@ -562,31 +573,58 @@ func positiveVars(goal Body) []Var {
 }
 
 // validateSelect rejects a projection over a variable no positive relation binds (an unknown or
-// negation-only existential) and an unknown aggregate function — so a bad query errors clearly.
-func validateSelect(sel []Term, goal Body) error {
+// negation-only existential) and an unknown aggregate function — so a bad query errors clearly. The
+// having filters are checked by the same rules, since each is an aggregate over the same goal.
+func validateSelect(sel []Term, having []Compare, goal Body) error {
 	pv := map[Var]bool{}
 	for _, vv := range positiveVars(goal) {
 		pv[vv] = true
 	}
 	for _, t := range sel {
-		switch {
-		case t.Agg != nil:
-			if !validAggFunc(t.Agg.Func) {
-				return fmt.Errorf("query: unknown aggregate %q (want count/min/max/sum)", t.Agg.Func)
-			}
-			if t.Agg.Var != "" && !pv[t.Agg.Var] {
-				return fmt.Errorf("query: %s aggregates ?%s, which no relation binds", t.Agg.Func, t.Agg.Var)
-			}
-		case t.Var != "" && !pv[t.Var]:
-			return fmt.Errorf("query: projected ?%s is not bound by a positive relation (a variable used only under negation is existential and cannot be selected)", t.Var)
+		if err := validateAggOrVar(t, pv); err != nil {
+			return err
 		}
+	}
+	keys := map[Var]bool{}
+	for _, t := range sel {
+		if t.Agg == nil && t.Var != "" {
+			keys[t.Var] = true
+		}
+	}
+	for _, h := range having {
+		if err := validateAggOrVar(h.Left, pv); err != nil {
+			return err
+		}
+		// Caught here rather than at evaluation so the query fails on the query, not on whichever
+		// design happened to produce the first group.
+		if h.Right.Var != "" && !keys[h.Right.Var] {
+			return fmt.Errorf("query: having compares against ?%s, which is not a group key — after grouping only a selected variable or a constant is bound", h.Right.Var)
+		}
+		if h.Right.Agg != nil {
+			return fmt.Errorf("query: having compares two aggregates, which is not supported (compare an aggregate against a constant or a group key)")
+		}
+	}
+	return nil
+}
+
+func validateAggOrVar(t Term, pv map[Var]bool) error {
+	switch {
+	case t.Agg != nil:
+		if !validAggFunc(t.Agg.Func) {
+			return fmt.Errorf("query: unknown aggregate %q (want count/min/max/sum/list)", t.Agg.Func)
+		}
+		if t.Agg.Var != "" && !pv[t.Agg.Var] {
+			return fmt.Errorf("query: %s aggregates ?%s, which no relation binds", t.Agg.Func, t.Agg.Var)
+		}
+	case t.Var != "" && !pv[t.Var]:
+		return fmt.Errorf("query: projected ?%s is not bound by a positive relation (a variable used only under negation is existential and cannot be selected)", t.Var)
 	}
 	return nil
 }
 
 func validAggFunc(f string) bool {
 	switch f {
-	case "count", "min", "max", "sum":
+	case "count", "min", "max", "sum", "list":
 		return true
 	}
 	return false
@@ -617,20 +655,36 @@ func projectRows(sel []Term, raw []*binding) []Row {
 	return dedupSort(rows, selKeys(sel))
 }
 
-// aggregate groups the solved bindings by the select's variable columns and reduces each aggregate
-// column over the group. A group's provenance is the union of its rows' cites.
+// aggregate groups the solved bindings by the select's variable columns, reduces each aggregate
+// column over the group, and drops the groups a having filter rejects. A group's provenance is the
+// union of its surviving rows' cites.
 //
 // Example — `component-on-net(?ref,?net) => ?net, count(?ref)`: the solve yields one binding per
 // (ref,net) fact; grouping by ?net collapses them per net, and count(?ref) is the group size — parts
-// per net. min/max/sum reduce the numeric value of their variable over the group instead.
-func aggregate(sel []Term, raw []*binding) []Row {
+// per net. min/max/sum reduce the numeric value of their variable over the group instead, and list
+// joins its distinct values.
+//
+// A having aggregate is reduced alongside the selected ones and filtered on, but its column is not in
+// selKeys, so it never reaches the output. That is what lets `=> ?p having count(?n) < 2` answer with
+// the subjects rather than the tally.
+func aggregate(sel []Term, having []Compare, raw []*binding) ([]Row, error) {
 	var keyVars []Var
 	var aggs []Term
+	selected := map[Var]bool{}
 	for _, t := range sel {
+		selected[colLabel(t)] = true
 		if t.Agg != nil {
 			aggs = append(aggs, t)
 		} else if t.Var != "" {
 			keyVars = append(keyVars, t.Var)
+		}
+	}
+	added := map[Var]bool{}
+	for _, h := range having {
+		lbl := colLabel(h.Left)
+		if !selected[lbl] && !added[lbl] {
+			aggs = append(aggs, h.Left)
+			added[lbl] = true
 		}
 	}
 	type group struct {
@@ -664,9 +718,51 @@ func aggregate(sel []Term, raw []*binding) []Row {
 		for _, a := range aggs {
 			row.Bind[colLabel(a)] = reduce(*a.Agg, g.rows)
 		}
+		keep, err := passesHaving(row, having)
+		if err != nil {
+			return nil, err
+		}
+		if !keep {
+			continue
+		}
+		// Drop the columns only a having asked for. Columns() already keys off Select, so these never
+		// reach a rendered table, but Row.Bind is public and a consumer walking it would otherwise
+		// find a column the query never asked for.
+		for _, h := range having {
+			if lbl := colLabel(h.Left); !selected[lbl] {
+				delete(row.Bind, lbl)
+			}
+		}
 		out = append(out, row)
 	}
-	return dedupSort(out, selKeys(sel))
+	return dedupSort(out, selKeys(sel)), nil
+}
+
+// passesHaving applies the group filters to one reduced row. The left side reads the aggregate column
+// just computed; the right side is a constant, or a group key the projection also selected. Comparing
+// against a variable the group does not determine is an error rather than a silent false, because a
+// filter that quietly matches nothing is indistinguishable from a design with no such group.
+func passesHaving(row Row, having []Compare) (bool, error) {
+	for _, h := range having {
+		left := row.Bind[colLabel(h.Left)]
+		var right Value
+		switch {
+		case h.Right.Const != nil:
+			right = *h.Right.Const
+		case h.Right.Var != "":
+			v, ok := row.Bind[h.Right.Var]
+			if !ok {
+				return false, fmt.Errorf("query: having compares against ?%s, which is not a group key — only a selected variable or a constant is bound once the rows are grouped", h.Right.Var)
+			}
+			right = v
+		default:
+			return false, fmt.Errorf("query: having compares against an aggregate, which is not supported (compare against a constant or a group key)")
+		}
+		if !compareValues(left, h.Op, right) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func groupKeyOf(keyVars []Var, bnd *binding) string {
@@ -678,19 +774,79 @@ func groupKeyOf(keyVars []Var, bnd *binding) string {
 	return b.String()
 }
 
-// reduce computes one aggregate over a group's bindings: count is the row count; min/max/sum are
-// over the numeric value of the aggregated variable (rows whose value is non-numeric are skipped).
-func reduce(a Aggregate, rows []*binding) Value {
-	if a.Func == "count" {
-		n := float64(len(rows))
-		return Value{S: ftoa(n), Num: &n}
+// listSep joins a list aggregate's members. A space rather than a comma, because the members land in
+// ONE csv cell and a comma there reads as a column break to every naive splitter downstream — the csv
+// writer quotes it correctly, and the half of the world that reads csv with strings.Split does not.
+const listSep = " "
+
+// groupValues is a group's values of Var: one per binding, or the distinct set when the aggregate
+// says so. Sorted either way, so a saved view regenerates identically rather than inheriting the
+// solver's join order.
+//
+// A binding that does not bind Var contributes nothing, matching min/max/sum, which skip a row whose
+// value is not numeric.
+func groupValues(a Aggregate, rows []*binding) []string {
+	seen := map[string]bool{}
+	out := make([]string, 0, len(rows))
+	for _, bnd := range rows {
+		val, ok := bnd.vals[a.Var]
+		if !ok || val.Absent || val.S == "" {
+			continue
+		}
+		if a.Distinct {
+			if seen[val.S] {
+				continue
+			}
+			seen[val.S] = true
+		}
+		out = append(out, val.S)
 	}
+	sort.Strings(out)
+	return out
+}
+
+// numericValues is min/max/sum's input: the numeric value of Var across the group, deduped when the
+// aggregate says distinct. Dedup is on the VALUE, so two bindings carrying the same number contribute
+// once — which is what makes sum(distinct ?v) the sum of the distinct values rather than of the
+// distinct rows that happen to hold them.
+func numericValues(a Aggregate, rows []*binding) []float64 {
+	seen := map[float64]bool{}
 	var nums []float64
 	for _, bnd := range rows {
-		if val, ok := bnd.vals[a.Var]; ok && val.Num != nil {
-			nums = append(nums, *val.Num)
+		val, ok := bnd.vals[a.Var]
+		if !ok || val.Num == nil {
+			continue
 		}
+		if a.Distinct {
+			if seen[*val.Num] {
+				continue
+			}
+			seen[*val.Num] = true
+		}
+		nums = append(nums, *val.Num)
 	}
+	return nums
+}
+
+// reduce computes one aggregate over a group's bindings: count is how many; list joins them; min/max/
+// sum are over their numeric value (a row whose value is non-numeric is skipped). Distinct reduces the
+// group's distinct values of the aggregated variable instead of one entry per binding, which changes
+// count, sum and list, and leaves min and max where they were.
+func reduce(a Aggregate, rows []*binding) Value {
+	if a.Func == "count" {
+		// Bare count counts BINDINGS, so it counts a row that binds nothing for Var; distinct counts
+		// the values, so it cannot. That asymmetry is the definition rather than an oversight: a
+		// binding exists whether or not Var is bound in it, and a value does not.
+		n := float64(len(rows))
+		if a.Distinct {
+			n = float64(len(groupValues(a, rows)))
+		}
+		return Value{S: ftoa(n), Num: &n}
+	}
+	if a.Func == "list" {
+		return Value{S: strings.Join(groupValues(a, rows), listSep)}
+	}
+	nums := numericValues(a, rows)
 	if len(nums) == 0 {
 		return Value{}
 	}
