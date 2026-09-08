@@ -26,7 +26,9 @@ func Emits(ruleName string) bool {
 		// every item bound to them reading not-automated forever.
 		RuleRailCurrentCapacity, RuleRailCurrentMargin,
 		// Same for the load-switch lower bound (WS3-085): a fixed name under no family prefix.
-		RuleLoadSwitchTripBelowBudget:
+		RuleLoadSwitchTripBelowBudget,
+		// The IO-map rules (agni issue 517), three fixed names under no family prefix.
+		RuleIOMapPin, RuleIOMapNetAbsent, RuleIOMapFarEnd:
 		return true
 	}
 	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-") ||

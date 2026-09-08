@@ -21,6 +21,14 @@ const (
 	// read, and it is a third rule rather than a threshold on them because it judges a different part,
 	// the switch rather than the supply.
 	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
+	// The three IO-map rules (agni issue 517). Fixed names rather than one per declared row, which
+	// is the documented exception to one-rule-per-declared-thing: a real map is hundreds of rows and
+	// a reviewer signs off "the netlist matches the IO map", not each row. Three names because the
+	// three answers are acted on differently, and because the last two are opposite defects that get
+	// confused when they share a verdict.
+	RuleIOMapPin       = "io-map-pin-mismatch"
+	RuleIOMapNetAbsent = "io-map-net-absent"
+	RuleIOMapFarEnd    = "io-map-far-end"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
@@ -55,6 +63,13 @@ func Compile(d Declaration) []*check.Rule {
 		if d.MarginFactor > 1 {
 			rules = append(rules, railBudgetMarginRule(d))
 		}
+	}
+	if len(d.IOMap) > 0 {
+		rules = append(rules, ioMapPinRule(d), ioMapNetAbsentRule(d))
+		// The far-end rule is compiled whenever a map is declared, not only when a row fills its far
+		// end, because its own verdicts are what report the denominator: a map whose far-end columns
+		// are empty must read as unexamined rather than as clean.
+		rules = append(rules, ioMapFarEndRule(d))
 	}
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))
