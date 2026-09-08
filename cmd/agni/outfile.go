@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,22 @@ func redirectOut(cmd *cobra.Command, out string) (func(), error) {
 	cmd.SetOut(f)
 	return func() {
 		f.Close()
-		fmt.Fprintf(cmd.ErrOrStderr(), "wrote %s\n", out)
+		fmt.Fprintf(cmd.ErrOrStderr(), "wrote %s\n", absForNote(out))
 	}, nil
+}
+
+// absForNote is the path to PRINT for a file just written. Absolute, because the note's job is to
+// hand the reader something they can act on: a terminal linkifies an absolute path into a click, and
+// a relative one is only meaningful to someone standing in the directory the command ran in. That is
+// the common case for a report, which is written from wherever the design happens to be and opened
+// from a browser somewhere else entirely.
+//
+// Falls back to the path as given, because Abs fails only when the working directory cannot be
+// resolved, and a note is never worth failing a run that has already written its artifact.
+func absForNote(out string) string {
+	abs, err := filepath.Abs(out)
+	if err != nil {
+		return out
+	}
+	return abs
 }

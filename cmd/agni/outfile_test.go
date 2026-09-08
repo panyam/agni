@@ -178,3 +178,42 @@ func TestOutFileUnwritablePathErrors(t *testing.T) {
 		t.Error("an uncreatable --out path succeeded, so the output went somewhere unasked for")
 	}
 }
+
+// TestOutFileNoteIsAbsolute: the note names a path the reader can act on. A relative `-o` is
+// resolved before it is printed, because a terminal linkifies an absolute path into a click and a
+// relative one only means something to someone standing where the command ran. A report is the case
+// that motivates it: written from wherever the design is, opened from a browser somewhere else.
+func TestOutFileNoteIsAbsolute(t *testing.T) {
+	dir := t.TempDir()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture, err := filepath.Abs(outFileFixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chdir(wd) })
+
+	var out, errOut bytes.Buffer
+	cmd := checkCmd()
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetArgs([]string{"--format", "csv", "-o", "report.csv", fixture})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	// EvalSymlinks because a temp dir is under a symlinked /var on darwin, and the note reports the
+	// path Abs produced rather than the resolved one. Comparing the basename alone would pass on the
+	// relative spelling this test exists to reject.
+	got := strings.TrimSpace(strings.TrimPrefix(errOut.String(), "wrote "))
+	if !filepath.IsAbs(got) {
+		t.Errorf("note is not an absolute path: %q", errOut.String())
+	}
+	if filepath.Base(got) != "report.csv" {
+		t.Errorf("note names the wrong file: %q", got)
+	}
+}
