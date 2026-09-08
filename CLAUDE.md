@@ -141,6 +141,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   a workflow only exists as a wrapper in someone's local Makefile, that is a missing target here.
 - **A flag wins outright over `agni.yaml` rather than merging**, so a Makefile default that passes
   `--mount` shuts the file out. `make serve MOUNTS=` is how you hand the mount table back to it.
+- **`agni.yaml` wants a `web_dir` or `--server self` cannot run outside a checkout.** The lookup falls
+  back to a relative `./web`, so a run from a design folder fails with `--web-dir "web" is not a
+  directory`, and since agni 637 it fails BEFORE writing the artifact rather than after. The four keys
+  are `mounts`, `symbol_paths`, `web_dir`, `native_tools`, and `web_dir` must name a BUILT bundle:
+  `checkWebAssets` stats three templates and three `static/*.js` before the listener opens.
+- **An unknown key in `agni.yaml` is a hard ERROR, and the file is shared by every lane, every
+  released binary and the container image.** So a new key goes in only after every reader on the
+  machine understands it, and the probe has a trap: `agni <cmd> --help` short-circuits before the
+  config is loaded, so it accepts anything and proves nothing. Probe with a command that reads a
+  design, and run the same probe with a deliberately bogus key first as a positive control.
 - **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
   does not turn it off.** `internal/projects/descriptor.go` defaults `conventions.yaml`, `profiles`,
   `params` and `review.yaml`, and `FSStore` composes each one it finds. Two consequences that have
@@ -201,8 +211,17 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   until Ctrl-C because the links live exactly as long as the server does. `self:PORT` fails on a taken
   port rather than moving. **A link names
   the design's declared ENTRY whatever you pointed the command at, and carries the revision it was
-  read at**, which the viewer checks before it draws. Semantics and the two ways the halves used to
+  read at**, which the viewer checks before it draws. **A verdict link also carries `rule=`**, so the
+  viewer resolves it by running ONE rule rather than the catalog (21.78s to 1.95s on a 3980-component
+  board, and paid per click, because each click from a report is a fresh page load). The rule is
+  minted rather than recovered, since `VerdictID` is generated and never parsed; a link without it
+  still resolves by the slow route, which is what keeps saved reports working. A TRACE link needs no
+  such hint because it carries the question rather than a conclusion. Semantics and the two ways the halves used to
   disagree are in `guide/checks-and-reports.md`.
+- **`review --coverage` renders as markdown ALONE and refuses an explicit `--format`.** The two are
+  different axes and the render switch tests coverage first, so `--coverage --format html -o page.html`
+  used to write a markdown table into a file named `.html`. If you want a coverage page, the per-item
+  `--format html` already carries the same rollup in its header band.
 - **`agni params <mpn>` prints the RECORD a query answer cannot reach**, and it needs no design,
   because a spec library is not one. The datalog relations carry what a query can BIND; the conditions
   a value holds under, the pin bindings, the full provenance and the verification state are read off
@@ -353,6 +372,25 @@ a run leaves behind and the generated-code rules. **`tutorial-runs-check` regene
 does not read the prose quoting them**, so a tutorial can cite numbers a change moved and the gate
 stays green.
 
+**The CLI and the SERVER do not compose a design the same way, and the difference is invisible.**
+`service.SourcesFor` resolves a named path to a design's tiers and its callers are `cmd/agni` and one
+example; nothing on the served path calls it. So the CLI reads a netlist entry and attaches the
+schematic companion its descriptor declares, while the server hands the same URI to the loader, finds
+no faithful geometry on a netlist, and falls back to an auto-layout. Same file, same mount, same
+spelling, two different designs, no error either side. Four symptoms follow and each reads as its own
+defect: findings with no sheet badges, query cells reporting `LOCATE_REASON_NO_GEOMETRY`,
+`trace --render` writing the design's FIRST sheet whatever the route crossed, and every minted link
+opening on a computed layout. Check `availableLayouts` from `GetDesign` before believing anything
+geometric on the served path: no `faithful` in it means the companion was not attached. C32 names the
+rule, agni 656 is the fix, and 658 is the test it still needs.
+
+**A variable projected through a DERIVED relation loses its entity kind**, so a query answer that is
+correct and complete cannot be clicked in the viewer. `varKind` types a projected variable from the
+catalog relations in the GOAL, and a user rule is not one, so the kind its body established does not
+survive the `:-`. The workaround reads as redundant and is not: repeat a catalog atom in the goal,
+`neither(?p), component.class(?p,?k) => ?p`. Same rows, and the column comes back `component` instead
+of a scalar. Agni 654. It bites every bucket-shaped query, which is most of what negation is for.
+
 **Three ways to read a design and get a confident WRONG answer, all silent, all hit in one sitting.**
 Each returns an empty answer rather than an error, which reads as "the design does not have that".
 
@@ -410,7 +448,7 @@ not copy it back into this repo.
 
 ## Architectural constraints
 
-`CONSTRAINTS.md` holds the enforceable rules (C1–C30). Read it before proposing changes, and **push
+`CONSTRAINTS.md` holds the enforceable rules (C1 to C32). Read it before proposing changes, and **push
 back when a request would violate one**: quote the constraint by name, explain the conflict, and ask
 whether to proceed and whether the constraint should change. The point of constraints is that they
 survive everyone forgetting why the rule exists. Push back on architectural smell even without a

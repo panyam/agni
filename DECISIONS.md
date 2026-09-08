@@ -1549,3 +1549,29 @@ asserts otherwise.
 Reopen if the reader gains a separate field for the library-qualified `lib_id`, which would let
 `PartType.name` be local without the symbol cache losing its key. That is the shape that makes the
 upstream fix cheap; until then it is a rename that costs a resolver.
+
+## The coverage rollup renders as markdown alone, and refusing beats giving it more formats
+
+**Question.** `review --coverage` emits the per-area rollup and `--format` picks markdown, json or
+html. Should `--coverage --format html` produce a coverage PAGE? Raised because it silently produced
+markdown into a file named `.html`, which a browser then showed as text (fixed in agni 652 by
+refusing the combination).
+
+**Answer. No, and the refusal is the fix rather than a placeholder for the feature.** Two reasons,
+and the second is the one that settles it.
+
+A coverage JSON would owe a wire message under C31 rather than a shape invented for one consumer, so
+"just add the format" is a proto change and a service question, not a renderer.
+
+And a coverage HTML would duplicate an artifact that already exists. The per-item `--format html`
+page carries the same rollup in its header band, above the items it summarises: covered, answered,
+and the outcome split. Someone who wants a coverage page already has one, with the per-item detail
+underneath it, which is strictly more than the rollup alone would give them.
+
+**What to do instead.** Point the caller at `--format html` without `--coverage`. The refusal message
+does exactly that, because an error that names the thing you actually wanted costs nothing and a bare
+"unsupported combination" would send someone to file this ticket.
+
+**Reopen if** a consumer needs the rollup as data rather than as a page, which is the json half and
+the only one with a real gap behind it. That wants a wire message first, and at that point the
+markdown renderer becomes one projection of it rather than the source of truth.
