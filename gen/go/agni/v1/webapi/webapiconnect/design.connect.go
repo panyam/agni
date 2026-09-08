@@ -43,6 +43,9 @@ const (
 	// DesignServiceGetLayoutReportProcedure is the fully-qualified name of the DesignService's
 	// GetLayoutReport RPC.
 	DesignServiceGetLayoutReportProcedure = "/agni.v1.webapi.DesignService/GetLayoutReport"
+	// DesignServiceTraceDesignProcedure is the fully-qualified name of the DesignService's TraceDesign
+	// RPC.
+	DesignServiceTraceDesignProcedure = "/agni.v1.webapi.DesignService/TraceDesign"
 )
 
 // DesignServiceClient is a client for the agni.v1.webapi.DesignService service.
@@ -70,6 +73,17 @@ type DesignServiceClient interface {
 	// fallback). It uses the same symbol source as the render, so it describes what the viewer
 	// shows and points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
+	// TraceDesign walks from one pin to another through the series parts between them and returns the
+	// route: each part crossed with its own pin on both sides, each net passed through, and what else
+	// sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
+	// a route drawn on the canvas cannot disagree.
+	//
+	// Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
+	// resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
+	// else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
+	// rendered it as "not connected" would send its reader to look at the board instead of at what
+	// they typed.
+	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
 }
 
 // NewDesignServiceClient constructs a client for the agni.v1.webapi.DesignService service. By
@@ -107,6 +121,12 @@ func NewDesignServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(designServiceMethods.ByName("GetLayoutReport")),
 			connect.WithClientOptions(opts...),
 		),
+		traceDesign: connect.NewClient[webapi.TraceDesignRequest, webapi.TraceDesignResponse](
+			httpClient,
+			baseURL+DesignServiceTraceDesignProcedure,
+			connect.WithSchema(designServiceMethods.ByName("TraceDesign")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -116,6 +136,7 @@ type designServiceClient struct {
 	getSheet        *connect.Client[webapi.GetSheetRequest, webapi.GetSheetResponse]
 	highlightSheet  *connect.Client[webapi.HighlightSheetRequest, webapi.HighlightSheetResponse]
 	getLayoutReport *connect.Client[webapi.GetLayoutReportRequest, webapi.GetLayoutReportResponse]
+	traceDesign     *connect.Client[webapi.TraceDesignRequest, webapi.TraceDesignResponse]
 }
 
 // GetDesign calls agni.v1.webapi.DesignService.GetDesign.
@@ -136,6 +157,11 @@ func (c *designServiceClient) HighlightSheet(ctx context.Context, req *connect.R
 // GetLayoutReport calls agni.v1.webapi.DesignService.GetLayoutReport.
 func (c *designServiceClient) GetLayoutReport(ctx context.Context, req *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	return c.getLayoutReport.CallUnary(ctx, req)
+}
+
+// TraceDesign calls agni.v1.webapi.DesignService.TraceDesign.
+func (c *designServiceClient) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
+	return c.traceDesign.CallUnary(ctx, req)
 }
 
 // DesignServiceHandler is an implementation of the agni.v1.webapi.DesignService service.
@@ -163,6 +189,17 @@ type DesignServiceHandler interface {
 	// fallback). It uses the same symbol source as the render, so it describes what the viewer
 	// shows and points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
+	// TraceDesign walks from one pin to another through the series parts between them and returns the
+	// route: each part crossed with its own pin on both sides, each net passed through, and what else
+	// sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
+	// a route drawn on the canvas cannot disagree.
+	//
+	// Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
+	// resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
+	// else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
+	// rendered it as "not connected" would send its reader to look at the board instead of at what
+	// they typed.
+	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
 }
 
 // NewDesignServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -196,6 +233,12 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(designServiceMethods.ByName("GetLayoutReport")),
 		connect.WithHandlerOptions(opts...),
 	)
+	designServiceTraceDesignHandler := connect.NewUnaryHandler(
+		DesignServiceTraceDesignProcedure,
+		svc.TraceDesign,
+		connect.WithSchema(designServiceMethods.ByName("TraceDesign")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.DesignService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DesignServiceGetDesignProcedure:
@@ -206,6 +249,8 @@ func NewDesignServiceHandler(svc DesignServiceHandler, opts ...connect.HandlerOp
 			designServiceHighlightSheetHandler.ServeHTTP(w, r)
 		case DesignServiceGetLayoutReportProcedure:
 			designServiceGetLayoutReportHandler.ServeHTTP(w, r)
+		case DesignServiceTraceDesignProcedure:
+			designServiceTraceDesignHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -229,4 +274,8 @@ func (UnimplementedDesignServiceHandler) HighlightSheet(context.Context, *connec
 
 func (UnimplementedDesignServiceHandler) GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.GetLayoutReport is not implemented"))
+}
+
+func (UnimplementedDesignServiceHandler) TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.DesignService.TraceDesign is not implemented"))
 }

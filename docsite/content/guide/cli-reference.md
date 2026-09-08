@@ -285,7 +285,7 @@ pins that are not connected.
 | `--from <ref.pin>` | the pin to start at, e.g. `U7.3` |
 | `--to <ref.pin>` | the pin to end at |
 | `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it rests on, so a no-route can be re-asked wider |
-| `--format <fmt>` | `text` (default) or `json` |
+| `--format <fmt>` | `text` (default), or `json`, which emits the same `Trace` message the `TraceDesign` rpc returns, in protojson, so a script reading the CLI and a client reading the API parse one shape |
 | `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
 
 ### `diff <old> <new>`

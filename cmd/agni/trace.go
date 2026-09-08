@@ -1,16 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/service"
 )
 
 // traceCmd walks from one pin to another through series pass elements and prints what it crossed.
@@ -65,11 +66,16 @@ func traceCmd() *cobra.Command {
 				}
 			}
 			if format == "json" {
-				enc := json.NewEncoder(cmd.OutOrStdout())
-				enc.SetIndent("", "  ")
-				if err := enc.Encode(t); err != nil {
+				// protojson of the WIRE message, matching how check, diff, validate and params emit
+				// theirs, so a script reading this CLI and a client reading TraceDesign parse one
+				// shape. EmitUnpopulated keeps empty lists and zero fields present, so a no-route is
+				// still a well-formed object rather than fields that appear and vanish per run.
+				b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.
+					Marshal(service.TraceProto(t))
+				if err != nil {
 					return err
 				}
+				fmt.Fprintln(cmd.OutOrStdout(), string(b))
 				if t.Outcome == check.TraceUnresolved {
 					return fmt.Errorf("cannot trace: %s", t.Reason)
 				}

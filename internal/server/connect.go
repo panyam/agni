@@ -112,6 +112,14 @@ func (a *Design) GetLayoutReport(ctx context.Context, req *connect.Request[webap
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Design) TraceDesign(ctx context.Context, req *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error) {
+	resp, err := a.svc.TraceDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 // Datasheet adapts service.DatasheetService to the generated Connect handler interface (the
 // extraction workbench's read side, WS13-006).
 type Datasheet struct {
