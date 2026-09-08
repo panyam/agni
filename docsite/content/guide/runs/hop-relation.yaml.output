@@ -1,0 +1,15 @@
+#agni-run 9caafd44a11e0d6e
+from            through  to              provenance
+CAN1_CANH       R1       CAN1_CANL       designs/gateway/gateway.edn:CAN1_CANH
+CAN1_CANL       R1       CAN1_CANH       designs/gateway/gateway.edn:CAN1_CANL
+MCU_NRST        R3       PMIC_PG         designs/gateway/gateway.edn:MCU_NRST
+PMIC_EN         R2       PMIC_MAIN_12V0  designs/gateway/gateway.edn:PMIC_EN
+PMIC_MAIN_12V0  R2       PMIC_EN         designs/gateway/gateway.edn:PMIC_MAIN_12V0
+PMIC_PG         R3       MCU_NRST        designs/gateway/gateway.edn:PMIC_PG
+
+6 result(s)
+#agni-step
+n        count(r)  provenance
+PMIC_EN  1         designs/gateway/gateway.edn ; designs/gateway/gateway.edn:PMIC_EN ; designs/gateway/gateway.edn:PMIC_MAIN_12V0
+
+1 result(s)
