@@ -9,8 +9,10 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/panyam/agni/core/check/naming"
+	"github.com/panyam/agni/core/query"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/readers/formats"
 
@@ -804,5 +806,90 @@ func TestQueryServiceUsesItsResolver(t *testing.T) {
 	r := &ProjectResolver{}
 	if svc := NewQueryService(nil, nil, r); svc.projects != r {
 		t.Error("NewQueryService dropped its ProjectResolver, so every query would run against the built-in vocabulary with no error")
+	}
+}
+
+// kindsOf parses a query and reports the entity kind of each answer column, which is what the web
+// panel uses to decide whether a result cell can be clicked.
+func kindsOf(t *testing.T, src string) []string {
+	t.Helper()
+	q, err := query.Parse(src)
+	if err != nil {
+		t.Fatalf("parse %q: %v", src, err)
+	}
+	kinds, _, _ := columnKinds(q)
+	return kinds
+}
+
+// A variable projected through a derived relation used to lose its entity kind, so a query that was
+// correct and complete could not be clicked in the viewer (agni issue 654). The catalog does not
+// describe a user rule, so the lookup missed and the column fell back to scalar even though the
+// rule's own body had bound the variable from a relation that declares one.
+//
+// It bit the queries most worth clicking: derived relations are the idiom the querying guide teaches
+// for anything past one clause, and negation REQUIRES a unary helper rule.
+func TestColumnKindsFollowDerivedRelations(t *testing.T) {
+	for _, tc := range []struct {
+		name, query, want string
+	}{
+		{
+			"a catalog atom is unchanged",
+			`component.class(?p,"ferrite") => ?p`, "component",
+		},
+		{
+			"one hop through a rule",
+			`ferr(?p) :- component.class(?p,"ferrite"); ferr(?p) => ?p`, "component",
+		},
+		{
+			// A rule defined in terms of another rule is ordinary. Stopping at the first hop would be
+			// a silent partial answer, which is the shape of the bug rather than a smaller version.
+			"two hops",
+			`a(?p) :- component.class(?p,"ferrite"); b(?p) :- a(?p); b(?p) => ?p`, "component",
+		},
+		{
+			// The shape this matters for: a bucket built with negation, which needs a unary helper.
+			"a bucket through negation",
+			`p(?c) :- component.class(?c,"capacitor"); cov(?c) :- p(?c), component-on-net(?c,?n); ` +
+				`nocov(?c) :- p(?c), not cov(?c); nocov(?c) => ?c`, "component",
+		},
+		{
+			// THE CONTROL. Two rules define one head and bind that position to different kinds, so a
+			// column typed from whichever was written first is wrong for half the rows. Without this
+			// case a first-wins implementation passes every other row in this table.
+			"rules that disagree stay scalar",
+			`x(?v) :- component.class(?v,"ferrite"); x(?v) :- net.ground(?v); x(?v) => ?v`, "",
+		},
+		{
+			// entity()'s kind is per-row, carried by kindVars, and a head argument has no per-row
+			// identity to carry it through. Better a scalar than a kind invented for the column.
+			"a rule wrapping entity() stays scalar",
+			`e(?n) :- entity(?n,?k); e(?n) => ?n`, "",
+		},
+		{
+			"an aggregate is a number whatever it reduces",
+			`ferr(?p) :- component.class(?p,"ferrite"); ferr(?p) => count(?p)`, "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := kindsOf(t, tc.query); len(got) != 1 || got[0] != tc.want {
+				t.Errorf("columnKinds = %v, want [%q]", got, tc.want)
+			}
+		})
+	}
+}
+
+// A rule set may be recursive, and a cycle must end the walk rather than the process.
+func TestColumnKindsSurvivesARecursiveRule(t *testing.T) {
+	done := make(chan []string, 1)
+	go func() {
+		done <- kindsOf(t, `r(?a,?b) :- component-on-net(?a,?b); r(?a,?b) :- r(?a,?c), r(?c,?b); r(?a,?b) => ?a`)
+	}()
+	select {
+	case got := <-done:
+		if len(got) != 1 || got[0] != "component" {
+			t.Errorf("columnKinds = %v, want [component]", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("columnKinds did not terminate on a recursive rule set")
 	}
 }
