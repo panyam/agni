@@ -73,6 +73,24 @@ At EE3 the answer was "a pull-up". At EE5 you have to pick a value, and it is a 
 
 The usual landing zone is a few kilohms, with weaker values on short lightly loaded buses and stronger ones as the bus grows. (If you ever meet a board where I2C works at room temperature and stops when it warms up, a marginal pull-up against a slow rise time is one of the first things worth measuring.) The catalog checks presence rather than value, because value needs the bus capacitance and the sink ratings, which is a datasheet-tier question and the subject of chapter 7.
 
+### Two pull-ups is also wrong
+
+Resistors in parallel are one smaller resistor, and the arithmetic is the ordinary kind: two 2.2k
+pulling the same line give an effective 1.1k. So a bus with a second pull-up on it sinks roughly
+twice the current it was sized for, and a device holding the line low has to sink all of it while
+still keeping its output below VOL. Past that point the low level creeps up and a receiver starts
+reading it as neither state.
+
+It arrives the same way nearly every time. A module carries its own termination so it works
+standalone, the board it plugs into already pulls the same bus, and neither schematic is wrong on its
+own. Nothing about the board looks unusual, and it usually still works with whichever parts happen to
+be fitted, which is why it is a warning rather than an error.
+
+Two pull-ups to two DIFFERENT rails is the worse version, and a different defect. The bus then ties
+those supplies together through its resistors whenever one is up and the other is not, so a rail that
+is meant to be off is fed through the bus during sequencing. On the bench every supply comes up at
+once and nothing is seen; it appears as a board that fails on one particular power-up order.
+
 ## What you can now answer
 
 - Why an unconnected input does not read zero, and what it does instead. *(EE3)*
@@ -86,6 +104,8 @@ The usual landing zone is a few kilohms, with weaker values on short lightly loa
 | Rule | Severity | What it catches |
 |---|---|---|
 | [`i2c-pull-up`](../../reference/rules/i2c-pull-up/) | error | an I2C line reaching no rail through a resistor |
+| [`i2c-redundant-pull-up`](../../reference/rules/i2c-redundant-pull-up/) | warning | one bus pulled to one rail by two resistors |
+| [`i2c-pull-up-split-rail`](../../reference/rules/i2c-pull-up-split-rail/) | warning | one bus pulled to two different rails |
 | [`floating-input`](../../reference/rules/floating-input/) | warning | a net whose pins are all inputs, with nothing driving or pulling it |
 | [`profile/missing-pullup`](../../reference/rules/profile-missing-pullup/) | warning | the same question for any bus a declared interface says needs one |
 | [`unspecified-pin-with-driver`](../../reference/rules/unspecified-pin-with-driver/) | warning | a pin whose electrical type the design never stated, sitting on a driven net |

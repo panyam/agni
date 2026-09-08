@@ -43,6 +43,8 @@ var rules = []*check.Rule{
 	esdProtection,
 	esdClampNotTVS,
 	i2cPullUp,
+	i2cRedundantPullUp,
+	i2cPullUpSplitRail,
 	supplyExceedsAbsMax,
 	regulatorOutputExceedsAbsMax,
 	fetVdssBelowRail,
