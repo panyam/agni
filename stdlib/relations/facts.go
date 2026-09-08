@@ -124,6 +124,7 @@ const (
 	RelPinRole       = "pin.role"        // pin.role(ref_des, pin, role): derived power/ground/anode/cathode. doc: facts/docs/pin.role.md
 	RelPinType       = "pin.type"        // pin.type(ref_des, pin, etype): electrical type (power_in, input, ...). doc: facts/docs/pin.type.md
 	RelPinNet        = "pin.net"         // pin.net(ref_des, pin, net): the net a pin is on (absent if none). doc: facts/docs/pin.net.md
+	RelPinName       = "pin.name"        // pin.name(ref_des, pin, name): the part type's functional name for the pin (absent if unnamed). doc: facts/docs/pin.name.md
 	RelNetPinCount   = "net.pin_count"   // net.pin_count(net, count): connections on a net. doc: facts/docs/net.pin_count.md
 	RelHasNCChannel  = "has_nc_channel"  // has_nc_channel(present): one row when the design can express no-connect. doc: facts/docs/has_nc_channel.md
 	RelTypesPowerOut = "types_power_out" // types_power_out(present): one row when the source format types power-output pins (WS3-072). doc: facts/docs/types_power_out.md
@@ -922,6 +923,18 @@ func pinFacts(m check.Model) []facts.Row {
 		out = append(out, facts.Row{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cites: cites})
 		if net := m.PinNetName(ref, des); net != "" {
 			out = append(out, facts.Row{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cites: cites})
+		}
+		// The FUNCTIONAL name, which is what a datasheet, a firmware header and an IO map call the
+		// pin, against the designator every row above is keyed on. Both have been in ir.Pin all
+		// along and only the designator was ever projected, so a rule or query asking what a pin is
+		// FOR had nothing to read (agni issue 517).
+		//
+		// Emitted only when the part type declares one, so absent and empty stay apart: a format
+		// carrying no pin names answers nothing rather than answering "". KiCad's "~" is its
+		// spelling of "this pin has no name" and reaches the IR verbatim, so it is read as absent
+		// here, the same reading classifyPinRole and resolveEndpoint already take of it.
+		if name := m.PinName(ref, des); name != "" && name != "~" {
+			out = append(out, facts.Row{Relation: RelPinName, Subject: ref, Object: des, Value: name, Cites: cites})
 		}
 	}
 	return out

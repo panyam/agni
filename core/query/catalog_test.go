@@ -104,6 +104,10 @@ var deliberateScalars = map[string]string{
 	"param.pin/pin":       "a pin of a part type, not a placement",
 	"param.pin_range/pin": "a pin of a part type, not a placement",
 	"param.pin/name":      "the pin name a datasheet prints, not an entity name",
+	// The same reasoning one tier down. pin.name's locatable column is the PIN, which is declared
+	// and owned by ref_des; the functional name is a label the part type prints on it, and there is
+	// no "PTC11" in the design's entity vocabulary to navigate to.
+	"pin.name/name": "the functional name a part type prints on a pin, not an entity name",
 	// A bus label IS in the entity vocabulary and this is the one place the declaration could say
 	// more than the old inference did. Left as a scalar so this change alters no answers; declaring
 	// it is a behaviour change with its own review.
