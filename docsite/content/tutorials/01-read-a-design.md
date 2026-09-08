@@ -82,7 +82,7 @@ not warn you that it read nothing, and it does not stay quiet:
 
 {{ agniRun "content/tutorials/runs/01-check-kicad-sch-broken.yaml" }}
 
-A hundred and eight findings, against twenty-eight on the same board read correctly. Every one of
+A hundred and fourteen findings, against twenty-eight on the same board read correctly. Every one of
 them is an artefact of the bad read. Nothing in that output says "I could not resolve your symbols".
 It looks like a board in serious trouble, and a reader who skipped `stats` would spend an afternoon
 on it.
