@@ -53,3 +53,13 @@ HANDOFF_*.md
 # by hack/samples.pin. Not committed because these designs are not ours: each carries its own licence
 # (Apache-2.0, CERN-OHL-P), and this repo stays uniformly Apache-2.0. `make samples` puts them here.
 tools/samples/
+
+# Generated reports and views. `check`, `review`, `query` and `trace` write these, and on a real board
+# they carry net names, ref-des and the design's title, which is customer data this repo must never
+# hold (see CLAUDE.md, "What does not belong in this repo"). Ignored by SHAPE rather than by remembering
+# to clean up: one of these sat untracked in the root for a session before anyone noticed.
+/report.html
+/*.report.html
+/view.html
+/verdicts.csv
+
