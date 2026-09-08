@@ -1523,3 +1523,29 @@ counting datalog is otherwise unable to do (agni issue 374 names it as a motivat
 **Reopen if** a question turns up that genuinely needs the ORDERED path as one value in one cell,
 which the tuple form cannot express without the caller re-sorting by `?i`. Rendering a saved view is
 the likely candidate, and the answer there may be a report-side join rather than a column type.
+
+## A KiCad part's library prefix is stripped by the WRITER, not by the reader
+
+A KiCad part is named `gateway:CONN4` and sits in a library already called `gateway`, so the
+qualification is spelled twice. EDIF's own library scoping carries it, and a reader that treats the
+qualified form as one name refuses the colon: GNU Electric takes a cell rename's DISPLAY string as
+the cell's name where ours takes the identifier, so a clean identifier beside a qualified display was
+not enough and every KiCad design failed to import. The obvious fix is to stop duplicating the prefix
+in `PartType.name`, at the reader, where it would be cleaner and the writer would need no special
+case.
+
+The answer is no, and it is a measurement rather than a preference. The prefix is load-bearing in the
+reader: `symLibCache.symbol()` looks up an external `.kicad_sym` by the full `lib_id`, so the library
+half is the key that finds the file. Stripping it upstream does not tidy a name, it breaks symbol
+resolution. Made the change and ran the suite: `unresolved_symbol_test` starts reporting parts that
+resolved fine before, and it reaches 7 packages, 13 named tests, one committed capture, four docsite
+pages and the `classify.PartIndex` join.
+
+So `localName` lives in `readers/edif/writer.go` and stops there. The cost is that a KiCad design
+taken out through EDIF and read back names the part `CONN4` in library `gateway` rather than
+`gateway:CONN4` in library `gateway`, which is the same fact with the redundancy gone, and nothing
+asserts otherwise.
+
+Reopen if the reader gains a separate field for the library-qualified `lib_id`, which would let
+`PartType.name` be local without the symbol cache losing its key. That is the shape that makes the
+upstream fix cheap; until then it is a rename that costs a resolver.
