@@ -135,25 +135,48 @@ func TestBusVectorCrossesSheetBoundary(t *testing.T) {
 	}
 }
 
-// TestBusVectorSlicedPrefixNotPromoted guards the other side of the same fix. A parent that cuts one
-// prefix into several ranges (PP_OUT[0..31] alongside PP_OUT[0..7], PP_OUT[8..15], ...) hands each
-// slice to its own instance of the same child sheet, and every instance's pin is spelled PP_OUT[0..7].
-// Member names no longer identify a signal there — KiCad maps the two buses by bit position, so the
-// child's PP_OUT1 is the parent's PP_OUT1 under one instance and PP_OUT9 under the next. Promoting by
-// name merged nets the design keeps apart, so a sliced prefix is skipped.
-func TestBusVectorSlicedPrefixNotPromoted(t *testing.T) {
-	root, err := parse(strings.NewReader(`(kicad_sch
-		(label "PP_OUT[0..31]" (at 10 10 0))
-		(label "PP_OUT[0..7]" (at 10 20 0))
-		(label "OTHER[0..7]" (at 10 30 0)))`))
+// TestBusVectorOffsetRangeMapsByPosition is the other half of the same fix, and the half that says
+// why promotion is a MAP rather than a rename. The parent's bus is `PP[2..3]` and the sheet pin is
+// `PP[0..1]`, so the child's `PP0` is the parent's `PP2`. Joining members by name would leave all
+// four taps separate; promoting by name would merge the two buses into one.
+//
+// This is what `vme-wren` does at scale: it cuts `PP_OUT[0..31]` into four eight-wide slices and
+// hands each to its own instance of the same driver sheet, whose pin is always spelled
+// `PP_OUT[0..7]`. An earlier revision refused to promote there at all, which was safe and left the
+// nets split.
+func TestBusVectorOffsetRangeMapsByPosition(t *testing.T) {
+	d, complete, err := ReadSchematicHierarchyNets("hier_busoffset_root.kicad_sch",
+		readFixture(t, "hier_busoffset_root.kicad_sch"), hierOpen(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	sliced := slicedBusPrefixes(root)
-	if !sliced["PP_OUT"] {
-		t.Error("PP_OUT is drawn as several ranges and must count as sliced")
+	if !complete {
+		t.Fatal("hierarchy walk did not complete; the sub-sheet did not open")
 	}
-	if sliced["OTHER"] {
-		t.Error("OTHER has one range and must not count as sliced")
+	if bad := disagreements(pinNets(d), readOracle(t, "hier_busoffset.oracle")); len(bad) > 0 {
+		t.Errorf("net partition disagrees with kicad-cli:\n  %s", strings.Join(bad, "\n  "))
+	}
+}
+
+// TestBusMembersAscending pins the ordering the positional map is built on. kicad-cli joins the
+// child's bit 0 of `B[0..1]` to `A0` of a parent bus spelled `A[3..0]`, not to `A3`, so the members
+// pair off by ascending index whatever direction the range is written in. netgraph.ExpandBusName
+// keeps the WRITTEN direction on purpose, for diagrams, which is why this does not reuse it.
+func TestBusMembersAscending(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{"A[0..1]", []string{"A0", "A1"}},
+		{"A[3..0]", []string{"A0", "A1", "A2", "A3"}},
+		{"PP_OUT[8..10]", []string{"PP_OUT8", "PP_OUT9", "PP_OUT10"}},
+		{"DATA[1:0]", nil}, // xschem's spelling, not a KiCad bus
+		{"PLAIN", nil},
+	}
+	for _, c := range cases {
+		got := busMembersAscending(c.in)
+		if strings.Join(got, ",") != strings.Join(c.want, ",") {
+			t.Errorf("busMembersAscending(%q) = %v, want %v", c.in, got, c.want)
+		}
 	}
 }

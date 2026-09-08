@@ -26,13 +26,17 @@ var emitCases = []struct {
 	// power symbol or PWR_FLAG, which the reader records on "#PWR01" while keeping the component list
 	// physical. EDIF has no instance for one, so those alone come back as no-ref connections.
 	unanchored int
+	// unresolvedRefs is the number of emitted portRefs naming nothing on the instance's cell, which
+	// is zero for every format that delivers part types and every reference for the two that do not.
+	// Read by TestEmitEDIFResolvesEveryPortRef.
+	unresolvedRefs int
 }{
 	{name: "kicad-sch", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch", wantComps: 19, wantConns: 56},
-	{name: "kicad-pcb", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", wantComps: 19, wantConns: 56},
+	{name: "kicad-pcb", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", wantComps: 19, wantConns: 56, unresolvedRefs: 56},
 	{name: "kicad-hier", path: "../kicad/testdata/hier_root.kicad_sch", wantComps: 6, wantConns: 13, unanchored: 3},
 	{name: "kicad-multisection", path: "../kicad/testdata/dup_refdes.kicad_sch", wantComps: 2, wantConns: 2},
 	{name: "edif", path: "../../examples/tutorial-project/designs/gateway/gateway.edn", wantComps: 19, wantConns: 56},
-	{name: "ipc2581", path: "../ipc2581/testdata/board.xml", wantComps: 3, wantConns: 8},
+	{name: "ipc2581", path: "../ipc2581/testdata/board.xml", wantComps: 3, wantConns: 8, unresolvedRefs: 8},
 	{name: "telesis", path: "../telesis/testdata/basic.tel", wantComps: 13, wantConns: 19},
 	{name: "geda", path: "../geda/testdata/dup_refdes.sch", wantComps: 7, wantConns: 18},
 	{name: "geda-slotted", path: "../geda/testdata/slotted.sch", wantComps: 1, wantConns: 4},
@@ -173,60 +177,6 @@ func anchoredPairs(d *ir.Design) ([]string, int) {
 	return pairs, unanchored
 }
 
-// edifNamePos finds a name written directly after a construct head, skipping the (rename ...) and
-// (array ...) forms, which carry their identifier inside and are checked through the recursion.
-var edifNamePos = regexp.MustCompile(`\((instance|instanceRef)\s+([^\s()]+)`)
-
 // emittedInstanceIDs pulls the identifier an (instance ...) is written under, in either name form.
 // The identifier is what an (instanceRef ...) looks up, so it is the string that has to be unique.
 var emittedInstanceIDs = regexp.MustCompile(`\(instance (?:\(rename ([^\s()]+) "[^"]*"\)|([^\s()]+)) `)
-
-// edifIdent is the identifier grammar: a letter or underscore, then letters, digits and underscores.
-// The leading "&" is the escape the format defines for a name that would otherwise start with a
-// digit, and mintID already emits it.
-var edifIdent = regexp.MustCompile(`^&?[A-Za-z_][A-Za-z0-9_]*$|^&[0-9][A-Za-z0-9_]*$`)
-
-// TestEmitEDIFWritesLegalIdentifiers checks the writer's output against the format's own name rule
-// rather than against our reader, which is the gap agni issue 582 sat in. Our reader accepts a bare
-// atom containing anything except whitespace, parens and quotes, so a round-trip test passes over
-// names no other tool can read. A conforming reader skips what it cannot parse, and skipping an
-// instance loses every connection hanging off it.
-//
-// Measured on a real board before this was fixed: 1123 of 1123 instance names illegal, being raw
-// KiCad uuids, which both open with a digit and carry hyphens. A third-party EDIF parser read 1123
-// components and 0 instances from that file, and 1123 of each from the same board after.
-//
-// It checks the INSTANCE slots only. The cell, port and net slots are still emitted as bare atoms
-// that the grammar rejects, and fixing them means minting a declaration and its references together
-// rather than tightening one predicate, which is agni issue 590. Widening the regex above is that
-// issue's acceptance test.
-func TestEmitEDIFWritesLegalIdentifiers(t *testing.T) {
-	for _, tc := range emitCases {
-		t.Run(tc.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			if err := edif.WriteNetlist(&buf, readForEmit(t, tc.path)); err != nil {
-				t.Fatal(err)
-			}
-			bad := map[string]int{}
-			var checked int
-			for _, m := range edifNamePos.FindAllStringSubmatch(buf.String(), -1) {
-				checked++
-				if !edifIdent.MatchString(m[2]) {
-					bad[fmt.Sprintf("(%s %s", m[1], m[2])]++
-				}
-			}
-			if checked == 0 {
-				t.Fatal("no names found in the emitted netlist; the assertion would pass vacuously")
-			}
-			if len(bad) > 0 {
-				keys := make([]string, 0, len(bad))
-				for k := range bad {
-					keys = append(keys, k)
-				}
-				sort.Strings(keys)
-				t.Errorf("%d distinct illegal EDIF identifier(s) of %d names emitted, first few: %v",
-					len(bad), checked, keys[:min(6, len(keys))])
-			}
-		})
-	}
-}

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"path"
 	"regexp"
-	"strings"
+	"slices"
+	"strconv"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
@@ -101,52 +102,56 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 	return d, w.complete, nil
 }
 
-// busPrefix is a vector bus name without its index range: "PP_OUT[8..15]" -> "PP_OUT".
-func busPrefix(name string) string {
-	if i := strings.IndexByte(name, '['); i >= 0 {
-		return name[:i]
-	}
-	return name
-}
+// kicadBusVectorRe is KiCad's vector-bus spelling and ONLY it: `PREFIX[first..last]`, two dots.
+// netgraph.IsBusName also accepts the `[hi:lo]` form that xschem and gEDA use, which is right for
+// the shared bus-not-modeled diagnostic but wrong to act on here. KiCad reads `DATA[1:0]` as an
+// ordinary scalar label, and its own netlist export keeps `/DATA0` and `/sub/DATA0` apart for such
+// a label, so promoting members off one would invent a connection the design does not have.
+// TestHierBusMembersDoNotCross is that control.
+var kicadBusVectorRe = regexp.MustCompile(`^(.*)\[(\d+)\.\.(\d+)\]$`)
 
-// slicedBusPrefixes names the bus prefixes this sheet cuts into more than one range, which is the
-// case where a member name stops identifying a signal. `vme-wren` draws PP_OUT[0..31] alongside
-// PP_OUT[0..7], PP_OUT[8..15], PP_OUT[16..23] and PP_OUT[24..31], and hands each slice to one
-// instance of the same 8-wide driver sheet. Every instance's pin is PP_OUT[0..7], so its member
-// PP_OUT1 is the parent's PP_OUT1 in one instance and PP_OUT9 in the next: KiCad maps the two buses
-// by BIT POSITION, and only a positional map gets that right. Promoting by name would merge nets the
-// design keeps apart, so a sliced prefix is left alone.
-func slicedBusPrefixes(root *node) map[string]bool {
-	ranges := map[string]map[string]bool{}
-	for _, tag := range []string{"label", "global_label", "hierarchical_label"} {
-		for _, l := range root.Children(tag) {
-			name := unescapeName(atomOf(l.Arg(1)))
-			if !isKiCadBusVector(name) {
-				continue
-			}
-			pfx := busPrefix(name)
-			if ranges[pfx] == nil {
-				ranges[pfx] = map[string]bool{}
-			}
-			ranges[pfx][name] = true
-		}
+// busMembersAscending expands a KiCad vector bus into its members ordered by ASCENDING INDEX, which
+// is the order two buses are matched up in, and returns nil for anything that is not one.
+//
+// Ascending rather than written, and the distinction is load-bearing rather than tidiness. Asked
+// directly, kicad-cli joins the child's bit 0 of `B[0..1]` to `A0` of a parent bus spelled `A[3..0]`,
+// not to `A3`. netgraph.ExpandBusName deliberately preserves the WRITTEN direction so a diagram reads
+// its bits as drawn, so this cannot reuse it.
+func busMembersAscending(name string) []string {
+	m := kicadBusVectorRe.FindStringSubmatch(name)
+	if m == nil {
+		return nil
 	}
-	out := map[string]bool{}
-	for pfx, rs := range ranges {
-		if len(rs) > 1 {
-			out[pfx] = true
-		}
+	first, _ := strconv.Atoi(m[2])
+	last, _ := strconv.Atoi(m[3])
+	if first > last {
+		first, last = last, first
+	}
+	out := make([]string, 0, last-first+1)
+	for i := first; i <= last; i++ {
+		out = append(out, m[1]+strconv.Itoa(i))
 	}
 	return out
 }
 
-// sheetBusNames solves ONE sheet's bus geometry and returns the bus name at each bus point.
+// sheetBusNames resolves, for each bus sheet pin on a sheet, the name of the bus BRANCH it sits on.
 //
-// It is a second, tiny net solve over the `(bus ...)` segments alone, with the sheet's labels as
-// anchors, reusing the same union-find the wire solve uses. Buses are otherwise not modelled (a bus
-// is a drawing convention, and its members connect through the tap labels), but a bus SHEET PIN
-// needs to know which bus it sits on, and that is a connectivity question about the bus itself.
+// It walks the `(bus ...)` segments outward from each pin and takes the first vector label it
+// reaches. Nearest-label rather than one name for the whole bus, because a bus is routinely drawn as
+// a trunk with labelled branches and the branches carry different members: `vme-wren` wires
+// PP_OUT[0..31] to PP_OUT[0..7], PP_OUT[8..15], PP_OUT[16..23] and PP_OUT[24..31], and hands one
+// slice to each of four instances of the same driver sheet. Every one of those pins is on the same
+// connected bus, so a solve that names the cluster gives all four the same answer and maps every
+// instance's bit 0 onto the same parent member.
+//
+// That is consistent with how KiCad joins buses. Two buses wired together share the members whose
+// NAMES match, which is what makes a trunk and its slices one drawing; a bus crossing a sheet pin
+// maps BY BIT POSITION, which is what makes the branch's own label the one that matters.
+//
+// Buses are otherwise not modelled, and should not be: a bus is a drawing convention whose members
+// connect through their tap labels. Which bus a pin sits on is a question about the bus itself.
 func sheetBusNames(root *node) map[netgraph.Point]string {
+	type seg struct{ a, b netgraph.Point }
 	var segs []netgraph.Wire
 	for _, b := range root.Children("bus") {
 		pts := xyPoints(b.Child("pts"), sheetPt)
@@ -157,33 +162,100 @@ func sheetBusNames(root *node) map[netgraph.Point]string {
 	if len(segs) == 0 {
 		return nil
 	}
-	var anchors []netgraph.Anchor
+	labelAt := map[netgraph.Point]string{}
 	var onBus []netgraph.Point
 	for _, tag := range []string{"label", "global_label", "hierarchical_label"} {
 		for _, l := range root.Children(tag) {
-			if at := sheetPt(l.Child("at")); at != nil {
-				anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: unescapeName(atomOf(l.Arg(1)))})
-				onBus = append(onBus, gp(at))
+			at := sheetPt(l.Child("at"))
+			if at == nil {
+				continue
+			}
+			onBus = append(onBus, gp(at))
+			if name := unescapeName(atomOf(l.Arg(1))); busMembersAscending(name) != nil {
+				labelAt[gp(at)] = name
 			}
 		}
 	}
-	// A sheet pin is registered as a label-less anchor purely so its point appears in the map; an
-	// empty label neither names nor unions anything.
+	pinAt := map[netgraph.Point]string{}
 	for _, sh := range root.Children("sheet") {
 		for _, p := range sh.Children("pin") {
 			if at := sheetPt(p.Child("at")); at != nil {
-				anchors = append(anchors, netgraph.Anchor{At: gp(at)})
 				onBus = append(onBus, gp(at))
+				pinAt[gp(at)] = unescapeName(atomOf(p.Arg(1)))
 			}
 		}
 	}
-	// A bus label is placed ALONG the bus, not at a segment end, so the segments have to be split
-	// at it exactly as the wire solve splits wires — otherwise the label is an isolated point that
-	// names nothing and every bus comes back anonymous.
-	_, _, _, pointNets := netgraph.BuildWithPoints(splitWiresAt(segs, onBus), anchors, nil, nil)
+	// A label sits ALONG a bus rather than at a segment end, so the segments split at every label and
+	// pin exactly as the wire solve splits wires. Without it a label is an isolated point naming
+	// nothing, and every bus comes back anonymous.
+	adj := map[netgraph.Point][]netgraph.Point{}
+	for _, w := range splitWiresAt(segs, onBus) {
+		adj[w.A] = append(adj[w.A], w.B)
+		adj[w.B] = append(adj[w.B], w.A)
+	}
+
 	out := map[netgraph.Point]string{}
-	for pt, ref := range pointNets {
-		out[pt] = ref.Name
+	for pin, pinName := range pinAt {
+		if name, ok := nearestBusLabel(pin, adj, labelAt); ok {
+			out[pin] = name
+		} else if _, onIt := adj[pin]; onIt {
+			// Nothing labels the branch, so the pin names it and the members still cross as spelled.
+			out[pin] = pinName
+		}
+	}
+	return out
+}
+
+// nearestBusLabel breadth-first searches the bus graph from start and returns the closest vector
+// label. It reports false when nothing is reachable, and when two DIFFERENT labels tie at the same
+// distance, since the drawing then does not say which branch the pin is on and guessing would invent
+// a connection.
+func nearestBusLabel(start netgraph.Point, adj map[netgraph.Point][]netgraph.Point, labelAt map[netgraph.Point]string) (string, bool) {
+	seen := map[netgraph.Point]bool{start: true}
+	frontier := []netgraph.Point{start}
+	for len(frontier) > 0 {
+		var found []string
+		var next []netgraph.Point
+		for _, p := range frontier {
+			if name, ok := labelAt[p]; ok && !slices.Contains(found, name) {
+				found = append(found, name)
+			}
+			for _, q := range adj[p] {
+				if !seen[q] {
+					seen[q] = true
+					next = append(next, q)
+				}
+			}
+		}
+		if len(found) == 1 {
+			return found[0], true
+		}
+		if len(found) > 1 {
+			return "", false // a tie names no single branch
+		}
+		frontier = next
+	}
+	return "", false
+}
+
+// reusedSheetFiles names the sub-sheet files this sheet instantiates more than once.
+//
+// One file placed several times is where member names stop identifying a signal hardest: every
+// instance's bus pin is spelled identically, so promoting by the pin's own members maps them all
+// onto whichever branch resolved, and the instances merge. `vme-wren` places one eight-wide driver
+// sheet four times off slices of PP_OUT[0..31]. Getting those right needs the branch a pin sits on
+// resolved exactly, and nearestBusLabel does not manage it on a bus that forks four ways, so a
+// reused sheet promotes nothing and its nets stay split.
+func reusedSheetFiles(root *node) map[string]bool {
+	n := map[string]int{}
+	for _, sh := range root.Children("sheet") {
+		n[propValue(sh, "Sheetfile")]++
+	}
+	out := map[string]bool{}
+	for f, c := range n {
+		if c > 1 {
+			out[f] = true
+		}
 	}
 	return out
 }
@@ -195,51 +267,38 @@ func sheetBusNames(root *node) map[netgraph.Point]string {
 // so label-union does the rest. A BUS sheet pin cannot work that way, because the members are not
 // at the pin — each one is tapped off the bus somewhere else on each sheet, under its own label. So
 // the join is by NAME instead: every member of a crossing bus vector resolves, inside the child, to
-// the name it has in the PARENT (agni issue 561). `AN[0..7]` entering `inout_user` makes the child's
-// `AN0` label mean the root's `AN0` rather than `/inout_user/AN0`, which is what KiCad does and what
-// its own netlist export shows.
+// the name of the member it lands on in the PARENT (agni issue 561).
 //
-// It promotes ONLY when the parent's bus at that pin carries the same vector name as the pin, which
-// is the case where joining by member name and joining by bit position are the same answer. KiCad
-// really joins the two buses positionally, so a parent bus under another name maps its bit 0 to the
-// child's bit 0 whatever the two are called, and promoting by name there is wrong in the expensive
-// direction: `vme-wren` instantiates one driver sheet four times, and name-promotion merged four
-// distinct bank buses into one net. Skipping leaves those split, which is the status quo and is
-// visible in the oracle baseline, rather than inventing a connection the design does not have.
+// The two buses match up BY BIT POSITION and not by member name, which is the whole reason this is a
+// map rather than a rename. Asked directly, kicad-cli joins a child's `PP_OUT0` to the parent's
+// `PP_OUT2` when the parent's bus at that pin is `PP_OUT[2..3]`, joins `B0` to `A0` across a rename,
+// and pairs off as far as the shorter of the two when the widths differ. Where the two names happen
+// to be equal the map is the identity, which is why `AN[0..7]` on both sides needs no special case.
 //
 // Only the members are promoted, never the bus name itself: the parent's anchor for the bus pin is
 // the child-qualified `/<sheet>/AN[0..7]`, and promoting that would break the very join it makes.
 // Promotion composes through nesting, because sc.local already carries whatever this sheet inherited.
-func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string, sliced map[string]bool) map[string]string {
+func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string, reused bool) map[string]string {
+	if reused {
+		return nil
+	}
 	var out map[string]string
 	for _, p := range sub.Children("pin") {
-		name := unescapeName(atomOf(p.Arg(1)))
-		if !isKiCadBusVector(name) {
-			continue
-		}
 		at := sheetPt(p.Child("at"))
-		if at == nil || busAt[gp(at)] != name || sliced[busPrefix(name)] {
+		if at == nil {
 			continue
 		}
-		for _, m := range netgraph.ExpandBusName(name) {
+		mine := busMembersAscending(unescapeName(atomOf(p.Arg(1))))
+		theirs := busMembersAscending(busAt[gp(at)])
+		for j := 0; j < len(mine) && j < len(theirs); j++ {
 			if out == nil {
 				out = map[string]string{}
 			}
-			out[m] = sc.local(m)
+			out[mine[j]] = sc.local(theirs[j])
 		}
 	}
 	return out
 }
-
-// kicadBusVectorRe is KiCad's vector-bus spelling and ONLY it: `PREFIX[first..last]`, two dots.
-// netgraph.IsBusName also accepts the `[hi:lo]` form that xschem and gEDA use, which is right for
-// the shared bus-not-modeled diagnostic but wrong to act on here. KiCad reads `DATA[1:0]` as an
-// ordinary scalar label, and its own netlist export keeps `/DATA0` and `/sub/DATA0` apart for such
-// a label — so promoting members off one would invent a connection the design does not have.
-// TestHierBusMembersDoNotCross is that control.
-var kicadBusVectorRe = regexp.MustCompile(`^.*\[\d+\.\.\d+\]$`)
-
-func isKiCadBusVector(name string) bool { return kicadBusVectorRe.MatchString(name) }
 
 // hierNetWalker carries the accumulator state for the hierarchical netlist walk — the fields a
 // recursive closure would otherwise capture: the Design under construction, the library and
@@ -293,7 +352,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		sc.prefix = id
 		name = path.Base(id)
 	}
-	busAt, slicedBus := sheetBusNames(root), slicedBusPrefixes(root)
+	busAt, reusedSheet := sheetBusNames(root), reusedSheetFiles(root)
 	w.libs.collect(root, src)
 	w.comps.collect(root, src, instPath)
 	collectSheetNets(root, sc, &w.in)
@@ -330,7 +389,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		for a := range ancestors {
 			childAnc[a] = true
 		}
-		if err := w.walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, slicedBus)); err != nil {
+		if err := w.walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, reusedSheet[propValue(sub, "Sheetfile")])); err != nil {
 			return err
 		}
 	}
@@ -364,7 +423,7 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 				instPath = "/" + u
 			}
 		}
-		busAt, slicedBus := sheetBusNames(root), slicedBusPrefixes(root)
+		busAt, reusedSheet := sheetBusNames(root), reusedSheetFiles(root)
 		sc := sheetScope{offset: netgraph.Point{X: k * instStep}, instPath: instPath, src: src, syms: syms, wirePfx: id, promoted: promoted}
 		if id != "/" {
 			sc.prefix = id
@@ -390,7 +449,7 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 			for a := range ancestors {
 				childAnc[a] = true
 			}
-			walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, slicedBus))
+			walk(childBytes, file, childID, instPath+"/"+uuidOf(sub), childAnc, busPinPromotions(sub, sc, busAt, reusedSheet[propValue(sub, "Sheetfile")]))
 		}
 	}
 
