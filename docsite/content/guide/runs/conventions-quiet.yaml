@@ -14,6 +14,10 @@
 #
 # No from_root: the page names the design and the config bare, so the script runs INSIDE the copied
 # designs directory and both resolve exactly as displayed.
+#
+# The design is named as its FOLDER rather than as a file, because it is a declared design now: the
+# folder holds the netlist entry and the schematic companion the examples draw findings on, and
+# naming the folder is what reads the entry rather than whichever of the two files you picked.
 fixture: examples/common/designs
 script: |
   cat > example.yaml <<'YAML'
@@ -25,6 +29,6 @@ script: |
       allow: ["^[A-Z][A-Z0-9_]*$"]
       exempt: ["^\\+", "^GND"]
   YAML
-  agni check i2c-sensor.edn --conventions example.yaml --rule example/signal-net-naming
+  agni check i2c-sensor --conventions example.yaml --rule example/signal-net-naming
 show: |
-  agni check i2c-sensor.edn --conventions example.yaml --rule example/signal-net-naming
+  agni check i2c-sensor --conventions example.yaml --rule example/signal-net-naming

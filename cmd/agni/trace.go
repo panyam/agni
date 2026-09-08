@@ -8,6 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+
 	"github.com/panyam/agni/core/check"
 )
 
@@ -18,7 +20,7 @@ import (
 // walk held the path and discarded it on the way out. This is the smallest surface over the walk
 // that now returns it.
 func traceCmd() *cobra.Command {
-	var from, to, format string
+	var from, to, format, renderOut string
 	var hops int
 	cmd := &cobra.Command{
 		Use:   "trace <file>",
@@ -53,6 +55,15 @@ func traceCmd() *cobra.Command {
 			if t.Outcome == check.TraceUnresolved && format == "text" {
 				return fmt.Errorf("cannot trace: %s", t.Reason)
 			}
+			// --render draws the answer, and it draws a no-route and an unresolved endpoint too,
+			// which is the point: a picture of the two nets that do NOT join is the thing a reader
+			// was going to go looking for anyway. traceSpecs decides what counts as a subject; the
+			// drawing itself is the shared path every command uses.
+			if renderOut != "" {
+				if err := renderSubjects(cmd.ErrOrStderr(), args[0], renderOut, traceSpecs(t)); err != nil {
+					return err
+				}
+			}
 			if format == "json" {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
@@ -75,10 +86,24 @@ func traceCmd() *cobra.Command {
 			"budget rather than an electrical claim, and the answer states the value it rests on, so a "+
 			"no-route can be re-asked wider.")
 	cmd.Flags().StringVar(&format, "format", "text", "text|json")
+	cmd.Flags().StringVar(&renderOut, "render", "",
+		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+
+			"design's own schematic where it has one and on an auto-layout of its netlist where it "+
+			"does not. Works for a no-route too, marking the two nets that fail to join.")
 	cmd.MarkFlagRequired("from")
 	cmd.MarkFlagRequired("to")
 	return cmd
 }
+
+// The route reads in one colour and the parts crossed in another, so a reader can tell the wire the
+// signal travels on from the part it travels through. The endpoint colour is deliberately the odd
+// one out: it marks what was ASKED rather than what was found, which is what makes a no-route
+// drawing legible.
+const (
+	traceRouteColor    = "#2563eb"
+	traceCrossColor    = "#e11d48"
+	traceEndpointColor = "#0f766e"
+)
 
 // parseEndpoint reads "U7.3" into its two halves, splitting at the FIRST dot because a ref-des does
 // not contain one and a pin designator occasionally does.
@@ -173,4 +198,52 @@ func classNote(class string) string {
 		return ""
 	}
 	return " (" + strings.ReplaceAll(class, "_", " ") + ")"
+}
+
+// traceSpecs turns a trace into the entities a drawing should point at: the nets it passed through,
+// the parts it crossed, and the two endpoint pins.
+//
+// It draws the answer whatever the answer was. A route gets its nets and crossings; a no-route gets
+// the two nets that fail to join, which is the picture a reader goes looking for the moment they
+// read the words. An unresolved endpoint gets whichever end DID resolve, because half an answer
+// located is more use than none, and the text beside it already says the other end named nothing.
+//
+// This is the typed half of the render path, and it lives here rather than in subjectrender.go for
+// the reason findingSpecs lives beside the review renderer: deciding what counts as a subject of an
+// answer is a claim about that answer, and it belongs where someone reviewing the answer will read it.
+func traceSpecs(t check.Trace) []*geom.HighlightSpec {
+	var specs []*geom.HighlightSpec
+	netSpec := func(name, color string) *geom.HighlightSpec {
+		return &geom.HighlightSpec{
+			Nets: []string{name}, Color: color, Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_PATH,
+		}
+	}
+	switch t.Outcome {
+	case check.TraceRouted:
+		for _, n := range t.Nets {
+			specs = append(specs, netSpec(n.Name, traceRouteColor))
+		}
+		for _, c := range t.Crossings {
+			specs = append(specs, &geom.HighlightSpec{
+				Components: []string{c.RefDes}, Color: traceCrossColor,
+				Shape: geom.HighlightShape_HIGHLIGHT_SHAPE_BOUNDING_RECT,
+			})
+		}
+	default:
+		// Both ends, in the colour that says they are the question rather than the answer. An
+		// endpoint that did not resolve carries no net, so it contributes nothing.
+		for _, e := range []check.TraceEnd{t.From, t.To} {
+			if e.Net != "" {
+				specs = append(specs, netSpec(e.Net, traceEndpointColor))
+			}
+		}
+	}
+	for _, e := range []check.TraceEnd{t.From, t.To} {
+		if e.RefDes != "" && e.Pin != "" {
+			specs = append(specs, &geom.HighlightSpec{
+				Pins: []*geom.PinRef{{RefDes: e.RefDes, Pin: e.Pin}}, Color: traceEndpointColor,
+			})
+		}
+	}
+	return specs
 }

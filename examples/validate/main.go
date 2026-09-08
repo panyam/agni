@@ -35,7 +35,7 @@ func problemsLine(problems []string) string {
 }
 
 func main() {
-	design := common.AskPath("design", "../common/designs/i2c-sensor.edn")
+	design := common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn")
 
 	demo := demokit.New("validate").
 		Dir("validate").

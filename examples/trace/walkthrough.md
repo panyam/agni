@@ -53,10 +53,18 @@ Agni -->> You: Trace (outcome, crossings, nets, stubs)
 
 > Two pins with nothing between them. This is an ANSWER rather than a failure, so it names both nets and the radius it searched to. An endpoint that names nothing the design has is the different case, and it reports as unresolved rather than as a disconnection, because a pin spelled wrong and two pins genuinely not connected are opposite problems.
 
+## Draw it {#draw}
+
+> The route as text tells you R1 is in the way. It does not tell you where R1 is, what else hangs off the nets on either side of it, or whether the path you got is the one you meant. check.TracePins hands back the nets and the parts crossed, and those are exactly the subjects a highlight overlay takes, so drawing the answer is a conversion rather than a second walk.
+>
+> This writes route.svg beside the example. Open it in anything that shows an SVG. The design's own schematic is drawn where it has one, and an auto-layout of the netlist where it does not, which the command says so you never mistake the second for the first.
+
 ## Same thing from the CLI
 
 This walkthrough is the narrated form of one command:
 
-    agni trace i2c-sensor.edn --from U1.3 --to J1.1
+    agni trace ../common/designs/i2c-sensor --from U1.3 --to J1.1 --render route.svg
 
-Add `--hops` to widen the search, and `--format json` for the machine-readable form.
+Add `--hops` to widen the search, and `--format json` for the machine-readable form. To look at the
+whole design interactively rather than one route, `agni open ../common/designs/i2c-sensor` serves it
+and prints a URL.

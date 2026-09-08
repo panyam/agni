@@ -40,7 +40,11 @@ func LoadSchematic(arg string) (*geom.SchematicGeometry, error) {
 // and is never the IR itself. File paths stay at the edge; the core reader sees an io.Reader
 // (CONSTRAINTS C1).
 func ReadSchematicFixture(name string) (*geom.SchematicGeometry, error) {
-	f, err := designsFS.Open("designs/" + name)
+	p, err := fixturePath(name)
+	if err != nil {
+		return nil, err
+	}
+	f, err := designsFS.Open(p)
 	if err != nil {
 		return nil, err
 	}

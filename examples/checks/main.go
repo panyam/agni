@@ -22,7 +22,7 @@ var walkthroughMD []byte
 
 func main() {
 	// The shared path input: default to the bundled fixture, accept any path the user enters.
-	design := common.AskPath("design", "../common/designs/i2c-sensor.edn")
+	design := common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn")
 
 	demo := demokit.New("checks").
 		Dir("checks").
