@@ -1,0 +1,23 @@
+# Rung 13: the tier-namespaced findings the browser panel shows, produced by the CLI, because this
+# rung's whole claim is that the two are the same run.
+#
+# This replaces a hand-written table that had drifted three ways at once (agni issues 623, 624). It
+# promised 12 findings, it named `profile-overlay/can-signal-missing`, which is the namespace a
+# `--profile-path` overlay composes under and not the one a PROJECT composes, and it hung that rule
+# on a net when the rule it meant reports against the host component. Nothing could catch any of it:
+# the parse check reads a fence's command and never its output.
+#
+# match keeps the tier rules and DELIBERATELY not the total. The built-in findings are rung 2's and
+# are not what this rung is about, and the `] ` anchor is there because a bare `gateway/` also
+# matches every provenance path.
+#
+# The total is left out because it is the one number the CLI and the panel currently disagree on: the
+# viewer scores the entry netlist without the declared board, so it reports 15 where this reports 28
+# (agni issue 646). These six tier rows are identical on both surfaces, which is what the page claims
+# about them. Put the total back once 646 lands.
+fixture: examples/tutorial-project
+show: |
+  agni check designs/gateway/gateway.edn
+script: |
+  agni check designs/gateway/gateway.edn
+match: '\] (gateway|gateway-profiles|intent)/'
