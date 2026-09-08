@@ -859,6 +859,13 @@ the runner's architecture rather than on any change. Closing 472 is what lets th
 git-status check forces a regenerate-then-commit-then-gate ordering, so the first run after an edit
 fails for a reason unrelated to the edit. `proto-check` spells this out and
 `hack/tutorial_runs_check.sh` follows it.
+**Note:** the GENERATOR still has an ordering rule, and it is enforced rather than remembered (agni
+issue 588). A capture's stamp hashes `git ls-files` for its fixture, so a fixture file that is not
+committed yet is not in the hash: the local gate passes, the commit moves the hash, and CI fails on a
+tree whose content never changed. `inputHash` refuses a fixture holding files git neither tracks nor
+ignores. IGNORED files stay invisible, which is not a detail but agni issue 357, where counting the
+tutorial's own `make report` output meant everyone who had run the tutorial rewrote the committed
+stamp on every gate run.
 **Note:** the docsite's `guide/` section is the un-generated counterpart and shows the cost. Its 37
 command fences across nine pages are typed by hand with no `runs/` directory, so nothing regenerates
 them and nothing reads them. Four went stale without a word: `getting-started.md` reported 10
