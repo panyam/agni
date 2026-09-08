@@ -106,6 +106,11 @@ type viewerOpts struct {
 	conventions string
 
 	reviewStorePath string
+	// listener, when non-nil, is a listener the caller already BOUND, and the server serves on it
+	// instead of binding addr itself. `--server self` uses it so a port is held from the moment the
+	// flag is parsed: a taken port then fails before the command does its work, and nothing can take
+	// the port between the check and the serve.
+	listener net.Listener
 	// extraMounts are mounts the caller composed itself, merged with the declared and discovered ones.
 	// `open` uses it to serve the single mount it minted for the design named on the command line,
 	// which is a mount no flag and no file declared.
@@ -293,6 +298,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 	}
 	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
+	if o.listener != nil {
+		return skhttp.ListenAndServeGraceful(srv, skhttp.WithListener(o.listener))
+	}
 	return skhttp.ListenAndServeGraceful(srv)
 }
 

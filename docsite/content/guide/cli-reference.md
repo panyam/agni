@@ -35,7 +35,7 @@ Run the rule catalog and report findings. The workhorse. See
 | `--tag <key>=<value>` | run only rules with this tag, e.g. `--tag category=power` (repeatable) |
 | `--format <fmt>` | `text` (default), `markdown`, `json`, `csv`, `report`, or `html`. `csv` emits one row per finding with a stable header, for a spreadsheet-driven review. `html` is the verdict report as a self-contained page and turns `--verdicts` on by itself |
 | `--verdicts` | report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. A separate table, so plain `--format csv` is unchanged. Honours `--format text/csv/json/html`. Only rules that state one contribute, and a rule absent from the output is declining to say rather than reporting that it considered nothing |
-| `--url-base <addr>` | base address of a running viewer, so an `--format html` report links each verdict to its proof. A link is emitted only for a mount the operator DECLARED with `--mount` or in `agni.yaml`, because a mount minted for one run means nothing on a server that was not started with it. It then asks that server for its mount table and drops the links if the same name is served from a different root. Whenever links are withheld, the reason is printed. Omitted, subjects render as plain text |
+| `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots. `--url-base` is a deprecated alias |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info`. This is the **severity** axis. For the coverage axis, see `review --fail-on-outcome` and `--min-answered` below |
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
@@ -62,7 +62,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |
 | `--format <fmt>` | `markdown` (default), `json`, or `html`. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--url-base` is given. One design at a time, since a page's title, hash and links all name one design |
-| `--url-base <addr>` | base address of a running viewer, so an `--format html` checklist links each finding to its proof. Same promise as `check --url-base`: the mount has to be one you declared, the server is asked whether it serves that name from the same root, and a withheld link says why |
+| `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots. `--url-base` is a deprecated alias |
 | `--results-out <file>` | also write the run as a self-contained check-result document |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--render <dir>` | also write an annotated schematic SVG per design, each finding highlighted in place |
@@ -288,7 +288,7 @@ pins that are not connected.
 | `--to <ref.pin>` | the pin to end at |
 | `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it rests on, so a no-route can be re-asked wider |
 | `--format <fmt>` | `text` (default), or `json`, which emits the same `Trace` message the `TraceDesign` rpc returns, in protojson, so a script reading the CLI and a client reading the API parse one shape |
-| `--url-base <addr>` | base address of a RUNNING viewer, so the answer comes with a link that re-asks it there. It starts no server: run `agni open <design>` or `agni serve` first. Same promise as `check --url-base`, and a link is printed for a no-route too, since "these two pins do not join" is worth sending someone. The link carries the QUESTION rather than an answer, so it needs no revision hash and is re-asked against whatever the design is when it is followed |
+| `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots. `--url-base` is a deprecated alias |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
 | `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
 
@@ -317,6 +317,10 @@ Serve one design and print the URL that shows it, so a board can be looked at fr
 lives in. Binds loopback on a free port and serves only that design (and its project, where it has
 one). It also prints a ready-made `agni check … --url-base …` line, which carries `--mount` because a
 mount is minted per process and a second `agni` would not know this one.
+
+`agni check <design> --server self` is the same idea from the other end and needs no second command:
+one process reads the design and serves it, so the links resolve without anything being declared.
+`open` remains the way to look at a board without running anything over it.
 
 | flag | what it does |
 |---|---|

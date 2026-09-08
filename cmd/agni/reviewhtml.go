@@ -87,13 +87,14 @@ func evidenceFor(it review.ItemResult, meta rpt.Checklist) []rpt.ChecklistEviden
 // than restating them: the mount has to be one the operator DECLARED, and the server has to agree it
 // serves that name from the same root. Restating it here is how the two surfaces would drift into
 // disagreeing about what a link means, which is the whole reason the report model is shared.
-func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg, urlBase string) (rpt.Checklist, error) {
+func checklistMeta(cmd *cobra.Command, ll *localLoader, designArg string, spec serverSpec) (rpt.Checklist, error) {
 	designURI, err := cliArgURI(designArg)
 	if err != nil {
 		return rpt.Checklist{}, err
 	}
 	ws, _ := workspace()
-	mountPath, contentHash, why := verdictLinkTarget(cmd.Context(), ws, ll, designURI)
+	urlBase := spec.base()
+	mountPath, contentHash, why := verdictLinkTarget(cmd.Context(), ws, ll, designURI, spec.self)
 	if urlBase != "" && why != "" {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no findings were linked: %s\n", why)
 	}

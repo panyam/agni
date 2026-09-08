@@ -128,8 +128,8 @@ func freePort() (string, error) {
 // openBanner prints what `open` exists to give you: the design's own URL, and a check command that
 // works when pasted.
 //
-// serveURLs ends its addresses with a slash, and both the view path and --url-base want a bare
-// origin. A doubled slash is cosmetic in a browser and is NOT cosmetic in --url-base, which
+// serveURLs ends its addresses with a slash, and both the view path and --server want a bare
+// origin. A doubled slash is cosmetic in a browser and is NOT cosmetic in --server, which
 // concatenates rather than joins.
 //
 // The check line carries --mount for a reason that is easy to miss. Mounts are minted PER PROCESS, so
@@ -138,7 +138,7 @@ func freePort() (string, error) {
 func openBanner(w io.Writer, rawURL string, m mounts.Mount, designURI, viewPath string) {
 	base := strings.TrimSuffix(rawURL, "/")
 	fmt.Fprintf(w, "%s%s\n", base, viewPath)
-	fmt.Fprintf(w, "\ncheck it against this server:\n  agni check --mount %s=%s %s --verdicts --url-base %s\n",
+	fmt.Fprintf(w, "\ncheck it against this server:\n  agni check --mount %s=%s %s --verdicts --server %s\n",
 		m.Name, m.Root, designURI, base)
 	// The trace line is here for the same reason the check line is: --url-base needs a mount the
 	// operator declared, and assembling that by hand against a server whose mount was minted by
