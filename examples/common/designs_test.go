@@ -5,20 +5,68 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-func TestReadByExtUnknown(t *testing.T) {
-	_, err := readByExt(strings.NewReader("whatever"), "design.txt")
+func TestReadDesignUnknownExtension(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "design.txt")
+	if err := os.WriteFile(p, []byte("whatever"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ReadDesign(p)
 	if err == nil || !strings.Contains(err.Error(), "no reader") {
-		t.Errorf("readByExt(.txt) error = %v, want a \"no reader\" error", err)
+		t.Errorf("ReadDesign(.txt) error = %v, want a \"no reader\" error", err)
 	}
 }
 
-func TestReadByExtIPCSniff(t *testing.T) {
+func TestReadDesignIPCSniff(t *testing.T) {
 	// A .xml that is not IPC-2581 must be rejected by the root sniff, not handed to the reader.
-	_, err := readByExt(strings.NewReader(`<?xml version="1.0"?><notipc/>`), "board.xml")
+	p := filepath.Join(t.TempDir(), "board.xml")
+	if err := os.WriteFile(p, []byte(`<?xml version="1.0"?><notipc/>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ReadDesign(p)
 	if err == nil || !strings.Contains(err.Error(), "not an IPC-2581") {
-		t.Errorf("readByExt(non-IPC .xml) error = %v, want a \"not an IPC-2581\" error", err)
+		t.Errorf("ReadDesign(non-IPC .xml) error = %v, want a \"not an IPC-2581\" error", err)
+	}
+}
+
+// TestReadCarriesTheIngestionPasses is the guard this package did not have, and the reason it needed
+// one is that its absence is silent.
+//
+// Both readers here used to dispatch straight to edif.Read and friends, skipping formats.Loader,
+// which is where the format-neutral passes run. classify.StampMPN is one of them, so every example
+// read a design whose components carried NO part number: nothing errored, the counts were right, and
+// every datasheet-tier question answered "none" rather than failing. A query for uncovered parts
+// grouped by MPN reported that the board was clean.
+//
+// Asserted on BOTH paths, because they are separate calls and a fix to one would look complete.
+func TestReadCarriesTheIngestionPasses(t *testing.T) {
+	const fixture = "probe-coverage.edn"
+	for _, tc := range []struct {
+		name string
+		read func() (*ir.Design, error)
+	}{
+		{"embedded", func() (*ir.Design, error) { return ReadFixture(fixture) }},
+		{"on disk", func() (*ir.Design, error) { return ReadDesign(filepath.Join("designs", fixture)) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d, err := tc.read()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var withMPN int
+			for _, c := range d.GetComponents() {
+				if c.GetMpn() != "" {
+					withMPN++
+				}
+			}
+			if withMPN == 0 {
+				t.Errorf("no component carries an MPN, so the read skipped classify.StampMPN; "+
+					"%d components were read", len(d.GetComponents()))
+			}
+		})
 	}
 }
 
