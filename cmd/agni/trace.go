@@ -24,7 +24,7 @@ import (
 // walk held the path and discarded it on the way out. This is the smallest surface over the walk
 // that now returns it.
 func traceCmd() *cobra.Command {
-	var from, to, format, renderOut, urlBase string
+	var from, to, format, renderOut, urlBase, traceOutPath string
 	var hops int
 	cmd := &cobra.Command{
 		Use:   "trace <file>",
@@ -36,6 +36,11 @@ func traceCmd() *cobra.Command {
 			"route but is never passed through.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			closeOut, err := redirectOut(cmd, traceOutPath)
+			if err != nil {
+				return err
+			}
+			defer closeOut()
 			a, err := parseEndpoint(from, "--from")
 			if err != nil {
 				return err
@@ -130,6 +135,7 @@ func traceCmd() *cobra.Command {
 			"budget rather than an electrical claim, and the answer states the value it rests on, so a "+
 			"no-route can be re-asked wider.")
 	cmd.Flags().StringVar(&format, "format", "text", "text|json")
+	outFileFlag(cmd, &traceOutPath)
 	cmd.Flags().StringVar(&urlBase, "url-base", "",
 		"base address of a RUNNING viewer (e.g. http://localhost:8080), so the answer comes with a link "+
 			"that re-asks it there. It starts no server: run `agni open <design>` or `agni serve` first, "+

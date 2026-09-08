@@ -440,7 +440,7 @@ func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
 	var verdicts bool
-	var urlBase string
+	var urlBase, outPath string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -456,6 +456,11 @@ func checkCmd() *cobra.Command {
 			"above the threshold, so check gates CI.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			closeOut, err := redirectOut(cmd, outPath)
+			if err != nil {
+				return err
+			}
+			defer closeOut()
 			switch format {
 			case "text", "json", "csv", "markdown", "report":
 			case "html":
@@ -714,6 +719,7 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
 	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so every --verdicts format links each verdict to its proof: an anchor in the html report, a url column in the csv, a line under each row in the terminal. Omitted, or for a design reached by a path the server would not recognise, no link is emitted at all: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
+	outFileFlag(cmd, &outPath)
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
@@ -832,7 +838,7 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, urlBase string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, urlBase, reviewOutPath string
 	var coverage bool
 	var ratifiedFloor float64
 	var failOnOutcome string
@@ -851,6 +857,11 @@ func reviewCmd() *cobra.Command {
 			"traceability matrix. Automation is manifest-level (stated once); pass/fail/n-a is per design.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			closeOut, err := redirectOut(cmd, reviewOutPath)
+			if err != nil {
+				return err
+			}
+			defer closeOut()
 			// Parsed BEFORE anything is read, so a typo in a CI config fails in the first millisecond
 			// rather than after a full run over a family of boards. The gate is otherwise applied last,
 			// on every exit path below.
@@ -1055,6 +1066,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), or html (the checklist as a self-contained page, every finding per item)")
 	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so an --format html checklist links each finding to its proof. Subject to the same promise as `check --url-base`: the mount has to be one you DECLARED, and the server is asked whether it serves that name from the same root. Whenever links are withheld the reason is printed")
+	outFileFlag(cmd, &reviewOutPath)
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")
 	cmd.Flags().StringVar(&resultsOut, "results-out", "", "also write the run as a self-contained check-result document (JSON) at this path; one design only. Render it later with `agni results`")
