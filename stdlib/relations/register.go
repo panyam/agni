@@ -67,6 +67,7 @@ var builtinSchema = map[string][]facts.Field{
 	// tag in the device_classes SET (WS3-071), so a family tag answers too.
 	RelComponentClass:        {facts.FieldSubject, facts.FieldValue},                    // component.class(ref, class)
 	RelNetGround:             {facts.FieldSubject},                                      // net.ground(net)
+	RelNetHop:                {facts.FieldSubject, facts.FieldObject, facts.FieldValue}, // net.hop(from, through, to)
 	RelNetExternal:           {facts.FieldSubject},                                      // net.external(net)
 	RelEsdRated:              {facts.FieldSubject},                                      // component.esd_rated(ref) — WS3-076, datasheet tier
 	RelComponentDeviceClass:  {facts.FieldSubject, facts.FieldValue},                    // component.device_class(ref, class) — WS10-013, datasheet tier
@@ -123,6 +124,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "component.esd_rated", Args: []string{"ref_des"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the part carries a datasheet ESD rating at or above the credit floor (needs --params)", Kind: facts.KindDatasheet},
 	{Name: "component.device_class", Args: []string{"ref_des", "class"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the device class the part's datasheet declares (authoritative over the ref-des/keyword class; needs --params)", Kind: facts.KindDatasheet},
 	{Name: "net.ground", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a ground rail (name-derived)", Kind: facts.KindNetlist},
+	{Name: "net.hop", Args: []string{"from", "through", "to"}, ArgKinds: map[string]facts.ArgKind{"from": {Entity: check.KindNet}, "through": {Entity: check.KindComponent}, "to": {Entity: check.KindNet}}, Summary: "one series crossing: a two-net pass element (R/L/ferrite/fuse) bridging two nets, emitted in both directions. `reaches` at one step, and countable where `reaches` is not: two resistors bridging the same pair are two hops and one reach", Kind: facts.KindNetlist},
 	{Name: "net.external", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net may extend onto an unread sheet (read-gap marker)", Kind: facts.KindNetlist},
 	{Name: "bus", Args: []string{"label", "kind"}, Summary: "a reader-detected bus not yet expanded into member nets (WS1-034)", Kind: facts.KindNetlist},
 	{Name: "unresolved_symbol", Args: []string{"ref_des", "symref"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a placement whose symbol did not resolve, so it carries no pins (WS1-052)", Kind: facts.KindNetlist},

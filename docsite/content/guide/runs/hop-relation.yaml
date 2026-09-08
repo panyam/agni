@@ -1,0 +1,10 @@
+# The one-step crossing relation, then the count it makes possible.
+#
+# Two steps rather than one because the count is meaningless until a reader has seen what a hop IS.
+# The gateway answers 1 for its only resistor-to-rail net, which is the correct answer and the boring
+# one; the interesting answer is 2, and the page says what that would mean rather than the capture
+# faking a board with the defect on it.
+fixture: examples/tutorial-project
+steps:
+  - script: agni query designs/gateway/gateway.edn 'net.hop(?from, ?through, ?to) => ?from, ?through, ?to'
+  - script: agni query designs/gateway/gateway.edn 'net.hop(?n, ?r, ?rail), rail(?rail), component.class(?r, "resistor") => ?n, count(?r)'

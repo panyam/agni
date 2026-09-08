@@ -138,6 +138,7 @@ const (
 	// marker a rule suppresses a finding on rather than firing on incomplete connectivity.
 	RelComponentClass = "component.class" // component.class(ref_des, class): a device class the part is in. doc: facts/docs/component.class.md
 	RelNetGround      = "net.ground"      // net.ground(net): the net is a ground rail (name-derived). doc: facts/docs/net.ground.md
+	RelNetHop         = "net.hop"         // net.hop(from, through, to): one series crossing. doc: facts/docs/net.hop.md
 	RelNetExternal    = "net.external"    // net.external(net): the net may extend onto an unread sheet. doc: facts/docs/net.external.md
 
 	// Datasheet-derived class relation (WS3-076): the CONCEPT the esd-protection Go rule credits,
@@ -287,6 +288,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, esdRatedFacts(m)...)
 	out = append(out, componentDeviceClassFacts(m)...)
 	out = append(out, netGroundFacts(m)...)
+	out = append(out, netHopFacts(m)...)
 	out = append(out, netExternalFacts(m)...)
 	out = append(out, busFacts(m)...)
 	out = append(out, unresolvedSymbolFacts(m)...)
@@ -1085,6 +1087,87 @@ func specDocCite(spec *parampb.PartSpec) string {
 		doc = docs[0].GetTitle()
 	}
 	return fmt.Sprintf("datasheet %q", doc)
+}
+
+// netHopFacts emits net.hop(from, through, to) for every series crossing on the board: a pass element
+// (resistor, inductor, ferrite, fuse) that touches exactly two nets, once per direction.
+//
+// It is `reaches` at ONE STEP, and it exists because the two answer different questions. `reaches`
+// is transitive and tells you a net is somewhere in another's neighbourhood; it cannot tell you WHAT
+// was crossed, and it cannot be counted, because it reports each destination once however many ways
+// there are to get there. Two pull-up resistors in parallel from a bus to a rail are one `reaches`
+// answer and two hops, and telling those apart is the whole of agni issue 516's second question.
+//
+// STORED rather than computed on demand, which is the change from how issue 599 first described it.
+// A per-crossing edge is a projection of the design the way component-on-net is, so it belongs in the
+// fact layer (C29) where it is finite, cheap and joinable. Making it a generator would have bought
+// transitivity the evaluator can already express by recursion over these rows, at the cost of the
+// whole-design-scan hazard GeneratorFirstRules exists to catch.
+//
+// BOTH DIRECTIONS are emitted, so a question can start from either end without the author having to
+// guess which way the projector happened to write the row. The cost is one extra row per crossing on
+// a relation whose size is the number of two-net pass elements, which is small.
+//
+// A part with one net or three is not a crossing and contributes nothing: a one-net stub goes
+// nowhere, and a three-net part is not a series element, which is the same two-terminal rule the
+// reach walk applies. Ground is NOT excluded here, unlike in the pull-up walk, because excluding it
+// would bake one rule's question into a fact everyone reads; a rule that must not cross ground
+// writes `not net.ground(?to)`.
+func netHopFacts(m check.Model) []facts.Row {
+	// Nets per pass component, in one pass over the design rather than a scan per component.
+	type netRef struct {
+		name string
+		prov *ir.Provenance
+	}
+	byRef := map[string][]netRef{}
+	var order []string
+	for _, n := range m.Nets() {
+		for _, conn := range n.Connections {
+			ref := conn.ComponentRef
+			if !isPassClass(m.ComponentClass(ref)) {
+				continue
+			}
+			seen := false
+			for _, e := range byRef[ref] {
+				if e.name == n.Name {
+					seen = true
+					break
+				}
+			}
+			if seen {
+				continue // both pins of the part on one net is a short, not a crossing
+			}
+			if len(byRef[ref]) == 0 {
+				order = append(order, ref)
+			}
+			byRef[ref] = append(byRef[ref], netRef{name: n.Name, prov: n.Prov})
+		}
+	}
+	var out []facts.Row
+	for _, ref := range order {
+		ns := byRef[ref]
+		if len(ns) != 2 {
+			continue
+		}
+		a, b := ns[0], ns[1]
+		out = append(out,
+			facts.Row{Relation: RelNetHop, Subject: a.name, Object: ref, Value: b.name, Cites: cite(irCite(a.prov))},
+			facts.Row{Relation: RelNetHop, Subject: b.name, Object: ref, Value: a.name, Cites: cite(irCite(b.prov))})
+	}
+	return out
+}
+
+// isPassClass reports a component class a signal continues THROUGH: the series pass elements. It is
+// the fact layer's own copy of the rule check.passClass applies, and it is a copy because
+// core/facts depends on no analysis package (C29) and this is a projection rather than a walk. The
+// two must agree, and net_hop_test.go asserts a hop exists for exactly the classes the reach walk
+// crosses.
+func isPassClass(c check.ComponentClass) bool {
+	switch c {
+	case check.ClassResistor, check.ClassInductor, check.ClassFerrite, check.ClassFuse:
+		return true
+	}
+	return false
 }
 
 // netGroundFacts emits net.ground(net) for each ground-named net. The rail relation covers BOTH

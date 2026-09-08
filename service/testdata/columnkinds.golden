@@ -42,6 +42,9 @@ net.declared_via_drill	arg0=net	kind="net"	kindVar=""	ref=-
 net.declared_via_drill	arg1=mm	kind=""	kindVar=""	ref=-
 net.external	arg0=net	kind="net"	kindVar=""	ref=-
 net.ground	arg0=net	kind="net"	kindVar=""	ref=-
+net.hop	arg0=from	kind="net"	kindVar=""	ref=-
+net.hop	arg1=through	kind="component"	kindVar=""	ref=-
+net.hop	arg2=to	kind="net"	kindVar=""	ref=-
 net.max_voltage	arg0=net	kind="net"	kindVar=""	ref=-
 net.max_voltage	arg1=volts	kind=""	kindVar=""	ref=-
 net.netclass	arg0=net	kind="net"	kindVar=""	ref=-

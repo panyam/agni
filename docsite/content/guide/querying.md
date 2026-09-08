@@ -407,6 +407,29 @@ is safe to commit or mail.
 agni query designs/gateway/gateway.edn 'rail(?n) => ?n' --format csv > rails.csv
 ```
 
+## Counting what a reachability question cannot
+
+`reaches` tells you a net is somewhere in another's neighbourhood. It does not tell you what was
+crossed to get there, and it reports each destination once however many routes lead to it. Those are
+different limitations and the second one has teeth: two pull-up resistors from one bus to one rail
+look exactly like one, because the rail is reachable either way.
+
+`net.hop(from, through, to)` is the same walk at ONE step, and it names the part. Being one row per
+crossing rather than one per destination is what makes it countable.
+
+{{ agniRun "content/guide/runs/hop-relation.yaml" }}
+
+The second query is the one worth keeping. A net answering 2 or more has more than one part taking it
+to a supply, which on an I2C bus is the double-pull-up defect: two 2.2k resistors in parallel are an
+effective 1.1k, so the bus sinks about twice the current it was sized for and a device driving low may
+not reach its VOL. The gateway answers 1, correctly, and a board with the defect answers 2 through a
+query with nothing special in it.
+
+Every crossing appears twice, once from each end, so a question can start from either side without
+knowing which way the fact was written. Ground is not excluded, deliberately: a rule that must not
+cross it writes `not net.ground(?to)` and says so where a reader can see it, rather than inheriting
+one rule's judgement from a fact everybody reads.
+
 ## Following a signal across the parts in the way
 
 A query joins facts. It cannot follow a path, because a path is not a fact: it is a sequence, of

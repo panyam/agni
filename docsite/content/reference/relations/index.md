@@ -27,6 +27,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`net.declared_via_drill(net, mm)`](net.declared_via_drill/) | the via drill a net SHOULD route at, cascaded across its classes by priority (join this, not the per-class rows) |
 | [`net.external(net)`](net.external/) | the net may extend onto an unread sheet (read-gap marker) |
 | [`net.ground(net)`](net.ground/) | the net is a ground rail (name-derived) |
+| [`net.hop(from, through, to)`](net.hop/) | one series crossing: a two-net pass element (R/L/ferrite/fuse) bridging two nets, emitted in both directions. `reaches` at one step, and countable where `reaches` is not: two resistors bridging the same pair are two hops and one reach |
 | [`net.max_voltage(net, volts)`](net.max_voltage/) | a net's declared rail voltage |
 | [`net.netclass(net, class)`](net.netclass/) | the tool-assigned net class a net belongs to (KiCad net_settings; not the derived semantic role) |
 | [`net.nominal_voltage(net, volts)`](net.nominal_voltage/) | a RAIL's nominal voltage derived from its net name (3V3 -> 3.3). Rails only; a non-rail net's name-derived level is net.signal_level |
