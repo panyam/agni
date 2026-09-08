@@ -84,9 +84,12 @@ io_map:
 `net`, `device` and `pin` are required. A row missing any of them states nothing checkable.
 
 **`function` is carried and nothing reads it.** Deciding whether a selected function is legal on a
-pin means reading the part's alternate-function table, which is a different modality and is agni
-issue 188. Every verdict on a row that declares one says outright that it was not evaluated, so
-filling the column in can never read as having it verified.
+pin means reading the part's alternate-function table, a pad-by-mode grid that the datasheet contract
+has no shape for. That is agni issue 667, and it is a different artifact from the pin FUNCTION table
+(one row per pin, name and number and I/O type), which is issue 188 and is done.
+
+Every verdict on a row that declares one says outright that it was not evaluated, so filling the
+column in can never read as having it verified.
 
 ### Fixing a finding
 

@@ -359,7 +359,8 @@ the design the map never mentioned. That number is usually the point, because a 
 hundred of sixteen hundred nets leaves fourteen hundred UNEXAMINED, which is not clean. An undeclared
 net is `not-considered` and never a fail, and rails stay in the denominator with their reason saying
 so, because excusing them is the tool deciding which absences are acceptable. `function` is carried
-and NOTHING READS IT (issue 188); every verdict on a row declaring one says so outright.
+and NOTHING READS IT (issue 667, which is the ALTERNATE-function table; issue 188 is the pin
+function table and is done); every verdict on a row declaring one says so outright.
 
 **Comparing an identifier across two documents goes through `core/ident`, never `==`.** A pin map is
 authored in the datasheet's vocabulary and a netlist answers in package designators, and both carry
