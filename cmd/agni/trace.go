@@ -11,6 +11,8 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/render"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
 )
 
@@ -44,11 +46,28 @@ func traceCmd() *cobra.Command {
 			if format != "text" && format != "json" {
 				return fmt.Errorf("--format %s: want text or json", format)
 			}
-			d, _, err := readDesignWithConfig(args[0])
+			// Thin client of the in-process DesignService, the shape `check` and `query` already
+			// take (WS9-048). The CLI supplies an os-backed loader and the service does the walk, so
+			// the answer a terminal prints and the answer the viewer draws come from ONE
+			// implementation rather than from two call sites that agree today.
+			//
+			// nil for the native renderer: TraceDesign never reaches it, and passing a real one would
+			// mean building the shell-out platform effect for a command that cannot use it.
+			svc := service.NewDesignService(&localLoader{loader: newLoader()}, nil, render.Style{}, cliProjects())
+			uri, err := cliArgURI(args[0])
 			if err != nil {
 				return err
 			}
-			t := check.TracePins(check.NewModel(d), a, b, hops)
+			resp, err := svc.TraceDesign(cmd.Context(), &webapi.TraceDesignRequest{
+				Uri:  string(uri),
+				From: &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
+				To:   &webapi.TraceEndpoint{RefDes: b.RefDes, Pin: b.Pin},
+				Hops: int32(hops),
+			})
+			if err != nil {
+				return err
+			}
+			t := service.TraceFromProto(resp.GetTrace())
 			// An endpoint that names nothing is a failed QUESTION, not an answer about the design,
 			// so it exits non-zero. A no-route is an answer and exits clean: a script asking whether
 			// two pins are joined must be able to tell "they are not" from "you named a pin that
@@ -71,7 +90,7 @@ func traceCmd() *cobra.Command {
 				// shape. EmitUnpopulated keeps empty lists and zero fields present, so a no-route is
 				// still a well-formed object rather than fields that appear and vanish per run.
 				b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.
-					Marshal(service.TraceProto(t))
+					Marshal(resp.GetTrace())
 				if err != nil {
 					return err
 				}
