@@ -53,6 +53,47 @@ describe("layout persistence", () => {
   });
 });
 
+// The opening tab of every stack the boot layout builds.
+//
+// This asserts the setActive CALL and not the pixels, which is the same limit the resizeGroup
+// comment in dock.ts records: a unit test here cannot see that a tab is actually on top. The
+// browser suite covers that half. What this catches is the cheap half, and the half that went
+// wrong: a stack gaining a second panel and nobody adding it to the setActive list.
+describe("default layout opening tabs", () => {
+  function fakeApi(): { api: any; added: string[]; activated: string[] } {
+    const added: string[] = [];
+    const activated: string[] = [];
+    const api: any = {
+      width: 1600,
+      height: 900,
+      addPanel: (p: { id: string }) => void added.push(p.id),
+      getPanel: (id: string) =>
+        added.includes(id) ? { api: { setActive: () => void activated.push(id), group: undefined } } : undefined,
+    };
+    return { api, added, activated };
+  }
+
+  it("opens the Query/Trace stack on Query, not on the panel added last", () => {
+    const { api, added, activated } = fakeApi();
+    defaultLayout(api);
+    // Trace is added within the query group and after it, so dockview would otherwise leave Trace
+    // active. Regression guard for the v0.2.0 defect where the query surface booted hidden.
+    expect(added.indexOf("trace")).toBeGreaterThan(added.indexOf("query"));
+    expect(activated).toContain("query");
+  });
+
+  it("names an opening tab for every stack that holds more than one panel", () => {
+    const { api, added, activated } = fakeApi();
+    defaultLayout(api);
+    // Each of these shares a tab strip with at least one sibling. A stack with no entry here opens
+    // on whichever panel happened to be added last, which is what this suite exists to prevent.
+    for (const id of ["canvas", "details", "checks", "review", "query"]) {
+      expect(added).toContain(id);
+      expect(activated).toContain(id);
+    }
+  });
+});
+
 describe("panel registry", () => {
   it("covers exactly the twelve viewer panels with unique ids", () => {
     const ids = VIEWER_PANELS.map((p) => p.id);

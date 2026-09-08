@@ -242,6 +242,9 @@ export function defaultLayout(api: DockviewApi): void {
     resizeGroup(api, "checks", { width: Math.max(rail, EAST_MIN_PX) });
     resizeGroup(api, "query", { height: api.height ? Math.round(api.height * QUERY_FRACTION) : QUERY_FALLBACK_PX });
     // Each stack opens on its first tab: the drawing, the findings, and what one selection is.
+    // query, not trace: the Trace panel is added within this stack after Query, and dockview makes
+    // the last panel added the active one, so without this the stack opens on Trace.
+    api.getPanel("query")?.api.setActive();
     api.getPanel("details")?.api.setActive();
     api.getPanel("checks")?.api.setActive();
     api.getPanel("review")?.api.setActive();
