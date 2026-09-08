@@ -25,7 +25,7 @@ This is a drawing of your netlist, not a reproduction of your schematic. Parts s
 algorithm put them. It is for following connectivity, not for review of the drawing itself.
 
 <agni-viewer src="{{.Site.PathPrefix}}/static/designs/gateway-netlist.svg"
-             caption="gateway.edn with a computed force layout: no geometry came from the file, every position here was calculated"></agni-viewer>
+             caption="gateway.edn drawn by the command above: no geometry came from the file, every position here was calculated"></agni-viewer>
 
 Compare it against the faithful drawing further down. Same board, same nets, and a completely
 different picture, because one was drawn by a person and the other was solved for.
@@ -36,8 +36,8 @@ There are five, and which one reads best depends entirely on the board. Rather t
 
 {{ agniRun "content/tutorials/runs/03-render-designs-gateway-gateway-edn-compare.yaml" }}
 
-For this board `force` has by far the fewest crossings, and `grid` is the worst by that measure
-while being the most compact. `orthogonal` is the only one that bends wires into right angles, which
+For this board `force` has by far the fewest crossings and `grid` is the worst by that measure,
+while `stress` draws the most compact picture by edge length. `orthogonal` is the only one that bends wires into right angles, which
 is what a schematic normally looks like, at the cost of more segments and more crossings.
 
 Lower `stress` means the drawn distances better match how far apart things actually are in the
@@ -69,9 +69,6 @@ Zero net changes. The two readers converged on the same netlist, and the whole e
 premise: analysis runs over one internal representation, so the format you started from stops
 mattering once the file is read.
 
-The nineteen changed components are library-qualified part-type names, which differ because each
-format names its libraries its own way. That is a difference in the files, not in the board.
-
 This is also the practical way to check a CAD migration. Export from the old tool and the new one,
 diff the two, and an empty net delta is real evidence the design survived the move.
 
@@ -86,6 +83,17 @@ agni open designs/gateway/gateway.edn
 It picks a free port on loopback, so it will not collide with anything you already have running, and
 it serves only this design and the project around it. The URL it prints goes straight to the board
 rather than to a file browser.
+
+**It needs the viewer's built assets, and it does not carry them.** From a repo checkout they sit in
+`./web` after `make ui`, which is the default, and that is why every other command on this page works
+here and this one may not. Anywhere else, point at them once:
+
+```
+agni open designs/gateway/gateway.edn --web-dir /path/to/web
+```
+
+`AGNI_WEB_DIR` and a `web_dir:` line in `agni.yaml` do the same thing without repeating the flag, and
+the error names all three if you get it wrong.
 
 The viewer pans and zooms, and its panels run the same checks the CLI runs, over the same catalog, so
 the findings you saw in rung 2 appear against the drawing rather than as a list. Later rungs add tiers
