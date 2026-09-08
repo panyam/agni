@@ -20,7 +20,7 @@ import (
 // need the BOTH-VIEWS tarball, which is 19MB against tutorial-board's 3MB and deliberately not in the
 // gate's default fetch, so this runs as its own target: `make oracle` fetches the corpus and then
 // runs exactly this test. `make browser-test` was the other suite outside the gate for a comparable
-// reason, until it moved inside in v0.2.1. This one stays out: a browser is a fixed one-time
+// reason, until PR 629 moved it inside. This one stays out: a browser is a fixed one-time
 // install, where the corpus is 19MB fetched per cache miss.
 //
 // It asserts against a COMMITTED BASELINE of the disagreements rather than demanding zero, because

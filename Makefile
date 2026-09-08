@@ -130,7 +130,7 @@ web-test:
 # jsdom has no layout engine, so the unit suite can prove what a panel renders and nothing about
 # what a reader can see; a CSS bug once shipped through a fully green run.
 #
-# IN THE GATE since agni v0.2.1, having been deliberately outside it before. The argument for keeping
+# IN THE GATE since PR 629, having been deliberately outside it before. The argument for keeping
 # it out was that a machine without a browser would go red for a reason unrelated to the change. What
 # settled it was v0.2.0 shipping a viewer whose query surface booted hidden behind the Trace tab: the
 # textarea was in the DOM the whole time, so every jsdom assertion passed, and the browser suite that
