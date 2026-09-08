@@ -90,8 +90,15 @@ and a netlist answers in package designators, so both are resolved: `PTE7`, `PTE
 name carrying a zero-width space pasted out of a spreadsheet all reach the same pin. A match that
 needed any of that says so in the verdict, so a note always means something was inferred.
 
-It compiles to three rules rather than one, because a reviewer acts on the three answers differently
-and because two of them are opposite defects: a net the map declares and the netlist does not have is
+It compiles to four rules rather than one. Three of them ask whether the design kept the promises the
+map made, and the fourth asks the opposite question: which nets the map never mentioned. That number
+is usually the important one. A design with sixteen hundred nets and a map declaring two hundred has
+two hundred checked and fourteen hundred unexamined, which is not the same as clean, and nothing else
+in a run tells those apart. Nets it does not name report as `not-considered` rather than as failures,
+because an undeclared net is a question nobody asked and not a fault in the board.
+
+The three that check the promises are separated because a reviewer acts on them differently, and
+because two of them are opposite defects: a net the map declares and the netlist does not have is
 usually a real disconnection, where a net the netlist has and the map does not declare is an
 incomplete map. `function` is accepted and NOT yet evaluated, since deciding whether a function is
 legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so

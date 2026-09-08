@@ -68,6 +68,7 @@ var docKeys = []string{
 	RuleIOMapPin,                        // io-map-pin-mismatch
 	RuleIOMapNetAbsent,                  // io-map-net-absent
 	RuleIOMapFarEnd,                     // io-map-far-end
+	RuleIOMapCoverage,                   // io-map-coverage
 }
 
 // docKey maps a Rule.Name to its doc key: identity for the fixed-name rules (module-missing,
@@ -111,6 +112,7 @@ var docSummaries = map[string]string{
 	RuleIOMapPin:                        "A net is not on the pin the design intent's IO map assigns it to.",
 	RuleIOMapNetAbsent:                  "The design intent's IO map declares a net the netlist does not have.",
 	RuleIOMapFarEnd:                     "A net does not reach the far-end device pin the design intent's IO map declares.",
+	RuleIOMapCoverage:                   "How much of the netlist the design intent's IO map declares at all.",
 }
 
 // docRemedies is what to DO about each intent rule KIND, in the imperative (check.Rule.Remedy).
@@ -137,6 +139,7 @@ var docRemedies = map[string]string{
 	RuleStrapAddressCollision:           "Re-strap one of the two devices to a free address, taking the address map from each part's datasheet rather than from the schematic.",
 	RuleIOMapPin:                        "Move the net to the declared pin, or amend the IO map. A pin assignment that moved late and a map nobody updated look identical from here, and the firmware was written against the map.",
 	RuleIOMapNetAbsent:                  "Add the missing net, or amend the IO map. Check for a misspelling first: a net present under a slightly different name is a different fix from one that was never drawn.",
+	RuleIOMapCoverage:                   "Declare the nets the map does not cover, or accept the coverage and read the other IO-map results as being about the covered fraction alone. There is nothing to fix in the design here.",
 	RuleIOMapFarEnd:                     "Route the net to the declared device pin, or amend the far end the map declares. The reported route shows what the net actually goes through, so start by reading where it diverges.",
 }
 

@@ -29,6 +29,9 @@ const (
 	RuleIOMapPin       = "io-map-pin-mismatch"
 	RuleIOMapNetAbsent = "io-map-net-absent"
 	RuleIOMapFarEnd    = "io-map-far-end"
+	// RuleIOMapCoverage is the one whose considered set is the NETLIST rather than the declaration:
+	// which parts of the design the map never spoke about.
+	RuleIOMapCoverage = "io-map-coverage"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
@@ -70,6 +73,7 @@ func Compile(d Declaration) []*check.Rule {
 		// end, because its own verdicts are what report the denominator: a map whose far-end columns
 		// are empty must read as unexamined rather than as clean.
 		rules = append(rules, ioMapFarEndRule(d))
+		rules = append(rules, ioMapCoverageRule(d))
 	}
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))
