@@ -58,3 +58,53 @@ func TestSampleBoardRead(t *testing.T) {
 		t.Errorf("components carrying an MPN = %d, want %d", got, want)
 	}
 }
+
+const sampleJetsonBoard = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
+
+// TestSampleBoardPartIdentityAgreesAcrossViews asserts the two views of one design resolve the same
+// part numbers. It is a stronger claim than either view's count, because the schematic and the board
+// state the MPN in different places and a reader can satisfy a count while joining on nothing.
+//
+// The board file is in the oracle corpus rather than the tutorial tarball, so this needs
+// `make samples-oracle`.
+func TestSampleBoardPartIdentityAgreesAcrossViews(t *testing.T) {
+	if _, err := os.Stat(sampleJetsonBoard); err != nil {
+		t.Skipf("oracle corpus not fetched, run `make samples-oracle`: %v", err)
+	}
+
+	mpns := func(path string) map[string]string {
+		t.Helper()
+		d, err := (&Loader{}).ReadDesign(path)
+		if err != nil {
+			t.Fatalf("ReadDesign %s: %v", path, err)
+		}
+		got := map[string]string{}
+		for _, c := range d.GetComponents() {
+			if m := c.GetMpn(); m != "" {
+				got[c.GetRefDes()] = m
+			}
+		}
+		return got
+	}
+
+	fromSch, fromPCB := mpns(sampleJetson), mpns(sampleJetsonBoard)
+	if len(fromPCB) == 0 {
+		t.Fatalf("the board file states an MPN on every footprint and the read resolved none; "+
+			"the schematic view of the same design resolves %d", len(fromSch))
+	}
+
+	var missing, differ int
+	for ref, want := range fromSch {
+		switch got, ok := fromPCB[ref]; {
+		case !ok:
+			missing++
+		case got != want:
+			differ++
+		}
+	}
+	if missing != 0 || differ != 0 {
+		t.Errorf("views disagree on part identity: %d ref_des present in the schematic and absent "+
+			"from the board, %d carrying a different MPN (schematic %d, board %d)",
+			missing, differ, len(fromSch), len(fromPCB))
+	}
+}

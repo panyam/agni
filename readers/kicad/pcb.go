@@ -78,8 +78,10 @@ func extractPCB(root *node, src string) *ir.Design {
 			Attributes:   map[string]string{},
 			Prov:         &ir.Provenance{SourceFile: src, NativeId: uuidOf(fp), NativeIdKind: kicadNativeIDKind},
 		}
-		if val := propValue(fp, "Value"); val != "" {
-			comp.Attributes["Value"] = val
+		for _, key := range partIdentityProps {
+			if v := propValue(fp, key); v != "" {
+				comp.Attributes[key] = v
+			}
 		}
 		// A placed footprint is one physical section (a board has no multi-unit split). Emit it
 		// so section-aware consumers (diff's per-section part_ref, check's pin walk) see the same
