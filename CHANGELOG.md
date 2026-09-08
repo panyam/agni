@@ -8,6 +8,15 @@ process and the versioning rules are in `RELEASING.md`.
 Each entry summarizes.  The full per-release write-up lives in `RELEASES/<tag>.md` and is what the
 GitHub Release body carries.
 
+## [0.2.1] - 2026-09-08
+
+Full notes: [`RELEASES/v0.2.1.md`](RELEASES/v0.2.1.md).
+
+### Fixed
+
+- The viewer's default layout opened on the Trace tab, hiding the query surface behind it.  Every
+  other dock stack set its opening tab; the query stack did not, and it became a stack in v0.2.0.
+
 ## [0.2.0] - 2026-09-07
 
 Full notes: [`RELEASES/v0.2.0.md`](RELEASES/v0.2.0.md).
@@ -78,6 +87,7 @@ container image, with the tag as the single source of the version stamped into t
 
 Tag-only, no release notes.  The first tagged version.
 
+[0.2.1]: https://github.com/panyam/agni/releases/tag/v0.2.1
 [0.2.0]: https://github.com/panyam/agni/releases/tag/v0.2.0
 [0.1.1]: https://github.com/panyam/agni/releases/tag/v0.1.1
 [0.1.0]: https://github.com/panyam/agni/releases/tag/v0.1.0
