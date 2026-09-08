@@ -1,0 +1,24 @@
+# Rung 13: what a genuinely broken read looks like once the review layer is scoring it, which is the
+# lesson the page's old "Serve it wrong first" section was reaching for and could not reach.
+#
+# That section told the reader to drop --symbol-path from a command serving the EDIF netlist and
+# promised 88 inconclusive findings. EDIF declares its own pins, so the flag does nothing there and
+# the run is byte-identical with and without it (agni issue 623). The output it printed was real,
+# though: it had been lifted from a review of the SCHEMATIC, whose symbols do live in a separate
+# library. So this spec reproduces it where it actually happens.
+#
+# The recipe is rung 1's, and all three parts are load-bearing: the .kicad_sch rather than the entry
+# netlist, --as-named so the declared companion does not redirect back to that entry, and the symbol
+# library moved aside, because a schematic's own directory subtree is always searched. The runner
+# works on a copy of the fixture, so the mv does not need undoing.
+#
+# match keeps the headline tally and one item row. Every inconclusive row carries the same long
+# unresolved-symbol list, so printing all eight would be eight copies of one sentence.
+fixture: examples/tutorial-project
+show: |
+  mv designs/gateway/symbols designs/gateway/symbols-off
+  agni review designs/gateway/gateway.kicad_sch --as-named
+script: |
+  mv designs/gateway/symbols designs/gateway/symbols-off
+  agni review designs/gateway/gateway.kicad_sch --as-named
+match: '^\*\*[0-9]|^\| P1 \|'
