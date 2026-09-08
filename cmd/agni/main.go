@@ -867,6 +867,14 @@ func reviewCmd() *cobra.Command {
 			"traceability matrix. Automation is manifest-level (stated once); pass/fail/n-a is per design.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Beside the --server check and before redirectOut, for the same reason: a run that cannot
+			// produce what was asked for must refuse while the output file is still uncreated, rather
+			// than announce "wrote <file>" over something nobody wanted (agni issue 637).
+			if coverageShadowsFormat(cmd, coverage) {
+				return fmt.Errorf("review: --coverage emits the per-area rollup, which renders as markdown "+
+					"only, so --format %q would be discarded. Pass one or the other. The per-item page "+
+					"(--format html on its own) already carries the same rollup in its header", format)
+			}
 			// Before redirectOut, so a --server this process cannot honour refuses the run while the
 			// output file is still uncreated. Creating it first meant a refused run still announced
 			// "wrote <file>" over an empty one (agni issue 637).
@@ -1079,7 +1087,7 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&intentPath, "intent-path", "", "a YAML design-intent declaration (expected modules, voltage domains); its rules join the catalog so intent-bound items resolve")
 	cmd.Flags().StringVar(&conventions, "conventions", "", "an operator naming-convention config (YAML); its rules join the catalog namespaced as <config name>/<rule name>, and its lexicon teaches the run which net names are this project's power rails, grounds, and feedback nodes")
 	cmd.Flags().StringVar(&boardPath, "board-path", "", "a board-geometry file (.kicad_pcb / IPC-2581 .xml|.cvg) attached to the netlist design so board-tier DRC items resolve pass/fail instead of not-applicable")
-	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report")
+	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report. Markdown only, so it refuses an explicit --format; the --format html page already carries the same rollup in its header")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), or html (the checklist as a self-contained page, every finding per item)")
 	serverFlag(cmd, &serverVal)
@@ -1091,6 +1099,29 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&failOnOutcome, "fail-on-outcome", "", "exit non-zero when any checklist ITEM sits at one of these outcomes (comma-separated, e.g. fail or fail,provisional). This is the coverage axis, not `check --fail-on`'s severity axis: it asks whether a question was answered, not how bad the answer was. Off by default")
 	cmd.Flags().IntVar(&minAnswered, "min-answered", 0, "exit non-zero when fewer than N checklist items produced an ANSWER (pass, fail, provisional, or computed-n/a). Distinct from the covered count, which still counts an item whose rule is present but whose inputs are absent; that is the regression a severity gate cannot see. Off by default")
 	return cmd
+}
+
+// coverageShadowsFormat reports whether --coverage would silently throw away a --format the caller
+// asked for.
+//
+// The two flags are different axes and only one of them has more than one rendering. --coverage
+// emits the per-area rollup, which exists as markdown alone; --format picks the surface of the
+// per-item report. The switch that dispatches them tests coverage FIRST, so every format lost to it
+// silently: `--coverage --format html -o page.html` wrote a markdown table into a file named .html,
+// and a browser showed it as text.
+//
+// Refusing beats extending here. A coverage JSON would need a wire message to satisfy C31 rather
+// than a shape invented for one consumer, and a coverage HTML would duplicate an artifact that
+// already exists, since the per-item page carries the same rollup in its header band.
+//
+// It asks Changed rather than comparing against the default, because --format defaults to markdown
+// on review and to the empty string on results. Only an explicit request can be discarded, and only
+// an explicit request is worth refusing over.
+func coverageShadowsFormat(cmd *cobra.Command, coverage bool) bool {
+	if !coverage || !cmd.Flags().Changed("format") {
+		return false
+	}
+	return cmd.Flags().Lookup("format").Value.String() != "markdown"
 }
 
 // gateReview applies the CI gate after the report has been rendered, so a tripped pipeline still gets

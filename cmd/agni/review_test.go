@@ -761,3 +761,56 @@ func TestReviewLoadSwitchSizing(t *testing.T) {
 		t.Errorf("no seeded overcurrent threshold must read needs-data, never pass\n%s", unseeded)
 	}
 }
+
+// --coverage and --format are different axes, and the render switch tests coverage first, so an
+// explicit --format used to be discarded without a word: `--coverage --format html -o page.html`
+// wrote a markdown table into a file named .html and a browser showed it as text. Only an explicit
+// --format is refused, since the flag defaults to markdown and the rollup is markdown.
+func TestReviewCoverageRefusesAFormatItCannotRender(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{"html is refused", []string{"--coverage", "--format", "html"}, true},
+		{"json is refused", []string{"--coverage", "--format", "json"}, true},
+		{"markdown is what the rollup already is", []string{"--coverage", "--format", "markdown"}, false},
+		{"coverage alone is unaffected", []string{"--coverage"}, false},
+		{"a format without coverage is unaffected", []string{"--format", "json"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := reviewCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			cmd.SetArgs(append(append([]string{"--checklist", "testdata/review/mini.yaml"}, tc.args...),
+				"testdata/review/can-broken.edn"))
+			err := cmd.Execute()
+			if tc.wantErr && err == nil {
+				t.Fatalf("wanted a refusal, got none")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("wanted no refusal, got %v", err)
+			}
+			if tc.wantErr && !strings.Contains(err.Error(), "would be discarded") {
+				t.Errorf("the refusal should say the format was going to be thrown away: %v", err)
+			}
+		})
+	}
+}
+
+// The refusal has to land before -o creates the file, or a rejected run leaves an empty artifact and
+// announces it, which is the shape agni issue 637 fixed for --server.
+func TestReviewCoverageRefusalLeavesNoOutputFile(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "page.html")
+	cmd := reviewCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--checklist", "testdata/review/mini.yaml", "--coverage", "--format", "html",
+		"-o", p, "testdata/review/can-broken.edn"})
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("wanted a refusal")
+	}
+	if _, err := os.Stat(p); err == nil {
+		t.Errorf("a refused run created %s", p)
+	}
+}

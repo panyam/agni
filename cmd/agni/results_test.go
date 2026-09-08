@@ -289,3 +289,28 @@ func TestResultsCarriesSkippedRules(t *testing.T) {
 		}
 	}
 }
+
+// results shares review's shadowing: its render switch tests coverage before format, so an explicit
+// --format was discarded silently. The rollup renders as markdown alone, so an explicit request for
+// anything else is refused rather than quietly answered with markdown.
+func TestReviewResultsCoverageRefusesAFormatItCannotRender(t *testing.T) {
+	design := isolatedDesign(t, "testdata/review/can-broken.edn")
+	doc := filepath.Join(t.TempDir(), "review.results.json")
+	runCLI(t, reviewCmd(), "--checklist", "testdata/review/mini.yaml", "--results-out", doc, design)
+
+	cmd := resultsCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--coverage", "--format", "json", doc})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("wanted a refusal for --coverage --format json")
+	}
+	if !strings.Contains(err.Error(), "would be discarded") {
+		t.Errorf("the refusal should say the format was going to be thrown away: %v", err)
+	}
+	// --coverage on its own is the supported spelling and stays working.
+	if got := runCLI(t, resultsCmd(), "--coverage", doc); !strings.Contains(got, "Review coverage") {
+		t.Errorf("--coverage alone should still render the rollup, got:\n%s", got)
+	}
+}
