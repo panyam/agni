@@ -1,0 +1,19 @@
+# KiCad's own answer for hier_busoffset_root.kicad_sch, and the reference this fixture exists to meet.
+#
+# Regenerate with:
+#   kicad-cli sch export netlist --format kicadsexpr -o out.net hier_busoffset_root.kicad_sch
+# then read the (name ...) and (ref/pin ...) pairs out of each (net ...) block.  Produced by
+# Eeschema 10.0.4.  Do not hand-edit: the point of the file is that we did not choose the answer.
+#
+# The parent's bus is PP[2..3] and the sheet pin is PP[0..1], so the two buses pair off BY BIT
+# POSITION and not by member name: the child's PP0 is the parent's PP2.  A reader that joined
+# members by name would leave all four taps in separate nets, and one that promoted by name would
+# merge the two buses outright.  The sibling hier_busvec fixture is the case where the two names are
+# equal and the same positional map is the identity (agni issue 561).
+#
+# <net name>  <ref>.<pin> ...
+/PP2  R1.1 R101.1
+/PP3  R2.1 R102.1
+unconnected-(R1-Pad2)    R1.2
+unconnected-(R2-Pad2)    R2.2
+unconnected-(R101-Pad2)  R101.2
