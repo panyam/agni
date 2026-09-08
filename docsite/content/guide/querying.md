@@ -363,6 +363,38 @@ is safe to commit or mail.
 agni query designs/gateway/gateway.edn 'rail(?n) => ?n' --format csv > rails.csv
 ```
 
+## Following a signal across the parts in the way
+
+A query joins facts. It cannot follow a path, because a path is not a fact: it is a sequence, of
+unknown length, and there is no relation whose columns can hold one. So "which nets carry a resistor"
+is a query and "what does this pin go through to reach that one" is not.
+
+`agni trace` is that second question. It walks from one pin to another through the series parts that
+split a net without breaking the path, and prints what it crossed.
+
+{{ agniRun "content/guide/runs/trace-path.yaml" }}
+
+Three things in that output are the point of the command.
+
+**The part in the middle.** `R3` sits between the MCU's reset pin and the PMIC's power-good output,
+so the two pins are on different nets and no per-net question can see that they are joined. A series
+element splitting a net is the ordinary case, not an awkward one, which is why "are these connected"
+is so often answered wrongly by eye.
+
+**What else is sitting there.** The parts on each net are listed, probe points first, because a
+reviewer reading a route is usually working out where to put a probe or which capacitor is in the
+way. Filtering the output down to the series elements would remove the most useful thing on the line.
+
+**A no is an answer.** The third trace found nothing, and it says which nets the two pins are actually
+on, how far it searched, and what it will and will not cross. A capacitor is a DC block, so the walk
+never crosses one; a rail or plane can be where a route ENDS but is never passed through, since a
+supply joins everything to everything and a route through one would mean nothing.
+
+What the command refuses to do is guess. A pin you name that the design does not have is an error
+rather than an empty result, because a name spelled wrong in a declaration and two pins that are
+genuinely unconnected are opposite problems, and reporting the first as the second sends you to look
+at the board instead of at what you typed.
+
 ## What a query is not
 
 A query **reports**, it does not judge. It has no notion of pass/fail, that is what

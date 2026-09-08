@@ -1,0 +1,15 @@
+# Three traces on the gateway, one per outcome a trace can reach.
+#
+# The gateway rather than a conformance board, because the question this command answers is about a
+# design whose names mean something: MCU_NRST reaching PMIC_PG through a resistor is a story a
+# reviewer recognises, and R3 sitting in the middle of it is exactly the part a per-net question
+# cannot see.
+#
+# The no-route is here deliberately. It is an ANSWER, not a failure, and printing it beside a route
+# is what shows the difference: it names both nets, states the radius it searched to, and says what
+# the walk does and does not cross, so a reader can judge it rather than take it on trust.
+fixture: examples/tutorial-project
+steps:
+  - script: agni trace designs/gateway/gateway.edn --from U3.10 --to U1.5
+  - script: agni trace designs/gateway/gateway.edn --from U1.2 --to U3.2
+  - script: agni trace designs/gateway/gateway.edn --from U3.10 --to U1.1

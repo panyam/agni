@@ -78,19 +78,25 @@ func extractPCB(root *node, src string) *ir.Design {
 			Attributes:   map[string]string{},
 			Prov:         &ir.Provenance{SourceFile: src, NativeId: uuidOf(fp), NativeIdKind: kicadNativeIDKind},
 		}
+		props := map[string]string{}
 		for _, key := range partIdentityProps {
 			if v := propValue(fp, key); v != "" {
 				comp.Attributes[key] = v
+				props[key] = v
 			}
 		}
 		// A placed footprint is one physical section (a board has no multi-unit split). Emit it
 		// so section-aware consumers (diff's per-section part_ref, check's pin walk) see the same
 		// structure they get from EDIF/schematic readers; the "part" is the footprint.
 		comp.Sections = []*ir.ComponentSection{{
-			Index:      0,
+			Index: 0,
+			// The same properties ride the SECTION as well as the component. A placed footprint is one
+			// section, so the two carry the same values, and consumers read different halves: the
+			// datasheet join reads the component, and the EDIF writer emits a section's attributes as
+			// the instance's properties (agni issue 584).
+			Attributes: props,
 			PartRef:    fpid,
 			LibraryRef: libPrefix(fpid),
-			Attributes: map[string]string{},
 			Prov:       &ir.Provenance{SourceFile: src, NativeId: uuidOf(fp), NativeIdKind: kicadNativeIDKind},
 		}}
 		d.Components = append(d.Components, comp)

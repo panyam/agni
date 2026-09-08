@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/readers/edif"
 )
@@ -108,12 +110,13 @@ func TestEmitEDIFNamesEveryInstanceOnce(t *testing.T) {
 				t.Fatal(err)
 			}
 			seen := map[string]bool{}
-			for line := range bytes.SplitSeq(buf.Bytes(), []byte("\n")) {
-				fields := bytes.Fields(line)
-				if len(fields) < 2 || string(fields[0]) != "(instance" {
-					continue
+			for _, m := range emittedInstanceIDs.FindAllStringSubmatch(buf.String(), -1) {
+				// The identifier is the bare atom, or the ID inside a (rename ID "display") for a
+				// source name that had to be minted into a legal one.
+				name := m[1]
+				if name == "" {
+					name = m[2]
 				}
-				name := string(fields[1])
 				if seen[name] {
 					t.Errorf("instance name %q written twice; an instanceRef to it reaches only the first", name)
 				}
@@ -169,4 +172,56 @@ func anchoredPairs(d *ir.Design) ([]string, int) {
 		}
 	}
 	return pairs, unanchored
+}
+
+// emittedInstanceIDs pulls the identifier an (instance ...) is written under, in either name form.
+// The identifier is what an (instanceRef ...) looks up, so it is the string that has to be unique.
+var emittedInstanceIDs = regexp.MustCompile(`\(instance (?:\(rename ([^\s()]+) "[^"]*"\)|([^\s()]+)) `)
+
+// TestEmitEDIFKeepsPartIdentity requires a part number stated by the source to survive an export.
+//
+// The datasheet tier joins on component.mpn, so an export that drops it hands the recipient a netlist
+// that looks complete and silently fails a BOM join. The writer carries a SECTION's attributes into
+// the instance's properties, which is why a reader that records the part number only on the component
+// exports nothing: the value is in the IR and not in the half the writer reads (agni issue 584).
+//
+// Rows with no MPN in the source are skipped rather than asserted at zero, because most fixtures here
+// state none and a design that carries no part number legitimately exports none.
+func TestEmitEDIFKeepsPartIdentity(t *testing.T) {
+	for _, tc := range emitCases {
+		t.Run(tc.name, func(t *testing.T) {
+			src := readForEmit(t, tc.path)
+			want := map[string]string{}
+			for _, c := range src.GetComponents() {
+				if m := c.GetMpn(); m != "" {
+					want[c.GetRefDes()] = m
+				}
+			}
+			if len(want) == 0 {
+				t.Skip("source states no part number")
+			}
+			// The re-read goes through edif.Read rather than the Loader, so the format-neutral
+			// ingestion passes have not run on it. Stamping here is what makes the two sides
+			// comparable; without it the assertion fails for every format on an empty right-hand side.
+			out := roundTripEDIF(t, src, tc.path)
+			classify.StampMPN(out)
+			got := map[string]string{}
+			for _, c := range out.GetComponents() {
+				if m := c.GetMpn(); m != "" {
+					got[c.GetRefDes()] = m
+				}
+			}
+			var lost []string
+			for ref, m := range want {
+				if got[ref] != m {
+					lost = append(lost, fmt.Sprintf("%s=%s", ref, m))
+				}
+			}
+			if len(lost) > 0 {
+				sort.Strings(lost)
+				t.Errorf("%d of %d part number(s) lost through the emit, first few: %v",
+					len(lost), len(want), lost[:min(5, len(lost))])
+			}
+		})
+	}
 }

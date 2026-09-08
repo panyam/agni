@@ -183,6 +183,11 @@ type Model interface {
 	// series element splits the net, so "a fuse sits between connector and regulator" is
 	// invisible to any per-net quantifier.
 	Reach(start *ir.Net, hops int) Reach
+	// ReachToTerminus is the same walk with one admission rule changed: a bus-like net is a legal
+	// DESTINATION and still an illegal transit node. A question whose answer is "we landed on a
+	// rail" (a pull-up's terminus, a trace to a pin that sits on one) cannot be asked of Reach,
+	// which drops such a net from the result set entirely.
+	ReachToTerminus(start *ir.Net, hops int) Reach
 	Between(from, to *ir.Net, class ComponentClass, hops int) bool
 	// board tier (WS3-008): each net's routed copper from the board-geometry sidecar.
 	// Empty when the model was built without a board (NewModel); see NewModelWithBoard.

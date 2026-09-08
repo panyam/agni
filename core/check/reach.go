@@ -71,8 +71,29 @@ func IsBusLike(m Model, n *ir.Net) bool {
 		m.IsGroundNet(n) || len(n.Connections) > maxWalkFan
 }
 
-// reach runs the bounded BFS over the model's pass-element adjacency.
+// Reach runs the bounded BFS over the model's pass-element adjacency, refusing a bus-like net
+// outright. See walk for the shared body and admitTerminus for the other admission rule.
 func (m *irModel) Reach(start *ir.Net, hops int) Reach {
+	return m.walk(start, hops, false)
+}
+
+// ReachToTerminus is Reach with one difference: a bus-like net is admitted as a DESTINATION and is
+// still refused as a transit node. The walk lands on a rail, records how it got there, and does not
+// continue through it.
+//
+// It exists because a net may legitimately be an endpoint of a question whose interior it must never
+// be. Reach excludes a bus-like net from the result set entirely (not merely from the frontier), so
+// a walk cannot arrive at the thing a pull-up terminates on or at a device pin that sits on a rail,
+// and PullUpPathToRail carries its own BFS for exactly that reason. The distinction is a property of
+// the POSITION in the path rather than of the net, which is why it cannot be expressed by filtering
+// the node set once (agni issue 374).
+func (m *irModel) ReachToTerminus(start *ir.Net, hops int) Reach {
+	return m.walk(start, hops, true)
+}
+
+// walk is the bounded BFS both reach variants share. admitTerminus decides what happens at a
+// bus-like net: skip it entirely, or record it and refuse to expand it.
+func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
 	r := Reach{Crossed: map[string]bool{}, Parent: map[string]ReachStep{}, Depth: map[string]int{}}
 	if start == nil {
 		return r
@@ -96,14 +117,21 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 					if visited[o.Name] || o.Name == n.Name {
 						continue
 					}
-					if IsBusLike(m, o) {
+					busLike := IsBusLike(m, o)
+					if busLike && !admitTerminus {
 						continue
 					}
 					visited[o.Name] = true
 					r.Crossed[c.ComponentRef] = true
-					r.Parent[o.Name] = ReachStep{From: n.Name, Through: c.ComponentRef}
+					r.Parent[o.Name] = ReachStep{
+						From: n.Name, Through: c.ComponentRef,
+						FromPin: c.PinRef, ToPin: pinOn(o, c.ComponentRef),
+					}
 					r.Depth[o.Name] = depth + 1 // BFS, so the first visit is the shortest
 					r.Nets = append(r.Nets, o)
+					if busLike {
+						continue // a legal destination, never a transit node
+					}
 					next = append(next, o)
 				}
 			}
@@ -111,6 +139,18 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 		frontier = next
 	}
 	return r
+}
+
+// pinOn returns ref's pin designator on net n, or "" when the connection carries none. The first
+// match wins: a part with both pins on one net is a short rather than a crossing, and the walk
+// refuses that case (o.Name == n.Name) before it gets here.
+func pinOn(n *ir.Net, ref string) string {
+	for _, c := range n.Connections {
+		if c.ComponentRef == ref {
+			return c.PinRef
+		}
+	}
+	return ""
 }
 
 // Between reports whether a component of the given class sits ON the series path from

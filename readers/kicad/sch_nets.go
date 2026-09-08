@@ -490,10 +490,24 @@ func gp(p *geom.Point) netgraph.Point {
 // kicadTransform in the rotation only: it uses KiCad's raw angle rather than the render-frame angle
 // geomRotation produces. Lib pin coordinates are in KiCad's own (un-flipped) frame, so the rotation
 // must be applied in that frame; geomRotation's 360-deg flip is right for 0/180 but reverses
-// 90<->270, which swaps a rotated symbol's two pins onto the wrong nets. Origin and mirror are the
-// same as kicadTransform.
+// 90<->270, which swaps a rotated symbol's two pins onto the wrong nets.
+//
+// A MIRRORED placement takes the flipped angle back, and the reason is an order the two sides do not
+// share. KiCad applies the rotation and THEN the mirror; geomath.ApplyTransform applies the mirror
+// and then the rotation. Those agree at 0 and 180 and disagree at 90 and 270, because a reflection
+// and a quarter turn do not commute. For a reflection M and a rotation R, M∘R equals R⁻¹∘M, so
+// feeding the INVERSE angle to a mirror-first composer reproduces KiCad's order exactly, and
+// geomRotation is that inverse (360-deg). Unmirrored, M is the identity, nothing has to commute, and
+// the raw angle is what the un-flipped frame wants.
+//
+// The two pins of a symbol placed mirrored at 90 or 270 are otherwise swapped onto each other's nets
+// (agni issue 577). Measured against kicad-cli across all twelve placements of a two-pin symbol; the
+// matrix is TestMirroredPinPlacement.
 func pinTransform(ps *node) *geom.Transform {
 	t := kicadTransform(ps)
+	if t.MirrorX || t.MirrorY {
+		return t
+	}
 	if a := ps.Child("at").Arg(3); a != nil {
 		if deg, err := strconv.ParseFloat(atomOf(a), 64); err == nil {
 			t.RotationDeg = ((int32(deg) % 360) + 360) % 360

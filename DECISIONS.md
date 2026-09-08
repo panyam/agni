@@ -1498,3 +1498,28 @@ proxy test would make `CONSTRAINTS.md` less trustworthy rather than more.
 **Reopen if** a review-shaped rule is violated in the tree and review does not catch it. That is
 evidence the proxy is worth its cost, and it is the same evidence C6 and C20 supplied for their side
 of the line.
+
+---
+
+## A path is not a query column, and stringifying one would settle that badly
+
+**Question.** `agni trace` returns a route. Should the same route be a column in `agni query`, so a
+connectivity question can be asked over a hundred rows rather than one pair at a time? Raised while
+building the trace command (agni issue 518), which names the query form as one of its pieces.
+
+**Answer. Not as a column on `query.Value`, which is a scalar by declaration.** The cheap version is
+to render the path into `Value.S` and move on. It looks free, and it is not: nothing can join on that
+string, sort it, or count its hops, so every consumer that wants any of those parses the rendering
+back out, and the rendering then becomes a format nobody can change. The honest version gives `Value`
+a non-scalar shape, which is a contract change through `report.Table`, all five output formats, the
+web wire and the fact-schema arg kinds, for one column.
+
+**What to do instead.** Project the path as TUPLES rather than as a value: a `hop(?from, ?through,
+?to, ?i)` relation emitting one row per crossing keeps every column scalar, and the aggregates that
+already exist (`count`, `min`, `max`) then answer the questions a path column was wanted for. "Which
+nets reach a rail through more than one resistor" is a `count` over that relation, and it is the
+counting datalog is otherwise unable to do (agni issue 374 names it as a motivating gap).
+
+**Reopen if** a question turns up that genuinely needs the ORDERED path as one value in one cell,
+which the tuple form cannot express without the caller re-sorting by `?i`. Rendering a saved view is
+the likely candidate, and the answer there may be a report-side join rather than a column type.
