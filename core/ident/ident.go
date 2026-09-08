@@ -201,31 +201,83 @@ func Compare(a, b string) Result {
 	if a == b {
 		return Result{Match: Exact, A: a, B: b}
 	}
-	altsA, altsB := Alternatives(a), Alternatives(b)
+	altsA, altsB := readingsOf(a), readingsOf(b)
 	for _, x := range altsA {
 		for _, y := range altsB {
-			if x == y {
-				return Result{Match: Exact, A: x, B: y, Note: alternativeNote(a, b, x, y)}
+			if x.raw == y.raw {
+				return Result{Match: Exact, A: x.raw, B: y.raw, Note: alternativeNote(a, b, x.raw, y.raw)}
 			}
 		}
 	}
 	for _, x := range altsA {
 		for _, y := range altsB {
-			if Canonical(x) == Canonical(y) {
-				return Result{Match: Normalized, A: x, B: y, Note: joinNotes(differences(x, y), alternativeNote(a, b, x, y))}
+			if x.canonical == y.canonical {
+				return Result{Match: Normalized, A: x.raw, B: y.raw,
+					Note: joinNotes(differences(x.raw, y.raw), alternativeNote(a, b, x.raw, y.raw))}
 			}
 		}
 	}
-	for _, x := range altsA {
-		for _, y := range altsB {
-			if skipped, ok := tokenSubsequence(Canonical(x), Canonical(y)); ok {
-				return Result{Match: Fuzzy, A: x, B: y,
+	// Tokens are split here rather than beside the canonical forms, because only this pass needs
+	// them and it is reached only when both passes above failed. Splitting them eagerly cost four
+	// allocations on every normalized match, which is the ordinary case: most map rows name one pin
+	// and settle in the pass above.
+	tokA, tokB := tokensOf(altsA), tokensOf(altsB)
+	for i, x := range altsA {
+		for j, y := range altsB {
+			if skipped, ok := tokenSubsequence(tokA[i], tokB[j]); ok {
+				return Result{Match: Fuzzy, A: x.raw, B: y.raw,
 					Note: joinNotes("one side carries "+strings.Join(skipped, ", ")+" and the other does not",
-						differences(x, y), alternativeNote(a, b, x, y))}
+						differences(x.raw, y.raw), alternativeNote(a, b, x.raw, y.raw))}
 			}
 		}
 	}
 	return Result{Match: None, A: a, B: b}
+}
+
+// reading is one alternative of a cell with the derived forms the comparison loops need, computed
+// once rather than per pair.
+//
+// Compare walks every alternative on the left against every alternative on the right, so anything
+// derived inside those loops was recomputed n x m times for n + m distinct inputs. On a cell naming
+// three functions a side that is sixty-four canonicalizations where eight would do.
+//
+// IT IS NOT A FREE WIN and the benchmarks say so. Holding the derived forms costs one slice per
+// side, so a single-valued comparison, which is most map rows, went from 20 allocations to 22 while
+// the three-a-side cell went from 168 to 50. Read the allocation counts rather than the timings
+// there: ns/op on this benchmark swings by a factor of two between runs on one machine, and the
+// allocation counts do not move at all. Two allocations is the price of one match ladder instead of
+// a second short-circuit path beside it, and a duplicated ladder is exactly the two-normalizers
+// defect this package exists to prevent.
+//
+// A CALLER COMPARING MANY AGAINST MANY should not reach for Compare in a nested loop at all. This
+// hoist makes one call cheaper and leaves the caller's own n x m intact: two hundred map rows
+// against sixteen hundred nets is 320,000 calls however fast each one is. Canonical is the shared
+// key, so build a map keyed on it once and look each candidate up, which is O(n + m) and turns the
+// question into a lookup. Compare is for deciding one pair and explaining the answer.
+//
+// The hoist itself is pure. Canonical has no state and no side effect, so every reading the loops
+// see is the value they computed for themselves before.
+type reading struct {
+	raw       string
+	canonical string
+}
+
+func readingsOf(s string) []reading {
+	alts := Alternatives(s)
+	out := make([]reading, 0, len(alts))
+	for _, a := range alts {
+		out = append(out, reading{raw: a, canonical: Canonical(a)})
+	}
+	return out
+}
+
+// tokensOf splits each reading once, for the fuzzy pass alone.
+func tokensOf(rs []reading) [][]string {
+	out := make([][]string, len(rs))
+	for i, r := range rs {
+		out[i] = strings.Split(r.canonical, "_")
+	}
+	return out
 }
 
 // alternativeNote says which half of a multi-valued cell matched, and only when a cell really had
@@ -301,8 +353,8 @@ func joinNotes(parts ...string) string {
 // Both ends must match, which is what stops the rule widening into nonsense. Without that anchor
 // TXD1 is a subsequence of GMAC0_MII_RGMII_TXD1 and every signal on the pin would match every other.
 // A single token is never fuzzy-matched for the same reason: there is nothing to anchor.
-func tokenSubsequence(x, y string) ([]string, bool) {
-	a, b := strings.Split(x, "_"), strings.Split(y, "_")
+func tokenSubsequence(x, y []string) ([]string, bool) {
+	a, b := x, y
 	if len(a) > len(b) {
 		a, b = b, a
 	}
