@@ -21,7 +21,10 @@ BASELINE="hack/ir_model_baseline.txt"
 EXCLUDE='^(gen|readers|internal/netgraph|examples|core/graph|core/diff|core/validate)/'
 
 current() {
-  grep -rEn 'func [^{]*\*ir\.Design' --include='*.go' . 2>/dev/null | sed -E 's#^\./##' \
+  # --exclude-dir=.claude: an agent finishing inside this repo leaves a git worktree under
+  # .claude/worktrees/, a second full copy of the tree, and every producer is then found twice.
+  # This check is about THIS checkout's source, so a nested checkout is not part of it.
+  grep -rEn 'func [^{]*\*ir\.Design' --include='*.go' --exclude-dir=.claude . 2>/dev/null | sed -E 's#^\./##' \
     | grep -vE '_test\.go:' | while IFS= read -r line; do
       file=${line%%:*}
       dir=$(dirname "$file")

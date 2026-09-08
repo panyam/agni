@@ -38,8 +38,12 @@ trap restore EXIT
 outputs | xargs -0 tar cf "$tmp/before.tar"
 
 outputs | xargs -0 rm -f
-if ! (cd docsite && $GO run . -build >/dev/null 2>&1); then
+# Keep the build's stderr. A spec that cannot render does NOT fail the build (AgniRun puts the error
+# in the page for the reader instead), so its capture simply never appears and the comparison below
+# reports a missing file with no reason beside it. The kept output is what says why.
+if ! (cd docsite && $GO run . -build >/dev/null 2>"$tmp/build.err"); then
   echo "tutorial-runs-check: the docsite build failed, so captures could not be verified" >&2
+  cat "$tmp/build.err" >&2
   exit 1
 fi
 outputs | xargs -0 tar cf "$tmp/after.tar"
@@ -60,5 +64,15 @@ if diff -r "$tmp/before" "$tmp/after" >/dev/null 2>&1; then
   exit 0
 fi
 echo "tutorial captures are stale - run 'make tutorial-runs' and commit the result:" >&2
-diff -rq "$tmp/before" "$tmp/after" 2>&1 | sed "s#$tmp/before/##; s#$tmp/after/##; s/^/  /" >&2
+# `|| true` because diff exits non-zero here by definition, and `set -e` with pipefail would end the
+# script on it. That is why everything below this line used to be unreachable, the original `exit 1`
+# included, which was harmless only because set -e exited 1 anyway.
+diff -rq "$tmp/before" "$tmp/after" 2>&1 | sed "s#$tmp/before/##; s#$tmp/after/##; s/^/  /" >&2 || true
+# A capture that is MISSING rather than different did not regenerate at all, which is a spec that
+# errored rather than a stale output. `make tutorial-runs` will not fix that one.
+if [ -s "$tmp/build.err" ]; then
+  echo >&2
+  echo "a capture did not regenerate, and the build said why:" >&2
+  grep -v '^[0-9]\{4\}/[0-9]\{2\}/' "$tmp/build.err" | sed 's/^/  /' >&2 || true
+fi
 exit 1
