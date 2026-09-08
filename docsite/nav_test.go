@@ -202,3 +202,95 @@ func TestBuiltSiteIsSelfContained(t *testing.T) {
 		t.Error("the build target does not copy static/ into dist, so a built site has no CSS, no JS bundle and no designs")
 	}
 }
+
+// headerEntry is one HeaderNavLinks.json record. A child carries the same fields, and "group": true
+// marks a child that renders as a subheading inside the dropdown rather than an ordinary item.
+type headerEntry struct {
+	Name     string        `json:"name"`
+	URL      string        `json:"url"`
+	Group    bool          `json:"group"`
+	Children []headerEntry `json:"children"`
+}
+
+func headerEntries(t *testing.T) []headerEntry {
+	t.Helper()
+	var links []headerEntry
+	if err := json.Unmarshal([]byte(read(t, headerLinks)), &links); err != nil {
+		t.Fatalf("parse %s: %v", headerLinks, err)
+	}
+	return links
+}
+
+// TestHeaderDropdownListsEveryPage fails when a section owns a top-level header dropdown but one of
+// its pages is missing from it. That page still renders and the sidebar still links it, so nothing
+// looks broken. It is absent from the most visible nav the site has, and you do not notice because
+// you reach the page by typing the URL you just wrote.
+//
+// TestHeaderNavLinksResolve covers the json-to-content direction. This is content-to-json, which is
+// the half nothing checked (agni issue 574).
+//
+// The exemption is READ FROM THE DATA rather than listed here. A section is required to be complete
+// only when it has a top-level entry of its own carrying children, which is the header declaring an
+// intent to itemise that section. `learn/` and `build/` appear instead as group headings inside
+// another section's dropdown, and `learn/` lists two of its fifteen pages on purpose, since twelve
+// chapters would swamp the menu and the course has its own index and level map. Give `learn/` a
+// top-level dropdown later and every chapter becomes required with no edit here. What this costs is
+// that a section itemised only as a group heading goes unchecked, which is why
+// TestSectionIndexLinksEveryPage carries no exemption at all.
+func TestHeaderDropdownListsEveryPage(t *testing.T) {
+	for _, entry := range headerEntries(t) {
+		section := strings.Trim(entry.URL, "/")
+		if len(entry.Children) == 0 || section == "" {
+			continue
+		}
+		if fi, err := os.Stat(filepath.Join(contentDir, section)); err != nil || !fi.IsDir() {
+			continue // a dropdown that is not a content section
+		}
+		listed := map[string]bool{}
+		for _, c := range entry.Children {
+			listed[strings.Trim(c.URL, "/")] = true
+		}
+		for _, slug := range sectionPages(t, section) {
+			if !listed[section+"/"+slug] {
+				t.Errorf("content/%s/%s.md is missing from the %q dropdown in %s, so it is absent from the header nav",
+					section, slug, entry.Name, headerLinks)
+			}
+		}
+	}
+}
+
+// sectionIndexLinks returns the page slugs content/<section>/index.md links with a relative link.
+// The indexes write `[EE1](levels/#parts-ee1)` rather than a section-qualified path, so the match is
+// anchored on the markdown link target: an optional "./", the slug, a slash, and an optional anchor.
+// Matching the bare slug anywhere in the body would pass on any mention of the page's name in prose.
+func sectionIndexLinks(t *testing.T, section string) map[string]bool {
+	t.Helper()
+	body := read(t, filepath.Join(contentDir, section, "index.md"))
+	out := map[string]bool{}
+	for _, m := range regexp.MustCompile(`\]\((?:\./)?([a-z0-9-]+)/(?:#[^)]*)?\)`).FindAllStringSubmatch(body, -1) {
+		out[m[1]] = true
+	}
+	return out
+}
+
+// TestSectionIndexLinksEveryPage fails when a section's index.md does not link one of the section's
+// pages. The index is where a reader who arrived at the section rather than at the page starts, so a
+// page missing from it is invisible to anyone browsing rather than searching.
+//
+// This one has no exemption. Every section indexes every page it holds today, `learn/` included,
+// which is what makes it the check covering the sections the header rule above lets through.
+func TestSectionIndexLinksEveryPage(t *testing.T) {
+	for _, section := range dispatchedSections(t) {
+		if _, err := os.Stat(filepath.Join(contentDir, section, "index.md")); err != nil {
+			t.Errorf("section %q has no index.md, so it has no landing page", section)
+			continue
+		}
+		linked := sectionIndexLinks(t, section)
+		for _, slug := range sectionPages(t, section) {
+			if !linked[slug] {
+				t.Errorf("content/%s/%s.md is not linked from content/%s/index.md, so nothing on the section's landing page reaches it",
+					section, slug, section)
+			}
+		}
+	}
+}
