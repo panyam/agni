@@ -1539,6 +1539,19 @@ What was accepted with it, since the objections above were right and none of the
   `TestRenderRouteIsTheOnlyFormat` holds the two callers to one answer. Treat the format as a
   contract, because it is one.
 - **One route per pair**, the BFS tree path, so `route` cannot answer about parallel paths at all.
+- **It crosses the API boundary as an opaque string, in fields that already existed.** No proto
+  changed, which is what made the reversal cheap and is also what hides the cost: the rendering
+  travels in `QueryRow.cells` and in a `Witness`, so it is a wire contract with no schema, nothing
+  validating it and nothing versioning it. That is the whole reason `model.RenderRoute` has to be the
+  only producer.
+- **A client cannot make the crossed parts clickable.** The column-kind declaration types `from` and
+  `net` as net entities and `path` as a plain string, so a viewer can link both endpoints of a route
+  and not the resistor between them. The same route arrives fully structured over `TraceDesign`
+  (`repeated TraceCross`), so the engine answers the identical question two ways with different
+  fidelity depending on which surface asked.
+
+The tuple form would close that last one as a side effect, since `?through` would carry a component
+kind per row, which is worth knowing when 374 is picked up: it is not only about counting.
 
 The tuple form is not superseded. A `hop(?from, ?through, ?to, ?i)` relation remains the right answer
 for counting and joining, and issue 374 still names it; this decided the rendering question only.
