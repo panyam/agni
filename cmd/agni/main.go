@@ -457,14 +457,18 @@ func checkCmd() *cobra.Command {
 			"above the threshold, so check gates CI.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Before redirectOut, so a --server this process cannot honour refuses the run while the
+			// output file is still uncreated. Creating it first meant a refused run still announced
+			// "wrote <file>" over an empty one (agni issue 637).
+			var err error
+			if srvSpec, err = resolveServer(serverVal); err != nil {
+				return err
+			}
 			closeOut, err := redirectOut(cmd, outPath)
 			if err != nil {
 				return err
 			}
 			defer closeOut()
-			if srvSpec, err = resolveServer(serverVal); err != nil {
-				return err
-			}
 			switch format {
 			case "text", "json", "csv", "markdown", "report":
 			case "html":
@@ -863,14 +867,18 @@ func reviewCmd() *cobra.Command {
 			"traceability matrix. Automation is manifest-level (stated once); pass/fail/n-a is per design.",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Before redirectOut, so a --server this process cannot honour refuses the run while the
+			// output file is still uncreated. Creating it first meant a refused run still announced
+			// "wrote <file>" over an empty one (agni issue 637).
+			var err error
+			if srvSpec, err = resolveServer(serverVal); err != nil {
+				return err
+			}
 			closeOut, err := redirectOut(cmd, reviewOutPath)
 			if err != nil {
 				return err
 			}
 			defer closeOut()
-			if srvSpec, err = resolveServer(serverVal); err != nil {
-				return err
-			}
 			// Parsed BEFORE anything is read, so a typo in a CI config fails in the first millisecond
 			// rather than after a full run over a family of boards. The gate is otherwise applied last,
 			// on every exit path below.

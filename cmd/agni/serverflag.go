@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -97,8 +98,40 @@ func serverFlag(cmd *cobra.Command, server *string) {
 			"running, which is asked whether it serves the same mounts from the same roots")
 }
 
-// resolveServer turns the flag into a spec.
-func resolveServer(server string) (serverSpec, error) { return parseServerSpec(server) }
+// resolveServer turns the flag into a spec, and refuses a `self` spec this process could not serve.
+//
+// The asset check belongs HERE rather than in serveSelf, for the reason the port check is already at
+// parse time. self mints links into an artifact and then serves them, so both of its preconditions
+// have to hold before the wrapped command writes anything; checking the assets afterwards left a
+// report full of links to a server that never bound (agni issue 637). Binding the port early and
+// stat-ing the assets late meant one precondition was exact and the other was a hope.
+//
+// A failed check CLOSES the listener parseServerSpec bound, per that function's contract that a
+// caller must close a spec it does not go on to serve. Without it every failed run would leak the
+// port it had just reserved, so the second attempt would fail for a different and more confusing
+// reason than the first.
+func resolveServer(server string) (serverSpec, error) {
+	spec, err := parseServerSpec(server)
+	if err != nil || !spec.self {
+		return spec, err
+	}
+	// Commands that mint links carry no --web-dir of their own, so the flag is empty here and the
+	// value comes from the agni.yaml/environment chain resolveWebDir applies.
+	if _, _, err := resolveWebAssets("", os.Getenv); err != nil {
+		spec.Close()
+		return serverSpec{}, fmt.Errorf("--server %s cannot serve: %w", server, err)
+	}
+	return spec, nil
+}
+
+// Close releases the listener a `self` spec is holding. Safe on a spec that holds none, so a caller
+// can close unconditionally on any path that does not go on to serve.
+func (s serverSpec) Close() error {
+	if s.ln == nil {
+		return nil
+	}
+	return s.ln.Close()
+}
 
 // serveSelf runs the viewer over the mount table THIS RUN built, then blocks.
 //

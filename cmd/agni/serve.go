@@ -138,7 +138,10 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// which is the default anyway, so it never once carried information. What it did carry was a
 	// standing invitation to pass a DESIGN folder, which is why checkWebAssets still has to say
 	// what it is not.
-	dir, source := resolveWebDir(webDir, os.Getenv)
+	dir, source, err := resolveWebAssets(webDir, os.Getenv)
+	if err != nil {
+		return err
+	}
 	// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read, and
 	// the serving line below already prints the resolved directory, so announcing that case here
 	// says nothing a reader does not have twice over. The environment is the one provenance
@@ -146,12 +149,6 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// a shell months ago outlives every memory of exporting it.
 	if source == envWebDir {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
-	}
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-		return fmt.Errorf("--web-dir %q is not a directory", dir)
-	}
-	if err := checkWebAssets(dir); err != nil {
-		return err
 	}
 	explicit, err := mounts.Parse(cliMountSpecs)
 	if err != nil {
@@ -483,6 +480,25 @@ func healthHandler() http.Handler {
 // esbuild bundle) before the server starts, so a misdirected `serve <design-folder>` fails upfront
 // with guidance instead of a cryptic template-not-found on the first request. The positional arg
 // is the assets dir (defaults to "web"); design folders are exposed with --mount, not this arg.
+// resolveWebAssets resolves --web-dir through its fallback chain and reports whether the viewer can
+// actually be served from what it found. It returns the directory and where the value came from, so a
+// caller can narrate the provenance.
+//
+// Split out of runViewer so `--server self` can ask the same question BEFORE the command it wraps
+// does its work (agni issue 637). That ordering is the whole point: self mints links into an artifact
+// and then serves them, so a run that cannot serve must fail while the artifact is still unwritten,
+// the way a taken port already does.
+func resolveWebAssets(flag string, getenv func(string) string) (dir, source string, err error) {
+	dir, source = resolveWebDir(flag, getenv)
+	if fi, serr := os.Stat(dir); serr != nil || !fi.IsDir() {
+		return dir, source, fmt.Errorf("--web-dir %q is not a directory. Set it with --web-dir, or web_dir in an agni.yaml, or %s. A checkout has one at ./%s", dir, envWebDir, defaultWebDir)
+	}
+	if err := checkWebAssets(dir); err != nil {
+		return dir, source, err
+	}
+	return dir, source, nil
+}
+
 func checkWebAssets(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "templates", "ViewerPage.html")); err != nil {
 		return fmt.Errorf("%q has no templates/ViewerPage.html: --web-dir is the viewer's own assets dir (defaults to %q), not a folder to browse; mount design folders with --mount name=path", dir, defaultWebDir)
