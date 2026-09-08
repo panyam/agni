@@ -134,16 +134,17 @@ The markdown above is for reading in a terminal and pasting into a review. `--fo
 same checklist as a self-contained page instead:
 
 ```
-agni review designs/gateway --format html --url-base http://localhost:8080 > review.html
+agni review designs/gateway --format html --server self > review.html
 ```
 
 Two differences from the markdown. Every finding is listed per item, where the Detail cell above caps
-at three, so a rule that fired on forty nets shows forty. And with a viewer running, each finding
-links to its proof: click the net and the board opens with the checks run and that subject in focus.
+at three, so a rule that fired on forty nets shows forty. And each finding links to its proof: click
+the net and the board opens with the checks run and that subject in focus.
 
-The link half needs the same two things `check --url-base` needs, a viewer address and a mount you
-DECLARED, and it prints the reason when it withholds one. The easiest way to get both right is
-`agni open designs/gateway`, which serves the board and prints the matching command.
+`--server self` starts the viewer over this run's own mount table and blocks until Ctrl-C, so the
+links cannot point somewhere the report was not read from. Naming a server someone else is running
+works too, and then the link half needs the same two things `check --server <url>` needs, a viewer
+address and a mount you DECLARED, and it prints the reason when it withholds one.
 
 ## Items about the board, not the netlist
 

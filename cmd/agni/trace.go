@@ -24,7 +24,7 @@ import (
 // walk held the path and discarded it on the way out. This is the smallest surface over the walk
 // that now returns it.
 func traceCmd() *cobra.Command {
-	var from, to, format, renderOut, urlBase, serverVal, traceOutPath string
+	var from, to, format, renderOut, serverVal, traceOutPath string
 	var srvSpec serverSpec
 	var hops int
 	cmd := &cobra.Command{
@@ -42,7 +42,7 @@ func traceCmd() *cobra.Command {
 				return err
 			}
 			defer closeOut()
-			if srvSpec, err = resolveServer(cmd, serverVal, urlBase); err != nil {
+			if srvSpec, err = resolveServer(serverVal); err != nil {
 				return err
 			}
 			a, err := parseEndpoint(from, "--from")
@@ -86,11 +86,16 @@ func traceCmd() *cobra.Command {
 			// survived a route would quietly drop half the answers people argue about.
 			//
 			// The guard is an EARLY-OUT, not the refusal. Withholding lives in viewerLinkMeta and
-			// TraceURL, both of which yield nothing without a url base, so removing this line changes
+			// TraceURL, both of which yield nothing without a server, so removing this line changes
 			// no output; what it saves is the design resolution and the content hash that
 			// viewerLinkMeta computes for a run that asked for no links. Worth knowing before reading
 			// it as the thing that keeps a link honest.
-			if urlBase != "" {
+			//
+			// IT GUARDS THE RESOLVED SPEC, not a flag variable. #633 replaced --url-base with --server
+			// and left this reading the old variable, so `trace --server <url>` skipped the block
+			// entirely: no link, and no reason either, while the deprecated alias still worked. That is
+			// the shape an early-out turns into when the thing it reads stops being set (agni issue 636).
+			if srvSpec.url != "" {
 				meta := viewerLinkMeta(cmd, cmd.Context(), ll, string(uri), srvSpec)
 				if u := rpt.TraceURL(meta, a.String(), b.String(), hops); u != "" {
 					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
@@ -140,7 +145,7 @@ func traceCmd() *cobra.Command {
 			"no-route can be re-asked wider.")
 	cmd.Flags().StringVar(&format, "format", "text", "text|json")
 	outFileFlag(cmd, &traceOutPath)
-	serverFlag(cmd, &serverVal, &urlBase)
+	serverFlag(cmd, &serverVal)
 	withSelfServer(cmd, &srvSpec)
 	cmd.Flags().StringVar(&renderOut, "render", "",
 		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+

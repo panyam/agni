@@ -27,7 +27,7 @@ type serverSpec struct {
 	// take it in between, and `self` learns its own port from ln.Addr() instead of guessing a free one
 	// and hoping. servicekit serves on it through WithListener.
 	ln net.Listener
-	// url is a remote server's base address, the old --url-base.
+	// url is a remote server's base address.
 	url string
 }
 
@@ -81,28 +81,24 @@ func parseServerSpec(v string) (serverSpec, error) {
 	}
 }
 
-// serverFlag registers --server on a command that mints viewer links, and keeps --url-base working as
-// a hidden alias for one release.
-func serverFlag(cmd *cobra.Command, server, urlBase *string) {
+// serverFlag registers --server on a command that mints viewer links.
+//
+// --url-base, which this replaced, is GONE rather than kept as a hidden alias. It survived one
+// release that way and the cost showed up immediately: five docsite pages and `agni open`'s own
+// printed command went on teaching it, and nothing failed, because a working alias makes stale
+// instructions indistinguishable from current ones (agni issue 636). A removed flag errors, which is
+// the feedback a rename is supposed to give.
+func serverFlag(cmd *cobra.Command, server *string) {
 	cmd.Flags().StringVar(server, "server", "",
 		"where the links this run mints should point. Empty (the default) mints none, which is what a "+
 			"pipeline wants. `self` starts a viewer on a free port, serves this run's own mount table, "+
 			"and blocks until Ctrl-C, so the links cannot disagree with what was read. `self:PORT` does "+
 			"the same on that port and fails if it is taken. A URL names a server someone else is "+
 			"running, which is asked whether it serves the same mounts from the same roots")
-	cmd.Flags().StringVar(urlBase, "url-base", "", "deprecated alias for --server")
-	_ = cmd.Flags().MarkHidden("url-base")
 }
 
-// resolveServer folds the two flags into one spec, preferring --server when both are given.
-func resolveServer(cmd *cobra.Command, server, urlBase string) (serverSpec, error) {
-	v := server
-	if v == "" && urlBase != "" {
-		fmt.Fprintln(cmd.ErrOrStderr(), "note: --url-base is deprecated; use --server")
-		v = urlBase
-	}
-	return parseServerSpec(v)
-}
+// resolveServer turns the flag into a spec.
+func resolveServer(server string) (serverSpec, error) { return parseServerSpec(server) }
 
 // serveSelf runs the viewer over the mount table THIS RUN built, then blocks.
 //

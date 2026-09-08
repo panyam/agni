@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"net"
 	"strings"
 	"testing"
-
-	"github.com/spf13/cobra"
 )
 
 func TestParseServerSpecShapes(t *testing.T) {
@@ -114,35 +111,19 @@ func TestSelfLinksAMintedMount(t *testing.T) {
 	}
 }
 
-// TestURLBaseStillWorksAndSaysItIsDeprecated: the alias keeps every existing invocation running,
-// including the `check ... --url-base ...` line `agni open` prints, and says so once on stderr.
-func TestURLBaseStillWorksAndSaysItIsDeprecated(t *testing.T) {
-	cmd := &cobra.Command{}
-	var errOut bytes.Buffer
-	cmd.SetErr(&errOut)
-
-	spec, err := resolveServer(cmd, "", "http://localhost:8080")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if spec.url != "http://localhost:8080" {
-		t.Errorf("url = %q, want the --url-base value", spec.url)
-	}
-	if !strings.Contains(errOut.String(), "deprecated") {
-		t.Errorf("no deprecation note on stderr: %q", errOut.String())
-	}
-}
-
-// TestServerWinsOverURLBase pins the precedence, since both may be passed while the alias lives.
-func TestServerWinsOverURLBase(t *testing.T) {
-	cmd := &cobra.Command{}
-	cmd.SetErr(&bytes.Buffer{})
-	spec, err := resolveServer(cmd, "http://a.example", "http://b.example")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if spec.url != "http://a.example" {
-		t.Errorf("url = %q, want the --server value to win", spec.url)
+// The alias is GONE, so a command naming it fails rather than working quietly. That is the whole
+// point of removing it: a working alias made stale instructions indistinguishable from current ones
+// across five docsite pages and `agni open`'s own printed command (agni issue 636).
+func TestURLBaseIsNoLongerAFlag(t *testing.T) {
+	root := rootCmd()
+	for _, name := range []string{"check", "review", "trace"} {
+		sub, _, err := root.Find([]string{name})
+		if err != nil {
+			t.Fatalf("no %s command: %v", name, err)
+		}
+		if f := sub.Flags().Lookup("url-base"); f != nil {
+			t.Errorf("%s still defines --url-base (hidden=%v)", name, f.Hidden)
+		}
 	}
 }
 

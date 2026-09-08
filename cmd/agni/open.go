@@ -140,11 +140,15 @@ func openBanner(w io.Writer, rawURL string, m mounts.Mount, designURI, viewPath 
 	fmt.Fprintf(w, "%s%s\n", base, viewPath)
 	fmt.Fprintf(w, "\ncheck it against this server:\n  agni check --mount %s=%s %s --verdicts --server %s\n",
 		m.Name, m.Root, designURI, base)
-	// The trace line is here for the same reason the check line is: --url-base needs a mount the
+	// The trace line is here for the same reason the check line is: --server needs a mount the
 	// operator declared, and assembling that by hand against a server whose mount was minted by
 	// THIS process is exactly the mismatch the flag's server check exists to catch. One process
 	// mints the mount and serves it, so a command it writes out cannot disagree with it.
-	fmt.Fprintf(w, "\ntrace a signal on it:\n  agni trace --mount %s=%s %s --from <ref.pin> --to <ref.pin> --url-base %s\n",
+	//
+	// This line kept saying --url-base for a release after the check line above it moved to --server,
+	// which is worse than a stale doc: it is generated for someone to copy (agni issue 636).
+	// TestOpenBannerNamesNoRemovedFlag is what stops the pair drifting again.
+	fmt.Fprintf(w, "\ntrace a signal on it:\n  agni trace --mount %s=%s %s --from <ref.pin> --to <ref.pin> --server %s\n",
 		m.Name, m.Root, designURI, base)
 	fmt.Fprintf(w, "\nCtrl-C to stop.\n")
 }

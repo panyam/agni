@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -25,21 +26,21 @@ func TestOpenBannerPrintsAPasteableCheckCommand(t *testing.T) {
 	if !strings.Contains(out, "mount://gateway/designs/gw.edn") {
 		t.Errorf("the check line must name the design it opened:\n%s", out)
 	}
-	if !strings.Contains(out, "--url-base http://127.0.0.1:5000\n") {
-		t.Errorf("--url-base must be a bare origin, since VerdictURL concatenates rather than joins:\n%s", out)
+	if !strings.Contains(out, "--server http://127.0.0.1:5000\n") {
+		t.Errorf("--server must be a bare origin, since VerdictURL concatenates rather than joins:\n%s", out)
 	}
 }
 
 // serveURLs ends its addresses with a slash. Doubling it is cosmetic in a browser and is not cosmetic
-// in --url-base.
+// in --server.
 func TestOpenBannerTrimsTheTrailingSlash(t *testing.T) {
 	var b bytes.Buffer
 	openBanner(&b, "http://127.0.0.1:5000/", mounts.Mount{Name: "m", Root: "/r"}, "mount://m/x.edn", "/designs/m/x.edn/view")
 	if strings.Contains(b.String(), "5000//designs") {
 		t.Errorf("doubled slash in the design URL:\n%s", b.String())
 	}
-	if strings.Contains(b.String(), "url-base http://127.0.0.1:5000/") {
-		t.Errorf("--url-base kept its trailing slash:\n%s", b.String())
+	if strings.Contains(b.String(), "server http://127.0.0.1:5000/") {
+		t.Errorf("--server kept its trailing slash:\n%s", b.String())
 	}
 }
 
@@ -84,5 +85,27 @@ func TestFreePortIsBindable(t *testing.T) {
 	l.Close()
 	if p == "0" {
 		t.Error("freePort must resolve the kernel's assignment, not hand back :0")
+	}
+}
+
+// The banner prints TWO commands and they drifted: the check line moved to --server and the trace
+// line beside it went on saying --url-base for a release, which is worse than a stale doc because it
+// is generated for someone to copy (agni issue 636). This holds both lines to the flag set the CLI
+// actually defines, so the pair cannot drift again.
+func TestOpenBannerNamesNoRemovedFlag(t *testing.T) {
+	var b bytes.Buffer
+	openBanner(&b, "http://127.0.0.1:5000/", mounts.Mount{Name: "m", Root: "/r"},
+		"mount://m/board.edn", "/designs/m/board.edn/view")
+	known := knownFlags(rootCmd())
+	for _, m := range regexp.MustCompile(`--[a-z][a-z0-9-]*`).FindAllString(b.String(), -1) {
+		if !known[m] {
+			t.Errorf("the banner hands the reader %s, which the CLI does not define:\n%s", m, b.String())
+		}
+	}
+	// Both lines are there to be held, so a banner that stopped printing one would pass vacuously.
+	for _, want := range []string{"agni check ", "agni trace "} {
+		if !strings.Contains(b.String(), want) {
+			t.Fatalf("the banner no longer prints %q, so this test proves nothing:\n%s", want, b.String())
+		}
 	}
 }

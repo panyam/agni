@@ -262,7 +262,7 @@ func firstBytes(b []byte, n int) []byte {
 // viewerLinkMeta, so this asserts trace inherits the promise rather than restating the rule.
 func TestTraceCLIWithholdsALinkForAnUndeclaredMountAndSaysSo(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1",
-		"--url-base", "http://127.0.0.1:1")
+		"--server", "http://127.0.0.1:1")
 	if err != nil {
 		t.Fatalf("trace: %v\n%s", err, out)
 	}

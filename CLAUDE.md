@@ -199,7 +199,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   prints its reason. **`--server self` removes the question instead of answering it**: one process
   reads the design and serves it, so a minted mount is as linkable as a declared one, and it blocks
   until Ctrl-C because the links live exactly as long as the server does. `self:PORT` fails on a taken
-  port rather than moving. `--url-base` is a deprecated alias for one release. **A link names
+  port rather than moving. **A link names
   the design's declared ENTRY whatever you pointed the command at, and carries the revision it was
   read at**, which the viewer checks before it draws. Semantics and the two ways the halves used to
   disagree are in `guide/checks-and-reports.md`.

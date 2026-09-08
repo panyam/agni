@@ -279,7 +279,7 @@ banner rather than the benefit of the doubt, since a link nobody could check has
 treating it as though it had is the false confidence the hash exists to remove.
 
 The easiest way to get all of this right is not to assemble it by hand. `agni open <design>` serves
-the board and prints the matching `agni check --mount … --url-base …` line, and because one process
+the board and prints the matching `agni check --mount … --server …` line, and because one process
 mints the mount and serves it, the two cannot disagree.
 
 The page needs no JavaScript and loads nothing from the network, so it survives being emailed,
