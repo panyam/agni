@@ -3,9 +3,9 @@ module github.com/panyam/agni/examples/checks
 go 1.26.4
 
 require (
-	github.com/panyam/demokit v0.0.31
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/agni/examples/common v0.0.0
+	github.com/panyam/demokit v0.0.31
 )
 
 require (
@@ -37,9 +37,9 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
-	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
