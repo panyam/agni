@@ -289,8 +289,11 @@ than net names (auto-named nets differ by tool) or counts (compensating errors c
 `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Out of the gate because it needs the 19MB both-views
 corpus, not the 3MB the gate fetches.
 
-**`make browser-test` is a separate suite and is NOT in the gate.** It drives a real Chromium against
-a real server for the handful of assertions that need layout, because jsdom has none. Read
+**`make browser-test` is IN the gate**, and needs a Chromium on the machine
+(`cd web && pnpm exec playwright-core install chromium`). It drives a real browser against a real
+server for the handful of assertions that need layout, because jsdom has none: a panel can be present
+in the DOM and invisible to a reader, which is how v0.2.0 shipped a viewer whose query surface booted
+hidden behind the Trace tab. It was outside the gate until v0.2.1. Read
 `docsite/content/build/the-gate.md` for what belongs in it, and `build/evidence.md` for the two ways
 a layout assertion passes while proving nothing.
 

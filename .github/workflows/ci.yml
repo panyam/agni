@@ -1,6 +1,9 @@
 # The repo gate: exactly `make testall` (vet + engine tests + example modules + bundle build
-# + web typecheck/vitest). Keep this in lockstep with the Makefile; if a step is added there,
-# it runs here for free via testall.
+# + web typecheck/vitest + the browser layout suite). Keep this in lockstep with the Makefile; if a
+# step is added there, it runs here for free via testall.
+#
+# The one thing testall needs that is not a Go or Node dependency is a Chromium, installed below.
+# That is the cost of having `make browser-test` inside the gate rather than beside it.
 name: ci
 
 on:
@@ -39,6 +42,24 @@ jobs:
 
       - name: Install web dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      # Chromium for `make browser-test`, which is part of testall. The suite drives playwright-core
+      # directly rather than @vitest/browser, and playwright-core ships no browser of its own, so
+      # without this step every layout spec fails with "install one with ..." rather than an
+      # assertion. --with-deps pulls the shared libraries a headless Chromium needs on a bare runner.
+      #
+      # Cached on the playwright-core version from the lockfile: a browser build is ~150MB and does
+      # not change between PRs, so keying on anything finer would re-download it for no reason. A
+      # cache miss still installs and still fails loudly.
+      - name: Cache the Chromium build
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('web/pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        run: pnpm exec playwright-core install --with-deps chromium
         working-directory: web
 
       # The board corpus `make samples` fetches, keyed on the pin file rather than on anything about

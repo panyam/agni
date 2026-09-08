@@ -7,50 +7,17 @@
 //
 // The mounts are the repo's own reader fixtures, so the pages under test are the synthetic designs
 // the rest of the suite uses and nothing here reaches a real board.
+//
+// Spawning and stopping live in `childserver.ts`, shared with `docsite.ts`. Read its header before
+// changing anything about teardown: signalling a process GROUP by number is only safe while the
+// child is alive, and getting that wrong killed unrelated servers on the developer's machine.
 
-import { spawn, type ChildProcess } from "node:child_process";
-import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { start, freePort, type Server } from "./childserver.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..", "..");
-
-// freePort asks the kernel for an unused port and gives it back. There is a race between closing
-// the probe and the server binding, which is why nothing retries on it: on a developer machine the
-// window is microseconds, and a collision fails loudly rather than silently using the wrong server.
-async function freePort(): Promise<number> {
-  return new Promise((ok, fail) => {
-    const probe = createServer();
-    probe.once("error", fail);
-    probe.listen(0, "127.0.0.1", () => {
-      const addr = probe.address();
-      if (addr === null || typeof addr === "string") {
-        probe.close(() => fail(new Error("no port from probe")));
-        return;
-      }
-      const port = addr.port;
-      probe.close(() => ok(port));
-    });
-  });
-}
-
-// waitForServer polls until the server answers or the deadline passes. `go run` compiles the CLI on
-// first use, so the first call in a clean checkout can take tens of seconds; the timeout is sized
-// for that rather than for a warm binary.
-async function waitForServer(base: string, ms: number): Promise<void> {
-  const deadline = Date.now() + ms;
-  for (;;) {
-    try {
-      const res = await fetch(base, { signal: AbortSignal.timeout(2000) });
-      if (res.ok) return;
-    } catch {
-      // not up yet
-    }
-    if (Date.now() > deadline) throw new Error(`agni serve did not answer at ${base} within ${ms}ms`);
-    await new Promise((r) => setTimeout(r, 250));
-  }
-}
 
 // The base URL travels to the specs through vitest's provide/inject channel, declared here so
 // `inject("baseUrl")` is typed rather than a string nobody checks.
@@ -60,15 +27,16 @@ declare module "vitest" {
   }
 }
 
-let child: ChildProcess | undefined;
+let server: Server | undefined;
 
 // setup starts the server and publishes its base URL for the specs. vitest calls it once per run.
 export async function setup({ provide }: { provide: (key: string, value: unknown) => void }): Promise<void> {
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
-  child = spawn(
-    "go",
-    [
+  server = await start({
+    what: "agni serve",
+    command: "go",
+    args: [
       "run", "./cmd/agni", "serve",
       "--addr", `:${port}`,
       "--mount", "kicad=readers/kicad/testdata",
@@ -76,34 +44,13 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
     ],
     // cwd is the repo root, so serve's default --web-dir ("web") resolves without a flag. This used
     // to pass "web" positionally, which was the same value by another route.
-    //
-    // detached so the spawn becomes a process-group leader: `go run` execs the compiled binary as
-    // its own child, and killing only the go process would orphan the server holding the port.
-    { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"], detached: true },
-  );
-  // Server output is kept and only printed on a failure to start. Streaming it would bury the test
-  // output; discarding it would make a startup failure unreadable.
-  let log = "";
-  child.stdout?.on("data", (d: Buffer) => (log += d.toString()));
-  child.stderr?.on("data", (d: Buffer) => (log += d.toString()));
-  try {
-    await waitForServer(base, 120_000);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(log);
-    throw e;
-  }
+    cwd: repoRoot,
+    base,
+    health: base,
+  });
   provide("baseUrl", base);
 }
 
-// teardown stops the server. `go run` execs the compiled binary as a CHILD, so killing the go
-// process alone orphans the server and leaves the port held. Killing the process group takes both.
 export async function teardown(): Promise<void> {
-  if (!child?.pid) return;
-  try {
-    process.kill(-child.pid, "SIGTERM");
-  } catch {
-    child.kill("SIGTERM");
-  }
-  await new Promise((r) => setTimeout(r, 300));
+  await server?.stop();
 }
