@@ -180,12 +180,21 @@ func subjectRefs(es []check.Entity) string {
 }
 
 // refs joins the first column of each row, which is the ref-des on every query here.
+// refsCap bounds the ref-des list a bucket prints. The bundled fixture has three parts and the count
+// alongside carries the answer anyway, so a full list is only ever useful at fixture scale: pointed at
+// a real board these buckets run to several hundred, and the wall of text buries the three lines
+// around it. The count is never truncated, only the naming.
+const refsCap = 12
+
 func refs(rs [][]string) string {
 	out := make([]string, 0, len(rs))
 	for _, r := range rs {
 		out = append(out, r[0])
 	}
 	sort.Strings(out)
+	if len(out) > refsCap {
+		return strings.Join(out[:refsCap], ", ") + fmt.Sprintf(", ... (%d more)", len(out)-refsCap)
+	}
 	return strings.Join(out, ", ")
 }
 
