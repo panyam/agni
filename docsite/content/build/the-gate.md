@@ -10,17 +10,17 @@ flowchart LR
     T(["make testall"])
     T --> V["vet<br/>ir-model-check<br/>fixture-copies-check"]
     T --> E["test<br/>examples-test<br/>docsite-test"]
-    T --> W["ui<br/>web-test"]
+    T --> W["ui<br/>web-test<br/>browser-test"]
     T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check"]
     V --- Vn["Go hygiene, C19 ratchet,<br/>duplicated fixtures"]
     E --- En["engine, example modules, docsite wiring"]
-    W --- Wn["bundle, typecheck, vitest"]
+    W --- Wn["bundle, typecheck, vitest,<br/>layout in a real Chromium"]
     G --- Gn["generated trees still match their source"]
-    B(["make browser-test"]) --- Bn["layout, in a real Chromium.<br/>NOT in the gate."]
+    O(["make oracle"]) --- On["KiCad against real boards.<br/>NOT in the gate."]
     classDef note fill:none,stroke:none;
     classDef out stroke-dasharray: 4 3;
-    class Vn,En,Wn,Gn,Bn note;
-    class B,Bn out;
+    class Vn,En,Wn,Gn,On note;
+    class O,On out;
 ```
 
 ## Some boards are fetched, not committed
@@ -252,12 +252,6 @@ the commit.
 
 ## What the gate does NOT run
 
-`make browser-test` drives layout assertions through a real Chromium against a real server (agni
-issue 323), deliberately outside `testall`. It runs two suites against two servers: the viewer's own
-layout assertions against `agni serve`, and a geometry sweep of every hand-authored docsite figure
-against the docsite, which the Go gate can check for a resolving path, an uncalled file, a colour
-literal and a blank line, and cannot check for anything about the RESULT.
-
 `make oracle` cross-checks the KiCad reader against real boards, and is outside `testall` for a
 different reason: cost. It reads a design's schematic our way, reads the same design's `.kicad_pcb`
 for the netlist KiCad itself resolved, and requires the two to agree on which pins share a net. That
@@ -285,18 +279,25 @@ have not.
 
 ```mermaid
 flowchart LR
-    J["make testall · jsdom<br/>zero-sized boxes, elementFromPoint answers<br/>nothing, no CSS rule has any effect"] --> JP["proves what a<br/>panel RENDERS"]
-    B["make browser-test · Chromium"] --> BP["proves what a<br/>reader can SEE"]
+    J["web-test · jsdom<br/>zero-sized boxes, elementFromPoint answers<br/>nothing, no CSS rule has any effect"] --> JP["proves what a<br/>panel RENDERS"]
+    B["browser-test · Chromium"] --> BP["proves what a<br/>reader can SEE"]
     JP -.->|"the gap a badge strip painted<br/>over two columns through"| BP
 ```
 
-Keeping the browser suite out of the gate means a machine without a browser never turns CI red for a
-reason unrelated to the change under test. It needs one installed per machine (`cd web && pnpm exec
-playwright-core install chromium`) and starts its own server on a kernel-picked port, so it will not
-fight a dev server you already have.
+The browser suite runs inside `testall`. It needs a Chromium installed per machine (`cd web && pnpm
+exec playwright-core install chromium`; CI installs and caches one) and starts its own server on a
+kernel-picked port, so it will not fight a dev server you already have.
 
-**Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, where it runs on
-every gate rather than when somebody remembers. Pixels are the claim. Read the layout traps in
+It was outside the gate until v0.2.1, on the argument that a machine without a browser should not go
+red for a reason unrelated to the change under test. What overturned that was v0.2.0 shipping a
+viewer whose query surface booted hidden behind the Trace tab. Every jsdom assertion passed, because
+the textarea was present the whole time and only its visibility was wrong, and the browser suite that
+did catch it ran after the tag was pushed. A suite that runs when somebody remembers is a suite that
+runs after the release. The specs take about 16 seconds; the real cost was always the browser
+download, which is now a cached CI step and a one-time cost for a developer.
+
+**Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, which runs in a
+fraction of the time and on any machine. Pixels are the claim. Read the layout traps in
 `build/evidence.md` first: two versions of the first test there went green with the CSS under test
 deleted.
 

@@ -128,9 +128,17 @@ web-test:
 # real Chromium driving a real server. NOT part of testall, deliberately.
 #
 # jsdom has no layout engine, so the unit suite can prove what a panel renders and nothing about
-# what a reader can see; a CSS bug once shipped through a fully green run. This closes that, and
-# pays for it in speed and in needing a browser on the machine. Keeping it out of the gate means a
-# machine without one never turns CI red for a reason unrelated to the change under test.
+# what a reader can see; a CSS bug once shipped through a fully green run.
+#
+# IN THE GATE since agni v0.2.1, having been deliberately outside it before. The argument for keeping
+# it out was that a machine without a browser would go red for a reason unrelated to the change. What
+# settled it was v0.2.0 shipping a viewer whose query surface booted hidden behind the Trace tab: the
+# textarea was in the DOM the whole time, so every jsdom assertion passed, and the browser suite that
+# would have caught it only ran after the tag was pushed. A suite that runs when somebody remembers
+# is a suite that runs after the release.
+#
+# The speed objection did not survive measurement either: the specs take about 16 seconds. The cost
+# is the browser download, which CI caches and a developer pays once.
 #
 # Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
@@ -161,7 +169,7 @@ catalog-docs-check: catalog-docs
 # (cmd/agni) asserts web/static/app.js exists, and the bundle is a gitignored build artifact.
 # proto-check sits near the front because stale generated code makes every later failure a red
 # herring: it compiles and tests green while describing a different schema.
-testall: vet ir-model-check fixture-copies-check proto-check samples-oracle ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check samples-oracle ui test examples-test web-test browser-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
