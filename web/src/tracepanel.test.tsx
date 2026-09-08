@@ -15,14 +15,14 @@ function mount(state?: TraceState) {
 
 const routed: TraceState = {
   ...emptyTrace(),
-  from: { refDes: "U1", pin: "3", pinName: "SDA", net: "SDA" },
-  to: { refDes: "J1", pin: "1", pinName: "VBUS", net: "VCC" },
+  from: { refDes: "U1", pin: "3", pinName: "SDA", net: "SDA", sheetIds: ["s2"] },
+  to: { refDes: "J1", pin: "1", pinName: "VBUS", net: "VCC", sheetIds: ["s3"] },
   outcome: TraceOutcome.ROUTED,
   radius: 6,
   crossings: [{ refDes: "R1", cls: "resistor", enterPin: "2", exitPin: "1" }],
   nets: [
-    { name: "SDA", stubs: [{ refDes: "TP1", pin: "1", cls: "test_point" }], stubsElided: 0, busLike: false },
-    { name: "VCC", stubs: [], stubsElided: 3, busLike: true },
+    { name: "SDA", stubs: [{ refDes: "TP1", pin: "1", cls: "test_point" }], stubsElided: 0, busLike: false, sheetIds: ["s2"] },
+    { name: "VCC", stubs: [], stubsElided: 3, busLike: true, sheetIds: [] },
   ],
   ran: true,
 };

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
-import { emptyTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects } from "./trace.js";
+import { emptyTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSheet, traceSubjects } from "./trace.js";
 
 // create(TraceSchema, ...) rather than an object literal: a plain literal standing in for a proto is
 // invisible to `pnpm run typecheck`, which is how a fixture goes structurally wrong while the build
@@ -34,10 +34,50 @@ describe("traceFromResponse", () => {
   it("carries every field the panel renders", () => {
     const s = traceFromResponse(routed());
     expect(s.ran).toBe(true);
-    expect(s.from).toEqual({ refDes: "U1", pin: "3", pinName: "SDA", net: "SDA" });
+    expect(s.from).toEqual({ refDes: "U1", pin: "3", pinName: "SDA", net: "SDA", sheetIds: [] });
     expect(s.crossings).toEqual([{ refDes: "R1", cls: "resistor", enterPin: "2", exitPin: "1" }]);
-    expect(s.nets[1]).toEqual({ name: "VCC", stubs: [], stubsElided: 4, busLike: true });
+    expect(s.nets[1]).toEqual({ name: "VCC", stubs: [], stubsElided: 4, busLike: true, sheetIds: [] });
     expect(s.radius).toBe(6);
+  });
+});
+
+// A trace answer carries where each net and endpoint is DRAWN, so the viewer can open a sheet the
+// route is on rather than whichever was already showing (agni issue 657). An older server that sends
+// no such field yields an empty list, not undefined, so a panel rendering badges over it is safe.
+describe("sheet ids on a trace", () => {
+  it("carries the server's sheets for endpoints and nets", () => {
+    const t = routed();
+    t.from!.sheetIds = ["s2"];
+    t.nets[0].sheetIds = ["s2", "s5"];
+    const s = traceFromResponse(t);
+    expect(s.from.sheetIds).toEqual(["s2"]);
+    expect(s.nets[0].sheetIds).toEqual(["s2", "s5"]);
+  });
+
+  it("reads a response with no sheets as drawn nowhere, not as undefined", () => {
+    const s = traceFromResponse(routed());
+    expect(s.from.sheetIds).toEqual([]);
+    expect(s.nets[0].sheetIds).toEqual([]);
+  });
+});
+
+describe("traceSheet", () => {
+  it("prefers the FROM endpoint, which is the pin the reader named", () => {
+    const t = routed();
+    t.from!.sheetIds = ["from-sheet"];
+    t.nets[0].sheetIds = ["net-sheet"];
+    expect(traceSheet(traceFromResponse(t))).toBe("from-sheet");
+  });
+
+  it("falls back to the first net that is drawn", () => {
+    const t = routed();
+    t.nets[1].sheetIds = ["net-sheet"];
+    expect(traceSheet(traceFromResponse(t))).toBe("net-sheet");
+  });
+
+  // An answer drawn nowhere must leave the view alone rather than jump somewhere arbitrary.
+  it("names no sheet when nothing on the route is drawn", () => {
+    expect(traceSheet(traceFromResponse(routed()))).toBe("");
   });
 });
 

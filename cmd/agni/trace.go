@@ -117,7 +117,7 @@ func traceCmd() *cobra.Command {
 			// was going to go looking for anyway. traceSpecs decides what counts as a subject; the
 			// drawing itself is the shared path every command uses.
 			if renderOut != "" {
-				if err := renderSubjects(cmd.ErrOrStderr(), args[0], renderOut, traceSpecs(t)); err != nil {
+				if err := renderSubjects(cmd.ErrOrStderr(), args[0], renderOut, traceSheet(resp.GetTrace()), traceSpecs(t)); err != nil {
 					return err
 				}
 			}
@@ -311,4 +311,25 @@ func traceSpecs(t check.Trace) []*geom.HighlightSpec {
 		}
 	}
 	return specs
+}
+
+// traceSheet is the sheet a rendered trace should open on: the sheet the FROM endpoint's net is
+// drawn on, else the first net of the route that is drawn anywhere, else "" for the caller's default.
+//
+// The server decides where each net lives and this only chooses among what it was told, which is the
+// point: the CLI used to pick the design's first sheet on its own, and one surface deciding where a
+// route lives is what C32 asks for.
+//
+// From rather than to, because the reader named that pin first and a route reads in that direction.
+// One SVG can only show one sheet; the viewer offers every sheet of every net as a badge.
+func traceSheet(p *webapi.Trace) string {
+	if ids := p.GetFrom().GetSheetIds(); len(ids) > 0 {
+		return ids[0]
+	}
+	for _, n := range p.GetNets() {
+		if ids := n.GetSheetIds(); len(ids) > 0 {
+			return ids[0]
+		}
+	}
+	return ""
 }

@@ -252,6 +252,10 @@ message TraceDesignRequest {
   // the value it rests on: nothing about a route degrades with distance, so a no-route can be
   // re-asked wider and the reader has to be able to see what was asked the first time.
   int32 hops = 4;
+  // as_named reads exactly the artifact this uri names, as it does on every other design request.
+  // A trace resolves tiers too: the walk is over the netlist and the sheets come from the geometry
+  // companion, which for a netlist entry is a different artifact.
+  bool as_named = 5;
 }
 
 // TraceEndpoint names one pin of one component.
@@ -286,6 +290,13 @@ message TraceEnd {
   string pin_name = 2;
   // net is the net the pin sits on, empty when the endpoint did not resolve.
   string net = 3;
+  // sheet_ids names the sheets this endpoint's net is drawn on, empty when it is drawn on none.
+  //
+  // Filled on EVERY outcome, including no-route. The two nets that fail to join are drawn somewhere,
+  // and that picture is what a reader goes looking for the moment they read "no route", so a field
+  // populated only on success would answer with silence exactly where the question is sharpest. Empty
+  // then honestly means not drawn, rather than nobody looked.
+  repeated string sheet_ids = 4;
 }
 
 // TraceCross is one series element crossed on the route, with its own pins on each side.
@@ -309,6 +320,13 @@ message TraceNet {
   // rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
   // assuming the trace stopped early for some other reason.
   bool bus_like = 4;
+  // sheet_ids names the sheets this net is drawn on, empty when it is drawn on none.
+  //
+  // PER NET rather than one sheet for the whole trace, because a route crossing three sheets is
+  // exactly when a reader wants to choose. It is the same shape a Finding's `sheets` and a query
+  // cell's `cell_sheets` already carry, so the panel renders the same SheetBadges and a click
+  // navigates the same way.
+  repeated string sheet_ids = 5;
 }
 
 // TraceStub is a part sitting on a net of the route that the route does not pass through. Test

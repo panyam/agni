@@ -5,6 +5,7 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/netgraph"
 )
 
@@ -178,5 +179,50 @@ func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m L
 			continue
 		}
 		f.LocateReason = locateReasonProto(check.LocateReason(m, f.GetSubject().GetKind(), f.GetSubject().GetRef()))
+	}
+}
+
+// AnnotateTraceSheets fills a trace's per-net and per-endpoint sheet ids, the same way
+// AnnotateSheets fills a finding's.
+//
+// PER NET rather than one sheet for the answer, because a route crossing three sheets is exactly
+// when a reader wants to choose which to open, and the panel already renders a list of badges for a
+// finding and for a query cell. A trace was the third consumer of this index and the only one that
+// never asked, so a route drew on the design's first sheet whatever it crossed (agni issue 657).
+//
+// Both outcomes are annotated. On a no-route the two endpoints' nets are still drawn somewhere, and
+// that is the picture a reader goes looking for the moment they read that the pins do not join, so a
+// field filled only on success would go silent exactly where the question is sharpest. Empty sheet
+// ids then mean the net is drawn nowhere, rather than that nobody looked.
+func AnnotateTraceSheets(t *webapi.Trace, g *geom.SchematicGeometry, m LocateSource) {
+	if t == nil || (g == nil && len(m.Nets()) == 0) {
+		return
+	}
+	ix := indexSheets(g, m)
+	netSheets := func(name string) []string {
+		if name == "" {
+			return nil
+		}
+		return ix.sheetsFor(&checkspb.Subject{Kind: check.KindNet, Ref: name})
+	}
+	for _, n := range t.GetNets() {
+		n.SheetIds = netSheets(n.GetName())
+	}
+	// An endpoint resolves by its PLACEMENT, not by its net. A trace endpoint is a pin on a part, and
+	// where that part is drawn is what a reader wants to open; the net it sits on may be drawn on
+	// several sheets it does not appear on, which is how a route first landed on a sheet carrying the
+	// middle net and none of the parts. This is the same lookup a pin finding uses.
+	//
+	// Falling back to the net keeps an endpoint whose part is not placed (an unresolved symbol) from
+	// going blank when its net is drawn somewhere.
+	for _, e := range []*webapi.TraceEnd{t.GetFrom(), t.GetTo()} {
+		if e == nil {
+			continue
+		}
+		ep := e.GetEndpoint()
+		e.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: check.KindPin, Ref: ep.GetRefDes(), Pin: ep.GetPin()})
+		if len(e.SheetIds) == 0 {
+			e.SheetIds = netSheets(e.GetNet())
+		}
 	}
 }
