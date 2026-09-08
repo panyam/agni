@@ -293,7 +293,7 @@ corpus, not the 3MB the gate fetches.
 (`cd web && pnpm exec playwright-core install chromium`). It drives a real browser against a real
 server for the handful of assertions that need layout, because jsdom has none: a panel can be present
 in the DOM and invisible to a reader, which is how v0.2.0 shipped a viewer whose query surface booted
-hidden behind the Trace tab. It was outside the gate until v0.2.1. Read
+hidden behind the Trace tab. It was outside the gate until PR 629. Read
 `docsite/content/build/the-gate.md` for what belongs in it, and `build/evidence.md` for the two ways
 a layout assertion passes while proving nothing.
 

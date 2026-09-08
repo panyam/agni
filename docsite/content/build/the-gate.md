@@ -288,7 +288,7 @@ The browser suite runs inside `testall`. It needs a Chromium installed per machi
 exec playwright-core install chromium`; CI installs and caches one) and starts its own server on a
 kernel-picked port, so it will not fight a dev server you already have.
 
-It was outside the gate until v0.2.1, on the argument that a machine without a browser should not go
+It was outside the gate until PR 629, on the argument that a machine without a browser should not go
 red for a reason unrelated to the change under test. What overturned that was v0.2.0 shipping a
 viewer whose query surface booted hidden behind the Trace tab. Every jsdom assertion passed, because
 the textarea was present the whole time and only its visibility was wrong, and the browser suite that

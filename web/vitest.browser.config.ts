@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
 // unit run must not: `make test` has to stay something you can run on any machine in a few seconds.
 // Separate config, same gate.
 //
-// It was outside the gate until agni v0.2.1, on the argument that a machine without a browser would
+// It was outside the gate until PR 629, on the argument that a machine without a browser would
 // go red for a reason unrelated to the change. v0.2.0 then shipped a viewer whose query surface
 // booted hidden behind the Trace tab. The textarea was in the DOM throughout, so jsdom saw nothing
 // wrong, and this suite caught it only after the tag was pushed. The browser download is now a CI

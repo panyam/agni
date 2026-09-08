@@ -34,8 +34,9 @@ From a green `main`:
 
 2. **Run the gate.**  `make testall`.  Read `docsite/content/build/the-gate.md` before trusting the
    result: it has three traps that make a red gate read green, and one that makes a green tree read
-   red.  For a release, also run `make oracle` and `make browser-test`, neither of which is in the
-   gate.
+   red.  For a release, also run `make oracle`, which is not in the gate: it needs the 19MB
+   both-views corpus rather than the 3MB `testall` fetches.  `make browser-test` needs no separate
+   run, having been part of `testall` since PR 629.
 
 3. **Write the notes.**  `RELEASES/v<X.Y.Z>.md` is the canonical write-up and doubles as the GitHub
    Release body.  Add the summary entry to `CHANGELOG.md`, newest on top, linking the release file.
@@ -87,7 +88,7 @@ pull from a logged-out client.
 
 - [ ] `git merge --ff-only origin/main` clean, working tree clean
 - [ ] `make testall` green
-- [ ] `make oracle` and `make browser-test` green
+- [ ] `make oracle` green (`browser-test` rides in `testall`)
 - [ ] `RELEASES/vX.Y.Z.md` written; `CHANGELOG.md` entry added and linked
 - [ ] Notes committed and pushed to `main`
 - [ ] `make tag-push V=vX.Y.Z`
