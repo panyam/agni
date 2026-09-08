@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"testing"
 
@@ -108,12 +109,13 @@ func TestEmitEDIFNamesEveryInstanceOnce(t *testing.T) {
 				t.Fatal(err)
 			}
 			seen := map[string]bool{}
-			for line := range bytes.SplitSeq(buf.Bytes(), []byte("\n")) {
-				fields := bytes.Fields(line)
-				if len(fields) < 2 || string(fields[0]) != "(instance" {
-					continue
+			for _, m := range emittedInstanceIDs.FindAllStringSubmatch(buf.String(), -1) {
+				// The identifier is the bare atom, or the ID inside a (rename ID "display") for a
+				// source name that had to be minted into a legal one.
+				name := m[1]
+				if name == "" {
+					name = m[2]
 				}
-				name := string(fields[1])
 				if seen[name] {
 					t.Errorf("instance name %q written twice; an instanceRef to it reaches only the first", name)
 				}
@@ -169,4 +171,62 @@ func anchoredPairs(d *ir.Design) ([]string, int) {
 		}
 	}
 	return pairs, unanchored
+}
+
+// edifNamePos finds a name written directly after a construct head, skipping the (rename ...) and
+// (array ...) forms, which carry their identifier inside and are checked through the recursion.
+var edifNamePos = regexp.MustCompile(`\((instance|instanceRef)\s+([^\s()]+)`)
+
+// emittedInstanceIDs pulls the identifier an (instance ...) is written under, in either name form.
+// The identifier is what an (instanceRef ...) looks up, so it is the string that has to be unique.
+var emittedInstanceIDs = regexp.MustCompile(`\(instance (?:\(rename ([^\s()]+) "[^"]*"\)|([^\s()]+)) `)
+
+// edifIdent is the identifier grammar: a letter or underscore, then letters, digits and underscores.
+// The leading "&" is the escape the format defines for a name that would otherwise start with a
+// digit, and mintID already emits it.
+var edifIdent = regexp.MustCompile(`^&?[A-Za-z_][A-Za-z0-9_]*$|^&[0-9][A-Za-z0-9_]*$`)
+
+// TestEmitEDIFWritesLegalIdentifiers checks the writer's output against the format's own name rule
+// rather than against our reader, which is the gap agni issue 582 sat in. Our reader accepts a bare
+// atom containing anything except whitespace, parens and quotes, so a round-trip test passes over
+// names no other tool can read. A conforming reader skips what it cannot parse, and skipping an
+// instance loses every connection hanging off it.
+//
+// Measured on a real board before this was fixed: 1123 of 1123 instance names illegal, being raw
+// KiCad uuids, which both open with a digit and carry hyphens. A third-party EDIF parser read 1123
+// components and 0 instances from that file, and 1123 of each from the same board after.
+//
+// It checks the INSTANCE slots only. The cell, port and net slots are still emitted as bare atoms
+// that the grammar rejects, and fixing them means minting a declaration and its references together
+// rather than tightening one predicate, which is agni issue 590. Widening the regex above is that
+// issue's acceptance test.
+func TestEmitEDIFWritesLegalIdentifiers(t *testing.T) {
+	for _, tc := range emitCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := edif.WriteNetlist(&buf, readForEmit(t, tc.path)); err != nil {
+				t.Fatal(err)
+			}
+			bad := map[string]int{}
+			var checked int
+			for _, m := range edifNamePos.FindAllStringSubmatch(buf.String(), -1) {
+				checked++
+				if !edifIdent.MatchString(m[2]) {
+					bad[fmt.Sprintf("(%s %s", m[1], m[2])]++
+				}
+			}
+			if checked == 0 {
+				t.Fatal("no names found in the emitted netlist; the assertion would pass vacuously")
+			}
+			if len(bad) > 0 {
+				keys := make([]string, 0, len(bad))
+				for k := range bad {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				t.Errorf("%d distinct illegal EDIF identifier(s) of %d names emitted, first few: %v",
+					len(bad), checked, keys[:min(6, len(keys))])
+			}
+		})
+	}
 }
