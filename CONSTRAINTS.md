@@ -10,10 +10,10 @@ Enforceable architectural rules for this project. Background and rationale in
 Each rule carries a **Verify**, and `TestEveryConstraintCarriesAVerify` (`internal/constraints`) holds
 that to being true, because a rule with nothing to run is not enforceable and that is exactly how C6
 went unchecked. A Verify is one of two things. Sixteen are TESTS the gate runs, so a violation turns
-CI red. Fifteen are REVIEW questions, and each says what a reviewer should ask instead. That second
-number is the one to watch: C32 joined it knowing its test was missing rather than by deciding a
-machine could not answer it, so a review question is now either "no test is possible" or "no test
-yet", and the two read alike from here. C15 carries no Verify at all because it was merged into C17
+CI red. Fourteen are REVIEW questions, and each says what a reviewer should ask instead. That second
+number is the one to watch, and C32 is why: it joined the review column knowing its test was missing
+rather than by deciding a machine could not answer it, and left again once the test existed. So a
+review question is either "no test is possible" or "no test yet", and the two read alike from here. C15 carries no Verify at all because it was merged into C17
 and kept as a tombstone. None is a command typed into this document for someone to remember to run, and a new
 rule must not add one.
 
@@ -1022,9 +1022,20 @@ This is C31 one layer out. C31 makes the two surfaces agree about the SHAPE of a
 them agree about what the answer is ABOUT. The kind clause is the same rule at cell granularity: a
 variable projected through a derived relation lost the entity kind its defining rule established, so
 the same question answered the same rows and only one spelling of it could be clicked.
-**Verify:** by REVIEW, and it should not stay that way. The test this wants is behavioural rather
-than a source sweep: read one fixture design carrying a declared companion through the CLI path and
-through the service, and assert the same tiers, the same `availableLayouts`, and the same column
-kinds. It needs a POSITIVE CONTROL, because both surfaces resolving nothing is exactly the failure
-mode and a bare "CLI equals service" assertion passes on a design where neither attaches anything.
-Tracked as agni issue 658; the instances it generalises are 654 (kinds), 656 (tiers) and 657 (links).
+**Verify:** `TestC32SurfacesResolveOneDesignAlike` and `TestC32LeavesAnUndeclaredSiblingAlone`
+(`cmd/agni`), which resolve one fixture design through the CLI's resolver and through the service's
+and assert the same artifact for every tier, under all three spellings.
+
+It lives in `cmd/agni` because that is the only package that can see BOTH surfaces: the CLI's
+resolver is unexported and `service` cannot import package main. It is behavioural rather than a
+source sweep, so `internal/constraints` is the wrong home by that package's own rule, since C32's
+violation was a function that was never CALLED and no sweep over source can see one.
+
+The second test is the POSITIVE CONTROL and is why this is not a bare equality assertion: both
+surfaces resolving nothing agree perfectly, which is exactly the state the constraint exists to
+catch. It pins an undeclared sibling revision to being read as named on both sides, and then asserts
+the design's own entry DOES resolve, so "read as named" stays a decision rather than a resolver that
+never works. Reverting 656 fails the first test alone; disabling resolution entirely fails both.
+
+Still open: the KIND clause has no test of its own (agni 654), and the LINK clause is asserted only
+through the two surfaces' agreement on tiers rather than on what a minted link opens.
