@@ -182,7 +182,7 @@ func TestWorkspaceDeclaredSeparatesNamedFromMinted(t *testing.T) {
 // a failure there is reported by whichever call needed it for real work, and fail-closed is the same
 // answer every other unlinkable case gets.
 func TestLinkTargetIsNilSafe(t *testing.T) {
-	got, why := linkTarget(nil, "mount://demo/x.edn")
+	got, why := linkTarget(nil, "mount://demo/x.edn", false)
 	if got != "" {
 		t.Errorf("linkTarget(nil) = %q, want no link", got)
 	}
@@ -199,7 +199,7 @@ func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, uri := range []string{"", "not a uri", "mount://undeclared/x.edn", "mount://demo/"} {
-		got, why := linkTarget(ws, uri)
+		got, why := linkTarget(ws, uri, false)
 		if got != "" {
 			t.Errorf("linkTarget(%q) = %q, want no link", uri, got)
 			continue
@@ -304,7 +304,7 @@ func TestVerdictLinkTargetNamesTheResolvedEntry(t *testing.T) {
 		{"the entry itself", "mount://demo/gateway.edn"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			path, hash, why := verdictLinkTarget(ctx, ws, ll, tc.arg)
+			path, hash, why := verdictLinkTarget(ctx, ws, ll, tc.arg, false)
 			if path == "" {
 				t.Fatalf("no link for %q: %s", tc.arg, why)
 			}
@@ -338,7 +338,7 @@ func TestVerdictLinkPathAndHashNameOneArtifact(t *testing.T) {
 	}
 
 	for _, arg := range []string{"mount://demo", "mount://demo/gateway.kicad_sch", "mount://demo/gateway.edn"} {
-		path, hash, why := verdictLinkTarget(ctx, ws, ll, arg)
+		path, hash, why := verdictLinkTarget(ctx, ws, ll, arg, false)
 		if path == "" {
 			t.Fatalf("no link for %q: %s", arg, why)
 		}

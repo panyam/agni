@@ -440,7 +440,8 @@ func checkCmd() *cobra.Command {
 	var ruleNames, tagPairs []string
 	var format, failOn, paramsDir, conventions, profilePath, intentPath, resultsOut, boardPath string
 	var verdicts bool
-	var urlBase, outPath string
+	var urlBase, serverVal, outPath string
+	var srvSpec serverSpec
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -461,6 +462,9 @@ func checkCmd() *cobra.Command {
 				return err
 			}
 			defer closeOut()
+			if srvSpec, err = resolveServer(cmd, serverVal, urlBase); err != nil {
+				return err
+			}
 			switch format {
 			case "text", "json", "csv", "markdown", "report":
 			case "html":
@@ -666,7 +670,7 @@ func checkCmd() *cobra.Command {
 					// (issue 479) and left the folder form's PATH pointing at a directory the
 					// viewer cannot open, plus a companion form whose correct path carried the
 					// entry's hash and read as a mismatch.
-					meta := viewerLinkMeta(cmd, ctx, ll, designURI, urlBase)
+					meta := viewerLinkMeta(cmd, ctx, ll, designURI, srvSpec)
 					meta.Generated = time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
 					switch format {
 					case "csv":
@@ -718,7 +722,8 @@ func checkCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&ruleNames, "rule", nil, "run only these rules by name (repeatable)")
 	cmd.Flags().StringArrayVar(&tagPairs, "tag", nil, "run only rules matching key=value tags (repeatable; e.g. --tag category=connectivity)")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text | json | csv | markdown | report | html (html is the verdict report and implies --verdicts)")
-	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so every --verdicts format links each verdict to its proof: an anchor in the html report, a url column in the csv, a line under each row in the terminal. Omitted, or for a design reached by a path the server would not recognise, no link is emitted at all: a URL is a promise the reader can follow, and one assembled from a guessed address resolves on nobody's server")
+	serverFlag(cmd, &serverVal, &urlBase)
+	withSelfServer(cmd, &srvSpec)
 	outFileFlag(cmd, &outPath)
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
@@ -838,7 +843,8 @@ func writeCheckDesignJSON(w io.Writer, resp *webapi.CheckDesignResponse) error {
 }
 
 func reviewCmd() *cobra.Command {
-	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, urlBase, reviewOutPath string
+	var checklist, paramsDir, profilePath, intentPath, boardPath, format, renderDir, companion, conventions, resultsOut, urlBase, serverVal, reviewOutPath string
+	var srvSpec serverSpec
 	var coverage bool
 	var ratifiedFloor float64
 	var failOnOutcome string
@@ -862,6 +868,9 @@ func reviewCmd() *cobra.Command {
 				return err
 			}
 			defer closeOut()
+			if srvSpec, err = resolveServer(cmd, serverVal, urlBase); err != nil {
+				return err
+			}
 			// Parsed BEFORE anything is read, so a typo in a CI config fails in the first millisecond
 			// rather than after a full run over a family of boards. The gate is otherwise applied last,
 			// on every exit path below.
@@ -1019,7 +1028,7 @@ func reviewCmd() *cobra.Command {
 					// than a filter of it: items in the team's own order, one row per question. It
 					// carries every finding per item, where the markdown Detail cell caps at three,
 					// which is what the cap's own comment says the web surface is for.
-					meta, err := checklistMeta(cmd, ll, args[0], urlBase)
+					meta, err := checklistMeta(cmd, ll, args[0], srvSpec)
 					if err != nil {
 						return err
 					}
@@ -1065,7 +1074,8 @@ func reviewCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&coverage, "coverage", false, "emit a per-area coverage rollup (covered/pass/fail/provisional/needs-intent/needs-data/computed-n-a/n-a/not-automated) instead of the per-item report")
 	cmd.Flags().Float64Var(&ratifiedFloor, "ratified-floor", 0, "datasheet-confidence floor for a trustworthy finding; a fail whose findings are all mock or below this is 'provisional'. 0 uses the default (0.9)")
 	cmd.Flags().StringVar(&format, "format", "markdown", "per-item report format: markdown (Detail cell capped), json (full findings, for tooling), or html (the checklist as a self-contained page, every finding per item)")
-	cmd.Flags().StringVar(&urlBase, "url-base", "", "base address of a running viewer (e.g. http://localhost:8080) so an --format html checklist links each finding to its proof. Subject to the same promise as `check --url-base`: the mount has to be one you DECLARED, and the server is asked whether it serves that name from the same root. Whenever links are withheld the reason is printed")
+	serverFlag(cmd, &serverVal, &urlBase)
+	withSelfServer(cmd, &srvSpec)
 	outFileFlag(cmd, &reviewOutPath)
 	cmd.Flags().StringVar(&renderDir, "render", "", "also write an annotated schematic SVG per design (each finding highlighted in place) to <dir>/<design-stem>/<sheet>.svg")
 	cmd.Flags().StringVar(&companion, "companion", "", "geometry file (.eds) to draw the --render images on, joined to the netlist findings by net name; with one design only (else a sibling <stem>.eds is auto-detected per design)")

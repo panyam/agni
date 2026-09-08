@@ -24,7 +24,8 @@ import (
 // walk held the path and discarded it on the way out. This is the smallest surface over the walk
 // that now returns it.
 func traceCmd() *cobra.Command {
-	var from, to, format, renderOut, urlBase, traceOutPath string
+	var from, to, format, renderOut, urlBase, serverVal, traceOutPath string
+	var srvSpec serverSpec
 	var hops int
 	cmd := &cobra.Command{
 		Use:   "trace <file>",
@@ -41,6 +42,9 @@ func traceCmd() *cobra.Command {
 				return err
 			}
 			defer closeOut()
+			if srvSpec, err = resolveServer(cmd, serverVal, urlBase); err != nil {
+				return err
+			}
 			a, err := parseEndpoint(from, "--from")
 			if err != nil {
 				return err
@@ -87,7 +91,7 @@ func traceCmd() *cobra.Command {
 			// viewerLinkMeta computes for a run that asked for no links. Worth knowing before reading
 			// it as the thing that keeps a link honest.
 			if urlBase != "" {
-				meta := viewerLinkMeta(cmd, cmd.Context(), ll, string(uri), urlBase)
+				meta := viewerLinkMeta(cmd, cmd.Context(), ll, string(uri), srvSpec)
 				if u := rpt.TraceURL(meta, a.String(), b.String(), hops); u != "" {
 					defer fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 				}
@@ -136,13 +140,8 @@ func traceCmd() *cobra.Command {
 			"no-route can be re-asked wider.")
 	cmd.Flags().StringVar(&format, "format", "text", "text|json")
 	outFileFlag(cmd, &traceOutPath)
-	cmd.Flags().StringVar(&urlBase, "url-base", "",
-		"base address of a RUNNING viewer (e.g. http://localhost:8080), so the answer comes with a link "+
-			"that re-asks it there. It starts no server: run `agni open <design>` or `agni serve` first, "+
-			"and `open` prints a ready-made command. Same promise as `check --url-base`: the mount has to "+
-			"be one you declared, the server is asked whether it serves that name from the same root, and "+
-			"a withheld link says why. The link carries the QUESTION, so it needs no revision hash and is "+
-			"re-asked against whatever the design is when someone follows it.")
+	serverFlag(cmd, &serverVal, &urlBase)
+	withSelfServer(cmd, &srvSpec)
 	cmd.Flags().StringVar(&renderOut, "render", "",
 		"also draw the answer to this .svg file: the route's nets and the parts crossed, on the "+
 			"design's own schematic where it has one and on an auto-layout of its netlist where it "+

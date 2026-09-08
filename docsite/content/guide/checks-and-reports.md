@@ -225,7 +225,7 @@ the [CLI reference](../cli-reference/#gating-a-pipeline-on-a-review) for the ful
 looked at, what it concluded, and what to do about the parts that failed.
 
     agni check --format html \
-      --url-base http://localhost:8080 \
+      --server http://localhost:8080 \
       --mount board=. mount://board/design.kicad_sch > report.html
 
 Rules with something to act on come first and open expanded; rules that cleared everything collapse to
@@ -237,16 +237,21 @@ are captioned "absence here is not evidence of correctness". Presenting a failur
 considered set as though they were the same kind of answer is the false-coverage claim this whole
 layer exists to remove, and a report is where it would be most convincing.
 
-**Links are emitted only when they are real.** `--url-base` says where the viewer is. The other half
-is that the mount was DECLARED, with `--mount` or in `agni.yaml`, rather than minted for this run: a
-minted name means nothing on a server that was not started with it, so it gets no links rather than
-links resolving on nobody's server. Either way the reason is printed.
+**Links are emitted only when they are real.** `--server` says where the viewer is. Against a URL,
+the other half is that the mount was DECLARED, with `--mount` or in `agni.yaml`, rather than minted
+for this run: a minted name means nothing on a server that was not started with it, so it gets no
+links rather than links resolving on nobody's server. Either way the reason is printed.
+
+`--server self` removes that second half rather than satisfying it. One process reads the design and
+serves it, so the table the links name is the table being served and a minted mount is as linkable as
+a declared one. It blocks until Ctrl-C, which is the honest lifetime of those links: they resolve for
+exactly as long as the server that mints them is up.
 
 <details>
 <summary>What the server is asked, and the three answers it can give</summary>
 
 Declaring the mount says the operator named it, which is not the same as the server agreeing about
-it, so `--url-base` also asks that server for its mount table. A name served from a different root
+it, so a `--server <url>` run also asks that server for its mount table. A name served from a different root
 means every link would open a different board, and those links are dropped. A server that does not
 answer leaves the question open rather than settling it, so the links stay and the run says they went
 unverified, which keeps the case where a report is written before the viewer is up.

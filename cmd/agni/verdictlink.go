@@ -32,7 +32,7 @@ const serverMountTimeout = 2 * time.Second
 // not: a report with 265 rows and no links looks like a broken renderer, and nothing on the page or
 // in the terminal said which of the two halves was missing. The caller prints this whenever
 // --url-base was given and nothing came back.
-func linkTarget(ws *cliWorkspace, designURI string) (path, why string) {
+func linkTarget(ws *cliWorkspace, designURI string, selfServed bool) (path, why string) {
 	if ws == nil {
 		return "", "this run has no mount table"
 	}
@@ -40,8 +40,12 @@ func linkTarget(ws *cliWorkspace, designURI string) (path, why string) {
 	if err != nil || u.Mount == "" || u.Path == "" {
 		return "", fmt.Sprintf("%s does not address a mount", designURI)
 	}
-	if !ws.Declared(u.Mount) {
-		return "", fmt.Sprintf("mount %q was minted for this run rather than declared, so a link built from it would resolve on no server; pass --mount %s=<root> to name it", u.Mount, u.Mount)
+	// The declared-mount rule exists because a mount minted for one run means nothing on a server that
+	// was not started with it. Under `--server self` that premise is gone: this process serves the
+	// table it just minted, so the minted mount is exactly the one the link resolves against. Lifting
+	// the rule here is most of what the flag is for.
+	if !selfServed && !ws.Declared(u.Mount) {
+		return "", fmt.Sprintf("mount %q was minted for this run rather than declared, so a link built from it would resolve on no server; pass --mount %s=<root> to name it, or --server self to serve it from here", u.Mount, u.Mount)
 	}
 	return u.Mount + "/" + u.Path, ""
 }
@@ -109,7 +113,7 @@ func mountURIAuthority(designURI string) string {
 //
 // Resolving once is what makes those unrepresentable rather than merely fixed. There is no longer a
 // pair of values that could name different artifacts.
-func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, designURI string) (mountPath, contentHash, why string) {
+func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, designURI string, selfServed bool) (mountPath, contentHash, why string) {
 	target := designURI
 	// A resolution failure leaves the argument standing rather than dropping the link. The design was
 	// already read and analysed by the time anything asks for a link, so a descriptor that will not
@@ -121,7 +125,7 @@ func verdictLinkTarget(ctx context.Context, ws *cliWorkspace, ll *localLoader, d
 			}
 		}
 	}
-	mountPath, why = linkTarget(ws, target)
+	mountPath, why = linkTarget(ws, target, selfServed)
 	return mountPath, designContentHash(ctx, ll, target), why
 }
 
@@ -161,13 +165,16 @@ func designContentHash(ctx context.Context, ll *localLoader, designURI string) s
 //
 // It returns an rpt.Report because that is what the renderers take; a caller wanting only the URL
 // halves reads URLBase and MountPath off it and ignores the rest.
-func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, designURI, urlBase string) rpt.Report {
+func viewerLinkMeta(cmd *cobra.Command, ctx context.Context, ll *localLoader, designURI string, spec serverSpec) rpt.Report {
 	ws, _ := workspace()
-	mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI)
+	urlBase := spec.base()
+	mountPath, contentHash, why := verdictLinkTarget(ctx, ws, ll, designURI, spec.self)
 	if urlBase != "" && why != "" {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: --url-base is set but no links were emitted: %s\n", why)
 	}
-	if urlBase != "" && mountPath != "" {
+	// A remote server is asked whether it agrees about the mount. `self` is not asked, because there is
+	// nobody to disagree: the table the links name is the table this process is about to serve.
+	if spec.url != "" && mountPath != "" {
 		if m, ok := mounts.Find(ws.Mounts(), mountURIAuthority(designURI)); ok {
 			keep, note := verifyServerMount(ctx, urlBase, m)
 			if note != "" {
