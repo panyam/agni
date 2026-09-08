@@ -12,6 +12,17 @@ GitHub Release body carries.
 
 Full notes: [`RELEASES/v0.2.1.md`](RELEASES/v0.2.1.md).
 
+Tagged as a patch although two new rules change what `check` reports on unchanged input, which would
+ordinarily be a minor.  Deliberate, since there are no external consumers yet.
+
+### Added
+
+- `i2c-redundant-pull-up`: an I2C net reaching one rail through more than one resistor.  Parallel
+  pull-ups are one smaller resistor, so the bus sinks more current than it was sized for.
+- `i2c-pull-up-split-rail`: an I2C net reaching two different rails through its pull-ups, which
+  back-feeds whichever supply is down through the bus.
+- `examples/dft-coverage`.
+
 ### Fixed
 
 - The viewer's default layout opened on the Trace tab, hiding the query surface behind it.  Every
