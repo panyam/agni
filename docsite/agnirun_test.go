@@ -368,3 +368,31 @@ func TestScriptAndStepsAreMutuallyExclusive(t *testing.T) {
 		t.Error("a step with a show but no script must be an error")
 	}
 }
+
+// TestInputHashRejectsUntrackedFixtureFiles is the other side of TestInputHashIgnoresUntrackedFiles,
+// and the two only make sense together. A gitignored file is generated output nobody commits, so it
+// must not move the stamp. A file git neither tracks nor ignores is a fixture somebody has not
+// committed yet, and it moves the stamp the moment they do: the gate passes locally and fails in CI
+// on a tree whose content never changed (agni issue 588).
+func TestInputHashRejectsUntrackedFixtureFiles(t *testing.T) {
+	const fixture = "readers/kicad/testdata"
+	if _, err := inputHash([]byte("spec"), fixture); err != nil {
+		t.Fatalf("clean fixture should hash: %v", err)
+	}
+
+	stray := filepath.Join("..", fixture, "zz_untracked_fixture.kicad_sch")
+	if err := os.WriteFile(stray, []byte("(kicad_sch)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(stray) })
+
+	_, err := inputHash([]byte("spec"), fixture)
+	if err == nil {
+		t.Fatal("an untracked, unignored fixture file must be rejected; it changes the stamp on commit")
+	}
+	for _, want := range []string{"zz_untracked_fixture.kicad_sch", "Commit them"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error does not say %q: %v", want, err)
+		}
+	}
+}

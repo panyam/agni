@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"sync"
@@ -50,6 +51,11 @@ func AgniRun(relativePath string) string {
 	if err != nil {
 		// Rendered rather than swallowed. A silently empty block is the failure this whole mechanism
 		// exists to remove, and a tutorial showing an error is a tutorial someone fixes.
+		//
+		// Also to stderr, because the page is for the READER and an operator running the build sees
+		// none of it. The build still exits 0 by design, so without this a spec that cannot render
+		// leaves no trace anywhere the person who broke it is looking.
+		fmt.Fprintf(os.Stderr, "agniRun %s failed: %v\n", relativePath, err)
 		return "```\nagniRun " + relativePath + " failed: " + err.Error() + "\n```"
 	}
 	return out
@@ -352,6 +358,15 @@ func inputHash(spec []byte, fixture string) (string, error) {
 	if fixture == "" {
 		return hex.EncodeToString(h.Sum(nil))[:16], nil
 	}
+	if stray, err := untrackedFixtureFiles(fixture); err != nil {
+		return "", err
+	} else if len(stray) > 0 {
+		return "", fmt.Errorf("fixture %s has files git does not track yet:\n  %s\n"+
+			"The stamp hashes COMMITTED content, so it cannot be computed for this tree: it would come "+
+			"out one way now and another once these are committed, which is a capture that passes here "+
+			"and is stale in CI. Commit them, then regenerate (agni issue 588)",
+			fixture, strings.Join(stray, "\n  "))
+	}
 	files, err := trackedFiles(fixture)
 	if err != nil {
 		return "", err
@@ -378,6 +393,35 @@ func inputHash(spec []byte, fixture string) (string, error) {
 // bug this exists to fix, and restore it invisibly: the stamp would start depending on the working
 // tree again with nothing on screen to say so. A fixture with no tracked files is the same mistake
 // wearing a different hat, so an empty listing is an error too, not a hash of no content.
+// untrackedFixtureFiles lists the files under fixture that git neither tracks nor ignores.
+//
+// Such a file is the one state the stamp cannot describe. It is not in the hash, because the hash
+// covers committed content (see trackedFiles), so the gate passes; commit it and the hash moves, so
+// CI fails on a tree whose CONTENT never changed. That caught three branches in one session, twice
+// after the person had just described it, which is what makes it worth a check rather than another
+// paragraph of documentation (agni issue 588).
+//
+// Ignored files are deliberately not listed. The tutorial's own `make report` writes gitignored
+// output into examples/tutorial-project/reports/, and counting that is what agni issue 357 was: every
+// gate run by anyone who had followed the tutorial rewrote the committed stamp. --exclude-standard is
+// exactly the line between generated output nobody commits and a fixture somebody forgot to.
+func untrackedFixtureFiles(fixture string) ([]string, error) {
+	cmd := exec.Command("git", "ls-files", "-z", "--others", "--exclude-standard", "--", fixture)
+	cmd.Dir = ".."
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("listing untracked files for fixture %s: %w", fixture, err)
+	}
+	var files []string
+	for _, p := range strings.Split(string(out), "\x00") {
+		if p != "" {
+			files = append(files, p)
+		}
+	}
+	sort.Strings(files)
+	return files, nil
+}
+
 func trackedFiles(fixture string) ([]string, error) {
 	cmd := exec.Command("git", "ls-files", "-z", "--", fixture)
 	cmd.Dir = ".." // specs name their fixture relative to the repo root, as the rest of this file does
