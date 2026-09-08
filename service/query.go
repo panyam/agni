@@ -86,7 +86,14 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	}
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKinds(q)
-	resp := &webapi.RunQueryResponse{Columns: make([]string, len(cols)), ColumnKinds: kinds}
+	// The answer echoes its own question and the design it was asked of, so a response is
+	// self-describing wherever it ends up: a saved file, a pasted ticket, a cache. Both come from the
+	// request rather than being re-derived, so they cannot describe a different run than the one that
+	// produced these rows.
+	resp := &webapi.RunQueryResponse{
+		Columns: make([]string, len(cols)), ColumnKinds: kinds,
+		Query: req.GetQuery(), Source: req.GetUri(),
+	}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
 	}

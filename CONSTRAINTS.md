@@ -967,3 +967,31 @@ direction and the fact that each shape still compiles to rules.
 correct and every one of them does; only the reverse is a violation. `stdlib/profiles` importing
 `core/query` is likewise fine, since a profile that targets one engine is a shape making a choice,
 not the catalog making it for everyone.
+
+## C31: A command's `--format json` emits the wire message, in protojson
+**Rule:** Where a command has a `--format json` (or `--report-format json`), it emits **protojson of
+the message that command's rpc returns**, with `EmitUnpopulated` so a field never appears and
+vanishes between runs. Where no rpc serves the answer, it emits the contract TYPE rather than a
+wrapper invented for one consumer (`agni params` emits a bare `PartSpec`). A command with neither has
+no wire form yet, and adding one is the work rather than hand-rolling a second shape. A command that
+evaluates two ways renders BOTH paths from the same message, so a format cannot work on one and not
+the other.
+**Why:** the CLI's json is a contract, and it was two. `check`, `check --report`, `diff`, `validate`
+and `params` emitted the wire message; `query`, `render --report` and `intake` emitted hand-rolled
+shapes, so what a client learned from one command told it nothing about the next. Two of those were
+worse than inconsistent: `query` received a `RunQueryResponse` and re-encoded a different shape of it,
+and `render` encoded the Go `graph.ConversionReport` while `service` converted the same struct through
+`reportToProto` for `GetLayoutReport`, so the two publishers of one report disagreed by construction
+(`class` against `deviceClass`) and nothing could detect it. This is C26 one layer out: two
+hand-maintained shapes for one answer drift, and they drift silently, because a field the renderer
+never learned is absent from both sides of any assertion made on the proto.
+**Verify:** `TestEveryJSONFormatEmitsAProto` (`cmd/agni`) scans the command tree's json paths and
+fails on a hand-rolled encoder outside the declared exception list.
+**The one exception, and it is declared rather than tolerated:** `agni intake`. `intake.Skeleton`'s
+confidentiality guarantee is STRUCTURAL, meaning the type has no field that can hold a net name or a
+connection, so an intake summary cannot express the confidential parts of a design (C16). A proto twin
+would have to carry that guarantee into a file edited by people adding fields for other reasons, where
+it would survive only as long as everyone remembered it, which is the policy this design replaced. It
+keeps `encoding/json` until something needs it on a wire, and then the guarantee gets designed rather
+than inherited. The reasoning lives on the type in `intake/intake.go`, where someone adding a field
+will read it.

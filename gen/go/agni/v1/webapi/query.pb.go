@@ -291,7 +291,19 @@ type RunQueryResponse struct {
 	// derived from the arg-label of the relation position its variable was bound from — "component"
 	// (a ref_des), "net", or "" for a scalar or unresolved column. It drives which cells the panel
 	// renders as clickable-to-locate. Empty (or all "") when no column resolves to an entity.
-	ColumnKinds   []string `protobuf:"bytes,3,rep,name=column_kinds,json=columnKinds,proto3" json:"column_kinds,omitempty"`
+	ColumnKinds []string `protobuf:"bytes,3,rep,name=column_kinds,json=columnKinds,proto3" json:"column_kinds,omitempty"`
+	// query and source echo the request's identifying inputs, so an ANSWER says which question
+	// produced it and which design it was asked of.
+	//
+	// Added when the CLI's `--format json` moved onto this message. The CLI had been emitting a
+	// hand-rolled shape that carried both, and dropping them to adopt the wire form would have made
+	// the machine-readable format the only one that cannot say what it is an answer to, which is
+	// backwards: markdown and html carry them precisely so a saved view states its own question.
+	//
+	// The panel ignores them, since it sent the request and already knows. That is the ordinary cost
+	// of a self-describing response and it is one string each.
+	Query         string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
+	Source        string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -345,6 +357,20 @@ func (x *RunQueryResponse) GetColumnKinds() []string {
 		return x.ColumnKinds
 	}
 	return nil
+}
+
+func (x *RunQueryResponse) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *RunQueryResponse) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
 }
 
 type ListRelationsRequest struct {
@@ -756,11 +782,13 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\tcell_refs\x18\x06 \x03(\tR\bcellRefs\")\n" +
 	"\n" +
 	"CellSheets\x12\x1b\n" +
-	"\tsheet_ids\x18\x01 \x03(\tR\bsheetIds\"}\n" +
+	"\tsheet_ids\x18\x01 \x03(\tR\bsheetIds\"\xab\x01\n" +
 	"\x10RunQueryResponse\x12\x18\n" +
 	"\acolumns\x18\x01 \x03(\tR\acolumns\x12,\n" +
 	"\x04rows\x18\x02 \x03(\v2\x18.agni.v1.webapi.QueryRowR\x04rows\x12!\n" +
-	"\fcolumn_kinds\x18\x03 \x03(\tR\vcolumnKinds\"\x16\n" +
+	"\fcolumn_kinds\x18\x03 \x03(\tR\vcolumnKinds\x12\x14\n" +
+	"\x05query\x18\x04 \x01(\tR\x05query\x12\x16\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\"\x16\n" +
 	"\x14ListRelationsRequest\"|\n" +
 	"\fRelationInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +

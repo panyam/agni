@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/panyam/agni/core/graph"
@@ -20,6 +20,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/readers/formats"
+	"github.com/panyam/agni/service"
 )
 
 // The layout/--symbols vocabulary is shared with the service tier via formats.
@@ -357,9 +358,17 @@ func writeReport(w io.Writer, file, symbols string, reg *graph.Registry, format 
 	name := filepath.Base(file)
 	switch format {
 	case "json":
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		return enc.Encode(rep)
+		// protojson of the WIRE message, the same ConversionReport GetLayoutReport returns, so a
+		// script reading this CLI and a client reading the rpc parse one shape. It used to encode the
+		// Go struct, so the two publishers of one report disagreed by construction: `class` here and
+		// `deviceClass` over the wire, for the same field.
+		b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.
+			Marshal(service.ReportProto(rep))
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(w, string(b))
+		return err
 	case "text", "":
 		writeReportText(w, name, symbols, rep)
 		return nil

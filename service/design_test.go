@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/panyam/agni/artifact"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -725,5 +727,42 @@ func TestGetDesignSurvivesAnUnhashableFile(t *testing.T) {
 	}
 	if len(resp.GetSheets()) == 0 {
 		t.Error("the design still loaded, so its sheets must still be listed")
+	}
+}
+
+// fullConversionReport sets every field to a distinguishable non-zero value, with TWO components,
+// which is the load-bearing half of a round-trip guard: a zero field survives a conversion that
+// drops it, and a converter that drops everything past the first element round-trips a one-element
+// slice perfectly.
+func fullConversionReport() *graph.ConversionReport {
+	return &graph.ConversionReport{Components: []graph.ComponentReport{
+		{RefDes: "R1", Symbol: "Device:R", Class: "resistor", Cell: "res", Kind: "glyph"},
+		{RefDes: "U2", Symbol: "MCU:STM32", Class: "ic", Cell: "box", Kind: "provided"},
+	}}
+}
+
+// C26's guard for the pair. The CLI's --report-format json and GetLayoutReport now publish this one
+// message, so a field the converter never learned would be absent from both sides of every assertion
+// made on the proto, which is how a silently dropped field ships.
+func TestConversionReportProtoRoundTrip(t *testing.T) {
+	want := fullConversionReport()
+	if got := ReportFromProto(ReportProto(want)); !reflect.DeepEqual(got, want) {
+		t.Errorf("round trip lost or changed a field\n got: %+v\nwant: %+v", got, want)
+	}
+}
+
+func TestConversionReportFieldCensus(t *testing.T) {
+	var got []string
+	rt := reflect.TypeOf(graph.ComponentReport{})
+	for i := 0; i < rt.NumField(); i++ {
+		got = append(got, rt.Field(i).Name)
+	}
+	sort.Strings(got)
+	want := []string{"Cell", "Class", "Kind", "RefDes", "Symbol"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("graph.ComponentReport's fields changed.\n got: %v\nwant: %v\n\n"+
+			"A new field is not covered by TestConversionReportProtoRoundTrip until it is in the "+
+			"fixture. Add it to the proto, both converters and fullConversionReport, then list it here.",
+			got, want)
 	}
 }

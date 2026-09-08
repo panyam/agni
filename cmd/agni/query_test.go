@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"os"
 	"strings"
@@ -418,5 +420,62 @@ func TestQueryViewNamesTheMountNotTheHost(t *testing.T) {
 		if strings.Contains(out.String(), wd) {
 			t.Errorf("--format %s published the host path %q", format, wd)
 		}
+	}
+}
+
+// C31: the CLI's json is protojson of the wire message, so a script reading it and the panel reading
+// RunQuery parse one shape.
+//
+// The cites assertion is inherited from the deleted TestTableJSONKeepsCitesApart, which protected the
+// same property of the shape this replaces: provenance stays a per-row LIST rather than being
+// flattened into a trailing cell the way text and csv need. Deleting the renderer should not delete
+// the claim.
+func TestQueryJSONIsTheWireMessage(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"testdata/conformance/showcase.passes.kicad_sch",
+		`component.class(?r, "resistor") => ?r`, "--format", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query --format json: %v\n%s", err, out.String())
+	}
+	var resp webapi.RunQueryResponse
+	if err := protojson.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("not protojson of webapi.RunQueryResponse: %v\n%s", err, out.String())
+	}
+	if len(resp.GetRows()) == 0 {
+		t.Fatal("no rows")
+	}
+	if len(resp.GetRows()[0].GetCites()) == 0 {
+		t.Error("provenance is not kept per row, so an answer cannot be traced back to its source")
+	}
+	// The column kinds the hand-rolled shape dropped, which is what makes a cell locatable.
+	if len(resp.GetColumnKinds()) == 0 || resp.GetColumnKinds()[0] != "component" {
+		t.Errorf("columnKinds = %v, want the entity kind the panel navigates on", resp.GetColumnKinds())
+	}
+	// An answer says which question produced it and which design it was asked of.
+	if !strings.Contains(resp.GetQuery(), "component.class") || resp.GetSource() == "" {
+		t.Errorf("the answer does not name its own question: query=%q source=%q", resp.GetQuery(), resp.GetSource())
+	}
+}
+
+// The spec-library path renders from the same message, so a format cannot work on a design and not on
+// a corpus. That invariant is what renderTable exists to hold, and json had quietly stopped honouring
+// it while the two paths built different things.
+func TestQueryJSONWorksOnTheSpecLibraryPathToo(t *testing.T) {
+	cmd := queryCmd()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{"--speclib", "--params", "testdata/conformance/params",
+		"param(?mpn, ?sym, ?max)", "--format", "json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("query --speclib --format json: %v\n%s", err, out.String())
+	}
+	var resp webapi.RunQueryResponse
+	if err := protojson.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("not protojson of webapi.RunQueryResponse: %v\n%s", err, out.String())
+	}
+	if len(resp.GetRows()) == 0 {
+		t.Error("no rows from the spec library")
 	}
 }
