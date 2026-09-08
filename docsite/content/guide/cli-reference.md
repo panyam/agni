@@ -367,12 +367,20 @@ the pin's physical designator, with the mapping between them carried per instanc
 table, which is the construct EDIF has for it. And an identifier holds no character a reader rejects,
 with anything richer moved into the quoted display half of a `(rename ...)`.
 
-Where a part type declares fewer pins than the netlist connects, the cell's interface is completed
-from the connections. A board file carries no part types, Telesis records a package with no pin list,
-and a gEDA slot maps its gate onto pins the shared symbol never names, so without this the file would
-reference ports nothing declares. This states what the connections already assert rather than
-inventing a part, and it is bounded the same way a netlist is: a pin on no net is invisible, so a
-cell completed this way carries the pins the design uses and not the pins the part has.
+Anything the file references, it also declares. Where a part type declares fewer pins than the
+netlist connects, the cell's interface is completed from the connections; where no part type exists
+at all, the cell is declared too, and so is the top cell the contents live in. A board file is the
+case that needs all three, because copper carries footprints, pads and nets and never says what the
+part is. This states what the `cellRef`s and `portRef`s in the same file already name rather than
+inventing a part, and it is bounded the way a netlist is: a pin on no net is invisible, so a cell
+completed this way carries the pins the design uses and not the pins the part has.
+
+A part named `gateway:CONN4` inside a library called `gateway` is written as cell `CONN4`, since
+EDIF's own library scoping already carries the qualification and a reader that treats the qualified
+form as one name rejects the colon in it. The prefix stays in the IR, where it selects the symbol
+file an external reference resolves from, so this is an encoding choice in the writer and not a
+rename. A design taken out through EDIF and read back therefore names that part `CONN4` in library
+`gateway`, which is the same fact with the redundancy gone.
 
 `.eds` is refused rather than treated as EDIF. It is a dual-capability format, a netlist plus the
 faithful schematic geometry beside it, and there is no schematic writer yet, so emitting one from
