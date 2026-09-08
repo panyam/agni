@@ -17,6 +17,17 @@ import (
 // the nets. KiCad stores schematic connectivity implicitly (wires + pins + labels are geometry),
 // so nets are computed from that geometry by schNets (see sch_nets.go), not read from the file.
 // sourceFile is recorded in provenance only; the caller owns file I/O (CONSTRAINTS C1).
+// partIdentityProps are the KiCad properties both readers carry into a component's attributes:
+// Value, the part-identity pair (MPN, Manufacturer, the WS10-003 join key when no BomLine exists),
+// and Footprint/Datasheet (footprint-consistency rules plus the WS10 datasheet join, WS1-037). Other
+// user properties are deliberately not swept until a consumer earns them (C9).
+//
+// It is one list rather than a copy per reader because the copy already drifted. The board reader
+// carried Value alone, so component.mpn came back empty for every board-only read and the entire
+// datasheet tier reported clean over a file that states an MPN on every footprint (agni issue 570).
+// A schematic and a board file put the part number in different places and mean the same thing by it.
+var partIdentityProps = []string{"Value", "MPN", "Manufacturer", "Footprint", "Datasheet"}
+
 func ReadSchematic(r io.Reader, sourceFile string) (*ir.Design, error) {
 	return ReadSchematicWithSymbols(r, sourceFile, nil)
 }
@@ -250,11 +261,7 @@ func (a *compAccum) collect(root *node, src, instPath string) {
 			Attributes: map[string]string{},
 			Prov:       &ir.Provenance{SourceFile: src, NativeId: uuidOf(ps), NativeIdKind: kicadNativeIDKind},
 		}
-		// Value plus the part-identity properties (MPN, Manufacturer — the WS10-003
-		// join key when no BomLine exists) and Footprint/Datasheet (footprint-consistency
-		// rules + the WS10 datasheet join, WS1-037) are carried into attributes; other user
-		// properties are deliberately not swept until a consumer earns them (C9).
-		for _, key := range []string{"Value", "MPN", "Manufacturer", "Footprint", "Datasheet"} {
+		for _, key := range partIdentityProps {
 			if v := propValue(ps, key); v != "" {
 				sec.Attributes[key] = v
 				if _, ok := comp.Attributes[key]; !ok {
