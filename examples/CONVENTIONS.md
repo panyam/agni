@@ -83,6 +83,13 @@ demo.Bind("run").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 })
 ```
 
+Setting **`AGNI_EXAMPLE_DESIGN`** replaces the default every `AskPath` offers, so a walkthrough
+can be driven over a design this repo cannot carry without that path being typed at the prompt
+or committed anywhere. It moves the DEFAULT rather than the value, so the prompt still shows it
+and a typed path still wins, and `--non-interactive` picks it up, which is what makes it worth
+having over just typing the path. A blank or whitespace-only value is not a value, so an
+`export AGNI_EXAMPLE_DESIGN=` left in a shell does not point every example at `""`.
+
 `Load` (which `design.Load()` calls) reads the path from disk first, so a user can point the
 example at their own design, then falls back to the embedded fixture whose base name matches,
 so the example still runs from any directory. A file that exists but fails to parse is

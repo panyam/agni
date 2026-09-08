@@ -67,3 +67,6 @@ neither. The two with neither share a part number, so the grouping in step 5 has
 GND deliberately carries no test point.
 
 Point the first step at any design you can read.
+
+Point it at your own board by typing a path at the first step, or by setting
+`AGNI_EXAMPLE_DESIGN` to change the default, which `make runquiet` and `make record` pick up too.
