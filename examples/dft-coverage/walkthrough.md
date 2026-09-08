@@ -20,7 +20,9 @@ The last step goes past what a coverage report can ask.
 ## Pick a design {#pick}
 
 > The bundled fixture is `../common/designs/probe-coverage.edn`, a small board built so each coverage
-> case occurs once. Point this at any design you can read.
+> case occurs once. Point this at any design you can read. Setting `AGNI_EXAMPLE_DESIGN` changes the
+> default, so a walkthrough can be driven over a board this repo does not carry without that path
+> being typed or committed.
 
 ## What is on the board {#inventory}
 
@@ -50,3 +52,9 @@ The last step goes past what a coverage report can ask.
 > wrong. A verdict names what was ASKED: which subjects passed and why, and which the rule could not
 > decide at all. "No findings" and "nobody looked" print identically in a spreadsheet.
 
+
+## One gap worth knowing before you trust the counts
+
+A thermistor is a two-terminal passive and carries no device class today, so `component.class`
+yields nothing for one and it drops out of the passive buckets above. On a board with thermistors
+the counts this walkthrough prints are low by that many parts. Tracked as agni issue 627.

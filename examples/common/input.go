@@ -1,10 +1,11 @@
 package common
 
 import (
+	"os"
 	"strings"
 
-	"github.com/panyam/demokit"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/demokit"
 )
 
 // PathInput is the shared way an example asks the user for a design file path and turns it
@@ -28,9 +29,27 @@ type PathInput struct {
 	path string
 }
 
+// DesignPathEnv overrides the default path every AskPath offers. It exists so a walkthrough can be
+// driven over a design this repo cannot carry, without that design's path appearing in any file here:
+// the board is named in the environment, and what is committed still defaults to a bundled fixture.
+//
+// Named for EXAMPLES rather than for any one walkthrough, because every example reaches it through
+// AskPath and a demo-shaped name would read as belonging to whichever one you happened to be running.
+//
+// It changes the DEFAULT, not the value, so the prompt still shows the path and the user can still
+// type another. --non-interactive then runs on it too, which is what makes the env var worth having
+// over just typing the path.
+const DesignPathEnv = "AGNI_EXAMPLE_DESIGN"
+
 // AskPath creates a PathInput bound to the named walkthrough input, defaulting to def (a path
-// relative to the example directory, e.g. "../common/designs/foo.edn").
-func AskPath(name, def string) *PathInput { return &PathInput{key: name, path: def} }
+// relative to the example directory, e.g. "../common/designs/foo.edn"), or to DesignPathEnv when
+// that is set to a non-blank value.
+func AskPath(name, def string) *PathInput {
+	if v := strings.TrimSpace(os.Getenv(DesignPathEnv)); v != "" {
+		def = v
+	}
+	return &PathInput{key: name, path: def}
+}
 
 // Def is the demokit input to attach to the step that collects the path. Declaring it here
 // (rather than in a markdown `inputs` block) keeps the prompt wording identical across
