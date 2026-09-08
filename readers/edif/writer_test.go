@@ -88,6 +88,14 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 //     on, so an array port has nowhere to be written back to; and partTypeOf, whose parseName knows
 //     four name forms and not (array DATA 8), files the port itself as a pin with no name at all.
 //     Excluding one without the other would assert that a bus we decline to write comes back anyway.
+//   - PART-TYPE PINS THE NETLIST REFERENCES AND THE INTERFACE DOES NOT DECLARE. Read consumes the
+//     portInstance table that resolved a logical port to its physical pins and keeps only the
+//     resolved pin (WS1-025), so for a source that used one the writer cannot tell that pins 5 and 6
+//     are both the GND port. EDIF resolves a portRef against the interface, so writing those pins
+//     without declaring them produces a file a conforming reader cannot follow; the writer declares
+//     them, and the re-read reports them as pins. That is the same reader loss the three above are,
+//     surfacing on the cell rather than on the net, so the exclusion is computed by the writer'"'"'s own
+//     rule rather than hand-listed: whatever the nets reference and the interface does not declare.
 func TestWriteRoundTripsIR(t *testing.T) {
 	for _, path := range corpus(t) {
 		t.Run(filepath.Base(path), func(t *testing.T) {
@@ -107,7 +115,7 @@ func TestWriteRoundTripsIR(t *testing.T) {
 // nineteen components and fifteen nets is not a lead.
 func diffIR(t *testing.T, want, got *ir.Design) {
 	t.Helper()
-	w, g := normalize(want), normalize(got)
+	w, g := normalize(want, want), normalize(got, want)
 	if w.GetName() != g.GetName() {
 		t.Errorf("design name = %q, want %q", g.GetName(), w.GetName())
 	}
@@ -146,18 +154,21 @@ func diffIR(t *testing.T, want, got *ir.Design) {
 	}
 }
 
-// normalize applies the three documented exclusions to a copy, so neither input is mutated.
-func normalize(d *ir.Design) *ir.Design {
+// normalize applies the four documented exclusions to a copy, so neither input is mutated. It takes
+// the SOURCE design as well, because the last exclusion is defined against what that design declared.
+func normalize(d, src *ir.Design) *ir.Design {
 	c := proto.Clone(d).(*ir.Design)
 	clearSourceFiles(c.ProtoReflect())
 	delete(c.Attributes, "edif_hierarchical")
+	synthesized := portsTheNetlistAdds(src)
 	for _, lib := range c.GetLibraries() {
 		for _, pt := range lib.GetParts() {
 			kept := pt.Pins[:0]
 			for _, p := range pt.GetPins() {
-				if p.GetName() != "" {
-					kept = append(kept, p)
+				if p.GetName() == "" || synthesized[pt.GetName()][p.GetName()] {
+					continue
 				}
+				kept = append(kept, p)
 			}
 			pt.Pins = kept
 		}
@@ -171,6 +182,45 @@ func normalize(d *ir.Design) *ir.Design {
 		}
 	}
 	return c
+}
+
+// portsTheNetlistAdds names, per part type, the ports the writer has to declare because a net
+// references them and the interface does not. It is the writer'"'"'s undeclaredPorts rule restated over
+// the SOURCE design, so the exclusion tracks the writer instead of being a list that goes stale.
+func portsTheNetlistAdds(d *ir.Design) map[string]map[string]bool {
+	partOf := map[string]string{}
+	for _, c := range d.GetComponents() {
+		for _, s := range c.GetSections() {
+			if c.GetRefDes() != "" {
+				partOf[c.GetRefDes()] = s.GetPartRef()
+			}
+		}
+	}
+	declared := map[string]map[string]bool{}
+	for _, lib := range d.GetLibraries() {
+		for _, pt := range lib.GetParts() {
+			declared[pt.GetName()] = map[string]bool{}
+			for _, p := range pt.GetPins() {
+				if n := p.GetName(); n != "" {
+					declared[pt.GetName()][n] = true
+				}
+			}
+		}
+	}
+	out := map[string]map[string]bool{}
+	for _, n := range d.GetNets() {
+		for _, cn := range n.GetConnections() {
+			part, ok := partOf[cn.GetComponentRef()]
+			if !ok || declared[part] == nil || declared[part][cn.GetPinRef()] {
+				continue
+			}
+			if out[part] == nil {
+				out[part] = map[string]bool{}
+			}
+			out[part][cn.GetPinRef()] = true
+		}
+	}
+	return out
 }
 
 // clearSourceFiles walks the message tree and clears every Provenance.source_file, the same

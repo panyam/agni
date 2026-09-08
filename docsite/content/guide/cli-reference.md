@@ -359,6 +359,21 @@ to anchor it to and minting one would invent a component the source never had. T
 bare `portRef`s and read back as connections with no component, which is what an EDIF no-ref
 connection has always been. Every other connection is anchored.
 
+The output is written to be read by tools other than this one, which is a stricter target than
+round-tripping through agni's own reader and was not always met. Three things follow from it. The
+libraries come first and the design node last, so a reader that resolves a reference the moment it
+meets one is never asked to follow a forward reference. A `portRef` names the cell's PORT rather than
+the pin's physical designator, with the mapping between them carried per instance in a `portInstance`
+table, which is the construct EDIF has for it. And an identifier holds no character a reader rejects,
+with anything richer moved into the quoted display half of a `(rename ...)`.
+
+Where a part type declares fewer pins than the netlist connects, the cell's interface is completed
+from the connections. A board file carries no part types, Telesis records a package with no pin list,
+and a gEDA slot maps its gate onto pins the shared symbol never names, so without this the file would
+reference ports nothing declares. This states what the connections already assert rather than
+inventing a part, and it is bounded the same way a netlist is: a pin on no net is invisible, so a
+cell completed this way carries the pins the design uses and not the pins the part has.
+
 `.eds` is refused rather than treated as EDIF. It is a dual-capability format, a netlist plus the
 faithful schematic geometry beside it, and there is no schematic writer yet, so emitting one from
 the netlist writer alone would produce a file claiming to carry a drawing that carries none.
