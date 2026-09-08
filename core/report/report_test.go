@@ -196,3 +196,23 @@ func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
 		})
 	}
 }
+
+// The rule rides with the verdict so the viewer can resolve one link by running one rule instead of
+// the whole catalog. It is a hint on top of the identity, not part of it, so a link that carries no
+// rule still addresses the same verdict and every link already written into a saved report keeps
+// working.
+func TestVerdictURLCarriesTheRule(t *testing.T) {
+	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "i2c-pull-up")
+	want := "http://h:8080/designs/m/b.edn/view?verdict=i2c-pull-up%3A%28net%3ASDA%29&rule=i2c-pull-up"
+	if got != want {
+		t.Errorf("VerdictURL = %q, want %q", got, want)
+	}
+	if got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", ""); strings.Contains(got, "rule=") {
+		t.Errorf("an unnamed rule must not appear in the link: %q", got)
+	}
+	withHash := Report{URLBase: "http://h:8080", MountPath: "m/b.edn", ContentHash: "sha256:abc"}
+	if got := VerdictURL(withHash, "r:(net:N)", "r"); !strings.Contains(got, "hash=sha256%3Aabc") || !strings.Contains(got, "rule=r") {
+		t.Errorf("the rule must not displace the revision hash: %q", got)
+	}
+}

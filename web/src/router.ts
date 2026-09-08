@@ -37,6 +37,18 @@ export interface ViewerLocation {
   // the viewer never mints one of its own. A hash in the address bar came from whoever wrote the
   // link, which is the only reason it is worth comparing against.
   hash: string;
+  // rule is the rule name behind `verdict`, "" when the link named none. It rides in and out of the
+  // URL with the verdict the way `hash` does, and means nothing without one.
+  //
+  // A HINT rather than part of the address. It lets the viewer resolve the verdict by running one
+  // rule instead of the whole catalog, which is the difference between a link that opens and a link
+  // that opens fifteen seconds later. The verdict id remains the identity, so a link that carries no
+  // rule still resolves; it just pays for the full run. Links written before this existed keep
+  // working for exactly that reason.
+  //
+  // Not derived from the id, deliberately. VerdictID is generated and never parsed, because its
+  // escaping is what lets a subject ref carry its own colons and commas.
+  rule: string;
   // trace is a pin-to-pin question the viewer should ask on arrival, "U1.3,J1.1", "" when none.
   //
   // It carries the QUESTION rather than an answer, which is what makes it different in kind from
@@ -67,7 +79,7 @@ const VIEW_SEGMENT = "view";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", trace: "", traceHops: 0 };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0 };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -110,6 +122,9 @@ export function locationToUrl(loc: ViewerLocation): string {
   // Only alongside the verdict it qualifies. A hash left in the address bar after the proof it
   // described is gone would keep asserting a provenance nothing on screen still depends on.
   if (loc.verdict && loc.hash) params.set("hash", loc.hash);
+  // Same rule as hash: only alongside the verdict it qualifies. A rule left in the address bar
+  // after its verdict is gone would scope the next run to a rule nothing on screen asked about.
+  if (loc.verdict && loc.rule) params.set("rule", loc.rule);
   if (loc.trace) params.set("trace", loc.trace);
   // Only alongside the trace it qualifies, and only when it is not the server default, so an
   // ordinary link stays short and one that pinned a radius keeps saying so.
@@ -153,6 +168,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.symbols = params.get("sym") === "1";
   loc.verdict = params.get("verdict") ?? "";
   loc.hash = params.get("hash") ?? "";
+  loc.rule = params.get("rule") ?? "";
   loc.trace = params.get("trace") ?? "";
   // A hops that is not a positive integer is DROPPED rather than clamped: the alternative is asking
   // a question nobody wrote, and a link with a mangled radius should fall back to the default the

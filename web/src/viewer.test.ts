@@ -388,7 +388,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", trace: "", traceHops: 0 });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", rule: "", trace: "", traceHops: 0 });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -400,6 +400,49 @@ describe("ViewerPresenter", () => {
     }
   });
 
+  // Following a link is a question about ONE verdict, and answering it used to cost the whole
+  // catalog: a cold page load has an empty cache, so restore ran every selected rule (which defaults
+  // to every available rule) before it could resolve anything. On a real board that was 56 rules and
+  // about fifteen seconds, paid again on every click, because each click is a fresh page load.
+  describe("a verdict link runs only the rule it names", () => {
+    function linkLoc(rule: string) {
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, trace: "", traceHops: 0 };
+    }
+    // The rules the run actually asked the server for, flattened across calls.
+    function asked(h: ReturnType<typeof harness>): string[] {
+      return h.checkDesign.mock.calls.flatMap((c) => (c[0] as { rules?: string[] }).rules ?? []);
+    }
+
+    it("asks for the named rule alone", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("single-pin-net"));
+      expect(asked(h)).toEqual(["single-pin-net"]);
+    });
+
+    it("falls back to the whole catalog when the link names no rule", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc(""));
+      expect(asked(h)).toEqual(expect.arrayContaining(["single-pin-net", "diff-pair-naming"]));
+    });
+
+    // A rule this catalog does not have cannot be run, and scoping to it would resolve nothing and
+    // report a working link as stale. The full run is the honest fallback.
+    it("falls back when the named rule is not in the catalog", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("a-rule-from-a-later-release"));
+      expect(asked(h)).toEqual(expect.arrayContaining(["single-pin-net", "diff-pair-naming"]));
+    });
+
+    // The scoped run must not shrink the ruleset the Run button would use afterwards.
+    it("leaves the full selection in place for the next run", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("single-pin-net"));
+      h.checkDesign.mockClear();
+      await h.presenter.runChecks();
+      expect(asked(h)).toEqual(expect.arrayContaining(["diff-pair-naming"]));
+    });
+  });
+
   // The CLI-to-viewer hop's honesty guard (agni issue 392). `agni check --url-base` mints a link
   // carrying the revision it ran against; a verdict id is derived from a rule name and a subject ref,
   // so it resolves against an EDITED design just as readily and draws its proof on whatever now
@@ -407,7 +450,7 @@ describe("ViewerPresenter", () => {
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, trace: "", traceHops: 0 };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, rule: "", trace: "", traceHops: 0 };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
       h.getDesign.mockResolvedValue({
@@ -478,7 +521,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", trace: "", traceHops: 0 });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0 });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 
