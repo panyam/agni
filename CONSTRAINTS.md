@@ -995,3 +995,33 @@ it would survive only as long as everyone remembered it, which is the policy thi
 keeps `encoding/json` until something needs it on a wire, and then the guarantee gets designed rather
 than inherited. The reasoning lives on the type in `intake/intake.go`, where someone adding a field
 will read it.
+
+## C32: One design resolves the same way on every surface, and so do the links to it
+**Rule:** A design resolves to the same TIERS however it is named and whichever surface reads it. The
+entry, the enclosing folder, and a declared companion all name one design, and the CLI and the
+service compose it identically. An answer that names an entity carries that entity's KIND wherever it
+is produced, so a client can act on the answer without re-deriving what a column meant. A link one
+surface mints resolves, and lands, the same as the equivalent link the other mints.
+**Why:** `service.SourcesFor` is what resolves a named path to a design's tiers, and for most of 2026
+it had two callers, both outside the served path. So one design was two: the CLI read a netlist entry
+and attached the schematic companion its descriptor declared, while the server handed the same URI
+straight to the loader, found no faithful geometry on a netlist, and fell back to a computed layout.
+Same file, same spelling, same mount, different design.
+
+Nothing errored, and that is the property worth naming. Four symptoms followed and each was chased as
+its own defect before the common cause turned up: findings came back with no sheet badges, query
+cells reported `LOCATE_REASON_NO_GEOMETRY` with empty sheet lists, `trace --render` wrote the
+design's first sheet whatever the route crossed, and every link the CLI minted opened on an
+auto-layout. Every one of those is a well-formed empty answer, which reads as "this design has no
+geometry" rather than "the companion was not attached".
+
+This is C31 one layer out. C31 makes the two surfaces agree about the SHAPE of an answer; this makes
+them agree about what the answer is ABOUT. The kind clause is the same rule at cell granularity: a
+variable projected through a derived relation lost the entity kind its defining rule established, so
+the same question answered the same rows and only one spelling of it could be clicked.
+**Verify:** by REVIEW, and it should not stay that way. The test this wants is behavioural rather
+than a source sweep: read one fixture design carrying a declared companion through the CLI path and
+through the service, and assert the same tiers, the same `availableLayouts`, and the same column
+kinds. It needs a POSITIVE CONTROL, because both surfaces resolving nothing is exactly the failure
+mode and a bare "CLI equals service" assertion passes on a design where neither attaches anything.
+Tracked as agni issue 658; the instances it generalises are 654 (kinds), 656 (tiers) and 657 (links).
