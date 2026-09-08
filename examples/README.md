@@ -26,7 +26,8 @@ of them at once.
 | 9 | [resolve-design/](resolve-design/) | Which design does this file belong to? `project.yaml` / `design.yaml` descriptors, and resolving a file to the design that declares its entry. What is behind `agni check <design-folder>`. | ready |
 | 10 | [trace/](trace/) | Follow one pin to another through the series parts in the way (`check.TracePins`) and read the route, the nets it passes through, and what else sits on them. The walkthrough form of `agni trace`. | ready |
 | 11 | [dft-coverage/](dft-coverage/) | Design for test: which nets a probe can reach, and which parts a tester can measure. Queries over the fact relations rather than the rule catalog, so it is also the tour of derived relations, aggregates and negation. | ready |
-| 12 | [whole-enchilada/](whole-enchilada/) | The capstone: all of the above end to end in one tour — convergence, checks, diff, emit, and both renderers. | ready |
+| 12 | [design-review/](design-review/) | A review checklist run against a board: every item resolves to pass, fail, not-applicable, needs-a-declaration, or nothing covers it. The rung that composes the others, and the only one whose point is what it CANNOT answer. | ready |
+| 13 | [whole-enchilada/](whole-enchilada/) | The capstone: all of the above end to end in one tour — convergence, checks, diff, emit, and both renderers. | ready |
 
 New here? Start with `whole-enchilada` for the full tour, then use rungs 1-10 to go deep on
 each step. Examples are tracked as roadmap tickets (workstream WS8).

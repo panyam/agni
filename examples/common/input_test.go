@@ -20,6 +20,7 @@ import (
 // the one test that is ABOUT the variable still exercises it.
 func TestMain(m *testing.M) {
 	os.Unsetenv(DesignPathEnv)
+	os.Unsetenv(ReviewPathEnv)
 	os.Exit(m.Run())
 }
 

@@ -41,11 +41,30 @@ type PathInput struct {
 // over just typing the path.
 const DesignPathEnv = "AGNI_EXAMPLE_DESIGN"
 
+// ReviewPathEnv overrides the default review manifest, the way DesignPathEnv overrides the design.
+//
+// A review walkthrough needs BOTH to be pointed at real work: a team's checklist is as unshippable
+// here as their board, and a checklist without its design answers nothing. Two variables rather than
+// one because the two are separately useful, and because a manifest is often shared across the
+// designs of one project where the design is not.
+const ReviewPathEnv = "AGNI_EXAMPLE_REVIEW"
+
 // AskPath creates a PathInput bound to the named walkthrough input, defaulting to def (a path
 // relative to the example directory, e.g. "../common/designs/foo.edn"), or to DesignPathEnv when
 // that is set to a non-blank value.
 func AskPath(name, def string) *PathInput {
-	if v := strings.TrimSpace(os.Getenv(DesignPathEnv)); v != "" {
+	return askPathEnv(name, def, DesignPathEnv)
+}
+
+// AskReviewPath is AskPath for a review manifest, reading ReviewPathEnv instead. Same semantics
+// throughout: a blank value is not a value, the variable moves the DEFAULT rather than the answer, so
+// the prompt still shows it and a typed path still wins.
+func AskReviewPath(name, def string) *PathInput {
+	return askPathEnv(name, def, ReviewPathEnv)
+}
+
+func askPathEnv(name, def, env string) *PathInput {
+	if v := strings.TrimSpace(os.Getenv(env)); v != "" {
 		def = v
 	}
 	return &PathInput{key: name, path: def}
