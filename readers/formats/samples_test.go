@@ -16,16 +16,26 @@ const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetso
 // TestSampleBoardRead pins what the reader currently produces for a real hierarchical board.
 //
 // It is a CHARACTERIZATION test, so one of the three numbers below is knowingly wrong and is
-// asserted anyway. KiCad resolves this board to 1387 nets and we produce 1729, because a net crossing
-// a sheet boundary is read as two nets: `/inout_user/AN0` and `AN0` where KiCad has one `/AN0`.
-// Asserting 1729 is what makes a fix VISIBLE, so whoever moves it changes the constant deliberately
-// rather than discovering months later that a number drifted.
+// asserted anyway. KiCad resolves this board to 1387 nets and we produce 1478, because a net crossing
+// a sheet boundary can still be read as two. Asserting the wrong number is what makes the next fix
+// VISIBLE, so whoever moves it changes the constant deliberately rather than discovering months later
+// that a number drifted.
 //
-// 1729 became 1606 when issue 577 landed, the pin swap on mirrored symbols: this board places a lot
-// of them, and each swap moved one connection out of a net and another in. What remains is the group
-// buses issue 561 does not yet follow, `CAM0{CSI}`, whose members come from a `bus_alias` and are
-// named `CAM0.CLK_N`. Which nets are still wrong, rather than how many, is in
-// readers/kicad/oracle_corpus.baseline.
+// It has moved twice from 1729. Issue 577, the pin swap on mirrored symbols, took it to 1606: this
+// board places a lot of them and each swap moved one connection out of a net and another in. Issue
+// 597 then taught the walk to follow a GROUP bus across a sheet boundary, which is the spelling this
+// board uses, `CAM0{CSI}`, whose members come from a `bus_alias` and are named `CAM0.CSI2_CLK+`.
+// Issue 561's first half, the bus VECTOR (`AN[0..7]`), landed before either and moved this number not
+// at all, which is why the two halves are separate issues.
+//
+// It is now BELOW KiCad's 1387, so falling further is the WRONG direction and the obvious reading of
+// this constant is backwards. Every remaining disagreement is an over-merge, ten of them, and all ten
+// predate both fixes: KiCad gives each unconnected pin its own `unconnected-(U65-GL-Pad10)` net where
+// we group a part's unconnected pins into one `N$nnn`. Ten of ours stand in for about thirty of
+// KiCad's, which is the whole of the gap. Closing that pushes this number UP toward 1387.
+//
+// Which nets are still wrong, rather than how many, is in readers/kicad/oracle_corpus.baseline, and
+// that file is the one to read: it separates the two directions, and the split half is now empty.
 //
 // The other two are correct today and guard against regression: the component count matches KiCad
 // exactly, and the MPN count is what the datasheet tier joins on.
@@ -45,9 +55,9 @@ func TestSampleBoardRead(t *testing.T) {
 		t.Errorf("components = %d, want %d (KiCad resolves the same 1123 from the board file)", got, want)
 	}
 
-	if got, want := len(d.GetNets()), 1606; got != want {
-		t.Errorf("nets = %d, want %d; KiCad resolves 1387, and the gap is the group-bus half of "+
-			"issue 561. As that closes this constant should fall toward 1387", got, want)
+	if got, want := len(d.GetNets()), 1355; got != want {
+		t.Errorf("nets = %d, want %d; KiCad resolves 1387 and we are UNDER it, because we group a "+
+			"part's unconnected pins where KiCad names each one. Closing that raises this number", got, want)
 	}
 
 	var withMPN int

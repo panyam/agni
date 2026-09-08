@@ -56,14 +56,44 @@ func collectBuses(root *node, src string, qualify func(string) string) []*ir.Bus
 	}
 	// bus_alias: `(bus_alias "NAME" (members "A" "B" ...))` — an explicitly-listed bus.
 	for _, a := range root.Children("bus_alias") {
+		add("bus_alias", unescapeName(atomOf(a.Arg(1))), aliasMembers(a))
+	}
+	return out
+}
+
+// aliasMembers reads the member list off one `(bus_alias ...)` node.
+func aliasMembers(a *node) []string {
+	mn := a.Child("members")
+	if mn == nil {
+		return nil
+	}
+	var out []string
+	for _, m := range mn.Kids[1:] { // Kids[0] is the "members" head
+		out = append(out, unescapeName(m.Text()))
+	}
+	return out
+}
+
+// busAliases reads a sheet's `(bus_alias "NAME" (members "A" "B" ...))` declarations into a table.
+//
+// The table is what makes a group bus recognizable at all. A label `I2C0{I2C}` names the bus whose
+// members the alias `I2C` lists, and the SAME shape is how KiCad spells a subscript, so `3V3_{OUT}`
+// and `A_{1}` are ordinary scalar labels no pattern can tell apart from a bus. Membership here is the
+// test, and it is exact where a tighter pattern could only guess: the jetson baseboard carries over a
+// hundred distinct subscript groups (`1`, `CC`, `CLR`, `CS0`) and not one of them names an alias.
+//
+// Aliases are per FILE rather than per project, so a sheet that uses one declares it.
+func busAliases(root *node) map[string][]string {
+	var out map[string][]string
+	for _, a := range root.Children("bus_alias") {
 		name := unescapeName(atomOf(a.Arg(1)))
-		var members []string
-		if mn := a.Child("members"); mn != nil {
-			for _, m := range mn.Kids[1:] { // Kids[0] is the "members" head
-				members = append(members, unescapeName(m.Text()))
-			}
+		if name == "" {
+			continue
 		}
-		add("bus_alias", name, members)
+		if out == nil {
+			out = map[string][]string{}
+		}
+		out[name] = aliasMembers(a)
 	}
 	return out
 }

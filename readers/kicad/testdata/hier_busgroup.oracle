@@ -1,0 +1,28 @@
+# KiCad's own answer for hier_busgroup_root.kicad_sch, and the reference this fixture exists to meet.
+#
+# Regenerate with:
+#   kicad-cli sch export netlist --format kicadsexpr -o out.net hier_busgroup_root.kicad_sch
+# then read the (name ...) and (ref/pin ...) pairs out of each (net ...) block.  Produced by
+# Eeschema 10.0.4.  Do not hand-edit: the point of the file is that we did not choose the answer.
+#
+# I2C0{I2C} is a GROUP bus crossing a sheet boundary through a bus sheet pin.  Its members come from
+# the file's (bus_alias "I2C" (members "SDA" "SCL")) rather than from an index range, and they cross
+# with it: R1 on the root and R101 on the sub-sheet are one net, named by the PARENT's prefix even
+# though the child spells the bus I2C7{I2C} (agni issue 597).
+#
+# I2C8{I2C} is the control, and it is the over-merge direction.  It expands the SAME two member names
+# off the SAME alias and crosses nothing, so R3 and R4 must stay off I2C0's nets.  Eight buses share
+# the I2C alias on the jetson baseboard, so a promotion that dropped the prefix would short all of
+# them together while making the net count look better.
+#
+# <net name>  <ref>.<pin> ...
+/I2C0.SCL                R102.1 R2.1
+/I2C0.SDA                R1.1 R101.1
+/I2C8.SCL                R4.1
+/I2C8.SDA                R3.1
+unconnected-(R1-Pad2)    R1.2
+unconnected-(R2-Pad2)    R2.2
+unconnected-(R3-Pad2)    R3.2
+unconnected-(R4-Pad2)    R4.2
+unconnected-(R101-Pad2)  R101.2
+unconnected-(R102-Pad2)  R102.2
