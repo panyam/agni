@@ -269,7 +269,7 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 	refs = make([]query.Term, len(terms))
 	for i, t := range terms {
 		if t.Agg == nil && t.Var != "" {
-			kinds[i], kindVars[i], refs[i] = varKind(t.Var, q.Goal, decls)
+			kinds[i], kindVars[i], refs[i] = varKind(t.Var, q.Goal, decls, q.Rules, nil)
 		}
 	}
 	return kinds, kindVars, refs
@@ -278,7 +278,28 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 // varKind returns the entity kind a variable resolves to, or the variable whose per-row binding
 // carries it. It walks the positive body atoms and takes the first entity-yielding binding, so a
 // variable used as a net in one atom and a scalar in another is a net; a variable bound only in
-// scalar positions, or only by a user rule / IDB relation the catalog does not describe, is a scalar.
+// scalar positions is a scalar.
+//
+// It follows a USER RULE into its body, which it did not before. A rule is not in the catalog, so the
+// lookup missed and the column came back scalar even when the rule's own body had bound the variable
+// from a relation that declares an entity: the same question, answering the same rows, was clickable
+// in one spelling and dead in the other (agni issue 654). Derived relations are the idiom the
+// querying guide teaches for anything past one clause, and negation REQUIRES a unary helper rule, so
+// the queries worth clicking were exactly the ones losing their kinds.
+//
+// Three properties of that walk, each of which is wrong in the obvious implementation:
+//
+//   - It follows MORE THAN ONE HOP. A rule defined in terms of another rule is ordinary, and stopping
+//     at the first would be a silent partial answer, which is the failure this fixes rather than a
+//     smaller version of it. `seen` bounds it: a rule set may be recursive, and a cycle must end the
+//     walk rather than the process.
+//   - Rules that DISAGREE yield a scalar, not the first one written. Two rules may define one head
+//     and bind that position to a component in one and a net in the other, and a column typed from
+//     whichever was written first is wrong for half the rows. Scalar is the honest answer and is also
+//     the previous behaviour, so disagreement costs nothing new.
+//   - A rule wrapping `entity(?name, ?kind)` stays scalar. That relation's kind is per-row, carried by
+//     kindVars, and a head argument has no per-row identity to carry it through. Better a scalar than
+//     a kind invented for the column.
 //
 // Every branch below reads a DECLARATION. It used to match the catalog's arg-label prose, which put a
 // type system inside a naming convention and needed a hand-written pairing guard each time the
@@ -286,7 +307,7 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 // have their non-entity `kind` read as an entity kind, another so `param.pin(mpn, pin, ...)`'s
 // part-TYPE pin was not treated as a pin on the canvas. Both are gone, because neither relation
 // declares anything now (agni issue 548).
-func varKind(col query.Var, body query.Body, decls map[string]relArgDecl) (string, query.Var, query.Term) {
+func varKind(col query.Var, body query.Body, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Var, query.Term) {
 	for _, lit := range body.Literals {
 		a := lit.Pos
 		if a == nil {
@@ -333,7 +354,88 @@ func varKind(col query.Var, body query.Body, decls map[string]relArgDecl) (strin
 			return k.Entity, "", query.Term{}
 		}
 	}
+	return kindThroughRules(col, body, decls, rules, seen)
+}
+
+// kindThroughRules resolves a variable the catalog could not type by following the user rules that
+// define the relations binding it.
+//
+// Run only after the catalog walk above has failed, so a variable the catalog CAN type keeps the
+// answer it always had and this changes nothing for a query with no rules.
+func kindThroughRules(col query.Var, body query.Body, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Var, query.Term) {
+	if len(rules) == 0 {
+		return "", "", query.Term{}
+	}
+	for _, lit := range body.Literals {
+		a := lit.Pos
+		if a == nil || seen[a.Relation] {
+			continue
+		}
+		for j, term := range a.Args {
+			if term.Var != col {
+				continue
+			}
+			kind, ref, ok := headKind(a.Relation, j, decls, rules, seen)
+			if ok && kind != "" {
+				return kind, "", ref
+			}
+		}
+	}
 	return "", "", query.Term{}
+}
+
+// headKind types argument j of a derived relation by asking every rule that defines it, and returns a
+// kind only when they agree.
+//
+// A rule binding the position to a per-row kind (kindVars) is treated as DISAGREEMENT rather than as
+// an answer, because the caller has no per-row identity to carry through a head. That collapses to a
+// scalar, which is what the column was before.
+func headKind(rel string, j int, decls map[string]relArgDecl, rules []query.Rule, seen map[string]bool) (string, query.Term, bool) {
+	next := make(map[string]bool, len(seen)+1)
+	for k := range seen {
+		next[k] = true
+	}
+	next[rel] = true
+
+	var kind string
+	var ref query.Term
+	found := false
+	for _, r := range rules {
+		if r.Head.Relation != rel || j >= len(r.Head.Args) {
+			continue
+		}
+		hv := r.Head.Args[j].Var
+		if hv == "" {
+			return "", query.Term{}, false // a constant head argument types nothing
+		}
+		// A rule that reaches back into one already being resolved ABSTAINS rather than vetoing. Its
+		// silence is "no new information", not disagreement: a transitive closure defines itself in
+		// terms of itself, and letting the recursive clause veto would make every recursive relation
+		// scalar even where its base case types the position perfectly well.
+		if bodyTouches(r.Body, next) {
+			continue
+		}
+		k, kv, rf := varKind(hv, r.Body, decls, rules, next)
+		if k == "" || kv != "" {
+			return "", query.Term{}, false // untypeable, or per-row: the whole head is scalar
+		}
+		if found && k != kind {
+			return "", query.Term{}, false // two rules, two kinds: scalar rather than first-wins
+		}
+		kind, ref, found = k, rf, true
+	}
+	return kind, ref, found
+}
+
+// bodyTouches reports whether any positive literal names a relation currently being resolved, which
+// is how a cycle is recognised without walking into it.
+func bodyTouches(body query.Body, seen map[string]bool) bool {
+	for _, lit := range body.Literals {
+		if lit.Pos != nil && seen[lit.Pos.Relation] {
+			return true
+		}
+	}
+	return false
 }
 
 // relArgDecl is one relation's argument labels beside what they denote, the pair varKind resolves a

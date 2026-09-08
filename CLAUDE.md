@@ -421,12 +421,15 @@ Two things it leaves behind. `as_named` is on the wire because the CLI is itself
 services and resolving unconditionally overrode its own flag. And a trace still carries no sheet
 (agni 657), so `trace --render` is the one symptom 656 did not cure.
 
-**A variable projected through a DERIVED relation loses its entity kind**, so a query answer that is
-correct and complete cannot be clicked in the viewer. `varKind` types a projected variable from the
-catalog relations in the GOAL, and a user rule is not one, so the kind its body established does not
-survive the `:-`. The workaround reads as redundant and is not: repeat a catalog atom in the goal,
-`neither(?p), component.class(?p,?k) => ?p`. Same rows, and the column comes back `component` instead
-of a scalar. Agni 654. It bites every bucket-shaped query, which is most of what negation is for.
+**A variable's entity kind survives a DERIVED relation, and the three rules of that walk are worth
+knowing before you widen it.** `varKind` types a projected variable from the catalog relations in the
+goal and then follows user rules into their bodies, so a bucket built with negation is clickable
+without repeating a catalog atom to re-establish a kind the rule already knew (agni 654). It follows
+more than one hop. Rules that DISAGREE about a head position yield a scalar rather than the first one
+written, because a column typed from whichever rule came first is wrong for half the rows. A rule
+wrapping `entity(?name, ?kind)` stays scalar, since that kind is per-row and a head argument has no
+per-row identity to carry it. And a recursive clause ABSTAINS rather than vetoing, so a transitive
+closure is typed by its base case instead of collapsing to a scalar.
 
 **Three ways to read a design and get a confident WRONG answer, all silent, all hit in one sitting.**
 Each returns an empty answer rather than an error, which reads as "the design does not have that".
