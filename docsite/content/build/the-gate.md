@@ -11,11 +11,11 @@ flowchart LR
     T --> V["vet<br/>ir-model-check<br/>fixture-copies-check"]
     T --> E["test<br/>examples-test<br/>docsite-test"]
     T --> W["ui<br/>web-test<br/>browser-test"]
-    T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check"]
+    T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check<br/>tidyall-check"]
     V --- Vn["Go hygiene, C19 ratchet,<br/>duplicated fixtures"]
     E --- En["engine, example modules, docsite wiring"]
     W --- Wn["bundle, typecheck, vitest,<br/>layout in a real Chromium"]
-    G --- Gn["generated trees still match their source"]
+    G --- Gn["generated trees and module manifests<br/>still match their source"]
     O(["make oracle"]) --- On["KiCad against real boards.<br/>NOT in the gate."]
     classDef note fill:none,stroke:none;
     classDef out stroke-dasharray: 4 3;
@@ -191,6 +191,30 @@ churned those five captures for no reason anyone could act on. It was moved out 
 coupling is gone in both directions now, which is the point and also the catch: a reader fix that
 shrinks the baseline no longer moves the captures, and a change touching the fixtures still needs its
 own `make tutorial-runs` after the commit.
+
+## Building a module is not the same as the module being tidy
+
+`tidyall-check` runs `go mod tidy` over the root module and every example module, and fails on any
+difference. It costs about 5 seconds and runs near the front, so "updates to go.mod needed" is
+diagnosed there rather than surfacing later as a confusing `examples-test` failure.
+
+It exists because the gate built every module and never asked whether one was tidy, and those are
+different questions. An untidy module keeps building until some later change happens to need a
+requirement it never recorded, so the drift is invisible for exactly as long as nobody adds a
+dependency. **Eleven of the example modules had drifted this way before anyone looked.** What
+surfaced them was unrelated: promoting one root dependency to direct made `examples-test` fail with
+"updates to go.mod needed", and the tidy that fixed it swept up years of accumulated drift in the
+same commit.
+
+The examples are separate modules on purpose (C10, so demokit and its terminal-UI dependencies stay
+out of the engine's `go.mod`), and that is exactly what makes this possible: each carries its own
+resolved graph and nothing recomputed them together.
+
+**It snapshots and restores rather than reading `git status`**, the shape `tutorial-runs-check` uses
+and for the same reason. Reaching for `git diff` here is wrong twice over, and both ways were found
+by deliberately drifting a manifest and watching an early version pass. It misses the drift whenever
+tidy happens to restore a file to what HEAD already had, and it reports every unrelated uncommitted
+edit as untidiness, which is the regenerate → commit → gate ordering this shape exists to avoid.
 
 ## The three traps
 

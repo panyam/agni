@@ -338,6 +338,12 @@ hidden behind the Trace tab. It was outside the gate until PR 629. Read
 `docsite/content/build/the-gate.md` for what belongs in it, and `build/evidence.md` for the two ways
 a layout assertion passes while proving nothing.
 
+**A module that BUILDS is not a module that is tidy**, and the gate now asks both. `tidyall-check`
+runs `go mod tidy` over the root and every example module and fails on any difference (~5s, near the
+front so "updates to go.mod needed" is diagnosed there rather than as a later `examples-test`
+failure). Eleven example modules had drifted before anything looked, because an untidy module keeps
+building until some later change needs a requirement it never recorded. `make tidyall` fixes it.
+
 **`make testall` is the full gate, and CI runs exactly it.** Read
 `docsite/content/build/the-gate.md` before trusting a run: it has three traps that make a red gate
 read green (a pipe swallowing the exit code, a commit-first ordering rule, and a per-clone

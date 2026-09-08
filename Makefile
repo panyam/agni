@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: all proto proto-web proto-check tidy tidyall build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
+.PHONY: all proto proto-web proto-check tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dockserve dockstop tag tag-push tutorial-runs setup pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -54,6 +54,19 @@ tidy:
 
 # Tidy every module: the engine plus each example module (they have their own go.mod). Run
 # after changing imports anywhere the examples consume. EXAMPLE_MODS is defined below.
+# Freshness gate: fail when any module's go.mod/go.sum disagrees with a fresh `go mod tidy`.
+#
+# The gate BUILT every module and never asked whether one was tidy, and those are different
+# questions: an untidy module keeps building until some later change happens to need a requirement it
+# never recorded. Eleven example modules had drifted before anyone looked, and it took an unrelated
+# root dependency change to surface them all at once.
+#
+# It snapshots and restores rather than reading `git status`, for the reason tutorial-runs-check
+# gives. ~5s, and it runs near the FRONT of testall so "updates to go.mod needed" is diagnosed here
+# rather than surfacing later as a confusing examples-test failure (proto-check's placement argument).
+tidyall-check:
+	./hack/tidy_check.sh
+
 tidyall:
 	$(GO) mod tidy
 	@for d in $(EXAMPLE_MODS); do \
@@ -173,7 +186,7 @@ catalog-docs-check: catalog-docs
 # minutes per run, and the web surface is changing very little right now, so it is not paying for
 # itself while the demo work is in flight. Run `make browser-test` by hand when touching web/, and
 # put it back in this line once the demo is done.
-testall: vet ir-model-check fixture-copies-check proto-check samples-oracle ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
+testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test examples-test web-test catalog-docs-check docsite-test tutorial-runs-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
