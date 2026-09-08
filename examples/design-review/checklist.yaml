@@ -1,0 +1,40 @@
+# The checklist a reviewer walks before sign-off, written so a machine can read it.
+#
+# This file is the pedagogy of the walkthrough rather than scaffolding for it. An item binds to
+# exactly one mechanism, or to NOTHING, and that last case is the one no report in this space models:
+# a question on your list that no shipped rule covers is recorded as not-automated rather than
+# omitted, so the coverage number describes what was ASKED and not only what was answered.
+#
+# Sized so each outcome occurs at least once against the bundled design. Two of them are produced by
+# what the fixture LACKS rather than by what it has, which is the point rather than a shortcut: a
+# board-tier item on a netlist is not-applicable, and an intent item with nothing declared needs a
+# declaration.
+#
+# needs-data is deliberately absent. It is the state of a datasheet-backed item whose parameter
+# corpus EXISTS and does not carry the symbol, which is a different thing from having no corpus at
+# all (the not-applicable below), and showing it would mean bundling a seeded corpus for one row.
+name: Design review (worked example)
+areas:
+  - name: Connectivity
+    items:
+      - {id: "1", title: I2C buses carry a pull-up, rule: i2c-pull-up}
+      - {id: "2", title: no two parts drive one net, rule: output-output-conflict}
+      - {id: "3", title: every part is connected, rule: unconnected-component}
+  - name: House rules
+    items:
+      # A checklist item written as a question rather than bound to a shipped rule. This is how a
+      # team's own convention enters the review without anyone writing Go.
+      - id: "4"
+        title: no forbidden part number
+        query: {match: 'component.mpn(?r, "FORBIDDEN-PART") => ?r', subject: r, message: '{r} uses a forbidden MPN'}
+      # Presence, which needs no rule at all: a class of part must exist on the design.
+      - {id: "5", title: the board exposes a connector, present: {class: connector}}
+  - name: Not yet answerable
+    items:
+      # not-applicable: the rule exists and the design carries no copper for it to read.
+      - {id: "6", title: copper is wide enough, rule: track-width}
+      # needs-design-intent: the rule exists and nobody has declared what to check against.
+      - {id: "7", title: declared modules are present, rule: intent/module-missing}
+      # not-automated: a real review question that no shipped mechanism answers. Left unbound on
+      # purpose. Deleting this line would raise the coverage number and lower its truthfulness.
+      - {id: "8", title: the schematic matches the block diagram}
