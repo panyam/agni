@@ -2,13 +2,15 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -115,23 +117,35 @@ func TestTraceCLIRadiusIsAFlag(t *testing.T) {
 	}
 }
 
+// The json is protojson of the WIRE message, the same shape TraceDesign returns, so this decodes
+// into the proto rather than into the Go struct. That is the point of the change: a script reading
+// the CLI and a client reading the rpc now parse one thing.
 func TestTraceCLIJSON(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1", "--format", "json")
 	if err != nil {
 		t.Fatalf("trace --format json: %v\n%s", err, out)
 	}
-	var tr check.Trace
-	if err := json.Unmarshal([]byte(out), &tr); err != nil {
-		t.Fatalf("output is not json: %v\n%s", err, out)
+	var tr webapi.Trace
+	if err := protojson.Unmarshal([]byte(out), &tr); err != nil {
+		t.Fatalf("output is not protojson of webapi.Trace: %v\n%s", err, out)
 	}
-	if tr.Outcome != check.TraceRouted || len(tr.Crossings) != 1 {
-		t.Fatalf("decoded = %+v, want one crossing on a routed answer", tr)
+	if tr.GetOutcome() != webapi.TraceOutcome_TRACE_OUTCOME_ROUTED || len(tr.GetCrossings()) != 1 {
+		t.Fatalf("decoded = %+v, want one crossing on a routed answer", &tr)
 	}
-	if tr.Crossings[0].RefDes != "F1" || tr.Crossings[0].EnterPin != "1" || tr.Crossings[0].ExitPin != "2" {
-		t.Errorf("crossing = %+v, want F1 pin 1 to pin 2", tr.Crossings[0])
+	c := tr.GetCrossings()[0]
+	if c.GetRefDes() != "F1" || c.GetEnterPin() != "1" || c.GetExitPin() != "2" {
+		t.Errorf("crossing = %+v, want F1 pin 1 to pin 2", c)
 	}
-	if tr.From.PinName != "VBUS" || tr.To.Net != "VBUS_PROT" {
-		t.Errorf("endpoints = %+v / %+v", tr.From, tr.To)
+	if tr.GetFrom().GetPinName() != "VBUS" || tr.GetTo().GetNet() != "VBUS_PROT" {
+		t.Errorf("endpoints = %+v / %+v", tr.GetFrom(), tr.GetTo())
+	}
+	if tr.GetFrom().GetEndpoint().GetRefDes() != "J1" {
+		t.Errorf("the endpoint's ref-des did not survive: %+v", tr.GetFrom())
+	}
+	// EmitUnpopulated keeps a zero field present, so a client never has to tell "absent" from
+	// "zero" by whether a key showed up.
+	if !strings.Contains(out, "\"stubsElided\"") {
+		t.Errorf("a zero-valued field was omitted, so the shape changes per run:\n%s", out)
 	}
 }
 

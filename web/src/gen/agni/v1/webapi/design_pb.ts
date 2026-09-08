@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/design.proto.
  */
 export const file_agni_v1_webapi_design: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIi8KEEdldERlc2lnblJlcXVlc3QSDgoGbGF5b3V0GAEgASgJEgsKA3VyaRgCIAEoCSKaAgoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCSKZAQoPR2V0U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEgsKA3VyaRgFIAEoCSJZChBHZXRTaGVldFJlc3BvbnNlEisKBnBhY2tlZBgBIAEoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRTaGVldEgAEg0KA3N2ZxgCIAEoCUgAQgkKB2NvbnRlbnQiywEKFUhpZ2hsaWdodFNoZWV0UmVxdWVzdBINCgVzaGVldBgBIAEoCRIOCgZsYXlvdXQYAiABKAkSLQoHc3ltYm9scxgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRIrCgZmb3JtYXQYBCABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBIqCgVzcGVjcxgFIAMoCzIbLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTcGVjEgsKA3VyaRgGIAEoCSJjChZIaWdobGlnaHRTaGVldFJlc3BvbnNlEi8KBnBhY2tlZBgBIAEoCzIdLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHRIABINCgNzdmcYAiABKAlIAEIJCgdjb250ZW50IlQKFkdldExheW91dFJlcG9ydFJlcXVlc3QSLQoHc3ltYm9scxgBIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRILCgN1cmkYAiABKAkiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCJHChBDb252ZXJzaW9uUmVwb3J0EjMKCmNvbXBvbmVudHMYASADKAsyHy5hZ25pLnYxLndlYmFwaS5Db21wb25lbnRSZXBvcnQiZAoPQ29tcG9uZW50UmVwb3J0Eg8KB3JlZl9kZXMYASABKAkSDgoGc3ltYm9sGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRIMCgRjZWxsGAQgASgJEgwKBGtpbmQYBSABKAkqcwoLU2hlZXRGb3JtYXQSHAoYU0hFRVRfRk9STUFUX1VOU1BFQ0lGSUVEEAASFwoTU0hFRVRfRk9STUFUX1BBQ0tFRBABEhQKEFNIRUVUX0ZPUk1BVF9TVkcQAhIXChNTSEVFVF9GT1JNQVRfTkFUSVZFEAMqYgoMU3ltYm9sU291cmNlEh0KGVNZTUJPTF9TT1VSQ0VfVU5TUEVDSUZJRUQQABIXChNTWU1CT0xfU09VUkNFX0dMWVBIEAESGgoWU1lNQk9MX1NPVVJDRV9GQUlUSEZVTBACMvUCCg1EZXNpZ25TZXJ2aWNlElAKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaIS5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXNwb25zZRJNCghHZXRTaGVldBIfLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVzcG9uc2USXwoOSGlnaGxpZ2h0U2hlZXQSJS5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlc3BvbnNlEmIKD0dldExheW91dFJlcG9ydBImLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRMYXlvdXRSZXBvcnRSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIi8KEEdldERlc2lnblJlcXVlc3QSDgoGbGF5b3V0GAEgASgJEgsKA3VyaRgCIAEoCSKaAgoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCSKZAQoPR2V0U2hlZXRSZXF1ZXN0Eg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEgsKA3VyaRgFIAEoCSJZChBHZXRTaGVldFJlc3BvbnNlEisKBnBhY2tlZBgBIAEoCzIZLmFnbmkudjEuZ2VvbS5QYWNrZWRTaGVldEgAEg0KA3N2ZxgCIAEoCUgAQgkKB2NvbnRlbnQiywEKFUhpZ2hsaWdodFNoZWV0UmVxdWVzdBINCgVzaGVldBgBIAEoCRIOCgZsYXlvdXQYAiABKAkSLQoHc3ltYm9scxgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRIrCgZmb3JtYXQYBCABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBIqCgVzcGVjcxgFIAMoCzIbLmFnbmkudjEuZ2VvbS5IaWdobGlnaHRTcGVjEgsKA3VyaRgGIAEoCSJjChZIaWdobGlnaHRTaGVldFJlc3BvbnNlEi8KBnBhY2tlZBgBIAEoCzIdLmFnbmkudjEuZ2VvbS5QYWNrZWRIaWdobGlnaHRIABINCgNzdmcYAiABKAlIAEIJCgdjb250ZW50IlQKFkdldExheW91dFJlcG9ydFJlcXVlc3QSLQoHc3ltYm9scxgBIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRILCgN1cmkYAiABKAkiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKHAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EgsKA3VyaRgBIAEoCRIrCgRmcm9tGAIgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIpCgJ0bxgDIAEoCzIdLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kcG9pbnQSDAoEaG9wcxgEIAEoBSItCg1UcmFjZUVuZHBvaW50Eg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJIjsKE1RyYWNlRGVzaWduUmVzcG9uc2USJAoFdHJhY2UYASABKAsyFS5hZ25pLnYxLndlYmFwaS5UcmFjZSL7AQoFVHJhY2USJgoEZnJvbRgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kEiQKAnRvGAIgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSLQoHb3V0Y29tZRgDIAEoDjIcLmFnbmkudjEud2ViYXBpLlRyYWNlT3V0Y29tZRIOCgZyZWFzb24YBCABKAkSDgoGcmFkaXVzGAUgASgFEi0KCWNyb3NzaW5ncxgGIAMoCzIaLmFnbmkudjEud2ViYXBpLlRyYWNlQ3Jvc3MSJgoEbmV0cxgHIAMoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlTmV0IloKCFRyYWNlRW5kEi8KCGVuZHBvaW50GAEgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIQCghwaW5fbmFtZRgCIAEoCRILCgNuZXQYAyABKAkicwoKVHJhY2VDcm9zcxIPCgdyZWZfZGVzGAEgASgJEg0KBWNsYXNzGAIgASgJEhEKCWVudGVyX3BpbhgDIAEoCRIQCghleGl0X3BpbhgEIAEoCRIQCghmcm9tX25ldBgFIAEoCRIOCgZ0b19uZXQYBiABKAkiagoIVHJhY2VOZXQSDAoEbmFtZRgBIAEoCRIoCgVzdHVicxgCIAMoCzIZLmFnbmkudjEud2ViYXBpLlRyYWNlU3R1YhIUCgxzdHVic19lbGlkZWQYAyABKAUSEAoIYnVzX2xpa2UYBCABKAgiOAoJVHJhY2VTdHViEg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJEg0KBWNsYXNzGAMgASgJIkcKEENvbnZlcnNpb25SZXBvcnQSMwoKY29tcG9uZW50cxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLkNvbXBvbmVudFJlcG9ydCJkCg9Db21wb25lbnRSZXBvcnQSDwoHcmVmX2RlcxgBIAEoCRIOCgZzeW1ib2wYAiABKAkSFAoMZGV2aWNlX2NsYXNzGAMgASgJEgwKBGNlbGwYBCABKAkSDAoEa2luZBgFIAEoCSpzCgtTaGVldEZvcm1hdBIcChhTSEVFVF9GT1JNQVRfVU5TUEVDSUZJRUQQABIXChNTSEVFVF9GT1JNQVRfUEFDS0VEEAESFAoQU0hFRVRfRk9STUFUX1NWRxACEhcKE1NIRUVUX0ZPUk1BVF9OQVRJVkUQAypiCgxTeW1ib2xTb3VyY2USHQoZU1lNQk9MX1NPVVJDRV9VTlNQRUNJRklFRBAAEhcKE1NZTUJPTF9TT1VSQ0VfR0xZUEgQARIaChZTWU1CT0xfU09VUkNFX0ZBSVRIRlVMEAIqgQEKDFRyYWNlT3V0Y29tZRIdChlUUkFDRV9PVVRDT01FX1VOU1BFQ0lGSUVEEAASGAoUVFJBQ0VfT1VUQ09NRV9ST1VURUQQARIaChZUUkFDRV9PVVRDT01FX05PX1JPVVRFEAISHAoYVFJBQ0VfT1VUQ09NRV9VTlJFU09MVkVEEAMyzQMKDURlc2lnblNlcnZpY2USUAoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlc3BvbnNlEk0KCEdldFNoZWV0Eh8uYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXNwb25zZRJfCg5IaWdobGlnaHRTaGVldBIlLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVzcG9uc2USYgoPR2V0TGF5b3V0UmVwb3J0EiYuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlc3BvbnNlElYKC1RyYWNlRGVzaWduEiIuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed]);
 
 /**
  * SheetRef identifies a drawable sheet within a design.
@@ -386,6 +386,292 @@ export const GetLayoutReportResponseSchema: GenMessage<GetLayoutReportResponse> 
   messageDesc(file_agni_v1_webapi_design, 8);
 
 /**
+ * @generated from message agni.v1.webapi.TraceDesignRequest
+ */
+export type TraceDesignRequest = Message<"agni.v1.webapi.TraceDesignRequest"> & {
+  /**
+   * uri names the design to trace over, "mount://<mount>/<path>".
+   *
+   * @generated from field: string uri = 1;
+   */
+  uri: string;
+
+  /**
+   * from / to are the endpoint pins, as ref-des and pin designator.
+   *
+   * @generated from field: agni.v1.webapi.TraceEndpoint from = 2;
+   */
+  from?: TraceEndpoint | undefined;
+
+  /**
+   * @generated from field: agni.v1.webapi.TraceEndpoint to = 3;
+   */
+  to?: TraceEndpoint | undefined;
+
+  /**
+   * hops bounds the search in series crossings; 0 takes the server's default. Unlike the protection
+   * radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
+   * the value it rests on: nothing about a route degrades with distance, so a no-route can be
+   * re-asked wider and the reader has to be able to see what was asked the first time.
+   *
+   * @generated from field: int32 hops = 4;
+   */
+  hops: number;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceDesignRequest.
+ * Use `create(TraceDesignRequestSchema)` to create a new message.
+ */
+export const TraceDesignRequestSchema: GenMessage<TraceDesignRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 9);
+
+/**
+ * TraceEndpoint names one pin of one component.
+ *
+ * @generated from message agni.v1.webapi.TraceEndpoint
+ */
+export type TraceEndpoint = Message<"agni.v1.webapi.TraceEndpoint"> & {
+  /**
+   * @generated from field: string ref_des = 1;
+   */
+  refDes: string;
+
+  /**
+   * @generated from field: string pin = 2;
+   */
+  pin: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceEndpoint.
+ * Use `create(TraceEndpointSchema)` to create a new message.
+ */
+export const TraceEndpointSchema: GenMessage<TraceEndpoint> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 10);
+
+/**
+ * @generated from message agni.v1.webapi.TraceDesignResponse
+ */
+export type TraceDesignResponse = Message<"agni.v1.webapi.TraceDesignResponse"> & {
+  /**
+   * @generated from field: agni.v1.webapi.Trace trace = 1;
+   */
+  trace?: Trace | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceDesignResponse.
+ * Use `create(TraceDesignResponseSchema)` to create a new message.
+ */
+export const TraceDesignResponseSchema: GenMessage<TraceDesignResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 11);
+
+/**
+ * Trace is one pin-to-pin question and its whole answer.
+ *
+ * @generated from message agni.v1.webapi.Trace
+ */
+export type Trace = Message<"agni.v1.webapi.Trace"> & {
+  /**
+   * @generated from field: agni.v1.webapi.TraceEnd from = 1;
+   */
+  from?: TraceEnd | undefined;
+
+  /**
+   * @generated from field: agni.v1.webapi.TraceEnd to = 2;
+   */
+  to?: TraceEnd | undefined;
+
+  /**
+   * @generated from field: agni.v1.webapi.TraceOutcome outcome = 3;
+   */
+  outcome: TraceOutcome;
+
+  /**
+   * reason says why, for NO_ROUTE and UNRESOLVED; empty for a route.
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+
+  /**
+   * radius is the number of series crossings the walk searched to.
+   *
+   * @generated from field: int32 radius = 5;
+   */
+  radius: number;
+
+  /**
+   * @generated from field: repeated agni.v1.webapi.TraceCross crossings = 6;
+   */
+  crossings: TraceCross[];
+
+  /**
+   * @generated from field: repeated agni.v1.webapi.TraceNet nets = 7;
+   */
+  nets: TraceNet[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.Trace.
+ * Use `create(TraceSchema)` to create a new message.
+ */
+export const TraceSchema: GenMessage<Trace> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 12);
+
+/**
+ * TraceEnd is one resolved endpoint of a trace.
+ *
+ * @generated from message agni.v1.webapi.TraceEnd
+ */
+export type TraceEnd = Message<"agni.v1.webapi.TraceEnd"> & {
+  /**
+   * @generated from field: agni.v1.webapi.TraceEndpoint endpoint = 1;
+   */
+  endpoint?: TraceEndpoint | undefined;
+
+  /**
+   * pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"), or empty
+   * on a source carrying no part-type pin data. It is what a datasheet and a firmware header call
+   * the pin, so it is what makes the endpoint recognisable to the person reading.
+   *
+   * @generated from field: string pin_name = 2;
+   */
+  pinName: string;
+
+  /**
+   * net is the net the pin sits on, empty when the endpoint did not resolve.
+   *
+   * @generated from field: string net = 3;
+   */
+  net: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceEnd.
+ * Use `create(TraceEndSchema)` to create a new message.
+ */
+export const TraceEndSchema: GenMessage<TraceEnd> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 13);
+
+/**
+ * TraceCross is one series element crossed on the route, with its own pins on each side.
+ *
+ * @generated from message agni.v1.webapi.TraceCross
+ */
+export type TraceCross = Message<"agni.v1.webapi.TraceCross"> & {
+  /**
+   * @generated from field: string ref_des = 1;
+   */
+  refDes: string;
+
+  /**
+   * @generated from field: string class = 2;
+   */
+  class: string;
+
+  /**
+   * @generated from field: string enter_pin = 3;
+   */
+  enterPin: string;
+
+  /**
+   * @generated from field: string exit_pin = 4;
+   */
+  exitPin: string;
+
+  /**
+   * @generated from field: string from_net = 5;
+   */
+  fromNet: string;
+
+  /**
+   * @generated from field: string to_net = 6;
+   */
+  toNet: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceCross.
+ * Use `create(TraceCrossSchema)` to create a new message.
+ */
+export const TraceCrossSchema: GenMessage<TraceCross> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 14);
+
+/**
+ * TraceNet is one net on the route, with what else sits on it.
+ *
+ * @generated from message agni.v1.webapi.TraceNet
+ */
+export type TraceNet = Message<"agni.v1.webapi.TraceNet"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: repeated agni.v1.webapi.TraceStub stubs = 2;
+   */
+  stubs: TraceStub[];
+
+  /**
+   * stubs_elided is how many further parts sit on this net beyond the ones listed, so a capped list
+   * reads as capped rather than as complete.
+   *
+   * @generated from field: int32 stubs_elided = 3;
+   */
+  stubsElided: number;
+
+  /**
+   * bus_like marks a net the walk would refuse to continue THROUGH: a rail, a ground, or any
+   * rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
+   * assuming the trace stopped early for some other reason.
+   *
+   * @generated from field: bool bus_like = 4;
+   */
+  busLike: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceNet.
+ * Use `create(TraceNetSchema)` to create a new message.
+ */
+export const TraceNetSchema: GenMessage<TraceNet> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 15);
+
+/**
+ * TraceStub is a part sitting on a net of the route that the route does not pass through. Test
+ * points especially: a probe point on a path net is the most actionable thing on the line, and
+ * reducing the answer to its series elements removes exactly the parts a person reads a trace to find.
+ *
+ * @generated from message agni.v1.webapi.TraceStub
+ */
+export type TraceStub = Message<"agni.v1.webapi.TraceStub"> & {
+  /**
+   * @generated from field: string ref_des = 1;
+   */
+  refDes: string;
+
+  /**
+   * @generated from field: string pin = 2;
+   */
+  pin: string;
+
+  /**
+   * @generated from field: string class = 3;
+   */
+  class: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.TraceStub.
+ * Use `create(TraceStubSchema)` to create a new message.
+ */
+export const TraceStubSchema: GenMessage<TraceStub> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_design, 16);
+
+/**
  * ConversionReport is how an auto-layout mapped each component to a drawn node.
  *
  * @generated from message agni.v1.webapi.ConversionReport
@@ -402,7 +688,7 @@ export type ConversionReport = Message<"agni.v1.webapi.ConversionReport"> & {
  * Use `create(ConversionReportSchema)` to create a new message.
  */
 export const ConversionReportSchema: GenMessage<ConversionReport> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 9);
+  messageDesc(file_agni_v1_webapi_design, 17);
 
 /**
  * ComponentReport is one component's mapping in the conversion report.
@@ -449,7 +735,7 @@ export type ComponentReport = Message<"agni.v1.webapi.ComponentReport"> & {
  * Use `create(ComponentReportSchema)` to create a new message.
  */
 export const ComponentReportSchema: GenMessage<ComponentReport> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_design, 10);
+  messageDesc(file_agni_v1_webapi_design, 18);
 
 /**
  * SheetFormat selects which renderer draws a sheet. It is an axis distinct from
@@ -530,6 +816,48 @@ export const SymbolSourceSchema: GenEnum<SymbolSource> = /*@__PURE__*/
   enumDesc(file_agni_v1_webapi_design, 1);
 
 /**
+ * TraceOutcome is what a trace answered.
+ *
+ * An enum rather than the string the Go side started with, so a client meets an unrecognised value
+ * at decode rather than in a string comparison that quietly falls through to "not connected".
+ *
+ * @generated from enum agni.v1.webapi.TraceOutcome
+ */
+export enum TraceOutcome {
+  /**
+   * @generated from enum value: TRACE_OUTCOME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * a route was found within the radius
+   *
+   * @generated from enum value: TRACE_OUTCOME_ROUTED = 1;
+   */
+  ROUTED = 1,
+
+  /**
+   * both endpoints resolved and no route joins them
+   *
+   * @generated from enum value: TRACE_OUTCOME_NO_ROUTE = 2;
+   */
+  NO_ROUTE = 2,
+
+  /**
+   * an endpoint names nothing the design has; nothing was walked
+   *
+   * @generated from enum value: TRACE_OUTCOME_UNRESOLVED = 3;
+   */
+  UNRESOLVED = 3,
+}
+
+/**
+ * Describes the enum agni.v1.webapi.TraceOutcome.
+ */
+export const TraceOutcomeSchema: GenEnum<TraceOutcome> = /*@__PURE__*/
+  enumDesc(file_agni_v1_webapi_design, 2);
+
+/**
  * DesignService loads a design file into something the viewer can draw. It reuses the
  * engine's readers, auto-layout, and packer; the web tier only chooses which per file and
  * serves the result. A design that carries schematic geometry (EDIF .eds) renders faithfully;
@@ -592,6 +920,25 @@ export const DesignService: GenService<{
     methodKind: "unary";
     input: typeof GetLayoutReportRequestSchema;
     output: typeof GetLayoutReportResponseSchema;
+  },
+  /**
+   * TraceDesign walks from one pin to another through the series parts between them and returns the
+   * route: each part crossed with its own pin on both sides, each net passed through, and what else
+   * sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
+   * a route drawn on the canvas cannot disagree.
+   *
+   * Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
+   * resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
+   * else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
+   * rendered it as "not connected" would send its reader to look at the board instead of at what
+   * they typed.
+   *
+   * @generated from rpc agni.v1.webapi.DesignService.TraceDesign
+   */
+  traceDesign: {
+    methodKind: "unary";
+    input: typeof TraceDesignRequestSchema;
+    output: typeof TraceDesignResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_design, 0);

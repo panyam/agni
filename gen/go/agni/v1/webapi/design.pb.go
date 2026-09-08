@@ -128,6 +128,62 @@ func (SymbolSource) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{1}
 }
 
+// TraceOutcome is what a trace answered.
+//
+// An enum rather than the string the Go side started with, so a client meets an unrecognised value
+// at decode rather than in a string comparison that quietly falls through to "not connected".
+type TraceOutcome int32
+
+const (
+	TraceOutcome_TRACE_OUTCOME_UNSPECIFIED TraceOutcome = 0
+	TraceOutcome_TRACE_OUTCOME_ROUTED      TraceOutcome = 1 // a route was found within the radius
+	TraceOutcome_TRACE_OUTCOME_NO_ROUTE    TraceOutcome = 2 // both endpoints resolved and no route joins them
+	TraceOutcome_TRACE_OUTCOME_UNRESOLVED  TraceOutcome = 3 // an endpoint names nothing the design has; nothing was walked
+)
+
+// Enum value maps for TraceOutcome.
+var (
+	TraceOutcome_name = map[int32]string{
+		0: "TRACE_OUTCOME_UNSPECIFIED",
+		1: "TRACE_OUTCOME_ROUTED",
+		2: "TRACE_OUTCOME_NO_ROUTE",
+		3: "TRACE_OUTCOME_UNRESOLVED",
+	}
+	TraceOutcome_value = map[string]int32{
+		"TRACE_OUTCOME_UNSPECIFIED": 0,
+		"TRACE_OUTCOME_ROUTED":      1,
+		"TRACE_OUTCOME_NO_ROUTE":    2,
+		"TRACE_OUTCOME_UNRESOLVED":  3,
+	}
+)
+
+func (x TraceOutcome) Enum() *TraceOutcome {
+	p := new(TraceOutcome)
+	*p = x
+	return p
+}
+
+func (x TraceOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TraceOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_webapi_design_proto_enumTypes[2].Descriptor()
+}
+
+func (TraceOutcome) Type() protoreflect.EnumType {
+	return &file_agni_v1_webapi_design_proto_enumTypes[2]
+}
+
+func (x TraceOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TraceOutcome.Descriptor instead.
+func (TraceOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{2}
+}
+
 // SheetRef identifies a drawable sheet within a design.
 type SheetRef struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -831,6 +887,559 @@ func (x *GetLayoutReportResponse) GetReport() *ConversionReport {
 	return nil
 }
 
+type TraceDesignRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// uri names the design to trace over, "mount://<mount>/<path>".
+	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	// from / to are the endpoint pins, as ref-des and pin designator.
+	From *TraceEndpoint `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	To   *TraceEndpoint `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
+	// hops bounds the search in series crossings; 0 takes the server's default. Unlike the protection
+	// radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
+	// the value it rests on: nothing about a route degrades with distance, so a no-route can be
+	// re-asked wider and the reader has to be able to see what was asked the first time.
+	Hops          int32 `protobuf:"varint,4,opt,name=hops,proto3" json:"hops,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceDesignRequest) Reset() {
+	*x = TraceDesignRequest{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceDesignRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceDesignRequest) ProtoMessage() {}
+
+func (x *TraceDesignRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceDesignRequest.ProtoReflect.Descriptor instead.
+func (*TraceDesignRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TraceDesignRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+func (x *TraceDesignRequest) GetFrom() *TraceEndpoint {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *TraceDesignRequest) GetTo() *TraceEndpoint {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+func (x *TraceDesignRequest) GetHops() int32 {
+	if x != nil {
+		return x.Hops
+	}
+	return 0
+}
+
+// TraceEndpoint names one pin of one component.
+type TraceEndpoint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Pin           string                 `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceEndpoint) Reset() {
+	*x = TraceEndpoint{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceEndpoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceEndpoint) ProtoMessage() {}
+
+func (x *TraceEndpoint) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceEndpoint.ProtoReflect.Descriptor instead.
+func (*TraceEndpoint) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *TraceEndpoint) GetRefDes() string {
+	if x != nil {
+		return x.RefDes
+	}
+	return ""
+}
+
+func (x *TraceEndpoint) GetPin() string {
+	if x != nil {
+		return x.Pin
+	}
+	return ""
+}
+
+type TraceDesignResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Trace         *Trace                 `protobuf:"bytes,1,opt,name=trace,proto3" json:"trace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceDesignResponse) Reset() {
+	*x = TraceDesignResponse{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceDesignResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceDesignResponse) ProtoMessage() {}
+
+func (x *TraceDesignResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceDesignResponse.ProtoReflect.Descriptor instead.
+func (*TraceDesignResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *TraceDesignResponse) GetTrace() *Trace {
+	if x != nil {
+		return x.Trace
+	}
+	return nil
+}
+
+// Trace is one pin-to-pin question and its whole answer.
+type Trace struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	From    *TraceEnd              `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	To      *TraceEnd              `protobuf:"bytes,2,opt,name=to,proto3" json:"to,omitempty"`
+	Outcome TraceOutcome           `protobuf:"varint,3,opt,name=outcome,proto3,enum=agni.v1.webapi.TraceOutcome" json:"outcome,omitempty"`
+	// reason says why, for NO_ROUTE and UNRESOLVED; empty for a route.
+	Reason string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// radius is the number of series crossings the walk searched to.
+	Radius        int32         `protobuf:"varint,5,opt,name=radius,proto3" json:"radius,omitempty"`
+	Crossings     []*TraceCross `protobuf:"bytes,6,rep,name=crossings,proto3" json:"crossings,omitempty"`
+	Nets          []*TraceNet   `protobuf:"bytes,7,rep,name=nets,proto3" json:"nets,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Trace) Reset() {
+	*x = Trace{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Trace) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Trace) ProtoMessage() {}
+
+func (x *Trace) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Trace.ProtoReflect.Descriptor instead.
+func (*Trace) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *Trace) GetFrom() *TraceEnd {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *Trace) GetTo() *TraceEnd {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+func (x *Trace) GetOutcome() TraceOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return TraceOutcome_TRACE_OUTCOME_UNSPECIFIED
+}
+
+func (x *Trace) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *Trace) GetRadius() int32 {
+	if x != nil {
+		return x.Radius
+	}
+	return 0
+}
+
+func (x *Trace) GetCrossings() []*TraceCross {
+	if x != nil {
+		return x.Crossings
+	}
+	return nil
+}
+
+func (x *Trace) GetNets() []*TraceNet {
+	if x != nil {
+		return x.Nets
+	}
+	return nil
+}
+
+// TraceEnd is one resolved endpoint of a trace.
+type TraceEnd struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint *TraceEndpoint         `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	// pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"), or empty
+	// on a source carrying no part-type pin data. It is what a datasheet and a firmware header call
+	// the pin, so it is what makes the endpoint recognisable to the person reading.
+	PinName string `protobuf:"bytes,2,opt,name=pin_name,json=pinName,proto3" json:"pin_name,omitempty"`
+	// net is the net the pin sits on, empty when the endpoint did not resolve.
+	Net           string `protobuf:"bytes,3,opt,name=net,proto3" json:"net,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceEnd) Reset() {
+	*x = TraceEnd{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceEnd) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceEnd) ProtoMessage() {}
+
+func (x *TraceEnd) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceEnd.ProtoReflect.Descriptor instead.
+func (*TraceEnd) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *TraceEnd) GetEndpoint() *TraceEndpoint {
+	if x != nil {
+		return x.Endpoint
+	}
+	return nil
+}
+
+func (x *TraceEnd) GetPinName() string {
+	if x != nil {
+		return x.PinName
+	}
+	return ""
+}
+
+func (x *TraceEnd) GetNet() string {
+	if x != nil {
+		return x.Net
+	}
+	return ""
+}
+
+// TraceCross is one series element crossed on the route, with its own pins on each side.
+type TraceCross struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Class         string                 `protobuf:"bytes,2,opt,name=class,proto3" json:"class,omitempty"`
+	EnterPin      string                 `protobuf:"bytes,3,opt,name=enter_pin,json=enterPin,proto3" json:"enter_pin,omitempty"`
+	ExitPin       string                 `protobuf:"bytes,4,opt,name=exit_pin,json=exitPin,proto3" json:"exit_pin,omitempty"`
+	FromNet       string                 `protobuf:"bytes,5,opt,name=from_net,json=fromNet,proto3" json:"from_net,omitempty"`
+	ToNet         string                 `protobuf:"bytes,6,opt,name=to_net,json=toNet,proto3" json:"to_net,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceCross) Reset() {
+	*x = TraceCross{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceCross) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceCross) ProtoMessage() {}
+
+func (x *TraceCross) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceCross.ProtoReflect.Descriptor instead.
+func (*TraceCross) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *TraceCross) GetRefDes() string {
+	if x != nil {
+		return x.RefDes
+	}
+	return ""
+}
+
+func (x *TraceCross) GetClass() string {
+	if x != nil {
+		return x.Class
+	}
+	return ""
+}
+
+func (x *TraceCross) GetEnterPin() string {
+	if x != nil {
+		return x.EnterPin
+	}
+	return ""
+}
+
+func (x *TraceCross) GetExitPin() string {
+	if x != nil {
+		return x.ExitPin
+	}
+	return ""
+}
+
+func (x *TraceCross) GetFromNet() string {
+	if x != nil {
+		return x.FromNet
+	}
+	return ""
+}
+
+func (x *TraceCross) GetToNet() string {
+	if x != nil {
+		return x.ToNet
+	}
+	return ""
+}
+
+// TraceNet is one net on the route, with what else sits on it.
+type TraceNet struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Stubs []*TraceStub           `protobuf:"bytes,2,rep,name=stubs,proto3" json:"stubs,omitempty"`
+	// stubs_elided is how many further parts sit on this net beyond the ones listed, so a capped list
+	// reads as capped rather than as complete.
+	StubsElided int32 `protobuf:"varint,3,opt,name=stubs_elided,json=stubsElided,proto3" json:"stubs_elided,omitempty"`
+	// bus_like marks a net the walk would refuse to continue THROUGH: a rail, a ground, or any
+	// rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
+	// assuming the trace stopped early for some other reason.
+	BusLike       bool `protobuf:"varint,4,opt,name=bus_like,json=busLike,proto3" json:"bus_like,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceNet) Reset() {
+	*x = TraceNet{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceNet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceNet) ProtoMessage() {}
+
+func (x *TraceNet) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceNet.ProtoReflect.Descriptor instead.
+func (*TraceNet) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *TraceNet) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TraceNet) GetStubs() []*TraceStub {
+	if x != nil {
+		return x.Stubs
+	}
+	return nil
+}
+
+func (x *TraceNet) GetStubsElided() int32 {
+	if x != nil {
+		return x.StubsElided
+	}
+	return 0
+}
+
+func (x *TraceNet) GetBusLike() bool {
+	if x != nil {
+		return x.BusLike
+	}
+	return false
+}
+
+// TraceStub is a part sitting on a net of the route that the route does not pass through. Test
+// points especially: a probe point on a path net is the most actionable thing on the line, and
+// reducing the answer to its series elements removes exactly the parts a person reads a trace to find.
+type TraceStub struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	Pin           string                 `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
+	Class         string                 `protobuf:"bytes,3,opt,name=class,proto3" json:"class,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TraceStub) Reset() {
+	*x = TraceStub{}
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TraceStub) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TraceStub) ProtoMessage() {}
+
+func (x *TraceStub) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TraceStub.ProtoReflect.Descriptor instead.
+func (*TraceStub) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *TraceStub) GetRefDes() string {
+	if x != nil {
+		return x.RefDes
+	}
+	return ""
+}
+
+func (x *TraceStub) GetPin() string {
+	if x != nil {
+		return x.Pin
+	}
+	return ""
+}
+
+func (x *TraceStub) GetClass() string {
+	if x != nil {
+		return x.Class
+	}
+	return ""
+}
+
 // ConversionReport is how an auto-layout mapped each component to a drawn node.
 type ConversionReport struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -841,7 +1450,7 @@ type ConversionReport struct {
 
 func (x *ConversionReport) Reset() {
 	*x = ConversionReport{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -853,7 +1462,7 @@ func (x *ConversionReport) String() string {
 func (*ConversionReport) ProtoMessage() {}
 
 func (x *ConversionReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -866,7 +1475,7 @@ func (x *ConversionReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversionReport.ProtoReflect.Descriptor instead.
 func (*ConversionReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ConversionReport) GetComponents() []*ComponentReport {
@@ -890,7 +1499,7 @@ type ComponentReport struct {
 
 func (x *ComponentReport) Reset() {
 	*x = ComponentReport{}
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -902,7 +1511,7 @@ func (x *ComponentReport) String() string {
 func (*ComponentReport) ProtoMessage() {}
 
 func (x *ComponentReport) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_design_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_design_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -915,7 +1524,7 @@ func (x *ComponentReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentReport.ProtoReflect.Descriptor instead.
 func (*ComponentReport) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ComponentReport) GetRefDes() string {
@@ -1002,7 +1611,46 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\asymbols\x18\x01 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\"S\n" +
 	"\x17GetLayoutReportResponse\x128\n" +
-	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"S\n" +
+	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"\x9c\x01\n" +
+	"\x12TraceDesignRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x121\n" +
+	"\x04from\x18\x02 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x04from\x12-\n" +
+	"\x02to\x18\x03 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x02to\x12\x12\n" +
+	"\x04hops\x18\x04 \x01(\x05R\x04hops\":\n" +
+	"\rTraceEndpoint\x12\x17\n" +
+	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
+	"\x03pin\x18\x02 \x01(\tR\x03pin\"B\n" +
+	"\x13TraceDesignResponse\x12+\n" +
+	"\x05trace\x18\x01 \x01(\v2\x15.agni.v1.webapi.TraceR\x05trace\"\xaf\x02\n" +
+	"\x05Trace\x12,\n" +
+	"\x04from\x18\x01 \x01(\v2\x18.agni.v1.webapi.TraceEndR\x04from\x12(\n" +
+	"\x02to\x18\x02 \x01(\v2\x18.agni.v1.webapi.TraceEndR\x02to\x126\n" +
+	"\aoutcome\x18\x03 \x01(\x0e2\x1c.agni.v1.webapi.TraceOutcomeR\aoutcome\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x16\n" +
+	"\x06radius\x18\x05 \x01(\x05R\x06radius\x128\n" +
+	"\tcrossings\x18\x06 \x03(\v2\x1a.agni.v1.webapi.TraceCrossR\tcrossings\x12,\n" +
+	"\x04nets\x18\a \x03(\v2\x18.agni.v1.webapi.TraceNetR\x04nets\"r\n" +
+	"\bTraceEnd\x129\n" +
+	"\bendpoint\x18\x01 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\bendpoint\x12\x19\n" +
+	"\bpin_name\x18\x02 \x01(\tR\apinName\x12\x10\n" +
+	"\x03net\x18\x03 \x01(\tR\x03net\"\xa5\x01\n" +
+	"\n" +
+	"TraceCross\x12\x17\n" +
+	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x14\n" +
+	"\x05class\x18\x02 \x01(\tR\x05class\x12\x1b\n" +
+	"\tenter_pin\x18\x03 \x01(\tR\benterPin\x12\x19\n" +
+	"\bexit_pin\x18\x04 \x01(\tR\aexitPin\x12\x19\n" +
+	"\bfrom_net\x18\x05 \x01(\tR\afromNet\x12\x15\n" +
+	"\x06to_net\x18\x06 \x01(\tR\x05toNet\"\x8d\x01\n" +
+	"\bTraceNet\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12/\n" +
+	"\x05stubs\x18\x02 \x03(\v2\x19.agni.v1.webapi.TraceStubR\x05stubs\x12!\n" +
+	"\fstubs_elided\x18\x03 \x01(\x05R\vstubsElided\x12\x19\n" +
+	"\bbus_like\x18\x04 \x01(\bR\abusLike\"L\n" +
+	"\tTraceStub\x12\x17\n" +
+	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
+	"\x03pin\x18\x02 \x01(\tR\x03pin\x12\x14\n" +
+	"\x05class\x18\x03 \x01(\tR\x05class\"S\n" +
 	"\x10ConversionReport\x12?\n" +
 	"\n" +
 	"components\x18\x01 \x03(\v2\x1f.agni.v1.webapi.ComponentReportR\n" +
@@ -1021,12 +1669,18 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\fSymbolSource\x12\x1d\n" +
 	"\x19SYMBOL_SOURCE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13SYMBOL_SOURCE_GLYPH\x10\x01\x12\x1a\n" +
-	"\x16SYMBOL_SOURCE_FAITHFUL\x10\x022\xf5\x02\n" +
+	"\x16SYMBOL_SOURCE_FAITHFUL\x10\x02*\x81\x01\n" +
+	"\fTraceOutcome\x12\x1d\n" +
+	"\x19TRACE_OUTCOME_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14TRACE_OUTCOME_ROUTED\x10\x01\x12\x1a\n" +
+	"\x16TRACE_OUTCOME_NO_ROUTE\x10\x02\x12\x1c\n" +
+	"\x18TRACE_OUTCOME_UNRESOLVED\x10\x032\xcd\x03\n" +
 	"\rDesignService\x12P\n" +
 	"\tGetDesign\x12 .agni.v1.webapi.GetDesignRequest\x1a!.agni.v1.webapi.GetDesignResponse\x12M\n" +
 	"\bGetSheet\x12\x1f.agni.v1.webapi.GetSheetRequest\x1a .agni.v1.webapi.GetSheetResponse\x12_\n" +
 	"\x0eHighlightSheet\x12%.agni.v1.webapi.HighlightSheetRequest\x1a&.agni.v1.webapi.HighlightSheetResponse\x12b\n" +
-	"\x0fGetLayoutReport\x12&.agni.v1.webapi.GetLayoutReportRequest\x1a'.agni.v1.webapi.GetLayoutReportResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x0fGetLayoutReport\x12&.agni.v1.webapi.GetLayoutReportRequest\x1a'.agni.v1.webapi.GetLayoutReportResponse\x12V\n" +
+	"\vTraceDesign\x12\".agni.v1.webapi.TraceDesignRequest\x1a#.agni.v1.webapi.TraceDesignResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_design_proto_rawDescOnce sync.Once
@@ -1040,53 +1694,74 @@ func file_agni_v1_webapi_design_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_design_proto_rawDescData
 }
 
-var file_agni_v1_webapi_design_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_agni_v1_webapi_design_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agni_v1_webapi_design_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_agni_v1_webapi_design_proto_goTypes = []any{
 	(SheetFormat)(0),                // 0: agni.v1.webapi.SheetFormat
 	(SymbolSource)(0),               // 1: agni.v1.webapi.SymbolSource
-	(*SheetRef)(nil),                // 2: agni.v1.webapi.SheetRef
-	(*GetDesignRequest)(nil),        // 3: agni.v1.webapi.GetDesignRequest
-	(*GetDesignResponse)(nil),       // 4: agni.v1.webapi.GetDesignResponse
-	(*GetSheetRequest)(nil),         // 5: agni.v1.webapi.GetSheetRequest
-	(*GetSheetResponse)(nil),        // 6: agni.v1.webapi.GetSheetResponse
-	(*HighlightSheetRequest)(nil),   // 7: agni.v1.webapi.HighlightSheetRequest
-	(*HighlightSheetResponse)(nil),  // 8: agni.v1.webapi.HighlightSheetResponse
-	(*GetLayoutReportRequest)(nil),  // 9: agni.v1.webapi.GetLayoutReportRequest
-	(*GetLayoutReportResponse)(nil), // 10: agni.v1.webapi.GetLayoutReportResponse
-	(*ConversionReport)(nil),        // 11: agni.v1.webapi.ConversionReport
-	(*ComponentReport)(nil),         // 12: agni.v1.webapi.ComponentReport
-	(*geom.UndrawnPlacement)(nil),   // 13: agni.v1.geom.UndrawnPlacement
-	(*geom.PackedSheet)(nil),        // 14: agni.v1.geom.PackedSheet
-	(*geom.HighlightSpec)(nil),      // 15: agni.v1.geom.HighlightSpec
-	(*geom.PackedHighlight)(nil),    // 16: agni.v1.geom.PackedHighlight
+	(TraceOutcome)(0),               // 2: agni.v1.webapi.TraceOutcome
+	(*SheetRef)(nil),                // 3: agni.v1.webapi.SheetRef
+	(*GetDesignRequest)(nil),        // 4: agni.v1.webapi.GetDesignRequest
+	(*GetDesignResponse)(nil),       // 5: agni.v1.webapi.GetDesignResponse
+	(*GetSheetRequest)(nil),         // 6: agni.v1.webapi.GetSheetRequest
+	(*GetSheetResponse)(nil),        // 7: agni.v1.webapi.GetSheetResponse
+	(*HighlightSheetRequest)(nil),   // 8: agni.v1.webapi.HighlightSheetRequest
+	(*HighlightSheetResponse)(nil),  // 9: agni.v1.webapi.HighlightSheetResponse
+	(*GetLayoutReportRequest)(nil),  // 10: agni.v1.webapi.GetLayoutReportRequest
+	(*GetLayoutReportResponse)(nil), // 11: agni.v1.webapi.GetLayoutReportResponse
+	(*TraceDesignRequest)(nil),      // 12: agni.v1.webapi.TraceDesignRequest
+	(*TraceEndpoint)(nil),           // 13: agni.v1.webapi.TraceEndpoint
+	(*TraceDesignResponse)(nil),     // 14: agni.v1.webapi.TraceDesignResponse
+	(*Trace)(nil),                   // 15: agni.v1.webapi.Trace
+	(*TraceEnd)(nil),                // 16: agni.v1.webapi.TraceEnd
+	(*TraceCross)(nil),              // 17: agni.v1.webapi.TraceCross
+	(*TraceNet)(nil),                // 18: agni.v1.webapi.TraceNet
+	(*TraceStub)(nil),               // 19: agni.v1.webapi.TraceStub
+	(*ConversionReport)(nil),        // 20: agni.v1.webapi.ConversionReport
+	(*ComponentReport)(nil),         // 21: agni.v1.webapi.ComponentReport
+	(*geom.UndrawnPlacement)(nil),   // 22: agni.v1.geom.UndrawnPlacement
+	(*geom.PackedSheet)(nil),        // 23: agni.v1.geom.PackedSheet
+	(*geom.HighlightSpec)(nil),      // 24: agni.v1.geom.HighlightSpec
+	(*geom.PackedHighlight)(nil),    // 25: agni.v1.geom.PackedHighlight
 }
 var file_agni_v1_webapi_design_proto_depIdxs = []int32{
-	13, // 0: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
-	2,  // 1: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
+	22, // 0: agni.v1.webapi.GetDesignResponse.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	3,  // 1: agni.v1.webapi.GetDesignResponse.sheets:type_name -> agni.v1.webapi.SheetRef
 	0,  // 2: agni.v1.webapi.GetSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
 	1,  // 3: agni.v1.webapi.GetSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	14, // 4: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
+	23, // 4: agni.v1.webapi.GetSheetResponse.packed:type_name -> agni.v1.geom.PackedSheet
 	1,  // 5: agni.v1.webapi.HighlightSheetRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
 	0,  // 6: agni.v1.webapi.HighlightSheetRequest.format:type_name -> agni.v1.webapi.SheetFormat
-	15, // 7: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
-	16, // 8: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
+	24, // 7: agni.v1.webapi.HighlightSheetRequest.specs:type_name -> agni.v1.geom.HighlightSpec
+	25, // 8: agni.v1.webapi.HighlightSheetResponse.packed:type_name -> agni.v1.geom.PackedHighlight
 	1,  // 9: agni.v1.webapi.GetLayoutReportRequest.symbols:type_name -> agni.v1.webapi.SymbolSource
-	11, // 10: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
-	12, // 11: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
-	3,  // 12: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
-	5,  // 13: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
-	7,  // 14: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
-	9,  // 15: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
-	4,  // 16: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
-	6,  // 17: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
-	8,  // 18: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
-	10, // 19: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
-	16, // [16:20] is the sub-list for method output_type
-	12, // [12:16] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	20, // 10: agni.v1.webapi.GetLayoutReportResponse.report:type_name -> agni.v1.webapi.ConversionReport
+	13, // 11: agni.v1.webapi.TraceDesignRequest.from:type_name -> agni.v1.webapi.TraceEndpoint
+	13, // 12: agni.v1.webapi.TraceDesignRequest.to:type_name -> agni.v1.webapi.TraceEndpoint
+	15, // 13: agni.v1.webapi.TraceDesignResponse.trace:type_name -> agni.v1.webapi.Trace
+	16, // 14: agni.v1.webapi.Trace.from:type_name -> agni.v1.webapi.TraceEnd
+	16, // 15: agni.v1.webapi.Trace.to:type_name -> agni.v1.webapi.TraceEnd
+	2,  // 16: agni.v1.webapi.Trace.outcome:type_name -> agni.v1.webapi.TraceOutcome
+	17, // 17: agni.v1.webapi.Trace.crossings:type_name -> agni.v1.webapi.TraceCross
+	18, // 18: agni.v1.webapi.Trace.nets:type_name -> agni.v1.webapi.TraceNet
+	13, // 19: agni.v1.webapi.TraceEnd.endpoint:type_name -> agni.v1.webapi.TraceEndpoint
+	19, // 20: agni.v1.webapi.TraceNet.stubs:type_name -> agni.v1.webapi.TraceStub
+	21, // 21: agni.v1.webapi.ConversionReport.components:type_name -> agni.v1.webapi.ComponentReport
+	4,  // 22: agni.v1.webapi.DesignService.GetDesign:input_type -> agni.v1.webapi.GetDesignRequest
+	6,  // 23: agni.v1.webapi.DesignService.GetSheet:input_type -> agni.v1.webapi.GetSheetRequest
+	8,  // 24: agni.v1.webapi.DesignService.HighlightSheet:input_type -> agni.v1.webapi.HighlightSheetRequest
+	10, // 25: agni.v1.webapi.DesignService.GetLayoutReport:input_type -> agni.v1.webapi.GetLayoutReportRequest
+	12, // 26: agni.v1.webapi.DesignService.TraceDesign:input_type -> agni.v1.webapi.TraceDesignRequest
+	5,  // 27: agni.v1.webapi.DesignService.GetDesign:output_type -> agni.v1.webapi.GetDesignResponse
+	7,  // 28: agni.v1.webapi.DesignService.GetSheet:output_type -> agni.v1.webapi.GetSheetResponse
+	9,  // 29: agni.v1.webapi.DesignService.HighlightSheet:output_type -> agni.v1.webapi.HighlightSheetResponse
+	11, // 30: agni.v1.webapi.DesignService.GetLayoutReport:output_type -> agni.v1.webapi.GetLayoutReportResponse
+	14, // 31: agni.v1.webapi.DesignService.TraceDesign:output_type -> agni.v1.webapi.TraceDesignResponse
+	27, // [27:32] is the sub-list for method output_type
+	22, // [22:27] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_design_proto_init() }
@@ -1107,8 +1782,8 @@ func file_agni_v1_webapi_design_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_design_proto_rawDesc), len(file_agni_v1_webapi_design_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   11,
+			NumEnums:      3,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

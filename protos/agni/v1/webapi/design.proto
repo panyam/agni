@@ -41,6 +41,18 @@ service DesignService {
   // fallback). It uses the same symbol source as the render, so it describes what the viewer
   // shows and points at --symbol-path when provided symbols do not resolve.
   rpc GetLayoutReport(GetLayoutReportRequest) returns (GetLayoutReportResponse);
+
+  // TraceDesign walks from one pin to another through the series parts between them and returns the
+  // route: each part crossed with its own pin on both sides, each net passed through, and what else
+  // sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
+  // a route drawn on the canvas cannot disagree.
+  //
+  // Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
+  // resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
+  // else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
+  // rendered it as "not connected" would send its reader to look at the board instead of at what
+  // they typed.
+  rpc TraceDesign(TraceDesignRequest) returns (TraceDesignResponse);
 }
 
 // SheetFormat selects which renderer draws a sheet. It is an axis distinct from
@@ -176,6 +188,96 @@ message GetLayoutReportRequest {
 
 message GetLayoutReportResponse {
   ConversionReport report = 1;
+}
+
+// TraceOutcome is what a trace answered.
+//
+// An enum rather than the string the Go side started with, so a client meets an unrecognised value
+// at decode rather than in a string comparison that quietly falls through to "not connected".
+enum TraceOutcome {
+  TRACE_OUTCOME_UNSPECIFIED = 0;
+  TRACE_OUTCOME_ROUTED = 1;      // a route was found within the radius
+  TRACE_OUTCOME_NO_ROUTE = 2;    // both endpoints resolved and no route joins them
+  TRACE_OUTCOME_UNRESOLVED = 3;  // an endpoint names nothing the design has; nothing was walked
+}
+
+message TraceDesignRequest {
+  // uri names the design to trace over, "mount://<mount>/<path>".
+  string uri = 1;
+  // from / to are the endpoint pins, as ref-des and pin designator.
+  TraceEndpoint from = 2;
+  TraceEndpoint to = 3;
+  // hops bounds the search in series crossings; 0 takes the server's default. Unlike the protection
+  // radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
+  // the value it rests on: nothing about a route degrades with distance, so a no-route can be
+  // re-asked wider and the reader has to be able to see what was asked the first time.
+  int32 hops = 4;
+}
+
+// TraceEndpoint names one pin of one component.
+message TraceEndpoint {
+  string ref_des = 1;
+  string pin = 2;
+}
+
+message TraceDesignResponse {
+  Trace trace = 1;
+}
+
+// Trace is one pin-to-pin question and its whole answer.
+message Trace {
+  TraceEnd from = 1;
+  TraceEnd to = 2;
+  TraceOutcome outcome = 3;
+  // reason says why, for NO_ROUTE and UNRESOLVED; empty for a route.
+  string reason = 4;
+  // radius is the number of series crossings the walk searched to.
+  int32 radius = 5;
+  repeated TraceCross crossings = 6;
+  repeated TraceNet nets = 7;
+}
+
+// TraceEnd is one resolved endpoint of a trace.
+message TraceEnd {
+  TraceEndpoint endpoint = 1;
+  // pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"), or empty
+  // on a source carrying no part-type pin data. It is what a datasheet and a firmware header call
+  // the pin, so it is what makes the endpoint recognisable to the person reading.
+  string pin_name = 2;
+  // net is the net the pin sits on, empty when the endpoint did not resolve.
+  string net = 3;
+}
+
+// TraceCross is one series element crossed on the route, with its own pins on each side.
+message TraceCross {
+  string ref_des = 1;
+  string class = 2;
+  string enter_pin = 3;
+  string exit_pin = 4;
+  string from_net = 5;
+  string to_net = 6;
+}
+
+// TraceNet is one net on the route, with what else sits on it.
+message TraceNet {
+  string name = 1;
+  repeated TraceStub stubs = 2;
+  // stubs_elided is how many further parts sit on this net beyond the ones listed, so a capped list
+  // reads as capped rather than as complete.
+  int32 stubs_elided = 3;
+  // bus_like marks a net the walk would refuse to continue THROUGH: a rail, a ground, or any
+  // rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
+  // assuming the trace stopped early for some other reason.
+  bool bus_like = 4;
+}
+
+// TraceStub is a part sitting on a net of the route that the route does not pass through. Test
+// points especially: a probe point on a path net is the most actionable thing on the line, and
+// reducing the answer to its series elements removes exactly the parts a person reads a trace to find.
+message TraceStub {
+  string ref_des = 1;
+  string pin = 2;
+  string class = 3;
 }
 
 // ConversionReport is how an auto-layout mapped each component to a drawn node.
