@@ -212,19 +212,39 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	if err != nil {
 		return nil, err
 	}
-	layout := layoutForFile(u.Path, req.GetLayout())
+	// The design's declaration decides which artifact each tier reads, so a netlist entry whose
+	// schematic lives in a declared companion renders that companion's sheets rather than falling
+	// back to an auto-layout (agni issue 656). Every layout question below asks the GEOMETRY tier and
+	// every netlist question asks the netlist tier; before this they both asked the ref as handed in.
+	src, err := s.projects.Sources(ctx, u, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	gu, err := artifactURI(src.GeometryURI)
+	if err != nil {
+		return nil, err
+	}
+	nu, err := artifactURI(src.NetlistURI)
+	if err != nil {
+		return nil, err
+	}
+	bu, err := artifactURI(src.BoardURI)
+	if err != nil {
+		return nil, err
+	}
+	layout := layoutForFile(gu.Path, req.GetLayout())
 	opts, err := s.readOptions(ctx, u)
 	if err != nil {
 		return nil, err
 	}
-	g, err := s.loader.Geometry(ctx, u, layout, false, opts...)
+	g, err := s.loader.Geometry(ctx, gu, layout, false, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
 	resp := &webapi.GetDesignResponse{
 		Layout:           layout,
 		NativeAvailable:  s.native.Available(u),
-		AvailableLayouts: availableLayouts(u.Path),
+		AvailableLayouts: availableLayouts(gu.Path),
 		// Carried straight off the geometry, which computed it with the same resolution the renderer
 		// uses. A render that lost its symbols still draws every ref des and wire, so without this the
 		// viewer has no way to tell a complete sheet from a bodyless one (agni issue 354).
@@ -242,16 +262,30 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 	}
 	// A file with a board sidecar lists the physical board as one more sheet, after the
 	// drawable ones, regardless of the layout axis (the board is faithful by nature).
-	if b, err := s.loader.Board(ctx, u); err == nil && b != nil {
+	if b, err := s.loader.Board(ctx, bu); err == nil && b != nil {
 		resp.Sheets = append(resp.Sheets, &webapi.SheetRef{Id: boardSheetID, Name: "Board"})
 	}
 	if layout == faithfulLayout {
 		resp.Name = g.GetDesignRef()
-	} else if d, err := s.loader.Design(ctx, u, opts...); err == nil {
-		resp.Name = d.GetName()
-		resp.SourceFormat = d.GetSourceFormat()
-		resp.ComponentCount = int32(len(d.GetComponents()))
-		resp.NetCount = int32(len(d.GetNets()))
+	}
+	// The netlist tier is read for the counts WHENEVER it is a different artifact from the geometry
+	// tier, which is the case a declared companion creates: sheets from the schematic export, and
+	// 3980 components from the netlist beside it. Both halves of one design, where the branch this
+	// replaces could only ever report one.
+	//
+	// The guard is the other half of that. A faithful file that IS its own netlist tier is a drawing
+	// being read as itself, and netlisting one counts per-sheet segments nothing joins: the same board
+	// reads 5219 components and 4572 nets off its schematic export against 3980 and 1617 off its
+	// netlist. So a LOOSE geometry file still reports no counts rather than inflated ones.
+	if layout != faithfulLayout || src.NetlistURI != src.GeometryURI {
+		if d, err := s.loader.Design(ctx, nu, opts...); err == nil {
+			if resp.Name == "" {
+				resp.Name = d.GetName()
+			}
+			resp.SourceFormat = d.GetSourceFormat()
+			resp.ComponentCount = int32(len(d.GetComponents()))
+			resp.NetCount = int32(len(d.GetNets()))
+		}
 	}
 	return resp, nil
 }
@@ -359,7 +393,17 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 	if err != nil {
 		return nil, err
 	}
-	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, requested), faithful, opts...)
+	// The geometry tier, so a sheet request against a netlist entry renders the schematic companion
+	// the design declares rather than an auto-layout of the netlist (agni issue 656).
+	gsrc, err := s.projects.Sources(ctx, u, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	gu, err := artifactURI(gsrc.GeometryURI)
+	if err != nil {
+		return nil, err
+	}
+	g, err := s.loader.Geometry(ctx, gu, layoutForFile(gu.Path, requested), faithful, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}
@@ -435,7 +479,16 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	if err != nil {
 		return nil, err
 	}
-	g, err := s.loader.Geometry(ctx, u, layoutForFile(u.Path, req.GetLayout()), faithful, opts...)
+	// Same resolution as GetSheet's, so a highlight is drawn against the artifact the sheet came from.
+	hsrc, err := s.projects.Sources(ctx, u, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	hu, err := artifactURI(hsrc.GeometryURI)
+	if err != nil {
+		return nil, err
+	}
+	g, err := s.loader.Geometry(ctx, hu, layoutForFile(hu.Path, req.GetLayout()), faithful, opts...)
 	if err != nil {
 		return nil, classifyLoadErr(err)
 	}

@@ -76,7 +76,14 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// One FULL Model over the design (netlist + board + params, WS9-048): the query evaluator reads
 	// it, and the per-cell locate classifier (WS9-039) shares its indexes rather than re-scanning the
 	// raw IR. The board/params tiers back the board.* / param.* query relations, matching `agni query`.
-	model, err := BuildModel(ctx, s.loader, u, boardURI, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	// Which artifact each tier reads comes from the design's declaration, so a query addressed at a
+	// schematic companion counts the NETLIST's 1617 nets rather than the drawing's 4572 per-sheet
+	// segments (agni issue 656).
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, boardURI, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	model, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +123,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	// emitted (the design renders via an auto-layout that draws every entity).
 	var drawnComps, drawnNets map[string]bool
 	if navigable {
-		g := BuildGeometry(ctx, s.loader, u, ov.ReadOptions()...)
+		g := BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...)
 		ix = indexSheets(g, model)
 		if g != nil {
 			drawnComps, drawnNets = drawnEntities(g)

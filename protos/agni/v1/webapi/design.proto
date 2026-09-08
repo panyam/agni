@@ -89,6 +89,18 @@ message GetDesignRequest {
   string layout = 1;
   // uri names the design to load, "mount://<mount>/<path>".
   string uri = 2;
+  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
+  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+  // companion, copper from a board one.
+  //
+  // It exists because the CLI is a client of this service and carries the same flag. Resolution
+  // happens here, once, so a caller that wants the file itself has to be able to say so; without
+  // this field the service would silently override the CLI's own opt-out (agni issue 656).
+  //
+  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+  // how two views of one design are checked against each other.
+  bool as_named = 3;
 }
 
 message GetDesignResponse {
@@ -145,6 +157,18 @@ message GetSheetRequest {
   SymbolSource symbols = 4;
   // uri names the design the sheet belongs to.
   string uri = 5;
+  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
+  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+  // companion, copper from a board one.
+  //
+  // It exists because the CLI is a client of this service and carries the same flag. Resolution
+  // happens here, once, so a caller that wants the file itself has to be able to say so; without
+  // this field the service would silently override the CLI's own opt-out (agni issue 656).
+  //
+  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+  // how two views of one design are checked against each other.
+  bool as_named = 6;
 }
 
 message GetSheetResponse {
@@ -168,6 +192,10 @@ message HighlightSheetRequest {
   repeated agni.v1.geom.HighlightSpec specs = 5;
   // uri names the design the sheet belongs to.
   string uri = 6;
+  // as_named matches GetSheetRequest's, and must, or a highlight would be drawn against a different
+  // artifact than the sheet it lands on: the two calls resolve one design and have to resolve it the
+  // same way.
+  bool as_named = 7;
 }
 
 message HighlightSheetResponse {
@@ -184,6 +212,18 @@ message GetLayoutReportRequest {
   SymbolSource symbols = 1;
   // uri names the design to report on.
   string uri = 2;
+  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
+  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
+  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
+  // companion, copper from a board one.
+  //
+  // It exists because the CLI is a client of this service and carries the same flag. Resolution
+  // happens here, once, so a caller that wants the file itself has to be able to say so; without
+  // this field the service would silently override the CLI's own opt-out (agni issue 656).
+  //
+  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
+  // how two views of one design are checked against each other.
+  bool as_named = 3;
 }
 
 message GetLayoutReportResponse {

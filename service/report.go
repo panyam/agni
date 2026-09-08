@@ -51,7 +51,11 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, u, board, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, board, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +68,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	// shape a client may store, and half an address is not an address: a renderer shortens it for
 	// reading, but what travels has to be able to name the design on another machine.
 	rep := CheckReportProto(u.String(), check.Run(m, rules), rules)
-	AnnotateReport(rep, BuildGeometry(ctx, s.loader, u, ov.ReadOptions()...), m)
+	AnnotateReport(rep, BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...), m)
 	return &webapi.GetCheckReportResponse{Report: rep}, nil
 }
 

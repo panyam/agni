@@ -162,7 +162,13 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
-	m, err := BuildModel(ctx, s.loader, u, board, ov.SpecsOr(s.specs), ov.ReadOptions()...)
+	// Tiers from the design's declaration, so a check addressed at a companion analyses the netlist
+	// and annotates against the schematic (agni issue 656).
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, board, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	m, err := BuildModel(ctx, s.loader, nu, bu, ov.SpecsOr(s.specs), ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +192,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		Verdicts: VerdictProtos(check.RunVerdicts(m, runnable)),
 		Skipped:  skipped,
 	}
-	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, u, ov.ReadOptions()...), m)
+	AnnotateSheets(resp.Findings, BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...), m)
 	return resp, nil
 }
 
